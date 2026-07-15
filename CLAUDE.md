@@ -72,6 +72,8 @@ Smoke test manual: `pnpm dev`, login en `http://localhost:3000` con `admin@examp
 
 ## Gotchas (sección viva — agregá acá el mismo día que te muerda una)
 
+- **2026-07-15 · Prisma ≥6.16 ya no carga `.env` desde el client**: el install fresco del workspace resolvió `^6.6.0` → 6.19.x y `prisma/seed.ts` falló con "Environment variable not found: DATABASE_URL" (en el repo original funcionaba). Fix: `import "dotenv/config"` primero en todo entrypoint que use PrismaClient fuera del server (el server ya lo carga en `app.ts`). El CLI de Prisma (`migrate`, `studio`) sí sigue cargando `.env` solo.
+
 - **2026-07-15 · `@types/express` v5 con Express 4 rompe el typecheck** (21 errores `string | string[]` en `req.params`). Quedó pineado a `^4.17.21`. No "actualizar" ese paquete por su cuenta.
 - **2026-07-15 · Warning `url.parse()` deprecado al arrancar la API**: viene de Multer 1.x, no de nuestro código. Inofensivo; desaparecería al migrar a Multer 2.x (requiere decisión nueva por cambios de API).
 - **2026-07-15 · `contracts/validators/milestone.ak` y `milestone2.ak` son casi idénticos** (mismo validador, dos estilos). Consolidación pendiente — D-017.

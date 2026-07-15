@@ -1,0 +1,146 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+enum UserRole {
+  admin
+  developer
+  buyer
+  verifier
+}
+
+enum ProjectStatus {
+  planning
+  in_progress
+  delayed
+  completed
+}
+
+enum MembershipRole {
+  developer
+  buyer
+  verifier
+}
+
+enum MilestoneState {
+  Pending
+  InProgress
+  Completed
+  Observed
+}
+
+enum EvidenceType {
+  document
+  photo
+  certificate
+}
+
+model User {
+  id                 String          @id @default(cuid())
+  email              String          @unique
+  passwordHash       String
+  role               UserRole
+  fullName           String
+  isActive           Boolean         @default(true)
+  createdAt          DateTime        @default(now())
+  updatedAt          DateTime        @updatedAt
+
+  memberships        ProjectMember[]
+  evidences          Evidence[]      @relation("EvidenceUploadedBy")
+  certifiedMilestones Milestone[]    @relation("MilestoneCertifiedBy")
+  auditLogs          AuditLog[]      @relation("AuditActor")
+}
+
+model Project {
+  id                String          @id @default(cuid())
+  name              String
+  slug              String          @unique
+  address           String?
+  city              String?
+  country           String?
+  latitude          Float?
+  longitude         Float?
+  totalUnits        Int             @default(0)
+  estimatedDelivery DateTime?
+  status            ProjectStatus   @default(planning)
+  createdAt         DateTime        @default(now())
+  updatedAt         DateTime        @updatedAt
+
+  members           ProjectMember[]
+  milestones        Milestone[]
+  evidences         Evidence[]
+}
+
+model ProjectMember {
+  id             String         @id @default(cuid())
+  userId         String
+  projectId      String
+  membershipRole MembershipRole
+  createdAt      DateTime       @default(now())
+
+  user           User           @relation(fields: [userId], references: [id], onDelete: Cascade)
+  project        Project        @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, projectId, membershipRole])
+}
+
+model Milestone {
+  id                 String         @id @default(cuid())
+  projectId          String
+  name               String
+  sequenceOrder      Int
+  state              MilestoneState @default(Pending)
+  validationCritical Boolean        @default(false)
+  certifiedAt        DateTime?
+  certifiedById      String?
+  scopeType          String         @default("project_wide")
+  scopeUnitCount     Int            @default(0)
+  createdAt          DateTime       @default(now())
+  updatedAt          DateTime       @updatedAt
+
+  project            Project        @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  certifiedBy        User?          @relation("MilestoneCertifiedBy", fields: [certifiedById], references: [id])
+  evidences          Evidence[]
+
+  @@unique([projectId, sequenceOrder])
+}
+
+model Evidence {
+  id               String       @id @default(cuid())
+  projectId        String
+  milestoneId      String?
+  uploadedById     String
+  evidenceType     EvidenceType
+  category         String
+  authoritative    Boolean      @default(false)
+  originalFilename String
+  storedFilename   String
+  mimeType         String
+  sizeBytes        Int
+  storagePath      String
+  sha256Hash       String
+  uploadedAt       DateTime     @default(now())
+  createdAt        DateTime     @default(now())
+  updatedAt        DateTime     @updatedAt
+
+  project          Project      @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  milestone        Milestone?   @relation(fields: [milestoneId], references: [id], onDelete: SetNull)
+  uploadedBy       User         @relation("EvidenceUploadedBy", fields: [uploadedById], references: [id])
+}
+
+model AuditLog {
+  id           String    @id @default(cuid())
+  actorUserId  String?
+  action       String
+  entityType   String
+  entityId     String
+  metadataJson String?
+  createdAt    DateTime  @default(now())
+
+  actor        User?     @relation("AuditActor", fields: [actorUserId], references: [id], onDelete: SetNull)
+}
