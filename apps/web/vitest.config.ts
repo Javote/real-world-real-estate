@@ -1,0 +1,11 @@
+// Config propia de vitest: NO reutiliza vite.config.ts porque los plugins de
+// nitro/TanStack Start no aplican (ni funcionan) en el entorno de tests jsdom.
+import { defineConfig } from 'vitest/config'
+import react from '@vitejs/plugin-react'
+
+export default defineConfig({
+  plugins: [react()],
+  test: {
+    environment: 'jsdom',
+  },
+})

@@ -33,11 +33,14 @@ jobs:
       - name: Typecheck
         run: pnpm typecheck
 
+      - name: Tests
+        run: pnpm test
+
       - name: Build (web + api)
         run: pnpm build
 
-      # Cuando existan tests (deuda declarada en SPEC-002/007): agregar
-      # "pnpm test" acá y no mergear en rojo.
+      # Pendiente (deuda declarada): tests de la API (SPEC-006/007, default
+      # vitest+supertest) y de los validadores Aiken (SPEC-002).
 
   contracts:
     name: Contratos Aiken (fmt + check + blueprint al día)

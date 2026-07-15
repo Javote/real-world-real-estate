@@ -49,7 +49,7 @@ pnpm workspaces · TypeScript estricto · **web:** TanStack Start + TanStack Que
 ## Método de trabajo LLM
 
 - **Spec-driven:** antes de codear, leé la spec correspondiente (`specs/`, índice en `specs/README.md`); si no existe y la tarea la amerita, la spec se escribe primero (≤2 págs, con el template).
-- **PRs chicos con tests:** una tarea = una rama = un PR. Correr `pnpm typecheck` (y `aiken check` si aplica) ANTES de proponer el diff.
+- **PRs chicos con tests:** una tarea = una rama = un PR. Correr `pnpm typecheck && pnpm test` (y `aiken check` si aplica) ANTES de proponer el diff.
 - **Niveles de autonomía** (tabla completa en docs/GUIA-COMMITS.md): 🟢 UI/CRUD/tests/docs según spec → implementá directo. 🟡 migraciones, auth, manejo de archivos, pipeline de anclaje, CI/deploy → proponé y esperá revisión línea por línea. 🔴 validadores con fondos, manejo de seeds/keys, lógica de permisos (`canAccessProject`), hashing → el humano lidera; vos asistís.
 - **Persistencia de conocimiento:** toda decisión, gotcha o convención que surja en tu sesión va al repo en el mismo PR (DECISIONS.md, la spec, o la sección Gotchas de abajo). El chat es descartable; el repo es la memoria.
 - Confinamiento: trabajá solo en el frente asignado (web / api / contracts); las decisiones cruzadas las arbitra el humano.
