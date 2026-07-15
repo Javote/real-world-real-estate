@@ -1,0 +1,36 @@
+# Node / TypeScript
+node_modules/
+dist/
+.output/
+.nitro/
+.tanstack/
+*.tsbuildinfo
+
+# Secretos y datos locales
+.env
+.env.*
+!.env.example
+
+# SQLite de desarrollo (Prisma)
+packages/api/prisma/dev.db
+packages/api/prisma/dev.db-journal
+
+# Archivos subidos por usuarios (runtime, no código)
+packages/api/uploads/*
+!packages/api/uploads/.gitkeep
+
+# Artefactos de compilación de Aiken (el blueprint plutus.json SÍ se commitea)
+contracts/build/
+
+# Tests / cobertura
+coverage/
+playwright-report/
+test-results/
+
+# Sistema operativo / editor
+.DS_Store
+.idea/
+.vscode/
+
+# Config local de Claude Code
+.claude/settings.local.json
