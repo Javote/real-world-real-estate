@@ -35,6 +35,7 @@ Contratos: `pnpm contracts:check` (requiere `aiken` v1.1.21, instalable con `aik
 | `docs/GUIA-COMMITS.md` | Conventional commits (scopes cerrados), autonomía LLM 🟢🟡🔴, versionado por artefacto. |
 | `docs/01…08` | Arquitectura, dominio, API, contratos, backlog, prompts, devops (referencia técnica del diseño objetivo). |
 | `docs/playbook-flujo-de-trabajo.md` | El playbook madre de 7 fases. |
+| `docs/reporte-primer-sprint.md` | Reporte para decisores: consolidación, estado actual y roadmap (fotografía a 2026-07-15). |
 
 ## Estructura del monorepo
 
