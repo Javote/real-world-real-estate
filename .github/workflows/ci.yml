@@ -1,0 +1,63 @@
+name: CI
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  quality:
+    name: Typecheck + build (workspace pnpm)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+        # toma la versión de "packageManager" del package.json raíz
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+
+      - name: Instalar dependencias
+        run: pnpm install --frozen-lockfile
+
+      - name: Generar cliente Prisma
+        run: pnpm --filter @plataforma/api db:generate
+
+      - name: Typecheck
+        run: pnpm typecheck
+
+      - name: Build (web + api)
+        run: pnpm build
+
+      # Cuando existan tests (deuda declarada en SPEC-002/007): agregar
+      # "pnpm test" acá y no mergear en rojo.
+
+  contracts:
+    name: Contratos Aiken (fmt + check + blueprint al día)
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: contracts
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: aiken-lang/setup-aiken@v1
+        with:
+          version: v1.1.21   # misma versión pineada que usa el equipo (CLAUDE.md §Gotchas)
+
+      - run: aiken fmt --check
+
+      - run: aiken check
+
+      - name: aiken build (blueprint reproducible)
+        run: aiken build
+
+      - name: Verificar que plutus.json commiteado está al día
+        run: git diff --exit-code plutus.json || (echo "::error::plutus.json desactualizado — corré 'aiken build' y commiteá" && exit 1)

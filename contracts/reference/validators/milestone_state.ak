@@ -21,8 +21,8 @@ use cardano/address.{Script}
 use cardano/assets.{PolicyId}
 use cardano/transaction.{InlineDatum, OutputReference, Transaction, find_input}
 use plataforma/milestone.{
-  Action, Certify, Flag, MilestoneDatum, Pending, Reopen, Start,
-  required_signer, valid_transition,
+  Action, Certify, Flag, MilestoneDatum, Pending, Reopen, Start, required_signer,
+  valid_transition,
 }
 
 pub type MintAction {
@@ -160,8 +160,13 @@ validator milestone_state {
       }
       // Retire: solo quemas (cantidades negativas), nada se acuña.
       Retire ->
-        list.all(minted, fn(pair) { let Pair(_, qty) = pair
-          qty < 0 })
+        list.all(
+          minted,
+          fn(pair) {
+            let Pair(_, qty) = pair
+            qty < 0
+          },
+        )
     }
   }
 

@@ -1,12 +1,8 @@
 use aiken/collection/list
-use cardano/address.{Address}
 use aiken/crypto.{VerificationKeyHash}
+use cardano/address.{Address}
 use cardano/transaction.{
-  InlineDatum,
-  Input,
-  Output,
-  OutputReference,
-  Transaction,
+  InlineDatum, Input, Output, OutputReference, Transaction,
 }
 
 pub type MilestoneState {
@@ -36,29 +32,20 @@ pub fn valid_transition(from: MilestoneState, to: MilestoneState) -> Bool {
   }
 }
 
-fn find_own_input(
-  inputs: List<Input>,
-  own_ref: OutputReference,
-) -> Input {
+fn find_own_input(inputs: List<Input>, own_ref: OutputReference) -> Input {
   expect Some(input) =
     list.find(inputs, fn(input) { input.output_reference == own_ref })
 
   input
 }
 
-fn count_inputs_at_address(
-  inputs: List<Input>,
-  address: Address,
-) -> Int {
+fn count_inputs_at_address(inputs: List<Input>, address: Address) -> Int {
   inputs
     |> list.filter(fn(input) { input.output.address == address })
     |> list.length
 }
 
-fn count_outputs_at_address(
-  outputs: List<Output>,
-  address: Address,
-) -> Int {
+fn count_outputs_at_address(outputs: List<Output>, address: Address) -> Int {
   outputs
     |> list.filter(fn(output) { output.address == address })
     |> list.length
@@ -108,5 +95,9 @@ validator milestone(admin: VerificationKeyHash) {
     expect continuing_output.value == own_input.output.value
 
     True
+  }
+
+  else(_) {
+    fail
   }
 }

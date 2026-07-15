@@ -95,7 +95,11 @@ test observed_can_reopen() {
 }
 
 test cannot_certify_from_pending() {
-  !valid_transition(Pending, Certify { evidence_root: #"aa", now: 1 }, Certified)
+  !valid_transition(
+    Pending,
+    Certify { evidence_root: #"aa", now: 1 },
+    Certified,
+  )
 }
 
 test cannot_start_twice() {
@@ -108,7 +112,11 @@ test cannot_reopen_certified_directly() {
 }
 
 test cannot_jump_observed_to_certified() {
-  !valid_transition(Observed, Certify { evidence_root: #"aa", now: 1 }, Certified)
+  !valid_transition(
+    Observed,
+    Certify { evidence_root: #"aa", now: 1 },
+    Certified,
+  )
 }
 
 test signer_matrix() {

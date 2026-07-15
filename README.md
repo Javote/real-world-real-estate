@@ -12,11 +12,11 @@ Ante contradicción, gana el documento de mayor precedencia y el que está en co
 
 ```bash
 pnpm install
-cp .env.example .env                          # completar JWT_SECRET
-pnpm --filter @plataforma/api db:generate
-pnpm --filter @plataforma/api db:migrate      # crea la SQLite de dev
-pnpm --filter @plataforma/api db:seed         # usuarios y proyecto demo
-pnpm dev                                      # web en :3000, api en :8787
+cp packages/api/.env.example packages/api/.env   # completar JWT_SECRET
+pnpm db:generate
+pnpm db:migrate                                  # crea la SQLite de dev
+pnpm db:seed                                     # usuarios y proyecto demo
+pnpm dev                                         # web en :3000, api en :8787
 ```
 
 Login demo: `admin@example.com` / `admin123` (resto de usuarios en `packages/api/prisma/seed.ts`).
@@ -54,8 +54,7 @@ plataforma/
 ├── scripts/                    # (a poblar) skeleton.ts — walking skeleton, SPEC-001
 ├── specs/                      # registro + specs
 ├── docs/                       # referencia técnica + context/ congelado
-├── DECISIONS.md · CLAUDE.md · ROADMAP.md · SETUP.md
-└── docker-compose.prod.yml     # camino VPS+Coolify
+└── DECISIONS.md · CLAUDE.md · ROADMAP.md · SETUP.md
 ```
 
 **Qué se despliega y qué no:** solo `apps/web` y `packages/api` corren como servidores. `shared`/`cardano` son librerías que compilan dentro de la imagen de la API. `contracts/` no se hostea: el blueprint va commiteado y los validadores viven en la blockchain. Ver `docs/07-devops-cicd.md`. Antes del primer deploy real: migrar el datasource de Prisma a PostgreSQL (trigger de D-016).
