@@ -31,15 +31,16 @@ de confianza.
 
 - **Controlamos:** el código, el deploy, la red Preprod (faucet libre), el alcance de cada rebanada.
 - **No controlamos:** disponibilidad de Blockfrost, tiempos de confirmación, adopción de wallets
-  CIP-30 por notarios y certificadores, la **disponibilidad de los 3 participantes piloto** que el
-  SOM exige que elijan los developers socios, y la revisión del **council of experts** — el órgano
-  externo de gobernanza del proyecto (entre board y órgano consultivo) que revisó y aprobó el
-  whitepaper antes de que los reviewers aprobaran M1. Es razonable esperar que revise los
-  entregables de M3 antes de la submission: es un gate más, con gente fuera del equipo.
+  CIP-30 por notarios y certificadores, y la **disponibilidad de los 3 participantes piloto** que el
+  SOM exige que elijan los developers socios.
 - **Consecuencia (principio 8):** "listo" es *listo para activar* — lo que depende de terceros queda
   detrás de configuración (`CARDANO_NETWORK`, `ANCHOR_MODE`), activable en días.
-- **Riesgo de agenda no técnico:** la carta de los pilotos es un entregable de M3 y depende de gente
-  externa. **Ese contacto arranca temprano, no en la última rebanada.**
+- **Riesgo de agenda no técnico, atenuado:** la carta de confirmación de los pilotos es un entregable
+  de M3 y depende de gente externa. La buena noticia es que **la relación ya existe desde M1**:
+  `M1-D3-PilotPlan.pdf` incluye cartas de conformidad de un notario y dos developers, y define
+  timeline, alcance y métricas del piloto. Hay que leerlo antes de planificar la validación con
+  pilotos — probablemente ya contesta parte del criterio 4. Lo que sigue siendo nuestro trabajo es
+  **volver a contactarlos temprano**, no en la última rebanada.
 
 ## "Listo" — los criterios de aceptación del SOM
 

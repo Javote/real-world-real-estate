@@ -13,13 +13,20 @@ sustituye registros públicos, procesos notariales ni autorizaciones estatales (
 
 ## Jerarquía de precedencia (regla número uno)
 
-**`DECISIONS.md` > `CLAUDE.md` > `specs/`.**
-Ante contradicción, gana el documento de mayor precedencia y el que está en conflicto se corrige en
-el mismo PR. El repo es la memoria; los chats son descartables.
+Dos capas, porque son dos autoridades distintas:
 
-**`docs/` está fuera de la jerarquía y es inmutable:** son los entregables oficiales tal como se
-presentaron. Un error en un entregable no se corrige editándolo — se resuelve con una decisión que
-lo cite (D-022). Las discrepancias ya detectadas están en `docs/README.md`.
+- **Sobre las obligaciones — el *qué* y la vara de aceptación — manda `docs/`.** Son los entregables
+  aprobados por los reviewers de Catalyst. Ninguna decisión nuestra puede reducir lo que debemos.
+  **No se editan nunca.**
+- **Sobre la implementación — el *cómo*:** `DECISIONS.md` > `CLAUDE.md` > `specs/`.
+
+Un desvío de la letra de un entregable solo es legítimo si (a) el entregable se contradice
+internamente, (b) es un error de redacción, o (c) seguirlo al pie contradiría una verdad del
+producto declarada por el dueño. **Nunca por conveniencia.** Los desvíos vigentes están listados en
+`docs/README.md` y se comunican en la entrega.
+
+Ante contradicción, gana el de mayor precedencia y el que está en conflicto se corrige en el mismo
+PR. El repo es la memoria; los chats son descartables.
 
 ## Requisitos previos
 

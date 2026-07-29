@@ -1,0 +1,61 @@
+@startuml
+title Core Domain Model — Conceptual Entities
+
+class UnitForSale {
+  unit_id: UUID
+  unit_reference
+  status
+}
+
+class Milestone {
+  milestone_id: UUID
+  name
+  sequence_order
+  state
+  validation_critical: boolean
+  certified_at
+}
+
+class EvidenceItem {
+  evidence_id: UUID
+  evidence_type
+  category
+  authoritative: boolean
+  sha256_hash
+  uploaded_at
+}
+
+class EvidenceBundle {
+  bundle_id: UUID
+  bundle_commitment_hash
+  created_at
+}
+
+class Certifier {
+  certifier_id: UUID
+  professional_role
+  license_reference
+}
+
+class OnChainEvent {
+  onchain_event_id: UUID
+  event_type
+  txid
+  block_timestamp
+}
+
+class Account {
+  account_id: UUID
+  account_type
+}
+
+UnitForSale "1" -- "1..*" Milestone
+Milestone "1" -- "0..*" EvidenceItem
+Milestone "1" -- "0..*" EvidenceBundle
+EvidenceBundle "1" -- "1..*" EvidenceItem
+Milestone "1" -- "0..*" OnChainEvent
+EvidenceBundle "1" -- "1" OnChainEvent
+Certifier "1" -- "0..*" Milestone
+Account "1" -- "0..*" Certifier
+
+@enduml

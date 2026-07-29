@@ -1,10 +1,13 @@
 # DECISIONS.md
 
-> **Jerarquía de precedencia:** DECISIONS.md > CLAUDE.md > specs/.
-> Ante contradicción entre documentos, gana el de mayor precedencia y el documento en conflicto se corrige en el mismo PR en que se detecta.
-> Reabrir una decisión **Aceptada** requiere evidencia (spike, incidente, medición), no preferencia. La numeración nunca se recicla.
+> **Jerarquía de precedencia — dos capas:**
 >
-> **`docs/` está fuera de esta jerarquía y es inmutable.** Contiene los entregables oficiales tal como fueron presentados a Catalyst (proyecto 1400106). Un error o una ambigüedad en un entregable **no se corrige editándolo** — se resuelve con una decisión acá que cite el documento y el párrafo. Ver D-019 a D-022.
+> - **Obligaciones (el *qué*): `docs/` es ley.** Son los entregables aprobados por reviewers de Catalyst 1400106. Nada de este archivo puede reducir lo que debemos.
+> - **Implementación (el *cómo*): DECISIONS.md > CLAUDE.md > specs/.**
+>
+> Ante contradicción, gana el de mayor precedencia y el documento en conflicto se corrige en el mismo PR en que se detecta. Reabrir una decisión **Aceptada** requiere evidencia (spike, incidente, medición), no preferencia. La numeración nunca se recicla.
+>
+> **`docs/` no se edita nunca.** Un error o una ambigüedad en un entregable se resuelve con una decisión acá que cite el documento y el párrafo. **Un desvío solo es legítimo si** (a) el entregable se contradice internamente, (b) es un error de redacción, o (c) seguirlo al pie contradiría una verdad del producto declarada por el dueño — **nunca por conveniencia**. Los desvíos vigentes están listados en `docs/README.md` y se comunican en la entrega. Ver D-022.
 >
 > **Historia:** este repo consolida la guía de implementación con el backend PoC (`cardano-real-estate-backend`). Los ADR-001..009 de ese repo quedan absorbidos acá (los vigentes, como D-016/D-017; el resto como contexto). El registro original y los snapshots del material fuente se eliminaron del árbol de trabajo en la consolidación documental de 2026-07-29; siguen disponibles en el historial de git (último commit que los contiene: `4b21955`).
 
@@ -31,7 +34,7 @@
 | D-017 | Contratos: adoptar el proyecto Aiken del backend en `contracts/`, junto a los validadores de referencia | Aceptada (consolidación de duplicados Abierta) |
 | D-018 | El producto se llama **PropNexus** | Aceptada |
 | D-019 | Plutus **V3**, no V2 — desvío documentado del SOM de M3 | Aceptada |
-| D-020 | FSM canónica del stage; M1-D2c está mal dibujado | Aceptada |
+| D-020 | FSM canónica del stage — confirma el entregable original | Aceptada |
 | D-021 | **La plataforma nunca custodia ni transfiere valor**, en ninguna fase | Aceptada |
 | D-022 | `docs/` inmutable (entregables oficiales); el stack canónico vive en `CLAUDE.md` | Aceptada |
 | D-023 | `Milestone` → `ConstructionStage` en el dominio; "milestone" reservado a Catalyst | Aceptada |
@@ -184,14 +187,27 @@ Para un producto cuya tesis es "verificá sin confiar en la plataforma" (D-026),
 **Cómo se comunica.** El desvío se explicita en la entrega de M3: V3 es estrictamente posterior a V2 y satisface la intención del criterio ("una máquina de estados en un lenguaje de contratos de Cardano"), no su literalidad. Registrarlo en el reporte de entrega, no descubrirlo en la revisión.
 **Reversión.** Cara y sin retorno técnico. Solo si un revisor lo exige explícitamente por escrito.
 
-## D-020 — FSM canónica del stage; M1-D2c está mal dibujado
+## D-020 — FSM canónica del stage
 
-**Contexto.** Hay tres versiones del ciclo de vida en la documentación:
-> - **M1-D1 §Workflow and State Model:** cuatro estados de cara al usuario — Pending, In Progress, Certified, Observed, con "caminos de excepción predefinidos".
-> - **M1-D2c (diagrama UML):** `Pending → InProgress → Completed → Observed → [*]`, con `Observed` **posterior** a `Completed` y como estado final.
-> - **Código y SPEC-002:** `Pending → InProgress → {Observed ⇄ InProgress, Completed}`, `Completed` terminal.
+> **Reescrita el 2026-07-29 tras aparecer los artefactos originales de M1.** La versión anterior de
+> esta decisión afirmaba que el diagrama de ciclo de vida de M1 estaba mal dibujado y que
+> desviábamos de él. **Era falso.** Lo que estaba mal era un `.puml` regenerado a posteriori desde
+> el PDF, que invirtió las flechas y que nunca formó parte de la entrega. El entregable original
+> —`M1-D2-Architecture-and-Data-Models/3-milestone-lifecycle.puml`, y el PDF `M1-D2c` que coincide
+> con él— dice exactamente lo que decidimos. **Esta decisión ya no es un desvío: es una
+> confirmación.**
 
-**Decisión.** La topología canónica es la tercera:
+**Contexto.** El entregable original dice, textual:
+
+```
+[*] --> Pending
+Pending    --> InProgress : work initiated
+InProgress --> Completed  : evidence complete
+InProgress --> Observed   : issue detected
+Observed   --> InProgress : remediation completed
+```
+
+**Decisión.** La topología canónica es exactamente esa:
 
 ```
 Pending → InProgress → Completed        (Completed es terminal)
@@ -199,10 +215,12 @@ Pending → InProgress → Completed        (Completed es terminal)
           Observed
 ```
 
-`Observed` es un **camino de remediación**, no un estado final: el certifier observa para que el developer corrija y vuelva a `InProgress`. Es la única lectura consistente con M1-D1 (que describe `Observed` como "usado para reportar problemas y requerir correcciones") y con M2-D1 §6.2, donde observar devuelve el trabajo al developer.
-**M1-D2c está mal dibujado y no se corrige** (D-022): la discrepancia queda registrada acá y en `docs/README.md`.
-**Etiqueta visible.** El estado en datos se llama `Completed`; la etiqueta que ve el usuario es "Certificado" / "Certified", resuelta por el diccionario i18n (D-025). Esto respeta M2-D4 §8.2: *"the server returns keys; the client renders"*.
-**Reversión.** Cambiar la topología rompe el validador, la tabla de transiciones del backend y la UI a la vez. Requiere decisión nueva.
+`Observed` es un **camino de remediación**, no un estado final: se observa para que el developer corrija y vuelva a `InProgress`. El entregable lo confirma con las etiquetas de sus transiciones ("issue detected" / "remediation completed") y es consistente con M2-D1 §6.2.
+
+**Nombre del estado: `Completed`.** Hay una inconsistencia *interna* del propio M1: el `README.md` de la carpeta lista los estados como "Pending / In Progress / **Certified** / Observed", mientras que el `.puml` dice `Completed`. Gana `Completed` por la regla de precedencia interna de M1 (ver D-022): los artefactos especificados en `Instructions.txt` —los cuatro `.puml` y el `.csv`— mandan sobre el `README.md`, que es un resumen de cortesía redactado después. Además `Completed` es el nombre correcto por D-026: `Certified` implicaría que la plataforma certifica, y no certifica.
+**Etiqueta visible.** El estado en datos se llama `Completed`; la etiqueta que ve el usuario sale del diccionario i18n (D-025), respetando M2-D4 §8.2 (*"the server returns keys; the client renders"*).
+**Lección registrada.** El error no estuvo en el entregable sino en un artefacto **derivado** de él. Verificar siempre contra lo entregado, nunca contra su transcripción — ver Gotchas de `CLAUDE.md`.
+**Reversión.** Cambiar la topología rompe el validador, la tabla de transiciones del backend y la UI a la vez. Requiere decisión nueva — y ahora también contradiría un entregable aprobado.
 
 ## D-021 — La plataforma nunca custodia ni transfiere valor
 
@@ -229,6 +247,20 @@ Pending → InProgress → Completed        (Completed es terminal)
 **Consecuencia estructural.** `docs/` queda con tres carpetas (una por milestone) y un `README.md` de índice. Todo lo derivado que vivía ahí —guía de arquitectura, backlog, prompts, devops, snapshots de material fuente, reporte de sprint— se eliminó; lo vigente se re-derivó hacia `specs/` y estas decisiones.
 **Actualización (2026-07-29, segunda pasada).** La raíz había quedado con ocho `.md`, lo que contradice el principio 1 (una sola fuente de verdad por cosa) por acumulación: dos índices del mismo trabajo, dos lugares con reglas de método. Se consolidó a **tres archivos**: `README.md` (entrada humana, arranque, entorno), `CLAUDE.md` (todo lo que un agente necesita por sesión: principios, stack, reglas, autonomía, commits, comandos, gotchas) y `DECISIONS.md`. `STACK.md`, `GUIA-COMMITS.md` y los diez principios de `PLAYBOOK.md` se absorbieron en `CLAUDE.md`; los pasos vivos de `SETUP.md` en `README.md`; `ROADMAP.md` en `specs/README.md`, que pasa a ser **el mapa de desarrollo** — un solo índice del trabajo en lugar de dos que divergen.
 **Qué se perdió a propósito.** Instrucciones de acciones ya ejecutadas una sola vez (el scaffolding de `SETUP.md` contra un stack que no se usó; las fases 1-6 del playbook, ya cumplidas; la guía genérica de escalado). No son conocimiento vivo y siguen en el historial: `git show 6a365ee`.
+
+**Enmienda (2026-07-29, tercera pasada) — precedencia en dos capas.** La formulación "docs/ está fuera de la jerarquía" quedó corta. Los entregables están **aprobados por reviewers** y no podemos decidir en contra de ellos; pero tomados al pie de la letra se contradicen entre sí y con verdades del producto. Se separa en dos autoridades:
+
+- **`docs/` es ley sobre las obligaciones** — el *qué* y la vara de aceptación. Nada en este archivo puede reducir lo que debemos: ni el ≥95% de coverage, ni los pilotos, ni la URL pública, ni el runbook. Absoluto, sin excepción.
+- **`DECISIONS.md` manda sobre la implementación** — el *cómo*, incluido dónde la letra de un entregable se interpreta en vez de seguirse literal.
+
+**Un desvío solo es legítimo en tres casos:** (a) el entregable se contradice internamente, (b) es un error de redacción, (c) seguirlo al pie contradiría una verdad del producto declarada por el dueño. **Nunca por conveniencia ni por preferencia técnica.** Todo desvío se registra acá citando el párrafo, se lista en `docs/README.md` y **se comunica en la entrega**.
+
+**Precedencia interna de M1.** `Instructions.txt` especifica el paquete entregado: cuatro `.puml` + un `.csv` + un `README.md`. Los **artefactos especificados** (`.puml`, `.csv`) mandan sobre el `README.md`, que es un resumen de cortesía escrito después para facilitarle la lectura a los reviewers. Resuelve la inconsistencia `Certified`/`Completed` (D-020) y aclara que las dos columnas que el README promete en la taxonomía —"authoritative" y "anchored on-chain"— nunca existieron en el CSV: son un hueco real que llenan D-027 y D-028, no una promesa incumplida que estemos pisando.
+
+**Artefactos derivados.** Solo lo entregado es canónico. Cuatro `.puml` regenerados desde los PDF se eliminaron el 2026-07-29 por contradecir los originales (flechas invertidas en la FSM, multiplicidades invertidas en el modelo de dominio, componentes perdidos en la arquitectura). Los PDF sí se conservan: fueron parte de la entrega, fueron aprobados y coinciden con los `.puml` originales.
+
+**Desvío registrado — `Milestone` cuelga de `UnitForSale` (M1) vs stages a nivel proyecto (M2).** El modelo de dominio de M1 dice `UnitForSale "1" -- "1..*" Milestone`. M2-D1 trata los stages como del **proyecto** (el developer avanza los 10 stages del desarrollo, no de cada unidad) y ata contrato, releases y dossier a la unidad. **Gana M2** por ser posterior y más específico, y porque es lo que la maqueta aprobada muestra. Caso (a) de la regla: los entregables se contradicen entre sí.
+
 **Reversión.** Barata: `git revert` del PR de consolidación; todo sigue en el historial.
 
 ## D-023 — `Milestone` → `ConstructionStage` en el dominio

@@ -1,0 +1,16 @@
+﻿Instructions
+
+This .rar file contains all deliverables for point 2 of Milestone 1.
+
+This includes .puml files for:
+* System architecture
+* Core Domain Model
+* Milestone Lifecycle
+* Evidence anchoring flow
+
+
+As well as a .csv File pertaining Evidence Taxonomy, and a README text file.
+
+
+
+When checking the SHA 256 hash that was delivered as point 4 of Milestone 1 within the Proof of Achievement section of the Milestone Module for this project, if one uses this very .rar file, the hashes should match. It should be noted that simply reassembling the same files and creating a new compressed file might yield different results, due simply to associated metadata on such a process. For this reason, the very same .rar file was provided on said milestone module as the evidence of completion for point 4 - Milestone 1.

@@ -1,0 +1,45 @@
+@startuml
+title System Architecture — High-Level Overview
+
+package "User-Facing Layer (Off-Chain)" {
+  component "Web Application UI"
+}
+
+package "Off-Chain Application Services" {
+  component "Backend API"
+  component "Identity and Role Service"
+  component "Evidence Intake Service"
+  component "Hashing and Commitment Service"
+  component "Milestone State Service"
+  component "Access Control and Sharing Service"
+  component "Audit Log Service"
+  component "Export and Verification Service"
+}
+
+package "Off-Chain Storage" {
+  database "Document Storage"
+  database "Metadata Store"
+  database "Audit Log Store"
+}
+
+package "On-Chain Layer (Cardano)" {
+  component "Evidence Anchor Transactions"
+  component "Milestone State Anchors"
+}
+
+"Web Application UI" --> "Backend API"
+"Backend API" --> "Identity and Role Service"
+"Backend API" --> "Evidence Intake Service"
+"Evidence Intake Service" --> "Hashing and Commitment Service"
+"Backend API" --> "Milestone State Service"
+"Backend API" --> "Access Control and Sharing Service"
+"Backend API" --> "Export and Verification Service"
+
+"Evidence Intake Service" --> "Document Storage"
+"Backend API" --> "Metadata Store"
+"Audit Log Service" --> "Audit Log Store"
+
+"Hashing and Commitment Service" --> "Evidence Anchor Transactions"
+"Milestone State Service" --> "Milestone State Anchors"
+
+@enduml

@@ -1,0 +1,13 @@
+@startuml
+title Milestone Lifecycle — State Machine
+
+[*] --> Pending
+
+Pending --> InProgress : work initiated
+
+InProgress --> Completed : evidence complete
+InProgress --> Observed : issue detected
+
+Observed --> InProgress : remediation completed
+
+@enduml

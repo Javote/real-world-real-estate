@@ -1,0 +1,18 @@
+@startuml
+title Evidence Anchoring Flow — Sequence Diagram
+
+actor Developer
+participant "Web Application UI"
+participant "Backend API"
+participant "Hashing and Commitment Service"
+participant "Cardano Network"
+
+Developer -> "Web Application UI" : upload evidence
+"Web Application UI" -> "Backend API" : submit evidence
+"Backend API" -> "Hashing and Commitment Service" : compute SHA-256
+"Hashing and Commitment Service" -> "Cardano Network" : anchor hash
+"Cardano Network" --> "Hashing and Commitment Service" : TXID
+"Hashing and Commitment Service" --> "Backend API" : hash + TXID
+"Backend API" -> "Web Application UI" : record reference
+
+@enduml

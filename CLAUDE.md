@@ -17,12 +17,16 @@
 
 Nunca uses "milestone" para una etapa de obra (D-023). Si ves `Milestone` en código, es deuda de rename pendiente.
 
-## Jerarquía de precedencia
+## Jerarquía de precedencia — dos capas
 
-**DECISIONS.md > CLAUDE.md > specs/.**
+- **Obligaciones (el *qué*, la vara de aceptación): manda `docs/`.** Entregables aprobados por reviewers. Ninguna decisión puede reducir lo que debemos.
+- **Implementación (el *cómo*): `DECISIONS.md` > `CLAUDE.md` > `specs/`.**
+
 Si encontrás una contradicción entre documentos: manda la de mayor precedencia y corregí el documento en conflicto **en el mismo PR**. Si la contradicción es con código, avisá antes de "arreglar" nada.
 
-**`docs/` está fuera de esta jerarquía y es INMUTABLE.** Son los entregables oficiales tal como se presentaron a Catalyst. Si encontrás un error o una ambigüedad en un entregable, **no lo edites**: registrá una decisión en `DECISIONS.md` citando documento y párrafo. Ya hay cuatro discrepancias resueltas así (D-019 a D-022); están listadas en `docs/README.md`.
+**`docs/` es INMUTABLE — no lo edites nunca**, ni para corregir un error evidente. Registrá una decisión en `DECISIONS.md` citando documento y párrafo. **Un desvío solo es legítimo si** (a) el entregable se contradice internamente, (b) es un error de redacción, o (c) seguirlo al pie contradiría una verdad del producto declarada por el dueño. **Nunca por conveniencia ni por preferencia técnica.** Los desvíos vigentes están en `docs/README.md`.
+
+**Y antes de declarar que un entregable está mal: verificá que estás mirando el entregable.** Ya nos pasó decidir contra una transcripción errónea (ver Gotchas).
 
 ## Principios de trabajo (los diez que sostienen todo lo demás)
 
@@ -183,6 +187,10 @@ pnpm contracts:build              # regenera plutus.json (commitearlo)
 Smoke test manual: `pnpm dev`, login en `http://localhost:3000` con `admin@example.com` / `admin123` (seed) y navegar a proyectos.
 
 ## Gotchas (sección viva — agregá acá el mismo día que te muerda una)
+
+- **2026-07-29 · Un artefacto derivado contradijo al entregable y nos hizo decidir mal.** Cuatro `.puml` regenerados desde los PDF de M1 tenían las flechas de la FSM invertidas. Durante toda una sesión creímos que el entregable estaba mal dibujado y registramos un "desvío" (D-020) que **no existía**: el original decía exactamente lo que habíamos decidido. **Antes de concluir que un entregable está mal, verificá que estás mirando el entregable y no una transcripción.** El paquete canónico de M1 es `M1-D2-Architecture-and-Data-Models/`, y está hasheado en la Proof of Achievement.
+- **2026-07-29 · Grepear solo `*.md` esconde entregables.** Busqué "council of experts" en `docs/ --include="*.md"` y concluí que no aparecía. Estaba en un `.csv` — y encima en una carpeta que todavía no se había copiado. Grepeá sin filtro de extensión, y verificá que el árbol esté completo antes de afirmar una ausencia.
+- **2026-07-29 · Los PDF de este repo no se leen con la herramienta de lectura** (falta `pdftoppm`). Y extraerles el texto no alcanza para un diagrama: las flechas son trazos vectoriales, no texto. Renderizalos primero: `qlmanage -t -s 1800 -o <dir> archivo.pdf` genera un PNG sin instalar nada.
 
 - **2026-07-29 · Los códigos de entregable (`D1`, `D2a`…) se reinician en cada milestone y colisionan**: `M1-D1` es el whitepaper, `M2-D1` es el mapa de arquitectura de información; `M1-D2a` es la arquitectura del sistema, `M2-D2a` es el catálogo de pantallas. Dentro de los documentos de M2, un "D1 §5" suelto significa siempre M2-D1. Al citar en specs, commits o código, **usá siempre la forma completa** (`M2-D1 §4`).
 - **2026-07-29 · `M2-D5` y `M2-D6` son entregables de Milestone 2, aunque vivan en `docs/milestone-3-implementacion/`**: son los planes *de* M3 escritos *en* M2. Están archivados junto al SOM de M3 porque en la práctica se leen juntos.
