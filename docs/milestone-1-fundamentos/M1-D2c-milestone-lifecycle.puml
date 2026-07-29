@@ -1,0 +1,10 @@
+@startuml M1-D2c-milestone-lifecycle
+title Milestone Lifecycle - State Machine
+
+[*] --> Pending
+Pending --> InProgress
+InProgress --> Completed
+Completed --> Observed
+Observed --> [*]
+
+@enduml

@@ -1,10 +1,12 @@
 # DECISIONS.md
 
-> **Jerarquía de precedencia:** DECISIONS.md > CLAUDE.md > specs/ > ROADMAP.md y docs/ (históricos).
+> **Jerarquía de precedencia:** DECISIONS.md > CLAUDE.md > STACK.md > specs/ > ROADMAP.md.
 > Ante contradicción entre documentos, gana el de mayor precedencia y el documento en conflicto se corrige en el mismo PR en que se detecta.
 > Reabrir una decisión **Aceptada** requiere evidencia (spike, incidente, medición), no preferencia. La numeración nunca se recicla.
 >
-> **Historia:** este repo consolida la guía de implementación con el backend PoC (`cardano-real-estate-backend`). Los ADR-001..009 de ese repo quedan absorbidos acá (los vigentes, como D-016/D-017; el resto como contexto) y su registro original se conserva congelado en `docs/context/backend/DECISIONS-backend.md`.
+> **`docs/` está fuera de esta jerarquía y es inmutable.** Contiene los entregables oficiales tal como fueron presentados a Catalyst (proyecto 1400106). Un error o una ambigüedad en un entregable **no se corrige editándolo** — se resuelve con una decisión acá que cite el documento y el párrafo. Ver D-019 a D-022.
+>
+> **Historia:** este repo consolida la guía de implementación con el backend PoC (`cardano-real-estate-backend`). Los ADR-001..009 de ese repo quedan absorbidos acá (los vigentes, como D-016/D-017; el resto como contexto). El registro original y los snapshots del material fuente se eliminaron del árbol de trabajo en la consolidación documental de 2026-07-29; siguen disponibles en el historial de git (último commit que los contiene: `4b21955`).
 
 ## Índice
 
@@ -27,6 +29,14 @@
 | D-015 | Versionado: CalVer para servicios; enteros para contratos | Aceptada |
 | D-016 | Adoptar el backend PoC (Express 4 + Prisma + SQLite + JWT/bcrypt + disco local) como `packages/api` | Aceptada (trigger de revisión definido) |
 | D-017 | Contratos: adoptar el proyecto Aiken del backend en `contracts/`, junto a los validadores de referencia | Aceptada (consolidación de duplicados Abierta) |
+| D-018 | El producto se llama **PropNexus** | Aceptada |
+| D-019 | Plutus **V3**, no V2 — desvío documentado del SOM de M3 | Aceptada |
+| D-020 | FSM canónica del stage; M1-D2c está mal dibujado | Aceptada |
+| D-021 | **La plataforma nunca custodia ni transfiere valor**, en ninguna fase | Aceptada |
+| D-022 | `docs/` inmutable (entregables oficiales); `STACK.md` canónico para el stack | Aceptada |
+| D-023 | `Milestone` → `ConstructionStage` en el dominio; "milestone" reservado a Catalyst | Aceptada |
+| D-024 | Sistema de diseño: Tailwind v4 + shadcn/ui con los tokens normativos de M2-D3 | Aceptada |
+| D-025 | i18n es-AR/en-US: diccionarios propios, cero strings hardcodeados | Aceptada |
 
 ---
 
@@ -35,7 +45,7 @@
 **Contexto.** El playbook decide mono vs multi-repo por ciclo de vida: los contratos que se congelan y auditan suelen ir aparte. Acá los contratos de Fase A/B son anclaje e integridad (sin fondos), evolucionan junto al backend que los consume vía blueprint, y el equipo es chico.
 **Decisión.** Un solo repo. `contracts/` vive adentro pero aislado (fuera del workspace pnpm, CI propio con `aiken check` + verificación de `plutus.json`).
 **Alternativas descartadas.** Repo aparte de contratos desde el día 1: fricción de sincronización de blueprint sin beneficio mientras no haya auditoría.
-**Trigger de revisión (no opcional).** Cuando `stage_release` (M3-SC-03, custodia fondos reales) entre en camino a auditoría/mainnet, se re-evalúa extraer `contracts/` a repo propio congelable. Registrar el resultado como D-0XX nueva.
+**Trigger de revisión (reescrito 2026-07-29).** El trigger original era "cuando `stage_release` (M3-SC-03) custodie fondos reales". **Esa condición nunca se va a cumplir:** por D-021 la plataforma no custodia valor en ninguna fase, así que ningún validador va a manejar fondos. El trigger vigente es otro: **cuando los validadores se congelen para auditoría externa de cara a mainnet (M4)**, se re-evalúa extraer `contracts/` a repo propio congelable. Registrar el resultado como D-0XX nueva.
 **Reversión.** `git filter-repo` sobre `contracts/` + el blueprint pasa a consumirse como artefacto versionado.
 
 ## D-002 — Frontend: TanStack Start + shadcn/ui
@@ -43,7 +53,8 @@
 **Contexto.** Requisito del mandato. Cuatro superficies por rol según el diseño D1/D3.
 **Decisión.** TanStack Start (SSR para browse público y dossier compartido) + shadcn/ui + TanStack Query.
 **Alternativas descartadas.** Next.js (peso innecesario declarado por el owner); SPA pura (pierde SSR del browse público).
-**Nota de consolidación (2026-07-15).** La primera versión de `apps/web` porta las pantallas de la maqueta PropTrust con su CSS original (snapshot en `docs/context/maqueta/`); shadcn/ui entra con el rediseño de identidad visual a cargo de UX/UI, sin cambiar esta decisión.
+**Nota de consolidación (2026-07-15).** La primera versión de `apps/web` porta las pantallas de la maqueta PropTrust con su CSS original; shadcn/ui entra con el rediseño de identidad visual a cargo de UX/UI, sin cambiar esta decisión.
+**Actualización (2026-07-29).** Esa maqueta PropTrust quedó obsoleta: el diseño vigente es PropNexus (M2-D1/D3/D4) y no deriva de ella. El CSS portado y sus snapshots se eliminaron. La adopción de shadcn/ui con los tokens de M2-D3 se formaliza en D-024.
 **Reversión.** Alta fricción; solo con evidencia de bloqueo del framework.
 
 ## D-003 — Backend separado (Hono) — **núcleo vigente; framework reemplazado por D-016**
@@ -107,7 +118,8 @@
 
 ## D-013 — Preprod hasta aprobación de gobernanza
 
-**Decisión.** `CARDANO_NETWORK=Preprod` en todos los entornos. Mainnet = entorno nuevo con wallet nueva, checklist de docs/07 y aprobación explícita. CI jamás toca la red (ni Preprod).
+**Decisión.** `CARDANO_NETWORK=Preprod` en todos los entornos. Mainnet = entorno nuevo con wallet nueva, checklist de despliegue y aprobación explícita. CI jamás toca la red (ni Preprod).
+**Actualización (2026-07-29).** Preprod y no Preview: espeja mainnet en parámetros de protocolo y epochs, tiene faucet estable y es la mejor soportada por Blockfrost y los exploradores públicos donde el revisor va a verificar los TXIDs. **Mainnet es alcance de Milestone 4** (app en producción), no de M3 — M3 corre íntegramente en testnet.
 
 ## D-014 — Blockchain detrás de puerto propio con doble modo
 
@@ -134,3 +146,103 @@
 **Decisión.** `contracts/` parte del proyecto Aiken del backend (aiken.toml, lock y validadores V1 vigentes). Los validadores de referencia de la guía entran en `contracts/reference/` como material de diseño de Fase B (D-008), NO como código activo: no compilan necesariamente contra la versión pineada y no se despliegan.
 **Pendiente (hereda ex ADR-009, sigue Abierta).** Consolidar `milestone.ak` vs `milestone2.ak`: default conservar `milestone.ak`; spike ≤1 día confirmando con quien escribió `milestone2.ak`. Se cierra borrando uno en un PR que actualice esta entrada.
 **Reversión.** Ver trigger de D-001 (extracción a repo propio al congelarse para auditoría).
+
+---
+
+> Las decisiones D-018 a D-025 se registran el **2026-07-29**, al incorporar la documentación
+> oficial completa de Milestones 1, 2 y 3 (`docs/`). Varias resuelven contradicciones entre los
+> entregables y el código existente; ninguna se resolvió editando un entregable (D-022).
+
+## D-018 — El producto se llama PropNexus
+
+**Contexto.** El repo arrastraba el nombre **PropTrust**, tomado de una maqueta visual anterior. Toda la documentación oficial (M2-D1, M2-D3, M2-D4, apéndice de M2-D6) dice **PropNexus**, y así está registrado el proyecto Catalyst 1400106.
+**Decisión.** PropNexus es el nombre del producto en todas las superficies: UI, logo del `GradientHeader`, copy, README, títulos de documentos propios. La clave de `localStorage` del selector de idioma es `propnexus.lang`, literal, como fija M2-D3 §Localization.
+**Alcance del rename.** Sin efecto en nombres de paquetes internos (`@plataforma/api`), que no son visibles al usuario y renombrarlos es churn sin valor.
+**Reversión.** N/A — el nombre lo fija un compromiso externo.
+
+## D-019 — Plutus V3, no V2
+
+**Contexto.** El SOM de M3 dice literalmente *"Smart-contract suite (**Plutus V2** state machine)"*, y M2-D5 §3 repite el supuesto. El proyecto Aiken existente es `v1.1.21` con `aiken-lang/stdlib v3.0.0`, y su blueprint declara `"plutusVersion": "v3"`.
+**Decisión.** Se mantiene **Plutus V3**. Es lo que Aiken 1.1.x emite nativamente; bajar a V2 exigiría pinear una versión anterior de Aiken y su stdlib, reescribir los validadores existentes y renunciar a mejoras del intérprete, sin ningún beneficio funcional.
+**Cómo se comunica.** El desvío se explicita en la entrega de M3: V3 es estrictamente posterior a V2 y satisface la intención del criterio ("una máquina de estados en un lenguaje de contratos de Cardano"), no su literalidad. Registrarlo en el reporte de entrega, no descubrirlo en la revisión.
+**Reversión.** Cara y sin retorno técnico. Solo si un revisor lo exige explícitamente por escrito.
+
+## D-020 — FSM canónica del stage; M1-D2c está mal dibujado
+
+**Contexto.** Hay tres versiones del ciclo de vida en la documentación:
+> - **M1-D1 §Workflow and State Model:** cuatro estados de cara al usuario — Pending, In Progress, Certified, Observed, con "caminos de excepción predefinidos".
+> - **M1-D2c (diagrama UML):** `Pending → InProgress → Completed → Observed → [*]`, con `Observed` **posterior** a `Completed` y como estado final.
+> - **Código y SPEC-002:** `Pending → InProgress → {Observed ⇄ InProgress, Completed}`, `Completed` terminal.
+
+**Decisión.** La topología canónica es la tercera:
+
+```
+Pending → InProgress → Completed        (Completed es terminal)
+             ↑↓
+          Observed
+```
+
+`Observed` es un **camino de remediación**, no un estado final: el certifier observa para que el developer corrija y vuelva a `InProgress`. Es la única lectura consistente con M1-D1 (que describe `Observed` como "usado para reportar problemas y requerir correcciones") y con M2-D1 §6.2, donde observar devuelve el trabajo al developer.
+**M1-D2c está mal dibujado y no se corrige** (D-022): la discrepancia queda registrada acá y en `docs/README.md`.
+**Etiqueta visible.** El estado en datos se llama `Completed`; la etiqueta que ve el usuario es "Certificado" / "Certified", resuelta por el diccionario i18n (D-025). Esto respeta M2-D4 §8.2: *"the server returns keys; the client renders"*.
+**Reversión.** Cambiar la topología rompe el validador, la tabla de transiciones del backend y la UI a la vez. Requiere decisión nueva.
+
+## D-021 — La plataforma nunca custodia ni transfiere valor
+
+**Contexto.** El SOM de M3 usa vocabulario financiero que sugiere custodia: *"≥8 stages con signers/**percentages** configurables"*, *"mediana desde reserva hasta creación de **escrow** < 12 minutos"*, y `M3-SC-03` se llama *"stage payment release"*. Leído literalmente, describe un validador que retiene y libera fondos.
+**Decisión.** **La plataforma no custodia, no retiene y no transfiere valor — en ninguna fase, ni en M3 ni en M4.** On-chain van exclusivamente commitments criptográficos (hashes, Merkle roots) y sus TXIDs. Todo movimiento de dinero ocurre íntegramente fuera de la plataforma, entre las partes, por sus canales habituales.
+**Cómo se releen los términos del SOM:**
+
+| Término del SOM | Qué es en realidad |
+|---|---|
+| "stage payment release" (`M3-SC-03`) | Anclaje del **evento** de liberación: qué stage, qué monto, quién lo liberó, cuándo. No ejecuta el pago. |
+| "percentages configurables" | Cronograma de pagos registrado como dato del contrato. No es una distribución de fondos on-chain. |
+| "signers configurables" | Qué rol puede autorizar cada transición del stage. Es autorización de **estado**, no de gasto. |
+| "creación de escrow" | Creación del registro de contrato con su cronograma, y su anclaje. |
+| "mediana reserva → escrow < 12 min" | Se mide desde que el investor acepta la invitación (M2-D1 §6.1 paso 5) hasta que el contrato queda creado y anclado con TXID confirmado. **Definir la instrumentación antes de la demo, no durante.** |
+
+**Consecuencias.** (a) El frente de contratos baja de 🔴 a 🟡: no hay fondos en riesgo. (b) Lo único que justifica un validador real —y no solo anclaje por metadata (D-006)— es hacer cumplir transiciones de estado válidas on-chain para stages `validation_critical`, que es exactamente D-008. (c) El trigger de revisión de D-001 se reescribió, porque dependía de una custodia que no va a existir.
+**Base documental.** Consistente con M1-D1 §On-Chain/Off-Chain Boundaries y §Non-Substitution Statement, y con M2-D6 §8.1–8.2. El SOM es el único documento que sugiere lo contrario, y lo hace por vocabulario, no por diseño.
+**Reversión.** Introducir custodia sería un producto distinto con un perfil regulatorio distinto. Requiere renegociar el proyecto, no una decisión técnica.
+
+## D-022 — `docs/` inmutable; `STACK.md` canónico para el stack
+
+**Contexto.** `docs/` pasó a contener los entregables oficiales de M1, M2 y M3 tal como fueron presentados. Editarlos para corregir errores desincronizaría el repo de lo que el revisor tiene, y volvería imposible verificar que entregamos lo que decimos. A la vez, esos entregables son **agnósticos de stack**: el único requisito técnico comprometido es que los contratos sean en Aiken.
+**Decisión.** (a) `docs/` es de solo lectura; toda corrección, desvío o reinterpretación se registra como decisión acá, citando documento y párrafo. (b) El stack vigente se documenta en **`STACK.md`**, en la raíz, fuera de `docs/`, porque es nuestro y es cambiable. (c) `DECISIONS.md` decide y `STACK.md` describe: si se contradicen, manda `DECISIONS.md`.
+**Consecuencia estructural.** `docs/` queda con tres carpetas (una por milestone) y un `README.md` de índice. Todo lo derivado que vivía ahí —guía de arquitectura, backlog, prompts, devops, snapshots de material fuente, reporte de sprint— se eliminó; lo vigente se re-deriva hacia `specs/` y estas decisiones. `GUIA-COMMITS.md` y `PLAYBOOK.md` pasaron a la raíz por ser método de trabajo, no documentación oficial.
+**Reversión.** Barata: `git revert` del PR de consolidación; todo sigue en el historial.
+
+## D-023 — `Milestone` → `ConstructionStage` en el dominio
+
+**Contexto.** "Milestone" se usa con dos significados incompatibles: los **hitos Catalyst** (M1, M2, M3, M4 — etapas contractuales del proyecto) y las **etapas de obra** de un desarrollo inmobiliario. La documentación nueva ya resolvió la ambigüedad de hecho: M2 y M3 dicen **"stage"** de forma consistente (`/projects/:id/stages`, `/certifier/stages/:stageId`, `StageChip`, "Standard, 10 stages", "construction stage" en la matriz de permisos de M2-D1 §4). Los que dicen `Milestone` son M1-D2b y el código actual.
+**Decisión.** El dominio se renombra a **`ConstructionStage`** (`stage` en rutas, props y variables). "Milestone" queda reservado **exclusivamente** para los hitos Catalyst. Alcance del rename:
+
+| Dónde | De | A |
+|---|---|---|
+| Prisma | `model Milestone` | `model ConstructionStage` |
+| Prisma | `enum MilestoneState` | `enum StageState` |
+| Prisma | `Evidence.milestoneId` | `Evidence.stageId` |
+| API | `/api/v1/…/milestones` | `/api/v1/…/stages` |
+| Contratos | `validators/milestone.ak`, `lib/plataforma/milestone.ak` | `stage.ak` |
+| Aiken | `name = "j/milestone-fsm"` | naming PropNexus |
+| Specs | SPEC-002 y referencias cruzadas | renombradas |
+
+**Reinterpretación de M1-D2b.** El entregable llama `Milestone` a esta entidad. Se lee como `ConstructionStage`; el entregable no se edita (D-022).
+**Por qué ahora.** El rename cuesta una migración y un reemplazo cruzado hoy, cuando hay 5 rutas web y 6 archivos de rutas de API. Después de implementar las 53 entradas del backlog de M2-D5 cuesta un orden de magnitud más.
+**Alternativas descartadas.** Mantener `Milestone` (la API expondría `/stages/` sobre un modelo llamado `Milestone`); renombrar solo la superficie pública (deja una capa de traducción permanente entre DB y API, que es lo que más confunde a quien lee el código por primera vez).
+
+## D-024 — Sistema de diseño: Tailwind v4 + shadcn/ui con los tokens de M2-D3
+
+**Contexto.** M2-D3 especifica un sistema de diseño completo y **normativo**: valores hex por rol semántico, escala tipográfica en px, iconografía Lucide con pares icono-significado reservados, escala de espaciado de 4px, radios, elevación, y 36 componentes con anatomía, estados y reglas de uso. `apps/web` hoy tiene ~1000 líneas de CSS portadas de la maqueta PropTrust anterior, que no deriva de este sistema. Tailwind v4 y `lucide-react` ya están instalados (los trajo el scaffold de TanStack Start); shadcn/ui no.
+**Decisión.** Se activa la nota que D-002 dejaba pendiente. El sistema de diseño se implementa como: tokens de M2-D3 declarados como CSS custom properties + tema de Tailwind v4; shadcn/ui como base de los primitivos accesibles (Dialog, Select, Switch, Popover — que resuelven gratis el focus trap, `role="dialog"` y `aria-labelledby` que M2-D3 §Accessibility exige); los 36 componentes de M2-D3 construidos encima, en `apps/web/src/components/`.
+**El CSS de la maqueta se elimina**, no se migra: el diseño vigente no deriva de él.
+**Regla dura que se mantiene.** Los componentes de dominio (HashChip, StatusPill, VerificationBadge, …) viven en un único lugar y no se crean variantes ad-hoc. M2-D3 y M2-D4 son normativos: *"never invent new statuses"*, *"new patterns should be added to this document before being used"* — y como el documento es inmutable (D-022), en la práctica significa que un patrón nuevo requiere una decisión acá.
+**Reversión.** Media. Los tokens son datos; los componentes son reescribibles. Lo caro sería volver a CSS a mano.
+
+## D-025 — i18n es-AR / en-US con diccionarios propios
+
+**Contexto.** M2-D3 §Principio 6 y §Localization lo fijan como requisito, no como preferencia: es-AR (registro voseo) por default, en-US secundario, **cero strings hardcodeados** en componentes, formateo con `Intl.*` para moneda/fechas/relativos/decimales, y toggle alcanzable desde el login y desde cada pantalla de perfil. M2-D4 §8.2 agrega la restricción del lado servidor: *"the server returns keys; the client renders"*.
+**Decisión.** (a) Diccionarios propios en `apps/web/src/i18n/` — no se agrega una librería de i18n hasta tener evidencia de que hace falta (pluralización compleja, carga diferida por ruta): el `Intl` del runtime cubre formateo y el diccionario es un objeto tipado, lo que además da autocompletado y falla en typecheck si falta una clave. (b) **El backend devuelve claves de traducción, nunca copy** — para acciones de audit log, categorías, etiquetas de rol y nombres de stage. (c) Persistencia en `localStorage` bajo `propnexus.lang`, default `es-AR`.
+**Consecuencia de diseño.** Los strings en español son 20–30% más largos que en inglés (M2-D3 §Text growth): los componentes se dimensionan al contenido; nada de anchos fijos salvo FAB e íconos.
+**Alternativas descartadas.** `react-i18next` (peso y ceremonia para dos locales y un diccionario estático); copy hardcodeado con traducción posterior (contradice el requisito y garantiza reescritura).
+**Reversión.** Barata mientras el acceso al diccionario esté detrás de un único hook.

@@ -20,7 +20,7 @@ export const Route = createRootRoute({
         content: 'width=device-width, initial-scale=1',
       },
       {
-        title: 'PropTrust — Trazabilidad Inmobiliaria',
+        title: 'PropNexus — Trazabilidad Inmobiliaria',
       },
     ],
     links: [

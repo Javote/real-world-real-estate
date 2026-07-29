@@ -160,7 +160,7 @@ function VerifyScreen() {
       </div>
 
       <div style={{ textAlign: 'center', padding: '2rem', color: 'var(--gray-600)', fontSize: '0.9rem' }}>
-        <p>PropTrust · Trazabilidad inmobiliaria con blockchain</p>
+        <p>PropNexus · Trazabilidad inmobiliaria con blockchain</p>
         <p style={{ marginTop: '0.5rem' }}>Powered by Cardano</p>
       </div>
     </div>

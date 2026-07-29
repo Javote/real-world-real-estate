@@ -25,8 +25,8 @@ cp <guia>/starter/.gitignore .gitignore
 cp <guia>/CLAUDE.md <guia>/DECISIONS.md <guia>/ROADMAP.md ./
 cp -r <guia>/docs ./docs
 cp -r <guia>/specs ./specs
-# Snapshot congelado del material fuente:
-mkdir -p docs/context && cp <ruta-a-tus-pdfs>/*.pdf docs/context/   # + el extracto ya incluido
+# Entregables oficiales (inmutables, una carpeta por milestone Catalyst):
+mkdir -p docs/milestone-{1-fundamentos,2-diseno,3-implementacion}   # ver docs/README.md
 
 # Estructura vacía con .gitkeep:
 mkdir -p apps packages/api/src packages/db/src packages/shared/src packages/cardano/src scripts
@@ -218,7 +218,7 @@ docker build -f apps/web/Dockerfile -t plataforma-web .
 docker compose -f docker-compose.prod.yml up --build
 ```
 
-Deploy real: seguir `docs/07-devops-cicd.md` (camino A: Railway con "Wait for CI"; camino B: VPS + Coolify). En ambos, **deploy = push a `main`**; GitHub Actions solo valida calidad, no despliega.
+Deploy real: D-010 (camino A: Railway con "Wait for CI"; camino B: VPS + Coolify). En ambos, **deploy = push a `main`**; GitHub Actions solo valida calidad, no despliega. El runbook de deploy/rollback/incidente es un entregable exigido por el SOM de M3 y se escribe en la fase de pre-producción.
 
 Tercer commit y protección:
 

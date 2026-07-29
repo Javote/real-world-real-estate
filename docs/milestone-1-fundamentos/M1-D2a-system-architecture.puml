@@ -1,0 +1,48 @@
+@startuml M1-D2a-system-architecture
+title System Architecture - High-Level Overview
+
+skinparam componentStyle rectangle
+
+package "User-Facing Layer (Off-Chain)" {
+  [Web Application UI]
+}
+
+package "Off-Chain Application Services" {
+  [Backend API]
+  [Identity and Role Service]
+  [Milestone State Service]
+  [Hashing and Commitment Service]
+  [Evidence Intake Service]
+  [Access Control and Sharing Service]
+  [Export and Verification Service]
+  [Audit Log Service]
+}
+
+package "Off-Chain Storage" {
+  database "Metadata Store" as MetadataStore
+  database "Audit Log Store" as AuditLogStore
+}
+
+package "On-Chain Layer (Cardano)" {
+  [Evidence Anchor Transactions] as OnChainTx
+}
+
+[Web Application UI] --> [Backend API]
+
+[Backend API] --> [Identity and Role Service]
+[Backend API] --> [Milestone State Service]
+[Backend API] --> [Hashing and Commitment Service]
+[Backend API] --> [Evidence Intake Service]
+[Backend API] --> [Access Control and Sharing Service]
+[Backend API] --> [Export and Verification Service]
+[Backend API] --> [Audit Log Service]
+
+[Milestone State Service] --> MetadataStore
+[Evidence Intake Service] --> MetadataStore
+[Access Control and Sharing Service] --> MetadataStore
+[Audit Log Service] --> AuditLogStore
+
+[Hashing and Commitment Service] --> OnChainTx
+[Export and Verification Service] --> OnChainTx
+
+@enduml

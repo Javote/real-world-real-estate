@@ -4,7 +4,9 @@
 
 ## Propósito
 
-Implementar el subconjunto de la API (docs/03) que el frontend de la demo (SPEC-004) necesita, arrancando por el **contrato Zod compartido** — que es lo único que sincroniza ambos frentes. La subida de documentación calcula y persiste hashes pero NO ancla: deja el enganche listo para `AnchorPort` (SPEC-001).
+Implementar el subconjunto de la API que el frontend de la demo (SPEC-004) necesita, arrancando por el **contrato Zod compartido** — que es lo único que sincroniza ambos frentes. La subida de documentación calcula y persiste hashes pero NO ancla: deja el enganche listo para `AnchorPort` (SPEC-001).
+
+> **Superada (2026-07-29).** El subconjunto de esta spec era un recorte de demo. El alcance real de la API es el backlog completo de **M2-D5 §4-6** (18 work streams `M3-BE-01..18`). Esta spec se reemplaza en la reescritura de `specs/`; ver `ROADMAP.md` §Fase 0.
 
 ## Alcance / NO-alcance
 
@@ -48,7 +50,7 @@ export const LoginRequest = z.object({ email: z.string().email(), password: z.st
 export const Session = z.object({ accountId: z.string().uuid(), displayName: z.string(), role: z.enum(["developer"]) });
 ```
 
-### 2. Endpoints (subset de docs/03; mismos paths para que nada se tire después)
+### 2. Endpoints (subset; mismos paths que M2-D5 para que nada se tire después)
 
 | Método y ruta | Request/Response | Notas |
 |---|---|---|

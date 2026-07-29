@@ -29,7 +29,7 @@ verifyProof(leafHex: string, proof: ProofStep[], rootHex: string): boolean
 
 Metadata on-chain (label `ANCHOR_METADATA_LABEL`, default 1904): `{ v: 1, t: AnchorType, h: hex64, r: refOpaca, p?: refOpaca }`.
 
-Endpoint (Sprint 2): `POST /developer/projects/:id/stages/:stageId/evidence` (multipart) → `{ bundleId, files: [{id, sha256}], merkleRoot, txid, explorerUrl }` — detalle en docs/03.
+Endpoint: `POST /developer/projects/:id/stages/:stageId/evidence` (multipart) → `{ bundleId, files: [{id, sha256}], merkleRoot, txid, explorerUrl }` — ver M2-D5 §5 (entrada `38, 44c`, refs `M3-BE-13` / `M3-SC-02`) y M2-D4 §8.1 (patrones P4 y P5: la respuesta de la mutación debe traer Merkle root, TXID, fecha de anclaje y cantidad de archivos, sin segundo round trip).
 
 Script (Sprint 1): `pnpm skeleton <archivo> [--mode=real|simulated]` → imprime hash, root, txid, `VERIFIED|FAILED`, URL de explorer. Exit code 0 solo si VERIFIED.
 

@@ -72,7 +72,7 @@ Formato: `<tipo>/<REF-en-kebab>-<descripción-corta>`.
 
 | Nivel | Qué cubre | Cómo se trabaja |
 |---|---|---|
-| 🟢 Verde | Componentes UI según spec/diseño, endpoints CRUD según docs/03, tests, docs, seeds, prompts | El LLM implementa directo; revisión de PR normal |
+| 🟢 Verde | Componentes UI según M2-D3, endpoints CRUD según M2-D5, tests, docs, seeds, prompts | El LLM implementa directo; revisión de PR normal |
 | 🟡 Amarillo | Migraciones de DB, auth/permisos/guards, pipeline de anclaje (`packages/cardano`), manejo de archivos/S3, config de CI/deploy, validadores Aiken sin fondos | El LLM propone; revisión humana línea por línea antes de merge |
 | 🔴 Rojo | `stage_release.ak` (custodia fondos), manejo de seeds/keys/firmas, todo lo que toque `SERVICE_WALLET_SEED`, checklist de mainnet | El humano lidera y escribe; el LLM asiste. El revisor debe poder explicar cada línea sin mirar el chat |
 

@@ -1,0 +1,68 @@
+@startuml M1-D2b-core-domain-model
+title Core Domain Model - Conceptual Entities
+
+skinparam classAttributeIconSize 0
+
+class Account {
+  account_id: UUID
+  account_type
+}
+
+class Certifier {
+  certifier_id: UUID
+  professional_role
+  license_reference
+}
+
+class UnitForSale {
+  unit_id: UUID
+  unit_reference
+  status
+}
+
+class Milestone {
+  milestone_id: UUID
+  name
+  sequence_order
+  state
+  validation_critical: boolean
+  certified_at
+}
+
+class EvidenceBundle {
+  bundle_id: UUID
+  bundle_commitment_hash
+  created_at
+}
+
+class EvidenceItem {
+  evidence_id: UUID
+  evidence_type
+  category
+  authoritative: boolean
+  sha256_hash
+  uploaded_at
+}
+
+class OnChainEvent {
+  onchain_event_id: UUID
+  event_type
+  tx_id
+  block_timestamp
+}
+
+Account "1" -- "0..*" Certifier
+Account "1" -- "0..*" UnitForSale
+
+UnitForSale "1..*" -- "1" Milestone
+Certifier "0..*" -- "1" Milestone
+
+Milestone "1" -- "0..*" EvidenceBundle
+
+EvidenceBundle "1" -- "1..*" EvidenceItem
+EvidenceBundle "1" -- "0..*" OnChainEvent
+
+Milestone "1" -- "0..*" EvidenceItem
+Milestone "1" -- "0..*" OnChainEvent
+
+@enduml

@@ -1,6 +1,8 @@
 # SPEC-002 — Validador milestone FSM (Aiken)
 
-> Adoptada del repo backend en la consolidación (2026-07-15), donde era su SPEC-002. Describe el validador V1 **ya escrito** en `contracts/validators/milestone.ak`. El diseño Fase B (state-thread con thread token, D-008) vive en `contracts/reference/` y docs/08.
+> Adoptada del repo backend en la consolidación (2026-07-15), donde era su SPEC-002. Describe el validador V1 **ya escrito** en `contracts/validators/milestone.ak`. El diseño Fase B (state-thread con thread token, D-008) vive en `contracts/reference/`.
+>
+> **Pendiente de reescritura (2026-07-29).** Esta spec precede a la documentación oficial de M2/M3 y quedó desactualizada en tres puntos: el rename a `ConstructionStage` (D-023), la FSM canónica (D-020) y el alcance del validador bajo D-021 (nunca custodia valor). Ver `ROADMAP.md` §Fase 0.
 
 ## Propósito
 

@@ -39,7 +39,7 @@ Sesión de sí/no sobre cada decisión abierta (el humano trae preferencias; el 
 - **runbooks/TEMPLATE.md:** solo si el proyecto se opera en producción ("un runbook que no se ensayó es una hipótesis").
 
 ### Fase 5 — Estructura de repos y hogar documental
-Decidir mono vs multi-repo por **ciclo de vida del código** (los contratos se congelan y auditan → repo aparte; si todo vive y muere junto → un repo). Definir el hogar documental único (en multi-repo: el repo que todos abren a diario; los demás linkean vía layout de hermanos + guard para LLMs: "si ../X/docs no existe, avisar y no continuar"). La raíz compartida no lleva archivos. El whitepaper original entra como **snapshot congelado** en `docs/context/`, con un extracto técnico de 1-2 páginas de lo que alimenta las specs.
+Decidir mono vs multi-repo por **ciclo de vida del código** (los contratos se congelan y auditan → repo aparte; si todo vive y muere junto → un repo). Definir el hogar documental único (en multi-repo: el repo que todos abren a diario; los demás linkean vía layout de hermanos + guard para LLMs: "si ../X/docs no existe, avisar y no continuar"). La raíz compartida no lleva archivos. El material fuente oficial (whitepaper, entregables aprobados) entra **congelado y de solo lectura** en `docs/`; lo que alimenta las specs se re-deriva hacia `specs/`, nunca se edita en origen. *(En este repo: `docs/` = entregables Catalyst, inmutable por D-022.)*
 
 ### Fase 6 — Bootstrap (el orden importa)
 1. `.gitignore` correcto por stack (los secretos bloqueados ANTES del primer add).
@@ -87,5 +87,5 @@ Decidir mono vs multi-repo por **ciclo de vida del código** (los contratos se c
 ☐ Template de specs + las 1-3 primeras identificadas con dueño
 ☐ Estructura de carpetas + .gitignore + git init + identidad
 ☐ Commit 1: docs · Commit 2: scaffold auditado · Commit 3: CI
-☐ Snapshot del whitepaper en docs/context/
+☐ Material fuente oficial congelado en docs/ (solo lectura)
 ☐ Primer objetivo declarado: el walking skeleton, como script
