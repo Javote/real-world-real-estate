@@ -6,7 +6,7 @@ import { setSession } from '../auth/session'
 export const Route = createFileRoute('/login')({ component: LoginScreen })
 
 // Perfiles del seed (packages/api/prisma/seed.ts). El rol "certifier" de la
-// maqueta corresponde al rol global `verifier` del backend (SPEC-006).
+// maqueta corresponde al rol global `verifier` del backend.
 export const ROLE_PRESETS = [
   { key: 'developer', icon: '🏗️', label: 'Developer', email: 'developer@example.com', password: 'dev123' },
   { key: 'certifier', icon: '✓', label: 'Certifier', email: 'verifier@example.com', password: 'verifier123' },
@@ -55,7 +55,7 @@ export function LoginScreen() {
       <div className="login-box">
         <div className="login-header">
           <div className="logo" style={{ fontSize: '2rem', marginBottom: '0.5rem' }}>
-            Prop<span>Trust</span>
+            Prop<span>Nexus</span>
           </div>
           <p style={{ color: 'var(--gray-600)' }}>Trazabilidad inmobiliaria con anclaje blockchain</p>
         </div>

@@ -92,7 +92,7 @@ Los entregables oficiales **son agnósticos de stack**: el único requisito téc
 2. **Cero PII on-chain o en logs:** ni nombres, ni emails, ni URLs internas, ni nombres de archivo en metadata, datums o logs. Solo hashes y refs opacas. Strings de metadata ≤ 64 bytes.
 3. **El hash es el ticket de entrada a la cadena de prueba** (D-027). Solo se hashea lo que se va a anclar. Si un archivo tiene `sha256Hash`, termina anclado — o se muestra como "Pendiente" mientras confirma, **nunca** como "Verificado". El hash lo calcula el servidor y no se recalcula ni se edita después de creado. Los **assets** informativos (renders, folletos, galerías, fotos de unidad de muestra) no se hashean, no se anclan y no muestran ninguna señal de prueba. No hay estado intermedio: un archivo está en la cadena de prueba o no está.
 4. **Passwords solo con bcrypt** (cost 10). Jamás loguear ni devolver `passwordHash` en ninguna respuesta.
-5. **Autorización en dos capas, siempre:** rol global (`requireRole`) + membresía por proyecto (`canAccessProject`). `admin` bypasea membresías; el resto solo ve proyectos donde es miembro (SPEC-006).
+5. **Autorización en dos capas, siempre:** rol global (`requireRole`) + membresía por proyecto (`canAccessProject`). `admin` bypasea membresías; el resto solo ve proyectos donde es miembro. La matriz completa está en M2-D1 §4.
 6. **Todo body se valida con Zod** (`safeParse` + 400 con `error.flatten()`). Nada llega a Prisma sin pasar por un schema. Para endpoints nuevos: el schema va a `packages/shared` ANTES que el endpoint, y el frontend importa el mismo tipo.
 7. **Toda mutación relevante escribe `AuditLog`** (append-only) vía `writeAuditLog`, con actor, entidad, acción, timestamp.
 8. **Idempotencia en todo lo que toca plata o chain:** re-ejecutar un anclaje, release o migración no duplica efectos.
@@ -110,7 +110,7 @@ Los entregables oficiales **son agnósticos de stack**: el único requisito téc
 
 - No migrar lógica de negocio on-chain: el backend es la fuente de verdad del lifecycle (D-007); on-chain se anclan pruebas.
 - No importar Lucid/Blockfrost fuera del futuro adaptador real de `packages/cardano` (D-014). Las rutas de la API jamás llaman a la chain directo.
-- En el front, no hacer `fetch` fuera de `ApiPort` (`apps/web/src/api/`): los adaptadores implementan la misma interfaz tipada (SPEC-004).
+- En el front, no hacer `fetch` fuera de `ApiPort` (`apps/web/src/api/`): los adaptadores (`real` | `mock`) implementan la misma interfaz tipada.
 - No tocar mainnet: `CARDANO_NETWORK=Preprod` siempre (D-013). CI no toca ninguna red.
 - **No subir `@types/express` a v5** mientras `express` sea v4: los tipos v5 rompen todas las rutas (ver gotchas).
 - **No editar migraciones ya aplicadas** en `packages/api/prisma/migrations/`; siempre migración nueva.
@@ -202,7 +202,7 @@ Smoke test manual: `pnpm dev`, login en `http://localhost:3000` con `admin@examp
 - **2026-07-15 · `@types/express` v5 con Express 4 rompe el typecheck** (21 errores `string | string[]` en `req.params`). Quedó pineado a `^4.17.21`. No "actualizar" ese paquete por su cuenta.
 - **2026-07-15 · Warning `url.parse()` deprecado al arrancar la API**: viene de Multer 1.x, no de nuestro código. Inofensivo; desaparecería al migrar a Multer 2.x (requiere decisión nueva por cambios de API).
 - **2026-07-15 · `contracts/validators/milestone.ak` y `milestone2.ak` son casi idénticos** (mismo validador, dos estilos). Consolidación pendiente — D-017.
-- **2026-07-15 · Los validadores Aiken tienen 0 tests** (`aiken check` pasa en verde vacío). Los casos borde de SPEC-002 son la suite mínima a escribir.
+- **2026-07-15 · Los validadores Aiken tienen 0 tests** (`aiken check` pasa en verde vacío). Los casos borde de la FSM (D-020) son la suite mínima a escribir.
 - La sintaxis de Aiken cambia entre versiones: verificá contra la versión pineada en CI (`aiken --version`) antes de asumir stdlib. Los `.ak` de este repo asumen v1.1.x.
-- Metadata de Cardano: strings > 64 bytes revientan al construir la tx — validar antes de firmar (caso 10 de SPEC-001).
+- Metadata de Cardano: strings > 64 bytes revientan al construir la tx — validar antes de firmar (D-006).
 - El scaffolder de TanStack Start cambia de flags entre versiones: `pnpm create @tanstack/start@latest --help` primero.

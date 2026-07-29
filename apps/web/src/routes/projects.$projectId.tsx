@@ -15,7 +15,7 @@ import { useRequireSession } from '../auth/useSession'
 
 export const Route = createFileRoute('/projects/$projectId')({ component: ProjectDetail })
 
-// Tabla de transiciones de SPEC-002 — el front solo ofrece movimientos válidos.
+// Tabla de transiciones de la FSM (D-020) — el front solo ofrece movimientos válidos.
 const VALID_TRANSITIONS: Record<MilestoneState, Array<{ to: MilestoneState; label: string }>> = {
   Pending: [{ to: 'InProgress', label: 'Iniciar' }],
   InProgress: [

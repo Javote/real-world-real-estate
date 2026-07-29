@@ -1,5 +1,5 @@
-// ApiPort — ÚNICO lugar del front que hace fetch (regla de CLAUDE.md, SPEC-004).
-// Adaptador `real` contra packages/api. El adaptador `mock` está pendiente (SPEC-004).
+// ApiPort — ÚNICO lugar del front que hace fetch (prohibición de CLAUDE.md).
+// Adaptador `real` contra packages/api. El adaptador `mock` está pendiente.
 
 import { clearSession, getSession } from '../auth/session'
 import type {

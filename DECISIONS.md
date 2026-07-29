@@ -104,7 +104,7 @@
 
 **Decisión.** Un UTxO por milestone identificado por thread token (asset name = milestone_ref); transiciones = gastar y recrear con datum nuevo. Tipos y tabla de transiciones en `lib/plataforma/milestone.ak` (puro, testeable barato); el validador es cáscara delgada. Espejo 1:1 con la implementación del backend.
 **Alternativas descartadas.** Todo en un archivo (impide importar tipos desde `stage_release.ak` y encarece tests); estado por datum sin token (falsificable por UTxOs paralelos).
-**Nota de consolidación.** El validador ya escrito en el backend (`milestone.ak`, sin thread token, 1-input/1-output — ver SPEC-002) es la V1 vigente; este patrón state-thread es el objetivo de Fase B.
+**Nota de consolidación.** El validador ya escrito en el backend (`milestone.ak`, sin thread token, 1-input/1-output) es la V1 vigente; este patrón state-thread es el objetivo de Fase B.
 **Fundamento reformulado (2026-07-29) — por qué sigue haciendo falta un validador.** Con D-021 (nunca custodia valor) y D-026 (no decide nada), la pregunta obligada es: si la plataforma no controla nada, ¿para qué un validador Plutus en vez de simple metadata (D-006)?
 
 > **El validador no controla el mundo real: controla al operador de la plataforma.**
@@ -276,7 +276,7 @@ Pending → InProgress → Completed        (Completed es terminal)
 | API | `/api/v1/…/milestones` | `/api/v1/…/stages` |
 | Contratos | `validators/milestone.ak`, `lib/plataforma/milestone.ak` | `stage.ak` |
 | Aiken | `name = "j/milestone-fsm"` | naming PropNexus |
-| Specs | SPEC-002 y referencias cruzadas | renombradas |
+| Specs | Referencias cruzadas al validador | renombradas |
 
 **Reinterpretación de M1-D2b.** El entregable llama `Milestone` a esta entidad. Se lee como `ConstructionStage`; el entregable no se edita (D-022).
 **Por qué ahora.** El rename cuesta una migración y un reemplazo cruzado hoy, cuando hay 5 rutas web y 6 archivos de rutas de API. Después de implementar las 53 entradas del backlog de M2-D5 cuesta un orden de magnitud más.

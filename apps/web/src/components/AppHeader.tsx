@@ -12,7 +12,7 @@ export function AppHeader({ session }: { session: Session }) {
   return (
     <header className="header">
       <Link to="/dashboard" className="logo" style={{ textDecoration: 'none' }}>
-        Prop<span>Trust</span>
+        Prop<span>Nexus</span>
       </Link>
       <nav className="nav">
         <Link to="/dashboard">Proyectos</Link>

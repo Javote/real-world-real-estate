@@ -148,17 +148,14 @@ timeouts y fallback branches (los caminos de excepción que M1-D1 §Workflow exi
 
 ---
 
-## Registro de specs (heredado — pendiente de reescritura)
+## Registro de specs
 
-> Estas specs precedieron a la documentación oficial de M2/M3. Se conservan mientras se define la
-> estructura nueva; su contenido vigente se absorberá y los archivos se reemplazarán.
+**Vacío.** Las siete specs heredadas (`SPEC-001` a `SPEC-007`) se eliminaron el 2026-07-29: todas
+precedían a la documentación oficial y describían prototipos descartables. Lo vigente de cada una ya
+está absorbido en `DECISIONS.md` y en este mapa. Siguen en el historial: `git show d57e017`.
 
-| # | Spec | Estado |
-|---|---|---|
-| SPEC-001 | [Anclaje de evidencia](SPEC-001-anclaje-evidencia.md) | Vigente en lo conceptual |
-| SPEC-002 | [Validador FSM (Aiken)](SPEC-002-validador-milestone-fsm.md) | Desactualizada: rename D-023, FSM D-020, alcance D-021 |
-| SPEC-003 | Dossier: compilación, export y share token | Nunca escrita |
-| SPEC-004 | [Demo frontend](SPEC-004-demo-frontend.md) | **Superada** — la maqueta que porta quedó obsoleta |
-| SPEC-005 | [API de la demo](SPEC-005-api-demo.md) | **Superada** — era un recorte de demo |
-| SPEC-006 | [Autenticación y permisos](SPEC-006-auth-y-permisos.md) | Vigente; falta 4 roles y matriz de M2-D1 §4 |
-| SPEC-007 | [Flujo de evidencia](SPEC-007-flujo-de-evidencia.md) | Vigente; falta bundles y Merkle |
+**La numeración no se recicla.** Las specs nuevas arrancan en `SPEC-008`.
+
+La estructura en discusión —referencias normativas para los invariantes, y specs = rebanadas
+verticales que dejan la app demostrable— todavía no está cerrada. Este archivo se actualiza cuando
+lo esté.

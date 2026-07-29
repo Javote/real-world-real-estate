@@ -1,4 +1,4 @@
-// Tests del flujo de login (SPEC-004: interfaz /login + caso borde 1).
+// Tests del flujo de login.
 // Monta LoginScreen en un router de memoria con un /dashboard stub: se prueba
 // el flujo real del navegador (form → ApiPort → sesión → redirect), con el
 // fetch mockeado — el test no depende de la API levantada.
@@ -103,7 +103,7 @@ describe('LoginScreen', () => {
     expect(body.password).toBe('verifier123')
   })
 
-  it('credenciales inválidas (401): muestra el error, no redirige y no guarda sesión — SPEC-004 caso borde 1', async () => {
+  it('credenciales inválidas (401): muestra el error, no redirige y no guarda sesión', async () => {
     vi.stubGlobal(
       'fetch',
       vi.fn(async () =>

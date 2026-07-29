@@ -1,5 +1,5 @@
-// Tipos espejo de las respuestas de packages/api (SPEC-006/007).
-// Migración pendiente a schemas Zod en packages/shared (SPEC-005 §1, tarea T0).
+// Tipos espejo de las respuestas de packages/api.
+// Migración pendiente a schemas Zod en packages/shared (regla 6 de CLAUDE.md).
 
 export type UserRole = 'admin' | 'developer' | 'buyer' | 'verifier'
 export type MilestoneState = 'Pending' | 'InProgress' | 'Completed' | 'Observed'

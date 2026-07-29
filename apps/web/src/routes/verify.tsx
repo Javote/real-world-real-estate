@@ -30,7 +30,7 @@ function VerifyScreen() {
     try {
       // Verificación contra los proyectos accesibles con la sesión actual.
       // La verificación pública real (sin cuenta, contra la chain) llega con
-      // SPEC-001 + AnchorPort (D-014).
+      // AnchorPort (D-014).
       const projects = await api.listProjects()
       for (const project of projects) {
         const evidence = await api.listEvidence(project.id)
@@ -55,13 +55,13 @@ function VerifyScreen() {
     <div>
       <div className="verification-hero">
         <div className="logo" style={{ fontSize: '2.5rem', marginBottom: '1rem' }}>
-          Prop<span>Trust</span>
+          Prop<span>Nexus</span>
         </div>
         <h1>Verificación de documentos</h1>
         <p>
           Validá la integridad de cualquier documento registrado en la plataforma por su hash
           SHA-256. El anclaje en Cardano (verificación pública por TXID) llega con la integración
-          on-chain — SPEC-001.
+          on-chain (D-014).
         </p>
 
         {session ? (
@@ -118,7 +118,7 @@ function VerifyScreen() {
                   </div>
                   <div className="proof-row">
                     <span className="proof-label">Anclaje on-chain</span>
-                    <span className="proof-value">Pendiente (SPEC-001)</span>
+                    <span className="proof-value">Pendiente</span>
                   </div>
                 </div>
               </div>
@@ -144,7 +144,7 @@ function VerifyScreen() {
             <div className="result-card">
               <p style={{ color: 'var(--gray-600)' }}>
                 La verificación sin cuenta estará disponible cuando el anclaje on-chain esté
-                integrado (SPEC-001): ahí cualquier persona podrá validar un hash o TXID
+                integrado (D-014): ahí cualquier persona podrá validar un hash o TXID
                 directamente contra Cardano. Por ahora, iniciá sesión para verificar contra tus
                 proyectos.
               </p>
