@@ -6,7 +6,7 @@
 
 Implementar el subconjunto de la API que el frontend de la demo (SPEC-004) necesita, arrancando por el **contrato Zod compartido** — que es lo único que sincroniza ambos frentes. La subida de documentación calcula y persiste hashes pero NO ancla: deja el enganche listo para `AnchorPort` (SPEC-001).
 
-> **Superada (2026-07-29).** El subconjunto de esta spec era un recorte de demo. El alcance real de la API es el backlog completo de **M2-D5 §4-6** (18 work streams `M3-BE-01..18`). Esta spec se reemplaza en la reescritura de `specs/`; ver `ROADMAP.md` §Fase 0.
+> **Superada (2026-07-29).** El subconjunto de esta spec era un recorte de demo. El alcance real de la API es el backlog completo de **M2-D5 §4-6** (18 work streams `M3-BE-01..18`). Esta spec se reemplaza en la reescritura de `specs/`; ver `specs/README.md`.
 
 ## Alcance / NO-alcance
 

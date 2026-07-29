@@ -15,20 +15,58 @@ Nunca uses "milestone" para una etapa de obra (D-023). Si ves `Milestone` en có
 
 ## Jerarquía de precedencia
 
-**DECISIONS.md > CLAUDE.md > STACK.md > specs/ > ROADMAP.md.**
+**DECISIONS.md > CLAUDE.md > specs/.**
 Si encontrás una contradicción entre documentos: manda la de mayor precedencia y corregí el documento en conflicto **en el mismo PR**. Si la contradicción es con código, avisá antes de "arreglar" nada.
 
 **`docs/` está fuera de esta jerarquía y es INMUTABLE.** Son los entregables oficiales tal como se presentaron a Catalyst. Si encontrás un error o una ambigüedad en un entregable, **no lo edites**: registrá una decisión en `DECISIONS.md` citando documento y párrafo. Ya hay cuatro discrepancias resueltas así (D-019 a D-022); están listadas en `docs/README.md`.
 
+## Principios de trabajo (los diez que sostienen todo lo demás)
+
+1. **Una sola fuente de verdad por cosa.** Cada dato vive en un lugar; el resto linkea, nunca copia. La duplicación diverge en silencio; el link roto es un fallo ruidoso — preferí siempre el fallo ruidoso.
+2. **Jerarquía de precedencia explícita.** El documento en conflicto se corrige en el mismo PR en que se detecta la contradicción.
+3. **Decidir rápido con defaults, refutar con spikes cortos** (≤2-3 días). Toda decisión abierta arranca con una opción por defecto; el spike existe para refutarla, no para explorar infinito. Reabrir una decisión aceptada requiere evidencia, no preferencia.
+4. **El repo es la memoria; los chats son descartables.** Toda decisión, gotcha o convención que emerja en una sesión se persiste en el mismo PR.
+5. **Documentar contra realidad, no intenciones.** Las specs se escriben cuando hay código real que documentar, un paso antes de necesitarlas. La documentación especulativa produce archivos que nadie corrige.
+6. **Vertical primero (walking skeleton).** Antes de pulir capas, un hilo mínimo que atraviesa todo el sistema de punta a punta. Después se engorda ese hilo.
+7. **Dependencias externas detrás de interfaces propias** con modo real/simulado conmutable por configuración. Los simuladores son producto, no stubs. Acá esa dependencia es Cardano (D-014).
+8. **Redefinir "listo" según lo que controlás.** Si el hito depende de terceros, "listo" es *listo para activar*: todo lo bloqueado detrás de configuración, activable en días.
+9. **LLMs para volumen, humanos para juicio**, con niveles de autonomía explícitos según riesgo. Nada de lógica crítica que el revisor no pueda explicar sin mirar el chat.
+10. **CI desde el primer PR** y **documentación antes que código**, para que toda sesión tenga contexto desde el minuto uno.
+
+## Estructura del repo
+
+`apps/web` (TanStack Start) y `packages/api` (Express + Prisma) son los únicos servicios. `shared`/`db`/`cardano` son librerías (hoy placeholders con .gitkeep; el esquema Prisma vive en `packages/api/prisma`). `contracts/` es el proyecto Aiken: no se hostea, su versión es un entero (D-015).
+
+Solo tres `.md` en la raíz, a propósito: **`README.md`** (entrada humana, arranque, variables de entorno), **`CLAUDE.md`** (este archivo: todo lo que un agente necesita en cada sesión) y **`DECISIONS.md`** (el porqué). El mapa de desarrollo está en `specs/README.md`; los entregables oficiales en `docs/` (índice en `docs/README.md`).
+
 ## Stack
 
-**El stack canónico vive en `STACK.md`.** No lo dupliques acá. Cambiarlo requiere una `D-0XX` nueva.
+Los entregables oficiales **son agnósticos de stack**: el único requisito técnico comprometido es que los contratos sean en **Aiken**. Todo lo de abajo es implementación nuestra y cambiarlo requiere una `D-0XX` nueva, no una edición de esta tabla.
 
-Lo esencial para no equivocarte: los entregables oficiales son agnósticos de stack y el único requisito técnico comprometido es que **los contratos sean en Aiken**. Todo lo demás es implementación nuestra.
+| Frente | Stack | Versión real | Decisión |
+|---|---|---|---|
+| Workspace | pnpm workspaces, Node ≥20, TypeScript estricto | `pnpm@9.15.0` | D-001 |
+| **web** | TanStack Start + Router + Query, React 19, Tailwind v4, Lucide, Vite, Vitest+jsdom | Start `^1.168` · TW `^4.1` | D-002, D-024 |
+| **web** (falta) | shadcn/ui — primitivos accesibles para los 36 componentes de M2-D3 | pendiente | D-024 |
+| **api** | Express 4 + Zod + JWT + bcrypt(10) + Multer 1.x, base `/api/v1` | Express `^4.21` | D-016 |
+| **db** | Prisma; SQLite en dev → **PostgreSQL al desplegar** | `^6.6` (resuelve 6.19.x) | D-016 |
+| storage | disco local en dev → **S3 genérico** (MinIO dev / R2 prod) | — | D-011 |
+| **shared** | Zod, contrato único API↔web | placeholder vacío | D-012 |
+| **cardano** | `AnchorPort` con adaptadores `blockfrost` (Lucid Evolution) y `simulated` | placeholder vacío | D-005, D-014 |
+| **contracts** | Aiken v1.1.21 · **Plutus V3** · stdlib v3.0.0 · blueprint commiteado | `plutus.json` → `v3` | D-017, D-019 |
+| red | **Preprod** en todos los entornos hasta M4 | — | D-013 |
+| deploy | Docker · Railway con "Wait for CI" · GHA **solo valida** | — | D-010 |
+| versionado | CalVer `vYYYY.MM.N` para servicios; entero para contratos; nada para packages internos | — | D-015 |
 
-## Estructura
+**Deuda técnica conocida** (registrada, sin decisión formal salvo donde se indica):
 
-`apps/web` (TanStack Start) y `packages/api` (Express + Prisma) son los únicos servicios. `shared`/`db`/`cardano` son librerías (hoy placeholders con .gitkeep; el esquema Prisma vive en `packages/api/prisma`). `contracts/` es el proyecto Aiken: no se hostea, su versión es un entero (D-015). Specs en `specs/`, decisiones en `DECISIONS.md`, stack en `STACK.md`, método de trabajo en `GUIA-COMMITS.md` y `PLAYBOOK.md`, entregables oficiales en `docs/` (índice en `docs/README.md`).
+- Skew de TypeScript: `5.8` en la API contra `6.0` en la web. **Unificar antes de poblar `packages/shared`**, que los tipa a ambos.
+- Nitro pineado a un **nightly** (`3.0.1-20260714-…`) que trajo el scaffold. Pasar a estable antes de pre-prod.
+- `contracts/aiken.toml` con naming de scaffold (`j/milestone-fsm`, `version = "0.0.0"`, que incumple D-015).
+- Multer 1.x emite warning de `url.parse()` deprecado; migrar a 2.x requiere decisión nueva.
+- `apps/web/src/styles.css`: ~1000 líneas de CSS de la maqueta anterior, a reemplazar por los tokens de M2-D3 (D-024).
+
+**Decisiones de stack abiertas:** D-005 (Lucid vs Mesh — lo cierra el walking skeleton) · D-009 (co-firma CIP-30 vs wallet por rol) · D-016 (Express→Hono solo con evidencia medida) · D-017 (`milestone.ak` vs `milestone2.ak`).
 
 ## Documentación oficial: qué leer antes de tocar cada frente
 
@@ -79,11 +117,50 @@ Lo esencial para no equivocarte: los entregables oficiales son agnósticos de st
 
 ## Método de trabajo LLM
 
-- **Spec-driven:** antes de codear, leé la spec correspondiente (`specs/`, índice en `specs/README.md`); si no existe y la tarea la amerita, la spec se escribe primero (≤2 págs, con el template).
+- **Spec-driven:** antes de codear, leé la spec correspondiente (`specs/`, mapa en `specs/README.md`); si no existe y la tarea la amerita, la spec se escribe primero (≤2 págs, con el template).
 - **PRs chicos con tests:** una tarea = una rama = un PR. Correr `pnpm typecheck && pnpm test` (y `aiken check` si aplica) ANTES de proponer el diff.
-- **Niveles de autonomía** (tabla completa en `GUIA-COMMITS.md`): 🟢 UI/CRUD/tests/docs según spec → implementá directo. 🟡 migraciones, auth, manejo de archivos, pipeline de anclaje, validadores, CI/deploy → proponé y esperá revisión línea por línea. 🔴 manejo de seeds/keys, lógica de permisos (`canAccessProject`), hashing y construcción de commitments → el humano lidera; vos asistís. *(Los validadores bajaron de 🔴 a 🟡 por D-021: no custodian valor.)*
-- **Persistencia de conocimiento:** toda decisión, gotcha o convención que surja en tu sesión va al repo en el mismo PR (DECISIONS.md, la spec, o la sección Gotchas de abajo). El chat es descartable; el repo es la memoria.
-- Confinamiento: trabajá solo en el frente asignado (web / api / contracts); las decisiones cruzadas las arbitra el humano.
+- **Persistencia de conocimiento:** toda decisión, gotcha o convención que surja en tu sesión va al repo en el mismo PR (DECISIONS.md, la spec, o la sección Gotchas de abajo).
+- **Confinamiento:** trabajá solo en el frente asignado (web / api / contracts); las decisiones cruzadas las arbitra el humano. Los merges los secuencia el humano.
+- **Pase de coherencia** al final de cada tanda grande de decisiones: grep de términos superados en todos los docs.
+
+### Niveles de autonomía (por riesgo del código)
+
+| Nivel | Qué cubre | Cómo se trabaja |
+|---|---|---|
+| 🟢 Verde | Componentes UI según M2-D3, endpoints CRUD según M2-D5, tests, docs, seeds | El LLM implementa directo; revisión de PR normal |
+| 🟡 Amarillo | Migraciones de DB, auth/permisos/guards, pipeline de anclaje (`packages/cardano`), manejo de archivos/S3, config de CI/deploy, **validadores Aiken** | El LLM propone; revisión humana línea por línea antes de merge |
+| 🔴 Rojo | Manejo de seeds/keys/firmas, todo lo que toque `SERVICE_WALLET_SEED`, la lógica de `canAccessProject`, hashing y construcción de commitments | El humano lidera y escribe; el LLM asiste. El revisor debe poder explicar cada línea sin mirar el chat |
+
+Si dudás del nivel, es el más alto de los dos. *(Los validadores bajaron de 🔴 a 🟡 por D-021: no custodian valor. Lo que queda en rojo es lo que puede filtrar secretos o romper el aislamiento entre roles.)*
+
+### Commits, ramas y PRs
+
+Formato: `<tipo>(<scope>): <descripción en imperativo, minúscula, sin punto final> [<REF>]`
+
+- **Tipos:** `feat` · `fix` · `refactor` · `test` · `docs` · `chore` · `perf` · `db`
+- **Scopes (cerrados):** `web` · `api` · `db` · `shared` · `cardano` · `contracts` · `ci` · `repo`
+- **REF:** el ID de M2-D5 entre corchetes cuando aplique (`[M3-BE-13]`, `[M3-FE-18]`, `[M3-SC-05]`)
+
+```
+feat(api): endpoint de subida de evidencia con merkle y anclaje [M3-BE-13]
+feat(web): modal AnchoringSuccess con merkle root y txid [M3-FE-18]
+db(db): tabla audit_log append-only con índice por categoría [M3-BE-16]
+test(web): e2e DEV-EVIDENCE-UPLOAD-001
+```
+
+Reglas: un commit = un cambio lógico (no mezclar refactor con feature) · el cuerpo explica el *por qué*, no el *qué* · `BREAKING CHANGE:` en el footer si rompe contrato de API o esquema on-chain · nunca commitear `.env`, seeds de wallet, keys ni evidencia real.
+
+Ramas: `<tipo>/<REF-en-kebab>-<descripción-corta>` — ej. `feat/M3-BE-13-evidence-anchoring`. `main` siempre deployable y protegida; merge solo por PR con squash.
+
+PR: título = mensaje de commit principal. Descripción con **qué**, **por qué**, **cómo probarlo**, y checklist:
+
+- [ ] `pnpm typecheck` y `pnpm test` pasan
+- [ ] Schema Zod en `shared` actualizado (si toca API)
+- [ ] Evento de `AuditLog` agregado (si es mutación relevante)
+- [ ] `aiken check` pasa (si toca contratos)
+- [ ] Sin datos sensibles on-chain ni en logs
+
+Un PR por rebanada de spec. PRs > ~500 líneas: dividir.
 
 ## Comandos
 

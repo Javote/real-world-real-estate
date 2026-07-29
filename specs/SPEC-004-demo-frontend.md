@@ -2,7 +2,7 @@
 
 > **Estado tras la consolidación (2026-07-15):** `apps/web` ya existe con las pantallas portadas de la maqueta PropTrust y un `ApiPort` con **adaptador real** contra la API existente (`packages/api`, SPEC-006/007). El usuario demo es el del seed del backend (`admin@example.com` / `admin123`).
 >
-> **Superada (2026-07-29).** La maqueta PropTrust que esta spec porta **quedó obsoleta**: el diseño vigente es PropNexus (M2-D1/D3/D4) y no deriva de ella. Lo único que sobrevive de esta spec es el contrato `ApiPort` (todo `fetch` pasa por ahí) y el patrón de adaptador real/mock. El alcance real del frontend es el backlog de **M2-D5 §4-6** (26 work streams `M3-FE-01..26`). Se reemplaza en la reescritura de `specs/`; ver `ROADMAP.md` §Fase 0.
+> **Superada (2026-07-29).** La maqueta PropTrust que esta spec porta **quedó obsoleta**: el diseño vigente es PropNexus (M2-D1/D3/D4) y no deriva de ella. Lo único que sobrevive de esta spec es el contrato `ApiPort` (todo `fetch` pasa por ahí) y el patrón de adaptador real/mock. El alcance real del frontend es el backlog de **M2-D5 §4-6** (26 work streams `M3-FE-01..26`). Se reemplaza en la reescritura de `specs/`; ver `specs/README.md`.
 
 ## Propósito
 

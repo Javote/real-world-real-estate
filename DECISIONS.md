@@ -1,6 +1,6 @@
 # DECISIONS.md
 
-> **Jerarquía de precedencia:** DECISIONS.md > CLAUDE.md > STACK.md > specs/ > ROADMAP.md.
+> **Jerarquía de precedencia:** DECISIONS.md > CLAUDE.md > specs/.
 > Ante contradicción entre documentos, gana el de mayor precedencia y el documento en conflicto se corrige en el mismo PR en que se detecta.
 > Reabrir una decisión **Aceptada** requiere evidencia (spike, incidente, medición), no preferencia. La numeración nunca se recicla.
 >
@@ -33,7 +33,7 @@
 | D-019 | Plutus **V3**, no V2 — desvío documentado del SOM de M3 | Aceptada |
 | D-020 | FSM canónica del stage; M1-D2c está mal dibujado | Aceptada |
 | D-021 | **La plataforma nunca custodia ni transfiere valor**, en ninguna fase | Aceptada |
-| D-022 | `docs/` inmutable (entregables oficiales); `STACK.md` canónico para el stack | Aceptada |
+| D-022 | `docs/` inmutable (entregables oficiales); el stack canónico vive en `CLAUDE.md` | Aceptada |
 | D-023 | `Milestone` → `ConstructionStage` en el dominio; "milestone" reservado a Catalyst | Aceptada |
 | D-024 | Sistema de diseño: Tailwind v4 + shadcn/ui con los tokens normativos de M2-D3 | Aceptada |
 | D-025 | i18n es-AR/en-US: diccionarios propios, cero strings hardcodeados | Aceptada |
@@ -123,7 +123,7 @@
 
 ## D-014 — Blockchain detrás de puerto propio con doble modo
 
-**Contexto.** Principio 7 del playbook: la dependencia más lenta e incierta va detrás de una interfaz propia con modo real/simulado. Acá es Cardano/Blockfrost.
+**Contexto.** Principio 7 (`CLAUDE.md` §Principios de trabajo): la dependencia más lenta e incierta va detrás de una interfaz propia con modo real/simulado. Acá es Cardano/Blockfrost.
 **Decisión.** `packages/cardano` expone `AnchorPort` (`anchor()`, `verify()`, `awaitConfirmation()`) con dos implementaciones: `blockfrost` (real) y `simulated` (determinística: txid = hash del payload, confirmación inmediata, verificación real contra un ledger en memoria/SQLite). **El simulador es producto**: lo usan los tests, el CI, el seed de demo y el desarrollo offline. `ANCHOR_MODE=real|simulated` por entorno.
 **Consecuencia.** Ninguna parte del sistema importa Lucid/Blockfrost directamente salvo el adaptador real.
 
@@ -205,11 +205,13 @@ Pending → InProgress → Completed        (Completed es terminal)
 **Base documental.** Consistente con M1-D1 §On-Chain/Off-Chain Boundaries y §Non-Substitution Statement, y con M2-D6 §8.1–8.2. El SOM es el único documento que sugiere lo contrario, y lo hace por vocabulario, no por diseño.
 **Reversión.** Introducir custodia sería un producto distinto con un perfil regulatorio distinto. Requiere renegociar el proyecto, no una decisión técnica.
 
-## D-022 — `docs/` inmutable; `STACK.md` canónico para el stack
+## D-022 — `docs/` inmutable; tres `.md` en la raíz
 
 **Contexto.** `docs/` pasó a contener los entregables oficiales de M1, M2 y M3 tal como fueron presentados. Editarlos para corregir errores desincronizaría el repo de lo que el revisor tiene, y volvería imposible verificar que entregamos lo que decimos. A la vez, esos entregables son **agnósticos de stack**: el único requisito técnico comprometido es que los contratos sean en Aiken.
-**Decisión.** (a) `docs/` es de solo lectura; toda corrección, desvío o reinterpretación se registra como decisión acá, citando documento y párrafo. (b) El stack vigente se documenta en **`STACK.md`**, en la raíz, fuera de `docs/`, porque es nuestro y es cambiable. (c) `DECISIONS.md` decide y `STACK.md` describe: si se contradicen, manda `DECISIONS.md`.
-**Consecuencia estructural.** `docs/` queda con tres carpetas (una por milestone) y un `README.md` de índice. Todo lo derivado que vivía ahí —guía de arquitectura, backlog, prompts, devops, snapshots de material fuente, reporte de sprint— se eliminó; lo vigente se re-deriva hacia `specs/` y estas decisiones. `GUIA-COMMITS.md` y `PLAYBOOK.md` pasaron a la raíz por ser método de trabajo, no documentación oficial.
+**Decisión.** (a) `docs/` es de solo lectura; toda corrección, desvío o reinterpretación se registra como decisión acá, citando documento y párrafo. (b) El stack vigente —que es nuestro y es cambiable— se documenta **fuera de `docs/`**, en `CLAUDE.md` §Stack, y cambiarlo requiere una decisión acá, no una edición de esa tabla.
+**Consecuencia estructural.** `docs/` queda con tres carpetas (una por milestone) y un `README.md` de índice. Todo lo derivado que vivía ahí —guía de arquitectura, backlog, prompts, devops, snapshots de material fuente, reporte de sprint— se eliminó; lo vigente se re-derivó hacia `specs/` y estas decisiones.
+**Actualización (2026-07-29, segunda pasada).** La raíz había quedado con ocho `.md`, lo que contradice el principio 1 (una sola fuente de verdad por cosa) por acumulación: dos índices del mismo trabajo, dos lugares con reglas de método. Se consolidó a **tres archivos**: `README.md` (entrada humana, arranque, entorno), `CLAUDE.md` (todo lo que un agente necesita por sesión: principios, stack, reglas, autonomía, commits, comandos, gotchas) y `DECISIONS.md`. `STACK.md`, `GUIA-COMMITS.md` y los diez principios de `PLAYBOOK.md` se absorbieron en `CLAUDE.md`; los pasos vivos de `SETUP.md` en `README.md`; `ROADMAP.md` en `specs/README.md`, que pasa a ser **el mapa de desarrollo** — un solo índice del trabajo en lugar de dos que divergen.
+**Qué se perdió a propósito.** Instrucciones de acciones ya ejecutadas una sola vez (el scaffolding de `SETUP.md` contra un stack que no se usó; las fases 1-6 del playbook, ya cumplidas; la guía genérica de escalado). No son conocimiento vivo y siguen en el historial: `git show 6a365ee`.
 **Reversión.** Barata: `git revert` del PR de consolidación; todo sigue en el historial.
 
 ## D-023 — `Milestone` → `ConstructionStage` en el dominio

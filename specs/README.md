@@ -1,41 +1,158 @@
-# specs/ — Registro
+# specs/ — El mapa de desarrollo
 
-> Reglas: número bajo demanda; la fila se agrega **en el mismo PR** que crea la spec. Las specs se escriben un sprint antes de su código. Máx. 2 páginas ([TEMPLATE.md](TEMPLATE.md)). Precedencia: DECISIONS.md > CLAUDE.md > specs. La numeración nunca se recicla.
+> **Precedencia:** `DECISIONS.md` > `CLAUDE.md` > `specs/`. La numeración nunca se recicla.
+> Este archivo absorbe el antiguo `ROADMAP.md` (2026-07-29): un solo índice del trabajo, para que
+> no haya dos listas que diverjan.
 >
-> **Nota de consolidación (2026-07-15):** SPEC-006 y SPEC-007 vienen del repo backend (donde eran SPEC-003 y SPEC-001); se renumeraron para no reciclar números de este registro. Describen código que ya existe y funciona en `packages/api`.
+> ⚠️ **La estructura de specs está en rediscusión.** El registro de abajo es el heredado y quedó
+> superado por la documentación oficial de M2/M3. La auditoría de conformidad y los criterios de
+> aceptación **sí son vigentes**.
 
-## Registro
+## Mandato
 
-| # | Spec | Estado | Dueño | Código en |
-|---|---|---|---|---|
-| SPEC-001 | [Anclaje de evidencia (hash → Merkle → AnchorPort → verificación)](SPEC-001-anclaje-evidencia.md) | Escrita | — asignar | Sprint 1 (script) y 2 (integración) |
-| SPEC-002 | [Validador milestone FSM (Aiken) — V1 vigente](SPEC-002-validador-milestone-fsm.md) | Escrita (código existente en `contracts/`) | — asignar | Hecho (V1); Fase B en Sprints 3 y 5 |
-| SPEC-003 | Dossier: compilación, export y share token público | Pendiente (escribir en Sprint 3) | — asignar | Sprint 4 |
-| SPEC-004 | [Demo local: frontend (login, proyectos, evidencia)](SPEC-004-demo-frontend.md) | Escrita | — asignar | Sprint 1 |
-| SPEC-005 | [API de la demo (adoptada: la API existente de `packages/api`)](SPEC-005-api-demo.md) | Escrita | — asignar | Hecho (D-016); costurón de anclaje en Sprint 2 |
-| SPEC-006 | [Autenticación y permisos](SPEC-006-auth-y-permisos.md) | Vigente (código existente) | — asignar | Hecho |
-| SPEC-007 | [Flujo de evidencia](SPEC-007-flujo-de-evidencia.md) | Vigente (código existente) | — asignar | Hecho |
+Entregar **Milestone 3 — Core Backend, Smart-Contract Development & Integration**: el backlog
+completo de `M2-D5`, corriendo de punta a punta en pre-producción pública, con anclaje real en
+Preprod y verificable por cualquier tercero vía TXID.
 
-## Mapa de dependencias y paralelización (Sprint 1, actualizado tras la consolidación)
+## Alcance: qué es M3 y qué es M4
 
-Los frentes B (API demo) y parte del A (pantallas) ya existen por la consolidación (D-016 + port de la maqueta). Queda:
+| | Milestone 3 | Milestone 4 |
+|---|---|---|
+| Red | **Preprod** (D-013) | Mainnet |
+| Entorno | Pre-producción pública | Producción |
+| Datos | Semilla + piloto con 3 participantes | Reales |
+| Contratos | Escritos, testeados ≥95%, desplegados en testnet | Congelados y auditados (trigger de D-001) |
+| Custodia de valor | **Ninguna** (D-021) | **Ninguna** (D-021) |
 
-```
-  FRENTE A                FRENTE C                  FRENTE UX/UI
-  Completar front         Walking skeleton          Identidad visual
-  (adaptador mock,        (SPEC-001: script         (shadcn/ui sobre las
-  SPEC-004; hoy solo      anclaje, spike D-005;     pantallas ya portadas;
-  existe el modo real)    no depende de A ni B)     no toca ApiPort)
-       │                        │
-       └───────────┬────────────┘
-                   ▼
-     INTEGRACIÓN (Sprint 2): anchorQueue real → AnchorPort:
-     evidencia pending → anchored + txid. El front ya
-     muestra el estado sin tocarlo.
-```
+D-021 aplica a las dos columnas. Lo que cambia en M4 es la red y el rigor operativo, no el modelo
+de confianza.
 
-**Reglas de paralelización:**
-- Los frentes son independientes: cada persona (o agente, confinado a su frente) avanza sin pisar a los demás. Ningún frente edita archivos de otro.
-- C (skeleton) es además el spike de D-005 y puede terminar primero.
-- El frente de contratos (tests de SPEC-002, consolidación D-017) también corre en paralelo: no está conectado a nada todavía.
-- SPEC-003 se escribe cuando su código está a un sprint de distancia — no antes (documentar contra realidad).
+## Qué controlamos y qué no
+
+- **Controlamos:** el código, el deploy, la red Preprod (faucet libre), el alcance de cada rebanada.
+- **No controlamos:** disponibilidad de Blockfrost, tiempos de confirmación, adopción de wallets
+  CIP-30 por notarios y certificadores, y la **disponibilidad de los 3 participantes piloto** que el
+  SOM exige que elijan los developers socios.
+- **Consecuencia (principio 8):** "listo" es *listo para activar* — lo que depende de terceros queda
+  detrás de configuración (`CARDANO_NETWORK`, `ANCHOR_MODE`), activable en días.
+- **Riesgo de agenda no técnico:** la carta de los pilotos es un entregable de M3 y depende de gente
+  externa. **Ese contacto arranca temprano, no en la última rebanada.**
+
+## "Listo" — los criterios de aceptación del SOM
+
+M3 se aprueba cuando estas afirmaciones son verificables por un tercero sin ayuda del equipo.
+Tomados de `docs/milestone-3-implementacion/Milestone-3-info.md`; el mapeo a evidencia es nuestro.
+
+| # | Criterio | Evidencia |
+|---|---|---|
+| 1 | Los contratos compilan | `aiken check` verde en CI; `plutus.json` coincide con el código |
+| 2 | Unit tests **≥95% coverage** | Reporte de coverage en CI (hoy: **0 tests**) |
+| 3 | **≥8 stages** con signers/percentages configurables | Tests parametrizados; plantilla estándar de 10 stages |
+| 4 | **3 participantes piloto** confirman que refleja el avance de obra y la lógica de certificación | Carta firmada |
+| 5 | Endpoints documentados | Colección Postman/OpenAPI publicada |
+| 6 | Proof objects validados | Tests por patrón P1–P10 contra M2-D4 §8.1 |
+| 7 | **Rechaza evidencia sin firmar** | Test de rechazo — ⚠️ *falta definir qué significa "firmada"* |
+| 8 | Flujos de UI end-to-end en pre-prod | Test IDs de M2-D5 §4-6 verdes + walkthrough |
+| 9 | Mediana **reserva → escrow < 12 min** | Telemetría + capturas; métrica definida en D-021 |
+| 10 | Audit logs persistidos | Ledger append-only paginable (M2-D4 P6) |
+| 11 | **Sin hallazgos P1** de seguridad abiertos | Reporte de security review con fixes |
+| 12 | Pre-prod en **URL pública** | La URL, viva |
+| 13 | **Video walkthrough** | El video del flujo completo |
+| 14 | **Runbook** deploy / rollback / incidente | El runbook + capturas de monitoreo |
+| 15 | Lista de **TXIDs** de anclajes de prueba | Publicada y resoluble en un explorador |
+| 16 | README marca **carpetas públicas vs privadas** | ⚠️ *requisito hoy no atendido* |
+
+**Seis de los dieciséis no se resuelven programando** (4, 11, 12, 13, 14, 16) y son los que siempre
+se dejan para el final.
+
+## Conformidad actual (auditoría 2026-07-29)
+
+| Frente | Conforme | Detalle |
+|---|---|---|
+| Endpoints | **2 de ~80** | Solo `POST /auth/login` y `GET /auth/me` coinciden exacto. El resto existe con paths no scopeados por rol, o no existe. |
+| Pantallas | **1 de 53** | Solo `/login`, y no conforma: pide email (M2-D2 pide *Username*), sin las 4 solapas de rol, sin `LanguageToggle`, sin `GradientHeader`. |
+| Componentes | **4 de 36 por nombre, 0 conformes** | `HashChip` no trunca 6+4 y usa emoji en vez de Lucide; `StatusPill` es booleano en vez de la matriz de 5 estados. `MilestoneStateBadge` y `AppHeader` no existen en M2-D3. |
+| Entidades | **6 de ~18** | Falta `Unit` —sobre la que giran contrato, releases y dossier— y el rol `notary`. |
+| Contratos | topología correcta, **0 tests** | El criterio 2 pide ≥95%. Las 6 ops `M3-SC-01..06` no existen como tales. |
+| i18n · tokens · shell mobile · Merkle · `AnchorPort` | **0%** | Nada implementado. |
+
+**Conformidad global ≈ 2%.** El código existente es una **semilla** cuyo valor son decisiones de
+arquitectura, no superficie terminada:
+
+- **Se conserva:** auth JWT+bcrypt con autorización en dos capas · SHA-256 en el servidor al subir ·
+  `AuditLog` append-only · el patrón `ApiPort` en el front · la topología de la FSM en Aiken · el
+  shape de `Project`/`Evidence` en Prisma.
+- **Se reemplaza:** las 5 rutas web como UI · `styles.css` · `MilestoneStateBadge` y `AppHeader` ·
+  el CRUD de `users` (no aparece en ninguna superficie de rol) · `/dashboard` y `/verify`.
+
+> **Hueco entre entregables detectado en la auditoría.** `/verify` no existe en M2-D5, pero M1-D1
+> §Evidence Model promete *"una guía paso a paso para que cualquier revisor externo verifique la
+> integridad de forma independiente"*. O esa verificación es un documento y no una pantalla, o M2
+> tiene un hueco respecto del whitepaper. **Hay que decidirlo, no descubrirlo en la revisión.**
+
+## Orden de trabajo
+
+Ordenado por **dependencia de datos**, siguiendo los flujos cross-rol de M2-D1 §6: el developer crea
+lo que el certifier valida, y ambos producen lo que el investor consume y el notary firma.
+
+Cada rebanada deja la app **corriendo y demostrable** — ese es el criterio de corte.
+
+| # | Rebanada | Qué podés hacer que antes no |
+|---|---|---|
+| 1 | Login de 4 roles | Entrás como cada rol y ves su panel, en ambos idiomas, en mobile |
+| 2 | Developer crea proyecto, unidades y stages | Creás un desarrollo con su plantilla de 10 stages |
+| 3 | **Evidencia → Merkle → TXID real** *(walking skeleton)* | Subís evidencia y obtenés un TXID verificable en cardanoscan |
+| 4 | Certifier certifica y observa | La FSM cierra el lazo: observar devuelve el stage al developer |
+| 5 | Invitación y aceptación | La unidad aparece en el portfolio del investor |
+| 6 | Releases por stage | Cada liberación con su TXID, visible para ambas partes |
+| 7 | Investor: browse, unidad, progreso | Recorrés el producto como comprador |
+| 8 | Dossier + share público + export | Un tercero verifica sin cuenta |
+| 9 | Notary firma | El dossier queda firmado con TXID |
+| 10 | Audit log completo | Historia filtrable con verificación a un tap |
+| 11 | Pre-prod, telemetría, seguridad, evidencia | Los 16 criterios en verde |
+
+**Track paralelo — contratos.** `contracts/` está aislado del workspace pnpm y no bloquea a nadie:
+corre en paralelo desde el inicio. (a) rename y naming PropNexus (D-023) + consolidar
+`milestone.ak`/`milestone2.ak` (D-017); (b) **suite de tests desde cero** — es el criterio 2 y
+estamos en 0; (c) las 6 ops como anclaje de commitment (D-021); (d) ≥8 stages, signers por rol,
+timeouts y fallback branches (los caminos de excepción que M1-D1 §Workflow exige y hoy no existen).
+
+## Decisiones abiertas
+
+| Decisión | Default | Qué la cierra | Cuándo |
+|---|---|---|---|
+| **Qué significa "evidencia sin firmar" (criterio 7)** | Sin default | Requiere `D-0XX` nueva. M1-D1 §Identity & Signatures exige "autoridad primero" y prohíbe certificar un stage crítico con firmas incompletas, pero nunca define qué constituye una firma. **Bloquea el diseño de `Evidence`** | Rebanada 1 |
+| D-005 Lucid vs Mesh | Lucid Evolution | El walking skeleton mismo | Rebanada 3 |
+| D-009 Custodia de firmas profesionales | Co-firma CIP-30 | Prototipo con un certificador real | Rebanada 9 |
+| D-017 `milestone.ak` vs `milestone2.ak` | Conservar `milestone.ak` | Spike ≤1 día | Track contratos |
+| Unificar TypeScript 5.8 / 6.0 | — | Deuda; bloquea `packages/shared` | Rebanada 1 |
+
+## Riesgos, señal temprana y plan B
+
+| Riesgo | Señal temprana | Plan B |
+|---|---|---|
+| **Coverage ≥95%** es un salto desde 0 | Track de contratos sin tests al cerrar la rebanada 3 | Criterio duro: no hay plan B, hay que empezarlo temprano |
+| **Los 3 pilotos no responden a tiempo** | Sin contacto al cerrar la rebanada 3 | Escalar a los developers socios; es su compromiso elegirlos |
+| Lib web3 bloquea (D-005) | El skeleton no ancla | Repetir con Mesh; decidir con evidencia |
+| Fricción CIP-30 con profesionales (D-009) | Spike de la rebanada 9 | Custodia delegada documentada con sus controles |
+| Blockfrost caído o limitado | Errores 402/429 en el adaptador | `ANCHOR_MODE=simulated` mantiene el producto usable; cola de re-anclaje |
+| Confirmaciones lentas rompen la UX | `AnchoringSuccessModal` tarda >30s | Modal en dos tiempos: "enviado" (TXID) → "confirmado" (poll) |
+| **Scope creep de UI**: 70 pantallas, 36 componentes | Una rebanada de superficie no cierra | Cortar superficies secundarias antes que mover la fecha. Dossier y audit log **no** son cortables: son la tesis del producto |
+| La métrica de 12 minutos se descubre tarde | No hay telemetría al llegar a la rebanada 11 | Instrumentarla en la rebanada 5, cuando nace el flujo de invitación |
+
+---
+
+## Registro de specs (heredado — pendiente de reescritura)
+
+> Estas specs precedieron a la documentación oficial de M2/M3. Se conservan mientras se define la
+> estructura nueva; su contenido vigente se absorberá y los archivos se reemplazarán.
+
+| # | Spec | Estado |
+|---|---|---|
+| SPEC-001 | [Anclaje de evidencia](SPEC-001-anclaje-evidencia.md) | Vigente en lo conceptual |
+| SPEC-002 | [Validador FSM (Aiken)](SPEC-002-validador-milestone-fsm.md) | Desactualizada: rename D-023, FSM D-020, alcance D-021 |
+| SPEC-003 | Dossier: compilación, export y share token | Nunca escrita |
+| SPEC-004 | [Demo frontend](SPEC-004-demo-frontend.md) | **Superada** — la maqueta que porta quedó obsoleta |
+| SPEC-005 | [API de la demo](SPEC-005-api-demo.md) | **Superada** — era un recorte de demo |
+| SPEC-006 | [Autenticación y permisos](SPEC-006-auth-y-permisos.md) | Vigente; falta 4 roles y matriz de M2-D1 §4 |
+| SPEC-007 | [Flujo de evidencia](SPEC-007-flujo-de-evidencia.md) | Vigente; falta bundles y Merkle |

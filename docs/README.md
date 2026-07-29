@@ -13,9 +13,9 @@ presentados. Es material de referencia, no documentación de trabajo.
    documento y el párrafo que reinterpreta. Ver §Discrepancias conocidas.
 3. **Los entregables son agnósticos de stack.** El único requisito técnico oficial del proyecto es
    que los smart contracts sean en **Aiken**. Todo lo demás (framework web, ORM, base de datos,
-   hosting) es decisión de implementación nuestra y vive en **`STACK.md`**.
+   hosting) es decisión de implementación nuestra y vive en la sección Stack de **`CLAUDE.md`**.
 4. Nada derivado vive acá: specs en `specs/`, decisiones en `DECISIONS.md`, reglas de trabajo en
-   `CLAUDE.md`, plan de ejecución en `ROADMAP.md`.
+   `CLAUDE.md`, mapa de desarrollo en `specs/README.md`.
 
 ## Índice
 
@@ -34,7 +34,7 @@ presentados. Es material de referencia, no documentación de trabajo.
 | Archivo | Entregable | Contenido |
 |---|---|---|
 | `M2-D1-Information-architecture-and-navigation-map.md` | M2-D1 | Roles (INV/DEV/NOT/CER), matriz de permisos, mapa de navegación por rol, árboles de pantallas, flujos cross-rol, gating de autenticación, i18n, notificaciones. |
-| `M2-D2-screen-catalog/` | M2-D2a | Catálogo visual de las ~70 pantallas. Los IDs (`06-07`, `44d`, `52v`…) que el backlog de M2-D5 referencia en cada fila salen de acá. |
+| `M2-D2-Screenshots-catalog/` | M2-D2a | Catálogo visual de las ~70 pantallas. Los IDs (`06-07`, `44d`, `52v`…) que el backlog de M2-D5 referencia en cada fila salen de acá. |
 | `M2-D3-Design-principles-and-component-library.md` | M2-D3 | 6 principios de diseño, lenguaje visual (color normativo, tipografía, iconografía, espaciado, elevación), 36 componentes, estados de interacción, accesibilidad WCAG 2.1 AA, localización. |
 | `M2-D4-UX-docs-and-proof-rendering-patterns.md` | M2-D4 | Los 10 patrones canónicos de renderizado de prueba (P1–P10), principios cross-patrón y los contratos de datos que le imponen al backend. |
 
@@ -74,4 +74,4 @@ Detectadas al consolidar. **Ninguna se corrige editando el entregable**; cada un
 | M3 SOM: "Plutus **V2** state machine". M2-D5 §3 repite el supuesto. | El proyecto Aiken es v1.1.21 y compila **Plutus V3** (`contracts/plutus.json` → `"plutusVersion": "v3"`). V3 es estrictamente posterior y es lo que Aiken 1.1.x emite nativamente. | D-019 |
 | M1-D2c: `Pending → InProgress → Completed → Observed → [*]`, con `Observed` posterior a `Completed` y terminal. | Topología canónica: `Pending → InProgress → {Observed ⇄ InProgress, Completed}`, `Completed` terminal. `Observed` es un camino de remediación, no un estado final — consistente con M1-D1 §Workflow y con M2-D1 (el certifier observa para que el developer corrija). | D-020 |
 | M3 SOM: "signers/**percentages** configurables", "reserva → creación de **escrow** < 12 min". | **La plataforma nunca custodia ni transfiere valor**, en ninguna fase. On-chain van solo commitments (hashes) y TXIDs; el dinero se mueve íntegramente fuera de la plataforma. Los porcentajes son cronograma de pagos registrado como dato; el "escrow" es el contrato creado y anclado. | D-021 |
-| Todos los entregables son agnósticos de stack; M2-D5 §2.1 usa notación de rutas Wouter. | El stack canónico vive en `STACK.md`. Las rutas de M2-D5 se leen como **paths**, no como elección de router. | D-022 |
+| Todos los entregables son agnósticos de stack; M2-D5 §2.1 usa notación de rutas Wouter. | El stack canónico vive en `CLAUDE.md` §Stack. Las rutas de M2-D5 se leen como **paths**, no como elección de router. | D-022 |
