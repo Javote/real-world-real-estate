@@ -37,6 +37,13 @@
 | D-023 | `Milestone` → `ConstructionStage` en el dominio; "milestone" reservado a Catalyst | Aceptada |
 | D-024 | Sistema de diseño: Tailwind v4 + shadcn/ui con los tokens normativos de M2-D3 | Aceptada |
 | D-025 | i18n es-AR/en-US: diccionarios propios, cero strings hardcodeados | Aceptada |
+| D-026 | **La plataforma no certifica, no valida y no decide** — solo registra, ancla y refleja | Aceptada (vocabulario de UI Abierto) |
+| D-027 | Taxonomía de archivos: el hash es el ticket de entrada a la cadena de prueba | Aceptada |
+| D-028 | Qué significa "evidencia sin firmar" (criterio 7 del SOM) | Aceptada |
+
+> **Repaso completo con la documentación oficial: ver §Repaso al final del archivo.** D-001..D-017 se
+> escribieron sin los entregables delante; las 25 entradas se revisaron el 2026-07-29 y cada una
+> tiene veredicto registrado.
 
 ---
 
@@ -80,12 +87,14 @@
 **Contexto.** El baseline (§13) pide empezar con transacciones de anclaje compactas y subir a validadores solo donde agreguen valor.
 **Decisión.** Fase A: tx con metadata `{v, t, h, r, p?}` bajo `ANCHOR_METADATA_LABEL`; strings ≤64 bytes; cero PII. Cubre M3-SC-01/02/06.
 **Alternativas descartadas.** Validador para todo desde el día 1 (complejidad sin retorno); NFT por evidencia (costo y ruido).
+**Criterio de qué se ancla (agregado 2026-07-29).** Se ancla lo que alguien podría necesitar verificar en una disputa; nada más. Ver D-027 para la taxonomía. **Perfil de carga observado:** lo anclable es escaso, valioso y llega temprano (permisos, planos, actas — de a uno) → el anclaje **individual** (`M3-SC-06`) es el caso normal, no la excepción, y el bundle con Merkle (`M3-SC-02`) es para cuando una etapa cierra con varios artefactos juntos. Lo voluminoso llega tarde (renders, fotos de unidad de muestra) y **no toca la cadena**: es presión sobre el almacenamiento (D-011), no sobre Cardano. Son dos subsistemas con perfiles opuestos; no dimensionarlos juntos.
 **Reversión.** N/A — Fase B se suma, no reemplaza: los anchors de metadata siguen siendo válidos históricamente.
 
 ## D-007 — Lifecycle de milestones: backend = fuente de verdad
 
 **Contexto.** El baseline §11 dice explícito que la fase 1 no exige enforcement on-chain del ciclo de vida.
-**Decisión.** La máquina de estados se persiste en el backend (hoy: enum `MilestoneState` + rutas de la API; objetivo: función pura en `packages/shared`). On-chain se anclan pruebas de las transiciones relevantes. El validador de milestones (D-008) es opt-in de Fase B para milestones `validation_critical` o como precondición de releases.
+**Decisión.** La máquina de estados se persiste en el backend (hoy: enum `MilestoneState` + rutas de la API; objetivo: función pura en `packages/shared`). On-chain se anclan pruebas de las transiciones relevantes. El validador de stages (D-008) es opt-in de Fase B para stages `validation_critical`.
+**Reformulación del fundamento (2026-07-29).** El título original —"el backend es la fuente de verdad"— se presta a leer que el backend **decide** el estado de una obra. No decide nada (D-026). El estado real lo determinan procesos externos: un municipio aprueba, un profesional observa, una obra avanza. Lo que el backend es fuente de verdad **de** es el **registro** de ese estado: qué se declaró, cuándo, y quién lo declaró. La implementación no cambia; el fundamento sí, y esto importa para no derivar mal después — por ejemplo, no hay ninguna regla de negocio que la plataforma pueda "hacer cumplir" sobre la obra, solo sobre la coherencia de su propio registro.
 **Reversión.** Subir enforcement es aditivo (D-006).
 
 ## D-008 — Validador de milestones: state-thread + núcleo puro
@@ -93,6 +102,14 @@
 **Decisión.** Un UTxO por milestone identificado por thread token (asset name = milestone_ref); transiciones = gastar y recrear con datum nuevo. Tipos y tabla de transiciones en `lib/plataforma/milestone.ak` (puro, testeable barato); el validador es cáscara delgada. Espejo 1:1 con la implementación del backend.
 **Alternativas descartadas.** Todo en un archivo (impide importar tipos desde `stage_release.ak` y encarece tests); estado por datum sin token (falsificable por UTxOs paralelos).
 **Nota de consolidación.** El validador ya escrito en el backend (`milestone.ak`, sin thread token, 1-input/1-output — ver SPEC-002) es la V1 vigente; este patrón state-thread es el objetivo de Fase B.
+**Fundamento reformulado (2026-07-29) — por qué sigue haciendo falta un validador.** Con D-021 (nunca custodia valor) y D-026 (no decide nada), la pregunta obligada es: si la plataforma no controla nada, ¿para qué un validador Plutus en vez de simple metadata (D-006)?
+
+> **El validador no controla el mundo real: controla al operador de la plataforma.**
+
+Con anclaje por metadata suelto, quien tenga la wallet de servicio puede publicar cualquier secuencia de anchors —contradictoria, fuera de orden, o inventada a posteriori— y la cadena la acepta sin chistar. Con state-thread, cada transición debe gastar el UTxO anterior: la secuencia queda **encadenada y ni nosotros mismos podemos falsificarla después**.
+
+Para un producto cuya tesis es "verificá sin confiar en la plataforma" (D-026), esa distinción *es* el producto: sin ella, el comprador sigue teniendo que confiar en nosotros, que es exactamente el problema que veníamos a resolver. Y es además lo que hace honesto el criterio del SOM cuando pide una *state machine* y no una lista de anclajes.
+**Consecuencia.** El validador se justifica solo donde la integridad de la **secuencia** importa (stages `validation_critical`). Para artefactos sueltos sin secuencia —un documento aislado, `M3-SC-06`— la metadata alcanza y agregar validador sería complejidad sin retorno.
 
 ## D-009 — Custodia de firmas de certificador/notario — **Default → spike**
 
@@ -248,3 +265,93 @@ Pending → InProgress → Completed        (Completed es terminal)
 **Consecuencia de diseño.** Los strings en español son 20–30% más largos que en inglés (M2-D3 §Text growth): los componentes se dimensionan al contenido; nada de anchos fijos salvo FAB e íconos.
 **Alternativas descartadas.** `react-i18next` (peso y ceremonia para dos locales y un diccionario estático); copy hardcodeado con traducción posterior (contradice el requisito y garantiza reescritura).
 **Reversión.** Barata mientras el acceso al diccionario esté detrás de un único hook.
+
+---
+
+> D-026 a D-028 se registran el **2026-07-29** tras el repaso completo de D-001..D-025 con la
+> documentación oficial delante (ver §Repaso al final). D-026 es la de mayor alcance de todo el
+> registro: gobierna copy, modelo de datos, validadores y postura legal.
+
+## D-026 — La plataforma no certifica, no valida y no decide
+
+**Contexto.** El vocabulario heredado —"certifier", "certificate", "Certified"— sugiere que la plataforma emite certificaciones. No lo hace, y creerlo lleva a diseñar mal: a poner reglas de negocio on-chain, a redactar copy que afirma validez legal, y a asumir una responsabilidad que el proyecto explícitamente rechaza en M1-D1 §Non-Substitution Statement.
+**Decisión.** La plataforma **acompaña procesos que ya existen fuera de ella y los refleja**. No es autoridad de nada. Solo puede sostener cuatro afirmaciones:
+
+1. este archivo tiene este hash;
+2. se registró en este momento;
+3. declara provenir de esta autoridad externa, con esta referencia;
+4. esta persona, con este rol, atestiguó haberlo revisado en este momento.
+
+Todo lo demás —que el permiso sea válido, que la obra esté bien ejecutada, que el profesional esté habilitado— ocurre y se determina afuera.
+
+**El rol "certifier" verifica integridad y completitud**, no validez legal: contrasta lo presentado contra los hashes anclados y confirma que no cambió y que no falta nada. Su artefacto es una **atestación técnica**, y el modelo de datos usa *attestation*, no *certification*.
+
+**Por qué existe la máquina de estados.** Porque el mundo real se retracta: documentación que parecía aprobada resulta observada, o aparece un error a subsanar. `Observed ⇄ InProgress` (D-020) no modela una decisión de la plataforma — modela una reversión que ya ocurre afuera y que hoy no queda registrada en ningún lado.
+
+**El problema que resuelve.** Hoy es imposible verificar el estado real de esos procesos: la evidencia está dispersa en canales informales y nada garantiza que lo que se muestra hoy sea lo que existía ayer. Esa opacidad ya causó daño económico real a compradores. La plataforma no agrega una autoridad nueva; hace verificable el rastro de las que ya existen.
+
+**Consecuencias operativas.** (a) Ninguna superficie afirma validez legal. (b) El aviso de no sustitución de M1-D1 se muestra donde aparecen atestaciones y dossiers. (c) Valida retroactivamente D-020: `Completed` y no `Certified` como nombre del estado, porque `Certified` habría implicado que certificamos.
+**Pendiente (Abierta).** M2-D1/D2/D5 usan "Issued certificates" y el pill "Certified" — entregables inmutables (D-022). Falta decidir si el copy se califica levemente ("Certificado técnico", extendiendo el subtítulo "Technical history" que la propia maqueta ya usa en la pantalla 58) o si se deja literal y toda la precisión va al modelo de datos y al aviso. Es postura legal, no técnica.
+**Reversión.** N/A — describe lo que el proyecto es. Cambiarlo sería otro producto con otro perfil regulatorio.
+
+## D-027 — Taxonomía de archivos: el hash es el ticket de entrada a la cadena de prueba
+
+**Contexto.** La regla 3 original de CLAUDE.md decía "todo archivo subido recibe hash SHA-256". Se escribió sin M2 delante y confunde dos cosas: hashear (milisegundos, sin efecto externo) y anclar (cuesta plata, ocupa cadena, crea una afirmación pública). Además, el flujo real tiene dos poblaciones muy distintas: documentación relevante que llega esporádica y temprano, y material informativo que llega en volumen y tarde.
+**Decisión.** Dos categorías, sin estado intermedio:
+
+| | **Anclable** (Evidence · Document) | **Asset** |
+|---|---|---|
+| Qué es | Permisos, planos aprobados, actas, informes, fotos de obra que sostienen el avance de una etapa | Renders, folletos, galería del proyecto, fotos de unidad de muestra |
+| Se hashea | **Sí** | **No** |
+| Se ancla | **Sí** (individual o por bundle) | No |
+| Señales de prueba en UI | Sí | **Ninguna** — ni `HashChip` ni `VerificationBadge` |
+| Mutabilidad | Inmutable desde su creación | Editable y borrable |
+
+**Solo se hashea lo que se va a anclar.** Un hash guardado es una promesa implícita: si existe en la base, alguien lo va a mostrar o un revisor va a preguntar por qué no está en la cadena. Eso crearía un tercer estado ambiguo —hasheado-pero-no-anclado— que es exactamente lo que M2-D4 §6.2 prohíbe. El único estado transitorio legítimo es "Pendiente" mientras la tx confirma; nunca "Verificado".
+**Criterio de corte.** Se ancla lo que alguien podría necesitar verificar en una disputa. Un permiso municipal sí; un render de marketing no.
+**Consecuencia sobre el modelo.** El Prisma actual tiene una sola tabla `Evidence` para todo. M2-D1 y M2-D5 ya tratan `Evidence bundle`, `Document` y las galerías como entidades distintas con endpoints distintos; el modelo no lo reflejaba porque se escribió sin M2 a la vista.
+**Alternativas descartadas.** Hashear todo "por si acaso" (crea el estado ambiguo y gasta la señal de prueba); anclar todo (costo y ruido sin retorno).
+
+## D-028 — Qué significa "evidencia sin firmar" (criterio 7 del SOM)
+
+**Contexto.** El SOM exige que la API *"rechace evidencia sin firmar"*, pero ningún documento define qué constituye una firma sobre una evidencia. M1-D1 §Identity & Signatures establece el flujo de "autoridad primero" (los documentos que requieren validación oficial deben estar certificados por la autoridad competente **antes** de subirse) y prohíbe marcar como certificado un hito crítico si faltan firmas — distinguiendo explícitamente entre firmas **nativas** y **de profesionales off-chain**. M1-D2b ya modela `EvidenceItem.authoritative: boolean`, campo que existe en el Prisma actual y está sin usar.
+**Decisión.** Deriva de D-026: la plataforma no valida la firma, **registra de forma inmutable la declaración de origen y la atestación de revisión**. Evidencia sin firmar es:
+
+- **(a)** la que se declara `authoritative` pero no trae atribución de autoridad externa — `issuingAuthority` y `authorityReference` (expediente, matrícula) pasan a ser obligatorios cuando `authoritative = true`; o
+- **(b)** un bundle que ningún revisor atestiguó.
+
+**El rechazo ocurre en la transición, no en el upload.** Un stage `validation_critical` no puede avanzar si le falta cualquiera de las dos. Subir es siempre posible; avanzar no.
+**Sobre la firma criptográfica.** Se aplica sobre la **atestación del revisor** (CIP-30, D-009), no sobre cada archivo. Si el spike de D-009 sale mal, degrada a atestación custodial **sin rehacer el modelo de datos** — que es la razón principal para separar (a) de (b) en vez de depender de una sola.
+**Que la autoridad sea "declarada" y no verificable por máquina no es una debilidad: es el alcance correcto** (D-026). Lo que la plataforma garantiza no es que el permiso sea válido, sino que ese archivo, con esa declaración de origen, existía en ese momento y no cambió desde entonces.
+**Alternativa descartada.** Exigir firma criptográfica archivo por archivo: ningún documento lo pide, rompería al developer subiendo fotos de obra desde el teléfono, y confunde **integridad** —ya resuelta con SHA-256— con **autoría**, que es lo que el criterio busca.
+
+---
+
+# Repaso completo — 2026-07-29
+
+**Por qué.** D-001 a D-017 se redactaron **antes** de que llegara la documentación oficial de M1, M2 y M3. Se revisaron las 25 entradas con los once entregables delante. Esto queda como constancia de que el repaso ocurrió: **una entrada marcada "Intacta" acá no se re-litiga sin evidencia nueva** (principio 3).
+
+| # | Veredicto | Qué pasó |
+|---|---|---|
+| D-001 | **Reformulada** | El trigger de revisión dependía de una custodia de fondos que D-021 dice que nunca existirá. Reescrito: dispara al congelar validadores para auditoría de cara a M4. |
+| D-002 | **Reformulada** | La maqueta PropTrust que porta quedó obsoleta; el diseño vigente es PropNexus. La adopción de shadcn/ui se formaliza en D-024. |
+| D-003 | Intacta | La separación web/api no la toca ningún entregable. |
+| D-004 | Intacta | Ya estaba reemplazada por D-016. |
+| D-005 | Intacta | Lucid vs Mesh sigue abierta; la cierra el walking skeleton. |
+| D-006 | **Reformulada** | Le faltaba el criterio de qué se ancla (ahora en D-027) y el perfil de carga: anclable escaso y temprano, voluminoso tardío y fuera de la cadena. |
+| D-007 | **Reformulada** | "El backend es la fuente de verdad" se leía como que el backend decide el estado de una obra. No decide nada (D-026): es fuente de verdad del **registro**, no del hecho. |
+| D-008 | **Reformulada** | Necesitaba responder por qué hace falta un validador si la plataforma no controla nada. Respuesta: no controla el mundo real, **controla al operador**. Sin eso, el comprador tendría que confiar en nosotros — el problema que veníamos a resolver. |
+| D-009 | Intacta | Sigue abierta; reencuadrada por D-028 (la firma cae sobre la atestación, no sobre cada archivo). |
+| D-010 | Intacta | Deploy no depende de nada que faltara. |
+| D-011 | Intacta | S3 sigue siendo el destino. D-027 le suma volumen tardío de assets como carga principal. |
+| D-012 | Intacta | Cambios aditivos: sin relación con lo que faltaba. |
+| D-013 | **Reformulada** | Se explicitó Preprod (no Preview) y que mainnet es alcance de **M4**, dato que no teníamos. |
+| D-014 | Intacta | `AnchorPort` con doble modo se confirma con M2-D4 §8.1. |
+| D-015 | Intacta | Versionado por artefacto: sin relación. |
+| D-016 | Intacta | El backend adoptado sigue siendo la base. El rol `notary` y el rename de D-023 son cambios de modelo, no de esta decisión. |
+| D-017 | Intacta | La consolidación `milestone.ak`/`milestone2.ak` sigue Abierta. |
+| D-018..D-025 | — | Nacidas ya con la documentación completa. |
+
+**Lo que el repaso cambió de fondo:** las tres decisiones on-chain (D-006, D-007, D-008) tenían fundamentos escritos para un producto que retenía valor y hacía cumplir reglas. El producto no es eso. La implementación de las tres sobrevive casi sin cambios — lo que se reescribió es **por qué**, que es lo que evita derivar mal en las próximas cincuenta decisiones.
+
+**Lo que el repaso no cubre:** el modelo de datos y las specs. Las entradas siguen siendo válidas, pero `specs/` entero precede a la documentación oficial y se reescribe aparte.

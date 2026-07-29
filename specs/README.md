@@ -31,8 +31,11 @@ de confianza.
 
 - **Controlamos:** el código, el deploy, la red Preprod (faucet libre), el alcance de cada rebanada.
 - **No controlamos:** disponibilidad de Blockfrost, tiempos de confirmación, adopción de wallets
-  CIP-30 por notarios y certificadores, y la **disponibilidad de los 3 participantes piloto** que el
-  SOM exige que elijan los developers socios.
+  CIP-30 por notarios y certificadores, la **disponibilidad de los 3 participantes piloto** que el
+  SOM exige que elijan los developers socios, y la revisión del **council of experts** — el órgano
+  externo de gobernanza del proyecto (entre board y órgano consultivo) que revisó y aprobó el
+  whitepaper antes de que los reviewers aprobaran M1. Es razonable esperar que revise los
+  entregables de M3 antes de la submission: es un gate más, con gente fuera del equipo.
 - **Consecuencia (principio 8):** "listo" es *listo para activar* — lo que depende de terceros queda
   detrás de configuración (`CARDANO_NETWORK`, `ANCHOR_MODE`), activable en días.
 - **Riesgo de agenda no técnico:** la carta de los pilotos es un entregable de M3 y depende de gente
@@ -121,7 +124,9 @@ timeouts y fallback branches (los caminos de excepción que M1-D1 §Workflow exi
 
 | Decisión | Default | Qué la cierra | Cuándo |
 |---|---|---|---|
-| **Qué significa "evidencia sin firmar" (criterio 7)** | Sin default | Requiere `D-0XX` nueva. M1-D1 §Identity & Signatures exige "autoridad primero" y prohíbe certificar un stage crítico con firmas incompletas, pero nunca define qué constituye una firma. **Bloquea el diseño de `Evidence`** | Rebanada 1 |
+| ~~Qué significa "evidencia sin firmar"~~ | — | **Cerrada: D-028.** Ya no bloquea el modelo de datos. | — |
+| **Vocabulario "certificate" en la UI** | Calificar levemente ("Certificado técnico") | Postura legal, no técnica — decisión del owner. Sub-ítem Abierto de D-026 | Rebanada 4 |
+| **`/verify`: verificación independiente** | Sin default | M1-D1 la promete, M2-D5 no tiene pantalla. ¿Documento o superficie? | Rebanada 3 |
 | D-005 Lucid vs Mesh | Lucid Evolution | El walking skeleton mismo | Rebanada 3 |
 | D-009 Custodia de firmas profesionales | Co-firma CIP-30 | Prototipo con un certificador real | Rebanada 9 |
 | D-017 `milestone.ak` vs `milestone2.ak` | Conservar `milestone.ak` | Spike ≤1 día | Track contratos |

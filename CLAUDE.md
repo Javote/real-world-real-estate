@@ -2,7 +2,11 @@
 
 ## Contexto (3 líneas)
 
-**PropNexus** (Catalyst 1400106) — plataforma de ventas inmobiliarias en pozo: estructura el ciclo de obra en **stages**, organiza **evidencia** (planos, fotos, permisos, certificados) y ancla **huellas criptográficas** (SHA-256/Merkle) en **Cardano** con timestamps. Off-chain: documentos, PII y lógica de negocio. On-chain: solo commitments compactos y TXIDs — **nunca valor** (D-021). Cuatro roles con superficie propia: investor (INV), developer (DEV), notary (NOT), certifier (CER).
+**PropNexus** (Catalyst 1400106) — plataforma de ventas inmobiliarias en pozo: estructura el ciclo de obra en **stages**, organiza **evidencia** (planos, permisos, actas, certificados) y ancla **huellas criptográficas** (SHA-256/Merkle) en **Cardano** con timestamps. Off-chain: documentos, PII y lógica de negocio. On-chain: solo commitments compactos y TXIDs — **nunca valor** (D-021). Cuatro roles con superficie propia: investor (INV), developer (DEV), notary (NOT), certifier (CER).
+
+**El problema real que resuelve.** Hoy es imposible verificar el estado real de los procesos de aprobación y avance de una obra en pozo: la evidencia está dispersa en canales informales y nada garantiza que lo que se muestra hoy sea lo que existía ayer. Esa opacidad ya causó daño económico real a compradores.
+
+**Lo que la plataforma NO hace** (D-026): no certifica, no valida y no decide nada. Acompaña procesos que ya existen afuera y los refleja. El rol "certifier" verifica **integridad y completitud** contra los hashes anclados — no validez legal. La plataforma solo puede sostener cuatro afirmaciones: *este archivo tiene este hash* · *se registró en este momento* · *declara provenir de esta autoridad externa* · *esta persona atestiguó haberlo revisado*. Si escribís copy, modelo o validador que afirme algo más, está mal.
 
 ## Vocabulario: "milestone" tiene dos significados — usá el correcto
 
@@ -82,7 +86,7 @@ Los entregables oficiales **son agnósticos de stack**: el único requisito téc
 
 1. **Datos primero:** dinero jamás en float — montos en unidades enteras mínimas (lovelace como `bigint`; moneda fiat en centavos `integer`). Timestamps en UTC. IDs = UUID.
 2. **Cero PII on-chain o en logs:** ni nombres, ni emails, ni URLs internas, ni nombres de archivo en metadata, datums o logs. Solo hashes y refs opacas. Strings de metadata ≤ 64 bytes.
-3. **Todo archivo subido recibe hash SHA-256** calculado del archivo en el servidor y persistido en `Evidence.sha256Hash`. Es el ancla de la verificación on-chain: no se recalcula ni se edita después de creado (SPEC-007).
+3. **El hash es el ticket de entrada a la cadena de prueba** (D-027). Solo se hashea lo que se va a anclar. Si un archivo tiene `sha256Hash`, termina anclado — o se muestra como "Pendiente" mientras confirma, **nunca** como "Verificado". El hash lo calcula el servidor y no se recalcula ni se edita después de creado. Los **assets** informativos (renders, folletos, galerías, fotos de unidad de muestra) no se hashean, no se anclan y no muestran ninguna señal de prueba. No hay estado intermedio: un archivo está en la cadena de prueba o no está.
 4. **Passwords solo con bcrypt** (cost 10). Jamás loguear ni devolver `passwordHash` en ninguna respuesta.
 5. **Autorización en dos capas, siempre:** rol global (`requireRole`) + membresía por proyecto (`canAccessProject`). `admin` bypasea membresías; el resto solo ve proyectos donde es miembro (SPEC-006).
 6. **Todo body se valida con Zod** (`safeParse` + 400 con `error.flatten()`). Nada llega a Prisma sin pasar por un schema. Para endpoints nuevos: el schema va a `packages/shared` ANTES que el endpoint, y el frontend importa el mismo tipo.
