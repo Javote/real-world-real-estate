@@ -69,7 +69,7 @@ Los entregables oficiales **son agnósticos de stack**: el único requisito téc
 **Deuda técnica conocida** (registrada, sin decisión formal salvo donde se indica):
 
 - Skew de TypeScript: `5.8` en la API contra `6.0` en la web. **Unificar antes de poblar `packages/shared`**, que los tipa a ambos.
-- Nitro pineado a un **nightly** (`3.0.1-20260714-…`) que trajo el scaffold. Pasar a estable antes de pre-prod.
+- Nitro pineado a un **nightly** (`3.0.1-20260714-…`) que trajo el scaffold. **Ya está molestando, no solo en pre-prod:** su proxy de desarrollo rompe `POST`+`401` (ver Gotchas), lo que hace indebuggeables los caminos de error de auth en local. Pasar a estable subió de prioridad.
 - `contracts/aiken.toml` con naming de scaffold (`j/milestone-fsm`, `version = "0.0.0"`, que incumple D-015).
 - Multer 1.x emite warning de `url.parse()` deprecado; migrar a 2.x requiere decisión nueva.
 - `apps/web/src/styles.css`: ~1000 líneas de CSS de la maqueta anterior, a reemplazar por los tokens de M2-D3 (D-024).
@@ -182,13 +182,26 @@ pnpm --filter @plataforma/api db:migrate     # nueva migración en desarrollo
 pnpm --filter @plataforma/api db:seed        # datos demo (admin/dev/buyer/verifier, proyecto torre-a)
 pnpm contracts:check              # aiken check (compila y corre tests de validadores)
 pnpm contracts:build              # regenera plutus.json (commitearlo)
+pnpm e2e                          # walkthrough Playwright (mobile + desktop) — NO corre en CI
+pnpm --filter web e2e:ui          # el mismo, en modo interactivo
+pnpm --filter web e2e:report      # abre el último reporte HTML
 ```
+
+**Sobre `pnpm e2e`:** levanta web+api solo (reusa los que ya estén corriendo), recorre la app y deja
+capturas, video y trace en `apps/web/e2e/.artifacts/` (gitignoreado). Se corre a mano, cada tanto —
+no en cada commit. Produce tres cosas que el SOM de M3 pide como evidencia: los test IDs de M2-D5
+ejecutándose, capturas, y el video del walkthrough (criterio 13).
 
 Smoke test manual: `pnpm dev`, login en `http://localhost:3000` con `admin@example.com` / `admin123` (seed) y navegar a proyectos.
 
 ## Gotchas (sección viva — agregá acá el mismo día que te muerda una)
 
 - **2026-07-29 · Un artefacto derivado contradijo al entregable y nos hizo decidir mal.** Cuatro `.puml` regenerados desde los PDF de M1 tenían las flechas de la FSM invertidas. Durante toda una sesión creímos que el entregable estaba mal dibujado y registramos un "desvío" (D-020) que **no existía**: el original decía exactamente lo que habíamos decidido. **Antes de concluir que un entregable está mal, verificá que estás mirando el entregable y no una transcripción.** El paquete canónico de M1 es `M1-D2-Architecture-and-Data-Models/`, y está hasheado en la Proof of Achievement.
+- **2026-07-29 · El proxy de nitro en dev convierte `POST` + `401` en `502 Bad Gateway`.** Reproducible al 100%, y **solo** esa combinación: `GET 401`, `POST 400` y `POST 200` pasan bien. Sale de `h3@2.0.1-rc.25` dentro de `nitro-nightly` (`runtime/internal/vite/dev-worker.mjs` → "fetch failed"), así que **es solo del dev-worker**: en producción la API es otro origen y no hay proxy. **Consecuencia:** el camino de error más común de cualquier app —credenciales inválidas— muestra "No se pudo conectar con la API" en desarrollo. Antes de debuggear un error de auth, verificá contra `:8787` directo. Queda como `test.fail()` en el walkthrough E2E para que avise cuando se arregle.
+- **2026-07-29 · Los tests E2E necesitan esperar la hidratación, no el DOM.** La app llega por SSR y los formularios son controlados por React: si Playwright hace click antes de que React monte, el `<form>` hace submit nativo, nunca corre el `preventDefault` y la página recarga sin llamar a la API. Da fallas intermitentes que parecen de backend. Hay que sondear la hidratación con una interacción que solo React pueda satisfacer — ver `waitForHydration` en `apps/web/e2e/walkthrough.spec.ts`.
+- **2026-07-29 · `test.fail()` a nivel `describe` aplica a todos los tests que siguen**, no solo al próximo. Para marcar un test suelto va **dentro** del cuerpo. Puesto afuera hizo fallar los 16.
+- **2026-07-29 · Los `<label>` de `login.tsx` no estaban asociados a sus inputs** (sin `htmlFor`/`id`), así que `getByLabel` no los encontraba y el formulario incumplía la accesibilidad que M2-D3 exige. Los tests de vitest no lo detectaban porque usaban otros selectores. Corregido. **Usá selectores accesibles en los tests: fallan cuando la accesibilidad está mal, que es justo lo que querés.**
+- **2026-07-29 · Un `*.test.tsx` dentro de `src/routes/` lo escanea el router de TanStack** y avisa "does not export a Route". Prefijarlo con `-` o configurar `routeFileIgnorePattern`. Y `vitest` levanta los `.spec.ts` de `e2e/` si no se los excluye: su `include` por defecto matchea `test` **y** `spec`.
 - **2026-07-29 · Las capturas de M2-D2 tienen datos mock, no datos de diseño.** M2-D1 §Primary platform characteristics lo dice: *"the maquette uses mock blockchain interactions"*. El panel del certifier (captura 55) muestra tres unidades del mismo proyecto en tres stages distintos, y **casi me hace modelar los stages por unidad** — cuando el dominio dice que un desarrollo tiene un solo trámite (D-029). Los hashes, TXIDs, números y combinaciones de las capturas son relleno. Lo normativo de una captura es la **estructura**: layout, componentes, jerarquía, estados. Los valores, no.
 - **2026-07-29 · Grepear solo `*.md` esconde entregables.** Busqué "council of experts" en `docs/ --include="*.md"` y concluí que no aparecía. Estaba en un `.csv` — y encima en una carpeta que todavía no se había copiado. Grepeá sin filtro de extensión, y verificá que el árbol esté completo antes de afirmar una ausencia.
 - **2026-07-29 · Los PDF de este repo no se leen con la herramienta de lectura** (falta `pdftoppm`). Y extraerles el texto no alcanza para un diagrama: las flechas son trazos vectoriales, no texto. Renderizalos primero: `qlmanage -t -s 1800 -o <dir> archivo.pdf` genera un PNG sin instalar nada.

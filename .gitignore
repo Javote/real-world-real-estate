@@ -34,3 +34,6 @@ test-results/
 
 # Config local de Claude Code
 .claude/settings.local.json
+
+# Artefactos de la suite E2E (capturas, videos, traces, reporte)
+apps/web/e2e/.artifacts/

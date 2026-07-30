@@ -79,8 +79,11 @@ export function LoginScreen() {
           </div>
 
           <div className="form-group">
-            <label className="form-label">Email</label>
+            <label className="form-label" htmlFor="login-email">
+              Email
+            </label>
             <input
+              id="login-email"
               type="email"
               className="form-input"
               value={email}
@@ -90,8 +93,11 @@ export function LoginScreen() {
           </div>
 
           <div className="form-group">
-            <label className="form-label">Contraseña</label>
+            <label className="form-label" htmlFor="login-password">
+              Contraseña
+            </label>
             <input
+              id="login-password"
               type="password"
               className="form-input"
               value={password}

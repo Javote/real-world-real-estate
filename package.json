@@ -16,6 +16,7 @@
     "db:migrate": "pnpm --filter @plataforma/api db:migrate",
     "db:seed": "pnpm --filter @plataforma/api db:seed",
     "contracts:check": "cd contracts && aiken check",
-    "contracts:build": "cd contracts && aiken build"
+    "contracts:build": "cd contracts && aiken build",
+    "e2e": "pnpm --filter web e2e"
   }
 }

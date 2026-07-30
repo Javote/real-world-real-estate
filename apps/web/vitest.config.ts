@@ -7,5 +7,8 @@ export default defineConfig({
   plugins: [react()],
   test: {
     environment: 'jsdom',
+    // e2e/ es de Playwright, no de vitest: sin esto vitest levanta los .spec.ts
+    // de ahí (su `include` por defecto matchea test Y spec) y explota.
+    exclude: ['**/node_modules/**', '**/dist/**', 'e2e/**'],
   },
 })
