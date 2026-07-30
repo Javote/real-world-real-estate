@@ -177,17 +177,29 @@ test(web): e2e DEV-EVIDENCE-UPLOAD-001
 
 Reglas: un commit = un cambio lógico (no mezclar refactor con feature) · el cuerpo explica el *por qué*, no el *qué* · `BREAKING CHANGE:` en el footer si rompe contrato de API o esquema on-chain · nunca commitear `.env`, seeds de wallet, keys ni evidencia real.
 
-Ramas: `<tipo>/<REF-en-kebab>-<descripción-corta>` — ej. `feat/M3-BE-13-evidence-anchoring`. `main` siempre deployable y protegida; merge solo por PR con squash.
+### Ramas: una sola, `main` (D-030)
 
-PR: título = mensaje de commit principal. Descripción con **qué**, **por qué**, **cómo probarlo**, y checklist:
+**Trunk-based mientras el equipo sea una persona.** No hay ramas de feature, no hay PRs, no hay
+protección de rama. El ciclo es siempre el mismo:
+
+> **planificar → implementar → testear → commitear → pushear**
+
+Pushear es parte del ciclo, no un paso aparte: un commit que no se pusheó no existe para nadie más
+y no pasó por CI.
+
+**Puerta antes de pushear** (era el checklist del PR; sigue valiendo, sin la ceremonia):
 
 - [ ] `pnpm typecheck` y `pnpm test` pasan
-- [ ] Schema Zod en `shared` actualizado (si toca API)
+- [ ] Schema Zod en `packages/shared` actualizado (si toca la API)
 - [ ] Evento de `AuditLog` agregado (si es mutación relevante)
 - [ ] `aiken check` pasa (si toca contratos)
 - [ ] Sin datos sensibles on-chain ni en logs
 
-Un PR por rebanada de spec. PRs > ~500 líneas: dividir.
+**Lo que no cambia:** el tamaño del commit. Un cambio lógico por commit sigue siendo la regla —
+ahora importa más, porque el mensaje de commit es la única revisión que va a existir. Si un cambio
+no se puede explicar en un mensaje, es demasiado grande.
+
+Cuando se sumen más personas, esto se revierte a ramas + PR. El trigger está en D-030.
 
 ## Comandos
 

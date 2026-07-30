@@ -44,6 +44,7 @@
 | D-027 | Taxonomía de archivos: el hash es el ticket de entrada a la cadena de prueba | Aceptada |
 | D-028 | Qué significa "evidencia sin firmar" (criterio 7 del SOM) | Aceptada |
 | D-029 | Alcance del dominio: stages del proyecto; la unidad es lo comercial | Aceptada |
+| D-030 | Trunk-based: una sola rama `main`, sin PRs | Aceptada (trigger de revisión definido) |
 
 > **Repaso completo con la documentación oficial: ver §Repaso al final del archivo.** D-001..D-017 se
 > escribieron sin los entregables delante; las 25 entradas se revisaron el 2026-07-29 y cada una
@@ -396,6 +397,15 @@ Project ──1:N── Unit                     ← nace en la subdivisión, pa
 
 **M1-D2b no se contradice con esto.** `UnitForSale "1" -- "1..*" Milestone` se lee como **asociación** —la trazabilidad de una unidad comprende N stages— no como pertenencia. No hay desvío que registrar.
 **Reversión.** Cara: toca el modelo entero. Requiere decisión nueva con evidencia del negocio.
+
+## D-030 — Trunk-based: una sola rama `main`, sin PRs
+
+**Contexto.** `CLAUDE.md` traía el flujo estándar: una rama por tarea, `main` protegida, merge solo por PR con squash, y un checklist en la descripción del PR. Eso viene del playbook y es correcto **para un equipo**. Hoy el equipo es una persona más agentes: no hay a quién revisarle, y el PR no agrega información — la agrega el mensaje de commit, que igual hay que escribir. Además el repo vivió sin remoto hasta el 2026-07-29, así que la ceremonia era puramente nominal.
+**Decisión.** Una sola rama, `main`. Sin ramas de feature, sin PRs, sin protección de rama. El ciclo es **planificar → implementar → testear → commitear → pushear**, y pushear es parte del ciclo: un commit sin pushear no pasó por CI ni existe para nadie más.
+**Lo que se conserva.** El checklist del PR no se tira, cambia de lugar: pasa a ser **puerta antes de pushear** (typecheck, tests, schema Zod, `AuditLog`, `aiken check`, cero datos sensibles). Y la regla de un cambio lógico por commit se vuelve **más** importante, no menos: el mensaje de commit es ahora la única revisión que va a existir.
+**Lo que se pierde, dicho explícito.** (a) El CI ya no corre *antes* de que el código toque `main`, sino después — el workflow dispara con `push` a `main`. (b) No hay diff revisable por un tercero antes del merge. (c) Un commit malo se arregla con otro commit adelante, no descartando una rama. Se aceptan los tres a cambio de velocidad, con el equipo del tamaño actual.
+**Trigger de revisión (no opcional).** **Cuando se sume la segunda persona al repo**, esto vuelve a ramas + PR: ahí el PR sí transporta información que el commit no (la conversación de revisión). Registrar la reversión como decisión nueva, no editando esta.
+**Reversión.** Trivial: reinstaurar la protección de rama en GitHub y volver a la convención `<tipo>/<REF-en-kebab>-<descripción>`, que queda documentada en el historial de `CLAUDE.md`.
 
 ---
 
