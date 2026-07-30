@@ -12,7 +12,7 @@
 
 | Término | Significa | Dónde |
 |---|---|---|
-| **Milestone** | Hito **Catalyst**: M1, M2, M3, M4. Etapas contractuales del proyecto. | `docs/milestone-N-*/`, reportes de entrega |
+| **Milestone** | Hito **Catalyst**: M1, M2, M3… Etapas contractuales del proyecto. | `docs/milestone-N-*/`, reportes de entrega |
 | **Stage** (`ConstructionStage`) | Etapa de **obra** de un desarrollo. Es la entidad del dominio. | Código, API, specs, contratos |
 
 Nunca uses "milestone" para una etapa de obra (D-023). Si ves `Milestone` en código, es deuda de rename pendiente.
@@ -62,7 +62,7 @@ Los entregables oficiales **son agnósticos de stack**: el único requisito téc
 | **shared** | Zod, contrato único API↔web | placeholder vacío | D-012 |
 | **cardano** | `AnchorPort` con adaptadores `blockfrost` (Lucid Evolution) y `simulated` | placeholder vacío | D-005, D-014 |
 | **contracts** | Aiken v1.1.21 · **Plutus V3** · stdlib v3.0.0 · blueprint commiteado | `plutus.json` → `v3` | D-017, D-019 |
-| red | **Preprod** en todos los entornos hasta M4 | — | D-013 |
+| red | **Preprod** en todos los entornos; mainnet fuera de alcance | — | D-013 |
 | deploy | Docker · Railway con "Wait for CI" · GHA **solo valida** | — | D-010 |
 | versionado | CalVer `vYYYY.MM.N` para servicios; entero para contratos; nada para packages internos | — | D-015 |
 
@@ -189,6 +189,7 @@ Smoke test manual: `pnpm dev`, login en `http://localhost:3000` con `admin@examp
 ## Gotchas (sección viva — agregá acá el mismo día que te muerda una)
 
 - **2026-07-29 · Un artefacto derivado contradijo al entregable y nos hizo decidir mal.** Cuatro `.puml` regenerados desde los PDF de M1 tenían las flechas de la FSM invertidas. Durante toda una sesión creímos que el entregable estaba mal dibujado y registramos un "desvío" (D-020) que **no existía**: el original decía exactamente lo que habíamos decidido. **Antes de concluir que un entregable está mal, verificá que estás mirando el entregable y no una transcripción.** El paquete canónico de M1 es `M1-D2-Architecture-and-Data-Models/`, y está hasheado en la Proof of Achievement.
+- **2026-07-29 · Las capturas de M2-D2 tienen datos mock, no datos de diseño.** M2-D1 §Primary platform characteristics lo dice: *"the maquette uses mock blockchain interactions"*. El panel del certifier (captura 55) muestra tres unidades del mismo proyecto en tres stages distintos, y **casi me hace modelar los stages por unidad** — cuando el dominio dice que un desarrollo tiene un solo trámite (D-029). Los hashes, TXIDs, números y combinaciones de las capturas son relleno. Lo normativo de una captura es la **estructura**: layout, componentes, jerarquía, estados. Los valores, no.
 - **2026-07-29 · Grepear solo `*.md` esconde entregables.** Busqué "council of experts" en `docs/ --include="*.md"` y concluí que no aparecía. Estaba en un `.csv` — y encima en una carpeta que todavía no se había copiado. Grepeá sin filtro de extensión, y verificá que el árbol esté completo antes de afirmar una ausencia.
 - **2026-07-29 · Los PDF de este repo no se leen con la herramienta de lectura** (falta `pdftoppm`). Y extraerles el texto no alcanza para un diagrama: las flechas son trazos vectoriales, no texto. Renderizalos primero: `qlmanage -t -s 1800 -o <dir> archivo.pdf` genera un PNG sin instalar nada.
 

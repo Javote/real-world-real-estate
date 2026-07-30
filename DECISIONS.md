@@ -40,9 +40,10 @@
 | D-023 | `Milestone` → `ConstructionStage` en el dominio; "milestone" reservado a Catalyst | Aceptada |
 | D-024 | Sistema de diseño: Tailwind v4 + shadcn/ui con los tokens normativos de M2-D3 | Aceptada |
 | D-025 | i18n es-AR/en-US: diccionarios propios, cero strings hardcodeados | Aceptada |
-| D-026 | **La plataforma no certifica, no valida y no decide** — solo registra, ancla y refleja | Aceptada (vocabulario de UI Abierto) |
+| D-026 | **La plataforma no certifica, no valida y no decide** — solo registra, ancla y refleja | Aceptada |
 | D-027 | Taxonomía de archivos: el hash es el ticket de entrada a la cadena de prueba | Aceptada |
 | D-028 | Qué significa "evidencia sin firmar" (criterio 7 del SOM) | Aceptada |
+| D-029 | Alcance del dominio: stages del proyecto; la unidad es lo comercial | Aceptada |
 
 > **Repaso completo con la documentación oficial: ver §Repaso al final del archivo.** D-001..D-017 se
 > escribieron sin los entregables delante; las 25 entradas se revisaron el 2026-07-29 y cada una
@@ -55,7 +56,7 @@
 **Contexto.** El playbook decide mono vs multi-repo por ciclo de vida: los contratos que se congelan y auditan suelen ir aparte. Acá los contratos de Fase A/B son anclaje e integridad (sin fondos), evolucionan junto al backend que los consume vía blueprint, y el equipo es chico.
 **Decisión.** Un solo repo. `contracts/` vive adentro pero aislado (fuera del workspace pnpm, CI propio con `aiken check` + verificación de `plutus.json`).
 **Alternativas descartadas.** Repo aparte de contratos desde el día 1: fricción de sincronización de blueprint sin beneficio mientras no haya auditoría.
-**Trigger de revisión (reescrito 2026-07-29).** El trigger original era "cuando `stage_release` (M3-SC-03) custodie fondos reales". **Esa condición nunca se va a cumplir:** por D-021 la plataforma no custodia valor en ninguna fase, así que ningún validador va a manejar fondos. El trigger vigente es otro: **cuando los validadores se congelen para auditoría externa de cara a mainnet (M4)**, se re-evalúa extraer `contracts/` a repo propio congelable. Registrar el resultado como D-0XX nueva.
+**Trigger de revisión (reescrito 2026-07-29).** El trigger original era "cuando `stage_release` (M3-SC-03) custodie fondos reales". **Esa condición nunca se va a cumplir:** por D-021 la plataforma no custodia valor en ninguna fase, así que ningún validador va a manejar fondos. El trigger vigente es otro: **cuando los validadores se congelen para auditoría externa de cara a mainnet**, se re-evalúa extraer `contracts/` a repo propio congelable. Registrar el resultado como D-0XX nueva.
 **Reversión.** `git filter-repo` sobre `contracts/` + el blueprint pasa a consumirse como artefacto versionado.
 
 ## D-002 — Frontend: TanStack Start + shadcn/ui
@@ -139,7 +140,7 @@ Para un producto cuya tesis es "verificá sin confiar en la plataforma" (D-026),
 ## D-013 — Preprod hasta aprobación de gobernanza
 
 **Decisión.** `CARDANO_NETWORK=Preprod` en todos los entornos. Mainnet = entorno nuevo con wallet nueva, checklist de despliegue y aprobación explícita. CI jamás toca la red (ni Preprod).
-**Actualización (2026-07-29).** Preprod y no Preview: espeja mainnet en parámetros de protocolo y epochs, tiene faucet estable y es la mejor soportada por Blockfrost y los exploradores públicos donde el revisor va a verificar los TXIDs. **Mainnet es alcance de Milestone 4** (app en producción), no de M3 — M3 corre íntegramente en testnet.
+**Actualización (2026-07-29).** Preprod y no Preview: espeja mainnet en parámetros de protocolo y epochs, tiene faucet estable y es la mejor soportada por Blockfrost y los exploradores públicos donde el revisor va a verificar los TXIDs. **Mainnet queda fuera del alcance de M3**, que corre íntegramente en testnet: requiere entorno nuevo, wallet nueva y aprobación explícita.
 
 ## D-014 — Blockchain detrás de puerto propio con doble modo
 
@@ -225,7 +226,7 @@ Pending → InProgress → Completed        (Completed es terminal)
 ## D-021 — La plataforma nunca custodia ni transfiere valor
 
 **Contexto.** El SOM de M3 usa vocabulario financiero que sugiere custodia: *"≥8 stages con signers/**percentages** configurables"*, *"mediana desde reserva hasta creación de **escrow** < 12 minutos"*, y `M3-SC-03` se llama *"stage payment release"*. Leído literalmente, describe un validador que retiene y libera fondos.
-**Decisión.** **La plataforma no custodia, no retiene y no transfiere valor — en ninguna fase, ni en M3 ni en M4.** On-chain van exclusivamente commitments criptográficos (hashes, Merkle roots) y sus TXIDs. Todo movimiento de dinero ocurre íntegramente fuera de la plataforma, entre las partes, por sus canales habituales.
+**Decisión.** **La plataforma no custodia, no retiene y no transfiere valor — en ninguna fase, ahora ni después.** On-chain van exclusivamente commitments criptográficos (hashes, Merkle roots) y sus TXIDs. Todo movimiento de dinero ocurre íntegramente fuera de la plataforma, entre las partes, por sus canales habituales.
 **Cómo se releen los términos del SOM:**
 
 | Término del SOM | Qué es en realidad |
@@ -259,13 +260,13 @@ Pending → InProgress → Completed        (Completed es terminal)
 
 **Artefactos derivados.** Solo lo entregado es canónico. Cuatro `.puml` regenerados desde los PDF se eliminaron el 2026-07-29 por contradecir los originales (flechas invertidas en la FSM, multiplicidades invertidas en el modelo de dominio, componentes perdidos en la arquitectura). Los PDF sí se conservan: fueron parte de la entrega, fueron aprobados y coinciden con los `.puml` originales.
 
-**Desvío registrado — `Milestone` cuelga de `UnitForSale` (M1) vs stages a nivel proyecto (M2).** El modelo de dominio de M1 dice `UnitForSale "1" -- "1..*" Milestone`. M2-D1 trata los stages como del **proyecto** (el developer avanza los 10 stages del desarrollo, no de cada unidad) y ata contrato, releases y dossier a la unidad. **Gana M2** por ser posterior y más específico, y porque es lo que la maqueta aprobada muestra. Caso (a) de la regla: los entregables se contradicen entre sí.
+**Desvío retirado (2026-07-29, mismo día).** Se había registrado acá un desvío `Milestone`/`UnitForSale` afirmando que M1 y M2 se contradecían. **No se contradicen** — la contradicción era mi lectura. Ver D-029, que resuelve el alcance del dominio sin desviarse de ningún entregable.
 
 **Reversión.** Barata: `git revert` del PR de consolidación; todo sigue en el historial.
 
 ## D-023 — `Milestone` → `ConstructionStage` en el dominio
 
-**Contexto.** "Milestone" se usa con dos significados incompatibles: los **hitos Catalyst** (M1, M2, M3, M4 — etapas contractuales del proyecto) y las **etapas de obra** de un desarrollo inmobiliario. La documentación nueva ya resolvió la ambigüedad de hecho: M2 y M3 dicen **"stage"** de forma consistente (`/projects/:id/stages`, `/certifier/stages/:stageId`, `StageChip`, "Standard, 10 stages", "construction stage" en la matriz de permisos de M2-D1 §4). Los que dicen `Milestone` son M1-D2b y el código actual.
+**Contexto.** "Milestone" se usa con dos significados incompatibles: los **hitos Catalyst** (M1, M2, M3… — etapas contractuales del proyecto) y las **etapas de obra** de un desarrollo inmobiliario. La documentación nueva ya resolvió la ambigüedad de hecho: M2 y M3 dicen **"stage"** de forma consistente (`/projects/:id/stages`, `/certifier/stages/:stageId`, `StageChip`, "Standard, 10 stages", "construction stage" en la matriz de permisos de M2-D1 §4). Los que dicen `Milestone` son M1-D2b y el código actual.
 **Decisión.** El dominio se renombra a **`ConstructionStage`** (`stage` en rutas, props y variables). "Milestone" queda reservado **exclusivamente** para los hitos Catalyst. Alcance del rename:
 
 | Dónde | De | A |
@@ -323,7 +324,7 @@ Todo lo demás —que el permiso sea válido, que la obra esté bien ejecutada, 
 **El problema que resuelve.** Hoy es imposible verificar el estado real de esos procesos: la evidencia está dispersa en canales informales y nada garantiza que lo que se muestra hoy sea lo que existía ayer. Esa opacidad ya causó daño económico real a compradores. La plataforma no agrega una autoridad nueva; hace verificable el rastro de las que ya existen.
 
 **Consecuencias operativas.** (a) Ninguna superficie afirma validez legal. (b) El aviso de no sustitución de M1-D1 se muestra donde aparecen atestaciones y dossiers. (c) Valida retroactivamente D-020: `Completed` y no `Certified` como nombre del estado, porque `Certified` habría implicado que certificamos.
-**Pendiente (Abierta).** M2-D1/D2/D5 usan "Issued certificates" y el pill "Certified" — entregables inmutables (D-022). Falta decidir si el copy se califica levemente ("Certificado técnico", extendiendo el subtítulo "Technical history" que la propia maqueta ya usa en la pantalla 58) o si se deja literal y toda la precisión va al modelo de datos y al aviso. Es postura legal, no técnica.
+**Vocabulario de la UI (cerrado 2026-07-29).** M2-D1, M2-D2 y M2-D5 usan "Issued certificates" y el pill "Certified". Como aparecen en entregables aprobados, **el copy queda literal** — calificarlo sería un desvío por conveniencia, que la regla de D-022 prohíbe. La precisión va a tres lugares que no tocan el entregable: el modelo de datos usa `attestation`, el aviso de no sustitución de M1-D1 se muestra donde aparecen atestaciones y dossiers, y el subtítulo "Technical history" que la propia maqueta ya trae en la pantalla 58 hace el trabajo de calificar.
 **Reversión.** N/A — describe lo que el proyecto es. Cambiarlo sería otro producto con otro perfil regulatorio.
 
 ## D-027 — Taxonomía de archivos: el hash es el ticket de entrada a la cadena de prueba
@@ -357,6 +358,45 @@ Todo lo demás —que el permiso sea válido, que la obra esté bien ejecutada, 
 **Que la autoridad sea "declarada" y no verificable por máquina no es una debilidad: es el alcance correcto** (D-026). Lo que la plataforma garantiza no es que el permiso sea válido, sino que ese archivo, con esa declaración de origen, existía en ese momento y no cambió desde entonces.
 **Alternativa descartada.** Exigir firma criptográfica archivo por archivo: ningún documento lo pide, rompería al developer subiendo fotos de obra desde el teléfono, y confunde **integridad** —ya resuelta con SHA-256— con **autoría**, que es lo que el criterio busca.
 
+## D-029 — Alcance del dominio: los stages son del proyecto; la unidad es lo comercial
+
+**Contexto.** Hubo confusión sobre si las etapas de obra cuelgan del proyecto o de la unidad, y llegué a registrar un desvío inexistente entre M1-D2b y M2-D1. La evidencia parecía dividida: el panel del certifier (captura 55) muestra tres unidades del mismo proyecto en tres etapas distintas (7B→5, 5A→6, 9C→3), mientras que el progreso del developer (captura 45) muestra **una sola** progresión de diez con etapas como "Land acquisition" y "Earthworks and excavation".
+
+**Lo que resolvió la ambigüedad** fue el dominio, no el documento: un desarrollo inmobiliario tiene **un solo trámite**. La subdivisión en unidades ocurre en un paso tardío del proyecto, y recién después se venden. No se hace movimiento de suelos por departamento.
+
+**Y la captura 55 no era evidencia:** M2-D1 §Primary platform characteristics dice explícitamente que *"the maquette uses mock blockchain interactions"*. Los números por unidad son datos de relleno, no una afirmación de diseño. Le había dado peso de entregable a un dato de ejemplo.
+
+**Decisión.**
+
+```
+Project ──1:N── ConstructionStage        ← el trámite: una sola progresión, compartida
+                      └──1:N── EvidenceBundle / Document → anclajes
+Project ──1:N── Unit                     ← nace en la subdivisión, paso tardío
+                      ├── Contract, PaymentRelease, Invitation
+                      └── Dossier = pruebas de los stages del proyecto
+                                  + documentos propios de la unidad
+```
+
+**Dos familias de anclaje**, tres y tres:
+
+| Ancla | Alcance | Op |
+|---|---|---|
+| Bundle de evidencia (Merkle root) | **Proyecto** → stage | `M3-SC-02` |
+| Certificación de stage | **Proyecto** → stage | `M3-SC-05` |
+| Documento suelto | **Proyecto** | `M3-SC-06` |
+| Aceptación de invitación | **Unidad** | `M3-SC-01` |
+| Release de pago por stage | **Unidad** → contrato | `M3-SC-03` |
+| Firma del notario sobre dossier | **Unidad** → dossier | `M3-SC-04` |
+
+**Consecuencias.**
+- **El certifier certifica un stage una sola vez**, a nivel proyecto. No una vez por unidad — con 400 unidades sería absurdo.
+- **El dossier sigue siendo por unidad** (lo manda M2), pero compone pruebas del proyecto —idénticas entre unidades hermanas— más lo propio de esa unidad. Es exactamente el *"mismo respaldo para unidades de un mismo proyecto"* que pide el negocio.
+- **`Unit` puede no existir al principio.** Un proyecto pasa un tiempo acumulando stages y evidencia con **cero unidades**. El modelo debe soportarlo y el flujo de invitación solo se habilita después de la subdivisión.
+- **`Milestone.scopeType` y `scopeUnitCount` se eliminan** del schema: nada en la cadena de prueba tiene alcance de unidad, así que el campo no distingue nada.
+
+**M1-D2b no se contradice con esto.** `UnitForSale "1" -- "1..*" Milestone` se lee como **asociación** —la trazabilidad de una unidad comprende N stages— no como pertenencia. No hay desvío que registrar.
+**Reversión.** Cara: toca el modelo entero. Requiere decisión nueva con evidencia del negocio.
+
 ---
 
 # Repaso completo — 2026-07-29
@@ -365,7 +405,7 @@ Todo lo demás —que el permiso sea válido, que la obra esté bien ejecutada, 
 
 | # | Veredicto | Qué pasó |
 |---|---|---|
-| D-001 | **Reformulada** | El trigger de revisión dependía de una custodia de fondos que D-021 dice que nunca existirá. Reescrito: dispara al congelar validadores para auditoría de cara a M4. |
+| D-001 | **Reformulada** | El trigger de revisión dependía de una custodia de fondos que D-021 dice que nunca existirá. Reescrito: dispara al congelar validadores para auditoría de cara a mainnet. |
 | D-002 | **Reformulada** | La maqueta PropTrust que porta quedó obsoleta; el diseño vigente es PropNexus. La adopción de shadcn/ui se formaliza en D-024. |
 | D-003 | Intacta | La separación web/api no la toca ningún entregable. |
 | D-004 | Intacta | Ya estaba reemplazada por D-016. |
@@ -377,7 +417,7 @@ Todo lo demás —que el permiso sea válido, que la obra esté bien ejecutada, 
 | D-010 | Intacta | Deploy no depende de nada que faltara. |
 | D-011 | Intacta | S3 sigue siendo el destino. D-027 le suma volumen tardío de assets como carga principal. |
 | D-012 | Intacta | Cambios aditivos: sin relación con lo que faltaba. |
-| D-013 | **Reformulada** | Se explicitó Preprod (no Preview) y que mainnet es alcance de **M4**, dato que no teníamos. |
+| D-013 | **Reformulada** | Se explicitó Preprod (no Preview) y que mainnet queda fuera del alcance de M3. |
 | D-014 | Intacta | `AnchorPort` con doble modo se confirma con M2-D4 §8.1. |
 | D-015 | Intacta | Versionado por artefacto: sin relación. |
 | D-016 | Intacta | El backend adoptado sigue siendo la base. El rol `notary` y el rename de D-023 son cambios de modelo, no de esta decisión. |

@@ -14,18 +14,18 @@ Entregar **Milestone 3 — Core Backend, Smart-Contract Development & Integratio
 completo de `M2-D5`, corriendo de punta a punta en pre-producción pública, con anclaje real en
 Preprod y verificable por cualquier tercero vía TXID.
 
-## Alcance: qué es M3 y qué es M4
+## Alcance de M3
 
-| | Milestone 3 | Milestone 4 |
-|---|---|---|
-| Red | **Preprod** (D-013) | Mainnet |
-| Entorno | Pre-producción pública | Producción |
-| Datos | Semilla + piloto con 3 participantes | Reales |
-| Contratos | Escritos, testeados ≥95%, desplegados en testnet | Congelados y auditados (trigger de D-001) |
-| Custodia de valor | **Ninguna** (D-021) | **Ninguna** (D-021) |
+| | |
+|---|---|
+| Red | **Preprod**, en todos los entornos (D-013) |
+| Entorno | Pre-producción pública |
+| Datos | Semilla + piloto con 3 participantes |
+| Contratos | Escritos, testeados ≥95%, desplegados en testnet |
+| Custodia de valor | **Ninguna** (D-021) |
 
-D-021 aplica a las dos columnas. Lo que cambia en M4 es la red y el rigor operativo, no el modelo
-de confianza.
+Mainnet y producción quedan fuera de M3 y no se planifican acá: requieren entorno nuevo, wallet
+nueva y aprobación explícita (D-013).
 
 ## Qué controlamos y qué no
 

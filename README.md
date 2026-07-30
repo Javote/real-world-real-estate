@@ -61,7 +61,7 @@ DATABASE_URL=file:./dev.db              # SQLite en dev; postgres://… al despl
 JWT_SECRET=cambiame-en-produccion
 UPLOAD_DIR=./uploads                    # disco local en dev; S3 en prod (D-011)
 MAX_FILE_SIZE_MB=10
-CARDANO_NETWORK=Preprod                 # nunca mainnet hasta M4 (D-013)
+CARDANO_NETWORK=Preprod                 # nunca mainnet (D-013)
 ANCHOR_MODE=simulated                   # simulated | real (D-014)
 BLOCKFROST_API_KEY=preprod_xxx
 SERVICE_WALLET_SEED=…                   # jamás commitear (regla 12 de CLAUDE.md)
@@ -143,7 +143,7 @@ nunca habla directo con Cardano.
 ## Estado
 
 M1 y M2 entregados. **M3 en construcción** — su alcance es el backlog completo de `M2-D5`,
-corriendo íntegramente en **Preprod** (D-013). Mainnet y producción son Milestone 4.
+corriendo íntegramente en **Preprod** (D-013). Mainnet y producción quedan fuera de alcance.
 
 La conformidad actual del código con los entregables es de orden **2%**: lo que existe es una
 semilla que aporta decisiones de arquitectura (auth en dos capas, SHA-256 en el servidor, audit log

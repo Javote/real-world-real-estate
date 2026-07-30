@@ -34,7 +34,7 @@ presentados. Es material de referencia, no documentación de trabajo.
 | `M1-D1b-resumen-whitepaper-castellano.md` | *(derivado)* | Resumen en castellano, sección por sección. Cómodo para trabajar; **no reemplaza al PDF** ante una duda. |
 | **`M1-D2-Architecture-and-Data-Models/`** | **M1-D2 — canónico** | El paquete tal como se entregó y hasheó. Ver detalle abajo. |
 | `M1-D2{a,b,c,d}-*.pdf` | M1-D2 (presentación) | Versiones en Illustrator de los cuatro diagramas, agregadas para facilitar la lectura a los reviewers. Aprobadas y **coincidentes** con los `.puml` originales. |
-| `M1-D3-PilotPlan.pdf` | M1-D3 | Plan del piloto: timeline, alcance, métricas y tests, más las cartas de conformidad del notario y dos developers. **Relevante para el criterio 4 de M3.** |
+| `M1-D3-PilotPlan.pdf` | M1-D3 | Plan del piloto: roadmap de tiempos de desarrollo por milestone, más las cartas de conformidad del notario y dos developers. **No define métricas de tiempo ni umbrales numéricos** (verificado). Relevante para el criterio 4 de M3 por las cartas. |
 | `M1-D4-Blockchain-Anchoring-Index.md` | M1-D4 | Los tres entregables de M1 con su SHA-256, su TXID y el link a cardanoscan. |
 
 #### `M1-D2-Architecture-and-Data-Models/` — el paquete canónico
@@ -57,7 +57,7 @@ M1** (ver `M1-D4`): el contenido está comprometido criptográficamente.
 | Archivo | Entregable | Contenido |
 |---|---|---|
 | `M2-D1-Information-architecture-and-navigation-map.md` | M2-D1 | Roles (INV/DEV/NOT/CER), matriz de permisos, mapa de navegación por rol, árboles de pantallas, flujos cross-rol, gating de autenticación, i18n, notificaciones. |
-| `M2-D2-Screenshots-catalog/` | M2-D2a | Catálogo visual de las ~70 pantallas. Los IDs (`06-07`, `44d`, `52v`…) que el backlog de M2-D5 referencia en cada fila salen de acá. |
+| `M2-D2-Screenshots-catalog/` | M2-D2 | Catálogo visual de las ~70 pantallas. Los IDs (`06-07`, `44d`, `52v`…) que el backlog de M2-D5 referencia en cada fila salen de acá. **Los datos son mock** (M2-D1 lo dice): lo normativo es la estructura, no los valores. |
 | `M2-D3-Design-principles-and-component-library.md` | M2-D3 | 6 principios de diseño, lenguaje visual (color normativo, tipografía, iconografía, espaciado, elevación), 36 componentes, estados de interacción, accesibilidad WCAG 2.1 AA, localización. |
 | `M2-D4-UX-docs-and-proof-rendering-patterns.md` | M2-D4 | Los 10 patrones canónicos de renderizado de prueba (P1–P10), principios cross-patrón y los contratos de datos que le imponen al backend. |
 
@@ -99,7 +99,6 @@ entregable**, y todos se comunican en la entrega:
 | M3 SOM: "Plutus **V2** state machine"; M2-D5 §3 repite el supuesto. | El proyecto Aiken es v1.1.21 y compila **Plutus V3** (`contracts/plutus.json`). V3 es estrictamente posterior y es lo que Aiken 1.1.x emite nativamente. Ningún entregable fija versión de Aiken. | (b) error de redacción | D-019 |
 | M3 SOM: "signers/**percentages** configurables", "reserva → creación de **escrow** < 12 min". | **La plataforma nunca custodia ni transfiere valor**, en ninguna fase. Los porcentajes son cronograma registrado como dato; el "escrow" es el contrato creado y anclado. | (c) contradice una verdad del producto | D-021 |
 | M1 §README lista los estados como "…**Certified**…"; el `.puml` dice `Completed`. | Gana `Completed`: precedencia interna de M1 (artefactos especificados > README de cortesía), y además `Certified` implicaría que la plataforma certifica. | (a) contradicción interna | D-020, D-026 |
-| M1-D2b: `UnitForSale "1" -- "1..*" Milestone` — los stages cuelgan de la unidad. | M2-D1 los trata como stages del **proyecto** y ata contrato, releases y dossier a la unidad. Gana M2: posterior, más específico, y es lo que muestra la maqueta aprobada. | (a) contradicción entre entregables | D-022 |
 | M1 §README promete que la taxonomía indica "authoritative" y "anchored on-chain". | El CSV entregado no tiene esas columnas. El README prometió de más; el hueco lo llenan D-027 (qué se ancla) y D-028 (qué es autoritativo). | (a) contradicción interna | D-027, D-028 |
 | M2-D5 §2.1 usa notación de rutas Wouter. | Las rutas se leen como **paths**, no como elección de router. Los entregables son agnósticos de stack. | (b) error de redacción | D-022 |
 
