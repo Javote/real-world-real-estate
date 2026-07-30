@@ -152,7 +152,7 @@ timeouts y fallback branches (los caminos de excepción que M1-D1 §Workflow exi
 
 **Vacío.** Las siete specs heredadas (`SPEC-001` a `SPEC-007`) se eliminaron el 2026-07-29: todas
 precedían a la documentación oficial y describían prototipos descartables. Lo vigente de cada una ya
-está absorbido en `DECISIONS.md` y en este mapa. Siguen en el historial: `git show d57e017`.
+está absorbido en `DECISIONS.md` y en este mapa. Siguen en el historial: `git log --diff-filter=D --name-only -- 'specs/SPEC-*'`.
 
 **La numeración no se recicla.** Las specs nuevas arrancan en `SPEC-008`.
 
