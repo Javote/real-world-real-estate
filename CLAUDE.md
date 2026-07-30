@@ -8,6 +8,25 @@
 
 **Lo que la plataforma NO hace** (D-026): no certifica, no valida y no decide nada. Acompaña procesos que ya existen afuera y los refleja. El rol "certifier" verifica **integridad y completitud** contra los hashes anclados — no validez legal. La plataforma solo puede sostener cuatro afirmaciones: *este archivo tiene este hash* · *se registró en este momento* · *declara provenir de esta autoridad externa* · *esta persona atestiguó haberlo revisado*. Si escribís copy, modelo o validador que afirme algo más, está mal.
 
+## Si llegás nuevo: punto de partida
+
+**El código es una semilla, no la app.** `apps/web` está a ~2% de conformidad con el diseño aprobado:
+sin `GradientHeader`, sin `BottomNav`, paleta equivocada, textos hardcodeados, "Milestones" donde va
+"Stages". **Eso es lo esperado, no un bug que arreglar de paso.** Lo valioso de lo que existe son
+decisiones de arquitectura (auth en dos capas, SHA-256 en el servidor, `AuditLog` append-only, el
+patrón `ApiPort`, la topología de la FSM en Aiken), no superficie terminada. `packages/api` está
+bastante mejor parado que `apps/web`: la API se evoluciona, el front se reemplaza.
+
+Orden de lectura para agarrar contexto rápido:
+
+1. Este archivo entero (son ~200 líneas y es lo único que se carga solo).
+2. `specs/README.md` — el mapa: criterios de aceptación de M3, conformidad actual medida, orden de trabajo, decisiones abiertas, riesgos.
+3. `DECISIONS.md` — el porqué. Si algo del código te parece raro, la respuesta está acá antes que en el código.
+4. `docs/README.md` — índice de los entregables oficiales y los desvíos registrados.
+5. Lo puntual del frente que vas a tocar (ver la tabla de §Documentación oficial más abajo).
+
+Para ver la app corriendo: `pnpm e2e` o el skill `run-app`. **No improvises un driver de browser**, ya está armado.
+
 ## Vocabulario: "milestone" tiene dos significados — usá el correcto
 
 | Término | Significa | Dónde |
