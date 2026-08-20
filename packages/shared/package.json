@@ -1,0 +1,21 @@
+{
+  "name": "@plataforma/shared",
+  "version": "0.0.0",
+  "private": true,
+  "description": "Contrato único API↔web: schemas Zod y los tipos que ambos importan (D-012, regla 6)",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "prepare": "tsc -p tsconfig.json",
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "test": "vitest run"
+  },
+  "dependencies": {
+    "zod": "^3.24.2"
+  },
+  "devDependencies": {
+    "typescript": "^6.0.2",
+    "vitest": "^4.1.5"
+  }
+}

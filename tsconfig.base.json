@@ -17,7 +17,6 @@
     "paths": {
       "@plataforma/shared": ["packages/shared/src"],
       "@plataforma/shared/*": ["packages/shared/src/*"],
-      "@plataforma/db": ["packages/db/src"],
       "@plataforma/cardano": ["packages/cardano/src"]
     }
   }

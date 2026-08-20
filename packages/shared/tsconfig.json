@@ -1,0 +1,25 @@
+{
+  // CommonJS a propósito: packages/api es CJS y lo consume con require() en
+  // runtime (D-016). El front no lo carga en runtime — importa solo tipos, que
+  // `verbatimModuleSyntax` borra en la compilación.
+  //
+  // El package.json apunta `types` al FUENTE y `main` al dist: así el typecheck
+  // de los consumidores no depende de que este package esté compilado, y solo
+  // el runtime de la API necesita el build.
+  "compilerOptions": {
+    "target": "ES2022",
+    "module": "node16",
+    "moduleResolution": "node16",
+    "lib": ["ES2022"],
+    "outDir": "dist",
+    "rootDir": "src",
+    "declaration": true,
+    "strict": true,
+    "noUncheckedIndexedAccess": true,
+    "exactOptionalPropertyTypes": true,
+    "esModuleInterop": true,
+    "skipLibCheck": true
+  },
+  "include": ["src"],
+  "exclude": ["src/**/*.test.ts"]
+}
