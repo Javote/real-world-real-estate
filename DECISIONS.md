@@ -18,7 +18,7 @@
 | D-001 | Monorepo pnpm con `contracts/` adentro | Aceptada (trigger de revisión definido) |
 | D-002 | Frontend: TanStack Start + shadcn/ui | Aceptada |
 | D-003 | Backend separado (Hono), no server functions del frontend | Aceptada en su núcleo (separación web/api); framework reemplazado por D-016 |
-| D-004 | Drizzle ORM + PostgreSQL | Reemplazada por D-016 |
+| D-004 | Drizzle ORM + PostgreSQL | Reemplazada por D-016; el ORM (Drizzle) se ratifica como destino futuro por D-038 |
 | D-005 | Web3 TS: Lucid Evolution + Blockfrost | Default → spike (el walking skeleton ES el spike) |
 | D-006 | Anclaje Fase A por metadata de transacción (label 1904) | Aceptada |
 | D-007 | Lifecycle de milestones: backend = fuente de verdad; on-chain solo Fase B | Aceptada |
@@ -30,7 +30,7 @@
 | D-013 | Red Cardano: Preprod hasta aprobación de gobernanza | Aceptada |
 | D-014 | Dependencia blockchain detrás de puerto propio con modo real/simulado | Aceptada |
 | D-015 | Versionado: CalVer para servicios; enteros para contratos | Aceptada |
-| D-016 | Adoptar el backend PoC (Express 4 + Prisma + SQLite + JWT/bcrypt + disco local) como `packages/api` | Aceptada (trigger de revisión definido) |
+| D-016 | Adoptar el backend PoC (Express 4 + Prisma + SQLite + JWT/bcrypt + disco local) como `packages/api` | Aceptada (trigger de revisión enmendado por D-038: el destino ya no es PostgreSQL) |
 | D-017 | Contratos: adoptar el proyecto Aiken del backend en `contracts/`, junto a los validadores de referencia | Aceptada (consolidación de duplicados Abierta) |
 | D-018 | El producto se llama **PropNexus** | Aceptada |
 | D-019 | Plutus **V3**, no V2 — desvío documentado del SOM de M3 | Aceptada |
@@ -52,6 +52,7 @@
 | D-035 | Zod 4 en el contrato compartido | Aceptada |
 | D-036 | Multer 2.x | Aceptada |
 | D-037 | Nitro: versión publicada en vez de nightly | Aceptada |
+| D-038 | Datos: Drizzle (destino, diferido) · SQLite (default, no Postgres) · Turso (hosting en prod) | Aceptada (compromiso de dirección; migración diferida, ver Trigger) |
 
 > **Repaso completo con la documentación oficial: ver §Repaso al final del archivo.** D-001..D-017 se
 > escribieron sin los entregables delante; las 25 entradas se revisaron el 2026-07-29 y cada una
@@ -103,7 +104,8 @@ legitima. Ninguno se resolvió editando el entregable, y **todos se comunican en
 ## D-004 — Drizzle + PostgreSQL — **Reemplazada por D-016**
 
 **Decisión original.** Drizzle ORM, migraciones drizzle-kit, PostgreSQL 16.
-**Reemplazo (2026-07-15).** Existe un backend funcionando con Prisma + SQLite (dev); reescribirlo costaría días sin agregar valor a la demo. Ver D-016. PostgreSQL sigue siendo el destino al desplegar (cambiar `provider` del datasource + regenerar migraciones).
+**Reemplazo (2026-07-15).** Existe un backend funcionando con Prisma + SQLite (dev); reescribirlo costaría días sin agregar valor a la demo. Ver D-016.
+**Actualización (2026-08-20, D-038).** El ORM Drizzle de esta decisión original se ratifica como destino futuro (migración diferida, sin fecha). El destino de datastore ya **no** es PostgreSQL: default SQLite, con Turso como hosting probable en producción — ver D-038.
 
 ## D-005 — Lucid Evolution + Blockfrost — **Default → spike**
 
@@ -190,7 +192,11 @@ previene, y llegó a estar replicado en `README.md`. Inventario honesto: `specs/
 **Contexto (2026-07-15).** Al consolidar los tres frentes existía un backend funcionando y verificado end-to-end (auth JWT+bcrypt, CRUD de usuarios/proyectos/milestones, evidencia con SHA-256, audit log, autorización en dos capas) construido con Express 4 + Prisma + SQLite + Multer — distinto del stack que esta guía había cerrado en D-003/D-004 (Hono + Drizzle + PostgreSQL + S3). El playbook manda documentar contra realidad, no intenciones, y reabrir decisiones con evidencia: la evidencia es que el código existe, funciona, y reescribirlo costaría días sin agregar valor a la demo.
 **Decisión.** El backend entra tal cual como `packages/api`. Sus decisiones internas vigentes se absorben: Express 4 con `@types/express` pineado a la línea 4 (ex ADR-002), Prisma + SQLite en dev con schema portable a Postgres (ex ADR-003), JWT firmado + bcrypt cost 10 con revalidación `isActive` por request (ex ADR-004), evidencia en disco local + SHA-256 inmutable como ancla (ex ADR-005), autorización rol global + membresía (ex ADR-006). La integración Cardano, que el backend había excluido (ex ADR-008), **vuelve a estar en alcance en este repo** vía `packages/cardano`/`AnchorPort` (D-014).
 **Alternativas descartadas.** Reescribir en Hono+Drizzle antes de la demo (costo sin retorno inmediato); mantener dos repos (contradice la consolidación).
-**Trigger de revisión.** Antes del primer deploy real: migrar el datasource a PostgreSQL (obligatorio, el schema ya lo prevé) y evaluar S3 (D-011). La migración de framework Express→Hono solo se reabre con evidencia (bloqueo técnico o costo de mantenimiento medido), no por preferencia.
+**Trigger de revisión.** ~~Antes del primer deploy real: migrar el datasource a PostgreSQL~~ —
+enmendado por D-038 (2026-08-20): el destino ya no es PostgreSQL, es mantener SQLite con Turso como
+hosting probable en producción. Evaluar S3 (D-011) sigue vigente, es independiente del datastore.
+La migración de framework Express→Hono solo se reabre con evidencia (bloqueo técnico o costo de
+mantenimiento medido), no por preferencia.
 **Reversión.** Las rutas están aisladas por recurso y la auth encapsulada en `src/lib/jwt.ts` + `src/middlewares/auth.ts`; migrar framework u ORM es incremental por recurso.
 
 ## D-017 — Contratos: adoptar el proyecto Aiken del backend en `contracts/`
@@ -699,6 +705,60 @@ inventada**, y sobrevive en la documentación hasta que alguien la testea.
 **Trigger de revisión.** Cuando salga Nitro 3 estable, pasar a él y volver a probar el 502 en el
 mismo movimiento.
 **Reversión.** Trivial: volver al alias `npm:nitro-nightly@…` en `apps/web/package.json`.
+
+## D-038 — Datos: Drizzle diferido, SQLite como default, Turso como destino de hosting
+
+**Contexto (2026-08-20).** Revisión de stack a pedido del dueño del producto, antes de liberar
+agentes a trabajar en paralelo. Dos preguntas quedaban abiertas desde D-016: si el ORM sigue siendo
+Prisma para siempre, y si el destino de base de datos al desplegar es PostgreSQL (lo que D-016
+daba por sentado). El dueño zanjó las dos con una postura explícita, no una preferencia técnica del
+LLM — es exactamente el tipo de evidencia que el principio 3 pide para reabrir una decisión Aceptada.
+
+**Decisión — ORM.** Drizzle **sigue siendo el destino**, tal como decía D-004 originalmente. No se
+reabre "¿Drizzle o Prisma?": se ratifica Drizzle, con la migración **diferida** a cuando haga falta,
+no ahora. Prisma sigue siendo lo que corre hoy (D-016, intacta). No hay trigger de fecha; el trigger
+es el mismo principio 3: evidencia concreta (un límite real de Prisma, o el momento en que el costo
+de mantener dos ORMs mentales supere el de migrar), no conveniencia. Cuando llegue, es un spike
+acotado (≤2-3 días) que compara el costo real de migrar `schema.prisma` + los queries de
+`packages/api` contra Drizzle, no una reescritura a ciegas.
+
+**Decisión — datastore.** El destino **deja de ser PostgreSQL**. Default: **mantener SQLite** todo
+lo posible, en dev y en producción, salvo que aparezca una limitación real y medida para este
+proyecto — no hipotética. Esto **enmienda el trigger de D-016** ("antes del primer deploy real:
+migrar a PostgreSQL"), que quedaba desactualizado.
+
+**Decisión — hosting en producción.** El deploy probable es **Render**. Ahí, el candidato es
+**Turso** (libSQL gestionado) por encima de un disco persistente de Render + Litestream, por una
+razón técnica concreta y no por costo (a la escala de este proyecto los dos son casi gratis: disco
+de Render es ~$0.25/GB/mes, el free tier de Turso da 5GB / 500M lecturas / 10M escrituras por mes).
+La razón es que **D-003 ya anticipa un worker de confirmaciones separado** del proceso web para el
+pipeline de anclaje. Un disco persistente de Render solo se monta en una instancia; si el worker
+termina siendo un segundo servicio, no puede compartir el archivo SQLite. Turso es una base
+accesible por red — cualquier proceso se conecta igual que a un Postgres — y de paso resuelve backup
+y point-in-time recovery sin tener que operar Litestream a mano. Se integra detrás de la misma
+lógica de "dependencia externa detrás de interfaz propia" que ya rige Cardano (D-014, principio 7):
+Turso no es una particularidad de Prisma ni de Drizzle, así que no ata la migración de ORM.
+
+**Alternativas descartadas.** PostgreSQL gestionado (Neon/Supabase/Render Postgres): descartado no
+por costo sino porque no hay evidencia de una limitación de SQLite que lo justifique — se reabre si
+aparece. Disco persistente de Render + Litestream: descartado por el problema del worker
+multi-proceso, no por precio; queda como alternativa barata si Turso resultara inviable por algún
+motivo no previsto hoy.
+
+**Lo que NO se hace ahora.** Esta decisión es de **dirección**, no de implementación: no se toca
+`schema.prisma`, no se instala Drizzle, no se crea cuenta de Turso. `specs/stack.md` §10 pasa a
+listar el trigger de cada spike.
+
+**Consecuencia documental.** Corrige `specs/stack.md` fila "Base de datos" (destino: Turso, no
+PostgreSQL) y la fila "Prisma" (nota: destino Drizzle). Corrige `CLAUDE.md` raíz §Stack, fila
+**db**, que decía "PostgreSQL al desplegar".
+
+**Trigger de revisión.** Migración de ORM: spike cuando aparezca evidencia (ver arriba). Turso:
+se activa en el primer intento real de deploy a Render — ahí se crea la cuenta y se prueba contra
+el worker de confirmaciones si ya existe, o contra el caso hipotético si todavía no.
+**Reversión.** Todas las piezas están donde D-014/D-016 ya las aislaba: Prisma detrás de
+`prisma/schema.prisma` + los repositorios de `packages/api`, y el datastore detrás de la variable de
+conexión. Cambiar cualquiera de las tres no requiere tocar lógica de negocio.
 
 ---
 

@@ -49,7 +49,7 @@ El front está a ~2% de conformidad con el diseño aprobado. Lo que se conserva 
 | Pieza | Versión | Estado | Nota |
 |---|---|---|---|
 | Express | `4.22.2` | ● | D-016. `@types/express` **pineado a v4**: los tipos v5 rompen todas las rutas |
-| Prisma (ORM + CLI) | `6.19.3` | ● | D-016 |
+| Prisma (ORM + CLI) | `6.19.3` | ● | D-016. Destino ratificado: Drizzle (D-038), migración diferida sin fecha |
 | Zod | `4.4.3` | ● | D-035. Rutas heredadas aún con formas de la 3, que v4 acepta |
 | JWT (`jsonwebtoken`) | `9.0.2` | ● | 7 días, con revalidación de `isActive` por request |
 | **bcrypt** (módulo nativo) | `5.1.1` | ◐ | cost 10. Nativo ⇒ toolchain en la imagen Docker, y es el origen del warning de `url.parse()` vía `node-pre-gyp` |
@@ -87,7 +87,7 @@ Ningún validador custodia ni transfiere valor, en ninguna fase (D-021).
 
 | Pieza | Hoy | Destino | Estado | Decisión |
 |---|---|---|---|---|
-| Base de datos | **SQLite** (`prisma/dev.db`) | **PostgreSQL** | ○ | D-016 — el trigger es *antes del primer deploy real* |
+| Base de datos | **SQLite** (`prisma/dev.db`) | **SQLite**, probablemente vía **Turso** en Render | ○ | D-038 — default sin fecha; PostgreSQL queda descartado salvo evidencia de una limitación real |
 | Migraciones | Prisma Migrate, 1 migración (`init`) | idempotentes en el entrypoint | ◐ | D-012 |
 | Archivos de evidencia | **disco local** (`UPLOAD_DIR`, Multer) | **S3 genérico**: MinIO dev / R2 prod | ○ | D-011 |
 | URLs de archivos | descarga por endpoint autenticado | prefirmadas, TTL ≤15 min | ○ | D-011 |
@@ -157,6 +157,8 @@ Ver `CLAUDE.md` §Cómo se trabaja acá y D-032.
 | `/verify` como pantalla o como documento | sin default | M1-D1 la promete, M2-D5 no la tiene |
 | Backups y retención de datos | sin default | nunca se discutió |
 | Gestor de secretos en pre-prod | sin default | lo fuerza el primer deploy |
+| D-038 · cuándo migrar Prisma → Drizzle | diferido, sin fecha | spike cuando aparezca evidencia de límite real (principio 3) |
+| D-038 · Turso vs disco Render + Litestream para SQLite en prod | Turso (por el worker de confirmaciones de D-003, no por costo) | primer intento real de deploy a Render |
 
 ## 11 · Deuda del stack
 

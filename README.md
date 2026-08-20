@@ -168,8 +168,8 @@ carga solo cuando un agente toca ese subárbol.
 
 **Qué se despliega y qué no:** solo `apps/web` y `packages/api` corren como servidores.
 `shared`/`cardano` son librerías que compilan dentro de la imagen de la API. `contracts/` no se
-hostea: el blueprint va commiteado y los validadores viven en la blockchain. Antes del primer deploy
-real: migrar el datasource de Prisma a PostgreSQL (trigger de D-016).
+hostea: el blueprint va commiteado y los validadores viven en la blockchain. El destino de datos es
+mantener SQLite (probablemente vía Turso en Render), no migrar a PostgreSQL — D-038.
 
 **Principio rector:** documentos y datos personales viven off-chain; on-chain solo van hashes
 SHA-256, raíces Merkle, commitments y TXIDs. El backend es la capa de orquestación; el frontend
