@@ -83,16 +83,24 @@ printf '%s└ alcance: %s · %s archivos%s\n' "$DIM" "$SCOPE_DESC" "$(printf '%s
 head_ "1 · Prohibiciones absolutas"
 
 # D-022 — docs/ es inmutable, ni para corregir un error evidente.
-DOCS_TOUCHED="$(printf '%s\n' "$CHANGED" | grep -E '^docs/' || true)"
-if [ -n "$DOCS_TOUCHED" ] && [ "$CI_MODE" = 0 ]; then
+# Distingue SUMAR de TOCAR: agregar un entregable nuevo es legítimo; modificar,
+# borrar o renombrar uno existente, no. Así el escape casi nunca hace falta.
+# Corre también en CI: es la última línea de defensa si alguien pushea desde una
+# máquina sin hooks (antes se salteaba en CI y el agujero pasaba desapercibido).
+DOCS_MUTATED="$( { [ -n "$BASE" ] && git diff --name-status "$BASE"..HEAD -- docs/ 2>/dev/null
+                   git diff --name-status HEAD -- docs/ 2>/dev/null
+                 } | grep -E '^[MDR]' | sort -u || true )"
+if [ -n "$DOCS_MUTATED" ]; then
   if [ "${GATE_ALLOW_DOCS:-0}" = 1 ]; then
-    warn "docs/ modificado con GATE_ALLOW_DOCS=1 — solo legítimo para SUMAR un entregable nuevo o SACAR algo que nunca fue entregable (D-022, D-033). Jamás para corregir uno."
+    warn "docs/ modificado con GATE_ALLOW_DOCS=1 — solo legítimo para SACAR algo que nunca fue entregable (D-033). Jamás para corregir uno."
+    printf '      %s\n' "$DOCS_MUTATED"
   else
-    bad "docs/ modificado (D-022: inmutable). Archivos: $(printf '%s' "$DOCS_TOUCHED" | tr '\n' ' ')"
+    bad "un entregable de docs/ fue modificado, borrado o renombrado (D-022: inmutable)"
+    printf '      %s\n' "$DOCS_MUTATED"
     echo "      → un error en un entregable se resuelve con una decisión en DECISIONS.md, no editándolo"
   fi
 else
-  ok "docs/ intacto (D-022)"
+  ok "entregables de docs/ intactos (D-022)"
 fi
 
 # Regla 12 — secretos solo por env. Prefijos bech32 de Cardano + PEM + valores reales.
