@@ -1,22 +1,22 @@
-// Tipos espejo de las respuestas de packages/api.
-// Migración pendiente a schemas Zod en packages/shared (regla 6 de CLAUDE.md).
+// Tipos de las respuestas de packages/api.
+//
+// Lo de auth ya NO se declara acá: viene de @plataforma/shared, que es donde el
+// contrato existe una sola vez (regla 6). Si la API cambia la forma de una
+// respuesta de auth sin actualizar el schema, el typecheck de este package falla
+// — que es exactamente el punto de tener el package.
+//
+// Son `export type`: el front no carga Zod en runtime, solo usa los tipos, y
+// `verbatimModuleSyntax` los borra al compilar.
+import type { UserRole } from '@plataforma/shared'
 
-export type UserRole = 'admin' | 'developer' | 'buyer' | 'verifier'
+export type { LoginResponse, SessionUser, UserRole } from '@plataforma/shared'
+
+// El resto sigue siendo espejo manual. Cada uno migra a packages/shared cuando
+// su rebanada lo toque (SPEC-008 §NO-alcance): migrarlos todos ahora sería
+// escribir schemas para endpoints que van a cambiar de forma igual.
 export type MilestoneState = 'Pending' | 'InProgress' | 'Completed' | 'Observed'
 export type ProjectStatus = 'planning' | 'in_progress' | 'delayed' | 'completed'
 export type EvidenceType = 'document' | 'photo' | 'certificate'
-
-export interface SessionUser {
-  id: string
-  email: string
-  role: UserRole
-  fullName: string
-}
-
-export interface LoginResponse {
-  token: string
-  user: SessionUser
-}
 
 export interface Milestone {
   id: string
