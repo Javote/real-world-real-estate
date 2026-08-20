@@ -3,18 +3,20 @@ name: CI
 on:
   pull_request:
   push:
-    branches: [main]
+    branches: [main, 'track/**']
 
 concurrency:
   group: ci-${{ github.ref }}
   cancel-in-progress: true
 
 jobs:
-  quality:
-    name: Typecheck + build (workspace pnpm)
+  gate:
+    name: La puerta (scripts/gate.sh --ci)
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0   # la puerta compara contra la base del cambio
 
       - uses: pnpm/action-setup@v4
         # toma la versión de "packageManager" del package.json raíz
@@ -27,20 +29,10 @@ jobs:
       - name: Instalar dependencias
         run: pnpm install --frozen-lockfile
 
-      - name: Generar cliente Prisma
-        run: pnpm --filter @plataforma/api db:generate
-
-      - name: Typecheck
-        run: pnpm typecheck
-
-      - name: Tests
-        run: pnpm test
-
-      - name: Build (web + api)
-        run: pnpm build
-
-      # Pendiente (deuda declarada): tests de la API (SPEC-006/007, default
-      # vitest+supertest) y de los validadores Aiken (SPEC-002).
+      # Un solo paso, el mismo script que corre el hook de push en local.
+      # Si CI y local se separan, divergen — ver D-032.
+      - name: Puerta
+        run: scripts/gate.sh --ci
 
   contracts:
     name: Contratos Aiken (fmt + check + blueprint al día)
@@ -53,7 +45,7 @@ jobs:
 
       - uses: aiken-lang/setup-aiken@v1
         with:
-          version: v1.1.21   # misma versión pineada que usa el equipo (CLAUDE.md §Gotchas)
+          version: v1.1.21   # misma versión pineada que usa el equipo
 
       - run: aiken fmt --check
 

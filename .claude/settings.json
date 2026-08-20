@@ -1,0 +1,71 @@
+{
+  "$schema": "https://json.schemastore.org/claude-code-settings.json",
+
+  "permissions": {
+    "deny": [
+      "Edit(./docs/**)",
+      "Write(./docs/**)",
+      "Read(./**/.env)",
+      "Edit(./packages/api/prisma/migrations/**)",
+      "Edit(./contracts/build/**)",
+      "Edit(./apps/web/src/routeTree.gen.ts)"
+    ],
+    "allow": [
+      "Bash(pnpm install)",
+      "Bash(pnpm typecheck:*)",
+      "Bash(pnpm test:*)",
+      "Bash(pnpm build:*)",
+      "Bash(pnpm dev:*)",
+      "Bash(pnpm e2e:*)",
+      "Bash(pnpm lint:*)",
+      "Bash(pnpm contracts:*)",
+      "Bash(pnpm --filter:*)",
+      "Bash(pnpm exec:*)",
+      "Bash(aiken:*)",
+      "Bash(./scripts/gate.sh:*)",
+      "Bash(scripts/gate.sh:*)",
+      "Bash(./scripts/worktree.sh:*)",
+      "Bash(scripts/worktree.sh:*)",
+      "Bash(git status:*)",
+      "Bash(git diff:*)",
+      "Bash(git log:*)",
+      "Bash(git show:*)",
+      "Bash(git add:*)",
+      "Bash(git commit:*)",
+      "Bash(git branch:*)",
+      "Bash(git switch:*)",
+      "Bash(git worktree:*)",
+      "Bash(git rev-parse:*)",
+      "Bash(git merge-base:*)",
+      "Bash(git grep:*)",
+      "Bash(git ls-files:*)",
+      "Bash(curl -s:*)",
+      "Bash(curl -sf:*)",
+      "Bash(lsof:*)"
+    ]
+  },
+
+  "hooks": {
+    "PreToolUse": [
+      {
+        "matcher": "Edit|Write|NotebookEdit",
+        "hooks": [
+          { "type": "command", "command": "$CLAUDE_PROJECT_DIR/scripts/hooks/guard-write.sh" }
+        ]
+      },
+      {
+        "matcher": "Bash",
+        "hooks": [
+          { "type": "command", "command": "$CLAUDE_PROJECT_DIR/scripts/hooks/guard-bash.sh", "timeout": 300 }
+        ]
+      }
+    ],
+    "SessionStart": [
+      {
+        "hooks": [
+          { "type": "command", "command": "$CLAUDE_PROJECT_DIR/scripts/hooks/session-start.sh" }
+        ]
+      }
+    ]
+  }
+}
