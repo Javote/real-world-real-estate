@@ -113,3 +113,63 @@ describe("POST /projects/:id/evidence — subida de evidencia", () => {
     expect(res.status).toBe(401);
   });
 });
+
+describe("evidencia — storagePath jamás sale al cliente (D-011)", () => {
+  // D-011: la clave de almacenamiento (acá, la ruta absoluta en disco del
+  // servidor) es un detalle interno. Filtrarla expone la topología del
+  // filesystem del servidor a cualquiera con acceso de lectura.
+  let evidenceId: string;
+
+  beforeAll(async () => {
+    const res = await subir(miembro, { evidenceType: "document", category: "permiso" }, {
+      buf: PDF, nombre: "storage-path.pdf", tipo: "application/pdf",
+    });
+    evidenceId = res.body.id;
+  });
+
+  it("POST /projects/:id/evidence no devuelve storagePath", async () => {
+    const res = await subir(miembro, { evidenceType: "document", category: "permiso" }, {
+      buf: PDF, nombre: "otro.pdf", tipo: "application/pdf",
+    });
+
+    expect(res.status).toBe(201);
+    expect(res.body).not.toHaveProperty("storagePath");
+  });
+
+  it("GET /projects/:id/evidence (listado) no devuelve storagePath", async () => {
+    const res = await request(app)
+      .get(`/api/v1/projects/${projectId}/evidence`)
+      .set("Authorization", `Bearer ${miembro}`);
+
+    expect(res.status).toBe(200);
+    expect(res.body.length).toBeGreaterThan(0);
+    for (const item of res.body) expect(item).not.toHaveProperty("storagePath");
+  });
+
+  it("GET /evidence/:id no devuelve storagePath", async () => {
+    const res = await request(app)
+      .get(`/api/v1/evidence/${evidenceId}`)
+      .set("Authorization", `Bearer ${miembro}`);
+
+    expect(res.status).toBe(200);
+    expect(res.body).not.toHaveProperty("storagePath");
+  });
+
+  it("PATCH /evidence/:id no devuelve storagePath", async () => {
+    const res = await request(app)
+      .patch(`/api/v1/evidence/${evidenceId}`)
+      .set("Authorization", `Bearer ${miembro}`)
+      .send({ category: "permiso-actualizado" });
+
+    expect(res.status).toBe(200);
+    expect(res.body).not.toHaveProperty("storagePath");
+  });
+
+  it("GET /evidence/:id/download sigue funcionando (usa storagePath solo server-side)", async () => {
+    const res = await request(app)
+      .get(`/api/v1/evidence/${evidenceId}/download`)
+      .set("Authorization", `Bearer ${miembro}`);
+
+    expect(res.status).toBe(200);
+  });
+});

@@ -30,6 +30,7 @@ router.get("/projects/:id/evidence", async (req, res) => {
   const evidence = await prisma.evidence.findMany({
     where: { projectId: req.params.id },
     orderBy: { uploadedAt: "desc" },
+    omit: { storagePath: true },
     include: {
       milestone: true,
       uploadedBy: {
@@ -139,7 +140,8 @@ router.post(
         sizeBytes: req.file.size,
         storagePath: absolutePath,
         sha256Hash
-      }
+      },
+      omit: { storagePath: true }
     });
 
     await writeAuditLog({
@@ -156,6 +158,7 @@ router.post(
 router.get("/evidence/:id", async (req, res) => {
   const evidence = await prisma.evidence.findUnique({
     where: { id: req.params.id },
+    omit: { storagePath: true },
     include: {
       project: true,
       milestone: true,
@@ -261,7 +264,8 @@ router.patch("/evidence/:id", requireRole("admin", "developer"), async (req, res
 
   const evidence = await prisma.evidence.update({
     where: { id: req.params.id },
-    data: parsed.data
+    data: parsed.data,
+    omit: { storagePath: true }
   });
 
   await writeAuditLog({

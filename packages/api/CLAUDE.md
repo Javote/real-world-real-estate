@@ -28,6 +28,15 @@ endpoints del backlog **hoy conforman 2**: `POST /auth/login` y `GET /auth/me`.
 
 ## Trampas verificadas
 
+- **2026-08-20 · `storagePath` se filtraba en las cuatro respuestas de `/evidence`.** D-011 dice
+  explícitamente que la clave de almacenamiento jamás se expone, pero `POST/GET/GET-by-id/PATCH
+  /evidence` devolvían el registro Prisma completo — incluida la ruta absoluta en disco del
+  servidor. Se detectó leyendo la ruta al migrar Multer, no por un test (no había ninguno).
+  **Fix:** `omit: { storagePath: true }` en cada query que responde al cliente
+  (`evidence.routes.ts`); las dos rutas que sí necesitan la ruta real internamente (`download`,
+  `delete`) siguen consultándola sin `omit`, porque nunca la devuelven en el body. Cualquier
+  endpoint nuevo que toque `Evidence` tiene que repetir el `omit` — no hay un select compartido
+  todavía porque la superficie es chica; si crece, vale la pena centralizarlo.
 - **Prisma ≥6.16 ya no carga `.env` desde el client.** Todo entrypoint que use `PrismaClient`
   fuera del server necesita `import "dotenv/config"` primero (el server ya lo hace en `app.ts`).
   El CLI de Prisma (`migrate`, `studio`) sí lo sigue cargando solo.
