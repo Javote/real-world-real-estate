@@ -45,6 +45,22 @@ describe("contrato de auth", () => {
     expect(r.success).toBe(false);
   });
 
+  // `extend()` sobre un strictObject conserva la estrictez. Está testeado y no
+  // asumido: si un refactor la perdiera, /auth/me podría filtrar campos del
+  // modelo en silencio y ningún otro test lo vería.
+  it("FALLA si /auth/me trae un campo de más", () => {
+    const base = {
+      id: "u1",
+      email: "d@e.com",
+      role: "admin",
+      fullName: "A",
+      isActive: true,
+      createdAt: "2026-08-20T12:00:00.000Z",
+    };
+    expect(meResponseSchema.safeParse(base).success).toBe(true);
+    expect(meResponseSchema.safeParse({ ...base, passwordHash: "$2b$10$x" }).success).toBe(false);
+  });
+
   it("exige que createdAt de /auth/me sea un ISO datetime", () => {
     const base = { id: "u1", email: "d@e.com", role: "admin", fullName: "A", isActive: true };
     expect(meResponseSchema.safeParse({ ...base, createdAt: "2026-08-20T12:00:00.000Z" }).success).toBe(true);

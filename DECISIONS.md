@@ -49,6 +49,7 @@
 | D-032 | El harness de agentes: la puerta es ejecutable y lo irreversible se bloquea por hook | Aceptada |
 | D-033 | `docs/` contiene solo entregables; el índice se muda a `specs/entregables.md` | Aceptada |
 | D-034 | El inventario del stack vive en `specs/stack.md`; `CLAUDE.md` conserva lo de sesión | Aceptada |
+| D-035 | Zod 4 en el contrato compartido | Aceptada |
 
 > **Repaso completo con la documentación oficial: ver §Repaso al final del archivo.** D-001..D-017 se
 > escribieron sin los entregables delante; las 25 entradas se revisaron el 2026-07-29 y cada una
@@ -604,6 +605,38 @@ produce exactamente eso. Por eso `specs/stack.md` marca el estado pieza por piez
 ◐ parcial · ○ decidido sin ejecutar · ? abierto.
 
 **Reversión.** Trivial: el archivo vuelve a `CLAUDE.md` §Stack.
+
+## D-035 — Zod 4 en el contrato compartido
+
+**Contexto (2026-08-20).** La revisión de stack agarró `packages/shared` con **un solo archivo de
+schemas**, recién creado en SPEC-008. Cada rebanada de acá en adelante agrega schemas hasta cubrir
+los ~80 endpoints de M2-D5. Zod 4 estaba publicado (`4.4.3`) y —dato que decidió el timing— el zod
+3 que ya teníamos instalado (`3.25.76`) **ya expone la API v4** bajo el subpath `zod/v4`: no era un
+salto entre líneas incompatibles, era adelantar algo que la propia 3.x estaba transicionando.
+
+**Decisión.** `zod@^4` en `packages/shared` y `packages/api`. Los schemas compartidos se escriben en
+el idioma v4: `z.email()` y `z.iso.datetime()` en vez de encadenar sobre `z.string()`, y
+`z.strictObject` en vez de `.strict()`.
+
+**Evidencia de que el costo era mínimo.** Subir la dependencia no rompió **nada**: typecheck verde
+en los tres packages y 21 tests en verde sin tocar una línea. Zod 4 mantiene funcionando las formas
+de la 3.
+
+**Por qué modernizar el idioma igual, si lo viejo funciona.** Porque `auth.ts` es el archivo que
+toda spec futura va a copiar. Si ahí queda el idioma deprecado, se replica ochenta veces y la
+migración real se paga entera más adelante — que era exactamente lo que esta decisión evitaba.
+
+**Alcance de lo que NO se tocó.** Las cuatro rutas heredadas (`users`, `projects`, `milestones`,
+`evidence`) siguen con las formas de la 3, que Zod 4 acepta. No se migran porque M2-D5 las reescribe
+igual: sus paths no están scopeados por rol y de los ~80 endpoints del backlog conforman 2.
+Migrarlas ahora sería trabajo sobre código con fecha de vencimiento.
+
+**Consecuencia sobre la regla 4.** `z.strictObject` no es cosmética: con un objeto normal Zod
+**descarta las claves desconocidas en silencio**, así que un `passwordHash` filtrado pasaría el
+schema. Hay dos tests que lo fijan, uno por `loginResponse` y otro por `meResponse` — el segundo
+existe porque `.extend()` podría haber perdido la estrictez, y eso no se asume: se verifica.
+
+**Reversión.** Barata mientras `shared` tenga pocos schemas; cara después. Por eso se hizo ahora.
 
 ---
 

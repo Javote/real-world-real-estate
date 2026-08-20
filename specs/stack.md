@@ -50,7 +50,7 @@ El front está a ~2% de conformidad con el diseño aprobado. Lo que se conserva 
 |---|---|---|---|
 | Express | `4.22.2` | ● | D-016. `@types/express` **pineado a v4**: los tipos v5 rompen todas las rutas |
 | Prisma (ORM + CLI) | `6.19.3` | ● | D-016 |
-| Zod | `3.25.76` | ● | todo body por `safeParse` (regla 6) |
+| Zod | `4.4.3` | ● | D-035. Rutas heredadas aún con formas de la 3, que v4 acepta |
 | JWT (`jsonwebtoken`) | `9.0.2` | ● | 7 días, con revalidación de `isActive` por request |
 | bcrypt (**módulo nativo**) | `5.1.1` | ● | cost 10. Nativo ⇒ necesita toolchain en la imagen Docker |
 | **Multer** | `1.4.5-lts.1` | ◐ | única fuente del warning `url.parse()` deprecado; la línea 1.x está sin mantenimiento |
@@ -63,7 +63,7 @@ Base `/api/v1`. De los ~80 endpoints del backlog de M2-D5, **conforman 2**.
 
 | Pieza | Versión | Estado | Nota |
 |---|---|---|---|
-| Zod como contrato único API↔web | `3.25.76` | ◐ | SPEC-008: **auth migrado**, el resto migra por rebanada |
+| Zod como contrato único API↔web | `4.4.3` | ◐ | SPEC-008: **auth migrado**, el resto migra por rebanada |
 
 Es lo único que vuelve el drift API↔web *imposible* en vez de prohibido. La mecánica de
 resolución (por qué `types` apunta al `.d.ts` y no al fuente) está en `packages/shared/CLAUDE.md`.
