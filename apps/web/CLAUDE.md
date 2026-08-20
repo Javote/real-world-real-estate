@@ -1,0 +1,59 @@
+# apps/web — el frente
+
+> Se carga solo al tocar este subárbol. Las reglas duras, las prohibiciones y la deuda
+> transversal están en el `CLAUDE.md` de la raíz y **no se repiten acá**.
+
+TanStack Start + Router + Query · React 19 · Tailwind v4 · Lucide · Vite · Vitest+jsdom (D-002).
+
+**Esto es una semilla, no la app.** Sin `GradientHeader`, sin `BottomNav`, paleta equivocada,
+textos hardcodeados, "Milestones" donde va "Stages". **Es lo esperado, no un bug que arreglar de
+paso.** Lo único que se conserva es el patrón `ApiPort`; el resto de la superficie se reemplaza.
+Falta shadcn/ui, y reemplazar `styles.css` (~1000 líneas de CSS de la maqueta vieja) por los
+tokens de M2-D3 (D-024). Tailwind v4 y `lucide-react` **ya están instalados**: no los agregues.
+
+## Antes de tocar una pantalla
+
+`M2-D1` (árbol de pantallas y permisos del rol) + `M2-D3` (componentes). Si la pantalla muestra un
+hash, TXID o Merkle root, además `M2-D4` — sus 10 patrones son normativos. Qué endpoint consume lo
+dice `M2-D5` §4-6.
+
+## Específico de este frente (lo que no está en la raíz)
+
+- **Mobile-first**: todo flujo funciona en una columna de ~380px (M2-D3 §Principio 4). En desktop
+  el `BottomNav` se reemplaza por sidebar y el contenido pasa a grillas multi-columna.
+- **Los strings en español son 20-30% más largos que en inglés** (M2-D3 §Text growth):
+  dimensioná al contenido, nada de anchos fijos salvo FAB e íconos.
+- **La clave de `localStorage` del idioma es `propnexus.lang`, literal** (M2-D3 §Localization).
+- **Los puertos salen de `ports.ts`**, que los lee de `apps/web/.env` (lo escribe
+  `scripts/worktree.sh`) y por defecto da 3000/8787. Si agregás config que necesite el puerto,
+  importalo de ahí — hardcodearlo rompe los árboles paralelos (D-031).
+
+## Trampas verificadas
+
+- **El proxy de nitro en dev convierte `POST` + `401` en `502`.** Reproducible al 100% y solo esa
+  combinación (`GET 401`, `POST 400` y `POST 200` pasan bien). Sale de `h3@2.0.1-rc.25` dentro de
+  `nitro-nightly`, solo en el dev-worker de Vite; en producción la API es otro origen y no hay
+  proxy. **Consecuencia: el error de credenciales inválidas muestra "No se pudo conectar con la
+  API" en desarrollo.** Antes de debuggear un error de auth, comparate contra la API directo.
+- **Los tests E2E esperan la hidratación, no el DOM.** La app llega por SSR con formularios
+  controlados por React: un click antes de que React monte hace submit nativo, nunca corre el
+  `preventDefault` y la página recarga sin llamar a la API. Falla intermitente que parece de
+  backend. Ver `waitForHydration` en `e2e/walkthrough.spec.ts`.
+- **`test.fail()` a nivel `describe` aplica a todos los tests que siguen.** Para marcar uno suelto
+  va **dentro** del cuerpo. Puesto afuera hizo fallar los 16.
+- **Usá selectores accesibles** (`getByLabel`, `getByRole`): fallan cuando la accesibilidad está
+  mal, que es justo lo que querés. Así se descubrió que los `<label>` del login no tenían `htmlFor`.
+- **Un `*.test.tsx` dentro de `src/routes/`** lo escanea el router y avisa "does not export a
+  Route": prefijalo con `-` o configurá `routeFileIgnorePattern`. Y `vitest` excluye `e2e/`
+  explícitamente porque su `include` por defecto matchea `spec` además de `test`.
+- **El badge flotante de TanStack Devtools sale en las capturas.** El helper `shot()` lo esconde
+  con `addStyleTag`; para capturas nuevas usá ese helper, no `page.screenshot` pelado.
+
+## Comandos
+
+```bash
+pnpm --filter web test            # vitest
+pnpm --filter web e2e:ui          # playwright interactivo
+pnpm --filter web e2e:report      # reporte HTML de la última corrida
+pnpm --filter web exec playwright test --project=desktop -g "AUTH-LOGIN-001"
+```

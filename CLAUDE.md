@@ -1,5 +1,8 @@
 # CLAUDE.md
 
+> Lo transversal. Lo de cada frente vive en `apps/web/CLAUDE.md`, `packages/api/CLAUDE.md` y
+> `contracts/CLAUDE.md`, y se carga solo cuando tocás ese subárbol.
+
 ## Contexto (3 líneas)
 
 **PropNexus** (Catalyst 1400106) — plataforma de ventas inmobiliarias en pozo: estructura el ciclo de obra en **stages**, organiza **evidencia** (planos, permisos, actas, certificados) y ancla **huellas criptográficas** (SHA-256/Merkle) en **Cardano** con timestamps. Off-chain: documentos, PII y lógica de negocio. On-chain: solo commitments compactos y TXIDs — **nunca valor** (D-021). Cuatro roles con superficie propia: investor (INV), developer (DEV), notary (NOT), certifier (CER).
@@ -10,22 +13,21 @@
 
 ## Si llegás nuevo: punto de partida
 
-**El código es una semilla, no la app.** `apps/web` está a ~2% de conformidad con el diseño aprobado:
-sin `GradientHeader`, sin `BottomNav`, paleta equivocada, textos hardcodeados, "Milestones" donde va
-"Stages". **Eso es lo esperado, no un bug que arreglar de paso.** Lo valioso de lo que existe son
-decisiones de arquitectura (auth en dos capas, SHA-256 en el servidor, `AuditLog` append-only, el
-patrón `ApiPort`, la topología de la FSM en Aiken), no superficie terminada. `packages/api` está
-bastante mejor parado que `apps/web`: la API se evoluciona, el front se reemplaza.
+**El código es una semilla, no la app.** La conformidad con el diseño aprobado es de orden **2%**.
+**Eso es lo esperado, no un bug que arreglar de paso.** Lo valioso de lo que existe son decisiones
+de arquitectura (auth en dos capas, SHA-256 en el servidor, `AuditLog` append-only, el patrón
+`ApiPort`, la topología de la FSM en Aiken), no superficie terminada.
 
-Orden de lectura para agarrar contexto rápido:
+Orden de lectura:
 
-1. Este archivo entero (son ~200 líneas y es lo único que se carga solo).
-2. `specs/README.md` — el mapa: criterios de aceptación de M3, conformidad actual medida, orden de trabajo, decisiones abiertas, riesgos.
+1. Este archivo entero (es lo único que se carga solo, junto al del frente que toques).
+2. `specs/README.md` — el mapa: criterios de aceptación de M3, conformidad medida, rebanadas, riesgos.
 3. `DECISIONS.md` — el porqué. Si algo del código te parece raro, la respuesta está acá antes que en el código.
-4. `docs/README.md` — índice de los entregables oficiales y los desvíos registrados.
-5. Lo puntual del frente que vas a tocar (ver la tabla de §Documentación oficial más abajo).
+4. Lo puntual del frente (ver §Documentación oficial más abajo).
 
-Para ver la app corriendo: `pnpm e2e` o el skill `run-app`. **No improvises un driver de browser**, ya está armado.
+**Para trabajar: invocá el skill `slice`.** Es el protocolo de sesión completo — ubicarse,
+spec, plan, implementar, verificar, documentar, commitear, pushear.
+Para ver la app corriendo: skill `run-app`. **No improvises un driver de browser**, ya está armado.
 
 ## Vocabulario: "milestone" tiene dos significados — usá el correcto
 
@@ -36,35 +38,53 @@ Para ver la app corriendo: `pnpm e2e` o el skill `run-app`. **No improvises un d
 
 Nunca uses "milestone" para una etapa de obra (D-023). Si ves `Milestone` en código, es deuda de rename pendiente.
 
-## Jerarquía de precedencia — dos capas
+## Jerarquía de precedencia
 
-- **Obligaciones (el *qué*, la vara de aceptación): manda `docs/`.** Entregables aprobados por reviewers. Ninguna decisión puede reducir lo que debemos.
+Dos capas, porque son dos autoridades distintas:
+
+- **Obligaciones (el *qué*, la vara de aceptación): manda `docs/`.** Entregables aprobados por
+  reviewers. Ninguna decisión puede reducir lo que debemos. **`docs/` es INMUTABLE** — ni para
+  corregir un error evidente. Está bloqueado por hook, no por convención.
 - **Implementación (el *cómo*): `DECISIONS.md` > `CLAUDE.md` > `specs/`.**
 
-Si encontrás una contradicción entre documentos: manda la de mayor precedencia y corregí el documento en conflicto **en el mismo PR**. Si la contradicción es con código, avisá antes de "arreglar" nada.
+Un desvío solo es legítimo si (a) el entregable se contradice internamente, (b) es un error de
+redacción, o (c) seguirlo al pie contradiría una verdad del producto declarada por el dueño.
+**Nunca por conveniencia ni por preferencia técnica.**
 
-**`docs/` es INMUTABLE — no lo edites nunca**, ni para corregir un error evidente. Registrá una decisión en `DECISIONS.md` citando documento y párrafo. **Un desvío solo es legítimo si** (a) el entregable se contradice internamente, (b) es un error de redacción, o (c) seguirlo al pie contradiría una verdad del producto declarada por el dueño. **Nunca por conveniencia ni por preferencia técnica.** Los desvíos vigentes están en `docs/README.md`.
+**El desarrollo completo de la regla —qué se registra, cómo, y los desvíos vigentes— está en el
+encabezado de `DECISIONS.md` y en D-022. Acá no se repite.** Ante contradicción entre documentos:
+gana el de mayor precedencia y el otro se corrige en el mismo commit. Si la contradicción es con
+código, avisá antes de "arreglar" nada.
 
-**Y antes de declarar que un entregable está mal: verificá que estás mirando el entregable.** Ya nos pasó decidir contra una transcripción errónea (ver Gotchas).
+**Y antes de declarar que un entregable está mal: verificá que estás mirando el entregable.** Ya
+nos pasó decidir contra una transcripción errónea (ver Trampas).
 
 ## Principios de trabajo (los diez que sostienen todo lo demás)
 
 1. **Una sola fuente de verdad por cosa.** Cada dato vive en un lugar; el resto linkea, nunca copia. La duplicación diverge en silencio; el link roto es un fallo ruidoso — preferí siempre el fallo ruidoso.
-2. **Jerarquía de precedencia explícita.** El documento en conflicto se corrige en el mismo PR en que se detecta la contradicción.
+2. **Jerarquía de precedencia explícita.** El documento en conflicto se corrige en el mismo commit en que se detecta la contradicción.
 3. **Decidir rápido con defaults, refutar con spikes cortos** (≤2-3 días). Toda decisión abierta arranca con una opción por defecto; el spike existe para refutarla, no para explorar infinito. Reabrir una decisión aceptada requiere evidencia, no preferencia.
-4. **El repo es la memoria; los chats son descartables.** Toda decisión, gotcha o convención que emerja en una sesión se persiste en el mismo PR.
+4. **El repo es la memoria; los chats son descartables.** Toda decisión, trampa o convención que emerja en una sesión se persiste en el mismo commit.
 5. **Documentar contra realidad, no intenciones.** Las specs se escriben cuando hay código real que documentar, un paso antes de necesitarlas. La documentación especulativa produce archivos que nadie corrige.
 6. **Vertical primero (walking skeleton).** Antes de pulir capas, un hilo mínimo que atraviesa todo el sistema de punta a punta. Después se engorda ese hilo.
 7. **Dependencias externas detrás de interfaces propias** con modo real/simulado conmutable por configuración. Los simuladores son producto, no stubs. Acá esa dependencia es Cardano (D-014).
 8. **Redefinir "listo" según lo que controlás.** Si el hito depende de terceros, "listo" es *listo para activar*: todo lo bloqueado detrás de configuración, activable en días.
 9. **LLMs para volumen, humanos para juicio**, con niveles de autonomía explícitos según riesgo. Nada de lógica crítica que el revisor no pueda explicar sin mirar el chat.
-10. **CI desde el primer PR** y **documentación antes que código**, para que toda sesión tenga contexto desde el minuto uno.
+10. **CI desde el primer commit** y **documentación antes que código**, para que toda sesión tenga contexto desde el minuto uno.
 
 ## Estructura del repo
 
-`apps/web` (TanStack Start) y `packages/api` (Express + Prisma) son los únicos servicios. `shared`/`db`/`cardano` son librerías (hoy placeholders con .gitkeep; el esquema Prisma vive en `packages/api/prisma`). `contracts/` es el proyecto Aiken: no se hostea, su versión es un entero (D-015).
+`apps/web` (TanStack Start) y `packages/api` (Express + Prisma) son los únicos servicios.
+`shared`/`db`/`cardano` son librerías (hoy placeholders; el esquema Prisma vive en
+`packages/api/prisma`). `contracts/` es el proyecto Aiken: no se hostea, su versión es un entero
+(D-015).
 
-Solo tres `.md` en la raíz, a propósito: **`README.md`** (entrada humana, arranque, variables de entorno), **`CLAUDE.md`** (este archivo: todo lo que un agente necesita en cada sesión) y **`DECISIONS.md`** (el porqué). El mapa de desarrollo está en `specs/README.md`; los entregables oficiales en `docs/` (índice en `docs/README.md`).
+Tres `.md` en la raíz, a propósito: **`README.md`** (entrada humana, arranque, variables de
+entorno), **`CLAUDE.md`** (este archivo) y **`DECISIONS.md`** (el porqué). El mapa de desarrollo
+está en `specs/README.md`; los entregables oficiales en `docs/`.
+
+El harness de agentes vive en `.claude/` (subagentes, skills, hooks y permisos, todo commiteado) y
+`scripts/` (la puerta y los árboles de trabajo). Ver §Cómo se trabaja acá.
 
 ## Stack
 
@@ -85,17 +105,24 @@ Los entregables oficiales **son agnósticos de stack**: el único requisito téc
 | deploy | Docker · Railway con "Wait for CI" · GHA **solo valida** | — | D-010 |
 | versionado | CalVer `vYYYY.MM.N` para servicios; entero para contratos; nada para packages internos | — | D-015 |
 
-**Deuda técnica conocida** (registrada, sin decisión formal salvo donde se indica):
+**Deuda técnica transversal** (la de cada frente está en su `CLAUDE.md`):
 
-- Skew de TypeScript: `5.8` en la API contra `6.0` en la web. **Unificar antes de poblar `packages/shared`**, que los tipa a ambos.
-- Nitro pineado a un **nightly** (`3.0.1-20260714-…`) que trajo el scaffold. **Ya está molestando, no solo en pre-prod:** su proxy de desarrollo rompe `POST`+`401` (ver Gotchas), lo que hace indebuggeables los caminos de error de auth en local. Pasar a estable subió de prioridad.
-- `contracts/aiken.toml` con naming de scaffold (`j/milestone-fsm`, `version = "0.0.0"`, que incumple D-015).
-- Multer 1.x emite warning de `url.parse()` deprecado; migrar a 2.x requiere decisión nueva.
-- `apps/web/src/styles.css`: ~1000 líneas de CSS de la maqueta anterior, a reemplazar por los tokens de M2-D3 (D-024).
+- **Skew de TypeScript: `5.8` en la API contra `6.0` en la web.** Unificar **antes** de poblar
+  `packages/shared`, que los tipa a ambos. Es lo que hoy bloquea la regla 6, que es la única
+  defensa real contra el drift API↔web.
+- **`packages/api` no tiene script `test`**, así que `pnpm -r test` lo saltea en silencio. La
+  puerta falla si tocás ese paquete, justamente para que la deuda bloquee a quien la usa.
+- **`contracts/` tiene 0 tests** contra un criterio de aceptación de ≥95% de coverage.
+- Nitro pineado a un **nightly** (`3.0.1-20260714-…`) que trajo el scaffold, con un proxy de dev
+  que rompe `POST`+`401` (ver `apps/web/CLAUDE.md`). Pasar a estable subió de prioridad.
+- `packages/db/` es un placeholder vacío reservado que nunca se usó: el esquema vive en
+  `packages/api/prisma` por D-016.
 
 **Decisiones de stack abiertas:** D-005 (Lucid vs Mesh — lo cierra el walking skeleton) · D-009 (co-firma CIP-30 vs wallet por rol) · D-016 (Express→Hono solo con evidencia medida) · D-017 (`milestone.ak` vs `milestone2.ak`).
 
 ## Documentación oficial: qué leer antes de tocar cada frente
+
+No leas los cuatro entregables por costumbre: son ~25k tokens. Abrí lo que la fila pide.
 
 | Vas a tocar | Leé primero |
 |---|---|
@@ -103,19 +130,19 @@ Los entregables oficiales **son agnósticos de stack**: el único requisito téc
 | Algo que muestre un hash, TXID o Merkle root | `M2-D4` (los 10 patrones son **normativos**) |
 | Un endpoint | `M2-D5` §4-6 (trae el path, los test IDs y el work stream) + `M2-D6` §9 |
 | Un validador | `M1-D1` §Workflow + D-020 (FSM) + D-021 (nunca valor) |
-| El modelo de datos | `M1-D2b` + `M2-D1` §4 (matriz de permisos) |
+| El modelo de datos | `M1-D2b` + `M2-D1` §4 (matriz de permisos) + D-029 |
 
 ## Reglas duras (innegociables)
 
 1. **Datos primero:** dinero jamás en float — montos en unidades enteras mínimas (lovelace como `bigint`; moneda fiat en centavos `integer`). Timestamps en UTC. IDs = UUID.
 2. **Cero PII on-chain o en logs:** ni nombres, ni emails, ni URLs internas, ni nombres de archivo en metadata, datums o logs. Solo hashes y refs opacas. Strings de metadata ≤ 64 bytes.
-3. **El hash es el ticket de entrada a la cadena de prueba** (D-027). Solo se hashea lo que se va a anclar. Si un archivo tiene `sha256Hash`, termina anclado — o se muestra como "Pendiente" mientras confirma, **nunca** como "Verificado". El hash lo calcula el servidor y no se recalcula ni se edita después de creado. Los **assets** informativos (renders, folletos, galerías, fotos de unidad de muestra) no se hashean, no se anclan y no muestran ninguna señal de prueba. No hay estado intermedio: un archivo está en la cadena de prueba o no está.
+3. **El hash es el ticket de entrada a la cadena de prueba** (D-027). Solo se hashea lo que se va a anclar. Si un archivo tiene `sha256Hash`, termina anclado — o se muestra como "Pendiente" mientras confirma, **nunca** como "Verificado". El hash lo calcula el servidor y no se recalcula ni se edita después de creado. Los **assets** informativos (renders, folletos, galerías, fotos de unidad de muestra) no se hashean, no se anclan y no muestran ninguna señal de prueba. No hay estado intermedio.
 4. **Passwords solo con bcrypt** (cost 10). Jamás loguear ni devolver `passwordHash` en ninguna respuesta.
 5. **Autorización en dos capas, siempre:** rol global (`requireRole`) + membresía por proyecto (`canAccessProject`). `admin` bypasea membresías; el resto solo ve proyectos donde es miembro. La matriz completa está en M2-D1 §4.
 6. **Todo body se valida con Zod** (`safeParse` + 400 con `error.flatten()`). Nada llega a Prisma sin pasar por un schema. Para endpoints nuevos: el schema va a `packages/shared` ANTES que el endpoint, y el frontend importa el mismo tipo.
 7. **Toda mutación relevante escribe `AuditLog`** (append-only) vía `writeAuditLog`, con actor, entidad, acción, timestamp.
 8. **Idempotencia en todo lo que toca plata o chain:** re-ejecutar un anclaje, release o migración no duplica efectos.
-9. **Máquina de estados del stage:** `Pending → InProgress → {Observed ⇄ InProgress, Completed}`, `Completed` terminal (D-020). `Observed` es remediación, no estado final. Una sola tabla de transiciones, espejada entre backend y `contracts/`. La etiqueta que ve el usuario ("Certificado"/"Certified") sale del diccionario i18n, no del nombre del estado.
+9. **Máquina de estados del stage:** `Pending → InProgress → {Observed ⇄ InProgress, Completed}`, `Completed` terminal (D-020). `Observed` es remediación, no estado final. Una sola tabla de transiciones, espejada entre backend y `contracts/`. La etiqueta que ve el usuario sale del diccionario i18n, no del nombre del estado.
 10. Uploads: solo `application/pdf`, `image/jpeg`, `image/png`; máximo `MAX_FILE_SIZE_MB` (default 10). Si un upload falla la validación después de que Multer escribió el archivo, **borrar el archivo huérfano** antes de responder.
 11. **`contracts/plutus.json` se commitea** tras cada `aiken build`; direcciones de script derivadas del blueprint, jamás hardcodeadas.
 12. **Secrets solo por env.** Si ves una seed/key commiteada: frená y avisá.
@@ -127,40 +154,70 @@ Los entregables oficiales **son agnósticos de stack**: el único requisito téc
 
 ## Prohibiciones (qué NO hacer aunque parezca buena idea)
 
-- No migrar lógica de negocio on-chain: el backend es la fuente de verdad del lifecycle (D-007); on-chain se anclan pruebas.
+- No migrar lógica de negocio on-chain: el backend es la fuente de verdad del **registro** del lifecycle (D-007); on-chain se anclan pruebas.
 - No importar Lucid/Blockfrost fuera del futuro adaptador real de `packages/cardano` (D-014). Las rutas de la API jamás llaman a la chain directo.
-- En el front, no hacer `fetch` fuera de `ApiPort` (`apps/web/src/api/`): los adaptadores (`real` | `mock`) implementan la misma interfaz tipada.
+- En el front, no hacer `fetch` fuera de `ApiPort` (`apps/web/src/api/`).
 - No tocar mainnet: `CARDANO_NETWORK=Preprod` siempre (D-013). CI no toca ninguna red.
-- **No subir `@types/express` a v5** mientras `express` sea v4: los tipos v5 rompen todas las rutas (ver gotchas).
-- **No editar migraciones ya aplicadas** en `packages/api/prisma/migrations/`; siempre migración nueva.
+- **No subir `@types/express` a v5** mientras `express` sea v4.
+- **No editar migraciones ya aplicadas**; siempre migración nueva.
 - No tocar `contracts/build/` (generado) ni editar `aiken.lock` a mano.
-- No inventar endpoints, campos o dependencias fuera de spec/docs — proponer en el PR, no improvisar.
+- No inventar endpoints, campos o dependencias fuera de spec/docs — proponer, no improvisar.
 - No commitear `.env`, `dev.db`, `uploads/` ni artefactos de build.
 - No "arreglar" tests cambiando contratos de API o esquema de DB para que pasen.
 - No crear variantes ad-hoc de los componentes de dominio (HashChip/StatusPill/etc.): viven en `apps/web/src/components/domain/`.
 - **No editar nada dentro de `docs/`** (D-022). Ni para corregir un error evidente.
-- **No inventar estados ni patrones de prueba nuevos.** M2-D3 dice *"never invent new statuses"* y M2-D4 dice que un patrón nuevo se documenta antes de usarse. Como el documento es inmutable, en la práctica: patrón nuevo = decisión nueva en `DECISIONS.md`.
-- No abrir un modal de verificación automáticamente (M2-D4 §6.3). Toda superficie de prueba es iniciada por el usuario; la única excepción es `AnchoringSuccessModal`, que confirma una acción que el usuario acaba de disparar.
+- **No inventar estados ni patrones de prueba nuevos.** M2-D3 dice *"never invent new statuses"* y M2-D4 pide documentar un patrón antes de usarlo. Como el documento es inmutable, en la práctica: patrón nuevo = decisión nueva en `DECISIONS.md`.
+- No abrir un modal de verificación automáticamente (M2-D4 §6.3). Toda superficie de prueba es iniciada por el usuario; la única excepción es `AnchoringSuccessModal`.
 
-## Método de trabajo LLM
+## Cómo se trabaja acá
 
-- **Spec-driven:** antes de codear, leé la spec correspondiente (`specs/`, mapa en `specs/README.md`); si no existe y la tarea la amerita, la spec se escribe primero (≤2 págs, con el template).
-- **PRs chicos con tests:** una tarea = una rama = un PR. Correr `pnpm typecheck && pnpm test` (y `aiken check` si aplica) ANTES de proponer el diff.
-- **Persistencia de conocimiento:** toda decisión, gotcha o convención que surja en tu sesión va al repo en el mismo PR (DECISIONS.md, la spec, o la sección Gotchas de abajo).
-- **Confinamiento:** trabajá solo en el frente asignado (web / api / contracts); las decisiones cruzadas las arbitra el humano. Los merges los secuencia el humano.
-- **Pase de coherencia** al final de cada tanda grande de decisiones: grep de términos superados en todos los docs.
+**El protocolo de sesión es el skill `slice`.** Invocalo al empezar; no lo repito acá.
+
+**La puerta.** `scripts/gate.sh` es el único comando que decide si un cambio puede pushearse:
+prohibiciones absolutas, typecheck, tests **del frente que tocaste**, y contratos si aplica. **El
+CI corre el mismo script** — si se separan, divergen.
+
+Lo que no se puede dejar librado al azar **es un hook, no un párrafo** (D-032). Están bloqueados
+por el harness, no por convención: editar `docs/`, editar una migración aplicada o un archivo
+generado, escribir una clave privada, pushear con la puerta cerrada, pushear forzado. Los hooks
+tienen su propia suite: `scripts/hooks/test-guards.sh`.
+
+**Árboles paralelos.** `scripts/worktree.sh create <track>` deja un árbol usable —rama, deps, base
+sembrada y puertos propios— para `web`, `api` o `contracts` (D-031). El track de contratos siempre
+puede correr en paralelo: está aislado del workspace pnpm.
+
+**Subagentes** (`.claude/agents/`), divididos por el contexto que necesitan, no por rol nominal:
+
+| Agente | Cuándo | Por qué existe |
+|---|---|---|
+| `spec` | antes de implementar una rebanada sin spec | leer los entregables cuesta ~25k tokens que el implementador no necesita |
+| `conformance` | antes de commitear, obligatorio si hay superficie de prueba | el que escribió el código es el peor juez de si cumple la spec |
+| `contracts` | cualquier trabajo en `contracts/` | contexto Aiken/Plutus disjunto del TypeScript |
+
+**Dónde vive cada cosa** (si no está en su lugar, no lo copies: movelo):
+
+| Qué | Dónde |
+|---|---|
+| Obligaciones, la vara de aceptación | `docs/` — inmutable |
+| Por qué se decidió algo | `DECISIONS.md` |
+| Reglas transversales de sesión | este archivo |
+| Reglas, trampas y deuda de un frente | `<frente>/CLAUDE.md` |
+| Estado, rebanadas, riesgos | `specs/README.md` |
+| Invariantes y casos borde de una rebanada | `specs/SPEC-NNN` |
+| Procedimientos | `.claude/skills/` |
+| Lo que se ejecuta y no se confía | `scripts/` y `.claude/settings.json` |
 
 ### Niveles de autonomía (por riesgo del código)
 
 | Nivel | Qué cubre | Cómo se trabaja |
 |---|---|---|
-| 🟢 Verde | Componentes UI según M2-D3, endpoints CRUD según M2-D5, tests, docs, seeds | El LLM implementa directo; revisión de PR normal |
-| 🟡 Amarillo | Migraciones de DB, auth/permisos/guards, pipeline de anclaje (`packages/cardano`), manejo de archivos/S3, config de CI/deploy, **validadores Aiken** | El LLM propone; revisión humana línea por línea antes de merge |
+| 🟢 Verde | Componentes UI según M2-D3, endpoints CRUD según M2-D5, tests, docs, seeds | El LLM implementa directo |
+| 🟡 Amarillo | Migraciones de DB, auth/permisos/guards, pipeline de anclaje (`packages/cardano`), manejo de archivos/S3, config de CI/deploy, **validadores Aiken** | El LLM propone; revisión humana línea por línea antes de integrar |
 | 🔴 Rojo | Manejo de seeds/keys/firmas, todo lo que toque `SERVICE_WALLET_SEED`, la lógica de `canAccessProject`, hashing y construcción de commitments | El humano lidera y escribe; el LLM asiste. El revisor debe poder explicar cada línea sin mirar el chat |
 
-Si dudás del nivel, es el más alto de los dos. *(Los validadores bajaron de 🔴 a 🟡 por D-021: no custodian valor. Lo que queda en rojo es lo que puede filtrar secretos o romper el aislamiento entre roles.)*
+Si dudás del nivel, es el más alto de los dos.
 
-### Commits, ramas y PRs
+### Commits y ramas
 
 Formato: `<tipo>(<scope>): <descripción en imperativo, minúscula, sin punto final> [<REF>]`
 
@@ -168,86 +225,71 @@ Formato: `<tipo>(<scope>): <descripción en imperativo, minúscula, sin punto fi
 - **Scopes (cerrados):** `web` · `api` · `db` · `shared` · `cardano` · `contracts` · `ci` · `repo`
 - **REF:** el ID de M2-D5 entre corchetes cuando aplique (`[M3-BE-13]`, `[M3-FE-18]`, `[M3-SC-05]`)
 
-```
-feat(api): endpoint de subida de evidencia con merkle y anclaje [M3-BE-13]
-feat(web): modal AnchoringSuccess con merkle root y txid [M3-FE-18]
-db(db): tabla audit_log append-only con índice por categoría [M3-BE-16]
-test(web): e2e DEV-EVIDENCE-UPLOAD-001
-```
+Un commit = un cambio lógico (no mezclar refactor con feature) · el cuerpo explica el *por qué* ·
+`BREAKING CHANGE:` en el footer si rompe contrato de API o esquema on-chain.
 
-Reglas: un commit = un cambio lógico (no mezclar refactor con feature) · el cuerpo explica el *por qué*, no el *qué* · `BREAKING CHANGE:` en el footer si rompe contrato de API o esquema on-chain · nunca commitear `.env`, seeds de wallet, keys ni evidencia real.
-
-### Ramas: una sola, `main` (D-030)
-
-**Trunk-based mientras el equipo sea una persona.** No hay ramas de feature, no hay PRs, no hay
-protección de rama. El ciclo es siempre el mismo:
-
-> **planificar → implementar → testear → commitear → pushear**
-
-Pushear es parte del ciclo, no un paso aparte: un commit que no se pusheó no existe para nadie más
-y no pasó por CI.
-
-**Puerta antes de pushear** (era el checklist del PR; sigue valiendo, sin la ceremonia):
-
-- [ ] `pnpm typecheck` y `pnpm test` pasan
-- [ ] Schema Zod en `packages/shared` actualizado (si toca la API)
-- [ ] Evento de `AuditLog` agregado (si es mutación relevante)
-- [ ] `aiken check` pasa (si toca contratos)
-- [ ] Sin datos sensibles on-chain ni en logs
-
-**Lo que no cambia:** el tamaño del commit. Un cambio lógico por commit sigue siendo la regla —
-ahora importa más, porque el mensaje de commit es la única revisión que va a existir. Si un cambio
-no se puede explicar en un mensaje, es demasiado grande.
-
-Cuando se sumen más personas, esto se revierte a ramas + PR. El trigger está en D-030.
+**`main` es la rama de integración y no hay PRs** (D-030). Las ramas `track/<nombre>` existen solo
+para que los árboles paralelos no se pisen (D-031): viven horas o días, se integran con
+`merge --ff-only` y se borran. Cuando se sume una segunda persona, esto vuelve a PRs — el trigger
+está en D-030.
 
 ## Comandos
 
 ```bash
 pnpm install                      # bootstrap del workspace
-pnpm dev                          # web (:3000) + api (:8787) en paralelo
+pnpm dev                          # web + api en paralelo (puertos según el árbol)
 pnpm typecheck                    # typecheck de todos los packages
-pnpm --filter @plataforma/api dev            # solo la API
-pnpm --filter @plataforma/api db:generate    # regenerar cliente Prisma tras tocar schema
-pnpm --filter @plataforma/api db:migrate     # nueva migración en desarrollo
-pnpm --filter @plataforma/api db:seed        # datos demo (admin/dev/buyer/verifier, proyecto torre-a)
+pnpm test                         # tests (hoy: solo web — ver §Deuda)
 pnpm contracts:check              # aiken check (compila y corre tests de validadores)
 pnpm contracts:build              # regenera plutus.json (commitearlo)
 pnpm e2e                          # walkthrough Playwright (mobile + desktop) — NO corre en CI
-pnpm --filter web e2e:ui          # el mismo, en modo interactivo
-pnpm --filter web e2e:report      # abre el último reporte HTML
+
+scripts/gate.sh                   # LA PUERTA — lo mismo que corre el CI y el hook de push
+scripts/gate.sh --ci              # sin acotar por diff: verifica todo
+scripts/worktree.sh list          # árboles, ramas y puertos
+scripts/worktree.sh create web    # árbol nuevo, listo para usar
+scripts/hooks/test-guards.sh      # regresión de los guardias del harness
 ```
 
-**Sobre `pnpm e2e`:** levanta web+api solo (reusa los que ya estén corriendo), recorre la app y deja
-capturas, video y trace en `apps/web/e2e/.artifacts/` (gitignoreado). Se corre a mano, cada tanto —
-no en cada commit. Produce tres cosas que el SOM de M3 pide como evidencia: los test IDs de M2-D5
-ejecutándose, capturas, y el video del walkthrough (criterio 13).
+Los comandos por frente (db:migrate, db:seed, e2e:ui…) están en el `CLAUDE.md` de cada frente.
 
-Smoke test manual: `pnpm dev`, login en `http://localhost:3000` con `admin@example.com` / `admin123` (seed) y navegar a proyectos.
+**Sobre `pnpm e2e`:** levanta web+api (reusa los que estén corriendo), recorre la app y deja
+capturas, video y trace en `apps/web/e2e/.artifacts/` (gitignoreado). Se corre a mano, cada tanto.
+Produce tres cosas que el SOM de M3 pide como evidencia: los test IDs de M2-D5 ejecutándose,
+capturas, y el video del walkthrough (criterio 13).
 
-## Gotchas (sección viva — agregá acá el mismo día que te muerda una)
+## Trampas transversales (sección viva — agregá acá el mismo día que te muerda una)
 
-- **2026-07-29 · Un artefacto derivado contradijo al entregable y nos hizo decidir mal.** Cuatro `.puml` regenerados desde los PDF de M1 tenían las flechas de la FSM invertidas. Durante toda una sesión creímos que el entregable estaba mal dibujado y registramos un "desvío" (D-020) que **no existía**: el original decía exactamente lo que habíamos decidido. **Antes de concluir que un entregable está mal, verificá que estás mirando el entregable y no una transcripción.** El paquete canónico de M1 es `M1-D2-Architecture-and-Data-Models/`, y está hasheado en la Proof of Achievement.
-- **2026-07-29 · El proxy de nitro en dev convierte `POST` + `401` en `502 Bad Gateway`.** Reproducible al 100%, y **solo** esa combinación: `GET 401`, `POST 400` y `POST 200` pasan bien. Sale de `h3@2.0.1-rc.25` dentro de `nitro-nightly` (`runtime/internal/vite/dev-worker.mjs` → "fetch failed"), así que **es solo del dev-worker**: en producción la API es otro origen y no hay proxy. **Consecuencia:** el camino de error más común de cualquier app —credenciales inválidas— muestra "No se pudo conectar con la API" en desarrollo. Antes de debuggear un error de auth, verificá contra `:8787` directo. Queda como `test.fail()` en el walkthrough E2E para que avise cuando se arregle.
-- **2026-07-29 · Los tests E2E necesitan esperar la hidratación, no el DOM.** La app llega por SSR y los formularios son controlados por React: si Playwright hace click antes de que React monte, el `<form>` hace submit nativo, nunca corre el `preventDefault` y la página recarga sin llamar a la API. Da fallas intermitentes que parecen de backend. Hay que sondear la hidratación con una interacción que solo React pueda satisfacer — ver `waitForHydration` en `apps/web/e2e/walkthrough.spec.ts`.
-- **2026-07-29 · `test.fail()` a nivel `describe` aplica a todos los tests que siguen**, no solo al próximo. Para marcar un test suelto va **dentro** del cuerpo. Puesto afuera hizo fallar los 16.
-- **2026-07-29 · Los `<label>` de `login.tsx` no estaban asociados a sus inputs** (sin `htmlFor`/`id`), así que `getByLabel` no los encontraba y el formulario incumplía la accesibilidad que M2-D3 exige. Los tests de vitest no lo detectaban porque usaban otros selectores. Corregido. **Usá selectores accesibles en los tests: fallan cuando la accesibilidad está mal, que es justo lo que querés.**
-- **2026-07-29 · Un `*.test.tsx` dentro de `src/routes/` lo escanea el router de TanStack** y avisa "does not export a Route". Prefijarlo con `-` o configurar `routeFileIgnorePattern`. Y `vitest` levanta los `.spec.ts` de `e2e/` si no se los excluye: su `include` por defecto matchea `test` **y** `spec`.
-- **2026-07-29 · Las capturas de M2-D2 tienen datos mock, no datos de diseño.** M2-D1 §Primary platform characteristics lo dice: *"the maquette uses mock blockchain interactions"*. El panel del certifier (captura 55) muestra tres unidades del mismo proyecto en tres stages distintos, y **casi me hace modelar los stages por unidad** — cuando el dominio dice que un desarrollo tiene un solo trámite (D-029). Los hashes, TXIDs, números y combinaciones de las capturas son relleno. Lo normativo de una captura es la **estructura**: layout, componentes, jerarquía, estados. Los valores, no.
-- **2026-07-29 · Grepear solo `*.md` esconde entregables.** Busqué "council of experts" en `docs/ --include="*.md"` y concluí que no aparecía. Estaba en un `.csv` — y encima en una carpeta que todavía no se había copiado. Grepeá sin filtro de extensión, y verificá que el árbol esté completo antes de afirmar una ausencia.
-- **2026-07-29 · Los PDF de este repo no se leen con la herramienta de lectura** (falta `pdftoppm`). Y extraerles el texto no alcanza para un diagrama: las flechas son trazos vectoriales, no texto. Renderizalos primero: `qlmanage -t -s 1800 -o <dir> archivo.pdf` genera un PNG sin instalar nada.
+Las de cada frente van en su `CLAUDE.md`. Acá solo lo que cruza frentes o toca el método.
 
-- **2026-07-29 · Los códigos de entregable (`D1`, `D2a`…) se reinician en cada milestone y colisionan**: `M1-D1` es el whitepaper, `M2-D1` es el mapa de arquitectura de información; `M1-D2a` es la arquitectura del sistema, `M2-D2a` es el catálogo de pantallas. Dentro de los documentos de M2, un "D1 §5" suelto significa siempre M2-D1. Al citar en specs, commits o código, **usá siempre la forma completa** (`M2-D1 §4`).
-- **2026-07-29 · `M2-D5` y `M2-D6` son entregables de Milestone 2, aunque vivan en `docs/milestone-3-implementacion/`**: son los planes *de* M3 escritos *en* M2. Están archivados junto al SOM de M3 porque en la práctica se leen juntos.
-- **2026-07-29 · Tailwind v4 y `lucide-react` ya vienen instalados** en `apps/web` (los trajo el scaffold de TanStack Start). No los agregues de nuevo. Lo que falta es shadcn/ui y reemplazar `styles.css` (CSS de la maqueta vieja) por los tokens de M2-D3.
-- **2026-07-29 · `contracts/aiken.toml` conserva naming de scaffold**: `name = "j/milestone-fsm"`, `repository.user = "j"`, `version = "0.0.0"` (que además incumple D-015, que pide entero incremental). Corregir junto con el rename de D-023.
-
-- **2026-07-15 · Prisma ≥6.16 ya no carga `.env` desde el client**: el install fresco del workspace resolvió `^6.6.0` → 6.19.x y `prisma/seed.ts` falló con "Environment variable not found: DATABASE_URL" (en el repo original funcionaba). Fix: `import "dotenv/config"` primero en todo entrypoint que use PrismaClient fuera del server (el server ya lo carga en `app.ts`). El CLI de Prisma (`migrate`, `studio`) sí sigue cargando `.env` solo.
-
-- **2026-07-15 · `@types/express` v5 con Express 4 rompe el typecheck** (21 errores `string | string[]` en `req.params`). Quedó pineado a `^4.17.21`. No "actualizar" ese paquete por su cuenta.
-- **2026-07-15 · Warning `url.parse()` deprecado al arrancar la API**: viene de Multer 1.x, no de nuestro código. Inofensivo; desaparecería al migrar a Multer 2.x (requiere decisión nueva por cambios de API).
-- **2026-07-15 · `contracts/validators/milestone.ak` y `milestone2.ak` son casi idénticos** (mismo validador, dos estilos). Consolidación pendiente — D-017.
-- **2026-07-15 · Los validadores Aiken tienen 0 tests** (`aiken check` pasa en verde vacío). Los casos borde de la FSM (D-020) son la suite mínima a escribir.
-- La sintaxis de Aiken cambia entre versiones: verificá contra la versión pineada en CI (`aiken --version`) antes de asumir stdlib. Los `.ak` de este repo asumen v1.1.x.
-- Metadata de Cardano: strings > 64 bytes revientan al construir la tx — validar antes de firmar (D-006).
-- El scaffolder de TanStack Start cambia de flags entre versiones: `pnpm create @tanstack/start@latest --help` primero.
+- **2026-08-20 · Un comando de shell contiene datos, no solo código.** La primera versión del
+  guardia de Bash matcheaba la *mención* de `docs/` y de `git push`, así que se bloqueó a sí misma
+  al escribirse y disparó la puerta al escribir un skill que documenta el push. Matchear
+  **invocaciones**, no menciones: `scripts/hooks/analyze-cmd.py` saca los cuerpos de heredoc antes
+  de analizar, y `test-guards.sh` fija el comportamiento.
+- **2026-07-29 · Un artefacto derivado contradijo al entregable y nos hizo decidir mal.** Cuatro
+  `.puml` regenerados desde los PDF de M1 tenían las flechas de la FSM invertidas. Durante toda una
+  sesión creímos que el entregable estaba mal y registramos un "desvío" (D-020) que **no existía**.
+  **Antes de concluir que un entregable está mal, verificá que estás mirando el entregable y no una
+  transcripción.** El paquete canónico de M1 es `M1-D2-Architecture-and-Data-Models/`, hasheado en
+  la Proof of Achievement.
+- **2026-07-29 · Las capturas de M2-D2 tienen datos mock, no datos de diseño.** M2-D1 §Primary
+  platform characteristics lo dice: *"the maquette uses mock blockchain interactions"*. El panel
+  del certifier (captura 55) muestra tres unidades del mismo proyecto en tres stages distintos, y
+  **casi me hace modelar los stages por unidad** — cuando el dominio dice que un desarrollo tiene un
+  solo trámite (D-029). Lo normativo de una captura es la **estructura**: layout, componentes,
+  jerarquía, estados. Los valores, no.
+- **2026-07-29 · Grepear solo `*.md` esconde entregables.** Busqué "council of experts" en `docs/`
+  con `--include="*.md"` y concluí que no aparecía. Estaba en un `.csv`, y en una carpeta que
+  todavía no se había copiado. Grepeá sin filtro de extensión, y verificá que el árbol esté
+  completo antes de afirmar una ausencia.
+- **2026-07-29 · Los PDF de este repo no se leen con la herramienta de lectura** (falta
+  `pdftoppm`), y extraerles el texto no alcanza para un diagrama: las flechas son trazos
+  vectoriales, no texto. Renderizalos primero: `qlmanage -t -s 1800 -o <dir> archivo.pdf`.
+- **2026-07-29 · Los códigos de entregable (`D1`, `D2a`…) se reinician en cada milestone y
+  colisionan**: `M1-D1` es el whitepaper, `M2-D1` es el mapa de arquitectura de información. Dentro
+  de los documentos de M2, un "D1 §5" suelto significa siempre M2-D1. Al citar en specs, commits o
+  código, **usá siempre la forma completa** (`M2-D1 §4`).
+- **2026-07-29 · `M2-D5` y `M2-D6` son entregables de Milestone 2, aunque vivan en
+  `docs/milestone-3-implementacion/`**: son los planes *de* M3 escritos *en* M2. Se archivan junto
+  al SOM de M3 porque en la práctica se leen juntos.
