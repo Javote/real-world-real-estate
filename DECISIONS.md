@@ -51,6 +51,7 @@
 | D-034 | El inventario del stack vive en `specs/stack.md`; `CLAUDE.md` conserva lo de sesión | Aceptada |
 | D-035 | Zod 4 en el contrato compartido | Aceptada |
 | D-036 | Multer 2.x | Aceptada |
+| D-037 | Nitro: versión publicada en vez de nightly | Aceptada |
 
 > **Repaso completo con la documentación oficial: ver §Repaso al final del archivo.** D-001..D-017 se
 > escribieron sin los entregables delante; las 25 entradas se revisaron el 2026-07-29 y cada una
@@ -667,6 +668,37 @@ compilación. La alternativa `bcryptjs` es JS puro, compatible en formato de has
 No se decide acá: tocar el hashing de contraseñas es código 🔴 y lo lidera el humano.
 
 **Reversión.** Trivial mientras la superficie sea `lib/upload.ts`: volver a `^1.4.5-lts.2`.
+
+## D-037 — Nitro: versión publicada en vez de nightly
+
+**Contexto (2026-08-20).** `apps/web` traía del scaffold `nitro` como alias de
+`nitro-nightly@3.0.1-20260714-164552-c6e6168b`. Un nightly **no garantiza reproducibilidad**: si
+se despublica o se recolecta, `pnpm install --frozen-lockfile` falla y el CI muere sin que nadie
+haya tocado el código.
+
+**Decisión.** `nitro@3.0.260610-beta`, la versión publicada más nueva. **Sigue siendo beta** —no
+existe Nitro 3 estable— pero es una versión fija y publicada, que es lo que la reproducibilidad
+exige.
+
+**Verificación del spike.** typecheck verde en los tres packages · `pnpm build` de web OK ·
+`pnpm dev` arriba · los cuatro códigos del proxy correctos salvo el conocido · **walkthrough E2E
+completo: 16/16**. Se acepta ir un mes para atrás (la beta es del 10-jun, el nightly del 14-jul) a
+cambio de builds reproducibles.
+
+**Lo que el spike refutó, y es el hallazgo que más vale.** La hipótesis era que el `502` en
+`POST`+`401` era una regresión de `h3@2.0.1-rc.25`, que es lo que este repo afirmaba como hecho.
+La beta trae `h3@2.0.1-rc.22` y **el 502 sobrevivió idéntico**. El bug abarca al menos dos
+versiones de h3, así que **no se resuelve eligiendo versión**: queda como deuda con su
+atribución corregida.
+
+Es la segunda atribución falsa que cae en la misma revisión —la otra fue el warning de
+`url.parse()` achacado a Multer (D-036)— y las dos estaban escritas en el repo como hechos
+verificados. La lección se repite: **una causa plausible anotada sin comprobar es una causa
+inventada**, y sobrevive en la documentación hasta que alguien la testea.
+
+**Trigger de revisión.** Cuando salga Nitro 3 estable, pasar a él y volver a probar el 502 en el
+mismo movimiento.
+**Reversión.** Trivial: volver al alias `npm:nitro-nightly@…` en `apps/web/package.json`.
 
 ---
 

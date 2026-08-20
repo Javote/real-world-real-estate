@@ -31,10 +31,13 @@ dice `M2-D5` §4-6.
 ## Trampas verificadas
 
 - **El proxy de nitro en dev convierte `POST` + `401` en `502`.** Reproducible al 100% y solo esa
-  combinación (`GET 401`, `POST 400` y `POST 200` pasan bien). Sale de `h3@2.0.1-rc.25` dentro de
-  `nitro-nightly`, solo en el dev-worker de Vite; en producción la API es otro origen y no hay
-  proxy. **Consecuencia: el error de credenciales inválidas muestra "No se pudo conectar con la
-  API" en desarrollo.** Antes de debuggear un error de auth, comparate contra la API directo.
+  combinación (`GET 401`, `POST 400` y `POST 200` pasan bien). Vive en el dev-worker de Vite; en
+  producción la API es otro origen y no hay proxy. **Consecuencia: el error de credenciales
+  inválidas muestra "No se pudo conectar con la API" en desarrollo.** Antes de debuggear un error
+  de auth, comparate contra la API directo.
+  **No es una regresión de `h3@2.0.1-rc.25`**, como decía este archivo: al pasar a
+  `nitro@3.0.260610-beta`, que trae `h3@2.0.1-rc.22`, el 502 sobrevivió idéntico (D-037). Abarca
+  al menos rc.22 y rc.25, así que no se arregla eligiendo versión.
 - **Los tests E2E esperan la hidratación, no el DOM.** La app llega por SSR con formularios
   controlados por React: un click antes de que React monte hace submit nativo, nunca corre el
   `preventDefault` y la página recarga sin llamar a la API. Falla intermitente que parece de

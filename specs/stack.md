@@ -32,7 +32,7 @@ packages tienen su propio `tsconfig.json` autocontenido.
 | TanStack Router + Query | `1.170` / `5.90` | ● | rutas por archivo, `routeTree.gen.ts` generado |
 | React | `19.2.7` | ● | |
 | Vite | `8.1.4` | ● | |
-| **Nitro** | `3.0.1-20260714-…` **nightly** | ◐ | pineado a un nightly del scaffold; su proxy de dev rompe `POST`+`401` |
+| Nitro | `3.0.260610-beta` | ◐ | D-037. Versión publicada, no un nightly. Su proxy de dev sigue rompiendo `POST`+`401` |
 | Tailwind CSS | `4.3.2` | ● | vía `@tailwindcss/vite` |
 | Lucide (iconos) | `0.545` | ● | M2-D3 reserva pares icono-significado |
 | **shadcn/ui** | — | ○ | D-024. Primitivos accesibles para los 36 componentes de M2-D3 |
@@ -162,7 +162,7 @@ Ver `CLAUDE.md` §Cómo se trabaja acá y D-032.
 
 | Deuda | Costo de arrastrarla |
 |---|---|
-| **Nitro pineado a un nightly** | Builds no reproducibles, y su proxy de dev convierte `POST`+`401` en `502`: el camino de error más común de auth es indebuggeable en local |
+| **Nitro sigue en beta, y su proxy de dev rompe `POST`+`401`** | El camino de error más común de auth es indebuggeable en local. No hay Nitro 3 estable todavía, y el bug abarca al menos h3 rc.22 y rc.25: no se resuelve eligiendo versión (D-037) |
 | **`bcrypt` es nativo** | La imagen Docker necesita toolchain de compilación (`node-pre-gyp`), y ese mismo camino emite el warning de `url.parse()` deprecado en cada arranque. Alternativa: `bcryptjs`, JS puro y compatible en formato de hash, ~30% más lento. Es código 🔴: lo decide el humano |
 | **`contracts/` con 0 tests** | Único criterio duro del SOM sin plan B |
 | **`aiken.toml` con naming de scaffold** | Incumple D-015 (versión entera incremental) |
