@@ -7,12 +7,14 @@ import viteReact from '@vitejs/plugin-react'
 import tailwindcss from '@tailwindcss/vite'
 import { nitro } from 'nitro/vite'
 
-// La API (packages/api) corre en :8787 — ver CLAUDE.md §Comandos.
+// La API (packages/api) corre en :8787 en el árbol principal — ver CLAUDE.md §Comandos.
 // El proxy va por routeRules de nitro (server.proxy de Vite no aplica:
 // nitro atiende las requests antes que el middleware de Vite).
-const API_ORIGIN = process.env.API_ORIGIN ?? 'http://localhost:8787'
+// Puerto y origen salen de ports.ts para que cada worktree tenga los suyos (D-031).
+import { API_ORIGIN, WEB_PORT } from './ports.ts'
 
 const config = defineConfig({
+  server: { port: WEB_PORT },
   resolve: { tsconfigPaths: true },
   plugins: [
     devtools(),

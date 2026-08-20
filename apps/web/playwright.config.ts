@@ -1,5 +1,7 @@
 import { defineConfig, devices } from '@playwright/test'
 
+import { WEB_PORT } from './ports.ts'
+
 // Suite E2E: NO corre en CI ni en `pnpm test`. Se corre a mano, cada tanto,
 // con `pnpm e2e` (o `pnpm e2e:ui` para el modo interactivo).
 //
@@ -10,8 +12,8 @@ import { defineConfig, devices } from '@playwright/test'
 // Los artefactos van a e2e/.artifacts/ y están gitignoreados: son salida, no
 // fuente. El repo ya carga 21 MB de capturas oficiales en docs/.
 
-const PORT = 3000
-const BASE_URL = `http://localhost:${PORT}`
+// Puerto propio del árbol (D-031): 3000 en el principal, otro en cada worktree.
+const BASE_URL = `http://localhost:${WEB_PORT}`
 
 export default defineConfig({
   testDir: './e2e',
@@ -46,7 +48,7 @@ export default defineConfig({
     },
   ],
   webServer: {
-    // Levanta web (:3000) + api (:8787). Si ya están corriendo, los reusa.
+    // Levanta web + api en los puertos de ESTE árbol. Si ya corren, los reusa.
     command: 'pnpm dev',
     cwd: '../..',
     url: BASE_URL,
