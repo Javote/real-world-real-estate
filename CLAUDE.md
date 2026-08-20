@@ -76,8 +76,8 @@ nos pasó decidir contra una transcripción errónea (ver Trampas).
 ## Estructura del repo
 
 `apps/web` (TanStack Start) y `packages/api` (Express + Prisma) son los únicos servicios.
-`shared`/`db`/`cardano` son librerías (hoy placeholders; el esquema Prisma vive en
-`packages/api/prisma`). `contracts/` es el proyecto Aiken: no se hostea, su versión es un entero
+`shared` (contrato único API↔web) y `cardano` (a poblar) son librerías; el esquema Prisma vive en
+`packages/api/prisma` (D-016). `contracts/` es el proyecto Aiken: no se hostea, su versión es un entero
 (D-015).
 
 Tres `.md` en la raíz, a propósito: **`README.md`** (entrada humana, arranque, variables de
@@ -94,13 +94,13 @@ Los entregables oficiales **son agnósticos de stack**: el único requisito téc
 
 | Frente | Stack | Versión real | Decisión |
 |---|---|---|---|
-| Workspace | pnpm workspaces, Node ≥20, TypeScript estricto | `pnpm@9.15.0` | D-001 |
+| Workspace | pnpm workspaces, Node ≥20, TypeScript **6.0** estricto | `pnpm@9.15.0` | D-001 |
 | **web** | TanStack Start + Router + Query, React 19, Tailwind v4, Lucide, Vite, Vitest+jsdom | Start `^1.168` · TW `^4.1` | D-002, D-024 |
 | **web** (falta) | shadcn/ui — primitivos accesibles para los 36 componentes de M2-D3 | pendiente | D-024 |
 | **api** | Express 4 + Zod + JWT + bcrypt(10) + Multer 1.x, base `/api/v1` | Express `^4.21` | D-016 |
 | **db** | Prisma; SQLite en dev → **PostgreSQL al desplegar** | `^6.6` (resuelve 6.19.x) | D-016 |
 | storage | disco local en dev → **S3 genérico** (MinIO dev / R2 prod) | — | D-011 |
-| **shared** | Zod, contrato único API↔web | placeholder vacío | D-012 |
+| **shared** | Zod, contrato único API↔web | auth migrado (SPEC-008) | D-012 |
 | **cardano** | `AnchorPort` con adaptadores `blockfrost` (Lucid Evolution) y `simulated` | placeholder vacío | D-005, D-014 |
 | **contracts** | Aiken v1.1.21 · **Plutus V3** · stdlib v3.0.0 · blueprint commiteado | `plutus.json` → `v3` | D-017, D-019 |
 | red | **Preprod** en todos los entornos; mainnet fuera de alcance | — | D-013 |
@@ -109,16 +109,9 @@ Los entregables oficiales **son agnósticos de stack**: el único requisito téc
 
 **Deuda técnica transversal** (la de cada frente está en su `CLAUDE.md`):
 
-- **Skew de TypeScript: `5.8` en la API contra `6.0` en la web.** Unificar **antes** de poblar
-  `packages/shared`, que los tipa a ambos. Es lo que hoy bloquea la regla 6, que es la única
-  defensa real contra el drift API↔web.
-- **`packages/api` no tiene script `test`**, así que `pnpm -r test` lo saltea en silencio. La
-  puerta falla si tocás ese paquete, justamente para que la deuda bloquee a quien la usa.
 - **`contracts/` tiene 0 tests** contra un criterio de aceptación de ≥95% de coverage.
 - Nitro pineado a un **nightly** (`3.0.1-20260714-…`) que trajo el scaffold, con un proxy de dev
   que rompe `POST`+`401` (ver `apps/web/CLAUDE.md`). Pasar a estable subió de prioridad.
-- `packages/db/` es un placeholder vacío reservado que nunca se usó: el esquema vive en
-  `packages/api/prisma` por D-016.
 
 **Decisiones de stack abiertas:** D-005 (Lucid vs Mesh — lo cierra el walking skeleton) · D-009 (co-firma CIP-30 vs wallet por rol) · D-016 (Express→Hono solo con evidencia medida) · D-017 (`milestone.ak` vs `milestone2.ak`).
 

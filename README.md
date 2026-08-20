@@ -156,7 +156,7 @@ plataforma/
 │   ├── api/                    # Express 4 + Prisma + SQLite dev (D-016)
 │   │   ├── prisma/             #   schema, migraciones, seed
 │   │   └── src/                #   routes, middlewares (auth 2 capas), lib, utils
-│   ├── shared/                 # (a poblar, SPEC-008) Zod compartido API↔web
+│   ├── shared/                 # contrato único API↔web: schemas Zod + tipos
 │   └── cardano/                # (a poblar) AnchorPort real/simulado — D-014
 ├── contracts/                  # Proyecto Aiken (D-017) — Plutus V3, nunca custodia valor (D-021)
 ├── specs/                      # el mapa de desarrollo + las specs de rebanada

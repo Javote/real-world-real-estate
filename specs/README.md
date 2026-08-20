@@ -107,7 +107,7 @@ conformidad. Lo que sigue es lo que hay que cambiar, por palanca:
 | # | Hallazgo | Evidencia | Estado |
 |---|---|---|---|
 | 1 | **La puerta no existía.** `pnpm test` corría 4 tests de 1 archivo; `packages/api` no tiene script `test` y `pnpm -r` lo saltea **en silencio** (`Scope: 2 of 3`); los contratos no estaban en `pnpm test`. 3 de los 5 ítems de la puerta eran inverificables. | medido | **resuelto** — `scripts/gate.sh` + D-032 |
-| 2 | **`packages/shared` vacío desactiva la regla 6**, que es lo único que vuelve imposible el drift API↔web. Bloqueada por el skew TS 5.8/6.0. | — | **SPEC-008** |
+| 2 | **`packages/shared` vacío desactiva la regla 6**, que es lo único que vuelve imposible el drift API↔web. Bloqueada por el skew TS 5.8/6.0. | — | **resuelto** — SPEC-008: TS unificado en 6.0, contrato de auth compartido, 21 tests |
 | 3 | **El principio 1 ya se violaba:** jerarquía de precedencia escrita **4 veces**; "2% de conformidad" **4 veces**; trampas del front duplicadas entre `CLAUDE.md` y el skill `run-app`; 267 líneas de README de scaffold sin información del proyecto. | grep | **resuelto** — contexto por subárbol (D-032) |
 | 4 | **Los 6 criterios que no se programan estaban todos en la última rebanada.** El criterio 4 (3 pilotos) depende de gente externa y tiene el lead time más largo del proyecto; el 12 (URL pública) hacía caer el primer deploy real al final. | plan | **resuelto** — Track C, abajo |
 | 5 | **Contratos: 0 tests contra un criterio de ≥95%**, declarado paralelo y sin nadie encima. Único criterio duro sin plan B. | `aiken check` verde vacío | **track propio** |
@@ -125,7 +125,7 @@ Cada rebanada deja la app **corriendo y demostrable** — ese es el criterio de 
 
 | # | Spec | Rebanada | Qué podés hacer que antes no | Estado |
 |---|---|---|---|---|
-| 0 | `SPEC-008` | **Cimientos verificables** *(no es vertical, a propósito)* | La puerta puede verificar la API y el contrato API↔web | **abierta** |
+| 0 | `SPEC-008` | **Cimientos verificables** *(no es vertical, a propósito)* | La puerta puede verificar la API y el contrato API↔web | **cerrada** 2026-08-20 |
 | 0b | `SPEC-009` | Rename D-023 + naming de contratos | El dominio dice `stage` en todos lados | no escrita |
 | 1 | — | Login de 4 roles | Entrás como cada rol y ves su panel, en ambos idiomas, en mobile | no escrita |
 | 2 | — | Developer crea proyecto, unidades y stages | Creás un desarrollo con su plantilla de 10 stages | no escrita |
@@ -194,7 +194,7 @@ la última rebanada, que es donde los proyectos mueren. Arrancan **ahora**, en p
 
 | Spec | Título | Rebanada | Estado |
 |---|---|---|---|
-| `SPEC-008` | Cimientos verificables | 0 | **abierta** |
+| `SPEC-008` | Cimientos verificables | 0 | **cerrada** 2026-08-20 |
 
 Las siete specs heredadas (`SPEC-001` a `SPEC-007`) se eliminaron el 2026-07-29: precedían a la
 documentación oficial y describían prototipos descartables. Lo vigente de cada una está absorbido

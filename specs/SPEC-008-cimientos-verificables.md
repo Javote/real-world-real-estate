@@ -70,21 +70,33 @@ tipo**, no una copia: `apps/web/src/api/types.ts` deja de declarar los suyos par
 | `loginRequestSchema` con email no-email | falla |
 | `loginResponseSchema` con `passwordHash` presente | **falla** — el schema es la defensa, no el código |
 
-## Preguntas abiertas
+## Preguntas abiertas — cerradas el 2026-08-20
 
-- **¿A qué versión de TypeScript se unifica?** *Default: 6.0*, la que ya usa la web, por ser la más
-  nueva y porque `packages/shared` tipa a ambos. **Refutación:** si `packages/api` rompe de un modo
-  no trivial contra `@types/express` 4 (que está pineado y **no se sube**, ver prohibiciones), se
-  unifica a 5.8 para los dos y se registra por qué. Spike ≤ medio día.
-- **¿Runner de tests de la API?** *Default: vitest + supertest*, que es lo que el propio CI dejó
-  anotado como default y evita meter un segundo runner en el workspace.
-- **¿El adaptador `mock` de `ApiPort` entra acá?** *Default: no.* Entra cuando una rebanada lo
-  necesite para trabajar sin API. Meterlo ahora es superficie especulativa (principio 5).
+- **Versión de TypeScript: 6.0 para todo**, el default. `@types/express` 4 no dio ningún problema
+  (el riesgo que motivaba la refutación no se materializó), así que no hizo falta bajar a 5.8. **Lo
+  que sí apareció:** TS 6.0 deprecó `moduleResolution: node10`, que usaban `packages/api` y la
+  config nueva de `shared`. Se migraron las dos a `node16`, que es la resolución correcta para
+  packages CommonJS. Efecto colateral: `vitest.config.ts` pasó a `.mts`, porque bajo `node16` un
+  `.ts` de un package CJS no puede importar `vitest/config`, que es ESM.
+- **Runner de la API: vitest + supertest**, el default. Sin sorpresas.
+- **Adaptador `mock` de `ApiPort`: no entra**, como estaba previsto. Sigue pendiente para la
+  rebanada que lo necesite.
+
+## Lo que se aprendió y no estaba previsto
+
+**Un `.d.ts` nunca se emite; un `.ts` sí.** La primera versión apuntaba `types` al fuente para que
+el typecheck no dependiera del build. Falla: tsc mete ese fuente en el programa del consumidor y
+`rootDir` lo rechaza (TS6059). Apuntando `types` al `.d.ts` compilado el problema desaparece —
+pero entonces el typecheck sí depende del build, así que `pnpm typecheck` **reconstruye `shared`
+antes de verificar**. Verificar contra un `dist` viejo es un verde falso, peor que un rojo. Los
+tests, en cambio, resuelven al fuente por alias: ni compilar antes de testear, ni riesgo de
+staleness. Todo eso quedó en `packages/shared/CLAUDE.md`.
 
 ## Definición de terminado
 
-- [ ] `scripts/gate.sh` abre tocando `packages/api` y `packages/shared`
-- [ ] `pnpm test` corre y reporta tests de web, api y shared
-- [ ] cambiar a mano la forma de `loginResponse` en la API **rompe el typecheck del front**
-      (verificalo de verdad, es el invariante 2)
-- [ ] `packages/db/` eliminado y las referencias en `README.md` y `CLAUDE.md` actualizadas
+- [x] `scripts/gate.sh` abre tocando `packages/api` y `packages/shared`
+- [x] `pnpm test` corre y reporta tests de web, api y shared — **21 tests** (eran 4)
+- [x] cambiar a mano la forma de `loginResponse` **rompe el typecheck de los dos lados**:
+      `auth.routes.ts:53` en la API y `login.tsx:40` en el front. Verificado rompiéndolo a
+      propósito y restaurándolo, no razonándolo.
+- [x] `packages/db/` eliminado y las referencias actualizadas
