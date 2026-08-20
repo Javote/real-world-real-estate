@@ -1,6 +1,6 @@
 # SPEC-NNN — Título
 
-> Máximo 2 páginas. El número se pide bajo demanda: fila nueva en `specs/README.md` en el mismo PR que crea la spec. Si el código y la spec divergen, se corrige la spec (o el código) en el mismo PR en que se detecta.
+> Máximo 2 páginas. El número se pide bajo demanda: fila nueva en `specs/README.md` en el mismo commit que crea la spec. Si el código y la spec divergen, se corrige la spec (o el código) en el mismo commit en que se detecta.
 
 ## Propósito
 

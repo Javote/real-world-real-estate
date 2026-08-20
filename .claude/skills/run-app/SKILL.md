@@ -72,8 +72,8 @@ Las trampas de este frente —el `502` del proxy en dev, la hidratación en los 
 devtools en las capturas— están en **`apps/web/CLAUDE.md` §Trampas verificadas**, que se carga
 solo al tocar ese subárbol. No se duplican acá.
 
-Y si la app no se parece al catálogo de pantallas de M2: **eso es lo esperado**, la conformidad es
-~2%. Ver `apps/web/CLAUDE.md`.
+Y si la app no se parece al catálogo de pantallas de M2: **eso es lo esperado**. Ver
+`apps/web/CLAUDE.md`, y el estado medido en `specs/README.md`.
 
 ## Bajar todo
 

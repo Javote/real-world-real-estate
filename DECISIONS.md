@@ -5,7 +5,7 @@
 > - **Obligaciones (el *qué*): `docs/` es ley.** Son los entregables aprobados por reviewers de Catalyst 1400106. Nada de este archivo puede reducir lo que debemos.
 > - **Implementación (el *cómo*): DECISIONS.md > CLAUDE.md > specs/.**
 >
-> Ante contradicción, gana el de mayor precedencia y el documento en conflicto se corrige en el mismo PR en que se detecta. Reabrir una decisión **Aceptada** requiere evidencia (spike, incidente, medición), no preferencia. La numeración nunca se recicla.
+> Ante contradicción, gana el de mayor precedencia y el documento en conflicto se corrige en el mismo commit en que se detecta. Reabrir una decisión **Aceptada** requiere evidencia (spike, incidente, medición), no preferencia. La numeración nunca se recicla.
 >
 > **`docs/` no se edita nunca.** Un error o una ambigüedad en un entregable se resuelve con una decisión acá que cite el documento y el párrafo. **Un desvío solo es legítimo si** (a) el entregable se contradice internamente, (b) es un error de redacción, o (c) seguirlo al pie contradiría una verdad del producto declarada por el dueño — **nunca por conveniencia**. Los desvíos vigentes están listados en `docs/README.md` y se comunican en la entrega. Ver D-022.
 >
@@ -471,9 +471,16 @@ modelo; un hook lo ejecuta el harness.** Las dos cosas parecen equivalentes leí
 | **Bloqueante** — hooks en `.claude/settings.json` | editar `docs/`, editar una migración aplicada o un archivo generado, escribir una clave privada, pushear con la puerta cerrada, pushear forzado | Es lo irreversible o lo que rompe un compromiso externo. No puede depender de que el modelo se acuerde |
 | **Advisory** — `CLAUDE.md`, specs, skills | criterio, contexto, procedimiento, todo lo que requiere juicio | Bloquear el juicio produce fricción sin seguridad |
 
-**El criterio de la puerta: verifica el frente que el cambio tocó, y falla si ese frente no tiene
-verificación.** Así la deuda bloquea a quien la usa, no a quien la hereda: hoy tocar
-`packages/api` cierra la puerta hasta que exista su script `test`.
+**El criterio de la puerta: la suite que existe se corre siempre; la suite que falta bloquea solo a
+quien toca ese frente.** Así la deuda frena a quien la usa, no a quien la hereda: hoy tocar
+`packages/api` cierra la puerta hasta que exista su script `test`, pero no frena a nadie más.
+
+**Calibración registrada (2026-08-20, mismo día).** La primera versión verificaba **todo** en CI,
+lo que sonaba más estricto y en la práctica dejaba el CI **rojo de forma permanente** por deuda
+preexistente. Un CI rojo permanente es peor que no tener CI, porque se deja de mirar. En CI el
+alcance pasó a ser el mismo concepto que en local —lo que este cambio tocó—, que además es lo que
+mantiene honesta la promesa de "el mismo script en los dos lados". Segunda calibración: un `.md`
+dentro de un subárbol no cuenta como tocar ese frente.
 
 **Contexto por subárbol.** `CLAUDE.md` en la raíz queda con lo transversal; cada frente
 (`apps/web/`, `packages/api/`, `contracts/`) tiene el suyo, que se carga solo cuando el agente

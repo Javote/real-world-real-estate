@@ -13,8 +13,9 @@
 
 ## Si llegás nuevo: punto de partida
 
-**El código es una semilla, no la app.** La conformidad con el diseño aprobado es de orden **2%**.
-**Eso es lo esperado, no un bug que arreglar de paso.** Lo valioso de lo que existe son decisiones
+**El código es una semilla, no la app.** La conformidad con el diseño aprobado es muy baja y
+**eso es lo esperado, no un bug que arreglar de paso** (el número medido vive en `specs/README.md`
+y solo ahí: un número de estado copiado se desactualiza en todas las copias menos una). Lo valioso de lo que existe son decisiones
 de arquitectura (auth en dos capas, SHA-256 en el servidor, `AuditLog` append-only, el patrón
 `ApiPort`, la topología de la FSM en Aiken), no superficie terminada.
 

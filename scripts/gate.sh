@@ -50,8 +50,18 @@ for ref in origin/main main; do
 done
 
 if [ "$CI_MODE" = 1 ]; then
-  CHANGED="$(git ls-files)"
-  SCOPE_DESC="CI — todos los archivos versionados"
+  # En CI el alcance es el mismo concepto que en local: lo que este cambio tocó.
+  # Verificar "todo" sonaba más estricto y en la práctica dejaba el CI rojo de
+  # forma permanente por deuda preexistente — y un CI rojo permanente es peor
+  # que no tener CI, porque se deja de mirar.
+  CI_BASE="${GATE_BASE:-}"
+  if [ -z "$CI_BASE" ]; then
+    if [ -n "$BASE" ] && [ "$BASE" != "$(git rev-parse HEAD)" ]; then CI_BASE="$BASE"
+    else CI_BASE="$(git rev-parse HEAD~1 2>/dev/null || true)"; fi
+  fi
+  CHANGED="$(git diff --name-only "$CI_BASE"..HEAD 2>/dev/null)"
+  [ -z "$CHANGED" ] && CHANGED="$(git ls-files)"
+  SCOPE_DESC="CI — cambios desde ${CI_BASE:0:8}"
 else
   CHANGED="$( { git diff --name-only HEAD 2>/dev/null
                 git diff --name-only --cached 2>/dev/null
@@ -155,7 +165,6 @@ fi
 run "typecheck (workspace)" pnpm typecheck
 
 WEB=0; API=0; SHARED=0; CONTRACTS=0
-[ "$CI_MODE" = 1 ] && { WEB=1; API=1; SHARED=1; CONTRACTS=1; }
 touched_code '^apps/web/'        && WEB=1
 touched_code '^packages/api/'    && API=1
 touched_code '^packages/shared/' && SHARED=1
@@ -163,23 +172,24 @@ touched_code '^contracts/'       && CONTRACTS=1
 
 has_test_script() { node -e "process.exit(require('./$1/package.json').scripts?.test?0:1)" 2>/dev/null; }
 
-if [ "$WEB" = 1 ]; then
-  run "tests apps/web" pnpm --filter web test
-else skip "tests apps/web — sin cambios en el frente"; fi
-
-if [ "$API" = 1 ]; then
-  if has_test_script packages/api; then
-    run "tests packages/api" pnpm --filter @plataforma/api test
+# Regla de la puerta: la suite que existe se corre SIEMPRE (es barata y es
+# estrictamente mejor); la suite que NO existe bloquea solo si tocaste ese
+# frente. Así la deuda frena a quien la usa, sin frenar a todos para siempre.
+front() { # front <etiqueta> <dir> <filtro pnpm> <tocado 0|1> <nota si falta>
+  local label="$1" dir="$2" filter="$3" touched="$4" nota="$5"
+  if has_test_script "$dir"; then
+    run "tests $label" pnpm --filter "$filter" test
+  elif [ "$touched" = 1 ]; then
+    bad "$label fue modificado y NO tiene script \`test\` — \`pnpm -r test\` lo saltea en silencio"
+    echo "      → $nota"
   else
-    bad "packages/api fue modificado y NO tiene script \`test\` — \`pnpm -r test\` lo saltea en silencio"
-    echo "      → esta es la deuda medida el 2026-08-20: la puerta no puede verificar la API. Cerrala en SPEC-008."
+    skip "tests $label — todavía sin suite"
   fi
-else skip "tests packages/api — sin cambios en el frente"; fi
+}
 
-if [ "$SHARED" = 1 ]; then
-  if has_test_script packages/shared; then run "tests packages/shared" pnpm --filter @plataforma/shared test
-  else bad "packages/shared modificado sin script \`test\` (regla 6: el contrato API↔web se verifica)"; fi
-else skip "tests packages/shared — sin cambios en el frente"; fi
+front "apps/web"        apps/web        web                 "$WEB"    "sin suite no hay verificación"
+front "packages/api"    packages/api    @plataforma/api     "$API"    "deuda medida el 2026-08-20; se cierra en SPEC-008"
+front "packages/shared" packages/shared @plataforma/shared  "$SHARED" "regla 6: el contrato API↔web se verifica"
 
 if [ "$QUICK" = 0 ]; then
   [ "$WEB" = 1 ] && run "build apps/web" pnpm --filter web build
@@ -192,24 +202,22 @@ if touched '^scripts/'; then
   run "guardias del harness" scripts/hooks/test-guards.sh
 else skip "guardias del harness — sin cambios en scripts/"; fi
 
-if [ "$CONTRACTS" = 1 ]; then
-  if command -v aiken >/dev/null 2>&1; then
-    ( cd contracts && aiken fmt --check >/dev/null 2>&1 ) && ok "aiken fmt" || bad "aiken fmt --check falla — corré 'cd contracts && aiken fmt'"
-    run "aiken check" bash -c 'cd contracts && aiken check'
-    if [ "$QUICK" = 0 ]; then
-      ( cd contracts && aiken build >/dev/null 2>&1 )
-      if git diff --quiet -- contracts/plutus.json; then ok "plutus.json al día (D-017)"
-      else bad "plutus.json desactualizado — corré 'pnpm contracts:build' y commiteá el blueprint"; fi
-    else skip "blueprint — modo --quick"; fi
-    # Criterio 2 del SOM: ≥95% de coverage. Hoy son 0 tests: que la puerta lo diga.
-    NTESTS="$(grep -rhoE '^[[:space:]]*test[[:space:]]+[a-z_0-9]+' contracts/validators contracts/lib 2>/dev/null | wc -l | tr -d ' ')"
-    [ "${NTESTS:-0}" -eq 0 ] && warn "contracts/ tiene 0 tests y el criterio 2 del SOM pide ≥95% de coverage"
-  elif [ "$CI_MODE" = 1 ] || [ "${GATE_SKIP_CONTRACTS:-0}" = 1 ]; then
-    warn "aiken no instalado — salteado (en CI lo cubre el job 'contracts', con la versión pineada)"
-  else
-    bad "tocaste contracts/ y aiken no está instalado (aikup install v1.1.21)"
-  fi
-else skip "contratos — sin cambios en el frente"; fi
+if command -v aiken >/dev/null 2>&1; then
+  ( cd contracts && aiken fmt --check >/dev/null 2>&1 ) && ok "aiken fmt" || bad "aiken fmt --check falla — corré 'cd contracts && aiken fmt'"
+  run "aiken check" bash -c 'cd contracts && aiken check'
+  if [ "$CONTRACTS" = 1 ] && [ "$QUICK" = 0 ]; then
+    ( cd contracts && aiken build >/dev/null 2>&1 )
+    if git diff --quiet -- contracts/plutus.json; then ok "plutus.json al día (D-017)"
+    else bad "plutus.json desactualizado — corré 'pnpm contracts:build' y commiteá el blueprint"; fi
+  else skip "blueprint — sin cambios en contracts/"; fi
+  # Criterio 2 del SOM: ≥95% de coverage. Hoy son 0 tests: que la puerta lo diga.
+  NTESTS="$(grep -rhoE '^[[:space:]]*test[[:space:]]+[a-z_0-9]+' contracts/validators contracts/lib 2>/dev/null | wc -l | tr -d ' ')"
+  [ "${NTESTS:-0}" -eq 0 ] && warn "contracts/ tiene 0 tests y el criterio 2 del SOM pide ≥95% de coverage"
+elif [ "$CONTRACTS" = 1 ] && [ "$CI_MODE" = 0 ] && [ "${GATE_SKIP_CONTRACTS:-0}" != 1 ]; then
+  bad "tocaste contracts/ y aiken no está instalado (aikup install v1.1.21)"
+else
+  skip "contratos — aiken no instalado (en CI lo cubre el job 'contracts', con la versión pineada)"
+fi
 
 # ── 3. Coherencia documental ─────────────────────────────────────────────────
 head_ "3 · Coherencia"
