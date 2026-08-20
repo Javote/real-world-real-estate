@@ -35,6 +35,11 @@ endpoints del backlog **hoy conforman 2**: `POST /auth/login` y `GET /auth/me`.
   `req.params`). Está pineado a `^4.17.21`: no lo "actualices" por su cuenta.
 - **El warning de `url.parse()` deprecado al arrancar viene de Multer 1.x**, no del código.
   Inofensivo; migrar a Multer 2.x requiere decisión nueva.
+- **`pnpm install` se lleva puesto el cliente Prisma generado.** Después de cualquier install,
+  `node_modules/.prisma/client` desaparece y el typecheck falla con "Module '@prisma/client' has no
+  exported member 'UserRole'" — que **parece** un problema de resolución de módulos y no lo es.
+  Antes de tocar `moduleResolution` por ese error, corré `pnpm --filter @plataforma/api db:generate`.
+  La puerta lo regenera sola si falta.
 - **El puerto sale de `PORT` en `packages/api/.env`** (lo escribe `scripts/worktree.sh` por árbol).
   No lo hardcodees.
 

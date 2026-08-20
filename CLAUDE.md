@@ -271,6 +271,14 @@ Las de cada frente van en su `CLAUDE.md`. Acá solo lo que cruza frentes o toca 
   variable y "pasara" sin verificar nada de lo que dice verificar. **Toda suite de tests tiene que
   ser hermética**: si su resultado depende del entorno de quien la llama, no es una suite. Los
   escapes se prueban explícitos, escritos en el comando de cada caso.
+- **2026-08-20 · Editar un `package.json` sin correr `pnpm install` produce un verde falso.** La
+  API declaraba TypeScript 6.0 y tenía 5.9 instalado: el typecheck local pasó, pero verificando
+  con la versión vieja — la unificación nunca se había probado. Lo atrapó el CI con
+  `ERR_PNPM_OUTDATED_LOCKFILE`, que es tarde. **La puerta ahora verifica que el lockfile refleje
+  los `package.json`** (`scripts/check-lockfile.py`). Dos corolarios: cambiar una versión declarada
+  no la instala, y un verde sobre el entorno equivocado es peor que un rojo. El primer intento del
+  chequeo usaba `pnpm install --lockfile-only`, que **reescribe el lockfile** — un verificador que
+  muta lo que verifica no es un verificador, así que quedó como comparación textual.
 - **2026-07-29 · Un artefacto derivado contradijo al entregable y nos hizo decidir mal.** Cuatro
   `.puml` regenerados desde los PDF de M1 tenían las flechas de la FSM invertidas. Durante toda una
   sesión creímos que el entregable estaba mal y registramos un "desvío" (D-020) que **no existía**.

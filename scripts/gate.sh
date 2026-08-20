@@ -163,10 +163,26 @@ run() { # run "etiqueta" comando...
   return $rc
 }
 
-# El cliente de Prisma es generado: sin él, el typecheck de la API miente.
-if [ ! -d node_modules/.prisma/client ] && [ ! -d packages/api/node_modules/.prisma/client ]; then
-  run "generar cliente Prisma" pnpm --filter @plataforma/api db:generate
+# El lockfile tiene que reflejar los package.json. Editar un package.json sin
+# correr `pnpm install` deja el CI roto y —peor— el typecheck local corriendo
+# contra versiones que no son las declaradas: el 2026-08-20 la API declaraba
+# TypeScript 6.0 y tenía 5.9 instalado, así que la "unificación" pasó en verde
+# sin haberse verificado nunca. Comparación textual, sin red y sin efectos:
+# `pnpm install --lockfile-only` reescribe el lockfile, y un verificador que
+# muta lo que verifica no sirve.
+if LOCK_OUT="$(python3 scripts/check-lockfile.py 2>&1)"; then
+  ok "lockfile en sincronía con los package.json"
+else
+  bad "pnpm-lock.yaml desactualizado — corré 'pnpm install' y commiteá el lockfile"
+  printf '      %s\n' "$LOCK_OUT" | head -8
 fi
+
+# El cliente de Prisma es generado y `pnpm install` se lo lleva puesto; sin él,
+# el typecheck de la API falla con un error que PARECE de resolución de módulos.
+# Se regenera siempre (~5s) en vez de detectarlo: con pnpm el cliente vive dentro
+# del store virtual (.pnpm/@prisma+client@<hash>/…), así que cualquier chequeo de
+# ruta es frágil y falla del lado equivocado.
+run "generar cliente Prisma" pnpm --filter @plataforma/api db:generate
 
 # Typecheck: siempre. Es barato y es lo único que atrapa roturas cruzadas
 # entre packages (el motivo por el que packages/shared existe).
