@@ -14,6 +14,8 @@ dist/
 # SQLite de desarrollo (Prisma)
 packages/api/prisma/dev.db
 packages/api/prisma/dev.db-journal
+packages/api/prisma/test.db
+packages/api/prisma/test.db-journal
 
 # Archivos subidos por usuarios (runtime, no código)
 packages/api/uploads/*
