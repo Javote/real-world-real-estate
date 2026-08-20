@@ -38,11 +38,14 @@ endpoints del backlog **hoy conforman 2**: `POST /auth/login` y `GET /auth/me`.
 - **El puerto sale de `PORT` en `packages/api/.env`** (lo escribe `scripts/worktree.sh` por árbol).
   No lo hardcodees.
 
-## Deuda que bloquea la puerta
+## Tests
 
-**No hay script `test`**, así que `pnpm -r test` saltea este paquete en silencio y la puerta no
-puede verificar la API. Por eso `scripts/gate.sh` **falla** si tocás este paquete: la deuda
-bloquea a quien la usa. Se cierra en SPEC-008.
+`pnpm --filter @plataforma/api test` — vitest + supertest contra **una base SQLite propia**
+(`prisma/test.db`), que `test/global-setup.ts` crea con `prisma migrate deploy` y siembra en cada
+corrida. Nunca contra `dev.db`: un test no puede depender del seed de desarrollo ni ensuciarlo.
+
+Se usa `migrate deploy` y no `db push` a propósito: así la suite verifica las migraciones reales
+que van a correr en producción, no una proyección del schema.
 
 ## Comandos
 
