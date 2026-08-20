@@ -266,7 +266,10 @@ Las de cada frente van en su `CLAUDE.md`. Acá solo lo que cruza frentes o toca 
   guardia de Bash matcheaba la *mención* de `docs/` y de `git push`, así que se bloqueó a sí misma
   al escribirse y disparó la puerta al escribir un skill que documenta el push. Matchear
   **invocaciones**, no menciones: `scripts/hooks/analyze-cmd.py` saca los cuerpos de heredoc antes
-  de analizar, y `test-guards.sh` fija el comportamiento.
+  de analizar, y `test-guards.sh` fija el comportamiento. **Corolario de la misma familia:** un
+  escáner que vive dentro del corpus que escanea se encuentra a sí mismo — el chequeo de mainnet de
+  la puerta matcheaba el literal de su propio mensaje de error, y solo se vio al crear un árbol
+  nuevo, porque en el principal el archivo todavía estaba sin trackear y `git grep` no lo veía.
 - **2026-07-29 · Un artefacto derivado contradijo al entregable y nos hizo decidir mal.** Cuatro
   `.puml` regenerados desde los PDF de M1 tenían las flechas de la FSM invertidas. Durante toda una
   sesión creímos que el entregable estaba mal y registramos un "desvío" (D-020) que **no existía**.

@@ -99,8 +99,10 @@ else
 fi
 
 # D-013 — Preprod en todos los entornos. CI nunca toca ninguna red.
-if git grep -nIE 'CARDANO_NETWORK[[:space:]]*[=:][[:space:]]*["'"'"']?[Mm]ainnet' -- . ':!DECISIONS.md' ':!CLAUDE.md' ':!README.md' ':!docs/' ':!specs/' >/dev/null 2>&1; then
-  bad "CARDANO_NETWORK=Mainnet en el código (D-013: Preprod siempre)"
+# El propio script queda excluido: un escáner que vive dentro del corpus que
+# escanea se encuentra a sí mismo (pasó — el mensaje de error matcheaba el patrón).
+if git grep -nIE 'CARDANO_NETWORK[[:space:]]*[=:][[:space:]]*["'"'"']?[Mm]ainnet' -- . ':!DECISIONS.md' ':!CLAUDE.md' ':!README.md' ':!docs/' ':!specs/' ':!scripts/gate.sh' >/dev/null 2>&1; then
+  bad "la red mainnet aparece configurada en el código (D-013: solo Preprod)"
 else
   ok "ninguna red que no sea Preprod (D-013)"
 fi
