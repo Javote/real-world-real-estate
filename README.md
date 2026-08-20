@@ -105,11 +105,9 @@ Todavía no ejecutados; hacen falta para el anclaje real y para pre-producción:
    migraciones aditivas e idempotentes).
 5. **PostgreSQL y S3** reemplazando SQLite y disco local (triggers de D-016 y D-011).
 
-Build de producción local:
-
-```bash
-docker compose -f docker-compose.prod.yml up --build
-```
+**No hay build de producción todavía.** No existe ningún `Dockerfile` ni `docker-compose*.yml`:
+la capa de infraestructura está en 0% y es el hueco más grande del proyecto. El inventario
+honesto de qué existe y qué no está en `specs/stack.md` §8.
 
 ## Índice documental
 
@@ -135,6 +133,7 @@ Deliberadamente **tres archivos en la raíz y nada más**. Todo lo demás vive i
 | `DECISIONS.md` | **El documento de mayor valor por línea.** 32 ADRs con contexto, alternativas, trigger de revisión y reversión. |
 | `specs/README.md` | **El mapa de desarrollo:** criterios de aceptación de M3, estado medido, rebanadas en orden de dependencia, tracks paralelos, riesgos. |
 | `specs/SPEC-NNN-*.md` | Una por rebanada: invariantes, casos borde (que son los tests) y definición de terminado. |
+| `specs/stack.md` | **Inventario completo del stack:** front, back, contratos, datos, blockchain, infraestructura y verificación, con qué corre hoy y qué está solo decidido. |
 | `specs/entregables.md` | **Mapa de los entregables oficiales:** qué archivo es cuál y qué contiene. Es un mapa, no una transcripción: ante una duda de contenido, abrí el entregable. |
 
 ## Estructura del monorepo

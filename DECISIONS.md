@@ -48,6 +48,7 @@
 | D-031 | Ramas cortas por track para árboles de trabajo paralelos | Aceptada (trigger de revisión definido) |
 | D-032 | El harness de agentes: la puerta es ejecutable y lo irreversible se bloquea por hook | Aceptada |
 | D-033 | `docs/` contiene solo entregables; el índice se muda a `specs/entregables.md` | Aceptada |
+| D-034 | El inventario del stack vive en `specs/stack.md`; `CLAUDE.md` conserva lo de sesión | Aceptada |
 
 > **Repaso completo con la documentación oficial: ver §Repaso al final del archivo.** D-001..D-017 se
 > escribieron sin los entregables delante; las 25 entradas se revisaron el 2026-07-29 y cada una
@@ -145,7 +146,14 @@ Para un producto cuya tesis es "verificá sin confiar en la plataforma" (D-026),
 ## D-010 — Deploy: Railway, "Wait for CI", GHA no despliega — **Default**
 
 **Decisión.** GitHub Actions = barrera de calidad únicamente. Railway detecta push a `main`, buildea ambos Dockerfiles, rollout con healthcheck. Watch paths por servicio.
-**Alternativas.** VPS + Coolify (más barato, self-hosted): la reversión es el propio `docker-compose.prod.yml` que ya existe — cambiar cuesta horas, no días. Por eso queda como Default con reversión barata en lugar de exigir spike.
+**Alternativas.** VPS + Coolify (más barato, self-hosted): cambiar cuesta horas, no días. Por eso queda como Default con reversión barata en lugar de exigir spike.
+
+**Corrección de hecho (2026-08-20).** Esta entrada afirmaba que Railway "buildea ambos
+Dockerfiles" y que la reversión era "el propio `docker-compose.prod.yml` que ya existe".
+**Ninguno de los tres archivos existe** — no hay `Dockerfile` de web, ni de api, ni compose, ni
+cuenta de Railway. La decisión sigue en pie como Default; lo que se corrige es la descripción,
+que daba por construido lo que solo estaba decidido. Es exactamente el error que el principio 5
+previene, y llegó a estar replicado en `README.md`. Inventario honesto: `specs/stack.md` §8.
 
 ## D-011 — Storage S3 genérico: MinIO dev / R2 prod
 
@@ -569,6 +577,33 @@ hermética (`unset` de los escapes al arrancar), porque un escape que apaga su p
 es exactamente lo contrario de lo que un escape debe ser.
 
 **Reversión.** Barata: `git mv` de vuelta y revertir los punteros. Nada de esto toca un entregable.
+
+## D-034 — El inventario del stack vive en `specs/stack.md`
+
+**Contexto (2026-08-20).** D-022 decidió que el stack vigente —que es nuestro y es cambiable— se
+documenta **fuera de `docs/`**, y lo ubicó en `CLAUDE.md` §Stack. Esa ubicación funcionaba mientras
+el stack fuera una tabla de doce filas. Al inventariarlo completo —front, back, contratos, datos,
+blockchain, **infraestructura** y verificación, con versiones reales y estado de cada pieza— son
+~170 líneas, y `CLAUDE.md` se carga entero en **cada** sesión.
+
+**Decisión.** El inventario completo va a `specs/stack.md`. `CLAUDE.md` §Stack conserva solo lo que
+hace falta al escribir código: qué framework se usa en cada frente y qué decisión lo respalda.
+Versiones, estado, infraestructura, deuda y decisiones abiertas viven en un solo lugar y no se
+repiten.
+
+**Esto no contradice D-022, la honra.** Lo que D-022 decidió es que el stack **no vive en `docs/`**
+porque no es un entregable: es nuestro y cambia. `CLAUDE.md` era el lugar disponible en ese
+momento, no una propiedad de la decisión. Lo que sí se mantiene intacto: **cambiar el stack
+requiere una decisión acá, no una edición de esas tablas.**
+
+**Lo que el inventario destapó, y es la razón de fondo para haberlo escrito.** La capa de
+infraestructura está en **0%** —ningún `Dockerfile`, ningún compose, ninguna cuenta de deploy— y
+**tres documentos la describían como existente** (`README.md` con un `docker compose` que no
+corre, y D-010 en dos lugares). Un inventario que mezcla lo que corre con lo que está decidido
+produce exactamente eso. Por eso `specs/stack.md` marca el estado pieza por pieza: ● corre ·
+◐ parcial · ○ decidido sin ejecutar · ? abierto.
+
+**Reversión.** Trivial: el archivo vuelve a `CLAUDE.md` §Stack.
 
 ---
 

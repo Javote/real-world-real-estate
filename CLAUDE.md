@@ -90,30 +90,25 @@ El harness de agentes vive en `.claude/` (subagentes, skills, hooks y permisos, 
 
 ## Stack
 
-Los entregables oficiales **son agnósticos de stack**: el único requisito técnico comprometido es que los contratos sean en **Aiken**. Todo lo de abajo es implementación nuestra y cambiarlo requiere una `D-0XX` nueva, no una edición de esta tabla.
+Los entregables oficiales **son agnósticos de stack**: el único requisito técnico comprometido es
+que los contratos sean en **Aiken**. Todo lo demás es nuestro, y cambiarlo requiere una `D-0XX`
+nueva, no una edición de una tabla.
 
-| Frente | Stack | Versión real | Decisión |
-|---|---|---|---|
-| Workspace | pnpm workspaces, Node ≥20, TypeScript **6.0** estricto | `pnpm@9.15.0` | D-001 |
-| **web** | TanStack Start + Router + Query, React 19, Tailwind v4, Lucide, Vite, Vitest+jsdom | Start `^1.168` · TW `^4.1` | D-002, D-024 |
-| **web** (falta) | shadcn/ui — primitivos accesibles para los 36 componentes de M2-D3 | pendiente | D-024 |
-| **api** | Express 4 + Zod + JWT + bcrypt(10) + Multer 1.x, base `/api/v1` | Express `^4.21` | D-016 |
-| **db** | Prisma; SQLite en dev → **PostgreSQL al desplegar** | `^6.6` (resuelve 6.19.x) | D-016 |
-| storage | disco local en dev → **S3 genérico** (MinIO dev / R2 prod) | — | D-011 |
-| **shared** | Zod, contrato único API↔web | auth migrado (SPEC-008) | D-012 |
-| **cardano** | `AnchorPort` con adaptadores `blockfrost` (Lucid Evolution) y `simulated` | placeholder vacío | D-005, D-014 |
-| **contracts** | Aiken v1.1.21 · **Plutus V3** · stdlib v3.0.0 · blueprint commiteado | `plutus.json` → `v3` | D-017, D-019 |
-| red | **Preprod** en todos los entornos; mainnet fuera de alcance | — | D-013 |
-| deploy | Docker · Railway con "Wait for CI" · GHA **solo valida** | — | D-010 |
-| versionado | CalVer `vYYYY.MM.N` para servicios; entero para contratos; nada para packages internos | — | D-015 |
+Lo que necesitás saber al escribir código:
 
-**Deuda técnica transversal** (la de cada frente está en su `CLAUDE.md`):
+| Frente | Con qué se escribe | Decisión |
+|---|---|---|
+| **web** | TanStack Start + Router + Query · React 19 · Tailwind v4 · Lucide · shadcn/ui *(falta)* | D-002, D-024 |
+| **api** | Express 4 + Zod + JWT + bcrypt(10) + Multer, base `/api/v1` | D-016 |
+| **shared** | Zod — el contrato único API↔web. El schema va acá **antes** que el endpoint | D-012 |
+| **db** | Prisma · SQLite en dev, **PostgreSQL al desplegar** | D-016 |
+| **cardano** | `AnchorPort` con adaptadores `blockfrost` y `simulated` — *package vacío* | D-005, D-014 |
+| **contracts** | Aiken v1.1.21 · **Plutus V3** · stdlib v3.0.0 · blueprint commiteado | D-017, D-019 |
+| red | **Preprod siempre**; mainnet fuera de alcance | D-013 |
 
-- **`contracts/` tiene 0 tests** contra un criterio de aceptación de ≥95% de coverage.
-- Nitro pineado a un **nightly** (`3.0.1-20260714-…`) que trajo el scaffold, con un proxy de dev
-  que rompe `POST`+`401` (ver `apps/web/CLAUDE.md`). Pasar a estable subió de prioridad.
-
-**Decisiones de stack abiertas:** D-005 (Lucid vs Mesh — lo cierra el walking skeleton) · D-009 (co-firma CIP-30 vs wallet por rol) · D-016 (Express→Hono solo con evidencia medida) · D-017 (`milestone.ak` vs `milestone2.ak`).
+> **El inventario completo —versiones reales, infraestructura, qué corre y qué está solo decidido,
+> deuda y decisiones abiertas— está en `specs/stack.md` y solo ahí** (D-034). Acá no se repite: una
+> tabla de versiones copiada en dos archivos se desactualiza en uno de los dos.
 
 ## Documentación oficial: qué leer antes de tocar cada frente
 
