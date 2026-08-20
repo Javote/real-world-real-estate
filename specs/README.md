@@ -1,12 +1,11 @@
 # specs/ — El mapa de desarrollo
 
 > **Precedencia:** `DECISIONS.md` > `CLAUDE.md` > `specs/`. La numeración nunca se recicla.
-> Este archivo absorbe el antiguo `ROADMAP.md` (2026-07-29): un solo índice del trabajo, para que
-> no haya dos listas que diverjan.
+> Un solo índice del trabajo, para que no haya dos listas que diverjan.
 >
-> ⚠️ **La estructura de specs está en rediscusión.** El registro de abajo es el heredado y quedó
-> superado por la documentación oficial de M2/M3. La auditoría de conformidad y los criterios de
-> aceptación **sí son vigentes**.
+> **Una spec = una rebanada vertical** (cerrado el 2026-08-20, ver D-032). La spec no repite el
+> backlog de M2-D5: lo linkea, y aporta lo que M2-D5 no trae — invariantes, casos borde, delta del
+> modelo de datos y definición de terminado. Las escribe el subagente `spec`.
 
 ## Mandato
 
@@ -94,6 +93,29 @@ arquitectura, no superficie terminada:
 > integridad de forma independiente"*. O esa verificación es un documento y no una pantalla, o M2
 > tiene un hueco respecto del whitepaper. **Hay que decidirlo, no descubrirlo en la revisión.**
 
+## Auditoría 2026-08-20 — qué bloquea el arranque de M3
+
+> Hecha al preparar el harness de agentes, con luz verde para ir a fondo con M3. La de arriba mide
+> **conformidad con el diseño**; esta mide **qué impide producir código**. Las mediciones están
+> verificadas, no estimadas.
+
+**Veredicto: el pensamiento es sólido, la configuración es de la fase anterior.** M1 y M2 fueron
+entregables documentales y el sistema de gobernanza es excelente para eso. M3 es un hito de código
+con 16 criterios binarios, y el repo llega con 30 decisiones, **0 specs**, **4 tests** y ~2% de
+conformidad. Lo que sigue es lo que hay que cambiar, por palanca:
+
+| # | Hallazgo | Evidencia | Estado |
+|---|---|---|---|
+| 1 | **La puerta no existía.** `pnpm test` corría 4 tests de 1 archivo; `packages/api` no tiene script `test` y `pnpm -r` lo saltea **en silencio** (`Scope: 2 of 3`); los contratos no estaban en `pnpm test`. 3 de los 5 ítems de la puerta eran inverificables. | medido | **resuelto** — `scripts/gate.sh` + D-032 |
+| 2 | **`packages/shared` vacío desactiva la regla 6**, que es lo único que vuelve imposible el drift API↔web. Bloqueada por el skew TS 5.8/6.0. | — | **SPEC-008** |
+| 3 | **El principio 1 ya se violaba:** jerarquía de precedencia escrita **4 veces**; "2% de conformidad" **4 veces**; trampas del front duplicadas entre `CLAUDE.md` y el skill `run-app`; 267 líneas de README de scaffold sin información del proyecto. | grep | **resuelto** — contexto por subárbol (D-032) |
+| 4 | **Los 6 criterios que no se programan estaban todos en la última rebanada.** El criterio 4 (3 pilotos) depende de gente externa y tiene el lead time más largo del proyecto; el 12 (URL pública) hacía caer el primer deploy real al final. | plan | **resuelto** — Track C, abajo |
+| 5 | **Contratos: 0 tests contra un criterio de ≥95%**, declarado paralelo y sin nadie encima. Único criterio duro sin plan B. | `aiken check` verde vacío | **track propio** |
+| 6 | **El rename D-023 sigue sin hacerse** y hoy es lo más barato que va a ser. | — | **SPEC-009** |
+| 7 | **`contracts/aiken.toml` con naming de scaffold** (`j/milestone-fsm`, `version = "0.0.0"`, que incumple D-015). | — | **SPEC-009** |
+| 8 | **D-030 no cubría los agentes en paralelo.** Su trigger era "segunda persona"; lo que llegó fue concurrencia de árboles. Los puertos estaban fijos en 3 lugares, así que dos árboles se pisaban. | medido | **resuelto** — D-031 |
+
+
 ## Orden de trabajo
 
 Ordenado por **dependencia de datos**, siguiendo los flujos cross-rol de M2-D1 §6: el developer crea
@@ -101,25 +123,45 @@ lo que el certifier valida, y ambos producen lo que el investor consume y el not
 
 Cada rebanada deja la app **corriendo y demostrable** — ese es el criterio de corte.
 
-| # | Rebanada | Qué podés hacer que antes no |
-|---|---|---|
-| 1 | Login de 4 roles | Entrás como cada rol y ves su panel, en ambos idiomas, en mobile |
-| 2 | Developer crea proyecto, unidades y stages | Creás un desarrollo con su plantilla de 10 stages |
-| 3 | **Evidencia → Merkle → TXID real** *(walking skeleton)* | Subís evidencia y obtenés un TXID verificable en cardanoscan |
-| 4 | Certifier certifica y observa | La FSM cierra el lazo: observar devuelve el stage al developer |
-| 5 | Invitación y aceptación | La unidad aparece en el portfolio del investor |
-| 6 | Releases por stage | Cada liberación con su TXID, visible para ambas partes |
-| 7 | Investor: browse, unidad, progreso | Recorrés el producto como comprador |
-| 8 | Dossier + share público + export | Un tercero verifica sin cuenta |
-| 9 | Notary firma | El dossier queda firmado con TXID |
-| 10 | Audit log completo | Historia filtrable con verificación a un tap |
-| 11 | Pre-prod, telemetría, seguridad, evidencia | Los 16 criterios en verde |
+| # | Spec | Rebanada | Qué podés hacer que antes no | Estado |
+|---|---|---|---|---|
+| 0 | `SPEC-008` | **Cimientos verificables** *(no es vertical, a propósito)* | La puerta puede verificar la API y el contrato API↔web | **abierta** |
+| 0b | `SPEC-009` | Rename D-023 + naming de contratos | El dominio dice `stage` en todos lados | no escrita |
+| 1 | — | Login de 4 roles | Entrás como cada rol y ves su panel, en ambos idiomas, en mobile | no escrita |
+| 2 | — | Developer crea proyecto, unidades y stages | Creás un desarrollo con su plantilla de 10 stages | no escrita |
+| 3 | — | **Evidencia → Merkle → TXID real** *(walking skeleton)* | Subís evidencia y obtenés un TXID verificable en cardanoscan | no escrita |
+| 4 | — | Certifier certifica y observa | La FSM cierra el lazo: observar devuelve el stage al developer | no escrita |
+| 5 | — | Invitación y aceptación | La unidad aparece en el portfolio del investor | no escrita |
+| 6 | — | Releases por stage | Cada liberación con su TXID, visible para ambas partes | no escrita |
+| 7 | — | Investor: browse, unidad, progreso | Recorrés el producto como comprador | no escrita |
+| 8 | — | Dossier + share público + export | Un tercero verifica sin cuenta | no escrita |
+| 9 | — | Notary firma | El dossier queda firmado con TXID | no escrita |
+| 10 | — | Audit log completo | Historia filtrable con verificación a un tap | no escrita |
+| 11 | — | Telemetría y cierre de evidencia | Los 16 criterios en verde | no escrita |
 
-**Track paralelo — contratos.** `contracts/` está aislado del workspace pnpm y no bloquea a nadie:
+**Las specs se escriben una por vez, un paso antes de necesitarlas** (principio 5). Escribir las
+once ahora produciría once archivos especulativos que nadie corrige.
+
+### Tracks paralelos
+
+**Track B — contratos.** `contracts/` está aislado del workspace pnpm y no bloquea a nadie:
 corre en paralelo desde el inicio. (a) rename y naming PropNexus (D-023) + consolidar
 `milestone.ak`/`milestone2.ak` (D-017); (b) **suite de tests desde cero** — es el criterio 2 y
 estamos en 0; (c) las 6 ops como anclaje de commitment (D-021); (d) ≥8 stages, signers por rol,
 timeouts y fallback branches (los caminos de excepción que M1-D1 §Workflow exige y hoy no existen).
+Corre en su propio árbol: `scripts/worktree.sh create contracts` (D-031).
+
+**Track C — los seis criterios que no se programan.** Dueño: el humano. Estaban todos apilados en
+la última rebanada, que es donde los proyectos mueren. Arrancan **ahora**, en paralelo:
+
+| Criterio | Qué hacer ya | Por qué no puede esperar |
+|---|---|---|
+| **4 · 3 pilotos confirman** | Releer `M1-D3-PilotPlan.pdf` (ya trae cartas de un notario y dos developers) y **recontactarlos** | Es el lead time más largo del proyecto y no lo controlamos |
+| **12 · URL pública** | Desplegar el esqueleto actual a pre-prod, aunque muestre poco | Un primer deploy al final es donde los proyectos mueren |
+| **16 · README público/privado** | Una tabla en `README.md` | 20 minutos, hoy no está atendido |
+| **11 · sin hallazgos P1** | Correr `/security-review` sobre lo que haya, ya | Los hallazgos tempranos son baratos |
+| **14 · runbook** | Se escribe con el primer deploy, no después | Se escribe solo si se escribe mientras pasa |
+| **13 · video walkthrough** | Sale de `pnpm e2e`, que ya graba video | Ya está resuelto técnicamente |
 
 ## Decisiones abiertas
 
@@ -150,12 +192,13 @@ timeouts y fallback branches (los caminos de excepción que M1-D1 §Workflow exi
 
 ## Registro de specs
 
-**Vacío.** Las siete specs heredadas (`SPEC-001` a `SPEC-007`) se eliminaron el 2026-07-29: todas
-precedían a la documentación oficial y describían prototipos descartables. Lo vigente de cada una ya
-está absorbido en `DECISIONS.md` y en este mapa. Siguen en el historial: `git log --diff-filter=D --name-only -- 'specs/SPEC-*'`.
+| Spec | Título | Rebanada | Estado |
+|---|---|---|---|
+| `SPEC-008` | Cimientos verificables | 0 | **abierta** |
 
-**La numeración no se recicla.** Las specs nuevas arrancan en `SPEC-008`.
+Las siete specs heredadas (`SPEC-001` a `SPEC-007`) se eliminaron el 2026-07-29: precedían a la
+documentación oficial y describían prototipos descartables. Lo vigente de cada una está absorbido
+en `DECISIONS.md` y en este mapa. Siguen en el historial:
+`git log --diff-filter=D --name-only -- 'specs/SPEC-*'`.
 
-La estructura en discusión —referencias normativas para los invariantes, y specs = rebanadas
-verticales que dejan la app demostrable— todavía no está cerrada. Este archivo se actualiza cuando
-lo esté.
+**La numeración no se recicla.** Por eso las nuevas arrancan en `SPEC-008`.

@@ -13,20 +13,15 @@ sustituye registros públicos, procesos notariales ni autorizaciones estatales (
 
 ## Jerarquía de precedencia (regla número uno)
 
-Dos capas, porque son dos autoridades distintas:
+Dos autoridades distintas: **`docs/` manda sobre las obligaciones** (el *qué* y la vara de
+aceptación — entregables aprobados por reviewers, **inmutables**), y **`DECISIONS.md` > `CLAUDE.md`
+> `specs/` mandan sobre la implementación** (el *cómo*).
 
-- **Sobre las obligaciones — el *qué* y la vara de aceptación — manda `docs/`.** Son los entregables
-  aprobados por los reviewers de Catalyst. Ninguna decisión nuestra puede reducir lo que debemos.
-  **No se editan nunca.**
-- **Sobre la implementación — el *cómo*:** `DECISIONS.md` > `CLAUDE.md` > `specs/`.
+**La regla completa —cuándo un desvío es legítimo, cómo se registra y cuáles están vigentes— vive
+en el encabezado de `DECISIONS.md` y en D-022.** Acá no se repite: llegó a estar escrita en cuatro
+archivos, que es exactamente lo que el principio 1 prohíbe.
 
-Un desvío de la letra de un entregable solo es legítimo si (a) el entregable se contradice
-internamente, (b) es un error de redacción, o (c) seguirlo al pie contradiría una verdad del
-producto declarada por el dueño. **Nunca por conveniencia.** Los desvíos vigentes están listados en
-`docs/README.md` y se comunican en la entrega.
-
-Ante contradicción, gana el de mayor precedencia y el que está en conflicto se corrige en el mismo
-PR. El repo es la memoria; los chats son descartables.
+El repo es la memoria; los chats son descartables.
 
 ## Requisitos previos
 
@@ -51,6 +46,33 @@ pnpm dev                                         # web en :3000, api en :8787
 
 Login demo: `admin@example.com` / `admin123` (resto de usuarios en `packages/api/prisma/seed.ts`).
 Contratos: `pnpm contracts:check`.
+
+## Trabajar con agentes
+
+Todo el harness está en el repo y commiteado: no hay que configurar nada por máquina.
+
+```bash
+claude                            # y adentro:  /slice
+```
+
+`/slice` es el protocolo completo de una sesión — ubicarse, spec, plan, implementar, verificar,
+documentar, commitear, pushear. Para trabajar en paralelo:
+
+```bash
+scripts/worktree.sh create contracts   # árbol propio: rama, deps, base y puertos
+cd ../pn-contracts && claude
+```
+
+Lo que el harness **bloquea** (no advierte): editar `docs/`, editar una migración aplicada o un
+archivo generado, escribir una clave privada, pushear con la puerta cerrada, pushear forzado.
+
+```bash
+scripts/gate.sh                   # LA PUERTA: lo mismo que corre el CI y el hook de push
+scripts/worktree.sh list          # árboles, ramas y puertos
+scripts/hooks/test-guards.sh      # regresión de los guardias
+```
+
+Detalle en `CLAUDE.md` §Cómo se trabaja acá y en D-032.
 
 ## Variables de entorno
 
@@ -106,29 +128,40 @@ Deliberadamente **tres archivos en la raíz y nada más**. Todo lo demás vive i
 
 | Archivo | Contenido |
 |---|---|
-| `CLAUDE.md` | Todo lo que un agente necesita en cada sesión: vocabulario, principios, stack y su deuda, reglas duras, prohibiciones, autonomía 🟢🟡🔴, convención de commits, comandos y gotchas. |
-| `DECISIONS.md` | **El documento de mayor valor por línea.** 25 ADRs con contexto, alternativas, trigger de revisión y reversión. |
-| `specs/README.md` | **El mapa de desarrollo:** criterios de aceptación de M3, estado real, rebanadas en orden de dependencia, riesgos. |
+| `CLAUDE.md` | Lo transversal de cada sesión: vocabulario, principios, stack y deuda, reglas duras, prohibiciones, autonomía 🟢🟡🔴, commits, comandos, trampas y cómo se trabaja con el harness. |
+| `<frente>/CLAUDE.md` | Lo propio de `apps/web`, `packages/api` y `contracts`: qué leer, trampas verificadas, deuda y comandos. Se cargan solos al tocar el subárbol. |
+| `DECISIONS.md` | **El documento de mayor valor por línea.** 32 ADRs con contexto, alternativas, trigger de revisión y reversión. |
+| `specs/README.md` | **El mapa de desarrollo:** criterios de aceptación de M3, estado medido, rebanadas en orden de dependencia, tracks paralelos, riesgos. |
+| `specs/SPEC-NNN-*.md` | Una por rebanada: invariantes, casos borde (que son los tests) y definición de terminado. |
 
 ## Estructura del monorepo
 
 ```
 plataforma/
-├── .github/workflows/ci.yml   # CI: typecheck+build de api y web, aiken check + blueprint
+├── .claude/                    # harness de agentes, commiteado
+│   ├── settings.json           #   hooks (lo que se bloquea) + permisos
+│   ├── agents/                 #   spec · conformance · contracts
+│   └── skills/                 #   slice (protocolo de sesión) · run-app
+├── .github/workflows/ci.yml    # CI: corre scripts/gate.sh --ci + aiken
+├── scripts/
+│   ├── gate.sh                 #   LA PUERTA — la misma en local y en CI
+│   ├── worktree.sh             #   árboles por track con puertos y base propios (D-031)
+│   └── hooks/                  #   guardias + su suite de regresión
 ├── apps/
 │   └── web/                    # TanStack Start + Tailwind v4 — 4 superficies por rol
 ├── packages/
 │   ├── api/                    # Express 4 + Prisma + SQLite dev (D-016)
-│   │   ├── prisma/             # schema, migraciones, seed
-│   │   └── src/                # routes, middlewares (auth 2 capas), lib, utils
-│   ├── shared/                 # (a poblar) Zod compartido API↔web
-│   ├── db/                     # (reservado) — el esquema vive en packages/api/prisma por D-016
+│   │   ├── prisma/             #   schema, migraciones, seed
+│   │   └── src/                #   routes, middlewares (auth 2 capas), lib, utils
+│   ├── shared/                 # (a poblar, SPEC-008) Zod compartido API↔web
 │   └── cardano/                # (a poblar) AnchorPort real/simulado — D-014
 ├── contracts/                  # Proyecto Aiken (D-017) — Plutus V3, nunca custodia valor (D-021)
-├── scripts/                    # (a poblar) walking skeleton
-├── specs/                      # el mapa de desarrollo + las specs
+├── specs/                      # el mapa de desarrollo + las specs de rebanada
 ├── docs/                       # entregables oficiales — INMUTABLE (D-022)
 └── README.md · CLAUDE.md · DECISIONS.md
+
+Cada frente tiene además su propio `CLAUDE.md` (`apps/web/`, `packages/api/`, `contracts/`), que se
+carga solo cuando un agente toca ese subárbol.
 ```
 
 **Qué se despliega y qué no:** solo `apps/web` y `packages/api` corren como servidores.
@@ -145,11 +178,29 @@ nunca habla directo con Cardano.
 M1 y M2 entregados. **M3 en construcción** — su alcance es el backlog completo de `M2-D5`,
 corriendo íntegramente en **Preprod** (D-013). Mainnet y producción quedan fuera de alcance.
 
-La conformidad actual del código con los entregables es de orden **2%**: lo que existe es una
-semilla que aporta decisiones de arquitectura (auth en dos capas, SHA-256 en el servidor, audit log
-append-only, el patrón `ApiPort`, la topología de la FSM en Aiken), no superficie terminada.
+Lo que existe hoy es una **semilla**: aporta decisiones de arquitectura, no superficie terminada.
 
-Ver **`specs/README.md`** para el estado detallado, las fases y sus criterios de salida.
+**El estado medido —conformidad, qué bloquea el arranque, rebanadas, tracks paralelos y riesgos—
+vive en `specs/README.md` y solo ahí.** Un número de estado copiado en dos archivos se desactualiza
+en uno de los dos.
+
+## Carpetas públicas y privadas
+
+Este repositorio es **público**. No contiene, en ninguna carpeta, secretos, credenciales, seeds de
+wallet ni datos personales: los secretos viajan **solo por variables de entorno** y nunca se
+versionan (regla 12 de `CLAUDE.md`, verificada por `scripts/gate.sh` en cada push).
+
+| Ruta | Visibilidad | Qué contiene |
+|---|---|---|
+| `apps/`, `packages/`, `contracts/`, `scripts/`, `.claude/`, `.github/` | **Pública** | Código, contratos, harness y CI |
+| `docs/`, `specs/`, `README.md`, `CLAUDE.md`, `DECISIONS.md` | **Pública** | Entregables oficiales y documentación de trabajo |
+| `packages/api/.env`, `apps/web/.env` | **Privada** — nunca versionada | Secretos locales. El ejemplo público es `.env.example` |
+| `packages/api/prisma/dev.db` | **Privada** — nunca versionada | Base SQLite de desarrollo |
+| `packages/api/uploads/` | **Privada** — nunca versionada | Evidencia subida en runtime |
+| `apps/web/e2e/.artifacts/` | **Privada** — nunca versionada | Capturas, videos y traces de la suite E2E |
+
+La wallet de servicio de Preprod y la API key de Blockfrost se configuran por entorno en el
+proveedor de deploy y **no existen en el repositorio**.
 
 ## Reglas duras del equipo
 

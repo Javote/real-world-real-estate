@@ -44,7 +44,9 @@
 | D-027 | Taxonomía de archivos: el hash es el ticket de entrada a la cadena de prueba | Aceptada |
 | D-028 | Qué significa "evidencia sin firmar" (criterio 7 del SOM) | Aceptada |
 | D-029 | Alcance del dominio: stages del proyecto; la unidad es lo comercial | Aceptada |
-| D-030 | Trunk-based: una sola rama `main`, sin PRs | Aceptada (trigger de revisión definido) |
+| D-030 | Trunk-based: una sola rama `main`, sin PRs | Aceptada (enmendada por D-031) |
+| D-031 | Ramas cortas por track para árboles de trabajo paralelos | Aceptada (trigger de revisión definido) |
+| D-032 | El harness de agentes: la puerta es ejecutable y lo irreversible se bloquea por hook | Aceptada |
 
 > **Repaso completo con la documentación oficial: ver §Repaso al final del archivo.** D-001..D-017 se
 > escribieron sin los entregables delante; las 25 entradas se revisaron el 2026-07-29 y cada una
@@ -406,6 +408,97 @@ Project ──1:N── Unit                     ← nace en la subdivisión, pa
 **Lo que se pierde, dicho explícito.** (a) El CI ya no corre *antes* de que el código toque `main`, sino después — el workflow dispara con `push` a `main`. (b) No hay diff revisable por un tercero antes del merge. (c) Un commit malo se arregla con otro commit adelante, no descartando una rama. Se aceptan los tres a cambio de velocidad, con el equipo del tamaño actual.
 **Trigger de revisión (no opcional).** **Cuando se sume la segunda persona al repo**, esto vuelve a ramas + PR: ahí el PR sí transporta información que el commit no (la conversación de revisión). Registrar la reversión como decisión nueva, no editando esta.
 **Reversión.** Trivial: reinstaurar la protección de rama en GitHub y volver a la convención `<tipo>/<REF-en-kebab>-<descripción>`, que queda documentada en el historial de `CLAUDE.md`.
+
+## D-031 — Ramas cortas por track para árboles de trabajo paralelos
+
+**Contexto (2026-08-20).** D-030 estableció trunk-based —una sola rama, sin PRs— con este
+fundamento: el equipo es una persona, no hay a quién revisarle, y el PR no agrega información que
+el mensaje de commit no dé. Su **trigger de reversión** era "cuando se sume la segunda persona".
+
+Lo que llegó no fue una segunda persona: fueron **agentes trabajando en paralelo**, en `git
+worktree` separados. Eso crea el mismo problema de concurrencia por un motivo distinto, y el
+trigger de D-030 no lo cubría. Con tres árboles commiteando a `main` a la vez, la puerta corre
+sobre un árbol que ya no es `main` en cuanto otro track pushea primero, y los conflictos aparecen
+en el peor momento: al integrar.
+
+**Decisión.** Cada árbol de trabajo usa una rama corta `track/<nombre>` (`track/web`, `track/api`,
+`track/contracts`). Se integra a `main` con **`merge --ff-only`** y la rama se borra. Vive horas o
+días, no semanas.
+
+**Lo que NO cambia — esto no reinstala PRs.** No hay revisión, no hay protección de rama, no hay
+ceremonia. La rama es un **mecanismo de aislamiento**, no un artefacto de proceso: existe para que
+dos árboles no se pisen, no para que alguien revise. `main` sigue siendo la única rama de
+integración y el ciclo sigue siendo planificar → implementar → testear → commitear → pushear.
+
+**Consecuencias operativas.** Un `git worktree add` pelado no alcanza en este repo: `.env`,
+`dev.db` y `node_modules` están gitignoreados y no viajan, y los puertos estaban fijos en tres
+lugares (`vite dev --port 3000`, `PORT=8787`, `const PORT = 3000` en Playwright), así que dos
+árboles corriendo la app se pisaban. Se resolvió con `scripts/worktree.sh` —que deja el árbol
+usable: rama, deps, base sembrada y puertos propios— y parametrizando los puertos en
+`apps/web/ports.ts`, leído por Vite y por Playwright. Sin `apps/web/.env` el comportamiento es
+idéntico al de antes (3000/8787).
+
+**Qué track puede correr en paralelo.** `contracts` **siempre**: está aislado del workspace pnpm
+(D-001) y no comparte nada. `web` y `api` están acoplados por `packages/shared`, que tipa a los
+dos: si la rebanada toca el contrato de datos, va en un solo árbol.
+
+**Alternativas descartadas.** (a) Los tres árboles commiteando directo a `main` con rebase previo:
+es D-030 literal, pero la puerta verificaría un estado que deja de ser cierto en cuanto otro
+pushea. (b) Sesiones secuenciales sin worktrees: renuncia al paralelismo justo del track que hoy
+no bloquea a nadie y está en 0 tests contra un criterio de ≥95%.
+
+**Trigger de revisión.** Si aparece una segunda persona, gana el trigger de D-030 y esto pasa a
+ramas + PR de verdad, con revisión. Si en cambio los árboles paralelos dejan de usarse, la
+convención muere sola y `main` queda como única rama sin necesidad de decisión nueva.
+**Reversión.** Trivial: borrar las ramas `track/*` y trabajar solo en el árbol principal.
+
+## D-032 — El harness de agentes: la puerta es ejecutable y lo irreversible se bloquea por hook
+
+**Contexto (2026-08-20).** `CLAUDE.md` traía una "puerta antes de pushear" de cinco ítems
+(typecheck, tests, schema Zod, `AuditLog`, `aiken check`). Al medirla, **tres de los cinco eran
+inverificables**: `pnpm test` corría 4 tests de un solo archivo, `packages/api` no tiene script
+`test` y `pnpm -r` lo saltea **en silencio**, y los contratos no estaban en `pnpm test`. La puerta
+existía como párrafo, no como verificación.
+
+Y hay una asimetría que la práctica dejó clara: **una regla en un `.md` es advisory para el
+modelo; un hook lo ejecuta el harness.** Las dos cosas parecen equivalentes leídas, y no lo son.
+
+**Decisión.** Tres capas, con criterio explícito de qué va en cada una:
+
+| Capa | Qué contiene | Por qué ahí |
+|---|---|---|
+| **Ejecutable** — `scripts/gate.sh` | typecheck, tests del frente tocado, prohibiciones absolutas, blueprint al día | Un comando que **falla**. El CI corre **el mismo script**: si se separan, divergen |
+| **Bloqueante** — hooks en `.claude/settings.json` | editar `docs/`, editar una migración aplicada o un archivo generado, escribir una clave privada, pushear con la puerta cerrada, pushear forzado | Es lo irreversible o lo que rompe un compromiso externo. No puede depender de que el modelo se acuerde |
+| **Advisory** — `CLAUDE.md`, specs, skills | criterio, contexto, procedimiento, todo lo que requiere juicio | Bloquear el juicio produce fricción sin seguridad |
+
+**El criterio de la puerta: verifica el frente que el cambio tocó, y falla si ese frente no tiene
+verificación.** Así la deuda bloquea a quien la usa, no a quien la hereda: hoy tocar
+`packages/api` cierra la puerta hasta que exista su script `test`.
+
+**Contexto por subárbol.** `CLAUDE.md` en la raíz queda con lo transversal; cada frente
+(`apps/web/`, `packages/api/`, `contracts/`) tiene el suyo, que se carga solo cuando el agente
+toca ese subárbol. Las trampas específicas de un frente estaban duplicadas entre el `CLAUDE.md`
+raíz y el skill `run-app`, y la jerarquía de precedencia llegó a estar escrita **cuatro veces** —
+exactamente lo que el principio 1 prohíbe. Los READMEs de scaffold de `apps/web` y `contracts`
+(267 líneas de documentación genérica de TanStack y Aiken, cero información del proyecto) se
+eliminaron: eran ruido en el lugar donde un agente busca contexto del frente.
+
+**Subagentes divididos por el contexto que necesitan, no por rol nominal:** `spec` (leer los
+entregables cuesta ~25k tokens que el implementador no necesita), `conformance` (**lector fresco**:
+el agente que escribió el código es el peor juez de si cumple la spec) y `contracts` (Aiken/Plutus
+es un universo disjunto del TypeScript).
+
+**Alternativas descartadas.** (a) Correr la puerta en cada `git commit`: más estricto, pero cuesta
+~40-90s por commit y empuja a commits grandes, que contradice la regla de un cambio lógico por
+commit. El push es el momento correcto — es cuando el código empieza a existir para los demás, y
+es literalmente lo que D-030 llamó "puerta antes de pushear". (b) Dejar todo como convención en
+`CLAUDE.md`: es el estado que produjo una puerta inverificable durante meses.
+
+**Trigger de revisión.** Si la puerta empieza a saltearse con los escapes (`GATE_ALLOW_DOCS`,
+`GATE_SKIP_CONTRACTS`) de forma rutinaria, es señal de que un check está mal calibrado: se
+corrige el check, no se relaja la puerta.
+**Reversión.** Barata: los hooks se desactivan borrando `.claude/settings.json`; el script queda
+igual de útil corrido a mano.
 
 ---
 
