@@ -52,8 +52,8 @@ El front está a ~2% de conformidad con el diseño aprobado. Lo que se conserva 
 | Prisma (ORM + CLI) | `6.19.3` | ● | D-016 |
 | Zod | `4.4.3` | ● | D-035. Rutas heredadas aún con formas de la 3, que v4 acepta |
 | JWT (`jsonwebtoken`) | `9.0.2` | ● | 7 días, con revalidación de `isActive` por request |
-| bcrypt (**módulo nativo**) | `5.1.1` | ● | cost 10. Nativo ⇒ necesita toolchain en la imagen Docker |
-| **Multer** | `1.4.5-lts.1` | ◐ | única fuente del warning `url.parse()` deprecado; la línea 1.x está sin mantenimiento |
+| **bcrypt** (módulo nativo) | `5.1.1` | ◐ | cost 10. Nativo ⇒ toolchain en la imagen Docker, y es el origen del warning de `url.parse()` vía `node-pre-gyp` |
+| Multer | `2.2.0` | ● | D-036 |
 | dotenv | `16.4.5` | ● | |
 | Vitest + supertest | `4.1.10` / `7.0` | ● | 11 tests, base SQLite propia |
 
@@ -163,7 +163,7 @@ Ver `CLAUDE.md` §Cómo se trabaja acá y D-032.
 | Deuda | Costo de arrastrarla |
 |---|---|
 | **Nitro pineado a un nightly** | Builds no reproducibles, y su proxy de dev convierte `POST`+`401` en `502`: el camino de error más común de auth es indebuggeable en local |
-| **Multer 1.x** | Warning de `url.parse()` deprecado en cada arranque; línea sin mantenimiento, sobre el camino de subida de evidencia, que es el núcleo del producto |
+| **`bcrypt` es nativo** | La imagen Docker necesita toolchain de compilación (`node-pre-gyp`), y ese mismo camino emite el warning de `url.parse()` deprecado en cada arranque. Alternativa: `bcryptjs`, JS puro y compatible en formato de hash, ~30% más lento. Es código 🔴: lo decide el humano |
 | **`contracts/` con 0 tests** | Único criterio duro del SOM sin plan B |
 | **`aiken.toml` con naming de scaffold** | Incumple D-015 (versión entera incremental) |
 | **`tsconfig.base.json` huérfano** | Configuración que aparenta gobernar y no gobierna nada |

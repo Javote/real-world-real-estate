@@ -50,6 +50,7 @@
 | D-033 | `docs/` contiene solo entregables; el índice se muda a `specs/entregables.md` | Aceptada |
 | D-034 | El inventario del stack vive en `specs/stack.md`; `CLAUDE.md` conserva lo de sesión | Aceptada |
 | D-035 | Zod 4 en el contrato compartido | Aceptada |
+| D-036 | Multer 2.x | Aceptada |
 
 > **Repaso completo con la documentación oficial: ver §Repaso al final del archivo.** D-001..D-017 se
 > escribieron sin los entregables delante; las 25 entradas se revisaron el 2026-07-29 y cada una
@@ -637,6 +638,35 @@ schema. Hay dos tests que lo fijan, uno por `loginResponse` y otro por `meRespon
 existe porque `.extend()` podría haber perdido la estrictez, y eso no se asume: se verifica.
 
 **Reversión.** Barata mientras `shared` tenga pocos schemas; cara después. Por eso se hizo ahora.
+
+## D-036 — Multer 2.x
+
+**Contexto (2026-08-20).** La revisión de stack encontró `multer@1.4.5-lts.2` contra `2.2.0`
+publicado. La línea 1.x está en mantenimiento mínimo y Multer está sobre el camino de subida de
+evidencia, que es el núcleo del producto.
+
+**Decisión.** `multer@^2` y `@types/multer@^2`. **Cero cambios de código**: `diskStorage`,
+`limits`, `fileFilter` y `.single()` funcionan igual.
+
+**Cómo se verificó.** Se escribieron **primero** 7 tests del camino de subida —que no existía
+ninguno— y pasaron contra Multer 1.x. Recién después se migró, y los mismos 7 volvieron a pasar.
+Cubren lo que una migración de esta capa puede romper sin avisar: tipo de archivo rechazado,
+límite de tamaño, body inválido, ausencia de archivo, autorización por membresía, y —el que más
+importa— que **ningún rechazo deje el archivo huérfano en disco** (regla 10). Un directorio de
+uploads que crece con basura rechazada es una fuga silenciosa.
+
+**Corrección de un hecho que el repo daba por cierto.** Esta migración se justificaba en parte
+porque "el warning de `url.parse()` deprecado viene de Multer 1.x". **Es falso.** El warning
+sobrevivió a la migración; trazado con `tsx --trace-deprecation`, sale de **`bcrypt` vía
+`@mapbox/node-pre-gyp`**. La afirmación estaba escrita como hecho en dos archivos. La decisión se
+sostiene igual por sus propios méritos —línea mantenida, cero costo, tests nuevos— pero el motivo
+era otro. **Antes de atribuir un warning, trazalo.**
+
+**Lo que destapó.** `bcrypt` es un módulo **nativo**: la imagen Docker va a necesitar toolchain de
+compilación. La alternativa `bcryptjs` es JS puro, compatible en formato de hash y ~30% más lenta.
+No se decide acá: tocar el hashing de contraseñas es código 🔴 y lo lidera el humano.
+
+**Reversión.** Trivial mientras la superficie sea `lib/upload.ts`: volver a `^1.4.5-lts.2`.
 
 ---
 

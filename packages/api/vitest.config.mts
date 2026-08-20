@@ -21,6 +21,10 @@ export default defineConfig({
       DATABASE_URL: "file:./test.db",
       JWT_SECRET: "test-secret-jamas-en-produccion",
       NODE_ENV: "test",
+      // Directorio propio: la suite no puede ensuciar packages/api/uploads.
+      // Y 1 MB para que el test del límite de tamaño no mueva 10 MB.
+      UPLOAD_DIR: "./test-uploads",
+      MAX_FILE_SIZE_MB: "1",
     },
     // Comparten una sola base sembrada, y un test la muta a propósito
     // (el de token revocado). Sin esto se pisarían entre archivos.

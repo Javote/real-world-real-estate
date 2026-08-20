@@ -20,6 +20,7 @@ packages/api/prisma/test.db-journal
 # Archivos subidos por usuarios (runtime, no código)
 packages/api/uploads/*
 !packages/api/uploads/.gitkeep
+packages/api/test-uploads/
 
 # Artefactos de compilación de Aiken (el blueprint plutus.json SÍ se commitea)
 contracts/build/

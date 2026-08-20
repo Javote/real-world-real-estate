@@ -33,8 +33,12 @@ endpoints del backlog **hoy conforman 2**: `POST /auth/login` y `GET /auth/me`.
   El CLI de Prisma (`migrate`, `studio`) sí lo sigue cargando solo.
 - **`@types/express` v5 con Express 4 rompe el typecheck** (21 errores `string | string[]` en
   `req.params`). Está pineado a `^4.17.21`: no lo "actualices" por su cuenta.
-- **El warning de `url.parse()` deprecado al arrancar viene de Multer 1.x**, no del código.
-  Inofensivo; migrar a Multer 2.x requiere decisión nueva.
+- **El warning de `url.parse()` deprecado al arrancar viene de `bcrypt`**, vía
+  `@mapbox/node-pre-gyp`, no de Multer ni del código propio. El repo lo atribuyó a Multer durante
+  meses y era falso: se comprobó con `tsx --trace-deprecation`, y sobrevivió intacto a la
+  migración a Multer 2 (D-036). **Antes de atribuir un warning, trazalo.**
+  Es la punta visible de algo que importa más: `bcrypt` es un **módulo nativo**, así que la imagen
+  Docker va a necesitar toolchain de compilación. Ver `specs/stack.md` §11.
 - **`pnpm install` se lleva puesto el cliente Prisma generado.** Después de cualquier install,
   `node_modules/.prisma/client` desaparece y el typecheck falla con "Module '@prisma/client' has no
   exported member 'UserRole'" — que **parece** un problema de resolución de módulos y no lo es.
