@@ -86,7 +86,7 @@ head_ "1 · Prohibiciones absolutas"
 DOCS_TOUCHED="$(printf '%s\n' "$CHANGED" | grep -E '^docs/' || true)"
 if [ -n "$DOCS_TOUCHED" ] && [ "$CI_MODE" = 0 ]; then
   if [ "${GATE_ALLOW_DOCS:-0}" = 1 ]; then
-    warn "docs/ modificado con GATE_ALLOW_DOCS=1 — tiene que ser un entregable NUEVO, nunca una corrección (D-022)"
+    warn "docs/ modificado con GATE_ALLOW_DOCS=1 — solo legítimo para SUMAR un entregable nuevo o SACAR algo que nunca fue entregable (D-022, D-033). Jamás para corregir uno."
   else
     bad "docs/ modificado (D-022: inmutable). Archivos: $(printf '%s' "$DOCS_TOUCHED" | tr '\n' ' ')"
     echo "      → un error en un entregable se resuelve con una decisión en DECISIONS.md, no editándolo"

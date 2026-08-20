@@ -43,6 +43,14 @@ if has "PUSH=1"; then
   if has "FORCE=1"; then
     block "BLOQUEADO — push forzado. Reescribir la historia de una rama compartida borra trabajo. Si de verdad hace falta, --force-with-lease y con el humano mirando."
   fi
+  # Escapes escritos en la línea de comando (GATE_ALLOW_DOCS=1 git push): el hook
+  # corre en su propio proceso, así que hay que reenviarlos explícitamente.
+  while IFS= read -r assign; do
+    [ -n "$assign" ] && export "${assign#ENV=}"
+  done <<EOF
+$(printf '%s' "$ANALYSIS" | grep '^ENV=' || true)
+EOF
+
   GATE="$PROJ/scripts/gate.sh"
   [ -x "$GATE" ] || block "BLOQUEADO — no encuentro scripts/gate.sh. Ningún push sale sin pasar la puerta."
   printf '\n⏳ Puerta antes de pushear (D-030) — corriendo scripts/gate.sh…\n' >&2

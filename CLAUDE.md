@@ -82,7 +82,8 @@ nos pasó decidir contra una transcripción errónea (ver Trampas).
 
 Tres `.md` en la raíz, a propósito: **`README.md`** (entrada humana, arranque, variables de
 entorno), **`CLAUDE.md`** (este archivo) y **`DECISIONS.md`** (el porqué). El mapa de desarrollo
-está en `specs/README.md`; los entregables oficiales en `docs/`.
+está en `specs/README.md`; los entregables oficiales en `docs/`, mapeados en `specs/entregables.md`
+(`docs/` contiene solo entregables: nada nuestro vive ahí adentro — D-033).
 
 El harness de agentes vive en `.claude/` (subagentes, skills, hooks y permisos, todo commiteado) y
 `scripts/` (la puerta y los árboles de trabajo). Ver §Cómo se trabaja acá.
@@ -199,7 +200,8 @@ puede correr en paralelo: está aislado del workspace pnpm.
 
 | Qué | Dónde |
 |---|---|
-| Obligaciones, la vara de aceptación | `docs/` — inmutable |
+| Obligaciones, la vara de aceptación | `docs/` — inmutable, y **solo entregables** (D-033) |
+| Qué archivo de `docs/` es qué entregable | `specs/entregables.md` |
 | Por qué se decidió algo | `DECISIONS.md` |
 | Reglas transversales de sesión | este archivo |
 | Reglas, trampas y deuda de un frente | `<frente>/CLAUDE.md` |
@@ -271,6 +273,11 @@ Las de cada frente van en su `CLAUDE.md`. Acá solo lo que cruza frentes o toca 
   escáner que vive dentro del corpus que escanea se encuentra a sí mismo — el chequeo de mainnet de
   la puerta matcheaba el literal de su propio mensaje de error, y solo se vio al crear un árbol
   nuevo, porque en el principal el archivo todavía estaba sin trackear y `git grep` no lo veía.
+- **2026-08-20 · Un escape de entorno desactivaba en silencio su propia verificación.** Correr la
+  puerta con `GATE_ALLOW_DOCS=1` hacía que la suite de guardias —que la puerta ejecuta— heredara la
+  variable y "pasara" sin verificar nada de lo que dice verificar. **Toda suite de tests tiene que
+  ser hermética**: si su resultado depende del entorno de quien la llama, no es una suite. Los
+  escapes se prueban explícitos, escritos en el comando de cada caso.
 - **2026-07-29 · Un artefacto derivado contradijo al entregable y nos hizo decidir mal.** Cuatro
   `.puml` regenerados desde los PDF de M1 tenían las flechas de la FSM invertidas. Durante toda una
   sesión creímos que el entregable estaba mal y registramos un "desvío" (D-020) que **no existía**.

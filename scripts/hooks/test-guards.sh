@@ -12,11 +12,19 @@
 #   · matcheaba `git push` dentro de un heredoc y disparaba la puerta al escribir
 #     un skill que documenta el push;
 #   · el fixture de clave privada se arma en runtime (ver FAKE_KEY), porque si el
-#     literal estuviera en el archivo, guard-write.sh bloquearía este archivo.
+#     literal estuviera en el archivo, guard-write.sh bloquearía este archivo;
+#   · la suite heredaba GATE_ALLOW_DOCS del entorno y "pasaba" sin verificar
+#     nada: ahora es hermética (ver el unset de abajo).
 set -uo pipefail
 cd "$(dirname "$0")/../.." || exit 1
 export CLAUDE_PROJECT_DIR="$PWD"
 H="scripts/hooks"
+
+# HERMÉTICO. Sin esto, correr la puerta con GATE_ALLOW_DOCS=1 hacía que la suite
+# heredara el escape y "pasara" sin verificar nada de lo que dice verificar: el
+# escape desactivaba en silencio su propia verificación. Los escapes se prueban
+# explícitos, escritos en el comando de cada caso.
+unset GATE_ALLOW_DOCS GATE_SKIP_CONTRACTS
 
 # Clave falsa armada por concatenación: el literal completo nunca existe en disco.
 FAKE_KEY="ed25519_sk""1qqqqqqqqqqqqqqqqqqqq"
@@ -74,6 +82,14 @@ analyze "PUSH=1"      'scripts/gate.sh && git push -u origin main'              
 analyze "PUSH=1 FORCE=1" 'git push --force'                                             "push forzado"
 analyze "PUSH=1"      'git push --force-with-lease'                                     "force-with-lease no cuenta como forzado"
 analyze "-"           'echo "no corras git push todavía"'                               "git push dentro de un string"
+analyze "PUSH=1 ENV=GATE_ALLOW_DOCS=1" 'GATE_ALLOW_DOCS=1 git push'                     "el escape documentado se reenvía a la puerta"
+analyze "PUSH=1"      'CUALQUIERA=1 git push'                                           "una variable no reconocida NO se reenvía"
+
+echo "analyze-cmd.py — el escape vale igual para escrituras que para el push"
+analyze "WRITE=docs/" 'git rm docs/x.md'                                                "sin escape, borrar en docs/ se bloquea"
+analyze "-"           'GATE_ALLOW_DOCS=1 git rm docs/x.md'                              "con el escape inline, se permite"
+analyze "WRITE=docs/" 'GATE_ALLOW_DOCS=0 git rm docs/x.md'                              "el escape en 0 no habilita nada"
+analyze "WRITE=docs/" 'OTRA_VAR=1 git rm docs/x.md'                                     "otra variable no habilita nada"
 
 printf '\n%s pasaron · %s fallaron\n' "$PASS" "$FAIL"
 [ "$FAIL" -eq 0 ] || exit 1

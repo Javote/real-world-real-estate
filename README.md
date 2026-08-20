@@ -115,9 +115,11 @@ docker compose -f docker-compose.prod.yml up --build
 
 ### Documentación oficial (inmutable)
 
+> `docs/` contiene **únicamente entregables** (D-033). El mapa de qué archivo es qué entregable
+> está en `specs/entregables.md`, que sí se puede mantener.
+
 | Ruta | Contenido |
 |---|---|
-| `docs/README.md` | **Índice y mapa de los entregables.** Códigos, colisiones de nomenclatura y discrepancias conocidas. Empezá acá. |
 | `docs/milestone-1-fundamentos/` | Whitepaper + arquitectura de sistema, modelo de dominio, ciclo de vida y flujo de anclaje (UML). |
 | `docs/milestone-2-diseno/` | Arquitectura de información, catálogo de pantallas, biblioteca de 36 componentes, 10 patrones de renderizado de prueba. |
 | `docs/milestone-3-implementacion/` | SOM de M3 + backlog de 53 entradas (pantalla → endpoint → test ID) + baseline de backend y contratos. |
@@ -133,6 +135,7 @@ Deliberadamente **tres archivos en la raíz y nada más**. Todo lo demás vive i
 | `DECISIONS.md` | **El documento de mayor valor por línea.** 32 ADRs con contexto, alternativas, trigger de revisión y reversión. |
 | `specs/README.md` | **El mapa de desarrollo:** criterios de aceptación de M3, estado medido, rebanadas en orden de dependencia, tracks paralelos, riesgos. |
 | `specs/SPEC-NNN-*.md` | Una por rebanada: invariantes, casos borde (que son los tests) y definición de terminado. |
+| `specs/entregables.md` | **Mapa de los entregables oficiales:** qué archivo es cuál y qué contiene. Es un mapa, no una transcripción: ante una duda de contenido, abrí el entregable. |
 
 ## Estructura del monorepo
 

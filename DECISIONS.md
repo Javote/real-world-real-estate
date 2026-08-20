@@ -7,7 +7,7 @@
 >
 > Ante contradicción, gana el de mayor precedencia y el documento en conflicto se corrige en el mismo commit en que se detecta. Reabrir una decisión **Aceptada** requiere evidencia (spike, incidente, medición), no preferencia. La numeración nunca se recicla.
 >
-> **`docs/` no se edita nunca.** Un error o una ambigüedad en un entregable se resuelve con una decisión acá que cite el documento y el párrafo. **Un desvío solo es legítimo si** (a) el entregable se contradice internamente, (b) es un error de redacción, o (c) seguirlo al pie contradiría una verdad del producto declarada por el dueño — **nunca por conveniencia**. Los desvíos vigentes están listados en `docs/README.md` y se comunican en la entrega. Ver D-022.
+> **`docs/` no se edita nunca.** Un error o una ambigüedad en un entregable se resuelve con una decisión acá que cite el documento y el párrafo. **Un desvío solo es legítimo si** (a) el entregable se contradice internamente, (b) es un error de redacción, o (c) seguirlo al pie contradiría una verdad del producto declarada por el dueño — **nunca por conveniencia**. Los desvíos vigentes están listados en §Desvíos vigentes, acá arriba, y se comunican en la entrega. Ver D-022 y D-033.
 >
 > **Historia:** este repo consolida la guía de implementación con el backend PoC (`cardano-real-estate-backend`). Los ADR-001..009 de ese repo quedan absorbidos acá (los vigentes, como D-016/D-017; el resto como contexto). El registro original y los snapshots del material fuente se eliminaron del árbol de trabajo en la consolidación documental de 2026-07-29; siguen disponibles en el historial de git: `git log --oneline --diff-filter=D --name-only -- 'docs/context/*'` da el commit que los borró, y el anterior los contiene.
 
@@ -47,10 +47,28 @@
 | D-030 | Trunk-based: una sola rama `main`, sin PRs | Aceptada (enmendada por D-031) |
 | D-031 | Ramas cortas por track para árboles de trabajo paralelos | Aceptada (trigger de revisión definido) |
 | D-032 | El harness de agentes: la puerta es ejecutable y lo irreversible se bloquea por hook | Aceptada |
+| D-033 | `docs/` contiene solo entregables; el índice se muda a `specs/entregables.md` | Aceptada |
 
 > **Repaso completo con la documentación oficial: ver §Repaso al final del archivo.** D-001..D-017 se
 > escribieron sin los entregables delante; las 25 entradas se revisaron el 2026-07-29 y cada una
 > tiene veredicto registrado.
+
+## Desvíos vigentes
+
+Los cinco lugares donde **no seguimos la letra** de un entregable, cada uno con el caso que lo
+legitima. Ninguno se resolvió editando el entregable, y **todos se comunican en la entrega**.
+
+| Qué dice el entregable | Resolución | Caso | Decisión |
+|---|---|---|---|
+| M3 SOM: "Plutus **V2** state machine"; M2-D5 §3 repite el supuesto. | El proyecto Aiken es v1.1.21 y compila **Plutus V3** (`contracts/plutus.json`). V3 es estrictamente posterior y es lo que Aiken 1.1.x emite nativamente. Ningún entregable fija versión de Aiken. | (b) error de redacción | D-019 |
+| M3 SOM: "signers/**percentages** configurables", "reserva → creación de **escrow** < 12 min". | **La plataforma nunca custodia ni transfiere valor**, en ninguna fase. Los porcentajes son cronograma registrado como dato; el "escrow" es el contrato creado y anclado. | (c) contradice una verdad del producto | D-021 |
+| M1 §README lista los estados como "…**Certified**…"; el `.puml` dice `Completed`. | Gana `Completed`: precedencia interna de M1 (artefactos especificados > README de cortesía), y además `Certified` implicaría que la plataforma certifica. | (a) contradicción interna | D-020, D-026 |
+| M1 §README promete que la taxonomía indica "authoritative" y "anchored on-chain". | El CSV entregado no tiene esas columnas. El README prometió de más; el hueco lo llenan D-027 (qué se ancla) y D-028 (qué es autoritativo). | (a) contradicción interna | D-027, D-028 |
+| M2-D5 §2.1 usa notación de rutas Wouter. | Las rutas se leen como **paths**, no como elección de router. Los entregables son agnósticos de stack. | (b) error de redacción | D-022 |
+
+> Vivían en `docs/README.md` hasta el 2026-08-20. Estaban del lado inmutable, así que la tabla no
+> se podía mantener: un desvío nuevo no tenía dónde anotarse. Ver D-033.
+
 
 ---
 
@@ -248,7 +266,7 @@ Pending → InProgress → Completed        (Completed es terminal)
 
 **Contexto.** `docs/` pasó a contener los entregables oficiales de M1, M2 y M3 tal como fueron presentados. Editarlos para corregir errores desincronizaría el repo de lo que el revisor tiene, y volvería imposible verificar que entregamos lo que decimos. A la vez, esos entregables son **agnósticos de stack**: el único requisito técnico comprometido es que los contratos sean en Aiken.
 **Decisión.** (a) `docs/` es de solo lectura; toda corrección, desvío o reinterpretación se registra como decisión acá, citando documento y párrafo. (b) El stack vigente —que es nuestro y es cambiable— se documenta **fuera de `docs/`**, en `CLAUDE.md` §Stack, y cambiarlo requiere una decisión acá, no una edición de esa tabla.
-**Consecuencia estructural.** `docs/` queda con tres carpetas (una por milestone) y un `README.md` de índice. Todo lo derivado que vivía ahí —guía de arquitectura, backlog, prompts, devops, snapshots de material fuente, reporte de sprint— se eliminó; lo vigente se re-derivó hacia `specs/` y estas decisiones.
+**Consecuencia estructural.** `docs/` queda con tres carpetas, una por milestone. (Tenía además un `README.md` de índice; se mudó a `specs/entregables.md` el 2026-08-20 — ver D-033.) Todo lo derivado que vivía ahí —guía de arquitectura, backlog, prompts, devops, snapshots de material fuente, reporte de sprint— se eliminó; lo vigente se re-derivó hacia `specs/` y estas decisiones.
 **Actualización (2026-07-29, segunda pasada).** La raíz había quedado con ocho `.md`, lo que contradice el principio 1 (una sola fuente de verdad por cosa) por acumulación: dos índices del mismo trabajo, dos lugares con reglas de método. Se consolidó a **tres archivos**: `README.md` (entrada humana, arranque, entorno), `CLAUDE.md` (todo lo que un agente necesita por sesión: principios, stack, reglas, autonomía, commits, comandos, gotchas) y `DECISIONS.md`. `STACK.md`, `GUIA-COMMITS.md` y los diez principios de `PLAYBOOK.md` se absorbieron en `CLAUDE.md`; los pasos vivos de `SETUP.md` en `README.md`; `ROADMAP.md` en `specs/README.md`, que pasa a ser **el mapa de desarrollo** — un solo índice del trabajo en lugar de dos que divergen.
 **Qué se perdió a propósito.** Instrucciones de acciones ya ejecutadas una sola vez (el scaffolding de `SETUP.md` contra un stack que no se usó; las fases 1-6 del playbook, ya cumplidas; la guía genérica de escalado). No son conocimiento vivo y siguen en el historial: `git log --diff-filter=D --name-only -- SETUP.md PLAYBOOK.md`.
 
@@ -257,7 +275,7 @@ Pending → InProgress → Completed        (Completed es terminal)
 - **`docs/` es ley sobre las obligaciones** — el *qué* y la vara de aceptación. Nada en este archivo puede reducir lo que debemos: ni el ≥95% de coverage, ni los pilotos, ni la URL pública, ni el runbook. Absoluto, sin excepción.
 - **`DECISIONS.md` manda sobre la implementación** — el *cómo*, incluido dónde la letra de un entregable se interpreta en vez de seguirse literal.
 
-**Un desvío solo es legítimo en tres casos:** (a) el entregable se contradice internamente, (b) es un error de redacción, (c) seguirlo al pie contradiría una verdad del producto declarada por el dueño. **Nunca por conveniencia ni por preferencia técnica.** Todo desvío se registra acá citando el párrafo, se lista en `docs/README.md` y **se comunica en la entrega**.
+**Un desvío solo es legítimo en tres casos:** (a) el entregable se contradice internamente, (b) es un error de redacción, (c) seguirlo al pie contradiría una verdad del producto declarada por el dueño. **Nunca por conveniencia ni por preferencia técnica.** Todo desvío se registra acá citando el párrafo, se lista en §Desvíos vigentes y **se comunica en la entrega**.
 
 **Precedencia interna de M1.** `Instructions.txt` especifica el paquete entregado: cuatro `.puml` + un `.csv` + un `README.md`. Los **artefactos especificados** (`.puml`, `.csv`) mandan sobre el `README.md`, que es un resumen de cortesía escrito después para facilitarle la lectura a los reviewers. Resuelve la inconsistencia `Certified`/`Completed` (D-020) y aclara que las dos columnas que el README promete en la taxonomía —"authoritative" y "anchored on-chain"— nunca existieron en el CSV: son un hueco real que llenan D-027 y D-028, no una promesa incumplida que estemos pisando.
 
@@ -506,6 +524,51 @@ es literalmente lo que D-030 llamó "puerta antes de pushear". (b) Dejar todo co
 corrige el check, no se relaja la puerta.
 **Reversión.** Barata: los hooks se desactivan borrando `.claude/settings.json`; el script queda
 igual de útil corrido a mano.
+
+## D-033 — `docs/` contiene solo entregables; el índice se muda afuera
+
+**Contexto (2026-08-20).** Al bloquear D-022 por hook apareció una fuga que la regla escrita no
+distinguía: dentro de `docs/` convivían dos clases de archivo con naturaleza opuesta.
+
+| Archivo | Qué es |
+|---|---|
+| `docs/README.md` | Índice **nuestro**. Nunca se entregó, nunca se hasheó. |
+| `docs/milestone-1-fundamentos/M1-D2-Architecture-and-Data-Models/README.md` | Parte del paquete que `Instructions.txt` especifica y que **fue hasheado con SHA-256 en la Proof of Achievement de M1**. |
+
+Dos consecuencias, las dos malas. **Primera:** `DECISIONS.md` —el documento de mayor precedencia—
+decía en dos lugares que *"los desvíos vigentes están listados en `docs/README.md`"*, o sea que
+delegaba información **mutable** (la tabla crece con cada desvío) en un área congelada. **Segunda:**
+cualquier excepción por *nombre de archivo* ("los README son nuestros") habría dejado editable
+justamente el que está comprometido criptográficamente.
+
+**Decisión.** No se enmienda D-022: **`docs/` es inmutable, sin excepciones.** Lo que se corrige es
+el contenido de la carpeta para que la regla sea verdadera sin excepciones — `docs/` pasa a
+contener **únicamente entregables**:
+
+- el índice bibliográfico se muda a **`specs/entregables.md`**, donde se puede mantener;
+- la tabla de desvíos se muda a **`DECISIONS.md` §Desvíos vigentes**, junto a las decisiones que
+  resume (principio 1: un resumen vive con lo resumido o diverge);
+- lo que ya vivía en otro lado —jerarquía de precedencia, colisión de códigos `D1`/`D2a`, la
+  lección de los artefactos derivados— no se copia: se linkea.
+
+**Alternativa descartada: excepción por ruta exacta para `docs/README.md`.** Era más barata y
+técnicamente segura (el hook matchea rutas, no nombres, así que el README hasheado seguía
+protegido). Se descartó por elección del dueño: una regla absoluta con una excepción deja de ser
+absoluta, y esta protege un compromiso externo —que el repo esté sincronizado con lo que el
+revisor tiene—. Prefiere pagar el costo de que `docs/` no tenga mapa adentro.
+
+**Consecuencia operativa.** La eliminación de `docs/README.md` es una escritura dentro de `docs/` y
+exige el escape `GATE_ALLOW_DOCS=1`, ruidoso y visible en el commit. Eso destapó que **el escape
+estaba documentado pero era inusable**: el hook corre en su propio proceso y no heredaba las
+variables escritas en la línea de comando, así que `GATE_ALLOW_DOCS=1 git push` no tenía efecto.
+Se corrigió reenviando explícitamente una lista **cerrada** de variables (`GATE_ALLOW_DOCS`,
+`GATE_SKIP_CONTRACTS`) del comando a la puerta; cualquier otra se ignora, para que el mecanismo no
+sea un canal de inyección de entorno. Y destapó un segundo problema, peor: con el escape activo, la
+suite de guardias que la propia puerta ejecuta lo **heredaba** y pasaba sin verificar nada. Quedó
+hermética (`unset` de los escapes al arrancar), porque un escape que apaga su propia verificación
+es exactamente lo contrario de lo que un escape debe ser.
+
+**Reversión.** Barata: `git mv` de vuelta y revertir los punteros. Nada de esto toca un entregable.
 
 ---
 
