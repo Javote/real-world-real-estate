@@ -54,6 +54,10 @@ endpoints del backlog **hoy conforman 2**: `POST /auth/login` y `GET /auth/me`.
   exported member 'UserRole'" — que **parece** un problema de resolución de módulos y no lo es.
   Antes de tocar `moduleResolution` por ese error, corré `pnpm --filter @plataforma/api db:generate`.
   La puerta lo regenera sola si falta.
+- **2026-08-20 · Un `import()` dinámico en un test necesita la extensión `.js`.** `packages/api`
+  es CommonJS con `moduleResolution: node16`, así que `import("../src/lib/jwt")` typechequea
+  rojo (TS2835) aunque vitest lo resuelva sin problema. Va `"../src/lib/jwt.js"`: tsc lo mapea
+  al `.ts` y vitest también. Los imports estáticos no lo piden — solo los dinámicos.
 - **El puerto sale de `PORT` en `packages/api/.env`** (lo escribe `scripts/worktree.sh` por árbol).
   No lo hardcodees.
 
@@ -65,30 +69,29 @@ endpoints del backlog **hoy conforman 2**: `POST /auth/login` y `GET /auth/me`.
 
 | Archivo | Qué lo hace 🔴 | Estado |
 |---|---|---|
-| `lib/jwt.ts` | manejo de la clave de firma | ⚠️ **P1 abierto** — ver abajo |
+| `lib/jwt.ts` | manejo de la clave de firma | ✔ cerrado 2026-08-20 — sin fallback (D-042, `SPEC-010`) |
 | `routes/auth.routes.ts` | bcrypt en login | ⚠️ oráculo de tiempos abierto |
 | `routes/users.routes.ts` | bcrypt al crear y al cambiar password | ✔ correcto (cost 10, nunca se loguea ni se devuelve) |
 | `middlewares/auth.ts` · `canAccessProject` | la lógica de membresía | ✔ correcto hoy · forma frágil |
 | `utils/hashing.ts` | SHA-256 de evidencia | ✔ correcto · R2 lo va a mover |
 | `SERVICE_WALLET_SEED`, construcción de commitments | — | **no existen todavía** (`packages/cardano` vacío) |
 
-### P1 · `JWT_SECRET` cae a un literal público
+### ~~P1 · `JWT_SECRET` cae a un literal público~~ — cerrado el 2026-08-20
 
-```js
-const JWT_SECRET = process.env.JWT_SECRET || "dev-secret";   // lib/jwt.ts
-```
+`lib/jwt.ts` hacía `process.env.JWT_SECRET || "dev-secret"`. Con la variable ausente **o vacía**
+—y `.env.example` traía `JWT_SECRET=""`, que en JS es falsy— la API firmaba con un literal que está
+en el repo: cualquiera forjaba `{userId, role:"admin"}`. No era escalar privilegios, era saltear la
+autenticación entera. No llegó a ser explotable porque todavía no hay deploy.
 
-Si la variable falta **o está vacía**, la API firma con un literal que está en el repo. Y
-`.env.example` trae `JWT_SECRET=""`, que en JS es falsy: verificado, `"" || "dev-secret"` resuelve
-al fallback. Con eso cualquiera forja `{userId, role:"admin"}` y lo firma. No es escalar
-privilegios — es saltear la autenticación entera.
+**Cómo quedó.** `requireJwtSecret()` lee el entorno, recorta y **lanza** si no queda nada; se
+evalúa al importar el módulo, así que el fallo es el arranque del proceso y no una request de
+producción — que importa porque el free tier de Render no da shell para ir a mirar qué variables
+quedaron cargadas (D-040). El porqué completo y las alternativas descartadas están en **D-042**;
+las invariantes y los casos borde, en `specs/SPEC-010`.
 
-**Hoy no es explotable: no hay deploy.** El riesgo es que se arma solo el día que lo haya, y el free
-tier de Render no da shell para ir a ver qué variables quedaron cargadas (D-040): fallaría en
-silencio. **Esto bloquea el primer deploy** — se arregla antes de que exista una URL pública, no
-después. Es además el criterio 11 del SOM (*sin hallazgos P1*).
-
-Forma correcta: reventar al arrancar si falta. Sin fallback, nunca.
+**Lo que hay que sostener.** El `render.yaml` que falta escribir (D-041) tiene que declarar
+`JWT_SECRET` con `generateValue: true`. Y `pnpm dev` ahora falla en un checkout sin
+`packages/api/.env`: es el comportamiento buscado, no una regresión.
 
 ### El comentario del login promete más de lo que el código cumple
 

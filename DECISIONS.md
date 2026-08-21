@@ -56,6 +56,7 @@
 | D-039 | Plataforma de deploy: Render. Railway descartado | Aceptada |
 | D-040 | El deploy de M3 corre en free tier ($0/mes). Restricción de diseño, no de presupuesto | Aceptada |
 | D-041 | Deploy con runtime nativo de Node + `render.yaml`. Sin Docker | Aceptada |
+| D-042 | En la superficie 🔴 el default inseguro no existe: se revienta al arrancar y se cierra al omitir | Aceptada |
 
 > **Repaso completo con la documentación oficial: ver §Repaso al final del archivo.** D-001..D-017 se
 > escribieron sin los entregables delante; las 25 entradas se revisaron el 2026-07-29 y cada una
@@ -913,6 +914,69 @@ existir el `render.yaml`: esta decisión define **qué** hay que escribir, no lo
 **Trigger de revisión.** Se vuelve a Docker si (a) hace falta un paquete de SO que el runtime nativo
 no trae, (b) el build nativo deja de ser reproducible de forma que moleste, o (c) se ejecuta la
 reversión a Coolify.
+
+
+## D-042 — En la superficie 🔴, el default inseguro no existe: se revienta
+
+**Contexto (2026-08-20).** La auditoría de la superficie 🔴 (`packages/api/CLAUDE.md`) encontró dos
+hallazgos con la **misma forma**, en los dos lugares donde más duele:
+
+- `lib/jwt.ts` hacía `process.env.JWT_SECRET || "dev-secret"`. Sin la variable —o con
+  `JWT_SECRET=""`, que es lo que trae `.env.example` y en JS es falsy— la API firmaba con un
+  literal público. Cualquiera forja `{userId, role:"admin"}`: no es escalar privilegios, es saltear
+  la autenticación entera. Era el **P1** que bloqueaba el primer deploy.
+- `canAccessProject(userId, role, projectId, allowedMemberships?)` tenía el 4º parámetro opcional, y
+  **omitirlo acepta cualquier membresía**. Quien quiso decir "solo developer" y se olvidó del
+  argumento obtiene "cualquier miembro", en silencio.
+
+Los dos son el mismo error de diseño: **el camino de menor esfuerzo era el inseguro**. No se
+llegaba a ellos equivocándose, se llegaba a ellos por omisión.
+
+**Decisión.** En el código 🔴 —claves, firmas, hashing, membresías— ningún valor ausente resuelve a
+un default que funciona:
+
+1. **Secreto ausente ⇒ el proceso no arranca.** Nada de fallback, ni siquiera "solo en desarrollo".
+   La verificación corre al importar el módulo, no en la primera request. Aplica desde ya a
+   `JWT_SECRET`, y por adelantado a `SERVICE_WALLET_SEED` y `BLOCKFROST_API_KEY` cuando existan
+   (`packages/cardano` está vacío). Un valor presente pero **vacío o solo espacios** cuenta como
+   ausente: es el caso real, no el hipotético.
+2. **Parámetro de permiso ausente ⇒ error de compilación.** Un argumento que decide alcance no
+   puede ser opcional: el default de un permiso es "ninguno", y "ninguno" no es un default útil, así
+   que la única salida honesta es exigirlo.
+
+**Por qué reventar y no advertir.** El free tier de Render no da shell (D-040): no hay forma de
+entrar a ver qué variables quedaron cargadas. Un warning en un log que nadie mira es
+indistinguible de no tener nada, y el modo degradado sería justamente el explotable. Un proceso que
+no levanta se ve en el primer deploy; una API firmando con `dev-secret` se ve cuando alguien la usa.
+
+**Alternativas descartadas.**
+
+- *Fallback solo si `NODE_ENV !== "production"`.* Es el patrón habitual y es una trampa: `NODE_ENV`
+  llega mal seteado más seguido que `JWT_SECRET`, y el modo inseguro pasa a depender de una segunda
+  variable igual de olvidable. Se descarta por la misma razón que el original.
+- *Generar un secreto aleatorio al arrancar si falta.* Arranca, pero invalida todas las sesiones en
+  cada reinicio — y con el spin-down de free (D-040) eso es varias veces por día. Convierte un fallo
+  de configuración en un bug intermitente de sesión, que es peor de diagnosticar.
+- *Exigir además un largo mínimo.* Tiene sentido y no entra todavía: fijar un número es una política
+  y hoy no hay dónde sostenerla. Queda para el security review del criterio 11.
+
+**Consecuencias.**
+
+- `pnpm dev` **falla** en un checkout sin `packages/api/.env`. Es a propósito y es el punto: antes
+  "funcionaba" en modo inseguro. `README.md` §Arranque rápido ya manda copiar el `.env.example`, que
+  ahora explica cómo generar el valor.
+- El `render.yaml` que falta escribir (D-041, criterio 12) tiene que declarar `JWT_SECRET` con
+  `generateValue: true`. Si se olvida, el servicio no levanta — que es exactamente el
+  comportamiento buscado.
+- La suite ya cargaba `JWT_SECRET` en `vitest.config.mts`, así que no hubo que tocar el entorno de
+  tests. Que no haga falta un escape para testear es la señal de que la regla está bien puesta.
+
+**Trigger de revisión.** Si aparece un entorno donde reventar al arrancar sea inaceptable —un
+health check que deba responder aunque falte configuración, por ejemplo— se reabre con ese caso
+concreto delante, no antes.
+
+**Reversión.** Es una línea por sitio. Lo que no se revierte es el test: `test/jwt.test.ts` fija que
+el import falle sin la variable, así que reponer un fallback deja la puerta cerrada.
 
 ---
 

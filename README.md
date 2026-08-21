@@ -38,7 +38,7 @@ El repo es la memoria; los chats son descartables.
 
 ```bash
 pnpm install
-cp packages/api/.env.example packages/api/.env   # completar JWT_SECRET
+cp packages/api/.env.example packages/api/.env   # completar JWT_SECRET: openssl rand -hex 32
 pnpm db:generate
 pnpm db:migrate                                  # crea la SQLite de dev
 pnpm db:seed                                     # usuarios y proyecto demo
@@ -81,7 +81,7 @@ Referencia completa en `.env.example` y `packages/api/.env.example`. Las que imp
 
 ```
 DATABASE_URL=file:./dev.db              # SQLite en dev; postgres://… al desplegar (D-016)
-JWT_SECRET=cambiame-en-produccion
+JWT_SECRET=<openssl rand -hex 32>    # obligatorio: sin esto la API no arranca (D-042)
 UPLOAD_DIR=./uploads                    # disco local en dev; S3 en prod (D-011)
 MAX_FILE_SIZE_MB=10
 CARDANO_NETWORK=Preprod                 # nunca mainnet (D-013)

@@ -58,7 +58,7 @@ Tomados de `docs/milestone-3-implementacion/Milestone-3-info.md`; el mapeo a evi
 | 8 | Flujos de UI end-to-end en pre-prod | Test IDs de M2-D5 §4-6 verdes + walkthrough |
 | 9 | Mediana **reserva → escrow < 12 min** | Telemetría + capturas; métrica definida en D-021 |
 | 10 | Audit logs persistidos | Ledger append-only paginable (M2-D4 P6) |
-| 11 | **Sin hallazgos P1** de seguridad abiertos | Reporte de security review con fixes — ⚠️ *hoy hay uno abierto: `JWT_SECRET`, ver `packages/api/CLAUDE.md` §Superficie 🔴* |
+| 11 | **Sin hallazgos P1** de seguridad abiertos | Reporte de security review con fixes — el P1 conocido (`JWT_SECRET`) se cerró el 2026-08-20 (D-042, `SPEC-010`); falta correr el review |
 | 12 | Pre-prod en **URL pública** | La URL, viva |
 | 13 | **Video walkthrough** | El video del flujo completo |
 | 14 | **Runbook** deploy / rollback / incidente | El runbook + capturas de monitoreo |
@@ -127,6 +127,7 @@ Cada rebanada deja la app **corriendo y demostrable** — ese es el criterio de 
 |---|---|---|---|---|
 | 0 | `SPEC-008` | **Cimientos verificables** *(no es vertical, a propósito)* | La puerta puede verificar la API y el contrato API↔web | **cerrada** 2026-08-20 |
 | 0b | `SPEC-009` | Rename D-023 + naming de contratos | El dominio dice `stage` en todos lados | no escrita |
+| 0c | `SPEC-010` | **Endurecer la superficie 🔴** *(tampoco es vertical)* | El código 🔴 no tiene defaults inseguros | **en curso** |
 | 1 | — | Login de 4 roles | Entrás como cada rol y ves su panel, en ambos idiomas, en mobile | no escrita |
 | 2 | — | Developer crea proyecto, unidades y stages | Creás un desarrollo con su plantilla de 10 stages | no escrita |
 | 3 | — | **Evidencia → Merkle → TXID real** *(walking skeleton)* | Subís evidencia y obtenés un TXID verificable en cardanoscan | no escrita |
@@ -159,7 +160,7 @@ la última rebanada, que es donde los proyectos mueren. Arrancan **ahora**, en p
 | **4 · 3 pilotos confirman** | Releer `M1-D3-PilotPlan.pdf` (ya trae cartas de un notario y dos developers) y **recontactarlos** | Es el lead time más largo del proyecto y no lo controlamos |
 | **12 · URL pública** | Desplegar el esqueleto actual a Render free, aunque muestre poco. **Arranca de cero: hay que escribir el `render.yaml`** — runtime nativo, sin Docker (D-041). **Antes**: migrar evidencia a R2 — en free no hay disco persistente y el archivo se pierde cada 15 min (D-040) | Un primer deploy al final es donde los proyectos mueren |
 | **16 · README público/privado** | Una tabla en `README.md` | 20 minutos, hoy no está atendido |
-| **11 · sin hallazgos P1** | **Ya hay un P1 conocido sin correr el review**: `JWT_SECRET` cae a un literal público (`packages/api/CLAUDE.md` §Superficie 🔴). Arreglarlo **antes** del deploy, y recién ahí correr `/security-review` sobre el resto | Los hallazgos tempranos son baratos, y este se arma solo el día que haya URL pública |
+| **11 · sin hallazgos P1** | El P1 conocido (`JWT_SECRET` caía a un literal público) **está cerrado**: D-042 + `SPEC-010`. Queda correr `/security-review` sobre el resto, antes del deploy | Los hallazgos tempranos son baratos, y ese se armaba solo el día que hubiera URL pública |
 | **14 · runbook** | Se escribe con el primer deploy, no después | Se escribe solo si se escribe mientras pasa |
 | **13 · video walkthrough** | Sale de `pnpm e2e`, que ya graba video | Ya está resuelto técnicamente |
 
@@ -195,6 +196,7 @@ la última rebanada, que es donde los proyectos mueren. Arrancan **ahora**, en p
 | Spec | Título | Rebanada | Estado |
 |---|---|---|---|
 | `SPEC-008` | Cimientos verificables | 0 | **cerrada** 2026-08-20 |
+| `SPEC-010` | Endurecer la superficie 🔴 | 0c | **en curso** |
 
 Las siete specs heredadas (`SPEC-001` a `SPEC-007`) se eliminaron el 2026-07-29: precedían a la
 documentación oficial y describían prototipos descartables. Lo vigente de cada una está absorbido
