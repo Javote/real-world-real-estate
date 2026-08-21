@@ -94,6 +94,6 @@ request ni de respuesta. `packages/shared` no cambia.
 ## Definición de terminado
 
 - [x] P1 cerrado: `JWT_SECRET` sin fallback, con test de arranque
-- [ ] el login paga el costo de `bcrypt` exista o no el usuario
+- [x] el login paga el costo de `bcrypt` exista o no el usuario — de ~81 ms de diferencia a 0.7 ms
 - [ ] `allowedMemberships` obligatorio en los 27 call sites
 - [ ] `packages/api/CLAUDE.md` §Superficie 🔴 sin ⚠️ abiertos

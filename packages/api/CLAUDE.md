@@ -70,7 +70,7 @@ endpoints del backlog **hoy conforman 2**: `POST /auth/login` y `GET /auth/me`.
 | Archivo | Qué lo hace 🔴 | Estado |
 |---|---|---|
 | `lib/jwt.ts` | manejo de la clave de firma | ✔ cerrado 2026-08-20 — sin fallback (D-042, `SPEC-010`) |
-| `routes/auth.routes.ts` | bcrypt en login | ⚠️ oráculo de tiempos abierto |
+| `routes/auth.routes.ts` | bcrypt en login | ✔ cerrado 2026-08-20 — hash dummy (`SPEC-010`) |
 | `routes/users.routes.ts` | bcrypt al crear y al cambiar password | ✔ correcto (cost 10, nunca se loguea ni se devuelve) |
 | `middlewares/auth.ts` · `canAccessProject` | la lógica de membresía | ✔ correcto hoy · forma frágil |
 | `utils/hashing.ts` | SHA-256 de evidencia | ✔ correcto · R2 lo va a mover |
@@ -93,15 +93,34 @@ las invariantes y los casos borde, en `specs/SPEC-010`.
 `JWT_SECRET` con `generateValue: true`. Y `pnpm dev` ahora falla en un checkout sin
 `packages/api/.env`: es el comportamiento buscado, no una regresión.
 
-### El comentario del login promete más de lo que el código cumple
+### ~~El comentario del login promete más de lo que el código cumple~~ — cerrado el 2026-08-20
 
-`auth.routes.ts` devuelve el mismo body para "no existe" y "password incorrecta", y el comentario
-explica bien por qué. Pero **el tiempo de respuesta no es el mismo**: si el usuario no existe, corta
-antes y nunca corre `bcrypt.compare`. Medido: **~81 ms de diferencia** en una máquina rápida.
+`auth.routes.ts` devolvía el mismo body para "no existe" y para "password incorrecta", y el
+comentario explicaba bien por qué. Pero **el tiempo de respuesta no era el mismo**: si el usuario no
+existía, cortaba antes y nunca corría `bcrypt.compare`. El oráculo que el comentario decía cerrar
+seguía abierto — se consultaba con un cronómetro en vez de leyendo el body, que es igual de gratis.
 
-El oráculo que el comentario dice cerrar sigue abierto — se consulta con un cronómetro en vez de
-leyendo el body. Se cierra comparando contra un hash dummy cuando el usuario no está, para pagar
-siempre el mismo costo.
+**Cómo quedó.** Se compara siempre, contra `user?.passwordHash ?? HASH_DUMMY`, y los tres rechazos
+—no existe, inactivo, password incorrecta— se resuelven en un solo `if` **después** de la
+comparación. El hash dummy se deriva de un `randomUUID()` por proceso: ninguna password puede
+coincidir y no queda en el repo un literal con forma de credencial.
+
+**Medido, no estimado** (`test/auth-timing.test.ts`, medianas de 9 corridas intercaladas):
+
+| | antes | después |
+|---|---|---|
+| email inexistente | ~0 ms | 82.3 ms |
+| password incorrecta | ~81 ms | 83.0 ms |
+| **diferencia** | **~81 ms** | **0.7 ms** |
+
+El test asienta por **orden de magnitud** (entre 0.5× y 2×), no por milisegundos: la falla que
+importa es categórica —cortar antes de bcrypt devuelve ~0 ms—, y una aserción en milisegundos sería
+flaky en cualquier CI compartido. `isActive=false` entra en el mismo caso: antes también cortaba
+temprano, o sea que revelaba "esta cuenta existe pero está dada de baja".
+
+**Lo que queda.** La consulta a Prisma sigue costando distinto según el email exista o no. Es un
+índice único sobre una columna, y al lado de los 82 ms de bcrypt no se mide. Si algún día el store
+de usuarios deja de ser una tabla local, hay que volver a medirlo.
 
 ### `canAccessProject`: bien hoy, con una forma que no escala
 
