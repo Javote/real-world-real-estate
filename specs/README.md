@@ -169,7 +169,7 @@ la última rebanada, que es donde los proyectos mueren. Arrancan **ahora**, en p
 |---|---|---|---|
 | ~~Qué significa "evidencia sin firmar"~~ | — | **Cerrada: D-028.** Ya no bloquea el modelo de datos. | — |
 | **Vocabulario "certificate" en la UI** | Calificar levemente ("Certificado técnico") | Postura legal, no técnica — decisión del owner. Sub-ítem Abierto de D-026 | Rebanada 4 |
-| **`/verify`: verificación independiente** | Sin default | M1-D1 la promete, M2-D5 no tiene pantalla. ¿Documento o superficie? | Rebanada 3 |
+| **`/verify`: verificación *independiente*** | La pantalla ya existe (168 líneas, `ApiPort` + `HashChip`) — pero exige sesión y verifica contra la API, no contra la chain | Llega con `AnchorPort` (D-014): verificar sin cuenta y sin confiar en la plataforma. La pregunta ya no es si hay pantalla | Rebanada 3 |
 | ~~D-005 Lucid vs Mesh~~ | — | **Cerrada: D-005 Aceptada** (2026-08-20). Lucid Evolution + Blockfrost, sin spike previo. | — |
 | ~~D-009 Custodia de firmas profesionales~~ | — | **Cerrada: D-009 Aceptada** (2026-08-20). Co-firma CIP-30 no-custodial. | — |
 | D-017 `milestone.ak` vs `milestone2.ak` | Conservar `milestone.ak` | Spike ≤1 día | Track contratos |

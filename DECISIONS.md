@@ -24,7 +24,7 @@
 | D-007 | Lifecycle de milestones: backend = fuente de verdad; on-chain solo Fase B | Aceptada |
 | D-008 | Validador de milestones: patrón state-thread con thread token, núcleo puro separado | Aceptada |
 | D-009 | Custodia de firmas de certificador/notario | Aceptada (co-firma CIP-30 no-custodial) |
-| D-010 | Deploy: Railway con "Wait for CI"; GitHub Actions no despliega | Default (reversión barata a Coolify) |
+| D-010 | Deploy: Railway con "Wait for CI"; GitHub Actions no despliega | Aceptada en su núcleo (GHA no despliega); **plataforma reemplazada por D-039** |
 | D-011 | Storage: S3 genérico — MinIO en dev, Cloudflare R2 en prod | Aceptada (transición: dev usa disco local por D-016 hasta integrar S3) |
 | D-012 | Cambios aditivos entre deploys; migraciones idempotentes en entrypoint | Aceptada |
 | D-013 | Red Cardano: Preprod hasta aprobación de gobernanza | Aceptada |
@@ -53,6 +53,7 @@
 | D-036 | Multer 2.x | Aceptada |
 | D-037 | Nitro: versión publicada en vez de nightly | Aceptada |
 | D-038 | Datos: Drizzle (destino, diferido) · SQLite (default, no Postgres) · Turso (hosting en prod) | Aceptada (compromiso de dirección; migración diferida, ver Trigger) |
+| D-039 | Plataforma de deploy: Render. Railway descartado | Aceptada |
 
 > **Repaso completo con la documentación oficial: ver §Repaso al final del archivo.** D-001..D-017 se
 > escribieron sin los entregables delante; las 25 entradas se revisaron el 2026-07-29 y cada una
@@ -157,6 +158,11 @@ Dockerfiles" y que la reversión era "el propio `docker-compose.prod.yml` que ya
 cuenta de Railway. La decisión sigue en pie como Default; lo que se corrige es la descripción,
 que daba por construido lo que solo estaba decidido. Es exactamente el error que el principio 5
 previene, y llegó a estar replicado en `README.md`. Inventario honesto: `specs/stack.md` §8.
+
+**Reemplazo parcial (2026-08-20, D-039).** La plataforma deja de ser Railway: es **Render**. Lo que
+sobrevive de esta entrada es su núcleo, que nunca fue el proveedor — **GitHub Actions es barrera de
+calidad y no despliega**, el rollout va con healthcheck, y el build por servicio se dispara por push
+a `main`. Ver D-039.
 
 ## D-011 — Storage S3 genérico: MinIO dev / R2 prod
 
@@ -757,6 +763,42 @@ el worker de confirmaciones si ya existe, o contra el caso hipotético si todav�
 **Reversión.** Todas las piezas están donde D-014/D-016 ya las aislaba: Prisma detrás de
 `prisma/schema.prisma` + los repositorios de `packages/api`, y el datastore detrás de la variable de
 conexión. Cambiar cualquiera de las tres no requiere tocar lógica de negocio.
+
+
+## D-039 — Plataforma de deploy: Render. Railway queda descartado
+
+**Contexto (2026-08-20).** D-010 eligió Railway como **Default** con reversión barata, antes de que
+existiera ningún deploy. Desde entonces D-038 razonó el hosting de datos entero sobre **Render**
+(Turso vs. disco persistente + Litestream es un dilema *de Render*), y `CLAUDE.md` y `README.md`
+quedaron diciendo Render mientras `specs/stack.md` §8 seguía diciendo Railway. El repo sostenía las
+dos plataformas a la vez: contradicción detectada al auditar el stack.
+
+**Decisión.** **Render.** Railway queda descartado explícitamente — no como default a refutar, sino
+descartado. Es una postura del dueño del producto, que es exactamente la clase de evidencia que el
+principio 3 admite para cerrar un **Default** (D-010 nunca fue Aceptada: los defaults existen para
+ser reemplazados barato, y este se reemplaza sin spike porque no hay nada construido que migrar).
+
+**Qué NO cambia.** El núcleo de D-010 sobrevive intacto porque nunca dependió del proveedor:
+GitHub Actions es **barrera de calidad y no despliega** (la puerta sigue siendo el único juez),
+rollout con healthcheck contra `GET /health` —que ya existe—, y build por servicio disparado por
+push a `main`.
+
+**Consecuencia — coherencia con D-038.** Esto deja de ser una contradicción y pasa a ser una sola
+línea: Render como plataforma, **Turso** como base (D-038), y el motivo por el que Turso le gana al
+disco persistente —que el disco de Render se monta en una sola instancia y no lo puede compartir el
+worker de confirmaciones de D-003— ahora descansa sobre una plataforma decidida y no supuesta.
+
+**Lo que NO se hace ahora.** Sigue sin existir un solo `Dockerfile`, ni cuenta de Render, ni deploy.
+Esta decisión es de **dirección**: elimina una contradicción, no construye infraestructura.
+`specs/stack.md` §8 sigue siendo el inventario honesto, y sigue en 0%.
+
+**Alternativa preservada.** VPS + Coolify (self-hosted, más barato) sigue siendo la reversión barata
+que D-010 ya documentaba: cambiar cuesta horas, no días, mientras el deploy siga siendo dos
+contenedores sin estado y una base accesible por red. Railway no vuelve sin una decisión nueva.
+
+**Trigger de revisión.** El primer deploy real. Si Render resulta inviable por algo no previsto
+—límite de plan, healthcheck que no encaja, o el worker de confirmaciones que no entra en el
+modelo de servicios— se reabre acá con esa evidencia concreta, no por preferencia.
 
 ---
 

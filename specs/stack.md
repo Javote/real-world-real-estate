@@ -21,8 +21,9 @@
 | TypeScript, estricto, unificado en los tres packages | `6.0.3` | ● | SPEC-008 |
 | Resolución de módulos | `node16` en api y shared · `bundler` en web | ● | SPEC-008 |
 
-`tsconfig.base.json` existe pero **no lo extiende nadie**: es configuración muerta. Los tres
-packages tienen su propio `tsconfig.json` autocontenido.
+No hay `tsconfig.base.json`: se borró por no gobernar nada. Los tres packages tienen su propio
+`tsconfig.json` autocontenido, y esa autonomía es deliberada — la resolución de módulos difiere
+entre web y los packages de Node.
 
 ## 2 · Frontend — `apps/web`
 
@@ -55,7 +56,7 @@ El front está a ~2% de conformidad con el diseño aprobado. Lo que se conserva 
 | **bcrypt** (módulo nativo) | `5.1.1` | ◐ | cost 10. Nativo ⇒ toolchain en la imagen Docker, y es el origen del warning de `url.parse()` vía `node-pre-gyp` |
 | Multer | `2.2.0` | ● | D-036 |
 | dotenv | `16.4.5` | ● | |
-| Vitest + supertest | `4.1.10` / `7.0` | ● | 11 tests, base SQLite propia |
+| Vitest + supertest | `4.1.10` / `7.0` | ● | 23 tests (auth 11 · upload 12), base SQLite propia |
 
 Base `/api/v1`. De los ~80 endpoints del backlog de M2-D5, **conforman 2**.
 
@@ -109,7 +110,7 @@ Ningún validador custodia ni transfiere valor, en ninguna fase (D-021).
 ## 8 · Infraestructura y despliegue
 
 > **Esta capa está en 0%.** No existe ningún `Dockerfile`, ni `docker-compose*.yml`, ni
-> configuración de Railway. Es el hueco más grande del proyecto y afecta a cuatro criterios del
+> configuración de Render. Es el hueco más grande del proyecto y afecta a cuatro criterios del
 > SOM (12 · URL pública, 9 · telemetría, 14 · runbook y monitoreo, 11 · security review).
 
 | Pieza | Estado | Decisión |
@@ -117,7 +118,7 @@ Ningún validador custodia ni transfiere valor, en ninguna fase (D-021).
 | **Dockerfile de `apps/web`** | ○ — no existe | D-010 |
 | **Dockerfile de `packages/api`** | ○ — no existe | D-010 |
 | `docker-compose.prod.yml` | ○ — no existe, **aunque `README.md` y D-010 lo citan como existente** | D-010 |
-| Plataforma de deploy: **Railway**, con "Wait for CI" y watch paths por servicio | ○ — cuenta no creada | D-010 (Default, reversión barata) |
+| Plataforma de deploy: **Render**, con build por servicio y GHA que no despliega | ○ — cuenta no creada | D-039 (Railway descartado; núcleo de D-010 intacto) |
 | Entrypoint que corre migraciones antes de arrancar | ○ | D-012 |
 | `GET /health` | ● — existe en la API | — |
 | Healthcheck de contenedor / rollout | ○ | D-010 |
@@ -139,7 +140,7 @@ Ningún validador custodia ni transfiere valor, en ninguna fase (D-021).
 | `scripts/check-lockfile.py` — lockfile vs `package.json` | — | ● |
 | `scripts/worktree.sh` — árboles por track con puertos y base propios | — | ● |
 | Subagentes `spec` · `conformance` · `contracts` y skills `slice` · `run-app` | — | ● |
-| Tests: **21** (web 4 · api 11 · shared 6) · contratos 0 | — | ◐ |
+| Tests: **34** (web 4 · api 23 · shared 7) · contratos 0 | — | ◐ |
 | Coverage medido | — | ○ — el criterio 2 pide ≥95% en contratos |
 | Análisis estático / scan de dependencias | — | ○ — criterio 11 (*"static analysis, dependency scans"*) |
 | E2E Playwright | — | ● pero **fuera de CI**, por decisión |
@@ -152,7 +153,7 @@ Ver `CLAUDE.md` §Cómo se trabaja acá y D-032.
 |---|---|---|
 | D-017 · `milestone.ak` vs `milestone2.ak` | conservar `milestone.ak` | spike ≤1 día |
 | Vocabulario "certificate" en la UI | calificar levemente | postura del dueño (sub-ítem de D-026) |
-| `/verify` como pantalla o como documento | sin default | M1-D1 la promete, M2-D5 no la tiene |
+| `/verify`: cómo se verifica **sin cuenta y sin confiar en la API** | la pantalla ya existe, pero exige sesión y verifica contra la API | M1-D1 promete verificación independiente; llega con `AnchorPort` (D-014) |
 | Retención de datos | sin default | nunca se discutió (backups los cubre D-038) |
 | Gestor de secretos en pre-prod | variables de entorno de la plataforma de deploy | el primer deploy real |
 | D-038 · cuándo migrar Prisma → Drizzle | diferido, sin fecha | spike cuando aparezca evidencia de límite real (principio 3) |
@@ -166,5 +167,4 @@ Ver `CLAUDE.md` §Cómo se trabaja acá y D-032.
 | **`bcrypt` es nativo** | La imagen Docker necesita toolchain de compilación (`node-pre-gyp`), y ese mismo camino emite el warning de `url.parse()` deprecado en cada arranque. Alternativa: `bcryptjs`, JS puro y compatible en formato de hash, ~30% más lento. Es código 🔴: lo decide el humano |
 | **`contracts/` con 0 tests** | Único criterio duro del SOM sin plan B |
 | **`aiken.toml` con naming de scaffold** | Incumple D-015 (versión entera incremental) |
-| **`tsconfig.base.json` huérfano** | Configuración que aparenta gobernar y no gobierna nada |
 | **`milestone` en el dominio** | D-023 pendiente; encarece con cada pantalla nueva |

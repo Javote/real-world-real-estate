@@ -26,7 +26,8 @@ El repo es la memoria; los chats son descartables.
 ## Requisitos previos
 
 - **Node.js ≥ 20 LTS** y **pnpm ≥ 9** — `corepack enable && corepack prepare pnpm@latest --activate`
-- **Docker** (para PostgreSQL y MinIO cuando se migre desde SQLite y disco local)
+- **Docker** (para MinIO cuando se migre desde disco local — D-011). PostgreSQL ya no es el
+  destino: se mantiene SQLite (D-038)
 - **Aiken v1.1.21** para los contratos:
   ```bash
   curl --proto '=https' --tlsv1.2 -LsSf https://install.aiken-lang.org | sh
