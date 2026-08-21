@@ -1,5 +1,21 @@
 # CLAUDE.md
 
+> ## ⚠️ LEER PRIMERO: `specs/PLAN-2026-08-21-saneamiento-y-flujo.md`
+>
+> El 2026-08-21 se descubrió que **este archivo y todo el flujo de trabajo están por reemplazarse**.
+> Dos entregables que son la especificación real del producto se venían ignorando:
+> **`docs/milestone-2-diseno/M2-D2-Screenshots-catalog/`** (70 capturas, la spec visual) y
+> **`docs/milestone-3-implementacion/UI-implementation-plan.md`** (M2-D5: 53 filas de backlog con
+> path, componentes, endpoints, test IDs y patrón por superficie — **el índice maestro**).
+>
+> **No implementes ninguna pantalla sin abrir su captura y su fila de M2-D5.** Cuando la prosa de
+> M2-D3 y la captura difieren, gana la captura. El plan trae la deuda medida, los 4 commits de
+> saneamiento y el flujo nuevo. Los borradores aprobados son `specs/propuesta-CLAUDE.md` (reemplaza
+> este archivo) y `specs/propuesta-SPEC-011.md`.
+>
+> Lo de abajo sigue vigente **como referencia técnica** (reglas duras, prohibiciones, trampas), pero
+> la sección §Cómo se trabaja acá está derogada por el plan.
+
 > Lo transversal. Lo de cada frente vive en `apps/web/CLAUDE.md`, `packages/api/CLAUDE.md` y
 > `contracts/CLAUDE.md`, y se carga solo cuando tocás ese subárbol.
 

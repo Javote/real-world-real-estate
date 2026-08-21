@@ -1,5 +1,16 @@
 # SPEC-011 — Login de 4 roles
 
+> ## ⛔ OBSOLETO — no implementar contra este archivo
+>
+> Se escribió leyendo la **prosa** de M2-D1/M2-D3 sin abrir `1-LOGIN.png` ni la fila `01` de M2-D5.
+> La superficie que produjo (commit `75ff427`) **no se parece al diseño aprobado**: gradiente como
+> banda en vez de página completa, sin tarjeta blanca, solapas como grilla en vez de segmented
+> control, sin título por rol, credenciales precargadas en vez de placeholders. Y declaró los 4
+> paneles como "shells vacíos" cuando en realidad son grillas de KPI con lista de trabajo pendiente.
+>
+> Lo reemplaza `specs/propuesta-SPEC-011.md`. Contexto completo en
+> `specs/PLAN-2026-08-21-saneamiento-y-flujo.md`.
+
 > Rebanada 1 de `specs/README.md` §Orden de trabajo. Primera rebanada vertical real de M3 (después
 > de los cimientos 0/0b/0c/0d). Backlog: `M2-D5` fila 01 (login) + filas 02, 33-34, 51, 55 (landing
 > de cada rol). IDs `AUTH-LOGIN-001`, `AUTH-ME-001`, `INV-BUY-LIST-001`, `DEV-PANEL-KPIS-001`,

@@ -1,5 +1,13 @@
 # specs/ — El mapa de desarrollo
 
+> ## ⚠️ Este archivo se disuelve en el commit 1 del plan
+>
+> Ver **`specs/PLAN-2026-08-21-saneamiento-y-flujo.md`**. El §Orden de trabajo de abajo (11 rebanadas
+> inventadas) queda reemplazado por las **53 filas de backlog de M2-D5**
+> (`docs/milestone-3-implementacion/UI-implementation-plan.md`), que ya traen path, componentes,
+> endpoints, test IDs y patrón por superficie. Una rebanada = un grupo de filas que comparten
+> `M3-BE-XX`.
+
 > **Precedencia:** `DECISIONS.md` > `CLAUDE.md` > `specs/`. La numeración nunca se recicla.
 > Un solo índice del trabajo, para que no haya dos listas que diverjan.
 >
