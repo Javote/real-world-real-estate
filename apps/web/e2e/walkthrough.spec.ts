@@ -18,7 +18,7 @@ mkdirSync(SHOTS, { recursive: true })
 // cuando se rehaga el modelo de roles.
 const SEED_USERS = [
   { role: 'admin', email: 'admin@example.com', password: 'admin123' },
-  { role: 'developer', email: 'developer@example.com', password: 'dev123' },
+  { role: 'developer', email: 'developer@example.com', password: 'developer123' },
   { role: 'buyer', email: 'buyer@example.com', password: 'buyer123' },
   { role: 'verifier', email: 'verifier@example.com', password: 'verifier123' },
 ] as const
@@ -115,7 +115,7 @@ test.describe('Walkthrough', () => {
   test('DEV-PROJECT-DETAIL-001 · detalle de proyecto con sus stages y evidencia', async ({
     page,
   }) => {
-    await login(page, 'developer@example.com', 'dev123')
+    await login(page, 'developer@example.com', 'developer123')
 
     // El seed crea un único proyecto (slug torre-a); se entra por la primera tarjeta.
     const firstProject = page.locator('a[href^="/projects/"]').first()

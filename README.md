@@ -46,6 +46,7 @@ pnpm dev                                         # web en :3000, api en :8787
 ```
 
 Login demo: `admin@example.com` / `admin123` (resto de usuarios en `packages/api/prisma/seed.ts`).
+Son credenciales **de desarrollo y publicadas**: `db:seed` no se corre contra la instancia pública.
 Contratos: `pnpm contracts:check`.
 
 ## Trabajar con agentes

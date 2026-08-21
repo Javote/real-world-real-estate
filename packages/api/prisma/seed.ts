@@ -12,13 +12,17 @@ const prisma = new PrismaClient();
 
 async function main() {
   const adminPassword = await bcrypt.hash("admin123", 10);
-  const developerPassword = await bcrypt.hash("dev123", 10);
+  const developerPassword = await bcrypt.hash("developer123", 10);
   const buyerPassword = await bcrypt.hash("buyer123", 10);
   const verifierPassword = await bcrypt.hash("verifier123", 10);
 
   const admin = await prisma.user.upsert({
     where: { email: "admin@example.com" },
-    update: {},
+    // La password SÍ se actualiza: el seed imprime estas credenciales al
+    // terminar, así que tiene que garantizarlas. Con `update: {}` una base ya
+    // existente conservaba la vieja mientras el seed anunciaba la nueva — que es
+    // lo que pasó al subir el mínimo a 8 caracteres (D-046).
+    update: { passwordHash: adminPassword },
     create: {
       email: "admin@example.com",
       passwordHash: adminPassword,
@@ -29,7 +33,11 @@ async function main() {
 
   const developer = await prisma.user.upsert({
     where: { email: "developer@example.com" },
-    update: {},
+    // La password SÍ se actualiza: el seed imprime estas credenciales al
+    // terminar, así que tiene que garantizarlas. Con `update: {}` una base ya
+    // existente conservaba la vieja mientras el seed anunciaba la nueva — que es
+    // lo que pasó al subir el mínimo a 8 caracteres (D-046).
+    update: { passwordHash: developerPassword },
     create: {
       email: "developer@example.com",
       passwordHash: developerPassword,
@@ -40,7 +48,11 @@ async function main() {
 
   const buyer = await prisma.user.upsert({
     where: { email: "buyer@example.com" },
-    update: {},
+    // La password SÍ se actualiza: el seed imprime estas credenciales al
+    // terminar, así que tiene que garantizarlas. Con `update: {}` una base ya
+    // existente conservaba la vieja mientras el seed anunciaba la nueva — que es
+    // lo que pasó al subir el mínimo a 8 caracteres (D-046).
+    update: { passwordHash: buyerPassword },
     create: {
       email: "buyer@example.com",
       passwordHash: buyerPassword,
@@ -51,7 +63,11 @@ async function main() {
 
   const verifier = await prisma.user.upsert({
     where: { email: "verifier@example.com" },
-    update: {},
+    // La password SÍ se actualiza: el seed imprime estas credenciales al
+    // terminar, así que tiene que garantizarlas. Con `update: {}` una base ya
+    // existente conservaba la vieja mientras el seed anunciaba la nueva — que es
+    // lo que pasó al subir el mínimo a 8 caracteres (D-046).
+    update: { passwordHash: verifierPassword },
     create: {
       email: "verifier@example.com",
       passwordHash: verifierPassword,
@@ -158,7 +174,7 @@ async function main() {
 
   console.log("Seed completado");
   console.log("Admin: admin@example.com / admin123");
-  console.log("Developer: developer@example.com / dev123");
+  console.log("Developer: developer@example.com / developer123");
   console.log("Buyer: buyer@example.com / buyer123");
   console.log("Verifier: verifier@example.com / verifier123");
   console.log("Project slug: torre-a");

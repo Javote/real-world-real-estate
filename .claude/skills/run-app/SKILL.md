@@ -22,7 +22,7 @@ pnpm dev        # correr en background
 ```
 
 El seed imprime los usuarios. Hoy son `admin@example.com/admin123`,
-`developer@example.com/dev123`, `buyer@example.com/buyer123`, `verifier@example.com/verifier123`,
+`developer@example.com/developer123`, `buyer@example.com/buyer123`, `verifier@example.com/verifier123`,
 más un proyecto `torre-a`. **Ojo:** no son los cuatro roles de M2-D1 (INV/DEV/NOT/CER) — el
 backend todavía no tiene `notary` y usa `buyer`/`verifier`. Si el modelo de roles ya se rehizo,
 releé el seed en vez de asumir estas credenciales.
@@ -40,7 +40,7 @@ until curl -sf -o /dev/null http://localhost:$WEB/; do sleep 1; done; echo listo
 ```bash
 curl -s -X POST http://localhost:$API/api/v1/auth/login \
   -H 'Content-Type: application/json' \
-  -d '{"email":"developer@example.com","password":"dev123"}'      # 200 + token
+  -d '{"email":"developer@example.com","password":"developer123"}'      # 200 + token
 curl -s -o /dev/null -w '%{http_code}\n' http://localhost:$WEB/    # 200
 ```
 

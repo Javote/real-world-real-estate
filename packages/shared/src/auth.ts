@@ -9,10 +9,71 @@ import { z } from "zod";
 export const userRoleSchema = z.enum(["admin", "developer", "buyer", "verifier"]);
 export type UserRole = z.infer<typeof userRoleSchema>;
 
-/** Body de `POST /api/v1/auth/login`. */
+/** Largo mínimo en caracteres: el SHALL de NIST SP 800-63B §5.1.1.2 (D-046). */
+export const PASSWORD_MIN_CHARS = 8;
+
+/**
+ * Largo máximo en BYTES. Es el límite de bcrypt, que más allá de 72 **trunca en
+ * silencio**: sin esto, una passphrase larga tendría hasheados solo los primeros
+ * 72 bytes y nadie se enteraría. NIST prohíbe truncar, así que se rechaza.
+ */
+export const PASSWORD_MAX_BYTES = 72;
+
+/**
+ * Largo en bytes UTF-8, contado a mano.
+ *
+ * Ni `Buffer` (Node) ni `TextEncoder` (DOM): el `lib` de este package es
+ * `["ES2022"]` pelado a propósito, porque lo consumen la API y el browser. Meter
+ * `DOM` acá para una línea le abriría a `packages/api` todos los globals del
+ * navegador, que es un precio alto por evitar ocho líneas.
+ *
+ * El `for...of` sobre un string itera **code points**, no unidades UTF-16, así
+ * que los pares suplentes —emoji incluidos— cuentan una vez y no dos.
+ */
+function byteLength(value: string): number {
+  let bytes = 0;
+  for (const char of value) {
+    const cp = char.codePointAt(0) ?? 0;
+    bytes += cp < 0x80 ? 1 : cp < 0x800 ? 2 : cp < 0x10000 ? 3 : 4;
+  }
+  return bytes;
+}
+
+/**
+ * La política de passwords, en un solo lugar (D-046).
+ *
+ * Deliberadamente **no** hay reglas de composición —nada de "una mayúscula y un
+ * número"— porque NIST lo prohíbe explícitamente: empujan a `Password1!` y bajan
+ * la entropía real. Y el alfabeto es todo: espacios, Unicode y emoji incluidos.
+ * Si alguna vez aparece acá un `.regex(...)` restringiendo caracteres, está mal.
+ *
+ * Se aplica donde la password se ESCRIBE (`POST /users`, `PATCH /users/:id`), no
+ * donde se verifica: ver el comentario de `loginRequestSchema`.
+ */
+export const passwordSchema = z
+  .string()
+  // `.min()` de Zod cuenta unidades UTF-16, no caracteres: cuatro emoji dan
+  // `.length === 8` y pasarían un mínimo de 8 con la mitad de los caracteres que
+  // el mínimo pide. `[...pw]` itera code points, que es lo que NIST llama
+  // "characters".
+  .refine((pw) => [...pw].length >= PASSWORD_MIN_CHARS, {
+    message: `La contraseña necesita al menos ${PASSWORD_MIN_CHARS} caracteres`,
+  })
+  .refine((pw) => byteLength(pw) <= PASSWORD_MAX_BYTES, {
+    message: `La contraseña no puede superar los ${PASSWORD_MAX_BYTES} bytes`,
+  });
+
+/**
+ * Body de `POST /api/v1/auth/login`.
+ *
+ * `password` NO valida la política a propósito (D-046). Hacerlo convertiría al
+ * login en un oráculo de cuál es la política, y dejaría afuera a cuentas creadas
+ * bajo una anterior. Acá solo se exige que venga algo, con un techo generoso que
+ * es higiene de entrada y no política.
+ */
 export const loginRequestSchema = z.object({
   email: z.email(),
-  password: z.string().min(3),
+  password: z.string().min(1).max(1024),
 });
 export type LoginRequest = z.infer<typeof loginRequestSchema>;
 

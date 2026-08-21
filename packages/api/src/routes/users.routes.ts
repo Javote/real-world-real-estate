@@ -1,3 +1,4 @@
+import { passwordSchema } from "@plataforma/shared";
 import bcrypt from "bcrypt";
 import { Router } from "express";
 import { z } from "zod";
@@ -28,7 +29,7 @@ router.get("/", async (_req, res) => {
 router.post("/", async (req, res) => {
   const schema = z.object({
     email: z.string().email(),
-    password: z.string().min(6),
+    password: passwordSchema,
     role: z.enum(["admin", "developer", "buyer", "verifier"]),
     fullName: z.string().min(1)
   });
@@ -91,7 +92,7 @@ router.patch("/:id", async (req, res) => {
     fullName: z.string().min(1).optional(),
     role: z.enum(["admin", "developer", "buyer", "verifier"]).optional(),
     isActive: z.boolean().optional(),
-    password: z.string().min(6).optional()
+    password: passwordSchema.optional()
   });
 
   const parsed = schema.safeParse(req.body);

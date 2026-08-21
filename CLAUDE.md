@@ -127,7 +127,11 @@ No leas los cuatro entregables por costumbre: son ~25k tokens. Abrí lo que la f
 1. **Datos primero:** dinero jamás en float — montos en unidades enteras mínimas (lovelace como `bigint`; moneda fiat en centavos `integer`). Timestamps en UTC. IDs = UUID.
 2. **Cero PII on-chain o en logs:** ni nombres, ni emails, ni URLs internas, ni nombres de archivo en metadata, datums o logs. Solo hashes y refs opacas. Strings de metadata ≤ 64 bytes.
 3. **El hash es el ticket de entrada a la cadena de prueba** (D-027). Solo se hashea lo que se va a anclar. Si un archivo tiene `sha256Hash`, termina anclado — o se muestra como "Pendiente" mientras confirma, **nunca** como "Verificado". El hash lo calcula el servidor y no se recalcula ni se edita después de creado. Los **assets** informativos (renders, folletos, galerías, fotos de unidad de muestra) no se hashean, no se anclan y no muestran ninguna señal de prueba. No hay estado intermedio.
-4. **Passwords solo con bcrypt** (cost 10). Jamás loguear ni devolver `passwordHash` en ninguna respuesta.
+4. **Passwords solo con bcrypt** (cost 10) — ratificado con argumento, no heredado: en 0.1 CPU un KDF
+   memory-hard es la forma equivocada (D-046). Jamás loguear ni devolver `passwordHash` en ninguna
+   respuesta. La **política** (mín. 8 caracteres, máx. 72 bytes rechazando en vez de truncar, sin reglas
+   de composición) vive en `passwordSchema` de `packages/shared` y se aplica donde la password se
+   **escribe**, nunca en el login.
 5. **Autorización en dos capas, siempre:** rol global (`requireRole`) + membresía por proyecto (`canAccessProject`). `admin` bypasea membresías; el resto solo ve proyectos donde es miembro. La matriz completa está en M2-D1 §4.
 6. **Todo body se valida con Zod** (`safeParse` + 400 con `error.flatten()`). Nada llega a Prisma sin pasar por un schema. Para endpoints nuevos: el schema va a `packages/shared` ANTES que el endpoint, y el frontend importa el mismo tipo.
 7. **Toda mutación relevante escribe `AuditLog`** (append-only) vía `writeAuditLog`, con actor, entidad, acción, timestamp.

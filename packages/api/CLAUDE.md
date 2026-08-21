@@ -60,6 +60,12 @@ endpoints del backlog **hoy conforman 2**: `POST /auth/login` y `GET /auth/me`.
   es CommonJS con `moduleResolution: node16`, así que `import("../src/lib/jwt")` typechequea
   rojo (TS2835) aunque vitest lo resuelva sin problema. Va `"../src/lib/jwt.js"`: tsc lo mapea
   al `.ts` y vitest también. Los imports estáticos no lo piden — solo los dinámicos.
+- **2026-08-21 · El seed imprimía credenciales que no garantizaba.** Los cuatro `upsert` de
+  `prisma/seed.ts` usaban `update: {}`, así que en una base ya existente el usuario conservaba
+  la password vieja mientras el `console.log` del final anunciaba la nueva. Se vio al subir el
+  mínimo a 8 caracteres: el seed decía `developer123` y el login daba 401 con esa. **Un seed de
+  demo tiene que ser autoritativo sobre lo que publica**, así que ahora `update` sí escribe el
+  `passwordHash`. Corolario general: `update: {}` no es "idempotente", es "no reconcilia".
 - **2026-08-21 · Un rate limiter mal configurado detrás de un proxy es peor que ninguno.**
   `req.ip` sale de `app.set("trust proxy", …)`. Con 0 detrás de Render, todos los clientes
   comparten la IP del proxy y caen en el mismo balde: la app queda inusable. Con
@@ -80,7 +86,7 @@ endpoints del backlog **hoy conforman 2**: `POST /auth/login` y `GET /auth/me`.
 |---|---|---|
 | `lib/jwt.ts` | manejo de la clave de firma | ✔ cerrado 2026-08-20 — sin fallback (D-042, `SPEC-010`) |
 | `routes/auth.routes.ts` | bcrypt en login | ✔ cerrado 2026-08-20 — hash dummy (`SPEC-010`) |
-| `routes/users.routes.ts` | bcrypt al crear y al cambiar password | ✔ correcto (cost 10, nunca se loguea ni se devuelve) |
+| `routes/users.routes.ts` | bcrypt al crear y al cambiar password | ✔ correcto (cost 10, nunca se loguea ni se devuelve) · política endurecida 2026-08-21 (D-046) |
 | `middlewares/auth.ts` · `canAccessProject` | la lógica de membresía | ✔ correcto · fail-closed desde 2026-08-21 · falta que sea middleware |
 | `utils/hashing.ts` | SHA-256 de evidencia | ✔ correcto · R2 lo va a mover |
 | `SERVICE_WALLET_SEED`, construcción de commitments | — | **no existen todavía** (`packages/cardano` vacío) |
@@ -196,6 +202,13 @@ exactamente los bytes que terminan en el object storage, no un temporal que desp
 El uso es correcto — cost 10 (regla 4), `compare` en login, `hash` al crear y al cambiar password,
 y `auth.routes.ts` tipa la respuesta explícitamente para que `passwordHash` no se escape por un
 spread distraído.
+
+**Por qué bcrypt y no Argon2id: D-046.** Resumen: Argon2id es la recomendación general, pero es
+memory-hard, y en 0.1 CPU con todo login pagando un hash (D-045) es la forma equivocada para esta
+caja. La salida si el módulo nativo alguna vez rompe un build **no es `bcryptjs`, es `scrypt` de
+`node:crypto`** — stdlib, sin dependencias, se lleva puesta toda esta deuda de una. La política de
+largo (mín. 8 caracteres, máx. 72 **bytes**, sin reglas de composición) vive en `passwordSchema` de
+`packages/shared`, no en las rutas.
 
 Sobre `bcrypt` vs `bcryptjs`, la recomendación **se dio vuelta** y conviene saber por qué: D-041
 mató el argumento caro (sin Docker, no hay toolchain que meter en una imagen), y apareció un dato
