@@ -60,6 +60,13 @@ endpoints del backlog **hoy conforman 2**: `POST /auth/login` y `GET /auth/me`.
   es CommonJS con `moduleResolution: node16`, así que `import("../src/lib/jwt")` typechequea
   rojo (TS2835) aunque vitest lo resuelva sin problema. Va `"../src/lib/jwt.js"`: tsc lo mapea
   al `.ts` y vitest también. Los imports estáticos no lo piden — solo los dinámicos.
+- **2026-08-21 · Un rate limiter mal configurado detrás de un proxy es peor que ninguno.**
+  `req.ip` sale de `app.set("trust proxy", …)`. Con 0 detrás de Render, todos los clientes
+  comparten la IP del proxy y caen en el mismo balde: la app queda inusable. Con
+  `trust proxy: true`, cualquiera falsifica `X-Forwarded-For` y el límite no existe, sin
+  ruido. El default es 0 —el que falla ruidoso— y `true` es inalcanzable porque
+  `trustProxyHops()` parsea siempre a entero. **El deploy tiene que setear
+  `TRUST_PROXY_HOPS=1`** (D-045).
 - **El puerto sale de `PORT` en `packages/api/.env`** (lo escribe `scripts/worktree.sh` por árbol).
   No lo hardcodees.
 
@@ -119,6 +126,12 @@ El test asienta por **orden de magnitud** (entre 0.5× y 2×), no por milisegund
 importa es categórica —cortar antes de bcrypt devuelve ~0 ms—, y una aserción en milisegundos sería
 flaky en cualquier CI compartido. `isActive=false` entra en el mismo caso: antes también cortaba
 temprano, o sea que revelaba "esta cuenta existe pero está dada de baja".
+
+**Lo que costó, porque no fue gratis.** Ahora **todo** intento paga un bcrypt: un email inventado
+pasó de costar ~0 ms a costar 82 ms, y en el free tier son 0.1 CPU (D-040). Sin límite, un spray sin
+autenticar voltea la URL pública, que es el criterio 12. Por eso `/login` tiene rate limiting
+(D-045) — y por eso el arreglo del oráculo y el limiter son el mismo cambio en dos commits, no dos
+cosas independientes. Si alguna vez alguien piensa en sacar el limiter, esto es lo que reabre.
 
 **Lo que queda.** La consulta a Prisma sigue costando distinto según el email exista o no. Es un
 índice único sobre una columna, y al lado de los 82 ms de bcrypt no se mide. Si algún día el store

@@ -6,6 +6,7 @@ import { Router } from "express";
 import { signToken } from "../lib/jwt";
 import { prisma } from "../lib/prisma";
 import { authenticate } from "../middlewares/auth";
+import { loginRateLimiter } from "../middlewares/rateLimit";
 import { writeAuditLog } from "../utils/audit";
 
 const router = Router();
@@ -26,7 +27,7 @@ const router = Router();
  */
 const HASH_DUMMY = bcrypt.hashSync(randomUUID(), 10);
 
-router.post("/login", async (req, res) => {
+router.post("/login", loginRateLimiter(), async (req, res) => {
   // El schema vive en packages/shared, no acá (regla 6): el front importa el
   // mismo tipo, así que una respuesta que cambie de forma rompe su typecheck.
   const parsed = loginRequestSchema.safeParse(req.body);

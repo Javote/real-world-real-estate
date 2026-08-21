@@ -9,8 +9,13 @@ import milestonesRoutes from "./routes/milestones.routes";
 import evidenceRoutes from "./routes/evidence.routes";
 import auditRoutes from "./routes/audit.routes";
 import { errorHandler } from "./middlewares/errorHandler";
+import { trustProxyHops } from "./middlewares/rateLimit";
 
 const app = express();
+
+// De cuántos saltos de proxy sale la IP del cliente. Tiene que estar ANTES de
+// cualquier limiter: es lo que decide qué IP se usa como clave. Ver D-045.
+app.set("trust proxy", trustProxyHops());
 
 app.use(express.json());
 

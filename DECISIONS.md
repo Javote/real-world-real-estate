@@ -59,6 +59,7 @@
 | D-042 | En la superficie 🔴 el default inseguro no existe: se revienta al arrancar y se cierra al omitir | Aceptada |
 | D-043 | La regla de visibilidad de proyectos existe una sola vez: `projectScope` | Aceptada |
 | D-044 | La segunda capa de autorización la verifica la puerta; el middleware queda diferido | Aceptada (con trigger de revisión) |
+| D-045 | Rate limiting en `/auth/login`, y de dónde sale la IP del cliente | Aceptada |
 
 > **Repaso completo con la documentación oficial: ver §Repaso al final del archivo.** D-001..D-017 se
 > escribieron sin los entregables delante; las 25 entradas se revisaron el 2026-07-29 y cada una
@@ -1112,6 +1113,74 @@ saltó, eso es evidencia de que se puede seguir difiriendo — y si saltó dos v
 
 **Reversión.** Sacar una línea de `gate.sh`. Lo que no se revierte es la evidencia que va a haber
 juntado para entonces.
+
+
+## D-045 — Rate limiting en `/auth/login`, y de dónde sale la IP del cliente
+
+**Contexto (2026-08-21).** Cerrar el oráculo de tiempos del login tuvo un costo que hay que pagar
+en otro lado. Antes, un email inventado cortaba antes de `bcrypt.compare` y no costaba nada; ahora
+**todo** intento paga un hash completo. Tirar 10.000 emails al azar pasó de gratis a 10.000 hashes,
+y en el free tier de Render son **0.1 CPU** (D-040), donde los 82 ms medidos en una máquina rápida
+se van a varios cientos.
+
+Eso no es una vulnerabilidad abstracta: el criterio 12 del SOM pide una **pre-prod en URL pública**,
+y la URL tiene que estar viva cuando la miren. Un spray sin autenticar la voltea. La API no tenía
+rate limiting en ningún endpoint — verificado, no supuesto.
+
+La salida no es reabrir el oráculo. Es limitar.
+
+**Decisión — el límite.** `express-rate-limit` sobre `POST /auth/login`, 20 intentos por IP cada 15
+minutos, configurable con `LOGIN_RATE_LIMIT_MAX`. Tres elecciones que no son obvias:
+
+- **Se cuentan todos los intentos, no solo los fallidos.** Lo que se protege es CPU, y el hash se
+  paga igual cuando la password es correcta. Un limiter con `skipSuccessfulRequests` no defiende de
+  nada acá.
+- **La clave es la IP, no el email.** Limitar por email deja que cualquiera bloquee la cuenta de
+  otro con 20 intentos: se cambia una denegación de servicio general por una **dirigida**, que es
+  peor. El costo aceptado es el simétrico: una oficina detrás de un NAT comparte cupo.
+- **Solo `/login`, no toda la API.** Ahí es donde está el bcrypt. Un limiter global es una decisión
+  de producto que nadie tomó y que rompería clientes legítimos sin haberlo medido.
+
+**Decisión — de dónde sale la IP.** Es la mitad que se rompe en silencio. `app.set("trust proxy", …)`
+decide si `req.ip` es la IP del socket o la de `X-Forwarded-For`, y las dos configuraciones
+equivocadas fallan muy distinto:
+
+| Config | Qué pasa | Cómo se entera uno |
+|---|---|---|
+| **De menos** — 0 detrás del proxy de Render | todos comparten la IP del proxy, caen en el mismo balde, la app queda inusable | en el primer minuto |
+| **De más** — `trust proxy: true` | cualquiera falsifica `X-Forwarded-For` y el límite no existe | **nunca** |
+
+Se elige el que falla ruidoso: **el default es 0**. Y la configuración que falla en silencio queda
+**inalcanzable por construcción** — `trustProxyHops()` parsea siempre a entero, así que `true` no es
+un valor escribible; `"true"`, `"-1"` y cualquier basura caen a 0. Está fijado por test.
+
+**Prerequisito del deploy.** El `render.yaml` que falta escribir (D-041, criterio 12) tiene que
+setear `TRUST_PROXY_HOPS=1`. Es la segunda entrada de esa lista, después del `generateValue: true`
+de `JWT_SECRET` (D-042). Si se olvida, la app se ve rota enseguida — que es el modo de falla que
+elegimos, no un accidente.
+
+**Store en memoria.** Alcanza porque el free tier da **una** instancia (D-040). Con dos, cada una
+lleva su propia cuenta y el límite efectivo se duplica. No es un problema hoy y no se resuelve por
+adelantado: meter Redis para un servicio que no existe es trabajo especulativo (principio 5).
+
+**Alternativas descartadas.**
+
+- *Bajar el cost de bcrypt.* Haría el spray más barato de aguantar y **la regla 4 fija 10**. No es
+  negociable por performance.
+- *Volver al corte temprano cuando el email no existe.* Reabre el oráculo de enumeración. Cambiar
+  una vulnerabilidad por otra no es un arreglo.
+- *Un limiter escrito a mano.* Son 30 líneas hasta que aparecen la limpieza de la tabla, las
+  cabeceras `draft-7` y el manejo de proxy. Es superficie de auth: acá una dependencia madura y
+  chica gana.
+
+**Trigger de revisión.** (a) el free tier deja de alcanzar y hay más de una instancia — ahí el store
+en memoria deja de ser correcto; (b) aparece otro endpoint caro sin autenticar (el primer candidato
+es el upload de evidencia, que hashea); (c) usuarios legítimos detrás de un NAT chocan con el
+límite, que se mide subiendo `LOGIN_RATE_LIMIT_MAX` y no sacando el limiter.
+
+**Reversión.** Sacar el middleware de la ruta. Lo que no se revierte es `trust proxy`: esa línea
+tiene que quedar aunque el limiter se vaya, porque cualquier cosa futura que mire `req.ip` —logs de
+auditoría incluidos— depende de ella.
 
 ---
 

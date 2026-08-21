@@ -55,8 +55,9 @@ El front está a ~2% de conformidad con el diseño aprobado. Lo que se conserva 
 | JWT (`jsonwebtoken`) | `9.0.2` | ● | 7 días, con revalidación de `isActive` por request |
 | **bcrypt** (módulo nativo) | `5.1.1` | ◐ | cost 10. Nativo ⇒ toolchain en la imagen Docker, y es el origen del warning de `url.parse()` vía `node-pre-gyp` |
 | Multer | `2.2.0` | ● | D-036 |
+| `express-rate-limit` | `8.6.2` | ● | D-045. Solo sobre `POST /auth/login`. Store en memoria: alcanza con **una** instancia, que es lo que da el free tier (D-040) |
 | dotenv | `16.4.5` | ● | |
-| Vitest + supertest | `4.1.10` / `7.0` | ● | 23 tests (auth 11 · upload 12), base SQLite propia |
+| Vitest + supertest | `4.1.10` / `7.0` | ● | 62 tests (auth 11 · upload 12 · jwt 10 · timing 3 · acceso 16 · rate limit 10), base SQLite propia |
 
 Base `/api/v1`. De los ~80 endpoints del backlog de M2-D5, **conforman 2**.
 

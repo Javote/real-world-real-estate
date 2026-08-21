@@ -159,7 +159,7 @@ la última rebanada, que es donde los proyectos mueren. Arrancan **ahora**, en p
 | Criterio | Qué hacer ya | Por qué no puede esperar |
 |---|---|---|
 | **4 · 3 pilotos confirman** | Releer `M1-D3-PilotPlan.pdf` (ya trae cartas de un notario y dos developers) y **recontactarlos** | Es el lead time más largo del proyecto y no lo controlamos |
-| **12 · URL pública** | Desplegar el esqueleto actual a Render free, aunque muestre poco. **Arranca de cero: hay que escribir el `render.yaml`** — runtime nativo, sin Docker (D-041). **Antes**: migrar evidencia a R2 — en free no hay disco persistente y el archivo se pierde cada 15 min (D-040) | Un primer deploy al final es donde los proyectos mueren |
+| **12 · URL pública** | Desplegar el esqueleto actual a Render free, aunque muestre poco. **Arranca de cero: hay que escribir el `render.yaml`** — runtime nativo, sin Docker (D-041). **Antes**: migrar evidencia a R2 — en free no hay disco persistente y el archivo se pierde cada 15 min (D-040). Dos variables que el `render.yaml` no puede olvidar: `JWT_SECRET` con `generateValue: true` (D-042) y `TRUST_PROXY_HOPS=1` (D-045) | Un primer deploy al final es donde los proyectos mueren |
 | **16 · README público/privado** | Una tabla en `README.md` | 20 minutos, hoy no está atendido |
 | **11 · sin hallazgos P1** | El P1 conocido (`JWT_SECRET` caía a un literal público) **está cerrado**: D-042 + `SPEC-010`. Queda correr `/security-review` sobre el resto, antes del deploy | Los hallazgos tempranos son baratos, y ese se armaba solo el día que hubiera URL pública |
 | **14 · runbook** | Se escribe con el primer deploy, no después | Se escribe solo si se escribe mientras pasa |
