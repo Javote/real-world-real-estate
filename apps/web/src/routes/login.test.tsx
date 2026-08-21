@@ -120,6 +120,26 @@ describe('LoginScreen', () => {
     expect(window.sessionStorage.getItem('proptrust.session')).toBeNull()
   })
 
+  it('demasiados intentos (429): lo dice, en vez de culpar a la API caída', async () => {
+    // Antes de D-045 cualquier status que no fuera 401 caía en el mensaje de
+    // "¿está levantada?", que con un 429 es falso: la API está perfectamente
+    // levantada y es justamente ella la que decidió cortar.
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(async () =>
+        new Response(JSON.stringify({ message: 'Too many login attempts' }), { status: 429 }),
+      ),
+    )
+
+    const router = await renderLogin()
+    fireEvent.click(screen.getByText('Ingresar'))
+
+    await screen.findByText(/Demasiados intentos/)
+    expect(screen.queryByText(/No se pudo conectar/)).toBeNull()
+    expect(router.state.location.pathname).toBe('/login')
+    expect(window.sessionStorage.getItem('proptrust.session')).toBeNull()
+  })
+
   it('API caída: muestra un mensaje accionable en lugar de romperse', async () => {
     vi.stubGlobal('fetch', vi.fn(async () => {
       throw new TypeError('fetch failed')

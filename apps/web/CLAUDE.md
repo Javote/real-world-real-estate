@@ -38,6 +38,11 @@ dice `M2-D5` §4-6.
   **No es una regresión de `h3@2.0.1-rc.25`**, como decía este archivo: al pasar a
   `nitro@3.0.260610-beta`, que trae `h3@2.0.1-rc.22`, el 502 sobrevivió idéntico (D-037). Abarca
   al menos rc.22 y rc.25, así que no se arregla eligiendo versión.
+  **2026-08-21 · el 429 del rate limiter NO cae en la trampa**: medido a través del proxy de dev
+  con `LOGIN_RATE_LIMIT_MAX=1`, el 401 dio 502 y los 429 siguientes pasaron intactos (D-045). O
+  sea que sigue siendo específico del 401, y el mensaje de "demasiados intentos" se ve bien también
+  en desarrollo. Es el tipo de cosa que conviene medir y no deducir: el patrón "POST de error se
+  rompe" habría predicho lo contrario.
 - **Los tests E2E esperan la hidratación, no el DOM.** La app llega por SSR con formularios
   controlados por React: un click antes de que React monte hace submit nativo, nunca corre el
   `preventDefault` y la página recarga sin llamar a la API. Falla intermitente que parece de

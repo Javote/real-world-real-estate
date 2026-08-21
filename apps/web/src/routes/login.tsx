@@ -13,6 +13,17 @@ export const ROLE_PRESETS = [
   { key: 'buyer', icon: '🏠', label: 'Buyer', email: 'buyer@example.com', password: 'buyer123' },
 ] as const
 
+// El 429 existe desde que /login tiene rate limiting (D-045). Sin esta rama, el
+// usuario limitado leía "¿está levantada la API?" — que es falso y lo manda a
+// depurar el lugar equivocado. Los textos siguen hardcodeados como el resto de
+// esta pantalla: el diccionario i18n (D-025) llega con la rebanada 1.
+function messageFor(err: unknown): string {
+  if (err instanceof ApiError && err.status === 401) return 'Credenciales inválidas'
+  if (err instanceof ApiError && err.status === 429)
+    return 'Demasiados intentos. Esperá unos minutos y volvé a probar.'
+  return 'No se pudo conectar con la API — ¿está levantada? (pnpm dev)'
+}
+
 export function LoginScreen() {
   const navigate = useNavigate()
   const [preset, setPreset] = useState(0)
@@ -40,11 +51,7 @@ export function LoginScreen() {
       setSession({ token: res.token, user: res.user })
       void navigate({ to: '/dashboard' })
     } catch (err) {
-      setError(
-        err instanceof ApiError && err.status === 401
-          ? 'Credenciales inválidas'
-          : 'No se pudo conectar con la API — ¿está levantada? (pnpm dev)',
-      )
+      setError(messageFor(err))
     } finally {
       setBusy(false)
     }
