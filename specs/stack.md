@@ -88,9 +88,9 @@ Ningún validador custodia ni transfiere valor, en ninguna fase (D-021).
 
 | Pieza | Hoy | Destino | Estado | Decisión |
 |---|---|---|---|---|
-| Base de datos | **SQLite** (`prisma/dev.db`) | **SQLite** vía **Turso** en prod (ORM: Drizzle) | ○ | D-038 — dirección ratificada (SQLite default, Turso probable en Render); migración de ORM diferida, sin fecha |
+| Base de datos | **SQLite** (`prisma/dev.db`) | **SQLite** vía **Turso** en prod (free: 5 GB · 500M lecturas · 10M escrituras) | ○ | D-038 · D-040 — Turso **obligatorio**, no preferencia: en free no hay disco. Migración a Drizzle diferida, sin fecha |
 | Migraciones | Prisma Migrate, 1 migración (`init`) | idempotentes en el entrypoint | ◐ | D-012 |
-| Archivos de evidencia | **disco local** (`UPLOAD_DIR`, Multer) | **S3 genérico**: MinIO dev / **Cloudflare R2** prod | ○ | D-011 |
+| Archivos de evidencia | **disco local** (`UPLOAD_DIR`, Multer) | **S3 genérico**: MinIO dev / **Cloudflare R2** prod (free: 10 GB, egress $0) | ○ — **prerequisito del primer deploy**, no transición: en free no hay disco persistente | D-011 · D-040 |
 | URLs de archivos | descarga por endpoint autenticado | prefirmadas, TTL ≤15 min | ○ | D-011 |
 | Base de tests | SQLite propia (`prisma/test.db`), sembrada por corrida | — | ● | SPEC-008 |
 
@@ -119,7 +119,11 @@ Ningún validador custodia ni transfiere valor, en ninguna fase (D-021).
 | **Dockerfile de `packages/api`** | ○ — no existe | D-010 |
 | `docker-compose.prod.yml` | ○ — no existe, **aunque `README.md` y D-010 lo citan como existente** | D-010 |
 | Plataforma de deploy: **Render**, con build por servicio y GHA que no despliega | ○ — cuenta no creada | D-039 (Railway descartado; núcleo de D-010 intacto) |
-| Entrypoint que corre migraciones antes de arrancar | ○ | D-012 |
+| **Todo el deploy en free tier — $0/mes** | ○ — restricción de diseño ya decidida | D-040 |
+| Presupuesto: **750 instance-hours/mes** compartidas entre web y api | ○ — **keep-warm prohibido**: rompe el free | D-040 |
+| Cold start ~1 min tras 15 min de inactividad | ○ — se calienta a mano antes de demo/grabación | D-040 |
+| Worker de confirmaciones: **cron de GHA**, no background worker | ○ — los workers de Render no tienen free | D-040 · D-003 |
+| Entrypoint que corre migraciones antes de arrancar | ○ — **obligatorio**: free no tiene shell ni one-off jobs | D-012 · D-040 |
 | `GET /health` | ● — existe en la API | — |
 | Healthcheck de contenedor / rollout | ○ | D-010 |
 | Entorno de **pre-producción con URL pública** | ○ | criterio 12 del SOM |
@@ -128,7 +132,7 @@ Ningún validador custodia ni transfiere valor, en ninguna fase (D-021).
 | Monitoreo y capturas de monitoreo | ○ | criterio 14 |
 | **Runbook** (deploy / rollback / incidente) | ○ — no existe | criterio 14 |
 | Versionado de servicios: CalVer `vYYYY.MM.N` en tags | ○ — sin releases | D-015 |
-| Backups de la base | ○ — los resuelve Turso (réplicas + PITR) cuando exista el deploy | D-038 |
+| Backups de la base | ○ — Turso free trae 1 día de point-in-time restore | D-038 · D-040 |
 
 ## 9 · Verificación — CI, puerta y harness
 

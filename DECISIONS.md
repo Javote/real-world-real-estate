@@ -54,6 +54,7 @@
 | D-037 | Nitro: versión publicada en vez de nightly | Aceptada |
 | D-038 | Datos: Drizzle (destino, diferido) · SQLite (default, no Postgres) · Turso (hosting en prod) | Aceptada (compromiso de dirección; migración diferida, ver Trigger) |
 | D-039 | Plataforma de deploy: Render. Railway descartado | Aceptada |
+| D-040 | El deploy de M3 corre en free tier ($0/mes). Restricción de diseño, no de presupuesto | Aceptada |
 
 > **Repaso completo con la documentación oficial: ver §Repaso al final del archivo.** D-001..D-017 se
 > escribieron sin los entregables delante; las 25 entradas se revisaron el 2026-07-29 y cada una
@@ -169,6 +170,12 @@ a `main`. Ver D-039.
 **Decisión.** El código habla S3 estándar; el entorno decide el proveedor. URLs prefirmadas TTL ≤ 15 min; `storage_key` jamás se expone.
 **Alternativas descartadas.** Archivos en Postgres (bloat); disco local (mata portabilidad del deploy).
 **Nota de transición (2026-07-15).** El backend adoptado (D-016) guarda evidencia en disco local vía Multer (`UPLOAD_DIR`); migrar a S3 es un spike acotado que no cambia el contrato de la API (el almacenamiento está detrás de `src/lib/upload.ts` + `storagePath` en DB). Esta decisión marca el destino; el disco local es el estado de partida documentado.
+
+**Promoción a prerequisito (2026-08-20, D-040).** Deja de ser "transición futura": el free tier de
+Render **no tiene disco persistente** y su filesystem se borra en cada redeploy, restart y
+spin-down (cada 15 min de inactividad). Con evidencia en disco local, el hash sobrevive en la base
+y el archivo no — la app mostraría evidencia anclada que no puede exhibir, violando la regla 17.
+**R2 tiene que estar antes del primer deploy, no después.** Ver D-040.
 
 ## D-012 — Cambios aditivos entre deploys
 
@@ -799,6 +806,63 @@ contenedores sin estado y una base accesible por red. Railway no vuelve sin una 
 **Trigger de revisión.** El primer deploy real. Si Render resulta inviable por algo no previsto
 —límite de plan, healthcheck que no encaja, o el worker de confirmaciones que no entra en el
 modelo de servicios— se reabre acá con esa evidencia concreta, no por preferencia.
+
+
+## D-040 — El deploy de M3 corre en **free tier**: $0/mes, como restricción de diseño
+
+**Contexto (2026-08-20).** Postura del dueño tras elegir Render (D-039): el deploy de M3 no debe
+costar dinero. Se verificaron los límites vigentes de las tres piezas antes de aceptarlo, porque
+"gratis" solo es una decisión si se sabe qué se rompe.
+
+**Decisión.** M3 se despliega enteramente en planes gratuitos, y eso se trata como **restricción de
+arquitectura**, no como una nota de presupuesto: hay cosas que dejan de ser posibles y quedan
+prohibidas por esta entrada, no por olvido.
+
+| Pieza | Plan | Límite que importa |
+|---|---|---|
+| `apps/web` (SSR) + `packages/api` | Render Free web service ×2 | **750 instance-hours/mes compartidas**; spin-down a los 15 min; ~1 min de arranque |
+| Base | **Turso** free | 5 GB · 500M lecturas · 10M escrituras/mes · no vence |
+| Evidencia | **Cloudflare R2** free | 10 GB · 1M ops A · 10M ops B · egress $0 · no vence |
+| Worker de confirmaciones | **cron de GitHub Actions** | gratis en repo público |
+
+**Consecuencia 1 — R2 antes del primer deploy.** El free tier no tiene disco persistente y borra el
+filesystem en cada redeploy, restart y spin-down. Evidencia en disco local se pierde cada 15 minutos
+de inactividad, y lo grave no es perder archivos: el hash sobrevive en la base y el archivo no, así
+que la app mostraría prueba que no puede sustanciar (regla 17). **D-011 pasa de destino a
+prerequisito.**
+
+**Consecuencia 2 — Turso deja de ser preferencia y pasa a ser obligación.** D-038 eligió Turso por
+el worker multi-proceso. En free el argumento es más fuerte y más simple: **SQLite en archivo es
+imposible**, no inconveniente. De paso se esquiva una trampa — el Postgres free de Render **expira a
+los 30 días**, o sea que habría muerto justo cuando los reviewers de Catalyst fueran a mirar.
+
+**Consecuencia 3 — el worker de D-003 no puede ser un servicio.** Los background workers de Render
+no tienen plan gratuito (desde $7/mes). El pipeline de confirmaciones se dispara desde un **cron de
+GitHub Actions** contra un endpoint autenticado. Un `setInterval` dentro de la API **no sirve**:
+cuando el servicio duerme, deja de contar.
+
+**Consecuencia 4 — migraciones en el entrypoint, obligatorio.** Free no tiene shell ni one-off jobs.
+Es lo que D-012 ya pedía; ahora no hay alternativa.
+
+**Prohibido por esta decisión: keep-warm.** El truco de pinguear para evitar cold starts es
+justamente lo que rompe el free — dos servicios despiertos 24/7 son ~1460 h contra 750, suspendidos
+cerca del día 15. **Se puede tener "sin cold start" o "gratis", no las dos.** Con spin-down normal el
+presupuesto sobra (~1500 visitas frías al mes), así que la mitigación aceptada es **calentar la URL
+a mano justo antes de una demo, revisión o grabación**, y dejarla dormir el resto del tiempo.
+
+**Lo que se acepta a cambio.** ~1 min de cold start en los criterios 12 (URL pública), 13 (video) y
+8 (E2E en pre-prod). Es un costo de credibilidad ante reviewers, no un incumplimiento: la URL
+responde.
+
+**Alternativa evaluada y descartada.** Hacer `apps/web` un **static site** (no consume horas, no
+duerme) dejaría a la API sola en 730 h contra 750 y podría correr caliente 24/7. Se descarta: cuesta
+el SSR de D-002, elegido para el browse público y el dossier compartido, y el colchón sería de 20 h
+—un redeploy o un tercer servicio lo rompen—. No se cambia arquitectura por 20 horas de margen.
+
+**Trigger de revisión.** Se paga algo el día que (a) los cold starts hagan fracasar una demo con
+pilotos o reviewers, (b) 750 h dejen de alcanzar por tráfico real, o (c) el worker necesite correr
+más seguido de lo que un cron de GHA permite. El primer plan pago relevante es un web service
+Starter (~$7/mes); no se contrata por comodidad, se contrata contra uno de esos tres hechos.
 
 ---
 
