@@ -106,7 +106,8 @@ Todavía no ejecutados; hacen falta para el anclaje real y para pre-producción:
    migraciones aditivas e idempotentes).
 5. **PostgreSQL y S3** reemplazando SQLite y disco local (triggers de D-016 y D-011).
 
-**No hay build de producción todavía.** No existe ningún `Dockerfile` ni `docker-compose*.yml`:
+**No hay build de producción todavía.** No existe `render.yaml` (y no habrá Dockerfiles: el deploy
+usa el runtime nativo de Node — D-041):
 la capa de infraestructura está en 0% y es el hueco más grande del proyecto. El inventario
 honesto de qué existe y qué no está en `specs/stack.md` §8.
 

@@ -55,6 +55,7 @@
 | D-038 | Datos: Drizzle (destino, diferido) · SQLite (default, no Postgres) · Turso (hosting en prod) | Aceptada (compromiso de dirección; migración diferida, ver Trigger) |
 | D-039 | Plataforma de deploy: Render. Railway descartado | Aceptada |
 | D-040 | El deploy de M3 corre en free tier ($0/mes). Restricción de diseño, no de presupuesto | Aceptada |
+| D-041 | Deploy con runtime nativo de Node + `render.yaml`. Sin Docker | Aceptada |
 
 > **Repaso completo con la documentación oficial: ver §Repaso al final del archivo.** D-001..D-017 se
 > escribieron sin los entregables delante; las 25 entradas se revisaron el 2026-07-29 y cada una
@@ -164,6 +165,11 @@ previene, y llegó a estar replicado en `README.md`. Inventario honesto: `specs/
 sobrevive de esta entrada es su núcleo, que nunca fue el proveedor — **GitHub Actions es barrera de
 calidad y no despliega**, el rollout va con healthcheck, y el build por servicio se dispara por push
 a `main`. Ver D-039.
+
+**Remanente corregido (2026-08-20, D-041).** Esta entrada también daba por sentado **Docker**
+("buildea ambos Dockerfiles"), que era una exigencia *de Railway*. D-039 cambió la plataforma pero
+ese supuesto pasó de contrabando adentro del núcleo preservado. Render corre Node con runtime
+nativo: no hacen falta Dockerfiles. Ver D-041.
 
 ## D-011 — Storage S3 genérico: MinIO dev / R2 prod
 
@@ -863,6 +869,50 @@ el SSR de D-002, elegido para el browse público y el dossier compartido, y el c
 pilotos o reviewers, (b) 750 h dejen de alcanzar por tráfico real, o (c) el worker necesite correr
 más seguido de lo que un cron de GHA permite. El primer plan pago relevante es un web service
 Starter (~$7/mes); no se contrata por comodidad, se contrata contra uno de esos tres hechos.
+
+
+## D-041 — Deploy con **runtime nativo de Node** y `render.yaml`. Docker sale del plan
+
+**Contexto (2026-08-20).** Pregunta del dueño: *¿por qué Docker? ¿Render free acepta contenedores?*
+Las dos mitades tienen respuesta y la segunda no es la importante. **Sí**, Render acepta
+`runtime: docker` y funciona con `plan: free`. Pero al rastrear de dónde salía la exigencia, las
+tres filas de `specs/stack.md` §8 que pedían Dockerfiles estaban atribuidas a **D-010**, que decía
+literalmente *"Railway buildea ambos Dockerfiles"*. **Docker era un requisito de Railway.** D-039
+reemplazó la plataforma y preservó el núcleo de D-010, pero el supuesto de Docker viajó adentro de
+ese núcleo sin que nadie lo examinara. Es el modo de falla del principio 1 en su versión sutil: no
+una copia que diverge, sino un supuesto que sobrevive a la decisión que lo justificaba.
+
+**Decisión.** `apps/web` y `packages/api` se despliegan con el **runtime nativo de Node** de Render.
+El artefacto de infraestructura que se commitea es **`render.yaml`** (Blueprint: admite `plan: free`,
+`rootDir` y `buildFilter` para monorepo), **no dos Dockerfiles**. La documentación de Render es
+explícita al respecto: el runtime nativo es el camino corto salvo que ya uses Docker, necesites un
+lenguaje no soportado o paquetes de SO propios. Nada de eso aplica — esto es Node 20+ con pnpm
+workspaces.
+
+**Consecuencia — la deuda de `bcrypt` se desinfla a la mitad.** `specs/stack.md` §11 justificaba su
+costo con *"la imagen Docker necesita toolchain de compilación (node-pre-gyp)"*. Sin imagen propia,
+ese costo lo absorbe el entorno de build de Render. La deuda **no desaparece** —sigue siendo un
+módulo nativo, y sigue siendo código 🔴— pero su argumento más caro se cae.
+
+**Hueco que encontró esta revisión.** `apps/web` no tenía script `start`. Se agrega
+`node .output/server/index.mjs`, verificado contra un build real: levanta, respeta `PORT` y responde
+200. Hacía falta con Docker o sin Docker; es exactamente la clase de cosa que se descubre a las 11
+de la noche del primer deploy.
+
+**Costo aceptado — la reversión a Coolify se encarece.** D-039 preservó "VPS + Coolify" como
+reversión barata, y Coolify despliega contenedores. Sin Dockerfiles, esa salida deja de ser
+inmediata. **Se acepta a conciencia:** escribir dos Dockerfiles hoy para preservar opcionalidad
+sobre el fallback de una plataforma que todavía no usamos es trabajo especulativo (principio 5). Si
+Render falla, dockerizar dos servicios Node sin estado es un día de trabajo, no una reescritura, y
+el trigger de revisión de D-039 ya cubre ese caso.
+
+**Lo que NO cambia.** Todo lo de D-040 sigue igual: free tier, 750 h, spin-down, Turso, R2, cron de
+GHA, migraciones en el `buildCommand`/`startCommand` en vez de un entrypoint de imagen. Y sigue sin
+existir el `render.yaml`: esta decisión define **qué** hay que escribir, no lo escribe.
+
+**Trigger de revisión.** Se vuelve a Docker si (a) hace falta un paquete de SO que el runtime nativo
+no trae, (b) el build nativo deja de ser reproducible de forma que moleste, o (c) se ejecuta la
+reversión a Coolify.
 
 ---
 

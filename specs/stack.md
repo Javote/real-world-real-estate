@@ -109,21 +109,25 @@ Ningún validador custodia ni transfiere valor, en ninguna fase (D-021).
 
 ## 8 · Infraestructura y despliegue
 
-> **Esta capa está en 0%.** No existe ningún `Dockerfile`, ni `docker-compose*.yml`, ni
-> configuración de Render. Es el hueco más grande del proyecto y afecta a cuatro criterios del
-> SOM (12 · URL pública, 9 · telemetría, 14 · runbook y monitoreo, 11 · security review).
+> **Esta capa está en 0%.** No existe `render.yaml` ni configuración de deploy de ningún tipo. Es
+> el hueco más grande del proyecto y afecta a cuatro criterios del SOM (12 · URL pública,
+> 9 · telemetría, 14 · runbook y monitoreo, 11 · security review).
+>
+> **No hay Dockerfiles y no los va a haber** (D-041): el deploy usa el runtime nativo de Node. Si
+> ves una fila pidiendo una imagen, es deuda de D-010, que era una decisión de Railway.
 
 | Pieza | Estado | Decisión |
 |---|---|---|
-| **Dockerfile de `apps/web`** | ○ — no existe | D-010 |
-| **Dockerfile de `packages/api`** | ○ — no existe | D-010 |
-| `docker-compose.prod.yml` | ○ — no existe, **aunque `README.md` y D-010 lo citan como existente** | D-010 |
+| **`render.yaml`** (Blueprint: `plan: free`, `rootDir`, `buildFilter`) | ○ — **no existe**; es el artefacto de infra a escribir | D-041 |
+| Runtime: **nativo de Node**, sin imagen propia | ○ — decidido | D-041 (reemplaza los Dockerfiles de D-010) |
+| Script `start` de `apps/web` (`node .output/server/index.mjs`) | ● — existe, verificado contra build real | D-041 |
+| Script `start` de `packages/api` (`node dist/src/server.js`) | ● — ya existía | — |
 | Plataforma de deploy: **Render**, con build por servicio y GHA que no despliega | ○ — cuenta no creada | D-039 (Railway descartado; núcleo de D-010 intacto) |
 | **Todo el deploy en free tier — $0/mes** | ○ — restricción de diseño ya decidida | D-040 |
 | Presupuesto: **750 instance-hours/mes** compartidas entre web y api | ○ — **keep-warm prohibido**: rompe el free | D-040 |
 | Cold start ~1 min tras 15 min de inactividad | ○ — se calienta a mano antes de demo/grabación | D-040 |
 | Worker de confirmaciones: **cron de GHA**, no background worker | ○ — los workers de Render no tienen free | D-040 · D-003 |
-| Entrypoint que corre migraciones antes de arrancar | ○ — **obligatorio**: free no tiene shell ni one-off jobs | D-012 · D-040 |
+| Migraciones antes de arrancar, en el `buildCommand`/`startCommand` | ○ — **obligatorio**: free no tiene shell ni one-off jobs | D-012 · D-040 · D-041 |
 | `GET /health` | ● — existe en la API | — |
 | Healthcheck de contenedor / rollout | ○ | D-010 |
 | Entorno de **pre-producción con URL pública** | ○ | criterio 12 del SOM |
@@ -168,7 +172,7 @@ Ver `CLAUDE.md` §Cómo se trabaja acá y D-032.
 | Deuda | Costo de arrastrarla |
 |---|---|
 | **Nitro sigue en beta, y su proxy de dev rompe `POST`+`401`** | El camino de error más común de auth es indebuggeable en local. No hay Nitro 3 estable todavía, y el bug abarca al menos h3 rc.22 y rc.25: no se resuelve eligiendo versión (D-037) |
-| **`bcrypt` es nativo** | La imagen Docker necesita toolchain de compilación (`node-pre-gyp`), y ese mismo camino emite el warning de `url.parse()` deprecado en cada arranque. Alternativa: `bcryptjs`, JS puro y compatible en formato de hash, ~30% más lento. Es código 🔴: lo decide el humano |
+| **`bcrypt` es nativo** | Más barata desde D-041: sin imagen propia, el toolchain de compilación lo absorbe el entorno de build de Render. Queda el warning de `url.parse()` deprecado en cada arranque vía `node-pre-gyp`, y el riesgo de un módulo nativo. Alternativa: `bcryptjs`, JS puro y compatible en formato de hash, ~30% más lento. Es código 🔴: lo decide el humano |
 | **`contracts/` con 0 tests** | Único criterio duro del SOM sin plan B |
 | **`aiken.toml` con naming de scaffold** | Incumple D-015 (versión entera incremental) |
 | **`milestone` en el dominio** | D-023 pendiente; encarece con cada pantalla nueva |
