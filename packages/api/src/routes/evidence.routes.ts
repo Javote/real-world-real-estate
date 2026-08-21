@@ -67,7 +67,7 @@ router.post(
       ["developer"]
     );
 
-    if (!allowed && req.user!.role !== "admin") {
+    if (!allowed) {
       if (req.file?.path && fs.existsSync(req.file.path)) {
         fs.unlinkSync(req.file.path);
       }
@@ -235,7 +235,7 @@ router.patch("/evidence/:id", requireRole("admin", "developer"), async (req, res
     ["developer"]
   );
 
-  if (!allowed && req.user!.role !== "admin") {
+  if (!allowed) {
     return res.status(403).json({ message: "Forbidden" });
   }
 

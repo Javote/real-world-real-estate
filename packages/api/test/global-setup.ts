@@ -16,7 +16,11 @@ export const FIXTURES = {
   revocable: { email: "revocable@test.local", password: "revocable123", fullName: "Revocable Test" },
   /** developer activo pero SIN membresía: la segunda capa de autorización */
   ajeno: { email: "ajeno@test.local", password: "ajeno123", fullName: "Ajeno Test" },
+  /** admin que ningún test muta — `revocable` se desactiva en auth.test.ts */
+  admin: { email: "admin@test.local", password: "admin123", fullName: "Admin Test" },
   proyecto: { slug: "torre-test" },
+  /** segundo proyecto, SIN miembros: sin él no se puede ver si el listado scopea */
+  otroProyecto: { slug: "torre-ajena" },
 };
 
 export default async function setup() {
@@ -65,6 +69,13 @@ export default async function setup() {
         fullName: FIXTURES.ajeno.fullName,
         isActive: true,
       },
+      {
+        email: FIXTURES.admin.email,
+        passwordHash: await hash(FIXTURES.admin.password),
+        role: UserRole.admin,
+        fullName: FIXTURES.admin.fullName,
+        isActive: true,
+      },
     ],
   });
 
@@ -79,8 +90,25 @@ export default async function setup() {
     },
   });
   const miembro = await prisma.user.findUniqueOrThrow({ where: { email: FIXTURES.activo.email } });
-  await prisma.projectMember.create({
-    data: { projectId: proyecto.id, userId: miembro.id, membershipRole: MembershipRole.developer },
+  await prisma.projectMember.createMany({
+    data: [
+      { projectId: proyecto.id, userId: miembro.id, membershipRole: MembershipRole.developer },
+      // DOS membresías sobre el MISMO proyecto: el schema lo permite
+      // (@@unique por userId+projectId+membershipRole) y el listado viejo lo
+      // devolvía duplicado. Sin este fixture, esa regresión no se ve.
+      { projectId: proyecto.id, userId: miembro.id, membershipRole: MembershipRole.buyer },
+    ],
+  });
+
+  // Segundo proyecto, sin ningún miembro: es contra lo que se mide que el
+  // listado scopee. Se crea después, así que es el más nuevo por createdAt.
+  await prisma.project.create({
+    data: {
+      name: "Torre Ajena",
+      slug: FIXTURES.otroProyecto.slug,
+      status: ProjectStatus.planning,
+      totalUnits: 4,
+    },
   });
 
   await prisma.$disconnect();

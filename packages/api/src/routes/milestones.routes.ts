@@ -41,7 +41,7 @@ router.post("/projects/:id/milestones", requireRole("admin", "developer"), async
     ["developer"]
   );
 
-  if (!allowed && req.user!.role !== "admin") {
+  if (!allowed) {
     return res.status(403).json({ message: "Forbidden" });
   }
 
@@ -124,7 +124,7 @@ router.patch("/milestones/:id", requireRole("admin", "developer"), async (req, r
     ["developer"]
   );
 
-  if (!allowed && req.user!.role !== "admin") {
+  if (!allowed) {
     return res.status(403).json({ message: "Forbidden" });
   }
 
@@ -181,7 +181,7 @@ router.patch("/milestones/:id/state", requireRole("admin", "developer"), async (
     ["developer"]
   );
 
-  if (!allowed && req.user!.role !== "admin") {
+  if (!allowed) {
     return res.status(403).json({ message: "Forbidden" });
   }
 

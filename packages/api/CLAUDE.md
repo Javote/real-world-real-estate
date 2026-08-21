@@ -154,10 +154,18 @@ que el momento barato de cambiar la forma es **antes** de la tanda grande, no de
 propuesto: un `requireProjectAccess(...)` de Express que lea `req.params.projectId`. Dueño: humano
 (`specs/SPEC-010` §Preguntas abiertas).
 
-**Ruido que quedó a la vista.** Cinco call sites hacen `if (!allowed && req.user!.role !== "admin")`,
-y ese segundo término es redundante: `canAccessProject` ya devuelve `true` para `admin`. No es un
-bug —el resultado es idéntico— pero sugiere que el bypass vive en las rutas cuando vive en la
-función. Se limpia con el refactor a middleware, en el mismo movimiento.
+**Cerrado el 2026-08-21 · la regla estaba escrita tres veces.** `canAccessProject`, el bypass de
+`admin` repetido en 5 call sites, y un query a mano en `GET /projects` que no llamaba a la función.
+Las tres coincidían por casualidad y solo una tenía tests. Ahora hay una sola —`projectScope`, un
+`Prisma.ProjectWhereInput`— que `canAccessProject` aplica a un id y el listado aplica a la
+colección; el bypass de admin vive adentro y en ningún otro lado. Al unificarlas cayeron dos bugs de
+la copia: el listado de un no-admin salía sin orden, y un usuario con dos membresías en el mismo
+proyecto lo veía **duplicado**. Ojo con la consecuencia deliberada: `admin` sobre un proyecto que no
+existe ahora da `false`, no `true`. Todo en D-043.
+
+**Deuda que queda a la vista acá.** `GET /projects` sigue leyendo `status` y `city` de la query sin
+Zod (`String(status) as any`). No es autorización y no es 🔴, pero es la regla 6 sin cumplir en el
+único lugar donde el body no aplica.
 
 ### El SHA-256 se mueve cuando llegue R2
 

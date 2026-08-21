@@ -57,6 +57,7 @@
 | D-040 | El deploy de M3 corre en free tier ($0/mes). Restricción de diseño, no de presupuesto | Aceptada |
 | D-041 | Deploy con runtime nativo de Node + `render.yaml`. Sin Docker | Aceptada |
 | D-042 | En la superficie 🔴 el default inseguro no existe: se revienta al arrancar y se cierra al omitir | Aceptada |
+| D-043 | La regla de visibilidad de proyectos existe una sola vez: `projectScope` | Aceptada |
 
 > **Repaso completo con la documentación oficial: ver §Repaso al final del archivo.** D-001..D-017 se
 > escribieron sin los entregables delante; las 25 entradas se revisaron el 2026-07-29 y cada una
@@ -987,6 +988,67 @@ concreto delante, no antes.
 
 **Reversión.** Es una línea por sitio. Lo que no se revierte es el test: `test/jwt.test.ts` fija que
 el import falle sin la variable, así que reponer un fallback deja la puerta cerrada.
+
+
+## D-043 — La regla de visibilidad de proyectos existe una sola vez: `projectScope`
+
+**Contexto (2026-08-21).** Al cerrar el fail-open de `canAccessProject` (D-042) quedó a la vista que
+"qué proyectos puede ver este usuario" estaba escrito en **tres** lugares:
+
+1. `canAccessProject`, la función.
+2. El bypass de `admin`, repetido en 5 call sites como `if (!allowed && req.user!.role !== "admin")`
+   — redundante, porque la función ya devolvía `true` para admin, pero al leerlo parecía que la
+   decisión vivía en la ruta.
+3. `GET /projects`, que no la llamaba: traía todas las membresías del usuario y filtraba en JS.
+
+Las tres daban el mismo resultado, y ninguna auditoría lo había marcado porque **el resultado era
+correcto**. Pero coincidían por casualidad, solo una tenía tests, y es una regla de autorización:
+cuando dos copias divergen, el síntoma no es un error, es que alguien ve de más.
+
+Que la copia (3) tenía deriva propia se comprobó al unificar. Dos bugs que nadie miraba:
+
+- El listado de un **no-admin** salía en orden de inserción de membresías; el de admin, por fecha.
+- Un usuario con **dos membresías en el mismo proyecto** —el schema lo permite: `@@unique` es por
+  `userId + projectId + membershipRole`— veía el proyecto **duplicado**.
+
+**Decisión.** La regla se escribe una vez, como filtro de Prisma, y las dos preguntas la usan:
+
+```ts
+projectScope(role, userId, allowedMemberships): Prisma.ProjectWhereInput
+```
+
+`canAccessProject` la aplica a un id (`findFirst` con `id` + el scope) y `GET /projects` la aplica a
+la colección. El bypass de `admin` —matriz de M2-D1 §4— vive adentro de `projectScope` y en ningún
+otro lado; los 5 chequeos redundantes de las rutas se van.
+
+**Consecuencia deliberada — `admin` sobre un proyecto inexistente ahora da `false`.** Antes el
+bypass cortaba antes del query y devolvía `true` sin mirar si el proyecto existía. Ahora es un
+filtro vacío sobre la misma consulta, así que "no existe" responde igual para todos: 403 para
+cualquiera, en vez de 403 o 404 según quién pregunte. Es la misma postura que el login (no ser un
+oráculo) y está fijada por test.
+
+**Alternativas descartadas.**
+
+- *Dejar el `if (role === "admin") return true` adentro de `canAccessProject`.* Preserva el
+  comportamiento exacto y es el diff más chico, que en código 🔴 pesa. Se descarta porque deja el
+  bypass en dos lugares dentro del mismo archivo: se gana poco y se pierde justamente lo que esta
+  decisión viene a comprar.
+- *Que `GET /projects` llame a `canAccessProject` por proyecto.* Una consulta por fila, y la
+  pregunta de una colección no es la de un id.
+
+**Lo que esta decisión NO resuelve.** `canAccessProject` sigue siendo una **función que hay que
+acordarse de llamar**, no un middleware que no se pueda olvidar. Un endpoint nuevo que se la olvide
+no tiene segunda capa y nada lo detecta. Está registrado como hallazgo 9 de `specs/README.md`
+§Auditoría y como pregunta abierta de `specs/SPEC-010`, con dueño humano: es 🔴 y toca los 27 call
+sites. Unificar la regla primero es lo que vuelve mecánico ese refactor.
+
+**Trigger de revisión.** Si aparece una superficie donde la visibilidad no dependa solo de
+membresía —un proyecto público, un dossier compartido sin cuenta (rebanada 8)— `projectScope` es el
+lugar donde se agrega, no una condición nueva en una ruta.
+
+**Reversión.** El filtro es una función pura de tres argumentos; volver atrás es reponer el query
+viejo en la ruta. Lo que no se revierte son los tests del listado: fijan el scope, el orden y la
+deduplicación, que antes no cubría nada.
 
 ---
 

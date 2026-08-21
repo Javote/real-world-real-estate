@@ -5,6 +5,7 @@ import {
   authenticate,
   ANY_MEMBERSHIP,
   canAccessProject,
+  projectScope,
   requireRole
 } from "../middlewares/auth";
 import { writeAuditLog } from "../utils/audit";
@@ -16,43 +17,28 @@ router.use(authenticate);
 router.get("/", async (req, res) => {
   const { status, city } = req.query;
 
-  if (req.user!.role === "admin") {
-    const projects = await prisma.project.findMany({
-      where: {
-        ...(status ? { status: String(status) as any } : {}),
-        ...(city ? { city: String(city) } : {})
-      },
-      include: {
-        milestones: {
-          orderBy: { sequenceOrder: "asc" }
-        }
-      },
-      orderBy: { createdAt: "desc" }
-    });
-
-    return res.json(projects);
-  }
-
-  const memberships = await prisma.projectMember.findMany({
-    where: { userId: req.user!.id },
+  // El scope de visibilidad sale de `projectScope` y no de un query propio: es
+  // la MISMA regla que aplica `canAccessProject` a un proyecto puntual. Antes
+  // esta ruta tenía su propia implementación —traía todas las membresías del
+  // usuario y filtraba en JS— que daba el mismo resultado por casualidad.
+  //
+  // Al unificarlas se cayeron dos cosas que la copia hacía mal y nadie miraba:
+  // el listado de un no-admin salía en orden de membresía en vez de por fecha, y
+  // un usuario con dos membresías en el mismo proyecto lo veía DUPLICADO (el
+  // schema permite developer + buyer sobre el mismo proyecto).
+  const projects = await prisma.project.findMany({
+    where: {
+      ...(status ? { status: String(status) as any } : {}),
+      ...(city ? { city: String(city) } : {}),
+      ...projectScope(req.user!.role, req.user!.id, ANY_MEMBERSHIP)
+    },
     include: {
-      project: {
-        include: {
-          milestones: {
-            orderBy: { sequenceOrder: "asc" }
-          }
-        }
+      milestones: {
+        orderBy: { sequenceOrder: "asc" }
       }
-    }
+    },
+    orderBy: { createdAt: "desc" }
   });
-
-  const projects = memberships
-    .map((m) => m.project)
-    .filter((p) => {
-      if (status && p.status !== status) return false;
-      if (city && p.city !== city) return false;
-      return true;
-    });
 
   return res.json(projects);
 });

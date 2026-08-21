@@ -83,7 +83,26 @@ request ni de respuesta. `packages/shared` no cambia.
 | usuario sin membresía en el proyecto | `false` |
 | `admin` sin membresía | `true` (bypass, matriz de M2-D1 §4) |
 | llamar sin `allowedMemberships` | **no compila** |
+| `GET /projects` de un miembro | solo sus proyectos, del más nuevo al más viejo |
+| `GET /projects` de un usuario con DOS membresías en el mismo proyecto | el proyecto aparece **una** vez |
+| `GET /projects` de un usuario sin membresías | lista vacía |
+| `canAccessProject` sobre un proyecto inexistente, como `admin` | `false` — "no existe" responde igual para todos |
 | agregar una membresía al enum de Prisma sin tocar `ANY_MEMBERSHIP` | **no compila** (TS1360) |
+
+## Segunda pasada — 2026-08-21
+
+Revisar el propio arreglo encontró dos cosas más, las dos de la misma familia que el hallazgo
+original. Están cerradas en esta spec:
+
+- **`ANY_MEMBERSHIP` se mantenía solo.** Derivarlo de `Object.values(MembershipRole)` suena mejor y
+  es peor: una membresía nueva quedaba leyendo todos los proyectos por herencia, sin decisión de
+  nadie. Con `notary` pendiente de entrar al schema, iba a pasar de verdad. Ahora es una lista
+  literal con `satisfies Record<MembershipRole, true>` (D-042 §3).
+- **La regla de visibilidad estaba escrita tres veces:** `canAccessProject`, el bypass de `admin`
+  repetido en 5 call sites, y un query a mano en `GET /projects`. Las tres coincidían por
+  casualidad y solo una tenía tests. Ahora hay una sola, `projectScope` (D-043) — y al unificarlas
+  aparecieron dos bugs que la copia tenía y nadie miraba: el listado de un no-admin salía sin
+  orden, y un usuario con dos membresías en el mismo proyecto lo veía duplicado.
 
 ## Preguntas abiertas
 

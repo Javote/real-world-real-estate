@@ -113,6 +113,7 @@ conformidad. Lo que sigue es lo que hay que cambiar, por palanca:
 | 5 | **Contratos: 0 tests contra un criterio de ≥95%**, declarado paralelo y sin nadie encima. Único criterio duro sin plan B. | `aiken check` verde vacío | **track propio** |
 | 6 | **El rename D-023 sigue sin hacerse** y hoy es lo más barato que va a ser. | — | **SPEC-009** |
 | 7 | **`contracts/aiken.toml` con naming de scaffold** (`j/milestone-fsm`, `version = "0.0.0"`, que incumple D-015). | — | **SPEC-009** |
+| 9 | **La segunda capa de autorización es una función que hay que acordarse de llamar**, no un middleware que no se pueda olvidar. `requireRole` está en la cadena o no está; `canAccessProject` devuelve un booleano que alguien tiene que chequear, y un endpoint que se lo olvide **no tiene segunda capa y nada lo detecta**: ni el compilador, ni un test, ni la puerta. Hoy son 27 endpoints auditados sin agujeros; el backlog de M2-D5 son ~80. | auditoría 🔴 del 2026-08-20 + repaso del 2026-08-21 | **abierto — 🔴, dueño humano.** Default: un `requireProjectAccess(...)` de Express que lea `req.params.projectId`. Va **antes** de la tanda grande de endpoints, no después (`specs/SPEC-010` §Preguntas abiertas) |
 | 8 | **D-030 no cubría los agentes en paralelo.** Su trigger era "segunda persona"; lo que llegó fue concurrencia de árboles. Los puertos estaban fijos en 3 lugares, así que dos árboles se pisaban. | medido | **resuelto** — D-031 |
 
 

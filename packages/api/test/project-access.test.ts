@@ -118,3 +118,61 @@ describe("los endpoints de lectura siguen exigiendo membresía", () => {
     expect(res.status).toBe(200);
   });
 });
+
+// La otra mitad de "una sola regla": el listado. Antes tenía su propio query de
+// membresías, así que estos casos no estaban cubiertos por ningún test.
+describe("GET /api/v1/projects · el listado usa la misma regla", () => {
+  const login = (email: string, password: string) =>
+    request(app).post("/api/v1/auth/login").send({ email, password });
+
+  const listar = async (f: { email: string; password: string }) => {
+    const { body } = await login(f.email, f.password);
+    return request(app).get("/api/v1/projects").set("Authorization", `Bearer ${body.token}`);
+  };
+
+  it("un miembro ve su proyecto y NO ve el ajeno", async () => {
+    const res = await listar(FIXTURES.activo);
+
+    expect(res.status).toBe(200);
+    expect(res.body.map((p: { slug: string }) => p.slug)).toEqual([FIXTURES.proyecto.slug]);
+  });
+
+  it("un proyecto con dos membresías del mismo usuario aparece UNA vez", async () => {
+    // `activo` es developer Y buyer del proyecto de prueba. El listado viejo
+    // mapeaba membresías a proyectos, así que lo devolvía duplicado.
+    const res = await listar(FIXTURES.activo);
+
+    const torres = res.body.filter((p: { slug: string }) => p.slug === FIXTURES.proyecto.slug);
+    expect(torres).toHaveLength(1);
+  });
+
+  it("un usuario sin ninguna membresía no ve nada", async () => {
+    const res = await listar(FIXTURES.ajeno);
+
+    expect(res.status).toBe(200);
+    expect(res.body).toEqual([]);
+  });
+
+  it("un admin ve los dos proyectos, del más nuevo al más viejo", async () => {
+    // El orden importa acá porque antes solo lo tenía la rama de admin: el
+    // no-admin salía en orden de membresía, que no es un orden.
+    const res = await listar(FIXTURES.admin);
+
+    expect(res.status).toBe(200);
+    expect(res.body.map((p: { slug: string }) => p.slug)).toEqual([
+      FIXTURES.otroProyecto.slug,
+      FIXTURES.proyecto.slug,
+    ]);
+  });
+});
+
+describe("canAccessProject · un proyecto que no existe", () => {
+  it("no se lo concede ni a un admin", async () => {
+    // Cambio de comportamiento deliberado: antes `admin` devolvía true sin mirar
+    // si el proyecto existía, porque el bypass cortaba antes del query. Ahora el
+    // bypass es un filtro vacío sobre la misma consulta, así que "no existe"
+    // responde igual para todos: 403 y no un 403/404 según quién pregunte.
+    expect(await canAccessProject("cualquiera", UserRole.admin, "no-existe", ANY_MEMBERSHIP))
+      .toBe(false);
+  });
+});

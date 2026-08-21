@@ -1,4 +1,4 @@
-import { MembershipRole, UserRole } from "@prisma/client";
+import { MembershipRole, Prisma, UserRole } from "@prisma/client";
 import { NextFunction, Request, Response } from "express";
 import { verifyToken } from "../lib/jwt";
 import { prisma } from "../lib/prisma";
@@ -115,15 +115,35 @@ export async function canAccessProject(
   projectId: string,
   allowedMemberships: MembershipRole[]
 ) {
-  if (role === "admin") return true;
-
-  const membership = await prisma.projectMember.findFirst({
-    where: {
-      userId,
-      projectId,
-      membershipRole: { in: allowedMemberships }
-    }
+  const project = await prisma.project.findFirst({
+    where: { id: projectId, ...projectScope(role, userId, allowedMemberships) },
+    select: { id: true }
   });
 
-  return Boolean(membership);
+  return project !== null;
+}
+
+/**
+ * La misma regla, como filtro de Prisma, para cuando la pregunta es sobre una
+ * colección y no sobre un proyecto puntual.
+ *
+ * Es la **única** definición de "qué proyectos puede ver este usuario":
+ * `canAccessProject` la aplica a un id y `GET /projects` la aplica al listado.
+ * Antes eran dos implementaciones independientes —la función acá y un query a
+ * mano en la ruta— que daban el mismo resultado por casualidad y solo una tenía
+ * tests. Dos copias de una regla de autorización divergen en silencio, y ésta es
+ * de las que no avisan cuando divergen: el síntoma es que alguien ve de más.
+ *
+ * El bypass de `admin` (matriz de M2-D1 §4) vive acá y en ningún otro lado.
+ */
+export function projectScope(
+  role: UserRole,
+  userId: string,
+  allowedMemberships: MembershipRole[]
+): Prisma.ProjectWhereInput {
+  if (role === "admin") return {};
+
+  return {
+    members: { some: { userId, membershipRole: { in: allowedMemberships } } }
+  };
 }
