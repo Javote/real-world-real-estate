@@ -19,11 +19,11 @@
 | D-002 | Frontend: TanStack Start + shadcn/ui | Aceptada |
 | D-003 | Backend separado (Hono), no server functions del frontend | Aceptada en su núcleo (separación web/api); framework reemplazado por D-016 |
 | D-004 | Drizzle ORM + PostgreSQL | Reemplazada por D-016; el ORM (Drizzle) se ratifica como destino futuro por D-038 |
-| D-005 | Web3 TS: Lucid Evolution + Blockfrost | Default → spike (el walking skeleton ES el spike) |
+| D-005 | Web3 TS: Lucid Evolution + Blockfrost | Aceptada |
 | D-006 | Anclaje Fase A por metadata de transacción (label 1904) | Aceptada |
 | D-007 | Lifecycle de milestones: backend = fuente de verdad; on-chain solo Fase B | Aceptada |
 | D-008 | Validador de milestones: patrón state-thread con thread token, núcleo puro separado | Aceptada |
-| D-009 | Custodia de firmas de certificador/notario | Default → spike |
+| D-009 | Custodia de firmas de certificador/notario | Aceptada (co-firma CIP-30 no-custodial) |
 | D-010 | Deploy: Railway con "Wait for CI"; GitHub Actions no despliega | Default (reversión barata a Coolify) |
 | D-011 | Storage: S3 genérico — MinIO en dev, Cloudflare R2 en prod | Aceptada (transición: dev usa disco local por D-016 hasta integrar S3) |
 | D-012 | Cambios aditivos entre deploys; migraciones idempotentes en entrypoint | Aceptada |
@@ -107,11 +107,10 @@ legitima. Ninguno se resolvió editando el entregable, y **todos se comunican en
 **Reemplazo (2026-07-15).** Existe un backend funcionando con Prisma + SQLite (dev); reescribirlo costaría días sin agregar valor a la demo. Ver D-016.
 **Actualización (2026-08-20, D-038).** El ORM Drizzle de esta decisión original se ratifica como destino futuro (migración diferida, sin fecha). El destino de datastore ya **no** es PostgreSQL: default SQLite, con Turso como hosting probable en producción — ver D-038.
 
-## D-005 — Lucid Evolution + Blockfrost — **Default → spike**
+## D-005 — Lucid Evolution + Blockfrost — **Aceptada**
 
 **Contexto.** Dos libs TS maduras: Lucid Evolution y Mesh SDK. Lucid integra natural con blueprints CIP-57 de Aiken.
-**Default.** Lucid Evolution + Blockfrost Preprod.
-**Spike que lo refuta o confirma (≤2 días).** El walking skeleton (Sprint 1) se implementa con el default; si aparece bloqueo real (API rota, incompatibilidad de blueprint, docs muertas), se repite el skeleton con Mesh y se decide con evidencia. Al cierre del Sprint 1, esta entrada pasa a Aceptada o se reemplaza.
+**Decisión (ratificada 2026-08-20).** Lucid Evolution + Blockfrost Preprod como SDK Web3 TypeScript estándar para `packages/cardano` detrás del puerto `AnchorPort` (D-014).
 
 ## D-006 — Anclaje Fase A por metadata (label 1904)
 
@@ -142,11 +141,10 @@ Con anclaje por metadata suelto, quien tenga la wallet de servicio puede publica
 Para un producto cuya tesis es "verificá sin confiar en la plataforma" (D-026), esa distinción *es* el producto: sin ella, el comprador sigue teniendo que confiar en nosotros, que es exactamente el problema que veníamos a resolver. Y es además lo que hace honesto el criterio del SOM cuando pide una *state machine* y no una lista de anclajes.
 **Consecuencia.** El validador se justifica solo donde la integridad de la **secuencia** importa (stages `validation_critical`). Para artefactos sueltos sin secuencia —un documento aislado, `M3-SC-06`— la metadata alcanza y agregar validador sería complejidad sin retorno.
 
-## D-009 — Custodia de firmas de certificador/notario — **Default → spike**
+## D-009 — Custodia de firmas de certificador/notario — **Aceptada**
 
 **Contexto.** Los commits Fase B (SC-04/05) exigen firma del profesional. Dos modelos: co-firma CIP-30 desde el navegador (no-custodial, más fricción de UX) vs. wallet por rol operada por el backend (custodial, más simple, más riesgo).
-**Default.** Co-firma CIP-30: el backend arma la tx parcialmente firmada, el profesional co-firma con su wallet extension.
-**Spike (≤3 días, durante Sprint de Fase B).** Prototipo del flujo CIP-30 con un certificador real. Si la fricción es inaceptable para los usuarios reales, documentar custodia delegada con sus controles como decisión nueva.
+**Decisión (ratificada 2026-08-20).** Co-firma CIP-30 no-custodial: el backend arma la tx parcialmente firmada y el profesional co-firma desde su wallet extension (Eternl/Vespr/Nami). Preserva el principio D-021 (cero custodia de claves privadas o identidad ajena por la plataforma).
 
 ## D-010 — Deploy: Railway, "Wait for CI", GHA no despliega — **Default**
 

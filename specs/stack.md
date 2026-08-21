@@ -87,9 +87,9 @@ Ningún validador custodia ni transfiere valor, en ninguna fase (D-021).
 
 | Pieza | Hoy | Destino | Estado | Decisión |
 |---|---|---|---|---|
-| Base de datos | **SQLite** (`prisma/dev.db`) | **SQLite**, probablemente vía **Turso** en Render | ○ | D-038 — default sin fecha; PostgreSQL queda descartado salvo evidencia de una limitación real |
+| Base de datos | **SQLite** (`prisma/dev.db`) | **SQLite** vía **Turso** en prod (ORM: Drizzle) | ○ | D-038 — dirección ratificada (SQLite default, Turso probable en Render); migración de ORM diferida, sin fecha |
 | Migraciones | Prisma Migrate, 1 migración (`init`) | idempotentes en el entrypoint | ◐ | D-012 |
-| Archivos de evidencia | **disco local** (`UPLOAD_DIR`, Multer) | **S3 genérico**: MinIO dev / R2 prod | ○ | D-011 |
+| Archivos de evidencia | **disco local** (`UPLOAD_DIR`, Multer) | **S3 genérico**: MinIO dev / **Cloudflare R2** prod | ○ | D-011 |
 | URLs de archivos | descarga por endpoint autenticado | prefirmadas, TTL ≤15 min | ○ | D-011 |
 | Base de tests | SQLite propia (`prisma/test.db`), sembrada por corrida | — | ● | SPEC-008 |
 
@@ -100,11 +100,11 @@ Ningún validador custodia ni transfiere valor, en ninguna fase (D-021).
 | Red: **Preprod en todos los entornos**. Mainnet fuera del alcance de M3 | ● (por configuración) | D-013 |
 | `packages/cardano` con `AnchorPort` (`anchor`/`verify`/`awaitConfirmation`) | ○ — **el package está vacío** | D-014 |
 | Adaptador `simulated` (determinístico; es producto, no stub) | ○ | D-014 |
-| Adaptador real: **Lucid Evolution** + Blockfrost | ? — default a refutar por el walking skeleton | D-005 |
+| Adaptador real: **Lucid Evolution** + Blockfrost | ○ — decidido; el package está vacío | D-005 |
 | Anclaje Fase A: metadata de tx, label `1904`, strings ≤64 bytes | ○ | D-006 |
 | Cuenta Blockfrost (proyecto Preprod) | ○ — **no creada** | — |
 | Wallet de servicio (seed nueva y exclusiva de Preprod, fondeada por faucet) | ○ — **no creada** | 🔴 |
-| Co-firma CIP-30 para notario/certificador | ? | D-009 |
+| Co-firma CIP-30 para notario/certificador | ○ — decidido, sin implementar | D-009 |
 
 ## 8 · Infraestructura y despliegue
 
@@ -122,12 +122,12 @@ Ningún validador custodia ni transfiere valor, en ninguna fase (D-021).
 | `GET /health` | ● — existe en la API | — |
 | Healthcheck de contenedor / rollout | ○ | D-010 |
 | Entorno de **pre-producción con URL pública** | ○ | criterio 12 del SOM |
-| Secretos por entorno (`JWT_SECRET`, `BLOCKFROST_API_KEY`, `SERVICE_WALLET_SEED`) | ◐ — solo `.env` local; nada en un gestor | regla 12 |
+| Secretos por entorno (`JWT_SECRET`, `BLOCKFROST_API_KEY`, `SERVICE_WALLET_SEED`) | ◐ — `.env` local en dev; variables de entorno en plataforma en prod | regla 12 |
 | Telemetría / métrica *reserva → escrow < 12 min* | ○ | criterio 9 · D-021 define qué se mide |
 | Monitoreo y capturas de monitoreo | ○ | criterio 14 |
 | **Runbook** (deploy / rollback / incidente) | ○ — no existe | criterio 14 |
 | Versionado de servicios: CalVer `vYYYY.MM.N` en tags | ○ — sin releases | D-015 |
-| Backups de la base | ? — nunca se discutió | — |
+| Backups de la base | ○ — los resuelve Turso (réplicas + PITR) cuando exista el deploy | D-038 |
 
 ## 9 · Verificación — CI, puerta y harness
 
@@ -150,13 +150,11 @@ Ver `CLAUDE.md` §Cómo se trabaja acá y D-032.
 
 | Pregunta | Default vigente | Qué la cierra |
 |---|---|---|
-| D-005 · Lucid Evolution vs Mesh | Lucid | el walking skeleton (rebanada 3) |
-| D-009 · custodia de firmas profesionales | co-firma CIP-30 | prototipo con un certificador real (rebanada 9) |
 | D-017 · `milestone.ak` vs `milestone2.ak` | conservar `milestone.ak` | spike ≤1 día |
 | Vocabulario "certificate" en la UI | calificar levemente | postura del dueño (sub-ítem de D-026) |
 | `/verify` como pantalla o como documento | sin default | M1-D1 la promete, M2-D5 no la tiene |
-| Backups y retención de datos | sin default | nunca se discutió |
-| Gestor de secretos en pre-prod | sin default | lo fuerza el primer deploy |
+| Retención de datos | sin default | nunca se discutió (backups los cubre D-038) |
+| Gestor de secretos en pre-prod | variables de entorno de la plataforma de deploy | el primer deploy real |
 | D-038 · cuándo migrar Prisma → Drizzle | diferido, sin fecha | spike cuando aparezca evidencia de límite real (principio 3) |
 | D-038 · Turso vs disco Render + Litestream para SQLite en prod | Turso (por el worker de confirmaciones de D-003, no por costo) | primer intento real de deploy a Render |
 

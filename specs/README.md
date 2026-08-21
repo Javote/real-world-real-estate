@@ -170,10 +170,10 @@ la última rebanada, que es donde los proyectos mueren. Arrancan **ahora**, en p
 | ~~Qué significa "evidencia sin firmar"~~ | — | **Cerrada: D-028.** Ya no bloquea el modelo de datos. | — |
 | **Vocabulario "certificate" en la UI** | Calificar levemente ("Certificado técnico") | Postura legal, no técnica — decisión del owner. Sub-ítem Abierto de D-026 | Rebanada 4 |
 | **`/verify`: verificación independiente** | Sin default | M1-D1 la promete, M2-D5 no tiene pantalla. ¿Documento o superficie? | Rebanada 3 |
-| D-005 Lucid vs Mesh | Lucid Evolution | El walking skeleton mismo | Rebanada 3 |
-| D-009 Custodia de firmas profesionales | Co-firma CIP-30 | Prototipo con un certificador real | Rebanada 9 |
+| ~~D-005 Lucid vs Mesh~~ | — | **Cerrada: D-005 Aceptada** (2026-08-20). Lucid Evolution + Blockfrost, sin spike previo. | — |
+| ~~D-009 Custodia de firmas profesionales~~ | — | **Cerrada: D-009 Aceptada** (2026-08-20). Co-firma CIP-30 no-custodial. | — |
 | D-017 `milestone.ak` vs `milestone2.ak` | Conservar `milestone.ak` | Spike ≤1 día | Track contratos |
-| Unificar TypeScript 5.8 / 6.0 | — | Deuda; bloquea `packages/shared` | Rebanada 1 |
+| ~~Unificar TypeScript 5.8 / 6.0~~ | — | **Cerrada: SPEC-008.** Los tres packages en `^6.0.2`. | — |
 
 ## Riesgos, señal temprana y plan B
 
@@ -181,8 +181,8 @@ la última rebanada, que es donde los proyectos mueren. Arrancan **ahora**, en p
 |---|---|---|
 | **Coverage ≥95%** es un salto desde 0 | Track de contratos sin tests al cerrar la rebanada 3 | Criterio duro: no hay plan B, hay que empezarlo temprano |
 | **Los 3 pilotos no responden a tiempo** | Sin contacto al cerrar la rebanada 3 | Escalar a los developers socios; es su compromiso elegirlos |
-| Lib web3 bloquea (D-005) | El skeleton no ancla | Repetir con Mesh; decidir con evidencia |
-| Fricción CIP-30 con profesionales (D-009) | Spike de la rebanada 9 | Custodia delegada documentada con sus controles |
+| Lib web3 bloquea (D-005 ya aceptada, sin spike) | El skeleton no ancla | Repetir con Mesh y reabrir D-005 con esa evidencia |
+| Fricción CIP-30 con profesionales (D-009 ya aceptada, sin prototipo) | Rechazo de los pilotos en la rebanada 9 | Custodia delegada documentada con sus controles, como decisión nueva |
 | Blockfrost caído o limitado | Errores 402/429 en el adaptador | `ANCHOR_MODE=simulated` mantiene el producto usable; cola de re-anclaje |
 | Confirmaciones lentas rompen la UX | `AnchoringSuccessModal` tarda >30s | Modal en dos tiempos: "enviado" (TXID) → "confirmado" (poll) |
 | **Scope creep de UI**: 70 pantallas, 36 componentes | Una rebanada de superficie no cierra | Cortar superficies secundarias antes que mover la fecha. Dossier y audit log **no** son cortables: son la tesis del producto |
