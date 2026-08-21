@@ -172,7 +172,7 @@ Ver `CLAUDE.md` §Cómo se trabaja acá y D-032.
 | Deuda | Costo de arrastrarla |
 |---|---|
 | **Nitro sigue en beta, y su proxy de dev rompe `POST`+`401`** | El camino de error más común de auth es indebuggeable en local. No hay Nitro 3 estable todavía, y el bug abarca al menos h3 rc.22 y rc.25: no se resuelve eligiendo versión (D-037) |
-| **`bcrypt` es nativo** | Más barata desde D-041: sin imagen propia, el toolchain de compilación lo absorbe el entorno de build de Render. Queda el warning de `url.parse()` deprecado en cada arranque vía `node-pre-gyp`, y el riesgo de un módulo nativo. Alternativa: `bcryptjs`, JS puro y compatible en formato de hash, ~30% más lento. Es código 🔴: lo decide el humano |
+| **`bcrypt` es nativo** | Más barata desde D-041: sin imagen propia, el toolchain lo absorbe el entorno de build de Render. Queda el warning de `url.parse()` vía `node-pre-gyp` y el riesgo genérico de módulo nativo. **La alternativa `bcryptjs` (JS puro, ~30% más lento) hoy conviene menos**: Render free da 0.1 CPU, donde los ~81 ms medidos en una máquina rápida se van a varios cientos. Detalle en `packages/api/CLAUDE.md` §Superficie 🔴. Es código 🔴: lo decide el humano |
 | **`contracts/` con 0 tests** | Único criterio duro del SOM sin plan B |
 | **`aiken.toml` con naming de scaffold** | Incumple D-015 (versión entera incremental) |
 | **`milestone` en el dominio** | D-023 pendiente; encarece con cada pantalla nueva |

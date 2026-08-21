@@ -208,6 +208,10 @@ puede correr en paralelo: está aislado del workspace pnpm.
 
 Si dudás del nivel, es el más alto de los dos.
 
+**Dónde está hoy el código 🔴, y qué tiene abierto: `packages/api/CLAUDE.md` §Superficie 🔴** —
+todo el 🔴 existente vive en ese package, con un **P1 abierto en `lib/jwt.ts` que bloquea el primer
+deploy**. Acá no se repite el inventario.
+
 ### Commits y ramas
 
 Formato: `<tipo>(<scope>): <descripción en imperativo, minúscula, sin punto final> [<REF>]`
