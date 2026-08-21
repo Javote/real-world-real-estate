@@ -127,7 +127,7 @@ Cada rebanada deja la app **corriendo y demostrable** — ese es el criterio de 
 |---|---|---|---|---|
 | 0 | `SPEC-008` | **Cimientos verificables** *(no es vertical, a propósito)* | La puerta puede verificar la API y el contrato API↔web | **cerrada** 2026-08-20 |
 | 0b | `SPEC-009` | Rename D-023 + naming de contratos | El dominio dice `stage` en todos lados | no escrita |
-| 0c | `SPEC-010` | **Endurecer la superficie 🔴** *(tampoco es vertical)* | El código 🔴 no tiene defaults inseguros | **en curso** |
+| 0c | `SPEC-010` | **Endurecer la superficie 🔴** *(tampoco es vertical)* | El código 🔴 no tiene defaults inseguros | **cerrada** 2026-08-21 |
 | 1 | — | Login de 4 roles | Entrás como cada rol y ves su panel, en ambos idiomas, en mobile | no escrita |
 | 2 | — | Developer crea proyecto, unidades y stages | Creás un desarrollo con su plantilla de 10 stages | no escrita |
 | 3 | — | **Evidencia → Merkle → TXID real** *(walking skeleton)* | Subís evidencia y obtenés un TXID verificable en cardanoscan | no escrita |
@@ -196,7 +196,7 @@ la última rebanada, que es donde los proyectos mueren. Arrancan **ahora**, en p
 | Spec | Título | Rebanada | Estado |
 |---|---|---|---|
 | `SPEC-008` | Cimientos verificables | 0 | **cerrada** 2026-08-20 |
-| `SPEC-010` | Endurecer la superficie 🔴 | 0c | **en curso** |
+| `SPEC-010` | Endurecer la superficie 🔴 | 0c | **cerrada** 2026-08-21 |
 
 Las siete specs heredadas (`SPEC-001` a `SPEC-007`) se eliminaron el 2026-07-29: precedían a la
 documentación oficial y describían prototipos descartables. Lo vigente de cada una está absorbido

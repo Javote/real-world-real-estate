@@ -79,6 +79,7 @@ request ni de respuesta. `packages/shared` no cambia.
 |---|---|
 | miembro con la membresía pedida | `true` |
 | miembro con **otra** membresía que la pedida | `false` |
+| lista vacía de membresías | `false` — fail-closed |
 | usuario sin membresía en el proyecto | `false` |
 | `admin` sin membresía | `true` (bypass, matriz de M2-D1 §4) |
 | llamar sin `allowedMemberships` | **no compila** |
@@ -95,5 +96,5 @@ request ni de respuesta. `packages/shared` no cambia.
 
 - [x] P1 cerrado: `JWT_SECRET` sin fallback, con test de arranque
 - [x] el login paga el costo de `bcrypt` exista o no el usuario — de ~81 ms de diferencia a 0.7 ms
-- [ ] `allowedMemberships` obligatorio en los 27 call sites
-- [ ] `packages/api/CLAUDE.md` §Superficie 🔴 sin ⚠️ abiertos
+- [x] `allowedMemberships` obligatorio — 12 call sites, 7 de ellos pasan a `ANY_MEMBERSHIP` explícito
+- [x] `packages/api/CLAUDE.md` §Superficie 🔴 sin ⚠️ abiertos

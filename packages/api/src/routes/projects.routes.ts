@@ -3,6 +3,7 @@ import { z } from "zod";
 import { prisma } from "../lib/prisma";
 import {
   authenticate,
+  ANY_MEMBERSHIP,
   canAccessProject,
   requireRole
 } from "../middlewares/auth";
@@ -100,7 +101,8 @@ router.get("/:id", async (req, res) => {
   const allowed = await canAccessProject(
     req.user!.id,
     req.user!.role,
-    req.params.id
+    req.params.id,
+    ANY_MEMBERSHIP
   );
 
   if (!allowed) {
@@ -193,7 +195,8 @@ router.get("/:id/members", async (req, res) => {
   const allowed = await canAccessProject(
     req.user!.id,
     req.user!.role,
-    req.params.id
+    req.params.id,
+    ANY_MEMBERSHIP
   );
 
   if (!allowed) {

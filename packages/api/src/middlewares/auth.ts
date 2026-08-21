@@ -70,11 +70,36 @@ export function requireRole(...roles: UserRole[]) {
   };
 }
 
+/**
+ * "Cualquier membresía sirve" — para los endpoints de lectura, donde alcanza con
+ * ser miembro del proyecto.
+ *
+ * Se deriva del enum de Prisma en vez de escribir la lista a mano: una membresía
+ * nueva en `schema.prisma` queda incluida sola, que es exactamente lo que hacía
+ * el parámetro opcional que este valor reemplaza. La diferencia es que ahora el
+ * que abre el permiso lo dice, y se puede grepear quién lo hace.
+ */
+export const ANY_MEMBERSHIP: MembershipRole[] = Object.values(MembershipRole);
+
+/**
+ * Segunda capa de autorización: rol global (`requireRole`) + membresía por
+ * proyecto. `admin` bypasea membresías; el resto solo ve proyectos donde es
+ * miembro. La matriz completa está en M2-D1 §4.
+ *
+ * `allowedMemberships` es OBLIGATORIO y no puede volver a ser opcional (D-042):
+ * omitirlo aceptaba cualquier membresía, así que quien quiso decir "solo
+ * developer" y se olvidó del argumento obtenía "cualquier miembro", en silencio.
+ * Un default fail-open en la función 🔴 por excelencia. Para abrir a cualquier
+ * miembro está `ANY_MEMBERSHIP`, que hay que escribir.
+ *
+ * Una lista vacía no acepta a nadie: `{ in: [] }` no matchea, y ese es el
+ * sentido correcto de "no permití ninguna membresía".
+ */
 export async function canAccessProject(
   userId: string,
   role: UserRole,
   projectId: string,
-  allowedMemberships?: MembershipRole[]
+  allowedMemberships: MembershipRole[]
 ) {
   if (role === "admin") return true;
 
@@ -82,9 +107,7 @@ export async function canAccessProject(
     where: {
       userId,
       projectId,
-      ...(allowedMemberships
-        ? { membershipRole: { in: allowedMemberships } }
-        : {})
+      membershipRole: { in: allowedMemberships }
     }
   });
 

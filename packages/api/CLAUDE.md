@@ -20,7 +20,9 @@ endpoints del backlog **hoy conforman 2**: `POST /auth/login` y `GET /auth/me`.
 
 1. Schema Zod en `packages/shared` — **antes** que el endpoint (regla 6). El front importa el
    mismo tipo. Es lo único que vuelve imposible el drift API↔web.
-2. Ruta con `requireRole` + `canAccessProject` (🔴 `canAccessProject` lo lidera el humano).
+2. Ruta con `requireRole` + `canAccessProject`, diciendo **qué membresías** acepta —
+   `ANY_MEMBERSHIP` si alcanza con ser miembro. No es opcional: omitirlo no compila (D-042).
+   (🔴 `canAccessProject` lo lidera el humano.)
 3. `safeParse` → 400 con `error.flatten()`.
 4. `writeAuditLog` si es mutación relevante.
 5. Test del camino feliz y de cada rechazo.
@@ -72,7 +74,7 @@ endpoints del backlog **hoy conforman 2**: `POST /auth/login` y `GET /auth/me`.
 | `lib/jwt.ts` | manejo de la clave de firma | ✔ cerrado 2026-08-20 — sin fallback (D-042, `SPEC-010`) |
 | `routes/auth.routes.ts` | bcrypt en login | ✔ cerrado 2026-08-20 — hash dummy (`SPEC-010`) |
 | `routes/users.routes.ts` | bcrypt al crear y al cambiar password | ✔ correcto (cost 10, nunca se loguea ni se devuelve) |
-| `middlewares/auth.ts` · `canAccessProject` | la lógica de membresía | ✔ correcto hoy · forma frágil |
+| `middlewares/auth.ts` · `canAccessProject` | la lógica de membresía | ✔ correcto · fail-closed desde 2026-08-21 · falta que sea middleware |
 | `utils/hashing.ts` | SHA-256 de evidencia | ✔ correcto · R2 lo va a mover |
 | `SERVICE_WALLET_SEED`, construcción de commitments | — | **no existen todavía** (`packages/cardano` vacío) |
 
@@ -122,22 +124,33 @@ temprano, o sea que revelaba "esta cuenta existe pero está dada de baja".
 índice único sobre una columna, y al lado de los 82 ms de bcrypt no se mide. Si algún día el store
 de usuarios deja de ser una tabla local, hay que volver a medirlo.
 
-### `canAccessProject`: bien hoy, con una forma que no escala
+### `canAccessProject`: el default fail-open cerrado, la forma todavía no
 
-Auditados los 27 endpoints: **no hay agujeros**. `evidence` 6/6, `milestones` 6/6, y los de
-`projects` que no lo llaman son admin-only o filtran por membresía en el query (el listado scopea
-correctamente a no-admins). Dicho eso, dos cosas de **forma**:
+Auditados los 27 endpoints el 2026-08-20: **no hay agujeros**. `evidence` 6/6, `milestones` 6/6, y
+los de `projects` que no lo llaman son admin-only o filtran por membresía en el query (el listado
+scopea correctamente a no-admins). La auditoría dejó dos observaciones de **forma**; una está
+cerrada y la otra no.
 
-1. **Es una función que hay que acordarse de llamar**, no un middleware que no se puede olvidar.
-   `requireRole` está en la cadena o no está; `canAccessProject` devuelve un booleano que alguien
-   tiene que chequear. Un endpoint nuevo que se olvide **no tiene segunda capa, y nada lo detecta**:
-   ni el compilador, ni un test, ni la puerta. Hoy son 27 endpoints y el backlog son ~80.
-2. **El 4º parámetro es opcional y omitirlo abre, no cierra.** Sin `allowedMemberships`, cualquier
-   membresía pasa. Quien quiso decir "solo developer" y se olvidó del argumento obtiene "cualquier
-   miembro", en silencio. Un default fail-open en la función 🔴 por excelencia.
+**Cerrado el 2026-08-21 · el 4º parámetro era opcional y omitirlo abría, no cerraba.** Sin
+`allowedMemberships`, cualquier membresía pasaba: quien quiso decir "solo developer" y se olvidó del
+argumento obtenía "cualquier miembro", en silencio. Un default fail-open en la función 🔴 por
+excelencia. Ahora es **obligatorio** —omitirlo es un error de compilación, no un permiso más
+ancho— y para abrir a cualquier miembro hay que escribir `ANY_MEMBERSHIP`, que se deriva del enum de
+Prisma y se puede grepear. Los 7 call sites que lo omitían (todos de lectura) lo dicen explícito.
+El porqué está en D-042; los casos, en `specs/SPEC-010` y `test/project-access.test.ts`.
 
-Ninguna de las dos es un bug hoy. Las dos cobran cuando la superficie crezca, así que el momento
-barato de cambiar la forma es **antes** de la tanda grande de endpoints, no después.
+**Sigue abierto · es una función que hay que acordarse de llamar**, no un middleware que no se
+puede olvidar. `requireRole` está en la cadena o no está; `canAccessProject` devuelve un booleano
+que alguien tiene que chequear. Un endpoint nuevo que se olvide **no tiene segunda capa, y nada lo
+detecta**: ni el compilador, ni un test, ni la puerta. Hoy son 27 endpoints y el backlog son ~80, así
+que el momento barato de cambiar la forma es **antes** de la tanda grande, no después. Default
+propuesto: un `requireProjectAccess(...)` de Express que lea `req.params.projectId`. Dueño: humano
+(`specs/SPEC-010` §Preguntas abiertas).
+
+**Ruido que quedó a la vista.** Cinco call sites hacen `if (!allowed && req.user!.role !== "admin")`,
+y ese segundo término es redundante: `canAccessProject` ya devuelve `true` para `admin`. No es un
+bug —el resultado es idéntico— pero sugiere que el bypass vive en las rutas cuando vive en la
+función. Se limpia con el refactor a middleware, en el mismo movimiento.
 
 ### El SHA-256 se mueve cuando llegue R2
 

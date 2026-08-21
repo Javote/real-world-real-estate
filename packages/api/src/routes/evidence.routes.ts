@@ -6,6 +6,7 @@ import { prisma } from "../lib/prisma";
 import { uploadSingleEvidence } from "../lib/upload";
 import {
   authenticate,
+  ANY_MEMBERSHIP,
   canAccessProject,
   requireRole
 } from "../middlewares/auth";
@@ -20,7 +21,8 @@ router.get("/projects/:id/evidence", async (req, res) => {
   const allowed = await canAccessProject(
     req.user!.id,
     req.user!.role,
-    req.params.id
+    req.params.id,
+    ANY_MEMBERSHIP
   );
 
   if (!allowed) {
@@ -179,7 +181,8 @@ router.get("/evidence/:id", async (req, res) => {
   const allowed = await canAccessProject(
     req.user!.id,
     req.user!.role,
-    evidence.projectId
+    evidence.projectId,
+    ANY_MEMBERSHIP
   );
 
   if (!allowed) {
@@ -201,7 +204,8 @@ router.get("/evidence/:id/download", async (req, res) => {
   const allowed = await canAccessProject(
     req.user!.id,
     req.user!.role,
-    evidence.projectId
+    evidence.projectId,
+    ANY_MEMBERSHIP
   );
 
   if (!allowed) {
