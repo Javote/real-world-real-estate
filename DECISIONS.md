@@ -61,6 +61,7 @@
 | D-044 | La segunda capa de autorización la verifica la puerta; el middleware queda diferido | Aceptada (con trigger de revisión) |
 | D-045 | Rate limiting en `/auth/login`, y de dónde sale la IP del cliente | Aceptada |
 | D-046 | bcrypt se ratifica —con el argumento del free tier— y la política de passwords sale de NIST/OWASP | Aceptada |
+| D-047 | El seed de demo se niega a sembrar credenciales publicadas en una base que no sea local | Aceptada |
 
 > **Repaso completo con la documentación oficial: ver §Repaso al final del archivo.** D-001..D-017 se
 > escribieron sin los entregables delante; las 25 entradas se revisaron el 2026-07-29 y cada una
@@ -1266,6 +1267,70 @@ build ⇒ `node:crypto/scrypt`, no `bcryptjs`. (c) El owner pide la vara de ASVS
 **Reversión.** La política es un schema en `packages/shared`: cambiar el número es un commit. El
 algoritmo no se revierte tan barato —los hashes guardados llevan el prefijo `$2b$`— así que migrar
 KDF significa rehashear en el login, que es exactamente el trabajo que (a) y (b) implican.
+
+
+## D-047 — El seed de demo se niega a sembrar credenciales publicadas en una base que no sea local
+
+**Contexto (2026-08-21).** `prisma/seed.ts` crea `admin@example.com` con una password que está
+**publicada**: en `README.md`, en el skill `run-app`, en los presets del login y en los e2e. Eso es
+correcto para un SQLite en un disco propio y es un problema serio para la instancia pública que pide
+el criterio 12 del SOM — una cuenta admin de credenciales conocidas, en internet, a un `pnpm db:seed`
+de distancia. El comando que lo produce es exactamente el que uno corre sin pensar después de
+migrar.
+
+El owner además quiere **conservar `admin@example.com`**, y tiene razón: el email está referenciado
+en cinco lugares y cambiarlo no compra nada. El email no es el problema.
+
+**Decisión.** El límite no es la password, es **la base de datos**. `DATABASE_URL` que empieza con
+`file:` es un SQLite de esta máquina; cualquier otra cosa —`libsql://` de Turso (D-038),
+`postgres://`— es una base que alguien más puede alcanzar.
+
+| Base | `SEED_ADMIN_PASSWORD` / `SEED_DEMO_PASSWORD` | Qué pasa |
+|---|---|---|
+| `file:…` | ausente | se usa el default documentado — no hay nada que proteger |
+| `file:…` | presente | se usa, validada contra la política |
+| cualquier otra | ausente | **revienta**, y explica por qué |
+| cualquier otra | presente | se usa, validada contra la política |
+
+Sin `DATABASE_URL` cuenta como remota: *"no sé contra qué base estoy"* no puede significar *"local"*.
+Es la misma lectura de D-042 — el valor ausente no resuelve a algo que funciona.
+
+**Por qué no las otras salidas.**
+
+- *Cambiar o sacar `admin@example.com` del seed.* No arregla nada: el problema no es qué email es,
+  es que sus credenciales están en el repo. Y los reviewers de Catalyst necesitan entrar como admin.
+- *Poner una password de demo más fuerte.* Es la respuesta intuitiva y no sirve: una password
+  publicada sigue publicada por larga que sea. La fuerza es irrelevante cuando el atacante la lee.
+- *Exigir las variables siempre, también en local.* Le pone fricción a `pnpm db:seed` —el primer
+  comando de cualquiera que clona— para defenderse de una amenaza que en un archivo local no existe.
+  Y una fricción sin sentido no se cumple: se saltea con un alias.
+
+**El seed valida contra su propia política.** Una password que venga del entorno pasa por
+`passwordSchema` (D-046). Sin eso, `SEED_ADMIN_PASSWORD=abc` crearía un admin que `POST /users`
+jamás habría aceptado crear: el seed sería el agujero de la política que el resto de la API cumple.
+
+**Nunca se imprime una password que vino del entorno.** El seed cierra listando credenciales, que es
+útil en una terminal y es una fuga en una plataforma, donde los logs se guardan. Los defaults
+locales se imprimen porque ya son públicos; lo del entorno se muestra como
+`(desde SEED_ADMIN_PASSWORD)`. Está fijado por test, con la aserción escrita al revés —que la salida
+**no contenga** el valor— porque es la forma que falla si alguien "mejora" el mensaje.
+
+**Consecuencia para el deploy.** Lo mejor sigue siendo **no correr el seed de demo contra la
+instancia pública**. Las variables existen para cuando se lo quiera hacer a propósito —datos de
+demo para que los reviewers y los pilotos tengan algo que mirar (criterios 4 y 12)— y ahora eso es
+una decisión explícita en vez de un accidente. La lista de lo que el `render.yaml` no puede olvidar
+va por tres: `JWT_SECRET` con `generateValue: true` (D-042), `TRUST_PROXY_HOPS=1` (D-045) y estas
+dos si el seed corre ahí.
+
+**Trigger de revisión.** (a) Aparece un entorno remoto donde los datos de demo sean lo correcto por
+default —una demo pública deliberada, separada de pre-prod— y entonces el eje deja de ser
+local/remoto y pasa a ser un `SEED_PROFILE` explícito. (b) El seed deja de publicar credenciales
+porque las cuentas se crean por invitación (rebanada 5), y ahí esta decisión se vuelve innecesaria.
+
+**Reversión.** Los helpers están aislados en `prisma/credentials.ts` con sus tests; volver al
+comportamiento anterior es usar los literales de nuevo. Lo que no se revierte gratis es el criterio
+12: si esto se saca, hay que resolver de otra forma que la URL pública no quede con un admin
+conocido.
 
 ---
 

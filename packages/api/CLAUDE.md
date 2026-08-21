@@ -60,6 +60,13 @@ endpoints del backlog **hoy conforman 2**: `POST /auth/login` y `GET /auth/me`.
   es CommonJS con `moduleResolution: node16`, así que `import("../src/lib/jwt")` typechequea
   rojo (TS2835) aunque vitest lo resuelva sin problema. Va `"../src/lib/jwt.js"`: tsc lo mapea
   al `.ts` y vitest también. Los imports estáticos no lo piden — solo los dinámicos.
+- **2026-08-21 · Las credenciales del seed son públicas, así que el límite es la BASE, no la
+  password.** `admin@example.com/admin123` está en el README, en el skill `run-app`, en los
+  presets del login y en los e2e. Hacerla más larga no arregla nada: publicada es publicada.
+  Lo que se controla es dónde se puede sembrar — `DATABASE_URL` con `file:` usa los defaults,
+  cualquier otra cosa exige `SEED_ADMIN_PASSWORD`/`SEED_DEMO_PASSWORD` o el seed revienta
+  (D-047). Sin `DATABASE_URL` cuenta como remota. Los helpers y sus tests están en
+  `prisma/credentials.ts`.
 - **2026-08-21 · El seed imprimía credenciales que no garantizaba.** Los cuatro `upsert` de
   `prisma/seed.ts` usaban `update: {}`, así que en una base ya existente el usuario conservaba
   la password vieja mientras el `console.log` del final anunciaba la nueva. Se vio al subir el

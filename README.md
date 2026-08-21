@@ -46,7 +46,8 @@ pnpm dev                                         # web en :3000, api en :8787
 ```
 
 Login demo: `admin@example.com` / `admin123` (resto de usuarios en `packages/api/prisma/seed.ts`).
-Son credenciales **de desarrollo y publicadas**: `db:seed` no se corre contra la instancia pública.
+Son credenciales **de desarrollo y publicadas**, y por eso el seed solo las usa contra un SQLite
+local: contra cualquier otra base se niega a correr sin `SEED_ADMIN_PASSWORD` (D-047).
 Contratos: `pnpm contracts:check`.
 
 ## Trabajar con agentes
@@ -85,6 +86,8 @@ DATABASE_URL=file:./dev.db              # SQLite en dev; postgres://… al despl
 JWT_SECRET=<openssl rand -hex 32>    # obligatorio: sin esto la API no arranca (D-042)
 UPLOAD_DIR=./uploads                    # disco local en dev; S3 en prod (D-011)
 MAX_FILE_SIZE_MB=10
+SEED_ADMIN_PASSWORD=                     # obligatoria si el seed corre contra una base no local (D-047)
+SEED_DEMO_PASSWORD=                      # idem, para los tres usuarios de demo
 LOGIN_RATE_LIMIT_MAX=20                 # intentos de login por IP / 15 min (D-045)
 TRUST_PROXY_HOPS=0                      # 0 en local; al desplegar detrás de Render, 1 (D-045)
 CARDANO_NETWORK=Preprod                 # nunca mainnet (D-013)

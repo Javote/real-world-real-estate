@@ -1,4 +1,5 @@
 import "dotenv/config";
+import { passwordDeDemo, paraMostrar } from "./credentials";
 import bcrypt from "bcrypt";
 import {
   MembershipRole,
@@ -11,10 +12,15 @@ import {
 const prisma = new PrismaClient();
 
 async function main() {
-  const adminPassword = await bcrypt.hash("admin123", 10);
-  const developerPassword = await bcrypt.hash("developer123", 10);
-  const buyerPassword = await bcrypt.hash("buyer123", 10);
-  const verifierPassword = await bcrypt.hash("verifier123", 10);
+  // Los defaults locales son los que documenta el README. Los de los tres roles
+  // de demo comparten variable: el que importa de verdad es el admin.
+  const adminPlano = passwordDeDemo("SEED_ADMIN_PASSWORD", "admin123");
+  const demoPlano = (defaultLocal: string) => passwordDeDemo("SEED_DEMO_PASSWORD", defaultLocal);
+
+  const adminPassword = await bcrypt.hash(adminPlano, 10);
+  const developerPassword = await bcrypt.hash(demoPlano("developer123"), 10);
+  const buyerPassword = await bcrypt.hash(demoPlano("buyer123"), 10);
+  const verifierPassword = await bcrypt.hash(demoPlano("verifier123"), 10);
 
   const admin = await prisma.user.upsert({
     where: { email: "admin@example.com" },
@@ -172,11 +178,13 @@ async function main() {
     }
   });
 
+  const mostrar = paraMostrar;
+
   console.log("Seed completado");
-  console.log("Admin: admin@example.com / admin123");
-  console.log("Developer: developer@example.com / developer123");
-  console.log("Buyer: buyer@example.com / buyer123");
-  console.log("Verifier: verifier@example.com / verifier123");
+  console.log(`Admin: admin@example.com / ${mostrar("SEED_ADMIN_PASSWORD", "admin123")}`);
+  console.log(`Developer: developer@example.com / ${mostrar("SEED_DEMO_PASSWORD", "developer123")}`);
+  console.log(`Buyer: buyer@example.com / ${mostrar("SEED_DEMO_PASSWORD", "buyer123")}`);
+  console.log(`Verifier: verifier@example.com / ${mostrar("SEED_DEMO_PASSWORD", "verifier123")}`);
   console.log("Project slug: torre-a");
 }
 
