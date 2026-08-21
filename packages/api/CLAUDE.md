@@ -135,9 +135,16 @@ cerrada y la otra no.
 `allowedMemberships`, cualquier membresía pasaba: quien quiso decir "solo developer" y se olvidó del
 argumento obtenía "cualquier miembro", en silencio. Un default fail-open en la función 🔴 por
 excelencia. Ahora es **obligatorio** —omitirlo es un error de compilación, no un permiso más
-ancho— y para abrir a cualquier miembro hay que escribir `ANY_MEMBERSHIP`, que se deriva del enum de
-Prisma y se puede grepear. Los 7 call sites que lo omitían (todos de lectura) lo dicen explícito.
-El porqué está en D-042; los casos, en `specs/SPEC-010` y `test/project-access.test.ts`.
+ancho— y para abrir a cualquier miembro hay que escribir `ANY_MEMBERSHIP`, que se puede grepear. Los
+7 call sites que lo omitían (todos de lectura) lo dicen explícito. El porqué está en D-042; los
+casos, en `specs/SPEC-010` y `test/project-access.test.ts`.
+
+`ANY_MEMBERSHIP` es una lista **literal** con `satisfies Record<MembershipRole, true>`, no
+`Object.values(MembershipRole)`. La primera versión usaba el enum y se mantenía sola, que suena
+mejor y es peor: una membresía nueva quedaba leyendo todos los proyectos sin que nadie lo decidiera.
+Con `notary` pendiente de entrar al schema —el dominio tiene cuatro roles y el enum tiene tres, con
+los nombres viejos— eso iba a pasar en serio. Ahora agregar un rol al enum sin tocar esta lista no
+compila (TS1360, verificado a propósito).
 
 **Sigue abierto · es una función que hay que acordarse de llamar**, no un middleware que no se
 puede olvidar. `requireRole` está en la cadena o no está; `canAccessProject` devuelve un booleano

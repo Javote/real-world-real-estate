@@ -83,6 +83,7 @@ request ni de respuesta. `packages/shared` no cambia.
 | usuario sin membresía en el proyecto | `false` |
 | `admin` sin membresía | `true` (bypass, matriz de M2-D1 §4) |
 | llamar sin `allowedMemberships` | **no compila** |
+| agregar una membresía al enum de Prisma sin tocar `ANY_MEMBERSHIP` | **no compila** (TS1360) |
 
 ## Preguntas abiertas
 

@@ -56,9 +56,11 @@ describe("canAccessProject", () => {
     expect(await canAccessProject(miembro, UserRole.developer, proyecto, [])).toBe(false);
   });
 
-  it("ANY_MEMBERSHIP cubre el enum entero, sin lista escrita a mano", async () => {
-    // Si alguien agrega una membresía a schema.prisma, entra sola: es la misma
-    // semántica que tenía omitir el parámetro, sin el riesgo de que se desfase.
+  it("ANY_MEMBERSHIP cubre el enum entero", async () => {
+    // La lista está escrita a mano y el `satisfies Record<MembershipRole, true>`
+    // la obliga a estar completa: agregar una membresía al schema sin tocarla no
+    // compila (verificado metiendo `notary` en el enum a propósito). Este test es
+    // el segundo cerrojo, para el caso de que alguien saque el `satisfies`.
     expect([...ANY_MEMBERSHIP].sort()).toEqual([...Object.values(MembershipRole)].sort());
   });
 

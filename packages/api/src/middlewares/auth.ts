@@ -74,12 +74,26 @@ export function requireRole(...roles: UserRole[]) {
  * "Cualquier membresía sirve" — para los endpoints de lectura, donde alcanza con
  * ser miembro del proyecto.
  *
- * Se deriva del enum de Prisma en vez de escribir la lista a mano: una membresía
- * nueva en `schema.prisma` queda incluida sola, que es exactamente lo que hacía
- * el parámetro opcional que este valor reemplaza. La diferencia es que ahora el
- * que abre el permiso lo dice, y se puede grepear quién lo hace.
+ * La lista se escribe a mano **a propósito**, y el `satisfies` la obliga a estar
+ * completa: agregar una membresía a `schema.prisma` sin tocar esto **no compila**.
+ *
+ * La primera versión hacía `Object.values(MembershipRole)`, que se mantenía sola
+ * y por eso mismo estaba mal: una membresía nueva quedaba con lectura de todos
+ * los proyectos por herencia, sin que nadie lo decidiera. No es hipotético — el
+ * dominio tiene cuatro roles (investor, developer, notary, certifier) y este enum
+ * tiene tres, con los nombres viejos: `notary` va a entrar, y cuando entre el
+ * compilador va a pedir que alguien diga qué puede leer.
+ *
+ * Ampliar un permiso tiene que ser un acto deliberado; el trabajo de escribir un
+ * renglón es exactamente el punto.
  */
-export const ANY_MEMBERSHIP: MembershipRole[] = Object.values(MembershipRole);
+const ALL_MEMBERSHIPS = {
+  developer: true,
+  buyer: true,
+  verifier: true
+} satisfies Record<MembershipRole, true>;
+
+export const ANY_MEMBERSHIP = Object.keys(ALL_MEMBERSHIPS) as MembershipRole[];
 
 /**
  * Segunda capa de autorización: rol global (`requireRole`) + membresía por

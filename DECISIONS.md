@@ -943,6 +943,9 @@ un default que funciona:
 2. **Parámetro de permiso ausente ⇒ error de compilación.** Un argumento que decide alcance no
    puede ser opcional: el default de un permiso es "ninguno", y "ninguno" no es un default útil, así
    que la única salida honesta es exigirlo.
+3. **Ampliar un permiso ⇒ acto deliberado.** El conjunto de "a quién le alcanza con ser miembro"
+   se escribe a mano y el tipo obliga a que esté completo. Nada que decida alcance se mantiene solo:
+   un rol nuevo tiene que hacer fallar el build y esperar a que alguien diga qué puede ver.
 
 **Por qué reventar y no advertir.** El free tier de Render no da shell (D-040): no hay forma de
 entrar a ver qué variables quedaron cargadas. Un warning en un log que nadie mira es
@@ -968,6 +971,13 @@ no levanta se ve en el primer deploy; una API firmando con `dev-secret` se ve cu
 - El `render.yaml` que falta escribir (D-041, criterio 12) tiene que declarar `JWT_SECRET` con
   `generateValue: true`. Si se olvida, el servicio no levanta — que es exactamente el
   comportamiento buscado.
+- **`ANY_MEMBERSHIP` no crece solo.** La primera versión lo derivaba con
+  `Object.values(MembershipRole)`, que se mantenía sola y por eso mismo estaba mal: una membresía
+  nueva quedaba leyendo todos los proyectos por herencia. No es hipotético — el dominio tiene cuatro
+  roles (investor, developer, notary, certifier) y el enum tiene tres, con los nombres viejos, así
+  que `notary` va a entrar. Ahora la lista es literal con `satisfies Record<MembershipRole, true>`:
+  agregar el rol al schema sin decidir qué puede leer **no compila**. Verificado metiendo `notary`
+  en el enum a propósito (TS1360).
 - La suite ya cargaba `JWT_SECRET` en `vitest.config.mts`, así que no hubo que tocar el entorno de
   tests. Que no haga falta un escape para testear es la señal de que la regla está bien puesta.
 
