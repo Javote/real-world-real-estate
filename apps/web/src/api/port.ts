@@ -5,6 +5,7 @@ import { clearSession, getSession } from '../auth/session'
 import type {
   Evidence,
   LoginResponse,
+  MeResponse,
   Milestone,
   MilestoneState,
   Project,
@@ -53,6 +54,8 @@ function jsonInit(method: string, body: unknown): RequestInit {
 export const api = {
   login: (email: string, password: string) =>
     request<LoginResponse>('/api/v1/auth/login', jsonInit('POST', { email, password })),
+
+  me: () => request<MeResponse>('/api/v1/auth/me'),
 
   listProjects: () => request<Project[]>('/api/v1/projects'),
 

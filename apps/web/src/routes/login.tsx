@@ -2,34 +2,54 @@ import { createFileRoute, Link, useNavigate } from '@tanstack/react-router'
 import { useState } from 'react'
 import { api, ApiError } from '../api/port'
 import { setSession } from '../auth/session'
+import { ROLE_LANDING } from '../auth/roles'
+import { GradientHeader } from '../components/domain/GradientHeader'
+import { LanguageToggle } from '../components/domain/LanguageToggle'
+import { TextInput } from '../components/domain/TextInput'
+import { PrimaryButton } from '../components/domain/PrimaryButton'
+import { useTranslation } from '../i18n/useTranslation'
+import type { TranslationKey } from '../i18n/dictionary'
 
 export const Route = createFileRoute('/login')({ component: LoginScreen })
 
-// Perfiles del seed (packages/api/prisma/seed.ts). El rol "certifier" de la
-// maqueta corresponde al rol global `verifier` del backend.
+// Perfiles del seed (packages/api/src/db/seed.ts). El rol "certifier" y
+// "investor" de la maqueta corresponden a los roles globales `verifier` y
+// `buyer` del backend — ver SPEC-011 §Preguntas abiertas.
 export const ROLE_PRESETS = [
-  { key: 'developer', icon: '🏗️', label: 'Developer', email: 'developer@example.com', password: 'developer123' },
-  { key: 'certifier', icon: '✓', label: 'Certifier', email: 'verifier@example.com', password: 'verifier123' },
-  { key: 'buyer', icon: '🏠', label: 'Buyer', email: 'buyer@example.com', password: 'buyer123' },
-] as const
+  { key: 'buyer', tabKey: 'login.tabs.investor', email: 'buyer@example.com', password: 'buyer123' },
+  {
+    key: 'developer',
+    tabKey: 'login.tabs.developer',
+    email: 'developer@example.com',
+    password: 'developer123',
+  },
+  { key: 'notary', tabKey: 'login.tabs.notary', email: 'notary@example.com', password: 'notary123' },
+  {
+    key: 'verifier',
+    tabKey: 'login.tabs.certifier',
+    email: 'verifier@example.com',
+    password: 'verifier123',
+  },
+] as const satisfies ReadonlyArray<{
+  key: string
+  tabKey: TranslationKey
+  email: string
+  password: string
+}>
 
-// El 429 existe desde que /login tiene rate limiting (D-045). Sin esta rama, el
-// usuario limitado leía "¿está levantada la API?" — que es falso y lo manda a
-// depurar el lugar equivocado. Los textos siguen hardcodeados como el resto de
-// esta pantalla: el diccionario i18n (D-025) llega con la rebanada 1.
-function messageFor(err: unknown): string {
-  if (err instanceof ApiError && err.status === 401) return 'Credenciales inválidas'
-  if (err instanceof ApiError && err.status === 429)
-    return 'Demasiados intentos. Esperá unos minutos y volvé a probar.'
-  return 'No se pudo conectar con la API — ¿está levantada? (pnpm dev)'
+function errorKeyFor(err: unknown): TranslationKey {
+  if (err instanceof ApiError && err.status === 401) return 'login.errors.invalidCredentials'
+  if (err instanceof ApiError && err.status === 429) return 'login.errors.rateLimited'
+  return 'login.errors.networkError'
 }
 
 export function LoginScreen() {
   const navigate = useNavigate()
+  const { t } = useTranslation()
   const [preset, setPreset] = useState(0)
   const [email, setEmail] = useState<string>(ROLE_PRESETS[0].email)
   const [password, setPassword] = useState<string>(ROLE_PRESETS[0].password)
-  const [error, setError] = useState<string | null>(null)
+  const [errorKey, setErrorKey] = useState<TranslationKey | null>(null)
   const [busy, setBusy] = useState(false)
 
   function selectPreset(i: number) {
@@ -39,95 +59,93 @@ export function LoginScreen() {
       setEmail(p.email)
       setPassword(p.password)
     }
-    setError(null)
+    setErrorKey(null)
   }
 
   async function submit(e: React.FormEvent) {
     e.preventDefault()
     setBusy(true)
-    setError(null)
+    setErrorKey(null)
     try {
       const res = await api.login(email, password)
       setSession({ token: res.token, user: res.user })
-      void navigate({ to: '/dashboard' })
+      // Invariante 2: el ruteo usa el rol que devolvió la API, nunca la
+      // solapa que el usuario tocó antes de enviar el formulario.
+      const landing = ROLE_LANDING[res.user.role] ?? '/login'
+      void navigate({ to: landing })
     } catch (err) {
-      setError(messageFor(err))
+      setErrorKey(errorKeyFor(err))
     } finally {
       setBusy(false)
     }
   }
 
   return (
-    <div className="login-container">
-      <div className="login-box">
-        <div className="login-header">
-          <div className="logo" style={{ fontSize: '2rem', marginBottom: '0.5rem' }}>
-            Prop<span>Nexus</span>
-          </div>
-          <p style={{ color: 'var(--gray-600)' }}>Trazabilidad inmobiliaria con anclaje blockchain</p>
+    <div className="mx-auto min-h-screen max-w-md" style={{ backgroundColor: '#F4F1ED' }}>
+      <GradientHeader
+        title={t('app.name')}
+        subtitle={t('login.subtitle')}
+        right={<LanguageToggle />}
+      />
+
+      <form className="px-4 py-6" onSubmit={submit}>
+        <p className="mb-4 text-center text-sm" style={{ color: '#6B7280' }}>
+          {t('login.demoHint')}
+        </p>
+
+        <div className="mb-5 grid grid-cols-2 gap-2" role="tablist">
+          {ROLE_PRESETS.map((p, i) => (
+            <button
+              type="button"
+              key={p.key}
+              role="tab"
+              aria-selected={i === preset}
+              onClick={() => selectPreset(i)}
+              className="rounded-xl border px-3 py-2 text-sm font-medium"
+              style={
+                i === preset
+                  ? { borderColor: '#6D4AFF', backgroundColor: '#EEEAFF', color: '#5538DD' }
+                  : { borderColor: '#E5E7EB', color: '#374151' }
+              }
+            >
+              {t(p.tabKey)}
+            </button>
+          ))}
         </div>
 
-        <form className="card" onSubmit={submit}>
-          <p className="form-label" style={{ textAlign: 'center', marginBottom: '1rem' }}>
-            Seleccioná tu rol para continuar (usuarios del seed demo)
+        <div className="mb-4 rounded-2xl bg-white p-4">
+          <TextInput
+            label={t('login.usernameLabel')}
+            type="email"
+            value={email}
+            onChange={setEmail}
+            autoComplete="username"
+          />
+          <TextInput
+            label={t('login.passwordLabel')}
+            type="password"
+            value={password}
+            onChange={setPassword}
+            autoComplete="current-password"
+          />
+        </div>
+
+        {errorKey ? (
+          <p className="mb-4 text-sm" style={{ color: '#EF4444' }}>
+            {t(errorKey)}
           </p>
+        ) : null}
 
-          <div className="role-selector">
-            {ROLE_PRESETS.map((p, i) => (
-              <div
-                key={p.key}
-                className={`role-option ${i === preset ? 'active' : ''}`}
-                onClick={() => selectPreset(i)}
-              >
-                <div className="icon">{p.icon}</div>
-                <div className="label">{p.label}</div>
-              </div>
-            ))}
-          </div>
+        <PrimaryButton type="submit" disabled={busy} loading={busy}>
+          {busy ? t('login.submitting') : t('login.submit')}
+        </PrimaryButton>
 
-          <div className="form-group">
-            <label className="form-label" htmlFor="login-email">
-              Email
-            </label>
-            <input
-              id="login-email"
-              type="email"
-              className="form-input"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              autoComplete="username"
-            />
-          </div>
-
-          <div className="form-group">
-            <label className="form-label" htmlFor="login-password">
-              Contraseña
-            </label>
-            <input
-              id="login-password"
-              type="password"
-              className="form-input"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              autoComplete="current-password"
-            />
-          </div>
-
-          {error ? (
-            <p style={{ color: 'var(--danger)', fontSize: '0.9rem', marginBottom: '1rem' }}>{error}</p>
-          ) : null}
-
-          <button type="submit" className="btn btn-primary btn-block" disabled={busy}>
-            {busy ? 'Ingresando…' : 'Ingresar'}
-          </button>
-
-          <div style={{ textAlign: 'center', marginTop: '1.5rem' }}>
-            <Link to="/verify" style={{ color: 'var(--primary)', fontSize: '0.9rem' }}>
-              Verificar documento sin cuenta →
-            </Link>
-          </div>
-        </form>
-      </div>
+        <div className="mt-6 text-center">
+          <Link to="/verify" className="text-sm" style={{ color: '#6D4AFF' }}>
+            {t('login.verifyLink')}
+          </Link>
+        </div>
+      </form>
     </div>
   )
 }

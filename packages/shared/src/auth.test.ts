@@ -42,10 +42,18 @@ describe("contrato de auth", () => {
     expect(r.success).toBe(true);
   });
 
+  it("acepta el rol notary (SPEC-011)", () => {
+    const r = loginResponseSchema.safeParse({
+      token: "t",
+      user: { id: "u1", email: "notary@example.com", role: "notary", fullName: "Notary" },
+    });
+    expect(r.success).toBe(true);
+  });
+
   it("rechaza un rol que no existe", () => {
     const r = loginResponseSchema.safeParse({
       token: "t",
-      user: { id: "u1", email: "dev@example.com", role: "notary", fullName: "Dev" },
+      user: { id: "u1", email: "dev@example.com", role: "superadmin", fullName: "Dev" },
     });
     expect(r.success).toBe(false);
   });

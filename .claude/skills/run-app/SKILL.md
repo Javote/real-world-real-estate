@@ -23,9 +23,10 @@ pnpm dev        # correr en background
 
 El seed imprime los usuarios. Hoy son `admin@example.com/admin123`,
 `developer@example.com/developer123`, `buyer@example.com/buyer123`, `verifier@example.com/verifier123`,
-más un proyecto `torre-a`. **Ojo:** no son los cuatro roles de M2-D1 (INV/DEV/NOT/CER) — el
-backend todavía no tiene `notary` y usa `buyer`/`verifier`. Si el modelo de roles ya se rehizo,
-releé el seed en vez de asumir estas credenciales.
+`notary@example.com/notary123` (SPEC-011), más un proyecto `torre-a`. **Ojo:** los valores del rol
+(`buyer`/`verifier`) todavía no coinciden con la etiqueta de UI (Investor/Certifier) — es deuda de
+la misma familia que D-023 (ver SPEC-011 §Preguntas abiertas). Si el enum ya se renombró, releé el
+seed en vez de asumir estas credenciales.
 
 ## Esperar a que estén listos
 

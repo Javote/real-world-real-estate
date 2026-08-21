@@ -1,5 +1,12 @@
-import dotenv from "dotenv";
-dotenv.config();
+// `import "dotenv/config"` (no `import dotenv from "dotenv"; dotenv.config();`
+// intercalado): TypeScript hoistea TODOS los `import` al principio del
+// archivo compilado, en orden de declaración, así que un `dotenv.config()`
+// escrito entre dos imports corre DESPUÉS de que ya se resolvieron — acá,
+// después de `./routes/auth.routes`, que carga `lib/jwt.ts` y explota antes de
+// que `JWT_SECRET` exista en `process.env`. El import de efecto secundario
+// ejecuta `config()` en su propia posición hoisteada, que es lo que hace falta
+// que corra primero. Mismo patrón que `db/migrate.ts` y `db/seed.ts`.
+import "dotenv/config";
 
 import express from "express";
 import authRoutes from "./routes/auth.routes";

@@ -12,15 +12,31 @@ import { join } from 'node:path'
 const SHOTS = join(import.meta.dirname, '.artifacts', 'screenshots')
 mkdirSync(SHOTS, { recursive: true })
 
-// Usuarios del seed (packages/api/prisma/seed.ts).
-// OJO: estos NO son los cuatro roles de M2-D1 (INV/DEV/NOT/CER). El backend
-// todavía usa buyer/verifier y no tiene notary — es parte de lo que se corrige
-// cuando se rehaga el modelo de roles.
+// Usuarios del seed (packages/api/src/db/seed.ts), con el landing que le
+// corresponde a cada uno desde SPEC-011 (apps/web/src/auth/roles.ts
+// ROLE_LANDING). El valor del rol (`buyer`/`verifier`) todavía no coincide
+// con la etiqueta de UI (Investor/Certifier) — ver SPEC-011 §Preguntas
+// abiertas, deuda de la misma familia que D-023.
+//
+// `admin` queda afuera de este listado a propósito: no tiene solapa ni
+// landing en esta rebanada (SPEC-011 §Casos borde) — se prueba aparte.
 const SEED_USERS = [
-  { role: 'admin', email: 'admin@example.com', password: 'admin123' },
-  { role: 'developer', email: 'developer@example.com', password: 'developer123' },
-  { role: 'buyer', email: 'buyer@example.com', password: 'buyer123' },
-  { role: 'verifier', email: 'verifier@example.com', password: 'verifier123' },
+  { role: 'buyer', tab: 'Investor', email: 'buyer@example.com', password: 'buyer123', landing: '/investor/buy' },
+  {
+    role: 'developer',
+    tab: 'Developer',
+    email: 'developer@example.com',
+    password: 'developer123',
+    landing: '/developer',
+  },
+  { role: 'notary', tab: 'Notary', email: 'notary@example.com', password: 'notary123', landing: '/notary' },
+  {
+    role: 'verifier',
+    tab: 'Certifier',
+    email: 'verifier@example.com',
+    password: 'verifier123',
+    landing: '/certifier',
+  },
 ] as const
 
 async function shot(page: Page, name: string) {
@@ -45,14 +61,14 @@ async function shot(page: Page, name: string) {
 // submit nativo, nunca corre el preventDefault, y la página se recarga sin
 // llamar a la API. Da fallas intermitentes que parecen de backend y no lo son.
 //
-// Sondeamos la hidratación con el selector de rol: cambiar de preset reescribe
-// el campo de email, y eso solo puede hacerlo React ya montado.
+// Sondeamos la hidratación con las solapas de rol: tocar una reescribe el
+// campo de usuario, y eso solo puede hacerlo React ya montado.
 async function waitForHydration(page: Page) {
-  const email = page.getByLabel('Email')
-  await expect(email).toBeVisible()
+  const username = page.getByLabel('Usuario')
+  await expect(username).toBeVisible()
   await expect(async () => {
-    await page.locator('.role-option', { hasText: 'Buyer' }).click()
-    await expect(email).toHaveValue('buyer@example.com')
+    await page.getByRole('tab', { name: 'Investor' }).click()
+    await expect(username).toHaveValue('buyer@example.com')
   }).toPass({ timeout: 20_000, intervals: [250, 500, 1000] })
 }
 
@@ -61,12 +77,13 @@ async function gotoLogin(page: Page) {
   await waitForHydration(page)
 }
 
-async function login(page: Page, email: string, password: string) {
+async function login(page: Page, tab: string, email: string, password: string, landing: string) {
   await gotoLogin(page)
-  await page.getByLabel('Email').fill(email)
+  await page.getByRole('tab', { name: tab }).click()
+  await page.getByLabel('Usuario').fill(email)
   await page.getByLabel('Contraseña').fill(password)
   await page.getByRole('button', { name: 'Ingresar' }).click()
-  await expect(page).toHaveURL(/\/dashboard/)
+  await expect(page).toHaveURL(new RegExp(landing.replace('/', '\\/')))
 }
 
 test.describe('Walkthrough', () => {
@@ -95,7 +112,7 @@ test.describe('Walkthrough', () => {
     test.fail(true, 'proxy de nitro dev: POST+401 → 502')
 
     await gotoLogin(page)
-    await page.getByLabel('Email').fill('developer@example.com')
+    await page.getByLabel('Usuario').fill('developer@example.com')
     await page.getByLabel('Contraseña').fill('contraseña-incorrecta')
     await page.getByRole('button', { name: 'Ingresar' }).click()
 
@@ -105,19 +122,34 @@ test.describe('Walkthrough', () => {
   })
 
   for (const user of SEED_USERS) {
-    test(`AUTH-LOGIN-003 · entra como ${user.role} y ve su dashboard`, async ({ page }) => {
-      await login(page, user.email, user.password)
+    test(`AUTH-LOGIN-003 · entra como ${user.role} y ve el shell de su panel`, async ({ page }) => {
+      await login(page, user.tab, user.email, user.password, user.landing)
       await expect(page.locator('body')).toContainText(/./)
-      await shot(page, `03-dashboard-${user.role}`)
+      await shot(page, `03-panel-${user.role}`)
     })
   }
+
+  test('AUTH-LOGIN-004 · admin no tiene solapa ni landing en esta rebanada (SPEC-011 §Casos borde)', async ({
+    page,
+  }) => {
+    await gotoLogin(page)
+    await page.getByLabel('Usuario').fill('admin@example.com')
+    await page.getByLabel('Contraseña').fill('admin123')
+    await page.getByRole('button', { name: 'Ingresar' }).click()
+    // ROLE_LANDING['admin'] es null: el login es válido pero no hay panel de
+    // admin todavía, así que el ruteo vuelve a /login — no es un error.
+    await expect(page).toHaveURL(/\/login/)
+  })
 
   test('DEV-PROJECT-DETAIL-001 · detalle de proyecto con sus stages y evidencia', async ({
     page,
   }) => {
-    await login(page, 'developer@example.com', 'developer123')
+    await login(page, 'Developer', 'developer@example.com', 'developer123', '/developer')
 
-    // El seed crea un único proyecto (slug torre-a); se entra por la primera tarjeta.
+    // /dashboard es la superficie vieja (no conforme, fuera del ruteo de
+    // SPEC-011) que todavía existe para este flujo hasta que la rebanada de
+    // "Developer crea proyecto, unidades y stages" la reemplace.
+    await page.goto('/dashboard')
     const firstProject = page.locator('a[href^="/projects/"]').first()
     await expect(firstProject).toBeVisible()
     await firstProject.click()

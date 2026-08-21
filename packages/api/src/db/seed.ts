@@ -14,6 +14,7 @@ async function main() {
   const developerPassword = await bcrypt.hash(demoPlano("developer123"), 10);
   const buyerPassword = await bcrypt.hash(demoPlano("buyer123"), 10);
   const verifierPassword = await bcrypt.hash(demoPlano("verifier123"), 10);
+  const notaryPassword = await bcrypt.hash(demoPlano("notary123"), 10);
 
   const now = new Date();
 
@@ -83,6 +84,25 @@ async function main() {
       updatedAt: now
     })
     .onConflict((oc) => oc.column("email").doUpdateSet({ passwordHash: verifierPassword }))
+    .returningAll()
+    .executeTakeFirstOrThrow();
+
+  // El rol notary (SPEC-011) no tiene membresía de proyecto todavía: esta
+  // rebanada solo agrega el rol para que el login/landing lo reconozca, sin
+  // tocar ProjectMember (queda para cuando el notario tenga dossiers que revisar).
+  await db
+    .insertInto("User")
+    .values({
+      id: createId(),
+      email: "notary@example.com",
+      passwordHash: notaryPassword,
+      role: "notary",
+      fullName: "Notary Demo",
+      isActive: true,
+      createdAt: now,
+      updatedAt: now
+    })
+    .onConflict((oc) => oc.column("email").doUpdateSet({ passwordHash: notaryPassword }))
     .returningAll()
     .executeTakeFirstOrThrow();
 
@@ -188,6 +208,7 @@ async function main() {
   console.log(`Developer: developer@example.com / ${mostrar("SEED_DEMO_PASSWORD", "developer123")}`);
   console.log(`Buyer: buyer@example.com / ${mostrar("SEED_DEMO_PASSWORD", "buyer123")}`);
   console.log(`Verifier: verifier@example.com / ${mostrar("SEED_DEMO_PASSWORD", "verifier123")}`);
+  console.log(`Notary: notary@example.com / ${mostrar("SEED_DEMO_PASSWORD", "notary123")}`);
   console.log("Project slug: torre-a");
 }
 

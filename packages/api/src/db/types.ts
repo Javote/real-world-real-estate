@@ -3,7 +3,7 @@ import type { ColumnType, Generated, Insertable, Selectable, Updateable } from "
 // Mismos valores que antes con Drizzle (D-048) y que `prisma/schema.prisma`
 // (D-016). SQLite no tiene enum nativo: se modelan como `text`, y la
 // restricción real la sigue haciendo Zod en `packages/shared` (regla 6).
-export const USER_ROLES = ["admin", "developer", "buyer", "verifier"] as const;
+export const USER_ROLES = ["admin", "developer", "buyer", "verifier", "notary"] as const;
 export const PROJECT_STATUSES = ["planning", "in_progress", "delayed", "completed"] as const;
 export const MEMBERSHIP_ROLES = ["developer", "buyer", "verifier"] as const;
 export const MILESTONE_STATES = ["Pending", "InProgress", "Completed", "Observed"] as const;

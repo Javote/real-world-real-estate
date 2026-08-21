@@ -5,8 +5,8 @@ import { z } from "zod";
 // siguen funcionando, pero este archivo es el patrón que copian los schemas de
 // cada rebanada: si acá queda el idioma viejo, se replica ochenta veces.
 
-/** Roles globales. Espeja `enum UserRole` de packages/api/prisma/schema.prisma. */
-export const userRoleSchema = z.enum(["admin", "developer", "buyer", "verifier"]);
+/** Roles globales. Espeja `USER_ROLES` de packages/api/src/db/types.ts. */
+export const userRoleSchema = z.enum(["admin", "developer", "buyer", "verifier", "notary"]);
 export type UserRole = z.infer<typeof userRoleSchema>;
 
 /** Largo mínimo en caracteres: el SHALL de NIST SP 800-63B §5.1.1.2 (D-046). */

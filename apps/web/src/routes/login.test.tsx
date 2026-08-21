@@ -13,6 +13,7 @@ import {
   createRouter,
 } from '@tanstack/react-router'
 import { LoginScreen, ROLE_PRESETS } from './login'
+import { LocaleProvider } from '../i18n/useTranslation'
 
 const DEMO_USER = {
   id: 'u1',
@@ -28,25 +29,51 @@ function makeRouter() {
     path: '/login',
     component: LoginScreen,
   })
-  const dashboardRoute = createRoute({
-    getParentRoute: () => rootRoute,
-    path: '/dashboard',
-    component: () => <div>DASHBOARD-STUB</div>,
-  })
   const verifyRoute = createRoute({
     getParentRoute: () => rootRoute,
     path: '/verify',
     component: () => <div>VERIFY-STUB</div>,
   })
+  const investorRoute = createRoute({
+    getParentRoute: () => rootRoute,
+    path: '/investor/buy',
+    component: () => <div>INVESTOR-STUB</div>,
+  })
+  const developerRoute = createRoute({
+    getParentRoute: () => rootRoute,
+    path: '/developer',
+    component: () => <div>DEVELOPER-STUB</div>,
+  })
+  const notaryRoute = createRoute({
+    getParentRoute: () => rootRoute,
+    path: '/notary',
+    component: () => <div>NOTARY-STUB</div>,
+  })
+  const certifierRoute = createRoute({
+    getParentRoute: () => rootRoute,
+    path: '/certifier',
+    component: () => <div>CERTIFIER-STUB</div>,
+  })
   return createRouter({
-    routeTree: rootRoute.addChildren([loginRoute, dashboardRoute, verifyRoute]),
+    routeTree: rootRoute.addChildren([
+      loginRoute,
+      verifyRoute,
+      investorRoute,
+      developerRoute,
+      notaryRoute,
+      certifierRoute,
+    ]),
     history: createMemoryHistory({ initialEntries: ['/login'] }),
   })
 }
 
 async function renderLogin() {
   const router = makeRouter()
-  render(<RouterProvider router={router} />)
+  render(
+    <LocaleProvider>
+      <RouterProvider router={router} />
+    </LocaleProvider>,
+  )
   await screen.findByText('Ingresar')
   return router
 }
@@ -54,6 +81,7 @@ async function renderLogin() {
 describe('LoginScreen', () => {
   beforeEach(() => {
     window.sessionStorage.clear()
+    window.localStorage.clear()
   })
 
   afterEach(() => {
@@ -61,7 +89,7 @@ describe('LoginScreen', () => {
     vi.unstubAllGlobals()
   })
 
-  it('login exitoso: llama a la API con las credenciales, guarda la sesión y redirige a /dashboard', async () => {
+  it('login exitoso: llama a la API con las credenciales, guarda la sesión y redirige al panel del rol devuelto', async () => {
     const fetchMock = vi.fn<typeof fetch>(async () =>
       new Response(JSON.stringify({ token: 'jwt-de-prueba', user: DEMO_USER }), { status: 200 }),
     )
@@ -70,7 +98,9 @@ describe('LoginScreen', () => {
     await renderLogin()
     fireEvent.click(screen.getByText('Ingresar'))
 
-    await screen.findByText('DASHBOARD-STUB')
+    // DEMO_USER.role === 'developer' → /developer (invariante 2: el ruteo
+    // usa el rol de la respuesta, no la solapa tocada).
+    await screen.findByText('DEVELOPER-STUB')
 
     expect(fetchMock).toHaveBeenCalledWith(
       '/api/v1/auth/login',
@@ -103,6 +133,37 @@ describe('LoginScreen', () => {
     expect(body.password).toBe('verifier123')
   })
 
+  it('invariante 2: rutea por el rol que devuelve la API, no por la solapa tocada', async () => {
+    // Se toca la solapa Certifier pero la API responde con un usuario
+    // developer (podría pasar con cualquier credencial válida bajo la solapa
+    // equivocada) — el ruteo tiene que ir a /developer, no a /certifier.
+    const fetchMock = vi.fn<typeof fetch>(async () =>
+      new Response(JSON.stringify({ token: 't', user: DEMO_USER }), { status: 200 }),
+    )
+    vi.stubGlobal('fetch', fetchMock)
+
+    await renderLogin()
+    fireEvent.click(screen.getByText('Certifier'))
+    fireEvent.click(screen.getByText('Ingresar'))
+
+    await screen.findByText('DEVELOPER-STUB')
+    expect(screen.queryByText('CERTIFIER-STUB')).toBeNull()
+  })
+
+  it('login exitoso como rol notary aterriza en /notary', async () => {
+    const notaryUser = { id: 'u2', email: 'notary@example.com', role: 'notary', fullName: 'Notary Demo' }
+    const fetchMock = vi.fn<typeof fetch>(async () =>
+      new Response(JSON.stringify({ token: 't', user: notaryUser }), { status: 200 }),
+    )
+    vi.stubGlobal('fetch', fetchMock)
+
+    await renderLogin()
+    fireEvent.click(screen.getByText('Notary'))
+    fireEvent.click(screen.getByText('Ingresar'))
+
+    await screen.findByText('NOTARY-STUB')
+  })
+
   it('credenciales inválidas (401): muestra el error, no redirige y no guarda sesión', async () => {
     vi.stubGlobal(
       'fetch',
@@ -116,7 +177,7 @@ describe('LoginScreen', () => {
 
     await screen.findByText('Credenciales inválidas')
     expect(router.state.location.pathname).toBe('/login')
-    expect(screen.queryByText('DASHBOARD-STUB')).toBeNull()
+    expect(screen.queryByText('DEVELOPER-STUB')).toBeNull()
     expect(window.sessionStorage.getItem('proptrust.session')).toBeNull()
   })
 
@@ -138,6 +199,20 @@ describe('LoginScreen', () => {
     expect(screen.queryByText(/No se pudo conectar/)).toBeNull()
     expect(router.state.location.pathname).toBe('/login')
     expect(window.sessionStorage.getItem('proptrust.session')).toBeNull()
+  })
+
+  it('cambio de idioma antes de autenticarse: no pierde lo tipeado en los inputs', async () => {
+    vi.stubGlobal('fetch', vi.fn())
+
+    await renderLogin()
+    fireEvent.change(screen.getByLabelText('Usuario'), { target: { value: 'alguien@example.com' } })
+    fireEvent.change(screen.getByLabelText('Contraseña'), { target: { value: 'un-secreto' } })
+
+    fireEvent.click(screen.getByText('ES'))
+    await screen.findByText('EN')
+
+    expect((screen.getByLabelText('Username') as HTMLInputElement).value).toBe('alguien@example.com')
+    expect((screen.getByLabelText('Password') as HTMLInputElement).value).toBe('un-secreto')
   })
 
   it('API caída: muestra un mensaje accionable en lugar de romperse', async () => {

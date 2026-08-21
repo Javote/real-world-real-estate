@@ -30,6 +30,24 @@ dice `M2-D5` §4-6.
 
 ## Trampas verificadas
 
+- **2026-08-21 · `styles.css` (legado, D-024) define `.hidden { display: none !important; }`,
+  y choca con la clase utilitaria `.hidden` de Tailwind.** El `!important` gana siempre, sin
+  importar qué variante responsive se agregue (`md:flex`, `lg:flex`, etc.): un elemento con clase
+  `hidden md:flex` queda `display: none` en **todos** los viewports, porque Tailwind emite
+  `.hidden { display: none }` (sin `!important`) y el legado — que aparece más abajo en el mismo
+  archivo compilado, porque `@import "tailwindcss"` se expande in-place al principio de
+  `styles.css` y el resto del archivo (incluido este `.hidden`) queda después — lo pisa. Se
+  detectó armando el sidebar de `BottomNav` (`apps/web/src/components/domain/BottomNav.tsx`): el
+  `<aside>` nunca aparecía en desktop pese a que `window.matchMedia` confirmaba que la media query
+  matcheaba. **La clase `.container` y `.truncate` del legado tienen el mismo riesgo de colisión de
+  nombre** (sin `!important`, así que ahí es "gana el que está después en el archivo", más sutil
+  todavía) — evitalas o verificá con la extensión de un dev tools que el estilo final sea el
+  esperado. **Fix para "hidden por default, visible desde cierto breakpoint":** no uses la clase
+  bare `hidden`; escribí la base visible (`flex`) y ocultá con el prefijo invertido
+  (`max-md:hidden` en vez de `hidden md:flex`) — compila a `.max-md\:hidden`, un selector distinto
+  que no colisiona. Desaparece solo cuando `styles.css` se reemplace entero por los tokens de
+  M2-D3 (D-024): hasta entonces, cualquier clase Tailwind cuyo nombre bare coincida con una regla
+  del legado es sospechosa.
 - **El proxy de nitro en dev convierte `POST` + `401` en `502`.** Reproducible al 100% y solo esa
   combinación (`GET 401`, `POST 400` y `POST 200` pasan bien). Vive en el dev-worker de Vite; en
   producción la API es otro origen y no hay proxy. **Consecuencia: el error de credenciales

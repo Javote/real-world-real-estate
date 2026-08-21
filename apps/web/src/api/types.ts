@@ -9,7 +9,7 @@
 // `verbatimModuleSyntax` los borra al compilar.
 import type { UserRole } from '@plataforma/shared'
 
-export type { LoginResponse, SessionUser, UserRole } from '@plataforma/shared'
+export type { LoginResponse, MeResponse, SessionUser, UserRole } from '@plataforma/shared'
 
 // El resto sigue siendo espejo manual. Cada uno migra a packages/shared cuando
 // su rebanada lo toque (SPEC-008 §NO-alcance): migrarlos todos ahora sería

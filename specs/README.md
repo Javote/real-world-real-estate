@@ -130,7 +130,7 @@ Cada rebanada deja la app **corriendo y demostrable** — ese es el criterio de 
 | 0b | `SPEC-009` | Rename D-023 + naming de contratos | El dominio dice `stage` en todos lados | no escrita |
 | 0c | `SPEC-010` | **Endurecer la superficie 🔴** *(tampoco es vertical)* | El código 🔴 no tiene defaults inseguros | **cerrada** 2026-08-21 |
 | 0d | — | **Migrar `packages/api` de Prisma a Drizzle → Kysely** *(tampoco es vertical)* | El ORM deja de ser deuda antes de que el código nuevo se acople a Prisma | **cerrada** 2026-08-21 — D-048, D-049 |
-| 1 | — | Login de 4 roles | Entrás como cada rol y ves su panel, en ambos idiomas, en mobile | no escrita |
+| 1 | `SPEC-011` | Login de 4 roles | Entrás como cada rol y ves su panel, en ambos idiomas, en mobile | **cerrada** 2026-08-21 |
 | 2 | — | Developer crea proyecto, unidades y stages | Creás un desarrollo con su plantilla de 10 stages | no escrita |
 | 3 | — | **Evidencia → Merkle → TXID real** *(walking skeleton)* | Subís evidencia y obtenés un TXID verificable en cardanoscan | no escrita |
 | 4 | — | Certifier certifica y observa | La FSM cierra el lazo: observar devuelve el stage al developer | no escrita |
@@ -199,6 +199,10 @@ la última rebanada, que es donde los proyectos mueren. Arrancan **ahora**, en p
 |---|---|---|---|
 | `SPEC-008` | Cimientos verificables | 0 | **cerrada** 2026-08-20 |
 | `SPEC-010` | Endurecer la superficie 🔴 | 0c | **cerrada** 2026-08-21 |
+| `SPEC-011` | Login de 4 roles | 1 | **cerrada** 2026-08-21 |
+
+`SPEC-009` está reservada (rebanada 0b, rename D-023 + naming de contratos) pero todavía no
+escrita.
 
 Las siete specs heredadas (`SPEC-001` a `SPEC-007`) se eliminaron el 2026-07-29: precedían a la
 documentación oficial y describían prototipos descartables. Lo vigente de cada una está absorbido

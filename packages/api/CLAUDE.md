@@ -31,6 +31,19 @@ endpoints del backlog **hoy conforman 2**: `POST /auth/login` y `GET /auth/me`.
 
 ## Trampas verificadas
 
+- **2026-08-21 · TypeScript hoistea TODOS los `import` al principio del archivo compilado, así
+  que un `dotenv.config()` intercalado entre imports corre DESPUÉS de que ya se resolvieron.**
+  `app.ts` tenía `import dotenv from "dotenv"; dotenv.config(); import express ...; import
+  authRoutes from "./routes/auth.routes";` — visualmente `dotenv.config()` corre segundo, pero el
+  emit de CommonJS pone los `require()` de los tres imports **antes** que cualquier código
+  intercalado, en el orden en que aparecen los `import`. `auth.routes` carga `lib/jwt.ts`, que lee
+  `JWT_SECRET` al importarse (D-042) — así que la API tiraba "JWT_SECRET falta o está vacío" con
+  un `.env` perfectamente válido y confirmado con `node -e` standalone. Se encontró al verificar
+  `pnpm dev` desde cero para SPEC-011: nadie lo había pisado porque el árbol principal nunca se
+  había reiniciado limpio con este archivo. **Fix:** `import "dotenv/config"` como el primer
+  import del archivo (side-effect import, sin código intercalado) — mismo patrón que ya usaban
+  `db/migrate.ts` y `db/seed.ts`, que por eso nunca lo sufrieron. Antes de "arreglar" un
+  `dotenv.config()` que parece no cargar nada, mirá si hay imports después en el mismo archivo.
 - **2026-08-20 · `storagePath` se filtraba en las cuatro respuestas de `/evidence`.** D-011 dice
   explícitamente que la clave de almacenamiento jamás se expone, pero `POST/GET/GET-by-id/PATCH
   /evidence` devolvían el registro completo — incluida la ruta absoluta en disco del servidor. Se
