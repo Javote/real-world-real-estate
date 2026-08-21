@@ -146,8 +146,12 @@ Con `notary` pendiente de entrar al schema —el dominio tiene cuatro roles y el
 los nombres viejos— eso iba a pasar en serio. Ahora agregar un rol al enum sin tocar esta lista no
 compila (TS1360, verificado a propósito).
 
-**Sigue abierto · es una función que hay que acordarse de llamar**, no un middleware que no se
-puede olvidar. `requireRole` está en la cadena o no está; `canAccessProject` devuelve un booleano
+**Mitigado el 2026-08-21, no resuelto · es una función que hay que acordarse de llamar**, no un
+middleware que no se puede olvidar. `scripts/check-project-access.py` corre en la sección 1 de la
+puerta y falla nombrando el endpoint: *una ruta con parámetro en el path, o que liste proyectos,
+necesita `canAccessProject`/`projectScope` o ser admin-only* — y `requireRole("admin", "developer")`
+no cuenta como admin-only. Eso vuelve ruidoso el olvido; no lo vuelve imposible (D-044). La forma
+sigue abierta: `requireRole` está en la cadena o no está; `canAccessProject` devuelve un booleano
 que alguien tiene que chequear. Un endpoint nuevo que se olvide **no tiene segunda capa, y nada lo
 detecta**: ni el compilador, ni un test, ni la puerta. Hoy son 27 endpoints y el backlog son ~80, así
 que el momento barato de cambiar la forma es **antes** de la tanda grande, no después. Default

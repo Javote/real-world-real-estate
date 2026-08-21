@@ -58,6 +58,7 @@
 | D-041 | Deploy con runtime nativo de Node + `render.yaml`. Sin Docker | Aceptada |
 | D-042 | En la superficie 🔴 el default inseguro no existe: se revienta al arrancar y se cierra al omitir | Aceptada |
 | D-043 | La regla de visibilidad de proyectos existe una sola vez: `projectScope` | Aceptada |
+| D-044 | La segunda capa de autorización la verifica la puerta; el middleware queda diferido | Aceptada (con trigger de revisión) |
 
 > **Repaso completo con la documentación oficial: ver §Repaso al final del archivo.** D-001..D-017 se
 > escribieron sin los entregables delante; las 25 entradas se revisaron el 2026-07-29 y cada una
@@ -1049,6 +1050,68 @@ lugar donde se agrega, no una condición nueva en una ruta.
 **Reversión.** El filtro es una función pura de tres argumentos; volver atrás es reponer el query
 viejo en la ruta. Lo que no se revierte son los tests del listado: fijan el scope, el orden y la
 deduplicación, que antes no cubría nada.
+
+
+## D-044 — La segunda capa de autorización la verifica la puerta; el middleware queda diferido
+
+**Contexto (2026-08-21).** La auditoría 🔴 dejó un hallazgo que D-042 y D-043 no resuelven:
+`canAccessProject` es una **función que hay que acordarse de llamar**, no un middleware que no se
+pueda olvidar. `requireRole` está en la cadena o no está; la segunda capa devuelve un booleano que
+alguien tiene que chequear. Un endpoint nuevo que se la olvide no tiene segunda capa y **nada lo
+detecta**: ni el compilador, ni un test, ni la puerta.
+
+La forma correcta es un `requireProjectAccess(...)` de Express que lea `req.params.projectId`. Pero
+ese refactor toca los 27 call sites, es 🔴 —lo lidera el humano, línea por línea— y **no bloquea
+nada hoy**: las 27 rutas están auditadas y sin agujeros, y el hallazgo no es un P1 (no hay
+explotación posible, es riesgo estructural), así que no toca el criterio 11 ni ningún otro de los
+16. Al mismo tiempo no se puede diferir para siempre: el backlog de M2-D5 son ~80 endpoints, y
+retrofitear 80 cuesta el triple que 27.
+
+**Decisión.** Separar el problema en sus dos mitades y resolver primero la barata:
+
+| | Detector en la puerta | Middleware |
+|---|---|---|
+| Qué compra | que olvidarse sea **ruidoso** | que olvidarse sea **imposible** |
+| Nivel | 🟡 — es verificación, no lógica de auth | 🔴 — lo lidera el humano |
+| Costo | una sesión corta | 27 call sites revisados a mano |
+| Caducidad | ninguna: sigue sirviendo con el middleware puesto | — |
+
+`scripts/check-project-access.py` corre en la **sección 1 de la puerta**, junto a las prohibiciones
+absolutas y no junto a la verificación por frente: es un invariante, no el test de un subárbol.
+La regla es una línea — *una ruta con parámetro en el path, o que liste proyectos, necesita
+`canAccessProject`/`projectScope` o ser admin-only*— y `requireRole("admin", "developer")` **no**
+cuenta como admin-only, porque ahí el developer entra por rol y necesita la membresía igual.
+
+**El detector no reemplaza al middleware.** "Imposible" es estrictamente mejor que "ruidoso", y esto
+es análisis de texto sobre archivos de rutas: se lo puede engañar registrando rutas de una forma que
+no matchee. Lo que compra es que el modo de falla realista —alguien escribe un endpoint más y se
+olvida— deje de ser silencioso. El hallazgo sigue **abierto** (hallazgo 9 de `specs/README.md`).
+
+**Alternativas descartadas.**
+
+- *Hacer el middleware ahora.* Es lo correcto y es prematuro: gasta atención humana —el recurso más
+  escaso del proyecto, con el criterio 4 dependiendo de recontactar pilotos— en algo que no bloquea
+  ningún criterio, y lo hace sobre archivos que `SPEC-009` va a renombrar igual.
+- *Anotarlo y seguir.* Es lo que ya estaba, y es exactamente la queja: un párrafo no detecta nada
+  (D-032). La deuda anotada que no tiene quien la haga sonar se paga cuando ya es cara.
+- *Un test en vez de un chequeo de la puerta.* Tendría que enumerar rutas de todas formas, y viviría
+  en la suite de un frente en vez de correr siempre. La puerta es el lugar de los invariantes.
+
+**Allowlist vacía a propósito.** El script tiene un diccionario de excepciones y hoy no tiene
+ninguna — las 27 rutas pasan sin excepción, que es la confirmación ejecutable de la auditoría manual
+del 2026-08-20. Si algo tiene que entrar ahí, que cueste escribirlo con su motivo al lado.
+
+**Se verifica a sí mismo.** `check-project-access.py --self-test` corre 10 casos contra fixtures
+sintéticos y lo ejecuta `scripts/hooks/test-guards.sh`. Un chequeo que no se prueba termina pasando
+siempre, que es peor que no tenerlo: da confianza sin dar cobertura.
+
+**Trigger de revisión — cuándo se hace el middleware.** El primero que ocurra: (a) el detector
+salta por un olvido real, (b) arranca la rebanada 1, que es donde empieza la tanda grande de
+endpoints, o (c) aparece una ruta que el detector no sabe leer. Si al llegar a (b) el detector nunca
+saltó, eso es evidencia de que se puede seguir difiriendo — y si saltó dos veces, de que no.
+
+**Reversión.** Sacar una línea de `gate.sh`. Lo que no se revierte es la evidencia que va a haber
+juntado para entonces.
 
 ---
 

@@ -116,6 +116,19 @@ else
   ok "sin secretos versionados (regla 12)"
 fi
 
+# Regla 5 — autorización en dos capas. `requireRole` es un middleware: está en la
+# cadena o no está. `canAccessProject` es una función que hay que ACORDARSE de
+# llamar, así que un endpoint que se la olvide no tiene segunda capa y nada lo
+# detecta. Esto no arregla la forma (hallazgo 9 de specs/README.md, 🔴) pero hace
+# que olvidarse sea ruidoso. Corre siempre: es barato y es un invariante, no una
+# verificación de frente.
+if ACCESS_OUT="$(python3 scripts/check-project-access.py 2>&1)"; then
+  ok "todo endpoint con alcance de proyecto tiene segunda capa (regla 5)"
+else
+  bad "un endpoint con alcance de proyecto no tiene segunda capa de autorización (regla 5)"
+  printf '%s\n' "$ACCESS_OUT" | sed 's/^/      /'
+fi
+
 # D-013 — Preprod en todos los entornos. CI nunca toca ninguna red.
 # El propio script queda excluido: un escáner que vive dentro del corpus que
 # escanea se encuentra a sí mismo (pasó — el mensaje de error matcheaba el patrón).

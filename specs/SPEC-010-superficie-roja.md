@@ -106,11 +106,12 @@ original. Están cerradas en esta spec:
 
 ## Preguntas abiertas
 
-- **`canAccessProject` como middleware.** Hoy es una función que hay que acordarse de llamar y nada
-  detecta al que se la olvide: ni el compilador, ni un test, ni la puerta. Con 27 endpoints se
-  auditó a mano; con los ~80 del backlog no escala. Default: un `requireProjectAccess(...)` de
-  Express que lea `req.params.projectId`. Dueño: humano (es 🔴). **Antes** de la tanda grande de
-  endpoints, no después.
+- **`canAccessProject` como middleware.** Sigue siendo una función que hay que acordarse de llamar.
+  Lo que cambió el 2026-08-21 es que ya no es silencioso: `scripts/check-project-access.py` corre en
+  la sección 1 de la puerta y nombra el endpoint que se olvidó (D-044). Eso compra "ruidoso", no
+  "imposible" — la forma sigue abierta. Default: un `requireProjectAccess(...)` de Express que lea
+  `req.params.projectId`. Dueño: humano (es 🔴). Se hace al arrancar la rebanada 1, o antes si el
+  detector salta; el trigger completo está en D-044.
 
 ## Definición de terminado
 

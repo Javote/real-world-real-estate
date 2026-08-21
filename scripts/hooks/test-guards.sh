@@ -91,5 +91,15 @@ analyze "-"           'GATE_ALLOW_DOCS=1 git rm docs/x.md'                      
 analyze "WRITE=docs/" 'GATE_ALLOW_DOCS=0 git rm docs/x.md'                              "el escape en 0 no habilita nada"
 analyze "WRITE=docs/" 'OTRA_VAR=1 git rm docs/x.md'                                     "otra variable no habilita nada"
 
+echo
+echo "check-project-access.py — la segunda capa no se puede olvidar en silencio"
+if OUT="$(python3 scripts/check-project-access.py --self-test 2>&1)"; then
+  printf '%s\n' "$OUT" | grep '✔' | sed 's/^/  /'
+  PASS=$((PASS + $(printf '%s' "$OUT" | grep -c '✔')))
+else
+  printf '%s\n' "$OUT" | sed 's/^/  /'
+  FAIL=$((FAIL + 1))
+fi
+
 printf '\n%s pasaron · %s fallaron\n' "$PASS" "$FAIL"
 [ "$FAIL" -eq 0 ] || exit 1

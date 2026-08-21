@@ -164,8 +164,9 @@ No leas los cuatro entregables por costumbre: son ~25k tokens. Abrí lo que la f
 **El protocolo de sesión es el skill `slice`.** Invocalo al empezar; no lo repito acá.
 
 **La puerta.** `scripts/gate.sh` es el único comando que decide si un cambio puede pushearse:
-prohibiciones absolutas, typecheck, tests **del frente que tocaste**, y contratos si aplica. **El
-CI corre el mismo script** — si se separan, divergen.
+prohibiciones absolutas —entre ellas que **todo endpoint con alcance de proyecto tenga la segunda
+capa** de la regla 5 (D-044)—, typecheck, tests **del frente que tocaste**, y contratos si aplica.
+**El CI corre el mismo script** — si se separan, divergen.
 
 Lo que no se puede dejar librado al azar **es un hook, no un párrafo** (D-032). Están bloqueados
 por el harness, no por convención: editar `docs/`, editar una migración aplicada o un archivo
