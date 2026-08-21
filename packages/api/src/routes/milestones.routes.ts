@@ -1,8 +1,7 @@
-import { asc, eq } from "drizzle-orm";
 import { Router } from "express";
 import { z } from "zod";
-import { milestones } from "../db/schema";
 import { db } from "../lib/db";
+import { createId } from "../db/id";
 import {
   authenticate,
   ANY_MEMBERSHIP,
@@ -28,10 +27,11 @@ router.get("/projects/:id/milestones", async (req, res) => {
   }
 
   const result = await db
-    .select()
-    .from(milestones)
-    .where(eq(milestones.projectId, req.params.id))
-    .orderBy(asc(milestones.sequenceOrder));
+    .selectFrom("Milestone")
+    .selectAll()
+    .where("projectId", "=", req.params.id)
+    .orderBy("sequenceOrder", "asc")
+    .execute();
 
   return res.json(result);
 });
@@ -62,18 +62,24 @@ router.post("/projects/:id/milestones", requireRole("admin", "developer"), async
     return res.status(400).json(parsed.error.flatten());
   }
 
-  const [milestone] = await db
-    .insert(milestones)
+  const now = new Date();
+
+  const milestone = await db
+    .insertInto("Milestone")
     .values({
+      id: createId(),
       projectId: req.params.id,
       name: parsed.data.name,
       sequenceOrder: parsed.data.sequenceOrder,
       state: parsed.data.state ?? "Pending",
       validationCritical: parsed.data.validationCritical ?? false,
       scopeType: parsed.data.scopeType ?? "project_wide",
-      scopeUnitCount: parsed.data.scopeUnitCount ?? 0
+      scopeUnitCount: parsed.data.scopeUnitCount ?? 0,
+      createdAt: now,
+      updatedAt: now
     })
-    .returning();
+    .returningAll()
+    .executeTakeFirstOrThrow();
 
   await writeAuditLog({
     actorUserId: req.user!.id,
@@ -86,13 +92,11 @@ router.post("/projects/:id/milestones", requireRole("admin", "developer"), async
 });
 
 router.get("/milestones/:id", async (req, res) => {
-  const milestone = await db.query.milestones.findFirst({
-    where: eq(milestones.id, req.params.id),
-    with: {
-      evidences: true,
-      project: true
-    }
-  });
+  const milestone = await db
+    .selectFrom("Milestone")
+    .selectAll()
+    .where("id", "=", req.params.id)
+    .executeTakeFirst();
 
   if (!milestone) {
     return res.status(404).json({ message: "Milestone not found" });
@@ -109,14 +113,20 @@ router.get("/milestones/:id", async (req, res) => {
     return res.status(403).json({ message: "Forbidden" });
   }
 
-  return res.json(milestone);
+  const [evidences, project] = await Promise.all([
+    db.selectFrom("Evidence").selectAll().where("milestoneId", "=", milestone.id).execute(),
+    db.selectFrom("Project").selectAll().where("id", "=", milestone.projectId).executeTakeFirst()
+  ]);
+
+  return res.json({ ...milestone, evidences, project });
 });
 
 router.patch("/milestones/:id", requireRole("admin", "developer"), async (req, res) => {
-  const [milestoneExisting] = await db
-    .select()
-    .from(milestones)
-    .where(eq(milestones.id, req.params.id));
+  const milestoneExisting = await db
+    .selectFrom("Milestone")
+    .selectAll()
+    .where("id", "=", req.params.id)
+    .executeTakeFirst();
 
   if (!milestoneExisting) {
     return res.status(404).json({ message: "Milestone not found" });
@@ -146,11 +156,12 @@ router.patch("/milestones/:id", requireRole("admin", "developer"), async (req, r
     return res.status(400).json(parsed.error.flatten());
   }
 
-  const [milestone] = await db
-    .update(milestones)
-    .set(parsed.data)
-    .where(eq(milestones.id, req.params.id))
-    .returning();
+  const milestone = await db
+    .updateTable("Milestone")
+    .set({ ...parsed.data, updatedAt: new Date() })
+    .where("id", "=", req.params.id)
+    .returningAll()
+    .executeTakeFirstOrThrow();
 
   await writeAuditLog({
     actorUserId: req.user!.id,
@@ -172,7 +183,11 @@ router.patch("/milestones/:id/state", requireRole("admin", "developer"), async (
     return res.status(400).json(parsed.error.flatten());
   }
 
-  const [existing] = await db.select().from(milestones).where(eq(milestones.id, req.params.id));
+  const existing = await db
+    .selectFrom("Milestone")
+    .selectAll()
+    .where("id", "=", req.params.id)
+    .executeTakeFirst();
 
   if (!existing) {
     return res.status(404).json({ message: "Milestone not found" });
@@ -189,8 +204,14 @@ router.patch("/milestones/:id/state", requireRole("admin", "developer"), async (
     return res.status(403).json({ message: "Forbidden" });
   }
 
-  const data: { state: typeof parsed.data.state; certifiedAt?: Date; certifiedById?: string } = {
-    state: parsed.data.state
+  const data: {
+    state: typeof parsed.data.state;
+    updatedAt: Date;
+    certifiedAt?: Date;
+    certifiedById?: string;
+  } = {
+    state: parsed.data.state,
+    updatedAt: new Date()
   };
 
   if (parsed.data.state === "Completed") {
@@ -198,11 +219,12 @@ router.patch("/milestones/:id/state", requireRole("admin", "developer"), async (
     data.certifiedById = req.user!.id;
   }
 
-  const [milestone] = await db
-    .update(milestones)
+  const milestone = await db
+    .updateTable("Milestone")
     .set(data)
-    .where(eq(milestones.id, req.params.id))
-    .returning();
+    .where("id", "=", req.params.id)
+    .returningAll()
+    .executeTakeFirstOrThrow();
 
   await writeAuditLog({
     actorUserId: req.user!.id,
@@ -216,7 +238,7 @@ router.patch("/milestones/:id/state", requireRole("admin", "developer"), async (
 });
 
 router.delete("/milestones/:id", requireRole("admin"), async (req, res) => {
-  await db.delete(milestones).where(eq(milestones.id, req.params.id));
+  await db.deleteFrom("Milestone").where("id", "=", req.params.id).execute();
 
   await writeAuditLog({
     actorUserId: req.user!.id,

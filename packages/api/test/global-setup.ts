@@ -1,17 +1,19 @@
 import { existsSync, rmSync } from "node:fs";
 import path from "node:path";
 import bcrypt from "bcrypt";
-import { drizzle } from "drizzle-orm/libsql";
-import { migrate } from "drizzle-orm/libsql/migrator";
-import { eq } from "drizzle-orm";
-import { projectMembers, projects, users } from "../src/db/schema";
+import { Kysely } from "../src/lib/kysely";
+import { LibsqlDialect } from "../src/lib/libsql-dialect";
+import type { Database } from "../src/db/types";
+import { SqliteTypeCoercionPlugin } from "../src/db/sqlite-type-plugin";
+import { createId } from "../src/db/id";
 import { createClient } from "../src/lib/libsql-client";
 
-// Drizzle-kit resuelve las rutas SQLite relativas al cwd del proceso (acá,
-// packages/api), así que `file:./test.db` cae directo en packages/api/test.db
-// — ya no en prisma/test.db, que dejó de existir con la migración a Drizzle.
+// El migrador propio (D-049) resuelve rutas relativas al cwd del proceso
+// (acá, packages/api), así que `file:./test.db` cae directo en
+// packages/api/test.db.
 const DATABASE_URL = "file:./test.db";
 const DB_FILE = path.join(process.cwd(), "test.db");
+const MIGRATIONS_DIR = path.join(process.cwd(), "drizzle");
 
 export const FIXTURES = {
   /** developer, activo y MIEMBRO del proyecto de prueba */
@@ -27,89 +29,172 @@ export const FIXTURES = {
   otroProyecto: { slug: "torre-ajena" },
 };
 
+async function applyMigrations(client: ReturnType<typeof createClient>) {
+  const { readdirSync, readFileSync } = await import("node:fs");
+
+  await client.execute(
+    "CREATE TABLE IF NOT EXISTS _migrations (name text PRIMARY KEY NOT NULL, appliedAt integer NOT NULL)"
+  );
+
+  const files = readdirSync(MIGRATIONS_DIR)
+    .filter((file) => file.endsWith(".sql"))
+    .sort();
+
+  for (const file of files) {
+    const sql = readFileSync(path.join(MIGRATIONS_DIR, file), "utf-8");
+    const statements = sql
+      .split("--> statement-breakpoint")
+      .map((statement) => statement.trim())
+      .filter((statement) => statement.length > 0);
+
+    for (const statement of statements) {
+      await client.execute(statement);
+    }
+
+    await client.execute({
+      sql: "INSERT INTO _migrations (name, appliedAt) VALUES (?, ?)",
+      args: [file, Date.now()]
+    });
+  }
+}
+
 export default async function setup() {
   for (const f of [DB_FILE, `${DB_FILE}-journal`, `${DB_FILE}-wal`, `${DB_FILE}-shm`]) {
     if (existsSync(f)) rmSync(f);
   }
 
-  const client = createClient({ url: DATABASE_URL });
-  const db = drizzle(client);
+  // Se aplican las migraciones reales (`drizzle/*.sql`) y no una proyección
+  // ad-hoc del schema: así la suite verifica lo mismo que va a correr en
+  // producción. Se usa un cliente propio, aparte del que instancia
+  // `LibsqlDialect` más abajo (ver `lib/db.ts` sobre por qué no se comparte
+  // uno): acá hace falta `execute()` con SQL crudo, que Kysely no expone.
+  const migrationClient = createClient({ url: DATABASE_URL });
+  await applyMigrations(migrationClient);
+  migrationClient.close();
 
-  // Equivalente a `prisma migrate deploy`: aplica las migraciones commiteadas en
-  // `drizzle/`, así la suite verifica las migraciones reales que van a correr en
-  // producción y no una proyección del schema.
-  await migrate(db, { migrationsFolder: "./drizzle" });
+  const db = new Kysely<Database>({
+    dialect: new LibsqlDialect({ url: DATABASE_URL }),
+    plugins: [new SqliteTypeCoercionPlugin()]
+  });
 
   const hash = (pw: string) => bcrypt.hash(pw, 10);
+  const now = new Date();
 
-  await db.insert(users).values([
-    {
-      email: FIXTURES.activo.email,
-      passwordHash: await hash(FIXTURES.activo.password),
-      role: "developer",
-      fullName: FIXTURES.activo.fullName,
-      isActive: true,
-    },
-    {
-      email: FIXTURES.inactivo.email,
-      passwordHash: await hash(FIXTURES.inactivo.password),
-      role: "buyer",
-      fullName: FIXTURES.inactivo.fullName,
-      isActive: false,
-    },
-    {
-      email: FIXTURES.revocable.email,
-      passwordHash: await hash(FIXTURES.revocable.password),
-      role: "admin",
-      fullName: FIXTURES.revocable.fullName,
-      isActive: true,
-    },
-    {
-      email: FIXTURES.ajeno.email,
-      passwordHash: await hash(FIXTURES.ajeno.password),
-      role: "developer",
-      fullName: FIXTURES.ajeno.fullName,
-      isActive: true,
-    },
-    {
-      email: FIXTURES.admin.email,
-      passwordHash: await hash(FIXTURES.admin.password),
-      role: "admin",
-      fullName: FIXTURES.admin.fullName,
-      isActive: true,
-    },
-  ]);
+  await db
+    .insertInto("User")
+    .values([
+      {
+        id: createId(),
+        email: FIXTURES.activo.email,
+        passwordHash: await hash(FIXTURES.activo.password),
+        role: "developer",
+        fullName: FIXTURES.activo.fullName,
+        isActive: true,
+        createdAt: now,
+        updatedAt: now
+      },
+      {
+        id: createId(),
+        email: FIXTURES.inactivo.email,
+        passwordHash: await hash(FIXTURES.inactivo.password),
+        role: "buyer",
+        fullName: FIXTURES.inactivo.fullName,
+        isActive: false,
+        createdAt: now,
+        updatedAt: now
+      },
+      {
+        id: createId(),
+        email: FIXTURES.revocable.email,
+        passwordHash: await hash(FIXTURES.revocable.password),
+        role: "admin",
+        fullName: FIXTURES.revocable.fullName,
+        isActive: true,
+        createdAt: now,
+        updatedAt: now
+      },
+      {
+        id: createId(),
+        email: FIXTURES.ajeno.email,
+        passwordHash: await hash(FIXTURES.ajeno.password),
+        role: "developer",
+        fullName: FIXTURES.ajeno.fullName,
+        isActive: true,
+        createdAt: now,
+        updatedAt: now
+      },
+      {
+        id: createId(),
+        email: FIXTURES.admin.email,
+        passwordHash: await hash(FIXTURES.admin.password),
+        role: "admin",
+        fullName: FIXTURES.admin.fullName,
+        isActive: true,
+        createdAt: now,
+        updatedAt: now
+      }
+    ])
+    .execute();
 
   // Un proyecto con UN developer miembro y otro que no lo es: sin eso no se
   // puede testear la segunda capa de autorización (rol global + membresía).
-  const [proyecto] = await db
-    .insert(projects)
+  const proyecto = await db
+    .insertInto("Project")
     .values({
+      id: createId(),
       name: "Torre Test",
       slug: FIXTURES.proyecto.slug,
       status: "in_progress",
       totalUnits: 10,
+      createdAt: now,
+      updatedAt: now
     })
-    .returning();
+    .returningAll()
+    .executeTakeFirstOrThrow();
 
-  const [miembro] = await db.select().from(users).where(eq(users.email, FIXTURES.activo.email));
+  const miembro = await db
+    .selectFrom("User")
+    .selectAll()
+    .where("email", "=", FIXTURES.activo.email)
+    .executeTakeFirstOrThrow();
 
-  await db.insert(projectMembers).values([
-    { projectId: proyecto.id, userId: miembro.id, membershipRole: "developer" },
-    // DOS membresías sobre el MISMO proyecto: el schema lo permite (índice único
-    // por userId+projectId+membershipRole) y el listado viejo lo devolvía
-    // duplicado. Sin este fixture, esa regresión no se ve.
-    { projectId: proyecto.id, userId: miembro.id, membershipRole: "buyer" },
-  ]);
+  await db
+    .insertInto("ProjectMember")
+    .values([
+      {
+        id: createId(),
+        projectId: proyecto.id,
+        userId: miembro.id,
+        membershipRole: "developer",
+        createdAt: now
+      },
+      // DOS membresías sobre el MISMO proyecto: el schema lo permite (índice
+      // único por userId+projectId+membershipRole) y el listado viejo lo
+      // devolvía duplicado. Sin este fixture, esa regresión no se ve.
+      {
+        id: createId(),
+        projectId: proyecto.id,
+        userId: miembro.id,
+        membershipRole: "buyer",
+        createdAt: now
+      }
+    ])
+    .execute();
 
   // Segundo proyecto, sin ningún miembro: es contra lo que se mide que el
   // listado scopee. Se crea después, así que es el más nuevo por createdAt.
-  await db.insert(projects).values({
-    name: "Torre Ajena",
-    slug: FIXTURES.otroProyecto.slug,
-    status: "planning",
-    totalUnits: 4,
-  });
+  await db
+    .insertInto("Project")
+    .values({
+      id: createId(),
+      name: "Torre Ajena",
+      slug: FIXTURES.otroProyecto.slug,
+      status: "planning",
+      totalUnits: 4,
+      createdAt: new Date(now.getTime() + 1),
+      updatedAt: new Date(now.getTime() + 1)
+    })
+    .execute();
 
-  client.close();
+  await db.destroy();
 }

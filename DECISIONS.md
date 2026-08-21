@@ -63,6 +63,7 @@
 | D-046 | bcrypt se ratifica —con el argumento del free tier— y la política de passwords sale de NIST/OWASP | Aceptada |
 | D-047 | El seed de demo se niega a sembrar credenciales publicadas en una base que no sea local | Aceptada |
 | D-048 | La migración a Drizzle deja de estar diferida: arranca antes de las rebanadas de M3 | Aceptada |
+| D-049 | ORM: Drizzle → Kysely, un commit después de D-048 | Aceptada |
 
 > **Repaso completo con la documentación oficial: ver §Repaso al final del archivo.** D-001..D-017 se
 > escribieron sin los entregables delante; las 25 entradas se revisaron el 2026-07-29 y cada una
@@ -1369,6 +1370,41 @@ qué*, no el diseño del schema.
 **Trigger de revisión.** Ninguno — decisión de una sola vez, no recurrente. Si la migración expone
 un problema real con Drizzle+libSQL que no estaba previsto, se documenta como una D-0XX nueva que
 reabra este párrafo con esa evidencia, siguiendo el mismo principio 3.
+
+
+## D-049 — ORM: Drizzle → Kysely, un commit después de D-048 — **Aceptada**
+
+**Contexto (2026-08-21).** D-048 migró `packages/api` de Prisma a Drizzle el mismo día. Un commit
+después, el dueño del producto pidió migrar de Drizzle a Kysely con el argumento de que "Drizzle no
+es completamente type-safe, Kysely sí". Se le pidió evidencia concreta (un caso puntual del repo
+donde Drizzle perdiera tipos) antes de reabrir D-048, siguiendo el principio 3. No hay caso puntual:
+es una postura del dueño del producto, no un hallazgo técnico — la misma clase de evidencia que ya
+cerró D-039 (Render sobre Railway) sin spike. Se registra así, sin dorar la píldora: **esta entrada
+no tiene el respaldo técnico que el trigger de revisión de D-048 pedía**; se acepta igual porque el
+principio 3 reconoce la postura del dueño del producto como evidencia válida para un default, y
+D-048 nunca fue más que eso.
+
+**Decisión.** `packages/api` migra su capa de acceso a datos de Drizzle a **Kysely**, sobre el mismo
+`@libsql/client` y el mismo archivo de migraciones SQL (`drizzle/*.sql` se renombra pero su
+contenido no cambia: son SQL plano, no DSL de un ORM). El schema pasa de `drizzle-orm/sqlite-core`
+a una interfaz `Database` de Kysely con los mismos nombres de tabla/columna. Los patrones ya
+resueltos para Drizzle (`projectScope` como `EXISTS` correlacionado, `EVIDENCE_SAFE_COLUMNS` como
+lista explícita de columnas seleccionadas) se reimplementan con el query builder de Kysely — no se
+pierden, cambian de sintaxis.
+
+**Qué NO cambia.** Turso/SQLite (D-038), `@libsql/client` como driver, el shape de las tablas, y
+`drizzle-kit` **como generador de migraciones SQL** (Kysely no trae uno propio; se sigue generando
+el diff con `drizzle-kit generate` a partir de un schema espejo mínimo, o escribiendo el SQL a
+mano — a decidir en la implementación, no acá).
+
+**Alcance.** `packages/api` completo: `src/db/schema.ts`, `src/lib/db.ts`, `src/db/migrate.ts`,
+`src/db/seed.ts`, `src/middlewares/auth.ts` y las cinco rutas que importan Drizzle
+(`audit`, `auth`, `evidence`, `milestones`, `projects`, `users`). `apps/web` no se toca.
+
+**Trigger de revisión.** Ninguno adicional al de D-048: si esta migración expone un problema real
+con Kysely, se documenta como una D-0XX nueva con esa evidencia. Dado que esta entrada ya se acepta
+sin evidencia técnica, una futura reversión tampoco la necesita — alcanza con la misma postura del
+dueño del producto.
 
 **Reversión.** Mientras el ORM siga detrás de `packages/api/src/lib/db.ts` (antes `lib/prisma.ts`)
 y de los repositorios de cada ruta, volver a Prisma es una migración simétrica a esta, no un

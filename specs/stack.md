@@ -50,7 +50,7 @@ El front está a ~2% de conformidad con el diseño aprobado. Lo que se conserva 
 | Pieza | Versión | Estado | Nota |
 |---|---|---|---|
 | Express | `4.22.2` | ● | D-016. `@types/express` **pineado a v4**: los tipos v5 rompen todas las rutas |
-| Prisma (ORM + CLI) → **Drizzle** | `6.19.3` → en migración | ◐ | D-016 → D-038 (destino) → **D-048: la migración arranca ahora, no diferida** |
+| Prisma → Drizzle → **Kysely** | en migración | ◐ | D-016 → D-038 (Drizzle) → D-048 (arranca la migración) → **D-049: Drizzle → Kysely, sin evidencia técnica, postura del dueño del producto** |
 | Zod | `4.4.3` | ● | D-035. Rutas heredadas aún con formas de la 3, que v4 acepta |
 | JWT (`jsonwebtoken`) | `9.0.2` | ● | 7 días, con revalidación de `isActive` por request |
 | **bcrypt** (módulo nativo) | `5.1.1` | ◐ | cost 10. Nativo ⇒ toolchain en la imagen Docker, y es el origen del warning de `url.parse()` vía `node-pre-gyp` |
@@ -89,7 +89,7 @@ Ningún validador custodia ni transfiere valor, en ninguna fase (D-021).
 
 | Pieza | Hoy | Destino | Estado | Decisión |
 |---|---|---|---|---|
-| Base de datos | **SQLite** (`prisma/dev.db`) | **SQLite** vía **Turso** en prod (free: 5 GB · 500M lecturas · 10M escrituras) | ○ | D-038 · D-040 — Turso **obligatorio**, no preferencia: en free no hay disco. Migración a Drizzle diferida, sin fecha |
+| Base de datos | **SQLite** (`dev.db`, Kysely sobre `@libsql/client`) | **SQLite** vía **Turso** en prod (free: 5 GB · 500M lecturas · 10M escrituras) | ○ | D-038 · D-040 — Turso **obligatorio**, no preferencia: en free no hay disco. ORM: D-048 → D-049 |
 | Migraciones | Prisma Migrate, 1 migración (`init`) | idempotentes en el entrypoint | ◐ | D-012 |
 | Archivos de evidencia | **disco local** (`UPLOAD_DIR`, Multer) | **S3 genérico**: MinIO dev / **Cloudflare R2** prod (free: 10 GB, egress $0) | ○ — **prerequisito del primer deploy**, no transición: en free no hay disco persistente | D-011 · D-040 |
 | URLs de archivos | descarga por endpoint autenticado | prefirmadas, TTL ≤15 min | ○ | D-011 |
@@ -166,6 +166,7 @@ Ver `CLAUDE.md` §Cómo se trabaja acá y D-032.
 | Retención de datos | sin default | nunca se discutió (backups los cubre D-038) |
 | Gestor de secretos en pre-prod | variables de entorno de la plataforma de deploy | el primer deploy real |
 | ~~D-038 · cuándo migrar Prisma → Drizzle~~ | — | **Cerrada: D-048** (2026-08-21). Arranca antes de las rebanadas de M3, no diferida. |
+| ~~D-048 · Drizzle como destino de ORM~~ | — | **Reabierta y cerrada: D-049** (2026-08-21). Drizzle → Kysely, sin evidencia técnica, postura del dueño del producto. |
 | D-038 · Turso vs disco Render + Litestream para SQLite en prod | Turso (por el worker de confirmaciones de D-003, no por costo) | primer intento real de deploy a Render |
 
 ## 11 · Deuda del stack

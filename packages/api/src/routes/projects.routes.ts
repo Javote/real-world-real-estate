@@ -1,8 +1,7 @@
-import { and, asc, desc, eq, inArray } from "drizzle-orm";
 import { Router } from "express";
 import { z } from "zod";
-import { milestones, projectMembers, projects } from "../db/schema";
 import { db } from "../lib/db";
+import { createId } from "../db/id";
 import {
   authenticate,
   ANY_MEMBERSHIP,
@@ -20,44 +19,28 @@ router.get("/", async (req, res) => {
   const { status, city } = req.query;
 
   // El scope de visibilidad sale de `projectScope` y no de un query propio: es
-  // la MISMA regla que aplica `canAccessProject` a un proyecto puntual. Antes
-  // esta ruta tenía su propia implementación —traía todas las membresías del
-  // usuario y filtraba en JS— que daba el mismo resultado por casualidad.
-  //
-  // Al unificarlas se cayeron dos cosas que la copia hacía mal y nadie miraba:
-  // el listado de un no-admin salía en orden de membresía en vez de por fecha, y
-  // un usuario con dos membresías en el mismo proyecto lo veía DUPLICADO (el
-  // schema permite developer + buyer sobre el mismo proyecto). `projectScope`
-  // usa un EXISTS correlacionado, así que no duplica.
-  //
-  // Nota de implementación: el listado NO usa la Relational Query API
-  // (`db.query.projects.findMany`) porque esa API alias-ea la tabla base
-  // (`"Project" AS "projects"`) y la condición de `projectScope` referencia la
-  // columna del schema importado sin ese alias — Drizzle no reescribe un `SQL`
-  // a medida para calzar con su propio alias interno, así que el EXISTS
-  // correlacionado sale apuntando a una tabla que no está en scope
-  // ("no such column: Project.id"). Con `db.select().from(projects)` no hay
-  // alias de por medio, así que se arma en dos pasos: los proyectos filtrados
-  // (con su orden final) y los milestones de esos proyectos, agrupados en JS.
-  const projectRows = await db
-    .select()
-    .from(projects)
-    .where(
-      and(
-        status ? eq(projects.status, String(status) as any) : undefined,
-        city ? eq(projects.city, String(city)) : undefined,
-        projectScope(req.user!.role, req.user!.id, ANY_MEMBERSHIP)
-      )
-    )
-    .orderBy(desc(projects.createdAt));
+  // la MISMA regla que aplica `canAccessProject` a un proyecto puntual (D-048,
+  // D-049 — reimplementado con el query builder de Kysely, misma semántica:
+  // `EXISTS` correlacionado, sin duplicar filas de un usuario con dos
+  // membresías sobre el mismo proyecto).
+  let query = db.selectFrom("Project").selectAll("Project");
+
+  if (status) query = query.where("status", "=", String(status) as any);
+  if (city) query = query.where("city", "=", String(city));
+
+  const projectRows = await query
+    .where((eb) => projectScope(eb, req.user!.role, req.user!.id, ANY_MEMBERSHIP))
+    .orderBy("createdAt", "desc")
+    .execute();
 
   const projectIds = projectRows.map((p) => p.id);
   const milestoneRows = projectIds.length
     ? await db
-        .select()
-        .from(milestones)
-        .where(inArray(milestones.projectId, projectIds))
-        .orderBy(asc(milestones.sequenceOrder))
+        .selectFrom("Milestone")
+        .selectAll()
+        .where("projectId", "in", projectIds)
+        .orderBy("sequenceOrder", "asc")
+        .execute()
     : [];
 
   const milestonesByProject = new Map<string, typeof milestoneRows>();
@@ -96,15 +79,29 @@ router.post("/", requireRole("admin"), async (req, res) => {
     return res.status(400).json(parsed.error.flatten());
   }
 
-  const [project] = await db
-    .insert(projects)
+  const now = new Date();
+
+  const project = await db
+    .insertInto("Project")
     .values({
-      ...parsed.data,
+      id: createId(),
+      name: parsed.data.name,
+      slug: parsed.data.slug,
+      address: parsed.data.address ?? null,
+      city: parsed.data.city ?? null,
+      country: parsed.data.country ?? null,
+      latitude: parsed.data.latitude ?? null,
+      longitude: parsed.data.longitude ?? null,
+      totalUnits: parsed.data.totalUnits,
       estimatedDelivery: parsed.data.estimatedDelivery
         ? new Date(parsed.data.estimatedDelivery)
-        : undefined
+        : null,
+      status: parsed.data.status,
+      createdAt: now,
+      updatedAt: now
     })
-    .returning();
+    .returningAll()
+    .executeTakeFirstOrThrow();
 
   await writeAuditLog({
     actorUserId: req.user!.id,
@@ -128,32 +125,55 @@ router.get("/:id", async (req, res) => {
     return res.status(403).json({ message: "Forbidden" });
   }
 
-  const project = await db.query.projects.findFirst({
-    where: eq(projects.id, req.params.id),
-    with: {
-      milestones: {
-        orderBy: asc(milestones.sequenceOrder)
-      },
-      members: {
-        with: {
-          user: {
-            columns: {
-              id: true,
-              email: true,
-              fullName: true,
-              role: true
-            }
-          }
-        }
-      }
-    }
-  });
+  const project = await db
+    .selectFrom("Project")
+    .selectAll()
+    .where("id", "=", req.params.id)
+    .executeTakeFirst();
 
   if (!project) {
     return res.status(404).json({ message: "Project not found" });
   }
 
-  return res.json(project);
+  const milestoneRows = await db
+    .selectFrom("Milestone")
+    .selectAll()
+    .where("projectId", "=", project.id)
+    .orderBy("sequenceOrder", "asc")
+    .execute();
+
+  const memberRows = await db
+    .selectFrom("ProjectMember")
+    .innerJoin("User", "User.id", "ProjectMember.userId")
+    .select([
+      "ProjectMember.id",
+      "ProjectMember.userId",
+      "ProjectMember.projectId",
+      "ProjectMember.membershipRole",
+      "ProjectMember.createdAt",
+      "User.id as user_id",
+      "User.email as user_email",
+      "User.fullName as user_fullName",
+      "User.role as user_role"
+    ])
+    .where("ProjectMember.projectId", "=", project.id)
+    .execute();
+
+  const members = memberRows.map((row) => ({
+    id: row.id,
+    userId: row.userId,
+    projectId: row.projectId,
+    membershipRole: row.membershipRole,
+    createdAt: row.createdAt,
+    user: {
+      id: row.user_id,
+      email: row.user_email,
+      fullName: row.user_fullName,
+      role: row.user_role
+    }
+  }));
+
+  return res.json({ ...project, milestones: milestoneRows, members });
 });
 
 router.patch("/:id", requireRole("admin"), async (req, res) => {
@@ -175,16 +195,18 @@ router.patch("/:id", requireRole("admin"), async (req, res) => {
     return res.status(400).json(parsed.error.flatten());
   }
 
-  const [project] = await db
-    .update(projects)
+  const project = await db
+    .updateTable("Project")
     .set({
       ...parsed.data,
       estimatedDelivery: parsed.data.estimatedDelivery
         ? new Date(parsed.data.estimatedDelivery)
-        : undefined
+        : undefined,
+      updatedAt: new Date()
     })
-    .where(eq(projects.id, req.params.id))
-    .returning();
+    .where("id", "=", req.params.id)
+    .returningAll()
+    .executeTakeFirstOrThrow();
 
   await writeAuditLog({
     actorUserId: req.user!.id,
@@ -197,7 +219,7 @@ router.patch("/:id", requireRole("admin"), async (req, res) => {
 });
 
 router.delete("/:id", requireRole("admin"), async (req, res) => {
-  await db.delete(projects).where(eq(projects.id, req.params.id));
+  await db.deleteFrom("Project").where("id", "=", req.params.id).execute();
 
   await writeAuditLog({
     actorUserId: req.user!.id,
@@ -221,19 +243,36 @@ router.get("/:id/members", async (req, res) => {
     return res.status(403).json({ message: "Forbidden" });
   }
 
-  const members = await db.query.projectMembers.findMany({
-    where: eq(projectMembers.projectId, req.params.id),
-    with: {
-      user: {
-        columns: {
-          id: true,
-          email: true,
-          fullName: true,
-          role: true
-        }
-      }
+  const memberRows = await db
+    .selectFrom("ProjectMember")
+    .innerJoin("User", "User.id", "ProjectMember.userId")
+    .select([
+      "ProjectMember.id",
+      "ProjectMember.userId",
+      "ProjectMember.projectId",
+      "ProjectMember.membershipRole",
+      "ProjectMember.createdAt",
+      "User.id as user_id",
+      "User.email as user_email",
+      "User.fullName as user_fullName",
+      "User.role as user_role"
+    ])
+    .where("ProjectMember.projectId", "=", req.params.id)
+    .execute();
+
+  const members = memberRows.map((row) => ({
+    id: row.id,
+    userId: row.userId,
+    projectId: row.projectId,
+    membershipRole: row.membershipRole,
+    createdAt: row.createdAt,
+    user: {
+      id: row.user_id,
+      email: row.user_email,
+      fullName: row.user_fullName,
+      role: row.user_role
     }
-  });
+  }));
 
   return res.json(members);
 });
@@ -249,14 +288,17 @@ router.post("/:id/members", requireRole("admin"), async (req, res) => {
     return res.status(400).json(parsed.error.flatten());
   }
 
-  const [member] = await db
-    .insert(projectMembers)
+  const member = await db
+    .insertInto("ProjectMember")
     .values({
+      id: createId(),
       userId: parsed.data.userId,
       projectId: req.params.id,
-      membershipRole: parsed.data.membershipRole
+      membershipRole: parsed.data.membershipRole,
+      createdAt: new Date()
     })
-    .returning();
+    .returningAll()
+    .executeTakeFirstOrThrow();
 
   await writeAuditLog({
     actorUserId: req.user!.id,

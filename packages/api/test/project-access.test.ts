@@ -1,9 +1,8 @@
-import { eq } from "drizzle-orm";
 import request from "supertest";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import app from "../src/app";
 import { ANY_MEMBERSHIP, canAccessProject } from "../src/middlewares/auth";
-import { MEMBERSHIP_ROLES, projects, users } from "../src/db/schema";
+import { MEMBERSHIP_ROLES } from "../src/db/types";
 import { db } from "../src/lib/db";
 import { FIXTURES } from "./global-setup";
 
@@ -14,15 +13,23 @@ let proyecto: string;
 beforeAll(async () => {
   // `activo` es developer y MIEMBRO del proyecto de prueba; `ajeno` es developer
   // sin membresía. La diferencia entre los dos es la segunda capa entera.
-  miembro = (await db.select().from(users).where(eq(users.email, FIXTURES.activo.email)))[0].id;
-  ajeno = (await db.select().from(users).where(eq(users.email, FIXTURES.ajeno.email)))[0].id;
+  miembro = (
+    await db.selectFrom("User").selectAll().where("email", "=", FIXTURES.activo.email).executeTakeFirstOrThrow()
+  ).id;
+  ajeno = (
+    await db.selectFrom("User").selectAll().where("email", "=", FIXTURES.ajeno.email).executeTakeFirstOrThrow()
+  ).id;
   proyecto = (
-    await db.select().from(projects).where(eq(projects.slug, FIXTURES.proyecto.slug))
-  )[0].id;
+    await db
+      .selectFrom("Project")
+      .selectAll()
+      .where("slug", "=", FIXTURES.proyecto.slug)
+      .executeTakeFirstOrThrow()
+  ).id;
 });
 
 afterAll(async () => {
-  await db.$client.close();
+  await db.destroy();
 });
 
 // specs/SPEC-010 §Casos borde · middlewares/auth.ts. Es la función 🔴 por

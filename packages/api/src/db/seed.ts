@@ -1,16 +1,8 @@
 import "dotenv/config";
 import bcrypt from "bcrypt";
-import { drizzle } from "drizzle-orm/libsql";
-import { eq } from "drizzle-orm";
+import { createId } from "./id";
 import { passwordDeDemo, paraMostrar } from "./credentials";
-import { milestones, projectMembers, projects, users } from "./schema";
-import { createClient } from "../lib/libsql-client";
-
-const client = createClient({
-  url: process.env.DATABASE_URL ?? "file:./dev.db",
-  authToken: process.env.DATABASE_AUTH_TOKEN
-});
-const db = drizzle(client, { schema: { users, projects, projectMembers, milestones } });
+import { db } from "../lib/db";
 
 async function main() {
   // Los defaults locales son los que documenta el README. Los de los tres roles
@@ -23,115 +15,171 @@ async function main() {
   const buyerPassword = await bcrypt.hash(demoPlano("buyer123"), 10);
   const verifierPassword = await bcrypt.hash(demoPlano("verifier123"), 10);
 
+  const now = new Date();
+
   // La password SÍ se actualiza en cada upsert: el seed imprime estas
   // credenciales al terminar, así que tiene que garantizarlas. Un
-  // `onConflictDoNothing` dejaría una base ya existente con la password vieja
-  // mientras el log anuncia la nueva — lo que pasó al subir el mínimo a 8
-  // caracteres (D-046).
-  const [admin] = await db
-    .insert(users)
+  // `doNothing()` dejaría una base ya existente con la password vieja mientras
+  // el log anuncia la nueva — lo que pasó al subir el mínimo a 8 caracteres
+  // (D-046).
+  const admin = await db
+    .insertInto("User")
     .values({
+      id: createId(),
       email: "admin@example.com",
       passwordHash: adminPassword,
       role: "admin",
-      fullName: "Admin Demo"
+      fullName: "Admin Demo",
+      isActive: true,
+      createdAt: now,
+      updatedAt: now
     })
-    .onConflictDoUpdate({ target: users.email, set: { passwordHash: adminPassword } })
-    .returning();
+    .onConflict((oc) => oc.column("email").doUpdateSet({ passwordHash: adminPassword }))
+    .returningAll()
+    .executeTakeFirstOrThrow();
 
-  const [developer] = await db
-    .insert(users)
+  const developer = await db
+    .insertInto("User")
     .values({
+      id: createId(),
       email: "developer@example.com",
       passwordHash: developerPassword,
       role: "developer",
-      fullName: "Developer Demo"
+      fullName: "Developer Demo",
+      isActive: true,
+      createdAt: now,
+      updatedAt: now
     })
-    .onConflictDoUpdate({ target: users.email, set: { passwordHash: developerPassword } })
-    .returning();
+    .onConflict((oc) => oc.column("email").doUpdateSet({ passwordHash: developerPassword }))
+    .returningAll()
+    .executeTakeFirstOrThrow();
 
-  const [buyer] = await db
-    .insert(users)
+  const buyer = await db
+    .insertInto("User")
     .values({
+      id: createId(),
       email: "buyer@example.com",
       passwordHash: buyerPassword,
       role: "buyer",
-      fullName: "Buyer Demo"
+      fullName: "Buyer Demo",
+      isActive: true,
+      createdAt: now,
+      updatedAt: now
     })
-    .onConflictDoUpdate({ target: users.email, set: { passwordHash: buyerPassword } })
-    .returning();
+    .onConflict((oc) => oc.column("email").doUpdateSet({ passwordHash: buyerPassword }))
+    .returningAll()
+    .executeTakeFirstOrThrow();
 
-  const [verifier] = await db
-    .insert(users)
+  const verifier = await db
+    .insertInto("User")
     .values({
+      id: createId(),
       email: "verifier@example.com",
       passwordHash: verifierPassword,
       role: "verifier",
-      fullName: "Verifier Demo"
+      fullName: "Verifier Demo",
+      isActive: true,
+      createdAt: now,
+      updatedAt: now
     })
-    .onConflictDoUpdate({ target: users.email, set: { passwordHash: verifierPassword } })
-    .returning();
+    .onConflict((oc) => oc.column("email").doUpdateSet({ passwordHash: verifierPassword }))
+    .returningAll()
+    .executeTakeFirstOrThrow();
 
-  // Proyecto y membresías: `onConflictDoNothing` — igual que `update: {}` de
-  // Prisma, una base ya sembrada no cambia estos datos. Se relee por si el
-  // insert no devolvió fila (conflicto).
+  // Proyecto y membresías: `doNothing()` — igual que `update: {}` de Prisma,
+  // una base ya sembrada no cambia estos datos.
   await db
-    .insert(projects)
+    .insertInto("Project")
     .values({
+      id: createId(),
       name: "Torre A",
       slug: "torre-a",
       address: "Av. Santa Fe 3200",
       city: "Buenos Aires",
       country: "Argentina",
       totalUnits: 48,
-      status: "in_progress"
+      status: "in_progress",
+      createdAt: now,
+      updatedAt: now
     })
-    .onConflictDoNothing({ target: projects.slug });
+    .onConflict((oc) => oc.column("slug").doNothing())
+    .execute();
 
-  const [project] = await db.select().from(projects).where(eq(projects.slug, "torre-a"));
-
-  await db
-    .insert(projectMembers)
-    .values({ userId: developer.id, projectId: project.id, membershipRole: "developer" })
-    .onConflictDoNothing({
-      target: [projectMembers.userId, projectMembers.projectId, projectMembers.membershipRole]
-    });
+  const project = await db
+    .selectFrom("Project")
+    .selectAll()
+    .where("slug", "=", "torre-a")
+    .executeTakeFirstOrThrow();
 
   await db
-    .insert(projectMembers)
-    .values({ userId: buyer.id, projectId: project.id, membershipRole: "buyer" })
-    .onConflictDoNothing({
-      target: [projectMembers.userId, projectMembers.projectId, projectMembers.membershipRole]
-    });
-
-  await db
-    .insert(projectMembers)
-    .values({ userId: verifier.id, projectId: project.id, membershipRole: "verifier" })
-    .onConflictDoNothing({
-      target: [projectMembers.userId, projectMembers.projectId, projectMembers.membershipRole]
-    });
-
-  await db
-    .insert(milestones)
+    .insertInto("ProjectMember")
     .values({
+      id: createId(),
+      userId: developer.id,
+      projectId: project.id,
+      membershipRole: "developer",
+      createdAt: now
+    })
+    .onConflict((oc) => oc.columns(["userId", "projectId", "membershipRole"]).doNothing())
+    .execute();
+
+  await db
+    .insertInto("ProjectMember")
+    .values({
+      id: createId(),
+      userId: buyer.id,
+      projectId: project.id,
+      membershipRole: "buyer",
+      createdAt: now
+    })
+    .onConflict((oc) => oc.columns(["userId", "projectId", "membershipRole"]).doNothing())
+    .execute();
+
+  await db
+    .insertInto("ProjectMember")
+    .values({
+      id: createId(),
+      userId: verifier.id,
+      projectId: project.id,
+      membershipRole: "verifier",
+      createdAt: now
+    })
+    .onConflict((oc) => oc.columns(["userId", "projectId", "membershipRole"]).doNothing())
+    .execute();
+
+  await db
+    .insertInto("Milestone")
+    .values({
+      id: createId(),
       projectId: project.id,
       name: "Cimentación",
       sequenceOrder: 1,
       state: "Completed",
-      scopeUnitCount: 48
+      validationCritical: false,
+      scopeType: "project_wide",
+      scopeUnitCount: 48,
+      createdAt: now,
+      updatedAt: now
     })
-    .onConflictDoNothing({ target: [milestones.projectId, milestones.sequenceOrder] });
+    .onConflict((oc) => oc.columns(["projectId", "sequenceOrder"]).doNothing())
+    .execute();
 
   await db
-    .insert(milestones)
+    .insertInto("Milestone")
     .values({
+      id: createId(),
       projectId: project.id,
       name: "Estructura",
       sequenceOrder: 2,
       state: "InProgress",
-      scopeUnitCount: 48
+      validationCritical: false,
+      scopeType: "project_wide",
+      scopeUnitCount: 48,
+      createdAt: now,
+      updatedAt: now
     })
-    .onConflictDoNothing({ target: [milestones.projectId, milestones.sequenceOrder] });
+    .onConflict((oc) => oc.columns(["projectId", "sequenceOrder"]).doNothing())
+    .execute();
 
   const mostrar = paraMostrar;
 
@@ -149,5 +197,5 @@ main()
     process.exit(1);
   })
   .finally(() => {
-    client.close();
+    db.destroy();
   });

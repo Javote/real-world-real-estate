@@ -1,10 +1,9 @@
 import fs from "fs";
 import path from "path";
-import { and, desc, eq } from "drizzle-orm";
 import { Router } from "express";
 import { z } from "zod";
-import { evidences, milestones, projects } from "../db/schema";
 import { db } from "../lib/db";
+import { createId } from "../db/id";
 import { uploadSingleEvidence } from "../lib/upload";
 import {
   authenticate,
@@ -20,19 +19,30 @@ const router = Router();
 router.use(authenticate);
 
 // `storagePath` NUNCA sale al cliente (D-011, incidente real de filtración de
-// ruta absoluta en disco). Toda query que arma una respuesta usa esta lista de
-// columnas explícita en vez de "select *" / traer la fila entera. Las dos rutas
-// internas que sí necesitan `storagePath` (`download`, `delete`) consultan la
-// fila completa aparte, y nunca la devuelven en el body.
-const EVIDENCE_SAFE_COLUMNS = {
-  storagePath: false
-} as const;
-
-const UPLOADED_BY_COLUMNS = {
-  id: true,
-  email: true,
-  fullName: true
-} as const;
+// ruta absoluta en disco). Toda query que arma una respuesta lista sus columnas
+// EXPLÍCITAS en vez de `selectAll()` — es la forma en que Kysely reemplaza el
+// `columns: { storagePath: false }` de Drizzle (D-049): acá no hay "excluir",
+// solo "incluir", así que una columna nueva en `Evidence` no se filtra sola,
+// hay que sumarla a mano a esta lista. Las dos rutas internas que sí necesitan
+// `storagePath` (`download`, `delete`) consultan la fila completa aparte, y
+// nunca la devuelven en el body.
+const EVIDENCE_SAFE_COLUMNS = [
+  "id",
+  "projectId",
+  "milestoneId",
+  "uploadedById",
+  "evidenceType",
+  "category",
+  "authoritative",
+  "originalFilename",
+  "storedFilename",
+  "mimeType",
+  "sizeBytes",
+  "sha256Hash",
+  "uploadedAt",
+  "createdAt",
+  "updatedAt"
+] as const;
 
 router.get("/projects/:id/evidence", async (req, res) => {
   const allowed = await canAccessProject(
@@ -46,15 +56,70 @@ router.get("/projects/:id/evidence", async (req, res) => {
     return res.status(403).json({ message: "Forbidden" });
   }
 
-  const evidence = await db.query.evidences.findMany({
-    where: eq(evidences.projectId, req.params.id),
-    orderBy: desc(evidences.uploadedAt),
-    columns: EVIDENCE_SAFE_COLUMNS,
-    with: {
-      milestone: true,
-      uploadedBy: { columns: UPLOADED_BY_COLUMNS }
-    }
-  });
+  const rows = await db
+    .selectFrom("Evidence")
+    .innerJoin("User", "User.id", "Evidence.uploadedById")
+    .leftJoin("Milestone", "Milestone.id", "Evidence.milestoneId")
+    .select([
+      ...EVIDENCE_SAFE_COLUMNS.map((c) => `Evidence.${c}` as const),
+      "User.id as uploadedBy_id",
+      "User.email as uploadedBy_email",
+      "User.fullName as uploadedBy_fullName",
+      "Milestone.id as milestone_id",
+      "Milestone.projectId as milestone_projectId",
+      "Milestone.name as milestone_name",
+      "Milestone.sequenceOrder as milestone_sequenceOrder",
+      "Milestone.state as milestone_state",
+      "Milestone.validationCritical as milestone_validationCritical",
+      "Milestone.certifiedAt as milestone_certifiedAt",
+      "Milestone.certifiedById as milestone_certifiedById",
+      "Milestone.scopeType as milestone_scopeType",
+      "Milestone.scopeUnitCount as milestone_scopeUnitCount",
+      "Milestone.createdAt as milestone_createdAt",
+      "Milestone.updatedAt as milestone_updatedAt"
+    ])
+    .where("Evidence.projectId", "=", req.params.id)
+    .orderBy("Evidence.uploadedAt", "desc")
+    .execute();
+
+  const evidence = rows.map((row) => ({
+    id: row.id,
+    projectId: row.projectId,
+    milestoneId: row.milestoneId,
+    uploadedById: row.uploadedById,
+    evidenceType: row.evidenceType,
+    category: row.category,
+    authoritative: row.authoritative,
+    originalFilename: row.originalFilename,
+    storedFilename: row.storedFilename,
+    mimeType: row.mimeType,
+    sizeBytes: row.sizeBytes,
+    sha256Hash: row.sha256Hash,
+    uploadedAt: row.uploadedAt,
+    createdAt: row.createdAt,
+    updatedAt: row.updatedAt,
+    uploadedBy: {
+      id: row.uploadedBy_id,
+      email: row.uploadedBy_email,
+      fullName: row.uploadedBy_fullName
+    },
+    milestone: row.milestone_id
+      ? {
+          id: row.milestone_id,
+          projectId: row.milestone_projectId,
+          name: row.milestone_name,
+          sequenceOrder: row.milestone_sequenceOrder,
+          state: row.milestone_state,
+          validationCritical: row.milestone_validationCritical,
+          certifiedAt: row.milestone_certifiedAt,
+          certifiedById: row.milestone_certifiedById,
+          scopeType: row.milestone_scopeType,
+          scopeUnitCount: row.milestone_scopeUnitCount,
+          createdAt: row.milestone_createdAt,
+          updatedAt: row.milestone_updatedAt
+        }
+      : null
+  }));
 
   return res.json(evidence);
 });
@@ -107,7 +172,11 @@ router.post(
       return res.status(400).json(parsed.error.flatten());
     }
 
-    const [project] = await db.select().from(projects).where(eq(projects.id, projectId));
+    const project = await db
+      .selectFrom("Project")
+      .select("id")
+      .where("id", "=", projectId)
+      .executeTakeFirst();
 
     if (!project) {
       if (fs.existsSync(req.file.path)) {
@@ -117,10 +186,12 @@ router.post(
     }
 
     if (parsed.data.milestoneId) {
-      const [milestone] = await db
-        .select({ id: milestones.id })
-        .from(milestones)
-        .where(and(eq(milestones.id, parsed.data.milestoneId), eq(milestones.projectId, projectId)));
+      const milestone = await db
+        .selectFrom("Milestone")
+        .select("id")
+        .where("id", "=", parsed.data.milestoneId)
+        .where("projectId", "=", projectId)
+        .executeTakeFirst();
 
       if (!milestone) {
         if (fs.existsSync(req.file.path)) {
@@ -134,10 +205,12 @@ router.post(
 
     const absolutePath = path.resolve(req.file.path);
     const sha256Hash = await sha256File(absolutePath);
+    const now = new Date();
 
-    const [created] = await db
-      .insert(evidences)
+    const created = await db
+      .insertInto("Evidence")
       .values({
+        id: createId(),
         projectId,
         milestoneId: parsed.data.milestoneId ?? null,
         uploadedById: req.user!.id,
@@ -149,14 +222,19 @@ router.post(
         mimeType: req.file.mimetype,
         sizeBytes: req.file.size,
         storagePath: absolutePath,
-        sha256Hash
+        sha256Hash,
+        uploadedAt: now,
+        createdAt: now,
+        updatedAt: now
       })
-      .returning({ id: evidences.id });
+      .returning("id")
+      .executeTakeFirstOrThrow();
 
-    const evidence = await db.query.evidences.findFirst({
-      where: eq(evidences.id, created.id),
-      columns: EVIDENCE_SAFE_COLUMNS
-    });
+    const evidence = await db
+      .selectFrom("Evidence")
+      .select(EVIDENCE_SAFE_COLUMNS)
+      .where("id", "=", created.id)
+      .executeTakeFirst();
 
     await writeAuditLog({
       actorUserId: req.user!.id,
@@ -170,15 +248,11 @@ router.post(
 );
 
 router.get("/evidence/:id", async (req, res) => {
-  const evidence = await db.query.evidences.findFirst({
-    where: eq(evidences.id, req.params.id),
-    columns: EVIDENCE_SAFE_COLUMNS,
-    with: {
-      project: true,
-      milestone: true,
-      uploadedBy: { columns: UPLOADED_BY_COLUMNS }
-    }
-  });
+  const evidence = await db
+    .selectFrom("Evidence")
+    .select(EVIDENCE_SAFE_COLUMNS)
+    .where("id", "=", req.params.id)
+    .executeTakeFirst();
 
   if (!evidence) {
     return res.status(404).json({ message: "Evidence not found" });
@@ -195,11 +269,31 @@ router.get("/evidence/:id", async (req, res) => {
     return res.status(403).json({ message: "Forbidden" });
   }
 
-  return res.json(evidence);
+  const [project, milestone, uploadedBy] = await Promise.all([
+    db.selectFrom("Project").selectAll().where("id", "=", evidence.projectId).executeTakeFirst(),
+    evidence.milestoneId
+      ? db
+          .selectFrom("Milestone")
+          .selectAll()
+          .where("id", "=", evidence.milestoneId)
+          .executeTakeFirst()
+      : Promise.resolve(null),
+    db
+      .selectFrom("User")
+      .select(["id", "email", "fullName"])
+      .where("id", "=", evidence.uploadedById)
+      .executeTakeFirst()
+  ]);
+
+  return res.json({ ...evidence, project, milestone, uploadedBy });
 });
 
 router.get("/evidence/:id/download", async (req, res) => {
-  const [evidence] = await db.select().from(evidences).where(eq(evidences.id, req.params.id));
+  const evidence = await db
+    .selectFrom("Evidence")
+    .selectAll()
+    .where("id", "=", req.params.id)
+    .executeTakeFirst();
 
   if (!evidence) {
     return res.status(404).json({ message: "Evidence not found" });
@@ -224,7 +318,11 @@ router.get("/evidence/:id/download", async (req, res) => {
 });
 
 router.patch("/evidence/:id", requireRole("admin", "developer"), async (req, res) => {
-  const [existing] = await db.select().from(evidences).where(eq(evidences.id, req.params.id));
+  const existing = await db
+    .selectFrom("Evidence")
+    .selectAll()
+    .where("id", "=", req.params.id)
+    .executeTakeFirst();
 
   if (!existing) {
     return res.status(404).json({ message: "Evidence not found" });
@@ -254,12 +352,12 @@ router.patch("/evidence/:id", requireRole("admin", "developer"), async (req, res
   }
 
   if (parsed.data.milestoneId) {
-    const [milestone] = await db
-      .select({ id: milestones.id })
-      .from(milestones)
-      .where(
-        and(eq(milestones.id, parsed.data.milestoneId), eq(milestones.projectId, existing.projectId))
-      );
+    const milestone = await db
+      .selectFrom("Milestone")
+      .select("id")
+      .where("id", "=", parsed.data.milestoneId)
+      .where("projectId", "=", existing.projectId)
+      .executeTakeFirst();
 
     if (!milestone) {
       return res.status(400).json({
@@ -268,12 +366,17 @@ router.patch("/evidence/:id", requireRole("admin", "developer"), async (req, res
     }
   }
 
-  await db.update(evidences).set(parsed.data).where(eq(evidences.id, req.params.id));
+  await db
+    .updateTable("Evidence")
+    .set({ ...parsed.data, updatedAt: new Date() })
+    .where("id", "=", req.params.id)
+    .execute();
 
-  const evidence = await db.query.evidences.findFirst({
-    where: eq(evidences.id, req.params.id),
-    columns: EVIDENCE_SAFE_COLUMNS
-  });
+  const evidence = await db
+    .selectFrom("Evidence")
+    .select(EVIDENCE_SAFE_COLUMNS)
+    .where("id", "=", req.params.id)
+    .executeTakeFirst();
 
   await writeAuditLog({
     actorUserId: req.user!.id,
@@ -286,7 +389,11 @@ router.patch("/evidence/:id", requireRole("admin", "developer"), async (req, res
 });
 
 router.delete("/evidence/:id", requireRole("admin"), async (req, res) => {
-  const [existing] = await db.select().from(evidences).where(eq(evidences.id, req.params.id));
+  const existing = await db
+    .selectFrom("Evidence")
+    .selectAll()
+    .where("id", "=", req.params.id)
+    .executeTakeFirst();
 
   if (!existing) {
     return res.status(404).json({ message: "Evidence not found" });
@@ -296,7 +403,7 @@ router.delete("/evidence/:id", requireRole("admin"), async (req, res) => {
     fs.unlinkSync(existing.storagePath);
   }
 
-  await db.delete(evidences).where(eq(evidences.id, req.params.id));
+  await db.deleteFrom("Evidence").where("id", "=", req.params.id).execute();
 
   await writeAuditLog({
     actorUserId: req.user!.id,

@@ -5,7 +5,7 @@ import { db } from "../src/lib/db";
 import { FIXTURES } from "./global-setup";
 
 afterAll(async () => {
-  await db.$client.close();
+  await db.destroy();
 });
 
 const login = (email: string, password: string) =>

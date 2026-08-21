@@ -4,8 +4,8 @@
 > bcrypt, uploads, idempotencia, claves de traducción) están en el `CLAUDE.md` de la raíz y **no
 > se repiten acá**.
 
-Express 4 + Zod + JWT + bcrypt(10) + Multer 2.x + Drizzle/SQLite (`@libsql/client`), base `/api/v1`
-(D-016, D-036, D-048 — migrado de Prisma el 2026-08-21).
+Express 4 + Zod + JWT + bcrypt(10) + Multer 2.x + Kysely/SQLite (`@libsql/client`), base `/api/v1`
+(D-016, D-036, D-048 → D-049 — Prisma → Drizzle → Kysely, los dos migrados el 2026-08-21).
 
 Está mejor parada que el frente: **la API se evoluciona, el front se reemplaza.** Se conservan
 auth JWT+bcrypt con autorización en dos capas, SHA-256 en el servidor al subir, `AuditLog`
@@ -93,6 +93,40 @@ endpoints del backlog **hoy conforman 2**: `POST /auth/login` y `GET /auth/me`.
   `TRUST_PROXY_HOPS=1`** (D-045).
 - **El puerto sale de `PORT` en `packages/api/.env`** (lo escribe `scripts/worktree.sh` por árbol).
   No lo hardcodees.
+- **2026-08-21 · `kysely` y `@libsql/kysely-libsql` son ESM puro, mismo problema que
+  `@paralleldrive/cuid2` (D-049).** Se resuelve con el mismo patrón, centralizado esta vez en
+  `src/lib/kysely.ts` y `src/lib/libsql-dialect.ts` (para no repetirlo en cada archivo que importa
+  Kysely) — `require()` en runtime tipado con `typeof import("kysely", { with: { "resolution-mode":
+  "require" } })`, que a diferencia del patrón de `libsql-client.ts` no necesita listar cada tipo a
+  mano: le da al `require()` el tipo completo del módulo de una sola vez.
+- **2026-08-21 · Pasarle a `LibsqlDialect` un `Client` ya construido con `createClient` de
+  `lib/libsql-client.ts` no tipa.** `@libsql/kysely-libsql` declara `@libsql/client: ^0.8.0` como
+  dependencia propia; este package usa `^0.17.4`. `^0.8.0` no cubre `0.17.4` (para versiones `0.x`,
+  el caret solo permite parches), así que pnpm instala las dos versiones sin dedupear, y el tipo
+  `Client` de una no es asignable al de la otra (`sync()` devuelve `Promise<Replicated>` en una y
+  `Promise<void>` en la otra). **Fix:** `LibsqlDialect` recibe `{ url, authToken }` en vez de
+  `{ client }` — así construye su propio cliente con su propia versión, y no hay dos tipos de
+  `Client` en la misma expresión. Consecuencia: `lib/db.ts` ya no expone un `client` para cerrar a
+  mano; los tests cierran con `db.destroy()` (que sí cierra la conexión subyacente cuando
+  `LibsqlDialect` es dueño del cliente que crea — no cuando se le pasa uno externo, por eso el fix
+  de arriba). Donde hace falta un cliente crudo para SQL sin pasar por Kysely (`db/migrate.ts`,
+  `test/global-setup.ts`), se sigue usando `lib/libsql-client.ts` aparte, sin compartirlo con la
+  instancia de `Kysely`.
+- **2026-08-21 · Kysely no tiene `mode: "boolean"` / `mode: "timestamp_ms"` como Drizzle.** SQLite
+  guarda ambos como `integer` y `@libsql/client` los devuelve tal cual (`number`), no como
+  `boolean`/`Date`. Centralizado en `src/db/sqlite-type-plugin.ts` (`SqliteTypeCoercionPlugin`,
+  cargado en cada instancia de `Kysely`) en vez de convertir a mano en cada ruta — convierte por
+  nombre de columna (`createdAt`, `updatedAt`, `certifiedAt`, `estimatedDelivery`, `uploadedAt` →
+  `Date`; `isActive`, `authoritative`, `validationCritical` → `boolean`) en el resultado de toda
+  query. Al insertar/actualizar no hace falta la inversa: `@libsql/client` acepta `Date`/`boolean`
+  directo como valor (los convierte él). Si se agrega una columna nueva de estos dos tipos, hay que
+  sumarla a los `Set` del plugin — no hay chequeo del compilador que lo fuerce.
+- **2026-08-21 · Kysely no genera IDs ni timestamps por default** (`$defaultFn`/`$onUpdate` de
+  Drizzle no tienen equivalente). `src/db/id.ts` centraliza `createId()` (mismo patrón ESM que
+  arriba); cada `insertInto` pasa `id: createId()` y `createdAt/updatedAt: new Date()` a mano, y
+  cada `updateTable` que toca una fila con `updatedAt` lo suma explícito a `.set(...)`. Si un
+  endpoint nuevo hace un `update` y se olvida `updatedAt`, nada lo va a marcar — a diferencia de
+  Drizzle, donde `$onUpdate` lo hacía solo.
 
 ## Superficie 🔴 — inventario
 
@@ -198,7 +232,7 @@ propuesto: un `requireProjectAccess(...)` de Express que lea `req.params.project
 **Cerrado el 2026-08-21 · la regla estaba escrita tres veces.** `canAccessProject`, el bypass de
 `admin` repetido en 5 call sites, y un query a mano en `GET /projects` que no llamaba a la función.
 Las tres coincidían por casualidad y solo una tenía tests. Ahora hay una sola —`projectScope`, una
-condición `SQL` de Drizzle (`EXISTS` correlacionado, D-048)— que `canAccessProject` aplica a un id y el listado aplica a la
+condición de Kysely (`EXISTS` correlacionado, D-048 → D-049)— que `canAccessProject` aplica a un id y el listado aplica a la
 colección; el bypass de admin vive adentro y en ningún otro lado. Al unificarlas cayeron dos bugs de
 la copia: el listado de un no-admin salía sin orden, y un usuario con dos membresías en el mismo
 proyecto lo veía **duplicado**. Ojo con la consecuencia deliberada: `admin` sobre un proyecto que no
@@ -238,8 +272,9 @@ riesgo genérico de módulo nativo. **Bajar el cost no es opción: la regla 4 fi
 ## Tests
 
 `pnpm --filter @plataforma/api test` — vitest + supertest contra **una base SQLite propia**
-(`test.db`), que `test/global-setup.ts` crea aplicando las migraciones de Drizzle y siembra en
-cada corrida. Nunca contra `dev.db`: un test no puede depender del seed de desarrollo ni ensuciarlo.
+(`test.db`), que `test/global-setup.ts` crea aplicando las migraciones (`src/db/migrate.ts`, D-049)
+y siembra en cada corrida. Nunca contra `dev.db`: un test no puede depender del seed de desarrollo
+ni ensuciarlo.
 
 Se aplican las migraciones reales (`drizzle/*.sql`) y no una proyección ad-hoc del schema: así la
 suite verifica lo mismo que va a correr en producción.
@@ -248,8 +283,11 @@ suite verifica lo mismo que va a correr en producción.
 
 ```bash
 pnpm --filter @plataforma/api dev            # solo la API
-pnpm --filter @plataforma/api db:generate    # tras tocar src/db/schema.ts — genera la migración SQL
 pnpm --filter @plataforma/api db:migrate     # aplica las migraciones pendientes (nunca editar una aplicada)
 pnpm --filter @plataforma/api db:seed        # datos demo
-pnpm --filter @plataforma/api db:studio      # inspeccionar la base (drizzle-kit studio)
 ```
+
+No hay `db:generate` ni `db:studio` (D-049): Kysely no trae generador de migraciones ni UI de
+inspección. Una migración nueva se escribe a mano en `drizzle/*.sql`, con el mismo separador
+`--> statement-breakpoint` que ya usaban los archivos heredados de `drizzle-kit`. Para inspeccionar
+la base, un cliente SQLite cualquiera contra `dev.db`/`file:` — es deuda menor, no bloqueante.

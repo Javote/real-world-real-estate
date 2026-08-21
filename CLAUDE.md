@@ -101,7 +101,7 @@ Lo que necesitás saber al escribir código:
 | **web** | TanStack Start + Router + Query · React 19 · Tailwind v4 · Lucide · shadcn/ui *(falta)* | D-002, D-024 |
 | **api** | Express 4 + Zod + JWT + bcrypt(10) + Multer, base `/api/v1` | D-016 |
 | **shared** | Zod — el contrato único API↔web. El schema va acá **antes** que el endpoint | D-012 |
-| **db** | **Drizzle** (migrando desde Prisma, D-048) · **SQLite** en dev y prod, probable **Turso** en Render | D-016, D-038, D-048 |
+| **db** | **Kysely** (migrando desde Drizzle, D-049) · **SQLite** en dev y prod, probable **Turso** en Render | D-016, D-038, D-048, D-049 |
 | **cardano** | `AnchorPort` con adaptadores `blockfrost` y `simulated` — *package vacío* | D-005, D-014 |
 | **contracts** | Aiken v1.1.21 · **Plutus V3** · stdlib v3.0.0 · blueprint commiteado | D-017, D-019 |
 | red | **Preprod siempre**; mainnet fuera de alcance | D-013 |

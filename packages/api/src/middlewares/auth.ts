@@ -1,9 +1,8 @@
-import { and, eq, exists, inArray, sql, type SQL } from "drizzle-orm";
 import { NextFunction, Request, Response } from "express";
+import { type ExpressionBuilder, type ExpressionWrapper, sql, type SqlBool } from "../lib/kysely";
 import { verifyToken } from "../lib/jwt";
 import { db } from "../lib/db";
-import { projectMembers, projects, users } from "../db/schema";
-import type { MembershipRole, UserRole } from "../db/schema";
+import type { Database, MembershipRole, UserRole } from "../db/types";
 
 declare global {
   namespace Express {
@@ -32,15 +31,11 @@ export async function authenticate(
     const token = authHeader.split(" ")[1];
     const payload = verifyToken(token);
 
-    const [user] = await db
-      .select({
-        id: users.id,
-        email: users.email,
-        role: users.role,
-        isActive: users.isActive
-      })
-      .from(users)
-      .where(eq(users.id, payload.userId));
+    const user = await db
+      .selectFrom("User")
+      .select(["id", "email", "role", "isActive"])
+      .where("id", "=", payload.userId)
+      .executeTakeFirst();
 
     if (!user || !user.isActive) {
       return res.status(401).json({ message: "User not active" });
@@ -77,7 +72,7 @@ export function requireRole(...roles: UserRole[]) {
  * ser miembro del proyecto.
  *
  * La lista se escribe a mano **a propósito**, y el `satisfies` la obliga a estar
- * completa: agregar una membresía a `db/schema.ts` sin tocar esto **no compila**.
+ * completa: agregar una membresía a `db/types.ts` sin tocar esto **no compila**.
  *
  * La primera versión hacía `Object.values(MembershipRole)`, que se mantenía sola
  * y por eso mismo estaba mal: una membresía nueva quedaba con lectura de todos
@@ -117,50 +112,52 @@ export async function canAccessProject(
   projectId: string,
   allowedMemberships: MembershipRole[]
 ) {
-  const [project] = await db
-    .select({ id: projects.id })
-    .from(projects)
-    .where(and(eq(projects.id, projectId), projectScope(role, userId, allowedMemberships)));
+  const project = await db
+    .selectFrom("Project")
+    .select("id")
+    .where("id", "=", projectId)
+    .where((eb) => projectScope(eb, role, userId, allowedMemberships))
+    .executeTakeFirst();
 
   return project !== undefined;
 }
 
 /**
- * La misma regla, como condición SQL de Drizzle, para cuando la pregunta es
- * sobre una colección y no sobre un proyecto puntual.
+ * La misma regla, como condición de Kysely, para cuando la pregunta es sobre
+ * una colección y no sobre un proyecto puntual. Requiere un `ExpressionBuilder`
+ * ya parado sobre una query que tiene `"Project"` en scope (única forma de
+ * referenciar `Project.id` sin alias — no hay Relational Query API acá, así que
+ * no hay riesgo del alias interno que Drizzle le ponía a `db.query.*`, D-048).
  *
  * Es la **única** definición de "qué proyectos puede ver este usuario":
- * `canAccessProject` la aplica a un id (vía `and(eq(projects.id, ...), ...)`) y
- * `GET /projects` la aplica al listado completo. Antes eran dos implementaciones
- * independientes —la función acá y un query a mano en la ruta— que daban el
- * mismo resultado por casualidad y solo una tenía tests. Dos copias de una regla
- * de autorización divergen en silencio, y ésta es de las que no avisan cuando
- * divergen: el síntoma es que alguien ve de más.
+ * `canAccessProject` la aplica a un id y `GET /projects` la aplica al listado
+ * completo. Antes eran dos implementaciones independientes —la función acá y un
+ * query a mano en la ruta— que daban el mismo resultado por casualidad y solo
+ * una tenía tests. Dos copias de una regla de autorización divergen en
+ * silencio, y ésta es de las que no avisan cuando divergen: el síntoma es que
+ * alguien ve de más.
  *
  * El bypass de `admin` (matriz de M2-D1 §4) vive acá y en ningún otro lado.
- * Se implementa como `EXISTS` correlacionado contra `projects.id` en vez de un
+ * Se implementa como `EXISTS` correlacionado contra `Project.id` en vez de un
  * `IN (SELECT projectId FROM ...)`: así un usuario con dos membresías sobre el
  * mismo proyecto no lo duplica en el resultado (D-043).
  */
 export function projectScope(
+  eb: ExpressionBuilder<Database, "Project">,
   role: UserRole,
   userId: string,
   allowedMemberships: MembershipRole[]
-): SQL {
-  if (role === "admin") return sql`1=1`;
+): ExpressionWrapper<Database, "Project", SqlBool> {
+  if (role === "admin") return eb(sql.lit(1), "=", sql.lit(1));
 
-  if (allowedMemberships.length === 0) return sql`1=0`;
+  if (allowedMemberships.length === 0) return eb(sql.lit(1), "=", sql.lit(0));
 
-  return exists(
-    db
-      .select({ one: sql`1` })
-      .from(projectMembers)
-      .where(
-        and(
-          eq(projectMembers.projectId, projects.id),
-          eq(projectMembers.userId, userId),
-          inArray(projectMembers.membershipRole, allowedMemberships)
-        )
-      )
+  return eb.exists(
+    eb
+      .selectFrom("ProjectMember")
+      .select(sql.lit(1).as("one"))
+      .whereRef("ProjectMember.projectId", "=", "Project.id")
+      .where("ProjectMember.userId", "=", userId)
+      .where("ProjectMember.membershipRole", "in", allowedMemberships)
   );
 }

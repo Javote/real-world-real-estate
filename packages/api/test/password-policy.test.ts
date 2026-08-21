@@ -2,8 +2,6 @@ import { PASSWORD_MAX_BYTES, PASSWORD_MIN_CHARS } from "@plataforma/shared";
 import request from "supertest";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import app from "../src/app";
-import { eq } from "drizzle-orm";
-import { users } from "../src/db/schema";
 import { db } from "../src/lib/db";
 import { FIXTURES } from "./global-setup";
 
@@ -17,7 +15,7 @@ beforeAll(async () => {
 });
 
 afterAll(async () => {
-  await db.$client.close();
+  await db.destroy();
 });
 
 const crearUsuario = (password: string, email: string) =>
@@ -64,7 +62,11 @@ describe("PATCH /api/v1/users/:id aplica la misma política", () => {
   it("rechaza cambiar a una password que no cumple", async () => {
     // Es el endpoint que se olvida: se endurece el alta y el cambio queda
     // permitiendo lo que el alta prohíbe.
-    const [user] = await db.select().from(users).where(eq(users.email, FIXTURES.ajeno.email));
+    const user = await db
+      .selectFrom("User")
+      .selectAll()
+      .where("email", "=", FIXTURES.ajeno.email)
+      .executeTakeFirstOrThrow();
 
     const res = await request(app)
       .patch(`/api/v1/users/${user.id}`)

@@ -1,10 +1,9 @@
 import { passwordSchema } from "@plataforma/shared";
 import bcrypt from "bcrypt";
-import { desc, eq } from "drizzle-orm";
 import { Router } from "express";
 import { z } from "zod";
-import { users } from "../db/schema";
 import { db } from "../lib/db";
+import { createId } from "../db/id";
 import { authenticate, requireRole } from "../middlewares/auth";
 import { writeAuditLog } from "../utils/audit";
 
@@ -12,18 +11,14 @@ const router = Router();
 
 router.use(authenticate, requireRole("admin"));
 
+const USER_LIST_COLUMNS = ["id", "email", "role", "fullName", "isActive", "createdAt"] as const;
+
 router.get("/", async (_req, res) => {
   const userList = await db
-    .select({
-      id: users.id,
-      email: users.email,
-      role: users.role,
-      fullName: users.fullName,
-      isActive: users.isActive,
-      createdAt: users.createdAt
-    })
-    .from(users)
-    .orderBy(desc(users.createdAt));
+    .selectFrom("User")
+    .select(USER_LIST_COLUMNS)
+    .orderBy("createdAt", "desc")
+    .execute();
 
   return res.json(userList);
 });
@@ -42,22 +37,22 @@ router.post("/", async (req, res) => {
   }
 
   const passwordHash = await bcrypt.hash(parsed.data.password, 10);
+  const now = new Date();
 
-  const [user] = await db
-    .insert(users)
+  const user = await db
+    .insertInto("User")
     .values({
+      id: createId(),
       email: parsed.data.email,
       passwordHash,
       role: parsed.data.role,
-      fullName: parsed.data.fullName
+      fullName: parsed.data.fullName,
+      isActive: true,
+      createdAt: now,
+      updatedAt: now
     })
-    .returning({
-      id: users.id,
-      email: users.email,
-      role: users.role,
-      fullName: users.fullName,
-      isActive: users.isActive
-    });
+    .returning(["id", "email", "role", "fullName", "isActive"])
+    .executeTakeFirstOrThrow();
 
   await writeAuditLog({
     actorUserId: req.user!.id,
@@ -70,17 +65,11 @@ router.post("/", async (req, res) => {
 });
 
 router.get("/:id", async (req, res) => {
-  const [user] = await db
-    .select({
-      id: users.id,
-      email: users.email,
-      role: users.role,
-      fullName: users.fullName,
-      isActive: users.isActive,
-      createdAt: users.createdAt
-    })
-    .from(users)
-    .where(eq(users.id, req.params.id));
+  const user = await db
+    .selectFrom("User")
+    .select(USER_LIST_COLUMNS)
+    .where("id", "=", req.params.id)
+    .executeTakeFirst();
 
   if (!user) {
     return res.status(404).json({ message: "User not found" });
@@ -107,7 +96,8 @@ router.patch("/:id", async (req, res) => {
     role?: (typeof parsed.data)["role"];
     isActive?: boolean;
     passwordHash?: string;
-  } = {};
+    updatedAt: Date;
+  } = { updatedAt: new Date() };
 
   if (parsed.data.fullName !== undefined) data.fullName = parsed.data.fullName;
   if (parsed.data.role !== undefined) data.role = parsed.data.role;
@@ -116,17 +106,12 @@ router.patch("/:id", async (req, res) => {
     data.passwordHash = await bcrypt.hash(parsed.data.password, 10);
   }
 
-  const [user] = await db
-    .update(users)
+  const user = await db
+    .updateTable("User")
     .set(data)
-    .where(eq(users.id, req.params.id))
-    .returning({
-      id: users.id,
-      email: users.email,
-      role: users.role,
-      fullName: users.fullName,
-      isActive: users.isActive
-    });
+    .where("id", "=", req.params.id)
+    .returning(["id", "email", "role", "fullName", "isActive"])
+    .executeTakeFirstOrThrow();
 
   await writeAuditLog({
     actorUserId: req.user!.id,
@@ -139,7 +124,7 @@ router.patch("/:id", async (req, res) => {
 });
 
 router.delete("/:id", async (req, res) => {
-  await db.delete(users).where(eq(users.id, req.params.id));
+  await db.deleteFrom("User").where("id", "=", req.params.id).execute();
 
   await writeAuditLog({
     actorUserId: req.user!.id,

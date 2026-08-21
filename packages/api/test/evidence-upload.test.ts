@@ -4,8 +4,6 @@ import { resolve } from "node:path";
 import request from "supertest";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import app from "../src/app";
-import { eq } from "drizzle-orm";
-import { projects } from "../src/db/schema";
 import { db } from "../src/lib/db";
 import { FIXTURES } from "./global-setup";
 
@@ -25,12 +23,16 @@ let projectId: string;
 beforeAll(async () => {
   miembro = await token(FIXTURES.activo.email, FIXTURES.activo.password);
   ajeno = await token(FIXTURES.ajeno.email, FIXTURES.ajeno.password);
-  const [p] = await db.select().from(projects).where(eq(projects.slug, FIXTURES.proyecto.slug));
+  const p = await db
+    .selectFrom("Project")
+    .selectAll()
+    .where("slug", "=", FIXTURES.proyecto.slug)
+    .executeTakeFirstOrThrow();
   projectId = p.id;
 });
 
 afterAll(async () => {
-  await db.$client.close();
+  await db.destroy();
 });
 
 const subir = (tk: string, campos: Record<string, string>, archivo?: { buf: Buffer; nombre: string; tipo: string }) => {

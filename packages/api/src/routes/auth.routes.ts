@@ -2,9 +2,7 @@ import type { LoginResponse, MeResponse } from "@plataforma/shared";
 import { loginRequestSchema } from "@plataforma/shared";
 import { randomUUID } from "node:crypto";
 import bcrypt from "bcrypt";
-import { eq } from "drizzle-orm";
 import { Router } from "express";
-import { users } from "../db/schema";
 import { signToken } from "../lib/jwt";
 import { db } from "../lib/db";
 import { authenticate } from "../middlewares/auth";
@@ -37,7 +35,11 @@ router.post("/login", loginRateLimiter(), async (req, res) => {
     return res.status(400).json(parsed.error.flatten());
   }
 
-  const [user] = await db.select().from(users).where(eq(users.email, parsed.data.email));
+  const user = await db
+    .selectFrom("User")
+    .selectAll()
+    .where("email", "=", parsed.data.email)
+    .executeTakeFirst();
 
   // Se compara SIEMPRE, exista el usuario o no: es lo que hace que los tres
   // rechazos —no existe, inactivo, password incorrecta— cuesten lo mismo. Y por
@@ -81,17 +83,11 @@ router.post("/login", loginRateLimiter(), async (req, res) => {
 });
 
 router.get("/me", authenticate, async (req, res) => {
-  const [user] = await db
-    .select({
-      id: users.id,
-      email: users.email,
-      role: users.role,
-      fullName: users.fullName,
-      isActive: users.isActive,
-      createdAt: users.createdAt
-    })
-    .from(users)
-    .where(eq(users.id, req.user!.id));
+  const user = await db
+    .selectFrom("User")
+    .select(["id", "email", "role", "fullName", "isActive", "createdAt"])
+    .where("id", "=", req.user!.id)
+    .executeTakeFirst();
 
   // `authenticate` ya validó que existe y está activo, así que esto solo pasa si
   // lo borraron entre una consulta y la otra. Antes devolvía 200 con body `null`,
