@@ -129,6 +129,7 @@ Cada rebanada deja la app **corriendo y demostrable** — ese es el criterio de 
 | 0 | `SPEC-008` | **Cimientos verificables** *(no es vertical, a propósito)* | La puerta puede verificar la API y el contrato API↔web | **cerrada** 2026-08-20 |
 | 0b | `SPEC-009` | Rename D-023 + naming de contratos | El dominio dice `stage` en todos lados | no escrita |
 | 0c | `SPEC-010` | **Endurecer la superficie 🔴** *(tampoco es vertical)* | El código 🔴 no tiene defaults inseguros | **cerrada** 2026-08-21 |
+| 0d | — | **Migrar `packages/api` de Prisma a Drizzle** *(tampoco es vertical)* | El ORM deja de ser deuda antes de que el código nuevo se acople a Prisma | D-048 — en curso 2026-08-21 |
 | 1 | — | Login de 4 roles | Entrás como cada rol y ves su panel, en ambos idiomas, en mobile | no escrita |
 | 2 | — | Developer crea proyecto, unidades y stages | Creás un desarrollo con su plantilla de 10 stages | no escrita |
 | 3 | — | **Evidencia → Merkle → TXID real** *(walking skeleton)* | Subís evidencia y obtenés un TXID verificable en cardanoscan | no escrita |

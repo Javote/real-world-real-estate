@@ -6,7 +6,7 @@
       "Edit(./docs/**)",
       "Write(./docs/**)",
       "Read(./**/.env)",
-      "Edit(./packages/api/prisma/migrations/**)",
+      "Edit(./packages/api/drizzle/**)",
       "Edit(./contracts/build/**)",
       "Edit(./apps/web/src/routeTree.gen.ts)"
     ],

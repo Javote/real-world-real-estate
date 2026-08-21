@@ -2,14 +2,16 @@ import { loginResponseSchema, meResponseSchema } from "@plataforma/shared";
 import request from "supertest";
 import { afterAll, describe, expect, it } from "vitest";
 import app from "../src/app";
-import { prisma } from "../src/lib/prisma";
+import { eq } from "drizzle-orm";
+import { users } from "../src/db/schema";
+import { db } from "../src/lib/db";
 import { FIXTURES } from "./global-setup";
 
 const login = (email: string, password: string) =>
   request(app).post("/api/v1/auth/login").send({ email, password });
 
 afterAll(async () => {
-  await prisma.$disconnect();
+  await db.$client.close();
 });
 
 // Los casos borde salen de specs/SPEC-008 §Casos borde. Si un caso no está en
@@ -105,10 +107,7 @@ describe("GET /api/v1/auth/me", () => {
     const { body } = await login(FIXTURES.revocable.email, FIXTURES.revocable.password);
     expect(body.token).toBeTruthy();
 
-    await prisma.user.update({
-      where: { email: FIXTURES.revocable.email },
-      data: { isActive: false },
-    });
+    await db.update(users).set({ isActive: false }).where(eq(users.email, FIXTURES.revocable.email));
 
     const res = await request(app).get("/api/v1/auth/me").set("Authorization", `Bearer ${body.token}`);
 

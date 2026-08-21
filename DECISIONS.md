@@ -62,6 +62,7 @@
 | D-045 | Rate limiting en `/auth/login`, y de dónde sale la IP del cliente | Aceptada |
 | D-046 | bcrypt se ratifica —con el argumento del free tier— y la política de passwords sale de NIST/OWASP | Aceptada |
 | D-047 | El seed de demo se niega a sembrar credenciales publicadas en una base que no sea local | Aceptada |
+| D-048 | La migración a Drizzle deja de estar diferida: arranca antes de las rebanadas de M3 | Aceptada |
 
 > **Repaso completo con la documentación oficial: ver §Repaso al final del archivo.** D-001..D-017 se
 > escribieron sin los entregables delante; las 25 entradas se revisaron el 2026-07-29 y cada una
@@ -783,6 +784,10 @@ el worker de confirmaciones si ya existe, o contra el caso hipotético si todav�
 `prisma/schema.prisma` + los repositorios de `packages/api`, y el datastore detrás de la variable de
 conexión. Cambiar cualquiera de las tres no requiere tocar lógica de negocio.
 
+**Actualización (2026-08-21, D-048).** La migración deja de estar diferida: arranca ya, antes de
+las rebanadas de M3. Ver D-048 — el trigger de "evidencia, no preferencia" de este párrafo se da
+por satisfecho ahí, no se ignora.
+
 
 ## D-039 — Plataforma de deploy: Render. Railway queda descartado
 
@@ -1331,6 +1336,43 @@ porque las cuentas se crean por invitación (rebanada 5), y ahí esta decisión 
 comportamiento anterior es usar los literales de nuevo. Lo que no se revierte gratis es el criterio
 12: si esto se saca, hay que resolver de otra forma que la URL pública no quede con un admin
 conocido.
+
+## D-048 — La migración a Drizzle deja de estar diferida: arranca antes de las rebanadas de M3 — **Aceptada**
+
+**Contexto (2026-08-21).** D-038 ratificó Drizzle como destino de ORM pero difirió la migración
+"a cuando haga falta", con el principio 3 como trigger explícito: evidencia concreta, no
+conveniencia. Al revisar el stack con el dueño del producto surgió el origen real de Prisma en este
+repo: el destino siempre fue Drizzle (era la decisión original, D-004); en el medio, una maqueta que
+era más bien un borrador se actualizó y quedó incorporada al repo, Prisma se coló como atajo de esa
+maqueta, y esas primeras definiciones se traspapelaron. No es una preferencia técnica nueva — es
+retomar el rumbo original que el repo había perdido de vista.
+
+**Decisión.** La migración arranca **ahora**, antes de abrir la rebanada 1 (login de 4 roles) y de
+cualquier otro trabajo de M3. Razón: resolver la deuda de infraestructura que se pueda resolver
+**antes** de que el código nuevo empiece a acoplarse a Prisma — cuanto más tarde, más superficie hay
+que migrar después. Evidencia que satisface el principio 3 para reabrir D-038: el análisis técnico
+está más alineado a las preferencias ya declaradas del proyecto (querys más chicas y más explícitas,
+más parecidas a SQL que al DSL de Prisma, sin motor de generación de cliente aparte) — no es una
+limitación medida de Prisma, es la misma clase de evidencia que ya usó D-039 (postura del dueño del
+producto) para cerrar una decisión sin spike.
+
+**Qué NO cambia de D-038.** El destino de hosting (Turso en prod, SQLite en dev) y el driver elegido
+para hablar con esa base no dependen del ORM — siguen intactos. Lo único que se adelanta es el
+*cuándo* de la migración de ORM, no el *qué*.
+
+**Alcance de esta rebanada.** `packages/api` completo: `schema.prisma` → schema Drizzle,
+migraciones, y los 8 archivos de `src/` que importan `@prisma/client` hoy. `apps/web` no usa Prisma
+y no se toca. El detalle técnico de la migración (naming de columnas, manejo de IDs, timestamps,
+seed) queda en el commit que la implementa, no acá — esta entrada es la decisión de *cuándo y por
+qué*, no el diseño del schema.
+
+**Trigger de revisión.** Ninguno — decisión de una sola vez, no recurrente. Si la migración expone
+un problema real con Drizzle+libSQL que no estaba previsto, se documenta como una D-0XX nueva que
+reabra este párrafo con esa evidencia, siguiendo el mismo principio 3.
+
+**Reversión.** Mientras el ORM siga detrás de `packages/api/src/lib/db.ts` (antes `lib/prisma.ts`)
+y de los repositorios de cada ruta, volver a Prisma es una migración simétrica a esta, no un
+rediseño.
 
 ---
 

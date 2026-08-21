@@ -1,7 +1,7 @@
 # PropNexus — Anclaje de Evidencia Inmobiliaria sobre Cardano
 
 > Catalyst Fund Project **1400106** — *Real-World Real Estate Pre-Sale with Proof & Release*.
-> Monorepo: **pnpm + TanStack Start** (web) + **Express 4 + Prisma** (api) + **Aiken / Plutus V3** (contratos).
+> Monorepo: **pnpm + TanStack Start** (web) + **Express 4 + Drizzle** (api) + **Aiken / Plutus V3** (contratos).
 
 Ventas inmobiliarias en pozo: estructura el ciclo de obra en **stages**, organiza la **evidencia**
 (planos, fotos, permisos, certificados) y ancla **huellas criptográficas** (SHA-256 / Merkle) en
@@ -45,7 +45,7 @@ pnpm db:seed                                     # usuarios y proyecto demo
 pnpm dev                                         # web en :3000, api en :8787
 ```
 
-Login demo: `admin@example.com` / `admin123` (resto de usuarios en `packages/api/prisma/seed.ts`).
+Login demo: `admin@example.com` / `admin123` (resto de usuarios en `packages/api/src/db/seed.ts`).
 Son credenciales **de desarrollo y publicadas**, y por eso el seed solo las usa contra un SQLite
 local: contra cualquier otra base se niega a correr sin `SEED_ADMIN_PASSWORD` (D-047).
 Contratos: `pnpm contracts:check`.
@@ -160,9 +160,9 @@ plataforma/
 ├── apps/
 │   └── web/                    # TanStack Start + Tailwind v4 — 4 superficies por rol
 ├── packages/
-│   ├── api/                    # Express 4 + Prisma + SQLite dev (D-016)
-│   │   ├── prisma/             #   schema, migraciones, seed
-│   │   └── src/                #   routes, middlewares (auth 2 capas), lib, utils
+│   ├── api/                    # Express 4 + Drizzle + SQLite dev (D-016, D-048)
+│   │   ├── drizzle/            #   migraciones SQL generadas
+│   │   └── src/                #   routes, middlewares (auth 2 capas), lib, utils, db (schema/seed)
 │   ├── shared/                 # contrato único API↔web: schemas Zod + tipos
 │   └── cardano/                # (a poblar) AnchorPort real/simulado — D-014
 ├── contracts/                  # Proyecto Aiken (D-017) — Plutus V3, nunca custodia valor (D-021)
@@ -207,7 +207,7 @@ versionan (regla 12 de `CLAUDE.md`, verificada por `scripts/gate.sh` en cada pus
 | `apps/`, `packages/`, `contracts/`, `scripts/`, `.claude/`, `.github/` | **Pública** | Código, contratos, harness y CI |
 | `docs/`, `specs/`, `README.md`, `CLAUDE.md`, `DECISIONS.md` | **Pública** | Entregables oficiales y documentación de trabajo |
 | `packages/api/.env`, `apps/web/.env` | **Privada** — nunca versionada | Secretos locales. El ejemplo público es `.env.example` |
-| `packages/api/prisma/dev.db` | **Privada** — nunca versionada | Base SQLite de desarrollo |
+| `packages/api/dev.db` | **Privada** — nunca versionada | Base SQLite de desarrollo |
 | `packages/api/uploads/` | **Privada** — nunca versionada | Evidencia subida en runtime |
 | `apps/web/e2e/.artifacts/` | **Privada** — nunca versionada | Capturas, videos y traces de la suite E2E |
 

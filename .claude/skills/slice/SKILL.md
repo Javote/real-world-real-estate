@@ -64,8 +64,15 @@ Orden que evita retrabajo:
 4. **UI**, contra `ApiPort`, con los textos del diccionario i18n.
 5. **Tests**, en el mismo commit que el código que verifican.
 
-Un cambio lógico por commit. **El mensaje de commit es la única revisión que va a existir**: si
-un cambio no se puede explicar en un mensaje, es demasiado grande.
+**La rebanada completa es el cambio lógico — no cada archivo.** Código, tests y la documentación
+del paso 6 van en **un solo commit** al cerrar la rebanada. No dividas "código" en un commit y
+"docs" en otro: partirlos deja un commit que no compila sin el otro, o uno que documenta algo que
+el otro todavía no hizo — ninguno de los dos es revisable solo. La única excepción legítima es una
+sesión que **no toca código en absoluto** (ej. una decisión pura, o corregir un `CLAUDE.md`): ahí
+sí, un commit `docs`/`chore` aparte, porque no hay nada más con qué agruparlo.
+**El mensaje de commit es la única revisión que va a existir**: si un cambio no se puede explicar
+en un mensaje, es demasiado grande — pero la solución es cortar la rebanada en rebanadas más
+chicas, no partir una rebanada en commits de código y de documentación.
 
 ## 5 · Verificar — las tres capas
 

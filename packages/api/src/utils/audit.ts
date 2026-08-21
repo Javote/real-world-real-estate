@@ -1,4 +1,5 @@
-import { prisma } from "../lib/prisma";
+import { db } from "../lib/db";
+import { auditLogs } from "../db/schema";
 
 export async function writeAuditLog(params: {
   actorUserId?: string;
@@ -7,13 +8,11 @@ export async function writeAuditLog(params: {
   entityId: string;
   metadata?: unknown;
 }) {
-  await prisma.auditLog.create({
-    data: {
-      actorUserId: params.actorUserId,
-      action: params.action,
-      entityType: params.entityType,
-      entityId: params.entityId,
-      metadataJson: params.metadata ? JSON.stringify(params.metadata) : null
-    }
+  await db.insert(auditLogs).values({
+    actorUserId: params.actorUserId,
+    action: params.action,
+    entityType: params.entityType,
+    entityId: params.entityId,
+    metadataJson: params.metadata ? JSON.stringify(params.metadata) : null
   });
 }

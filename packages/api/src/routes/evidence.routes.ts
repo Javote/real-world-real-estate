@@ -1,8 +1,10 @@
 import fs from "fs";
 import path from "path";
+import { and, desc, eq } from "drizzle-orm";
 import { Router } from "express";
 import { z } from "zod";
-import { prisma } from "../lib/prisma";
+import { evidences, milestones, projects } from "../db/schema";
+import { db } from "../lib/db";
 import { uploadSingleEvidence } from "../lib/upload";
 import {
   authenticate,
@@ -17,6 +19,21 @@ const router = Router();
 
 router.use(authenticate);
 
+// `storagePath` NUNCA sale al cliente (D-011, incidente real de filtración de
+// ruta absoluta en disco). Toda query que arma una respuesta usa esta lista de
+// columnas explícita en vez de "select *" / traer la fila entera. Las dos rutas
+// internas que sí necesitan `storagePath` (`download`, `delete`) consultan la
+// fila completa aparte, y nunca la devuelven en el body.
+const EVIDENCE_SAFE_COLUMNS = {
+  storagePath: false
+} as const;
+
+const UPLOADED_BY_COLUMNS = {
+  id: true,
+  email: true,
+  fullName: true
+} as const;
+
 router.get("/projects/:id/evidence", async (req, res) => {
   const allowed = await canAccessProject(
     req.user!.id,
@@ -29,19 +46,13 @@ router.get("/projects/:id/evidence", async (req, res) => {
     return res.status(403).json({ message: "Forbidden" });
   }
 
-  const evidence = await prisma.evidence.findMany({
-    where: { projectId: req.params.id },
-    orderBy: { uploadedAt: "desc" },
-    omit: { storagePath: true },
-    include: {
+  const evidence = await db.query.evidences.findMany({
+    where: eq(evidences.projectId, req.params.id),
+    orderBy: desc(evidences.uploadedAt),
+    columns: EVIDENCE_SAFE_COLUMNS,
+    with: {
       milestone: true,
-      uploadedBy: {
-        select: {
-          id: true,
-          email: true,
-          fullName: true
-        }
-      }
+      uploadedBy: { columns: UPLOADED_BY_COLUMNS }
     }
   });
 
@@ -96,9 +107,7 @@ router.post(
       return res.status(400).json(parsed.error.flatten());
     }
 
-    const project = await prisma.project.findUnique({
-      where: { id: projectId }
-    });
+    const [project] = await db.select().from(projects).where(eq(projects.id, projectId));
 
     if (!project) {
       if (fs.existsSync(req.file.path)) {
@@ -108,12 +117,10 @@ router.post(
     }
 
     if (parsed.data.milestoneId) {
-      const milestone = await prisma.milestone.findFirst({
-        where: {
-          id: parsed.data.milestoneId,
-          projectId
-        }
-      });
+      const [milestone] = await db
+        .select({ id: milestones.id })
+        .from(milestones)
+        .where(and(eq(milestones.id, parsed.data.milestoneId), eq(milestones.projectId, projectId)));
 
       if (!milestone) {
         if (fs.existsSync(req.file.path)) {
@@ -128,8 +135,9 @@ router.post(
     const absolutePath = path.resolve(req.file.path);
     const sha256Hash = await sha256File(absolutePath);
 
-    const evidence = await prisma.evidence.create({
-      data: {
+    const [created] = await db
+      .insert(evidences)
+      .values({
         projectId,
         milestoneId: parsed.data.milestoneId ?? null,
         uploadedById: req.user!.id,
@@ -142,15 +150,19 @@ router.post(
         sizeBytes: req.file.size,
         storagePath: absolutePath,
         sha256Hash
-      },
-      omit: { storagePath: true }
+      })
+      .returning({ id: evidences.id });
+
+    const evidence = await db.query.evidences.findFirst({
+      where: eq(evidences.id, created.id),
+      columns: EVIDENCE_SAFE_COLUMNS
     });
 
     await writeAuditLog({
       actorUserId: req.user!.id,
       action: "CREATE_EVIDENCE",
       entityType: "Evidence",
-      entityId: evidence.id
+      entityId: created.id
     });
 
     return res.status(201).json(evidence);
@@ -158,19 +170,13 @@ router.post(
 );
 
 router.get("/evidence/:id", async (req, res) => {
-  const evidence = await prisma.evidence.findUnique({
-    where: { id: req.params.id },
-    omit: { storagePath: true },
-    include: {
+  const evidence = await db.query.evidences.findFirst({
+    where: eq(evidences.id, req.params.id),
+    columns: EVIDENCE_SAFE_COLUMNS,
+    with: {
       project: true,
       milestone: true,
-      uploadedBy: {
-        select: {
-          id: true,
-          email: true,
-          fullName: true
-        }
-      }
+      uploadedBy: { columns: UPLOADED_BY_COLUMNS }
     }
   });
 
@@ -193,9 +199,7 @@ router.get("/evidence/:id", async (req, res) => {
 });
 
 router.get("/evidence/:id/download", async (req, res) => {
-  const evidence = await prisma.evidence.findUnique({
-    where: { id: req.params.id }
-  });
+  const [evidence] = await db.select().from(evidences).where(eq(evidences.id, req.params.id));
 
   if (!evidence) {
     return res.status(404).json({ message: "Evidence not found" });
@@ -220,9 +224,7 @@ router.get("/evidence/:id/download", async (req, res) => {
 });
 
 router.patch("/evidence/:id", requireRole("admin", "developer"), async (req, res) => {
-  const existing = await prisma.evidence.findUnique({
-    where: { id: req.params.id }
-  });
+  const [existing] = await db.select().from(evidences).where(eq(evidences.id, req.params.id));
 
   if (!existing) {
     return res.status(404).json({ message: "Evidence not found" });
@@ -252,12 +254,12 @@ router.patch("/evidence/:id", requireRole("admin", "developer"), async (req, res
   }
 
   if (parsed.data.milestoneId) {
-    const milestone = await prisma.milestone.findFirst({
-      where: {
-        id: parsed.data.milestoneId,
-        projectId: existing.projectId
-      }
-    });
+    const [milestone] = await db
+      .select({ id: milestones.id })
+      .from(milestones)
+      .where(
+        and(eq(milestones.id, parsed.data.milestoneId), eq(milestones.projectId, existing.projectId))
+      );
 
     if (!milestone) {
       return res.status(400).json({
@@ -266,26 +268,25 @@ router.patch("/evidence/:id", requireRole("admin", "developer"), async (req, res
     }
   }
 
-  const evidence = await prisma.evidence.update({
-    where: { id: req.params.id },
-    data: parsed.data,
-    omit: { storagePath: true }
+  await db.update(evidences).set(parsed.data).where(eq(evidences.id, req.params.id));
+
+  const evidence = await db.query.evidences.findFirst({
+    where: eq(evidences.id, req.params.id),
+    columns: EVIDENCE_SAFE_COLUMNS
   });
 
   await writeAuditLog({
     actorUserId: req.user!.id,
     action: "UPDATE_EVIDENCE",
     entityType: "Evidence",
-    entityId: evidence.id
+    entityId: req.params.id
   });
 
   return res.json(evidence);
 });
 
 router.delete("/evidence/:id", requireRole("admin"), async (req, res) => {
-  const existing = await prisma.evidence.findUnique({
-    where: { id: req.params.id }
-  });
+  const [existing] = await db.select().from(evidences).where(eq(evidences.id, req.params.id));
 
   if (!existing) {
     return res.status(404).json({ message: "Evidence not found" });
@@ -295,9 +296,7 @@ router.delete("/evidence/:id", requireRole("admin"), async (req, res) => {
     fs.unlinkSync(existing.storagePath);
   }
 
-  await prisma.evidence.delete({
-    where: { id: req.params.id }
-  });
+  await db.delete(evidences).where(eq(evidences.id, req.params.id));
 
   await writeAuditLog({
     actorUserId: req.user!.id,

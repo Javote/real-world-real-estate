@@ -40,13 +40,13 @@ conveniencia.
 Y antes de concluir que el entregable está mal: verificá que estás mirando el
 entregable y no una transcripción (pasó, y costó una sesión entera)." ;;
 
-  packages/api/prisma/migrations/*)
+  packages/api/drizzle/*.sql)
     [ -f "$FP" ] && block \
 "BLOQUEADO — '$REL' es una migración ya aplicada.
 
 Editarla deja la base de cualquier otro árbol en un estado que el historial de
 migraciones no describe. Siempre migración nueva:
-  pnpm --filter @plataforma/api db:migrate" ;;
+  pnpm --filter @plataforma/api db:generate" ;;
 
   contracts/build/*|contracts/aiken.lock)
     block "BLOQUEADO — '$REL' es generado por aiken. Se regenera con 'pnpm contracts:build', no se edita." ;;

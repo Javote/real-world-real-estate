@@ -1,11 +1,11 @@
 import request from "supertest";
 import { afterAll, describe, expect, it } from "vitest";
 import app from "../src/app";
-import { prisma } from "../src/lib/prisma";
+import { db } from "../src/lib/db";
 import { FIXTURES } from "./global-setup";
 
 afterAll(async () => {
-  await prisma.$disconnect();
+  await db.$client.close();
 });
 
 const login = (email: string, password: string) =>

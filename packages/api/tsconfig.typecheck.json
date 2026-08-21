@@ -1,7 +1,7 @@
 {
-  // El build (tsconfig.json) emite solo src/ y prisma/ — los tests no van a la
-  // imagen. Pero sí tienen que typechequear: un test que no compila no verifica
-  // nada. Por eso la puerta usa esta config y el build usa la otra.
+  // El build (tsconfig.json) emite solo src/ — los tests no van a la imagen.
+  // Pero sí tienen que typechequear: un test que no compila no verifica nada.
+  // Por eso la puerta usa esta config y el build usa la otra.
   "extends": "./tsconfig.json",
-  "include": ["src", "prisma", "test", "vitest.config.mts"]
+  "include": ["src", "test", "vitest.config.mts", "drizzle.config.ts"]
 }

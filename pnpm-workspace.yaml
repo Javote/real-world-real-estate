@@ -3,10 +3,7 @@ packages:
   - "packages/*"
 
 onlyBuiltDependencies:
-  - "@prisma/client"
-  - "@prisma/engines"
   - "@tailwindcss/oxide"
   - bcrypt
   - esbuild
   - lightningcss
-  - prisma

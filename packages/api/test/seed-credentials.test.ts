@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { esBaseLocal, paraMostrar, passwordDeDemo } from "../prisma/credentials";
+import { esBaseLocal, paraMostrar, passwordDeDemo } from "../src/db/credentials";
 
 const LOCAL = { DATABASE_URL: "file:./dev.db" };
 const REMOTA = { DATABASE_URL: "libsql://propnexus.turso.io" };

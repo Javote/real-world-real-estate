@@ -1,13 +1,17 @@
-import { execFileSync } from "node:child_process";
 import { existsSync, rmSync } from "node:fs";
 import path from "node:path";
 import bcrypt from "bcrypt";
-import { MembershipRole, PrismaClient, ProjectStatus, UserRole } from "@prisma/client";
+import { drizzle } from "drizzle-orm/libsql";
+import { migrate } from "drizzle-orm/libsql/migrator";
+import { eq } from "drizzle-orm";
+import { projectMembers, projects, users } from "../src/db/schema";
+import { createClient } from "../src/lib/libsql-client";
 
-// Prisma resuelve las rutas SQLite relativas al archivo de schema, así que
-// `file:./test.db` cae en prisma/test.db — misma convención que dev.db.
+// Drizzle-kit resuelve las rutas SQLite relativas al cwd del proceso (acá,
+// packages/api), así que `file:./test.db` cae directo en packages/api/test.db
+// — ya no en prisma/test.db, que dejó de existir con la migración a Drizzle.
 const DATABASE_URL = "file:./test.db";
-const DB_FILE = path.join(process.cwd(), "prisma", "test.db");
+const DB_FILE = path.join(process.cwd(), "test.db");
 
 export const FIXTURES = {
   /** developer, activo y MIEMBRO del proyecto de prueba */
@@ -24,92 +28,88 @@ export const FIXTURES = {
 };
 
 export default async function setup() {
-  for (const f of [DB_FILE, `${DB_FILE}-journal`]) {
+  for (const f of [DB_FILE, `${DB_FILE}-journal`, `${DB_FILE}-wal`, `${DB_FILE}-shm`]) {
     if (existsSync(f)) rmSync(f);
   }
 
-  // `migrate deploy` y no `db push`: así la suite verifica las migraciones
-  // reales que van a correr en producción, no una proyección del schema.
-  execFileSync("pnpm", ["exec", "prisma", "migrate", "deploy"], {
-    cwd: process.cwd(),
-    env: { ...process.env, DATABASE_URL },
-    stdio: "pipe",
-  });
+  const client = createClient({ url: DATABASE_URL });
+  const db = drizzle(client);
 
-  const prisma = new PrismaClient({ datasources: { db: { url: DATABASE_URL } } });
+  // Equivalente a `prisma migrate deploy`: aplica las migraciones commiteadas en
+  // `drizzle/`, así la suite verifica las migraciones reales que van a correr en
+  // producción y no una proyección del schema.
+  await migrate(db, { migrationsFolder: "./drizzle" });
+
   const hash = (pw: string) => bcrypt.hash(pw, 10);
 
-  await prisma.user.createMany({
-    data: [
-      {
-        email: FIXTURES.activo.email,
-        passwordHash: await hash(FIXTURES.activo.password),
-        role: UserRole.developer,
-        fullName: FIXTURES.activo.fullName,
-        isActive: true,
-      },
-      {
-        email: FIXTURES.inactivo.email,
-        passwordHash: await hash(FIXTURES.inactivo.password),
-        role: UserRole.buyer,
-        fullName: FIXTURES.inactivo.fullName,
-        isActive: false,
-      },
-      {
-        email: FIXTURES.revocable.email,
-        passwordHash: await hash(FIXTURES.revocable.password),
-        role: UserRole.admin,
-        fullName: FIXTURES.revocable.fullName,
-        isActive: true,
-      },
-      {
-        email: FIXTURES.ajeno.email,
-        passwordHash: await hash(FIXTURES.ajeno.password),
-        role: UserRole.developer,
-        fullName: FIXTURES.ajeno.fullName,
-        isActive: true,
-      },
-      {
-        email: FIXTURES.admin.email,
-        passwordHash: await hash(FIXTURES.admin.password),
-        role: UserRole.admin,
-        fullName: FIXTURES.admin.fullName,
-        isActive: true,
-      },
-    ],
-  });
+  await db.insert(users).values([
+    {
+      email: FIXTURES.activo.email,
+      passwordHash: await hash(FIXTURES.activo.password),
+      role: "developer",
+      fullName: FIXTURES.activo.fullName,
+      isActive: true,
+    },
+    {
+      email: FIXTURES.inactivo.email,
+      passwordHash: await hash(FIXTURES.inactivo.password),
+      role: "buyer",
+      fullName: FIXTURES.inactivo.fullName,
+      isActive: false,
+    },
+    {
+      email: FIXTURES.revocable.email,
+      passwordHash: await hash(FIXTURES.revocable.password),
+      role: "admin",
+      fullName: FIXTURES.revocable.fullName,
+      isActive: true,
+    },
+    {
+      email: FIXTURES.ajeno.email,
+      passwordHash: await hash(FIXTURES.ajeno.password),
+      role: "developer",
+      fullName: FIXTURES.ajeno.fullName,
+      isActive: true,
+    },
+    {
+      email: FIXTURES.admin.email,
+      passwordHash: await hash(FIXTURES.admin.password),
+      role: "admin",
+      fullName: FIXTURES.admin.fullName,
+      isActive: true,
+    },
+  ]);
 
   // Un proyecto con UN developer miembro y otro que no lo es: sin eso no se
   // puede testear la segunda capa de autorización (rol global + membresía).
-  const proyecto = await prisma.project.create({
-    data: {
+  const [proyecto] = await db
+    .insert(projects)
+    .values({
       name: "Torre Test",
       slug: FIXTURES.proyecto.slug,
-      status: ProjectStatus.in_progress,
+      status: "in_progress",
       totalUnits: 10,
-    },
-  });
-  const miembro = await prisma.user.findUniqueOrThrow({ where: { email: FIXTURES.activo.email } });
-  await prisma.projectMember.createMany({
-    data: [
-      { projectId: proyecto.id, userId: miembro.id, membershipRole: MembershipRole.developer },
-      // DOS membresías sobre el MISMO proyecto: el schema lo permite
-      // (@@unique por userId+projectId+membershipRole) y el listado viejo lo
-      // devolvía duplicado. Sin este fixture, esa regresión no se ve.
-      { projectId: proyecto.id, userId: miembro.id, membershipRole: MembershipRole.buyer },
-    ],
-  });
+    })
+    .returning();
+
+  const [miembro] = await db.select().from(users).where(eq(users.email, FIXTURES.activo.email));
+
+  await db.insert(projectMembers).values([
+    { projectId: proyecto.id, userId: miembro.id, membershipRole: "developer" },
+    // DOS membresías sobre el MISMO proyecto: el schema lo permite (índice único
+    // por userId+projectId+membershipRole) y el listado viejo lo devolvía
+    // duplicado. Sin este fixture, esa regresión no se ve.
+    { projectId: proyecto.id, userId: miembro.id, membershipRole: "buyer" },
+  ]);
 
   // Segundo proyecto, sin ningún miembro: es contra lo que se mide que el
   // listado scopee. Se crea después, así que es el más nuevo por createdAt.
-  await prisma.project.create({
-    data: {
-      name: "Torre Ajena",
-      slug: FIXTURES.otroProyecto.slug,
-      status: ProjectStatus.planning,
-      totalUnits: 4,
-    },
+  await db.insert(projects).values({
+    name: "Torre Ajena",
+    slug: FIXTURES.otroProyecto.slug,
+    status: "planning",
+    totalUnits: 4,
   });
 
-  await prisma.$disconnect();
+  client.close();
 }

@@ -70,7 +70,7 @@ def escape_active(name, code):
 
 
 def protected_paths(code=""):
-    paths = ["packages/api/prisma/migrations/", "contracts/build/"]
+    paths = ["packages/api/drizzle/", "contracts/build/"]
     if not escape_active("GATE_ALLOW_DOCS", code):
         paths.insert(0, "docs/")
     return paths

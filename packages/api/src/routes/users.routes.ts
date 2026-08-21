@@ -1,8 +1,10 @@
 import { passwordSchema } from "@plataforma/shared";
 import bcrypt from "bcrypt";
+import { desc, eq } from "drizzle-orm";
 import { Router } from "express";
 import { z } from "zod";
-import { prisma } from "../lib/prisma";
+import { users } from "../db/schema";
+import { db } from "../lib/db";
 import { authenticate, requireRole } from "../middlewares/auth";
 import { writeAuditLog } from "../utils/audit";
 
@@ -11,19 +13,19 @@ const router = Router();
 router.use(authenticate, requireRole("admin"));
 
 router.get("/", async (_req, res) => {
-  const users = await prisma.user.findMany({
-    select: {
-      id: true,
-      email: true,
-      role: true,
-      fullName: true,
-      isActive: true,
-      createdAt: true
-    },
-    orderBy: { createdAt: "desc" }
-  });
+  const userList = await db
+    .select({
+      id: users.id,
+      email: users.email,
+      role: users.role,
+      fullName: users.fullName,
+      isActive: users.isActive,
+      createdAt: users.createdAt
+    })
+    .from(users)
+    .orderBy(desc(users.createdAt));
 
-  return res.json(users);
+  return res.json(userList);
 });
 
 router.post("/", async (req, res) => {
@@ -41,21 +43,21 @@ router.post("/", async (req, res) => {
 
   const passwordHash = await bcrypt.hash(parsed.data.password, 10);
 
-  const user = await prisma.user.create({
-    data: {
+  const [user] = await db
+    .insert(users)
+    .values({
       email: parsed.data.email,
       passwordHash,
       role: parsed.data.role,
       fullName: parsed.data.fullName
-    },
-    select: {
-      id: true,
-      email: true,
-      role: true,
-      fullName: true,
-      isActive: true
-    }
-  });
+    })
+    .returning({
+      id: users.id,
+      email: users.email,
+      role: users.role,
+      fullName: users.fullName,
+      isActive: users.isActive
+    });
 
   await writeAuditLog({
     actorUserId: req.user!.id,
@@ -68,17 +70,17 @@ router.post("/", async (req, res) => {
 });
 
 router.get("/:id", async (req, res) => {
-  const user = await prisma.user.findUnique({
-    where: { id: req.params.id },
-    select: {
-      id: true,
-      email: true,
-      role: true,
-      fullName: true,
-      isActive: true,
-      createdAt: true
-    }
-  });
+  const [user] = await db
+    .select({
+      id: users.id,
+      email: users.email,
+      role: users.role,
+      fullName: users.fullName,
+      isActive: users.isActive,
+      createdAt: users.createdAt
+    })
+    .from(users)
+    .where(eq(users.id, req.params.id));
 
   if (!user) {
     return res.status(404).json({ message: "User not found" });
@@ -100,7 +102,12 @@ router.patch("/:id", async (req, res) => {
     return res.status(400).json(parsed.error.flatten());
   }
 
-  const data: Record<string, unknown> = {};
+  const data: {
+    fullName?: string;
+    role?: (typeof parsed.data)["role"];
+    isActive?: boolean;
+    passwordHash?: string;
+  } = {};
 
   if (parsed.data.fullName !== undefined) data.fullName = parsed.data.fullName;
   if (parsed.data.role !== undefined) data.role = parsed.data.role;
@@ -109,17 +116,17 @@ router.patch("/:id", async (req, res) => {
     data.passwordHash = await bcrypt.hash(parsed.data.password, 10);
   }
 
-  const user = await prisma.user.update({
-    where: { id: req.params.id },
-    data,
-    select: {
-      id: true,
-      email: true,
-      role: true,
-      fullName: true,
-      isActive: true
-    }
-  });
+  const [user] = await db
+    .update(users)
+    .set(data)
+    .where(eq(users.id, req.params.id))
+    .returning({
+      id: users.id,
+      email: users.email,
+      role: users.role,
+      fullName: users.fullName,
+      isActive: users.isActive
+    });
 
   await writeAuditLog({
     actorUserId: req.user!.id,
@@ -132,9 +139,7 @@ router.patch("/:id", async (req, res) => {
 });
 
 router.delete("/:id", async (req, res) => {
-  await prisma.user.delete({
-    where: { id: req.params.id }
-  });
+  await db.delete(users).where(eq(users.id, req.params.id));
 
   await writeAuditLog({
     actorUserId: req.user!.id,

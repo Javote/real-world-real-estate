@@ -1,6 +1,8 @@
+import { asc, eq } from "drizzle-orm";
 import { Router } from "express";
 import { z } from "zod";
-import { prisma } from "../lib/prisma";
+import { milestones } from "../db/schema";
+import { db } from "../lib/db";
 import {
   authenticate,
   ANY_MEMBERSHIP,
@@ -25,12 +27,13 @@ router.get("/projects/:id/milestones", async (req, res) => {
     return res.status(403).json({ message: "Forbidden" });
   }
 
-  const milestones = await prisma.milestone.findMany({
-    where: { projectId: req.params.id },
-    orderBy: { sequenceOrder: "asc" }
-  });
+  const result = await db
+    .select()
+    .from(milestones)
+    .where(eq(milestones.projectId, req.params.id))
+    .orderBy(asc(milestones.sequenceOrder));
 
-  return res.json(milestones);
+  return res.json(result);
 });
 
 router.post("/projects/:id/milestones", requireRole("admin", "developer"), async (req, res) => {
@@ -59,8 +62,9 @@ router.post("/projects/:id/milestones", requireRole("admin", "developer"), async
     return res.status(400).json(parsed.error.flatten());
   }
 
-  const milestone = await prisma.milestone.create({
-    data: {
+  const [milestone] = await db
+    .insert(milestones)
+    .values({
       projectId: req.params.id,
       name: parsed.data.name,
       sequenceOrder: parsed.data.sequenceOrder,
@@ -68,8 +72,8 @@ router.post("/projects/:id/milestones", requireRole("admin", "developer"), async
       validationCritical: parsed.data.validationCritical ?? false,
       scopeType: parsed.data.scopeType ?? "project_wide",
       scopeUnitCount: parsed.data.scopeUnitCount ?? 0
-    }
-  });
+    })
+    .returning();
 
   await writeAuditLog({
     actorUserId: req.user!.id,
@@ -82,9 +86,9 @@ router.post("/projects/:id/milestones", requireRole("admin", "developer"), async
 });
 
 router.get("/milestones/:id", async (req, res) => {
-  const milestone = await prisma.milestone.findUnique({
-    where: { id: req.params.id },
-    include: {
+  const milestone = await db.query.milestones.findFirst({
+    where: eq(milestones.id, req.params.id),
+    with: {
       evidences: true,
       project: true
     }
@@ -109,9 +113,10 @@ router.get("/milestones/:id", async (req, res) => {
 });
 
 router.patch("/milestones/:id", requireRole("admin", "developer"), async (req, res) => {
-  const milestoneExisting = await prisma.milestone.findUnique({
-    where: { id: req.params.id }
-  });
+  const [milestoneExisting] = await db
+    .select()
+    .from(milestones)
+    .where(eq(milestones.id, req.params.id));
 
   if (!milestoneExisting) {
     return res.status(404).json({ message: "Milestone not found" });
@@ -141,10 +146,11 @@ router.patch("/milestones/:id", requireRole("admin", "developer"), async (req, r
     return res.status(400).json(parsed.error.flatten());
   }
 
-  const milestone = await prisma.milestone.update({
-    where: { id: req.params.id },
-    data: parsed.data
-  });
+  const [milestone] = await db
+    .update(milestones)
+    .set(parsed.data)
+    .where(eq(milestones.id, req.params.id))
+    .returning();
 
   await writeAuditLog({
     actorUserId: req.user!.id,
@@ -166,9 +172,7 @@ router.patch("/milestones/:id/state", requireRole("admin", "developer"), async (
     return res.status(400).json(parsed.error.flatten());
   }
 
-  const existing = await prisma.milestone.findUnique({
-    where: { id: req.params.id }
-  });
+  const [existing] = await db.select().from(milestones).where(eq(milestones.id, req.params.id));
 
   if (!existing) {
     return res.status(404).json({ message: "Milestone not found" });
@@ -185,7 +189,7 @@ router.patch("/milestones/:id/state", requireRole("admin", "developer"), async (
     return res.status(403).json({ message: "Forbidden" });
   }
 
-  const data: Record<string, unknown> = {
+  const data: { state: typeof parsed.data.state; certifiedAt?: Date; certifiedById?: string } = {
     state: parsed.data.state
   };
 
@@ -194,10 +198,11 @@ router.patch("/milestones/:id/state", requireRole("admin", "developer"), async (
     data.certifiedById = req.user!.id;
   }
 
-  const milestone = await prisma.milestone.update({
-    where: { id: req.params.id },
-    data
-  });
+  const [milestone] = await db
+    .update(milestones)
+    .set(data)
+    .where(eq(milestones.id, req.params.id))
+    .returning();
 
   await writeAuditLog({
     actorUserId: req.user!.id,
@@ -211,9 +216,7 @@ router.patch("/milestones/:id/state", requireRole("admin", "developer"), async (
 });
 
 router.delete("/milestones/:id", requireRole("admin"), async (req, res) => {
-  await prisma.milestone.delete({
-    where: { id: req.params.id }
-  });
+  await db.delete(milestones).where(eq(milestones.id, req.params.id));
 
   await writeAuditLog({
     actorUserId: req.user!.id,

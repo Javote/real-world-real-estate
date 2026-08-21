@@ -4,7 +4,8 @@
 > bcrypt, uploads, idempotencia, claves de traducción) están en el `CLAUDE.md` de la raíz y **no
 > se repiten acá**.
 
-Express 4 + Zod + JWT + bcrypt(10) + Multer 2.x + Prisma/SQLite, base `/api/v1` (D-016, D-036).
+Express 4 + Zod + JWT + bcrypt(10) + Multer 2.x + Drizzle/SQLite (`@libsql/client`), base `/api/v1`
+(D-016, D-036, D-048 — migrado de Prisma el 2026-08-21).
 
 Está mejor parada que el frente: **la API se evoluciona, el front se reemplaza.** Se conservan
 auth JWT+bcrypt con autorización en dos capas, SHA-256 en el servidor al subir, `AuditLog`
@@ -32,16 +33,14 @@ endpoints del backlog **hoy conforman 2**: `POST /auth/login` y `GET /auth/me`.
 
 - **2026-08-20 · `storagePath` se filtraba en las cuatro respuestas de `/evidence`.** D-011 dice
   explícitamente que la clave de almacenamiento jamás se expone, pero `POST/GET/GET-by-id/PATCH
-  /evidence` devolvían el registro Prisma completo — incluida la ruta absoluta en disco del
-  servidor. Se detectó leyendo la ruta al migrar Multer, no por un test (no había ninguno).
-  **Fix:** `omit: { storagePath: true }` en cada query que responde al cliente
-  (`evidence.routes.ts`); las dos rutas que sí necesitan la ruta real internamente (`download`,
-  `delete`) siguen consultándola sin `omit`, porque nunca la devuelven en el body. Cualquier
-  endpoint nuevo que toque `Evidence` tiene que repetir el `omit` — no hay un select compartido
-  todavía porque la superficie es chica; si crece, vale la pena centralizarlo.
-- **Prisma ≥6.16 ya no carga `.env` desde el client.** Todo entrypoint que use `PrismaClient`
-  fuera del server necesita `import "dotenv/config"` primero (el server ya lo hace en `app.ts`).
-  El CLI de Prisma (`migrate`, `studio`) sí lo sigue cargando solo.
+  /evidence` devolvían el registro completo — incluida la ruta absoluta en disco del servidor. Se
+  detectó leyendo la ruta al migrar Multer, no por un test (no había ninguno).
+  **Fix:** una lista de columnas explícita (`EVIDENCE_SAFE_COLUMNS = { storagePath: false }`,
+  pasada como `columns` a cada query de Drizzle que responde al cliente en `evidence.routes.ts`);
+  las dos rutas que sí necesitan la ruta real internamente (`download`, `delete`) siguen
+  consultándola completa, porque nunca la devuelven en el body. Cualquier endpoint nuevo que toque
+  `Evidence` tiene que repetir esa lista — no hay un select compartido todavía porque la superficie
+  es chica; si crece, vale la pena centralizarlo.
 - **`@types/express` v5 con Express 4 rompe el typecheck** (21 errores `string | string[]` en
   `req.params`). Está pineado a `^4.17.21`: no lo "actualices" por su cuenta.
 - **El warning de `url.parse()` deprecado al arrancar viene de `bcrypt`**, vía
@@ -51,11 +50,23 @@ endpoints del backlog **hoy conforman 2**: `POST /auth/login` y `GET /auth/me`.
   Es la punta visible de algo que importa más: `bcrypt` es un **módulo nativo**. El argumento caro
   (toolchain en la imagen Docker) murió con D-041 — no hay imagen. Ver §Superficie 🔴 y
   `specs/stack.md` §11.
-- **`pnpm install` se lleva puesto el cliente Prisma generado.** Después de cualquier install,
-  `node_modules/.prisma/client` desaparece y el typecheck falla con "Module '@prisma/client' has no
-  exported member 'UserRole'" — que **parece** un problema de resolución de módulos y no lo es.
-  Antes de tocar `moduleResolution` por ese error, corré `pnpm --filter @plataforma/api db:generate`.
-  La puerta lo regenera sola si falta.
+- **2026-08-21 · La Relational Query API de Drizzle no reescribe un `SQL` a mano para calzar con
+  su propio alias interno.** `db.query.projects.findMany({ where: projectScope(...) })` rompía con
+  `SQLITE_ERROR: no such column: Project.id`: el RQB alias-ea la tabla base (`"Project" AS
+  "projects"`), pero el `EXISTS` correlacionado que arma `projectScope` referencia la columna del
+  schema importado, sin ese alias. **Fix:** `GET /projects` usa `db.select().from(projects)` (sin
+  alias) en vez del RQB, y arma los `milestones` de cada proyecto con una segunda query agrupada en
+  JS. `GET /:id` y `GET /:id/members` sí pueden usar el RQB con seguridad porque no inyectan
+  `projectScope` dentro de su `where`. **Regla:** cualquier `SQL` armado a mano que referencie una
+  tabla del schema (no un alias) no es seguro de pasar al `where` de una query del RQB sobre esa
+  misma tabla.
+- **2026-08-21 · `@libsql/client` y `@paralleldrive/cuid2` son ESM puro; con `moduleResolution:
+  node16` (CJS) un `import` normal typechequea rojo** (TS1479/TS1471) aunque corra bien en runtime.
+  El patrón que lo resuelve —usado en `src/lib/libsql-client.ts`, para no repetirlo en cuatro
+  lugares— es tipos vía `import type {...} from "pkg" with { "resolution-mode": "require" }` y el
+  valor vía `require("pkg")` a secas; Node 24 resuelve ese `require` de un paquete ESM en runtime
+  sin problema. Antes de "arreglar" un TS1479/TS1471 nuevo cambiando `moduleResolution`, mirá si es
+  este mismo patrón el que hace falta.
 - **2026-08-20 · Un `import()` dinámico en un test necesita la extensión `.js`.** `packages/api`
   es CommonJS con `moduleResolution: node16`, así que `import("../src/lib/jwt")` typechequea
   rojo (TS2835) aunque vitest lo resuelva sin problema. Va `"../src/lib/jwt.js"`: tsc lo mapea
@@ -66,9 +77,9 @@ endpoints del backlog **hoy conforman 2**: `POST /auth/login` y `GET /auth/me`.
   Lo que se controla es dónde se puede sembrar — `DATABASE_URL` con `file:` usa los defaults,
   cualquier otra cosa exige `SEED_ADMIN_PASSWORD`/`SEED_DEMO_PASSWORD` o el seed revienta
   (D-047). Sin `DATABASE_URL` cuenta como remota. Los helpers y sus tests están en
-  `prisma/credentials.ts`.
+  `src/db/credentials.ts`.
 - **2026-08-21 · El seed imprimía credenciales que no garantizaba.** Los cuatro `upsert` de
-  `prisma/seed.ts` usaban `update: {}`, así que en una base ya existente el usuario conservaba
+  `src/db/seed.ts` (entonces `prisma/seed.ts`) usaban `update: {}`, así que en una base ya existente el usuario conservaba
   la password vieja mientras el `console.log` del final anunciaba la nueva. Se vio al subir el
   mínimo a 8 caracteres: el seed decía `developer123` y el login daba 401 con esa. **Un seed de
   demo tiene que ser autoritativo sobre lo que publica**, así que ahora `update` sí escribe el
@@ -146,7 +157,7 @@ autenticar voltea la URL pública, que es el criterio 12. Por eso `/login` tiene
 (D-045) — y por eso el arreglo del oráculo y el limiter son el mismo cambio en dos commits, no dos
 cosas independientes. Si alguna vez alguien piensa en sacar el limiter, esto es lo que reabre.
 
-**Lo que queda.** La consulta a Prisma sigue costando distinto según el email exista o no. Es un
+**Lo que queda.** La consulta a la base sigue costando distinto según el email exista o no. Es un
 índice único sobre una columna, y al lado de los 82 ms de bcrypt no se mide. Si algún día el store
 de usuarios deja de ser una tabla local, hay que volver a medirlo.
 
@@ -186,8 +197,8 @@ propuesto: un `requireProjectAccess(...)` de Express que lea `req.params.project
 
 **Cerrado el 2026-08-21 · la regla estaba escrita tres veces.** `canAccessProject`, el bypass de
 `admin` repetido en 5 call sites, y un query a mano en `GET /projects` que no llamaba a la función.
-Las tres coincidían por casualidad y solo una tenía tests. Ahora hay una sola —`projectScope`, un
-`Prisma.ProjectWhereInput`— que `canAccessProject` aplica a un id y el listado aplica a la
+Las tres coincidían por casualidad y solo una tenía tests. Ahora hay una sola —`projectScope`, una
+condición `SQL` de Drizzle (`EXISTS` correlacionado, D-048)— que `canAccessProject` aplica a un id y el listado aplica a la
 colección; el bypass de admin vive adentro y en ningún otro lado. Al unificarlas cayeron dos bugs de
 la copia: el listado de un no-admin salía sin orden, y un usuario con dos membresías en el mismo
 proyecto lo veía **duplicado**. Ojo con la consecuencia deliberada: `admin` sobre un proyecto que no
@@ -227,18 +238,18 @@ riesgo genérico de módulo nativo. **Bajar el cost no es opción: la regla 4 fi
 ## Tests
 
 `pnpm --filter @plataforma/api test` — vitest + supertest contra **una base SQLite propia**
-(`prisma/test.db`), que `test/global-setup.ts` crea con `prisma migrate deploy` y siembra en cada
-corrida. Nunca contra `dev.db`: un test no puede depender del seed de desarrollo ni ensuciarlo.
+(`test.db`), que `test/global-setup.ts` crea aplicando las migraciones de Drizzle y siembra en
+cada corrida. Nunca contra `dev.db`: un test no puede depender del seed de desarrollo ni ensuciarlo.
 
-Se usa `migrate deploy` y no `db push` a propósito: así la suite verifica las migraciones reales
-que van a correr en producción, no una proyección del schema.
+Se aplican las migraciones reales (`drizzle/*.sql`) y no una proyección ad-hoc del schema: así la
+suite verifica lo mismo que va a correr en producción.
 
 ## Comandos
 
 ```bash
 pnpm --filter @plataforma/api dev            # solo la API
-pnpm --filter @plataforma/api db:generate    # tras tocar el schema
-pnpm --filter @plataforma/api db:migrate     # migración nueva (nunca editar una aplicada)
+pnpm --filter @plataforma/api db:generate    # tras tocar src/db/schema.ts — genera la migración SQL
+pnpm --filter @plataforma/api db:migrate     # aplica las migraciones pendientes (nunca editar una aplicada)
 pnpm --filter @plataforma/api db:seed        # datos demo
-pnpm --filter @plataforma/api db:studio      # inspeccionar la base
+pnpm --filter @plataforma/api db:studio      # inspeccionar la base (drizzle-kit studio)
 ```

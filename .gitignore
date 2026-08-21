@@ -11,11 +11,16 @@ dist/
 .env.*
 !.env.example
 
-# SQLite de desarrollo (Prisma)
-packages/api/prisma/dev.db
-packages/api/prisma/dev.db-journal
-packages/api/prisma/test.db
-packages/api/prisma/test.db-journal
+# SQLite de desarrollo (Drizzle + @libsql/client, D-048). Rutas relativas a
+# packages/api/ — ya no a packages/api/prisma/, que dejó de existir.
+packages/api/dev.db
+packages/api/dev.db-journal
+packages/api/dev.db-wal
+packages/api/dev.db-shm
+packages/api/test.db
+packages/api/test.db-journal
+packages/api/test.db-wal
+packages/api/test.db-shm
 
 # Archivos subidos por usuarios (runtime, no código)
 packages/api/uploads/*

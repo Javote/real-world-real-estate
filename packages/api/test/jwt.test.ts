@@ -2,12 +2,14 @@ import jwt from "jsonwebtoken";
 import request from "supertest";
 import { afterAll, afterEach, describe, expect, it, vi } from "vitest";
 import app from "../src/app";
+import { eq } from "drizzle-orm";
 import { requireJwtSecret } from "../src/lib/jwt";
-import { prisma } from "../src/lib/prisma";
+import { users } from "../src/db/schema";
+import { db } from "../src/lib/db";
 import { FIXTURES } from "./global-setup";
 
 afterAll(async () => {
-  await prisma.$disconnect();
+  await db.$client.close();
 });
 
 // Los casos salen de specs/SPEC-010 §Casos borde. La clave de firma es código 🔴:
@@ -58,7 +60,7 @@ describe("arranque de la API", () => {
 
 describe("regresión del P1 · el literal público ya no firma nada", () => {
   const payloadDe = async () => {
-    const user = await prisma.user.findUniqueOrThrow({ where: { email: FIXTURES.activo.email } });
+    const [user] = await db.select().from(users).where(eq(users.email, FIXTURES.activo.email));
     return { userId: user.id, role: user.role, email: user.email };
   };
 

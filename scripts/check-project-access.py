@@ -37,7 +37,9 @@ ADMIN_ONLY = re.compile(r"""\brequireRole\s*\(\s*["']admin["']\s*\)""")
 # Las dos formas de la segunda capa (D-043: la regla es una sola, con dos usos).
 SECOND_LAYER = re.compile(r"\b(canAccessProject|projectScope)\b")
 # Una ruta que lista proyectos necesita scope aunque no tenga parámetro en el path.
-LISTS_PROJECTS = re.compile(r"\bprisma\.project\.findMany\b")
+# Drizzle no tiene un único método "findMany" para esto (D-048): un listado se ve
+# como `db.select()....from(projects)` o `db.query.projects.findMany(...)`.
+LISTS_PROJECTS = re.compile(r"\.from\(\s*projects\s*\)|\bdb\.query\.projects\.findMany\b")
 
 # Excepciones, con motivo. Vacío a propósito: si algo tiene que entrar acá, que
 # cueste escribirlo. Una allowlist que hay que editar a mano ya es fail-loud.
@@ -102,7 +104,7 @@ CASOS = [
     ("ruta con parámetro y canAccessProject", 0,
      'router.get("/:id", async (req, res) => { const a = await canAccessProject(u, r, p, M); });'),
     ("ruta con parámetro y NADA", 1,
-     'router.get("/:id", async (req, res) => { return res.json(await prisma.project.findUnique()); });'),
+     'router.get("/:id", async (req, res) => { return res.json(await db.query.projects.findFirst()); });'),
     ("ruta con parámetro, admin-only", 0,
      'router.delete("/:id", requireRole("admin"), async (req, res) => { return res.json({}); });'),
     ("requireRole('admin','developer') NO alcanza sola", 1,
@@ -112,9 +114,9 @@ CASOS = [
     ("ruta sin parámetro que no lista proyectos", 0,
      'router.get("/", async (req, res) => { return res.json({ ok: true }); });'),
     ("listado de proyectos sin scope", 1,
-     'router.get("/", async (req, res) => { return res.json(await prisma.project.findMany({})); });'),
+     'router.get("/", async (req, res) => { return res.json(await db.select().from(projects)); });'),
     ("listado de proyectos con projectScope", 0,
-     'router.get("/", async (req, res) => { await prisma.project.findMany({ where: projectScope(r, u, M) }); });'),
+     'router.get("/", async (req, res) => { await db.select().from(projects).where(projectScope(r, u, M)); });'),
     ("una ruta sin capa contamina al archivo, no la de al lado", 1,
      'router.get("/a/:id", async () => { await canAccessProject(a,b,c,d); });\n'
      'router.get("/b/:id", async () => { return 1; });'),

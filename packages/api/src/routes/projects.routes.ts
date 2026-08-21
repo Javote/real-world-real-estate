@@ -1,6 +1,8 @@
+import { and, asc, desc, eq, inArray } from "drizzle-orm";
 import { Router } from "express";
 import { z } from "zod";
-import { prisma } from "../lib/prisma";
+import { milestones, projectMembers, projects } from "../db/schema";
+import { db } from "../lib/db";
 import {
   authenticate,
   ANY_MEMBERSHIP,
@@ -25,22 +27,52 @@ router.get("/", async (req, res) => {
   // Al unificarlas se cayeron dos cosas que la copia hacía mal y nadie miraba:
   // el listado de un no-admin salía en orden de membresía en vez de por fecha, y
   // un usuario con dos membresías en el mismo proyecto lo veía DUPLICADO (el
-  // schema permite developer + buyer sobre el mismo proyecto).
-  const projects = await prisma.project.findMany({
-    where: {
-      ...(status ? { status: String(status) as any } : {}),
-      ...(city ? { city: String(city) } : {}),
-      ...projectScope(req.user!.role, req.user!.id, ANY_MEMBERSHIP)
-    },
-    include: {
-      milestones: {
-        orderBy: { sequenceOrder: "asc" }
-      }
-    },
-    orderBy: { createdAt: "desc" }
-  });
+  // schema permite developer + buyer sobre el mismo proyecto). `projectScope`
+  // usa un EXISTS correlacionado, así que no duplica.
+  //
+  // Nota de implementación: el listado NO usa la Relational Query API
+  // (`db.query.projects.findMany`) porque esa API alias-ea la tabla base
+  // (`"Project" AS "projects"`) y la condición de `projectScope` referencia la
+  // columna del schema importado sin ese alias — Drizzle no reescribe un `SQL`
+  // a medida para calzar con su propio alias interno, así que el EXISTS
+  // correlacionado sale apuntando a una tabla que no está en scope
+  // ("no such column: Project.id"). Con `db.select().from(projects)` no hay
+  // alias de por medio, así que se arma en dos pasos: los proyectos filtrados
+  // (con su orden final) y los milestones de esos proyectos, agrupados en JS.
+  const projectRows = await db
+    .select()
+    .from(projects)
+    .where(
+      and(
+        status ? eq(projects.status, String(status) as any) : undefined,
+        city ? eq(projects.city, String(city)) : undefined,
+        projectScope(req.user!.role, req.user!.id, ANY_MEMBERSHIP)
+      )
+    )
+    .orderBy(desc(projects.createdAt));
 
-  return res.json(projects);
+  const projectIds = projectRows.map((p) => p.id);
+  const milestoneRows = projectIds.length
+    ? await db
+        .select()
+        .from(milestones)
+        .where(inArray(milestones.projectId, projectIds))
+        .orderBy(asc(milestones.sequenceOrder))
+    : [];
+
+  const milestonesByProject = new Map<string, typeof milestoneRows>();
+  for (const milestone of milestoneRows) {
+    const list = milestonesByProject.get(milestone.projectId) ?? [];
+    list.push(milestone);
+    milestonesByProject.set(milestone.projectId, list);
+  }
+
+  const projectList = projectRows.map((project) => ({
+    ...project,
+    milestones: milestonesByProject.get(project.id) ?? []
+  }));
+
+  return res.json(projectList);
 });
 
 router.post("/", requireRole("admin"), async (req, res) => {
@@ -64,14 +96,15 @@ router.post("/", requireRole("admin"), async (req, res) => {
     return res.status(400).json(parsed.error.flatten());
   }
 
-  const project = await prisma.project.create({
-    data: {
+  const [project] = await db
+    .insert(projects)
+    .values({
       ...parsed.data,
       estimatedDelivery: parsed.data.estimatedDelivery
         ? new Date(parsed.data.estimatedDelivery)
         : undefined
-    }
-  });
+    })
+    .returning();
 
   await writeAuditLog({
     actorUserId: req.user!.id,
@@ -95,16 +128,16 @@ router.get("/:id", async (req, res) => {
     return res.status(403).json({ message: "Forbidden" });
   }
 
-  const project = await prisma.project.findUnique({
-    where: { id: req.params.id },
-    include: {
+  const project = await db.query.projects.findFirst({
+    where: eq(projects.id, req.params.id),
+    with: {
       milestones: {
-        orderBy: { sequenceOrder: "asc" }
+        orderBy: asc(milestones.sequenceOrder)
       },
       members: {
-        include: {
+        with: {
           user: {
-            select: {
+            columns: {
               id: true,
               email: true,
               fullName: true,
@@ -142,15 +175,16 @@ router.patch("/:id", requireRole("admin"), async (req, res) => {
     return res.status(400).json(parsed.error.flatten());
   }
 
-  const project = await prisma.project.update({
-    where: { id: req.params.id },
-    data: {
+  const [project] = await db
+    .update(projects)
+    .set({
       ...parsed.data,
       estimatedDelivery: parsed.data.estimatedDelivery
         ? new Date(parsed.data.estimatedDelivery)
         : undefined
-    }
-  });
+    })
+    .where(eq(projects.id, req.params.id))
+    .returning();
 
   await writeAuditLog({
     actorUserId: req.user!.id,
@@ -163,9 +197,7 @@ router.patch("/:id", requireRole("admin"), async (req, res) => {
 });
 
 router.delete("/:id", requireRole("admin"), async (req, res) => {
-  await prisma.project.delete({
-    where: { id: req.params.id }
-  });
+  await db.delete(projects).where(eq(projects.id, req.params.id));
 
   await writeAuditLog({
     actorUserId: req.user!.id,
@@ -189,11 +221,11 @@ router.get("/:id/members", async (req, res) => {
     return res.status(403).json({ message: "Forbidden" });
   }
 
-  const members = await prisma.projectMember.findMany({
-    where: { projectId: req.params.id },
-    include: {
+  const members = await db.query.projectMembers.findMany({
+    where: eq(projectMembers.projectId, req.params.id),
+    with: {
       user: {
-        select: {
+        columns: {
           id: true,
           email: true,
           fullName: true,
@@ -217,13 +249,14 @@ router.post("/:id/members", requireRole("admin"), async (req, res) => {
     return res.status(400).json(parsed.error.flatten());
   }
 
-  const member = await prisma.projectMember.create({
-    data: {
+  const [member] = await db
+    .insert(projectMembers)
+    .values({
       userId: parsed.data.userId,
       projectId: req.params.id,
       membershipRole: parsed.data.membershipRole
-    }
-  });
+    })
+    .returning();
 
   await writeAuditLog({
     actorUserId: req.user!.id,

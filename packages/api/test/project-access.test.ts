@@ -1,9 +1,10 @@
-import { MembershipRole, UserRole } from "@prisma/client";
+import { eq } from "drizzle-orm";
 import request from "supertest";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import app from "../src/app";
 import { ANY_MEMBERSHIP, canAccessProject } from "../src/middlewares/auth";
-import { prisma } from "../src/lib/prisma";
+import { MEMBERSHIP_ROLES, projects, users } from "../src/db/schema";
+import { db } from "../src/lib/db";
 import { FIXTURES } from "./global-setup";
 
 let miembro: string;
@@ -13,47 +14,49 @@ let proyecto: string;
 beforeAll(async () => {
   // `activo` es developer y MIEMBRO del proyecto de prueba; `ajeno` es developer
   // sin membresía. La diferencia entre los dos es la segunda capa entera.
-  miembro = (await prisma.user.findUniqueOrThrow({ where: { email: FIXTURES.activo.email } })).id;
-  ajeno = (await prisma.user.findUniqueOrThrow({ where: { email: FIXTURES.ajeno.email } })).id;
-  proyecto = (await prisma.project.findUniqueOrThrow({ where: { slug: FIXTURES.proyecto.slug } })).id;
+  miembro = (await db.select().from(users).where(eq(users.email, FIXTURES.activo.email)))[0].id;
+  ajeno = (await db.select().from(users).where(eq(users.email, FIXTURES.ajeno.email)))[0].id;
+  proyecto = (
+    await db.select().from(projects).where(eq(projects.slug, FIXTURES.proyecto.slug))
+  )[0].id;
 });
 
 afterAll(async () => {
-  await prisma.$disconnect();
+  await db.$client.close();
 });
 
 // specs/SPEC-010 §Casos borde · middlewares/auth.ts. Es la función 🔴 por
 // excelencia: cada rama tiene su caso, ninguna se da por inferida.
 describe("canAccessProject", () => {
   it("acepta al miembro cuando su membresía está en la lista", async () => {
-    expect(await canAccessProject(miembro, UserRole.developer, proyecto, [MembershipRole.developer]))
+    expect(await canAccessProject(miembro, "developer", proyecto, ["developer"]))
       .toBe(true);
   });
 
   it("rechaza al miembro cuando su membresía NO está en la lista", async () => {
     // Este es el caso que el default fail-open silenciaba: quien pedía "solo
     // verifier" y se olvidaba del argumento recibía a este developer igual.
-    expect(await canAccessProject(miembro, UserRole.developer, proyecto, [MembershipRole.verifier]))
+    expect(await canAccessProject(miembro, "developer", proyecto, ["verifier"]))
       .toBe(false);
   });
 
   it("rechaza a un usuario sin membresía en el proyecto", async () => {
-    expect(await canAccessProject(ajeno, UserRole.developer, proyecto, ANY_MEMBERSHIP)).toBe(false);
+    expect(await canAccessProject(ajeno, "developer", proyecto, ANY_MEMBERSHIP)).toBe(false);
   });
 
   it("acepta al miembro con ANY_MEMBERSHIP", async () => {
-    expect(await canAccessProject(miembro, UserRole.developer, proyecto, ANY_MEMBERSHIP)).toBe(true);
+    expect(await canAccessProject(miembro, "developer", proyecto, ANY_MEMBERSHIP)).toBe(true);
   });
 
   it("un admin sin membresía pasa igual — el bypass de la matriz de M2-D1 §4", async () => {
-    expect(await canAccessProject(ajeno, UserRole.admin, proyecto, [MembershipRole.verifier]))
+    expect(await canAccessProject(ajeno, "admin", proyecto, ["verifier"]))
       .toBe(true);
   });
 
   it("una lista vacía no acepta a nadie", async () => {
     // `{ in: [] }` no matchea nada. Es el sentido correcto de "no permití
     // ninguna membresía", y es lo contrario de lo que hacía omitir el argumento.
-    expect(await canAccessProject(miembro, UserRole.developer, proyecto, [])).toBe(false);
+    expect(await canAccessProject(miembro, "developer", proyecto, [])).toBe(false);
   });
 
   it("ANY_MEMBERSHIP cubre el enum entero", async () => {
@@ -61,7 +64,7 @@ describe("canAccessProject", () => {
     // la obliga a estar completa: agregar una membresía al schema sin tocarla no
     // compila (verificado metiendo `notary` en el enum a propósito). Este test es
     // el segundo cerrojo, para el caso de que alguien saque el `satisfies`.
-    expect([...ANY_MEMBERSHIP].sort()).toEqual([...Object.values(MembershipRole)].sort());
+    expect([...ANY_MEMBERSHIP].sort()).toEqual([...MEMBERSHIP_ROLES].sort());
   });
 
   it("no compila si se omite qué membresías acepta", () => {
@@ -70,7 +73,7 @@ describe("canAccessProject", () => {
     // está adentro de una función que nunca se invoca, a propósito.
     const nuncaSeLlama = () =>
       // @ts-expect-error — el 4º parámetro es obligatorio (D-042)
-      canAccessProject(miembro, UserRole.developer, proyecto);
+      canAccessProject(miembro, "developer", proyecto);
 
     expect(nuncaSeLlama).toBeTypeOf("function");
   });
@@ -172,7 +175,7 @@ describe("canAccessProject · un proyecto que no existe", () => {
     // si el proyecto existía, porque el bypass cortaba antes del query. Ahora el
     // bypass es un filtro vacío sobre la misma consulta, así que "no existe"
     // responde igual para todos: 403 y no un 403/404 según quién pregunte.
-    expect(await canAccessProject("cualquiera", UserRole.admin, "no-existe", ANY_MEMBERSHIP))
+    expect(await canAccessProject("cualquiera", "admin", "no-existe", ANY_MEMBERSHIP))
       .toBe(false);
   });
 });

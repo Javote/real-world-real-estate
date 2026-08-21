@@ -140,8 +140,8 @@ fi
 
 # Migraciones ya aplicadas: siempre migración nueva, jamás editar una existente.
 if [ -n "$BASE" ] && [ "$CI_MODE" = 0 ]; then
-  MIG_EDITED="$(git diff --name-status "$BASE"..HEAD -- packages/api/prisma/migrations/ 2>/dev/null | grep -E '^[MD]' || true)"
-  MIG_EDITED+="$(git diff --name-status HEAD -- packages/api/prisma/migrations/ 2>/dev/null | grep -E '^[MD]' || true)"
+  MIG_EDITED="$(git diff --name-status "$BASE"..HEAD -- packages/api/drizzle/ 2>/dev/null | grep -E '^[MD]' || true)"
+  MIG_EDITED+="$(git diff --name-status HEAD -- packages/api/drizzle/ 2>/dev/null | grep -E '^[MD]' || true)"
   if [ -n "$MIG_EDITED" ]; then
     bad "migración ya aplicada modificada o borrada — siempre migración nueva"
     printf '      %s\n' "$MIG_EDITED"
@@ -190,12 +190,9 @@ else
   printf '      %s\n' "$LOCK_OUT" | head -8
 fi
 
-# El cliente de Prisma es generado y `pnpm install` se lo lleva puesto; sin él,
-# el typecheck de la API falla con un error que PARECE de resolución de módulos.
-# Se regenera siempre (~5s) en vez de detectarlo: con pnpm el cliente vive dentro
-# del store virtual (.pnpm/@prisma+client@<hash>/…), así que cualquier chequeo de
-# ruta es frágil y falla del lado equivocado.
-run "generar cliente Prisma" pnpm --filter @plataforma/api db:generate
+# Drizzle (D-048) no tiene cliente generado: `src/db/schema.ts` es TypeScript de
+# mano, se importa directo — no hay paso de codegen que `pnpm install` se pueda
+# llevar puesto, así que el chequeo que existía para Prisma ya no aplica.
 
 # Typecheck: siempre. Es barato y es lo único que atrapa roturas cruzadas
 # entre packages (el motivo por el que packages/shared existe).
@@ -262,7 +259,7 @@ head_ "3 · Coherencia"
 # Principio 4: el repo es la memoria. Un cambio de comportamiento sin rastro
 # documental es conocimiento que se pierde cuando termina la sesión.
 CODE_CHANGED=0
-touched '^(apps|packages|contracts)/.*\.(ts|tsx|ak|prisma)$' && CODE_CHANGED=1
+touched '^(apps|packages|contracts)/.*\.(ts|tsx|ak)$' && CODE_CHANGED=1
 DOC_CHANGED=0
 touched '^(DECISIONS\.md|CLAUDE\.md|specs/|.*/CLAUDE\.md)' && DOC_CHANGED=1
 if [ "$CI_MODE" = 0 ] && [ "$CODE_CHANGED" = 1 ] && [ "$DOC_CHANGED" = 0 ]; then

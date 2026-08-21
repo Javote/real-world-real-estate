@@ -50,7 +50,7 @@ El front está a ~2% de conformidad con el diseño aprobado. Lo que se conserva 
 | Pieza | Versión | Estado | Nota |
 |---|---|---|---|
 | Express | `4.22.2` | ● | D-016. `@types/express` **pineado a v4**: los tipos v5 rompen todas las rutas |
-| Prisma (ORM + CLI) | `6.19.3` | ● | D-016. Destino ratificado: Drizzle (D-038), migración diferida sin fecha |
+| Prisma (ORM + CLI) → **Drizzle** | `6.19.3` → en migración | ◐ | D-016 → D-038 (destino) → **D-048: la migración arranca ahora, no diferida** |
 | Zod | `4.4.3` | ● | D-035. Rutas heredadas aún con formas de la 3, que v4 acepta |
 | JWT (`jsonwebtoken`) | `9.0.2` | ● | 7 días, con revalidación de `isActive` por request |
 | **bcrypt** (módulo nativo) | `5.1.1` | ◐ | cost 10. Nativo ⇒ toolchain en la imagen Docker, y es el origen del warning de `url.parse()` vía `node-pre-gyp` |
@@ -165,7 +165,7 @@ Ver `CLAUDE.md` §Cómo se trabaja acá y D-032.
 | `/verify`: cómo se verifica **sin cuenta y sin confiar en la API** | la pantalla ya existe, pero exige sesión y verifica contra la API | M1-D1 promete verificación independiente; llega con `AnchorPort` (D-014) |
 | Retención de datos | sin default | nunca se discutió (backups los cubre D-038) |
 | Gestor de secretos en pre-prod | variables de entorno de la plataforma de deploy | el primer deploy real |
-| D-038 · cuándo migrar Prisma → Drizzle | diferido, sin fecha | spike cuando aparezca evidencia de límite real (principio 3) |
+| ~~D-038 · cuándo migrar Prisma → Drizzle~~ | — | **Cerrada: D-048** (2026-08-21). Arranca antes de las rebanadas de M3, no diferida. |
 | D-038 · Turso vs disco Render + Litestream para SQLite en prod | Turso (por el worker de confirmaciones de D-003, no por costo) | primer intento real de deploy a Render |
 
 ## 11 · Deuda del stack

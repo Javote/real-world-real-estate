@@ -1,7 +1,9 @@
-import { MembershipRole, Prisma, UserRole } from "@prisma/client";
+import { and, eq, exists, inArray, sql, type SQL } from "drizzle-orm";
 import { NextFunction, Request, Response } from "express";
 import { verifyToken } from "../lib/jwt";
-import { prisma } from "../lib/prisma";
+import { db } from "../lib/db";
+import { projectMembers, projects, users } from "../db/schema";
+import type { MembershipRole, UserRole } from "../db/schema";
 
 declare global {
   namespace Express {
@@ -30,15 +32,15 @@ export async function authenticate(
     const token = authHeader.split(" ")[1];
     const payload = verifyToken(token);
 
-    const user = await prisma.user.findUnique({
-      where: { id: payload.userId },
-      select: {
-        id: true,
-        email: true,
-        role: true,
-        isActive: true
-      }
-    });
+    const [user] = await db
+      .select({
+        id: users.id,
+        email: users.email,
+        role: users.role,
+        isActive: users.isActive
+      })
+      .from(users)
+      .where(eq(users.id, payload.userId));
 
     if (!user || !user.isActive) {
       return res.status(401).json({ message: "User not active" });
@@ -75,7 +77,7 @@ export function requireRole(...roles: UserRole[]) {
  * ser miembro del proyecto.
  *
  * La lista se escribe a mano **a propósito**, y el `satisfies` la obliga a estar
- * completa: agregar una membresía a `schema.prisma` sin tocar esto **no compila**.
+ * completa: agregar una membresía a `db/schema.ts` sin tocar esto **no compila**.
  *
  * La primera versión hacía `Object.values(MembershipRole)`, que se mantenía sola
  * y por eso mismo estaba mal: una membresía nueva quedaba con lectura de todos
@@ -106,8 +108,8 @@ export const ANY_MEMBERSHIP = Object.keys(ALL_MEMBERSHIPS) as MembershipRole[];
  * Un default fail-open en la función 🔴 por excelencia. Para abrir a cualquier
  * miembro está `ANY_MEMBERSHIP`, que hay que escribir.
  *
- * Una lista vacía no acepta a nadie: `{ in: [] }` no matchea, y ese es el
- * sentido correcto de "no permití ninguna membresía".
+ * Una lista vacía no acepta a nadie: `projectScope` devuelve una condición que
+ * nunca matchea, y ese es el sentido correcto de "no permití ninguna membresía".
  */
 export async function canAccessProject(
   userId: string,
@@ -115,35 +117,50 @@ export async function canAccessProject(
   projectId: string,
   allowedMemberships: MembershipRole[]
 ) {
-  const project = await prisma.project.findFirst({
-    where: { id: projectId, ...projectScope(role, userId, allowedMemberships) },
-    select: { id: true }
-  });
+  const [project] = await db
+    .select({ id: projects.id })
+    .from(projects)
+    .where(and(eq(projects.id, projectId), projectScope(role, userId, allowedMemberships)));
 
-  return project !== null;
+  return project !== undefined;
 }
 
 /**
- * La misma regla, como filtro de Prisma, para cuando la pregunta es sobre una
- * colección y no sobre un proyecto puntual.
+ * La misma regla, como condición SQL de Drizzle, para cuando la pregunta es
+ * sobre una colección y no sobre un proyecto puntual.
  *
  * Es la **única** definición de "qué proyectos puede ver este usuario":
- * `canAccessProject` la aplica a un id y `GET /projects` la aplica al listado.
- * Antes eran dos implementaciones independientes —la función acá y un query a
- * mano en la ruta— que daban el mismo resultado por casualidad y solo una tenía
- * tests. Dos copias de una regla de autorización divergen en silencio, y ésta es
- * de las que no avisan cuando divergen: el síntoma es que alguien ve de más.
+ * `canAccessProject` la aplica a un id (vía `and(eq(projects.id, ...), ...)`) y
+ * `GET /projects` la aplica al listado completo. Antes eran dos implementaciones
+ * independientes —la función acá y un query a mano en la ruta— que daban el
+ * mismo resultado por casualidad y solo una tenía tests. Dos copias de una regla
+ * de autorización divergen en silencio, y ésta es de las que no avisan cuando
+ * divergen: el síntoma es que alguien ve de más.
  *
  * El bypass de `admin` (matriz de M2-D1 §4) vive acá y en ningún otro lado.
+ * Se implementa como `EXISTS` correlacionado contra `projects.id` en vez de un
+ * `IN (SELECT projectId FROM ...)`: así un usuario con dos membresías sobre el
+ * mismo proyecto no lo duplica en el resultado (D-043).
  */
 export function projectScope(
   role: UserRole,
   userId: string,
   allowedMemberships: MembershipRole[]
-): Prisma.ProjectWhereInput {
-  if (role === "admin") return {};
+): SQL {
+  if (role === "admin") return sql`1=1`;
 
-  return {
-    members: { some: { userId, membershipRole: { in: allowedMemberships } } }
-  };
+  if (allowedMemberships.length === 0) return sql`1=0`;
+
+  return exists(
+    db
+      .select({ one: sql`1` })
+      .from(projectMembers)
+      .where(
+        and(
+          eq(projectMembers.projectId, projects.id),
+          eq(projectMembers.userId, userId),
+          inArray(projectMembers.membershipRole, allowedMemberships)
+        )
+      )
+  );
 }
