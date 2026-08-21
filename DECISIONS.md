@@ -60,6 +60,7 @@
 | D-043 | La regla de visibilidad de proyectos existe una sola vez: `projectScope` | Aceptada |
 | D-044 | La segunda capa de autorización la verifica la puerta; el middleware queda diferido | Aceptada (con trigger de revisión) |
 | D-045 | Rate limiting en `/auth/login`, y de dónde sale la IP del cliente | Aceptada |
+| D-046 | bcrypt se ratifica —con el argumento del free tier— y la política de passwords sale de NIST/OWASP | Aceptada |
 
 > **Repaso completo con la documentación oficial: ver §Repaso al final del archivo.** D-001..D-017 se
 > escribieron sin los entregables delante; las 25 entradas se revisaron el 2026-07-29 y cada una
@@ -1181,6 +1182,90 @@ límite, que se mide subiendo `LOGIN_RATE_LIMIT_MAX` y no sacando el limiter.
 **Reversión.** Sacar el middleware de la ruta. Lo que no se revierte es `trust proxy`: esa línea
 tiene que quedar aunque el limiter se vaya, porque cualquier cosa futura que mire `req.ip` —logs de
 auditoría incluidos— depende de ella.
+
+
+## D-046 — bcrypt se ratifica, y la política de passwords sale de NIST/OWASP
+
+**Contexto (2026-08-21).** Pregunta del dueño: *¿por qué estamos usando bcrypt?* Al rastrearlo, la
+respuesta que daba el repo era circular. bcrypt **nunca se eligió**: entró en bloque con el backend
+PoC (D-016, que absorbe *"JWT firmado + bcrypt cost 10 con revalidación `isActive` por request (ex
+ADR-004)"* al lado de Express, Prisma y Multer), y después la **regla 4 de `CLAUDE.md`** lo congeló
+como restricción dura. El único debate que hubo desde entonces fue **bcrypt nativo vs `bcryptjs`**,
+que es una pregunta de empaquetado —toolchain, `node-pre-gyp`, el warning de `url.parse()`— y no de
+criptografía. La pregunta de fondo no se había hecho nunca.
+
+**Decisión 1 — bcrypt se queda, ahora con un argumento.** No es que "no esté roto": es que en
+**este** hardware es la forma correcta.
+
+La recomendación general hoy es **Argon2id**, y bcrypt quedó como alternativa aceptable pero no
+como default. Lo que da vuelta el análisis acá es que Argon2id y scrypt son **memory-hard**, y
+corremos en el free tier de Render: **0.1 CPU** y RAM acotada (D-040). Y desde D-045 **todo** intento
+de login paga un hash, exista o no la cuenta. Un KDF memory-hard es exactamente la forma equivocada
+para esa caja: la misma restricción que nos obligó a poner rate limiting es la que sostiene a
+bcrypt. **El cost 10 no se baja** — la regla 4 lo fija y bajarlo abarata el ataque offline.
+
+**Decisión 2 — la política de passwords, que es lo que de verdad decide cuánto aguanta esto.** El
+algoritmo es el multiplicador; la entropía es el número. Ningún KDF compensa una password de 6
+caracteres, y `POST /users` pedía exactamente eso. Se alinea con NIST SP 800-63B §5.1.1.2 y la
+Authentication Cheat Sheet de OWASP:
+
+| Regla | Qué hacemos | Fuente |
+|---|---|---|
+| Largo mínimo | **8 caracteres** (era 6) | NIST SHALL · OWASP cheat sheet |
+| Largo máximo | **72 bytes**, y se **rechaza**, no se trunca | NIST: *truncation SHALL NOT be performed* |
+| Reglas de composición | **ninguna** — nada de "una mayúscula y un número" | NIST SHALL NOT |
+| Alfabeto | todo: espacios, Unicode, emoji | NIST SHALL |
+| Rotación periódica | **no** | NIST SHALL NOT |
+
+**Por qué el máximo es 72 bytes y no un número redondo.** Es el límite de bcrypt: más allá de eso
+**trunca en silencio**, así que alguien con una passphrase larga tendría hasheados solo los primeros
+72 bytes y no se enteraría nunca. NIST prohíbe truncar; la salida honesta es rechazar y decirlo. Se
+mide en **bytes** y no en caracteres porque el límite de bcrypt es en bytes, y con
+`new TextEncoder()` en vez de `Buffer` para que el schema siga funcionando en el browser
+(`packages/shared` lo importan los dos lados).
+
+**Costo aceptado del máximo.** NIST pide permitir al menos 64 **caracteres**. Con ASCII se cumple
+holgado (64 < 72). Con Unicode multibyte no: 64 caracteres de kanji son 192 bytes y se rechazan. Es
+una limitación real de bcrypt, no de la política, y se documenta en vez de disimularse. La salida —
+pre-hashear con SHA-256 y base64 antes de bcrypt— tiene su propia trampa (bytes nulos) y cambia la
+semántica de los hashes guardados. No entra hoy.
+
+**Por qué 8 y no 12.** OWASP **ASVS 4.0 §2.1.1** pide 12 para passwords elegidas por el usuario;
+NIST y la Authentication Cheat Sheet piden 8. Se toma el piso que ambos mandan, que es el default
+(principio 3), y queda registrado que 12 es la vara más dura. **Subirlo es cambiar un número** en
+`passwordSchema` y las passwords del seed: si el owner lo quiere más estricto, no hay nada que
+rediseñar.
+
+**Dónde vive la política.** `passwordSchema` en `packages/shared` (regla 6), no en las rutas.
+`POST /users` y `PATCH /users/:id` la importan: una sola definición, y el front puede validar contra
+la misma antes de mandar.
+
+**El login NO valida la política, a propósito.** `loginRequestSchema` solo exige que venga algo.
+Aplicar la política ahí haría dos cosas malas: convertiría a `/login` en un oráculo de cuál es la
+política —justo después de que D-045 y el hash dummy la sacaran de ser un oráculo de otras cosas— y
+dejaría afuera a cuentas viejas creadas bajo una política anterior, que es un modo de falla que
+aparece recién en la migración. **La política se aplica donde la password se ESCRIBE, no donde se
+verifica.**
+
+**Lo que NO entra, y por qué.**
+
+- **Chequeo contra listas de passwords filtradas** (NIST SHOULD, la que más valdría). Es una llamada
+  de red con k-anonimato dentro del camino de auth: dependencia externa, latencia y un modo de falla
+  nuevo justo donde menos se quiere. Va con el `/security-review` del criterio 11, decidiendo antes
+  qué pasa cuando el servicio no responde.
+- **`scrypt` de `node:crypto`.** Es lo único que se llevaría puesta toda la deuda del módulo nativo
+  de una —`node-pre-gyp`, el warning de `url.parse()`, la línea de 🔴 por ser nativo en
+  `specs/stack.md`— y no agrega dependencias. Pero es memory-hard igual, y migrar los hashes
+  guardados obliga a rehashear en el próximo login de cada usuario. Queda anotado como la salida.
+
+**Trigger de revisión.** (a) Se sale del free tier y hay CPU y RAM de sobra ⇒ **Argon2id** vuelve a
+la mesa y esta decisión se reabre con el hardware nuevo delante. (b) El módulo nativo rompe un
+build ⇒ `node:crypto/scrypt`, no `bcryptjs`. (c) El owner pide la vara de ASVS ⇒ el mínimo pasa a 12.
+(d) Aparecen usuarios reales (no pilotos) ⇒ entra el chequeo de passwords filtradas.
+
+**Reversión.** La política es un schema en `packages/shared`: cambiar el número es un commit. El
+algoritmo no se revierte tan barato —los hashes guardados llevan el prefijo `$2b$`— así que migrar
+KDF significa rehashear en el login, que es exactamente el trabajo que (a) y (b) implican.
 
 ---
 
