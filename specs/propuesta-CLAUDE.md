@@ -1,3 +1,7 @@
+> **Desactualizada en parte (2026-08-23).** Este borrador todavía describe la puerta de 3
+> controles y los hooks. **El harness se borró entero** — ver D-053. Al incorporar este
+> borrador, su §Verificación se reemplaza por `pnpm verify` + el CI declarativo.
+
 # CLAUDE.md — PropNexus
 
 > **Este es el único archivo de contexto del repo.** No hay `CLAUDE.md` por frente, ni skills, ni

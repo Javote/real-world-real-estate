@@ -25,7 +25,7 @@ dice `M2-D5` §4-6.
   dimensioná al contenido, nada de anchos fijos salvo FAB e íconos.
 - **La clave de `localStorage` del idioma es `propnexus.lang`, literal** (M2-D3 §Localization).
 - **Los puertos salen de `ports.ts`**, que los lee de `apps/web/.env` (lo escribe
-  `scripts/worktree.sh`) y por defecto da 3000/8787. Si agregás config que necesite el puerto,
+  `apps/web/.env`) y por defecto da 3000/8787. Si agregás config que necesite el puerto,
   importalo de ahí — hardcodearlo rompe los árboles paralelos (D-031).
 
 ## Trampas verificadas

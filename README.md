@@ -1,7 +1,7 @@
 # PropNexus — Anclaje de Evidencia Inmobiliaria sobre Cardano
 
 > Catalyst Fund Project **1400106** — *Real-World Real Estate Pre-Sale with Proof & Release*.
-> Monorepo: **pnpm + TanStack Start** (web) + **Express 4 + Drizzle** (api) + **Aiken / Plutus V3** (contratos).
+> Monorepo: **pnpm + TanStack Start** (web) + **Express 4 + Kysely** (api) + **Aiken / Plutus V3** (contratos).
 
 Ventas inmobiliarias en pozo: estructura el ciclo de obra en **stages**, organiza la **evidencia**
 (planos, fotos, permisos, certificados) y ancla **huellas criptográficas** (SHA-256 / Merkle) en
@@ -39,7 +39,6 @@ El repo es la memoria; los chats son descartables.
 ```bash
 pnpm install
 cp packages/api/.env.example packages/api/.env   # completar JWT_SECRET: openssl rand -hex 32
-pnpm db:generate
 pnpm db:migrate                                  # crea la SQLite de dev
 pnpm db:seed                                     # usuarios y proyecto demo
 pnpm dev                                         # web en :3000, api en :8787
@@ -50,72 +49,71 @@ Son credenciales **de desarrollo y publicadas**, y por eso el seed solo las usa 
 local: contra cualquier otra base se niega a correr sin `SEED_ADMIN_PASSWORD` (D-047).
 Contratos: `pnpm contracts:check`.
 
-## Trabajar con agentes
+## Verificación
 
-Todo el harness está en el repo y commiteado: no hay que configurar nada por máquina.
-
-```bash
-claude                            # y adentro:  /slice
-```
-
-`/slice` es el protocolo completo de una sesión — ubicarse, spec, plan, implementar, verificar,
-documentar, commitear, pushear. Para trabajar en paralelo:
+Un comando, y es el mismo que corre el CI:
 
 ```bash
-scripts/worktree.sh create contracts   # árbol propio: rama, deps, base y puertos
-cd ../pn-contracts && claude
+pnpm verify        # typecheck + tests + build
 ```
 
-Lo que el harness **bloquea** (no advierte): editar `docs/`, editar una migración aplicada o un
-archivo generado, escribir una clave privada, pushear con la puerta cerrada, pushear forzado.
+El CI agrega el job de Aiken (`fmt --check`, `check`, `build` y que `plutus.json` esté al día) y
+`pnpm install --frozen-lockfile`, que falla si el lockfile no refleja los `package.json`.
 
-```bash
-scripts/gate.sh                   # LA PUERTA: lo mismo que corre el CI y el hook de push
-scripts/worktree.sh list          # árboles, ramas y puertos
-scripts/hooks/test-guards.sh      # regresión de los guardias
-```
+**No hay harness.** Hubo uno entre el 2026-08-20 y el 2026-08-23 —puerta ejecutable, hooks
+bloqueantes, subagentes, skills, árboles por track— y se borró entero: 1099 líneas que en tres días
+necesitaron cinco commits de arreglo a sí mismas y no atajaron ninguno de los bugs reales del
+período. El razonamiento completo, con los números, está en **D-053**.
 
-Detalle en `CLAUDE.md` §Cómo se trabaja acá y en D-032.
+Lo que queda como regla escrita y no como bloqueo: no editar `docs/` (es una copia de los
+entregables aprobados), no editar una migración ya aplicada, no commitear secretos.
 
 ## Variables de entorno
 
-Referencia completa en `.env.example` y `packages/api/.env.example`. Las que importan:
+**Un archivo por servicio, y son la referencia:** [`packages/api/.env.example`](packages/api/.env.example)
+y [`apps/web/.env.example`](apps/web/.env.example). Acá no se copian — una lista duplicada se
+desactualiza en la copia, no en el original.
 
-```
-DATABASE_URL=file:./dev.db              # SQLite en dev; postgres://… al desplegar (D-016)
-JWT_SECRET=<openssl rand -hex 32>    # obligatorio: sin esto la API no arranca (D-042)
-UPLOAD_DIR=./uploads                    # disco local en dev; S3 en prod (D-011)
-MAX_FILE_SIZE_MB=10
-SEED_ADMIN_PASSWORD=                     # obligatoria si el seed corre contra una base no local (D-047)
-SEED_DEMO_PASSWORD=                      # idem, para los tres usuarios de demo
-LOGIN_RATE_LIMIT_MAX=20                 # intentos de login por IP / 15 min (D-045)
-TRUST_PROXY_HOPS=0                      # 0 en local; al desplegar detrás de Render, 1 (D-045)
-CARDANO_NETWORK=Preprod                 # nunca mainnet (D-013)
-ANCHOR_MODE=simulated                   # simulated | real (D-014)
-BLOCKFROST_API_KEY=preprod_xxx
-SERVICE_WALLET_SEED=…                   # jamás commitear (regla 12 de CLAUDE.md)
-EXPLORER_BASE=https://preprod.cardanoscan.io
-ANCHOR_METADATA_LABEL=1904              # D-006
-```
+Lo único que no se deduce leyéndolos:
+
+- **`JWT_SECRET` es obligatoria y no tiene default.** Si falta o queda vacía, la API **no arranca**.
+  Es a propósito (D-042): el free tier no da shell para ir a mirar qué variables quedaron cargadas,
+  así que el fallo tiene que ser el arranque y no una request de producción.
+- **Las de `apps/web` son de build time.** Cambiarlas exige rebuild, no restart.
+- **`TRUST_PROXY_HOPS` vale 0 en local y 1 detrás de Render.** Con 0 detrás del proxy, todos los
+  clientes comparten balde de rate limit y la app queda inusable (D-045).
 
 **Secretos solo por env.** Si ves una seed o una key commiteada: frenar y avisar.
 
+## Deploy
+
+Todo corre en **free tier, $0/mes** — y eso es una restricción de arquitectura, no una nota de
+presupuesto (D-040). El artefacto es **`render.yaml`** en la raíz: dos servicios Node sobre Render
+(sin Docker, D-041) contra una base **Turso**.
+
+**El procedimiento completo —alta, deploy diario, rollback, incidentes y limitaciones— está en
+[`specs/RUNBOOK-deploy.md`](specs/RUNBOOK-deploy.md).** Acá solo lo que hay que saber antes de abrirlo:
+
+- Falta **crear las cuentas** (Render, Turso) y pegar cuatro variables. No falta código.
+- El web **proxea** `/api/**` hacia la API: no hay CORS y el navegador nunca ve la URL de la API.
+- `API_ORIGIN` es de **build time**: cambiarla exige redeploy del web, no un restart.
+- **Keep-warm está prohibido.** Dos servicios despiertos 24/7 son ~1460 h contra las 750 del plan
+  y quedan suspendidos cerca del día 15. Se calienta la URL a mano antes de una demo.
+- **La evidencia subida no persiste** (filesystem efímero). Aceptado y marcado en D-051; R2 sale en
+  su propia rebanada y vuelve a ser bloqueante el día del primer anclaje.
+
 ## Pasos de infraestructura pendientes
 
-Todavía no ejecutados; hacen falta para el anclaje real y para pre-producción:
+Todavía no ejecutados; hacen falta para el **anclaje real**, no para el deploy:
 
 1. **Blockfrost** — crear cuenta, proyecto **Preprod**, setear `BLOCKFROST_API_KEY`.
 2. **Wallet de servicio** — generar una seed *nueva y exclusiva de Preprod* para que el backend firme
    las transacciones de anclaje, y fondearla desde el [faucet de testnet](https://docs.cardano.org/cardano-testnets/tools/faucet).
-3. **`GET /health`** en la API devolviendo `{"ok":true}` — lo usan el HEALTHCHECK de Docker y el monitoreo.
-4. **Migrador en el entrypoint** del contenedor de la API, que corra antes de arrancar el server (D-012:
-   migraciones aditivas e idempotentes).
-5. **PostgreSQL y S3** reemplazando SQLite y disco local (triggers de D-016 y D-011).
+3. **`packages/cardano`** — el package está vacío: no hay `AnchorPort`, ni adaptador simulado, ni real (D-014).
+4. **Cloudflare R2** — storage S3-compatible para la evidencia, y mover el SHA-256 para que cubra los
+   bytes que terminan en el object storage (D-011, superficie 🔴).
 
-**No hay build de producción todavía.** No existe `render.yaml` (y no habrá Dockerfiles: el deploy
-usa el runtime nativo de Node — D-041):
-la capa de infraestructura está en 0% y es el hueco más grande del proyecto. El inventario
-honesto de qué existe y qué no está en `specs/stack.md` §8.
+El inventario honesto de qué existe y qué no está en [`specs/stack.md`](specs/stack.md) §8 y §12.
 
 ## Índice documental
 
@@ -136,7 +134,7 @@ Deliberadamente **tres archivos en la raíz y nada más**. Todo lo demás vive i
 
 | Archivo | Contenido |
 |---|---|
-| `CLAUDE.md` | Lo transversal de cada sesión: vocabulario, principios, stack y deuda, reglas duras, prohibiciones, autonomía 🟢🟡🔴, commits, comandos, trampas y cómo se trabaja con el harness. |
+| `CLAUDE.md` | Lo transversal de cada sesión: vocabulario, principios, reglas duras, prohibiciones, autonomía 🟢🟡🔴, commits, comandos y trampas. |
 | `<frente>/CLAUDE.md` | Lo propio de `apps/web`, `packages/api` y `contracts`: qué leer, trampas verificadas, deuda y comandos. Se cargan solos al tocar el subárbol. |
 | `DECISIONS.md` | **El documento de mayor valor por línea.** 32 ADRs con contexto, alternativas, trigger de revisión y reversión. |
 | `specs/README.md` | **El mapa de desarrollo:** criterios de aceptación de M3, estado medido, rebanadas en orden de dependencia, tracks paralelos, riesgos. |
@@ -148,20 +146,14 @@ Deliberadamente **tres archivos en la raíz y nada más**. Todo lo demás vive i
 
 ```
 plataforma/
-├── .claude/                    # harness de agentes, commiteado
-│   ├── settings.json           #   hooks (lo que se bloquea) + permisos
-│   ├── agents/                 #   spec · conformance · contracts
-│   └── skills/                 #   slice (protocolo de sesión) · run-app
-├── .github/workflows/ci.yml    # CI: corre scripts/gate.sh --ci + aiken
-├── scripts/
-│   ├── gate.sh                 #   LA PUERTA — la misma en local y en CI
-│   ├── worktree.sh             #   árboles por track con puertos y base propios (D-031)
-│   └── hooks/                  #   guardias + su suite de regresión
+├── .claude/settings.json       # comandos preaprobados de sesión (comodidad, no reglas)
+├── .github/workflows/ci.yml    # CI: typecheck + tests + build, y el job de Aiken
+├── render.yaml                 # Blueprint de deploy (2 servicios Node, free tier)
 ├── apps/
 │   └── web/                    # TanStack Start + Tailwind v4 — 4 superficies por rol
 ├── packages/
-│   ├── api/                    # Express 4 + Drizzle + SQLite dev (D-016, D-048)
-│   │   ├── drizzle/            #   migraciones SQL generadas
+│   ├── api/                    # Express 4 + Kysely + SQLite dev (D-016, D-049)
+│   │   ├── migrations/         #   migraciones SQL escritas a mano (D-052)
 │   │   └── src/                #   routes, middlewares (auth 2 capas), lib, utils, db (schema/seed)
 │   ├── shared/                 # contrato único API↔web: schemas Zod + tipos
 │   └── cardano/                # (a poblar) AnchorPort real/simulado — D-014
@@ -200,11 +192,11 @@ en uno de los dos.
 
 Este repositorio es **público**. No contiene, en ninguna carpeta, secretos, credenciales, seeds de
 wallet ni datos personales: los secretos viajan **solo por variables de entorno** y nunca se
-versionan (regla 12 de `CLAUDE.md`, verificada por `scripts/gate.sh` en cada push).
+versionan (regla 12 de `CLAUDE.md`).
 
 | Ruta | Visibilidad | Qué contiene |
 |---|---|---|
-| `apps/`, `packages/`, `contracts/`, `scripts/`, `.claude/`, `.github/` | **Pública** | Código, contratos, harness y CI |
+| `apps/`, `packages/`, `contracts/`, `.claude/`, `.github/` | **Pública** | Código, contratos y CI |
 | `docs/`, `specs/`, `README.md`, `CLAUDE.md`, `DECISIONS.md` | **Pública** | Entregables oficiales y documentación de trabajo |
 | `packages/api/.env`, `apps/web/.env` | **Privada** — nunca versionada | Secretos locales. El ejemplo público es `.env.example` |
 | `packages/api/dev.db` | **Privada** — nunca versionada | Base SQLite de desarrollo |

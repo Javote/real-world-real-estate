@@ -33,7 +33,7 @@ entre web y los packages de Node.
 | TanStack Router + Query | `1.170` / `5.90` | ● | rutas por archivo, `routeTree.gen.ts` generado |
 | React | `19.2.7` | ● | |
 | Vite | `8.1.4` | ● | |
-| Nitro | `3.0.260610-beta` | ◐ | D-037. Versión publicada, no un nightly. Su proxy de dev sigue rompiendo `POST`+`401` |
+| Nitro | `3.0.260610-beta` | ● | D-037. Versión publicada, no un nightly. **El `502` en `POST`+`401` está cerrado** (D-050): era el spec de fetch, no h3 |
 | Tailwind CSS | `4.3.2` | ● | vía `@tailwindcss/vite` |
 | Lucide (iconos) | `0.545` | ● | M2-D3 reserva pares icono-significado |
 | **shadcn/ui** | — | ○ | D-024. Primitivos accesibles para los 36 componentes de M2-D3 |
@@ -50,13 +50,13 @@ El front está a ~2% de conformidad con el diseño aprobado. Lo que se conserva 
 | Pieza | Versión | Estado | Nota |
 |---|---|---|---|
 | Express | `4.22.2` | ● | D-016. `@types/express` **pineado a v4**: los tipos v5 rompen todas las rutas |
-| Prisma → Drizzle → **Kysely** | en migración | ◐ | D-016 → D-038 (Drizzle) → D-048 (arranca la migración) → **D-049: Drizzle → Kysely, sin evidencia técnica, postura del dueño del producto** |
+| **Kysely** (sobre `@libsql/client`) | `0.29.5` | ● | Migración **terminada**: Prisma → Drizzle (D-048) → Kysely (D-049), las dos el 2026-08-21. Desde D-052 no queda rastro de ninguno de los dos en el árbol ni en el lockfile |
 | Zod | `4.4.3` | ● | D-035. Rutas heredadas aún con formas de la 3, que v4 acepta |
-| JWT (`jsonwebtoken`) | `9.0.2` | ● | 7 días, con revalidación de `isActive` por request |
-| **bcrypt** (módulo nativo) | `5.1.1` | ◐ | cost 10. Nativo ⇒ toolchain en la imagen Docker, y es el origen del warning de `url.parse()` vía `node-pre-gyp` |
+| JWT (`jsonwebtoken`) | `9.0.3` | ● | 7 días, con revalidación de `isActive` por request |
+| **bcrypt** (módulo nativo) | `5.1.1` | ◐ | cost 10. Es el origen del warning de `url.parse()` vía `node-pre-gyp`. El costo de "toolchain en la imagen" **murió con D-041**: no hay imagen |
 | Multer | `2.2.0` | ● | D-036 |
 | `express-rate-limit` | `8.6.2` | ● | D-045. Solo sobre `POST /auth/login`. Store en memoria: alcanza con **una** instancia, que es lo que da el free tier (D-040) |
-| dotenv | `16.4.5` | ● | |
+| dotenv | `16.6.1` | ● | `import "dotenv/config"` como primer import, nunca `dotenv.config()` intercalado |
 | Vitest + supertest | `4.1.10` / `7.0` | ● | 76 tests (auth 11 · upload 12 · jwt 10 · timing 3 · acceso 16 · rate limit 10), base SQLite propia |
 
 Base `/api/v1`. De los ~80 endpoints del backlog de M2-D5, **conforman 2**.
@@ -89,11 +89,11 @@ Ningún validador custodia ni transfiere valor, en ninguna fase (D-021).
 
 | Pieza | Hoy | Destino | Estado | Decisión |
 |---|---|---|---|---|
-| Base de datos | **SQLite** (`dev.db`, Kysely sobre `@libsql/client`) | **SQLite** vía **Turso** en prod (free: 5 GB · 500M lecturas · 10M escrituras) | ○ | D-038 · D-040 — Turso **obligatorio**, no preferencia: en free no hay disco. ORM: D-048 → D-049 |
-| Migraciones | Prisma Migrate, 1 migración (`init`) | idempotentes en el entrypoint | ◐ | D-012 |
-| Archivos de evidencia | **disco local** (`UPLOAD_DIR`, Multer) | **S3 genérico**: MinIO dev / **Cloudflare R2** prod (free: 10 GB, egress $0) | ○ — **prerequisito del primer deploy**, no transición: en free no hay disco persistente | D-011 · D-040 |
+| Base de datos | **SQLite** (`dev.db`, Kysely sobre `@libsql/client`) | **SQLite** vía **Turso** en prod (free: 5 GB · 500M lecturas · 10M escrituras) | ◐ — declarada en `render.yaml`; falta crear la base | D-038 · D-040 — Turso **obligatorio**, no preferencia: en free no hay disco. ORM: D-048 → D-049 |
+| Migraciones | SQL plano en `packages/api/migrations/`, 1 migración, tracking propio (`_migrations`), **un solo runner** (D-052) | idempotentes en el `startCommand` | ● — verificado sobre el **compilado**, contra base nueva y re-aplicando | D-012 · D-049 |
+| Archivos de evidencia | **disco local** (`UPLOAD_DIR`, Multer) | **S3 genérico**: MinIO dev / **Cloudflare R2** prod (free: 10 GB, egress $0) | ○ — **ya no bloquea el primer deploy**: sale con `/tmp` efímero y marcado (D-051). Vuelve a bloquear el día del primer anclaje | D-011 · D-040 · D-051 |
 | URLs de archivos | descarga por endpoint autenticado | prefirmadas, TTL ≤15 min | ○ | D-011 |
-| Base de tests | SQLite propia (`prisma/test.db`), sembrada por corrida | — | ● | SPEC-008 |
+| Base de tests | SQLite propia (`packages/api/test.db`), migrada y sembrada por corrida | — | ● | SPEC-008 |
 
 ## 7 · Blockchain
 
@@ -110,51 +110,62 @@ Ningún validador custodia ni transfiere valor, en ninguna fase (D-021).
 
 ## 8 · Infraestructura y despliegue
 
-> **Esta capa está en 0%.** No existe `render.yaml` ni configuración de deploy de ningún tipo. Es
-> el hueco más grande del proyecto y afecta a cuatro criterios del SOM (12 · URL pública,
-> 9 · telemetría, 14 · runbook y monitoreo, 11 · security review).
+> **Del 0% al deploy configurado (2026-08-23).** Existe `render.yaml` en la raíz y
+> `specs/RUNBOOK-deploy.md`. Lo que falta ya no es código ni configuración: son **tres altas de
+> cuenta** (Render, Turso) y pegar cuatro variables. El procedimiento exacto está en el runbook y
+> **no se repite acá**.
 >
-> **No hay Dockerfiles y no los va a haber** (D-041): el deploy usa el runtime nativo de Node. Si
-> ves una fila pidiendo una imagen, es deuda de D-010, que era una decisión de Railway.
+> **No hay Dockerfiles y no los va a haber** (D-041): runtime nativo de Node. Si ves una fila
+> pidiendo una imagen, es deuda de D-010, que era una decisión de Railway.
 
 | Pieza | Estado | Decisión |
 |---|---|---|
-| **`render.yaml`** (Blueprint: `plan: free`, `rootDir`, `buildFilter`) | ○ — **no existe**; es el artefacto de infra a escribir | D-041 |
-| Runtime: **nativo de Node**, sin imagen propia | ○ — decidido | D-041 (reemplaza los Dockerfiles de D-010) |
-| Script `start` de `apps/web` (`node .output/server/index.mjs`) | ● — existe, verificado contra build real | D-041 |
-| Script `start` de `packages/api` (`node dist/src/server.js`) | ● — ya existía | — |
-| Plataforma de deploy: **Render**, con build por servicio y GHA que no despliega | ○ — cuenta no creada | D-039 (Railway descartado; núcleo de D-010 intacto) |
-| **Todo el deploy en free tier — $0/mes** | ○ — restricción de diseño ya decidida | D-040 |
-| Presupuesto: **750 instance-hours/mes** compartidas entre web y api | ○ — **keep-warm prohibido**: rompe el free | D-040 |
-| Cold start ~1 min tras 15 min de inactividad | ○ — se calienta a mano antes de demo/grabación | D-040 |
-| Worker de confirmaciones: **cron de GHA**, no background worker | ○ — los workers de Render no tienen free | D-040 · D-003 |
-| Migraciones antes de arrancar, en el `buildCommand`/`startCommand` | ○ — **obligatorio**: free no tiene shell ni one-off jobs | D-012 · D-040 · D-041 |
-| `GET /health` | ● — existe en la API | — |
-| Healthcheck de contenedor / rollout | ○ | D-010 |
-| Entorno de **pre-producción con URL pública** | ○ | criterio 12 del SOM |
-| Secretos por entorno (`JWT_SECRET`, `BLOCKFROST_API_KEY`, `SERVICE_WALLET_SEED`) | ◐ — `.env` local en dev; variables de entorno en plataforma en prod | regla 12 |
-| Telemetría / métrica *reserva → escrow < 12 min* | ○ | criterio 9 · D-021 define qué se mide |
-| Monitoreo y capturas de monitoreo | ○ | criterio 14 |
-| **Runbook** (deploy / rollback / incidente) | ○ — no existe | criterio 14 |
+| **`render.yaml`** (Blueprint: 2 servicios, `plan: free`, `rootDir`, `buildFilter`) | ● — **escrito** | D-041 |
+| Runtime: **nativo de Node**, sin imagen propia · `NODE_VERSION=22` (la del CI) | ● — declarado | D-041 |
+| `startCommand` de la API: migraciones **y después** el servidor | ● — verificado sobre el compilado | D-012 · D-040 |
+| Script `start` de `apps/web` (`node .output/server/index.mjs`) | ● — respeta `PORT`, verificado | D-041 |
+| Script `start` de `packages/api` (`node dist/src/server.js`) | ● | — |
+| `healthCheckPath`: `/health` en la API, `/` en el web | ● — declarado | D-010 |
+| **Proxy `/api/**` del web hacia la API** (route rules de Nitro, horneadas en el build) | ● — **sin CORS y sin URL de API en el navegador**; el `502` en `POST`+`401` cerrado | D-050 |
+| `API_ORIGIN` es **build time**, no runtime — cambiarla exige redeploy del web | ● — documentado en el YAML y el runbook | D-031 (`ports.ts`) |
+| `JWT_SECRET` con `generateValue: true` | ● — declarado | D-042 |
+| `TRUST_PROXY_HOPS=1` (con 0 detrás del proxy la app queda inusable) | ● — declarado | D-045 |
+| Plataforma: **Render**, build por servicio, GHA no despliega | ◐ — **cuenta no creada** | D-039 · D-010 |
+| Base **Turso** (`DATABASE_URL` + `DATABASE_AUTH_TOKEN`, `sync: false`) | ◐ — **base no creada** | D-038 |
+| **Todo el deploy en free tier — $0/mes** | ● — restricción respetada por el YAML | D-040 |
+| Presupuesto: **750 instance-hours/mes** compartidas · **keep-warm prohibido** | ● — documentado en el YAML y el runbook §5 | D-040 |
+| Cold start ~1 min tras 15 min de inactividad | ● — se calienta a mano antes de demo/grabación | D-040 |
+| Evidencia: `UPLOAD_DIR=/tmp/uploads`, **efímero y marcado** | ● — aceptado a conciencia | **D-051** |
+| Seed de las cuentas demo: desde tu máquina contra Turso (free no da shell) | ● — procedimiento en el runbook §1.3 | D-047 |
+| **Runbook** (deploy / rollback / incidente) | ● — `specs/RUNBOOK-deploy.md` | criterio 14 |
+| Worker de confirmaciones: **cron de GHA**, no background worker | ○ — nada que disparar todavía (`packages/cardano` vacío) | D-040 · D-003 |
+| Entorno de **pre-producción con URL pública** | ◐ — a un `render login` de distancia | criterio 12 |
+| Telemetría / métrica *reserva → escrow < 12 min* | ○ | criterio 9 · D-021 |
+| Monitoreo y capturas de monitoreo | ○ — hoy solo los logs de Render | criterio 14 |
 | Versionado de servicios: CalVer `vYYYY.MM.N` en tags | ○ — sin releases | D-015 |
-| Backups de la base | ○ — Turso free trae 1 día de point-in-time restore | D-038 · D-040 |
+| Backups de la base | ○ — Turso free trae 1 día de point-in-time restore (runbook §3) | D-038 · D-040 |
 
-## 9 · Verificación — CI, puerta y harness
+## 9 · Verificación
 
-| Pieza | Versión | Estado |
+| Pieza | Versión / detalle | Estado |
 |---|---|---|
-| GitHub Actions: dos jobs (**la puerta** + **contratos Aiken**) | `checkout@v4`, `setup-node@v4` (Node 22), `pnpm/action-setup@v4`, `setup-aiken@v1` | ● |
-| `scripts/gate.sh` — el mismo script en local y en CI (~31 s) | — | ● |
-| Hooks bloqueantes (`docs/`, migraciones, generados, secretos, push) | — | ● |
-| `scripts/check-lockfile.py` — lockfile vs `package.json` | — | ● |
-| `scripts/worktree.sh` — árboles por track con puertos y base propios | — | ● |
-| Subagentes `spec` · `conformance` · `contracts` y skills `slice` · `run-app` | — | ● |
-| Tests: **34** (web 4 · api 23 · shared 7) · contratos 0 | — | ◐ |
+| GitHub Actions: dos jobs (**calidad** + **contratos Aiken**) | `checkout@v4`, `setup-node@v4` (Node 22), `pnpm/action-setup@v4`, `setup-aiken@v1` | ● |
+| `pnpm verify` — typecheck + tests + build, lo mismo que el CI, en local | — | ● |
+| `pnpm install --frozen-lockfile` — falla si el lockfile no refleja los `package.json` | — | ● |
+| Tests: **108** (web 16 · api 76 · shared 16) · contratos **0** | 13 archivos | ◐ |
 | Coverage medido | — | ○ — el criterio 2 pide ≥95% en contratos |
-| Análisis estático / scan de dependencias | — | ○ — criterio 11 (*"static analysis, dependency scans"*) |
-| E2E Playwright | — | ● pero **fuera de CI**, por decisión |
+| Análisis estático / scan de dependencias | — | ○ — criterio 11 |
+| E2E Playwright | `1.62`, solo Chromium | ● pero **fuera de CI**, por decisión |
+| **Harness de agentes** (puerta, hooks, subagentes, skills, worktrees) | — | **borrado el 2026-08-23 (D-053)** |
 
-Ver `CLAUDE.md` §Cómo se trabaja acá y D-032.
+El harness existió tres días y son 1099 líneas que ya no están. El porqué —cinco commits de arreglo
+a sí mismo, cero bugs reales detectados, y que el CI declarativo existía desde el día 1 y hacía casi
+lo mismo— está en **D-053**.
+
+**Lo que quedó sin enforcement automático, dicho explícito:** la segunda capa de autorización
+(regla 5) falla en silencio y hoy la sostiene solo quien escribe el endpoint. Es la única deuda que
+la poda dejó abierta, y el arreglo propuesto no es otro escáner sino un middleware
+(`packages/api/CLAUDE.md` §`canAccessProject`).
 
 ## 10 · Lo que NO está decidido
 
@@ -164,17 +175,228 @@ Ver `CLAUDE.md` §Cómo se trabaja acá y D-032.
 | Vocabulario "certificate" en la UI | calificar levemente | postura del dueño (sub-ítem de D-026) |
 | `/verify`: cómo se verifica **sin cuenta y sin confiar en la API** | la pantalla ya existe, pero exige sesión y verifica contra la API | M1-D1 promete verificación independiente; llega con `AnchorPort` (D-014) |
 | Retención de datos | sin default | nunca se discutió (backups los cubre D-038) |
-| Gestor de secretos en pre-prod | variables de entorno de la plataforma de deploy | el primer deploy real |
 | ~~D-038 · cuándo migrar Prisma → Drizzle~~ | — | **Cerrada: D-048** (2026-08-21). Arranca antes de las rebanadas de M3, no diferida. |
 | ~~D-048 · Drizzle como destino de ORM~~ | — | **Reabierta y cerrada: D-049** (2026-08-21). Drizzle → Kysely, sin evidencia técnica, postura del dueño del producto. |
-| D-038 · Turso vs disco Render + Litestream para SQLite en prod | Turso (por el worker de confirmaciones de D-003, no por costo) | primer intento real de deploy a Render |
+| ~~D-038 · Turso vs disco Render + Litestream~~ | — | **Cerrada de hecho (2026-08-23): en free tier no hay disco, así que Litestream no tiene sobre qué correr.** `render.yaml` declara Turso |
+| Gestor de secretos en pre-prod | variables de entorno de Render (`sync: false` + `generateValue`) | ya en uso; se reabre si aparece un secreto que rote |
 
 ## 11 · Deuda del stack
 
 | Deuda | Costo de arrastrarla |
 |---|---|
-| **Nitro sigue en beta, y su proxy de dev rompe `POST`+`401`** | El camino de error más común de auth es indebuggeable en local. No hay Nitro 3 estable todavía, y el bug abarca al menos h3 rc.22 y rc.25: no se resuelve eligiendo versión (D-037) |
+| **Nitro sigue en beta** | Sigue sin haber Nitro 3 estable. Pero **el `502` en `POST`+`401` ya no es deuda**: se cerró con `credentials: "omit"` al descubrir que era el spec de fetch y no h3 (D-050) |
+| **Evidencia efímera en la instancia desplegada** | Un archivo subido no sobrevive al primer spin-down. Aceptado a conciencia y marcado (D-051); **vuelve a ser bloqueante el día del primer anclaje** |
 | **`bcrypt` es nativo** | Más barata desde D-041: sin imagen propia, el toolchain lo absorbe el entorno de build de Render. Queda el warning de `url.parse()` vía `node-pre-gyp` y el riesgo genérico de módulo nativo. **La alternativa `bcryptjs` (JS puro, ~30% más lento) hoy conviene menos**: Render free da 0.1 CPU, donde los ~81 ms medidos en una máquina rápida se van a varios cientos. Detalle en `packages/api/CLAUDE.md` §Superficie 🔴. Es código 🔴: lo decide el humano |
 | **`contracts/` con 0 tests** | Único criterio duro del SOM sin plan B |
 | **`aiken.toml` con naming de scaffold** | Incumple D-015 (versión entera incremental) |
 | **`milestone` en el dominio** | D-023 pendiente; encarece con cada pantalla nueva |
+
+---
+
+## 12 · Inventario exhaustivo de dependencias
+
+> Auditado el **2026-08-23** leyendo `package.json`, `pnpm-lock.yaml` y lo instalado en
+> `node_modules` — no copiado de las tablas de arriba. Dos columnas a propósito: **declarado** es
+> lo que pedimos, **resuelto** es lo que corre. Cuando difieren, lo que se rompe en producción es
+> siempre lo resuelto.
+>
+> Las **transitivas** no se listan una por una: la fuente de verdad de esas 566 es `pnpm-lock.yaml`,
+> y una copia en Markdown se desactualiza en el próximo `pnpm install` (principio 1). Se listan solo
+> las que hay que conocer por algún motivo concreto (§12.6) y los duplicados que importan (§12.7).
+
+### 12.1 · Toolchain y ejecución
+
+| Pieza | Versión | Dónde se fija |
+|---|---|---|
+| **pnpm** | `9.15.0` | `packageManager` de `package.json` raíz — el CI lo toma de ahí |
+| **Node (declarado)** | `>=20` | `engines` de `package.json` raíz |
+| **Node (CI)** | `22` | `.github/workflows/ci.yml` |
+| **Node (deploy)** | `22` | `NODE_VERSION` en `render.yaml` |
+| **Node (máquina de esta auditoría)** | `24.14.1` — `undici` embebido `7.24.4` | local |
+| **TypeScript** | `6.0.3` (declarado `^6.0.2`) — unificado en los tres packages | cada `tsconfig.json` |
+| **Aiken** | `v1.1.21+42babe5` — pineado igual en local y en CI | `aiken.toml` · `setup-aiken@v1` |
+| **Python** (scripts de la puerta) | `3.14.2` local; el del runner en CI | `scripts/*.py` |
+
+`lockfileVersion: '9.0'`. `.npmrc`: `strict-peer-dependencies=false`, **`auto-install-peers=false`**
+(lo segundo es deliberado y está medido — §12.7).
+
+**Los tres `tsconfig` son autocontenidos y difieren a propósito** (no hay `tsconfig.base.json`):
+
+| Package | target | module / resolución | notas |
+|---|---|---|---|
+| `apps/web` | `ES2022` | `ESNext` / `bundler` | `jsx: react-jsx` · `verbatimModuleSyntax` · `noEmit` |
+| `packages/api` | `ES2022` | `node16` / `node16` | CJS · `outDir: dist`, `rootDir: .` |
+| `packages/shared` | `ES2022` | `node16` / `node16` | CJS · `outDir: dist`, `rootDir: src` |
+
+### 12.2 · `apps/web` — dependencias de runtime
+
+| Paquete | Declarado | Resuelto |
+|---|---|---|
+| `@plataforma/shared` | `workspace:^` | link local |
+| `@tailwindcss/vite` | `^4.1.18` | **`4.3.2`** |
+| `@tanstack/react-devtools` | `^0.10.8` | `0.10.8` |
+| `@tanstack/react-query` | `^5.90.5` | **`5.101.2`** |
+| `@tanstack/react-router` | `^1.170.18` | `1.170.18` |
+| `@tanstack/react-router-devtools` | `^1.167.0` | `1.167.0` |
+| `@tanstack/react-router-ssr-query` | `^1.167.1` | `1.167.1` |
+| `@tanstack/react-start` | `^1.168.28` | `1.168.28` |
+| `@tanstack/router-plugin` | `^1.132.0` | **`1.168.20`** |
+| `lucide-react` | `^0.545.0` | `0.545.0` |
+| `nitro` | `3.0.260610-beta` (exacto) | `3.0.260610-beta` |
+| `react` | `^19.2.0` | **`19.2.7`** |
+| `react-dom` | `^19.2.0` | **`19.2.7`** |
+| `tailwindcss` | `^4.1.18` | **`4.3.2`** |
+
+### 12.3 · `apps/web` — dependencias de desarrollo
+
+| Paquete | Declarado | Resuelto |
+|---|---|---|
+| `@playwright/test` | `^1.62.0` | `1.62.0` |
+| `@tailwindcss/typography` | `^0.5.16` | **`0.5.20`** |
+| `@tanstack/devtools-vite` | `^0.8.1` | `0.8.1` |
+| `@tanstack/router-cli` | `^1.132.0` | **`1.167.19`** |
+| `@testing-library/dom` | `^10.4.1` | `10.4.1` |
+| `@testing-library/react` | `^16.3.0` | **`16.3.2`** |
+| `@types/node` | `^22.10.2` | **`22.20.1`** |
+| `@types/react` | `^19.2.0` | **`19.2.17`** |
+| `@types/react-dom` | `^19.2.0` | **`19.2.3`** |
+| `@vitejs/plugin-react` | `^6.0.1` | **`6.0.3`** |
+| `jsdom` | `^28.1.0` | `28.1.0` |
+| `typescript` | `^6.0.2` | **`6.0.3`** |
+| `vite` | `^8.0.0` | **`8.1.4`** |
+| `vitest` | `^4.1.5` | **`4.1.10`** |
+
+Playwright corre **solo Chromium**, en dos proyectos: `iPhone 13` (mobile) y `Desktop Chrome`
+a 1440×900. No corre en CI, por decisión.
+
+### 12.4 · `packages/api`
+
+| Paquete | Declarado | Resuelto | Nota |
+|---|---|---|---|
+| `@libsql/client` | `^0.17.4` | `0.17.4` | ESM puro — patrón `require()` de `lib/libsql-client.ts` |
+| `@libsql/kysely-libsql` | `^0.4.1` | `0.4.1` | declara `@libsql/client: ^0.8.0` → §12.7 |
+| `@paralleldrive/cuid2` | `^3.3.0` | `3.3.0` | IDs; ESM puro |
+| `@plataforma/shared` | `workspace:^` | link local | |
+| `bcrypt` | `^5.1.1` | `5.1.1` | **módulo nativo**, cost 10 (regla 4) |
+| `dotenv` | `^16.4.5` | **`16.6.1`** | |
+| `express` | `^4.21.2` | **`4.22.2`** | v4 a propósito |
+| `express-rate-limit` | `^8.6.2` | `8.6.2` | solo `POST /auth/login`, store en memoria |
+| `jsonwebtoken` | `^9.0.2` | **`9.0.3`** | HS256, 7 días |
+| `kysely` | `^0.29.5` | `0.29.5` | ESM puro |
+| `multer` | `^2.2.0` | `2.2.0` | D-036 |
+| `zod` | `^4.4.3` | `4.4.3` | |
+| *dev* `@types/bcrypt` | `^5.0.2` | `5.0.2` | |
+| *dev* `@types/express` | `^4.17.25` | `4.17.25` | **pineado a v4**: los tipos v5 rompen 21 rutas |
+| *dev* `@types/jsonwebtoken` | `^9.0.9` | **`9.0.10`** | |
+| *dev* `@types/multer` | `^2.2.0` | `2.2.0` | |
+| *dev* `@types/node` | `^22.13.14` | **`22.20.1`** | |
+| *dev* `@types/supertest` | `^6.0.2` | **`6.0.3`** | |
+| *dev* `supertest` | `^7.0.0` | **`7.2.2`** | |
+| *dev* `tsx` | `^4.19.3` | **`4.23.1`** | |
+| *dev* `typescript` | `^6.0.2` | **`6.0.3`** | |
+| *dev* `vitest` | `^4.1.5` | **`4.1.10`** | |
+
+**Variables de entorno que el código realmente lee** (auditado por `grep`, no por el `.env.example`):
+`DATABASE_URL` · `DATABASE_AUTH_TOKEN` · `JWT_SECRET` · `PORT` · `UPLOAD_DIR` ·
+`MAX_FILE_SIZE_MB` · `TRUST_PROXY_HOPS` · `LOGIN_RATE_LIMIT_MAX` · `SEED_ADMIN_PASSWORD` ·
+`SEED_DEMO_PASSWORD`. En `apps/web`: `WEB_PORT` · `API_ORIGIN` (las dos de **build time**,
+`ports.ts`).
+
+### 12.5 · `packages/shared` y `contracts/`
+
+| Paquete | Declarado | Resuelto |
+|---|---|---|
+| `zod` | `^4.4.3` | `4.4.3` |
+| *dev* `typescript` | `^6.0.2` | `6.0.3` |
+| *dev* `vitest` | `^4.1.5` | `4.1.10` |
+
+`contracts/` no toca el workspace pnpm. Sus dependencias son dos y están en `aiken.toml` /
+`aiken.lock`: compilador **`v1.1.21`**, `aiken-lang/stdlib` **`v3.0.0`** (github), Plutus **V3**.
+El proyecto se llama `j/milestone-fsm` con `version = "0.0.0"` — scaffold, incumple D-015.
+
+### 12.6 · Transitivas que hay que conocer
+
+No están declaradas por nosotros, pero cada una explica un comportamiento del sistema:
+
+| Paquete | Versión | Por qué importa |
+|---|---|---|
+| **`undici`** | `7.24.4` **embebido en Node** (el paquete `7.28.0` del árbol no es el que corre) | Es el `fetch` que usa el proxy. Su paso `401` del spec es la causa de D-050 — y la variable es la **versión de Node**, no la del paquete |
+| `h3` | `2.0.1-rc.22` (es la que queda en el bundle; `rc.20` también está en el árbol) | El proxy y el `HTTPError` 502 salen de acá |
+| `srvx` | `0.11.22` | servidor HTTP de h3 |
+| `rou3` | `0.8.1` | router de h3 |
+| `esbuild` | `0.28.1` | vía Vite |
+| `lightningcss` | `1.32.0` · `@tailwindcss/oxide` `4.3.2` | binarios nativos de Tailwind v4 |
+| `@mapbox/node-pre-gyp` | `1.0.11` | vía `bcrypt`. **Origen real del warning de `url.parse()`** — atribuido a Multer durante meses (D-036) |
+| `body-parser` `1.20.6` · `qs` `6.15.3` | | vía Express 4 |
+| `busboy` | `1.6.0` | vía Multer |
+| `libsql` (binario nativo) | `0.5.29` | motor de `@libsql/client` |
+| `playwright-core` | `1.62.0` | |
+| `db0` | `0.3.4` | capa de base de Nitro. **Nada la usa** y arrastra §12.7 |
+
+### 12.7 · Duplicados y peso muerto
+
+**1 · `auto-install-peers=true` instalaba 225 MB de ORMs que nadie importa — cerrado (D-052).**
+El `.npmrc` tenía `auto-install-peers=true`; `db0` (que viene con Nitro, y que nada de este repo
+usa) declara `drizzle-orm` como peer **opcional**, y pnpm lo instalaba igual. `drizzle-orm` a su vez
+arrastraba Prisma entero:
+
+```
+nitro → db0@0.3.4 → drizzle-orm@0.45.2 → prisma + @prisma/client → @prisma/engines
+```
+
+O sea que **Prisma se seguía instalando después de D-048 y D-049, que lo sacaron del proyecto**, y
+Drizzle también, después de que D-049 lo reemplazara por Kysely. Se pagaba en cada build de Render,
+donde el free tier es lento y el `pnpm install --frozen-lockfile` es la parte larga.
+
+Medido con instalación **limpia** en los dos lados (borrando `node_modules` antes, para no comparar
+contra residuo acumulado):
+
+| | `auto-install-peers=true` | `auto-install-peers=false` |
+|---|---|---|
+| `node_modules` en disco | 559 MB | **334 MB** (−225 MB, −40 %) |
+| Paquetes distintos en el lockfile | 566 | **541** |
+| Entradas `nombre@versión` | 671 | **631** |
+
+Sin peers faltantes, sin warnings nuevos, y las 108 pruebas y los dos builds verdes. `prisma`,
+`@prisma/*` y `drizzle-orm` **ya no aparecen en el lockfile**.
+
+**2 · `@libsql/client` está dos veces: `0.17.4` y `0.8.1`.** No es residuo, es real:
+`@libsql/kysely-libsql@0.4.1` declara `^0.8.0`, y en versiones `0.x` el caret solo admite parches,
+así que no dedupea. Consecuencia ya conocida y resuelta: `LibsqlDialect` recibe `{ url, authToken }`
+en vez de un `Client` ya construido, porque los dos tipos `Client` no son asignables entre sí
+(`packages/api/CLAUDE.md` §Trampas). Arrastra dos copias del binario nativo `libsql`.
+
+**3 · Duplicados menores, todos benignos:** `rolldown` en dos versiones (con sus 15 binarios por
+plataforma), `@oxc-project/types` en tres, `chokidar` 4/5, `debug` 2/4, `semver` 6/7. Ruido normal
+de un árbol con Vite 8 y Nitro 3 beta conviviendo.
+
+**4 · `node_modules/.pnpm` no es un inventario.** Guarda directorios de instalaciones anteriores
+hasta que se podan: listarlo mostraba `zod@3.25.76`, `esbuild@0.18.20` y `h3@2.0.1-rc.25`, ninguno
+de los cuales estaba en el lockfile. **Para "qué versión corre", la fuente es `pnpm-lock.yaml`**;
+`.pnpm` responde otra pregunta. Es también por qué la medición de arriba se hizo con
+`rm -rf node_modules` antes de cada lado.
+
+### 12.8 · CI y acciones
+
+| Acción | Versión | Job |
+|---|---|---|
+| `actions/checkout` | `v4` | los dos (`fetch-depth: 0` en la puerta) |
+| `pnpm/action-setup` | `v4` | puerta — toma pnpm de `packageManager` |
+| `actions/setup-node` | `v4` | puerta — Node `22`, `cache: pnpm` |
+| `aiken-lang/setup-aiken` | `v1` | contratos — Aiken `v1.1.21` |
+
+Dos jobs: **calidad** (`pnpm install --frozen-lockfile` → `typecheck` → `test` → `build`) y
+**contratos** (`aiken fmt --check` + `aiken check` + `aiken build` + verificación de que
+`plutus.json` esté al día). **Ninguno despliega** (D-010).
+
+### 12.9 · Recuento
+
+| | Cuántos |
+|---|---|
+| Dependencias directas declaradas (los 3 packages, dep + dev) | **51** |
+| Paquetes distintos en el lockfile | **541** |
+| Entradas `nombre@versión` en el lockfile | **631** |
+| Paquetes con más de una versión resuelta | **53** |
+| Árbol transitivo de `apps/web` / `packages/api` / `packages/shared` | 400 / 377 / 154 |
+| `node_modules` en disco (instalación limpia) | **334 MB** |
+| Dependencias de `contracts/` | **1** (`aiken-lang/stdlib`) |

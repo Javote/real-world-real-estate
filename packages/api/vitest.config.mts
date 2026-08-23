@@ -1,7 +1,7 @@
 import path from "node:path";
 import { defineConfig } from "vitest/config";
 
-// La suite corre contra una base SQLite PROPIA (prisma/test.db), no contra
+// La suite corre contra una base SQLite PROPIA (packages/api/test.db), no contra
 // dev.db: un test no puede depender del seed de desarrollo ni ensuciarlo.
 // La crea y la siembra test/global-setup.ts en cada corrida.
 export default defineConfig({

@@ -1,9 +1,9 @@
 // Puertos del árbol de trabajo (D-031).
 //
-// Sin `apps/web/.env` esto da 3000/8787 — el árbol principal, comportamiento
-// idéntico al de siempre. `scripts/worktree.sh create <track>` escribe ese
-// archivo con puertos propios para que dos árboles puedan correr la app a la
-// vez sin pisarse. No se importa desde src/: es configuración de build.
+// Sin `apps/web/.env` esto da 3000/8787. Ese archivo existe para poder correr
+// dos copias de la app a la vez sin que se pisen los puertos, y en el deploy
+// es de donde sale `API_ORIGIN`. No se importa desde src/: es configuración de
+// build (ver .env.example).
 import { readFileSync } from 'node:fs'
 import { fileURLToPath } from 'node:url'
 

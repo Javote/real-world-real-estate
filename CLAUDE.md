@@ -14,7 +14,7 @@
 > este archivo) y `specs/propuesta-SPEC-011.md`.
 >
 > Lo de abajo sigue vigente **como referencia técnica** (reglas duras, prohibiciones, trampas), pero
-> la sección §Cómo se trabaja acá está derogada por el plan.
+> la sección §Cómo se trabaja acá se reescribió con D-053 (el harness ya no existe).
 
 > Lo transversal. Lo de cada frente vive en `apps/web/CLAUDE.md`, `packages/api/CLAUDE.md` y
 > `contracts/CLAUDE.md`, y se carga solo cuando tocás ese subárbol.
@@ -42,9 +42,8 @@ Orden de lectura:
 3. `DECISIONS.md` — el porqué. Si algo del código te parece raro, la respuesta está acá antes que en el código.
 4. Lo puntual del frente (ver §Documentación oficial más abajo).
 
-**Para trabajar: invocá el skill `slice`.** Es el protocolo de sesión completo — ubicarse,
-spec, plan, implementar, verificar, documentar, commitear, pushear.
-Para ver la app corriendo: skill `run-app`. **No improvises un driver de browser**, ya está armado.
+**Para trabajar:** leé este archivo y el del frente que toques, implementá, corré `pnpm verify`,
+documentá lo que emergió y commiteá. No hay skill ni protocolo que invocar (D-053).
 
 ## Vocabulario: "milestone" tiene dos significados — usá el correcto
 
@@ -61,7 +60,8 @@ Dos capas, porque son dos autoridades distintas:
 
 - **Obligaciones (el *qué*, la vara de aceptación): manda `docs/`.** Entregables aprobados por
   reviewers. Ninguna decisión puede reducir lo que debemos. **`docs/` es INMUTABLE** — ni para
-  corregir un error evidente. Está bloqueado por hook, no por convención.
+  corregir un error evidente — pero es una regla, no un bloqueo: los originales viven afuera y ya
+  están aprobados (D-022, enmendada).
 - **Implementación (el *cómo*): `DECISIONS.md` > `CLAUDE.md` > `specs/`.**
 
 Un desvío solo es legítimo si (a) el entregable se contradice internamente, (b) es un error de
@@ -91,9 +91,10 @@ nos pasó decidir contra una transcripción errónea (ver Trampas).
 
 ## Estructura del repo
 
-`apps/web` (TanStack Start) y `packages/api` (Express + Prisma) son los únicos servicios.
-`shared` (contrato único API↔web) y `cardano` (a poblar) son librerías; el esquema Prisma vive en
-`packages/api/prisma` (D-016). `contracts/` es el proyecto Aiken: no se hostea, su versión es un entero
+`apps/web` (TanStack Start) y `packages/api` (Express + Kysely) son los únicos servicios.
+`shared` (contrato único API↔web) y `cardano` (a poblar) son librerías; las migraciones son SQL
+plano escrito a mano en `packages/api/migrations/`, aplicadas por un único runner
+(`src/db/migrate.ts`, D-052). `contracts/` es el proyecto Aiken: no se hostea, su versión es un entero
 (D-015).
 
 Tres `.md` en la raíz, a propósito: **`README.md`** (entrada humana, arranque, variables de
@@ -101,8 +102,8 @@ entorno), **`CLAUDE.md`** (este archivo) y **`DECISIONS.md`** (el porqué). El m
 está en `specs/README.md`; los entregables oficiales en `docs/`, mapeados en `specs/entregables.md`
 (`docs/` contiene solo entregables: nada nuestro vive ahí adentro — D-033).
 
-El harness de agentes vive en `.claude/` (subagentes, skills, hooks y permisos, todo commiteado) y
-`scripts/` (la puerta y los árboles de trabajo). Ver §Cómo se trabaja acá.
+No hay `scripts/` ni harness de agentes: se borraron enteros el 2026-08-23 (D-053). En `.claude/`
+queda solo una lista de comandos preaprobados, que es comodidad de sesión y no una regla.
 
 ## Stack
 
@@ -117,7 +118,7 @@ Lo que necesitás saber al escribir código:
 | **web** | TanStack Start + Router + Query · React 19 · Tailwind v4 · Lucide · shadcn/ui *(falta)* | D-002, D-024 |
 | **api** | Express 4 + Zod + JWT + bcrypt(10) + Multer, base `/api/v1` | D-016 |
 | **shared** | Zod — el contrato único API↔web. El schema va acá **antes** que el endpoint | D-012 |
-| **db** | **Kysely** (migrando desde Drizzle, D-049) · **SQLite** en dev y prod, probable **Turso** en Render | D-016, D-038, D-048, D-049 |
+| **db** | **Kysely** (migración desde Drizzle **completa**, D-049) · **SQLite** en dev · **Turso** en Render | D-016, D-038, D-048, D-049 |
 | **cardano** | `AnchorPort` con adaptadores `blockfrost` y `simulated` — *package vacío* | D-005, D-014 |
 | **contracts** | Aiken v1.1.21 · **Plutus V3** · stdlib v3.0.0 · blueprint commiteado | D-017, D-019 |
 | red | **Preprod siempre**; mainnet fuera de alcance | D-013 |
@@ -149,7 +150,7 @@ No leas los cuatro entregables por costumbre: son ~25k tokens. Abrí lo que la f
    de composición) vive en `passwordSchema` de `packages/shared` y se aplica donde la password se
    **escribe**, nunca en el login.
 5. **Autorización en dos capas, siempre:** rol global (`requireRole`) + membresía por proyecto (`canAccessProject`). `admin` bypasea membresías; el resto solo ve proyectos donde es miembro. La matriz completa está en M2-D1 §4.
-6. **Todo body se valida con Zod** (`safeParse` + 400 con `error.flatten()`). Nada llega a Prisma sin pasar por un schema. Para endpoints nuevos: el schema va a `packages/shared` ANTES que el endpoint, y el frontend importa el mismo tipo.
+6. **Todo body se valida con Zod** (`safeParse` + 400 con `error.flatten()`). Nada llega a la base sin pasar por un schema. Para endpoints nuevos: el schema va a `packages/shared` ANTES que el endpoint, y el frontend importa el mismo tipo.
 7. **Toda mutación relevante escribe `AuditLog`** (append-only) vía `writeAuditLog`, con actor, entidad, acción, timestamp.
 8. **Idempotencia en todo lo que toca plata o chain:** re-ejecutar un anclaje, release o migración no duplica efectos.
 9. **Máquina de estados del stage:** `Pending → InProgress → {Observed ⇄ InProgress, Completed}`, `Completed` terminal (D-020). `Observed` es remediación, no estado final. Una sola tabla de transiciones, espejada entre backend y `contracts/`. La etiqueta que ve el usuario sale del diccionario i18n, no del nombre del estado.
@@ -181,43 +182,43 @@ No leas los cuatro entregables por costumbre: son ~25k tokens. Abrí lo que la f
 
 ## Cómo se trabaja acá
 
-**El protocolo de sesión es el skill `slice`.** Invocalo al empezar; no lo repito acá.
+**No hay harness.** Lo hubo entre el 2026-08-20 y el 2026-08-23 —una puerta ejecutable, cinco
+hooks bloqueantes, tres subagentes, dos skills, árboles de trabajo por track— y se borró entero
+(**D-053**): 1099 líneas que en tres días de vida necesitaron cinco commits de arreglo a sí mismas
+y no detectaron ninguno de los bugs reales del período. Si venís de leer una spec vieja que
+menciona `scripts/gate.sh`, ese archivo no existe.
 
-**La puerta.** `scripts/gate.sh` es el único comando que decide si un cambio puede pushearse:
-prohibiciones absolutas —entre ellas que **todo endpoint con alcance de proyecto tenga la segunda
-capa** de la regla 5 (D-044)—, typecheck, tests **del frente que tocaste**, y contratos si aplica.
-**El CI corre el mismo script** — si se separan, divergen.
+**Verificación: un comando, el mismo que corre el CI.**
 
-Lo que no se puede dejar librado al azar **es un hook, no un párrafo** (D-032). Están bloqueados
-por el harness, no por convención: editar `docs/`, editar una migración aplicada o un archivo
-generado, escribir una clave privada, pushear con la puerta cerrada, pushear forzado. Los hooks
-tienen su propia suite: `scripts/hooks/test-guards.sh`.
+```bash
+pnpm verify      # typecheck + tests + build
+```
 
-**Árboles paralelos.** `scripts/worktree.sh create <track>` deja un árbol usable —rama, deps, base
-sembrada y puertos propios— para `web`, `api` o `contracts` (D-031). El track de contratos siempre
-puede correr en paralelo: está aislado del workspace pnpm.
+El CI (`.github/workflows/ci.yml`) hace eso mismo, declarativo, más el job de Aiken. `pnpm install
+--frozen-lockfile` falla solo si el lockfile no refleja los `package.json`, que es el caso que
+importa: un verde sobre el entorno equivocado es peor que un rojo.
 
-**Subagentes** (`.claude/agents/`), divididos por el contexto que necesitan, no por rol nominal:
+**Lo demás es criterio, y el criterio va escrito, no ejecutado.** Las reglas duras de este archivo
+son advisory a propósito: bloquear el juicio produce fricción sin seguridad. Las dos excepciones
+donde eso **no** alcanza están declaradas como tales:
 
-| Agente | Cuándo | Por qué existe |
-|---|---|---|
-| `spec` | antes de implementar una rebanada sin spec | leer los entregables cuesta ~25k tokens que el implementador no necesita |
-| `conformance` | antes de commitear, obligatorio si hay superficie de prueba | el que escribió el código es el peor juez de si cumple la spec |
-| `contracts` | cualquier trabajo en `contracts/` | contexto Aiken/Plutus disjunto del TypeScript |
+- **La segunda capa de autorización** (regla 5) falla en silencio y hoy no la sostiene nada más que
+  quien escribe el endpoint. Ver `packages/api/CLAUDE.md` §`canAccessProject`.
+- **Los secretos** (regla 12) — no hay escáner; leé el diff antes de commitear.
 
 **Dónde vive cada cosa** (si no está en su lugar, no lo copies: movelo):
 
 | Qué | Dónde |
 |---|---|
-| Obligaciones, la vara de aceptación | `docs/` — inmutable, y **solo entregables** (D-033) |
+| Obligaciones, la vara de aceptación | `docs/` — copia de los entregables aprobados (D-022) |
 | Qué archivo de `docs/` es qué entregable | `specs/entregables.md` |
 | Por qué se decidió algo | `DECISIONS.md` |
 | Reglas transversales de sesión | este archivo |
 | Reglas, trampas y deuda de un frente | `<frente>/CLAUDE.md` |
 | Estado, rebanadas, riesgos | `specs/README.md` |
 | Invariantes y casos borde de una rebanada | `specs/SPEC-NNN` |
-| Procedimientos | `.claude/skills/` |
-| Lo que se ejecuta y no se confía | `scripts/` y `.claude/settings.json` |
+| Stack, versiones e infraestructura | `specs/stack.md` |
+| Deploy, rollback e incidentes | `specs/RUNBOOK-deploy.md` |
 
 ### Niveles de autonomía (por riesgo del código)
 
@@ -260,11 +261,7 @@ pnpm contracts:check              # aiken check (compila y corre tests de valida
 pnpm contracts:build              # regenera plutus.json (commitearlo)
 pnpm e2e                          # walkthrough Playwright (mobile + desktop) — NO corre en CI
 
-scripts/gate.sh                   # LA PUERTA — lo mismo que corre el CI y el hook de push
-scripts/gate.sh --ci              # sin acotar por diff: verifica todo
-scripts/worktree.sh list          # árboles, ramas y puertos
-scripts/worktree.sh create web    # árbol nuevo, listo para usar
-scripts/hooks/test-guards.sh      # regresión de los guardias del harness
+pnpm verify                       # typecheck + tests + build — lo mismo que corre el CI
 ```
 
 Los comandos por frente (db:migrate, db:seed, e2e:ui…) están en el `CLAUDE.md` de cada frente.
@@ -278,25 +275,21 @@ capturas, y el video del walkthrough (criterio 13).
 
 Las de cada frente van en su `CLAUDE.md`. Acá solo lo que cruza frentes o toca el método.
 
-- **2026-08-20 · Un comando de shell contiene datos, no solo código.** La primera versión del
-  guardia de Bash matcheaba la *mención* de `docs/` y de `git push`, así que se bloqueó a sí misma
-  al escribirse y disparó la puerta al escribir un skill que documenta el push. Matchear
-  **invocaciones**, no menciones: `scripts/hooks/analyze-cmd.py` saca los cuerpos de heredoc antes
-  de analizar, y `test-guards.sh` fija el comportamiento. **Corolario de la misma familia:** un
-  escáner que vive dentro del corpus que escanea se encuentra a sí mismo — el chequeo de mainnet de
-  la puerta matcheaba el literal de su propio mensaje de error, y solo se vio al crear un árbol
-  nuevo, porque en el principal el archivo todavía estaba sin trackear y `git grep` no lo veía.
-- **2026-08-20 · Un escape de entorno desactivaba en silencio su propia verificación.** Correr la
-  puerta con `GATE_ALLOW_DOCS=1` hacía que la suite de guardias —que la puerta ejecuta— heredara la
-  variable y "pasara" sin verificar nada de lo que dice verificar. **Toda suite de tests tiene que
-  ser hermética**: si su resultado depende del entorno de quien la llama, no es una suite. Los
-  escapes se prueban explícitos, escritos en el comando de cada caso.
+- **2026-08-20 · Un verificador que vive dentro del corpus que verifica se encuentra a sí mismo.**
+  El guardia de Bash matcheaba la *mención* de `docs/`, así que se bloqueó al escribirse; el chequeo
+  de mainnet de la puerta matcheaba el literal de su propio mensaje de error. Y correr la puerta con
+  `GATE_ALLOW_DOCS=1` hacía que la suite de guardias heredara la variable y "pasara" sin verificar
+  nada. **Toda suite tiene que ser hermética**: si su resultado depende del entorno de quien la
+  llama, no es una suite. Los tres artefactos se borraron con el harness (D-053) y la lección se
+  conserva porque aplica a cualquier chequeo automático que se escriba en el futuro: **antes de
+  agregar un verificador, preguntá si el problema no se arregla mejor cambiando la forma de lo
+  verificado.**
 - **2026-08-20 · Editar un `package.json` sin correr `pnpm install` produce un verde falso.** La
   API declaraba TypeScript 6.0 y tenía 5.9 instalado: el typecheck local pasó, pero verificando
   con la versión vieja — la unificación nunca se había probado. Lo atrapó el CI con
-  `ERR_PNPM_OUTDATED_LOCKFILE`, que es tarde. **La puerta ahora verifica que el lockfile refleje
-  los `package.json`** (`scripts/check-lockfile.py`). Dos corolarios: cambiar una versión declarada
-  no la instala, y un verde sobre el entorno equivocado es peor que un rojo. El primer intento del
+  `ERR_PNPM_OUTDATED_LOCKFILE`, que es tarde. **`pnpm install --frozen-lockfile` en el CI es lo que
+  lo atrapa**, y alcanza. Dos corolarios: cambiar una versión declarada no la instala, y un verde
+  sobre el entorno equivocado es peor que un rojo. El primer intento del
   chequeo usaba `pnpm install --lockfile-only`, que **reescribe el lockfile** — un verificador que
   muta lo que verifica no es un verificador, así que quedó como comparación textual.
 - **2026-07-29 · Un artefacto derivado contradijo al entregable y nos hizo decidir mal.** Cuatro

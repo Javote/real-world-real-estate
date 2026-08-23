@@ -87,7 +87,7 @@ request ni de respuesta. `packages/shared` no cambia.
 | `GET /projects` de un usuario con DOS membresías en el mismo proyecto | el proyecto aparece **una** vez |
 | `GET /projects` de un usuario sin membresías | lista vacía |
 | `canAccessProject` sobre un proyecto inexistente, como `admin` | `false` — "no existe" responde igual para todos |
-| agregar una membresía al enum de Prisma sin tocar `ANY_MEMBERSHIP` | **no compila** (TS1360) |
+| agregar una membresía al enum de `src/db/types.ts` sin tocar `ANY_MEMBERSHIP` | **no compila** (TS1360) |
 
 ## Segunda pasada — 2026-08-21
 

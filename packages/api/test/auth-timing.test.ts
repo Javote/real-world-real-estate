@@ -29,7 +29,7 @@ describe("POST /api/v1/auth/login · el tiempo no filtra si el email existe", ()
     const inexistentes: number[] = [];
     const passwordsMalas: number[] = [];
 
-    // Warm-up: la primera request paga conexión de Prisma y JIT.
+    // Warm-up: la primera request paga conexión a la base y JIT.
     await login(FIXTURES.activo.email, "calentando");
 
     // Intercaladas a propósito: si la máquina se frena a mitad de la corrida,

@@ -1,28 +1,47 @@
 import "dotenv/config";
-import { readdirSync, readFileSync } from "node:fs";
+import { existsSync, readdirSync, readFileSync } from "node:fs";
 import path from "node:path";
-import { createClient } from "../lib/libsql-client";
+import { createClient, type Client } from "../lib/libsql-client";
 
-// Kysely no trae generador de migraciones (D-049): las de `drizzle/*.sql` son
-// SQL plano heredado de cuando las generaba `drizzle-kit generate` (D-048) —
-// siguen siendo la fuente real, solo dejan de regenerarse desde un schema de
-// ORM. Una migración nueva se escribe a mano en `drizzle/`, con el mismo
-// separador `--> statement-breakpoint` entre statements que ya usaban los
-// archivos existentes (no es sintaxis de Kysely, es una convención de archivo
-// plano para poder tener más de un `CREATE TABLE` por migración).
+// Kysely no trae generador de migraciones (D-049): `migrations/*.sql` es SQL
+// plano que se escribe a mano, con `--> statement-breakpoint` entre statements
+// (convención de archivo, no sintaxis de Kysely: permite más de un statement
+// por archivo). El tracking de qué corrió es propio — tabla `_migrations`.
 //
-// El tracking de qué migración ya corrió es propio (tabla `_migrations`), no
-// heredado de `__drizzle_migrations`: no hay ninguna base con datos reales
-// todavía (sin deploy, D-041), así que no hay nada que migrar de un esquema
-// de tracking al otro.
-const MIGRATIONS_DIR = path.join(__dirname, "..", "..", "drizzle");
+// **Este archivo es el único lugar donde se aplican migraciones** (D-052). La
+// suite de tests lo importa en vez de repetir el parser: mientras estuvieron
+// duplicados, cualquier cambio de formato había que acordarse de hacerlo dos
+// veces, y los tests dejaban de verificar lo que corre en producción — que es
+// justamente lo único que justifica aplicar las migraciones reales en la suite.
+//
+// La ruta se resuelve buscando, no fijando: `tsx` corre desde `src/db/` y el
+// build corre desde `dist/src/db/`, así que una sola constante relativa no
+// puede servir a los dos. Con `../../migrations` a secas, el `db:migrate`
+// compilado apuntaba a `dist/migrations`, que no existe — y el `startCommand`
+// de Render corre el compilado, donde el free tier no da shell para ir a ver
+// por qué falló.
+export const MIGRATIONS_DIR = (() => {
+  const candidatos = [
+    path.join(__dirname, "..", "..", "migrations"), // tsx:   src/db      → packages/api
+    path.join(__dirname, "..", "..", "..", "migrations") // build: dist/src/db → packages/api
+  ];
+  const encontrado = candidatos.find((dir) => existsSync(dir));
+  if (!encontrado) {
+    throw new Error(
+      `No encuentro el directorio de migraciones. Probé:\n  ${candidatos.join("\n  ")}`
+    );
+  }
+  return encontrado;
+})();
 
-async function main() {
-  const client = createClient({
-    url: process.env.DATABASE_URL ?? "file:./dev.db",
-    authToken: process.env.DATABASE_AUTH_TOKEN
-  });
-
+/**
+ * Aplica las migraciones que falten y devuelve los nombres de las que aplicó.
+ *
+ * Idempotente: re-ejecutarla no duplica efectos (regla 8), que es lo que
+ * permite ponerla en el `startCommand` de Render — en free tier no hay shell
+ * ni one-off jobs para correrla aparte (D-012, D-040).
+ */
+export async function applyPendingMigrations(client: Client): Promise<string[]> {
   await client.execute(
     "CREATE TABLE IF NOT EXISTS _migrations (name text PRIMARY KEY NOT NULL, appliedAt integer NOT NULL)"
   );
@@ -30,6 +49,8 @@ async function main() {
   const applied = new Set(
     (await client.execute("SELECT name FROM _migrations")).rows.map((row) => row.name as string)
   );
+
+  const aplicadas: string[] = [];
 
   const files = readdirSync(MIGRATIONS_DIR)
     .filter((file) => file.endsWith(".sql"))
@@ -53,13 +74,30 @@ async function main() {
       args: [file, Date.now()]
     });
 
+    aplicadas.push(file);
+  }
+
+  return aplicadas;
+}
+
+async function main() {
+  const client = createClient({
+    url: process.env.DATABASE_URL ?? "file:./dev.db",
+    authToken: process.env.DATABASE_AUTH_TOKEN
+  });
+
+  for (const file of await applyPendingMigrations(client)) {
     console.log(`Applied ${file}`);
   }
 
   client.close();
 }
 
-main().catch((e) => {
-  console.error(e);
-  process.exit(1);
-});
+// Solo corre como script. Sin este guardia, importarlo desde la suite de tests
+// dispararía una migración contra `dev.db` como efecto secundario del import.
+if (require.main === module) {
+  main().catch((e) => {
+    console.error(e);
+    process.exit(1);
+  });
+}

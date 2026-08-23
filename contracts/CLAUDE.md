@@ -5,7 +5,7 @@
 
 Aiken **v1.1.21** · **Plutus V3** (D-019) · stdlib v3.0.0.
 Aislado del workspace pnpm (D-001): **corre en paralelo y no bloquea a nadie.** Es el track ideal
-para un árbol propio (`scripts/worktree.sh create contracts`).
+para trabajarlo por separado del resto del workspace.
 
 ## La FSM canónica (D-020)
 

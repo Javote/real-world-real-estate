@@ -106,7 +106,7 @@ async function main() {
     .returningAll()
     .executeTakeFirstOrThrow();
 
-  // Proyecto y membresías: `doNothing()` — igual que `update: {}` de Prisma,
+  // Proyecto y membresías: `doNothing()` — no reconcilia, solo evita el choque,
   // una base ya sembrada no cambia estos datos.
   await db
     .insertInto("Project")

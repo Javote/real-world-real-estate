@@ -5,7 +5,8 @@
 > se repiten acá**.
 
 Express 4 + Zod + JWT + bcrypt(10) + Multer 2.x + Kysely/SQLite (`@libsql/client`), base `/api/v1`
-(D-016, D-036, D-048 → D-049 — Prisma → Drizzle → Kysely, los dos migrados el 2026-08-21).
+(D-016, D-036, D-048 → D-049 — Prisma → Drizzle → Kysely, los dos migrados el 2026-08-21; los
+restos que quedaban se barrieron en D-052).
 
 Está mejor parada que el frente: **la API se evoluciona, el front se reemplaza.** Se conservan
 auth JWT+bcrypt con autorización en dos capas, SHA-256 en el servidor al subir, `AuditLog`
@@ -104,7 +105,7 @@ endpoints del backlog **hoy conforman 2**: `POST /auth/login` y `GET /auth/me`.
   ruido. El default es 0 —el que falla ruidoso— y `true` es inalcanzable porque
   `trustProxyHops()` parsea siempre a entero. **El deploy tiene que setear
   `TRUST_PROXY_HOPS=1`** (D-045).
-- **El puerto sale de `PORT` en `packages/api/.env`** (lo escribe `scripts/worktree.sh` por árbol).
+- **El puerto sale de `PORT` en `packages/api/.env`.**
   No lo hardcodees.
 - **2026-08-21 · `kysely` y `@libsql/kysely-libsql` son ESM puro, mismo problema que
   `@paralleldrive/cuid2` (D-049).** Se resuelve con el mismo patrón, centralizado esta vez en
@@ -230,17 +231,24 @@ Con `notary` pendiente de entrar al schema —el dominio tiene cuatro roles y el
 los nombres viejos— eso iba a pasar en serio. Ahora agregar un rol al enum sin tocar esta lista no
 compila (TS1360, verificado a propósito).
 
-**Mitigado el 2026-08-21, no resuelto · es una función que hay que acordarse de llamar**, no un
-middleware que no se puede olvidar. `scripts/check-project-access.py` corre en la sección 1 de la
-puerta y falla nombrando el endpoint: *una ruta con parámetro en el path, o que liste proyectos,
-necesita `canAccessProject`/`projectScope` o ser admin-only* — y `requireRole("admin", "developer")`
-no cuenta como admin-only. Eso vuelve ruidoso el olvido; no lo vuelve imposible (D-044). La forma
-sigue abierta: `requireRole` está en la cadena o no está; `canAccessProject` devuelve un booleano
-que alguien tiene que chequear. Un endpoint nuevo que se olvide **no tiene segunda capa, y nada lo
-detecta**: ni el compilador, ni un test, ni la puerta. Hoy son 27 endpoints y el backlog son ~80, así
-que el momento barato de cambiar la forma es **antes** de la tanda grande, no después. Default
-propuesto: un `requireProjectAccess(...)` de Express que lea `req.params.projectId`. Dueño: humano
+**ABIERTO · es una función que hay que acordarse de llamar**, no un middleware que se ve en la
+firma de la ruta. `requireRole` está en la cadena o no está; `canAccessProject` devuelve un booleano
+que alguien tiene que chequear adentro del handler. Un endpoint nuevo que se olvide **no tiene
+segunda capa, y nada lo detecta**: ni el compilador, ni un test, ni el CI.
+
+Hubo un escáner (`scripts/check-project-access.py`, D-044) que gritaba cuando una ruta con parámetro
+no llamaba a la función. Se borró con el resto del harness (D-053): 147 líneas para detectar un
+olvido que la forma correcta directamente no permite cometer. **Hoy, entonces, esta regla no la
+sostiene nada más que quien escribe el endpoint.**
+
+Los 27 endpoints actuales están bien (auditados el 2026-08-20, uno por uno). El riesgo es el 28
+sobre un backlog de ~80, así que el momento barato de cambiar la forma es **antes** de la tanda
+grande. Default propuesto: `requireProjectAccess(...)` de Express, hermano de `requireRole`, que lea
+`req.params.id`/`req.params.projectId` y encapsule el chequeo del booleano. Dueño: humano — es 🔴
 (`specs/SPEC-010` §Preguntas abiertas).
+
+> **Es la rebanada 0e de `specs/README.md`, y es la próxima.** Va antes que cualquier endpoint
+> nuevo, justamente para no escribir la tanda grande con la forma vieja.
 
 **Cerrado el 2026-08-21 · la regla estaba escrita tres veces.** `canAccessProject`, el bypass de
 `admin` repetido en 5 call sites, y un query a mano en `GET /projects` que no llamaba a la función.
@@ -289,7 +297,8 @@ riesgo genérico de módulo nativo. **Bajar el cost no es opción: la regla 4 fi
 y siembra en cada corrida. Nunca contra `dev.db`: un test no puede depender del seed de desarrollo
 ni ensuciarlo.
 
-Se aplican las migraciones reales (`drizzle/*.sql`) y no una proyección ad-hoc del schema: así la
+Se aplican las migraciones reales (`migrations/*.sql`) **con el mismo runner que corre en producción**
+(`src/db/migrate.ts`, D-052) y no una proyección ad-hoc del schema: así la
 suite verifica lo mismo que va a correr en producción.
 
 ## Comandos
@@ -301,6 +310,7 @@ pnpm --filter @plataforma/api db:seed        # datos demo
 ```
 
 No hay `db:generate` ni `db:studio` (D-049): Kysely no trae generador de migraciones ni UI de
-inspección. Una migración nueva se escribe a mano en `drizzle/*.sql`, con el mismo separador
-`--> statement-breakpoint` que ya usaban los archivos heredados de `drizzle-kit`. Para inspeccionar
+inspección. Una migración nueva se escribe a mano en `migrations/*.sql`, con el mismo separador
+`--> statement-breakpoint` (convención de archivo para tener más de un statement, no sintaxis de
+Kysely). Para inspeccionar
 la base, un cliente SQLite cualquiera contra `dev.db`/`file:` — es deuda menor, no bloqueante.

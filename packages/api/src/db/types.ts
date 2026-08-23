@@ -1,6 +1,6 @@
 import type { ColumnType, Generated, Insertable, Selectable, Updateable } from "../lib/kysely";
 
-// Mismos valores que antes con Drizzle (D-048) y que `prisma/schema.prisma`
+// Los valores son los que declara la migración (`migrations/0000_init.sql`)
 // (D-016). SQLite no tiene enum nativo: se modelan como `text`, y la
 // restricción real la sigue haciendo Zod en `packages/shared` (regla 6).
 export const USER_ROLES = ["admin", "developer", "buyer", "verifier", "notary"] as const;

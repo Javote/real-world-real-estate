@@ -21,8 +21,8 @@ const config = defineConfig({
     nitro({
       rollupConfig: { external: [/^@sentry\//] },
       routeRules: {
-        '/api/**': { proxy: `${API_ORIGIN}/api/**` },
-        '/health': { proxy: `${API_ORIGIN}/health` },
+        '/api/**': { proxy: { to: `${API_ORIGIN}/api/**`, fetchOptions: { credentials: 'omit' } } },
+        '/health': { proxy: { to: `${API_ORIGIN}/health`, fetchOptions: { credentials: 'omit' } } },
       },
     }),
     tailwindcss(),

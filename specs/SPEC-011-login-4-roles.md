@@ -79,7 +79,7 @@ conforme). Solo cambia quién los consume y cómo enruta la respuesta.
 - **Agregar `"notary"` a `userRoleSchema`** (`packages/shared/src/auth.ts`) y a cualquier lista de
   roles cerrada que lo excluya (p. ej. `ANY_MEMBERSHIP` si aplica a `User.role` y no solo a
   `MembershipRole` — verificar cuál de las dos enums es la relevante para AuthGuard de login).
-- **`User.role` en SQLite es `text` sin `CHECK`** (`drizzle/0000_kind_vulcan.sql`): agregar un valor
+- **`User.role` en SQLite es `text` sin `CHECK`** (`migrations/0000_init.sql`): agregar un valor
   al enum de Zod no requiere migración de esquema, solo el cambio de contrato + el seed. Si en el
   futuro se agrega un `CHECK` a esta columna, **esa** migración tiene que declarar los 5 valores
   vigentes (`admin`, `developer`, `buyer`, `verifier`, `notary`) o rompe el login de todos los roles

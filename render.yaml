@@ -1,0 +1,125 @@
+# ─────────────────────────────────────────────────────────────────────────────
+# Blueprint de Render — el único artefacto de infraestructura del proyecto.
+#
+# Runtime NATIVO de Node, sin imagen propia: D-041 mató los Dockerfiles al
+# descubrir que Docker era un requisito de Railway (D-010) que sobrevivió al
+# cambio de plataforma (D-039) sin que nadie lo examinara.
+#
+# TODO acá corre en free tier — $0/mes, y eso es restricción de arquitectura,
+# no nota de presupuesto (D-040):
+#   · 750 instance-hours/mes COMPARTIDAS entre los dos servicios.
+#   · Spin-down a los 15 min de inactividad, ~1 min de arranque en frío.
+#   · **Keep-warm está PROHIBIDO**: dos servicios despiertos 24/7 son ~1460 h
+#     contra 750 y quedan suspendidos cerca del día 15. Se calienta la URL a
+#     mano antes de una demo o grabación, y se la deja dormir el resto.
+#   · Sin disco persistente, sin shell y sin one-off jobs: por eso las
+#     migraciones van en el startCommand y la base es Turso, no un archivo.
+#
+# Lo que NO está acá y hay que crear a mano una vez (ver specs/RUNBOOK-deploy.md):
+#   · La base Turso y su token.
+#   · El seed de las cuentas demo (se corre desde tu máquina contra Turso: en
+#     free tier no hay shell remota).
+# ─────────────────────────────────────────────────────────────────────────────
+
+services:
+  # ── API ────────────────────────────────────────────────────────────────────
+  - type: web
+    name: propnexus-api
+    runtime: node
+    plan: free
+    region: oregon
+    branch: main
+    rootDir: .
+    # Solo redeploya si cambió algo que la API compila. Sin esto, cada commit
+    # de docs reconstruye los dos servicios y consume horas del presupuesto.
+    buildFilter:
+      paths:
+        - packages/api/**
+        - packages/shared/**
+        - pnpm-lock.yaml
+        - pnpm-workspace.yaml
+        - package.json
+        - render.yaml
+    buildCommand: >-
+      corepack enable &&
+      pnpm install --frozen-lockfile &&
+      pnpm --filter @plataforma/shared build &&
+      pnpm --filter @plataforma/api build
+    # Las migraciones corren ANTES de escuchar, en cada arranque. Son
+    # idempotentes (tabla `_migrations`, D-049) y no hay alternativa: el free
+    # tier no da shell ni one-off jobs (D-012 · D-040).
+    startCommand: >-
+      node packages/api/dist/src/db/migrate.js &&
+      node packages/api/dist/src/server.js
+    healthCheckPath: /health
+    envVars:
+      - key: NODE_VERSION
+        value: "22"                    # la misma que verifica el CI
+      - key: JWT_SECRET
+        generateValue: true            # D-042: sin fallback; si falta, el proceso no arranca
+      # Turso (D-038 · D-040). `sync: false` = se carga a mano en el dashboard,
+      # nunca en el repo (regla 12). Sale de `turso db show` / `turso db tokens create`.
+      - key: DATABASE_URL
+        sync: false                    # libsql://<base>-<org>.turso.io
+      - key: DATABASE_AUTH_TOKEN
+        sync: false
+      # D-045: con 0 detrás del proxy de Render todos los clientes comparten
+      # balde de rate limit y la app queda inusable. Render pone 1 salto.
+      - key: TRUST_PROXY_HOPS
+        value: "1"
+      - key: LOGIN_RATE_LIMIT_MAX
+        value: "20"
+      # EFÍMERO A PROPÓSITO — el free tier borra el filesystem en cada redeploy,
+      # restart y spin-down. La evidencia subida acá NO sobrevive. Es deuda
+      # conocida y acotada: R2 es el prerequisito real (D-011 · D-040) y sale en
+      # su propia rebanada. Mientras tanto, no subir evidencia que alguien
+      # espere volver a encontrar (regla 17).
+      - key: UPLOAD_DIR
+        value: /tmp/uploads
+      - key: MAX_FILE_SIZE_MB
+        value: "10"
+      # D-013: Preprod SIEMPRE. Mainnet está fuera del alcance de M3.
+      # `packages/cardano` está vacío todavía; se declaran para que el día que
+      # exista el AnchorPort no haya que tocar infraestructura.
+      - key: CARDANO_NETWORK
+        value: Preprod
+      - key: ANCHOR_MODE
+        value: simulated
+
+  # ── Web (SSR) ──────────────────────────────────────────────────────────────
+  - type: web
+    name: propnexus-web
+    runtime: node
+    plan: free
+    region: oregon
+    branch: main
+    rootDir: .
+    buildFilter:
+      paths:
+        - apps/web/**
+        - packages/shared/**
+        - pnpm-lock.yaml
+        - pnpm-workspace.yaml
+        - package.json
+        - render.yaml
+    buildCommand: >-
+      corepack enable &&
+      pnpm install --frozen-lockfile &&
+      pnpm --filter @plataforma/shared build &&
+      pnpm --filter web build
+    startCommand: node apps/web/.output/server/index.mjs
+    healthCheckPath: /
+    envVars:
+      - key: NODE_VERSION
+        value: "22"
+      # API_ORIGIN es de BUILD TIME, no de runtime: `apps/web/ports.ts` lo lee
+      # al construir y Nitro lo hornea en las routeRules del bundle
+      # (verificable con `grep API_ORIGIN apps/web/.output/server/index.mjs`).
+      # Cambiarlo exige redeploy del web, no un restart.
+      #
+      # `sync: false` en vez de `fromService`: Render le agrega un sufijo al
+      # hostname si el nombre del servicio ya está tomado por otra cuenta, así
+      # que la URL real recién se conoce después de crear el servicio. Se pega
+      # a mano una vez.
+      - key: API_ORIGIN
+        sync: false                    # https://propnexus-api.onrender.com

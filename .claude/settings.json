@@ -1,15 +1,6 @@
 {
   "$schema": "https://json.schemastore.org/claude-code-settings.json",
-
   "permissions": {
-    "deny": [
-      "Edit(./docs/**)",
-      "Write(./docs/**)",
-      "Read(./**/.env)",
-      "Edit(./packages/api/drizzle/**)",
-      "Edit(./contracts/build/**)",
-      "Edit(./apps/web/src/routeTree.gen.ts)"
-    ],
     "allow": [
       "Bash(pnpm install)",
       "Bash(pnpm typecheck:*)",
@@ -22,10 +13,6 @@
       "Bash(pnpm --filter:*)",
       "Bash(pnpm exec:*)",
       "Bash(aiken:*)",
-      "Bash(./scripts/gate.sh:*)",
-      "Bash(scripts/gate.sh:*)",
-      "Bash(./scripts/worktree.sh:*)",
-      "Bash(scripts/worktree.sh:*)",
       "Bash(git status:*)",
       "Bash(git diff:*)",
       "Bash(git log:*)",
@@ -42,30 +29,6 @@
       "Bash(curl -s:*)",
       "Bash(curl -sf:*)",
       "Bash(lsof:*)"
-    ]
-  },
-
-  "hooks": {
-    "PreToolUse": [
-      {
-        "matcher": "Edit|Write|NotebookEdit",
-        "hooks": [
-          { "type": "command", "command": "$CLAUDE_PROJECT_DIR/scripts/hooks/guard-write.sh" }
-        ]
-      },
-      {
-        "matcher": "Bash",
-        "hooks": [
-          { "type": "command", "command": "$CLAUDE_PROJECT_DIR/scripts/hooks/guard-bash.sh", "timeout": 300 }
-        ]
-      }
-    ],
-    "SessionStart": [
-      {
-        "hooks": [
-          { "type": "command", "command": "$CLAUDE_PROJECT_DIR/scripts/hooks/session-start.sh" }
-        ]
-      }
     ]
   }
 }

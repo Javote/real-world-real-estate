@@ -7,13 +7,13 @@ import type { Database } from "../src/db/types";
 import { SqliteTypeCoercionPlugin } from "../src/db/sqlite-type-plugin";
 import { createId } from "../src/db/id";
 import { createClient } from "../src/lib/libsql-client";
+import { applyPendingMigrations } from "../src/db/migrate";
 
 // El migrador propio (D-049) resuelve rutas relativas al cwd del proceso
 // (acá, packages/api), así que `file:./test.db` cae directo en
 // packages/api/test.db.
 const DATABASE_URL = "file:./test.db";
 const DB_FILE = path.join(process.cwd(), "test.db");
-const MIGRATIONS_DIR = path.join(process.cwd(), "drizzle");
 
 export const FIXTURES = {
   /** developer, activo y MIEMBRO del proyecto de prueba */
@@ -29,47 +29,22 @@ export const FIXTURES = {
   otroProyecto: { slug: "torre-ajena" },
 };
 
-async function applyMigrations(client: ReturnType<typeof createClient>) {
-  const { readdirSync, readFileSync } = await import("node:fs");
-
-  await client.execute(
-    "CREATE TABLE IF NOT EXISTS _migrations (name text PRIMARY KEY NOT NULL, appliedAt integer NOT NULL)"
-  );
-
-  const files = readdirSync(MIGRATIONS_DIR)
-    .filter((file) => file.endsWith(".sql"))
-    .sort();
-
-  for (const file of files) {
-    const sql = readFileSync(path.join(MIGRATIONS_DIR, file), "utf-8");
-    const statements = sql
-      .split("--> statement-breakpoint")
-      .map((statement) => statement.trim())
-      .filter((statement) => statement.length > 0);
-
-    for (const statement of statements) {
-      await client.execute(statement);
-    }
-
-    await client.execute({
-      sql: "INSERT INTO _migrations (name, appliedAt) VALUES (?, ?)",
-      args: [file, Date.now()]
-    });
-  }
-}
-
 export default async function setup() {
   for (const f of [DB_FILE, `${DB_FILE}-journal`, `${DB_FILE}-wal`, `${DB_FILE}-shm`]) {
     if (existsSync(f)) rmSync(f);
   }
 
-  // Se aplican las migraciones reales (`drizzle/*.sql`) y no una proyección
-  // ad-hoc del schema: así la suite verifica lo mismo que va a correr en
-  // producción. Se usa un cliente propio, aparte del que instancia
-  // `LibsqlDialect` más abajo (ver `lib/db.ts` sobre por qué no se comparte
-  // uno): acá hace falta `execute()` con SQL crudo, que Kysely no expone.
+  // Se aplican las migraciones REALES con el MISMO runner que corre en
+  // producción (`src/db/migrate.ts`, D-052) y no una proyección ad-hoc del
+  // schema: así la suite verifica lo mismo que va a correr desplegado. Mientras
+  // el runner estuvo duplicado acá, esa garantía dependía de que las dos copias
+  // no divergieran — o sea, no era una garantía.
+  //
+  // Cliente propio, aparte del que instancia `LibsqlDialect` más abajo (ver
+  // `lib/db.ts` sobre por qué no se comparte uno): acá hace falta `execute()`
+  // con SQL crudo, que Kysely no expone.
   const migrationClient = createClient({ url: DATABASE_URL });
-  await applyMigrations(migrationClient);
+  await applyPendingMigrations(migrationClient);
   migrationClient.close();
 
   const db = new Kysely<Database>({

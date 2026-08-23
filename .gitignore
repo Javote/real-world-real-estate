@@ -11,8 +11,7 @@ dist/
 .env.*
 !.env.example
 
-# SQLite de desarrollo (Drizzle + @libsql/client, D-048). Rutas relativas a
-# packages/api/ — ya no a packages/api/prisma/, que dejó de existir.
+# SQLite de desarrollo (Kysely sobre @libsql/client, D-049).
 packages/api/dev.db
 packages/api/dev.db-journal
 packages/api/dev.db-wal

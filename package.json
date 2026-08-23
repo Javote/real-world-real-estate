@@ -12,7 +12,7 @@
     "typecheck": "pnpm --filter @plataforma/shared build && pnpm -r typecheck",
     "lint": "pnpm -r lint",
     "test": "pnpm -r test",
-    "db:generate": "pnpm --filter @plataforma/api db:generate",
+    "verify": "pnpm typecheck && pnpm test && pnpm build",
     "db:migrate": "pnpm --filter @plataforma/api db:migrate",
     "db:seed": "pnpm --filter @plataforma/api db:seed",
     "contracts:check": "cd contracts && aiken check",

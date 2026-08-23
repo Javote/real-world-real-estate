@@ -43,9 +43,9 @@ tipo**, no una copia: `apps/web/src/api/types.ts` deja de declarar los suyos par
 2. El contrato de auth existe **una sola vez**, en `packages/shared`. Si la API cambia la forma de
    la respuesta y no actualiza el schema, **el typecheck del front falla**.
 3. Todos los packages compilan con **la misma versión** de TypeScript.
-4. `scripts/gate.sh` deja de bloquear por "packages/api fue modificado y NO tiene script `test`".
+4. `packages/api` tiene script `test`, así que `pnpm test` deja de saltearlo en silencio.
 5. Ninguna respuesta de la API contiene `passwordHash`, en ningún camino, ni de error.
-6. `packages/db/` no existe: el esquema vive en `packages/api/prisma` (D-016) y un placeholder
+6. `packages/db/` no existe: el esquema lo define `packages/api/migrations/` (D-049) y un placeholder
    reservado-que-nunca-se-usó es una afirmación falsa sobre el repo.
 
 ## Casos borde (definen los tests)
@@ -94,7 +94,7 @@ staleness. Todo eso quedó en `packages/shared/CLAUDE.md`.
 
 ## Definición de terminado
 
-- [x] `scripts/gate.sh` abre tocando `packages/api` y `packages/shared`
+- [x] `pnpm verify` pasa tocando `packages/api` y `packages/shared`
 - [x] `pnpm test` corre y reporta tests de web, api y shared — **21 tests** (eran 4)
 - [x] cambiar a mano la forma de `loginResponse` **rompe el typecheck de los dos lados**:
       `auth.routes.ts:53` en la API y `login.tsx:40` en el front. Verificado rompiéndolo a

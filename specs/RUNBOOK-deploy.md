@@ -1,0 +1,172 @@
+# Runbook — deploy, rollback e incidentes
+
+> Criterio 14 del SOM. Cubre `apps/web` y `packages/api` en **Render free tier** (D-039, D-040,
+> D-041), con la base en **Turso** (D-038). El artefacto de infraestructura es `render.yaml` en la
+> raíz, y es la única fuente de verdad de la configuración: lo de acá explica **cómo se opera**, no
+> qué dice el YAML.
+>
+> **Todo corre a $0/mes.** Eso impone cosas que no son negociables — están en §Limitaciones.
+
+## 0 · Qué se despliega
+
+| Servicio | Qué es | URL | Arranca con |
+|---|---|---|---|
+| `propnexus-api` | Express 4 sobre Node | `https://propnexus-api.onrender.com` | migraciones + `server.js` |
+| `propnexus-web` | TanStack Start (SSR) sobre Nitro | `https://propnexus-web.onrender.com` | `.output/server/index.mjs` |
+| base | SQLite gestionada | `libsql://…turso.io` | — |
+
+El web **proxea** `/api/**` y `/health` hacia la API (route rules de Nitro, horneadas en el build).
+Consecuencia práctica: **no hay CORS y el navegador nunca ve la URL de la API**; el front pega
+siempre a rutas relativas del mismo origen. `API_ORIGIN` es una variable de **build time**, no de
+runtime — cambiarla exige *redeploy* del web, no un restart.
+
+## 1 · Alta por primera vez
+
+Se hace una sola vez. Requiere cuentas en Render y Turso (las dos gratis, sin tarjeta).
+
+### 1.1 · Base en Turso
+
+```bash
+turso auth login                                  # abre el browser
+turso db create propnexus                         # free: 5 GB · 500M lecturas · 10M escrituras/mes
+turso db show propnexus --url                     # → libsql://propnexus-<org>.turso.io
+turso db tokens create propnexus                  # → el DATABASE_AUTH_TOKEN
+```
+
+Guardá los dos valores: van al dashboard de Render, **nunca al repo** (regla 12).
+
+### 1.2 · Los dos servicios en Render
+
+```bash
+render login
+```
+
+En el dashboard: **New → Blueprint**, elegí el repo `Javote/real-world-real-estate`, rama `main`.
+Render lee `render.yaml` y propone los dos servicios. Va a pedir los cuatro valores marcados
+`sync: false`:
+
+| Servicio | Variable | Valor |
+|---|---|---|
+| `propnexus-api` | `DATABASE_URL` | el `libsql://…` de 1.1 |
+| `propnexus-api` | `DATABASE_AUTH_TOKEN` | el token de 1.1 |
+| `propnexus-web` | `API_ORIGIN` | **la URL real de la API**, ver abajo |
+
+`JWT_SECRET` **no se pide**: lo genera Render (`generateValue: true`). No lo pongas a mano y no lo
+copies del `.env` local.
+
+**El orden importa.** `API_ORIGIN` es de build time, así que hay que conocer la URL de la API antes
+de que el web termine de construirse. Si Render tuvo que agregarle sufijo al hostname porque el
+nombre estaba tomado, la URL real no es la de la tabla. Procedimiento seguro: dejá que la API
+despliegue primero, copiá su URL del dashboard, pegala en `API_ORIGIN` del web y disparale un
+**Manual Deploy → Clear build cache & deploy**.
+
+### 1.3 · Sembrar las cuentas de demo
+
+El free tier **no da shell remota**, así que el seed se corre desde tu máquina contra Turso:
+
+```bash
+DATABASE_URL='libsql://propnexus-<org>.turso.io' \
+DATABASE_AUTH_TOKEN='<token>' \
+SEED_ADMIN_PASSWORD="$(openssl rand -base64 24)" \
+SEED_DEMO_PASSWORD="$(openssl rand -base64 24)" \
+JWT_SECRET=cualquier-cosa-el-seed-no-firma-nada \
+pnpm --filter @plataforma/api db:seed
+```
+
+**Las passwords son obligatorias contra Turso y el seed revienta sin ellas** (D-047): las
+credenciales del seed local están publicadas en el repo, y sembrarlas en una instancia desplegada
+deja una cuenta admin de credenciales conocidas. El seed imprime al final las que usó — anotalas,
+son las que se le pasan a un reviewer.
+
+Las migraciones **no** hay que correrlas a mano: van en el `startCommand` de la API y son
+idempotentes (tabla `_migrations`).
+
+## 2 · Deploy de todos los días
+
+Push a `main`. Render construye por servicio y solo el que corresponda: los `buildFilter` de
+`render.yaml` hacen que un commit de `docs/` o `specs/` no reconstruya nada, lo que además cuida el
+presupuesto de horas.
+
+**GitHub Actions no despliega** (D-010, núcleo preservado por D-039). La puerta es el único juez de
+si un cambio puede pushearse; Render solo reacciona a lo que ya pasó por ahí.
+
+Verificación post-deploy, en este orden:
+
+```bash
+curl -s https://propnexus-api.onrender.com/health                 # {"ok":true}
+curl -s https://propnexus-web.onrender.com/health                 # {"ok":true}  ← prueba el proxy
+curl -s -o /dev/null -w '%{http_code}\n' -X POST \
+  https://propnexus-web.onrender.com/api/v1/auth/login \
+  -H 'Content-Type: application/json' \
+  -d '{"email":"nadie@example.com","password":"incorrecta"}'      # 401, NO 502
+```
+
+**Ese último es el canario y no es opcional.** Un `502` ahí significa que se perdió el
+`credentials: "omit"` de las route rules y el camino de error más común de la app está roto (D-050).
+
+## 3 · Rollback
+
+Render guarda los deploys anteriores: **Dashboard → el servicio → Deploys → Rollback** en el último
+que estuvo verde. Es instantáneo y no toca la base.
+
+**La base no rollbackea con el servicio.** Si el problema fue una migración, el rollback del código
+deja el esquema adelantado. Por eso D-012 exige cambios **aditivos** entre deploys: una migración
+que solo agrega es compatible con el código viejo. Si alguna vez hay que revertir una migración, es
+una migración nueva que deshace — nunca editar la aplicada (bloqueado por hook).
+
+Turso free trae **1 día de point-in-time restore**:
+
+```bash
+turso db shell propnexus                          # inspección
+turso db create propnexus-restore --from-db propnexus --timestamp <ISO-8601>
+```
+
+Restaurar crea una base **nueva**: se apunta `DATABASE_URL` a ella y se redeploya. No se pisa la
+original hasta estar seguro.
+
+## 4 · Incidentes
+
+| Síntoma | Causa más probable | Qué hacer |
+|---|---|---|
+| Primera request tarda ~1 min | Spin-down a los 15 min. **Es esperado** (D-040) | Nada. Antes de una demo, calentar a mano (§5) |
+| La API no arranca, log dice `JWT_SECRET` | La variable quedó vacía | D-042: es el comportamiento buscado. Regenerar en el dashboard y redeploy |
+| Todos los logins dan 429 | `TRUST_PROXY_HOPS` distinto de 1 | Con 0 detrás del proxy, todos los clientes comparten balde (D-045). Ponerlo en 1 y restart |
+| `POST` de login devuelve **502** | Se perdió `credentials: "omit"` en las route rules | D-050. Revisar `apps/web/vite.config.ts` y **rebuild del web** (es build time) |
+| El web carga pero toda llamada falla | `API_ORIGIN` mal, o apunta a una URL vieja | Es build time: corregir la variable y **Clear build cache & deploy** |
+| Evidencia subida que desapareció | Filesystem efímero | **Es esperado**, no es un incidente. D-051 y §Limitaciones |
+| Servicio suspendido a mitad de mes | Se agotaron las 750 h | Alguien puso un keep-warm. Sacarlo (§Limitaciones) |
+| `ERR_PNPM_OUTDATED_LOCKFILE` en el build | Se tocó un `package.json` sin `pnpm install` | La puerta lo atrapa antes; si llegó acá, `pnpm install` y commitear el lockfile |
+
+Logs: **Dashboard → el servicio → Logs** (o `render logs -r <service>`). No hay shell: lo que no se
+loguee no se puede ir a mirar. Es la razón por la que D-042 hace que la API **reviente al arrancar**
+en vez de fallar en una request.
+
+## 5 · Antes de una demo, revisión o grabación
+
+Las dos URLs duermen. Calentarlas a mano, ~2 minutos antes:
+
+```bash
+curl -s -o /dev/null https://propnexus-api.onrender.com/health
+curl -s -o /dev/null https://propnexus-web.onrender.com/
+```
+
+**No automatices esto con un cron.** Un keep-warm periódico mantiene los dos servicios despiertos
+24/7 (~1460 h contra las 750 del plan) y los suspende cerca del día 15 — o sea que el truco para
+evitar un cold start de un minuto termina causando una caída de dos semanas. Está prohibido por
+D-040, no olvidado.
+
+## Limitaciones aceptadas (leer antes de prometer algo)
+
+1. **Cold start de ~1 min** tras 15 min de inactividad. Se acepta a cambio de $0 (D-040).
+2. **La evidencia subida no persiste.** El filesystem se borra en cada redeploy, restart y
+   spin-down. R2 es el arreglo real y sale en su propia rebanada (D-011, D-051). **La ventana en que
+   esto es tolerable se cierra el día del primer anclaje**: ahí un hash sin archivo sí sería prueba
+   insustanciable (regla 17).
+3. **750 instance-hours/mes compartidas** entre los dos servicios. Con spin-down normal sobra
+   (~1500 visitas frías); con keep-warm no alcanza.
+4. **Sin worker de confirmaciones.** Los background workers de Render no tienen free tier: cuando
+   exista el pipeline de anclaje, se dispara desde un cron de GitHub Actions contra un endpoint
+   autenticado — **nunca un `setInterval` dentro de la API**, que deja de contar cuando el servicio
+   duerme (D-003, D-040).
+5. **Sin telemetría ni monitoreo todavía** (criterios 9 y 14). Los logs de Render son lo único que
+   hay.

@@ -36,7 +36,7 @@
 | D-019 | Plutus **V3**, no V2 — desvío documentado del SOM de M3 | Aceptada |
 | D-020 | FSM canónica del stage — confirma el entregable original | Aceptada |
 | D-021 | **La plataforma nunca custodia ni transfiere valor**, en ninguna fase | Aceptada |
-| D-022 | `docs/` inmutable (entregables oficiales); el stack canónico vive en `CLAUDE.md` | Aceptada |
+| D-022 | `docs/` inmutable (entregables oficiales); el stack canónico vive en `CLAUDE.md` | Aceptada (**enmendada 2026-08-23**: es regla, no bloqueo) |
 | D-023 | `Milestone` → `ConstructionStage` en el dominio; "milestone" reservado a Catalyst | Aceptada |
 | D-024 | Sistema de diseño: Tailwind v4 + shadcn/ui con los tokens normativos de M2-D3 | Aceptada |
 | D-025 | i18n es-AR/en-US: diccionarios propios, cero strings hardcodeados | Aceptada |
@@ -45,25 +45,29 @@
 | D-028 | Qué significa "evidencia sin firmar" (criterio 7 del SOM) | Aceptada |
 | D-029 | Alcance del dominio: stages del proyecto; la unidad es lo comercial | Aceptada |
 | D-030 | Trunk-based: una sola rama `main`, sin PRs | Aceptada (enmendada por D-031) |
-| D-031 | Ramas cortas por track para árboles de trabajo paralelos | Aceptada (trigger de revisión definido) |
-| D-032 | El harness de agentes: la puerta es ejecutable y lo irreversible se bloquea por hook | Aceptada |
+| D-031 | Ramas cortas por track para árboles de trabajo paralelos | **Obsoleta por D-053** — `worktree.sh` borrado; nunca se usó |
+| D-032 | El harness de agentes: la puerta es ejecutable y lo irreversible se bloquea por hook | **Revertida por D-053** |
 | D-033 | `docs/` contiene solo entregables; el índice se muda a `specs/entregables.md` | Aceptada |
 | D-034 | El inventario del stack vive en `specs/stack.md`; `CLAUDE.md` conserva lo de sesión | Aceptada |
 | D-035 | Zod 4 en el contrato compartido | Aceptada |
 | D-036 | Multer 2.x | Aceptada |
-| D-037 | Nitro: versión publicada en vez de nightly | Aceptada |
+| D-037 | Nitro: versión publicada en vez de nightly | Aceptada; su deuda del `502` **cerrada por D-050** |
 | D-038 | Datos: Drizzle (destino, diferido) · SQLite (default, no Postgres) · Turso (hosting en prod) | Aceptada (compromiso de dirección; migración diferida, ver Trigger) |
 | D-039 | Plataforma de deploy: Render. Railway descartado | Aceptada |
 | D-040 | El deploy de M3 corre en free tier ($0/mes). Restricción de diseño, no de presupuesto | Aceptada |
 | D-041 | Deploy con runtime nativo de Node + `render.yaml`. Sin Docker | Aceptada |
 | D-042 | En la superficie 🔴 el default inseguro no existe: se revienta al arrancar y se cierra al omitir | Aceptada |
 | D-043 | La regla de visibilidad de proyectos existe una sola vez: `projectScope` | Aceptada |
-| D-044 | La segunda capa de autorización la verifica la puerta; el middleware queda diferido | Aceptada (con trigger de revisión) |
+| D-044 | La segunda capa de autorización la verifica la puerta; el middleware queda diferido | **Revertida por D-053** — el escáner se borró; la regla queda sin enforcement |
 | D-045 | Rate limiting en `/auth/login`, y de dónde sale la IP del cliente | Aceptada |
 | D-046 | bcrypt se ratifica —con el argumento del free tier— y la política de passwords sale de NIST/OWASP | Aceptada |
 | D-047 | El seed de demo se niega a sembrar credenciales publicadas en una base que no sea local | Aceptada |
 | D-048 | La migración a Drizzle deja de estar diferida: arranca antes de las rebanadas de M3 | Aceptada |
 | D-049 | ORM: Drizzle → Kysely, un commit después de D-048 | Aceptada |
+| D-050 | El `502` en `POST`+`401` es el spec de fetch, no h3: `credentials: "omit"` | Aceptada (cierra D-037) |
+| D-051 | El primer deploy sale con evidencia efímera y marcada, en vez de esperar a R2 | Aceptada |
+| D-052 | Saneamiento: se borra el rastro de Prisma y Drizzle, y cada cosa queda en un solo lugar | Aceptada |
+| D-053 | El harness de agentes se borra entero. Vuelve el CI declarativo | Aceptada (revierte D-032) |
 
 > **Repaso completo con la documentación oficial: ver §Repaso al final del archivo.** D-001..D-017 se
 > escribieron sin los entregables delante; las 25 entradas se revisaron el 2026-07-29 y cada una
@@ -320,6 +324,24 @@ Pending → InProgress → Completed        (Completed es terminal)
 **Un desvío solo es legítimo en tres casos:** (a) el entregable se contradice internamente, (b) es un error de redacción, (c) seguirlo al pie contradiría una verdad del producto declarada por el dueño. **Nunca por conveniencia ni por preferencia técnica.** Todo desvío se registra acá citando el párrafo, se lista en §Desvíos vigentes y **se comunica en la entrega**.
 
 **Precedencia interna de M1.** `Instructions.txt` especifica el paquete entregado: cuatro `.puml` + un `.csv` + un `README.md`. Los **artefactos especificados** (`.puml`, `.csv`) mandan sobre el `README.md`, que es un resumen de cortesía escrito después para facilitarle la lectura a los reviewers. Resuelve la inconsistencia `Certified`/`Completed` (D-020) y aclara que las dos columnas que el README promete en la taxonomía —"authoritative" y "anchored on-chain"— nunca existieron en el CSV: son un hueco real que llenan D-027 y D-028, no una promesa incumplida que estemos pisando.
+
+**Enmienda (2026-08-23) — `docs/` es una regla, no un bloqueo. La premisa original era más fuerte
+de lo que los hechos sostienen.** Dato del dueño del producto: **los originales viven afuera y ya
+fueron aprobados**. Los `.md` de `docs/` son adaptaciones que él mismo hizo de los PDF oficiales, y
+las imágenes son copias literales de las entregadas. O sea que `docs/` en este repo es una **copia
+de conveniencia**, no el ejemplar que tiene el revisor.
+
+Eso desarma el argumento con el que arrancó esta decisión —*"editarlos desincronizaría el repo de lo
+que el revisor tiene, y volvería imposible verificar que entregamos lo que decimos"*—: lo que el
+revisor tiene no cambia si acá se edita algo, porque no es este archivo el que se le entregó.
+
+**Qué cambia.** El bloqueo se va: el hook `guard-write.sh`, la entrada `Edit(./docs/**)` de
+`permissions.deny` y el chequeo de la sección 1 de la puerta se borraron con el resto del harness
+(D-053). **Qué NO cambia:** la disciplina de precedencia de las dos capas, entera. `docs/` sigue
+siendo ley sobre las obligaciones, un desvío sigue siendo legítimo solo en los tres casos de abajo,
+y sigue registrándose acá citando documento y párrafo. La razón para no editarlo deja de ser
+"rompés un compromiso externo" y pasa a ser la de siempre: **una copia editada de un entregable
+deja de servir como vara de aceptación**, que es lo único para lo que está en el repo.
 
 **Artefactos derivados.** Solo lo entregado es canónico. Cuatro `.puml` regenerados desde los PDF se eliminaron el 2026-07-29 por contradecir los originales (flechas invertidas en la FSM, multiplicidades invertidas en el modelo de dominio, componentes perdidos en la arquitectura). Los PDF sí se conservan: fueron parte de la entrega, fueron aprobados y coinciden con los `.puml` originales.
 
@@ -727,9 +749,15 @@ Es la segunda atribución falsa que cae en la misma revisión —la otra fue el 
 verificados. La lección se repite: **una causa plausible anotada sin comprobar es una causa
 inventada**, y sobrevive en la documentación hasta que alguien la testea.
 
-**Trigger de revisión.** Cuando salga Nitro 3 estable, pasar a él y volver a probar el 502 en el
-mismo movimiento.
+**Trigger de revisión.** Cuando salga Nitro 3 estable, pasar a él.
 **Reversión.** Trivial: volver al alias `npm:nitro-nightly@…` en `apps/web/package.json`.
+
+> **Enmienda (2026-08-23) — la atribución de arriba también era falsa.** El `502` no era de h3 en
+> ninguna versión: era `undici` cumpliendo el spec de WHATWG fetch al recibir un `401` con un body
+> no reproducible. Se cierra con `fetchOptions: { credentials: "omit" }` en las route rules.
+> El detalle medido, y por qué "probé dos versiones de h3 y el bug sobrevivió" llevaba a la
+> conclusión equivocada, están en **D-050**. La mitad de esta entrada que sí se sostuvo es
+> *"no se resuelve eligiendo versión"* — por el motivo opuesto al que se creía.
 
 ## D-038 — Datos: Drizzle diferido, SQLite como default, Turso como destino de hosting
 
@@ -1440,3 +1468,252 @@ rediseño.
 **Lo que el repaso cambió de fondo:** las tres decisiones on-chain (D-006, D-007, D-008) tenían fundamentos escritos para un producto que retenía valor y hacía cumplir reglas. El producto no es eso. La implementación de las tres sobrevive casi sin cambios — lo que se reescribió es **por qué**, que es lo que evita derivar mal en las próximas cincuenta decisiones.
 
 **Lo que el repaso no cubre:** el modelo de datos y las specs. Las entradas siguen siendo válidas, pero `specs/` entero precede a la documentación oficial y se reescribe aparte.
+
+## D-050 — El `502` en `POST`+`401` no era de h3: era el spec de fetch. Se cierra con `credentials: "omit"` — **Aceptada**
+
+**Contexto (2026-08-23).** Auditoría de stack previa al primer deploy. D-037 dejó el `502` como
+deuda con la atribución "bug de h3 que abarca al menos rc.22 y rc.25, no se resuelve eligiendo
+versión". La primera mitad de esa frase es falsa; la segunda es cierta por una razón distinta a la
+que se creía.
+
+**Lo que se midió.** El `502` **sobrevive al build de producción**, no es un artefacto de `vite dev`:
+un login con password incorrecta contra `apps/web/.output/server/index.mjs` devolvía
+`{"error":true,"status":502,"message":"fetch failed"}` en vez del `401` de la API. O sea que se
+habría desplegado a la URL pública del criterio 12 con el camino de error más común de la app
+respondiendo mal.
+
+Matriz por el proxy, contra la API directa como control:
+
+| Request | Directo a la API | Por el proxy (antes) |
+|---|---|---|
+| `POST /auth/login` password incorrecta | 401 | **502** |
+| `POST /projects` sin token | 401 | **502** |
+| `POST /auth/login` body inválido | 400 | 400 |
+| `GET /auth/me` sin token | 401 | 401 |
+| `POST /auth/login` correcto | 200 | 200 |
+
+**Causa raíz.** No es h3 y no es la API. Es **`undici`, el `fetch` de Node, cumpliendo el spec de
+WHATWG**. `proxyRequest` de h3 reenvía el body como `ReadableStream` con `duplex: "half"`; el paso
+*HTTP-network-or-cache fetch* del spec dice que ante un `401` hay que reintentar la request con
+credenciales, y que si el body no es reproducible (`body.source == null`, que es exactamente el caso
+de un stream) el resultado es un **network error**. En el `undici` embebido en Node 24.14.1 (v7.24.4):
+
+```js
+if (response.status === 401 && httpRequest.responseTainting !== "cors" && includeCredentials && …) {
+  if (request.body != null) {
+    if (request.body.source == null) {
+      return makeNetworkError("expected non-null body source");
+```
+
+h3 envuelve ese network error en `HTTPError({ status: 502 })` y de ahí sale el `502`.
+
+Aislado con un upstream de 15 líneas, fuera de todo el stack: `401` explota, `400` y `200` pasan, y
+el mismo `401` con body **bufferizado** (string en vez de stream) pasa perfecto. Con eso queda claro
+que la variable nunca fue la versión de h3 ni la de Nitro, sino **la versión de Node** — y que
+esperar a "Nitro 3 estable" (el trigger de revisión de D-037) no iba a arreglar nada, porque no hay
+nada roto que arreglar: es comportamiento especificado.
+
+**Decisión.** Las `routeRules` de proxy en `apps/web/vite.config.ts` pasan
+`fetchOptions: { credentials: "omit" }`. Es la única de las cuatro condiciones del `if` que se puede
+apagar desde afuera (`mode: "cors"`, `redirect: "manual"` y `credentials: "include"` se probaron y
+no la evitan), y **es lo semánticamente correcto para un proxy**: un proxy no debe adjuntar
+credenciales ambientes propias — reenvía el `Authorization` del cliente explícitamente, que es lo
+que `getProxyRequestHeaders` ya hacía y sigue haciendo.
+
+Nitro spread-ea las opciones de la route rule dentro de `proxyRequest(event, target, {...m.options})`,
+así que `fetchOptions` llega sin necesidad de parchear nada de h3.
+
+**Verificado, no supuesto.** Los cinco casos de la tabla dan el status correcto por el proxy, en el
+**build de producción** y en `pnpm dev`; `GET /auth/me` con token válido sigue dando 200, o sea que
+el `Authorization` se sigue reenviando. **D-037 queda cerrada** y su trigger de revisión ("volver a
+probar el 502 cuando salga Nitro 3 estable") se retira: ya no hay nada que reprobar.
+
+**Alternativas descartadas.** (a) *Orígenes separados + CORS* — el front tomaría la URL de la API de
+una env var y la API sumaría allowlist de orígenes: correcto, estándar, y cuesta un cambio en
+`port.ts`, CORS nuevo en la API y una URL de API en el bundle. Se descarta porque el arreglo real
+son dos líneas y no toca superficie de auth. (b) *Handler de proxy propio que bufferice el body* —
+mismo efecto, pero pone código nuestro atado a la API de h3 en una beta.
+
+**La lección, por tercera vez.** Es la **tercera** atribución falsa que cae por medición: Multer por
+el warning de `url.parse()` (D-036), h3 por el `502` (D-037) y ahora h3 otra vez acá. Las tres
+estaban escritas en el repo como hechos verificados. **D-037 no se equivocó por descuido — se
+equivocó por parar de bisecar un nivel antes de llegar al fondo**: probó dos versiones de h3, vio
+que el bug sobrevivía, y concluyó "es h3 en varias versiones" cuando el dato compatible era "no es
+h3". Corolario operativo: cuando cambiar la versión del sospechoso no mueve el síntoma, la hipótesis
+correcta es que el sospechoso está mal elegido, no que el bug es viejo.
+
+**Trigger de revisión.** Si una versión futura de Node cambia el manejo de `credentials: "omit"` en
+ese paso del spec, o si el proxy alguna vez necesita reenviar cookies del navegador (hoy la sesión
+va por `Authorization`, no por cookie — `apps/web/src/auth/session.ts`), se reabre.
+
+
+## D-051 — El primer deploy sale con evidencia efímera y marcada, en vez de esperar a R2 — **Aceptada**
+
+**Contexto (2026-08-23).** D-040 declaró R2 **prerequisito** del primer deploy: el free tier no tiene
+disco persistente, así que un archivo subido se pierde en el primer spin-down mientras su
+`sha256Hash` sobrevive en la base — y una app que muestra un hash cuyo archivo no existe está
+mostrando prueba que no puede sustanciar (regla 17).
+
+**Decisión.** Se despliega igual, **hoy**, con `UPLOAD_DIR=/tmp/uploads` declarado efímero en
+`render.yaml`, y el adaptador S3/R2 sale en su propia rebanada. Postura del dueño del producto.
+
+**Por qué no rompe la regla 17.** La regla prohíbe *mostrar* una señal de prueba insustanciable, y
+hoy no hay ninguna que mostrar: `packages/cardano` está vacío, no hay `AnchorPort`, no hay anclaje y
+por lo tanto no hay ningún estado "Verificado" que la app pueda emitir (D-014). Lo que se pierde al
+reiniciar es un archivo con un hash local, no una cadena de prueba anclada. **La ventana en que esto
+es aceptable se cierra exactamente el día que exista el primer anclaje**, y ese día R2 pasa a ser
+bloqueante de verdad.
+
+**Lo que se gana.** URL pública, login, navegación y base persistente andando ahora — criterios 12,
+13 y 8 del SOM — sin esperar una rebanada 🔴 (mover el SHA-256 para que cubra los bytes que terminan
+en el object storage, no un temporal).
+
+**Lo que se acepta a cambio, explícito.** Subir evidencia a la instancia desplegada y esperar
+encontrarla después **no funciona**, y eso hay que decirlo antes de cualquier demo. Está anotado en
+el `render.yaml`, en `specs/RUNBOOK-deploy.md` §Limitaciones y en `specs/stack.md` §6.
+
+**Trigger de revisión.** Se vuelve bloqueante con el primero de: (a) el primer anclaje real (D-014),
+(b) un piloto o reviewer subiendo evidencia que espere conservar, (c) cualquier pantalla que muestre
+un `HashChip` sobre un archivo subido en la instancia desplegada.
+
+## D-052 — Saneamiento: se borra el rastro de Prisma y Drizzle, y cada cosa queda en un solo lugar — **Aceptada**
+
+**Contexto (2026-08-23).** La auditoría de stack encontró que D-048 y D-049 habían migrado el
+código pero **no habían barrido lo que dejaron atrás**. El repo decía "Prisma ya no está" mientras
+`pnpm install` lo seguía instalando, y tres cosas que deberían existir una sola vez existían dos.
+
+**Qué se saneó, y por qué cada una importa.**
+
+**1 · `auto-install-peers=false` en `.npmrc`.** Con `true`, pnpm instala también los peers
+**opcionales**: `db0` (viene con Nitro, nada de este repo lo usa) declara `drizzle-orm` opcional, y
+`drizzle-orm` arrastra Prisma entero con sus engines. Medido con instalación limpia de los dos
+lados: **559 MB → 334 MB** (−40 %), 566 → 541 paquetes distintos en el lockfile. `prisma`,
+`@prisma/*` y `drizzle-orm` ya no aparecen. Se paga en cada build de Render, donde el
+`pnpm install --frozen-lockfile` es la parte larga y el free tier es lento.
+
+**2 · `packages/api/drizzle/` → `packages/api/migrations/`.** El directorio se llamaba como un ORM
+que ya no está. Se fue también `meta/` (`_journal.json` + `0000_snapshot.json`: metadata de
+`drizzle-kit`, que nada lee desde D-049) y el archivo pasó de `0000_kind_vulcan.sql` —nombre
+autogenerado— a `0000_init.sql`.
+
+> **Renombrar una migración aplicada normalmente está prohibido**, y con razón: el tracking es por
+> nombre de archivo, así que renombrarla la vuelve "pendiente" y revienta contra una base que ya la
+> tiene. Acá es legítimo por una ventana que se cierra sola: **no hay ninguna base desplegada**
+> (D-041: el deploy todavía no se ejecutó), y las locales se regeneran con dos comandos. **Este es
+> el último momento en que el rename es gratis.** Después del primer deploy, no se hace más.
+>
+> Consecuencia para quien tenga un árbol viejo: `rm packages/api/dev.db && pnpm db:migrate && pnpm db:seed`.
+> `test.db` no necesita nada — la suite lo borra y lo recrea en cada corrida.
+
+**3 · Un solo runner de migraciones.** `test/global-setup.ts` tenía su **propia copia** del
+aplicador: leía el directorio, partía por `--> statement-breakpoint` y escribía `_migrations`, todo
+duplicado de `src/db/migrate.ts`. Eso vaciaba de sentido lo único que justifica aplicar las
+migraciones reales en la suite —verificar lo mismo que corre en producción—, porque la garantía
+dependía de que dos copias no divergieran. Ahora `migrate.ts` exporta `applyPendingMigrations()` y
+la suite la importa (−43 líneas). El script quedó detrás de `require.main === module`: sin ese
+guardia, importarlo desde los tests migraba `dev.db` como efecto secundario del import.
+
+**4 · Un `.env.example` por servicio, y ninguno en la raíz.** El de la raíz no lo leía nadie:
+mandaba a otro archivo y describía Postgres y MinIO, que no son el stack. Sus variables útiles
+—Cardano y S3— se mudaron a `packages/api/.env.example`, que es el proceso que las va a leer,
+**comentadas**: una variable activa que ningún código consulta parece configuración y no lo es. Se
+suma `apps/web/.env.example`, que faltaba, con la advertencia de que sus dos variables son de
+**build time**. El README dejó de copiar la lista y ahora linkea: una lista duplicada se
+desactualiza en la copia, no en el original.
+
+**5 · Rastros de texto.** `db:generate` seguía documentado en tres lugares y **encadenado con `&&`
+en `scripts/worktree.sh`**, así que desde D-049 ningún árbol nuevo quedaba con base sembrada — el
+comando no existe y cortaba la cadena. Además: `tsconfig.typecheck.json` incluía `drizzle.config.ts`
+(borrado), `CLAUDE.md` y `README.md` decían "Express + Prisma", y comentarios de código explicaban
+el presente con analogías a un ORM ausente. Las menciones que **quedan** en `DECISIONS.md` y en las
+trampas de `packages/api/CLAUDE.md` son registro histórico y no se tocan: explican por qué el código
+es como es.
+
+**Lo que NO cambia.** Ninguna de las cinco toca comportamiento: mismo esquema, mismo SQL, mismos
+endpoints. Las 108 pruebas y los dos builds pasan igual antes y después, y la puerta abre.
+
+**Trigger de revisión.** `auto-install-peers=false` se revisa si algún día falta un peer **no**
+opcional y el síntoma es un import que no resuelve — el arreglo entonces es declararlo como
+dependencia directa, que es lo correcto, no volver a `true`.
+
+## D-053 — El harness de agentes se borra entero. Vuelve el CI declarativo — **Aceptada** · revierte D-032
+
+**Contexto (2026-08-23).** Pregunta del dueño del producto: *"me resulta raro que haya tantos
+scripts y tantos hooks; son una adición relativamente nueva que creo que complica todo"*. Se midió
+antes de responder, porque D-032 está Aceptada y reabrirla exige evidencia, no preferencia
+(principio 3). La evidencia apareció completa.
+
+**Lo que se midió.**
+
+| | |
+|---|---|
+| Repo iniciado | 2026-07-15 |
+| Harness incorporado | **2026-08-20**, casi todo en un commit (`a2c654f`), el nº 46 de 61 |
+| Vida útil al momento de borrarlo | **3 días** |
+| Peso | **1099 líneas**, contra 5512 de código de producto — **20 %** |
+| Commits de arreglo *a sí mismo* en esos 3 días | **5** |
+| Bugs reales del período que detectó | **0** |
+
+Los cinco arreglos: `ae7b3a9` el lockfile desactualizado que no detectaba · `955c8c6` `docs/` que
+nunca verificaba en CI · `82879f7` el hook de orientación que no encontraba las specs · `e433185`
+el CI que quedaba rojo para siempre · `7300add` la puerta detectándose a sí misma buscando mainnet.
+Más tres trampas registradas, **todas autoinfligidas**: el guardia de Bash bloqueándose al
+escribirse, el escáner de mainnet matcheando su propio mensaje de error, y `GATE_ALLOW_DOCS=1`
+desactivando en silencio la suite que verifica los guardias.
+
+**El dato que decidió.** Los cuatro bugs reales encontrados en la auditoría del 2026-08-23 —el 502
+del proxy (D-050), las migraciones que no se resolvían desde `dist/` y habrían roto el primer
+arranque en Render, el `db:generate` encadenado con `&&` que dejó **dos días sin sembrar ningún
+árbol nuevo**, y los 225 MB de ORMs muertos (D-052)— **no los detectó ningún guardia**. Salieron de
+leer y de medir. Los guardias, mayormente, se encontraron a sí mismos.
+
+**Y el argumento que lo cerró: el CI ya existía desde el día 1.** `a3b7051` (2026-07-15) traía un
+workflow declarativo con `typecheck` + `test` + `build` y el job entero de Aiken. **`gate.sh` no
+trajo CI: reemplazó 40 líneas de YAML por 285 de bash.** El detalle que lo delata es que el job de
+Aiken quedó declarativo y **nunca necesitó un arreglo** — los cinco fueron todos a la parte nueva.
+
+**Decisión.** Se borra el harness **entero**, sin excepciones: `gate.sh`, `worktree.sh`,
+`check-lockfile.py`, `check-project-access.py`, los cinco hooks, el bloque `hooks` de
+`settings.json`, los tres subagentes, las dos skills y `permissions.deny`. **2155 líneas.**
+
+Lo reemplaza lo que ya era declarativo y no necesitó mantenimiento:
+
+```bash
+pnpm verify        # typecheck + tests + build — lo mismo que corre el CI
+```
+
+`pnpm install --frozen-lockfile` cubre solo el caso de `check-lockfile.py` que importaba — de hecho
+**así se descubrió el bug original: lo atrapó el CI**, no un script. En `.claude/` queda únicamente
+la lista de comandos preaprobados, que es comodidad de sesión y no una regla.
+
+**Lo que se pierde, dicho sin maquillar.**
+
+1. **La segunda capa de autorización (regla 5) queda sin enforcement automático.** Es la única
+   pérdida real: falla en silencio, no la ve el compilador ni un test ni el CI. Los 27 endpoints
+   actuales están auditados y correctos; el riesgo es el 28 sobre un backlog de ~80. El arreglo
+   propuesto **no es otro escáner** —era un parche de 147 líneas sobre un problema de forma— sino
+   `requireProjectAccess(...)`, hermano de `requireRole`, que se ve en la firma de la ruta. Queda
+   abierto y con dueño humano: es 🔴.
+2. **Fallar más tarde.** Lo que antes moría antes de pushear ahora muere en el CI. Se acepta: son
+   minutos, y `pnpm verify` está a un comando de distancia.
+3. **La conveniencia de `worktree.sh`.** Nula en la práctica: **nunca se usó** — no existió jamás
+   una rama `track/*`, verificado en el historial completo.
+
+**Lo que NO cambia.** Las reglas siguen escritas y siguen valiendo: no editar una migración
+aplicada, no commitear secretos, no editar `docs/` a la ligera. Pasan de bloqueo a criterio, que es
+donde D-032 mismo ponía todo lo que requiere juicio.
+
+**La lección, que es más general que este repo.** El harness se construyó para hacer cumplir reglas
+que ya estaban escritas, y terminó siendo una segunda base de código con sus propios bugs, su propia
+suite de tests y su propio mantenimiento — para un repo de un solo desarrollador. **Antes de agregar
+un verificador, preguntá si el problema no se arregla mejor cambiando la forma de lo verificado**:
+`check-project-access.py` son 147 líneas detectando un olvido que un middleware de 15 no permite
+cometer.
+
+**Trigger de revisión.** Vuelve a discutirse si (a) se suma una segunda persona al repo —el
+argumento cambia cuando el criterio compartido deja de estar en una sola cabeza, y es el mismo
+trigger que D-030 define para volver a PRs—, o (b) un bug real llega a `main` por algo que un
+chequeo automático barato habría atajado. En ese caso se agrega **ese** chequeo, no un harness.
+
+**Reversión.** `git revert` del commit, o `git show <commit>^:scripts/gate.sh`. Nada se pierde: está
+todo en el historial.

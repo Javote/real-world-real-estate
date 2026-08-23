@@ -3,20 +3,18 @@ name: CI
 on:
   pull_request:
   push:
-    branches: [main, 'track/**']
+    branches: [main]
 
 concurrency:
   group: ci-${{ github.ref }}
   cancel-in-progress: true
 
 jobs:
-  gate:
-    name: La puerta (scripts/gate.sh --ci)
+  quality:
+    name: Typecheck + tests + build
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-        with:
-          fetch-depth: 0   # la puerta compara contra la base del cambio
 
       - uses: pnpm/action-setup@v4
         # toma la versión de "packageManager" del package.json raíz
@@ -26,13 +24,21 @@ jobs:
           node-version: 22
           cache: pnpm
 
+      # `--frozen-lockfile` falla si el lockfile no refleja los package.json.
+      # Eso ya cubre el caso que importa: editar una versión sin correr
+      # `pnpm install` deja el typecheck corriendo contra el entorno equivocado,
+      # y un verde sobre el entorno equivocado es peor que un rojo (D-053).
       - name: Instalar dependencias
         run: pnpm install --frozen-lockfile
 
-      # Un solo paso, el mismo script que corre el hook de push en local.
-      # Si CI y local se separan, divergen — ver D-032.
-      - name: Puerta
-        run: scripts/gate.sh --ci
+      - name: Typecheck
+        run: pnpm typecheck
+
+      - name: Tests
+        run: pnpm test
+
+      - name: Build (web + api)
+        run: pnpm build
 
   contracts:
     name: Contratos Aiken (fmt + check + blueprint al día)
