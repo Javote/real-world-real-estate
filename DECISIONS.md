@@ -75,6 +75,7 @@
 | D-058 | Thread token por stage, `mint` validado, ids opacos y el operador como único firmante | Aceptada (cierra D-057; deja D-009 sin alcance en `contracts/`) |
 | D-059 | El backend deja de estar desconectado del validador: FSM en `packages/shared`, productor del datum y tabla `OnChainEvent` | Aceptada (aclara D-007) |
 | D-060 | `packages/cardano` vuelve: `AnchorPort` + adaptador simulado con ledger propio (`SPEC-013` §A) | Aceptada (concreta D-014) |
+| D-061 | Todo stage es `validation_critical`; anclar evidencia lo dispara el admin; dos caminos on-chain | Aceptada |
 
 > **Repaso completo con la documentación oficial: ver §Repaso al final del archivo.** D-001..D-017 se
 > escribieron sin los entregables delante; las 25 entradas se revisaron el 2026-07-29 y cada una
@@ -2255,3 +2256,61 @@ se ven cuando el circuito está cerrado:
 **Trigger de revisión.** Si alguien importa Lucid o Blockfrost fuera de `packages/cardano`, la
 decisión se rompió (D-014). Y si el adaptador real llega sin que el simulado siga corriendo en CI,
 también: el simulado no es andamio, es lo que mantiene la suite offline y determinística.
+
+## D-061 — Todo stage es `validation_critical`, y anclar evidencia es un acto explícito del admin — **Aceptada**
+
+**Contexto (2026-08-23).** Al planear el vertical local, la pregunta *"¿este stage es crítico?"*
+resultó no tener respuesta en ningún lado, y el dueño lo dijo mejor que yo: *"no entiendo dónde está
+definido, en ningún lugar del proyecto"*. Tenía razón, y se verificó:
+
+- `M1-D2/2-core-domain-model.puml:15` — `validation_critical: boolean`, un atributo. Nada más.
+- `M2-D6:332` — *"optional criticality or scope metadata"*. Literalmente **optional**.
+- El whitepaper §Signature and Certification Rules lo **usa** (*"Milestones designated as
+  validation-critical cannot reach Certified status unless their required evidence set is
+  complete"*) sin decir nunca **quién designa ni cuáles**.
+- En el código: `DEFAULT false`, y el seed lo ponía en `false` en los dos stages de demo.
+
+O sea: **la regla más fuerte del whitepaper colgaba de un flag que nadie llenaba.** Un stage se
+completaba sin una sola evidencia solo porque quien lo creó no marcó una casilla.
+
+**Decisión (del dueño).** *"Todo es crítico."* No contradice ningún entregable —llena un hueco que
+dejaron abierto—, así que no es un desvío: es la designación que M1 pide y nunca hace.
+
+**1 · El default se invierte, y los stages viejos también.** Migración `0003`: `DEFAULT true`, y los
+existentes pasan a críticos. "Todos" no es "todos los nuevos": un proyecto sembrado ayer no puede
+quedar con reglas distintas al de mañana. La columna **se queda** —M1-D2 la modela y `docs/` manda
+sobre el *qué*— pero desmarcarla pasa a ser un acto explícito.
+
+**Consecuencia inmediata y buscada:** ningún stage se completa sin evidencia. Antes era la
+excepción; ahora es la regla, y el validador ya la aplicaba on-chain sin que la API la acompañara.
+
+**Nota de SQLite:** no sabe cambiar el `DEFAULT` de una columna, así que la tabla se reconstruye. El
+orden es crear → copiar → **borrar la vieja** → renombrar: renombrar primero reescribiría las
+cláusulas `FOREIGN KEY` de `Evidence` y `OnChainEvent` para apuntar al nombre viejo
+(`legacy_alter_table` está OFF por default) y quedarían colgando.
+
+**2 · Anclar evidencia lo dispara el admin, no el upload.** También del dueño: *"cada archivo
+subido como evidencia debe ser hasheado — no automático, debe poder hacerlo el admin"*. El SHA-256
+se sigue calculando en el servidor al subir (D-027: el hash es el ticket de entrada, y sin él no hay
+nada que anclar); lo que **no** es automático es el anclaje. Encaja con M2-D4 §6.3 —toda superficie
+de prueba es iniciada por el usuario— y evita anclar borradores: una vez en la cadena, no se borra.
+
+**3 · Los dos caminos on-chain, porque M1 dibuja dos.** `M1-D2/1-system-architecture.puml` declara
+**dos** componentes distintos, y el dueño lo zanjó: *"si los archivos dicen que hay dos caminos, hay
+dos caminos"*.
+
+| Camino | Qué prueba | Cómo | Decisión |
+|---|---|---|---|
+| `Evidence Anchor Transactions` | *este archivo existía a esta hora* | metadata de tx (label 1904), sin validador | D-006 |
+| `Milestone State Anchors` | *este stage se completó con esta evidencia y en este orden* | Merkle root del bundle en el datum, verificado por el validador | D-008 |
+
+El primero es por archivo y lo dispara el admin. El segundo es por stage y ocurre al completar. Uno
+no reemplaza al otro: sin el primero, un archivo anclado tarde no prueba cuándo existió; sin el
+segundo, nada ata ese archivo a la secuencia de obra.
+
+**Lo que esto abre y todavía no está:** `EvidenceBundle` no existe, así que el Merkle root no lo
+calcula nadie y un stage crítico se completa **registrado pero no anclado** (visible en un test, no
+en un comentario). Es la pieza 3 del plan de `SPEC-013 §Plan de trabajo`.
+
+**Trigger de revisión.** Si algún día hace falta un stage no crítico —un hito informativo, sin
+evidencia— la columna sigue ahí y desmarcarla es una línea. Lo que no vuelve es el default.

@@ -287,3 +287,38 @@ describe("PATCH /milestones/:id · la identidad on-chain", () => {
     expect(res.body.code).toBe("STAGE_IDENTITY_IMMUTABLE");
   });
 });
+
+describe("D-061 · todo stage es validation-critical", () => {
+  it("un stage creado sin decir nada nace crítico", async () => {
+    const res = await request(app)
+      .post(`/api/v1/projects/${proyecto}/milestones`)
+      .set("Authorization", `Bearer ${token}`)
+      .send({ name: "Stage por default", sequenceOrder: 999_201 });
+
+    expect(res.body.validationCritical).toBe(true);
+  });
+
+  it("y por lo tanto no se completa sin evidencia", async () => {
+    // Antes de D-061 este mismo stage se completaba sin nada: el default era
+    // `false` y nadie lo marcaba. Ese era el agujero.
+    const creado = await request(app)
+      .post(`/api/v1/projects/${proyecto}/milestones`)
+      .set("Authorization", `Bearer ${token}`)
+      .send({ name: "Stage por default 2", sequenceOrder: 999_202 });
+
+    await patchState(creado.body.id, "InProgress");
+    const res = await patchState(creado.body.id, "Completed");
+
+    expect(res.status).toBe(409);
+    expect(res.body.code).toBe("STAGE_EVIDENCE_REQUIRED");
+  });
+
+  it("desmarcarlo sigue siendo posible, pero ahora es explícito", async () => {
+    const res = await request(app)
+      .post(`/api/v1/projects/${proyecto}/milestones`)
+      .set("Authorization", `Bearer ${token}`)
+      .send({ name: "Stage no crítico", sequenceOrder: 999_203, validationCritical: false });
+
+    expect(res.body.validationCritical).toBe(false);
+  });
+});

@@ -94,6 +94,26 @@ son operaciones distintas con precondiciones distintas.
 | `ANCHOR_MODE=real` en la rebanada A | error explícito al construir el puerto |
 | El mismo payload anclado dos veces | mismo `txid` (el simulador es determinístico) |
 
+## Plan de trabajo — el vertical local completo
+
+El objetivo del dueño, textual: *"quiero poder testear de forma local el flujo completo. Crear un
+proyecto en la app, subir un documento, y enviar el hash de esa evidencia al smart contract"*. Eso
+es más que el `AnchorPort`: son seis piezas, y solo dos necesitan Docker.
+
+| # | Pieza | Necesita | Estado |
+|---|---|---|---|
+| 1 | **Todo stage es `validation_critical`** — migración `0003` y su decisión | — | **hecha** (D-061) |
+| 2 | Transacciones reales contra el **`Emulator`** de Lucid: `mint` + `spend` con el validador ejecutándose de verdad | — | pendiente |
+| 3 | **`EvidenceBundle`**, Merkle root y el endpoint de anclaje **manual del admin** | — | pendiente |
+| 4 | **MinIO** por `compose.dev.yml` + cliente S3 (D-011) | Docker | pendiente |
+| 5 | **yaci-devkit**: devnet local con API compatible Blockfrost | Docker | pendiente |
+| 6 | **Frontend**: crear proyecto → subir PDF → botón *anclar* → ver el TXID | — | pendiente |
+
+**El `Emulator` cambia el orden.** Lucid trae un ledger en proceso que **ejecuta el validador**, así
+que las transacciones se prueban sin Docker y en CI: yaci deja de ser el requisito para probar y
+pasa a ser el escalón de realismo (nodo real, fees reales, persistencia). El camino es
+`Emulator → yaci local → Preprod`, y el código del adaptador es el mismo en los tres.
+
 ## Preguntas abiertas
 
 1. **¿Todos los stages tienen hilo, o solo los `validationCritical`?** D-008 justifica el validador

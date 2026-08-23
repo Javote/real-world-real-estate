@@ -223,7 +223,9 @@ router.post(
         name: parsed.data.name,
         sequenceOrder: parsed.data.sequenceOrder,
         state: INITIAL_STAGE_STATE,
-        validationCritical: parsed.data.validationCritical ?? false,
+        // D-061: todo stage es validation-critical. El default deja de ser un
+        // flag que alguien se olvida de marcar; desmarcarlo es explícito.
+        validationCritical: parsed.data.validationCritical ?? true,
         scopeType: parsed.data.scopeType ?? "project_wide",
         scopeUnitCount: parsed.data.scopeUnitCount ?? 0,
         createdAt: now,
