@@ -1,5 +1,5 @@
 // ApiPort — ÚNICO lugar del front que hace fetch (prohibición de CLAUDE.md).
-// Adaptador `real` contra packages/api. El adaptador `mock` está pendiente.
+// Adaptador `real` contra apps/api. El adaptador `mock` está pendiente.
 
 import { clearSession, getSession } from '../auth/session'
 import type {
@@ -9,13 +9,13 @@ import type {
   Milestone,
   MilestoneState,
   Project,
-  ProjectDetail,
+  ProjectDetail
 } from './types'
 
 export class ApiError extends Error {
   constructor(
     public status: number,
-    message: string,
+    message: string
   ) {
     super(message)
   }
@@ -47,7 +47,7 @@ function jsonInit(method: string, body: unknown): RequestInit {
   return {
     method,
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(body),
+    body: JSON.stringify(body)
   }
 }
 
@@ -67,7 +67,7 @@ export const api = {
   uploadEvidence: (projectId: string, form: FormData) =>
     request<Evidence>(`/api/v1/projects/${projectId}/evidence`, {
       method: 'POST',
-      body: form,
+      body: form
     }),
 
   setMilestoneState: (milestoneId: string, state: MilestoneState) =>
@@ -76,9 +76,9 @@ export const api = {
   downloadEvidence: async (evidenceId: string): Promise<Blob> => {
     const session = getSession()
     const res = await fetch(`/api/v1/evidence/${evidenceId}/download`, {
-      headers: session ? { Authorization: `Bearer ${session.token}` } : {},
+      headers: session ? { Authorization: `Bearer ${session.token}` } : {}
     })
     if (!res.ok) throw new ApiError(res.status, res.statusText)
     return res.blob()
-  },
+  }
 }

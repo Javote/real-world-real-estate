@@ -12,19 +12,21 @@ dist/
 !.env.example
 
 # SQLite de desarrollo (Kysely sobre @libsql/client, D-049).
-packages/api/dev.db
-packages/api/dev.db-journal
-packages/api/dev.db-wal
-packages/api/dev.db-shm
-packages/api/test.db
-packages/api/test.db-journal
-packages/api/test.db-wal
-packages/api/test.db-shm
+apps/api/dev.db
+apps/api/dev.db-journal
+apps/api/dev.db-wal
+apps/api/dev.db-shm
+apps/api/test.db
+apps/api/test.db-journal
+apps/api/test.db-wal
+apps/api/test.db-shm
 
-# Archivos subidos por usuarios (runtime, no código)
-packages/api/uploads/*
-!packages/api/uploads/.gitkeep
-packages/api/test-uploads/
+# Archivos subidos por usuarios (runtime, no código). El `/uploads` de la raíz
+# no debería existir nunca; está por si alguien arranca la API desde ahí.
+/uploads/
+apps/api/uploads/*
+!apps/api/uploads/.gitkeep
+apps/api/test-uploads/
 
 # Artefactos de compilación de Aiken (el blueprint plutus.json SÍ se commitea)
 contracts/build/

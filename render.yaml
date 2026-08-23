@@ -34,7 +34,7 @@ services:
     # de docs reconstruye los dos servicios y consume horas del presupuesto.
     buildFilter:
       paths:
-        - packages/api/**
+        - apps/api/**
         - packages/shared/**
         - pnpm-lock.yaml
         - pnpm-workspace.yaml
@@ -49,8 +49,8 @@ services:
     # idempotentes (tabla `_migrations`, D-049) y no hay alternativa: el free
     # tier no da shell ni one-off jobs (D-012 · D-040).
     startCommand: >-
-      node packages/api/dist/src/db/migrate.js &&
-      node packages/api/dist/src/server.js
+      node apps/api/dist/src/db/migrate.js &&
+      node apps/api/dist/src/server.js
     healthCheckPath: /health
     envVars:
       - key: NODE_VERSION

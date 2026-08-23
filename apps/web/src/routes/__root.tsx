@@ -1,37 +1,36 @@
-import { HeadContent, Scripts, createRootRoute } from '@tanstack/react-router'
-import { TanStackRouterDevtoolsPanel } from '@tanstack/react-router-devtools'
 import { TanStackDevtools } from '@tanstack/react-devtools'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
-
-import appCss from '../styles.css?url'
+import { createRootRoute, HeadContent, Scripts } from '@tanstack/react-router'
+import { TanStackRouterDevtoolsPanel } from '@tanstack/react-router-devtools'
 import { LocaleProvider } from '../i18n/useTranslation'
+import appCss from '../styles.css?url'
 
 const queryClient = new QueryClient({
-  defaultOptions: { queries: { retry: 1, refetchOnWindowFocus: false } },
+  defaultOptions: { queries: { retry: 1, refetchOnWindowFocus: false } }
 })
 
 export const Route = createRootRoute({
   head: () => ({
     meta: [
       {
-        charSet: 'utf-8',
+        charSet: 'utf-8'
       },
       {
         name: 'viewport',
-        content: 'width=device-width, initial-scale=1',
+        content: 'width=device-width, initial-scale=1'
       },
       {
-        title: 'PropNexus — Trazabilidad Inmobiliaria',
-      },
+        title: 'PropNexus — Trazabilidad Inmobiliaria'
+      }
     ],
     links: [
       {
         rel: 'stylesheet',
-        href: appCss,
-      },
-    ],
+        href: appCss
+      }
+    ]
   }),
-  shellComponent: RootDocument,
+  shellComponent: RootDocument
 })
 
 function RootDocument({ children }: { children: React.ReactNode }) {
@@ -46,13 +45,13 @@ function RootDocument({ children }: { children: React.ReactNode }) {
         </QueryClientProvider>
         <TanStackDevtools
           config={{
-            position: 'bottom-right',
+            position: 'bottom-right'
           }}
           plugins={[
             {
               name: 'Tanstack Router',
-              render: <TanStackRouterDevtoolsPanel />,
-            },
+              render: <TanStackRouterDevtoolsPanel />
+            }
           ]}
         />
         <Scripts />

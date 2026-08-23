@@ -1,11 +1,11 @@
 import { createFileRoute } from '@tanstack/react-router'
 import { Activity, FileBadge, LayoutGrid, UserCircle } from 'lucide-react'
-import { useRoleGuard } from '../auth/useRoleGuard'
 import { CERTIFIER_ROLES } from '../auth/roles'
-import { PanelShell } from '../components/PanelShell'
-import { StatCard } from '../components/domain/StatCard'
-import { useTranslation } from '../i18n/useTranslation'
+import { useRoleGuard } from '../auth/useRoleGuard'
 import type { BottomNavItem } from '../components/domain/BottomNav'
+import { StatCard } from '../components/domain/StatCard'
+import { PanelShell } from '../components/PanelShell'
+import { useTranslation } from '../i18n/useTranslation'
 
 export const Route = createFileRoute('/certifier')({ component: CertifierScreen })
 
@@ -19,7 +19,7 @@ function CertifierScreen() {
     { key: 'panel', label: t('nav.certifier.panel'), icon: LayoutGrid, to: '/certifier' },
     { key: 'assigned', label: t('nav.certifier.assigned'), icon: Activity },
     { key: 'issued', label: t('nav.certifier.issued'), icon: FileBadge },
-    { key: 'profile', label: t('nav.certifier.profile'), icon: UserCircle },
+    { key: 'profile', label: t('nav.certifier.profile'), icon: UserCircle }
   ]
 
   return (

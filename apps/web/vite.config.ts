@@ -1,13 +1,13 @@
-import { defineConfig } from 'vite'
+import tailwindcss from '@tailwindcss/vite'
 import { devtools } from '@tanstack/devtools-vite'
 
 import { tanstackStart } from '@tanstack/react-start/plugin/vite'
 
 import viteReact from '@vitejs/plugin-react'
-import tailwindcss from '@tailwindcss/vite'
 import { nitro } from 'nitro/vite'
+import { defineConfig } from 'vite'
 
-// La API (packages/api) corre en :8787 en el árbol principal — ver CLAUDE.md §Comandos.
+// La API (apps/api) corre en :8787 en el árbol principal — ver CLAUDE.md §Comandos.
 // El proxy va por routeRules de nitro (server.proxy de Vite no aplica:
 // nitro atiende las requests antes que el middleware de Vite).
 // Puerto y origen salen de ports.ts para que cada worktree tenga los suyos (D-031).
@@ -22,13 +22,13 @@ const config = defineConfig({
       rollupConfig: { external: [/^@sentry\//] },
       routeRules: {
         '/api/**': { proxy: { to: `${API_ORIGIN}/api/**`, fetchOptions: { credentials: 'omit' } } },
-        '/health': { proxy: { to: `${API_ORIGIN}/health`, fetchOptions: { credentials: 'omit' } } },
-      },
+        '/health': { proxy: { to: `${API_ORIGIN}/health`, fetchOptions: { credentials: 'omit' } } }
+      }
     }),
     tailwindcss(),
     tanstackStart(),
-    viteReact(),
-  ],
+    viteReact()
+  ]
 })
 
 export default config

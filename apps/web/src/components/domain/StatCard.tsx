@@ -10,7 +10,7 @@ const ICON_TINTS: Record<string, string> = {
   trend: '#F97316',
   portfolio: '#3B82F6',
   people: '#EC4899',
-  verification: '#14B8A6',
+  verification: '#14B8A6'
 }
 
 interface StatCardProps {

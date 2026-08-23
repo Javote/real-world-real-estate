@@ -20,15 +20,12 @@ export default defineConfig({
   outputDir: './e2e/.artifacts/test-results',
   fullyParallel: false, // comparten la misma DB sembrada
   workers: 1,
-  reporter: [
-    ['list'],
-    ['html', { outputFolder: './e2e/.artifacts/report', open: 'never' }],
-  ],
+  reporter: [['list'], ['html', { outputFolder: './e2e/.artifacts/report', open: 'never' }]],
   use: {
     baseURL: BASE_URL,
     video: 'on', // el walkthrough grabado es evidencia de M3 (criterio 13)
     trace: 'retain-on-failure',
-    screenshot: 'only-on-failure',
+    screenshot: 'only-on-failure'
   },
   projects: [
     {
@@ -38,14 +35,14 @@ export default defineConfig({
       // diseño, pero se renderiza con Chromium: su `defaultBrowserType` es
       // webkit, y bajar un segundo navegador de ~100 MB no aporta nada acá.
       name: 'mobile',
-      use: { ...devices['iPhone 13'], browserName: 'chromium' },
+      use: { ...devices['iPhone 13'], browserName: 'chromium' }
     },
     {
       // En desktop el BottomNav se reemplaza por sidebar y el contenido pasa a
       // grillas multi-columna (M2-D1 §Responsive behavior).
       name: 'desktop',
-      use: { ...devices['Desktop Chrome'], viewport: { width: 1440, height: 900 } },
-    },
+      use: { ...devices['Desktop Chrome'], viewport: { width: 1440, height: 900 } }
+    }
   ],
   webServer: {
     // Levanta web + api en los puertos de ESTE árbol. Si ya corren, los reusa.
@@ -55,6 +52,6 @@ export default defineConfig({
     reuseExistingServer: true,
     timeout: 120_000,
     stdout: 'ignore',
-    stderr: 'pipe',
-  },
+    stderr: 'pipe'
+  }
 })

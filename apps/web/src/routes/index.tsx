@@ -1,7 +1,7 @@
 import { createFileRoute, useNavigate } from '@tanstack/react-router'
 import { useEffect } from 'react'
-import { getSession } from '../auth/session'
 import { ROLE_LANDING } from '../auth/roles'
+import { getSession } from '../auth/session'
 
 export const Route = createFileRoute('/')({ component: Home })
 

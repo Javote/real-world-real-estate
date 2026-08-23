@@ -1,5 +1,5 @@
-import { afterEach, beforeEach, describe, expect, it } from 'vitest'
 import { cleanup, fireEvent, render, screen } from '@testing-library/react'
+import { afterEach, beforeEach, describe, expect, it } from 'vitest'
 import { LocaleProvider, useTranslation } from './useTranslation'
 
 function Probe() {
@@ -25,7 +25,7 @@ describe('LocaleProvider / useTranslation', () => {
     render(
       <LocaleProvider>
         <Probe />
-      </LocaleProvider>,
+      </LocaleProvider>
     )
     await screen.findByText('locale: es-AR')
     expect(screen.getByText('Ingresar')).not.toBeNull()
@@ -35,7 +35,9 @@ describe('LocaleProvider / useTranslation', () => {
     function Toggle() {
       const { locale, setLocale } = useTranslation()
       return (
-        <button onClick={() => setLocale(locale === 'es-AR' ? 'en-US' : 'es-AR')}>toggle</button>
+        <button type="button" onClick={() => setLocale(locale === 'es-AR' ? 'en-US' : 'es-AR')}>
+          toggle
+        </button>
       )
     }
 
@@ -43,7 +45,7 @@ describe('LocaleProvider / useTranslation', () => {
       <LocaleProvider>
         <Probe />
         <Toggle />
-      </LocaleProvider>,
+      </LocaleProvider>
     )
     await screen.findByText('Ingresar')
 
@@ -60,7 +62,7 @@ describe('LocaleProvider / useTranslation', () => {
     render(
       <LocaleProvider>
         <Probe />
-      </LocaleProvider>,
+      </LocaleProvider>
     )
 
     await screen.findByText('Sign in')

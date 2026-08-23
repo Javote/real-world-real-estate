@@ -11,7 +11,14 @@ interface TextInputProps {
   error?: string
 }
 
-export function TextInput({ label, type = 'text', value, onChange, autoComplete, error }: TextInputProps) {
+export function TextInput({
+  label,
+  type = 'text',
+  value,
+  onChange,
+  autoComplete,
+  error
+}: TextInputProps) {
   const id = useId()
   return (
     <div className="mb-4">
@@ -22,7 +29,10 @@ export function TextInput({ label, type = 'text', value, onChange, autoComplete,
         id={id}
         type={type}
         className="w-full rounded-lg border px-3 py-2 outline-none focus:ring-2"
-        style={{ borderColor: error ? '#EF4444' : '#E5E7EB', ['--tw-ring-color' as string]: '#6D4AFF' }}
+        style={{
+          borderColor: error ? '#EF4444' : '#E5E7EB',
+          ['--tw-ring-color' as string]: '#6D4AFF'
+        }}
         value={value}
         onChange={(e) => onChange(e.target.value)}
         autoComplete={autoComplete}

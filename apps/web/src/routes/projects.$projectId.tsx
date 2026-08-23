@@ -1,17 +1,14 @@
-import { createFileRoute, Link } from '@tanstack/react-router'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
+import { createFileRoute, Link } from '@tanstack/react-router'
 import { useRef, useState } from 'react'
-import { api, ApiError } from '../api/port'
+import { ApiError, api } from '../api/port'
 import type { Evidence, Milestone, MilestoneState } from '../api/types'
+import { useRequireSession } from '../auth/useSession'
 import { AppHeader } from '../components/AppHeader'
 import { HashChip } from '../components/domain/HashChip'
-import { StatusPill } from '../components/domain/StatusPill'
-import {
-  MilestoneIndicator,
-  MilestoneStateBadge,
-} from '../components/domain/MilestoneStateBadge'
+import { MilestoneIndicator, MilestoneStateBadge } from '../components/domain/MilestoneStateBadge'
 import { projectProgress } from '../components/domain/ProjectCard'
-import { useRequireSession } from '../auth/useSession'
+import { StatusPill } from '../components/domain/StatusPill'
 
 export const Route = createFileRoute('/projects/$projectId')({ component: ProjectDetail })
 
@@ -20,10 +17,10 @@ const VALID_TRANSITIONS: Record<MilestoneState, Array<{ to: MilestoneState; labe
   Pending: [{ to: 'InProgress', label: 'Iniciar' }],
   InProgress: [
     { to: 'Completed', label: 'Certificar' },
-    { to: 'Observed', label: 'Observar' },
+    { to: 'Observed', label: 'Observar' }
   ],
   Observed: [{ to: 'InProgress', label: 'Reabrir' }],
-  Completed: [],
+  Completed: []
 }
 
 const CATEGORIES = [
@@ -31,7 +28,7 @@ const CATEGORIES = [
   { value: 'site_progress', label: 'Avance de obra' },
   { value: 'certifications', label: 'Certificaciones' },
   { value: 'permits', label: 'Permisos' },
-  { value: 'legal', label: 'Legal' },
+  { value: 'legal', label: 'Legal' }
 ] as const
 
 function formatBytes(bytes: number): string {
@@ -52,12 +49,12 @@ function ProjectDetail() {
   const projectQuery = useQuery({
     queryKey: ['project', projectId],
     queryFn: () => api.getProject(projectId),
-    enabled: !!session,
+    enabled: !!session
   })
   const evidenceQuery = useQuery({
     queryKey: ['evidence', projectId],
     queryFn: () => api.listEvidence(projectId),
-    enabled: !!session,
+    enabled: !!session
   })
 
   const stateMutation = useMutation({
@@ -66,7 +63,7 @@ function ProjectDetail() {
     onSuccess: () => {
       void queryClient.invalidateQueries({ queryKey: ['project', projectId] })
       void queryClient.invalidateQueries({ queryKey: ['projects'] })
-    },
+    }
   })
 
   const [tab, setTab] = useState<'timeline' | 'docs'>('timeline')
@@ -175,12 +172,20 @@ function ProjectDetail() {
         </div>
 
         <div className="tabs">
-          <div className={`tab ${tab === 'timeline' ? 'active' : ''}`} onClick={() => setTab('timeline')}>
+          <button
+            type="button"
+            className={`tab ${tab === 'timeline' ? 'active' : ''}`}
+            onClick={() => setTab('timeline')}
+          >
             Trazabilidad
-          </div>
-          <div className={`tab ${tab === 'docs' ? 'active' : ''}`} onClick={() => setTab('docs')}>
+          </button>
+          <button
+            type="button"
+            className={`tab ${tab === 'docs' ? 'active' : ''}`}
+            onClick={() => setTab('docs')}
+          >
             Documentos
-          </div>
+          </button>
         </div>
 
         {tab === 'timeline' ? (
@@ -223,7 +228,7 @@ function MilestoneRow({
   canWrite,
   projectId,
   onChangeState,
-  changing,
+  changing
 }: {
   milestone: Milestone
   evidence: Evidence[]
@@ -244,6 +249,7 @@ function MilestoneRow({
           {canWrite
             ? transitions.map((t) => (
                 <button
+                  type="button"
                   key={t.to}
                   className={`btn btn-sm ${t.to === 'Completed' ? 'btn-success' : 'btn-secondary'}`}
                   disabled={changing}
@@ -258,8 +264,8 @@ function MilestoneRow({
           {milestone.certifiedAt
             ? `Certificado el ${new Date(milestone.certifiedAt).toLocaleDateString()} · `
             : ''}
-          {evidence.length} documento{evidence.length === 1 ? '' : 's'} ·{' '}
-          {milestone.scopeUnitCount} unidades
+          {evidence.length} documento{evidence.length === 1 ? '' : 's'} · {milestone.scopeUnitCount}{' '}
+          unidades
         </p>
 
         {evidence.length > 0 || (canWrite && milestone.state !== 'Completed') ? (
@@ -307,13 +313,24 @@ function EvidenceList({ items }: { items: Evidence[] }) {
               {e.mimeType} · {formatBytes(e.sizeBytes)} · {e.category}
               {e.authoritative ? ' · Documento autoritativo' : ''}
             </div>
-            <div style={{ display: 'flex', gap: '0.75rem', alignItems: 'center', marginTop: '0.375rem' }}>
+            <div
+              style={{
+                display: 'flex',
+                gap: '0.75rem',
+                alignItems: 'center',
+                marginTop: '0.375rem'
+              }}
+            >
               <HashChip hash={e.sha256Hash} />
               <StatusPill />
             </div>
           </div>
           <div className="evidence-actions">
-            <button className="btn btn-secondary btn-sm" onClick={() => void download(e)}>
+            <button
+              type="button"
+              className="btn btn-secondary btn-sm"
+              onClick={() => void download(e)}
+            >
               ↓
             </button>
           </div>
@@ -341,7 +358,7 @@ function UploadArea({ projectId, milestoneId }: { projectId: string; milestoneId
             ? 'certificate'
             : file.type.startsWith('image/')
               ? 'photo'
-              : 'document',
+              : 'document'
         )
         if (milestoneId) form.append('milestoneId', milestoneId)
         await api.uploadEvidence(projectId, form)
@@ -353,12 +370,13 @@ function UploadArea({ projectId, milestoneId }: { projectId: string; milestoneId
     },
     onError: (err) => {
       setError(err instanceof ApiError ? err.message : 'Error al subir el archivo')
-    },
+    }
   })
 
   return (
     <div>
-      <div
+      <button
+        type="button"
         className="upload-area"
         onClick={() => inputRef.current?.click()}
         style={{ opacity: upload.isPending ? 0.6 : 1 }}
@@ -367,7 +385,10 @@ function UploadArea({ projectId, milestoneId }: { projectId: string; milestoneId
           <p>Subiendo y calculando hash SHA-256…</p>
         ) : (
           <>
-            <p>📎 Hacé clic para subir evidencia{milestoneId ? ' de este milestone' : ' del proyecto'}</p>
+            <p>
+              📎 Hacé clic para subir evidencia
+              {milestoneId ? ' de este milestone' : ' del proyecto'}
+            </p>
             <p style={{ fontSize: '0.85rem', marginTop: '0.5rem', color: 'var(--gray-600)' }}>
               PDF, JPG, PNG hasta 10 MB
             </p>
@@ -384,12 +405,13 @@ function UploadArea({ projectId, milestoneId }: { projectId: string; milestoneId
             e.target.value = ''
           }}
         />
-      </div>
+      </button>
       <div style={{ display: 'flex', gap: '0.75rem', alignItems: 'center', marginTop: '0.5rem' }}>
-        <label className="form-label" style={{ margin: 0 }}>
+        <label className="form-label" htmlFor="evidence-category" style={{ margin: 0 }}>
           Categoría
         </label>
         <select
+          id="evidence-category"
           className="form-select"
           style={{ width: 'auto' }}
           value={category}

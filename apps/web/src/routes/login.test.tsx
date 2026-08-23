@@ -2,24 +2,25 @@
 // Monta LoginScreen en un router de memoria con un /dashboard stub: se prueba
 // el flujo real del navegador (form → ApiPort → sesión → redirect), con el
 // fetch mockeado — el test no depende de la API levantada.
-import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
-import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react'
+
 import {
-  Outlet,
-  RouterProvider,
   createMemoryHistory,
   createRootRoute,
   createRoute,
   createRouter,
+  Outlet,
+  RouterProvider
 } from '@tanstack/react-router'
-import { LoginScreen, ROLE_PRESETS } from './login'
+import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { LocaleProvider } from '../i18n/useTranslation'
+import { LoginScreen, ROLE_PRESETS } from './login'
 
 const DEMO_USER = {
   id: 'u1',
   email: 'developer@example.com',
   role: 'developer',
-  fullName: 'Developer Demo',
+  fullName: 'Developer Demo'
 }
 
 function makeRouter() {
@@ -27,32 +28,32 @@ function makeRouter() {
   const loginRoute = createRoute({
     getParentRoute: () => rootRoute,
     path: '/login',
-    component: LoginScreen,
+    component: LoginScreen
   })
   const verifyRoute = createRoute({
     getParentRoute: () => rootRoute,
     path: '/verify',
-    component: () => <div>VERIFY-STUB</div>,
+    component: () => <div>VERIFY-STUB</div>
   })
   const investorRoute = createRoute({
     getParentRoute: () => rootRoute,
     path: '/investor/buy',
-    component: () => <div>INVESTOR-STUB</div>,
+    component: () => <div>INVESTOR-STUB</div>
   })
   const developerRoute = createRoute({
     getParentRoute: () => rootRoute,
     path: '/developer',
-    component: () => <div>DEVELOPER-STUB</div>,
+    component: () => <div>DEVELOPER-STUB</div>
   })
   const notaryRoute = createRoute({
     getParentRoute: () => rootRoute,
     path: '/notary',
-    component: () => <div>NOTARY-STUB</div>,
+    component: () => <div>NOTARY-STUB</div>
   })
   const certifierRoute = createRoute({
     getParentRoute: () => rootRoute,
     path: '/certifier',
-    component: () => <div>CERTIFIER-STUB</div>,
+    component: () => <div>CERTIFIER-STUB</div>
   })
   return createRouter({
     routeTree: rootRoute.addChildren([
@@ -61,9 +62,9 @@ function makeRouter() {
       investorRoute,
       developerRoute,
       notaryRoute,
-      certifierRoute,
+      certifierRoute
     ]),
-    history: createMemoryHistory({ initialEntries: ['/login'] }),
+    history: createMemoryHistory({ initialEntries: ['/login'] })
   })
 }
 
@@ -72,7 +73,7 @@ async function renderLogin() {
   render(
     <LocaleProvider>
       <RouterProvider router={router} />
-    </LocaleProvider>,
+    </LocaleProvider>
   )
   await screen.findByText('Ingresar')
   return router
@@ -90,8 +91,9 @@ describe('LoginScreen', () => {
   })
 
   it('login exitoso: llama a la API con las credenciales, guarda la sesión y redirige al panel del rol devuelto', async () => {
-    const fetchMock = vi.fn<typeof fetch>(async () =>
-      new Response(JSON.stringify({ token: 'jwt-de-prueba', user: DEMO_USER }), { status: 200 }),
+    const fetchMock = vi.fn<typeof fetch>(
+      async () =>
+        new Response(JSON.stringify({ token: 'jwt-de-prueba', user: DEMO_USER }), { status: 200 })
     )
     vi.stubGlobal('fetch', fetchMock)
 
@@ -104,12 +106,12 @@ describe('LoginScreen', () => {
 
     expect(fetchMock).toHaveBeenCalledWith(
       '/api/v1/auth/login',
-      expect.objectContaining({ method: 'POST' }),
+      expect.objectContaining({ method: 'POST' })
     )
     const body = JSON.parse(String(fetchMock.mock.calls[0]?.[1]?.body))
     expect(body).toEqual({
       email: ROLE_PRESETS[0].email,
-      password: ROLE_PRESETS[0].password,
+      password: ROLE_PRESETS[0].password
     })
 
     const stored = JSON.parse(window.sessionStorage.getItem('proptrust.session') ?? 'null')
@@ -118,8 +120,8 @@ describe('LoginScreen', () => {
   })
 
   it('elegir otro rol precarga las credenciales de ese perfil del seed', async () => {
-    const fetchMock = vi.fn<typeof fetch>(async () =>
-      new Response(JSON.stringify({ token: 't', user: DEMO_USER }), { status: 200 }),
+    const fetchMock = vi.fn<typeof fetch>(
+      async () => new Response(JSON.stringify({ token: 't', user: DEMO_USER }), { status: 200 })
     )
     vi.stubGlobal('fetch', fetchMock)
 
@@ -137,8 +139,8 @@ describe('LoginScreen', () => {
     // Se toca la solapa Certifier pero la API responde con un usuario
     // developer (podría pasar con cualquier credencial válida bajo la solapa
     // equivocada) — el ruteo tiene que ir a /developer, no a /certifier.
-    const fetchMock = vi.fn<typeof fetch>(async () =>
-      new Response(JSON.stringify({ token: 't', user: DEMO_USER }), { status: 200 }),
+    const fetchMock = vi.fn<typeof fetch>(
+      async () => new Response(JSON.stringify({ token: 't', user: DEMO_USER }), { status: 200 })
     )
     vi.stubGlobal('fetch', fetchMock)
 
@@ -151,9 +153,14 @@ describe('LoginScreen', () => {
   })
 
   it('login exitoso como rol notary aterriza en /notary', async () => {
-    const notaryUser = { id: 'u2', email: 'notary@example.com', role: 'notary', fullName: 'Notary Demo' }
-    const fetchMock = vi.fn<typeof fetch>(async () =>
-      new Response(JSON.stringify({ token: 't', user: notaryUser }), { status: 200 }),
+    const notaryUser = {
+      id: 'u2',
+      email: 'notary@example.com',
+      role: 'notary',
+      fullName: 'Notary Demo'
+    }
+    const fetchMock = vi.fn<typeof fetch>(
+      async () => new Response(JSON.stringify({ token: 't', user: notaryUser }), { status: 200 })
     )
     vi.stubGlobal('fetch', fetchMock)
 
@@ -167,9 +174,10 @@ describe('LoginScreen', () => {
   it('credenciales inválidas (401): muestra el error, no redirige y no guarda sesión', async () => {
     vi.stubGlobal(
       'fetch',
-      vi.fn(async () =>
-        new Response(JSON.stringify({ message: 'Invalid credentials' }), { status: 401 }),
-      ),
+      vi.fn(
+        async () =>
+          new Response(JSON.stringify({ message: 'Invalid credentials' }), { status: 401 })
+      )
     )
 
     const router = await renderLogin()
@@ -187,9 +195,10 @@ describe('LoginScreen', () => {
     // levantada y es justamente ella la que decidió cortar.
     vi.stubGlobal(
       'fetch',
-      vi.fn(async () =>
-        new Response(JSON.stringify({ message: 'Too many login attempts' }), { status: 429 }),
-      ),
+      vi.fn(
+        async () =>
+          new Response(JSON.stringify({ message: 'Too many login attempts' }), { status: 429 })
+      )
     )
 
     const router = await renderLogin()
@@ -211,14 +220,19 @@ describe('LoginScreen', () => {
     fireEvent.click(screen.getByText('ES'))
     await screen.findByText('EN')
 
-    expect((screen.getByLabelText('Username') as HTMLInputElement).value).toBe('alguien@example.com')
+    expect((screen.getByLabelText('Username') as HTMLInputElement).value).toBe(
+      'alguien@example.com'
+    )
     expect((screen.getByLabelText('Password') as HTMLInputElement).value).toBe('un-secreto')
   })
 
   it('API caída: muestra un mensaje accionable en lugar de romperse', async () => {
-    vi.stubGlobal('fetch', vi.fn(async () => {
-      throw new TypeError('fetch failed')
-    }))
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(async () => {
+        throw new TypeError('fetch failed')
+      })
+    )
 
     await renderLogin()
     fireEvent.click(screen.getByText('Ingresar'))

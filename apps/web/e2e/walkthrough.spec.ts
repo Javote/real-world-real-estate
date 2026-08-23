@@ -1,6 +1,6 @@
-import { test, expect, type Page } from '@playwright/test'
 import { mkdirSync } from 'node:fs'
 import { join } from 'node:path'
+import { expect, type Page, test } from '@playwright/test'
 
 // Walkthrough: recorre la app como la recorrería una persona y deja una captura
 // por pantalla. No es un test de regresión estricto — es la evidencia visual de
@@ -12,7 +12,7 @@ import { join } from 'node:path'
 const SHOTS = join(import.meta.dirname, '.artifacts', 'screenshots')
 mkdirSync(SHOTS, { recursive: true })
 
-// Usuarios del seed (packages/api/src/db/seed.ts), con el landing que le
+// Usuarios del seed (apps/api/src/db/seed.ts), con el landing que le
 // corresponde a cada uno desde SPEC-011 (apps/web/src/auth/roles.ts
 // ROLE_LANDING). El valor del rol (`buyer`/`verifier`) todavía no coincide
 // con la etiqueta de UI (Investor/Certifier) — ver SPEC-011 §Preguntas
@@ -21,22 +21,34 @@ mkdirSync(SHOTS, { recursive: true })
 // `admin` queda afuera de este listado a propósito: no tiene solapa ni
 // landing en esta rebanada (SPEC-011 §Casos borde) — se prueba aparte.
 const SEED_USERS = [
-  { role: 'buyer', tab: 'Investor', email: 'buyer@example.com', password: 'buyer123', landing: '/investor/buy' },
+  {
+    role: 'buyer',
+    tab: 'Investor',
+    email: 'buyer@example.com',
+    password: 'buyer123',
+    landing: '/investor/buy'
+  },
   {
     role: 'developer',
     tab: 'Developer',
     email: 'developer@example.com',
     password: 'developer123',
-    landing: '/developer',
+    landing: '/developer'
   },
-  { role: 'notary', tab: 'Notary', email: 'notary@example.com', password: 'notary123', landing: '/notary' },
+  {
+    role: 'notary',
+    tab: 'Notary',
+    email: 'notary@example.com',
+    password: 'notary123',
+    landing: '/notary'
+  },
   {
     role: 'verifier',
     tab: 'Certifier',
     email: 'verifier@example.com',
     password: 'verifier123',
-    landing: '/certifier',
-  },
+    landing: '/certifier'
+  }
 ] as const
 
 async function shot(page: Page, name: string) {
@@ -48,11 +60,11 @@ async function shot(page: Page, name: string) {
       [aria-label="Open TanStack Devtools"],
       .tsqd-parent-container,
       #tanstack-devtools { display: none !important; }
-    `,
+    `
   })
   await page.screenshot({
     path: join(SHOTS, `${project}--${name}.png`),
-    fullPage: true,
+    fullPage: true
   })
 }
 
@@ -88,7 +100,7 @@ async function login(page: Page, tab: string, email: string, password: string, l
 
 test.describe('Walkthrough', () => {
   test('AUTH-LOGIN-001 · la pantalla de login carga y ofrece los perfiles del seed', async ({
-    page,
+    page
   }) => {
     await page.goto('/login')
     await expect(page.getByRole('button', { name: 'Ingresar' })).toBeVisible()
@@ -130,7 +142,7 @@ test.describe('Walkthrough', () => {
   }
 
   test('AUTH-LOGIN-004 · admin no tiene solapa ni landing en esta rebanada (SPEC-011 §Casos borde)', async ({
-    page,
+    page
   }) => {
     await gotoLogin(page)
     await page.getByLabel('Usuario').fill('admin@example.com')
@@ -142,7 +154,7 @@ test.describe('Walkthrough', () => {
   })
 
   test('DEV-PROJECT-DETAIL-001 · detalle de proyecto con sus stages y evidencia', async ({
-    page,
+    page
   }) => {
     await login(page, 'Developer', 'developer@example.com', 'developer123', '/developer')
 

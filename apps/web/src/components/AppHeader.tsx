@@ -22,9 +22,15 @@ export function AppHeader({ session }: { session: Session }) {
         <span className="role-badge">{session.user.role}</span>
         <span>{session.user.fullName}</span>
         <button
+          type="button"
           onClick={logout}
           aria-label="Salir"
-          style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--gray-600)' }}
+          style={{
+            background: 'none',
+            border: 'none',
+            cursor: 'pointer',
+            color: 'var(--gray-600)'
+          }}
         >
           🚪
         </button>

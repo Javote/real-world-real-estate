@@ -4,7 +4,7 @@ const LABELS: Record<MilestoneState, { label: string; className: string }> = {
   Pending: { label: 'Pendiente', className: 'pending' },
   InProgress: { label: 'En progreso', className: 'inprogress' },
   Completed: { label: 'Completado', className: 'completed' },
-  Observed: { label: 'Observado', className: 'observed' },
+  Observed: { label: 'Observado', className: 'observed' }
 }
 
 export function MilestoneStateBadge({ state }: { state: MilestoneState }) {

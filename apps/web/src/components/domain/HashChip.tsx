@@ -15,14 +15,9 @@ export function HashChip({ hash }: { hash: string }) {
       <span className="truncate" style={{ maxWidth: '16rem' }}>
         {hash}
       </span>
-      <span
-        className="copy-btn"
-        role="button"
-        aria-label="Copiar hash"
-        onClick={copy}
-      >
+      <button type="button" className="copy-btn" aria-label="Copiar hash" onClick={copy}>
         {copied ? '✓' : '📋'}
-      </span>
+      </button>
     </span>
   )
 }

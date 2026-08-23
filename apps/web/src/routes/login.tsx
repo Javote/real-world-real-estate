@@ -1,18 +1,18 @@
 import { createFileRoute, Link, useNavigate } from '@tanstack/react-router'
 import { useState } from 'react'
-import { api, ApiError } from '../api/port'
-import { setSession } from '../auth/session'
+import { ApiError, api } from '../api/port'
 import { ROLE_LANDING } from '../auth/roles'
+import { setSession } from '../auth/session'
 import { GradientHeader } from '../components/domain/GradientHeader'
 import { LanguageToggle } from '../components/domain/LanguageToggle'
-import { TextInput } from '../components/domain/TextInput'
 import { PrimaryButton } from '../components/domain/PrimaryButton'
-import { useTranslation } from '../i18n/useTranslation'
+import { TextInput } from '../components/domain/TextInput'
 import type { TranslationKey } from '../i18n/dictionary'
+import { useTranslation } from '../i18n/useTranslation'
 
 export const Route = createFileRoute('/login')({ component: LoginScreen })
 
-// Perfiles del seed (packages/api/src/db/seed.ts). El rol "certifier" y
+// Perfiles del seed (apps/api/src/db/seed.ts). El rol "certifier" y
 // "investor" de la maqueta corresponden a los roles globales `verifier` y
 // `buyer` del backend — ver SPEC-011 §Preguntas abiertas.
 export const ROLE_PRESETS = [
@@ -21,15 +21,20 @@ export const ROLE_PRESETS = [
     key: 'developer',
     tabKey: 'login.tabs.developer',
     email: 'developer@example.com',
-    password: 'developer123',
+    password: 'developer123'
   },
-  { key: 'notary', tabKey: 'login.tabs.notary', email: 'notary@example.com', password: 'notary123' },
+  {
+    key: 'notary',
+    tabKey: 'login.tabs.notary',
+    email: 'notary@example.com',
+    password: 'notary123'
+  },
   {
     key: 'verifier',
     tabKey: 'login.tabs.certifier',
     email: 'verifier@example.com',
-    password: 'verifier123',
-  },
+    password: 'verifier123'
+  }
 ] as const satisfies ReadonlyArray<{
   key: string
   tabKey: TranslationKey

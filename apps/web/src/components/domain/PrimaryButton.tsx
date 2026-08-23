@@ -12,7 +12,13 @@ interface PrimaryButtonProps {
   onClick?: () => void
 }
 
-export function PrimaryButton({ children, type = 'button', disabled, loading, onClick }: PrimaryButtonProps) {
+export function PrimaryButton({
+  children,
+  type = 'button',
+  disabled,
+  loading,
+  onClick
+}: PrimaryButtonProps) {
   return (
     <button
       type={type}

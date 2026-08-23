@@ -4,19 +4,26 @@
   "version": "0.1.0",
   "packageManager": "pnpm@9.15.0",
   "engines": {
-    "node": ">=20"
+    "node": ">=22.12"
   },
   "scripts": {
-    "dev": "pnpm --parallel -r --filter './apps/**' --filter './packages/api' dev",
+    "dev": "pnpm --parallel -r --filter './apps/**' dev",
     "build": "pnpm -r build",
     "typecheck": "pnpm --filter @plataforma/shared build && pnpm -r typecheck",
     "lint": "pnpm -r lint",
     "test": "pnpm -r test",
     "verify": "pnpm typecheck && pnpm test && pnpm build",
-    "db:migrate": "pnpm --filter @plataforma/api db:migrate",
-    "db:seed": "pnpm --filter @plataforma/api db:seed",
     "contracts:check": "cd contracts && aiken check",
     "contracts:build": "cd contracts && aiken build",
+    "contracts:verify": "cd contracts && aiken fmt --check && aiken check && aiken build",
+    "verify:all": "pnpm verify && pnpm contracts:verify",
+    "db:migrate": "pnpm --filter @plataforma/api db:migrate",
+    "db:seed": "pnpm --filter @plataforma/api db:seed",
     "e2e": "pnpm --filter web e2e"
+  },
+  "pnpm": {
+    "overrides": {
+      "@types/express": "^5.0.6"
+    }
   }
 }

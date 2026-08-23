@@ -46,7 +46,7 @@ const esAR = {
   'languageToggle.switchTo': 'English',
   'languageToggle.label': 'Idioma',
   'nav.ariaLabel': 'Navegación principal',
-  'notifications.ariaLabel': 'Notificaciones',
+  'notifications.ariaLabel': 'Notificaciones'
 } as const
 
 export type TranslationKey = keyof typeof esAR
@@ -86,7 +86,7 @@ const enUS = {
   'nav.certifier.issued': 'Issued',
   'nav.certifier.profile': 'Profile',
   'panel.investor.title': 'Buy',
-  'panel.developer.title': "Developer panel",
+  'panel.developer.title': 'Developer panel',
   'panel.notary.title': 'Notary panel',
   'panel.certifier.title': 'Certifier panel',
   'panel.emptyValue': '—',
@@ -94,10 +94,10 @@ const enUS = {
   'languageToggle.switchTo': 'Español',
   'languageToggle.label': 'Language',
   'nav.ariaLabel': 'Main navigation',
-  'notifications.ariaLabel': 'Notifications',
+  'notifications.ariaLabel': 'Notifications'
 } satisfies Record<TranslationKey, string>
 
 export const dictionary: Record<Locale, Record<TranslationKey, string>> = {
   'es-AR': esAR,
-  'en-US': enUS,
+  'en-US': enUS
 }

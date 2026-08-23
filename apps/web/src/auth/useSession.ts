@@ -1,5 +1,5 @@
-import { useEffect, useState } from 'react'
 import { useNavigate } from '@tanstack/react-router'
+import { useEffect, useState } from 'react'
 import { getSession, type Session } from './session'
 
 // La sesión vive en sessionStorage → solo existe en el cliente. Las rutas

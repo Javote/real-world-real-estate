@@ -1,4 +1,4 @@
-// Tipos de las respuestas de packages/api.
+// Tipos de las respuestas de apps/api.
 //
 // Lo de auth ya NO se declara acá: viene de @plataforma/shared, que es donde el
 // contrato existe una sola vez (regla 6). Si la API cambia la forma de una

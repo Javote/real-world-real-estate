@@ -1,20 +1,20 @@
-import { afterEach, beforeEach, describe, expect, it } from 'vitest'
-import { cleanup, fireEvent, render, screen } from '@testing-library/react'
 import {
-  Outlet,
-  RouterProvider,
   createMemoryHistory,
   createRootRoute,
   createRoute,
   createRouter,
+  Outlet,
+  RouterProvider
 } from '@tanstack/react-router'
+import { cleanup, fireEvent, render, screen } from '@testing-library/react'
 import { Heart, ShoppingBag } from 'lucide-react'
-import { BottomNav, type BottomNavItem } from './BottomNav'
+import { afterEach, beforeEach, describe, expect, it } from 'vitest'
 import { LocaleProvider } from '../../i18n/useTranslation'
+import { BottomNav, type BottomNavItem } from './BottomNav'
 
 const items: BottomNavItem[] = [
   { key: 'favorites', label: 'Favoritos', icon: Heart },
-  { key: 'buy', label: 'Comprar', icon: ShoppingBag, to: '/investor/buy' },
+  { key: 'buy', label: 'Comprar', icon: ShoppingBag, to: '/investor/buy' }
 ]
 
 function renderNav() {
@@ -27,16 +27,16 @@ function renderNav() {
         <div>BUY-SCREEN</div>
         <BottomNav items={items} />
       </>
-    ),
+    )
   })
   const router = createRouter({
     routeTree: rootRoute.addChildren([buyRoute]),
-    history: createMemoryHistory({ initialEntries: ['/investor/buy'] }),
+    history: createMemoryHistory({ initialEntries: ['/investor/buy'] })
   })
   render(
     <LocaleProvider>
       <RouterProvider router={router} />
-    </LocaleProvider>,
+    </LocaleProvider>
   )
   return router
 }

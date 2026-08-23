@@ -23,11 +23,7 @@ export function GradientHeader({ title, subtitle, back, right }: GradientHeaderP
       </div>
 
       {back ? (
-        <button
-          type="button"
-          onClick={back.onClick}
-          className="mt-2 text-sm text-white/80"
-        >
+        <button type="button" onClick={back.onClick} className="mt-2 text-sm text-white/80">
           ← {back.label}
         </button>
       ) : null}

@@ -5,7 +5,7 @@ const STATUS_LABEL: Record<Project['status'], { text: string; className: string 
   planning: { text: '○ Por iniciar', className: 'status-ontrack' },
   in_progress: { text: '✓ En curso', className: 'status-ontrack' },
   delayed: { text: '⚠ Retrasado', className: 'status-delayed' },
-  completed: { text: '✓ Completado', className: 'status-ontrack' },
+  completed: { text: '✓ Completado', className: 'status-ontrack' }
 }
 
 export function projectProgress(project: Project): { done: number; total: number; pct: number } {
@@ -48,9 +48,7 @@ export function ProjectCard({ project }: { project: Project }) {
             <div className="progress-fill" style={{ width: `${pct}%` }} />
           </div>
           <div className="progress-text">
-            <span>
-              {total > 0 ? `${done} de ${total} milestones` : 'Sin milestones'}
-            </span>
+            <span>{total > 0 ? `${done} de ${total} milestones` : 'Sin milestones'}</span>
             <span className={`project-status ${status.className}`}>{status.text}</span>
           </div>
         </div>

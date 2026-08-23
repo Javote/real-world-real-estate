@@ -3,8 +3,8 @@
 // layout interno que los combina — GradientHeader + BottomNav/sidebar +
 // contenido — para no repetirlo cuatro veces.
 import type { ReactNode } from 'react'
-import { GradientHeader } from './domain/GradientHeader'
 import { BottomNav, type BottomNavItem } from './domain/BottomNav'
+import { GradientHeader } from './domain/GradientHeader'
 import { LanguageToggle } from './domain/LanguageToggle'
 
 interface PanelShellProps {

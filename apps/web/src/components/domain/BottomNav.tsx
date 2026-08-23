@@ -1,8 +1,9 @@
 // Componente de dominio (M2-D3 §Foundation): navegación primaria, role-scoped.
 // Mobile: barra fija al pie. Desktop: se reemplaza por sidebar izquierda con
 // los mismos items y orden (M2-D1 §Responsive behavior).
-import type { LucideIcon } from 'lucide-react'
+
 import { Link, useRouterState } from '@tanstack/react-router'
+import type { LucideIcon } from 'lucide-react'
 import { useTranslation } from '../../i18n/useTranslation'
 
 // Los únicos 4 landings reales de esta rebanada (SPEC-011). Un tab de una
@@ -55,7 +56,7 @@ export function BottomNav({ items }: { items: BottomNavItem[] }) {
 function NavButton({
   item,
   active,
-  vertical,
+  vertical
 }: {
   item: BottomNavItem
   active: boolean

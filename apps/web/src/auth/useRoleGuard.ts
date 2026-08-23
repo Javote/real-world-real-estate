@@ -2,12 +2,13 @@
 // SPEC-011): cada landing de rol valida contra el grupo de M2-D1, no solo
 // contra "hay sesión". Nadie con rol developer aterriza en /certifier
 // cambiando la URL a mano.
-import { useEffect, useState } from 'react'
+
 import { useNavigate } from '@tanstack/react-router'
-import { api, ApiError } from '../api/port'
-import { clearSession, getSession, type Session } from './session'
-import { ROLE_LANDING } from './roles'
+import { useEffect, useState } from 'react'
+import { ApiError, api } from '../api/port'
 import type { UserRole } from '../api/types'
+import { ROLE_LANDING } from './roles'
+import { clearSession, getSession, type Session } from './session'
 
 export function useRoleGuard(allowedRoles: readonly UserRole[]) {
   const navigate = useNavigate()
@@ -56,7 +57,7 @@ export function useRoleGuard(allowedRoles: readonly UserRole[]) {
       cancelled = true
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [navigate])
+  }, [navigate, allowedRoles.includes])
 
   return { session, ready }
 }

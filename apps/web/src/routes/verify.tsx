@@ -78,7 +78,12 @@ function VerifyScreen() {
                     if (e.key === 'Enter') void verify()
                   }}
                 />
-                <button className="btn btn-primary" onClick={() => void verify()} disabled={busy}>
+                <button
+                  type="button"
+                  className="btn btn-primary"
+                  onClick={() => void verify()}
+                  disabled={busy}
+                >
                   {busy ? 'Verificando…' : 'Verificar'}
                 </button>
               </div>
@@ -106,7 +111,9 @@ function VerifyScreen() {
                     <span className="proof-label">Proyecto asociado</span>
                     <span className="proof-value">
                       {result.match.project.name}
-                      {result.match.evidence.milestone ? ` · ${result.match.evidence.milestone.name}` : ''}
+                      {result.match.evidence.milestone
+                        ? ` · ${result.match.evidence.milestone.name}`
+                        : ''}
                     </span>
                   </div>
                   <div className="proof-row">
@@ -144,9 +151,8 @@ function VerifyScreen() {
             <div className="result-card">
               <p style={{ color: 'var(--gray-600)' }}>
                 La verificación sin cuenta estará disponible cuando el anclaje on-chain esté
-                integrado (D-014): ahí cualquier persona podrá validar un hash o TXID
-                directamente contra Cardano. Por ahora, iniciá sesión para verificar contra tus
-                proyectos.
+                integrado (D-014): ahí cualquier persona podrá validar un hash o TXID directamente
+                contra Cardano. Por ahora, iniciá sesión para verificar contra tus proyectos.
               </p>
             </div>
           </div>
@@ -159,7 +165,14 @@ function VerifyScreen() {
         </div>
       </div>
 
-      <div style={{ textAlign: 'center', padding: '2rem', color: 'var(--gray-600)', fontSize: '0.9rem' }}>
+      <div
+        style={{
+          textAlign: 'center',
+          padding: '2rem',
+          color: 'var(--gray-600)',
+          fontSize: '0.9rem'
+        }}
+      >
         <p>PropNexus · Trazabilidad inmobiliaria con blockchain</p>
         <p style={{ marginTop: '0.5rem' }}>Powered by Cardano</p>
       </div>

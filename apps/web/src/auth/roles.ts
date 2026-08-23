@@ -16,5 +16,5 @@ export const ROLE_LANDING: Record<UserRole, string | null> = {
   verifier: '/certifier',
   // admin queda fuera de alcance de esta rebanada (SPEC-011 §Casos borde):
   // no tiene solapa ni landing propio todavía.
-  admin: null,
+  admin: null
 }

@@ -3,7 +3,7 @@
 // página (invariante 6 de SPEC-011).
 import { createContext, useCallback, useContext, useEffect, useMemo, useState } from 'react'
 import { dictionary, type TranslationKey } from './dictionary'
-import { DEFAULT_LOCALE, getStoredLocale, setStoredLocale, type Locale } from './locale'
+import { DEFAULT_LOCALE, getStoredLocale, type Locale, setStoredLocale } from './locale'
 
 interface LocaleContextValue {
   locale: Locale

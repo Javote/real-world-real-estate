@@ -1,28 +1,28 @@
-import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
-import { cleanup, render, screen } from '@testing-library/react'
 import {
-  Outlet,
-  RouterProvider,
   createMemoryHistory,
   createRootRoute,
   createRoute,
   createRouter,
+  Outlet,
+  RouterProvider
 } from '@tanstack/react-router'
-import { useRoleGuard } from './useRoleGuard'
+import { cleanup, render, screen } from '@testing-library/react'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { CERTIFIER_ROLES } from './roles'
-import { setSession, type Session } from './session'
+import { type Session, setSession } from './session'
+import { useRoleGuard } from './useRoleGuard'
 
 const CERTIFIER_USER: Session['user'] = {
   id: 'u-cer',
   email: 'verifier@example.com',
   role: 'verifier',
-  fullName: 'Certifier Demo',
+  fullName: 'Certifier Demo'
 }
 const DEVELOPER_USER: Session['user'] = {
   id: 'u-dev',
   email: 'developer@example.com',
   role: 'developer',
-  fullName: 'Developer Demo',
+  fullName: 'Developer Demo'
 }
 
 function GuardedScreen() {
@@ -36,21 +36,21 @@ function makeRouter(initial: string) {
   const loginRoute = createRoute({
     getParentRoute: () => rootRoute,
     path: '/login',
-    component: () => <div>LOGIN-STUB</div>,
+    component: () => <div>LOGIN-STUB</div>
   })
   const developerRoute = createRoute({
     getParentRoute: () => rootRoute,
     path: '/developer',
-    component: () => <div>DEVELOPER-STUB</div>,
+    component: () => <div>DEVELOPER-STUB</div>
   })
   const certifierRoute = createRoute({
     getParentRoute: () => rootRoute,
     path: '/certifier',
-    component: GuardedScreen,
+    component: GuardedScreen
   })
   return createRouter({
     routeTree: rootRoute.addChildren([loginRoute, developerRoute, certifierRoute]),
-    history: createMemoryHistory({ initialEntries: [initial] }),
+    history: createMemoryHistory({ initialEntries: [initial] })
   })
 }
 
@@ -75,7 +75,7 @@ describe('useRoleGuard', () => {
     setSession({ token: 't', user: DEVELOPER_USER })
     vi.stubGlobal(
       'fetch',
-      vi.fn(async () => new Response(JSON.stringify(DEVELOPER_USER), { status: 200 })),
+      vi.fn(async () => new Response(JSON.stringify(DEVELOPER_USER), { status: 200 }))
     )
 
     const router = makeRouter('/certifier')
@@ -100,7 +100,7 @@ describe('useRoleGuard', () => {
     setSession({ token: 'expirado', user: CERTIFIER_USER })
     vi.stubGlobal(
       'fetch',
-      vi.fn(async () => new Response(JSON.stringify({ message: 'Invalid token' }), { status: 401 })),
+      vi.fn(async () => new Response(JSON.stringify({ message: 'Invalid token' }), { status: 401 }))
     )
 
     const router = makeRouter('/certifier')

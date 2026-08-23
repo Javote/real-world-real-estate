@@ -1,19 +1,22 @@
-import { createFileRoute, Link } from '@tanstack/react-router'
 import { useQuery } from '@tanstack/react-query'
+import { createFileRoute, Link } from '@tanstack/react-router'
 import { useState } from 'react'
 import { api } from '../api/port'
 import type { Milestone, Project } from '../api/types'
+import { useRequireSession } from '../auth/useSession'
 import { AppHeader } from '../components/AppHeader'
 import { ProjectCard } from '../components/domain/ProjectCard'
-import { useRequireSession } from '../auth/useSession'
 
 export const Route = createFileRoute('/dashboard')({ component: Dashboard })
 
 type MilestoneWithProject = Milestone & { project: Project }
 
-function milestonesByState(projects: Project[], states: Milestone['state'][]): MilestoneWithProject[] {
+function milestonesByState(
+  projects: Project[],
+  states: Milestone['state'][]
+): MilestoneWithProject[] {
   return projects.flatMap((p) =>
-    p.milestones.filter((m) => states.includes(m.state)).map((m) => ({ ...m, project: p })),
+    p.milestones.filter((m) => states.includes(m.state)).map((m) => ({ ...m, project: p }))
   )
 }
 
@@ -23,7 +26,7 @@ function Dashboard() {
   const projectsQuery = useQuery({
     queryKey: ['projects'],
     queryFn: api.listProjects,
-    enabled: !!session,
+    enabled: !!session
   })
 
   if (!ready || !session) return null
@@ -68,7 +71,7 @@ function TaskRow({
   milestone,
   priorityClass,
   meta,
-  actionLabel,
+  actionLabel
 }: {
   milestone: MilestoneWithProject
   priorityClass: string
@@ -118,12 +121,20 @@ function DeveloperDashboard({ projects }: { projects: Project[] }) {
       </div>
 
       <div className="tabs">
-        <div className={`tab ${tab === 'projects' ? 'active' : ''}`} onClick={() => setTab('projects')}>
+        <button
+          type="button"
+          className={`tab ${tab === 'projects' ? 'active' : ''}`}
+          onClick={() => setTab('projects')}
+        >
           Proyectos
-        </div>
-        <div className={`tab ${tab === 'tasks' ? 'active' : ''}`} onClick={() => setTab('tasks')}>
+        </button>
+        <button
+          type="button"
+          className={`tab ${tab === 'tasks' ? 'active' : ''}`}
+          onClick={() => setTab('tasks')}
+        >
           Tareas Pendientes
-        </div>
+        </button>
       </div>
 
       {tab === 'projects' ? (
@@ -207,7 +218,9 @@ function CertifierDashboard({ projects }: { projects: Project[] }) {
               actionLabel="Ver estado"
             />
           ))}
-          {observed.length === 0 ? <p className="page-subtitle">Sin observaciones activas.</p> : null}
+          {observed.length === 0 ? (
+            <p className="page-subtitle">Sin observaciones activas.</p>
+          ) : null}
         </div>
       </div>
     </div>
