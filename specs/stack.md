@@ -81,8 +81,9 @@ resolución (por qué `types` apunta al `.d.ts` y no al fuente) está en `packag
 | Blueprint `plutus.json` | commiteado, CI verifica que esté al día | ● | D-017 |
 | Validador | `validators/stage.ak` | ● | Datum alineado con `M1-D2` y firma del operador; reescrito por D-057 |
 | `lib/` puro y testeable | `lib/propnexus/fsm.ak` | ● | D-008: tipos, tabla de transiciones y reglas del datum, sin contexto de tx |
-| **Tests** | **53** (32 núcleo + 21 validador) | ● | Criterio 2 del SOM: la tabla punto de rechazo → test está en `contracts/CLAUDE.md` |
-| Thread token | — | ○ | D-008 promete la propiedad y **no está**: se pueden abrir hilos paralelos (D-057) |
+| **Tests** | **72** (39 núcleo + 33 validador) | ● | Criterio 2 del SOM: la tabla punto de rechazo → test está en `contracts/CLAUDE.md` |
+| Thread token + handler `mint` | NFT por stage, asset name = `stage_ref`, sin burn | ● | D-058 cierra lo que D-008 prometía: un solo hilo por stage, y nacimiento validado |
+| Firmante | el operador (`admin`), único | ● | D-058: decisión del dueño, y es lo que el whitepaper §System Overview describe |
 | Naming del proyecto | `propnexus/stage-fsm`, `version = "1"` | ● | D-015 cumplido (entero incremental) desde D-054 |
 
 Ningún validador custodia ni transfiere valor, en ninguna fase (D-021).
@@ -176,7 +177,6 @@ la ruta en vez de depender de un escáner. Ninguna ruta llama ya a `canAccessPro
 | Pregunta | Default vigente | Qué la cierra |
 |---|---|---|
 | ~~D-017 · `milestone.ak` vs `milestone2.ak`~~ | — | **Cerrada: D-054** (2026-08-23). No hizo falta spike: mismo hash de script |
-| **Thread token en el validador** | sin token: 1 input / 1 output y el `OutputReference` del hilo guardado off-chain | D-008 lo especifica y D-057 lo dejó abierto: cambiarlo cambia el hash del script, y hoy no hay nada anclado |
 | Vocabulario "certificate" en la UI | calificar levemente | postura del dueño (sub-ítem de D-026) |
 | `/verify`: cómo se verifica **sin cuenta y sin confiar en la API** | la pantalla ya existe, pero exige sesión y verifica contra la API | M1-D1 promete verificación independiente; llega con `AnchorPort` (D-014) |
 | Retención de datos | sin default | nunca se discutió (backups los cubre D-038) |

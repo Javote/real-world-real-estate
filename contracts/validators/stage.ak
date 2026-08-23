@@ -10,25 +10,48 @@
 //// performed by operator-controlled backend services"*. La co-firma CIP-30 del
 //// certificador (D-009) es Fase B y no está acá.
 ////
-//// Lo que este validador **no** hace todavía: no hay thread token, así que
-//// puede haber hilos paralelos en la misma dirección. Ver D-057.
+//// **El hilo se identifica por su thread token**, no por la dirección: todos
+//// los stages viven en la misma dirección de script, así que sin el NFT nada
+//// ataría *cuál* UTxO es el stage. `mint` acuña exactamente uno por stage, con
+//// el `stage_ref` como asset name, y `spend` exige que viaje en el output de
+//// continuación. No hay burn: el hilo es append-only (D-057).
 
+use aiken/collection/dict
 use aiken/collection/list
 use aiken/crypto.{VerificationKeyHash}
 use aiken/interval.{Finite}
-use cardano/address.{Address}
-use cardano/assets
+use cardano/address.{Address, Script}
+use cardano/assets.{PolicyId}
 use cardano/transaction.{
   Datum, InlineDatum, Input, NoDatum, Output, OutputReference, Transaction,
   ValidityRange, find_input,
 }
 use propnexus/fsm.{
-  Advance, Completed, Completion, InProgress, Observed, Pending, StageDatum,
-  StageRedeemer, StageState, valid_datum_evolution,
+  Advance, Completed, Completion, InProgress, Init, MintAction, Observed,
+  Pending, StageDatum, StageRedeemer, StageState, valid_datum_evolution,
+  valid_initial_datum,
 }
 
 fn at_address(outputs: List<Output>, address: Address) -> List<Output> {
   list.filter(outputs, fn(output) { output.address == address })
+}
+
+/// Outputs de este script que llevan el thread token del stage. Que haya
+/// exactamente uno es lo que impide partir o fusionar hilos.
+fn carrying_thread(
+  outputs: List<Output>,
+  policy: PolicyId,
+  stage_ref: ByteArray,
+) -> List<Output> {
+  list.filter(
+    outputs,
+    fn(output) {
+      and {
+        output.address.payment_credential == Script(policy),
+        assets.quantity_of(output.value, policy, stage_ref) == 1,
+      }
+    },
+  )
 }
 
 fn inputs_at_address(inputs: List<Input>, address: Address) -> Int {
@@ -60,11 +83,24 @@ validator stage(admin: VerificationKeyHash) {
     expect Some(old_datum) = datum
     expect Some(own_input) = find_input(tx.inputs, own_ref)
     let own_address = own_input.output.address
+    expect Script(own_policy) = own_address.payment_credential
+
+    // El UTxO que se gasta tiene que ser el hilo de este stage, no cualquier
+    // UTxO que alguien haya dejado en la dirección del script.
+    expect
+      assets.quantity_of(
+        own_input.output.value,
+        own_policy,
+        old_datum.stage_ref,
+      ) == 1
 
     // Un input del script y un output al script por transacción: sin esto,
     // dos hilos podrían fusionarse o partirse en la misma tx.
     expect inputs_at_address(tx.inputs, own_address) == 1
     expect [continuing_output] = at_address(tx.outputs, own_address)
+
+    // …y el output de continuación tiene que seguir llevando el token.
+    expect [_] = carrying_thread(tx.outputs, own_policy, old_datum.stage_ref)
 
     // Solo el operador mueve el hilo.
     expect list.has(tx.extra_signatories, admin)
@@ -88,6 +124,28 @@ validator stage(admin: VerificationKeyHash) {
     and {
       valid_datum_evolution(old_datum, new_datum, to, completion),
       time_ok,
+    }
+  }
+
+  /// Nacimiento del hilo: acuña **un** thread token cuyo asset name es el
+  /// `stage_ref`, y lo deja en el script con un datum inicial legítimo.
+  mint(action: MintAction, policy_id: PolicyId, tx: Transaction) {
+    expect list.has(tx.extra_signatories, admin)
+
+    let Init = action
+
+    // Exactamente un token, exactamente una unidad: sin esto se podrían
+    // acuñar dos hilos para el mismo stage en la misma transacción.
+    expect [Pair(asset_name, 1)] =
+      dict.to_pairs(assets.tokens(tx.mint, policy_id))
+
+    expect [thread_output] = carrying_thread(tx.outputs, policy_id, asset_name)
+    expect InlineDatum(raw_datum) = thread_output.datum
+    expect initial_datum: StageDatum = raw_datum
+
+    and {
+      initial_datum.stage_ref == asset_name,
+      valid_initial_datum(initial_datum),
     }
   }
 
@@ -131,7 +189,7 @@ fn wallet_address() -> Address {
 fn datum_at(state: StageState, critical: Bool) -> StageDatum {
   StageDatum {
     project_ref: #"70726f6a656374",
-    stage_ref: #"7374616765",
+    stage_ref,
     sequence_order: 1,
     validation_critical: critical,
     state,
@@ -140,8 +198,12 @@ fn datum_at(state: StageState, critical: Bool) -> StageDatum {
   }
 }
 
+const stage_ref: ByteArray = #"7374616765"
+
+/// El valor del hilo: el mínimo de ADA más el thread token del stage.
 fn locked_value() -> assets.Value {
   assets.from_lovelace(2_000_000)
+    |> assets.add(script_hash, stage_ref, 1)
 }
 
 fn script_input(d: StageDatum) -> Input {
@@ -511,5 +573,215 @@ test spend_rejects_open_ended_validity_range() fail {
       ..transition_tx(old, new, 100),
       validity_range: interval.everything,
     },
+  )
+}
+
+// ── Tests: thread token en las transiciones ──────────────────────────────
+
+test spend_rejects_utxo_without_thread_token() fail {
+  let old = datum_at(Pending, True)
+  let new = StageDatum { ..old, state: InProgress }
+  let bare = assets.from_lovelace(2_000_000)
+  let input =
+    Input {
+      ..script_input(old),
+      output: Output {
+        address: script_address(),
+        value: bare,
+        datum: InlineDatum(old),
+        reference_script: None,
+      },
+    }
+  stage.spend(
+    admin_key,
+    Some(old),
+    Advance { to: InProgress, completion: None },
+    own_ref,
+    tx([input], [script_output_with(InlineDatum(new), bare)], [admin_key], 100),
+  )
+}
+
+test spend_rejects_thread_token_of_another_stage() fail {
+  let old = datum_at(Pending, True)
+  let new = StageDatum { ..old, state: InProgress }
+  let impostor =
+    assets.from_lovelace(2_000_000)
+      |> assets.add(script_hash, #"6f74726f", 1)
+  let input =
+    Input {
+      ..script_input(old),
+      output: Output {
+        address: script_address(),
+        value: impostor,
+        datum: InlineDatum(old),
+        reference_script: None,
+      },
+    }
+  stage.spend(
+    admin_key,
+    Some(old),
+    Advance { to: InProgress, completion: None },
+    own_ref,
+    tx(
+      [input],
+      [script_output_with(InlineDatum(new), impostor)],
+      [admin_key],
+      100,
+    ),
+  )
+}
+
+test spend_rejects_dropping_the_thread_token() fail {
+  let old = datum_at(Pending, True)
+  let new = StageDatum { ..old, state: InProgress }
+  stage.spend(
+    admin_key,
+    Some(old),
+    Advance { to: InProgress, completion: None },
+    own_ref,
+    tx(
+      [script_input(old)],
+      [script_output_with(InlineDatum(new), assets.from_lovelace(2_000_000))],
+      [admin_key],
+      100,
+    ),
+  )
+}
+
+// ── Tests: nacimiento del hilo (mint) ────────────────────────────────────
+
+fn mint_tx(minted: assets.Value, outputs: List<Output>) -> Transaction {
+  Transaction {
+    ..transaction.placeholder,
+    mint: minted,
+    outputs,
+    extra_signatories: [admin_key],
+  }
+}
+
+fn one_token() -> assets.Value {
+  assets.from_asset(script_hash, stage_ref, 1)
+}
+
+test mint_creates_a_pending_thread() {
+  let initial = datum_at(Pending, True)
+  stage.mint(
+    admin_key,
+    Init,
+    script_hash,
+    mint_tx(
+      one_token(),
+      [script_output_with(InlineDatum(initial), locked_value())],
+    ),
+  )
+}
+
+test mint_rejects_missing_admin_signature() fail {
+  let initial = datum_at(Pending, True)
+  stage.mint(
+    admin_key,
+    Init,
+    script_hash,
+    Transaction {
+      ..mint_tx(
+        one_token(),
+        [script_output_with(InlineDatum(initial), locked_value())],
+      ),
+      extra_signatories: [other_key],
+    },
+  )
+}
+
+test mint_rejects_two_units_of_the_thread() fail {
+  let initial = datum_at(Pending, True)
+  let two =
+    assets.from_lovelace(2_000_000)
+      |> assets.add(script_hash, stage_ref, 2)
+  stage.mint(
+    admin_key,
+    Init,
+    script_hash,
+    mint_tx(
+      assets.from_asset(script_hash, stage_ref, 2),
+      [script_output_with(InlineDatum(initial), two)],
+    ),
+  )
+}
+
+test mint_rejects_two_threads_in_one_tx() fail {
+  let initial = datum_at(Pending, True)
+  let minted =
+    one_token()
+      |> assets.add(script_hash, #"6f74726f", 1)
+  stage.mint(
+    admin_key,
+    Init,
+    script_hash,
+    mint_tx(minted, [script_output_with(InlineDatum(initial), locked_value())]),
+  )
+}
+
+test mint_rejects_token_not_locked_in_the_script() fail {
+  let initial = datum_at(Pending, True)
+  let elsewhere =
+    Output {
+      address: wallet_address(),
+      value: locked_value(),
+      datum: InlineDatum(initial),
+      reference_script: None,
+    }
+  stage.mint(admin_key, Init, script_hash, mint_tx(one_token(), [elsewhere]))
+}
+
+test mint_rejects_asset_name_not_matching_stage_ref() fail {
+  let initial = StageDatum { ..datum_at(Pending, True), stage_ref: #"6f74726f" }
+  stage.mint(
+    admin_key,
+    Init,
+    script_hash,
+    mint_tx(
+      one_token(),
+      [script_output_with(InlineDatum(initial), locked_value())],
+    ),
+  )
+}
+
+test mint_rejects_starting_outside_pending() fail {
+  let initial = datum_at(InProgress, True)
+  stage.mint(
+    admin_key,
+    Init,
+    script_hash,
+    mint_tx(
+      one_token(),
+      [script_output_with(InlineDatum(initial), locked_value())],
+    ),
+  )
+}
+
+test mint_rejects_preloaded_evidence() fail {
+  let initial =
+    StageDatum {
+      ..datum_at(Pending, True),
+      evidence_root: root,
+      completed_at: 50,
+    }
+  stage.mint(
+    admin_key,
+    Init,
+    script_hash,
+    mint_tx(
+      one_token(),
+      [script_output_with(InlineDatum(initial), locked_value())],
+    ),
+  )
+}
+
+test mint_rejects_non_inline_datum() fail {
+  stage.mint(
+    admin_key,
+    Init,
+    script_hash,
+    mint_tx(one_token(), [script_output_with(NoDatum, locked_value())]),
   )
 }

@@ -8,8 +8,8 @@ Aislado del workspace pnpm (D-054): **corre en paralelo y no bloquea a nadie.** 
 para trabajarlo por separado del resto del workspace.
 
 ```
-lib/propnexus/fsm.ak     núcleo puro: tipos, tabla de transiciones, reglas del datum (32 tests)
-validators/stage.ak      el validador: lo que solo se puede chequear con la tx (21 tests)
+lib/propnexus/fsm.ak     núcleo puro: tipos, tabla de transiciones, reglas del datum (39 tests)
+validators/stage.ak      el validador: spend + mint, lo que necesita la tx    (33 tests)
 plutus.json              blueprint — se commitea tras cada build
 ```
 
@@ -43,7 +43,7 @@ validador necesita para decidir.
 
 | Campo | De dónde sale | Por qué está |
 |---|---|---|
-| `project_ref`, `stage_ref` | `milestone_id: UUID` de M1-D2 | refs **opacas**; el `name` del stage no viaja |
+| `project_ref`, `stage_ref` | `milestone_id: UUID` de M1-D2 | refs **opacas**: los bytes crudos del id off-chain (hoy cuid2, 24 bytes). `stage_ref` es además el asset name del thread token, de ahí el tope de 32 |
 | `sequence_order` | M1-D2 | orden del stage dentro del proyecto; parte de la identidad |
 | `validation_critical` | M1-D2 | decide si completar exige evidencia |
 | `state` | M1-D2 §3 | la FSM de D-020 |
@@ -55,9 +55,28 @@ validation-critical cannot reach Certified status unless their required evidence
 Acá eso es literal: `validation_critical == True` sin un commitment de 32 bytes **no llega a
 `Completed`**.
 
-**El firmante es un solo `admin`, y eso es lo que M1 pide.** El whitepaper §System Overview dice
-*"All blockchain interactions are performed by operator-controlled backend services"*. La co-firma
-CIP-30 del certificador (D-009) es Fase B: no está acá, y su ausencia no es un desvío.
+**El firmante es un solo `admin`, y es definitivo** (D-058): el whitepaper §System Overview dice
+*"All blockchain interactions are performed by operator-controlled backend services"*, y el dueño
+ratificó que no hace falta un certificador externo firmando en la cadena. No hay co-firma CIP-30
+pendiente acá. **Consecuencia, y hay que decirla:** lo que la cadena prueba es la **integridad de la
+secuencia y del momento**, no que un profesional atestiguó. La atestiguación vive off-chain
+(documento firmado + `AuditLog`), que es exactamente el reparto de las cuatro afirmaciones de D-026.
+
+## El hilo: un token por stage, y no se puede quemar
+
+Todos los stages viven en la **misma dirección de script**, así que la dirección no identifica a
+nadie. Lo que identifica al hilo es un **NFT** cuyo asset name es el `stage_ref`:
+
+- `mint` acuña **exactamente uno** por stage y lo deja en el script con un datum inicial legítimo
+  (`Pending`, sin evidencia, sin fecha, `sequence_order > 0`, refs no vacías ≤32 bytes).
+- `spend` exige que el UTxO que se gasta lleve el token **y** que el output de continuación lo siga
+  llevando. Un UTxO cualquiera abandonado en la dirección del script no es un hilo.
+- **No hay burn.** Quemar el token sería borrar la historia de un stage, y el punto entero del hilo
+  es que ni el operador pueda hacerlo (D-008). El hilo es append-only, como el `AuditLog`.
+
+Sin el token, el operador podía crear dos UTxOs para el mismo stage con estados contradictorios y
+**los dos validaban**: quien verifica tenía que preguntarnos cuál era el bueno, que es la confianza
+que el producto viene a eliminar.
 
 ## Coverage: cada punto de rechazo contra su test
 
@@ -65,7 +84,7 @@ CIP-30 del certificador (D-009) es Fase B: no está acá, y su ausencia no es un
 distribución de labels en property tests—, así que el ≥95% del criterio 2 del SOM se demuestra con
 esta tabla. **53 tests, 0 fallando.**
 
-`lib/propnexus/fsm.ak` — 32:
+`lib/propnexus/fsm.ak` — 39:
 
 | Qué prueba | Tests |
 |---|---|
@@ -74,8 +93,9 @@ esta tabla. **53 tests, 0 fallando.**
 | La identidad no se reescribe (proyecto, stage, orden, criticidad) | `t_identity_*` (5) |
 | Un stage crítico exige commitment de 32 bytes; uno no crítico no | `t_critical_needs_a_full_commitment`, `t_non_critical_completes_without_evidence` |
 | Evolución del datum: completar, no completar, y los cruces inválidos | `t_evolution_*` (9) |
+| Nacimiento del hilo: estado inicial, evidencia y fecha en cero, orden positivo, refs no vacías y ≤32 bytes | `t_initial_*` (7) |
 
-`validators/stage.ak` — 21 (5 caminos felices + 16 puntos de rechazo):
+`validators/stage.ak` — 33 (6 caminos felices + 27 puntos de rechazo):
 
 | Punto de rechazo | Test |
 |---|---|
@@ -95,6 +115,17 @@ esta tabla. **53 tests, 0 fallando.**
 | el datum nuevo no coincide con el redeemer | `spend_rejects_datum_not_matching_redeemer` |
 | `completed_at` fuera de la ventana de validez | `spend_rejects_timestamp_outside_validity_range` |
 | ventana de validez abierta (sin punta finita) | `spend_rejects_open_ended_validity_range` |
+| el UTxO gastado no lleva thread token | `spend_rejects_utxo_without_thread_token` |
+| el token es el de otro stage | `spend_rejects_thread_token_of_another_stage` |
+| la transición se queda con el token | `spend_rejects_dropping_the_thread_token` |
+| acuñar sin firma del operador | `mint_rejects_missing_admin_signature` |
+| acuñar 2 unidades del mismo token | `mint_rejects_two_units_of_the_thread` |
+| acuñar dos hilos en la misma tx | `mint_rejects_two_threads_in_one_tx` |
+| el token acuñado no queda en el script | `mint_rejects_token_not_locked_in_the_script` |
+| el asset name no coincide con el `stage_ref` del datum | `mint_rejects_asset_name_not_matching_stage_ref` |
+| nacer fuera de `Pending` | `mint_rejects_starting_outside_pending` |
+| nacer con evidencia o fecha ya puestas | `mint_rejects_preloaded_evidence` |
+| datum inicial no inline | `mint_rejects_non_inline_datum` |
 
 Los negativos van marcados `test ... fail` porque los `expect` abortan en vez de devolver `False`.
 
@@ -105,18 +136,13 @@ Los negativos van marcados `test ... fail` porque los `expect` abortan en vez de
   estado anterior: hoy se puede ir de `Pending` a `Completed`, o salir de `Completed`. El validador
   lo prohíbe, el backend no. **Es el arreglo más barato y de mayor valor pendiente del proyecto**, y
   vive del otro lado: `apps/api/CLAUDE.md`.
-- **No hay thread token** (D-057, punto abierto 1). El validador exige 1 input y 1 output en la
-  dirección del script, pero nada ata *cuál* UTxO es el hilo legítimo: se pueden abrir hilos
-  paralelos con datums inventados. Se mitiga off-chain guardando el `OutputReference` del hilo
-  real, así que la propiedad on-chain que promete D-008 **no está**.
-- **No hay handler de creación.** Sin `mint`, el primer UTxO del hilo lo crea el operador con el
-  datum que quiera: `Pending`, `sequence_order` y refs no se validan al nacer, solo se preservan.
-  Se cierra junto con el thread token.
-- **Cero co-firma por rol** (D-057, punto abierto 2): D-009 pide CIP-30 de notario y certificador
-  para Fase B; hoy firma solo el operador, que es lo que M1 describe para Fase A.
-- **El mapeo de ids off-chain → `*_ref` no está definido.** M1-D2 dice UUID, la regla 1 también, y
-  el backend usa cuid2. El datum acepta cualquier `ByteArray`, así que la decisión sigue afuera:
-  bytes del id, o `sha256(id)`. Definirlo antes del primer anclaje real.
+- **El `stage_ref` es el id off-chain en bytes, y hoy ese id es cuid2** (24 bytes), no UUID como
+  piden M1-D2 y la regla 1. El validador no opina —cualquier `ByteArray` de 1 a 32 bytes entra—
+  así que si el backend migra a UUID, migra sin tocar el script. Lo que **no** se puede es cambiar
+  de criterio con hilos ya acuñados: el asset name es el id, y no se puede reacuñar.
+- **El anclaje todavía no existe del lado del backend.** No hay `AnchorPort` (D-014) ni tabla de
+  eventos on-chain: nadie construye estas transacciones todavía. El validador está listo y probado,
+  sin nada que lo llame.
 - **Hubo un `contracts/reference/`** con 353 líneas que el compilador no leía y que describía otra
   FSM (`Certified`, salida del terminal). Se borró en **D-056**; no lo recuperes del historial.
 - **La sintaxis de Aiken cambia entre versiones**: verificá contra la pineada (`aiken --version`)

@@ -54,8 +54,21 @@ pub type StageRedeemer {
   Advance { to: StageState, completion: Option<Completion> }
 }
 
+/// Lo único que se puede hacer con la policy: **acuñar el hilo**.
+///
+/// No hay `Retire`/burn a propósito. Quemar el thread token sería borrar la
+/// historia de un stage, y el punto entero del hilo es que ni el operador pueda
+/// hacer eso (D-008). El hilo es append-only, como el `AuditLog`.
+pub type MintAction {
+  Init
+}
+
 /// Largo de un SHA-256 / Merkle root en bytes.
 pub const commitment_length: Int = 32
+
+/// Largo máximo de una ref opaca. Son 32 porque `stage_ref` es además el
+/// **asset name** del thread token, y Cardano no acepta más que eso.
+pub const max_ref_length: Int = 32
 
 /// **La tabla de transiciones.** Espejo 1:1 del backend: si cambia una,
 /// cambian las dos en el mismo commit.
@@ -122,6 +135,29 @@ pub fn valid_datum_evolution(
           new.completed_at == old.completed_at,
         }
     },
+  }
+}
+
+fn valid_ref(ref: ByteArray) -> Bool {
+  let len = bytearray.length(ref)
+  and {
+    len > 0,
+    len <= max_ref_length,
+  }
+}
+
+/// Reglas del **nacimiento** del hilo. Sin esto, el primer UTxO lo crea el
+/// operador con el datum que quiera —arrancar en `Completed`, con fecha de
+/// hace un año— y el validador de transiciones preservaría esa mentira
+/// prolijamente para siempre.
+pub fn valid_initial_datum(d: StageDatum) -> Bool {
+  and {
+    d.state == Pending,
+    d.evidence_root == "",
+    d.completed_at == 0,
+    d.sequence_order > 0,
+    valid_ref(d.project_ref),
+    valid_ref(d.stage_ref),
   }
 }
 
@@ -327,4 +363,51 @@ test t_evolution_rejects_leaving_terminal() {
     }
   let new = StageDatum { ..old, state: Observed }
   !valid_datum_evolution(old, new, Observed, None)
+}
+
+// ── Tests: reglas del nacimiento del hilo ────────────────────────────────
+
+test t_initial_datum_ok() {
+  valid_initial_datum(sample(Pending, True))
+}
+
+test t_initial_rejects_non_pending_state() {
+  and {
+    !valid_initial_datum(sample(InProgress, True)),
+    !valid_initial_datum(sample(Observed, True)),
+    !valid_initial_datum(sample(Completed, True)),
+  }
+}
+
+test t_initial_rejects_preloaded_evidence() {
+  !valid_initial_datum(
+    StageDatum { ..sample(Pending, True), evidence_root: root },
+  )
+}
+
+test t_initial_rejects_preloaded_timestamp() {
+  !valid_initial_datum(StageDatum { ..sample(Pending, True), completed_at: 1 })
+}
+
+test t_initial_rejects_non_positive_sequence() {
+  !valid_initial_datum(
+    StageDatum { ..sample(Pending, True), sequence_order: 0 },
+  )
+}
+
+test t_initial_rejects_empty_refs() {
+  and {
+    !valid_initial_datum(StageDatum { ..sample(Pending, True), stage_ref: "" }),
+    !valid_initial_datum(
+      StageDatum { ..sample(Pending, True), project_ref: "" },
+    ),
+  }
+}
+
+test t_initial_rejects_ref_longer_than_an_asset_name() {
+  let too_long =
+    #"000102030405060708090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f20"
+  !valid_initial_datum(
+    StageDatum { ..sample(Pending, True), stage_ref: too_long },
+  )
 }

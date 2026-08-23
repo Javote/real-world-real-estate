@@ -23,7 +23,7 @@
 | D-006 | Anclaje Fase A por metadata de transacción (label 1904) | Aceptada |
 | D-007 | Lifecycle de milestones: backend = fuente de verdad; on-chain solo Fase B | Aceptada |
 | D-008 | Validador de milestones: patrón state-thread con thread token, núcleo puro separado | Aceptada |
-| D-009 | Custodia de firmas de certificador/notario | Aceptada (co-firma CIP-30 no-custodial) |
+| D-009 | Custodia de firmas de certificador/notario | Aceptada (co-firma CIP-30 no-custodial); **sin alcance en el validador desde D-058** |
 | D-010 | Deploy: Railway con "Wait for CI"; GitHub Actions no despliega | Aceptada en su núcleo (GHA no despliega); **plataforma reemplazada por D-039** |
 | D-011 | Storage: S3 genérico — MinIO en dev, Cloudflare R2 en prod | Aceptada (transición: dev usa disco local por D-016 hasta integrar S3) |
 | D-012 | Cambios aditivos entre deploys; migraciones idempotentes en entrypoint | Aceptada |
@@ -72,6 +72,7 @@
 | D-055 | Estructura cerrada: `apps/` es lo desplegable, `packages/` es librería | Aceptada |
 | D-056 | `contracts/reference/` se borra: describía otra FSM que la que corre | Aceptada (enmienda D-017) |
 | D-057 | `contracts/` reescrito contra M1: datum de M1-D2, evidencia obligatoria en stages críticos, 53 tests | Aceptada |
+| D-058 | Thread token por stage, `mint` validado, ids opacos y el operador como único firmante | Aceptada (cierra D-057; deja D-009 sin alcance en `contracts/`) |
 
 > **Repaso completo con la documentación oficial: ver §Repaso al final del archivo.** D-001..D-017 se
 > escribieron sin los entregables delante; las 25 entradas se revisaron el 2026-07-29 y cada una
@@ -2045,3 +2046,76 @@ próximo del track de la API.
 **Trigger de revisión.** Si Fase B entra en sprint, o si aparece el `AnchorPort` (D-014) y hay que
 construir la transacción de verdad, los tres puntos abiertos se cierran juntos y en ese momento el
 hash vuelve a cambiar — antes de que haya nada en Preprod, no después.
+
+## D-058 — El hilo se cierra: un thread token por stage, nacimiento validado, y el operador como único firmante — **Aceptada** · cierra los tres puntos abiertos de D-057
+
+**Contexto (2026-08-23).** D-057 dejó tres puntos abiertos justamente porque los tres cambian el
+hash del script y convenía decidirlos juntos, antes del primer anclaje. Se decidieron el mismo día.
+
+### 1 · El firmante es el operador, y es definitivo
+
+**Decisión del dueño**, textual: *"está bien que el admin sea el que hashea. No hace falta ningún
+certifier externo."* Coincide con el whitepaper §System Overview (*"All blockchain interactions are
+performed by operator-controlled backend services"*), así que no es un desvío de nada.
+
+**Lo que hay que decir en voz alta, porque cambia qué se puede afirmar:** con un único firmante, lo
+que la cadena prueba es la **integridad de la secuencia y del momento** — que este datum sucedió a
+aquel, y que se registró dentro de esta ventana de tiempo. **No prueba que un profesional
+atestiguó.** Esa atestiguación sigue viviendo off-chain: el documento firmado por el certificador,
+más el `AuditLog` que registra quién lo revisó. Es exactamente el reparto de las cuatro afirmaciones
+de D-026 —*este archivo tiene este hash · se registró en este momento · declara provenir de esta
+autoridad externa · esta persona atestiguó haberlo revisado*—: la cadena sostiene las dos primeras,
+el off-chain las dos últimas. Ninguna copy de la UI puede sugerir que la firma on-chain es la del
+certificador.
+
+**Efecto sobre D-009.** Aquella entrada (co-firma CIP-30 no-custodial) queda **sin alcance en el
+validador**: no hay co-firma pendiente en `contracts/`. Si alguna vez se quiere que el profesional
+firme *en la cadena*, es una decisión nueva, no un pendiente de ésta.
+
+### 2 · Thread token: un NFT por stage, y no se puede quemar
+
+**El agujero que cierra.** Todos los stages viven en la **misma dirección de script**, así que la
+dirección no identifica a nadie. Sin token, el operador podía crear un segundo UTxO con el mismo
+`stage_ref` y un datum distinto: quedaban dos hilos vivos para el mismo stage —uno `InProgress`,
+otro `Completed` con otra evidencia— y **los dos validaban**. Quien verificaba desde afuera veía dos
+historias y tenía que preguntarnos cuál era la buena. Es literalmente la confianza que el producto
+viene a eliminar, y era la propiedad que D-008 prometía sin tener.
+
+**La decisión.** Policy = el mismo script; asset name = `stage_ref`; `mint` acuña exactamente uno;
+`spend` exige que el UTxO gastado lleve el token **y** que el output de continuación lo siga
+llevando.
+
+**Sin burn, a propósito.** El `Retire` que traía el material de referencia borrado en D-056 no se
+implementa: quemar el token es borrar la historia de un stage. `MintAction` tiene un solo
+constructor (`Init`) y el tipo lo dice en su docstring. El hilo es append-only, como el `AuditLog`.
+
+### 3 · Handler de creación: el nacimiento también se valida
+
+Sin `mint`, el validador solo sabía **preservar**: el primer UTxO lo creaba el operador con el datum
+que quisiera —arrancar en `Completed`, con `completed_at` de hace un año— y las transiciones
+preservaban esa mentira prolijamente para siempre. Ahora `valid_initial_datum` exige: estado
+`Pending`, `evidence_root` vacío, `completed_at` en 0, `sequence_order > 0` y refs no vacías de
+hasta 32 bytes. Es el mismo handler que acuña el token, por eso 2 y 3 eran un solo trabajo.
+
+### 4 · Mapeo de ids: los bytes crudos del id off-chain
+
+`stage_ref` y `project_ref` llevan **el id de la base tal cual, en bytes** (hoy cuid2, 24 bytes).
+Descartada la alternativa `sha256(id)`: no gana privacidad —un cuid2 no dice nada de nadie, no es
+PII— y sí encarece la verificación independiente, porque el verificador necesitaría saber que va
+hasheado además de conocer el id.
+
+**El tope de 32 bytes no es estético:** `stage_ref` es el asset name del thread token, y Cardano no
+acepta más. Por eso `max_ref_length` vive en el núcleo puro y no en un comentario.
+
+**Lo que esto deja abierto y hay que respetar:** M1-D2 y la regla 1 dicen UUID; el backend usa
+cuid2. El validador acepta cualquier `ByteArray` de 1 a 32 bytes, así que una migración futura a
+UUID no toca el script — pero **no se puede cambiar de criterio con hilos ya acuñados**, porque el
+asset name es el id y un NFT no se reacuña.
+
+**Estado.** 72 tests, 0 fallando (39 del núcleo puro, 33 del validador: 6 caminos felices y 27
+puntos de rechazo). Hash del script: `fa919ec0adc3…` → `0a2571c12148…`. Sigue sin haber nada
+desplegado ni anclado, que es exactamente por qué se hizo ahora.
+
+**Trigger de revisión.** El día que exista el `AnchorPort` (D-014) y alguien construya estas
+transacciones de verdad, cada campo del datum y cada asset name se vuelven migración. A partir de
+ahí, cambiar cualquiera de las cuatro decisiones de arriba cuesta reacuñar todos los hilos.
