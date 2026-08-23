@@ -32,17 +32,16 @@ endpoints del backlog **hoy conforman 2**: `POST /auth/login` y `GET /auth/me`.
 
 ## Trampas verificadas
 
-- **2026-08-23 · La FSM del stage no está aplicada acá, y `contracts/` cree que sí.**
-  `PATCH /milestones/:id/state` valida el enum con Zod y escribe: acepta `Pending → Completed`
-  directo, y también **salir de `Completed`**, que la regla 9 de la raíz declara terminal. El
-  validador Aiken sí la aplica (`lib/propnexus/fsm.ak`), y los dos `CLAUDE.md` decían "una sola
-  tabla de transiciones, espejada 1:1" — la mitad de esa frase era falsa. Se descubrió alineando
-  `contracts/` con M1-D2 (D-057). **Antes de tocar ese endpoint**: la tabla es
-  `Pending → InProgress → {Observed ⇄ InProgress, Completed}`, `Completed` terminal, y el lugar
-  correcto para escribirla una sola vez es `packages/shared` (que la importen la ruta y el seed),
-  no una copia más. Ojo también con lo que hace hoy al completar: setea `certifiedAt`/`certifiedById`
-  sin exigir evidencia, cuando el whitepaper §Signature and Certification Rules dice que un stage
-  `validationCritical` no puede completarse sin su evidencia — el validador ya lo rechaza.
+- **2026-08-23 · La FSM del stage no estaba aplicada acá, y `contracts/` creía que sí** — cerrado
+  el mismo día (D-059). `PATCH /milestones/:id/state` validaba el enum con Zod y escribía: aceptaba
+  `Pending → Completed` directo y **salir de `Completed`**, que la regla 9 declara terminal. Los dos
+  `CLAUDE.md` decían "una sola tabla de transiciones, espejada 1:1" y la mitad de esa frase era
+  falsa. **La lección, que sobrevive al arreglo:** cuando dos sistemas implementan la misma regla y
+  ninguno importa al otro, la frase "está espejado" es una intención, no un hecho — y acá el costo
+  no era un bug de UI sino una transacción firmada y pagada que la cadena rechaza. Ahora la tabla
+  vive en `packages/shared` (`STAGE_TRANSITIONS`, `canTransition`) y las dos suites prueban los 16
+  pares. **Antes de tocar la FSM: se cambia en `packages/shared` y en
+  `contracts/lib/propnexus/fsm.ak`, en el mismo commit.**
 
 - **2026-08-21 · TypeScript hoistea TODOS los `import` al principio del archivo compilado, así
   que un `dotenv.config()` intercalado entre imports corre DESPUÉS de que ya se resolvieron.**
@@ -153,6 +152,28 @@ endpoints del backlog **hoy conforman 2**: `POST /auth/login` y `GET /auth/me`.
   cada `updateTable` que toca una fila con `updatedAt` lo suma explícito a `.set(...)`. Si un
   endpoint nuevo hace un `update` y se olvida `updatedAt`, nada lo va a marcar — a diferencia de
   Drizzle, donde `$onUpdate` lo hacía solo.
+
+## El endpoint de estado de stages, y lo que todavía no cumple
+
+`PATCH /milestones/:id/state` es hoy el único lugar donde el registro avanza, y hace cuatro cosas
+(D-059): aplica la tabla de transiciones, exige evidencia para completar un stage
+`validationCritical`, escribe el estado, y registra un `OnChainEvent` **pendiente** — la
+declaración queda registrada y la prueba queda `Pending` hasta que exista TXID. Al revés no puede
+pasar.
+
+Lo que le falta, en orden de importancia:
+
+- **La evidencia que exige es el piso de D-028, no D-028.** Hoy alcanza con que exista *una*
+  evidencia asociada al stage. D-028 pide además atribución de autoridad (`issuingAuthority`,
+  `authorityReference` obligatorios cuando `authoritative = true`) y la atestación de un revisor.
+  **Esas columnas no existen** — es una migración y una decisión, no un `if`.
+- **Nadie calcula el commitment.** El validador exige un Merkle root de 32 bytes para completar un
+  stage crítico; acá no hay `EvidenceBundle` ni quien lo arme, así que `OnChainEvent.commitment`
+  se escribe `null`. Llega con el `AnchorPort` (D-014).
+- **El path dice `/milestones/`** y "milestone" está reservado a Catalyst (D-023): debería ser
+  `/stages/`. Cambiarlo toca `apps/web/src/api/port.ts` y los test IDs de M2-D5.
+- **El nombre miente un poco:** `PATCH .../state` suena a editar un campo, cuando lo que ocurre es
+  *registrar una transición* — un evento, no un update.
 
 ## Superficie 🔴 — inventario
 

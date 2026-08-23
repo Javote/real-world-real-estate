@@ -21,7 +21,7 @@
 | D-004 | Drizzle ORM + PostgreSQL | Reemplazada por D-016; el ORM (Drizzle) se ratifica como destino futuro por D-038 |
 | D-005 | Web3 TS: Lucid Evolution + Blockfrost | Aceptada |
 | D-006 | Anclaje Fase A por metadata de transacción (label 1904) | Aceptada |
-| D-007 | Lifecycle de milestones: backend = fuente de verdad; on-chain solo Fase B | Aceptada |
+| D-007 | Lifecycle de milestones: backend = fuente de verdad; on-chain solo Fase B | Aceptada (**aclarada por D-059**: el `state` del datum es commitment, no autoridad) |
 | D-008 | Validador de milestones: patrón state-thread con thread token, núcleo puro separado | Aceptada |
 | D-009 | Custodia de firmas de certificador/notario | Aceptada (co-firma CIP-30 no-custodial); **sin alcance en el validador desde D-058** |
 | D-010 | Deploy: Railway con "Wait for CI"; GitHub Actions no despliega | Aceptada en su núcleo (GHA no despliega); **plataforma reemplazada por D-039** |
@@ -73,6 +73,7 @@
 | D-056 | `contracts/reference/` se borra: describía otra FSM que la que corre | Aceptada (enmienda D-017) |
 | D-057 | `contracts/` reescrito contra M1: datum de M1-D2, evidencia obligatoria en stages críticos, 53 tests | Aceptada |
 | D-058 | Thread token por stage, `mint` validado, ids opacos y el operador como único firmante | Aceptada (cierra D-057; deja D-009 sin alcance en `contracts/`) |
+| D-059 | El backend deja de estar desconectado del validador: FSM en `packages/shared`, productor del datum y tabla `OnChainEvent` | Aceptada (aclara D-007) |
 
 > **Repaso completo con la documentación oficial: ver §Repaso al final del archivo.** D-001..D-017 se
 > escribieron sin los entregables delante; las 25 entradas se revisaron el 2026-07-29 y cada una
@@ -145,6 +146,9 @@ legitima. Ninguno se resolvió editando el entregable, y **todos se comunican en
 **Contexto.** El baseline §11 dice explícito que la fase 1 no exige enforcement on-chain del ciclo de vida.
 **Decisión.** La máquina de estados se persiste en el backend (hoy: enum `MilestoneState` + rutas de la API; objetivo: función pura en `packages/shared`). On-chain se anclan pruebas de las transiciones relevantes. El validador de stages (D-008) es opt-in de Fase B para stages `validation_critical`.
 **Reformulación del fundamento (2026-07-29).** El título original —"el backend es la fuente de verdad"— se presta a leer que el backend **decide** el estado de una obra. No decide nada (D-026). El estado real lo determinan procesos externos: un municipio aprueba, un profesional observa, una obra avanza. Lo que el backend es fuente de verdad **de** es el **registro** de ese estado: qué se declaró, cuándo, y quién lo declaró. La implementación no cambia; el fundamento sí, y esto importa para no derivar mal después — por ejemplo, no hay ninguna regla de negocio que la plataforma pueda "hacer cumplir" sobre la obra, solo sobre la coherencia de su propio registro.
+**Aclaración (2026-08-23, enmienda por D-059) — el `state` del datum es un commitment, no la autoridad.** Desde D-057 el datum on-chain lleva un campo `state`, y eso vuelve razonable preguntar: *si el estado vive en Cardano, ¿por qué existe un `PATCH /milestones/:id/state`?* Porque **el estado no vive en Cardano**. Lo que vive on-chain es una prueba de la secuencia de declaraciones: el `state` del datum es la forma compacta de decir "esto es lo que se declaró en este punto del hilo", no quién decide. La autoridad sobre el registro sigue siendo el backend, y sobre la obra no la tiene nadie de este lado (D-026). Que el validador verifique la transición no lo convierte en fuente de verdad: lo convierte en algo que **ni el operador puede reescribir después**, que es todo el argumento de D-008.
+
+**Corolario operativo:** hay **dos puntos de enforcement y una sola fuente de verdad**. La API valida la transición al registrar la declaración (protege contra un cliente o un bug); el validador la valida al anclarla (protege contra nosotros). Tres razones por las que no puede ser al revés: (a) no todo stage tiene hilo —el validador se justifica donde importa la secuencia, D-008—, (b) leer la cadena como autoridad exige un indexer y disponibilidad que en Preprod y free tier no tenemos (D-013, D-040), y (c) entre la declaración y el TXID confirmado pasan minutos: ese hueco es precisamente lo que la regla 17 obliga a mostrar como "Pendiente", y con la cadena como fuente de verdad no tendría representación.
 **Reversión.** Subir enforcement es aditivo (D-006).
 
 ## D-008 — Validador de milestones: state-thread + núcleo puro
@@ -2119,3 +2123,81 @@ desplegado ni anclado, que es exactamente por qué se hizo ahora.
 **Trigger de revisión.** El día que exista el `AnchorPort` (D-014) y alguien construya estas
 transacciones de verdad, cada campo del datum y cada asset name se vuelven migración. A partir de
 ahí, cambiar cualquiera de las cuatro decisiones de arriba cuesta reacuñar todos los hilos.
+
+## D-059 — El backend deja de estar desconectado del validador: la FSM en `packages/shared`, el productor del datum, y dónde aterriza el anclaje — **Aceptada** · aclara D-007
+
+**Contexto (2026-08-23).** Cerrado `contracts/` (D-056 → D-058), la pregunta del dueño fue por qué
+el backend y el contrato estaban desacoplados. La respuesta medida fue peor que "desacoplados":
+**estaban desconectados.** `grep -riE "cardano|lucid|blockfrost|plutus|anchor|txid" apps/api/src
+packages/shared/src` daba **cero resultados**, y la única columna con hash en toda la base era
+`Evidence.sha256Hash`. No había dónde guardar un TXID.
+
+Parte de eso es diseño y no se toca (D-007: el backend es fuente de verdad del **registro**, la
+cadena ancla **pruebas**; el acoplamiento debe ser fino y en una sola dirección). Lo que no era
+diseño eran tres huecos.
+
+### Hueco 1 · La tabla de transiciones existía en un solo lado
+
+`packages/shared/src/stage.ts`: `STAGE_STATES`, `STAGE_TRANSITIONS`, `canTransition`,
+`INITIAL_STAGE_STATE` y los códigos de rechazo. La ruta la aplica antes de escribir y devuelve
+**409** con `code`, no 400: el body es válido, lo que es inválido es la transición.
+
+**Por qué `packages/shared` y no un `if` en la ruta.** Es el único lugar del repo donde el drift es
+*imposible* en vez de prohibido, y acá el costo del drift no era un bug de UI: el día que exista el
+anclaje, una transición que la API acepta y el validador rechaza **arma la transacción, la firma,
+paga el fee y falla en la cadena**, con la base diciendo una cosa y la cadena otra.
+
+Los 16 pares se prueban exhaustivamente de los dos lados —`packages/shared/src/stage.test.ts` y los
+16 tests de `contracts/lib/propnexus/fsm.ak`—, así que una divergencia futura aparece como test
+rojo y no como transacción rechazada.
+
+**Dos correcciones que cayeron de la misma regla:** `POST /projects/:id/milestones` aceptaba `state`
+por body y ahora todo stage **nace en `Pending`** (el handler `mint` lo exige para acuñar el hilo,
+D-058); y `PATCH /milestones/:id` permitía reescribir `sequenceOrder` y `validationCritical`, que
+son **identidad** en el datum (`identity_preserved`) — ahora se rechaza con 409 en cuanto el hilo
+tiene TXID.
+
+### Hueco 2 · No había productor del datum
+
+`packages/shared/src/stage-datum.ts`: `refToHex`/`hexToRef`, `stageDatumSchema`, `buildStageDatum`,
+`isValidInitialDatum` y `canCompleteWithEvidence` — el espejo en TypeScript de `StageDatum`,
+`valid_initial_datum` y `completion_evidence_ok`.
+
+Vive en `shared` y no en la ruta porque **es el contrato con la cadena**: quien arme la transacción
+tiene que producir exactamente estos bytes, y quien verifique desde afuera tiene que poder
+reproducirlos. Un mapeo escondido dentro de un handler no lo puede reproducir nadie. Son funciones
+puras: no arman transacciones ni hablan con la red, y por eso se prueban sin nada montado.
+
+### Hueco 3 · No había dónde aterrizar el resultado
+
+Migración `0001_onchain_event.sql` — la entidad `OnChainEvent` de M1-D2 §2 (`event_type`, `txid`,
+`block_timestamp`), más dos columnas que M1 no modela y el hilo necesita:
+
+- **`outputRef`** — el UTxO del thread token. **Estado crítico**: si se pierde, ese stage no se
+  puede volver a mover nunca, porque el token está en un UTxO que no sabés cuál es.
+- **`eventIndex`** — la posición en el hilo (0 = `mint`, 1..n = transiciones), con índice único
+  `(milestoneId, eventIndex)`. Es lo que vuelve **idempotente** el anclaje (regla 8): escribir dos
+  veces el evento N viola el índice, en vez de anclar dos veces la misma transición.
+
+**La asimetría es deliberada y hay que respetarla:** el evento se escribe con `status: "Pending"` y
+sin `txid`, en el mismo momento que la declaración. El registro avanza y la prueba queda pendiente;
+al revés no puede pasar. Ese hueco entre la declaración y el TXID confirmado es exactamente lo que
+la regla 17 obliga a mostrar como "Pendiente".
+
+### Lo que se enforcea de la regla del whitepaper, y lo que todavía no
+
+La API rechaza completar un stage `validationCritical` sin evidencia asociada (**409
+`STAGE_EVIDENCE_REQUIRED`**), que es el espejo de `completion_evidence_ok`. **Es el piso de D-028,
+no D-028 entera:** falta exigir atribución de autoridad (`issuingAuthority`, `authorityReference`) y
+la atestación del revisor — columnas que no existen — y falta quien calcule el Merkle root del
+bundle, que llega con el `AnchorPort`. Queda anotado en `apps/api/CLAUDE.md`.
+
+**Estado.** `pnpm verify` en verde: 181 tests TS (44 shared · 121 API · 16 web) y 72 en Aiken.
+Los 28 nuevos de la API incluyen los 16 pares de la tabla, uno por uno.
+
+**Lo que sigue faltando para que estén acoplados de verdad:** el `AnchorPort` (D-014) y
+`packages/cardano`. Hoy el validador está probado y listo, el datum tiene productor, el TXID tiene
+dónde aterrizar — y **nadie construye la transacción todavía**. Eso es una rebanada propia.
+
+**Trigger de revisión.** Si aparece un segundo lugar que escriba `Milestone.state` sin pasar por
+`canTransition`, esta decisión se rompió: la regla vale porque hay un solo camino.

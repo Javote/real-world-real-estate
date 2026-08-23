@@ -29,10 +29,11 @@ camino de remediación: se observa para que el developer corrija y vuelva a `InP
 en datos se llama `Completed` —no `Certified`, porque la plataforma no certifica (D-026)— y la
 etiqueta visible sale del diccionario i18n.
 
-**Una sola tabla de transiciones, espejada 1:1 con el backend.** Si cambia una, cambian las dos en
-el mismo commit. **Ojo: hoy el espejo no existe del lado del backend** — `PATCH
-/milestones/:id/state` acepta cualquier estado desde cualquier estado, así que la tabla solo se
-aplica acá. Ver §Deuda.
+**Una sola tabla de transiciones, y desde D-059 el espejo existe de verdad**: la misma tabla vive
+en `packages/shared` (`STAGE_TRANSITIONS`) y la aplica `PATCH /milestones/:id/state` antes de
+escribir. Si cambia una, cambian las dos en el mismo commit — y las dos suites prueban los 16 pares
+exhaustivamente, así que una divergencia se ve como test rojo, no como una transacción rechazada en
+la cadena.
 
 ## El datum sale de M1-D2, menos lo que no puede salir del off-chain
 
@@ -131,11 +132,11 @@ Los negativos van marcados `test ... fail` porque los `expect` abortan en vez de
 
 ## Estado y deuda
 
-- **El backend no espeja la tabla de transiciones.** `PATCH /milestones/:id/state`
-  (`apps/api/src/routes/milestones.routes.ts`) valida el *enum* con Zod y escribe, sin mirar el
-  estado anterior: hoy se puede ir de `Pending` a `Completed`, o salir de `Completed`. El validador
-  lo prohíbe, el backend no. **Es el arreglo más barato y de mayor valor pendiente del proyecto**, y
-  vive del otro lado: `apps/api/CLAUDE.md`.
+- **~~El backend no espeja la tabla de transiciones.~~** Cerrado por D-059: la tabla vive en
+  `packages/shared`, la ruta la aplica, y el stage nace en `Pending` como el `mint` exige. Lo que
+  todavía **no** está del otro lado es el commitment de evidencia: la API exige *que haya*
+  evidencia para completar un stage crítico, el validador exige *un Merkle root de 32 bytes*, y
+  nadie lo calcula todavía (no hay `EvidenceBundle`).
 - **El `stage_ref` es el id off-chain en bytes, y hoy ese id es cuid2** (24 bytes), no UUID como
   piden M1-D2 y la regla 1. El validador no opina —cualquier `ByteArray` de 1 a 32 bytes entra—
   así que si el backend migra a UUID, migra sin tocar el script. Lo que **no** se puede es cambiar

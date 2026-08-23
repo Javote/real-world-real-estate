@@ -93,7 +93,7 @@ Ningún validador custodia ni transfiere valor, en ninguna fase (D-021).
 | Pieza | Hoy | Destino | Estado | Decisión |
 |---|---|---|---|---|
 | Base de datos | **SQLite** (`dev.db`, Kysely sobre `@libsql/client`) | **SQLite** vía **Turso** en prod (free: 5 GB · 500M lecturas · 10M escrituras) | ◐ — declarada en `render.yaml`; falta crear la base | D-038 · D-040 — Turso **obligatorio**, no preferencia: en free no hay disco. ORM: D-048 → D-049 |
-| Migraciones | SQL plano en `apps/api/migrations/`, 1 migración, tracking propio (`_migrations`), **un solo runner** (D-052) | idempotentes en el `startCommand` | ● — verificado sobre el **compilado**, contra base nueva y re-aplicando | D-012 · D-049 |
+| Migraciones | SQL plano en `apps/api/migrations/`, 2 migraciones, tracking propio (`_migrations`), **un solo runner** (D-052) | idempotentes en el `startCommand` | ● — verificado sobre el **compilado**, contra base nueva y re-aplicando | D-012 · D-049 |
 | Archivos de evidencia | **disco local** (`UPLOAD_DIR`, Multer) | **S3 genérico**: MinIO dev / **Cloudflare R2** prod (free: 10 GB, egress $0) | ○ — **ya no bloquea el primer deploy**: sale con `/tmp` efímero y marcado (D-051). Vuelve a bloquear el día del primer anclaje | D-011 · D-040 · D-051 |
 | URLs de archivos | descarga por endpoint autenticado | prefirmadas, TTL ≤15 min | ○ | D-011 |
 | Base de tests | SQLite propia (`apps/api/test.db`), migrada y sembrada por corrida | — | ● | SPEC-008 |

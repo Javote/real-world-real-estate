@@ -7,14 +7,17 @@
 //
 // Son `export type`: el front no carga Zod en runtime, solo usa los tipos, y
 // `verbatimModuleSyntax` los borra al compilar.
-import type { UserRole } from '@plataforma/shared'
+import type { StageState, UserRole } from '@plataforma/shared'
 
 export type { LoginResponse, MeResponse, SessionUser, UserRole } from '@plataforma/shared'
 
 // El resto sigue siendo espejo manual. Cada uno migra a packages/shared cuando
 // su rebanada lo toque (SPEC-008 §NO-alcance): migrarlos todos ahora sería
 // escribir schemas para endpoints que van a cambiar de forma igual.
-export type MilestoneState = 'Pending' | 'InProgress' | 'Completed' | 'Observed'
+// La FSM del stage YA migró (D-059): la tabla de transiciones y sus estados
+// viven en @plataforma/shared, que es el espejo del validador Aiken. El front
+// solo necesita el tipo — `canTransition` es del lado que decide.
+export type MilestoneState = StageState
 export type ProjectStatus = 'planning' | 'in_progress' | 'delayed' | 'completed'
 export type EvidenceType = 'document' | 'photo' | 'certificate'
 

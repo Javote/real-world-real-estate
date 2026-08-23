@@ -1,3 +1,4 @@
+import { STAGE_STATES, type StageState } from "@plataforma/shared";
 import type { ColumnType, Generated, Insertable, Selectable, Updateable } from "../lib/kysely";
 
 // Los valores son los que declara la migración (`migrations/0000_init.sql`)
@@ -6,13 +7,29 @@ import type { ColumnType, Generated, Insertable, Selectable, Updateable } from "
 export const USER_ROLES = ["admin", "developer", "buyer", "verifier", "notary"] as const;
 export const PROJECT_STATUSES = ["planning", "in_progress", "delayed", "completed"] as const;
 export const MEMBERSHIP_ROLES = ["developer", "buyer", "verifier"] as const;
-export const MILESTONE_STATES = ["Pending", "InProgress", "Completed", "Observed"] as const;
+// La FSM del stage NO se declara acá: vive en `packages/shared` (`STAGE_STATES`),
+// que es el espejo del validador Aiken (D-059). Se re-exporta para no romper a
+// quien la importe desde el módulo de tipos de la base.
+export const MILESTONE_STATES = STAGE_STATES;
+
+/** Estado de un evento on-chain. `Pending` mientras no haya TXID confirmado
+ * — la regla 17 prohíbe mostrar prueba sin anclaje real. */
+export const ONCHAIN_EVENT_STATUSES = ["Pending", "Confirmed", "Failed"] as const;
+
+/** `event_type` de M1-D2 §2. Hoy solo se escriben los dos del hilo de stages. */
+export const ONCHAIN_EVENT_TYPES = [
+  "STAGE_CREATED",
+  "STAGE_TRANSITION",
+  "EVIDENCE_ANCHOR"
+] as const;
 export const EVIDENCE_TYPES = ["document", "photo", "certificate"] as const;
 
 export type UserRole = (typeof USER_ROLES)[number];
 export type ProjectStatus = (typeof PROJECT_STATUSES)[number];
 export type MembershipRole = (typeof MEMBERSHIP_ROLES)[number];
-export type MilestoneState = (typeof MILESTONE_STATES)[number];
+export type MilestoneState = StageState;
+export type OnChainEventStatus = (typeof ONCHAIN_EVENT_STATUSES)[number];
+export type OnChainEventType = (typeof ONCHAIN_EVENT_TYPES)[number];
 export type EvidenceType = (typeof EVIDENCE_TYPES)[number];
 
 // Kysely no tiene columnas booleanas/timestamp: SQLite las guarda como
@@ -103,6 +120,34 @@ export interface AuditLogTable {
   createdAt: SqliteTimestamp;
 }
 
+/**
+ * El aterrizaje del anclaje (M1-D2 §2 `OnChainEvent`). Una fila por evento del
+ * hilo on-chain de un stage: `eventIndex` 0 es el `mint` del thread token,
+ * 1..n las transiciones.
+ *
+ * Se escribe **en el mismo momento que la declaración**, con `status:
+ * "Pending"` y sin `txid`: el registro avanza y la prueba queda pendiente. Al
+ * revés no puede pasar (D-059).
+ */
+export interface OnChainEventTable {
+  id: GeneratedId;
+  projectId: string;
+  milestoneId: string | null;
+  eventIndex: number;
+  eventType: OnChainEventType;
+  fromState: MilestoneState | null;
+  toState: MilestoneState | null;
+  /** Commitment anclado (evidence root / SHA-256), hex. */
+  commitment: string | null;
+  status: OnChainEventStatus;
+  txid: string | null;
+  /** UTxO del thread token: `txid#index`. Estado crítico — sin esto el hilo se pierde. */
+  outputRef: string | null;
+  blockTimestamp: SqliteTimestamp | null;
+  createdAt: SqliteTimestamp;
+  updatedAt: SqliteTimestamp;
+}
+
 export interface Database {
   User: UserTable;
   Project: ProjectTable;
@@ -110,6 +155,7 @@ export interface Database {
   Milestone: MilestoneTable;
   Evidence: EvidenceTable;
   AuditLog: AuditLogTable;
+  OnChainEvent: OnChainEventTable;
 }
 
 export type UserRow = Selectable<UserTable>;
@@ -133,3 +179,7 @@ export type EvidenceUpdate = Updateable<EvidenceTable>;
 
 export type AuditLogRow = Selectable<AuditLogTable>;
 export type NewAuditLog = Insertable<AuditLogTable>;
+
+export type OnChainEventRow = Selectable<OnChainEventTable>;
+export type NewOnChainEvent = Insertable<OnChainEventTable>;
+export type OnChainEventUpdate = Updateable<OnChainEventTable>;

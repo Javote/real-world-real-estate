@@ -1,6 +1,13 @@
+import {
+  canTransition,
+  INITIAL_STAGE_STATE,
+  STAGE_TRANSITION_ERRORS,
+  stageTransitionSchema
+} from "@plataforma/shared";
 import { type Request, Router } from "express";
 import { z } from "zod";
 import { createId } from "../db/id";
+import type { MilestoneState, OnChainEventType } from "../db/types";
 import { db } from "../lib/db";
 import {
   ANY_MEMBERSHIP,
@@ -13,6 +20,71 @@ import { writeAuditLog } from "../utils/audit";
 const router = Router();
 
 router.use(authenticate);
+
+/**
+ * Registra el evento on-chain **pendiente** de una transición ya declarada.
+ *
+ * La asimetría es deliberada (D-059): la declaración se registra siempre y la
+ * prueba queda `Pending` hasta que exista TXID confirmado. Al revés no puede
+ * pasar — nunca hay prueba de algo que no se declaró — y mientras no haya TXID
+ * la UI muestra "Pendiente", nunca "Verificado" (regla 17).
+ *
+ * `eventIndex` es la posición en el hilo on-chain: 0 es el `mint` del thread
+ * token, 1..n las transiciones. El índice único `(milestoneId, eventIndex)` es
+ * lo que vuelve idempotente el anclaje (regla 8).
+ */
+async function recordOnChainEvent(input: {
+  projectId: string;
+  milestoneId: string;
+  eventType: OnChainEventType;
+  fromState: MilestoneState | null;
+  toState: MilestoneState;
+}) {
+  const previo = await db
+    .selectFrom("OnChainEvent")
+    .select("eventIndex")
+    .where("milestoneId", "=", input.milestoneId)
+    .orderBy("eventIndex", "desc")
+    .limit(1)
+    .executeTakeFirst();
+
+  const now = new Date();
+
+  return db
+    .insertInto("OnChainEvent")
+    .values({
+      id: createId(),
+      projectId: input.projectId,
+      milestoneId: input.milestoneId,
+      eventIndex: previo ? previo.eventIndex + 1 : 0,
+      eventType: input.eventType,
+      fromState: input.fromState,
+      toState: input.toState,
+      commitment: null,
+      status: "Pending",
+      txid: null,
+      outputRef: null,
+      blockTimestamp: null,
+      createdAt: now,
+      updatedAt: now
+    })
+    .returningAll()
+    .executeTakeFirstOrThrow();
+}
+
+/** ¿Este stage ya tiene hilo en la cadena? Si lo tiene, su identidad on-chain
+ * (orden y criticidad) es inmutable: el validador la rechaza reescrita. */
+async function tieneHiloAnclado(milestoneId: string): Promise<boolean> {
+  const anclado = await db
+    .selectFrom("OnChainEvent")
+    .select("id")
+    .where("milestoneId", "=", milestoneId)
+    .where("txid", "is not", null)
+    .limit(1)
+    .executeTakeFirst();
+
+  return anclado !== undefined;
+}
 
 router.get(
   "/projects/:id/milestones",
@@ -37,7 +109,10 @@ router.post(
     const schema = z.object({
       name: z.string().min(1),
       sequenceOrder: z.number().int().positive(),
-      state: z.enum(["Pending", "InProgress", "Completed", "Observed"]).optional(),
+      // `state` NO se acepta por body: todo stage nace en `Pending`. El
+      // handler `mint` del validador lo exige para acuñar el hilo
+      // (`valid_initial_datum`), así que dejar elegir el estado inicial acá
+      // sería fabricar stages que no se pueden anclar.
       validationCritical: z.boolean().optional(),
       scopeType: z.string().optional(),
       scopeUnitCount: z.number().int().nonnegative().optional()
@@ -57,7 +132,7 @@ router.post(
         projectId: req.params.id,
         name: parsed.data.name,
         sequenceOrder: parsed.data.sequenceOrder,
-        state: parsed.data.state ?? "Pending",
+        state: INITIAL_STAGE_STATE,
         validationCritical: parsed.data.validationCritical ?? false,
         scopeType: parsed.data.scopeType ?? "project_wide",
         scopeUnitCount: parsed.data.scopeUnitCount ?? 0,
@@ -67,6 +142,14 @@ router.post(
       .returningAll()
       .executeTakeFirstOrThrow();
 
+    const anchor = await recordOnChainEvent({
+      projectId: milestone.projectId,
+      milestoneId: milestone.id,
+      eventType: "STAGE_CREATED",
+      fromState: null,
+      toState: milestone.state
+    });
+
     await writeAuditLog({
       actorUserId: req.user!.id,
       action: "CREATE_MILESTONE",
@@ -74,7 +157,7 @@ router.post(
       entityId: milestone.id
     });
 
-    return res.status(201).json(milestone);
+    return res.status(201).json({ ...milestone, anchor });
   }
 );
 
@@ -105,7 +188,9 @@ router.patch(
   "/milestones/:id",
   requireRole("admin", "developer"),
   requireProjectAccess({ via: "Milestone", param: "id" }, ["developer"]),
-  async (req, res) => {
+  // `Request<{ id: string }>` porque en Express 5 `req.params.id` es
+  // `string | string[]`, y `tieneHiloAnclado` necesita un id, no una lista.
+  async (req: Request<{ id: string }>, res) => {
     const milestoneExisting = await db
       .selectFrom("Milestone")
       .selectAll()
@@ -127,6 +212,20 @@ router.patch(
     const parsed = schema.safeParse(req.body);
     if (!parsed.success) {
       return res.status(400).json(parsed.error.flatten());
+    }
+
+    // `sequenceOrder` y `validationCritical` son parte de la IDENTIDAD del
+    // stage en el datum, y el validador exige que no cambie nunca
+    // (`identity_preserved`). Con el hilo ya anclado, reescribirlas acá dejaría
+    // a la base diciendo una cosa y a la cadena otra, sin forma de reconciliar.
+    const tocaIdentidad =
+      parsed.data.sequenceOrder !== undefined || parsed.data.validationCritical !== undefined;
+
+    if (tocaIdentidad && (await tieneHiloAnclado(req.params.id))) {
+      return res.status(409).json({
+        message: "Stage identity is immutable once anchored",
+        code: "STAGE_IDENTITY_IMMUTABLE"
+      });
     }
 
     const milestone = await db
@@ -152,11 +251,7 @@ router.patch(
   requireRole("admin", "developer"),
   requireProjectAccess({ via: "Milestone", param: "id" }, ["developer"]),
   async (req, res) => {
-    const schema = z.object({
-      state: z.enum(["Pending", "InProgress", "Completed", "Observed"])
-    });
-
-    const parsed = schema.safeParse(req.body);
+    const parsed = stageTransitionSchema.safeParse(req.body);
     if (!parsed.success) {
       return res.status(400).json(parsed.error.flatten());
     }
@@ -171,17 +266,56 @@ router.patch(
       return res.status(404).json({ message: "Milestone not found" });
     }
 
+    const to = parsed.data.state;
+
+    // **La tabla de transiciones, aplicada.** Es el mismo espejo que corre en
+    // `contracts/lib/propnexus/fsm.ak`: sin esto, una transición que la API
+    // acepta y el validador rechaza arma la transacción, la firma, paga el fee
+    // y falla en la cadena — con la base diciendo una cosa y la cadena otra.
+    if (!canTransition(existing.state, to)) {
+      return res.status(409).json({
+        message: `Invalid stage transition: ${existing.state} → ${to}`,
+        code: STAGE_TRANSITION_ERRORS.invalid,
+        from: existing.state,
+        to
+      });
+    }
+
+    // Whitepaper §Signature and Certification Rules: un stage
+    // `validation_critical` no llega a `Completed` sin su evidencia. El
+    // validador lo rechaza on-chain (`completion_evidence_ok`); acá se rechaza
+    // antes de que cueste un fee.
+    //
+    // **Este es el piso de D-028, no D-028 entera:** falta exigir atribución de
+    // autoridad (`issuingAuthority`, `authorityReference`) y la atestación del
+    // revisor, y esas columnas todavía no existen. Ver `CLAUDE.md` §Deuda.
+    if (to === "Completed" && existing.validationCritical) {
+      const evidencia = await db
+        .selectFrom("Evidence")
+        .select("id")
+        .where("milestoneId", "=", existing.id)
+        .limit(1)
+        .executeTakeFirst();
+
+      if (!evidencia) {
+        return res.status(409).json({
+          message: "A validation-critical stage cannot be completed without evidence",
+          code: STAGE_TRANSITION_ERRORS.evidenceRequired
+        });
+      }
+    }
+
     const data: {
-      state: typeof parsed.data.state;
+      state: typeof to;
       updatedAt: Date;
       certifiedAt?: Date;
       certifiedById?: string;
     } = {
-      state: parsed.data.state,
+      state: to,
       updatedAt: new Date()
     };
 
-    if (parsed.data.state === "Completed") {
+    if (to === "Completed") {
       data.certifiedAt = new Date();
       data.certifiedById = req.user!.id;
     }
@@ -193,32 +327,25 @@ router.patch(
       .returningAll()
       .executeTakeFirstOrThrow();
 
+    // La declaración quedó registrada; la prueba queda pendiente hasta que
+    // exista el `AnchorPort` (D-014) y devuelva un TXID confirmado.
+    const anchor = await recordOnChainEvent({
+      projectId: milestone.projectId,
+      milestoneId: milestone.id,
+      eventType: "STAGE_TRANSITION",
+      fromState: existing.state,
+      toState: to
+    });
+
     await writeAuditLog({
       actorUserId: req.user!.id,
       action: "CHANGE_MILESTONE_STATE",
       entityType: "Milestone",
       entityId: milestone.id,
-      metadata: { state: parsed.data.state }
+      metadata: { from: existing.state, to }
     });
 
-    return res.json(milestone);
-  }
-);
-
-router.delete(
-  "/milestones/:id",
-  requireRole("admin"),
-  async (req: Request<{ id: string }>, res) => {
-    await db.deleteFrom("Milestone").where("id", "=", req.params.id).execute();
-
-    await writeAuditLog({
-      actorUserId: req.user!.id,
-      action: "DELETE_MILESTONE",
-      entityType: "Milestone",
-      entityId: req.params.id
-    });
-
-    return res.status(204).send();
+    return res.json({ ...milestone, anchor });
   }
 );
 
