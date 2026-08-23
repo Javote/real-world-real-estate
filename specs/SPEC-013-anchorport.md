@@ -103,7 +103,7 @@ es más que el `AnchorPort`: son seis piezas, y solo dos necesitan Docker.
 | # | Pieza | Necesita | Estado |
 |---|---|---|---|
 | 1 | **Todo stage es `validation_critical`** — migración `0003` y su decisión | — | **hecha** (D-061) |
-| 2 | Transacciones reales contra el **`Emulator`** de Lucid: `mint` + `spend` con el validador ejecutándose de verdad | — | pendiente |
+| 2 | Transacciones reales contra el **`Emulator`** de Lucid: `mint` + `spend` con el validador ejecutándose de verdad | — | **hecha** |
 | 3 | **`EvidenceBundle`**, Merkle root y el endpoint de anclaje **manual del admin** | — | pendiente |
 | 4 | **MinIO** por `compose.dev.yml` + cliente S3 (D-011) | Docker | pendiente |
 | 5 | **yaci-devkit**: devnet local con API compatible Blockfrost | Docker | pendiente |

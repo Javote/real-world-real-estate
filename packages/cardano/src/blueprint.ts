@@ -72,6 +72,9 @@ export function stageScript(adminKeyHash: string, blueprint: Blueprint): Script 
 
 export interface StageScriptRefs {
   script: Script;
+  /** El parámetro con el que se derivó todo lo de acá. Se guarda para no tener
+   * que pasarlo dos veces: la firma y la dirección tienen que salir del mismo. */
+  adminKeyHash: string;
   /** Dirección del script: donde viven TODOS los hilos. */
   address: string;
   /** Policy del thread token. Es el mismo hash del script. */
@@ -86,6 +89,7 @@ export function stageScriptRefs(
   const script = stageScript(adminKeyHash, blueprint);
   return {
     script,
+    adminKeyHash,
     address: validatorToAddress(network, script),
     policyId: mintingPolicyToId(script)
   };

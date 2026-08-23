@@ -10,6 +10,7 @@ el puerto y no sabe que la cadena existe.
 port.ts        la interfaz: openThread · advanceThread · verify · awaitConfirmation
 ledger.ts      LedgerStore — el estado del simulador (memoria o SQLite)
 simulated.ts   adaptador simulado: rechaza lo mismo que rechazaría el validador
+real.ts        LucidAnchorAdapter: construye las transacciones de verdad
 codec.ts       StageDatum ⇄ Data de Plutus — el contrato binario con contracts/
 blueprint.ts   carga plutus.json, aplica el admin, deriva dirección y policy
 factory.ts     createAnchorPort(): ANCHOR_MODE, sin defaults inseguros
@@ -55,12 +56,27 @@ en cualquiera de los dos lados, los dos tests se ponen rojos. Es a propósito.
 - **La dirección del script depende del `admin`.** Rotar la wallet de servicio cambia la dirección,
   así que **no se puede rotar sin migrar todos los hilos**. Saberlo antes de generar la seed.
 
+## El adaptador real es agnóstico del provider, y eso no es cosmético
+
+`LucidAnchorAdapter` recibe una instancia de Lucid ya configurada, así que **el mismo código** corre
+contra el `Emulator` (en proceso, en CI), contra yaci-devkit (nodo local) y contra Preprod. Si
+hiciera falta cambiar una línea al pasar de uno a otro, lo que prueba el CI no sería lo que corre
+desplegado.
+
+El `admin` **no se configura**: se deriva de la wallet de la instancia. Configurarlo aparte
+permitiría que la firma y la dirección del script se desincronicen, y el síntoma sería hablarle a
+una dirección donde no hay ningún hilo — sin error, solo silencio.
+
+**Los tests del `Emulator` ejecutan el validador de verdad.** Un rechazo ahí es el mismo rechazo que
+daría la cadena. Por eso exigen `/failed script execution/` y no un `toThrow()` pelado: sin el
+regex, el test pasaría también si la transacción fallara por una razón nuestra —un UTxO que no
+está, plata que no alcanza— y estaría diciendo que el validador rechazó algo que nunca evaluó.
+
 ## Estado
 
-Rebanada **A cerrada** (puerto + simulador) y la mitad offline de la **B**: códec verificado contra
-Aiken y dirección derivada del blueprint. Falta lo que toca la red: construir las transacciones
-(`Emulator` primero, después yaci-devkit local, después Preprod) y el `reconcile()`/`verify()` de
-la rebanada C.
+Rebanadas **A** (puerto + simulador) y **B** (códec, blueprint, transacciones contra el `Emulator`)
+cerradas. Falta el escalón de realismo —yaci-devkit local y Preprod, que no cambian el código, solo
+el provider— y el `reconcile()`/`verify()` completo de la rebanada C, que necesita un indexer.
 
 ## Comandos
 
