@@ -31,7 +31,7 @@
 | D-014 | Dependencia blockchain detrás de puerto propio con modo real/simulado | Aceptada |
 | D-015 | Versionado: CalVer para servicios; enteros para contratos | Aceptada |
 | D-016 | Adoptar el backend PoC (Express 4 + Prisma + SQLite + JWT/bcrypt + disco local) como `packages/api` | Aceptada (trigger de revisión enmendado por D-038: el destino ya no es PostgreSQL) |
-| D-017 | Contratos: adoptar el proyecto Aiken del backend en `contracts/`, junto a los validadores de referencia | Aceptada; **consolidación cerrada por D-054** (mismo hash, `milestone2.ak` borrado) |
+| D-017 | Contratos: adoptar el proyecto Aiken del backend en `contracts/`, junto a los validadores de referencia | Aceptada; **consolidación cerrada por D-054** (mismo hash, `milestone2.ak` borrado); **`reference/` borrada por D-056** |
 | D-018 | El producto se llama **PropNexus** | Aceptada |
 | D-019 | Plutus **V3**, no V2 — desvío documentado del SOM de M3 | Aceptada |
 | D-020 | FSM canónica del stage — confirma el entregable original | Aceptada |
@@ -70,6 +70,7 @@
 | D-053 | El harness de agentes se borra entero. Vuelve el CI declarativo | Aceptada (revierte D-032) |
 | D-054 | Reseteo de estándar: Express 5, errores que no mienten, Biome, un validador, TS separado de Aiken | Aceptada |
 | D-055 | Estructura cerrada: `apps/` es lo desplegable, `packages/` es librería | Aceptada |
+| D-056 | `contracts/reference/` se borra: describía otra FSM que la que corre | Aceptada (enmienda D-017) |
 
 > **Repaso completo con la documentación oficial: ver §Repaso al final del archivo.** D-001..D-017 se
 > escribieron sin los entregables delante; las 25 entradas se revisaron el 2026-07-29 y cada una
@@ -234,6 +235,7 @@ mantenimiento medido), no por preferencia.
 
 **Contexto (2026-07-15).** El backend traía un proyecto Aiken real (v1.1.21, Plutus V3, stdlib v3.0.0) con el validador de milestones V1 funcionando (`milestone.ak`, y un duplicado `milestone2.ak` — ex ADR-009 Abierta). La guía traía dos validadores de referencia del diseño Fase B (`certification.ak`, `milestone_state.ak` con thread token) y la lib pura `lib/plataforma/milestone.ak`.
 **Decisión.** `contracts/` parte del proyecto Aiken del backend (aiken.toml, lock y validadores V1 vigentes). Los validadores de referencia de la guía entran en `contracts/reference/` como material de diseño de Fase B (D-008), NO como código activo: no compilan necesariamente contra la versión pineada y no se despliegan.
+**Enmendada (2026-08-23) por D-056.** `contracts/reference/` se borró entera: describía una FSM distinta de la canónica (D-020) y sus 10 tests probaban esa otra máquina. Guardar material de diseño *en el árbol del proyecto y en el mismo lenguaje que el código activo* fue el error; el `README.md` de la carpeta no alcanzó para distinguirlos.
 **Pendiente (hereda ex ADR-009, sigue Abierta).** Consolidar `milestone.ak` vs `milestone2.ak`: default conservar `milestone.ak`; spike ≤1 día confirmando con quien escribió `milestone2.ak`. Se cierra borrando uno en un PR que actualice esta entrada.
 **Reversión.** Ver trigger de D-001 (extracción a repo propio al congelarse para auditoría).
 
@@ -1903,3 +1905,65 @@ falsificarlo para que quede prolijo es peor que la incomodidad de leer una ruta 
 
 **Trigger de revisión.** Si aparece un tercer servicio desplegable, entra en `apps/`. Si
 `packages/` vuelve a tener algo que se despliega, esta decisión se rompió.
+
+## D-056 — `contracts/reference/` se borra: describía otra máquina de estados que la que corre — **Aceptada** · enmienda D-017
+
+**Contexto (2026-08-23).** Al abrir el track de contratos para cerrar el criterio 2 del SOM (≥95%
+de coverage, el único criterio duro sin plan B), la primera lectura completa del subárbol encontró
+que **de las 468 líneas de Aiken del repo, 353 —el 75%— viven en `contracts/reference/`, que
+`aiken` no mira**: el compilador solo lee `validators/` y `lib/`. Los únicos 10 tests escritos del
+proyecto están ahí adentro, y por eso `aiken check` reporta `"total": 0`.
+
+**El hallazgo que decide.** No es material inerte: es material **contradictorio**.
+
+| | validador activo (`validators/milestone.ak`) | `reference/` |
+|---|---|---|
+| estado final | `Completed` | `Certified` |
+| ¿se sale del final? | no, terminal | sí: `Certified → Observed` |
+| firmantes | un único `admin` | `developer` / `certifier` por acción |
+
+`Certified` vs `Completed` es **exactamente** la inconsistencia que D-020 ya resolvió a favor de
+`Completed` —porque la plataforma no certifica (D-026)— y está listada como desvío vigente. Salir
+de un estado que el canon declara terminal contradice la regla 9 de `CLAUDE.md`. Los 10 tests son
+tests **de esa otra FSM**: promoverlos tal cual pondría el proyecto en verde sobre la máquina
+equivocada, que es el peor resultado posible —peor que 0 tests, porque 0 tests no miente.
+
+**Decisión.** Se borra `contracts/reference/` entera. La FSM canónica es la de D-020, ya
+implementada en `validators/milestone.ak`, y el trabajo de tests se escribe contra ésa.
+
+**Por qué borrar y no dejarlo "por las dudas".** Es el caso puro del principio 1: dos fuentes de
+verdad para la misma cosa (la tabla de transiciones), divergiendo en silencio. Y de la trampa del
+2026-07-29 —*"un artefacto derivado contradijo al entregable y nos hizo decidir mal"*—, con el
+agravante de que este artefacto no está marcado como derivado: es código plausible, formateado,
+con tests que pasan, en un directorio del proyecto. La próxima sesión que abra `contracts/` sin
+leer esta entrada tiene 75% de probabilidad de aterrizar en el archivo equivocado. **Un directorio
+que el compilador no lee no es código: es documentación disfrazada de código, y la peor clase,
+porque tiene la autoridad visual del código.**
+
+**Qué se conserva, y dónde.** Nada de valor se pierde: lo que `reference/` aportaba eran tres ideas
+de diseño, y las tres ya están escritas en prosa donde corresponde —**el thread token** en D-008
+(el argumento entero de "ni nosotros podemos falsificarla después"), **los actores por rol** en
+D-009 (co-firma CIP-30), **el commit de certificación** en M2-D5 (`M3-SC-05`). El código queda en
+el historial de git, recuperable con
+`git log --diff-filter=D --name-only -- 'contracts/reference/*'`, que da el commit que lo borró; el
+anterior lo contiene. Una idea de diseño se registra como decisión, no como un `.ak` que no compila.
+
+**Lo que este borrado NO decide.** Sigue abierto, y hay que decidirlo por separado porque **tocar
+cualquiera de estas tres cambia el hash del script**:
+
+1. **No hay thread token.** El activo exige 1 input y 1 output en la dirección del script, pero
+   nada ata *cuál* UTxO es el hilo legítimo: se pueden abrir hilos paralelos en la misma dirección
+   con datums inventados y la cadena acepta los dos. Hoy se mitiga off-chain guardando el
+   `OutputReference` del hilo real. La propiedad on-chain que D-008 promete **no está**.
+2. **Un solo `admin` firma todo**, contra los cuatro roles del dominio y la co-firma de D-009.
+3. **El datum lleva `project_name` legible** (contra la regla 2: solo hashes y refs opacas) y
+   `milestone_id: Int` sin mapeo definido al id de la base, que es cuid2 (contra la regla 1: UUID).
+
+**Enmienda a D-017.** Aquella entrada metió `reference/` al repo como "material de diseño de Fase
+B". El error no fue guardarlo: fue guardarlo **en el árbol del proyecto y en el mismo lenguaje que
+el código activo**, sin que nada ejecutable distinguiera uno de otro. El `README.md` de la carpeta
+avisaba, y no alcanzó — un README es opt-in y el archivo `.ak` es lo que se abre primero.
+
+**Trigger de revisión.** Si Fase B entra en sprint, el state-thread se escribe de cero contra la
+FSM de D-020 y con la regla 2 aplicada al datum, leyendo D-008 —no recuperando el archivo del
+historial, que trae la FSM equivocada adentro.

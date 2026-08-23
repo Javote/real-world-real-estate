@@ -37,17 +37,31 @@ después**. Para un producto cuya tesis es "verificá sin confiar en la platafor
 
 ## Estado y deuda
 
-- **0 tests.** El criterio 2 del SOM pide **≥95% de coverage** y es el único criterio duro sin plan
-  B. Es la prioridad del track: un test por transición válida y **uno por cada inválida**
-  (`Completed → *` debe fallar siempre; `Pending → Completed` directo, también).
-- **Hubo un `milestone2.ak` y era el mismo script** — no "casi idéntico": mismo hash compilado
-  (`06534cfa08c481a9fa2e3995`). Se borró en D-054, sin spike y sin cambiar nada on-chain.
-  Consolidación pendiente, default conservar `milestone.ak` (D-017).
-- **`aiken.toml` conserva naming de scaffold**: `name = "j/milestone-fsm"`, `repository.user = "j"`,
-  `version = "0.0.0"` — que además incumple D-015 (entero incremental). Corregir junto con el
-  rename de D-023 (`milestone.ak` → `stage.ak`).
-- **`reference/` es material de diseño de Fase B** (D-008): no compila necesariamente y no se
-  despliega. No lo toques sin decisión previa.
+- **0 tests, y es la prioridad del track.** El criterio 2 del SOM pide **≥95% de coverage** y es el
+  único criterio duro sin plan B: un test por transición válida y **uno por cada inválida**
+  (`Completed → *` debe fallar siempre; `Pending → Completed` directo, también), más uno por cada
+  punto de rechazo del validador (`cardano/transaction.placeholder` para armar la tx).
+  **Ojo: `aiken check` no mide coverage de líneas** —solo tiene `--property-coverage`, que es la
+  distribución de labels en property tests—, así que el ≥95% hay que demostrarlo con una tabla que
+  mapee cada punto de rechazo del validador contra el test que lo ejercita.
+- **Hubo un `contracts/reference/` con 353 líneas que el compilador no leía** (`aiken` solo mira
+  `validators/` y `lib/`) y que describía **otra** máquina de estados: `Certified` en vez de
+  `Completed`, salida del estado terminal, firmantes por rol. Se borró entero en **D-056**. Si
+  encontrás una spec vieja que lo menciona, o pensás en recuperarlo del historial: no lo promuevas,
+  trae la FSM equivocada adentro.
+- **Tres decisiones abiertas, y las tres cambian el hash del script** (por eso son decisión, no
+  refactor — el desarrollo está en D-056):
+  1. **No hay thread token.** El validador exige 1 input y 1 output en la dirección del script,
+     pero nada ata *cuál* UTxO es el hilo legítimo: se pueden abrir hilos paralelos con datums
+     inventados. Hoy se mitiga off-chain guardando el `OutputReference` del hilo real, así que la
+     propiedad on-chain que promete D-008 no está.
+  2. **Un solo `admin` firma todo**, contra los cuatro roles del dominio y la co-firma CIP-30 de
+     D-009.
+  3. **El datum lleva `project_name` legible** (contra la regla 2: solo hashes y refs opacas) y
+     `milestone_id: Int` sin mapeo definido al id de la base, que es cuid2 (contra la regla 1: UUID).
+- **Rename pendiente**: `milestone.ak` → `stage.ak` y `MilestoneDatum` → `StageDatum` (D-023).
+  Renombrar tipos y campos no cambia el hash —el datum se codifica por posición— pero sí el
+  blueprint; hacerlo antes de que haya nada desplegado.
 - **La sintaxis de Aiken cambia entre versiones**: verificá contra la pineada (`aiken --version`)
   antes de asumir stdlib.
 
