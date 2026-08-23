@@ -36,6 +36,7 @@ services:
       paths:
         - apps/api/**
         - packages/shared/**
+        - packages/cardano/**
         - pnpm-lock.yaml
         - pnpm-workspace.yaml
         - package.json
@@ -44,6 +45,7 @@ services:
       corepack enable &&
       pnpm install --frozen-lockfile &&
       pnpm --filter @plataforma/shared build &&
+      pnpm --filter @plataforma/cardano build &&
       pnpm --filter @plataforma/api build
     # Las migraciones corren ANTES de escuchar, en cada arranque. Son
     # idempotentes (tabla `_migrations`, D-049) y no hay alternativa: el free
@@ -79,8 +81,11 @@ services:
       - key: MAX_FILE_SIZE_MB
         value: "10"
       # D-013: Preprod SIEMPRE. Mainnet está fuera del alcance de M3.
-      # `packages/cardano` está vacío todavía; se declaran para que el día que
-      # exista el AnchorPort no haya que tocar infraestructura.
+      # `ANCHOR_MODE=simulated` es el único válido hoy: el adaptador real llega
+      # en la rebanada B de SPEC-013 y pedirlo antes revienta al arrancar
+      # (D-042 — sin defaults inseguros, y sin fallar recién en el primer
+      # anclaje). `CARDANO_NETWORK` no lo lee nadie todavía; se deja declarado
+      # para que el día del adaptador real no haya que tocar infraestructura.
       - key: CARDANO_NETWORK
         value: Preprod
       - key: ANCHOR_MODE

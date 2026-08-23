@@ -145,14 +145,58 @@ describe("PATCH /milestones/:id/state · evidencia en stages críticos", () => {
 });
 
 describe("OnChainEvent · el aterrizaje del anclaje", () => {
-  it("registra el evento pendiente, sin TXID, en cada transición", async () => {
+  it("ancla la transición de un stage con hilo abierto", async () => {
+    // El stage se crea por la API para que su hilo exista: el `mint` pasa por
+    // `POST`, igual que en la cadena. Con `ANCHOR_MODE=simulated` la
+    // confirmación es inmediata.
+    const creado = await request(app)
+      .post(`/api/v1/projects/${proyecto}/milestones`)
+      .set("Authorization", `Bearer ${token}`)
+      .send({ name: "Stage con hilo", sequenceOrder: 999_101 });
+
+    expect(creado.body.anchor.status).toBe("Confirmed");
+    expect(creado.body.anchor.outputRef).toBe(`${creado.body.anchor.txid}#0`);
+
+    const res = await patchState(creado.body.id, "InProgress");
+
+    expect(res.body.anchor.status).toBe("Confirmed");
+    expect(res.body.anchor.fromState).toBe("Pending");
+    expect(res.body.anchor.toState).toBe("InProgress");
+    // El hilo se movió: el UTxO nuevo no es el que abrió el `mint`.
+    expect(res.body.anchor.outputRef).not.toBe(creado.body.anchor.outputRef);
+  });
+
+  it("deja el evento en Failed —y la declaración escrita— si el stage no tiene hilo", async () => {
+    // Es la invariante 2 de SPEC-013: el registro nunca depende del anclaje.
+    // Un stage insertado a mano (o sembrado antes de que existiera el puerto)
+    // no tiene hilo abierto, así que no se puede gastar nada.
     const id = await crearStage({ state: "Pending" });
     const res = await patchState(id, "InProgress");
 
-    expect(res.body.anchor.status).toBe("Pending");
+    expect(res.status).toBe(200);
+    expect(res.body.state).toBe("InProgress");
+    expect(res.body.anchor.status).toBe("Failed");
     expect(res.body.anchor.txid).toBeNull();
-    expect(res.body.anchor.fromState).toBe("Pending");
-    expect(res.body.anchor.toState).toBe("InProgress");
+  });
+
+  it("un stage crítico se completa en el registro pero NO se ancla, porque falta el commitment", async () => {
+    // La consecuencia visible del hueco de SPEC-013 §Preguntas abiertas 2: no
+    // existe `EvidenceBundle`, así que el datum va con `evidenceRoot` vacío y
+    // el simulador lo rechaza igual que lo haría el validador. Que esto esté
+    // en un test y no en un comentario es la diferencia entre una deuda
+    // conocida y una sorpresa.
+    const creado = await request(app)
+      .post(`/api/v1/projects/${proyecto}/milestones`)
+      .set("Authorization", `Bearer ${token}`)
+      .send({ name: "Stage crítico", sequenceOrder: 999_102, validationCritical: true });
+
+    await patchState(creado.body.id, "InProgress");
+    await agregarEvidencia(creado.body.id);
+    const res = await patchState(creado.body.id, "Completed");
+
+    expect(res.status).toBe(200);
+    expect(res.body.state).toBe("Completed");
+    expect(res.body.anchor.status).toBe("Failed");
   });
 
   it("numera los eventos en orden dentro del hilo", async () => {

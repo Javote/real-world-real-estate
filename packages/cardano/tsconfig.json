@@ -1,0 +1,22 @@
+{
+  // Mismo formato que packages/shared: CommonJS porque apps/api lo consume con
+  // require() en runtime. A diferencia de shared, este package NO lo importa el
+  // browser: corre solo en el servidor, así que puede usar `node:crypto`.
+  "compilerOptions": {
+    "target": "ES2022",
+    "module": "node16",
+    "moduleResolution": "node16",
+    "lib": ["ES2022"],
+    "types": ["node"],
+    "outDir": "dist",
+    "rootDir": "src",
+    "declaration": true,
+    "strict": true,
+    "noUncheckedIndexedAccess": true,
+    "exactOptionalPropertyTypes": true,
+    "esModuleInterop": true,
+    "skipLibCheck": true
+  },
+  "include": ["src"],
+  "exclude": ["src/**/*.test.ts"]
+}

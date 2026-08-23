@@ -81,6 +81,7 @@ resolución (por qué `types` apunta al `.d.ts` y no al fuente) está en `packag
 | Blueprint `plutus.json` | commiteado, CI verifica que esté al día | ● | D-017 |
 | Validador | `validators/stage.ak` | ● | Datum alineado con `M1-D2` y firma del operador; reescrito por D-057 |
 | `lib/` puro y testeable | `lib/propnexus/fsm.ak` | ● | D-008: tipos, tabla de transiciones y reglas del datum, sin contexto de tx |
+| Quien llama al validador | `packages/cardano` — `AnchorPort`, modo `simulated` | ◐ | SPEC-013: §A hecha (puerto + simulador), §B (Lucid + Blockfrost) y §C (reconciliar + `verify`) pendientes |
 | **Tests** | **72** (39 núcleo + 33 validador) | ● | Criterio 2 del SOM: la tabla punto de rechazo → test está en `contracts/CLAUDE.md` |
 | Thread token + handler `mint` | NFT por stage, asset name = `stage_ref`, sin burn | ● | D-058 cierra lo que D-008 prometía: un solo hilo por stage, y nacimiento validado |
 | Firmante | el operador (`admin`), único | ● | D-058: decisión del dueño, y es lo que el whitepaper §System Overview describe |

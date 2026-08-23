@@ -17,7 +17,11 @@ export default defineConfig({
   // desde dónde se invoca el comando.
   resolve: {
     alias: {
-      "@plataforma/shared": path.resolve(import.meta.dirname, "../../packages/shared/src/index.ts")
+      "@plataforma/shared": path.resolve(import.meta.dirname, "../../packages/shared/src/index.ts"),
+      "@plataforma/cardano": path.resolve(
+        import.meta.dirname,
+        "../../packages/cardano/src/index.ts"
+      )
     }
   },
   test: {

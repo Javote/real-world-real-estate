@@ -110,7 +110,9 @@ Todavía no ejecutados; hacen falta para el **anclaje real**, no para el deploy:
 1. **Blockfrost** — crear cuenta, proyecto **Preprod**, setear `BLOCKFROST_API_KEY`.
 2. **Wallet de servicio** — generar una seed *nueva y exclusiva de Preprod* para que el backend firme
    las transacciones de anclaje, y fondearla desde el [faucet de testnet](https://docs.cardano.org/cardano-testnets/tools/faucet).
-3. **`packages/cardano`** — el package está vacío: no hay `AnchorPort`, ni adaptador simulado, ni real (D-014).
+3. **`packages/cardano`** — el `AnchorPort` y el adaptador **simulado** ya existen y corren en CI
+   (`SPEC-013` §A). Falta el adaptador **real** (Lucid + Blockfrost): rebanada B. Hasta entonces,
+   `ANCHOR_MODE=real` revienta al arrancar, a propósito.
 4. **Cloudflare R2** — storage S3-compatible para la evidencia, y mover el SHA-256 para que cubra los
    bytes que terminan en el object storage (D-011, superficie 🔴).
 
@@ -161,7 +163,8 @@ plataforma/
 │   │   └── test/
 │   └── web/                    # TanStack Start + Tailwind v4 — servicio en Render
 ├── packages/
-│   └── shared/                 # contrato Zod API↔web: lo importan los dos
+│   ├── shared/                 # contrato Zod API↔web: lo importan los dos
+│   └── cardano/                # AnchorPort: la cadena detrás de una interfaz (hoy, simulado)
 ├── contracts/                  # Aiken · Plutus V3 — no se hostea, toolchain aparte
 │   ├── validators/stage.ak     #   el validador de la FSM + sus tests
 │   ├── lib/propnexus/fsm.ak    #   núcleo puro: tipos, transiciones, datum

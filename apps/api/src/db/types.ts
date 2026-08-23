@@ -148,6 +148,19 @@ export interface OnChainEventTable {
   updatedAt: SqliteTimestamp;
 }
 
+/**
+ * Ledger del adaptador simulado del `AnchorPort` (SPEC-013 §A). Solo se escribe
+ * con `ANCHOR_MODE=simulated`; con el adaptador real, el ledger es Cardano.
+ */
+export interface SimulatedLedgerUtxoTable {
+  outputRef: string;
+  /** `stageRef` del datum = asset name del thread token. */
+  assetName: string;
+  datumJson: string;
+  spentByTxid: string | null;
+  createdAt: SqliteTimestamp;
+}
+
 export interface Database {
   User: UserTable;
   Project: ProjectTable;
@@ -156,6 +169,7 @@ export interface Database {
   Evidence: EvidenceTable;
   AuditLog: AuditLogTable;
   OnChainEvent: OnChainEventTable;
+  SimulatedLedgerUtxo: SimulatedLedgerUtxoTable;
 }
 
 export type UserRow = Selectable<UserTable>;

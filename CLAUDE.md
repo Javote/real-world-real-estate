@@ -98,6 +98,7 @@ nos pasó decidir contra una transcripción errónea (ver Trampas).
 apps/api          Express 5 + Kysely      → servicio en Render
 apps/web          TanStack Start (SSR)    → servicio en Render
 packages/shared   contrato Zod API↔web    → lo importan los dos
+packages/cardano  AnchorPort (D-014)      → lo importa la API; simulado hoy, real en SPEC-013 §B
 contracts/        Aiken · Plutus V3       → no se hostea, toolchain aparte
 ```
 
@@ -106,7 +107,8 @@ cambia de un lado y el typecheck del otro falla. Las migraciones son SQL plano e
 `apps/api/migrations/`, aplicadas por un único runner (`src/db/migrate.ts`, D-052).
 
 `contracts/` **no está en el workspace pnpm** a propósito (D-054): otro toolchain, otro lockfile,
-otra caché. `packages/cardano` no existe todavía; aparece el día que exista el `AnchorPort` (D-014).
+otra caché. `packages/cardano` existe desde SPEC-013 §A: expone el `AnchorPort` y hoy solo trae el
+adaptador simulado — que es producto, no stub (D-014).
 
 Tres `.md` en la raíz, a propósito: **`README.md`** (entrada humana, arranque, variables de
 entorno), **`CLAUDE.md`** (este archivo) y **`DECISIONS.md`** (el porqué). El mapa de desarrollo
@@ -130,7 +132,7 @@ Lo que necesitás saber al escribir código:
 | **api** | Express 5 + Zod + JWT + bcrypt(10) + Multer + helmet, base `/api/v1` | D-016, D-054 |
 | **shared** | Zod — el contrato único API↔web. El schema va acá **antes** que el endpoint | D-012 |
 | **db** | **Kysely** (migración desde Drizzle **completa**, D-049) · **SQLite** en dev · **Turso** en Render | D-016, D-038, D-048, D-049 |
-| **cardano** | `AnchorPort` con adaptadores `blockfrost` y `simulated` — *package vacío* | D-005, D-014 |
+| **cardano** | `AnchorPort` con adaptadores `simulated` (**existe**) y `blockfrost` (*rebanada B*) | D-005, D-014, D-060 |
 | **contracts** | Aiken v1.1.21 · **Plutus V3** · stdlib v3.0.0 · blueprint commiteado | D-017, D-019 |
 | red | **Preprod siempre**; mainnet fuera de alcance | D-013 |
 

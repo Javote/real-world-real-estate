@@ -1,4 +1,5 @@
 import {
+  buildStageDatum,
   canTransition,
   INITIAL_STAGE_STATE,
   STAGE_TRANSITION_ERRORS,
@@ -7,7 +8,8 @@ import {
 import { type Request, Router } from "express";
 import { z } from "zod";
 import { createId } from "../db/id";
-import type { MilestoneState, OnChainEventType } from "../db/types";
+import type { MilestoneRow, MilestoneState, OnChainEventRow, OnChainEventType } from "../db/types";
+import { anchorPort } from "../lib/anchor";
 import { db } from "../lib/db";
 import {
   ANY_MEMBERSHIP,
@@ -70,6 +72,94 @@ async function recordOnChainEvent(input: {
     })
     .returningAll()
     .executeTakeFirstOrThrow();
+}
+
+/**
+ * La fila de `Milestone` en la forma que espera el productor del datum.
+ *
+ * `evidenceRoot` va vacío **siempre**: el Merkle root del bundle no lo calcula
+ * nadie todavía (no existe `EvidenceBundle`). Consecuencia visible y
+ * documentada en SPEC-013 §Preguntas abiertas: completar un stage
+ * `validationCritical` queda **registrado pero no anclado**, porque el
+ * validador exige 32 bytes de commitment y acá no hay ninguno.
+ */
+function toDatumSource(milestone: MilestoneRow) {
+  return {
+    id: milestone.id,
+    projectId: milestone.projectId,
+    sequenceOrder: milestone.sequenceOrder,
+    validationCritical: Boolean(milestone.validationCritical),
+    state: milestone.state,
+    evidenceRoot: "",
+    completedAt: milestone.certifiedAt ? new Date(milestone.certifiedAt).getTime() : 0
+  };
+}
+
+/** La cabeza del hilo: el UTxO vivo del thread token de este stage. */
+async function cabezaDelHilo(milestoneId: string): Promise<string | null> {
+  const ultimo = await db
+    .selectFrom("OnChainEvent")
+    .selectAll()
+    .where("milestoneId", "=", milestoneId)
+    .where("outputRef", "is not", null)
+    .orderBy("eventIndex", "desc")
+    .limit(1)
+    .executeTakeFirst();
+
+  return ultimo?.outputRef ?? null;
+}
+
+/**
+ * Ancla un evento ya registrado y le escribe el resultado.
+ *
+ * **El registro nunca depende del anclaje** (D-059, SPEC-013 §Invariante 2): si
+ * el puerto rechaza o se cae, la declaración ya está escrita y el evento queda
+ * `Failed`. La respuesta sigue siendo 200 — lo que el usuario declaró, ocurrió;
+ * lo que falta es la prueba, y la UI la muestra como tal (regla 17).
+ */
+async function anchorEvent(
+  event: OnChainEventRow,
+  milestone: MilestoneRow,
+  previous: MilestoneRow | null
+): Promise<OnChainEventRow> {
+  // Idempotencia (regla 8): un evento ya anclado no se vuelve a anclar.
+  if (event.txid) return event;
+
+  try {
+    const receipt =
+      previous === null
+        ? await anchorPort.openThread({ datum: buildStageDatum(toDatumSource(milestone)) })
+        : await anchorPort.advanceThread({
+            outputRef: (await cabezaDelHilo(milestone.id)) ?? "",
+            previous: buildStageDatum(toDatumSource(previous)),
+            next: buildStageDatum(toDatumSource(milestone))
+          });
+
+    const proof = receipt.status === "Confirmed" ? await anchorPort.verify(receipt.txid) : null;
+
+    return await db
+      .updateTable("OnChainEvent")
+      .set({
+        txid: receipt.txid,
+        outputRef: receipt.outputRef,
+        status: receipt.status,
+        blockTimestamp: proof ? new Date(proof.blockTimestamp) : null,
+        updatedAt: new Date()
+      })
+      .where("id", "=", event.id)
+      .returningAll()
+      .executeTakeFirstOrThrow();
+  } catch (error) {
+    // El detalle va al log del servidor, no al cliente (errorHandler §regla 2).
+    console.error("[anchor] el anclaje falló", { eventId: event.id, error });
+
+    return await db
+      .updateTable("OnChainEvent")
+      .set({ status: "Failed", updatedAt: new Date() })
+      .where("id", "=", event.id)
+      .returningAll()
+      .executeTakeFirstOrThrow();
+  }
 }
 
 /** ¿Este stage ya tiene hilo en la cadena? Si lo tiene, su identidad on-chain
@@ -142,13 +232,14 @@ router.post(
       .returningAll()
       .executeTakeFirstOrThrow();
 
-    const anchor = await recordOnChainEvent({
+    const evento = await recordOnChainEvent({
       projectId: milestone.projectId,
       milestoneId: milestone.id,
       eventType: "STAGE_CREATED",
       fromState: null,
       toState: milestone.state
     });
+    const anchor = await anchorEvent(evento, milestone, null);
 
     await writeAuditLog({
       actorUserId: req.user!.id,
@@ -329,13 +420,14 @@ router.patch(
 
     // La declaración quedó registrada; la prueba queda pendiente hasta que
     // exista el `AnchorPort` (D-014) y devuelva un TXID confirmado.
-    const anchor = await recordOnChainEvent({
+    const evento = await recordOnChainEvent({
       projectId: milestone.projectId,
       milestoneId: milestone.id,
       eventType: "STAGE_TRANSITION",
       fromState: existing.state,
       toState: to
     });
+    const anchor = await anchorEvent(evento, milestone, existing);
 
     await writeAuditLog({
       actorUserId: req.user!.id,

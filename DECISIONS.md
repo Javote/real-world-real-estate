@@ -28,7 +28,7 @@
 | D-011 | Storage: S3 genérico — MinIO en dev, Cloudflare R2 en prod | Aceptada (transición: dev usa disco local por D-016 hasta integrar S3) |
 | D-012 | Cambios aditivos entre deploys; migraciones idempotentes en entrypoint | Aceptada |
 | D-013 | Red Cardano: Preprod hasta aprobación de gobernanza | Aceptada |
-| D-014 | Dependencia blockchain detrás de puerto propio con modo real/simulado | Aceptada |
+| D-014 | Dependencia blockchain detrás de puerto propio con modo real/simulado | Aceptada; **implementada en parte por D-060** (simulado sí, real pendiente) |
 | D-015 | Versionado: CalVer para servicios; enteros para contratos | Aceptada |
 | D-016 | Adoptar el backend PoC (Express 4 + Prisma + SQLite + JWT/bcrypt + disco local) como `packages/api` | Aceptada (trigger de revisión enmendado por D-038: el destino ya no es PostgreSQL) |
 | D-017 | Contratos: adoptar el proyecto Aiken del backend en `contracts/`, junto a los validadores de referencia | Aceptada; **consolidación cerrada por D-054** (mismo hash, `milestone2.ak` borrado); **`reference/` borrada por D-056** |
@@ -74,6 +74,7 @@
 | D-057 | `contracts/` reescrito contra M1: datum de M1-D2, evidencia obligatoria en stages críticos, 53 tests | Aceptada |
 | D-058 | Thread token por stage, `mint` validado, ids opacos y el operador como único firmante | Aceptada (cierra D-057; deja D-009 sin alcance en `contracts/`) |
 | D-059 | El backend deja de estar desconectado del validador: FSM en `packages/shared`, productor del datum y tabla `OnChainEvent` | Aceptada (aclara D-007) |
+| D-060 | `packages/cardano` vuelve: `AnchorPort` + adaptador simulado con ledger propio (`SPEC-013` §A) | Aceptada (concreta D-014) |
 
 > **Repaso completo con la documentación oficial: ver §Repaso al final del archivo.** D-001..D-017 se
 > escribieron sin los entregables delante; las 25 entradas se revisaron el 2026-07-29 y cada una
@@ -2201,3 +2202,56 @@ dónde aterrizar — y **nadie construye la transacción todavía**. Eso es una 
 
 **Trigger de revisión.** Si aparece un segundo lugar que escriba `Milestone.state` sin pasar por
 `canTransition`, esta decisión se rompió: la regla vale porque hay un solo camino.
+
+## D-060 — `packages/cardano` vuelve, con el puerto y un simulador que rechaza de verdad — **Aceptada** · concreta D-014, dispara el trigger de D-055
+
+**Contexto (2026-08-23).** D-059 dejó el diagnóstico: el validador probado, el datum con productor,
+el TXID con dónde aterrizar, y **nadie construyendo la transacción**. `SPEC-013` corta ese trabajo
+en tres —A: puerto y simulador · B: adaptador real · C: reconciliación y `verify()`— y esta entrada
+registra lo que decidió la rebanada A.
+
+**1 · El package vuelve, y esta vez es un package.** D-055 lo borró porque era un directorio con un
+`.gitkeep` y sin `package.json`: *"vuelve como package real el día que exista el `AnchorPort`"*. Ese
+día es hoy. Tiene `package.json`, build propio, tests propios y una sola dependencia
+(`@plataforma/shared`).
+
+**2 · El puerto se abre en dos operaciones, no una.** D-014 hablaba de `anchor()`; quedó
+`openThread()` y `advanceThread()`, que espejan los dos handlers del validador (`mint` y `spend`).
+No es cosmética: tienen precondiciones **opuestas** —uno exige que NO haya hilo, el otro que exista
+y esté sin gastar— y esconderlas detrás de un solo nombre obligaría a adivinar cuál se quiso.
+
+**3 · El simulador rechaza lo mismo que la cadena.** Doble gasto, hilo duplicado, transición fuera
+de la tabla, identidad reescrita, datum viejo, y stage crítico sin commitment. **Un simulador que
+dice que sí a todo no simula: miente, y encima da confianza** — sería peor que no tenerlo, porque
+el error aparecería recién con una transacción firmada y pagada. El TXID es determinístico
+(`sha256` del payload canónico), así que anclar dos veces lo mismo se ve como el mismo TXID.
+
+**4 · El ledger del simulador vive en SQLite, en el schema real.** Es la decisión discutible de la
+rebanada, así que va con su argumento: en memoria, reiniciar `pnpm dev` deja huérfanos los hilos
+abiertos y el simulador pierde lo único que lo hace valer algo —detectar el doble gasto—. La tabla
+`SimulatedLedgerUtxo` **solo se escribe con `ANCHOR_MODE=simulated`**, lo dice su migración, y su
+índice parcial único (`assetName` donde `spentByTxid IS NULL`) es la propiedad del thread token
+verificada sin cadena: **un solo UTxO vivo por stage**. Con el adaptador real, el ledger es Cardano
+y la tabla queda muerta.
+
+**5 · `ANCHOR_MODE=real` revienta al construir el puerto**, no en el primer anclaje (D-042: sin
+defaults inseguros, y el fallo temprano y ruidoso antes que el tardío y silencioso). El default es
+`simulated`.
+
+**Lo que se descubrió al cablearlo, y quedó como test en vez de comentario.** Dos huecos que solo
+se ven cuando el circuito está cerrado:
+
+- **Un stage sin hilo abierto no se puede anclar.** Los stages sembrados o insertados antes de que
+  existiera el puerto no tienen `mint`, así que sus transiciones quedan `Failed`. El registro
+  avanza igual (invariante 2) y la respuesta sigue siendo 200. El backfill es trabajo de la
+  rebanada B.
+- **Un stage `validationCritical` se completa en el registro pero NO se ancla**, porque el datum
+  va con `evidenceRoot` vacío —no existe `EvidenceBundle`, nadie calcula el Merkle root— y el
+  simulador lo rechaza igual que lo haría el validador. Está como test explícito
+  (`apps/api/test/stage-transitions.test.ts`) para que sea deuda conocida y no sorpresa.
+
+**Estado.** 198 tests TS (44 shared · **15 cardano** · 123 API · 16 web) + 72 Aiken, todo en verde.
+
+**Trigger de revisión.** Si alguien importa Lucid o Blockfrost fuera de `packages/cardano`, la
+decisión se rompió (D-014). Y si el adaptador real llega sin que el simulado siga corriendo en CI,
+también: el simulado no es andamio, es lo que mantiene la suite offline y determinística.

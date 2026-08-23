@@ -1,0 +1,112 @@
+# SPEC-013 — `AnchorPort`: conectar el registro con la cadena
+
+> Rebanada 3 del mapa (`specs/README.md`), en **tres cortes**. Este documento cubre los tres; la
+> rebanada A es la que se implementa primero y las otras dos heredan sus invariantes.
+
+## Propósito
+
+Entre `apps/api` y `contracts/` no hay nada: el validador está probado y nadie construye la
+transacción (D-059). `AnchorPort` es esa pieza — la dependencia externa más lenta e incierta detrás
+de una interfaz propia con modo real/simulado (principio 7, D-014), para que el resto del sistema
+no sepa que Cardano existe.
+
+## Los tres cortes
+
+| | Qué deja funcionando | Qué introduce | Riesgo |
+|---|---|---|---|
+| **A · el puerto y el simulador** | El ciclo completo: declarar → anclar → TXID → estado del hilo, sin red | `packages/cardano`, `AnchorPort`, adaptador `simulated` con ledger propio | ninguno: sin secretos, sin red, corre en CI |
+| **B · el adaptador real** | Un TXID de verdad en cardanoscan (Preprod) | Lucid + Blockfrost, códec CBOR del datum, dirección derivada del blueprint | 🔴 `SERVICE_WALLET_SEED`; el códec es donde viven los bugs |
+| **C · reconciliación y verificación** | `/verify` verifica contra la cadena, no contra la API | `reconcile()` en lectura, `verify()` público, estados de la UI | medio: depende de disponibilidad de Blockfrost |
+
+**El corte es por riesgo, no por tamaño.** A no toca ningún secreto ni ninguna red y sin embargo
+cierra el circuito entero: es donde se descubren los errores de diseño baratos.
+
+## Alcance / NO-alcance
+
+- **Cubre (A):** la interfaz del puerto, el adaptador simulado con verificación real (detecta
+  doble gasto y hilos duplicados), el cableado en `PATCH /milestones/:id/state` y en la creación de
+  stages, y la actualización de `OnChainEvent`.
+- **NO cubre (A):** ninguna transacción de Cardano, ninguna dependencia de Lucid o Blockfrost,
+  ninguna key. `ANCHOR_MODE=real` existe y **falla explícito** hasta la rebanada B.
+- **NO cubre (ninguna):** `EvidenceBundle` ni el cálculo del Merkle root — sin eso, un stage
+  `validationCritical` no puede completarse **con anclaje**, porque el validador exige 32 bytes
+  (ver §Preguntas abiertas). Tampoco mainnet (D-013), ni valor de ningún tipo (D-021).
+
+## Interfaz
+
+```ts
+type AnchorMode = "simulated" | "real";
+
+interface AnchorPort {
+  // mint: acuña el thread token y crea el hilo en Pending
+  openThread(input: { datum: StageDatum }): Promise<AnchorReceipt>;
+  // spend: gasta el hilo y lo recrea con el datum nuevo
+  advanceThread(input: {
+    outputRef: string;            // el UTxO del hilo, `txid#index`
+    previous: StageDatum;
+    next: StageDatum;
+  }): Promise<AnchorReceipt>;
+  verify(txid: string): Promise<AnchorProof | null>;
+  awaitConfirmation(txid: string): Promise<AnchorProof>;
+}
+
+interface AnchorReceipt {
+  txid: string;
+  outputRef: string;              // el hilo QUE QUEDA vivo — estado crítico
+  status: "Pending" | "Confirmed";
+}
+```
+
+`openThread`/`advanceThread` espejan los dos handlers del validador. Los nombres del puerto son los
+de D-014 (`anchor`, `verify`, `awaitConfirmation`); `anchor` se abre en dos porque `mint` y `spend`
+son operaciones distintas con precondiciones distintas.
+
+## Invariantes
+
+1. **Nada fuera de `packages/cardano` importa Lucid ni Blockfrost** (D-014). La API llama al puerto.
+2. **El registro nunca depende del anclaje.** Si el puerto falla, la declaración ya está escrita y
+   el evento queda `Failed`; jamás al revés (D-059).
+3. **Idempotencia (regla 8):** un `OnChainEvent` que ya tiene `txid` no se vuelve a anclar. El
+   índice único `(milestoneId, eventIndex)` es la barrera.
+4. **Un hilo vivo por stage.** El simulador rechaza abrir un segundo hilo para un `stageRef` que ya
+   tiene UTxO sin gastar — es la propiedad del thread token, verificada sin cadena.
+5. **El `outputRef` se persiste siempre** que exista. Perderlo es perder el hilo: el token queda en
+   un UTxO que nadie sabe cuál es y ese stage no se mueve nunca más.
+6. **El simulador aplica las mismas reglas que el validador**, no menos: transición válida,
+   identidad preservada, evidencia en stages críticos, doble gasto. Un simulador que dice que sí a
+   todo no simula: miente.
+7. **`ANCHOR_MODE` no tiene default inseguro** (D-042): `simulated` es el default; `real` sin
+   configuración completa revienta al arrancar, no en el primer anclaje.
+8. **Anclar es secuencial por stage.** El evento N no se ancla hasta que N−1 tenga `outputRef`.
+
+## Casos borde (definen los tests)
+
+| Caso | Esperado |
+|---|---|
+| Abrir hilo de un stage que ya tiene uno vivo | rechazo (invariante 4) |
+| Avanzar desde un `outputRef` ya gastado | rechazo por doble gasto |
+| Avanzar desde un `outputRef` inexistente | rechazo |
+| Avanzar con una transición fuera de la tabla | rechazo (espeja `valid_transition`) |
+| Avanzar reescribiendo `sequenceOrder` o `validationCritical` | rechazo (espeja `identity_preserved`) |
+| Completar un stage crítico sin `evidenceRoot` de 32 bytes | rechazo (espeja `completion_evidence_ok`) |
+| Anclar dos veces el mismo evento | el segundo no produce transacción nueva |
+| El puerto tira una excepción | la declaración queda escrita, el evento en `Failed`, respuesta 200 |
+| `ANCHOR_MODE=real` en la rebanada A | error explícito al construir el puerto |
+| El mismo payload anclado dos veces | mismo `txid` (el simulador es determinístico) |
+
+## Preguntas abiertas
+
+1. **¿Todos los stages tienen hilo, o solo los `validationCritical`?** D-008 justifica el validador
+   donde importa la integridad de la *secuencia*. Anclar todo es más simple de explicar; anclar
+   solo los críticos cuesta menos fee y menos ADA inmovilizada. **Default vigente: todos**, porque
+   hoy no cuesta nada en Preprod y evita una regla más. Se decide antes de la rebanada B.
+2. **El Merkle root del bundle.** No existe `EvidenceBundle`. Hasta que exista, un stage
+   `validationCritical` se puede completar en el registro pero su anclaje no puede llevar
+   commitment. Se cruza con el hueco de D-028 (atribución de autoridad y atestación del revisor).
+   **Dueño: producto.**
+3. **Qué pasa con un anclaje que falla definitivamente.** `status = "Failed"` existe y nadie lo
+   escribe todavía. ¿Reintento automático, o queda visible como "no anclado"? Es decisión de
+   producto, no técnica.
+4. **La wallet de servicio no se puede rotar sin migrar los hilos**: el validador está
+   parametrizado por `admin`, así que cambiar la wallet cambia la dirección del script. Hay que
+   saberlo antes de generar la seed de la rebanada B, no después.
