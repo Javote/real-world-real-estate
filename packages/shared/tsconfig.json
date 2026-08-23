@@ -1,5 +1,5 @@
 {
-  // CommonJS a propósito: packages/api es CJS y lo consume con require() en
+  // CommonJS a propósito: apps/api es CJS y lo consume con require() en
   // runtime (D-016). El front no lo carga en runtime — importa solo tipos, que
   // `verbatimModuleSyntax` borra en la compilación.
   //

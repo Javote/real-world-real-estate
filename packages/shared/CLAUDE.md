@@ -2,7 +2,7 @@
 
 > Se carga solo al tocar este subárbol.
 
-Zod + los tipos inferidos. Todo lo que cruza la frontera entre `packages/api` y `apps/web` se
+Zod + los tipos inferidos. Todo lo que cruza la frontera entre `apps/api` y `apps/web` se
 declara **una sola vez acá** (D-012, regla 6). Es lo único que vuelve el drift API↔web
 *imposible* en vez de meramente prohibido: si una respuesta cambia de forma y el schema no,
 falla el typecheck de los dos lados. Verificado.

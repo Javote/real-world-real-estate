@@ -10,9 +10,10 @@
     "dev": "pnpm --parallel -r --filter './apps/**' dev",
     "build": "pnpm -r build",
     "typecheck": "pnpm --filter @plataforma/shared build && pnpm -r typecheck",
-    "lint": "pnpm -r lint",
+    "lint": "biome check .",
+    "lint:fix": "biome check --write .",
     "test": "pnpm -r test",
-    "verify": "pnpm typecheck && pnpm test && pnpm build",
+    "verify": "pnpm lint && pnpm typecheck && pnpm test && pnpm build",
     "contracts:check": "cd contracts && aiken check",
     "contracts:build": "cd contracts && aiken build",
     "contracts:verify": "cd contracts && aiken fmt --check && aiken check && aiken build",
@@ -25,5 +26,8 @@
     "overrides": {
       "@types/express": "^5.0.6"
     }
+  },
+  "devDependencies": {
+    "@biomejs/biome": "^2.5.10"
   }
 }

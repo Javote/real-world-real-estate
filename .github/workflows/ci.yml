@@ -9,9 +9,15 @@ concurrency:
   group: ci-${{ github.ref }}
   cancel-in-progress: true
 
+# Dos jobs independientes y a propósito: **TypeScript y Aiken son dos cadenas de
+# herramientas distintas**, con sus propias versiones, sus propios artefactos y
+# sus propios modos de falla. Corren en paralelo y ninguno espera al otro; que
+# los contratos no compilen no dice nada sobre la app, y al revés tampoco.
+# El equivalente local son `pnpm verify` y `pnpm contracts:verify`, o
+# `pnpm verify:all` para encadenarlos.
 jobs:
   app:
-    name: App TS (typecheck + tests + build)
+    name: App TS (lint + typecheck + tests + build)
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v7
@@ -31,6 +37,9 @@ jobs:
       - name: Instalar dependencias
         run: pnpm install --frozen-lockfile
 
+      - name: Lint + formato (Biome)
+        run: pnpm lint
+
       - name: Typecheck
         run: pnpm typecheck
 
@@ -42,6 +51,8 @@ jobs:
 
   contracts:
     name: Contratos Aiken (fmt + check + blueprint al día)
+    # Espeja `pnpm contracts:verify`, más el chequeo de que el blueprint
+    # commiteado esté al día — que solo tiene sentido acá, contra un árbol limpio.
     runs-on: ubuntu-latest
     defaults:
       run:

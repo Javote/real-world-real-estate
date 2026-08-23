@@ -5,7 +5,7 @@ import { z } from "zod";
 // siguen funcionando, pero este archivo es el patrón que copian los schemas de
 // cada rebanada: si acá queda el idioma viejo, se replica ochenta veces.
 
-/** Roles globales. Espeja `USER_ROLES` de packages/api/src/db/types.ts. */
+/** Roles globales. Espeja `USER_ROLES` de apps/api/src/db/types.ts. */
 export const userRoleSchema = z.enum(["admin", "developer", "buyer", "verifier", "notary"]);
 export type UserRole = z.infer<typeof userRoleSchema>;
 
@@ -24,7 +24,7 @@ export const PASSWORD_MAX_BYTES = 72;
  *
  * Ni `Buffer` (Node) ni `TextEncoder` (DOM): el `lib` de este package es
  * `["ES2022"]` pelado a propósito, porque lo consumen la API y el browser. Meter
- * `DOM` acá para una línea le abriría a `packages/api` todos los globals del
+ * `DOM` acá para una línea le abriría a `apps/api` todos los globals del
  * navegador, que es un precio alto por evitar ocho líneas.
  *
  * El `for...of` sobre un string itera **code points**, no unidades UTF-16, así
@@ -57,10 +57,10 @@ export const passwordSchema = z
   // el mínimo pide. `[...pw]` itera code points, que es lo que NIST llama
   // "characters".
   .refine((pw) => [...pw].length >= PASSWORD_MIN_CHARS, {
-    message: `La contraseña necesita al menos ${PASSWORD_MIN_CHARS} caracteres`,
+    message: `La contraseña necesita al menos ${PASSWORD_MIN_CHARS} caracteres`
   })
   .refine((pw) => byteLength(pw) <= PASSWORD_MAX_BYTES, {
-    message: `La contraseña no puede superar los ${PASSWORD_MAX_BYTES} bytes`,
+    message: `La contraseña no puede superar los ${PASSWORD_MAX_BYTES} bytes`
   });
 
 /**
@@ -73,7 +73,7 @@ export const passwordSchema = z
  */
 export const loginRequestSchema = z.object({
   email: z.email(),
-  password: z.string().min(1).max(1024),
+  password: z.string().min(1).max(1024)
 });
 export type LoginRequest = z.infer<typeof loginRequestSchema>;
 
@@ -89,14 +89,14 @@ export const sessionUserSchema = z.strictObject({
   id: z.string(),
   email: z.email(),
   role: userRoleSchema,
-  fullName: z.string(),
+  fullName: z.string()
 });
 export type SessionUser = z.infer<typeof sessionUserSchema>;
 
 /** Respuesta de `POST /api/v1/auth/login`. */
 export const loginResponseSchema = z.strictObject({
   token: z.string().min(1),
-  user: sessionUserSchema,
+  user: sessionUserSchema
 });
 export type LoginResponse = z.infer<typeof loginResponseSchema>;
 
@@ -109,6 +109,6 @@ export type LoginResponse = z.infer<typeof loginResponseSchema>;
  */
 export const meResponseSchema = sessionUserSchema.extend({
   isActive: z.boolean(),
-  createdAt: z.iso.datetime(),
+  createdAt: z.iso.datetime()
 });
 export type MeResponse = z.infer<typeof meResponseSchema>;

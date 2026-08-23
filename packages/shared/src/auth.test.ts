@@ -1,10 +1,5 @@
 import { describe, expect, it } from "vitest";
-import {
-  loginRequestSchema,
-  loginResponseSchema,
-  meResponseSchema,
-  passwordSchema,
-} from "./auth";
+import { loginRequestSchema, loginResponseSchema, meResponseSchema, passwordSchema } from "./auth";
 
 describe("contrato de auth", () => {
   it("rechaza un email que no es email", () => {
@@ -28,8 +23,8 @@ describe("contrato de auth", () => {
         email: "dev@example.com",
         role: "developer",
         fullName: "Dev",
-        passwordHash: "$2b$10$loquesea",
-      },
+        passwordHash: "$2b$10$loquesea"
+      }
     });
     expect(r.success).toBe(false);
   });
@@ -37,7 +32,7 @@ describe("contrato de auth", () => {
   it("acepta una respuesta de login bien formada", () => {
     const r = loginResponseSchema.safeParse({
       token: "t",
-      user: { id: "u1", email: "dev@example.com", role: "developer", fullName: "Dev" },
+      user: { id: "u1", email: "dev@example.com", role: "developer", fullName: "Dev" }
     });
     expect(r.success).toBe(true);
   });
@@ -45,7 +40,7 @@ describe("contrato de auth", () => {
   it("acepta el rol notary (SPEC-011)", () => {
     const r = loginResponseSchema.safeParse({
       token: "t",
-      user: { id: "u1", email: "notary@example.com", role: "notary", fullName: "Notary" },
+      user: { id: "u1", email: "notary@example.com", role: "notary", fullName: "Notary" }
     });
     expect(r.success).toBe(true);
   });
@@ -53,7 +48,7 @@ describe("contrato de auth", () => {
   it("rechaza un rol que no existe", () => {
     const r = loginResponseSchema.safeParse({
       token: "t",
-      user: { id: "u1", email: "dev@example.com", role: "superadmin", fullName: "Dev" },
+      user: { id: "u1", email: "dev@example.com", role: "superadmin", fullName: "Dev" }
     });
     expect(r.success).toBe(false);
   });
@@ -68,7 +63,7 @@ describe("contrato de auth", () => {
       role: "admin",
       fullName: "A",
       isActive: true,
-      createdAt: "2026-08-20T12:00:00.000Z",
+      createdAt: "2026-08-20T12:00:00.000Z"
     };
     expect(meResponseSchema.safeParse(base).success).toBe(true);
     expect(meResponseSchema.safeParse({ ...base, passwordHash: "$2b$10$x" }).success).toBe(false);
@@ -76,7 +71,9 @@ describe("contrato de auth", () => {
 
   it("exige que createdAt de /auth/me sea un ISO datetime", () => {
     const base = { id: "u1", email: "d@e.com", role: "admin", fullName: "A", isActive: true };
-    expect(meResponseSchema.safeParse({ ...base, createdAt: "2026-08-20T12:00:00.000Z" }).success).toBe(true);
+    expect(
+      meResponseSchema.safeParse({ ...base, createdAt: "2026-08-20T12:00:00.000Z" }).success
+    ).toBe(true);
     expect(meResponseSchema.safeParse({ ...base, createdAt: "20/08/2026" }).success).toBe(false);
   });
 });
@@ -131,13 +128,13 @@ describe("el login NO aplica la política", () => {
     // oráculo de cuál es, y dejaría afuera cuentas creadas bajo una anterior.
     expect(passwordSchema.safeParse("corta").success).toBe(false);
     expect(
-      loginRequestSchema.safeParse({ email: "dev@example.com", password: "corta" }).success,
+      loginRequestSchema.safeParse({ email: "dev@example.com", password: "corta" }).success
     ).toBe(true);
   });
 
   it("pero exige que venga algo", () => {
     expect(loginRequestSchema.safeParse({ email: "dev@example.com", password: "" }).success).toBe(
-      false,
+      false
     );
   });
 });
