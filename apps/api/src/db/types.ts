@@ -133,6 +133,8 @@ export interface OnChainEventTable {
   id: GeneratedId;
   projectId: string;
   milestoneId: string | null;
+  /** Solo en `EVIDENCE_ANCHOR`: qué archivo ancló esta transacción. */
+  evidenceId: string | null;
   eventIndex: number;
   eventType: OnChainEventType;
   fromState: MilestoneState | null;
@@ -161,6 +163,29 @@ export interface SimulatedLedgerUtxoTable {
   createdAt: SqliteTimestamp;
 }
 
+/**
+ * `EvidenceBundle` de M1-D2 §2: el conjunto de evidencia que sostiene el cierre
+ * de un stage, con su Merkle root. Es lo que hace anclable un stage
+ * `validation_critical` (D-061).
+ */
+export interface EvidenceBundleTable {
+  id: GeneratedId;
+  projectId: string;
+  milestoneId: string;
+  /** Merkle root del bundle, hex de 64. Es el `evidenceRoot` del datum. */
+  commitmentHash: string;
+  createdById: string | null;
+  createdAt: SqliteTimestamp;
+}
+
+/** Un acta, no un índice: el hash se copia para que el root siga siendo
+ * reconstruible aunque la evidencia se borre. */
+export interface EvidenceBundleItemTable {
+  bundleId: string;
+  evidenceId: string;
+  sha256Hash: string;
+}
+
 export interface Database {
   User: UserTable;
   Project: ProjectTable;
@@ -170,6 +195,8 @@ export interface Database {
   AuditLog: AuditLogTable;
   OnChainEvent: OnChainEventTable;
   SimulatedLedgerUtxo: SimulatedLedgerUtxoTable;
+  EvidenceBundle: EvidenceBundleTable;
+  EvidenceBundleItem: EvidenceBundleItemTable;
 }
 
 export type UserRow = Selectable<UserTable>;
@@ -197,3 +224,6 @@ export type NewAuditLog = Insertable<AuditLogTable>;
 export type OnChainEventRow = Selectable<OnChainEventTable>;
 export type NewOnChainEvent = Insertable<OnChainEventTable>;
 export type OnChainEventUpdate = Updateable<OnChainEventTable>;
+
+export type EvidenceBundleRow = Selectable<EvidenceBundleTable>;
+export type NewEvidenceBundle = Insertable<EvidenceBundleTable>;

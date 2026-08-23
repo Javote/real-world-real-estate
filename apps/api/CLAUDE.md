@@ -167,9 +167,10 @@ Lo que le falta, en orden de importancia:
   evidencia asociada al stage. D-028 pide además atribución de autoridad (`issuingAuthority`,
   `authorityReference` obligatorios cuando `authoritative = true`) y la atestación de un revisor.
   **Esas columnas no existen** — es una migración y una decisión, no un `if`.
-- **Nadie calcula el commitment.** El validador exige un Merkle root de 32 bytes para completar un
-  stage crítico; acá no hay `EvidenceBundle` ni quien lo arme, así que `OnChainEvent.commitment`
-  se escribe `null`. Llega con el `AnchorPort` (D-014).
+- **~~Nadie calcula el commitment.~~** Cerrado: al completar, `crearBundle` congela la evidencia
+  del stage en un `EvidenceBundle` y su Merkle root viaja al datum. **Es un acta, no un índice:** se
+  escribe con lo que existía en ese momento y no se toca. Si después se sube más evidencia, es otro
+  bundle — el root ya anclado tiene que seguir verificando.
 - **El path dice `/milestones/`** y "milestone" está reservado a Catalyst (D-023): debería ser
   `/stages/`. Cambiarlo toca `apps/web/src/api/port.ts` y los test IDs de M2-D5.
 - **El nombre miente un poco:** `PATCH .../state` suena a editar un campo, cuando lo que ocurre es

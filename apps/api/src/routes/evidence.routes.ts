@@ -3,6 +3,7 @@ import path from "node:path";
 import { type Request, Router } from "express";
 import { z } from "zod";
 import { createId } from "../db/id";
+import { anchorPort } from "../lib/anchor";
 import { db } from "../lib/db";
 import { uploadSingleEvidence } from "../lib/upload";
 import {
@@ -349,6 +350,114 @@ router.patch(
     });
 
     return res.json(evidence);
+  }
+);
+
+/**
+ * **Anclar el hash de un archivo. Lo dispara el admin, nunca el upload** (D-061).
+ *
+ * Es el camino `Evidence Anchor Transactions` de `M1-D2/1-system-architecture`:
+ * metadata suelta (label 1904, D-006), sin validador. Prueba *este archivo
+ * existía a esta hora* — no que un stage avanzó, que es lo que prueba el hilo.
+ *
+ * Por qué manual: una vez en la cadena no se borra. Anclar en el upload
+ * anclaría borradores, archivos subidos por error y versiones que todavía no
+ * son la buena. Y M2-D4 §6.3 pide que toda superficie de prueba la inicie el
+ * usuario.
+ *
+ * Idempotente (regla 8): si ese archivo ya tiene su anclaje, devuelve el mismo
+ * evento en vez de gastar otra transacción.
+ */
+router.post(
+  "/evidence/:id/anchor",
+  requireRole("admin"),
+  requireProjectAccess({ via: "Evidence", param: "id" }, ANY_MEMBERSHIP),
+  async (req: Request<{ id: string }>, res) => {
+    const evidencia = await db
+      .selectFrom("Evidence")
+      .select(["id", "projectId", "milestoneId", "sha256Hash"])
+      .where("id", "=", req.params.id)
+      .executeTakeFirst();
+
+    if (!evidencia) {
+      return res.status(404).json({ message: "Evidence not found" });
+    }
+
+    const yaAnclada = await db
+      .selectFrom("OnChainEvent")
+      .selectAll()
+      .where("evidenceId", "=", evidencia.id)
+      .where("txid", "is not", null)
+      .executeTakeFirst();
+
+    if (yaAnclada) {
+      return res.status(200).json(yaAnclada);
+    }
+
+    const previo = await db
+      .selectFrom("OnChainEvent")
+      .select("eventIndex")
+      .where("milestoneId", "=", evidencia.milestoneId)
+      .orderBy("eventIndex", "desc")
+      .limit(1)
+      .executeTakeFirst();
+
+    const now = new Date();
+    const evento = await db
+      .insertInto("OnChainEvent")
+      .values({
+        id: createId(),
+        projectId: evidencia.projectId,
+        milestoneId: evidencia.milestoneId,
+        evidenceId: evidencia.id,
+        eventIndex: previo ? previo.eventIndex + 1 : 0,
+        eventType: "EVIDENCE_ANCHOR",
+        fromState: null,
+        toState: null,
+        commitment: evidencia.sha256Hash,
+        status: "Pending",
+        txid: null,
+        outputRef: null,
+        blockTimestamp: null,
+        createdAt: now,
+        updatedAt: now
+      })
+      .returningAll()
+      .executeTakeFirstOrThrow();
+
+    let anclado = evento;
+    try {
+      const recibo = await anchorPort.anchorEvidence({
+        sha256: evidencia.sha256Hash,
+        // Ref opaca: el id del registro, nunca el nombre del archivo (regla 2).
+        reference: evidencia.id
+      });
+
+      anclado = await db
+        .updateTable("OnChainEvent")
+        .set({ txid: recibo.txid, status: recibo.status, updatedAt: new Date() })
+        .where("id", "=", evento.id)
+        .returningAll()
+        .executeTakeFirstOrThrow();
+    } catch (error) {
+      console.error("[anchor] el anclaje de evidencia falló", { evidenceId: evidencia.id, error });
+      anclado = await db
+        .updateTable("OnChainEvent")
+        .set({ status: "Failed", updatedAt: new Date() })
+        .where("id", "=", evento.id)
+        .returningAll()
+        .executeTakeFirstOrThrow();
+    }
+
+    await writeAuditLog({
+      actorUserId: req.user!.id,
+      action: "ANCHOR_EVIDENCE",
+      entityType: "Evidence",
+      entityId: evidencia.id,
+      metadata: { txid: anclado.txid, status: anclado.status }
+    });
+
+    return res.status(201).json(anclado);
   }
 );
 

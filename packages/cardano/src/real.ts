@@ -19,6 +19,9 @@ import {
   type AnchorProof,
   type AnchorReceipt,
   AnchorRejectedError,
+  EVIDENCE_METADATA_LABEL,
+  type EvidenceAnchorInput,
+  type MetadataAnchorReceipt,
   type OpenThreadInput,
   type OutputRef
 } from "./port";
@@ -140,6 +143,30 @@ export class LucidAnchorAdapter implements AnchorPort {
       .complete();
 
     return this.submit(tx);
+  }
+
+  /**
+   * El camino de metadata (D-006): una transacción sin validador que lleva el
+   * hash del archivo. No toca el hilo del stage ni el thread token.
+   *
+   * Las cadenas de metadata tienen tope de 64 bytes por string (regla 2): un
+   * SHA-256 en hex ocupa exactamente 64, y la ref va aparte por eso mismo.
+   */
+  async anchorEvidence({ sha256, reference }: EvidenceAnchorInput): Promise<MetadataAnchorReceipt> {
+    if (!/^[0-9a-f]{64}$/.test(sha256)) {
+      throw new AnchorRejectedError(`No es un SHA-256 en hex: ${sha256}`, "BAD_EVIDENCE_HASH");
+    }
+    if (reference.length > 64) {
+      throw new AnchorRejectedError("La ref no entra en un string de metadata", "REF_TOO_LONG");
+    }
+
+    const tx = await this.lucid
+      .newTx()
+      .attachMetadata(EVIDENCE_METADATA_LABEL, { h: sha256, r: reference })
+      .complete();
+
+    const { txid } = await this.submit(tx);
+    return { txid, status: "Pending" };
   }
 
   /**

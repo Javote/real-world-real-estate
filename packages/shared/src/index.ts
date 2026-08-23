@@ -5,5 +5,6 @@
 // inferidos. Si la forma de una respuesta cambia de un lado y no cambia acá, el
 // typecheck del otro lado falla — que es el punto.
 export * from "./auth";
+export * from "./merkle";
 export * from "./stage";
 export * from "./stage-datum";

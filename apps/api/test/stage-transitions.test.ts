@@ -179,12 +179,11 @@ describe("OnChainEvent · el aterrizaje del anclaje", () => {
     expect(res.body.anchor.txid).toBeNull();
   });
 
-  it("un stage crítico se completa en el registro pero NO se ancla, porque falta el commitment", async () => {
-    // La consecuencia visible del hueco de SPEC-013 §Preguntas abiertas 2: no
-    // existe `EvidenceBundle`, así que el datum va con `evidenceRoot` vacío y
-    // el simulador lo rechaza igual que lo haría el validador. Que esto esté
-    // en un test y no en un comentario es la diferencia entre una deuda
-    // conocida y una sorpresa.
+  it("un stage crítico se completa Y se ancla, con el Merkle root del bundle", async () => {
+    // Este test documentaba un hueco: hasta que existió `EvidenceBundle`, el
+    // datum viajaba con `evidenceRoot` vacío y el anclaje quedaba en `Failed`
+    // porque el validador exige 32 bytes para completar un stage crítico. Con
+    // el bundle, el circuito cierra entero.
     const creado = await request(app)
       .post(`/api/v1/projects/${proyecto}/milestones`)
       .set("Authorization", `Bearer ${token}`)
@@ -196,7 +195,9 @@ describe("OnChainEvent · el aterrizaje del anclaje", () => {
 
     expect(res.status).toBe(200);
     expect(res.body.state).toBe("Completed");
-    expect(res.body.anchor.status).toBe("Failed");
+    expect(res.body.anchor.status).toBe("Confirmed");
+    // El commitment anclado es el root del bundle, no un hash cualquiera.
+    expect(res.body.anchor.commitment).toMatch(/^[0-9a-f]{64}$/);
   });
 
   it("numera los eventos en orden dentro del hilo", async () => {

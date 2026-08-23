@@ -104,7 +104,7 @@ es más que el `AnchorPort`: son seis piezas, y solo dos necesitan Docker.
 |---|---|---|---|
 | 1 | **Todo stage es `validation_critical`** — migración `0003` y su decisión | — | **hecha** (D-061) |
 | 2 | Transacciones reales contra el **`Emulator`** de Lucid: `mint` + `spend` con el validador ejecutándose de verdad | — | **hecha** |
-| 3 | **`EvidenceBundle`**, Merkle root y el endpoint de anclaje **manual del admin** | — | pendiente |
+| 3 | **`EvidenceBundle`**, Merkle root y el endpoint de anclaje **manual del admin** | — | **hecha** |
 | 4 | **MinIO** por `compose.dev.yml` + cliente S3 (D-011) | Docker | pendiente |
 | 5 | **yaci-devkit**: devnet local con API compatible Blockfrost | Docker | pendiente |
 | 6 | **Frontend**: crear proyecto → subir PDF → botón *anclar* → ver el TXID | — | pendiente |
@@ -120,10 +120,11 @@ pasa a ser el escalón de realismo (nodo real, fees reales, persistencia). El ca
    donde importa la integridad de la *secuencia*. Anclar todo es más simple de explicar; anclar
    solo los críticos cuesta menos fee y menos ADA inmovilizada. **Default vigente: todos**, porque
    hoy no cuesta nada en Preprod y evita una regla más. Se decide antes de la rebanada B.
-2. **El Merkle root del bundle.** No existe `EvidenceBundle`. Hasta que exista, un stage
-   `validationCritical` se puede completar en el registro pero su anclaje no puede llevar
-   commitment. Se cruza con el hueco de D-028 (atribución de autoridad y atestación del revisor).
-   **Dueño: producto.**
+2. ~~**El Merkle root del bundle.**~~ **Cerrada**: `EvidenceBundle` existe (migración `0004`), el
+   root se calcula con `merkleRoot` de `packages/shared` y viaja al datum al completar. Lo que
+   **sigue abierto** es la otra mitad de D-028: atribución de autoridad (`issuingAuthority`,
+   `authorityReference`) y atestación del revisor, que son columnas que no existen. **Dueño:
+   producto.**
 3. **Qué pasa con un anclaje que falla definitivamente.** `status = "Failed"` existe y nadie lo
    escribe todavía. ¿Reintento automático, o queda visible como "no anclado"? Es decisión de
    producto, no técnica.

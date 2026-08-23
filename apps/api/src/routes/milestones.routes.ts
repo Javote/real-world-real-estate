@@ -1,7 +1,9 @@
+import { createHash } from "node:crypto";
 import {
   buildStageDatum,
   canTransition,
   INITIAL_STAGE_STATE,
+  merkleRoot,
   STAGE_TRANSITION_ERRORS,
   stageTransitionSchema
 } from "@plataforma/shared";
@@ -83,16 +85,86 @@ async function recordOnChainEvent(input: {
  * `validationCritical` queda **registrado pero no anclado**, porque el
  * validador exige 32 bytes de commitment y acá no hay ninguno.
  */
-function toDatumSource(milestone: MilestoneRow) {
+function toDatumSource(milestone: MilestoneRow, evidenceRoot: string) {
   return {
     id: milestone.id,
     projectId: milestone.projectId,
     sequenceOrder: milestone.sequenceOrder,
     validationCritical: Boolean(milestone.validationCritical),
     state: milestone.state,
-    evidenceRoot: "",
+    evidenceRoot,
     completedAt: milestone.certifiedAt ? new Date(milestone.certifiedAt).getTime() : 0
   };
+}
+
+/** El hash de dos nodos del árbol. Node acá, WebCrypto el día que verifique el
+ * browser: por eso `merkleRoot` recibe la función en vez de importarla. */
+const sha256Pair = (a: string, b: string) =>
+  createHash("sha256")
+    .update(Buffer.from(a + b, "hex"))
+    .digest("hex");
+
+/**
+ * Arma el bundle que sostiene el cierre de un stage y devuelve su Merkle root
+ * (`bundle_commitment_hash` de M1-D2 §2).
+ *
+ * **Es un acta, no un índice:** se escribe con la evidencia que existía en este
+ * momento y no se toca más. Si después se sube más evidencia, es otro bundle —
+ * el root ya anclado tiene que seguir verificando.
+ */
+async function crearBundle(milestone: MilestoneRow, actorUserId: string): Promise<string | null> {
+  const evidencias = await db
+    .selectFrom("Evidence")
+    .select(["id", "sha256Hash"])
+    .where("milestoneId", "=", milestone.id)
+    .orderBy("uploadedAt", "asc")
+    .execute();
+
+  if (evidencias.length === 0) return null;
+
+  const root = merkleRoot(
+    evidencias.map((e) => e.sha256Hash),
+    sha256Pair
+  );
+
+  const bundleId = createId();
+  await db
+    .insertInto("EvidenceBundle")
+    .values({
+      id: bundleId,
+      projectId: milestone.projectId,
+      milestoneId: milestone.id,
+      commitmentHash: root,
+      createdById: actorUserId,
+      createdAt: new Date()
+    })
+    .execute();
+
+  await db
+    .insertInto("EvidenceBundleItem")
+    .values(
+      evidencias.map((e) => ({
+        bundleId,
+        evidenceId: e.id,
+        sha256Hash: e.sha256Hash
+      }))
+    )
+    .execute();
+
+  return root;
+}
+
+/** El root del último bundle del stage, o vacío si todavía no tiene. */
+async function rootDelStage(milestoneId: string): Promise<string> {
+  const bundle = await db
+    .selectFrom("EvidenceBundle")
+    .select("commitmentHash")
+    .where("milestoneId", "=", milestoneId)
+    .orderBy("createdAt", "desc")
+    .limit(1)
+    .executeTakeFirst();
+
+  return bundle?.commitmentHash ?? "";
 }
 
 /** La cabeza del hilo: el UTxO vivo del thread token de este stage. */
@@ -126,13 +198,23 @@ async function anchorEvent(
   if (event.txid) return event;
 
   try {
+    // El root que va al datum sale del bundle del stage. Antes de que existiera
+    // `EvidenceBundle` esto era siempre vacío, y por eso un stage crítico se
+    // completaba en el registro pero el validador rechazaba su anclaje.
+    const root = await rootDelStage(milestone.id);
     const receipt =
       previous === null
-        ? await anchorPort.openThread({ datum: buildStageDatum(toDatumSource(milestone)) })
+        ? await anchorPort.openThread({ datum: buildStageDatum(toDatumSource(milestone, "")) })
         : await anchorPort.advanceThread({
             outputRef: (await cabezaDelHilo(milestone.id)) ?? "",
-            previous: buildStageDatum(toDatumSource(previous)),
-            next: buildStageDatum(toDatumSource(milestone))
+            // El datum previo se reconstruye con el root que ya tenía: si el
+            // bundle se creó recién, el UTxO viejo NO lo lleva.
+            previous: buildStageDatum(
+              toDatumSource(previous, previous.state === "Completed" ? root : "")
+            ),
+            next: buildStageDatum(
+              toDatumSource(milestone, milestone.state === "Completed" ? root : "")
+            )
           });
 
     const proof = receipt.status === "Confirmed" ? await anchorPort.verify(receipt.txid) : null;
@@ -143,6 +225,9 @@ async function anchorEvent(
         txid: receipt.txid,
         outputRef: receipt.outputRef,
         status: receipt.status,
+        // Qué commitment quedó anclado en ESTE evento. Vacío mientras el stage
+        // no se completa: hasta entonces el datum no lleva root.
+        commitment: milestone.state === "Completed" ? root : null,
         blockTimestamp: proof ? new Date(proof.blockTimestamp) : null,
         updatedAt: new Date()
       })
@@ -420,8 +505,14 @@ router.patch(
       .returningAll()
       .executeTakeFirstOrThrow();
 
-    // La declaración quedó registrada; la prueba queda pendiente hasta que
-    // exista el `AnchorPort` (D-014) y devuelva un TXID confirmado.
+    // Al completar, la evidencia del stage se congela en un bundle y su Merkle
+    // root es lo que viaja al datum. Se arma acá y no antes porque es el acta
+    // del cierre: la evidencia que existía en el momento de completar.
+    if (to === "Completed") {
+      await crearBundle(milestone, req.user!.id);
+    }
+
+    // La declaración quedó registrada; la prueba se ancla a continuación.
     const evento = await recordOnChainEvent({
       projectId: milestone.projectId,
       milestoneId: milestone.id,

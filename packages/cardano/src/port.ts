@@ -49,10 +49,38 @@ export interface AdvanceThreadInput {
   next: StageDatum;
 }
 
+/**
+ * El **otro** camino on-chain de M1: `Evidence Anchor Transactions`
+ * (`M1-D2/1-system-architecture.puml`), que es metadata suelta y no pasa por
+ * ningún validador (D-006).
+ *
+ * Prueba una cosa distinta a la del hilo: *este archivo existía a esta hora*.
+ * El hilo prueba *este stage se completó con esta evidencia y en este orden*.
+ * Ninguno reemplaza al otro (D-061).
+ */
+export interface EvidenceAnchorInput {
+  /** SHA-256 del archivo, en hex. Es lo único que viaja: nunca el archivo, ni
+   * su nombre, ni quién lo subió (regla 2). */
+  sha256: string;
+  /** Ref opaca al registro off-chain, para poder encontrarlo después. */
+  reference: string;
+}
+
+export interface MetadataAnchorReceipt {
+  txid: string;
+  status: AnchorStatus;
+}
+
+/** Label CIP-20 del anclaje de evidencia (D-006). */
+export const EVIDENCE_METADATA_LABEL = 1904;
+
 export interface AnchorPort {
   readonly mode: AnchorMode;
   openThread(input: OpenThreadInput): Promise<AnchorReceipt>;
   advanceThread(input: AdvanceThreadInput): Promise<AnchorReceipt>;
+  /** Ancla el hash de un archivo por metadata. Lo dispara el admin, nunca el
+   * upload (D-061). */
+  anchorEvidence(input: EvidenceAnchorInput): Promise<MetadataAnchorReceipt>;
   verify(txid: string): Promise<AnchorProof | null>;
   awaitConfirmation(txid: string): Promise<AnchorProof>;
 }

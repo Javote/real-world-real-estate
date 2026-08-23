@@ -8,6 +8,8 @@ import {
   type AnchorProof,
   type AnchorReceipt,
   AnchorRejectedError,
+  type EvidenceAnchorInput,
+  type MetadataAnchorReceipt,
   type OpenThreadInput,
   type OutputRef
 } from "./port";
@@ -118,6 +120,15 @@ export class SimulatedAnchorAdapter implements AnchorPort {
     const txid = txidOf("spend", { outputRef, next });
     await this.store.markSpent(outputRef, txid);
     return this.commit(txid, next);
+  }
+
+  async anchorEvidence({ sha256, reference }: EvidenceAnchorInput): Promise<MetadataAnchorReceipt> {
+    if (!/^[0-9a-f]{64}$/.test(sha256)) {
+      reject("BAD_EVIDENCE_HASH", `No es un SHA-256 en hex: ${sha256}`);
+    }
+    // Determinístico como el resto del simulador: anclar dos veces el mismo
+    // archivo da el mismo txid, que es como se ve una doble escritura.
+    return { txid: txidOf("evidence", { sha256, reference }), status: "Confirmed" };
   }
 
   async verify(txid: string): Promise<AnchorProof | null> {

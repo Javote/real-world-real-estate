@@ -178,3 +178,19 @@ describe("createAnchorPort", () => {
     expect(() => createAnchorPort({ mode: "mainnet" })).toThrow(/ANCHOR_MODE inválido/);
   });
 });
+
+describe("anchorEvidence · el camino de metadata", () => {
+  it("es determinístico y no toca el ledger del hilo", async () => {
+    const sha256 = "c".repeat(64);
+    const a = await port.anchorEvidence({ sha256, reference: "ev_1" });
+    const b = await port.anchorEvidence({ sha256, reference: "ev_1" });
+    expect(a.txid).toBe(b.txid);
+    expect(a.status).toBe("Confirmed");
+  });
+
+  it("rechaza un hash que no sea SHA-256", async () => {
+    await expect(port.anchorEvidence({ sha256: "corto", reference: "ev" })).rejects.toMatchObject({
+      code: "BAD_EVIDENCE_HASH"
+    });
+  });
+});
