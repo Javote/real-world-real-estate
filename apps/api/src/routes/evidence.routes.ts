@@ -5,6 +5,7 @@ import { z } from "zod";
 import { createId } from "../db/id";
 import { anchorPort } from "../lib/anchor";
 import { db } from "../lib/db";
+import { storage } from "../lib/storage";
 import { uploadSingleEvidence } from "../lib/upload";
 import {
   ANY_MEMBERSHIP,
@@ -13,7 +14,6 @@ import {
   requireRole
 } from "../middlewares/auth";
 import { writeAuditLog } from "../utils/audit";
-import { sha256File } from "../utils/hashing";
 
 const router = Router();
 
@@ -188,8 +188,22 @@ router.post(
       }
     }
 
-    const absolutePath = path.resolve(req.file.path);
-    const sha256Hash = await sha256File(absolutePath);
+    // El archivo pasa por disco (Multer) y de ahí al storage configurado. El
+    // hash que se guarda es el de **los bytes guardados**, no el del temporal:
+    // con `s3`, `put` relee el objeto y lo rehashea. Ver `lib/storage.ts`.
+    const guardado = await storage.put({
+      localPath: path.resolve(req.file.path),
+      key: `evidence/${projectId}/${req.file.filename}`,
+      contentType: req.file.mimetype
+    });
+
+    // Con `s3` el temporal ya cumplió su función; con `disk` el "temporal" ES
+    // el destino, así que no se borra.
+    if (storage.driver === "s3" && fs.existsSync(req.file.path)) {
+      fs.unlinkSync(req.file.path);
+    }
+
+    const sha256Hash = guardado.sha256;
     const now = new Date();
 
     const created = await db
@@ -206,7 +220,7 @@ router.post(
         storedFilename: req.file.filename,
         mimeType: req.file.mimetype,
         sizeBytes: req.file.size,
-        storagePath: absolutePath,
+        storagePath: guardado.storageRef,
         sha256Hash,
         uploadedAt: now,
         createdAt: now,
@@ -280,11 +294,20 @@ router.get(
       return res.status(404).json({ message: "Evidence not found" });
     }
 
-    if (!fs.existsSync(evidence.storagePath)) {
+    if (!(await storage.exists(evidence.storagePath))) {
       return res.status(404).json({ message: "Stored file not found" });
     }
 
-    return res.download(evidence.storagePath, evidence.originalFilename);
+    // Se streamea desde el storage en vez de `res.download`: con `s3` no hay
+    // ruta local que pasarle, y el nombre visible sale del registro, no del
+    // objeto guardado.
+    res.setHeader("Content-Type", evidence.mimeType);
+    res.setHeader(
+      "Content-Disposition",
+      `attachment; filename="${encodeURIComponent(evidence.originalFilename)}"`
+    );
+    const contenido = await storage.read(evidence.storagePath);
+    return contenido.pipe(res);
   }
 );
 
@@ -472,9 +495,7 @@ router.delete("/evidence/:id", requireRole("admin"), async (req: Request<{ id: s
     return res.status(404).json({ message: "Evidence not found" });
   }
 
-  if (fs.existsSync(existing.storagePath)) {
-    fs.unlinkSync(existing.storagePath);
-  }
+  await storage.remove(existing.storagePath);
 
   await db.deleteFrom("Evidence").where("id", "=", req.params.id).execute();
 

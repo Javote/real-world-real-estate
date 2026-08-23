@@ -303,12 +303,15 @@ existe ahora da `false`, no `true`. Todo en D-043.
 Zod (`String(status) as any`). No es autorización y no es 🔴, pero es la regla 6 sin cumplir en el
 único lugar donde el body no aplica.
 
-### El SHA-256 se mueve cuando llegue R2
+### ~~El SHA-256 se mueve cuando llegue R2~~ — cerrado el 2026-08-23
 
-`sha256File` streamea y está correcto, pero hashea **un archivo ya escrito en disco**. D-040
-convirtió R2 en prerequisito del primer deploy: cuando eso pase, el hash tiene que cubrir
-exactamente los bytes que terminan en el object storage, no un temporal que después se sube. Es
-🔴 por definición y es el momento donde estas cosas se rompen.
+El hash lo calcula ahora `lib/storage.ts`, y con `STORAGE_DRIVER=s3` **relee el objeto subido y lo
+rehashea**: cubre los bytes que quedaron en el object storage, no los del temporal. La diferencia
+no es teórica — si una subida se truncara, el hash del temporal seguiría siendo "correcto" y
+estaríamos anclando la huella de un archivo que no existe en ningún lado.
+
+`utils/hashing.ts` se borró: su única función quedó adentro del port, y dos lugares que hashean es
+uno de más.
 
 ### bcrypt: se queda nativo
 

@@ -210,3 +210,24 @@ proveedor de deploy y **no existen en el repositorio**.
 Viven en un solo lugar: **`CLAUDE.md`** (reglas duras + prohibiciones) con las decisiones que las
 respaldan en **`DECISIONS.md`**. Este README no las duplica — cualquier copia divergiría en
 silencio, y preferimos el link.
+
+## Infraestructura local (Docker)
+
+`compose.dev.yml` levanta lo que en producción es un tercero. **No se despliega**: el deploy usa
+runtime nativo de Node, sin Docker (D-041).
+
+```bash
+docker compose -f compose.dev.yml up -d      # MinIO en :9000, consola en :9001
+pnpm --filter @plataforma/api test:s3        # prueba el storage contra MinIO de verdad
+```
+
+Para que la API guarde la evidencia en MinIO en vez del disco:
+
+```bash
+STORAGE_DRIVER=s3 S3_ENDPOINT=http://localhost:9000 S3_BUCKET=propnexus-dev \
+S3_ACCESS_KEY_ID=propnexus S3_SECRET_ACCESS_KEY=propnexus-dev-only S3_CREATE_BUCKET=true \
+pnpm dev
+```
+
+Es **el mismo código** que va a hablar con Cloudflare R2 (D-011): cambian las variables, no el
+driver. Por eso probar contra MinIO prueba lo que va a correr desplegado.
