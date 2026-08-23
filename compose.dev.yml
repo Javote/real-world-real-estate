@@ -1,0 +1,36 @@
+# Infraestructura de desarrollo local. **No se despliega nada de esto** (D-041:
+# el deploy usa runtime nativo de Node, sin Docker).
+#
+#   docker compose -f compose.dev.yml up -d
+#
+# Dos servicios, y los dos existen para poder probar local lo que en producción
+# es un tercero:
+#
+#   minio  → S3 genérico. D-011 ya lo decidió como el dev de Cloudflare R2, y la
+#            gracia es que el código de storage es EL MISMO contra los dos: si
+#            anda acá, anda en R2 cambiando tres variables de entorno.
+#   yaci   → devnet de Cardano con API compatible Blockfrost. Permite ejercitar
+#            el adaptador real —el códec CBOR del datum, la dirección derivada
+#            del blueprint, el thread token— sin tocar Preprod ni gastar tADA, y
+#            con bloques de 1 segundo en vez de 20.
+services:
+  minio:
+    image: minio/minio:latest
+    container_name: propnexus-minio
+    command: server /data --console-address ":9001"
+    ports:
+      - "9000:9000"   # API S3
+      - "9001:9001"   # consola web
+    environment:
+      MINIO_ROOT_USER: propnexus
+      MINIO_ROOT_PASSWORD: propnexus-dev-only
+    volumes:
+      - minio-data:/data
+    healthcheck:
+      test: ["CMD", "mc", "ready", "local"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+
+volumes:
+  minio-data:

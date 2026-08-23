@@ -12,6 +12,10 @@
     "test": "vitest run"
   },
   "dependencies": {
+    "@harmoniclabs/bytestring": "^1.0.0",
+    "@harmoniclabs/cbor": "^1.6.6",
+    "@harmoniclabs/pair": "^1.0.0",
+    "@lucid-evolution/lucid": "^0.6.2",
     "@plataforma/shared": "workspace:^"
   },
   "devDependencies": {

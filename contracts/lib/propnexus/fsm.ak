@@ -13,6 +13,7 @@
 //// un timestamp — nunca nombres (whitepaper §On-Chain/Off-Chain Boundaries y
 //// regla 2 de `CLAUDE.md`).
 
+use aiken/cbor
 use aiken/primitive/bytearray
 
 /// Estados del stage. `Completed`, no `Certified`: la plataforma no certifica
@@ -410,4 +411,27 @@ test t_initial_rejects_ref_longer_than_an_asset_name() {
   !valid_initial_datum(
     StageDatum { ..sample(Pending, True), stage_ref: too_long },
   )
+}
+
+// ── El valor dorado del datum ────────────────────────────────────────────
+//
+// El CBOR de este datum es el contrato binario con `packages/cardano`: si el
+// códec de TypeScript produce otra cosa, la transacción se firma, se paga y el
+// validador la rechaza con un mensaje inútil. Por eso el valor se fija de los
+// dos lados —acá y en `packages/cardano/src/codec.test.ts`— sobre EL MISMO
+// datum. Cambiar un campo, su orden o el índice de un constructor rompe este
+// test antes de romper una transacción.
+
+test t_golden_datum_encoding() {
+  let datum =
+    StageDatum {
+      project_ref: #"70726f6a656374",
+      stage_ref: #"7374616765",
+      sequence_order: 1,
+      validation_critical: True,
+      state: Pending,
+      evidence_root: "",
+      completed_at: 0,
+    }
+  cbor.serialise(datum) == #"d8799f4770726f6a65637445737461676501d87a80d879804000ff"
 }
