@@ -31,7 +31,7 @@
 | D-014 | Dependencia blockchain detrás de puerto propio con modo real/simulado | Aceptada |
 | D-015 | Versionado: CalVer para servicios; enteros para contratos | Aceptada |
 | D-016 | Adoptar el backend PoC (Express 4 + Prisma + SQLite + JWT/bcrypt + disco local) como `packages/api` | Aceptada (trigger de revisión enmendado por D-038: el destino ya no es PostgreSQL) |
-| D-017 | Contratos: adoptar el proyecto Aiken del backend en `contracts/`, junto a los validadores de referencia | Aceptada (consolidación de duplicados Abierta) |
+| D-017 | Contratos: adoptar el proyecto Aiken del backend en `contracts/`, junto a los validadores de referencia | Aceptada; **consolidación cerrada por D-054** (mismo hash, `milestone2.ak` borrado) |
 | D-018 | El producto se llama **PropNexus** | Aceptada |
 | D-019 | Plutus **V3**, no V2 — desvío documentado del SOM de M3 | Aceptada |
 | D-020 | FSM canónica del stage — confirma el entregable original | Aceptada |
@@ -68,6 +68,8 @@
 | D-051 | El primer deploy sale con evidencia efímera y marcada, en vez de esperar a R2 | Aceptada |
 | D-052 | Saneamiento: se borra el rastro de Prisma y Drizzle, y cada cosa queda en un solo lugar | Aceptada |
 | D-053 | El harness de agentes se borra entero. Vuelve el CI declarativo | Aceptada (revierte D-032) |
+| D-054 | Reseteo de estándar: Express 5, errores que no mienten, Biome, un validador, TS separado de Aiken | Aceptada |
+| D-055 | Estructura cerrada: `apps/` es lo desplegable, `packages/` es librería | Aceptada |
 
 > **Repaso completo con la documentación oficial: ver §Repaso al final del archivo.** D-001..D-017 se
 > escribieron sin los entregables delante; las 25 entradas se revisaron el 2026-07-29 y cada una
@@ -1462,7 +1464,7 @@ rediseño.
 | D-014 | Intacta | `AnchorPort` con doble modo se confirma con M2-D4 §8.1. |
 | D-015 | Intacta | Versionado por artefacto: sin relación. |
 | D-016 | Intacta | El backend adoptado sigue siendo la base. El rol `notary` y el rename de D-023 son cambios de modelo, no de esta decisión. |
-| D-017 | Intacta | La consolidación `milestone.ak`/`milestone2.ak` sigue Abierta. |
+| D-017 | Intacta | La consolidación `milestone.ak`/`milestone2.ak` seguía Abierta *(se cerró después: D-054 — compilaban al mismo hash)*. |
 | D-018..D-025 | — | Nacidas ya con la documentación completa. |
 
 **Lo que el repaso cambió de fondo:** las tres decisiones on-chain (D-006, D-007, D-008) tenían fundamentos escritos para un producto que retenía valor y hacía cumplir reglas. El producto no es eso. La implementación de las tres sobrevive casi sin cambios — lo que se reescribió es **por qué**, que es lo que evita derivar mal en las próximas cincuenta decisiones.
@@ -1717,3 +1719,187 @@ chequeo automático barato habría atajado. En ese caso se agrega **ese** cheque
 
 **Reversión.** `git revert` del commit, o `git show <commit>^:scripts/gate.sh`. Nada se pierde: está
 todo en el historial.
+
+## D-054 — Reseteo de estándar antes del deploy: Express 5, errores que no mienten, Biome, un validador, y TS separado de Aiken — **Aceptada**
+
+**Contexto (2026-08-23).** Postura del dueño tras la poda del harness: *"varias decisiones quedaron
+viejas u obsoletas; hay que resetear el repo a un estándar digno antes de deployar, y para eso hay
+que mirar el código y no creerle a las decisiones"*. El caso que lo disparó: el repo hablaba de una
+puerta, hooks y subagentes, y **no tenía linter ni formateador** — algo que ninguna decisión
+mencionaba porque nadie había mirado.
+
+Esta entrada registra lo que apareció al auditar **el código**, no los documentos.
+
+### 1 · Express 4 → 5: un error en cualquier ruta mataba el proceso
+
+**Medido, no supuesto.** En Express 4 un handler `async` que rechaza **no llega al `errorHandler`**:
+
+| | Express 4 | Express 5 |
+|---|---|---|
+| `throw` síncrono | → errorHandler | → errorHandler |
+| `throw` en handler `async` | **request colgada + `unhandledRejection` → proceso con exit 1** | → errorHandler |
+
+Las **25 rutas de la API son `async`** y ninguna tiene try/catch. O sea que cualquier fallo
+inesperado —Turso lento, una columna que no existe, un null— colgaba la request y **mataba el
+proceso**; en Render free eso es ~1 minuto de arranque en frío para el siguiente visitante.
+
+Se migró a `express@5.2.1` + `@types/express@5.0.6`. La superficie era chica y se verificó antes:
+ninguna API removida en uso, todas las rutas con paths simples (path-to-regexp v8 no las toca), y
+`req.query` leyendo dos strings. **Las 88 pruebas pasaron sin editar una sola.**
+
+**Deriva de la migración.** `req.params[x]` pasa a ser `string | string[]` (v8 admite params
+repetidos). Los 8 sitios afectados se tipan con `Request<{ id: string }>`; en
+`requireProjectAccess`, donde la clave es dinámica, se narrowea en runtime y **un array es un 500**:
+elegir el primer id en silencio sería el bug exacto que no se quiere en la capa de autorización.
+
+**Esto deroga la prohibición de `CLAUDE.md`** *"no subir `@types/express` a v5 mientras `express` sea
+v4"*: era conditional y la condición dejó de valer. Se agrega `pnpm.overrides` para
+`@types/express`, porque `@types/multer` arrastraba una resolución vieja a v4 y tener dos copias de
+esos tipos ya había costado una sesión antes.
+
+### 2 · El `errorHandler` mentía en las dos direcciones
+
+Devolvía **400 con `err.message`** para cualquier `Error`. Es decir: un fallo interno se reportaba
+como culpa del cliente —**el monitoreo nunca veía un 5xx**, y un servicio que jamás reporta errores
+de servidor no es sano, es ciego— y de paso le mandaba al cliente el mensaje crudo, que en un error
+de Kysely/libSQL trae SQL, nombres de tabla y rutas del servidor (regla 2).
+
+Ahora la pregunta es explícita: **¿este mensaje lo escribimos para que lo lea quien usa la API?**
+Para eso está `HttpError` (status + mensaje seguro). `MulterError` se mapea a 400 porque sus
+mensajes son genéricos. **Todo lo demás es 500 genérico**, con el detalle en el log del servidor —
+único lugar donde se puede mirar en Render, que no da shell (D-040).
+
+### 3 · Hardening que faltaba entero
+
+`helmet` (cero dependencias transitivas), `x-powered-by` desactivado, y **handler 404 en JSON**:
+antes una ruta inexistente devolvía la página HTML de Express, desde una API que solo habla JSON.
+
+**`GET /health` ahora consulta la base.** Antes devolvía `{ok:true}` sin tocar nada, así que Render
+daba el servicio por sano mientras cada request fallaba por una `DATABASE_URL` mal cargada — que es
+**el modo de falla más probable del primer deploy** y exactamente lo que un healthcheck existe para
+detectar. Verificado: con la base inalcanzable ahora responde 503.
+
+**Cierre ordenado con `SIGTERM`/`SIGINT`**, que Render manda en cada deploy: antes las requests en
+vuelo se cortaban a la mitad y la conexión a la base quedaba abierta.
+
+### 4 · No había linter ni formateador — y `pnpm lint` no hacía nada
+
+`pnpm lint` era `pnpm -r lint` y **ningún package declaraba `lint`**: corría, no hacía nada, y no
+avisaba. El mismo modo de falla que D-032 había diagnosticado para `pnpm test`, sobreviviendo al
+harness que se creó para arreglarlo.
+
+Entra **Biome 2.5.10** (uno solo: formateador + linter), corriendo en `pnpm verify` y en el CI. La
+primera pasada encontró, entre otras cosas, la deuda que `packages/api/CLAUDE.md` ya tenía anotada
+—`GET /projects` leyendo la query sin Zod, con un `as any` que le mentía al compilador— y **9 bugs
+reales de accesibilidad**: `<span role="button">` y `<div onClick>` sin foco ni teclado. Todos
+arreglados con elementos semánticos.
+
+**Tres archivos quedan fuera de Biome**, y no por conveniencia: su parser rechaza
+`import type … with { "resolution-mode": "require" }`, que es **TypeScript 5.3+ válido** y el patrón
+sin el cual este package CJS no typechequea contra dependencias ESM puras (D-049). Es una limitación
+de Biome; los diagnósticos de categoría `syntax/` no se pueden suprimir inline, así que se acota a
+`db/id.ts`, `lib/kysely.ts` y `lib/libsql-client.ts`.
+
+### 5 · Había dos validadores Aiken, y son el mismo script
+
+D-017 dejó la consolidación de `milestone.ak` y `milestone2.ak` **abierta, con un spike de ≤1 día**.
+No hacía falta ningún spike: **los dos compilan al mismo hash** — `06534cfa08c481a9fa2e3995`. No son
+"casi idénticos": son idénticos, y la diferencia es de estilo (`when` contra destructuring). El
+blueprint commiteado publicaba los dos.
+
+Se borra `milestone2.ak`. **El hash del script no cambió**, o sea que no hay nada que redesplegar.
+Y de paso se cierra D-015 en contratos: `j/milestone-fsm` `0.0.0` (scaffold) pasa a
+`propnexus/stage-fsm` versión `1`.
+
+**Lo que NO se tocó:** los contratos siguen con **0 tests** contra un criterio 2 del SOM que pide
+≥95% de coverage. Es la deuda más grande que queda y no entra acá.
+
+### 6 · TypeScript y Aiken se verifican por separado
+
+Postura del dueño: **son dos cosas distintas y no tienen por qué compartir cadena**. Distinto
+toolchain, distintos artefactos, distintos modos de falla — que un validador no compile no dice
+nada sobre la app, y al revés tampoco.
+
+```bash
+pnpm verify             # app TS: lint + typecheck + tests + build
+pnpm contracts:verify   # Aiken: fmt --check + check + build
+pnpm verify:all         # las dos, encadenadas cuando hace falta
+```
+
+Consecuencia concreta: **Biome deja de mirar `contracts/` entero**. Estaba intentando reformatear
+`contracts/plutus.json`, que lo genera `aiken build` — y eso habría dejado el CI en rojo permanente
+por "blueprint desactualizado" contra un archivo que el linter reescribía por su cuenta. Un
+formateador de TypeScript no tiene nada que opinar sobre un artefacto de Aiken.
+
+El CI ya los tenía como **dos jobs en paralelo** y así se quedan, ahora con los nombres diciéndolo
+(`App TS` y `Contratos Aiken`). El chequeo de "blueprint al día" (`git diff --exit-code`) vive solo
+en CI a propósito: compara contra lo commiteado, así que en local, con cambios en curso, daría rojo
+siempre.
+
+### 7 · `engines` declaraba soporte que no existe
+
+Decía `>=20`. Nitro exige `^20.19.0 || >=22.12.0` y el `require(esm)` de `lib/libsql-client.ts`
+necesita Node ≥22.12: con Node 20.5 esto no arranca y el `package.json` decía que sí. Pasa a
+`>=22.12`, y se agrega `.nvmrc`.
+
+**Trigger de revisión.** Nada de esto es una preferencia de estilo: cada punto salió de un
+comportamiento medido. Se reabre con la misma vara — evidencia de que el comportamiento cambió.
+
+## D-055 — Estructura de carpetas cerrada: `apps/` es lo desplegable, `packages/` es librería — **Aceptada**
+
+**Contexto (2026-08-23).** Pregunta del dueño al cerrar el reseteo: *"¿debería ser `apps/api` en vez
+de `packages/api`? Quiero cerrar la estructura de carpetas de todo el proyecto"*. Se auditó el árbol
+entero, directorio por directorio, en vez de razonar sobre lo que los documentos decían que había.
+
+**La convención, explícita.** `apps/*` = **se despliega**. `packages/*` = **librería que alguien
+importa**. `contracts/` = otro toolchain, fuera del workspace pnpm.
+
+```
+apps/api        Express 5      → servicio en Render
+apps/web        TanStack Start → servicio en Render
+packages/shared contrato Zod   → lo importan los dos
+contracts/      Aiken          → no se hostea; su propio lockfile y caché
+```
+
+**1 · `packages/api` → `apps/api`.** Era un servicio desplegable viviendo entre las librerías, con
+lo cual la convención no decía nada: si `packages/` contiene tanto una librería como un servicio,
+mirar la carpeta no informa. Ahora sí. El nombre del paquete (`@plataforma/api`) **no cambia**, así
+que todos los `--filter` siguen igual.
+
+**2 · `packages/cardano` se borra.** Era un directorio con un `.gitkeep`, sin `package.json`:
+invisible para pnpm, o sea que **no era un package** aunque tres documentos lo llamaran así. Vuelve
+como package real el día que exista el `AnchorPort` (D-014) — crear el `package.json` hoy sería
+declarar una dependencia que nada tiene.
+
+**3 · `apps/web/.gitignore` se borra.** Scaffold de TanStack: duplicaba lo que ya ignora la raíz y
+además listaba `.wrangler`, `.vinxi`, `__unconfig*` y `todos.json` — herramientas que este proyecto
+no usa. Un `.gitignore` que menciona Cloudflare Workers en un repo que despliega en Render es ruido
+que hace dudar de lo que se está leyendo.
+
+**4 · Un `uploads/` suelto en la raíz, y por qué apareció.** `UPLOAD_DIR` caía por default en
+`"./uploads"`, **relativo al cwd**: arrancar la API desde la raíz del repo creaba el directorio ahí.
+No afecta al deploy —`render.yaml` setea la variable explícita— pero en local decide dónde van los
+archivos según desde dónde se invoque el comando. Ahora el default se ancla al package
+(`path.resolve(__dirname, …)`), y la raíz tiene su propia entrada en `.gitignore` por las dudas.
+
+**El mismo bug estaba en la suite de tests, y el rename lo destapó.** `vitest.config.mts` resolvía
+`@plataforma/shared` con `path.resolve(process.cwd(), "../shared/src/index.ts")`. Al mover el
+package, `../shared` dejó de existir y **las 9 suites fallaron con "Cannot find package"**. Anclado
+también a `import.meta.dirname`.
+
+> **Corolario que vale más que las cuatro mudanzas:** *un path relativo al `cwd` es una dependencia
+> oculta de desde dónde se invoca el comando.* Aparecieron dos en el mismo día, en archivos sin
+> relación, y los dos habrían fallado distinto en el deploy que en local. Al escribir una ruta,
+> anclala al archivo (`__dirname` / `import.meta.dirname`), no al proceso.
+
+**Lo que NO se movió, y por qué.** `packages/shared` se queda donde está: es una librería de verdad
+y es lo único que vuelve **imposible** —no prohibido— el drift entre el front y el back. `contracts/`
+tampoco entra al workspace pnpm: es otro toolchain (D-054 §6).
+
+**Nota sobre las rutas en `DECISIONS.md`.** Las entradas anteriores a ésta dicen `packages/api`
+porque eso era cierto cuando se escribieron. **No se reescriben**: son registro histórico, y
+falsificarlo para que quede prolijo es peor que la incomodidad de leer una ruta vieja. Desde acá,
+`apps/api`.
+
+**Trigger de revisión.** Si aparece un tercer servicio desplegable, entra en `apps/`. Si
+`packages/` vuelve a tener algo que se despliega, esta decisión se rompió.

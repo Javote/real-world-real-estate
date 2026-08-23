@@ -1,13 +1,13 @@
-name = "j/milestone-fsm"
-version = "0.0.0"
+name = "propnexus/stage-fsm"
+version = "1"
 compiler = "v1.1.21"
 plutus = "v3"
 license = "Apache-2.0"
-description = "Aiken contracts for project 'j/milestone-fsm'"
+description = "PropNexus — FSM de stages de obra anclada en Cardano (D-015, D-020)"
 
 [repository]
-user = "j"
-project = "milestone-fsm"
+user = "Javote"
+project = "real-world-real-estate"
 platform = "github"
 
 [[dependencies]]

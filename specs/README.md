@@ -114,7 +114,7 @@ conformidad. Lo que sigue es lo que hay que cambiar, por palanca:
 
 | # | Hallazgo | Evidencia | Estado |
 |---|---|---|---|
-| 1 | **La puerta no existía.** `pnpm test` corría 4 tests de 1 archivo; `packages/api` no tiene script `test` y `pnpm -r` lo saltea **en silencio** (`Scope: 2 of 3`); los contratos no estaban en `pnpm test`. 3 de los 5 ítems de la puerta eran inverificables. | medido | **resuelto** — hoy `pnpm verify` + CI; la puerta de D-032 se borró en D-053 |
+| 1 | **La puerta no existía.** `pnpm test` corría 4 tests de 1 archivo; `apps/api` no tiene script `test` y `pnpm -r` lo saltea **en silencio** (`Scope: 2 of 3`); los contratos no estaban en `pnpm test`. 3 de los 5 ítems de la puerta eran inverificables. | medido | **resuelto** — hoy `pnpm verify` + CI; la puerta de D-032 se borró en D-053 |
 | 2 | **`packages/shared` vacío desactiva la regla 6**, que es lo único que vuelve imposible el drift API↔web. Bloqueada por el skew TS 5.8/6.0. | — | **resuelto** — SPEC-008: TS unificado en 6.0, contrato de auth compartido, 21 tests |
 | 3 | **El principio 1 ya se violaba:** jerarquía de precedencia escrita **4 veces**; "2% de conformidad" **4 veces**; trampas del front duplicadas entre `CLAUDE.md` y un skill; 267 líneas de README de scaffold sin información del proyecto. | grep | **resuelto** — contexto por subárbol (D-032) |
 | 4 | **Los 6 criterios que no se programan estaban todos en la última rebanada.** El criterio 4 (3 pilotos) depende de gente externa y tiene el lead time más largo del proyecto; el 12 (URL pública) hacía caer el primer deploy real al final. | plan | **resuelto** — Track C, abajo |
@@ -137,9 +137,9 @@ Cada rebanada deja la app **corriendo y demostrable** — ese es el criterio de 
 | 0 | `SPEC-008` | **Cimientos verificables** *(no es vertical, a propósito)* | La puerta puede verificar la API y el contrato API↔web | **cerrada** 2026-08-20 |
 | 0b | `SPEC-009` | Rename D-023 + naming de contratos | El dominio dice `stage` en todos lados | no escrita |
 | 0c | `SPEC-010` | **Endurecer la superficie 🔴** *(tampoco es vertical)* | El código 🔴 no tiene defaults inseguros | **cerrada** 2026-08-21 |
-| 0d | — | **Migrar `packages/api` de Prisma a Drizzle → Kysely** *(tampoco es vertical)* | El ORM deja de ser deuda antes de que el código nuevo se acople a Prisma | **cerrada** 2026-08-21 — D-048, D-049 |
+| 0d | — | **Migrar `apps/api` de Prisma a Drizzle → Kysely** *(tampoco es vertical)* | El ORM deja de ser deuda antes de que el código nuevo se acople a Prisma | **cerrada** 2026-08-21 — D-048, D-049 |
 | 1 | `SPEC-011` | Login de 4 roles | Entrás como cada rol y ves su panel, en ambos idiomas, en mobile | **cerrada** 2026-08-21 |
-| **0e** | — | **`requireProjectAccess`: la segunda capa como middleware** 🔴 *(tampoco es vertical)* | Olvidarse de la membresía se ve en la firma de la ruta, como se ve un `requireRole` faltante | **PRÓXIMA — prioritaria** (D-053) |
+| **0e** | `SPEC-012` | **`requireProjectAccess`: la segunda capa como middleware** 🔴 *(tampoco es vertical)* | Olvidarse de la membresía se ve en la firma de la ruta, como se ve un `requireRole` faltante | **cerrada** 2026-08-23 |
 | 2 | — | Developer crea proyecto, unidades y stages | Creás un desarrollo con su plantilla de 10 stages | no escrita |
 | 3 | — | **Evidencia → Merkle → TXID real** *(walking skeleton)* | Subís evidencia y obtenés un TXID verificable en cardanoscan | no escrita |
 | 4 | — | Certifier certifica y observa | La FSM cierra el lazo: observar devuelve el stage al developer | no escrita |
@@ -154,30 +154,21 @@ Cada rebanada deja la app **corriendo y demostrable** — ese es el criterio de 
 **Las specs se escriben una por vez, un paso antes de necesitarlas** (principio 5). Escribir las
 once ahora produciría once archivos especulativos que nadie corrige.
 
-### Por qué 0e va primero
+### 0e, cerrada el 2026-08-23
 
 Al borrar el harness (D-053) se fue con él `check-project-access.py`, que era lo único que gritaba
-cuando un endpoint con alcance de proyecto se olvidaba de la segunda capa de autorización. **Hoy esa
-regla —la regla 5, y es 🔴— no la sostiene nada más que quien escribe el endpoint**: no la ve el
-compilador, ni un test, ni el CI, y falla en silencio (el síntoma es que alguien ve datos de un
-proyecto del que no es miembro).
+cuando un endpoint se olvidaba de la segunda capa. Se reemplazó por la forma que no lo necesita:
+`requireProjectAccess(...)`, hermano de `requireRole`, que se lee en la firma de la ruta. Los 12
+call sites quedaron convertidos y **`canAccessProject` ya no se llama desde ninguna ruta**.
 
-Los 27 endpoints actuales están auditados uno por uno y están bien. **El riesgo es el 28**, y el
-backlog de M2-D5 son ~80. Por eso va antes que la rebanada 2: el momento barato de cambiar la forma
-es antes de la tanda grande, no después de escribir 50 endpoints con la forma vieja.
-
-El arreglo **no es otro escáner** —el que había eran 147 líneas parcheando un problema de forma—
-sino `requireProjectAccess(...)`, hermano de `requireRole`, que se lee en la firma de la ruta y
-encapsula el chequeo del booleano. Alcance: ~15 líneas nuevas en
-`packages/api/src/middlewares/auth.ts` y los 27 call sites. **Dueño: humano** — toca
-`canAccessProject`, que es 🔴, así que se revisa línea por línea. Contexto completo en
-`packages/api/CLAUDE.md` §`canAccessProject` y en `specs/SPEC-010` §Preguntas abiertas.
+Se hizo antes que la rebanada 2 a propósito: el momento barato de cambiar la forma era antes de la
+tanda grande de endpoints, no después de escribir 50 con la forma vieja. Detalle en `SPEC-012`.
 
 ### Tracks paralelos
 
 **Track B — contratos.** `contracts/` está aislado del workspace pnpm y no bloquea a nadie:
 corre en paralelo desde el inicio. (a) rename y naming PropNexus (D-023) + consolidar
-`milestone.ak`/`milestone2.ak` (D-017); (b) **suite de tests desde cero** — es el criterio 2 y
+~~`milestone.ak`/`milestone2.ak` (D-017)~~ *(cerrado por D-054: mismo hash)*; (b) **suite de tests desde cero** — es el criterio 2 y
 estamos en 0; (c) las 6 ops como anclaje de commitment (D-021); (d) ≥8 stages, signers por rol,
 timeouts y fallback branches (los caminos de excepción que M1-D1 §Workflow exige y hoy no existen).
 Está aislado del workspace pnpm, así que se puede trabajar por separado.
@@ -203,7 +194,7 @@ la última rebanada, que es donde los proyectos mueren. Arrancan **ahora**, en p
 | **`/verify`: verificación *independiente*** | La pantalla ya existe (168 líneas, `ApiPort` + `HashChip`) — pero exige sesión y verifica contra la API, no contra la chain | Llega con `AnchorPort` (D-014): verificar sin cuenta y sin confiar en la plataforma. La pregunta ya no es si hay pantalla | Rebanada 3 |
 | ~~D-005 Lucid vs Mesh~~ | — | **Cerrada: D-005 Aceptada** (2026-08-20). Lucid Evolution + Blockfrost, sin spike previo. | — |
 | ~~D-009 Custodia de firmas profesionales~~ | — | **Cerrada: D-009 Aceptada** (2026-08-20). Co-firma CIP-30 no-custodial. | — |
-| D-017 `milestone.ak` vs `milestone2.ak` | Conservar `milestone.ak` | Spike ≤1 día | Track contratos |
+| ~~D-017 `milestone.ak` vs `milestone2.ak`~~ | — | **Cerrada por D-054**: compilaban al mismo hash | — |
 | ~~Unificar TypeScript 5.8 / 6.0~~ | — | **Cerrada: SPEC-008.** Los tres packages en `^6.0.2`. | — |
 
 ## Riesgos, señal temprana y plan B

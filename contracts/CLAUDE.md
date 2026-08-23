@@ -40,7 +40,8 @@ después**. Para un producto cuya tesis es "verificá sin confiar en la platafor
 - **0 tests.** El criterio 2 del SOM pide **≥95% de coverage** y es el único criterio duro sin plan
   B. Es la prioridad del track: un test por transición válida y **uno por cada inválida**
   (`Completed → *` debe fallar siempre; `Pending → Completed` directo, también).
-- **`milestone.ak` y `milestone2.ak` son casi idénticos** — mismo validador, dos estilos.
+- **Hubo un `milestone2.ak` y era el mismo script** — no "casi idéntico": mismo hash compilado
+  (`06534cfa08c481a9fa2e3995`). Se borró en D-054, sin spike y sin cambiar nada on-chain.
   Consolidación pendiente, default conservar `milestone.ak` (D-017).
 - **`aiken.toml` conserva naming de scaffold**: `name = "j/milestone-fsm"`, `repository.user = "j"`,
   `version = "0.0.0"` — que además incumple D-015 (entero incremental). Corregir junto con el

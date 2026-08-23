@@ -16,7 +16,7 @@
 > Lo de abajo sigue vigente **como referencia técnica** (reglas duras, prohibiciones, trampas), pero
 > la sección §Cómo se trabaja acá se reescribió con D-053 (el harness ya no existe).
 
-> Lo transversal. Lo de cada frente vive en `apps/web/CLAUDE.md`, `packages/api/CLAUDE.md` y
+> Lo transversal. Lo de cada frente vive en `apps/web/CLAUDE.md`, `apps/api/CLAUDE.md` y
 > `contracts/CLAUDE.md`, y se carga solo cuando tocás ese subárbol.
 
 ## Contexto (3 líneas)
@@ -91,11 +91,22 @@ nos pasó decidir contra una transcripción errónea (ver Trampas).
 
 ## Estructura del repo
 
-`apps/web` (TanStack Start) y `packages/api` (Express + Kysely) son los únicos servicios.
-`shared` (contrato único API↔web) y `cardano` (a poblar) son librerías; las migraciones son SQL
-plano escrito a mano en `packages/api/migrations/`, aplicadas por un único runner
-(`src/db/migrate.ts`, D-052). `contracts/` es el proyecto Aiken: no se hostea, su versión es un entero
-(D-015).
+**`apps/` es lo que se despliega. `packages/` es librería que alguien importa.** Si una carpeta de
+`packages/` termina siendo un servicio, la convención se rompió (D-055).
+
+```
+apps/api          Express 5 + Kysely      → servicio en Render
+apps/web          TanStack Start (SSR)    → servicio en Render
+packages/shared   contrato Zod API↔web    → lo importan los dos
+contracts/        Aiken · Plutus V3       → no se hostea, toolchain aparte
+```
+
+`packages/shared` es lo único que vuelve el drift API↔web **imposible** en vez de prohibido: un tipo
+cambia de un lado y el typecheck del otro falla. Las migraciones son SQL plano escrito a mano en
+`apps/api/migrations/`, aplicadas por un único runner (`src/db/migrate.ts`, D-052).
+
+`contracts/` **no está en el workspace pnpm** a propósito (D-054): otro toolchain, otro lockfile,
+otra caché. `packages/cardano` no existe todavía; aparece el día que exista el `AnchorPort` (D-014).
 
 Tres `.md` en la raíz, a propósito: **`README.md`** (entrada humana, arranque, variables de
 entorno), **`CLAUDE.md`** (este archivo) y **`DECISIONS.md`** (el porqué). El mapa de desarrollo
@@ -116,7 +127,7 @@ Lo que necesitás saber al escribir código:
 | Frente | Con qué se escribe | Decisión |
 |---|---|---|
 | **web** | TanStack Start + Router + Query · React 19 · Tailwind v4 · Lucide · shadcn/ui *(falta)* | D-002, D-024 |
-| **api** | Express 4 + Zod + JWT + bcrypt(10) + Multer, base `/api/v1` | D-016 |
+| **api** | Express 5 + Zod + JWT + bcrypt(10) + Multer + helmet, base `/api/v1` | D-016, D-054 |
 | **shared** | Zod — el contrato único API↔web. El schema va acá **antes** que el endpoint | D-012 |
 | **db** | **Kysely** (migración desde Drizzle **completa**, D-049) · **SQLite** en dev · **Turso** en Render | D-016, D-038, D-048, D-049 |
 | **cardano** | `AnchorPort` con adaptadores `blockfrost` y `simulated` — *package vacío* | D-005, D-014 |
@@ -188,22 +199,28 @@ hooks bloqueantes, tres subagentes, dos skills, árboles de trabajo por track—
 y no detectaron ninguno de los bugs reales del período. Si venís de leer una spec vieja que
 menciona `scripts/gate.sh`, ese archivo no existe.
 
-**Verificación: un comando, el mismo que corre el CI.**
+**Verificación: dos cadenas separadas, porque son dos cadenas distintas.**
 
 ```bash
-pnpm verify      # typecheck + tests + build
+pnpm verify             # app TS: lint (Biome) + typecheck + tests + build
+pnpm contracts:verify   # Aiken: fmt --check + check + build
+pnpm verify:all         # las dos, encadenadas
 ```
 
-El CI (`.github/workflows/ci.yml`) hace eso mismo, declarativo, más el job de Aiken. `pnpm install
---frozen-lockfile` falla solo si el lockfile no refleja los `package.json`, que es el caso que
-importa: un verde sobre el entorno equivocado es peor que un rojo.
+**TypeScript y Aiken no se mezclan** (D-054): distinto toolchain, distintos artefactos, distintos
+modos de falla. Biome no mira `contracts/` y `aiken` no sabe nada de la app. El CI los corre como
+**dos jobs en paralelo**, y ninguno espera al otro: que un validador no compile no dice nada sobre
+la app, y al revés tampoco.
+
+`pnpm install --frozen-lockfile` falla si el lockfile no refleja los `package.json` — un verde
+sobre el entorno equivocado es peor que un rojo.
 
 **Lo demás es criterio, y el criterio va escrito, no ejecutado.** Las reglas duras de este archivo
 son advisory a propósito: bloquear el juicio produce fricción sin seguridad. Las dos excepciones
 donde eso **no** alcanza están declaradas como tales:
 
 - **La segunda capa de autorización** (regla 5) falla en silencio y hoy no la sostiene nada más que
-  quien escribe el endpoint. Ver `packages/api/CLAUDE.md` §`canAccessProject`.
+  quien escribe el endpoint. Ver `apps/api/CLAUDE.md` §`canAccessProject`.
 - **Los secretos** (regla 12) — no hay escáner; leé el diff antes de commitear.
 
 **Dónde vive cada cosa** (si no está en su lugar, no lo copies: movelo):
@@ -230,7 +247,7 @@ donde eso **no** alcanza están declaradas como tales:
 
 Si dudás del nivel, es el más alto de los dos.
 
-**Dónde está hoy el código 🔴, y qué tiene abierto: `packages/api/CLAUDE.md` §Superficie 🔴** —
+**Dónde está hoy el código 🔴, y qué tiene abierto: `apps/api/CLAUDE.md` §Superficie 🔴** —
 todo el 🔴 existente vive en ese package, con un **P1 abierto en `lib/jwt.ts` que bloquea el primer
 deploy**. Acá no se repite el inventario.
 
@@ -261,7 +278,10 @@ pnpm contracts:check              # aiken check (compila y corre tests de valida
 pnpm contracts:build              # regenera plutus.json (commitearlo)
 pnpm e2e                          # walkthrough Playwright (mobile + desktop) — NO corre en CI
 
-pnpm verify                       # typecheck + tests + build — lo mismo que corre el CI
+pnpm verify                       # app TS: lint + typecheck + tests + build
+pnpm contracts:verify             # Aiken: fmt + check + build
+pnpm verify:all                   # las dos, encadenadas
+pnpm lint:fix                     # Biome arregla lo mecánico
 ```
 
 Los comandos por frente (db:migrate, db:seed, e2e:ui…) están en el `CLAUDE.md` de cada frente.

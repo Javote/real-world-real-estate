@@ -1,6 +1,6 @@
 # Runbook — deploy, rollback e incidentes
 
-> Criterio 14 del SOM. Cubre `apps/web` y `packages/api` en **Render free tier** (D-039, D-040,
+> Criterio 14 del SOM. Cubre `apps/web` y `apps/api` en **Render free tier** (D-039, D-040,
 > D-041), con la base en **Turso** (D-038). El artefacto de infraestructura es `render.yaml` en la
 > raíz, y es la única fuente de verdad de la configuración: lo de acá explica **cómo se opera**, no
 > qué dice el YAML.

@@ -6,7 +6,7 @@
 
 ## Propósito
 
-Cerrar los tres huecos medidos el 2026-08-20 (`specs/README.md` §Auditoría): `packages/api` no
+Cerrar los tres huecos medidos el 2026-08-20 (`specs/README.md` §Auditoría): `apps/api` no
 tiene tests y `pnpm -r test` lo saltea **en silencio**, `packages/shared` está vacío —lo que
 desactiva la regla 6, la única defensa real contra el drift API↔web— y el skew TypeScript 5.8/6.0
 bloquea poblarlo.
@@ -14,7 +14,7 @@ bloquea poblarlo.
 ## Alcance / NO-alcance
 
 - **Cubre:** unificar la versión de TypeScript · convertir `packages/shared` en un package real del
-  workspace con el primer contrato Zod (auth) · infraestructura de tests en `packages/api` con la
+  workspace con el primer contrato Zod (auth) · infraestructura de tests en `apps/api` con la
   suite de auth · eliminar el placeholder `packages/db`.
 - **NO cubre:** el rename `Milestone → ConstructionStage` (D-023) — es `SPEC-009`, y meterlo acá
   mezcla dos cambios de alto radio en un commit. Tampoco cubre superficie de UI, contratos, ni
@@ -24,7 +24,7 @@ bloquea poblarlo.
 ## Interfaz
 
 `packages/shared` pasa a ser `@plataforma/shared`, package del workspace, consumido por
-`packages/api` y `apps/web`:
+`apps/api` y `apps/web`:
 
 | Export | Qué es |
 |---|---|
@@ -43,14 +43,14 @@ tipo**, no una copia: `apps/web/src/api/types.ts` deja de declarar los suyos par
 2. El contrato de auth existe **una sola vez**, en `packages/shared`. Si la API cambia la forma de
    la respuesta y no actualiza el schema, **el typecheck del front falla**.
 3. Todos los packages compilan con **la misma versión** de TypeScript.
-4. `packages/api` tiene script `test`, así que `pnpm test` deja de saltearlo en silencio.
+4. `apps/api` tiene script `test`, así que `pnpm test` deja de saltearlo en silencio.
 5. Ninguna respuesta de la API contiene `passwordHash`, en ningún camino, ni de error.
-6. `packages/db/` no existe: el esquema lo define `packages/api/migrations/` (D-049) y un placeholder
+6. `packages/db/` no existe: el esquema lo define `apps/api/migrations/` (D-049) y un placeholder
    reservado-que-nunca-se-usó es una afirmación falsa sobre el repo.
 
 ## Casos borde (definen los tests)
 
-`packages/api`, con vitest + supertest:
+`apps/api`, con vitest + supertest:
 
 | Caso | Esperado |
 |---|---|
@@ -74,7 +74,7 @@ tipo**, no una copia: `apps/web/src/api/types.ts` deja de declarar los suyos par
 
 - **Versión de TypeScript: 6.0 para todo**, el default. `@types/express` 4 no dio ningún problema
   (el riesgo que motivaba la refutación no se materializó), así que no hizo falta bajar a 5.8. **Lo
-  que sí apareció:** TS 6.0 deprecó `moduleResolution: node10`, que usaban `packages/api` y la
+  que sí apareció:** TS 6.0 deprecó `moduleResolution: node10`, que usaban `apps/api` y la
   config nueva de `shared`. Se migraron las dos a `node16`, que es la resolución correcta para
   packages CommonJS. Efecto colateral: `vitest.config.ts` pasó a `.mts`, porque bajo `node16` un
   `.ts` de un package CJS no puede importar `vitest/config`, que es ESM.
@@ -94,7 +94,7 @@ staleness. Todo eso quedó en `packages/shared/CLAUDE.md`.
 
 ## Definición de terminado
 
-- [x] `pnpm verify` pasa tocando `packages/api` y `packages/shared`
+- [x] `pnpm verify` pasa tocando `apps/api` y `packages/shared`
 - [x] `pnpm test` corre y reporta tests de web, api y shared — **21 tests** (eran 4)
 - [x] cambiar a mano la forma de `loginResponse` **rompe el typecheck de los dos lados**:
       `auth.routes.ts:53` en la API y `login.tsx:40` en el front. Verificado rompiéndolo a

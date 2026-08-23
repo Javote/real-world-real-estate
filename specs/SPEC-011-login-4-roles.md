@@ -84,7 +84,7 @@ conforme). Solo cambia quién los consume y cómo enruta la respuesta.
   futuro se agrega un `CHECK` a esta columna, **esa** migración tiene que declarar los 5 valores
   vigentes (`admin`, `developer`, `buyer`, `verifier`, `notary`) o rompe el login de todos los roles
   de un saque.
-- **Seed** (`packages/api/src/db/seed.ts`): agregar un usuario demo `notary` (p. ej.
+- **Seed** (`apps/api/src/db/seed.ts`): agregar un usuario demo `notary` (p. ej.
   `notary@example.com`), sujeto a las mismas reglas D-047 (password vía
   `SEED_DEMO_PASSWORD` fuera de una base local con `DATABASE_URL=file:`).
 

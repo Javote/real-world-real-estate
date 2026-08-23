@@ -116,7 +116,7 @@ en un `.md` se desactualiza el día que alguien corre `pnpm up`.
 | red | **Preprod siempre**; mainnet fuera de alcance | D-013 |
 | deploy | **Render** free tier, runtime nativo (sin Docker) · evidencia en **R2** | D-039, D-040, D-041 |
 
-**Estructura.** `apps/web` y `packages/api` son los únicos servicios; `packages/shared` y
+**Estructura.** `apps/web` y `apps/api` son los únicos servicios; `packages/shared` y
 `packages/cardano` son librerías; `contracts/` es el proyecto Aiken (aislado del workspace pnpm, su
 versión es un entero — D-015). En la raíz: `README.md` (arranque humano), `CLAUDE.md` (este),
 `DECISIONS.md` (el porqué). `docs/` contiene **solo** entregables (D-033).
@@ -259,7 +259,7 @@ vuelve a PRs — el trigger está en D-030.
 
 ## Superficie 🔴 — la revisa el humano
 
-Todo el código 🔴 del proyecto vive en `packages/api`. Auditado leyendo los 27 endpoints, no
+Todo el código 🔴 del proyecto vive en `apps/api`. Auditado leyendo los 27 endpoints, no
 estimado.
 
 | Archivo | Qué lo hace 🔴 | Estado |
@@ -376,7 +376,7 @@ desktop el `BottomNav` se reemplaza por sidebar con los mismos items en el mismo
 en español son 20-30% más largos que en inglés: dimensioná al contenido, nada de anchos fijos salvo
 FAB e íconos. Los puertos salen de `ports.ts` (default 3000/8787).
 
-**`packages/api`.** Checklist de endpoint nuevo: (1) schema Zod en `packages/shared` **antes** que el
+**`apps/api`.** Checklist de endpoint nuevo: (1) schema Zod en `packages/shared` **antes** que el
 endpoint; (2) ruta con `requireRole` + `canAccessProject` diciendo **qué membresías** acepta
 (`ANY_MEMBERSHIP` si alcanza con ser miembro — omitirlo no compila, D-042); (3) `safeParse` → 400 con
 `error.flatten()`; (4) `writeAuditLog` si es mutación relevante; (5) test del camino feliz y de cada

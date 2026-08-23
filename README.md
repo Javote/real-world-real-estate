@@ -1,7 +1,7 @@
 # PropNexus — Anclaje de Evidencia Inmobiliaria sobre Cardano
 
 > Catalyst Fund Project **1400106** — *Real-World Real Estate Pre-Sale with Proof & Release*.
-> Monorepo: **pnpm + TanStack Start** (web) + **Express 4 + Kysely** (api) + **Aiken / Plutus V3** (contratos).
+> Monorepo: **pnpm + TanStack Start** (web) + **Express 5 + Kysely** (api) + **Aiken / Plutus V3** (contratos).
 
 Ventas inmobiliarias en pozo: estructura el ciclo de obra en **stages**, organiza la **evidencia**
 (planos, fotos, permisos, certificados) y ancla **huellas criptográficas** (SHA-256 / Merkle) en
@@ -38,13 +38,13 @@ El repo es la memoria; los chats son descartables.
 
 ```bash
 pnpm install
-cp packages/api/.env.example packages/api/.env   # completar JWT_SECRET: openssl rand -hex 32
+cp apps/api/.env.example apps/api/.env   # completar JWT_SECRET: openssl rand -hex 32
 pnpm db:migrate                                  # crea la SQLite de dev
 pnpm db:seed                                     # usuarios y proyecto demo
 pnpm dev                                         # web en :3000, api en :8787
 ```
 
-Login demo: `admin@example.com` / `admin123` (resto de usuarios en `packages/api/src/db/seed.ts`).
+Login demo: `admin@example.com` / `admin123` (resto de usuarios en `apps/api/src/db/seed.ts`).
 Son credenciales **de desarrollo y publicadas**, y por eso el seed solo las usa contra un SQLite
 local: contra cualquier otra base se niega a correr sin `SEED_ADMIN_PASSWORD` (D-047).
 Contratos: `pnpm contracts:check`.
@@ -54,10 +54,11 @@ Contratos: `pnpm contracts:check`.
 Un comando, y es el mismo que corre el CI:
 
 ```bash
-pnpm verify        # typecheck + tests + build
+pnpm verify        # lint + typecheck + tests + build
 ```
 
-El CI agrega el job de Aiken (`fmt --check`, `check`, `build` y que `plutus.json` esté al día) y
+El linter y el formateador son **Biome** (`pnpm lint:fix` arregla lo mecánico). El CI corre lo
+mismo, más el job de Aiken (`fmt --check`, `check`, `build` y que `plutus.json` esté al día) y
 `pnpm install --frozen-lockfile`, que falla si el lockfile no refleja los `package.json`.
 
 **No hay harness.** Hubo uno entre el 2026-08-20 y el 2026-08-23 —puerta ejecutable, hooks
@@ -70,7 +71,7 @@ entregables aprobados), no editar una migración ya aplicada, no commitear secre
 
 ## Variables de entorno
 
-**Un archivo por servicio, y son la referencia:** [`packages/api/.env.example`](packages/api/.env.example)
+**Un archivo por servicio, y son la referencia:** [`apps/api/.env.example`](apps/api/.env.example)
 y [`apps/web/.env.example`](apps/web/.env.example). Acá no se copian — una lista duplicada se
 desactualiza en la copia, no en el original.
 
@@ -135,7 +136,7 @@ Deliberadamente **tres archivos en la raíz y nada más**. Todo lo demás vive i
 | Archivo | Contenido |
 |---|---|
 | `CLAUDE.md` | Lo transversal de cada sesión: vocabulario, principios, reglas duras, prohibiciones, autonomía 🟢🟡🔴, commits, comandos y trampas. |
-| `<frente>/CLAUDE.md` | Lo propio de `apps/web`, `packages/api` y `contracts`: qué leer, trampas verificadas, deuda y comandos. Se cargan solos al tocar el subárbol. |
+| `<frente>/CLAUDE.md` | Lo propio de `apps/web`, `apps/api` y `contracts`: qué leer, trampas verificadas, deuda y comandos. Se cargan solos al tocar el subárbol. |
 | `DECISIONS.md` | **El documento de mayor valor por línea.** 32 ADRs con contexto, alternativas, trigger de revisión y reversión. |
 | `specs/README.md` | **El mapa de desarrollo:** criterios de aceptación de M3, estado medido, rebanadas en orden de dependencia, tracks paralelos, riesgos. |
 | `specs/SPEC-NNN-*.md` | Una por rebanada: invariantes, casos borde (que son los tests) y definición de terminado. |
@@ -144,38 +145,32 @@ Deliberadamente **tres archivos en la raíz y nada más**. Todo lo demás vive i
 
 ## Estructura del monorepo
 
+**Un repo git, dos sistemas de build.** La app TypeScript es un monorepo pnpm (un lockfile, un
+`pnpm install`, dependencias entre paquetes por `workspace:^`). `contracts/` está en el mismo repo
+pero **fuera** de ese workspace: lo construye `aiken` con su propio lockfile.
+
+La convención es una sola y no tiene excepciones (D-055): **`apps/` se despliega, `packages/` se
+importa.**
+
 ```
 plataforma/
-├── .claude/settings.json       # comandos preaprobados de sesión (comodidad, no reglas)
-├── .github/workflows/ci.yml    # CI: typecheck + tests + build, y el job de Aiken
-├── render.yaml                 # Blueprint de deploy (2 servicios Node, free tier)
 ├── apps/
-│   └── web/                    # TanStack Start + Tailwind v4 — 4 superficies por rol
+│   ├── api/                    # Express 5 + Kysely + SQLite dev — servicio en Render
+│   │   ├── migrations/         #   SQL escrito a mano, un solo runner (D-052)
+│   │   ├── src/
+│   │   └── test/
+│   └── web/                    # TanStack Start + Tailwind v4 — servicio en Render
 ├── packages/
-│   ├── api/                    # Express 4 + Kysely + SQLite dev (D-016, D-049)
-│   │   ├── migrations/         #   migraciones SQL escritas a mano (D-052)
-│   │   └── src/                #   routes, middlewares (auth 2 capas), lib, utils, db (schema/seed)
-│   ├── shared/                 # contrato único API↔web: schemas Zod + tipos
-│   └── cardano/                # (a poblar) AnchorPort real/simulado — D-014
-├── contracts/                  # Proyecto Aiken (D-017) — Plutus V3, nunca custodia valor (D-021)
-├── specs/                      # el mapa de desarrollo + las specs de rebanada
-├── docs/                       # entregables oficiales — INMUTABLE (D-022)
-└── README.md · CLAUDE.md · DECISIONS.md
-
-Cada frente tiene además su propio `CLAUDE.md` (`apps/web/`, `packages/api/`, `contracts/`), que se
-carga solo cuando un agente toca ese subárbol.
+│   └── shared/                 # contrato Zod API↔web: lo importan los dos
+├── contracts/                  # Aiken · Plutus V3 — no se hostea, toolchain aparte
+│   ├── validators/             #   milestone.ak (el único; ver D-054)
+│   └── plutus.json             #   blueprint, se commitea tras cada build
+├── docs/                       # entregables aprobados de M1/M2/M3
+├── specs/                      # specs, plan, runbook de deploy, stack
+├── .github/workflows/ci.yml    # dos jobs en paralelo: App TS · Contratos Aiken
+├── biome.json                  # linter + formateador (no mira contracts/)
+└── render.yaml                 # Blueprint de deploy (2 servicios, free tier)
 ```
-
-**Qué se despliega y qué no:** solo `apps/web` y `packages/api` corren como servidores.
-`shared`/`cardano` son librerías que compilan dentro de la imagen de la API. `contracts/` no se
-hostea: el blueprint va commiteado y los validadores viven en la blockchain. El destino de datos es
-mantener SQLite vía Turso en Render, no migrar a PostgreSQL — D-038. El deploy entero corre en
-**free tier, $0/mes**, y eso es una restricción de arquitectura: sin disco persistente, la evidencia
-va a R2 antes del primer deploy y el worker de confirmaciones es un cron de GHA — D-040.
-
-**Principio rector:** documentos y datos personales viven off-chain; on-chain solo van hashes
-SHA-256, raíces Merkle, commitments y TXIDs. El backend es la capa de orquestación; el frontend
-nunca habla directo con Cardano.
 
 ## Estado
 
@@ -198,9 +193,9 @@ versionan (regla 12 de `CLAUDE.md`).
 |---|---|---|
 | `apps/`, `packages/`, `contracts/`, `.claude/`, `.github/` | **Pública** | Código, contratos y CI |
 | `docs/`, `specs/`, `README.md`, `CLAUDE.md`, `DECISIONS.md` | **Pública** | Entregables oficiales y documentación de trabajo |
-| `packages/api/.env`, `apps/web/.env` | **Privada** — nunca versionada | Secretos locales. El ejemplo público es `.env.example` |
-| `packages/api/dev.db` | **Privada** — nunca versionada | Base SQLite de desarrollo |
-| `packages/api/uploads/` | **Privada** — nunca versionada | Evidencia subida en runtime |
+| `apps/api/.env`, `apps/web/.env` | **Privada** — nunca versionada | Secretos locales. El ejemplo público es `.env.example` |
+| `apps/api/dev.db` | **Privada** — nunca versionada | Base SQLite de desarrollo |
+| `apps/api/uploads/` | **Privada** — nunca versionada | Evidencia subida en runtime |
 | `apps/web/e2e/.artifacts/` | **Privada** — nunca versionada | Capturas, videos y traces de la suite E2E |
 
 La wallet de servicio de Preprod y la API key de Blockfrost se configuran por entorno en el

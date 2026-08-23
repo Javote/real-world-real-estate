@@ -1,8 +1,8 @@
 # SPEC-010 — Endurecer la superficie 🔴
 
 > **Rebanada 0c.** Como `SPEC-008`, no es vertical y no agrega pantalla: cierra los hallazgos de la
-> auditoría del 2026-08-20 sobre el código 🔴, que hoy vive entero en `packages/api`. El inventario
-> con el detalle de cada uno está en `packages/api/CLAUDE.md` §Superficie 🔴 y **no se repite acá**:
+> auditoría del 2026-08-20 sobre el código 🔴, que hoy vive entero en `apps/api`. El inventario
+> con el detalle de cada uno está en `apps/api/CLAUDE.md` §Superficie 🔴 y **no se repite acá**:
 > esta spec aporta las invariantes y los casos borde, que es de donde salen los tests.
 
 ## Propósito
@@ -21,7 +21,7 @@ del SOM: sin hallazgos P1 abiertos).
 - **NO cubre:**
   - **Mover el SHA-256 a R2.** `utils/hashing.ts` es correcto hoy; se rehace cuando exista el object
     storage, porque el hash tiene que cubrir los bytes que terminan en R2 y no un temporal (D-040).
-  - **`bcrypt` → `bcryptjs`.** Cerrado: se queda nativo (`packages/api/CLAUDE.md` §Superficie 🔴).
+  - **`bcrypt` → `bcryptjs`.** Cerrado: se queda nativo (`apps/api/CLAUDE.md` §Superficie 🔴).
   - **Convertir `canAccessProject` en middleware obligatorio.** Sigue siendo una función que hay que
     acordarse de llamar; eso es un refactor de los 27 endpoints y va aparte. Acá solo se cierra el
     default que abre.
@@ -118,4 +118,4 @@ original. Están cerradas en esta spec:
 - [x] P1 cerrado: `JWT_SECRET` sin fallback, con test de arranque
 - [x] el login paga el costo de `bcrypt` exista o no el usuario — de ~81 ms de diferencia a 0.7 ms
 - [x] `allowedMemberships` obligatorio — 12 call sites, 7 de ellos pasan a `ANY_MEMBERSHIP` explícito
-- [x] `packages/api/CLAUDE.md` §Superficie 🔴 sin ⚠️ abiertos
+- [x] `apps/api/CLAUDE.md` §Superficie 🔴 sin ⚠️ abiertos

@@ -16,8 +16,8 @@
 
 | Pieza | Versión | Estado | Decisión |
 |---|---|---|---|
-| pnpm workspaces (monorepo, `contracts/` adentro pero aislado) | `pnpm@9.15.0` | ● | D-001 |
-| Node | `engines: >=20` · CI usa **22** | ● | D-001 |
+| pnpm workspaces — `apps/*` (desplegable) + `packages/*` (librería); `contracts/` en el repo pero **fuera** del workspace | `pnpm@9.15.0` | ● | D-001, D-055 |
+| Node | `engines: >=22.12` · `.nvmrc` · CI y Render usan **22** | ● | D-001, D-054 — `>=20` era falso: Nitro pide `^20.19 \|\| >=22.12` y el `require(esm)` de la API necesita 22.12 |
 | TypeScript, estricto, unificado en los tres packages | `6.0.3` | ● | SPEC-008 |
 | Resolución de módulos | `node16` en api y shared · `bundler` en web | ● | SPEC-008 |
 
@@ -45,21 +45,22 @@ entre web y los packages de Node.
 El front está a ~2% de conformidad con el diseño aprobado. Lo que se conserva es el patrón
 `ApiPort`; la superficie se reemplaza. Ver `apps/web/CLAUDE.md`.
 
-## 3 · Backend — `packages/api`
+## 3 · Backend — `apps/api`
 
 | Pieza | Versión | Estado | Nota |
 |---|---|---|---|
-| Express | `4.22.2` | ● | D-016. `@types/express` **pineado a v4**: los tipos v5 rompen todas las rutas |
+| Express | `5.2.1` | ● | D-054 — v4 no reenviaba los rechazos de handlers `async` al errorHandler: colgaba la request y mataba el proceso |
 | **Kysely** (sobre `@libsql/client`) | `0.29.5` | ● | Migración **terminada**: Prisma → Drizzle (D-048) → Kysely (D-049), las dos el 2026-08-21. Desde D-052 no queda rastro de ninguno de los dos en el árbol ni en el lockfile |
 | Zod | `4.4.3` | ● | D-035. Rutas heredadas aún con formas de la 3, que v4 acepta |
 | JWT (`jsonwebtoken`) | `9.0.3` | ● | 7 días, con revalidación de `isActive` por request |
 | **bcrypt** (módulo nativo) | `5.1.1` | ◐ | cost 10. Es el origen del warning de `url.parse()` vía `node-pre-gyp`. El costo de "toolchain en la imagen" **murió con D-041**: no hay imagen |
 | Multer | `2.2.0` | ● | D-036 |
+| helmet | `8.3.0` | ● | D-054. Cero dependencias transitivas. Con `x-powered-by` desactivado y 404 en JSON |
 | `express-rate-limit` | `8.6.2` | ● | D-045. Solo sobre `POST /auth/login`. Store en memoria: alcanza con **una** instancia, que es lo que da el free tier (D-040) |
 | dotenv | `16.6.1` | ● | `import "dotenv/config"` como primer import, nunca `dotenv.config()` intercalado |
-| Vitest + supertest | `4.1.10` / `7.0` | ● | 76 tests (auth 11 · upload 12 · jwt 10 · timing 3 · acceso 16 · rate limit 10), base SQLite propia |
+| Vitest + supertest | `4.1.10` / `7.2.2` | ● | 95 tests, base SQLite propia migrada con el runner real |
 
-Base `/api/v1`. De los ~80 endpoints del backlog de M2-D5, **conforman 2**.
+Base `/api/v1`. De los ~80 endpoints del backlog de M2-D5, **conforman 2**. Los 12 con alcance de proyecto aplican la segunda capa como middleware (SPEC-012).
 
 ## 4 · Contrato compartido — `packages/shared`
 
@@ -78,10 +79,10 @@ resolución (por qué `types` apunta al `.d.ts` y no al fuente) está en `packag
 | **Plutus** | **V3** | ● | D-019 — desvío del SOM, que dice V2. V3 es lo que Aiken 1.1.x emite |
 | `aiken-lang/stdlib` | `v3.0.0` | ● | |
 | Blueprint `plutus.json` | commiteado, CI verifica que esté al día | ● | D-017 |
-| Validadores | `milestone.ak` + `milestone2.ak` | ◐ | casi idénticos; consolidación abierta (D-017) |
+| Validador | `milestone.ak` | ● | Era `milestone.ak` + `milestone2.ak`: **compilaban al mismo hash**, así que el segundo se borró (D-054) |
 | `lib/` puro y testeable | — | ○ | D-008, patrón state-thread de Fase B |
 | **Tests** | **0** | ○ | El criterio 2 del SOM pide **≥95% de coverage** |
-| Naming del proyecto | `j/milestone-fsm`, `version = "0.0.0"` | ◐ | scaffold; incumple D-015. Se corrige con el rename D-023 |
+| Naming del proyecto | `propnexus/stage-fsm`, `version = "1"` | ● | D-015 cumplido (entero incremental) desde D-054 |
 
 Ningún validador custodia ni transfiere valor, en ninguna fase (D-021).
 
@@ -90,10 +91,10 @@ Ningún validador custodia ni transfiere valor, en ninguna fase (D-021).
 | Pieza | Hoy | Destino | Estado | Decisión |
 |---|---|---|---|---|
 | Base de datos | **SQLite** (`dev.db`, Kysely sobre `@libsql/client`) | **SQLite** vía **Turso** en prod (free: 5 GB · 500M lecturas · 10M escrituras) | ◐ — declarada en `render.yaml`; falta crear la base | D-038 · D-040 — Turso **obligatorio**, no preferencia: en free no hay disco. ORM: D-048 → D-049 |
-| Migraciones | SQL plano en `packages/api/migrations/`, 1 migración, tracking propio (`_migrations`), **un solo runner** (D-052) | idempotentes en el `startCommand` | ● — verificado sobre el **compilado**, contra base nueva y re-aplicando | D-012 · D-049 |
+| Migraciones | SQL plano en `apps/api/migrations/`, 1 migración, tracking propio (`_migrations`), **un solo runner** (D-052) | idempotentes en el `startCommand` | ● — verificado sobre el **compilado**, contra base nueva y re-aplicando | D-012 · D-049 |
 | Archivos de evidencia | **disco local** (`UPLOAD_DIR`, Multer) | **S3 genérico**: MinIO dev / **Cloudflare R2** prod (free: 10 GB, egress $0) | ○ — **ya no bloquea el primer deploy**: sale con `/tmp` efímero y marcado (D-051). Vuelve a bloquear el día del primer anclaje | D-011 · D-040 · D-051 |
 | URLs de archivos | descarga por endpoint autenticado | prefirmadas, TTL ≤15 min | ○ | D-011 |
-| Base de tests | SQLite propia (`packages/api/test.db`), migrada y sembrada por corrida | — | ● | SPEC-008 |
+| Base de tests | SQLite propia (`apps/api/test.db`), migrada y sembrada por corrida | — | ● | SPEC-008 |
 
 ## 7 · Blockchain
 
@@ -124,7 +125,7 @@ Ningún validador custodia ni transfiere valor, en ninguna fase (D-021).
 | Runtime: **nativo de Node**, sin imagen propia · `NODE_VERSION=22` (la del CI) | ● — declarado | D-041 |
 | `startCommand` de la API: migraciones **y después** el servidor | ● — verificado sobre el compilado | D-012 · D-040 |
 | Script `start` de `apps/web` (`node .output/server/index.mjs`) | ● — respeta `PORT`, verificado | D-041 |
-| Script `start` de `packages/api` (`node dist/src/server.js`) | ● | — |
+| Script `start` de `apps/api` (`node dist/src/server.js`) | ● | — |
 | `healthCheckPath`: `/health` en la API, `/` en el web | ● — declarado | D-010 |
 | **Proxy `/api/**` del web hacia la API** (route rules de Nitro, horneadas en el build) | ● — **sin CORS y sin URL de API en el navegador**; el `502` en `POST`+`401` cerrado | D-050 |
 | `API_ORIGIN` es **build time**, no runtime — cambiarla exige redeploy del web | ● — documentado en el YAML y el runbook | D-031 (`ports.ts`) |
@@ -149,10 +150,13 @@ Ningún validador custodia ni transfiere valor, en ninguna fase (D-021).
 
 | Pieza | Versión / detalle | Estado |
 |---|---|---|
-| GitHub Actions: dos jobs (**calidad** + **contratos Aiken**) | `checkout@v4`, `setup-node@v4` (Node 22), `pnpm/action-setup@v4`, `setup-aiken@v1` | ● |
-| `pnpm verify` — typecheck + tests + build, lo mismo que el CI, en local | — | ● |
+| GitHub Actions: dos jobs **en paralelo** (`App TS` + `Contratos Aiken`) | `checkout@v7`, `setup-node@v7` (Node 22), `pnpm/action-setup@v6`, `setup-aiken@v1` | ● |
+| `pnpm verify` — **app TS**: lint + typecheck + tests + build | — | ● |
+| `pnpm contracts:verify` — **Aiken**: fmt + check + build. Separado a propósito (D-054) | — | ● |
+| `pnpm verify:all` — las dos cadenas encadenadas | — | ● |
+| **Biome 2.5.10** — formateador + linter, uno solo para todo el workspace | `2.5.10` | ● — D-054. Antes no había ninguno, y `pnpm lint` corría sin hacer nada |
 | `pnpm install --frozen-lockfile` — falla si el lockfile no refleja los `package.json` | — | ● |
-| Tests: **108** (web 16 · api 76 · shared 16) · contratos **0** | 13 archivos | ◐ |
+| Tests: **127** (web 16 · api 95 · shared 16) · contratos **0** | 15 archivos | ◐ |
 | Coverage medido | — | ○ — el criterio 2 pide ≥95% en contratos |
 | Análisis estático / scan de dependencias | — | ○ — criterio 11 |
 | E2E Playwright | `1.62`, solo Chromium | ● pero **fuera de CI**, por decisión |
@@ -162,16 +166,15 @@ El harness existió tres días y son 1099 líneas que ya no están. El porqué �
 a sí mismo, cero bugs reales detectados, y que el CI declarativo existía desde el día 1 y hacía casi
 lo mismo— está en **D-053**.
 
-**Lo que quedó sin enforcement automático, dicho explícito:** la segunda capa de autorización
-(regla 5) falla en silencio y hoy la sostiene solo quien escribe el endpoint. Es la única deuda que
-la poda dejó abierta, y el arreglo propuesto no es otro escáner sino un middleware
-(`packages/api/CLAUDE.md` §`canAccessProject`).
+**La única deuda que la poda dejó abierta se cerró el mismo día:** la segunda capa de autorización
+(regla 5) pasó a ser el middleware `requireProjectAccess` (SPEC-012), así que se lee en la firma de
+la ruta en vez de depender de un escáner. Ninguna ruta llama ya a `canAccessProject`.
 
 ## 10 · Lo que NO está decidido
 
 | Pregunta | Default vigente | Qué la cierra |
 |---|---|---|
-| D-017 · `milestone.ak` vs `milestone2.ak` | conservar `milestone.ak` | spike ≤1 día |
+| ~~D-017 · `milestone.ak` vs `milestone2.ak`~~ | — | **Cerrada: D-054** (2026-08-23). No hizo falta spike: mismo hash de script |
 | Vocabulario "certificate" en la UI | calificar levemente | postura del dueño (sub-ítem de D-026) |
 | `/verify`: cómo se verifica **sin cuenta y sin confiar en la API** | la pantalla ya existe, pero exige sesión y verifica contra la API | M1-D1 promete verificación independiente; llega con `AnchorPort` (D-014) |
 | Retención de datos | sin default | nunca se discutió (backups los cubre D-038) |
@@ -186,9 +189,9 @@ la poda dejó abierta, y el arreglo propuesto no es otro escáner sino un middle
 |---|---|
 | **Nitro sigue en beta** | Sigue sin haber Nitro 3 estable. Pero **el `502` en `POST`+`401` ya no es deuda**: se cerró con `credentials: "omit"` al descubrir que era el spec de fetch y no h3 (D-050) |
 | **Evidencia efímera en la instancia desplegada** | Un archivo subido no sobrevive al primer spin-down. Aceptado a conciencia y marcado (D-051); **vuelve a ser bloqueante el día del primer anclaje** |
-| **`bcrypt` es nativo** | Más barata desde D-041: sin imagen propia, el toolchain lo absorbe el entorno de build de Render. Queda el warning de `url.parse()` vía `node-pre-gyp` y el riesgo genérico de módulo nativo. **La alternativa `bcryptjs` (JS puro, ~30% más lento) hoy conviene menos**: Render free da 0.1 CPU, donde los ~81 ms medidos en una máquina rápida se van a varios cientos. Detalle en `packages/api/CLAUDE.md` §Superficie 🔴. Es código 🔴: lo decide el humano |
-| **`contracts/` con 0 tests** | Único criterio duro del SOM sin plan B |
-| **`aiken.toml` con naming de scaffold** | Incumple D-015 (versión entera incremental) |
+| **`bcrypt` es nativo** | Más barata desde D-041: sin imagen propia, el toolchain lo absorbe el entorno de build de Render. Queda el warning de `url.parse()` vía `node-pre-gyp` y el riesgo genérico de módulo nativo. **La alternativa `bcryptjs` (JS puro, ~30% más lento) hoy conviene menos**: Render free da 0.1 CPU, donde los ~81 ms medidos en una máquina rápida se van a varios cientos. Detalle en `apps/api/CLAUDE.md` §Superficie 🔴. Es código 🔴: lo decide el humano |
+| **`contracts/` con 0 tests** | Único criterio duro del SOM sin plan B. Es la deuda más grande que queda |
+| **`pnpm audit`: 1 crítica + 13 altas** | Casi todas cuelgan de `bcrypt` → `@mapbox/node-pre-gyp` → `tar`, y son cadena de **instalación** (corre en cada build de Render), no de request. D-046 ya dejó anotada la salida: `scrypt` de `node:crypto`, stdlib y cero dependencias. Es 🔴 y lo decide el humano |
 | **`milestone` en el dominio** | D-023 pendiente; encarece con cada pantalla nueva |
 
 ---
@@ -225,7 +228,7 @@ la poda dejó abierta, y el arreglo propuesto no es otro escáner sino un middle
 | Package | target | module / resolución | notas |
 |---|---|---|---|
 | `apps/web` | `ES2022` | `ESNext` / `bundler` | `jsx: react-jsx` · `verbatimModuleSyntax` · `noEmit` |
-| `packages/api` | `ES2022` | `node16` / `node16` | CJS · `outDir: dist`, `rootDir: .` |
+| `apps/api` | `ES2022` | `node16` / `node16` | CJS · `outDir: dist`, `rootDir: .` |
 | `packages/shared` | `ES2022` | `node16` / `node16` | CJS · `outDir: dist`, `rootDir: src` |
 
 ### 12.2 · `apps/web` — dependencias de runtime
@@ -269,7 +272,7 @@ la poda dejó abierta, y el arreglo propuesto no es otro escáner sino un middle
 Playwright corre **solo Chromium**, en dos proyectos: `iPhone 13` (mobile) y `Desktop Chrome`
 a 1440×900. No corre en CI, por decisión.
 
-### 12.4 · `packages/api`
+### 12.4 · `apps/api`
 
 | Paquete | Declarado | Resuelto | Nota |
 |---|---|---|---|
@@ -364,7 +367,7 @@ Sin peers faltantes, sin warnings nuevos, y las 108 pruebas y los dos builds ver
 `@libsql/kysely-libsql@0.4.1` declara `^0.8.0`, y en versiones `0.x` el caret solo admite parches,
 así que no dedupea. Consecuencia ya conocida y resuelta: `LibsqlDialect` recibe `{ url, authToken }`
 en vez de un `Client` ya construido, porque los dos tipos `Client` no son asignables entre sí
-(`packages/api/CLAUDE.md` §Trampas). Arrastra dos copias del binario nativo `libsql`.
+(`apps/api/CLAUDE.md` §Trampas). Arrastra dos copias del binario nativo `libsql`.
 
 **3 · Duplicados menores, todos benignos:** `rolldown` en dos versiones (con sus 15 binarios por
 plataforma), `@oxc-project/types` en tres, `chokidar` 4/5, `debug` 2/4, `semver` 6/7. Ruido normal
@@ -380,14 +383,15 @@ de los cuales estaba en el lockfile. **Para "qué versión corre", la fuente es 
 
 | Acción | Versión | Job |
 |---|---|---|
-| `actions/checkout` | `v4` | los dos (`fetch-depth: 0` en la puerta) |
-| `pnpm/action-setup` | `v4` | puerta — toma pnpm de `packageManager` |
-| `actions/setup-node` | `v4` | puerta — Node `22`, `cache: pnpm` |
+| `actions/checkout` | `v7` | los dos |
+| `pnpm/action-setup` | `v6` | app — toma pnpm de `packageManager` |
+| `actions/setup-node` | `v7` | app — Node `22`, `cache: pnpm` |
 | `aiken-lang/setup-aiken` | `v1` | contratos — Aiken `v1.1.21` |
 
-Dos jobs: **calidad** (`pnpm install --frozen-lockfile` → `typecheck` → `test` → `build`) y
-**contratos** (`aiken fmt --check` + `aiken check` + `aiken build` + verificación de que
-`plutus.json` esté al día). **Ninguno despliega** (D-010).
+Dos jobs **independientes y en paralelo**, porque son dos toolchains distintos (D-054):
+**`App TS`** (`--frozen-lockfile` → `lint` → `typecheck` → `test` → `build`) y **`Contratos Aiken`**
+(`fmt --check` + `check` + `build` + que `plutus.json` esté al día). Ninguno espera al otro y
+**ninguno despliega** (D-010).
 
 ### 12.9 · Recuento
 
@@ -397,6 +401,6 @@ Dos jobs: **calidad** (`pnpm install --frozen-lockfile` → `typecheck` → `tes
 | Paquetes distintos en el lockfile | **541** |
 | Entradas `nombre@versión` en el lockfile | **631** |
 | Paquetes con más de una versión resuelta | **53** |
-| Árbol transitivo de `apps/web` / `packages/api` / `packages/shared` | 400 / 377 / 154 |
+| Árbol transitivo de `apps/web` / `apps/api` / `packages/shared` | 400 / 377 / 154 |
 | `node_modules` en disco (instalación limpia) | **334 MB** |
 | Dependencias de `contracts/` | **1** (`aiken-lang/stdlib`) |
