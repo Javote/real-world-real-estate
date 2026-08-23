@@ -79,9 +79,10 @@ resolución (por qué `types` apunta al `.d.ts` y no al fuente) está en `packag
 | **Plutus** | **V3** | ● | D-019 — desvío del SOM, que dice V2. V3 es lo que Aiken 1.1.x emite |
 | `aiken-lang/stdlib` | `v3.0.0` | ● | |
 | Blueprint `plutus.json` | commiteado, CI verifica que esté al día | ● | D-017 |
-| Validador | `milestone.ak` | ● | Era `milestone.ak` + `milestone2.ak`: **compilaban al mismo hash**, así que el segundo se borró (D-054) |
-| `lib/` puro y testeable | — | ○ | D-008, patrón state-thread de Fase B |
-| **Tests** | **0** | ○ | El criterio 2 del SOM pide **≥95% de coverage** |
+| Validador | `validators/stage.ak` | ● | Datum alineado con `M1-D2` y firma del operador; reescrito por D-057 |
+| `lib/` puro y testeable | `lib/propnexus/fsm.ak` | ● | D-008: tipos, tabla de transiciones y reglas del datum, sin contexto de tx |
+| **Tests** | **53** (32 núcleo + 21 validador) | ● | Criterio 2 del SOM: la tabla punto de rechazo → test está en `contracts/CLAUDE.md` |
+| Thread token | — | ○ | D-008 promete la propiedad y **no está**: se pueden abrir hilos paralelos (D-057) |
 | Naming del proyecto | `propnexus/stage-fsm`, `version = "1"` | ● | D-015 cumplido (entero incremental) desde D-054 |
 
 Ningún validador custodia ni transfiere valor, en ninguna fase (D-021).
@@ -175,6 +176,7 @@ la ruta en vez de depender de un escáner. Ninguna ruta llama ya a `canAccessPro
 | Pregunta | Default vigente | Qué la cierra |
 |---|---|---|
 | ~~D-017 · `milestone.ak` vs `milestone2.ak`~~ | — | **Cerrada: D-054** (2026-08-23). No hizo falta spike: mismo hash de script |
+| **Thread token en el validador** | sin token: 1 input / 1 output y el `OutputReference` del hilo guardado off-chain | D-008 lo especifica y D-057 lo dejó abierto: cambiarlo cambia el hash del script, y hoy no hay nada anclado |
 | Vocabulario "certificate" en la UI | calificar levemente | postura del dueño (sub-ítem de D-026) |
 | `/verify`: cómo se verifica **sin cuenta y sin confiar en la API** | la pantalla ya existe, pero exige sesión y verifica contra la API | M1-D1 promete verificación independiente; llega con `AnchorPort` (D-014) |
 | Retención de datos | sin default | nunca se discutió (backups los cubre D-038) |

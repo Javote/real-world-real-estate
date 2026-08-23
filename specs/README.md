@@ -167,11 +167,12 @@ tanda grande de endpoints, no después de escribir 50 con la forma vieja. Detall
 ### Tracks paralelos
 
 **Track B — contratos.** `contracts/` está aislado del workspace pnpm y no bloquea a nadie:
-corre en paralelo desde el inicio. (a) rename y naming PropNexus (D-023) + consolidar
-~~`milestone.ak`/`milestone2.ak` (D-017)~~ *(cerrado por D-054: mismo hash)*; (b) **suite de tests desde cero** — es el criterio 2 y
-estamos en 0; (c) las 6 ops como anclaje de commitment (D-021); (d) ≥8 stages, signers por rol,
-timeouts y fallback branches (los caminos de excepción que M1-D1 §Workflow exige y hoy no existen).
-Está aislado del workspace pnpm, así que se puede trabajar por separado.
+corre en paralelo desde el inicio. ~~(a) rename y naming PropNexus (D-023) + consolidar
+`milestone.ak`/`milestone2.ak` (D-017)~~ *(cerrado: D-054 y D-057)*; ~~(b) **suite de tests desde
+cero** — es el criterio 2~~ *(cerrado: D-057, 53 tests)*; (c) las 6 ops como anclaje de commitment
+(D-021); (d) ≥8 stages, signers por rol, timeouts y fallback branches (los caminos de excepción que
+M1-D1 §Workflow exige y hoy no existen). Lo que quedó abierto y **cambia el hash del script**:
+thread token y co-firma por rol (D-057).
 
 **Track C — los seis criterios que no se programan.** Dueño: el humano. Estaban todos apilados en
 la última rebanada, que es donde los proyectos mueren. Arrancan **ahora**, en paralelo:

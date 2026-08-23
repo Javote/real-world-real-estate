@@ -163,7 +163,8 @@ plataforma/
 ├── packages/
 │   └── shared/                 # contrato Zod API↔web: lo importan los dos
 ├── contracts/                  # Aiken · Plutus V3 — no se hostea, toolchain aparte
-│   ├── validators/             #   milestone.ak (el único; ver D-054)
+│   ├── validators/stage.ak     #   el validador de la FSM + sus tests
+│   ├── lib/propnexus/fsm.ak    #   núcleo puro: tipos, transiciones, datum
 │   └── plutus.json             #   blueprint, se commitea tras cada build
 ├── docs/                       # entregables aprobados de M1/M2/M3
 ├── specs/                      # specs, plan, runbook de deploy, stack

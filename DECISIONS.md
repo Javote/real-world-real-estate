@@ -71,6 +71,7 @@
 | D-054 | Reseteo de estándar: Express 5, errores que no mienten, Biome, un validador, TS separado de Aiken | Aceptada |
 | D-055 | Estructura cerrada: `apps/` es lo desplegable, `packages/` es librería | Aceptada |
 | D-056 | `contracts/reference/` se borra: describía otra FSM que la que corre | Aceptada (enmienda D-017) |
+| D-057 | `contracts/` reescrito contra M1: datum de M1-D2, evidencia obligatoria en stages críticos, 53 tests | Aceptada |
 
 > **Repaso completo con la documentación oficial: ver §Repaso al final del archivo.** D-001..D-017 se
 > escribieron sin los entregables delante; las 25 entradas se revisaron el 2026-07-29 y cada una
@@ -1967,3 +1968,80 @@ avisaba, y no alcanzó — un README es opt-in y el archivo `.ak` es lo que se a
 **Trigger de revisión.** Si Fase B entra en sprint, el state-thread se escribe de cero contra la
 FSM de D-020 y con la regla 2 aplicada al datum, leyendo D-008 —no recuperando el archivo del
 historial, que trae la FSM equivocada adentro.
+
+## D-057 — `contracts/` se reescribe contra M1: el datum sale del modelo de datos y el validador se prueba entero — **Aceptada**
+
+**Contexto (2026-08-23).** Después de borrar `reference/` (D-056), la pregunta del dueño fue la
+correcta: *"revisá de nuevo la documentación, la carpeta Milestone 1 sobre todo. Si tiene sentido,
+arreglá todo `/contracts` para que quede de acuerdo a lo que plantea el whitepaper y el modelo de
+datos"*. Se releyeron los cuatro `.puml` canónicos, la taxonomía y el README del paquete
+`M1-D2-Architecture-and-Data-Models/`, más el whitepaper. **Tenía sentido: el validador que había
+no contradecía a M1, pero decía mucho menos que M1.**
+
+**Lo que M1 pide y el validador V1 no tenía.**
+
+| M1 | V1 (`milestone.ak`) | Ahora (`stage.ak`) |
+|---|---|---|
+| `milestone_id: UUID` (M1-D2 §2) | `milestone_id: Int` | `stage_ref: ByteArray` opaco |
+| Sin nombres on-chain (whitepaper §On-Chain/Off-Chain) | `project_name: ByteArray` **legible** | fuera del datum |
+| `sequence_order` (M1-D2 §2) | — | en el datum, parte de la identidad |
+| `validation_critical` (M1-D2 §2) | — | en el datum, y **gatea completar** |
+| `EvidenceBundle.bundle_commitment_hash`, 1–1 con `OnChainEvent` | — | `evidence_root`, 32 bytes |
+| `certified_at` (M1-D2 §2) | — | `completed_at`, acotado por la ventana de validez |
+
+**La regla que se ganó, y es la más importante.** Whitepaper §Signature and Certification Rules:
+*"Milestones designated as validation-critical cannot reach Certified status unless their required
+evidence set is complete"* — y más abajo, que la evidencia sin certificar *"cannot (…) trigger
+milestone completion"*. Eso ahora lo **aplica el script**: un stage con `validation_critical` no
+llega a `Completed` sin un commitment de 32 bytes. Antes era una frase en un PDF.
+
+**Lo que se confirmó que NO era un desvío.** El inventario previo listaba "un solo `admin` firma
+todo" como deuda contra D-009. No lo es: el whitepaper §System Overview dice explícito *"All
+blockchain interactions are performed by operator-controlled backend services"*. La co-firma CIP-30
+(D-009) es Fase B. El validador de Fase A firmado por el operador **es** lo que M1 describe, y se
+documentó como tal en vez de arrastrarlo como culpa.
+
+**El timestamp, acotado.** `completed_at` debe caer dentro del `validity_range` de la transacción y
+**las dos puntas tienen que ser finitas**. Sin eso, el campo es un número que el operador elige y la
+afirmación *"se registró en este momento"* —una de las cuatro que la plataforma puede sostener
+(D-026)— no se sostendría. Una ventana abierta hacia el futuro se rechaza.
+
+**53 tests, y una tabla en vez de un porcentaje.** El criterio 2 del SOM pide ≥95% de coverage y era
+el único criterio duro sin plan B. `aiken check` no mide coverage de líneas, así que la evidencia es
+la tabla **punto de rechazo → test** de `contracts/CLAUDE.md`: 32 tests del núcleo puro (incluida la
+tabla de transiciones **exhaustiva**: los 4 pares válidos y los 12 inválidos) y 21 del validador (5
+caminos felices y **uno por cada `expect`**). El corte núcleo puro / cáscara delgada es el de D-008:
+lo que se puede probar sin transacción, se prueba sin transacción.
+
+**El hash del script cambió, y era el momento de que cambiara:** `06534cfa08c4…` →
+`fa919ec0adc3…`. No hay nada desplegado, nada anclado y ninguna dirección derivada en uso, así que
+el cambio no costó nada. El día que exista un UTxO en Preprod, cada uno de estos campos se vuelve
+migración.
+
+**Estructura, y por qué el núcleo no se llama `stage.ak`.** `lib/propnexus/fsm.ak` +
+`validators/stage.ak`. Aiken rechaza que un módulo de `lib/` y un validador compartan nombre ("two
+top-level objects referred to as 'stage'"), así que el núcleo es `fsm.ak`. D-008 lo había nombrado
+`lib/plataforma/milestone.ak`; cambia el namespace (`propnexus`, D-018) y el nombre del entity
+(`stage`, D-023).
+
+**El hallazgo colateral, que vale más que el commit.** `contracts/CLAUDE.md` y `apps/api/CLAUDE.md`
+decían los dos que la tabla de transiciones está *"espejada 1:1 con el backend"*. **Es falso.**
+`PATCH /milestones/:id/state` valida el enum con Zod y escribe: acepta `Pending → Completed` directo
+y acepta **salir de `Completed`**. La FSM existía solo en Aiken. Queda anotada en
+`apps/api/CLAUDE.md` §Trampas con el lugar donde corresponde escribirla una sola vez
+(`packages/shared`). No se arregló en este commit porque es otro frente y otro test suite; es lo
+próximo del track de la API.
+
+**Lo que sigue abierto** (los tres cambian el hash, así que se deciden antes del primer anclaje):
+
+1. **Thread token.** Sin NFT, nada ata *cuál* UTxO es el hilo legítimo: se pueden abrir hilos
+   paralelos en la misma dirección. Hoy se mitiga off-chain guardando el `OutputReference`. La
+   propiedad que D-008 promete —*"ni nosotros podemos falsificarla después"*— todavía no está.
+2. **Handler de creación.** Sin `mint`, el primer UTxO lo crea el operador con el datum que quiera:
+   el validador solo garantiza preservación, no nacimiento. Se cierra junto con el punto 1.
+3. **Mapeo de ids.** M1-D2 y la regla 1 dicen UUID; el backend usa cuid2. El datum acepta cualquier
+   `ByteArray`: falta decidir si van los bytes del id o `sha256(id)`.
+
+**Trigger de revisión.** Si Fase B entra en sprint, o si aparece el `AnchorPort` (D-014) y hay que
+construir la transacción de verdad, los tres puntos abiertos se cierran juntos y en ese momento el
+hash vuelve a cambiar — antes de que haya nada en Preprod, no después.

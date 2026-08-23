@@ -32,6 +32,18 @@ endpoints del backlog **hoy conforman 2**: `POST /auth/login` y `GET /auth/me`.
 
 ## Trampas verificadas
 
+- **2026-08-23 · La FSM del stage no está aplicada acá, y `contracts/` cree que sí.**
+  `PATCH /milestones/:id/state` valida el enum con Zod y escribe: acepta `Pending → Completed`
+  directo, y también **salir de `Completed`**, que la regla 9 de la raíz declara terminal. El
+  validador Aiken sí la aplica (`lib/propnexus/fsm.ak`), y los dos `CLAUDE.md` decían "una sola
+  tabla de transiciones, espejada 1:1" — la mitad de esa frase era falsa. Se descubrió alineando
+  `contracts/` con M1-D2 (D-057). **Antes de tocar ese endpoint**: la tabla es
+  `Pending → InProgress → {Observed ⇄ InProgress, Completed}`, `Completed` terminal, y el lugar
+  correcto para escribirla una sola vez es `packages/shared` (que la importen la ruta y el seed),
+  no una copia más. Ojo también con lo que hace hoy al completar: setea `certifiedAt`/`certifiedById`
+  sin exigir evidencia, cuando el whitepaper §Signature and Certification Rules dice que un stage
+  `validationCritical` no puede completarse sin su evidencia — el validador ya lo rechaza.
+
 - **2026-08-21 · TypeScript hoistea TODOS los `import` al principio del archivo compilado, así
   que un `dotenv.config()` intercalado entre imports corre DESPUÉS de que ya se resolvieron.**
   `app.ts` tenía `import dotenv from "dotenv"; dotenv.config(); import express ...; import
