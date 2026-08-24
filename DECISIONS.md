@@ -22,7 +22,7 @@ ya no existen. Partirlo no pierde nada: el porqué sigue estando, deja de pesar.
 > se contradice internamente, (b) es un error de redacción, o (c) seguirlo al pie contradiría una
 > verdad del producto declarada por el dueño — **nunca por conveniencia**.
 >
-> **La numeración no se recicla.** Las decisiones nuevas siguen desde D-069.
+> **La numeración no se recicla.** Las decisiones nuevas siguen desde D-070.
 
 ## Desvíos vigentes
 
@@ -36,6 +36,7 @@ Todos se comunican en la entrega.
 | M1 §README lista los estados como "…**Certified**…"; el `.puml` dice `Completed` | Gana `Completed`: precedencia interna de M1, y `Certified` implicaría que la plataforma certifica | (a) contradicción interna | D-020, D-026 |
 | M1 §README promete que la taxonomía indica "authoritative" y "anchored on-chain" | El CSV entregado no tiene esas columnas. El hueco lo llenan D-027 y D-028 | (a) contradicción interna | D-027, D-028 |
 | M2-D5 §2.1 usa notación de rutas Wouter | Las rutas se leen como **paths**, no como elección de router | (b) redacción | D-022 |
+| M2-D4 §Pattern 2 dice "First 6 characters **after** the `0x` prefix" y su ejemplo es `0xdcd5...7994`, que son 6 **contando** el prefijo | Gana el ejemplo: es la única de las cuatro menciones de la regla que muestra el resultado, y las otras tres dicen solo "6+4 characters" | (a) contradicción interna | D-069 |
 | M2-D5 §3 asume tRPC-libre "REST over HTTPS"… y lo marca `[ASSUMPTION]` anulable | **Se confirma, no se anula**: la columna de endpoints de las 53 filas y la verificación externa por `curl` dependen de REST | — | D-066 |
 
 ---
@@ -144,6 +145,19 @@ las capturas piden (son teléfonos). App nativa: **no** — el día que se quier
 
 **Se pierde:** previews de link (OG) para el dossier público. Se resuelve con una página
 prerenderizada cuando haga falta; no bloquea M3.
+
+## D-069 — El HashChip trunca 6+4 **contando** el prefijo `0x`
+
+M2-D4 §Pattern 2 se contradice: el texto dice *"First 6 characters after the `0x` prefix"* y el
+ejemplo de la misma línea es `0xdcd5...7994`, donde `0xdcd5` son exactamente 6 **con** el prefijo —
+o sea 4 después de él. Las otras tres menciones de la regla (M2-D3 §Principio 1, M2-D4 §Solution,
+M2-D4 §Depth 2) dicen solo *"6+4 characters"*, sin aclarar.
+
+**Gana el ejemplo.** Es la única de las cuatro que muestra el resultado, y es la lectura con la que
+las cuatro concuerdan. Un hash sin prefijo se trunca a 6+4 a secas.
+
+Lo encontró un test, no una lectura: el primer intento implementó la letra de la regla y falló
+contra el ejemplo del propio entregable.
 
 ## D-024 — Sistema de diseño: Tailwind v4 + shadcn/ui con los tokens de M2-D3
 

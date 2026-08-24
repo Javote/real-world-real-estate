@@ -1,44 +1,76 @@
-// Componente de dominio (M2-D3 §Forms & Controls): input de una línea, label
-// arriba, foco con anillo purple. Usado en /login (SPEC-011 §Interfaz).
 import { useId } from 'react'
+import { cn } from '#/lib/cn'
+
+// M2-D3 §Forms & Controls · TextInput.
+//
+// El label va **arriba del campo y asociado por `htmlFor`**: sin eso,
+// `getByLabel` de los tests falla — que es exactamente para lo que sirve, y así
+// se descubrió que los labels del login viejo no lo tenían.
+//
+// El adorno derecho es del entregable: ojo para passwords, calendario para
+// fechas.
 
 interface TextInputProps {
   label: string
-  type?: string
   value: string
   onChange: (value: string) => void
-  autoComplete?: string
+  type?: 'text' | 'password' | 'email' | 'number'
+  placeholder?: string
+  /** Ojo, calendario, etc. Va dentro del campo, a la derecha. */
+  adornment?: React.ReactNode
+  /** Mensaje de error: pinta el borde y se muestra debajo. */
   error?: string
+  autoComplete?: string
+  required?: boolean
 }
 
 export function TextInput({
   label,
-  type = 'text',
   value,
   onChange,
+  type = 'text',
+  placeholder,
+  adornment,
+  error,
   autoComplete,
-  error
+  required
 }: TextInputProps) {
   const id = useId()
+  const errorId = `${id}-error`
+
   return (
-    <div className="mb-4">
-      <label className="mb-1 block text-sm font-medium" htmlFor={id} style={{ color: '#374151' }}>
+    <div className="flex flex-col gap-s1">
+      <label htmlFor={id} className="text-body-sm font-medium text-text-secondary">
         {label}
       </label>
-      <input
-        id={id}
-        type={type}
-        className="w-full rounded-lg border px-3 py-2 outline-none focus:ring-2"
-        style={{
-          borderColor: error ? '#EF4444' : '#E5E7EB',
-          ['--tw-ring-color' as string]: '#6D4AFF'
-        }}
-        value={value}
-        onChange={(e) => onChange(e.target.value)}
-        autoComplete={autoComplete}
-      />
+
+      <div className="relative">
+        <input
+          id={id}
+          type={type}
+          value={value}
+          onChange={(e) => onChange(e.target.value)}
+          placeholder={placeholder}
+          autoComplete={autoComplete}
+          required={required}
+          aria-invalid={error ? true : undefined}
+          aria-describedby={error ? errorId : undefined}
+          className={cn(
+            'w-full rounded-md border bg-surface-alt px-s3 py-s3 text-body text-text-primary',
+            'placeholder:text-disabled focus:outline-none focus:ring-2 focus:ring-primary',
+            error ? 'border-danger' : 'border-border',
+            adornment ? 'pr-s12' : ''
+          )}
+        />
+        {adornment ? (
+          <span className="absolute inset-y-0 right-s3 flex items-center text-text-muted">
+            {adornment}
+          </span>
+        ) : null}
+      </div>
+
       {error ? (
-        <p className="mt-1 text-xs" style={{ color: '#EF4444' }}>
+        <p id={errorId} className="text-body-sm text-danger">
           {error}
         </p>
       ) : null}

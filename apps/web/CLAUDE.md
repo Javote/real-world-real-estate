@@ -20,9 +20,21 @@ más**: no hay pantallas transcritas todavía.
 | `routes/{investor.buy,developer,notary,certifier}.tsx` | **Stubs deliberados**: el path y el guard son reales, la superficie no existe |
 | `styles.css` | **Los 51 tokens de M2-D3** en `@theme` — 20 colores normativos, escala tipográfica, espaciado de 4px, radios, elevación, tamaños de ícono |
 | `lib/cn.ts` · `components.json` | Base de shadcn/ui. Los primitivos se agregan **de a uno**, cuando su componente de dominio los necesita |
+| `components/domain/` | **12 componentes transversales** de M2-D3: los 8 de Foundation, los 3 botones y `TextInput` |
 
-**No hay** todavía ninguno de los 33 componentes de M2-D3 ni los patrones P1–P10. Ver
-[`specs/SPEC-014`](../../specs/SPEC-014-reconstruccion-del-front.md).
+**Faltan 21 componentes de M2-D3** —las cards, los 7 modales, los inputs que no son texto— y **los
+patrones P1–P10**, salvo los dos que ya viven dentro de un componente: `HashChip` es P2 y
+`VerificationBadge` es P1. Ver [`specs/SPEC-014`](../../specs/SPEC-014-reconstruccion-del-front.md).
+
+## Dos componentes llevan una regla dura adentro
+
+`VerificationBadge` **no acepta un booleano**: recibe el TXID. La regla 17 —nunca mostrar una señal
+de prueba que no puedas sustanciar— deja de ser algo que hay que acordarse y pasa a ser la firma del
+componente: sin TXID no hay forma de pedirle que diga "Verificado".
+
+`HashChip` recibe el hash **completo** y trunca al mostrar. Pre-truncarlo en la capa de datos rompe
+la copia y vuelve inverificable el anclaje (regla 16). Trunca 6+4 **contando el prefijo `0x`**, que
+es una contradicción del entregable resuelta en D-069.
 
 ## Los tokens no se tocan a mano
 
