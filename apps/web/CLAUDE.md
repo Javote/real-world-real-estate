@@ -20,11 +20,30 @@ más**: no hay pantallas transcritas todavía.
 | `routes/{investor.buy,developer,notary,certifier}.tsx` | **Stubs deliberados**: el path y el guard son reales, la superficie no existe |
 | `styles.css` | **Los 51 tokens de M2-D3** en `@theme` — 20 colores normativos, escala tipográfica, espaciado de 4px, radios, elevación, tamaños de ícono |
 | `lib/cn.ts` · `components.json` | Base de shadcn/ui. Los primitivos se agregan **de a uno**, cuando su componente de dominio los necesita |
-| `components/domain/` | **12 componentes transversales** de M2-D3: los 8 de Foundation, los 3 botones y `TextInput` |
+| `components/domain/` | **12 componentes transversales** de M2-D3 + **6 patrones de prueba** de M2-D4 |
+| `components/ui/dialog.tsx` | Primitivo de Radix vía shadcn. Editado en un punto: su botón de cierre usa el `SecondaryButton` de M2-D3, no el de shadcn — un solo sistema de botones |
+| `i18n/format.ts` | `Intl` con el locale activo: moneda, fecha, relativos (regla 14) |
 
-**Faltan 21 componentes de M2-D3** —las cards, los 7 modales, los inputs que no son texto— y **los
-patrones P1–P10**, salvo los dos que ya viven dentro de un componente: `HashChip` es P2 y
-`VerificationBadge` es P1. Ver [`specs/SPEC-014`](../../specs/SPEC-014-reconstruccion-del-front.md).
+**Los 10 patrones de M2-D4 están**, salvo dos que son superficies y no componentes: P6 (audit log)
+y P8 (dossier) llegan con su vertical. Faltan 21 componentes de M2-D3 —las cards, los modales de
+dominio, los inputs que no son texto—. Ver
+[`specs/SPEC-014`](../../specs/SPEC-014-reconstruccion-del-front.md).
+
+## La jerarquía de profundidad, que es lo que hace coherente a la app
+
+M2-D4 §6.1: *"patterns compose, never overlap"*. Cada patrón contesta **una** pregunta y a una
+profundidad distinta. Antes de agregar una señal de prueba a una pantalla, ubicá a qué profundidad
+va — dos patrones compitiendo por la misma respuesta es redundancia, no rigor.
+
+| Profundidad | Pregunta | Patrón |
+|---|---|---|
+| 1 | ¿está anclado? | `VerificationBadge` (P1) |
+| 2 | ¿cuál hash? (6+4) | `HashChip` (P2) · `StageChips` (P9) |
+| 3 | el hash completo, el explorador, la metadata | `TxidModal` (P3) · `AnchoringSuccessModal` (P4) · `MerkleRootProof` (P5) |
+| 4 | la historia entera o el artefacto compilado | audit log (P6) · dossier (P8) — **pendientes** |
+
+**Un solo modal se abre solo:** `AnchoringSuccessModal`, porque el sistema lo emite tras un anclaje
+exitoso. Todos los demás los inicia el usuario (M2-D4 §6.3).
 
 ## Dos componentes llevan una regla dura adentro
 

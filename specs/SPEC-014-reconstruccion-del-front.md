@@ -78,6 +78,7 @@ El orden no es negociable porque cada paso es prerequisito del siguiente:
 | 1 | Borrado + tokens (`@theme`) + shadcn/ui | Construir pantallas antes de los tokens es construirlas dos veces |
 | 2 | Los ~12 componentes transversales | Los usan todas las superficies |
 | 3 | Los patrones P1–P10 | Son transversales y son lo que distingue al producto de un CRUD con fotos |
+| — | *(1 a 3 hechos: reset · demolición + tokens · componentes · patrones)* | |
 | 4+ | Verticales, en el orden del flujo cross-rol de M2-D1 §6 | `evidencia → certificar → liberar`. Empieza por developer subiendo evidencia: es la única vertical con backend y contrato ya funcionando |
 
 Cada vertical trae **sus** endpoints (creándolos con paths scopeados por rol, D-066) y **sus** test
@@ -102,3 +103,6 @@ IDs. El rename de D-067 viaja en el commit 1, porque toca todo igual.
 2. **La otra mitad de D-028**: atribución de autoridad y atestación del revisor no tienen columnas.
    Bloquea la vertical del certifier, no las anteriores. **Dueño: producto.**
 3. **PWA**: qué entra al shell offline. Se decide cuando existan las superficies, no antes.
+4. **P6 (audit log) y P8 (dossier) son superficies, no componentes.** Los otros ocho patrones ya
+   existen como componentes reutilizables; estos dos se transcriben con su vertical, porque son
+   pantallas enteras con su propio backlog de M2-D5 (filas 49-50 y 26-29).
