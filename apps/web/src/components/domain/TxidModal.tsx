@@ -22,6 +22,8 @@ import { SecondaryButton } from './PrimaryButton'
 
 interface TxidModalProps {
   open: boolean
+  /** Test ID de M2-D5 (filas 25v, 50). Va en el contenido: Radix portalea. */
+  testId?: string
   onClose: () => void
   /** Qué ancla este TXID: nombre del documento, acción, título del evento. */
   label: string
@@ -41,6 +43,7 @@ interface TxidModalProps {
 
 export function TxidModal({
   open,
+  testId,
   onClose,
   label,
   anchoredAt,
@@ -50,7 +53,7 @@ export function TxidModal({
 }: TxidModalProps) {
   return (
     <Dialog open={open} onOpenChange={(abierto) => !abierto && onClose()}>
-      <DialogContent className="bg-card">
+      <DialogContent data-testid={testId} className="bg-card">
         <DialogHeader>
           <DialogTitle className="text-h2 font-bold text-text-primary">{labels.title}</DialogTitle>
           <DialogDescription className="text-body text-text-secondary">{label}</DialogDescription>

@@ -22,7 +22,7 @@ ya no existen. Partirlo no pierde nada: el porqué sigue estando, deja de pesar.
 > se contradice internamente, (b) es un error de redacción, o (c) seguirlo al pie contradiría una
 > verdad del producto declarada por el dueño — **nunca por conveniencia**.
 >
-> **La numeración no se recicla.** Las decisiones nuevas siguen desde D-070.
+> **La numeración no se recicla.** Las decisiones nuevas siguen desde D-071.
 
 ## Desvíos vigentes
 
@@ -37,6 +37,7 @@ Todos se comunican en la entrega.
 | M1 §README promete que la taxonomía indica "authoritative" y "anchored on-chain" | El CSV entregado no tiene esas columnas. El hueco lo llenan D-027 y D-028 | (a) contradicción interna | D-027, D-028 |
 | M2-D5 §2.1 usa notación de rutas Wouter | Las rutas se leen como **paths**, no como elección de router | (b) redacción | D-022 |
 | M2-D4 §Pattern 2 dice "First 6 characters **after** the `0x` prefix" y su ejemplo es `0xdcd5...7994`, que son 6 **contando** el prefijo | Gana el ejemplo: es la única de las cuatro menciones de la regla que muestra el resultado, y las otras tres dicen solo "6+4 characters" | (a) contradicción interna | D-069 |
+| M2-D1 §6 "Evidence flow" pasos 5-6: DEV *"Release stage N payment is enabled"*, INV *"Contract and **payments**… Releases by Stage"* | La plataforma **no administra fondos**: refleja y respalda la vida real, no la ejecuta. Sí puede mostrar el estado comercial de la unidad (vendida / disponible) | (c) verdad del producto | D-070 |
 | M2-D5 §3 asume tRPC-libre "REST over HTTPS"… y lo marca `[ASSUMPTION]` anulable | **Se confirma, no se anula**: la columna de endpoints de las 53 filas y la verificación externa por `curl` dependen de REST | — | D-066 |
 
 ---
@@ -145,6 +146,56 @@ las capturas piden (son teléfonos). App nativa: **no** — el día que se quier
 
 **Se pierde:** previews de link (OG) para el dossier público. Se resuelve con una página
 prerenderizada cuando haga falta; no bloquea M3.
+
+## D-070 — La plataforma no administra fondos: el "ciclo de dinero" de M2-D1 §6 no se transcribe
+
+**Desvío legítimo por la causal (c)** de la jerarquía de precedencia: *seguir el entregable al pie
+contradiría una verdad del producto declarada por el dueño* (2026-08-24).
+
+M2-D1 §6 "Evidence flow" cierra con dos pasos que no se van a construir como los describe:
+
+| Paso | Lo que dice el entregable |
+|---|---|
+| 5 | DEV · *"Project detail → Contracts and releases. After certification, **Release stage N payment** is enabled."* |
+| 6 | INV · *"Unit → **Contract and payments**. Sees stage-release TXID listed under **Releases by Stage**."* |
+
+Eso describe una plataforma que habilita y ejecuta pagos por etapa. **No es este producto.** La
+plataforma refleja y respalda en la cadena la vida real que ocurre afuera; no administra fondos, no
+los custodia y no los libera. D-021 ya lo decía para los validadores; esto lo extiende a la
+**superficie y al lenguaje**, que es por donde se había colado.
+
+**De dónde salió:** de un documento viejo y erróneo que se creyó subsanado y no lo estaba. No es
+una contradicción interna de M2-D1 —el paso está escrito con toda intención— así que no alcanza con
+leerlo distinto: hay que declarar el desvío.
+
+### Qué SÍ puede mostrar la plataforma
+
+Lo que es verdad y verificable: **el estado comercial de las unidades**. Que las unidades de un
+proyecto terminado ya no están disponibles porque se vendieron es un hecho del mundo real que el
+registro puede reflejar y la cadena respaldar. Eso es `Unit.status` y el `Contract` como registro
+del acuerdo — no un flujo de pagos.
+
+### Consecuencia inmediata
+
+Las filas 40-41 (`/developer/project/:projectId/contracts`) y 23-24
+(`/investor/unit/:unitId/contract`) **no se transcriben con el encuadre de pagos**. Cuando se
+construyan, muestran el contrato como registro y el estado de la unidad, no un botón de liberar.
+
+### Deuda declarada, no resuelta acá
+
+El encuadre viejo dejó rastro y **sigue en el repo**, funcionando y testeado. No se toca en este
+commit porque borrarlo es un cambio de alcance propio, no un efecto colateral:
+
+- `apps/api/src/routes/capital.routes.ts` y `contracts.routes.ts` (incluido
+  `POST /developer/contracts/:id/releases/:stageNum`)
+- la tabla `PaymentRelease` y el evento `PAYMENT_RELEASE`
+- `packages/shared/src/capital.ts`
+- `apps/web/src/components/domain/ReleaseProofList.tsx`
+- el patrón **P10** de M2-D4, *"Per-release financial proof"*
+
+Los comentarios de esos archivos ya aclaran que "release" significa anclar el evento y no mover
+plata (D-021), así que hoy no afirman nada falso. Lo que hay que decidir aparte es si esa superficie
+existe.
 
 ## D-069 — El HashChip trunca 6+4 **contando** el prefijo `0x`
 

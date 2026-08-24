@@ -75,10 +75,10 @@ aprobación explícita.
 
 | Dimensión | Especificado | Existe | Conforme |
 |---|---:|---:|---:|
-| Superficies (M2-D5) | 53 | 17 | 17 — Notary y Certifier completos |
+| Superficies (M2-D5) | 53 | 25 | 25 — Notary y Certifier completos + flujo de evidencia |
 | Componentes (M2-D3) | 36 | **36** | 36 |
 | Patrones de prueba (M2-D4) | 10 | 8 | 8 |
-| Test IDs | **75** | 19 | 19 — medido por `pnpm testids` |
+| Test IDs | **75** | 27 | 27 — medido por `pnpm testids` |
 | Paleta normativa | — | — | **0 coincidencias** |
 
 **API contra M2-D5:** de los **64** endpoints especificados coinciden **5** exactos —

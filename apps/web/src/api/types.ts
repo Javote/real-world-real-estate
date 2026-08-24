@@ -86,3 +86,42 @@ export interface Evidence {
   stage?: Stage | null
   uploadedBy?: { id: string; email: string; fullName: string }
 }
+
+// ── Superficie del developer (M2-D5 filas 35-36, 37, 38, 49) ────────────────
+//
+// Estos shapes son de la API y no del contrato de `packages/shared` todavía:
+// son composiciones de lectura (un proyecto con su avance calculado, un evento
+// del log con su actor) y no entidades del dominio. Cuando el cliente salga del
+// contrato oRPC (D-066) se generan solos y esto se borra.
+
+export interface DeveloperProject extends Project {
+  stageCount: number
+  /** 0-100, del proyecto (D-029). */
+  progress: number
+}
+
+export interface DeveloperProjectDetail extends DeveloperProject {
+  stages: Stage[]
+  evidenceCount: number
+}
+
+/** Lo que devuelve la subida anclada: la prueba llega con la respuesta. */
+export interface StageEvidenceAnchor {
+  evidence: Evidence
+  bundleId: string
+  /** Merkle root del bundle. Completo (regla 16). */
+  merkleRoot: string
+  anchor: { txid: string | null; status: string; eventType: string }
+}
+
+/** Una fila del audit log (M2-D4 P6). Append-only: nunca se edita ni se borra. */
+export interface AuditEvent {
+  id: string
+  action: string
+  entityType: string
+  entityId: string
+  metadataJson: string | null
+  createdAt: string
+  actorName: string | null
+  actorRole: UserRole | null
+}

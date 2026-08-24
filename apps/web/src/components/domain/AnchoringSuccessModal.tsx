@@ -19,6 +19,14 @@ import { PrimaryButton, SecondaryButton } from './PrimaryButton'
 
 interface AnchoringSuccessModalProps {
   open: boolean
+  /**
+   * Test ID de M2-D5 (fila 44d).
+   *
+   * Va en el contenido del diálogo y no en un contenedor de afuera: Radix
+   * renderiza el modal en un **portal**, así que un `data-testid` en el div que
+   * lo envuelve queda en un nodo vacío y el test no encuentra nada.
+   */
+  testId?: string
   onDone: () => void
   merkleRoot: string
   txid: string
@@ -36,6 +44,7 @@ interface AnchoringSuccessModalProps {
 
 export function AnchoringSuccessModal({
   open,
+  testId,
   onDone,
   merkleRoot,
   txid,
@@ -43,7 +52,7 @@ export function AnchoringSuccessModal({
 }: AnchoringSuccessModalProps) {
   return (
     <Dialog open={open} onOpenChange={(abierto) => !abierto && onDone()}>
-      <DialogContent className="bg-card">
+      <DialogContent data-testid={testId} className="bg-card">
         <DialogHeader>
           <span className="flex h-12 w-12 items-center justify-center rounded-full bg-verified-light text-verified">
             <ShieldCheck size={24} aria-hidden="true" />

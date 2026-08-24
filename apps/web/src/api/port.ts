@@ -2,6 +2,7 @@
 // Adaptador `real` contra apps/api. El adaptador `mock` está pendiente.
 
 import type {
+  Notification as AppNotification,
   CertifierAssignment,
   CertifierCertificate,
   CertifierKpis,
@@ -11,16 +12,21 @@ import type {
   NotaryKpis,
   NotarySignature,
   PendingDossier,
-  Profile
+  Profile,
+  UnreadCount
 } from '@plataforma/shared'
 import { clearSession, getSession } from '../auth/session'
 import type {
+  AuditEvent,
+  DeveloperProject,
+  DeveloperProjectDetail,
   Evidence,
   LoginResponse,
   MeResponse,
   Project,
   ProjectDetail,
   Stage,
+  StageEvidenceAnchor,
   StageState
 } from './types'
 
@@ -105,6 +111,49 @@ export const api = {
 
   setMilestoneState: (stageId: string, state: StageState) =>
     request<Stage>(`/api/v1/stages/${stageId}/state`, jsonInit('PATCH', { state })),
+
+  // ── Superficie del developer (M2-D5 filas 35-36, 37, 38/44c, 49, 62) ─────
+
+  listDeveloperProjects: () => request<DeveloperProject[]>('/api/v1/developer/projects'),
+
+  getDeveloperProject: (id: string) =>
+    request<DeveloperProjectDetail>(`/api/v1/developer/projects/${id}`),
+
+  /**
+   * Fila 38 — sube y **ancla en la misma request**.
+   *
+   * M2-D5 §2.2 lo obliga: *"client awaits success with TXID/Merkle root in the
+   * same response"*. Es lo que alimenta el `AnchoringSuccessModal`, la única
+   * superficie de prueba que se abre sola (M2-D4 §6.3).
+   */
+  uploadStageEvidence: (projectId: string, stageId: string, form: FormData) =>
+    request<StageEvidenceAnchor>(
+      `/api/v1/developer/projects/${projectId}/stages/${stageId}/evidence`,
+      { method: 'POST', body: form }
+    ),
+
+  listAuditLog: (params?: { category?: string; cursor?: string }) => {
+    const q = new URLSearchParams()
+    if (params?.category) q.set('category', params.category)
+    if (params?.cursor) q.set('cursor', params.cursor)
+    const qs = q.toString()
+    return request<Paginated<AuditEvent>>(`/api/v1/developer/audit-log${qs ? `?${qs}` : ''}`)
+  },
+
+  // ── Notificaciones (M2-D5 filas 22 y 62) ─────────────────────────────────
+
+  listNotifications: (params?: { unitId?: string; category?: string }) => {
+    const q = new URLSearchParams()
+    if (params?.unitId) q.set('unitId', params.unitId)
+    if (params?.category) q.set('category', params.category)
+    const qs = q.toString()
+    return request<AppNotification[]>(`/api/v1/investor/notifications${qs ? `?${qs}` : ''}`)
+  },
+
+  markNotificationRead: (id: string) =>
+    request<void>(`/api/v1/notifications/${id}/read`, { method: 'PATCH' }),
+
+  getUnreadCount: () => request<UnreadCount>('/api/v1/notifications/unread-count'),
 
   // ── Superficie del certifier (M2-D5 filas 56v, 56c, 57, 58) ──────────────
   //

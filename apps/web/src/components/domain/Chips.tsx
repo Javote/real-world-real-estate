@@ -85,6 +85,16 @@ interface StageChipProps extends ChipBaseProps {
   /** 1-10. */
   number: number
   /**
+   * Nombre de la etapa. **Con label el chip toma la forma de píldora ancha**
+   * ("1. Adquisición del terreno"), que es como lo muestra la captura 38; sin
+   * él, el cuadrado numérico que describe M2-D3.
+   *
+   * Las dos formas son el mismo componente porque el entregable las describe
+   * en la misma ficha —FilterPill / CategoryChip / StageChip comparten
+   * anatomía—, y porque cuando la prosa y la captura difieren gana la captura.
+   */
+  label?: string
+  /**
    * Si ese stage ya tiene evidencia anclada. **Es una señal, no un permiso**:
    * un stage anclado se puede volver a elegir —se le suma evidencia y se ancla
    * otro bundle—, así que esto cambia el borde y nada más.
@@ -96,6 +106,7 @@ interface StageChipProps extends ChipBaseProps {
 
 export function StageChip({
   number,
+  label,
   anchored,
   selected,
   onSelect,
@@ -112,7 +123,7 @@ export function StageChip({
       onClick={onSelect}
       className={cn(
         BASE,
-        'size-10 px-0 tabular-nums',
+        label ? 'shrink-0 whitespace-nowrap' : 'size-10 px-0 tabular-nums',
         selected ? SELECCIONADO : SIN_SELECCIONAR,
         // El anclado se distingue con el teal de "verificado", que es el mismo
         // que usa el VerificationBadge: una sola señal para una sola idea.
@@ -120,7 +131,7 @@ export function StageChip({
         className
       )}
     >
-      {number}
+      {label ? `${number}. ${label}` : number}
     </button>
   )
 }

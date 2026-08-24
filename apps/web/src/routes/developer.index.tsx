@@ -14,7 +14,11 @@ import { useTranslation } from '#/i18n/useTranslation'
 // Componentes: StatCard, ActionCard (featured), NotificationBell,
 // GradientHeader. Endpoint: GET /developer/kpis. Test ID: DEV-PANEL-KPIS-001.
 
-export const Route = createFileRoute('/developer')({ component: DeveloperPanel })
+// `.index` y no `developer.tsx`: un archivo de ruta sin `.index` es el LAYOUT
+// de todo lo que cuelga del prefijo y tiene que renderizar un `<Outlet/>`. Sin
+// esto, `/developer/projects` mostraba el panel. Misma corrección que en
+// `notary.index.tsx` y `certifier.index.tsx`.
+export const Route = createFileRoute('/developer/')({ component: DeveloperPanel })
 
 function DeveloperPanel() {
   const { session, ready } = useRoleGuard(DEV_ROLES)
