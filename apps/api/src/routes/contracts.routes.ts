@@ -1,10 +1,6 @@
 import { type Request, Router } from "express";
-import { z } from "zod";
-import { createId } from "../db/id";
-import { anchorCommitmentEvent, commitmentOf } from "../domain/anchoring";
 import { db } from "../lib/db";
-import { authenticate, projectScope, requireProjectAccess, requireRole } from "../middlewares/auth";
-import { writeAuditLog } from "../utils/audit";
+import { authenticate, projectScope } from "../middlewares/auth";
 
 // Contratos y liberaciones (M2-D5 filas 23-24, 40-41) — **M3-SC-03**.
 //

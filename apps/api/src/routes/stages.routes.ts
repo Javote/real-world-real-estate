@@ -1,13 +1,7 @@
-import { INITIAL_STAGE_STATE, stageTransitionSchema } from "@plataforma/shared";
+import { stageTransitionSchema } from "@plataforma/shared";
 import { type Request, Router } from "express";
 import { z } from "zod";
-import { createId } from "../db/id";
-import {
-  anchorEvent,
-  recordOnChainEvent,
-  tieneHiloAnclado,
-  transitionStage
-} from "../domain/stage-transition";
+import { tieneHiloAnclado, transitionStage } from "../domain/stage-transition";
 import { db } from "../lib/db";
 import {
   ANY_MEMBERSHIP,

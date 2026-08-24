@@ -1,6 +1,4 @@
-import { createHash } from "node:crypto";
 import type { CertifierAssignment, CertifierKpis } from "@plataforma/shared";
-import { merkleProof } from "@plataforma/shared";
 import { type Request, Router } from "express";
 import { z } from "zod";
 import { transitionStage } from "../domain/stage-transition";

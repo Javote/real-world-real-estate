@@ -1,18 +1,12 @@
-import fs from "node:fs";
-import path from "node:path";
 import type { DeveloperKpis } from "@plataforma/shared";
 import { type Request, Router } from "express";
 import { z } from "zod";
 import { createId } from "../db/id";
-import { anchorCommitmentEvent, commitmentOf } from "../domain/anchoring";
-import { notifyUnitInvestor } from "../domain/notify";
-import { crearBundle } from "../domain/stage-transition";
+import { anchorCommitmentEvent } from "../domain/anchoring";
 import { db } from "../lib/db";
-import { storage } from "../lib/storage";
-import { uploadSingleEvidence } from "../lib/upload";
 import { authenticate, projectScope, requireProjectAccess, requireRole } from "../middlewares/auth";
 import { writeAuditLog } from "../utils/audit";
-import { avancePorProyecto, EVIDENCE_SAFE_COLUMNS, proyectosVisibles } from "./_shared";
+import { proyectosVisibles } from "./_shared";
 
 // Superficie del developer (M2-D5 filas 34b-34c, 35-36, 37, 45, 46-47, 49).
 //

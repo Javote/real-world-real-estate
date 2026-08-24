@@ -1,17 +1,11 @@
 import { createHash } from "node:crypto";
-import fs from "node:fs";
-import path from "node:path";
 import { merkleProof } from "@plataforma/shared";
 import { type Request, Router } from "express";
 import { z } from "zod";
 import { createId } from "../db/id";
-import { anchorCommitmentEvent } from "../domain/anchoring";
-import { notifyUnitInvestor } from "../domain/notify";
-import { crearBundle } from "../domain/stage-transition";
 import { anchorPort } from "../lib/anchor";
 import { db } from "../lib/db";
 import { storage } from "../lib/storage";
-import { uploadSingleEvidence } from "../lib/upload";
 import {
   ANY_MEMBERSHIP,
   authenticate,

@@ -1,15 +1,9 @@
-import fs from "node:fs";
-import path from "node:path";
-import { INITIAL_STAGE_STATE } from "@plataforma/shared";
 import { type Request, Router } from "express";
 import { z } from "zod";
 import { createId } from "../db/id";
 import { PROJECT_STATUSES } from "../db/types";
-import { anchorEvent, recordOnChainEvent } from "../domain/stage-transition";
 import { db } from "../lib/db";
 import { sql } from "../lib/kysely";
-import { storage } from "../lib/storage";
-import { uploadSingleEvidence } from "../lib/upload";
 import {
   ANY_MEMBERSHIP,
   authenticate,
@@ -18,7 +12,6 @@ import {
   requireRole
 } from "../middlewares/auth";
 import { writeAuditLog } from "../utils/audit";
-import { EVIDENCE_SAFE_COLUMNS } from "./_shared";
 
 const router = Router();
 

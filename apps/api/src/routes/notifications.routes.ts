@@ -1,4 +1,4 @@
-import { type Notification, notificationQuerySchema, type UnreadCount } from "@plataforma/shared";
+import type { UnreadCount } from "@plataforma/shared";
 import { type Request, Router } from "express";
 import { db } from "../lib/db";
 import { authenticate } from "../middlewares/auth";

@@ -1,6 +1,6 @@
 import { randomBytes } from "node:crypto";
 import type { DossierShare } from "@plataforma/shared";
-import { type Notification, notificationQuerySchema, type UnreadCount } from "@plataforma/shared";
+import { type Notification, notificationQuerySchema } from "@plataforma/shared";
 import { type Request, Router } from "express";
 import { createId } from "../db/id";
 import { anchorCommitmentEvent, commitmentOf } from "../domain/anchoring";
