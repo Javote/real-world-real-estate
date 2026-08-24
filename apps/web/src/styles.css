@@ -1,5 +1,101 @@
 @import "tailwindcss";
 
-/* Los tokens de M2-D3 entran acá en el commit siguiente (D-024): se
-   transcriben del entregable, no se eligen. Hasta entonces esto es Tailwind
-   pelado — la app compila y no miente sobre tener un sistema visual. */
+/* =============================================================================
+   Tokens de M2-D3 §Visual Language.
+
+   **Esto es una transcripción, no un diseño.** El entregable dice, literal:
+   "Hex values are normative" y "Use only tokens from the scale". Si un valor de
+   acá no coincide con M2-D3, el que está mal es este archivo.
+
+   Regla de uso: **ningún componente escribe un color, tamaño, radio o sombra
+   literal.** Si hace falta algo que no está acá, no se inventa — se busca en el
+   entregable, y si tampoco está, es una decisión.
+   ============================================================================= */
+
+@theme {
+  /* --- Marca ------------------------------------------------------------- */
+  /* Botones primarios, headers con gradiente, nav activo, texto de acento, y
+     la señal visual de "anclado / on-chain". */
+  --color-primary: #6d4aff;
+  --color-primary-dark: #5538dd; /* pressed en botones; hover en links */
+  --color-primary-light: #eeeaff; /* fondos tintados: nav seleccionado, role pill */
+
+  /* --- Semánticos --------------------------------------------------------- */
+  /* Cada color tiene UN significado y no cambia entre contextos. */
+  --color-verified: #14b8a6; /* badge de verificación, confirmación on-chain, firmado */
+  --color-verified-light: #d4f4ee;
+  --color-pending: #f97316; /* pendiente de verificación, acción de observar, en disputa */
+  --color-pending-light: #ffe8d6;
+  --color-info: #3b82f6; /* pre-construcción, métricas de portfolio */
+  --color-info-light: #dbeafe;
+  --color-people: #ec4899; /* badges de cantidad de inversores */
+  --color-people-light: #fce7f3;
+  --color-danger: #ef4444; /* log out, destructivo duro */
+
+  /* --- Neutros ------------------------------------------------------------ */
+  --color-text-primary: #111827; /* titulares, números de stat, body denso */
+  --color-text-secondary: #374151; /* body normal, helper text */
+  --color-text-muted: #6b7280; /* labels, captions, timestamps */
+  --color-disabled: #9ca3af; /* inputs deshabilitados, íconos de nav inactivos */
+  --color-border: #e5e7eb;
+  --color-surface-alt: #f3f4f6; /* card sobre card; hover de botón ghost */
+  --color-app-bg: #f4f1ed; /* el off-white que se ve entre las cards */
+  --color-card: #ffffff;
+
+  /* --- Tipografía --------------------------------------------------------- */
+  /* Line height 1.25× en títulos y 1.5× en body salvo que se diga otra cosa.
+     `--text-mono-*` es EXCLUSIVO de hashes, TXIDs y Merkle roots: el usuario
+     los lee carácter por carácter. */
+  --text-display: 32px; /* título del GradientHeader */
+  --text-h1: 24px; /* títulos dentro del contenido, títulos de modal */
+  --text-h2: 20px; /* títulos de card, headers de sección */
+  --text-stat: 28px; /* número del StatCard — más pesado que h1 a propósito */
+  --text-body: 16px;
+  --text-body-sm: 14px; /* helper text, captions secundarias */
+  --text-label: 13px; /* labels de sección: CONTRACT SUMMARY */
+  --text-caption: 12px; /* timestamps, metadata */
+  --text-mono-sm: 12px; /* HashChip truncado inline */
+  --text-mono-body: 14px; /* TXID completo en el modal de verificación */
+
+  /* --- Espaciado ---------------------------------------------------------- */
+  /* Escala de 4px. Solo estos valores. */
+  --spacing-s1: 4px; /* gap ícono-label, padding de pill apretado */
+  --spacing-s2: 8px; /* padding horizontal de pill, gap entre chips */
+  --spacing-s3: 12px; /* padding interno de inputs */
+  --spacing-s4: 16px; /* padding de card, padding horizontal de página en mobile */
+  --spacing-s5: 20px; /* ritmo entre secciones dentro de una card */
+  --spacing-s6: 24px; /* gap entre cards */
+  --spacing-s8: 32px; /* corte de sección, margen inferior del header */
+  --spacing-s12: 48px; /* padding de empty-state grande */
+
+  /* --- Radios ------------------------------------------------------------- */
+  --radius-md: 8px; /* inputs, chips, pills */
+  --radius-lg: 12px; /* cards */
+  --radius-xl: 16px; /* stat tiles, modales, action tiles, base del header */
+  --radius-full: 999px; /* cápsulas, botones circulares, NotificationBell */
+
+  /* --- Elevación ---------------------------------------------------------- */
+  /* Mínima a propósito: el default es una sombra de un nivel. */
+  --shadow-e1: 0 1px 2px rgb(0 0 0 / 0.06); /* card en reposo */
+  --shadow-e2: 0 4px 12px rgb(0 0 0 / 0.08); /* card elevada presionada, FAB */
+  --shadow-modal: 0 8px 24px rgb(0 0 0 / 0.12);
+
+  /* --- Íconos ------------------------------------------------------------- */
+  /* Lucide. Nunca portadores únicos de significado: siempre con label al lado. */
+  --size-icon-inline: 16px; /* junto a body text */
+  --size-icon-pill: 14px; /* dentro de StatusPill / HashChip */
+  --size-icon-stat: 20px; /* dentro del badge de 40px del StatCard */
+  --size-icon-nav: 24px; /* BottomNav, stroke-only con label debajo */
+  --size-icon-empty: 48px; /* ilustración de empty-state */
+}
+
+/* El backdrop del modal no es un token de Tailwind (no es color de utilidad):
+   va como variable suelta para que los overlays la compartan. */
+:root {
+  --backdrop-modal: rgb(0 0 0 / 0.5);
+}
+
+body {
+  background-color: var(--color-app-bg);
+  color: var(--color-text-secondary);
+}

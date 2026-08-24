@@ -18,10 +18,24 @@ más**: no hay pantallas transcritas todavía.
 | `i18n/*` | Diccionario propio, sin librería. Crece con cada pantalla |
 | `routes/login.tsx` | Único path correcto de M2-D5 (fila 01). Falta rehacerle la piel |
 | `routes/{investor.buy,developer,notary,certifier}.tsx` | **Stubs deliberados**: el path y el guard son reales, la superficie no existe |
-| `styles.css` | Tailwind pelado. Los tokens de M2-D3 entran con D-024 |
+| `styles.css` | **Los 51 tokens de M2-D3** en `@theme` — 20 colores normativos, escala tipográfica, espaciado de 4px, radios, elevación, tamaños de ícono |
+| `lib/cn.ts` · `components.json` | Base de shadcn/ui. Los primitivos se agregan **de a uno**, cuando su componente de dominio los necesita |
 
-**No hay** `shadcn/ui`, ni tokens, ni ninguno de los 33 componentes de M2-D3, ni los patrones
-P1–P10. Ver [`specs/SPEC-014`](../../specs/SPEC-014-reconstruccion-del-front.md).
+**No hay** todavía ninguno de los 33 componentes de M2-D3 ni los patrones P1–P10. Ver
+[`specs/SPEC-014`](../../specs/SPEC-014-reconstruccion-del-front.md).
+
+## Los tokens no se tocan a mano
+
+`src/styles.test.ts` lee **el entregable** —no una copia— y verifica que los 20 colores normativos
+de M2-D3 §Visual Language estén en `styles.css`, uno por uno. Es el mismo patrón que el valor dorado
+de `contracts/`: si alguien ajusta un tono "para que quede mejor", el test se pone rojo.
+
+**Regla de uso:** ningún componente escribe un color, tamaño, radio o sombra literal. Si hace falta
+algo que no está en los tokens, no se inventa — se busca en M2-D3, y si tampoco está, es una decisión.
+
+**Biome necesita `css.parser.tailwindDirectives`** para parsear `@theme`: Tailwind v4 declara los
+tokens dentro del CSS y no hay `tailwind.config.js`. Sin esa opción aborta el formateo del archivo
+entero, con un error que no menciona `@theme`.
 
 **Un stub no es una pantalla a medias.** Se ve como lo que es y no compite con la captura: una
 pantalla inventada parece terminada y nadie la vuelve a mirar.
