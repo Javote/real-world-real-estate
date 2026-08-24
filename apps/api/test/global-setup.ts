@@ -1,7 +1,12 @@
 import { existsSync, mkdirSync, rmSync } from "node:fs";
 import path from "node:path";
-import bcrypt from "bcrypt";
-import { createId } from "../src/db/id";
+import {
+  type Personaje,
+  sembrarMembresias,
+  sembrarProyecto,
+  sembrarUnidadVendida,
+  sembrarUsuarios
+} from "../src/db/fixtures";
 import { applyPendingMigrations } from "../src/db/migrate";
 import { SqliteTypeCoercionPlugin } from "../src/db/sqlite-type-plugin";
 import type { Database } from "../src/db/types";
@@ -32,6 +37,19 @@ const DB_FILE = path.join(process.cwd(), TEMPLATE_DB);
 /** Los sufijos que SQLite deja al lado del archivo principal. */
 export const SQLITE_SIDECARS = ["", "-journal", "-wal", "-shm"] as const;
 
+// ── El elenco ──────────────────────────────────────────────────────────────
+//
+// Los constructores son los MISMOS que usa el seed de desarrollo
+// (`src/db/fixtures.ts`, SPEC-015 §2); el elenco no, y a propósito: este mundo
+// es **adverso**. Tiene un usuario inactivo, un developer sin membresía y un
+// proyecto sin miembros — casos que existen para probar rechazos y que en una
+// demo solo confundirían.
+//
+// **Lo que sí comparte con el seed es la regla que faltaba:** todo rol de
+// `USER_ROLES` tiene acá un representante ACTIVO. Su ausencia es la razón por
+// la que un guard que contestaba 403 a toda la superficie del investor vivió
+// sin que ningún test lo viera — no había con qué pedirla.
+
 export const FIXTURES = {
   /** developer, activo y MIEMBRO del proyecto de prueba */
   activo: { email: "dev@test.local", password: "dev123", fullName: "Dev Test" },
@@ -57,10 +75,22 @@ export const FIXTURES = {
   },
   proyecto: { slug: "torre-test" },
   /** la unidad del investor, con su contrato */
-  unidad: { unitReference: "3B" },
+  unidad: { unitReference: "3B", priceMinorUnits: 12_000_000, currency: "USD" },
   /** segundo proyecto, SIN miembros: sin él no se puede ver si el listado scopea */
   otroProyecto: { slug: "torre-ajena" }
 };
+
+/** El elenco con su rol y su estado, en la forma que comen los constructores. */
+export const ELENCO_TEST: Personaje[] = [
+  { ...FIXTURES.activo, role: "developer" },
+  { ...FIXTURES.inactivo, role: "buyer", isActive: false },
+  { ...FIXTURES.revocable, role: "admin" },
+  { ...FIXTURES.ajeno, role: "developer" },
+  { ...FIXTURES.admin, role: "admin" },
+  { ...FIXTURES.investor, role: "buyer" },
+  { ...FIXTURES.notario, role: "notary" },
+  { ...FIXTURES.certificador, role: "verifier" }
+];
 
 export default async function setup() {
   // El directorio de bases de test se rehace entero en cada corrida: así no
@@ -92,220 +122,50 @@ export default async function setup() {
     plugins: [new SqliteTypeCoercionPlugin()]
   });
 
-  const hash = (pw: string) => bcrypt.hash(pw, 10);
-  const now = new Date();
-
-  await db
-    .insertInto("User")
-    .values([
-      {
-        id: createId(),
-        email: FIXTURES.activo.email,
-        passwordHash: await hash(FIXTURES.activo.password),
-        role: "developer",
-        fullName: FIXTURES.activo.fullName,
-        isActive: true,
-        createdAt: now,
-        updatedAt: now
-      },
-      {
-        id: createId(),
-        email: FIXTURES.inactivo.email,
-        passwordHash: await hash(FIXTURES.inactivo.password),
-        role: "buyer",
-        fullName: FIXTURES.inactivo.fullName,
-        isActive: false,
-        createdAt: now,
-        updatedAt: now
-      },
-      {
-        id: createId(),
-        email: FIXTURES.revocable.email,
-        passwordHash: await hash(FIXTURES.revocable.password),
-        role: "admin",
-        fullName: FIXTURES.revocable.fullName,
-        isActive: true,
-        createdAt: now,
-        updatedAt: now
-      },
-      {
-        id: createId(),
-        email: FIXTURES.ajeno.email,
-        passwordHash: await hash(FIXTURES.ajeno.password),
-        role: "developer",
-        fullName: FIXTURES.ajeno.fullName,
-        isActive: true,
-        createdAt: now,
-        updatedAt: now
-      },
-      {
-        id: createId(),
-        email: FIXTURES.investor.email,
-        passwordHash: await hash(FIXTURES.investor.password),
-        role: "buyer",
-        fullName: FIXTURES.investor.fullName,
-        isActive: true,
-        createdAt: now,
-        updatedAt: now
-      },
-      {
-        id: createId(),
-        email: FIXTURES.notario.email,
-        passwordHash: await hash(FIXTURES.notario.password),
-        role: "notary",
-        fullName: FIXTURES.notario.fullName,
-        isActive: true,
-        createdAt: now,
-        updatedAt: now
-      },
-      {
-        id: createId(),
-        email: FIXTURES.certificador.email,
-        passwordHash: await hash(FIXTURES.certificador.password),
-        role: "verifier",
-        fullName: FIXTURES.certificador.fullName,
-        isActive: true,
-        createdAt: now,
-        updatedAt: now
-      },
-      {
-        id: createId(),
-        email: FIXTURES.admin.email,
-        passwordHash: await hash(FIXTURES.admin.password),
-        role: "admin",
-        fullName: FIXTURES.admin.fullName,
-        isActive: true,
-        createdAt: now,
-        updatedAt: now
-      }
-    ])
-    .execute();
+  const ids = await sembrarUsuarios(db, ELENCO_TEST);
+  const id = (email: string) => ids.get(email) as string;
 
   // Un proyecto con UN developer miembro y otro que no lo es: sin eso no se
   // puede testear la segunda capa de autorización (rol global + membresía).
-  const proyecto = await db
-    .insertInto("Project")
-    .values({
-      id: createId(),
-      name: "Torre Test",
-      slug: FIXTURES.proyecto.slug,
-      status: "in_progress",
-      totalUnits: 10,
-      createdAt: now,
-      updatedAt: now
-    })
-    .returningAll()
-    .executeTakeFirstOrThrow();
+  const projectId = await sembrarProyecto(db, {
+    slug: FIXTURES.proyecto.slug,
+    name: "Torre Test",
+    status: "in_progress",
+    totalUnits: 10
+  });
 
-  const miembro = await db
-    .selectFrom("User")
-    .selectAll()
-    .where("email", "=", FIXTURES.activo.email)
-    .executeTakeFirstOrThrow();
+  await sembrarMembresias(db, projectId, [
+    { userId: id(FIXTURES.activo.email), membershipRole: "developer" },
+    // DOS membresías sobre el MISMO proyecto: el schema lo permite (índice
+    // único por userId+projectId+membershipRole) y el listado viejo lo
+    // devolvía duplicado. Sin este fixture, esa regresión no se ve.
+    { userId: id(FIXTURES.activo.email), membershipRole: "buyer" },
+    { userId: id(FIXTURES.investor.email), membershipRole: "buyer" },
+    { userId: id(FIXTURES.certificador.email), membershipRole: "verifier" }
+  ]);
 
-  await db
-    .insertInto("ProjectMember")
-    .values([
-      {
-        id: createId(),
-        projectId: proyecto.id,
-        userId: miembro.id,
-        membershipRole: "developer",
-        createdAt: now
-      },
-      // DOS membresías sobre el MISMO proyecto: el schema lo permite (índice
-      // único por userId+projectId+membershipRole) y el listado viejo lo
-      // devolvía duplicado. Sin este fixture, esa regresión no se ve.
-      {
-        id: createId(),
-        projectId: proyecto.id,
-        userId: miembro.id,
-        membershipRole: "buyer",
-        createdAt: now
-      }
-    ])
-    .execute();
-
-  const investor = await db
-    .selectFrom("User")
-    .select("id")
-    .where("email", "=", FIXTURES.investor.email)
-    .executeTakeFirstOrThrow();
-
-  const certificador = await db
-    .selectFrom("User")
-    .select("id")
-    .where("email", "=", FIXTURES.certificador.email)
-    .executeTakeFirstOrThrow();
-
-  await db
-    .insertInto("ProjectMember")
-    .values([
-      {
-        id: createId(),
-        projectId: proyecto.id,
-        userId: investor.id,
-        membershipRole: "buyer",
-        createdAt: now
-      },
-      {
-        id: createId(),
-        projectId: proyecto.id,
-        userId: certificador.id,
-        membershipRole: "verifier",
-        createdAt: now
-      }
-    ])
-    .execute();
-
-  // La unidad del investor y su contrato: sin ellos no hay dossier, ni
-  // capital, ni directorio de investors que testear. El contrato existe
-  // porque la invitación se aceptó — acá se planta el resultado.
-  const unidad = await db
-    .insertInto("Unit")
-    .values({
-      id: createId(),
-      projectId: proyecto.id,
-      unitReference: FIXTURES.unidad.unitReference,
-      status: "sold",
-      floor: 3,
-      sizeM2: 72,
-      priceMinorUnits: 12_000_000,
-      currency: "USD",
-      investorId: investor.id,
-      createdAt: now,
-      updatedAt: now
-    })
-    .returningAll()
-    .executeTakeFirstOrThrow();
-
-  await db
-    .insertInto("Contract")
-    .values({
-      id: createId(),
-      unitId: unidad.id,
-      investorId: investor.id,
-      totalMinorUnits: 12_000_000,
-      currency: "USD",
-      signedAt: now,
-      createdAt: now
-    })
-    .execute();
+  // La unidad del investor y su contrato: sin ellos no hay dossier, ni capital,
+  // ni directorio de investors que testear. El contrato existe porque la
+  // invitación se aceptó — acá se planta el resultado.
+  await sembrarUnidadVendida(db, {
+    projectId,
+    investorId: id(FIXTURES.investor.email),
+    unitReference: FIXTURES.unidad.unitReference,
+    floor: 3,
+    sizeM2: 72,
+    priceMinorUnits: FIXTURES.unidad.priceMinorUnits,
+    currency: FIXTURES.unidad.currency
+  });
 
   // Segundo proyecto, sin ningún miembro: es contra lo que se mide que el
   // listado scopee. Se crea después, así que es el más nuevo por createdAt.
-  await db
-    .insertInto("Project")
-    .values({
-      id: createId(),
-      name: "Torre Ajena",
-      slug: FIXTURES.otroProyecto.slug,
-      status: "planning",
-      totalUnits: 4,
-      createdAt: new Date(now.getTime() + 1),
-      updatedAt: new Date(now.getTime() + 1)
-    })
-    .execute();
+  await sembrarProyecto(db, {
+    slug: FIXTURES.otroProyecto.slug,
+    name: "Torre Ajena",
+    status: "planning",
+    totalUnits: 4,
+    offsetMs: 1
+  });
 
   await db.destroy();
 }
