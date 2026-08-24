@@ -1,6 +1,13 @@
 // ApiPort — ÚNICO lugar del front que hace fetch (prohibición de CLAUDE.md).
 // Adaptador `real` contra apps/api. El adaptador `mock` está pendiente.
 
+import type {
+  CertifierAssignment,
+  CertifierKpis,
+  DeveloperKpis,
+  NotaryKpis,
+  PendingDossier
+} from '@plataforma/shared'
 import { clearSession, getSession } from '../auth/session'
 import type {
   Evidence,
@@ -64,6 +71,14 @@ export const api = {
   me: () => request<MeResponse>('/api/v1/auth/me'),
 
   listProjects: () => request<Project[]>('/api/v1/projects'),
+
+  // Paneles de rol (M2-D5 filas 33-34, 51, 55). Los tipos vienen del contrato
+  // de `packages/shared`: acá no se declara la forma de nada.
+  getDeveloperKpis: () => request<DeveloperKpis>('/api/v1/developer/kpis'),
+  getCertifierKpis: () => request<CertifierKpis>('/api/v1/certifier/kpis'),
+  getCertifierAssignments: () => request<CertifierAssignment[]>('/api/v1/certifier/assignments'),
+  getNotaryKpis: () => request<NotaryKpis>('/api/v1/notary/kpis'),
+  getNotaryPendingDossiers: () => request<PendingDossier[]>('/api/v1/notary/dossiers/pending'),
 
   getProject: (id: string) => request<ProjectDetail>(`/api/v1/projects/${id}`),
 

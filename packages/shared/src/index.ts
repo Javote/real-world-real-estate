@@ -6,5 +6,6 @@
 // typecheck del otro lado falla — que es el punto.
 export * from "./auth";
 export * from "./merkle";
+export * from "./panels";
 export * from "./stage";
 export * from "./stage-datum";

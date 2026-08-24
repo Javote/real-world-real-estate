@@ -1,24 +1,78 @@
-import { createFileRoute } from '@tanstack/react-router'
-import { DEV_ROLES } from '../auth/roles'
-import { useRoleGuard } from '../auth/useRoleGuard'
+import { useQuery } from '@tanstack/react-query'
+import { createFileRoute, useNavigate } from '@tanstack/react-router'
+import { Building2, FileCheck2, Home, Plus, TrendingUp } from 'lucide-react'
+import { api } from '#/api/port'
+import { DEV_ROLES } from '#/auth/roles'
+import { useRoleGuard } from '#/auth/useRoleGuard'
+import { ActionCard } from '#/components/domain/ActionCard'
+import { StatCard } from '#/components/domain/StatCard'
+import { KpiValue } from '#/components/KpiValue'
+import { PanelLayout } from '#/components/PanelLayout'
+import { useTranslation } from '#/i18n/useTranslation'
 
-// **Stub deliberado.** El path es el correcto —fila 33-34 de M2-D5— y el guard de
-// rol es real, así que la navegación por rol funciona de punta a punta. Lo que
-// falta es la superficie: se transcribe desde su captura cuando llegue su
-// vertical (SPEC-014), con los componentes que la fila nombra y el test ID
-// DEV-PANEL-KPIS-001 (M3-FE-14).
-//
-// Existe como stub y no como pantalla a medias a propósito: una pantalla
-// inventada se ve terminada y compite con la captura.
-export const Route = createFileRoute('/developer')({ component: Pendiente })
+// **M2-D5 fila 33-34 · `/developer` (Panel)** — captura 33-DEVELOPER-HOME-A.
+// Componentes: StatCard, ActionCard (featured), NotificationBell,
+// GradientHeader. Endpoint: GET /developer/kpis. Test ID: DEV-PANEL-KPIS-001.
 
-function Pendiente() {
-  const { ready } = useRoleGuard(DEV_ROLES)
+export const Route = createFileRoute('/developer')({ component: DeveloperPanel })
+
+function DeveloperPanel() {
+  const { session, ready } = useRoleGuard(DEV_ROLES)
+  const { t } = useTranslation()
+  const kpi = KpiValue()
+  const navigate = useNavigate()
+
+  const { data } = useQuery({
+    queryKey: ['developer', 'kpis'],
+    queryFn: api.getDeveloperKpis,
+    enabled: ready
+  })
+
   if (!ready) return null
 
   return (
-    <main data-testid="surface-pending" data-m2d5-row="33-34">
-      <p>Pendiente de transcribir — M2-D5 fila 33-34</p>
-    </main>
+    <PanelLayout
+      rol="developer"
+      title={t('panel.developer.title')}
+      context={session ? t('panel.welcome', { name: session.user.fullName }) : undefined}
+      onOpenNotifications={() => void navigate({ to: '/developer' })}
+    >
+      <section className="grid grid-cols-2 gap-s4" data-testid="DEV-PANEL-KPIS-001">
+        <ActionCard
+          title={t('panel.developer.newProject')}
+          description={t('panel.developer.newProjectHint')}
+          icon={Plus}
+          featured
+          onClick={() => void navigate({ to: '/developer' })}
+          testId="DEV-PROJECT-CREATE-001"
+        />
+        <StatCard
+          value={kpi(data?.activeProjects ?? null)}
+          label={t('panel.developer.activeProjects')}
+          icon={Building2}
+          tone="entity"
+        />
+        <StatCard
+          value={kpi(data?.totalUnits ?? null)}
+          label={t('panel.developer.totalUnits')}
+          icon={Home}
+          tone="portfolio"
+        />
+        <StatCard
+          value={kpi(data?.averageProgress ?? null, '%')}
+          label={t('panel.developer.averageProgress')}
+          helper={t('panel.developer.averageProgressHint')}
+          icon={TrendingUp}
+          tone="trend"
+        />
+        <StatCard
+          value={kpi(data?.verifiedDocuments ?? null)}
+          label={t('panel.developer.verifiedDocuments')}
+          helper={t('panel.developer.verifiedDocumentsHint')}
+          icon={FileCheck2}
+          tone="verification"
+        />
+      </section>
+    </PanelLayout>
   )
 }

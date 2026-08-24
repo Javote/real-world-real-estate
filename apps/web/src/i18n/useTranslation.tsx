@@ -36,7 +36,26 @@ export function useTranslation() {
   const ctx = useContext(LocaleContext)
   if (!ctx) throw new Error('useTranslation debe usarse dentro de LocaleProvider')
 
-  const t = useCallback((key: TranslationKey) => dictionary[ctx.locale][key], [ctx.locale])
+  /**
+   * Traduce, con interpolación simple de `{nombre}`.
+   *
+   * No es una librería de plurales ni de formato: para números, moneda y fechas
+   * están los helpers de `i18n/format.ts` con `Intl` (regla 14). Esto resuelve
+   * solo el caso de meter un valor dentro de una frase — "Welcome, {name}" —,
+   * que en español y en inglés tiene distinto orden de palabras y por eso no se
+   * puede concatenar a mano.
+   */
+  const t = useCallback(
+    (key: TranslationKey, params?: Record<string, string>) => {
+      const plantilla = dictionary[ctx.locale][key]
+      if (!params) return plantilla
+      return plantilla.replace(
+        /\{(\w+)\}/g,
+        (original, nombre: string) => params[nombre] ?? original
+      )
+    },
+    [ctx.locale]
+  )
 
   return { t, locale: ctx.locale, setLocale: ctx.setLocale }
 }

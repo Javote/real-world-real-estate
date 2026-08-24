@@ -17,6 +17,7 @@ import { trustProxyHops } from "./middlewares/rateLimit";
 import auditRoutes from "./routes/audit.routes";
 import authRoutes from "./routes/auth.routes";
 import evidenceRoutes from "./routes/evidence.routes";
+import panelsRoutes from "./routes/panels.routes";
 import projectsRoutes from "./routes/projects.routes";
 import stagesRoutes from "./routes/stages.routes";
 import usersRoutes from "./routes/users.routes";
@@ -100,6 +101,7 @@ app.use("/api/v1/users", usersRoutes);
 app.use("/api/v1/projects", projectsRoutes);
 app.use("/api/v1", stagesRoutes);
 app.use("/api/v1", evidenceRoutes);
+app.use("/api/v1", panelsRoutes);
 app.use("/api/v1/audit-logs", auditRoutes);
 
 // Una ruta que no existe tiene que contestar JSON como todo el resto: sin esto,

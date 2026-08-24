@@ -1,5 +1,6 @@
 import { ArrowLeft } from 'lucide-react'
 import { cn } from '#/lib/cn'
+import { PropNexusMark } from './PropNexusMark'
 
 // M2-D3 §Foundation · GradientHeader — *"Use on every primary screen, every
 // modal landing, every detail view"*.
@@ -39,19 +40,23 @@ export function GradientHeader({
         className
       )}
     >
+      {/* El logo va SIEMPRE y va primero: es el ancla agnóstica de rol. */}
       <div className="flex items-start justify-between gap-s3">
         <div className="flex items-center gap-s3">
           {badge ? (
             <span className="flex h-12 w-12 items-center justify-center rounded-xl bg-white/20">
               {badge}
             </span>
-          ) : null}
-          <div>
-            <h1 className="text-h1 font-bold">{title}</h1>
-            {subtitle ? <p className="text-body-sm text-white/80">{subtitle}</p> : null}
-          </div>
+          ) : (
+            <PropNexusMark />
+          )}
         </div>
         {right ? <div className="flex items-center gap-s2">{right}</div> : null}
+      </div>
+
+      <div className="mt-s4">
+        <h1 className="text-display font-bold leading-tight">{title}</h1>
+        {subtitle ? <p className="text-body-sm text-white/80">{subtitle}</p> : null}
       </div>
 
       {back ? (
