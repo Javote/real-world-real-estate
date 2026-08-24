@@ -19,8 +19,8 @@ import {
   type AnchorProof,
   type AnchorReceipt,
   AnchorRejectedError,
+  type CommitmentAnchorInput,
   EVIDENCE_METADATA_LABEL,
-  type EvidenceAnchorInput,
   type MetadataAnchorReceipt,
   type OpenThreadInput,
   type OutputRef
@@ -176,7 +176,10 @@ export class LucidAnchorAdapter implements AnchorPort {
    * Las cadenas de metadata tienen tope de 64 bytes por string (regla 2): un
    * SHA-256 en hex ocupa exactamente 64, y la ref va aparte por eso mismo.
    */
-  async anchorEvidence({ sha256, reference }: EvidenceAnchorInput): Promise<MetadataAnchorReceipt> {
+  async anchorCommitment({
+    sha256,
+    reference
+  }: CommitmentAnchorInput): Promise<MetadataAnchorReceipt> {
     if (!/^[0-9a-f]{64}$/.test(sha256)) {
       throw new AnchorRejectedError(`No es un SHA-256 en hex: ${sha256}`, "BAD_EVIDENCE_HASH");
     }

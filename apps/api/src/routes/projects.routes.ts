@@ -3,6 +3,7 @@ import { z } from "zod";
 import { createId } from "../db/id";
 import { PROJECT_STATUSES } from "../db/types";
 import { db } from "../lib/db";
+import { sql } from "../lib/kysely";
 import {
   ANY_MEMBERSHIP,
   authenticate,
@@ -30,7 +31,22 @@ router.use(authenticate);
  */
 const listQuerySchema = z.object({
   status: z.enum(PROJECT_STATUSES).optional(),
-  city: z.string().min(1).optional()
+  city: z.string().min(1).optional(),
+  /** Fila 04 — el typeahead. Busca en nombre y ciudad. */
+  q: z.string().min(1).max(120).optional(),
+  /** Fila 05 — el orden del `SelectDropdown`. */
+  sort: z.enum(["recent", "name", "delivery"]).optional(),
+  /**
+   * Fila 03 — el viewport del mapa: `minLon,minLat,maxLon,maxLat`.
+   *
+   * Se valida acá y no en el handler porque un bbox mal formado tiene que ser
+   * 400 y no un filtro que se ignora en silencio: quien pide el mapa y recibe
+   * el listado entero no se entera de que su viewport no llegó.
+   */
+  bbox: z
+    .string()
+    .regex(/^-?\d+(\.\d+)?(,-?\d+(\.\d+)?){3}$/)
+    .optional()
 });
 
 router.get("/", async (req, res) => {
@@ -40,7 +56,7 @@ router.get("/", async (req, res) => {
     return res.status(400).json(filtros.error.flatten());
   }
 
-  const { status, city } = filtros.data;
+  const { status, city, q, sort, bbox } = filtros.data;
 
   // El scope de visibilidad sale de `projectScope` y no de un query propio: es
   // la MISMA regla que aplica `canAccessProject` a un proyecto puntual (D-048,
@@ -52,9 +68,40 @@ router.get("/", async (req, res) => {
   if (status) query = query.where("status", "=", status);
   if (city) query = query.where("city", "=", city);
 
+  if (q) {
+    // `escape` explícito: sin él, un `%` tipeado en el buscador matchea todo y
+    // un `_` matchea cualquier carácter — el usuario cree que filtró y no.
+    const patron = `%${q.replace(/[\\%_]/g, "\\$&")}%`;
+    query = query.where((eb) =>
+      eb.or([
+        eb("name", "like", sql<string>`${patron} escape '\\'`),
+        eb("city", "like", sql<string>`${patron} escape '\\'`)
+      ])
+    );
+  }
+
+  if (bbox) {
+    const [minLon, minLat, maxLon, maxLat] = bbox.split(",").map(Number);
+    // Un proyecto sin coordenadas no entra al mapa. No se le inventa un punto.
+    query = query
+      .where("longitude", ">=", minLon)
+      .where("longitude", "<=", maxLon)
+      .where("latitude", ">=", minLat)
+      .where("latitude", "<=", maxLat);
+  }
+
   const projectRows = await query
     .where((eb) => projectScope(eb, req.user!.role, req.user!.id, ANY_MEMBERSHIP))
-    .orderBy("createdAt", "desc")
+    .$call((qb) => {
+      if (sort === "name") return qb.orderBy("name", "asc");
+      // `estimatedDelivery` nullable: las entregas sin fecha van al final en
+      // vez de encabezar el listado por ser NULL.
+      if (sort === "delivery")
+        return qb
+          .orderBy(sql`case when estimatedDelivery is null then 1 else 0 end`)
+          .orderBy("estimatedDelivery", "asc");
+      return qb.orderBy("createdAt", "desc");
+    })
     .execute();
 
   const projectIds = projectRows.map((p) => p.id);
@@ -313,5 +360,54 @@ router.post("/:id/members", requireRole("admin"), async (req: Request<{ id: stri
 
   return res.status(201).json(member);
 });
+
+/**
+ * Fila 06-07 — los documentos del proyecto (INV-PROJECT-DOCS-002).
+ *
+ * Es la evidencia del proyecto con su estado de prueba, en la forma que come el
+ * `DocumentCard`: hash completo (regla 16) y TXID cuando existe.
+ *
+ * **`storagePath` no sale nunca** (D-011) y **el estado se deriva del TXID, no
+ * se declara**: sin TXID el documento está "Pendiente", aunque tenga hash
+ * (regla 17). Esa derivación vive acá y no en el cliente para que no haya dos
+ * versiones de la misma regla.
+ */
+router.get(
+  "/:id/documents",
+  requireProjectAccess({ param: "id" }, ANY_MEMBERSHIP),
+  async (req: Request<{ id: string }>, res) => {
+    const filas = await db
+      .selectFrom("Evidence")
+      .leftJoin("OnChainEvent", (join) =>
+        join
+          .onRef("OnChainEvent.evidenceId", "=", "Evidence.id")
+          .on("OnChainEvent.eventType", "=", "EVIDENCE_ANCHOR")
+      )
+      .select([
+        "Evidence.id as id",
+        "Evidence.stageId as stageId",
+        "Evidence.evidenceType as evidenceType",
+        "Evidence.category as category",
+        "Evidence.authoritative as authoritative",
+        "Evidence.originalFilename as originalFilename",
+        "Evidence.mimeType as mimeType",
+        "Evidence.sizeBytes as sizeBytes",
+        "Evidence.sha256Hash as sha256Hash",
+        "Evidence.uploadedAt as uploadedAt",
+        "OnChainEvent.txid as txid",
+        "OnChainEvent.status as anchorStatus"
+      ])
+      .where("Evidence.projectId", "=", req.params.id)
+      .orderBy("Evidence.uploadedAt", "desc")
+      .execute();
+
+    return res.json(
+      filas.map((f) => ({
+        ...f,
+        anchorStatus: f.txid ? (f.anchorStatus ?? "Confirmed") : "Pending"
+      }))
+    );
+  }
+);
 
 export default router;

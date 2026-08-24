@@ -177,7 +177,7 @@ describe.skipIf(!corre)("AnchorPort contra un nodo Cardano local (yaci-devkit)",
   }, 120_000);
 
   it("ancla el hash de una evidencia por metadata", async () => {
-    const recibo = await adapter.anchorEvidence({
+    const recibo = await adapter.anchorCommitment({
       sha256: "e".repeat(64),
       reference: "ev_yaci_1"
     });

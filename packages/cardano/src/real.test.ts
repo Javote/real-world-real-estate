@@ -208,7 +208,7 @@ describe("anchorEvidence · el camino de metadata (D-006)", () => {
   it("ancla el hash sin tocar el hilo ni el thread token", async () => {
     // Es el otro componente on-chain de M1: prueba que el archivo existía a
     // esta hora, no que un stage avanzó. No pasa por ningún validador.
-    const recibo = await adapter.anchorEvidence({ sha256, reference: "ev_123" });
+    const recibo = await adapter.anchorCommitment({ sha256, reference: "ev_123" });
     emulator.awaitBlock(1);
 
     expect(recibo.txid).toMatch(/^[0-9a-f]{64}$/);
@@ -217,14 +217,14 @@ describe("anchorEvidence · el camino de metadata (D-006)", () => {
   });
 
   it("rechaza lo que no sea un SHA-256", async () => {
-    await expect(adapter.anchorEvidence({ sha256: "corto", reference: "ev" })).rejects.toThrow(
+    await expect(adapter.anchorCommitment({ sha256: "corto", reference: "ev" })).rejects.toThrow(
       /SHA-256/
     );
   });
 
   it("rechaza una ref que no entre en un string de metadata", async () => {
     // 64 bytes es el tope de una cadena de metadata (regla 2).
-    await expect(adapter.anchorEvidence({ sha256, reference: "x".repeat(65) })).rejects.toThrow(
+    await expect(adapter.anchorCommitment({ sha256, reference: "x".repeat(65) })).rejects.toThrow(
       /no entra/
     );
   });

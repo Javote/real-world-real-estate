@@ -179,6 +179,13 @@ CREATE TABLE `OnChainEvent` (
 	`stageId` text,
 	-- Solo en `EVIDENCE_ANCHOR`: qué archivo ancló esta transacción.
 	`evidenceId` text,
+	-- Ref OPACA al registro off-chain que este evento ancla, para los eventos
+	-- de commitment que no cuelgan de un stage ni de una evidencia: la
+	-- invitación aceptada, la liberación, la firma del dossier, el documento
+	-- suelto. Sin ella el TXID de un release no se puede volver a encontrar
+	-- salvo recomputando su commitment, que incluye un timestamp.
+	-- **Es el id del registro, nunca un nombre ni un email** (regla 2).
+	`referenceId` text,
 	-- Posición en la secuencia de eventos on-chain del stage. El índice único
 	-- con `stageId` es lo que vuelve **idempotente** el anclaje (regla 8):
 	-- escribir dos veces el evento N choca contra el índice en vez de anclar
@@ -209,6 +216,8 @@ CREATE UNIQUE INDEX `OnChainEvent_stageId_eventIndex_key` ON `OnChainEvent` (`st
 CREATE INDEX `OnChainEvent_stageId_idx` ON `OnChainEvent` (`stageId`);
 --> statement-breakpoint
 CREATE INDEX `OnChainEvent_evidenceId_idx` ON `OnChainEvent` (`evidenceId`);
+--> statement-breakpoint
+CREATE INDEX `OnChainEvent_referenceId_idx` ON `OnChainEvent` (`referenceId`);
 --> statement-breakpoint
 CREATE INDEX `OnChainEvent_status_idx` ON `OnChainEvent` (`status`);
 --> statement-breakpoint
@@ -276,3 +285,134 @@ CREATE TABLE `Favorite` (
 );
 --> statement-breakpoint
 CREATE INDEX `Favorite_userId_idx` ON `Favorite` (`userId`);
+--> statement-breakpoint
+
+-- ── Lo comercial: unidad, invitación, contrato, liberaciones ───────────────
+--
+-- D-029: los stages son del PROYECTO; la unidad es lo comercial y **nace en la
+-- subdivisión**, un paso tardío. Un proyecto pasa tiempo acumulando stages y
+-- evidencia con cero unidades, y el modelo lo soporta: `Unit` no es requisito
+-- de nada anterior.
+
+CREATE TABLE `Unit` (
+	`id` text PRIMARY KEY NOT NULL,
+	`projectId` text NOT NULL,
+	`unitReference` text NOT NULL,
+	`status` text DEFAULT 'available' NOT NULL,
+	`floor` integer,
+	`sizeM2` integer,
+	-- Unidades mínimas enteras (regla 1): jamás float para dinero.
+	`priceMinorUnits` integer,
+	`currency` text,
+	-- El investor asignado. Null hasta que acepta una invitación.
+	`investorId` text,
+	`createdAt` integer NOT NULL,
+	`updatedAt` integer NOT NULL,
+	FOREIGN KEY (`projectId`) REFERENCES `Project`(`id`) ON UPDATE no action ON DELETE cascade,
+	FOREIGN KEY (`investorId`) REFERENCES `User`(`id`) ON UPDATE no action ON DELETE set null
+);
+--> statement-breakpoint
+CREATE UNIQUE INDEX `Unit_projectId_unitReference_key` ON `Unit` (`projectId`,`unitReference`);
+--> statement-breakpoint
+CREATE INDEX `Unit_investorId_idx` ON `Unit` (`investorId`);
+--> statement-breakpoint
+
+-- El developer invita; el investor acepta o rechaza. Aceptar ancla (M3-SC-01).
+CREATE TABLE `Invitation` (
+	`id` text PRIMARY KEY NOT NULL,
+	`projectId` text NOT NULL,
+	`unitId` text NOT NULL,
+	`investorEmail` text NOT NULL,
+	`amountMinorUnits` integer NOT NULL,
+	`currency` text NOT NULL,
+	`status` text DEFAULT 'pending' NOT NULL,
+	`createdById` text,
+	`createdAt` integer NOT NULL,
+	`respondedAt` integer,
+	FOREIGN KEY (`projectId`) REFERENCES `Project`(`id`) ON UPDATE no action ON DELETE cascade,
+	FOREIGN KEY (`unitId`) REFERENCES `Unit`(`id`) ON UPDATE no action ON DELETE cascade,
+	FOREIGN KEY (`createdById`) REFERENCES `User`(`id`) ON UPDATE no action ON DELETE set null
+);
+--> statement-breakpoint
+CREATE INDEX `Invitation_unitId_idx` ON `Invitation` (`unitId`);
+--> statement-breakpoint
+
+-- Un contrato por unidad e investor. **No custodia nada** (D-021): es el
+-- registro del acuerdo, y el cronograma de pagos es dato, no plata que se mueva.
+CREATE TABLE `Contract` (
+	`id` text PRIMARY KEY NOT NULL,
+	`unitId` text NOT NULL,
+	`investorId` text NOT NULL,
+	`totalMinorUnits` integer NOT NULL,
+	`currency` text NOT NULL,
+	`signedAt` integer,
+	`createdAt` integer NOT NULL,
+	FOREIGN KEY (`unitId`) REFERENCES `Unit`(`id`) ON UPDATE no action ON DELETE cascade,
+	FOREIGN KEY (`investorId`) REFERENCES `User`(`id`) ON UPDATE no action ON DELETE no action
+);
+--> statement-breakpoint
+CREATE UNIQUE INDEX `Contract_unitId_key` ON `Contract` (`unitId`);
+--> statement-breakpoint
+
+-- **Cada liberación es un evento on-chain propio** (M2-D4 P10): el contrato es
+-- una entidad lógica, el artefacto anclado es cada release. "Release" significa
+-- anclar el evento, no ejecutar el pago (D-021).
+CREATE TABLE `PaymentRelease` (
+	`id` text PRIMARY KEY NOT NULL,
+	`contractId` text NOT NULL,
+	`stageNumber` integer NOT NULL,
+	`amountMinorUnits` integer NOT NULL,
+	`releasedById` text,
+	`releasedAt` integer NOT NULL,
+	FOREIGN KEY (`contractId`) REFERENCES `Contract`(`id`) ON UPDATE no action ON DELETE cascade,
+	FOREIGN KEY (`releasedById`) REFERENCES `User`(`id`) ON UPDATE no action ON DELETE set null
+);
+--> statement-breakpoint
+CREATE UNIQUE INDEX `PaymentRelease_contractId_stageNumber_key` ON `PaymentRelease` (`contractId`,`stageNumber`);
+--> statement-breakpoint
+
+-- ── El dossier (M2-D4 P8) ──────────────────────────────────────────────────
+--
+-- "El dossier tiene un hash": `masterHash` compromete el artefacto compilado en
+-- un momento. Si algo adentro cambia, el hash cambia — y eso es lo que vuelve
+-- verificable el link de solo lectura que se le pasa a un notario.
+CREATE TABLE `Dossier` (
+	`id` text PRIMARY KEY NOT NULL,
+	`unitId` text NOT NULL,
+	`masterHash` text NOT NULL,
+	`compiledAt` integer NOT NULL,
+	-- Token opaco del link público. Null mientras no se comparta.
+	`shareToken` text,
+	`status` text DEFAULT 'compiled' NOT NULL,
+	`signedById` text,
+	`signedAt` integer,
+	`rejectionNote` text,
+	FOREIGN KEY (`unitId`) REFERENCES `Unit`(`id`) ON UPDATE no action ON DELETE cascade,
+	FOREIGN KEY (`signedById`) REFERENCES `User`(`id`) ON UPDATE no action ON DELETE set null
+);
+--> statement-breakpoint
+CREATE UNIQUE INDEX `Dossier_shareToken_key` ON `Dossier` (`shareToken`);
+--> statement-breakpoint
+CREATE INDEX `Dossier_unitId_idx` ON `Dossier` (`unitId`);
+--> statement-breakpoint
+
+-- ── Notificaciones ─────────────────────────────────────────────────────────
+--
+-- Las cinco categorías son las mismas del audit log (M2-D4 P6): stage,
+-- document, release, signature, certificate.
+CREATE TABLE `Notification` (
+	`id` text PRIMARY KEY NOT NULL,
+	`userId` text NOT NULL,
+	`category` text NOT NULL,
+	`titleKey` text NOT NULL,
+	-- Datos para interpolar en la clave. El backend manda CLAVES, no copy
+	-- (regla 15): el cliente renderiza según su locale.
+	`paramsJson` text,
+	`unitId` text,
+	`readAt` integer,
+	`createdAt` integer NOT NULL,
+	FOREIGN KEY (`userId`) REFERENCES `User`(`id`) ON UPDATE no action ON DELETE cascade,
+	FOREIGN KEY (`unitId`) REFERENCES `Unit`(`id`) ON UPDATE no action ON DELETE set null
+);
+--> statement-breakpoint
+CREATE INDEX `Notification_userId_readAt_idx` ON `Notification` (`userId`,`readAt`);

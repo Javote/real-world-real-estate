@@ -28,7 +28,19 @@ export const FIXTURES = {
   ajeno: { email: "ajeno@test.local", password: "ajeno123", fullName: "Ajeno Test" },
   /** admin que ningún test muta — `revocable` se desactiva en auth.test.ts */
   admin: { email: "admin@test.local", password: "admin123", fullName: "Admin Test" },
+  /** buyer ACTIVO y dueño de la unidad de prueba: el investor del backlog */
+  investor: { email: "investor@test.local", password: "investor123", fullName: "Investor Test" },
+  /** notary activo. No tiene membresía por proyecto: no le hace falta (M2-D1 §4) */
+  notario: { email: "notary@test.local", password: "notary123", fullName: "Notary Test" },
+  /** verifier activo, MIEMBRO del proyecto de prueba: el certifier del backlog */
+  certificador: {
+    email: "certifier@test.local",
+    password: "certifier123",
+    fullName: "Certifier Test"
+  },
   proyecto: { slug: "torre-test" },
+  /** la unidad del investor, con su contrato */
+  unidad: { unitReference: "3B" },
   /** segundo proyecto, SIN miembros: sin él no se puede ver si el listado scopea */
   otroProyecto: { slug: "torre-ajena" }
 };
@@ -104,6 +116,36 @@ export default async function setup() {
       },
       {
         id: createId(),
+        email: FIXTURES.investor.email,
+        passwordHash: await hash(FIXTURES.investor.password),
+        role: "buyer",
+        fullName: FIXTURES.investor.fullName,
+        isActive: true,
+        createdAt: now,
+        updatedAt: now
+      },
+      {
+        id: createId(),
+        email: FIXTURES.notario.email,
+        passwordHash: await hash(FIXTURES.notario.password),
+        role: "notary",
+        fullName: FIXTURES.notario.fullName,
+        isActive: true,
+        createdAt: now,
+        updatedAt: now
+      },
+      {
+        id: createId(),
+        email: FIXTURES.certificador.email,
+        passwordHash: await hash(FIXTURES.certificador.password),
+        role: "verifier",
+        fullName: FIXTURES.certificador.fullName,
+        isActive: true,
+        createdAt: now,
+        updatedAt: now
+      },
+      {
+        id: createId(),
         email: FIXTURES.admin.email,
         passwordHash: await hash(FIXTURES.admin.password),
         role: "admin",
@@ -158,6 +200,72 @@ export default async function setup() {
         createdAt: now
       }
     ])
+    .execute();
+
+  const investor = await db
+    .selectFrom("User")
+    .select("id")
+    .where("email", "=", FIXTURES.investor.email)
+    .executeTakeFirstOrThrow();
+
+  const certificador = await db
+    .selectFrom("User")
+    .select("id")
+    .where("email", "=", FIXTURES.certificador.email)
+    .executeTakeFirstOrThrow();
+
+  await db
+    .insertInto("ProjectMember")
+    .values([
+      {
+        id: createId(),
+        projectId: proyecto.id,
+        userId: investor.id,
+        membershipRole: "buyer",
+        createdAt: now
+      },
+      {
+        id: createId(),
+        projectId: proyecto.id,
+        userId: certificador.id,
+        membershipRole: "verifier",
+        createdAt: now
+      }
+    ])
+    .execute();
+
+  // La unidad del investor y su contrato: sin ellos no hay dossier, ni
+  // capital, ni directorio de investors que testear. El contrato existe
+  // porque la invitación se aceptó — acá se planta el resultado.
+  const unidad = await db
+    .insertInto("Unit")
+    .values({
+      id: createId(),
+      projectId: proyecto.id,
+      unitReference: FIXTURES.unidad.unitReference,
+      status: "sold",
+      floor: 3,
+      sizeM2: 72,
+      priceMinorUnits: 12_000_000,
+      currency: "USD",
+      investorId: investor.id,
+      createdAt: now,
+      updatedAt: now
+    })
+    .returningAll()
+    .executeTakeFirstOrThrow();
+
+  await db
+    .insertInto("Contract")
+    .values({
+      id: createId(),
+      unitId: unidad.id,
+      investorId: investor.id,
+      totalMinorUnits: 12_000_000,
+      currency: "USD",
+      signedAt: now,
+      createdAt: now
+    })
     .execute();
 
   // Segundo proyecto, sin ningún miembro: es contra lo que se mide que el

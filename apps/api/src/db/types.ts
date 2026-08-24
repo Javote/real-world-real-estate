@@ -17,10 +17,16 @@ export { STAGE_STATES } from "@plataforma/shared";
 export const ONCHAIN_EVENT_STATUSES = ["Pending", "Confirmed", "Failed"] as const;
 
 /** `event_type` de M1-D2 §2. Hoy solo se escriben los dos del hilo de stages. */
+// Las seis operaciones on-chain de M2-D5 §7 (`M3-SC-01..06`), más los dos
+// eventos del hilo de stages.
 export const ONCHAIN_EVENT_TYPES = [
   "STAGE_CREATED",
   "STAGE_TRANSITION",
-  "EVIDENCE_ANCHOR"
+  "EVIDENCE_ANCHOR",
+  "INVITATION_ACCEPTED",
+  "PAYMENT_RELEASE",
+  "DOSSIER_SIGNATURE",
+  "DOCUMENT_ANCHOR"
 ] as const;
 export const EVIDENCE_TYPES = ["document", "photo", "certificate"] as const;
 
@@ -135,6 +141,8 @@ export interface OnChainEventTable {
   stageId: string | null;
   /** Solo en `EVIDENCE_ANCHOR`: qué archivo ancló esta transacción. */
   evidenceId: string | null;
+  /** Ref opaca al registro off-chain anclado (release, invitación, dossier, documento). */
+  referenceId: string | null;
   eventIndex: number;
   eventType: OnChainEventType;
   fromState: StageState | null;
@@ -193,6 +201,78 @@ export interface FavoriteTable {
   createdAt: SqliteTimestamp;
 }
 
+export interface UnitTable {
+  id: GeneratedId;
+  projectId: string;
+  unitReference: string;
+  status: string;
+  floor: number | null;
+  sizeM2: number | null;
+  /** Unidades mínimas enteras (regla 1). */
+  priceMinorUnits: number | null;
+  currency: string | null;
+  investorId: string | null;
+  createdAt: SqliteTimestamp;
+  updatedAt: SqliteTimestamp;
+}
+
+export interface InvitationTable {
+  id: GeneratedId;
+  projectId: string;
+  unitId: string;
+  investorEmail: string;
+  amountMinorUnits: number;
+  currency: string;
+  status: string;
+  createdById: string | null;
+  createdAt: SqliteTimestamp;
+  respondedAt: SqliteTimestamp | null;
+}
+
+export interface ContractTable {
+  id: GeneratedId;
+  unitId: string;
+  investorId: string;
+  totalMinorUnits: number;
+  currency: string;
+  signedAt: SqliteTimestamp | null;
+  createdAt: SqliteTimestamp;
+}
+
+export interface PaymentReleaseTable {
+  id: GeneratedId;
+  contractId: string;
+  stageNumber: number;
+  amountMinorUnits: number;
+  releasedById: string | null;
+  releasedAt: SqliteTimestamp;
+}
+
+export interface DossierTable {
+  id: GeneratedId;
+  unitId: string;
+  /** El hash maestro que compromete el artefacto compilado (M2-D4 P8). */
+  masterHash: string;
+  compiledAt: SqliteTimestamp;
+  shareToken: string | null;
+  status: string;
+  signedById: string | null;
+  signedAt: SqliteTimestamp | null;
+  rejectionNote: string | null;
+}
+
+export interface NotificationTable {
+  id: GeneratedId;
+  userId: string;
+  category: string;
+  /** Clave de traducción, nunca copy (regla 15). */
+  titleKey: string;
+  paramsJson: string | null;
+  unitId: string | null;
+  readAt: SqliteTimestamp | null;
+  createdAt: SqliteTimestamp;
+}
+
 export interface Database {
   User: UserTable;
   Project: ProjectTable;
@@ -203,6 +283,12 @@ export interface Database {
   OnChainEvent: OnChainEventTable;
   SimulatedLedgerUtxo: SimulatedLedgerUtxoTable;
   Favorite: FavoriteTable;
+  Unit: UnitTable;
+  Invitation: InvitationTable;
+  Contract: ContractTable;
+  PaymentRelease: PaymentReleaseTable;
+  Dossier: DossierTable;
+  Notification: NotificationTable;
   EvidenceBundle: EvidenceBundleTable;
   EvidenceBundleItem: EvidenceBundleItemTable;
 }

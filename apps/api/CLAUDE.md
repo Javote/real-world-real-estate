@@ -15,8 +15,11 @@ append-only y el shape de `Project`/`Evidence`.
 ## Antes de tocar un endpoint
 
 `M2-D5` §4-6 trae el path exacto, los test IDs y el work stream; `M2-D6` §9 el baseline. Los paths
-van **scopeados por rol** (`/investor/`, `/developer/`, `/notary/`, `/certifier/`) — de los ~80
-endpoints del backlog **hoy conforman 2**: `POST /auth/login` y `GET /auth/me`.
+van **scopeados por rol** (`/investor/`, `/developer/`, `/notary/`, `/certifier/`). El backlog de
+M2-D5 §4-6 está **completo**: los 18 work streams `M3-BE-XX` tienen sus rutas montadas y con test.
+
+Lo que queda fuera del backlog y sigue vivo: el CRUD genérico (`/projects`, `/users`, `/evidence`),
+que la superficie del entregable no consume pero los tests y el seed sí.
 
 ## Checklist de un endpoint nuevo
 
@@ -31,6 +34,33 @@ endpoints del backlog **hoy conforman 2**: `POST /auth/login` y `GET /auth/me`.
 6. Path y test ID **idénticos** a los de M2-D5.
 
 ## Trampas verificadas
+
+- **2026-08-24 · Un `router.use(guard)` en un router montado sobre `/api/v1` pelado corre para
+  TODA request que le entre, matcheen o no sus rutas.** `developer.routes.ts` tenía
+  `router.use(requireRole("admin", "developer"))`, y como estaba montado en `app.use("/api/v1",
+  developerRoutes)` contestaba **403 a `GET /api/v1/investor/favorites` de un buyer** antes de que
+  el router de favoritos se consultara siquiera: el rol global de OTRA superficie cortaba la
+  request. Lo mismo hacía `router.use(authenticate)` con `GET /public/dossier/:token`, que es uno
+  de los dos endpoints sin sesión del backlog (M2-D5 §2.2) — devolvía 401.
+  **Por qué no lo vio nadie:** la suite no tenía **ningún fixture activo que no fuera developer o
+  admin**. Cada test probaba su propia superficie con el rol correcto, y el 403 cruzado no aparecía
+  porque nunca se pedía una superficie de investor con un token de investor. Ahora
+  `test/global-setup.ts` planta un buyer, un notary y un verifier activos.
+  **Fix:** los routers con guard a nivel de router van montados bajo SU prefijo
+  (`app.use("/api/v1/developer", developerRoutes)`), con los paths internos sin el prefijo; y
+  `dossierRoutes` va **primero** de todos, antes de cualquier router con `authenticate` global.
+  La alternativa —bajar el guard a cada ruta— deja la puerta abierta a que una ruta nueva se olvide
+  de ponerlo, que es justo lo que D-042 evita.
+  **La lección general:** el orden de montaje en `app.ts` es semántico, no cosmético. Dos routers
+  sobre el mismo prefijo comparten el pipeline: el primero que contesta, contesta por los dos.
+
+- **2026-08-24 · Un evento de commitment sin ref no se puede volver a encontrar.** El TXID de un
+  `PaymentRelease` se buscaba matcheando el commitment del `OnChainEvent`, y el commitment de un
+  release incluye su `releasedAt` — así que el join no matcheaba nunca y el patrón P10 mostraba las
+  liberaciones **sin prueba**, indistinguibles de las no ancladas. `OnChainEvent` ahora tiene
+  `referenceId`: la ref opaca al registro off-chain que el evento ancla (release, invitación,
+  dossier, documento). Es la misma que ya se le pasaba al `AnchorPort`, solo que ahora persistida.
+  **Antes de anclar algo nuevo, preguntá cómo se va a volver del registro a su TXID.**
 
 - **2026-08-23 · La FSM del stage no estaba aplicada acá, y `contracts/` creía que sí** — cerrado
   el mismo día (D-059). `PATCH /milestones/:id/state` validaba el enum con Zod y escribía: aceptaba

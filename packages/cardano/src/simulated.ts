@@ -8,7 +8,7 @@ import {
   type AnchorProof,
   type AnchorReceipt,
   AnchorRejectedError,
-  type EvidenceAnchorInput,
+  type CommitmentAnchorInput,
   type MetadataAnchorReceipt,
   type OpenThreadInput,
   type OutputRef
@@ -122,7 +122,10 @@ export class SimulatedAnchorAdapter implements AnchorPort {
     return this.commit(txid, next);
   }
 
-  async anchorEvidence({ sha256, reference }: EvidenceAnchorInput): Promise<MetadataAnchorReceipt> {
+  async anchorCommitment({
+    sha256,
+    reference
+  }: CommitmentAnchorInput): Promise<MetadataAnchorReceipt> {
     if (!/^[0-9a-f]{64}$/.test(sha256)) {
       reject("BAD_EVIDENCE_HASH", `No es un SHA-256 en hex: ${sha256}`);
     }

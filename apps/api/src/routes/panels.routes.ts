@@ -7,6 +7,7 @@ import type {
 } from "@plataforma/shared";
 import { Router } from "express";
 import type { UserRole } from "../db/types";
+import { compileDossier } from "../domain/dossier";
 import { db } from "../lib/db";
 import { authenticate, projectScope, requireRole } from "../middlewares/auth";
 
@@ -14,11 +15,12 @@ import { authenticate, projectScope, requireRole } from "../middlewares/auth";
 // que es la forma que pide el backlog (D-066): `/developer/*`, `/notary/*`,
 // `/certifier/*`.
 //
-// **Qué se puede calcular hoy, y qué no.** Tres entidades del modelo de M1-D2
-// todavía no existen —`Unit`, `Contract`, `Dossier`— y con ellas se calculan
-// varios de los KPI de las capturas. Esos van en `null`, no en cero: cero
-// afirma "no hay ninguna", `null` dice "no hay con qué contarlas". El front los
-// dibuja con el guión.
+// **Qué se puede calcular hoy, y qué no.** Las tres entidades que faltaban
+// —`Unit`, `Contract`, `Dossier`— ya existen, así que los KPI que dependían de
+// ellas se cuentan de verdad. Los schemas los siguen aceptando nullable a
+// propósito: `null` es "no hay con qué contarlas" y cero es "no hay ninguna",
+// y esa distinción tiene que sobrevivir a que hoy no haga falta usarla. Un
+// proyecto sin unidades cargadas devuelve 0 unidades, que ES la verdad.
 //
 // Ningún endpoint de acá inventa un número.
 
@@ -40,8 +42,8 @@ router.get("/developer/kpis", requireRole("admin", "developer"), async (req, res
   if (ids.length === 0) {
     const vacio: DeveloperKpis = {
       activeProjects: 0,
-      totalUnits: null,
-      capitalRaisedMinorUnits: null,
+      totalUnits: 0,
+      capitalRaisedMinorUnits: 0,
       averageProgress: 0,
       verifiedDocuments: 0
     };
@@ -62,13 +64,28 @@ router.get("/developer/kpis", requireRole("admin", "developer"), async (req, res
     .where("status", "=", "Confirmed")
     .executeTakeFirst();
 
+  const unidades = await db
+    .selectFrom("Unit")
+    .select((eb) => eb.fn.countAll<number>().as("total"))
+    .where("projectId", "in", ids)
+    .executeTakeFirst();
+
+  // "Capital levantado" = suma de los contratos firmados. **No es plata que la
+  // plataforma tenga** (D-021): es un monto declarado, en unidades mínimas
+  // enteras (regla 1).
+  const contratos = await db
+    .selectFrom("Contract")
+    .innerJoin("Unit", "Unit.id", "Contract.unitId")
+    .select((eb) => eb.fn.sum<number>("Contract.totalMinorUnits").as("total"))
+    .where("Unit.projectId", "in", ids)
+    .executeTakeFirst();
+
   const completados = stages.filter((s) => s.state === "Completed").length;
 
   const kpis: DeveloperKpis = {
     activeProjects: ids.length,
-    // `Unit` y `Contract` no existen todavía: no hay con qué contar.
-    totalUnits: null,
-    capitalRaisedMinorUnits: null,
+    totalUnits: Number(unidades?.total ?? 0),
+    capitalRaisedMinorUnits: Number(contratos?.total ?? 0),
     averageProgress: stages.length ? Math.round((completados / stages.length) * 100) : 0,
     verifiedDocuments: Number(anclados?.total ?? 0)
   };
@@ -118,22 +135,75 @@ router.get("/certifier/assignments", requireRole("admin", "verifier"), async (re
   return res.json(filas satisfies CertifierAssignment[]);
 });
 
-router.get("/notary/kpis", requireRole("admin", "notary"), async (_req, res) => {
-  // **Los cuatro en null a propósito.** El dossier (M2-D4 P8) no existe como
-  // entidad: no hay dossiers pendientes que contar, ni firmados, ni unidades en
-  // revisión. Devolver ceros diría que el notario no tiene trabajo; `null` dice
-  // que todavía no hay modelo. El panel se dibuja igual, con su empty-state.
+/**
+ * Fila 51 — los KPI del notario. **Ya no son `null`.**
+ *
+ * Lo eran mientras el dossier no existía como entidad: `null` decía "no hay
+ * modelo" y cero habría dicho "no tenés trabajo", que es una afirmación
+ * distinta. Ahora `Dossier` existe y los cuatro se cuentan de verdad — el
+ * schema los sigue aceptando nullable porque la distinción vale para los KPI
+ * del developer que todavía no se pueden calcular.
+ */
+router.get("/notary/kpis", requireRole("admin", "notary"), async (req, res) => {
+  const filas = await db
+    .selectFrom("Dossier")
+    .select(["id", "status", "signedById", "unitId"])
+    .execute();
+
+  // Un admin ve el total; un notario, lo que firmó él más la cola común.
+  const firmados = filas.filter(
+    (f) => f.status === "signed" && (req.user!.role === "admin" || f.signedById === req.user!.id)
+  );
+  const pendientes = filas.filter((f) => f.status === "compiled");
+
   const kpis: NotaryKpis = {
-    pendingDossiers: null,
-    verified: null,
-    signed: null,
-    unitsUnderReview: null
+    pendingDossiers: pendientes.length,
+    // "Verificado" acá es el dossier revisado y resuelto: firmado o rechazado.
+    // No afirma nada sobre la obra (D-026).
+    verified: filas.filter((f) => f.status !== "compiled").length,
+    signed: firmados.length,
+    unitsUnderReview: new Set(pendientes.map((f) => f.unitId)).size
   };
   return res.json(kpis);
 });
 
+/**
+ * Fila 51 — la cola de revisión, con la barra de completitud.
+ *
+ * `completeness` es **qué fracción de la evidencia del dossier tiene su prueba
+ * sustanciada**, no "cuán listo está": un dossier al 60% tiene el 40% de sus
+ * artefactos todavía sin TXID (regla 17).
+ */
 router.get("/notary/dossiers/pending", requireRole("admin", "notary"), async (_req, res) => {
-  return res.json([] satisfies PendingDossier[]);
+  const filas = await db
+    .selectFrom("Dossier")
+    .innerJoin("Unit", "Unit.id", "Dossier.unitId")
+    .leftJoin("User", "User.id", "Unit.investorId")
+    .select([
+      "Dossier.id as dossierId",
+      "Dossier.unitId as unitId",
+      "Unit.unitReference as unitReference",
+      "User.fullName as investorName"
+    ])
+    .where("Dossier.status", "=", "compiled")
+    .orderBy("Dossier.compiledAt", "asc")
+    .limit(50)
+    .execute();
+
+  const pendientes: PendingDossier[] = [];
+  for (const fila of filas) {
+    const dossier = await compileDossier(fila.unitId);
+    pendientes.push({
+      dossierId: fila.dossierId,
+      unitLabel: fila.unitReference,
+      // Sin investor asignado la unidad no se vendió todavía; el panel muestra
+      // la referencia de la unidad y no un nombre inventado.
+      investorName: fila.investorName ?? fila.unitReference,
+      completeness: dossier?.completeness ?? 0
+    });
+  }
+
+  return res.json(pendientes);
 });
 
 export default router;

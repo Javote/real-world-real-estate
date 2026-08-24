@@ -58,7 +58,7 @@ export interface AdvanceThreadInput {
  * El hilo prueba *este stage se completó con esta evidencia y en este orden*.
  * Ninguno reemplaza al otro (D-061).
  */
-export interface EvidenceAnchorInput {
+export interface CommitmentAnchorInput {
   /** SHA-256 del archivo, en hex. Es lo único que viaja: nunca el archivo, ni
    * su nombre, ni quién lo subió (regla 2). */
   sha256: string;
@@ -78,9 +78,14 @@ export interface AnchorPort {
   readonly mode: AnchorMode;
   openThread(input: OpenThreadInput): Promise<AnchorReceipt>;
   advanceThread(input: AdvanceThreadInput): Promise<AnchorReceipt>;
-  /** Ancla el hash de un archivo por metadata. Lo dispara el admin, nunca el
-   * upload (D-061). */
-  anchorEvidence(input: EvidenceAnchorInput): Promise<MetadataAnchorReceipt>;
+  /**
+   * Ancla un commitment por metadata: el hash de un archivo (D-061), la
+   * aceptación de una invitación, una liberación, una firma de notario. Todo lo
+   * que M2-D5 anota con "(→ TXID)" y no mueve el hilo de un stage.
+   *
+   * Para evidencia lo dispara el admin, nunca el upload.
+   */
+  anchorCommitment(input: CommitmentAnchorInput): Promise<MetadataAnchorReceipt>;
   verify(txid: string): Promise<AnchorProof | null>;
   awaitConfirmation(txid: string): Promise<AnchorProof>;
 }

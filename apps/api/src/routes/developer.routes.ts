@@ -1,7 +1,7 @@
-import { INITIAL_STAGE_STATE } from "@plataforma/shared";
 import { type Request, Router } from "express";
 import { z } from "zod";
 import { createId } from "../db/id";
+import { anchorCommitmentEvent } from "../domain/anchoring";
 import { db } from "../lib/db";
 import { authenticate, projectScope, requireProjectAccess, requireRole } from "../middlewares/auth";
 import { writeAuditLog } from "../utils/audit";
@@ -26,7 +26,7 @@ function misProyectos(userId: string, role: "admin" | "developer") {
 }
 
 /** Fila 35-36 — el listado de proyectos del developer, con su avance. */
-router.get("/developer/projects", async (req, res) => {
+router.get("/projects", async (req, res) => {
   const proyectos = await misProyectos(req.user!.id, req.user!.role as "admin" | "developer")
     .orderBy("createdAt", "desc")
     .execute();
@@ -55,7 +55,7 @@ router.get("/developer/projects", async (req, res) => {
 
 /** Fila 37 — el detalle, que en la captura es una grilla de acciones + 3 stats. */
 router.get(
-  "/developer/projects/:id",
+  "/projects/:id",
   requireProjectAccess({ param: "id" }, ["developer"]),
   async (req: Request<{ id: string }>, res) => {
     const proyecto = await db
@@ -88,7 +88,7 @@ router.get(
 );
 
 /** Fila 34b-34c — crear un desarrollo. */
-router.post("/developer/projects", async (req, res) => {
+router.post("/projects", async (req, res) => {
   const schema = z.strictObject({
     name: z.string().min(1),
     slug: z.string().min(1),
@@ -147,7 +147,7 @@ router.post("/developer/projects", async (req, res) => {
 });
 
 /** Fila 45 — el avance de obra a través de todos los proyectos. */
-router.get("/developer/progress", async (req, res) => {
+router.get("/progress", async (req, res) => {
   const ids = (
     await misProyectos(req.user!.id, req.user!.role as "admin" | "developer").execute()
   ).map((p) => p.id);
@@ -180,7 +180,7 @@ router.get("/developer/progress", async (req, res) => {
  * de stage y documento suelto de proyecto (M3-SC-06). Cuando lo distinga, esta
  * ruta filtra; hoy devuelve todo con su estado real de prueba.
  */
-router.get("/developer/documents", async (req, res) => {
+router.get("/documents", async (req, res) => {
   const schema = z.object({ status: z.enum(["anchored", "pending"]).optional() });
   const parsed = schema.safeParse(req.query);
   if (!parsed.success) return res.status(400).json(parsed.error.flatten());
@@ -225,7 +225,7 @@ router.get("/developer/documents", async (req, res) => {
  * stage se re-ancla tras una remediación, el evento original queda y se agrega
  * uno nuevo. Esta ruta solo lee.
  */
-router.get("/developer/audit-log", async (req, res) => {
+router.get("/audit-log", async (req, res) => {
   const schema = z.object({
     category: z.string().optional(),
     cursor: z.string().optional(),
@@ -264,6 +264,78 @@ router.get("/developer/audit-log", async (req, res) => {
     items,
     nextCursor: ultima ? new Date(ultima.createdAt).toISOString() : null
   });
+});
+
+/**
+ * Fila 46-47 — anclar un documento suelto — **M3-BE-14** y **M3-SC-06**.
+ *
+ * "Suelto" quiere decir que no cuelga del cierre de un stage: un permiso, un
+ * plano aprobado, un certificado externo. El archivo ya está subido (la subida
+ * es `POST /projects/:id/evidence`); esto es el segundo paso, el que el usuario
+ * inicia apretando "Anclar" en el `DocumentCard` — **nunca automático**
+ * (M2-D4 §6.3).
+ *
+ * Lo que se ancla es el SHA-256 del archivo, que es el ticket de entrada a la
+ * cadena de prueba (D-027). Un documento sin hash no se puede anclar y no se
+ * puede mostrar como verificado: es 400, no un anclaje vacío.
+ *
+ * **Idempotente** (regla 8): si ese documento ya tiene su TXID, devuelve el
+ * mismo evento con 200 en vez de gastar otra transacción.
+ */
+router.post("/documents", async (req, res) => {
+  const schema = z.strictObject({ evidenceId: z.string().min(1) });
+  const parsed = schema.safeParse(req.body);
+  if (!parsed.success) return res.status(400).json(parsed.error.flatten());
+
+  const documento = await db
+    .selectFrom("Evidence")
+    .select(["id", "projectId", "stageId", "sha256Hash"])
+    .where("id", "=", parsed.data.evidenceId)
+    .executeTakeFirst();
+
+  if (!documento) return res.status(404).json({ message: "Document not found" });
+
+  // La segunda capa de autorización, hecha a mano porque el id que llega es de
+  // la evidencia y no del proyecto: el developer ancla documentos de SUS
+  // proyectos. Sin esto, cualquier developer anclaría el documento de otro.
+  const propio = await misProyectos(req.user!.id, req.user!.role as "admin" | "developer")
+    .where("Project.id", "=", documento.projectId)
+    .executeTakeFirst();
+
+  if (!propio) return res.status(403).json({ message: "Forbidden" });
+
+  if (!documento.sha256Hash) {
+    return res.status(400).json({ message: "Document has no hash", code: "NO_HASH" });
+  }
+
+  const yaAnclado = await db
+    .selectFrom("OnChainEvent")
+    .selectAll()
+    .where("evidenceId", "=", documento.id)
+    .where("txid", "is not", null)
+    .executeTakeFirst();
+
+  if (yaAnclado) return res.status(200).json(yaAnclado);
+
+  const anchor = await anchorCommitmentEvent({
+    projectId: documento.projectId,
+    stageId: documento.stageId,
+    evidenceId: documento.id,
+    eventType: "DOCUMENT_ANCHOR",
+    commitment: documento.sha256Hash,
+    // Ref opaca: el id del registro, jamás el nombre del archivo (regla 2).
+    reference: documento.id
+  });
+
+  await writeAuditLog({
+    actorUserId: req.user!.id,
+    action: "ANCHOR_DOCUMENT",
+    entityType: "Evidence",
+    entityId: documento.id,
+    metadata: { txid: anchor.txid, status: anchor.status }
+  });
+
+  return res.status(201).json(anchor);
 });
 
 export default router;

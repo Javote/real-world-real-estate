@@ -23,7 +23,7 @@ afterAll(async () => {
 });
 
 describe("GET /developer/kpis", () => {
-  it("calcula lo que puede y deja en null lo que necesita entidades que no existen", async () => {
+  it("cuenta unidades y capital de las entidades reales, sin inventar nada", async () => {
     const res = await request(app)
       .get("/api/v1/developer/kpis")
       .set("Authorization", `Bearer ${tokenDev}`);
@@ -33,10 +33,12 @@ describe("GET /developer/kpis", () => {
     expect(typeof res.body.averageProgress).toBe("number");
     expect(typeof res.body.verifiedDocuments).toBe("number");
 
-    // **La distinción que importa:** `Unit` y `Contract` no existen, así que
-    // estos dos son null y no cero. Cero afirmaría "no hay unidades vendidas".
-    expect(res.body.totalUnits).toBeNull();
-    expect(res.body.capitalRaisedMinorUnits).toBeNull();
+    // `Unit` y `Contract` ya existen, así que estos dos se cuentan de verdad.
+    // El piso es lo que planta el fixture —una unidad, un contrato— y no un
+    // total exacto: la suite comparte una base y otros archivos crean unidades
+    // sobre el mismo proyecto mientras este test corre.
+    expect(res.body.totalUnits).toBeGreaterThanOrEqual(1);
+    expect(res.body.capitalRaisedMinorUnits).toBeGreaterThanOrEqual(12_000_000);
   });
 
   it("el avance promedio está entre 0 y 100", async () => {
@@ -87,28 +89,54 @@ describe("GET /certifier/kpis y /certifier/assignments", () => {
 });
 
 describe("GET /notary/*", () => {
-  it("devuelve null en los cuatro KPI: el dossier no existe como entidad", async () => {
+  it("cuenta los dossiers reales, y cero es cero de verdad", async () => {
     const res = await request(app)
       .get("/api/v1/notary/kpis")
       .set("Authorization", `Bearer ${tokenAdmin}`);
 
     expect(res.status).toBe(200);
-    // Cero diría "el notario no tiene trabajo". Null dice "todavía no hay
-    // modelo de dossier". Son cosas distintas y el panel las muestra distinto.
-    expect(res.body).toEqual({
-      pendingDossiers: null,
-      verified: null,
-      signed: null,
-      unitsUnderReview: null
-    });
+    // Antes los cuatro eran `null` porque `Dossier` no existía. Ahora existe y
+    // se cuentan de verdad; la distinción null/cero sigue viva en el schema,
+    // que es donde importa.
+    //
+    // **No se afirman valores exactos a propósito:** la suite comparte una
+    // sola base, y `dossier.test.ts` compila y firma un dossier. Fijar ceros
+    // acá haría que este test dependa del orden de los archivos, que es
+    // justamente el tipo de verde frágil que no queremos.
+    for (const kpi of ["pendingDossiers", "verified", "signed", "unitsUnderReview"]) {
+      expect(typeof res.body[kpi]).toBe("number");
+      expect(res.body[kpi]).toBeGreaterThanOrEqual(0);
+    }
+
+    const total = await db
+      .selectFrom("Dossier")
+      .select((eb) => eb.fn.countAll<number>().as("total"))
+      .executeTakeFirstOrThrow();
+
+    // Pendiente + resuelto = todos: ningún dossier se cuenta dos veces ni se
+    // pierde.
+    expect(res.body.pendingDossiers + res.body.verified).toBe(Number(total.total));
+    expect(res.body.signed).toBeLessThanOrEqual(res.body.verified);
   });
 
-  it("la lista de dossiers pendientes está vacía, no inventada", async () => {
+  it("la cola de revisión trae solo dossiers compilados, con su completitud real", async () => {
     const res = await request(app)
       .get("/api/v1/notary/dossiers/pending")
       .set("Authorization", `Bearer ${tokenAdmin}`);
 
     expect(res.status).toBe(200);
-    expect(res.body).toEqual([]);
+    expect(Array.isArray(res.body)).toBe(true);
+
+    for (const pendiente of res.body) {
+      expect(pendiente.completeness).toBeGreaterThanOrEqual(0);
+      expect(pendiente.completeness).toBeLessThanOrEqual(100);
+      // Un dossier firmado no está pendiente de revisión.
+      const fila = await db
+        .selectFrom("Dossier")
+        .select("status")
+        .where("id", "=", pendiente.dossierId)
+        .executeTakeFirstOrThrow();
+      expect(fila.status).toBe("compiled");
+    }
   });
 });

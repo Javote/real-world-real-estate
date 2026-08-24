@@ -217,4 +217,62 @@ router.patch(
   }
 );
 
+/**
+ * Fila 09-12 — el mismo detalle de stage bajo el path anidado que el backlog
+ * pide (INV-STAGE-DETAIL-001), con el bundle que lo compromete.
+ *
+ * **404 y no 403 si el stage es de otro proyecto**: el id existe, pero bajo
+ * este proyecto no, y confirmar su existencia le diría a alguien con acceso a
+ * un proyecto que hay un stage con ese id en otro.
+ */
+router.get(
+  "/projects/:id/stages/:stageId",
+  requireProjectAccess({ param: "id" }, ANY_MEMBERSHIP),
+  async (req: Request<{ id: string; stageId: string }>, res) => {
+    const stage = await db
+      .selectFrom("Stage")
+      .selectAll()
+      .where("id", "=", req.params.stageId)
+      .where("projectId", "=", req.params.id)
+      .executeTakeFirst();
+
+    if (!stage) return res.status(404).json({ message: "Stage not found" });
+
+    const [evidences, bundle, eventos] = await Promise.all([
+      // Sin `storagePath` (D-011): esta lista sale al cliente.
+      db
+        .selectFrom("Evidence")
+        .select([
+          "id",
+          "evidenceType",
+          "category",
+          "authoritative",
+          "originalFilename",
+          "mimeType",
+          "sizeBytes",
+          "sha256Hash",
+          "uploadedAt"
+        ])
+        .where("stageId", "=", stage.id)
+        .orderBy("uploadedAt", "asc")
+        .execute(),
+      db
+        .selectFrom("EvidenceBundle")
+        .select(["id", "commitmentHash", "createdAt"])
+        .where("stageId", "=", stage.id)
+        .orderBy("createdAt", "desc")
+        .limit(1)
+        .executeTakeFirst(),
+      db
+        .selectFrom("OnChainEvent")
+        .select(["eventType", "toState", "commitment", "txid", "status", "createdAt"])
+        .where("stageId", "=", stage.id)
+        .orderBy("eventIndex", "asc")
+        .execute()
+    ]);
+
+    return res.json({ ...stage, evidences, bundle: bundle ?? null, events: eventos });
+  }
+);
+
 export default router;
