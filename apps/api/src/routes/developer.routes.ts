@@ -1,10 +1,18 @@
+import fs from "node:fs";
+import path from "node:path";
+import type { DeveloperKpis } from "@plataforma/shared";
 import { type Request, Router } from "express";
 import { z } from "zod";
 import { createId } from "../db/id";
-import { anchorCommitmentEvent } from "../domain/anchoring";
+import { anchorCommitmentEvent, commitmentOf } from "../domain/anchoring";
+import { notifyUnitInvestor } from "../domain/notify";
+import { crearBundle } from "../domain/stage-transition";
 import { db } from "../lib/db";
+import { storage } from "../lib/storage";
+import { uploadSingleEvidence } from "../lib/upload";
 import { authenticate, projectScope, requireProjectAccess, requireRole } from "../middlewares/auth";
 import { writeAuditLog } from "../utils/audit";
+import { avancePorProyecto, EVIDENCE_SAFE_COLUMNS, proyectosVisibles } from "./_shared";
 
 // Superficie del developer (M2-D5 filas 34b-34c, 35-36, 37, 45, 46-47, 49).
 //
@@ -337,5 +345,559 @@ router.post("/documents", async (req, res) => {
 
   return res.status(201).json(anchor);
 });
+
+router.get("/kpis", requireRole("admin", "developer"), async (req, res) => {
+  const ids = (await proyectosVisibles(req.user!.id, req.user!.role).execute()).map((p) => p.id);
+
+  if (ids.length === 0) {
+    const vacio: DeveloperKpis = {
+      activeProjects: 0,
+      totalUnits: 0,
+      capitalRaisedMinorUnits: 0,
+      averageProgress: 0,
+      verifiedDocuments: 0
+    };
+    return res.json(vacio);
+  }
+
+  const stages = await db
+    .selectFrom("Stage")
+    .select(["state"])
+    .where("projectId", "in", ids)
+    .execute();
+
+  const anclados = await db
+    .selectFrom("OnChainEvent")
+    .select((eb) => eb.fn.countAll<number>().as("total"))
+    .where("projectId", "in", ids)
+    .where("eventType", "=", "EVIDENCE_ANCHOR")
+    .where("status", "=", "Confirmed")
+    .executeTakeFirst();
+
+  const unidades = await db
+    .selectFrom("Unit")
+    .select((eb) => eb.fn.countAll<number>().as("total"))
+    .where("projectId", "in", ids)
+    .executeTakeFirst();
+
+  // "Capital levantado" = suma de los contratos firmados. **No es plata que la
+  // plataforma tenga** (D-021): es un monto declarado, en unidades mínimas
+  // enteras (regla 1).
+  const contratos = await db
+    .selectFrom("Contract")
+    .innerJoin("Unit", "Unit.id", "Contract.unitId")
+    .select((eb) => eb.fn.sum<number>("Contract.totalMinorUnits").as("total"))
+    .where("Unit.projectId", "in", ids)
+    .executeTakeFirst();
+
+  const completados = stages.filter((s) => s.state === "Completed").length;
+
+  const kpis: DeveloperKpis = {
+    activeProjects: ids.length,
+    totalUnits: Number(unidades?.total ?? 0),
+    capitalRaisedMinorUnits: Number(contratos?.total ?? 0),
+    averageProgress: stages.length ? Math.round((completados / stages.length) * 100) : 0,
+    verifiedDocuments: Number(anclados?.total ?? 0)
+  };
+
+  return res.json(kpis);
+});
+
+/** Fila 44b — las unidades de un proyecto, del lado del developer. */
+router.get(
+  "/projects/:id/units",
+  requireRole("admin", "developer"),
+  requireProjectAccess({ param: "id" }, ["developer"]),
+  async (req: Request<{ id: string }>, res) => {
+    const unidades = await db
+      .selectFrom("Unit")
+      .selectAll()
+      .where("projectId", "=", req.params.id)
+      .orderBy("unitReference", "asc")
+      .execute();
+
+    return res.json(unidades);
+  }
+);
+
+router.post(
+  "/projects/:id/units",
+  requireRole("admin", "developer"),
+  requireProjectAccess({ param: "id" }, ["developer"]),
+  async (req: Request<{ id: string }>, res) => {
+    const schema = z.strictObject({
+      unitReference: z.string().min(1).max(20),
+      floor: z.number().int().optional(),
+      sizeM2: z.number().int().positive().optional(),
+      // Entero en unidades mínimas: nunca un decimal para dinero (regla 1).
+      priceMinorUnits: z.number().int().nonnegative().optional(),
+      currency: z.string().length(3).optional()
+    });
+
+    const parsed = schema.safeParse(req.body);
+    if (!parsed.success) return res.status(400).json(parsed.error.flatten());
+
+    const ahora = new Date();
+    const unidad = await db
+      .insertInto("Unit")
+      .values({
+        id: createId(),
+        projectId: req.params.id,
+        unitReference: parsed.data.unitReference,
+        status: "available",
+        floor: parsed.data.floor ?? null,
+        sizeM2: parsed.data.sizeM2 ?? null,
+        priceMinorUnits: parsed.data.priceMinorUnits ?? null,
+        currency: parsed.data.currency ?? null,
+        investorId: null,
+        createdAt: ahora,
+        updatedAt: ahora
+      })
+      .returningAll()
+      .executeTakeFirstOrThrow();
+
+    await writeAuditLog({
+      actorUserId: req.user!.id,
+      action: "CREATE_UNIT",
+      entityType: "Unit",
+      entityId: unidad.id
+    });
+
+    return res.status(201).json(unidad);
+  }
+);
+
+router.patch(
+  "/units/:id",
+  requireRole("admin", "developer"),
+  async (req: Request<{ id: string }>, res) => {
+    const schema = z.strictObject({
+      status: z.enum(["available", "reserved", "sold", "delivered"]).optional(),
+      floor: z.number().int().optional(),
+      sizeM2: z.number().int().positive().optional(),
+      priceMinorUnits: z.number().int().nonnegative().optional(),
+      currency: z.string().length(3).optional()
+    });
+
+    const parsed = schema.safeParse(req.body);
+    if (!parsed.success) return res.status(400).json(parsed.error.flatten());
+
+    const unidad = await db
+      .selectFrom("Unit")
+      .selectAll()
+      .where("id", "=", req.params.id)
+      .executeTakeFirst();
+
+    if (!unidad) return res.status(404).json({ message: "Unit not found" });
+
+    // Segunda capa: la unidad no trae `projectId` en el path, así que la
+    // membresía se verifica con el proyecto de la unidad (regla 5).
+    const permitido = await db
+      .selectFrom("Project")
+      .select("id")
+      .where("id", "=", unidad.projectId)
+      .where((eb) => projectScope(eb, req.user!.role, req.user!.id, ["developer"]))
+      .executeTakeFirst();
+
+    if (!permitido) return res.status(403).json({ message: "Forbidden" });
+
+    const actualizada = await db
+      .updateTable("Unit")
+      .set({ ...parsed.data, updatedAt: new Date() })
+      .where("id", "=", unidad.id)
+      .returningAll()
+      .executeTakeFirstOrThrow();
+
+    return res.json(actualizada);
+  }
+);
+
+/** Fila 44 — el inventario cross-proyecto del developer. */
+router.get("/units", requireRole("admin", "developer"), async (req, res) => {
+  const proyectos = await db
+    .selectFrom("Project")
+    .select("id")
+    .where((eb) => projectScope(eb, req.user!.role, req.user!.id, ["developer"]))
+    .execute();
+
+  const ids = proyectos.map((p) => p.id);
+  if (ids.length === 0) return res.json([]);
+
+  const unidades = await db
+    .selectFrom("Unit")
+    .innerJoin("Project", "Project.id", "Unit.projectId")
+    .select([
+      "Unit.id as id",
+      "Unit.unitReference as unitReference",
+      "Unit.status as status",
+      "Unit.priceMinorUnits as priceMinorUnits",
+      "Unit.currency as currency",
+      "Unit.investorId as investorId",
+      "Project.id as projectId",
+      "Project.name as projectName"
+    ])
+    .where("Unit.projectId", "in", ids)
+    .execute();
+
+  return res.json(unidades);
+});
+
+/** Fila 39 — el developer emite la invitación. */
+router.post(
+  "/projects/:id/invitations",
+  requireRole("admin", "developer"),
+  requireProjectAccess({ param: "id" }, ["developer"]),
+  async (req: Request<{ id: string }>, res) => {
+    const schema = z.strictObject({
+      unitId: z.string().min(1),
+      investorEmail: z.string().email(),
+      amountMinorUnits: z.number().int().positive(),
+      currency: z.string().length(3)
+    });
+
+    const parsed = schema.safeParse(req.body);
+    if (!parsed.success) return res.status(400).json(parsed.error.flatten());
+
+    const unidad = await db
+      .selectFrom("Unit")
+      .selectAll()
+      .where("id", "=", parsed.data.unitId)
+      .where("projectId", "=", req.params.id)
+      .executeTakeFirst();
+
+    if (!unidad) return res.status(400).json({ message: "Unit does not belong to project" });
+
+    const ahora = new Date();
+    const invitacion = await db
+      .insertInto("Invitation")
+      .values({
+        id: createId(),
+        projectId: req.params.id,
+        unitId: unidad.id,
+        investorEmail: parsed.data.investorEmail,
+        amountMinorUnits: parsed.data.amountMinorUnits,
+        currency: parsed.data.currency,
+        status: "pending",
+        createdById: req.user!.id,
+        createdAt: ahora,
+        respondedAt: null
+      })
+      .returningAll()
+      .executeTakeFirstOrThrow();
+
+    // La unidad queda reservada mientras la invitación esté pendiente.
+    await db
+      .updateTable("Unit")
+      .set({ status: "reserved", updatedAt: ahora })
+      .where("id", "=", unidad.id)
+      .execute();
+
+    await writeAuditLog({
+      actorUserId: req.user!.id,
+      action: "CREATE_INVITATION",
+      entityType: "Invitation",
+      entityId: invitacion.id
+    });
+
+    return res.status(201).json(invitacion);
+  }
+);
+
+/** Fila 40-41 — los contratos de un proyecto, del lado del developer. */
+router.get(
+  "/projects/:id/contracts",
+  requireRole("admin", "developer"),
+  requireProjectAccess({ param: "id" }, ["developer"]),
+  async (req: Request<{ id: string }>, res) => {
+    const contratos = await db
+      .selectFrom("Contract")
+      .innerJoin("Unit", "Unit.id", "Contract.unitId")
+      .innerJoin("User", "User.id", "Contract.investorId")
+      .select([
+        "Contract.id as id",
+        "Contract.totalMinorUnits as totalMinorUnits",
+        "Contract.currency as currency",
+        "Contract.signedAt as signedAt",
+        "Unit.id as unitId",
+        "Unit.unitReference as unitReference",
+        "User.fullName as investorName"
+      ])
+      .where("Unit.projectId", "=", req.params.id)
+      .execute();
+
+    return res.json(contratos);
+  }
+);
+
+/** Fila 40-41 — liberar una etapa. **Ancla** (M3-SC-03). */
+router.post(
+  "/contracts/:id/releases/:stageNum",
+  requireRole("admin", "developer"),
+  async (req: Request<{ id: string; stageNum: string }>, res) => {
+    const schema = z.strictObject({ amountMinorUnits: z.number().int().positive() });
+    const parsed = schema.safeParse(req.body);
+    if (!parsed.success) return res.status(400).json(parsed.error.flatten());
+
+    const stageNumber = Number.parseInt(req.params.stageNum, 10);
+    if (!Number.isInteger(stageNumber) || stageNumber < 1) {
+      return res.status(400).json({ message: "stageNum must be a positive integer" });
+    }
+
+    const contrato = await db
+      .selectFrom("Contract")
+      .innerJoin("Unit", "Unit.id", "Contract.unitId")
+      .select([
+        "Contract.id as id",
+        "Contract.unitId as unitId",
+        "Contract.currency as currency",
+        "Unit.projectId as projectId"
+      ])
+      .where("Contract.id", "=", req.params.id)
+      .executeTakeFirst();
+
+    if (!contrato) return res.status(404).json({ message: "Contract not found" });
+
+    const permitido = await db
+      .selectFrom("Project")
+      .select("id")
+      .where("id", "=", contrato.projectId)
+      .where((eb) => projectScope(eb, req.user!.role, req.user!.id, ["developer"]))
+      .executeTakeFirst();
+
+    if (!permitido) return res.status(403).json({ message: "Forbidden" });
+
+    // **La liberación exige que la etapa esté certificada.** El entregable lo
+    // dice: "the developer initiates [the release] after the certifier has
+    // issued the stage's certificate". Liberar antes sería afirmar un avance
+    // que nadie verificó.
+    const stage = await db
+      .selectFrom("Stage")
+      .select(["id", "state"])
+      .where("projectId", "=", contrato.projectId)
+      .where("sequenceOrder", "=", stageNumber)
+      .executeTakeFirst();
+
+    if (!stage) return res.status(404).json({ message: "Stage not found" });
+    if (stage.state !== "Completed") {
+      return res.status(409).json({
+        message: "Stage is not certified yet",
+        code: "STAGE_NOT_CERTIFIED",
+        state: stage.state
+      });
+    }
+
+    // Idempotencia (regla 8): el índice único (contrato, etapa) impide liberar
+    // dos veces la misma.
+    const yaLiberada = await db
+      .selectFrom("PaymentRelease")
+      .selectAll()
+      .where("contractId", "=", contrato.id)
+      .where("stageNumber", "=", stageNumber)
+      .executeTakeFirst();
+
+    if (yaLiberada) return res.status(200).json(yaLiberada);
+
+    const ahora = new Date();
+    const release = await db
+      .insertInto("PaymentRelease")
+      .values({
+        id: createId(),
+        contractId: contrato.id,
+        stageNumber,
+        amountMinorUnits: parsed.data.amountMinorUnits,
+        releasedById: req.user!.id,
+        releasedAt: ahora
+      })
+      .returningAll()
+      .executeTakeFirstOrThrow();
+
+    const anchor = await anchorCommitmentEvent({
+      projectId: contrato.projectId,
+      eventType: "PAYMENT_RELEASE",
+      commitment: commitmentOf({
+        contractId: contrato.id,
+        stageNumber,
+        amountMinorUnits: parsed.data.amountMinorUnits,
+        releasedAt: ahora.toISOString()
+      }),
+      reference: release.id,
+      stageId: stage.id
+    });
+
+    await writeAuditLog({
+      actorUserId: req.user!.id,
+      action: "RELEASE_PAYMENT",
+      entityType: "PaymentRelease",
+      entityId: release.id,
+      metadata: { stageNumber, txid: anchor.txid }
+    });
+
+    return res.status(201).json({ ...release, anchor });
+  }
+);
+
+/**
+ * Fila 38 y 44c — la subida del developer, scopeada al stage — **M3-BE-13** y
+ * **M3-SC-02**, patrones P4 y P5.
+ *
+ * Es la MISMA subida que `POST /projects/:id/evidence` con el path y la forma
+ * que el backlog pide, y con una diferencia que no es cosmética: acá el stage
+ * es obligatorio y **la respuesta trae el Merkle root y el TXID en el mismo
+ * request**. M2-D5 §2.2 lo fija: *"back end submits to Cardano; client awaits
+ * success with TXID/Merkle root in the same response"* — es lo que alimenta el
+ * `AnchoringSuccessModal`, la única superficie de prueba que se abre sola
+ * (M2-D4 §6.3).
+ *
+ * **El bundle se rearma en cada subida.** Cada uno es un acta del conjunto que
+ * existía en ese momento, no un índice que se edita: el root ya anclado tiene
+ * que seguir verificando después de que se suba el archivo siguiente.
+ *
+ * **La asimetría de siempre** (D-059): el archivo y su hash quedan escritos
+ * aunque el anclaje falle. En ese caso `anchor.status` es `Failed`, el TXID es
+ * `null` y la UI muestra "Pendiente" — nunca "Verificado" (regla 17).
+ */
+router.post(
+  "/projects/:id/stages/:stageId/evidence",
+  requireRole("admin", "developer"),
+  requireProjectAccess({ param: "id" }, ["developer"]),
+  (req, res, next) => {
+    uploadSingleEvidence(req, res, (err) => (err ? next(err) : next()));
+  },
+  async (req: Request<{ id: string; stageId: string }>, res) => {
+    const { id: projectId, stageId } = req.params;
+
+    if (!req.file) return res.status(400).json({ message: "File is required" });
+
+    const borrarHuerfano = () => {
+      if (req.file && fs.existsSync(req.file.path)) fs.unlinkSync(req.file.path);
+    };
+
+    const schema = z.object({
+      evidenceType: z.enum(["document", "photo", "certificate"]),
+      category: z.string().min(1),
+      description: z.string().max(2000).optional(),
+      authoritative: z
+        .string()
+        .optional()
+        .transform((v) => v === "true")
+    });
+
+    const parsed = schema.safeParse(req.body);
+    if (!parsed.success) {
+      borrarHuerfano();
+      return res.status(400).json(parsed.error.flatten());
+    }
+
+    const stage = await db
+      .selectFrom("Stage")
+      .selectAll()
+      .where("id", "=", stageId)
+      .where("projectId", "=", projectId)
+      .executeTakeFirst();
+
+    if (!stage) {
+      borrarHuerfano();
+      return res.status(404).json({ message: "Stage does not belong to project" });
+    }
+
+    const guardado = await storage.put({
+      localPath: path.resolve(req.file.path),
+      key: `evidence/${projectId}/${req.file.filename}`,
+      contentType: req.file.mimetype
+    });
+
+    if (storage.driver === "s3" && fs.existsSync(req.file.path)) {
+      fs.unlinkSync(req.file.path);
+    }
+
+    const now = new Date();
+    const creada = await db
+      .insertInto("Evidence")
+      .values({
+        id: createId(),
+        projectId,
+        stageId,
+        uploadedById: req.user!.id,
+        evidenceType: parsed.data.evidenceType,
+        category: parsed.data.category,
+        authoritative: parsed.data.authoritative ?? false,
+        originalFilename: req.file.originalname,
+        storedFilename: req.file.filename,
+        mimeType: req.file.mimetype,
+        sizeBytes: req.file.size,
+        storagePath: guardado.storageRef,
+        sha256Hash: guardado.sha256,
+        uploadedAt: now,
+        createdAt: now,
+        updatedAt: now
+      })
+      .returning("id")
+      .executeTakeFirstOrThrow();
+
+    // El acta del conjunto que existe AHORA, con el archivo recién subido
+    // adentro. Nunca es null: acabamos de insertar al menos una evidencia.
+    const merkleRoot = await crearBundle(stage, req.user!.id);
+
+    const bundle = await db
+      .selectFrom("EvidenceBundle")
+      .select(["id", "commitmentHash"])
+      .where("stageId", "=", stage.id)
+      .orderBy("createdAt", "desc")
+      .limit(1)
+      .executeTakeFirstOrThrow();
+
+    // Se ancla el ROOT del bundle, no el hash del archivo: el archivo suelto ya
+    // tiene su propia ruta de anclaje (`POST /evidence/:id/anchor`), y lo que
+    // el patrón P5 muestra es el root con las hojas debajo.
+    const anchor = await anchorCommitmentEvent({
+      projectId,
+      stageId: stage.id,
+      evidenceId: creada.id,
+      eventType: "EVIDENCE_ANCHOR",
+      commitment: bundle.commitmentHash,
+      // Ref opaca: el id del bundle, nunca el nombre del archivo (regla 2).
+      reference: bundle.id
+    });
+
+    const evidence = await db
+      .selectFrom("Evidence")
+      .select(EVIDENCE_SAFE_COLUMNS)
+      .where("id", "=", creada.id)
+      .executeTakeFirstOrThrow();
+
+    // Los investors del proyecto se enteran de que hay evidencia nueva. Con
+    // clave, no con copy (regla 15).
+    const unidades = await db
+      .selectFrom("Unit")
+      .select("id")
+      .where("projectId", "=", projectId)
+      .where("investorId", "is not", null)
+      .execute();
+
+    for (const unidad of unidades) {
+      await notifyUnitInvestor({
+        unitId: unidad.id,
+        category: "document",
+        titleKey: "notifications.evidence.uploaded",
+        params: { stageName: stage.name }
+      });
+    }
+
+    await writeAuditLog({
+      actorUserId: req.user!.id,
+      action: "UPLOAD_STAGE_EVIDENCE",
+      entityType: "Evidence",
+      entityId: creada.id,
+      metadata: { bundleId: bundle.id, merkleRoot, txid: anchor.txid }
+    });
+
+    return res.status(201).json({
+      evidence,
+      bundleId: bundle.id,
+      merkleRoot: bundle.commitmentHash,
+      anchor
+    });
+  }
+);
 
 export default router;

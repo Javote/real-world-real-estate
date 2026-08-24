@@ -27,7 +27,7 @@ const COLUMNAS_SEGURAS = [
   "updatedAt"
 ] as const;
 
-router.get("/profile", async (req, res) => {
+router.get("/", async (req, res) => {
   const usuario = await db
     .selectFrom("User")
     .select(COLUMNAS_SEGURAS)
@@ -37,7 +37,7 @@ router.get("/profile", async (req, res) => {
   return res.json(usuario);
 });
 
-router.patch("/profile", async (req: Request, res) => {
+router.patch("/", async (req: Request, res) => {
   // El email y el rol NO se editan acá: cambiar el rol por el endpoint de
   // perfil sería una escalada de privilegios con forma de preferencia.
   const schema = z.strictObject({ fullName: z.string().min(1).max(120) });
@@ -62,7 +62,7 @@ router.patch("/profile", async (req: Request, res) => {
   return res.json(usuario);
 });
 
-router.patch("/profile/notifications", async (req: Request, res) => {
+router.patch("/notifications", async (req: Request, res) => {
   // Las categorías son las cinco del audit log (M2-D4 P6), que son las mismas
   // sobre las que se notifica.
   const schema = z.strictObject({

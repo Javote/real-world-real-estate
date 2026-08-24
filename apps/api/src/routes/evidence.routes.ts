@@ -1,5 +1,7 @@
+import { createHash } from "node:crypto";
 import fs from "node:fs";
 import path from "node:path";
+import { merkleProof } from "@plataforma/shared";
 import { type Request, Router } from "express";
 import { z } from "zod";
 import { createId } from "../db/id";
@@ -17,236 +19,14 @@ import {
   requireRole
 } from "../middlewares/auth";
 import { writeAuditLog } from "../utils/audit";
+import { EVIDENCE_SAFE_COLUMNS } from "./_shared";
 
 const router = Router();
 
 router.use(authenticate);
 
-// `storagePath` NUNCA sale al cliente (D-011, incidente real de filtración de
-// ruta absoluta en disco). Toda query que arma una respuesta lista sus columnas
-// EXPLÍCITAS en vez de `selectAll()` — es la forma en que Kysely reemplaza el
-// `columns: { storagePath: false }` de Drizzle (D-049): acá no hay "excluir",
-// solo "incluir", así que una columna nueva en `Evidence` no se filtra sola,
-// hay que sumarla a mano a esta lista. Las dos rutas internas que sí necesitan
-// `storagePath` (`download`, `delete`) consultan la fila completa aparte, y
-// nunca la devuelven en el body.
-const EVIDENCE_SAFE_COLUMNS = [
-  "id",
-  "projectId",
-  "stageId",
-  "uploadedById",
-  "evidenceType",
-  "category",
-  "authoritative",
-  "originalFilename",
-  "storedFilename",
-  "mimeType",
-  "sizeBytes",
-  "sha256Hash",
-  "uploadedAt",
-  "createdAt",
-  "updatedAt"
-] as const;
-
 router.get(
-  "/projects/:id/evidence",
-  requireProjectAccess({ param: "id" }, ANY_MEMBERSHIP),
-  async (req, res) => {
-    const rows = await db
-      .selectFrom("Evidence")
-      .innerJoin("User", "User.id", "Evidence.uploadedById")
-      .leftJoin("Stage", "Stage.id", "Evidence.stageId")
-      .select([
-        ...EVIDENCE_SAFE_COLUMNS.map((c) => `Evidence.${c}` as const),
-        "User.id as uploadedBy_id",
-        "User.email as uploadedBy_email",
-        "User.fullName as uploadedBy_fullName",
-        "Stage.id as stage_id",
-        "Stage.projectId as stage_projectId",
-        "Stage.name as stage_name",
-        "Stage.sequenceOrder as stage_sequenceOrder",
-        "Stage.state as stage_state",
-        "Stage.validationCritical as stage_validationCritical",
-        "Stage.certifiedAt as stage_certifiedAt",
-        "Stage.certifiedById as stage_certifiedById",
-        "Stage.createdAt as stage_createdAt",
-        "Stage.updatedAt as stage_updatedAt"
-      ])
-      .where("Evidence.projectId", "=", req.params.id)
-      .orderBy("Evidence.uploadedAt", "desc")
-      .execute();
-
-    const evidence = rows.map((row) => ({
-      id: row.id,
-      projectId: row.projectId,
-      stageId: row.stageId,
-      uploadedById: row.uploadedById,
-      evidenceType: row.evidenceType,
-      category: row.category,
-      authoritative: row.authoritative,
-      originalFilename: row.originalFilename,
-      storedFilename: row.storedFilename,
-      mimeType: row.mimeType,
-      sizeBytes: row.sizeBytes,
-      sha256Hash: row.sha256Hash,
-      uploadedAt: row.uploadedAt,
-      createdAt: row.createdAt,
-      updatedAt: row.updatedAt,
-      uploadedBy: {
-        id: row.uploadedBy_id,
-        email: row.uploadedBy_email,
-        fullName: row.uploadedBy_fullName
-      },
-      stage: row.stage_id
-        ? {
-            id: row.stage_id,
-            projectId: row.stage_projectId,
-            name: row.stage_name,
-            sequenceOrder: row.stage_sequenceOrder,
-            state: row.stage_state,
-            validationCritical: row.stage_validationCritical,
-            certifiedAt: row.stage_certifiedAt,
-            certifiedById: row.stage_certifiedById,
-            createdAt: row.stage_createdAt,
-            updatedAt: row.stage_updatedAt
-          }
-        : null
-    }));
-
-    return res.json(evidence);
-  }
-);
-
-router.post(
-  "/projects/:id/evidence",
-  requireRole("admin", "developer"),
-  // Antes de Multer a propósito: un request prohibido no llega a escribir el
-  // archivo, así que no hay huérfano que limpiar por esta vía. La limpieza de
-  // huérfanos sigue haciendo falta para lo que se rechaza DESPUÉS de Multer
-  // (tipo, tamaño, y los errores de la ruta) — ver SPEC-012.
-  requireProjectAccess({ param: "id" }, ["developer"]),
-  (req, res, next) => {
-    uploadSingleEvidence(req, res, (err) => {
-      if (err) return next(err);
-      next();
-    });
-  },
-  async (req: Request<{ id: string }>, res) => {
-    const projectId = req.params.id;
-
-    if (!req.file) {
-      return res.status(400).json({ message: "File is required" });
-    }
-
-    const schema = z.object({
-      stageId: z.string().optional(),
-      evidenceType: z.enum(["document", "photo", "certificate"]),
-      category: z.string().min(1),
-      authoritative: z
-        .string()
-        .optional()
-        .transform((v) => v === "true")
-    });
-
-    const parsed = schema.safeParse(req.body);
-    if (!parsed.success) {
-      if (fs.existsSync(req.file.path)) {
-        fs.unlinkSync(req.file.path);
-      }
-      return res.status(400).json(parsed.error.flatten());
-    }
-
-    const project = await db
-      .selectFrom("Project")
-      .select("id")
-      .where("id", "=", projectId)
-      .executeTakeFirst();
-
-    if (!project) {
-      if (fs.existsSync(req.file.path)) {
-        fs.unlinkSync(req.file.path);
-      }
-      return res.status(404).json({ message: "Project not found" });
-    }
-
-    if (parsed.data.stageId) {
-      const stage = await db
-        .selectFrom("Stage")
-        .select("id")
-        .where("id", "=", parsed.data.stageId)
-        .where("projectId", "=", projectId)
-        .executeTakeFirst();
-
-      if (!stage) {
-        if (fs.existsSync(req.file.path)) {
-          fs.unlinkSync(req.file.path);
-        }
-        return res.status(400).json({
-          message: "Stage does not belong to project"
-        });
-      }
-    }
-
-    // El archivo pasa por disco (Multer) y de ahí al storage configurado. El
-    // hash que se guarda es el de **los bytes guardados**, no el del temporal:
-    // con `s3`, `put` relee el objeto y lo rehashea. Ver `lib/storage.ts`.
-    const guardado = await storage.put({
-      localPath: path.resolve(req.file.path),
-      key: `evidence/${projectId}/${req.file.filename}`,
-      contentType: req.file.mimetype
-    });
-
-    // Con `s3` el temporal ya cumplió su función; con `disk` el "temporal" ES
-    // el destino, así que no se borra.
-    if (storage.driver === "s3" && fs.existsSync(req.file.path)) {
-      fs.unlinkSync(req.file.path);
-    }
-
-    const sha256Hash = guardado.sha256;
-    const now = new Date();
-
-    const created = await db
-      .insertInto("Evidence")
-      .values({
-        id: createId(),
-        projectId,
-        stageId: parsed.data.stageId ?? null,
-        uploadedById: req.user!.id,
-        evidenceType: parsed.data.evidenceType,
-        category: parsed.data.category,
-        authoritative: parsed.data.authoritative ?? false,
-        originalFilename: req.file.originalname,
-        storedFilename: req.file.filename,
-        mimeType: req.file.mimetype,
-        sizeBytes: req.file.size,
-        storagePath: guardado.storageRef,
-        sha256Hash,
-        uploadedAt: now,
-        createdAt: now,
-        updatedAt: now
-      })
-      .returning("id")
-      .executeTakeFirstOrThrow();
-
-    const evidence = await db
-      .selectFrom("Evidence")
-      .select(EVIDENCE_SAFE_COLUMNS)
-      .where("id", "=", created.id)
-      .executeTakeFirst();
-
-    await writeAuditLog({
-      actorUserId: req.user!.id,
-      action: "CREATE_EVIDENCE",
-      entityType: "Evidence",
-      entityId: created.id
-    });
-
-    return res.status(201).json(evidence);
-  }
-);
-
-router.get(
-  "/evidence/:id",
+  "/:id",
   requireProjectAccess({ via: "Evidence", param: "id" }, ANY_MEMBERSHIP),
   async (req, res) => {
     const evidence = await db
@@ -276,7 +56,7 @@ router.get(
 );
 
 router.get(
-  "/evidence/:id/download",
+  "/:id/download",
   requireProjectAccess({ via: "Evidence", param: "id" }, ANY_MEMBERSHIP),
   async (req, res) => {
     const evidence = await db
@@ -307,7 +87,7 @@ router.get(
 );
 
 router.patch(
-  "/evidence/:id",
+  "/:id",
   requireRole("admin", "developer"),
   requireProjectAccess({ via: "Evidence", param: "id" }, ["developer"]),
   async (req: Request<{ id: string }>, res) => {
@@ -387,7 +167,7 @@ router.patch(
  * evento en vez de gastar otra transacción.
  */
 router.post(
-  "/evidence/:id/anchor",
+  "/:id/anchor",
   requireRole("admin"),
   requireProjectAccess({ via: "Evidence", param: "id" }, ANY_MEMBERSHIP),
   async (req: Request<{ id: string }>, res) => {
@@ -479,7 +259,7 @@ router.post(
   }
 );
 
-router.delete("/evidence/:id", requireRole("admin"), async (req: Request<{ id: string }>, res) => {
+router.delete("/:id", requireRole("admin"), async (req: Request<{ id: string }>, res) => {
   const existing = await db
     .selectFrom("Evidence")
     .selectAll()
@@ -505,167 +285,66 @@ router.delete("/evidence/:id", requireRole("admin"), async (req: Request<{ id: s
 });
 
 /**
- * Fila 38 y 44c — la subida del developer, scopeada al stage — **M3-BE-13** y
- * **M3-SC-02**, patrones P4 y P5.
+ * Fila 25m — el camino de Merkle de un archivo dentro de su bundle.
  *
- * Es la MISMA subida que `POST /projects/:id/evidence` con el path y la forma
- * que el backlog pide, y con una diferencia que no es cosmética: acá el stage
- * es obligatorio y **la respuesta trae el Merkle root y el TXID en el mismo
- * request**. M2-D5 §2.2 lo fija: *"back end submits to Cardano; client awaits
- * success with TXID/Merkle root in the same response"* — es lo que alimenta el
- * `AnchoringSuccessModal`, la única superficie de prueba que se abre sola
- * (M2-D4 §6.3).
- *
- * **El bundle se rearma en cada subida.** Cada uno es un acta del conjunto que
- * existía en ese momento, no un índice que se edita: el root ya anclado tiene
- * que seguir verificando después de que se suba el archivo siguiente.
- *
- * **La asimetría de siempre** (D-059): el archivo y su hash quedan escritos
- * aunque el anclaje falle. En ese caso `anchor.status` es `Failed`, el TXID es
- * `null` y la UI muestra "Pendiente" — nunca "Verificado" (regla 17).
+ * Es lo que vuelve real la promesa de M2-D4 P5: el revisor rehashea **su**
+ * archivo, camina el árbol con estos hermanos y compara con la raíz anclada.
+ * Sin esto, tendría que bajarse todos los archivos del bundle.
  */
-router.post(
-  "/developer/projects/:id/stages/:stageId/evidence",
-  requireRole("admin", "developer"),
-  requireProjectAccess({ param: "id" }, ["developer"]),
-  (req, res, next) => {
-    uploadSingleEvidence(req, res, (err) => (err ? next(err) : next()));
-  },
-  async (req: Request<{ id: string; stageId: string }>, res) => {
-    const { id: projectId, stageId } = req.params;
+router.get("/:bundleId/proof/:fileHash", async (req, res) => {
+  const items = await db
+    .selectFrom("EvidenceBundleItem")
+    .select(["sha256Hash"])
+    .where("bundleId", "=", req.params.bundleId as string)
+    .execute();
 
-    if (!req.file) return res.status(400).json({ message: "File is required" });
+  if (items.length === 0) return res.status(404).json({ message: "Bundle not found" });
 
-    const borrarHuerfano = () => {
-      if (req.file && fs.existsSync(req.file.path)) fs.unlinkSync(req.file.path);
-    };
+  const bundle = await db
+    .selectFrom("EvidenceBundle")
+    .select(["commitmentHash"])
+    .where("id", "=", req.params.bundleId as string)
+    .executeTakeFirstOrThrow();
 
-    const schema = z.object({
-      evidenceType: z.enum(["document", "photo", "certificate"]),
-      category: z.string().min(1),
-      description: z.string().max(2000).optional(),
-      authoritative: z
-        .string()
-        .optional()
-        .transform((v) => v === "true")
-    });
+  const sha256Pair = (a: string, b: string) =>
+    createHash("sha256")
+      .update(Buffer.from(a + b, "hex"))
+      .digest("hex");
 
-    const parsed = schema.safeParse(req.body);
-    if (!parsed.success) {
-      borrarHuerfano();
-      return res.status(400).json(parsed.error.flatten());
-    }
-
-    const stage = await db
-      .selectFrom("Stage")
-      .selectAll()
-      .where("id", "=", stageId)
-      .where("projectId", "=", projectId)
-      .executeTakeFirst();
-
-    if (!stage) {
-      borrarHuerfano();
-      return res.status(404).json({ message: "Stage does not belong to project" });
-    }
-
-    const guardado = await storage.put({
-      localPath: path.resolve(req.file.path),
-      key: `evidence/${projectId}/${req.file.filename}`,
-      contentType: req.file.mimetype
-    });
-
-    if (storage.driver === "s3" && fs.existsSync(req.file.path)) {
-      fs.unlinkSync(req.file.path);
-    }
-
-    const now = new Date();
-    const creada = await db
-      .insertInto("Evidence")
-      .values({
-        id: createId(),
-        projectId,
-        stageId,
-        uploadedById: req.user!.id,
-        evidenceType: parsed.data.evidenceType,
-        category: parsed.data.category,
-        authoritative: parsed.data.authoritative ?? false,
-        originalFilename: req.file.originalname,
-        storedFilename: req.file.filename,
-        mimeType: req.file.mimetype,
-        sizeBytes: req.file.size,
-        storagePath: guardado.storageRef,
-        sha256Hash: guardado.sha256,
-        uploadedAt: now,
-        createdAt: now,
-        updatedAt: now
-      })
-      .returning("id")
-      .executeTakeFirstOrThrow();
-
-    // El acta del conjunto que existe AHORA, con el archivo recién subido
-    // adentro. Nunca es null: acabamos de insertar al menos una evidencia.
-    const merkleRoot = await crearBundle(stage, req.user!.id);
-
-    const bundle = await db
-      .selectFrom("EvidenceBundle")
-      .select(["id", "commitmentHash"])
-      .where("stageId", "=", stage.id)
-      .orderBy("createdAt", "desc")
-      .limit(1)
-      .executeTakeFirstOrThrow();
-
-    // Se ancla el ROOT del bundle, no el hash del archivo: el archivo suelto ya
-    // tiene su propia ruta de anclaje (`POST /evidence/:id/anchor`), y lo que
-    // el patrón P5 muestra es el root con las hojas debajo.
-    const anchor = await anchorCommitmentEvent({
-      projectId,
-      stageId: stage.id,
-      evidenceId: creada.id,
-      eventType: "EVIDENCE_ANCHOR",
-      commitment: bundle.commitmentHash,
-      // Ref opaca: el id del bundle, nunca el nombre del archivo (regla 2).
-      reference: bundle.id
-    });
-
-    const evidence = await db
-      .selectFrom("Evidence")
-      .select(EVIDENCE_SAFE_COLUMNS)
-      .where("id", "=", creada.id)
-      .executeTakeFirstOrThrow();
-
-    // Los investors del proyecto se enteran de que hay evidencia nueva. Con
-    // clave, no con copy (regla 15).
-    const unidades = await db
-      .selectFrom("Unit")
-      .select("id")
-      .where("projectId", "=", projectId)
-      .where("investorId", "is not", null)
-      .execute();
-
-    for (const unidad of unidades) {
-      await notifyUnitInvestor({
-        unitId: unidad.id,
-        category: "document",
-        titleKey: "notifications.evidence.uploaded",
-        params: { stageName: stage.name }
-      });
-    }
-
-    await writeAuditLog({
-      actorUserId: req.user!.id,
-      action: "UPLOAD_STAGE_EVIDENCE",
-      entityType: "Evidence",
-      entityId: creada.id,
-      metadata: { bundleId: bundle.id, merkleRoot, txid: anchor.txid }
-    });
-
-    return res.status(201).json({
-      evidence,
-      bundleId: bundle.id,
-      merkleRoot: bundle.commitmentHash,
-      anchor
-    });
+  try {
+    const proof = merkleProof(
+      items.map((i) => i.sha256Hash),
+      req.params.fileHash as string,
+      sha256Pair
+    );
+    return res.json({ merkleRoot: bundle.commitmentHash, leaf: req.params.fileHash, proof });
+  } catch {
+    return res.status(404).json({ message: "That hash is not part of this bundle" });
   }
-);
+});
+
+/** Fila 25m — los archivos del bundle con sus hashes. */
+router.get("/:bundleId/files", async (req, res) => {
+  const bundle = await db
+    .selectFrom("EvidenceBundle")
+    .selectAll()
+    .where("id", "=", req.params.bundleId as string)
+    .executeTakeFirst();
+
+  if (!bundle) return res.status(404).json({ message: "Bundle not found" });
+
+  const items = await db
+    .selectFrom("EvidenceBundleItem")
+    .leftJoin("Evidence", "Evidence.id", "EvidenceBundleItem.evidenceId")
+    .select([
+      "EvidenceBundleItem.evidenceId as evidenceId",
+      "EvidenceBundleItem.sha256Hash as sha256Hash",
+      "Evidence.originalFilename as filename"
+    ])
+    .where("EvidenceBundleItem.bundleId", "=", bundle.id)
+    .execute();
+
+  return res.json({ bundleId: bundle.id, merkleRoot: bundle.commitmentHash, files: items });
+});
 
 export default router;

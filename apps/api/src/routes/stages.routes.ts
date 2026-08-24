@@ -22,81 +22,7 @@ const router = Router();
 router.use(authenticate);
 
 router.get(
-  "/projects/:id/stages",
-  requireProjectAccess({ param: "id" }, ANY_MEMBERSHIP),
-  async (req, res) => {
-    const result = await db
-      .selectFrom("Stage")
-      .selectAll()
-      .where("projectId", "=", req.params.id)
-      .orderBy("sequenceOrder", "asc")
-      .execute();
-
-    return res.json(result);
-  }
-);
-
-router.post(
-  "/projects/:id/stages",
-  requireRole("admin", "developer"),
-  requireProjectAccess({ param: "id" }, ["developer"]),
-  async (req: Request<{ id: string }>, res) => {
-    const schema = z.object({
-      name: z.string().min(1),
-      sequenceOrder: z.number().int().positive(),
-      // `state` NO se acepta por body: todo stage nace en `Pending`. El
-      // handler `mint` del validador lo exige para acuñar el hilo
-      // (`valid_initial_datum`), así que dejar elegir el estado inicial acá
-      // sería fabricar stages que no se pueden anclar.
-      validationCritical: z.boolean().optional()
-    });
-
-    const parsed = schema.safeParse(req.body);
-    if (!parsed.success) {
-      return res.status(400).json(parsed.error.flatten());
-    }
-
-    const now = new Date();
-
-    const stage = await db
-      .insertInto("Stage")
-      .values({
-        id: createId(),
-        projectId: req.params.id,
-        name: parsed.data.name,
-        sequenceOrder: parsed.data.sequenceOrder,
-        state: INITIAL_STAGE_STATE,
-        // D-061: todo stage es validation-critical. El default deja de ser un
-        // flag que alguien se olvida de marcar; desmarcarlo es explícito.
-        validationCritical: parsed.data.validationCritical ?? true,
-        createdAt: now,
-        updatedAt: now
-      })
-      .returningAll()
-      .executeTakeFirstOrThrow();
-
-    const evento = await recordOnChainEvent({
-      projectId: stage.projectId,
-      stageId: stage.id,
-      eventType: "STAGE_CREATED",
-      fromState: null,
-      toState: stage.state
-    });
-    const anchor = await anchorEvent(evento, stage, null);
-
-    await writeAuditLog({
-      actorUserId: req.user!.id,
-      action: "CREATE_STAGE",
-      entityType: "Stage",
-      entityId: stage.id
-    });
-
-    return res.status(201).json({ ...stage, anchor });
-  }
-);
-
-router.get(
-  "/stages/:id",
+  "/:id",
   requireProjectAccess({ via: "Stage", param: "id" }, ANY_MEMBERSHIP),
   async (req, res) => {
     const stage = await db
@@ -119,7 +45,7 @@ router.get(
 );
 
 router.patch(
-  "/stages/:id",
+  "/:id",
   requireRole("admin", "developer"),
   requireProjectAccess({ via: "Stage", param: "id" }, ["developer"]),
   // `Request<{ id: string }>` porque en Express 5 `req.params.id` es
@@ -179,7 +105,7 @@ router.patch(
 );
 
 router.patch(
-  "/stages/:id/state",
+  "/:id/state",
   requireRole("admin", "developer"),
   requireProjectAccess({ via: "Stage", param: "id" }, ["developer"]),
   async (req: Request<{ id: string }>, res) => {
@@ -214,64 +140,6 @@ router.patch(
     }
 
     return res.json({ ...resultado.stage, anchor: resultado.anchor });
-  }
-);
-
-/**
- * Fila 09-12 — el mismo detalle de stage bajo el path anidado que el backlog
- * pide (INV-STAGE-DETAIL-001), con el bundle que lo compromete.
- *
- * **404 y no 403 si el stage es de otro proyecto**: el id existe, pero bajo
- * este proyecto no, y confirmar su existencia le diría a alguien con acceso a
- * un proyecto que hay un stage con ese id en otro.
- */
-router.get(
-  "/projects/:id/stages/:stageId",
-  requireProjectAccess({ param: "id" }, ANY_MEMBERSHIP),
-  async (req: Request<{ id: string; stageId: string }>, res) => {
-    const stage = await db
-      .selectFrom("Stage")
-      .selectAll()
-      .where("id", "=", req.params.stageId)
-      .where("projectId", "=", req.params.id)
-      .executeTakeFirst();
-
-    if (!stage) return res.status(404).json({ message: "Stage not found" });
-
-    const [evidences, bundle, eventos] = await Promise.all([
-      // Sin `storagePath` (D-011): esta lista sale al cliente.
-      db
-        .selectFrom("Evidence")
-        .select([
-          "id",
-          "evidenceType",
-          "category",
-          "authoritative",
-          "originalFilename",
-          "mimeType",
-          "sizeBytes",
-          "sha256Hash",
-          "uploadedAt"
-        ])
-        .where("stageId", "=", stage.id)
-        .orderBy("uploadedAt", "asc")
-        .execute(),
-      db
-        .selectFrom("EvidenceBundle")
-        .select(["id", "commitmentHash", "createdAt"])
-        .where("stageId", "=", stage.id)
-        .orderBy("createdAt", "desc")
-        .limit(1)
-        .executeTakeFirst(),
-      db
-        .selectFrom("OnChainEvent")
-        .select(["eventType", "toState", "commitment", "txid", "status", "createdAt"])
-        .where("stageId", "=", stage.id)
-        .orderBy("eventIndex", "asc")
-        .execute()
-    ]);
-
-    return res.json({ ...stage, evidences, bundle: bundle ?? null, events: eventos });
   }
 );
 

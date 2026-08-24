@@ -1,4 +1,4 @@
-import type { NotarySignature } from "@plataforma/shared";
+import type { NotaryKpis, NotarySignature, PendingDossier } from "@plataforma/shared";
 import { type Request, Router } from "express";
 import { z } from "zod";
 import { anchorCommitmentEvent, commitmentOf } from "../domain/anchoring";
@@ -28,6 +28,77 @@ const router = Router();
 
 router.use(authenticate);
 router.use(requireRole("admin", "notary"));
+
+/**
+ * Fila 51 — los KPI del notario. **Ya no son `null`.**
+ *
+ * Lo eran mientras el dossier no existía como entidad: `null` decía "no hay
+ * modelo" y cero habría dicho "no tenés trabajo", que es una afirmación
+ * distinta. Ahora `Dossier` existe y los cuatro se cuentan de verdad — el
+ * schema los sigue aceptando nullable porque la distinción vale para los KPI
+ * del developer que todavía no se pueden calcular.
+ */
+router.get("/kpis", requireRole("admin", "notary"), async (req, res) => {
+  const filas = await db
+    .selectFrom("Dossier")
+    .select(["id", "status", "signedById", "unitId"])
+    .execute();
+
+  // Un admin ve el total; un notario, lo que firmó él más la cola común.
+  const firmados = filas.filter(
+    (f) => f.status === "signed" && (req.user!.role === "admin" || f.signedById === req.user!.id)
+  );
+  const pendientes = filas.filter((f) => f.status === "compiled");
+
+  const kpis: NotaryKpis = {
+    pendingDossiers: pendientes.length,
+    // "Verificado" acá es el dossier revisado y resuelto: firmado o rechazado.
+    // No afirma nada sobre la obra (D-026).
+    verified: filas.filter((f) => f.status !== "compiled").length,
+    signed: firmados.length,
+    unitsUnderReview: new Set(pendientes.map((f) => f.unitId)).size
+  };
+  return res.json(kpis);
+});
+
+/**
+ * Fila 51 — la cola de revisión, con la barra de completitud.
+ *
+ * `completeness` es **qué fracción de la evidencia del dossier tiene su prueba
+ * sustanciada**, no "cuán listo está": un dossier al 60% tiene el 40% de sus
+ * artefactos todavía sin TXID (regla 17).
+ */
+router.get("/dossiers/pending", requireRole("admin", "notary"), async (_req, res) => {
+  const filas = await db
+    .selectFrom("Dossier")
+    .innerJoin("Unit", "Unit.id", "Dossier.unitId")
+    .leftJoin("User", "User.id", "Unit.investorId")
+    .select([
+      "Dossier.id as dossierId",
+      "Dossier.unitId as unitId",
+      "Unit.unitReference as unitReference",
+      "User.fullName as investorName"
+    ])
+    .where("Dossier.status", "=", "compiled")
+    .orderBy("Dossier.compiledAt", "asc")
+    .limit(50)
+    .execute();
+
+  const pendientes: PendingDossier[] = [];
+  for (const fila of filas) {
+    const dossier = await compileDossier(fila.unitId);
+    pendientes.push({
+      dossierId: fila.dossierId,
+      unitLabel: fila.unitReference,
+      // Sin investor asignado la unidad no se vendió todavía; el panel muestra
+      // la referencia de la unidad y no un nombre inventado.
+      investorName: fila.investorName ?? fila.unitReference,
+      completeness: dossier?.completeness ?? 0
+    });
+  }
+
+  return res.json(pendientes);
+});
 
 /** Fila 52v — el dossier a revisar, completo, con la huella de cada pieza. */
 router.get("/dossiers/:id", async (req: Request<{ id: string }>, res) => {

@@ -1,10 +1,12 @@
 import { createHash } from "node:crypto";
+import type { CertifierAssignment, CertifierKpis } from "@plataforma/shared";
 import { merkleProof } from "@plataforma/shared";
 import { type Request, Router } from "express";
 import { z } from "zod";
 import { transitionStage } from "../domain/stage-transition";
 import { db } from "../lib/db";
 import { authenticate, requireProjectAccess, requireRole } from "../middlewares/auth";
+import { proyectosVisibles } from "./_shared";
 
 // Superficie del certifier (M2-D5 filas 56v, 56c, 57, 58).
 //
@@ -21,9 +23,51 @@ const router = Router();
 
 router.use(authenticate);
 
+router.get("/kpis", requireRole("admin", "verifier"), async (req, res) => {
+  const ids = (await proyectosVisibles(req.user!.id, req.user!.role).execute()).map((p) => p.id);
+
+  const stages = ids.length
+    ? await db.selectFrom("Stage").select(["state"]).where("projectId", "in", ids).execute()
+    : [];
+
+  const kpis: CertifierKpis = {
+    // "Asignado" es, por ahora, un stage en curso dentro de un proyecto donde
+    // este usuario es miembro con rol verifier. El modelo de asignación
+    // explícita todavía no existe.
+    assigned: stages.filter((s) => s.state === "InProgress").length,
+    certified: stages.filter((s) => s.state === "Completed").length,
+    observed: stages.filter((s) => s.state === "Observed").length,
+    totalStages: stages.length
+  };
+
+  return res.json(kpis);
+});
+
+router.get("/assignments", requireRole("admin", "verifier"), async (req, res) => {
+  const ids = (await proyectosVisibles(req.user!.id, req.user!.role).execute()).map((p) => p.id);
+
+  if (ids.length === 0) return res.json([] satisfies CertifierAssignment[]);
+
+  const filas = await db
+    .selectFrom("Stage")
+    .innerJoin("Project", "Project.id", "Stage.projectId")
+    .select([
+      "Stage.id as stageId",
+      "Stage.name as stageName",
+      "Stage.sequenceOrder as sequenceOrder",
+      "Project.name as projectName"
+    ])
+    .where("Stage.projectId", "in", ids)
+    .where("Stage.state", "in", ["InProgress", "Observed"])
+    .orderBy("Stage.sequenceOrder", "asc")
+    .execute();
+
+  return res.json(filas satisfies CertifierAssignment[]);
+});
+
 /** Fila 56v — la vista de certificación: el stage con su evidencia. */
 router.get(
-  "/certifier/stages/:id",
+  "/stages/:id",
   requireRole("admin", "verifier"),
   requireProjectAccess({ via: "Stage", param: "id" }, ["verifier"]),
   async (req: Request<{ id: string }>, res) => {
@@ -60,7 +104,7 @@ router.get(
 
 /** Fila 56c — certificar: cierra el stage y ancla su bundle. */
 router.post(
-  "/certifier/stages/:id/certify",
+  "/stages/:id/certify",
   requireRole("admin", "verifier"),
   requireProjectAccess({ via: "Stage", param: "id" }, ["verifier"]),
   async (req: Request<{ id: string }>, res) => {
@@ -82,7 +126,7 @@ router.post(
 
 /** Fila 57 — observar: devuelve el stage al developer con una nota. */
 router.post(
-  "/certifier/stages/:id/observe",
+  "/stages/:id/observe",
   requireRole("admin", "verifier"),
   requireProjectAccess({ via: "Stage", param: "id" }, ["verifier"]),
   async (req: Request<{ id: string }>, res) => {
@@ -111,7 +155,7 @@ router.post(
 );
 
 /** Fila 58 — historial de lo emitido, con su hash y su TXID. */
-router.get("/certifier/certificates", requireRole("admin", "verifier"), async (req, res) => {
+router.get("/certificates", requireRole("admin", "verifier"), async (req, res) => {
   const schema = z.object({
     cursor: z.string().optional(),
     limit: z.coerce.number().int().min(1).max(100).default(20)
@@ -156,69 +200,6 @@ router.get("/certifier/certificates", requireRole("admin", "verifier"), async (r
     items: filas,
     nextCursor: ultima?.certifiedAt ? new Date(ultima.certifiedAt).toISOString() : null
   });
-});
-
-/**
- * Fila 25m — el camino de Merkle de un archivo dentro de su bundle.
- *
- * Es lo que vuelve real la promesa de M2-D4 P5: el revisor rehashea **su**
- * archivo, camina el árbol con estos hermanos y compara con la raíz anclada.
- * Sin esto, tendría que bajarse todos los archivos del bundle.
- */
-router.get("/evidence/:bundleId/proof/:fileHash", async (req, res) => {
-  const items = await db
-    .selectFrom("EvidenceBundleItem")
-    .select(["sha256Hash"])
-    .where("bundleId", "=", req.params.bundleId as string)
-    .execute();
-
-  if (items.length === 0) return res.status(404).json({ message: "Bundle not found" });
-
-  const bundle = await db
-    .selectFrom("EvidenceBundle")
-    .select(["commitmentHash"])
-    .where("id", "=", req.params.bundleId as string)
-    .executeTakeFirstOrThrow();
-
-  const sha256Pair = (a: string, b: string) =>
-    createHash("sha256")
-      .update(Buffer.from(a + b, "hex"))
-      .digest("hex");
-
-  try {
-    const proof = merkleProof(
-      items.map((i) => i.sha256Hash),
-      req.params.fileHash as string,
-      sha256Pair
-    );
-    return res.json({ merkleRoot: bundle.commitmentHash, leaf: req.params.fileHash, proof });
-  } catch {
-    return res.status(404).json({ message: "That hash is not part of this bundle" });
-  }
-});
-
-/** Fila 25m — los archivos del bundle con sus hashes. */
-router.get("/evidence/:bundleId/files", async (req, res) => {
-  const bundle = await db
-    .selectFrom("EvidenceBundle")
-    .selectAll()
-    .where("id", "=", req.params.bundleId as string)
-    .executeTakeFirst();
-
-  if (!bundle) return res.status(404).json({ message: "Bundle not found" });
-
-  const items = await db
-    .selectFrom("EvidenceBundleItem")
-    .leftJoin("Evidence", "Evidence.id", "EvidenceBundleItem.evidenceId")
-    .select([
-      "EvidenceBundleItem.evidenceId as evidenceId",
-      "EvidenceBundleItem.sha256Hash as sha256Hash",
-      "Evidence.originalFilename as filename"
-    ])
-    .where("EvidenceBundleItem.bundleId", "=", bundle.id)
-    .execute();
-
-  return res.json({ bundleId: bundle.id, merkleRoot: bundle.commitmentHash, files: items });
 });
 
 export default router;

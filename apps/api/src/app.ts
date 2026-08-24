@@ -20,17 +20,14 @@ import capitalRoutes from "./routes/capital.routes";
 import certifierRoutes from "./routes/certifier.routes";
 import contractsRoutes from "./routes/contracts.routes";
 import developerRoutes from "./routes/developer.routes";
-import dossierRoutes from "./routes/dossier.routes";
 import evidenceRoutes from "./routes/evidence.routes";
-import favoritesRoutes from "./routes/favorites.routes";
-import invitationsRoutes from "./routes/invitations.routes";
+import investorRoutes from "./routes/investor.routes";
 import notaryRoutes from "./routes/notary.routes";
 import notificationsRoutes from "./routes/notifications.routes";
-import panelsRoutes from "./routes/panels.routes";
 import profileRoutes from "./routes/profile.routes";
 import projectsRoutes from "./routes/projects.routes";
+import publicRoutes from "./routes/public.routes";
 import stagesRoutes from "./routes/stages.routes";
-import unitsRoutes from "./routes/units.routes";
 import usersRoutes from "./routes/users.routes";
 
 const app = express();
@@ -107,50 +104,41 @@ app.get("/health", async (_req, res) => {
   }
 });
 
+// ── Montaje: UN PREFIJO POR ROUTER ─────────────────────────────────────────
+//
+// **El orden de este bloque no importa, y ese es el punto** (SPEC-015 §4).
+//
+// Antes casi todos los routers colgaban de `/api/v1` pelado y el orden era
+// carga estructural: un `router.use(guard)` corre para TODA request que entra
+// al router —matcheen o no sus rutas—, así que el
+// `requireRole("admin","developer")` de la superficie del developer contestaba
+// 403 a `GET /api/v1/investor/favorites` de un buyer antes de que el router de
+// favoritos existiera para esa request. Lo mismo mataba con 401 el link público
+// del dossier, que el backlog declara sin sesión.
+//
+// Con un prefijo propio, ningún router ve una request que no le pertenece y esa
+// clase de bug no puede volver. El precio es agrupar por PREFIJO y no por
+// concepto de dominio: la superficie del investor está junta aunque toque
+// unidades, dossier, contratos e invitaciones. Está bien — es como agrupa
+// M2-D5 §4-6, que es el contrato.
 app.use("/api/v1/auth", authRoutes);
 app.use("/api/v1/users", usersRoutes);
 app.use("/api/v1/projects", projectsRoutes);
-// **Primero de todos los `/api/v1`, y por la misma razón que el bloque de
-// abajo:** `GET /public/dossier/:token` es uno de los dos endpoints sin sesión
-// del backlog (M2-D5 §2.2), y casi todos los routers que siguen tienen un
-// `router.use(authenticate)` que contesta 401 a cualquier request que les
-// entre, matcheen o no. Montado más abajo, el link público que un investor le
-// pasa a un notario sin cuenta devolvía 401.
-app.use("/api/v1", dossierRoutes);
-
-app.use("/api/v1", stagesRoutes);
-app.use("/api/v1", evidenceRoutes);
-app.use("/api/v1", certifierRoutes);
-app.use("/api/v1", unitsRoutes);
-app.use("/api/v1", invitationsRoutes);
-app.use("/api/v1", contractsRoutes);
-app.use("/api/v1", notificationsRoutes);
-app.use("/api/v1", favoritesRoutes);
-app.use("/api/v1", profileRoutes);
-
-// **Los paneles ANTES que los routers con prefijo propio, y no es cosmético.**
-// `/notary/dossiers/pending` (panel) y `/notary/dossiers/:id` (notaryRoutes)
-// comparten forma: montado al revés, `:id` matchea `"pending"` y la cola de
-// revisión devuelve 404.
-app.use("/api/v1", panelsRoutes);
-
-// **Estos tres van montados bajo SU prefijo, no bajo `/api/v1` pelado.**
-//
-// Los tres tienen un `router.use(requireRole(...))` a nivel de router, y un
-// middleware de router corre para TODA request que entra al router — no solo
-// para las que matchean alguna de sus rutas. Montados en `/api/v1`, el guard
-// del developer contestaba 403 a `GET /api/v1/investor/favorites` de un buyer
-// antes de que ese router siquiera se consultara: el rol global de OTRA
-// superficie cortaba la request. No lo vio nadie porque la suite no tenía
-// ningún fixture activo que no fuera developer o admin.
-//
-// Con el prefijo, el guard solo alcanza lo que el router realmente sirve. La
-// alternativa —bajar el guard a cada ruta— deja la puerta abierta a que una
-// ruta nueva se olvide de ponerlo, que es exactamente lo que D-042 evita.
+app.use("/api/v1/stages", stagesRoutes);
+app.use("/api/v1/evidence", evidenceRoutes);
+app.use("/api/v1/contracts", contractsRoutes);
+app.use("/api/v1/notifications", notificationsRoutes);
+app.use("/api/v1/profile", profileRoutes);
+app.use("/api/v1/audit-logs", auditRoutes);
+app.use("/api/v1/public", publicRoutes);
+app.use("/api/v1/investor", investorRoutes);
+// Dos routers sobre el mismo prefijo, y no chocan: sus paths son disjuntos. Se
+// mantienen separados porque `capital` es una superficie con forma propia
+// —agregados de dinero declarado— y meterla adentro daría un archivo enorme.
 app.use("/api/v1/developer", developerRoutes);
 app.use("/api/v1/developer", capitalRoutes);
 app.use("/api/v1/notary", notaryRoutes);
-app.use("/api/v1/audit-logs", auditRoutes);
+app.use("/api/v1/certifier", certifierRoutes);
 
 // Una ruta que no existe tiene que contestar JSON como todo el resto: sin esto,
 // Express devuelve su página HTML por defecto, que además anuncia el framework.
