@@ -20,12 +20,15 @@ import capitalRoutes from "./routes/capital.routes";
 import certifierRoutes from "./routes/certifier.routes";
 import contractsRoutes from "./routes/contracts.routes";
 import developerRoutes from "./routes/developer.routes";
+import developerComercialRoutes from "./routes/developer-comercial.routes";
+import developerEvidenciaRoutes from "./routes/developer-evidencia.routes";
 import evidenceRoutes from "./routes/evidence.routes";
 import investorRoutes from "./routes/investor.routes";
 import notaryRoutes from "./routes/notary.routes";
 import notificationsRoutes from "./routes/notifications.routes";
 import profileRoutes from "./routes/profile.routes";
 import projectsRoutes from "./routes/projects.routes";
+import projectsObraRoutes from "./routes/projects-obra.routes";
 import publicRoutes from "./routes/public.routes";
 import stagesRoutes from "./routes/stages.routes";
 import usersRoutes from "./routes/users.routes";
@@ -124,6 +127,7 @@ app.get("/health", async (_req, res) => {
 app.use("/api/v1/auth", authRoutes);
 app.use("/api/v1/users", usersRoutes);
 app.use("/api/v1/projects", projectsRoutes);
+app.use("/api/v1/projects", projectsObraRoutes);
 app.use("/api/v1/stages", stagesRoutes);
 app.use("/api/v1/evidence", evidenceRoutes);
 app.use("/api/v1/contracts", contractsRoutes);
@@ -132,10 +136,14 @@ app.use("/api/v1/profile", profileRoutes);
 app.use("/api/v1/audit-logs", auditRoutes);
 app.use("/api/v1/public", publicRoutes);
 app.use("/api/v1/investor", investorRoutes);
-// Dos routers sobre el mismo prefijo, y no chocan: sus paths son disjuntos. Se
-// mantienen separados porque `capital` es una superficie con forma propia
-// —agregados de dinero declarado— y meterla adentro daría un archivo enorme.
+// **Varios routers sobre el mismo prefijo, y no chocan**: sus paths son
+// disjuntos y ninguno tiene middleware catch-all que no le pertenezca. Se
+// mantienen separados por concern —el ciclo comercial, la subida anclada, el
+// capital— porque un solo archivo de 900 líneas por prefijo esconde las
+// costuras (SPEC-015 §6).
 app.use("/api/v1/developer", developerRoutes);
+app.use("/api/v1/developer", developerComercialRoutes);
+app.use("/api/v1/developer", developerEvidenciaRoutes);
 app.use("/api/v1/developer", capitalRoutes);
 app.use("/api/v1/notary", notaryRoutes);
 app.use("/api/v1/certifier", certifierRoutes);

@@ -30,7 +30,7 @@ acumulativa, y elimina dos clases de bug —no dos instancias— que ya mordiero
 | 3 | Trazabilidad de los 75 test IDs de M2-D5 + coverage | **1ª** | El criterio de aceptación no es medible |
 | 4 | Un prefijo por router en `app.ts` | 4ª | El orden de montaje como carga estructural |
 | 5 | e2e de Playwright en CI | 5ª | Red de seguridad que no se ejecuta |
-| 6 | Partir `evidence.routes.ts` (671 líneas, 4 responsabilidades) | 6ª | Único archivo que pide partirse |
+| 6 | Partir los routers que pasan las ~500 líneas | 6ª | Un archivo por prefijo esconde las costuras |
 | 7 | Bases locales a `apps/api/.data/` | 7ª | Artefactos mezclados con el código fuente |
 
 **Por qué el orden no es el de gravedad.** El más grave es el 3 —M2-D5 §8 declara que los test IDs
@@ -50,7 +50,7 @@ Medido con `grep` y con la suite, no estimado (principio de `specs/README.md`).
 | Archivos de test en `apps/api` | 21 |
 | `fileParallelism` | `false` |
 | Specs de Playwright | 2, con 0 referencias en `ci.yml` |
-| `evidence.routes.ts` | 671 líneas |
+| Router más grande | 671 líneas (`evidence.routes.ts`) |
 | Líneas de `.gitignore` para bases locales | 8 |
 
 ## Invariantes
