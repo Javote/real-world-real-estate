@@ -125,6 +125,7 @@ de corte de una rebanada es que la app quede corriendo y demostrable.**
 | [`SPEC-012`](SPEC-012-segunda-capa-como-middleware.md) | `requireProjectAccess`: la segunda capa como middleware | cerrada 2026-08-23 |
 | [`SPEC-013`](SPEC-013-anchorport.md) | `AnchorPort`: conectar el registro con la cadena | §A y §B cerradas · §C pendiente |
 | [`SPEC-014`](SPEC-014-reconstruccion-del-front.md) | Reconstrucción del front desde los entregables | **en curso** |
+| [`SPEC-015`](SPEC-015-saneamiento-de-la-instrumentacion.md) | Saneamiento de la instrumentación: tests, fixtures, coverage, CI | **en curso** |
 
 **La numeración no se recicla.** `SPEC-008`, `SPEC-011` y los planes anteriores están en
 [`archive/`](archive/): describen trabajo cerrado o código que se borró.
