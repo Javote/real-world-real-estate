@@ -43,4 +43,17 @@ export async function loginConSolapa(page: Page, rol: string) {
   await expect(page.getByLabel('Contraseña')).not.toHaveValue('')
 
   await page.getByRole('button', { name: /ingresar|sign in/i }).click()
+
+  // **Espera a que la sesión exista antes de devolver el control.** Sin esto el
+  // helper vuelve apenas se hace el click, y cualquier `page.goto()` posterior
+  // aborta el POST de login en vuelo: el test siguiente arranca sin sesión y el
+  // guard lo rebota a /login. Se ve como "la ruta no existe" y no lo es.
+  //
+  // Se espera la SESIÓN y no la URL porque no todos los roles aterrizan en el
+  // mismo lugar, y admin no aterriza en ninguno (SPEC-011 §Casos borde).
+  await expect
+    .poll(() => page.evaluate(() => sessionStorage.getItem('proptrust.session') !== null), {
+      timeout: 15_000
+    })
+    .toBe(true)
 }

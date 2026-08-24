@@ -3,10 +3,15 @@
 
 import type {
   CertifierAssignment,
+  CertifierCertificate,
   CertifierKpis,
+  CertifierStageView,
   DeveloperKpis,
+  Dossier,
   NotaryKpis,
-  PendingDossier
+  NotarySignature,
+  PendingDossier,
+  Profile
 } from '@plataforma/shared'
 import { clearSession, getSession } from '../auth/session'
 import type {
@@ -56,6 +61,13 @@ async function request<T>(path: string, init: RequestInit = {}): Promise<T> {
   return res.json() as Promise<T>
 }
 
+/** Envoltorio de las listas paginadas por cursor de la API. */
+export interface Paginated<T> {
+  items: T[]
+  /** `null` cuando no hay más páginas. */
+  nextCursor: string | null
+}
+
 function jsonInit(method: string, body: unknown): RequestInit {
   return {
     method,
@@ -93,6 +105,62 @@ export const api = {
 
   setMilestoneState: (stageId: string, state: StageState) =>
     request<Stage>(`/api/v1/stages/${stageId}/state`, jsonInit('PATCH', { state })),
+
+  // ── Superficie del certifier (M2-D5 filas 56v, 56c, 57, 58) ──────────────
+  //
+  // `certify` y `observe` son **transiciones de la misma FSM** con distinta
+  // autorización: las dos devuelven el stage actualizado y su anclaje.
+
+  getCertifierStage: (stageId: string) =>
+    request<CertifierStageView>(`/api/v1/certifier/stages/${stageId}`),
+
+  certifyStage: (stageId: string) =>
+    request<{ anchor: { txid: string | null; status: string } }>(
+      `/api/v1/certifier/stages/${stageId}/certify`,
+      jsonInit('POST', {})
+    ),
+
+  observeStage: (stageId: string, note: string) =>
+    request<{ anchor: { txid: string | null; status: string } }>(
+      `/api/v1/certifier/stages/${stageId}/observe`,
+      jsonInit('POST', { note })
+    ),
+
+  listCertificates: (cursor?: string) =>
+    request<Paginated<CertifierCertificate>>(
+      `/api/v1/certifier/certificates${cursor ? `?cursor=${encodeURIComponent(cursor)}` : ''}`
+    ),
+
+  // ── Superficie del notary (M2-D5 filas 52v, 52s, 52r, 53) ────────────────
+
+  getDossier: (dossierId: string) => request<Dossier>(`/api/v1/notary/dossiers/${dossierId}`),
+
+  signDossier: (dossierId: string) =>
+    request<{ dossierId: string; masterHash: string; anchor: { txid: string | null } }>(
+      `/api/v1/notary/dossiers/${dossierId}/sign`,
+      jsonInit('POST', {})
+    ),
+
+  rejectDossier: (dossierId: string, note: string) =>
+    request<{ dossierId: string; status: string }>(
+      `/api/v1/notary/dossiers/${dossierId}/reject`,
+      jsonInit('POST', { note })
+    ),
+
+  listSignatures: (cursor?: string) =>
+    request<Paginated<NotarySignature>>(
+      `/api/v1/notary/signatures${cursor ? `?cursor=${encodeURIComponent(cursor)}` : ''}`
+    ),
+
+  // ── Perfil — UNA superficie con cuatro entradas (M2-D5 §3) ───────────────
+
+  getProfile: () => request<Profile>('/api/v1/profile'),
+
+  updateProfile: (fullName: string) =>
+    request<Profile>('/api/v1/profile', jsonInit('PATCH', { fullName })),
+
+  updateNotificationPrefs: (prefs: Record<string, boolean>) =>
+    request<Profile>('/api/v1/profile/notifications', jsonInit('PATCH', prefs)),
 
   downloadEvidence: async (evidenceId: string): Promise<Blob> => {
     const session = getSession()

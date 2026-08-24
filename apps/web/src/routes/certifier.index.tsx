@@ -4,7 +4,7 @@ import { Activity, AlertCircle, Clock, ShieldCheck } from 'lucide-react'
 import { api } from '#/api/port'
 import { CERTIFIER_ROLES } from '#/auth/roles'
 import { useRoleGuard } from '#/auth/useRoleGuard'
-import { SecondaryButton } from '#/components/domain/PrimaryButton'
+import { AssignedStagesQueue } from '#/components/AssignedStagesQueue'
 import { StatCard } from '#/components/domain/StatCard'
 import { KpiValue } from '#/components/KpiValue'
 import { PanelLayout } from '#/components/PanelLayout'
@@ -15,7 +15,13 @@ import { useTranslation } from '#/i18n/useTranslation'
 // GET /certifier/kpis, GET /certifier/assignments.
 // Test IDs: CER-PANEL-001, CER-ASSIGNMENTS-002.
 
-export const Route = createFileRoute('/certifier')({ component: CertifierPanel })
+// **`*.index.tsx` y no `notary.tsx`/`certifier.tsx` a secas.** En el ruteo por
+// archivos de TanStack, `notary.tsx` es el LAYOUT de todo lo que cuelga de
+// `/notary` y tiene que renderizar un `<Outlet/>`; como esto es una pantalla y
+// no un layout, `/notary/profile` matcheaba el layout y mostraba el panel con
+// la URL del perfil. Con `.index` el panel es una hoja y sus hermanas son
+// hermanas de verdad.
+export const Route = createFileRoute('/certifier/')({ component: CertifierPanel })
 
 function CertifierPanel() {
   const { session, ready } = useRoleGuard(CERTIFIER_ROLES)
@@ -27,12 +33,6 @@ function CertifierPanel() {
     queryFn: api.getCertifierKpis,
     enabled: ready
   })
-  const { data: asignados } = useQuery({
-    queryKey: ['certifier', 'assignments'],
-    queryFn: api.getCertifierAssignments,
-    enabled: ready
-  })
-
   if (!ready) return null
 
   return (
@@ -71,36 +71,7 @@ function CertifierPanel() {
       <section className="rounded-xl bg-card p-s4 shadow-e1" data-testid="CER-ASSIGNMENTS-002">
         <h2 className="text-h2 font-bold text-text-primary">{t('panel.certifier.assignedList')}</h2>
 
-        {asignados?.length ? (
-          <ul className="mt-s4 flex flex-col gap-s2">
-            {asignados.map((asignacion) => (
-              <li
-                key={asignacion.stageId}
-                className="flex items-center justify-between gap-s3 rounded-lg bg-surface-alt p-s3"
-              >
-                <div className="flex min-w-0 flex-col">
-                  <span className="truncate text-body font-bold text-text-primary">
-                    {asignacion.projectName}
-                  </span>
-                  <span className="truncate text-body-sm text-text-muted">
-                    {t('panel.certifier.stageLine', {
-                      number: String(asignacion.sequenceOrder),
-                      name: asignacion.stageName
-                    })}
-                  </span>
-                </div>
-                {/* La captura muestra un pill compacto de borde naranja: es el
-                    SecondaryButton con el token `pending`, no un componente
-                    nuevo. */}
-                <SecondaryButton className="shrink-0 border-pending px-s3 py-s1 text-body-sm text-pending">
-                  {t('panel.certifier.certify')}
-                </SecondaryButton>
-              </li>
-            ))}
-          </ul>
-        ) : (
-          <p className="mt-s3 text-body-sm text-text-muted">{t('panel.certifier.emptyAssigned')}</p>
-        )}
+        <AssignedStagesQueue />
       </section>
     </PanelLayout>
   )

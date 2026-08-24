@@ -9,18 +9,21 @@
 // Additionally, you should also exclude this file from your linter and/or formatter to prevent it from being checked or modified.
 
 import { Route as rootRouteImport } from './routes/__root'
-import { Route as NotaryRouteImport } from './routes/notary'
 import { Route as LoginRouteImport } from './routes/login'
 import { Route as DeveloperRouteImport } from './routes/developer'
-import { Route as CertifierRouteImport } from './routes/certifier'
 import { Route as IndexRouteImport } from './routes/index'
+import { Route as NotaryIndexRouteImport } from './routes/notary.index'
+import { Route as CertifierIndexRouteImport } from './routes/certifier.index'
+import { Route as NotarySignedRouteImport } from './routes/notary.signed'
+import { Route as NotaryProfileRouteImport } from './routes/notary.profile'
+import { Route as NotaryDossiersRouteImport } from './routes/notary.dossiers'
 import { Route as InvestorBuyRouteImport } from './routes/investor.buy'
+import { Route as CertifierProfileRouteImport } from './routes/certifier.profile'
+import { Route as CertifierIssuedRouteImport } from './routes/certifier.issued'
+import { Route as CertifierAssignedRouteImport } from './routes/certifier.assigned'
+import { Route as NotaryDossierDossierIdRouteImport } from './routes/notary.dossier.$dossierId'
+import { Route as CertifierStageStageIdRouteImport } from './routes/certifier.stage.$stageId'
 
-const NotaryRoute = NotaryRouteImport.update({
-  id: '/notary',
-  path: '/notary',
-  getParentRoute: () => rootRouteImport,
-} as any)
 const LoginRoute = LoginRouteImport.update({
   id: '/login',
   path: '/login',
@@ -31,14 +34,34 @@ const DeveloperRoute = DeveloperRouteImport.update({
   path: '/developer',
   getParentRoute: () => rootRouteImport,
 } as any)
-const CertifierRoute = CertifierRouteImport.update({
-  id: '/certifier',
-  path: '/certifier',
-  getParentRoute: () => rootRouteImport,
-} as any)
 const IndexRoute = IndexRouteImport.update({
   id: '/',
   path: '/',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const NotaryIndexRoute = NotaryIndexRouteImport.update({
+  id: '/notary/',
+  path: '/notary/',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const CertifierIndexRoute = CertifierIndexRouteImport.update({
+  id: '/certifier/',
+  path: '/certifier/',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const NotarySignedRoute = NotarySignedRouteImport.update({
+  id: '/notary/signed',
+  path: '/notary/signed',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const NotaryProfileRoute = NotaryProfileRouteImport.update({
+  id: '/notary/profile',
+  path: '/notary/profile',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const NotaryDossiersRoute = NotaryDossiersRouteImport.update({
+  id: '/notary/dossiers',
+  path: '/notary/dossiers',
   getParentRoute: () => rootRouteImport,
 } as any)
 const InvestorBuyRoute = InvestorBuyRouteImport.update({
@@ -46,66 +69,151 @@ const InvestorBuyRoute = InvestorBuyRouteImport.update({
   path: '/investor/buy',
   getParentRoute: () => rootRouteImport,
 } as any)
+const CertifierProfileRoute = CertifierProfileRouteImport.update({
+  id: '/certifier/profile',
+  path: '/certifier/profile',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const CertifierIssuedRoute = CertifierIssuedRouteImport.update({
+  id: '/certifier/issued',
+  path: '/certifier/issued',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const CertifierAssignedRoute = CertifierAssignedRouteImport.update({
+  id: '/certifier/assigned',
+  path: '/certifier/assigned',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const NotaryDossierDossierIdRoute = NotaryDossierDossierIdRouteImport.update({
+  id: '/notary/dossier/$dossierId',
+  path: '/notary/dossier/$dossierId',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const CertifierStageStageIdRoute = CertifierStageStageIdRouteImport.update({
+  id: '/certifier/stage/$stageId',
+  path: '/certifier/stage/$stageId',
+  getParentRoute: () => rootRouteImport,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
-  '/certifier': typeof CertifierRoute
   '/developer': typeof DeveloperRoute
   '/login': typeof LoginRoute
-  '/notary': typeof NotaryRoute
+  '/certifier/assigned': typeof CertifierAssignedRoute
+  '/certifier/issued': typeof CertifierIssuedRoute
+  '/certifier/profile': typeof CertifierProfileRoute
   '/investor/buy': typeof InvestorBuyRoute
+  '/notary/dossiers': typeof NotaryDossiersRoute
+  '/notary/profile': typeof NotaryProfileRoute
+  '/notary/signed': typeof NotarySignedRoute
+  '/certifier/': typeof CertifierIndexRoute
+  '/notary/': typeof NotaryIndexRoute
+  '/certifier/stage/$stageId': typeof CertifierStageStageIdRoute
+  '/notary/dossier/$dossierId': typeof NotaryDossierDossierIdRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
-  '/certifier': typeof CertifierRoute
   '/developer': typeof DeveloperRoute
   '/login': typeof LoginRoute
-  '/notary': typeof NotaryRoute
+  '/certifier/assigned': typeof CertifierAssignedRoute
+  '/certifier/issued': typeof CertifierIssuedRoute
+  '/certifier/profile': typeof CertifierProfileRoute
   '/investor/buy': typeof InvestorBuyRoute
+  '/notary/dossiers': typeof NotaryDossiersRoute
+  '/notary/profile': typeof NotaryProfileRoute
+  '/notary/signed': typeof NotarySignedRoute
+  '/certifier': typeof CertifierIndexRoute
+  '/notary': typeof NotaryIndexRoute
+  '/certifier/stage/$stageId': typeof CertifierStageStageIdRoute
+  '/notary/dossier/$dossierId': typeof NotaryDossierDossierIdRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
-  '/certifier': typeof CertifierRoute
   '/developer': typeof DeveloperRoute
   '/login': typeof LoginRoute
-  '/notary': typeof NotaryRoute
+  '/certifier/assigned': typeof CertifierAssignedRoute
+  '/certifier/issued': typeof CertifierIssuedRoute
+  '/certifier/profile': typeof CertifierProfileRoute
   '/investor/buy': typeof InvestorBuyRoute
+  '/notary/dossiers': typeof NotaryDossiersRoute
+  '/notary/profile': typeof NotaryProfileRoute
+  '/notary/signed': typeof NotarySignedRoute
+  '/certifier/': typeof CertifierIndexRoute
+  '/notary/': typeof NotaryIndexRoute
+  '/certifier/stage/$stageId': typeof CertifierStageStageIdRoute
+  '/notary/dossier/$dossierId': typeof NotaryDossierDossierIdRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
   fullPaths:
-    '/' | '/certifier' | '/developer' | '/login' | '/notary' | '/investor/buy'
+    | '/'
+    | '/developer'
+    | '/login'
+    | '/certifier/assigned'
+    | '/certifier/issued'
+    | '/certifier/profile'
+    | '/investor/buy'
+    | '/notary/dossiers'
+    | '/notary/profile'
+    | '/notary/signed'
+    | '/certifier/'
+    | '/notary/'
+    | '/certifier/stage/$stageId'
+    | '/notary/dossier/$dossierId'
   fileRoutesByTo: FileRoutesByTo
-  to: '/' | '/certifier' | '/developer' | '/login' | '/notary' | '/investor/buy'
+  to:
+    | '/'
+    | '/developer'
+    | '/login'
+    | '/certifier/assigned'
+    | '/certifier/issued'
+    | '/certifier/profile'
+    | '/investor/buy'
+    | '/notary/dossiers'
+    | '/notary/profile'
+    | '/notary/signed'
+    | '/certifier'
+    | '/notary'
+    | '/certifier/stage/$stageId'
+    | '/notary/dossier/$dossierId'
   id:
     | '__root__'
     | '/'
-    | '/certifier'
     | '/developer'
     | '/login'
-    | '/notary'
+    | '/certifier/assigned'
+    | '/certifier/issued'
+    | '/certifier/profile'
     | '/investor/buy'
+    | '/notary/dossiers'
+    | '/notary/profile'
+    | '/notary/signed'
+    | '/certifier/'
+    | '/notary/'
+    | '/certifier/stage/$stageId'
+    | '/notary/dossier/$dossierId'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
-  CertifierRoute: typeof CertifierRoute
   DeveloperRoute: typeof DeveloperRoute
   LoginRoute: typeof LoginRoute
-  NotaryRoute: typeof NotaryRoute
+  CertifierAssignedRoute: typeof CertifierAssignedRoute
+  CertifierIssuedRoute: typeof CertifierIssuedRoute
+  CertifierProfileRoute: typeof CertifierProfileRoute
   InvestorBuyRoute: typeof InvestorBuyRoute
+  NotaryDossiersRoute: typeof NotaryDossiersRoute
+  NotaryProfileRoute: typeof NotaryProfileRoute
+  NotarySignedRoute: typeof NotarySignedRoute
+  CertifierIndexRoute: typeof CertifierIndexRoute
+  NotaryIndexRoute: typeof NotaryIndexRoute
+  CertifierStageStageIdRoute: typeof CertifierStageStageIdRoute
+  NotaryDossierDossierIdRoute: typeof NotaryDossierDossierIdRoute
 }
 
 declare module '@tanstack/react-router' {
   interface FileRoutesByPath {
-    '/notary': {
-      id: '/notary'
-      path: '/notary'
-      fullPath: '/notary'
-      preLoaderRoute: typeof NotaryRouteImport
-      parentRoute: typeof rootRouteImport
-    }
     '/login': {
       id: '/login'
       path: '/login'
@@ -120,18 +228,46 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof DeveloperRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/certifier': {
-      id: '/certifier'
-      path: '/certifier'
-      fullPath: '/certifier'
-      preLoaderRoute: typeof CertifierRouteImport
-      parentRoute: typeof rootRouteImport
-    }
     '/': {
       id: '/'
       path: '/'
       fullPath: '/'
       preLoaderRoute: typeof IndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/notary/': {
+      id: '/notary/'
+      path: '/notary'
+      fullPath: '/notary/'
+      preLoaderRoute: typeof NotaryIndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/certifier/': {
+      id: '/certifier/'
+      path: '/certifier'
+      fullPath: '/certifier/'
+      preLoaderRoute: typeof CertifierIndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/notary/signed': {
+      id: '/notary/signed'
+      path: '/notary/signed'
+      fullPath: '/notary/signed'
+      preLoaderRoute: typeof NotarySignedRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/notary/profile': {
+      id: '/notary/profile'
+      path: '/notary/profile'
+      fullPath: '/notary/profile'
+      preLoaderRoute: typeof NotaryProfileRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/notary/dossiers': {
+      id: '/notary/dossiers'
+      path: '/notary/dossiers'
+      fullPath: '/notary/dossiers'
+      preLoaderRoute: typeof NotaryDossiersRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/investor/buy': {
@@ -141,16 +277,59 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof InvestorBuyRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/certifier/profile': {
+      id: '/certifier/profile'
+      path: '/certifier/profile'
+      fullPath: '/certifier/profile'
+      preLoaderRoute: typeof CertifierProfileRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/certifier/issued': {
+      id: '/certifier/issued'
+      path: '/certifier/issued'
+      fullPath: '/certifier/issued'
+      preLoaderRoute: typeof CertifierIssuedRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/certifier/assigned': {
+      id: '/certifier/assigned'
+      path: '/certifier/assigned'
+      fullPath: '/certifier/assigned'
+      preLoaderRoute: typeof CertifierAssignedRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/notary/dossier/$dossierId': {
+      id: '/notary/dossier/$dossierId'
+      path: '/notary/dossier/$dossierId'
+      fullPath: '/notary/dossier/$dossierId'
+      preLoaderRoute: typeof NotaryDossierDossierIdRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/certifier/stage/$stageId': {
+      id: '/certifier/stage/$stageId'
+      path: '/certifier/stage/$stageId'
+      fullPath: '/certifier/stage/$stageId'
+      preLoaderRoute: typeof CertifierStageStageIdRouteImport
+      parentRoute: typeof rootRouteImport
+    }
   }
 }
 
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
-  CertifierRoute: CertifierRoute,
   DeveloperRoute: DeveloperRoute,
   LoginRoute: LoginRoute,
-  NotaryRoute: NotaryRoute,
+  CertifierAssignedRoute: CertifierAssignedRoute,
+  CertifierIssuedRoute: CertifierIssuedRoute,
+  CertifierProfileRoute: CertifierProfileRoute,
   InvestorBuyRoute: InvestorBuyRoute,
+  NotaryDossiersRoute: NotaryDossiersRoute,
+  NotaryProfileRoute: NotaryProfileRoute,
+  NotarySignedRoute: NotarySignedRoute,
+  CertifierIndexRoute: CertifierIndexRoute,
+  NotaryIndexRoute: NotaryIndexRoute,
+  CertifierStageStageIdRoute: CertifierStageStageIdRoute,
+  NotaryDossierDossierIdRoute: NotaryDossierDossierIdRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)

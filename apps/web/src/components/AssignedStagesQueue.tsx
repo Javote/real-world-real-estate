@@ -1,0 +1,56 @@
+import { useQuery } from '@tanstack/react-query'
+import { Link } from '@tanstack/react-router'
+import { api } from '#/api/port'
+import { SecondaryButton } from '#/components/domain/PrimaryButton'
+import { useTranslation } from '#/i18n/useTranslation'
+
+// La cola de etapas asignadas al certifier (M2-D5 fila 55).
+//
+// Vive suelta porque aparece en DOS lugares —el panel y la solapa "Assigned"—
+// y duplicarla garantizaría que se desincronicen. No es un componente de
+// M2-D3: es composición, como `PanelLayout`.
+
+export function AssignedStagesQueue() {
+  const { t } = useTranslation()
+  const { data: asignados } = useQuery({
+    queryKey: ['certifier', 'assignments'],
+    queryFn: api.getCertifierAssignments
+  })
+
+  if (!asignados?.length) {
+    return (
+      <p className="mt-s3 text-body-sm text-text-muted">{t('panel.certifier.emptyAssigned')}</p>
+    )
+  }
+
+  return (
+    <ul className="mt-s4 flex flex-col gap-s2">
+      {asignados.map((asignacion) => (
+        <li
+          key={asignacion.stageId}
+          className="flex items-center justify-between gap-s3 rounded-lg bg-surface-alt p-s3"
+        >
+          <div className="flex min-w-0 flex-col">
+            <span className="truncate text-body font-bold text-text-primary">
+              {asignacion.projectName}
+            </span>
+            <span className="truncate text-body-sm text-text-muted">
+              {t('panel.certifier.stageLine', {
+                number: String(asignacion.sequenceOrder),
+                name: asignacion.stageName
+              })}
+            </span>
+          </div>
+
+          {/* La captura muestra un pill compacto de borde naranja: es el
+              SecondaryButton con el token `pending`, no un componente nuevo. */}
+          <Link to="/certifier/stage/$stageId" params={{ stageId: asignacion.stageId }}>
+            <SecondaryButton className="shrink-0 border-pending px-s3 py-s1 text-body-sm text-pending">
+              {t('panel.certifier.certify')}
+            </SecondaryButton>
+          </Link>
+        </li>
+      ))}
+    </ul>
+  )
+}

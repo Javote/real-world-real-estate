@@ -17,6 +17,16 @@ interface ButtonProps {
   loading?: boolean
   onClick?: () => void
   className?: string
+  /**
+   * Test ID de M2-D5, cuando el botón ES la superficie del backlog —
+   * `CER-CERTIFY-001`, `NOT-DOSSIER-SIGN-001`.
+   *
+   * Explícito y no un spread de props sueltas: **una superficie sin sus test
+   * IDs no está terminada** (regla 4), así que el hook tiene que ser parte del
+   * contrato del componente y no algo que se cuela por accidente. Sin esto el
+   * atributo se descartaba en silencio y el test no encontraba nada.
+   */
+  testId?: string
 }
 
 const BASE =
@@ -28,11 +38,13 @@ export function PrimaryButton({
   disabled,
   loading,
   onClick,
-  className
+  className,
+  testId
 }: ButtonProps) {
   return (
     <button
       type={type}
+      data-testid={testId}
       onClick={onClick}
       disabled={disabled || loading}
       className={cn(BASE, 'bg-primary text-white active:bg-primary-dark', className)}
@@ -50,11 +62,13 @@ export function SecondaryButton({
   type = 'button',
   disabled,
   onClick,
-  className
+  className,
+  testId
 }: ButtonProps) {
   return (
     <button
       type={type}
+      data-testid={testId}
       onClick={onClick}
       disabled={disabled}
       className={cn(
@@ -79,11 +93,13 @@ export function DangerButton({
   disabled,
   onClick,
   className,
+  testId,
   variant = 'danger'
 }: ButtonProps & { variant?: 'danger' | 'corrective' }) {
   return (
     <button
       type={type}
+      data-testid={testId}
       onClick={onClick}
       disabled={disabled}
       className={cn(

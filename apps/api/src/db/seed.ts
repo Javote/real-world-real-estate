@@ -1,4 +1,5 @@
 import "dotenv/config";
+import { compileDossier } from "../domain/dossier";
 import { db } from "../lib/db";
 import { paraMostrar, passwordDeDemo } from "./credentials";
 import {
@@ -107,7 +108,7 @@ async function main() {
   // Una unidad vendida con su contrato: sin ella los paneles de capital, el
   // dossier y el directorio de investors arrancan vacíos y la demo no muestra
   // nada de la mitad del backlog.
-  await sembrarUnidadVendida(db, {
+  const { unitId } = await sembrarUnidadVendida(db, {
     projectId,
     investorId: id("buyer@example.com"),
     unitReference: "4B",
@@ -116,6 +117,13 @@ async function main() {
     priceMinorUnits: 9_500_000,
     currency: "USD"
   });
+
+  // **El dossier se COMPILA, no se inserta.** Es on-demand desde el estado
+  // autoritativo (M2-D5 §3) y su hash sale de los artefactos que existen: una
+  // fila insertada a mano tendría un `masterHash` que no corresponde a nada.
+  // Sin esto, la cola de revisión del notario arranca vacía y su superficie no
+  // se puede demostrar.
+  await compileDossier(unitId);
 
   console.log("Seed completado");
   for (const p of ELENCO_DEMO) {
