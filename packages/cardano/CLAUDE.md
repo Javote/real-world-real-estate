@@ -72,15 +72,39 @@ daría la cadena. Por eso exigen `/failed script execution/` y no un `toThrow()`
 regex, el test pasaría también si la transacción fallara por una razón nuestra —un UTxO que no
 está, plata que no alcanza— y estaría diciendo que el validador rechazó algo que nunca evaluó.
 
+## El devnet local, y las tres cosas que costaron
+
+`compose.dev.yml` levanta yaci-devkit: un Cardano de verdad con bloques de 1 segundo. El mismo
+adaptador que corre contra el `Emulator` corre contra él sin tocar una línea — cambia el provider.
+
+1. **La imagen `latest` no sirve**: quedó en enero de 2024 y reporta `protocol_major_ver: 8`
+   (Babbage), que **no ejecuta Plutus V3**. Por eso está pineada en `0.10.6`, que da Conway
+   (`protocol_major_ver: 10`) con cost models de V3.
+2. **Su entrypoint está roto**: invoca con `sh` un script que usa `==` de bash, y el contenedor
+   muere con `unexpected operator`. Se puentea con `entrypoint: ["bash", "/app/yaci-cli.sh"]`.
+3. **Provider Kupmios, no Blockfrost.** El provider Blockfrost de Lucid 0.6 lee `cost_models_raw`,
+   un campo que la API agregó después y que yaci-store todavía no devuelve (`Cannot read properties
+   of undefined (reading 'PlutusV1')`). Ogmios entrega los parámetros nativos. En Preprod se usa
+   Blockfrost, que sí lo trae, y el adaptador no se entera.
+
+Y dos fricciones del devnet que quedaron documentadas en el propio test: los cost models vienen con
+el i64 máximo, que al pasar por un `number` se redondea fuera de rango y CML rechaza; y la **ventana
+de validez no puede pasar el safe zone de la era** (`PastHorizon`), que en un devnet son 300
+segundos — de ahí que `VALIDITY_WINDOW_MS` sean 3 minutos y no 10.
+
 ## Estado
 
-Rebanadas **A** (puerto + simulador) y **B** (códec, blueprint, transacciones contra el `Emulator`)
-cerradas. Falta el escalón de realismo —yaci-devkit local y Preprod, que no cambian el código, solo
-el provider— y el `reconcile()`/`verify()` completo de la rebanada C, que necesita un indexer.
+Rebanadas **A** (puerto + simulador) y **B** (códec, blueprint, `Emulator` y **devnet local**)
+cerradas. Falta Preprod —que no cambia el código, solo el provider y la seed— y el
+`reconcile()`/`verify()` completo de la rebanada C, que necesita un indexer.
 
 ## Comandos
 
 ```bash
-pnpm --filter @plataforma/cardano test    # códec, blueprint y simulador
-docker compose -f compose.dev.yml up -d   # MinIO (y yaci cuando esté)
+pnpm --filter @plataforma/cardano test        # códec, blueprint, simulador y Emulator
+docker compose -f compose.dev.yml up -d       # MinIO + devnet de Cardano
+pnpm --filter @plataforma/cardano test:yaci   # el flujo completo contra el devnet
 ```
+
+`test:yaci` **no corre en CI** (el CI no levanta infraestructura) y está excluido del `test` normal.
+Se corre a mano, con el compose arriba.

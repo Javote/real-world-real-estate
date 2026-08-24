@@ -43,14 +43,25 @@ import {
  * mínimo que Cardano exige para que un UTxO exista (D-021). */
 export const THREAD_MIN_LOVELACE = 2_000_000n;
 
-/** Ventana de validez de la transacción. El validador exige las dos puntas
- * finitas y que `completed_at` caiga adentro. */
-export const VALIDITY_WINDOW_MS = 10 * 60 * 1000;
+/**
+ * Ventana de validez de la transacción. El validador exige las dos puntas
+ * finitas y que `completed_at` caiga adentro (`within_validity_range`).
+ *
+ * **Tres minutos, y el número tiene razón:** el nodo solo sabe traducir slots a
+ * tiempo dentro de su *horizonte* —el safe zone de la era—, y una ventana más
+ * larga que eso hace fallar la evaluación con `PastHorizon: transaction's
+ * validity bounds go beyond the foreseeable end of the current era`. En un
+ * devnet con epochs de 600 slots el safe zone son 300 segundos, así que 10
+ * minutos no entran. Tres sí, en cualquier red.
+ */
+export const VALIDITY_WINDOW_MS = 3 * 60 * 1000;
 
 export interface LucidAnchorOptions {
   lucid: LucidEvolution;
   network: Network;
   blueprint?: Blueprint;
+  /** Ancho de la ventana de validez. Ver `VALIDITY_WINDOW_MS`. */
+  validityWindowMs?: number;
   /** Reloj inyectable: los tests fijan el tiempo, no lo padecen. */
   now?: () => number;
 }
@@ -62,10 +73,18 @@ export class LucidAnchorAdapter implements AnchorPort {
   private readonly refs: StageScriptRefs;
   private readonly now: () => number;
 
-  private constructor(lucid: LucidEvolution, refs: StageScriptRefs, now: () => number) {
+  private readonly validityWindowMs: number;
+
+  private constructor(
+    lucid: LucidEvolution,
+    refs: StageScriptRefs,
+    now: () => number,
+    validityWindowMs: number
+  ) {
     this.lucid = lucid;
     this.refs = refs;
     this.now = now;
+    this.validityWindowMs = validityWindowMs;
   }
 
   /** La dirección del script, derivada del blueprint con el admin aplicado. */
@@ -87,7 +106,12 @@ export class LucidAnchorAdapter implements AnchorPort {
       options.blueprint ?? loadBlueprint()
     );
 
-    return new LucidAnchorAdapter(options.lucid, refs, options.now ?? (() => Date.now()));
+    return new LucidAnchorAdapter(
+      options.lucid,
+      refs,
+      options.now ?? (() => Date.now()),
+      options.validityWindowMs ?? VALIDITY_WINDOW_MS
+    );
   }
 
   /** `mint`: acuña el thread token y crea el hilo en `Pending`. */
@@ -126,7 +150,7 @@ export class LucidAnchorAdapter implements AnchorPort {
     // lo que el validador verifica (`within_validity_range`). Si el timestamp
     // cae afuera, la transacción se construye y se firma igual — y se rechaza.
     const desde = completion ? Math.min(now, completion.now) - 1000 : now - 1000;
-    const hasta = Math.max(now, completion?.now ?? now) + VALIDITY_WINDOW_MS;
+    const hasta = Math.max(now, completion?.now ?? now) + this.validityWindowMs;
 
     const tx = await this.lucid
       .newTx()

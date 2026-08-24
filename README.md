@@ -217,9 +217,20 @@ silencio, y preferimos el link.
 runtime nativo de Node, sin Docker (D-041).
 
 ```bash
-docker compose -f compose.dev.yml up -d      # MinIO en :9000, consola en :9001
-pnpm --filter @plataforma/api test:s3        # prueba el storage contra MinIO de verdad
+docker compose -f compose.dev.yml up -d          # MinIO en :9000 (consola :9001) + devnet de Cardano
+pnpm --filter @plataforma/api test:s3            # storage contra MinIO de verdad
+pnpm --filter @plataforma/cardano test:yaci      # anclaje contra un nodo Cardano de verdad
 ```
+
+El devnet (yaci-devkit) da **Conway con Plutus V3** y bloques de 1 segundo:
+
+| Servicio | Puerto | Para qué |
+|---|---|---|
+| yaci-store | `8080` | API compatible Blockfrost (`/api/v1`) |
+| Ogmios · Kupo | `1337` · `1442` | el provider que usa Lucid en local |
+| admin del devkit | `10000` | fondear una address (`/local-cluster/api/addresses/topup`) — el faucet local |
+
+Ninguno de los dos tests corre en CI: el CI no levanta infraestructura. Se corren a mano.
 
 Para que la API guarde la evidencia en MinIO en vez del disco:
 

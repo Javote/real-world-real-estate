@@ -106,7 +106,7 @@ es más que el `AnchorPort`: son seis piezas, y solo dos necesitan Docker.
 | 2 | Transacciones reales contra el **`Emulator`** de Lucid: `mint` + `spend` con el validador ejecutándose de verdad | — | **hecha** |
 | 3 | **`EvidenceBundle`**, Merkle root y el endpoint de anclaje **manual del admin** | — | **hecha** |
 | 4 | **MinIO** por `compose.dev.yml` + cliente S3 (D-011) | Docker | **hecha** |
-| 5 | **yaci-devkit**: devnet local con API compatible Blockfrost | Docker | pendiente |
+| 5 | **yaci-devkit**: devnet local con Conway + Plutus V3 | Docker | **hecha** |
 | 6 | **Frontend**: crear proyecto → subir PDF → botón *anclar* → ver el TXID | — | pendiente |
 
 **El `Emulator` cambia el orden.** Lucid trae un ledger en proceso que **ejecuta el validador**, así

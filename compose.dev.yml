@@ -32,5 +32,43 @@ services:
       timeout: 3s
       retries: 20
 
+  # Devnet de Cardano en proceso propio: bloques de 1 segundo en vez de 20, y
+  # una API compatible con Blockfrost. Sirve para ejercitar el adaptador real
+  # (SPEC-013 §B) contra un nodo de verdad sin tocar Preprod ni gastar tADA.
+  #
+  # Las tres piezas se habilitan por variable de entorno y las tres hacen falta:
+  #   yaci-store (8080) → API compatible Blockfrost, la que usa Lucid
+  #   ogmios (1337) + kupo (1442) → el otro camino de provider, por si el
+  #                                 primero se queda corto
+  # El puerto 10000 es la API de administración del devkit: es por donde se
+  # fondea una address (`/local-cluster/api/addresses/topup`), que en una red de
+  # verdad sería el faucet.
+  yaci:
+    # Pineada, y no `latest`: el `latest` de esta imagen quedó en enero de 2024
+    # y reporta `protocol_major_ver: 8` — **Babbage, que no ejecuta Plutus V3**.
+    # Nuestro validador es V3 (D-019), así que con `latest` el devnet no sirve
+    # para lo único que lo queremos.
+    image: bloxbean/yaci-cli:0.10.6
+    container_name: propnexus-yaci
+    # El entrypoint de la imagen es `sh /app/yaci-cli.sh`, y ese script usa
+    # `==` de bash: bajo `sh` (dash) falla con "unexpected operator" y el
+    # contenedor muere antes de arrancar nada. Es un bug de la imagen, no
+    # nuestro; se puentea invocándolo con bash, que está adentro.
+    entrypoint: ["bash", "/app/yaci-cli.sh"]
+    command: ["create-node", "-o", "--start"]
+    environment:
+      yaci_store_enabled: "true"
+      ogmios_enabled: "true"
+      kupo_enabled: "true"
+    ports:
+      - "8080:8080"     # yaci-store · compatible Blockfrost en /api/v1
+      - "1337:1337"     # ogmios
+      - "1442:1442"     # kupo
+      - "10000:10000"   # admin del devkit (topup, swagger)
+      - "8090:8090"     # submit-api
+    volumes:
+      - yaci-data:/clusters
+
 volumes:
   minio-data:
+  yaci-data:
