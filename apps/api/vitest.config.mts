@@ -54,6 +54,35 @@ export default defineConfig({
     // **En paralelo otra vez.** Estuvo en `false` mientras los archivos
     // compartían una sola base sembrada y se pisaban entre sí; con una base por
     // archivo (SPEC-015 §1) esa razón desapareció.
-    fileParallelism: true
+    fileParallelism: true,
+
+    // Coverage — SPEC-015 §3.
+    //
+    // **Los umbrales arrancan en el piso MEDIDO, no en el 95% que pide la
+    // aceptación de M3.** Poner el número final antes de tenerlo deja el CI
+    // rojo por deuda conocida, y un CI que está rojo por default enseña a
+    // ignorar el rojo. Es un trinquete: suben con cada rebanada, no bajan.
+    //
+    // El 95% de M3 se mide contra los **test IDs** del backlog, no contra
+    // líneas (M2-D5 §8) — eso lo cuenta `scripts/check-testids.mjs`. Esto de
+    // acá es la otra mitad: que el código que existe esté ejercitado.
+    coverage: {
+      provider: "v8",
+      reporter: ["text-summary", "html"],
+      include: ["src/**/*.ts"],
+      exclude: [
+        // Bootstrap del proceso: no tiene lógica que testear, y arrancarlo en
+        // un test levantaría un puerto.
+        "src/server.ts",
+        // Solo tipos: no emite runtime, así que contarlo distorsiona.
+        "src/db/types.ts"
+      ],
+      thresholds: {
+        statements: 67,
+        branches: 56,
+        functions: 65,
+        lines: 70
+      }
+    }
   }
 });

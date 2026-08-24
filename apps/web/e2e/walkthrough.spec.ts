@@ -107,7 +107,7 @@ test.describe('Walkthrough', () => {
     await shot(page, '01-login')
   })
 
-  test('AUTH-LOGIN-002 · credenciales inválidas no crean sesión', async ({ page }) => {
+  test('AUTH-LOGIN-001 · credenciales inválidas no crean sesión', async ({ page }) => {
     // FALLA ESPERADA — bug del proxy de desarrollo, no de la app.
     // El proxy de nitro convierte `POST` + `401` en `502 Bad Gateway` ("fetch
     // failed" en h3), así que el front recibe un 502 y muestra "No se pudo
@@ -134,14 +134,14 @@ test.describe('Walkthrough', () => {
   })
 
   for (const user of SEED_USERS) {
-    test(`AUTH-LOGIN-003 · entra como ${user.role} y ve el shell de su panel`, async ({ page }) => {
+    test(`AUTH-LOGIN-001 · entra como ${user.role} y ve el shell de su panel`, async ({ page }) => {
       await login(page, user.tab, user.email, user.password, user.landing)
       await expect(page.locator('body')).toContainText(/./)
       await shot(page, `03-panel-${user.role}`)
     })
   }
 
-  test('AUTH-LOGIN-004 · admin no tiene solapa ni landing en esta rebanada (SPEC-011 §Casos borde)', async ({
+  test('AUTH-LOGIN-001 · admin no tiene solapa ni landing en esta rebanada (SPEC-011 §Casos borde)', async ({
     page
   }) => {
     await gotoLogin(page)

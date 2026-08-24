@@ -78,7 +78,7 @@ aprobación explícita.
 | Superficies (M2-D5) | 53 | 6 | 0 |
 | Componentes (M2-D3) | 33 | 10 | — |
 | Patrones de prueba (M2-D4) | 10 | 1 | **0** |
-| Test IDs | 53 filas | **0** | 0 |
+| Test IDs | **75** | 9 | 9 — medido por `pnpm testids` |
 | Paleta normativa | — | — | **0 coincidencias** |
 
 **API contra M2-D5:** de los **64** endpoints especificados coinciden **5** exactos —

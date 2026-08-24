@@ -43,8 +43,15 @@ jobs:
       - name: Typecheck
         run: pnpm typecheck
 
-      - name: Tests
-        run: pnpm test
+      # La vara de aceptación de M3 se mide en test IDs del backlog, no en
+      # líneas (M2-D5 §8). Falla si alguien reclama un ID que el entregable no
+      # declara —un typo se ve implementado y no cuenta para nada— o si la
+      # cobertura baja del piso. Ver SPEC-015 §3.
+      - name: Trazabilidad de los test IDs del backlog
+        run: pnpm testids
+
+      - name: Tests + coverage
+        run: pnpm test:coverage
 
       - name: Build (web + api)
         run: pnpm build
