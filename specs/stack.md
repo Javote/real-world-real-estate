@@ -203,7 +203,7 @@ la ruta en vez de depender de un escáner. Ninguna ruta llama ya a `canAccessPro
 | **Nitro sigue en beta** | Sigue sin haber Nitro 3 estable. Pero **el `502` en `POST`+`401` ya no es deuda**: se cerró con `credentials: "omit"` al descubrir que era el spec de fetch y no h3 (D-050) |
 | **Evidencia efímera en la instancia desplegada** | Un archivo subido no sobrevive al primer spin-down. Aceptado a conciencia y marcado (D-051); **vuelve a ser bloqueante el día del primer anclaje** |
 | **`bcrypt` es nativo** | Más barata desde D-041: sin imagen propia, el toolchain lo absorbe el entorno de build de Render. Queda el warning de `url.parse()` vía `node-pre-gyp` y el riesgo genérico de módulo nativo. **La alternativa `bcryptjs` (JS puro, ~30% más lento) hoy conviene menos**: Render free da 0.1 CPU, donde los ~81 ms medidos en una máquina rápida se van a varios cientos. Detalle en `apps/api/CLAUDE.md` §Superficie 🔴. Es código 🔴: lo decide el humano |
-| **`contracts/` con 0 tests** | Único criterio duro del SOM sin plan B. Es la deuda más grande que queda |
+| ~~**`contracts/` con 0 tests**~~ | **Cerrada** (D-057, D-058): 73 tests, con la tabla punto de rechazo → test en `contracts/CLAUDE.md`. Era la deuda más grande que quedaba |
 | **`pnpm audit`: 1 crítica + 13 altas** | Casi todas cuelgan de `bcrypt` → `@mapbox/node-pre-gyp` → `tar`, y son cadena de **instalación** (corre en cada build de Render), no de request. D-046 ya dejó anotada la salida: `scrypt` de `node:crypto`, stdlib y cero dependencias. Es 🔴 y lo decide el humano |
 | **`milestone` en el dominio** | D-023 pendiente; encarece con cada pantalla nueva |
 

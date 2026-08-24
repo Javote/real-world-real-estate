@@ -57,7 +57,7 @@ Tomados de `docs/milestone-3-implementacion/Milestone-3-info.md`; el mapeo a evi
 | # | Criterio | Evidencia |
 |---|---|---|
 | 1 | Los contratos compilan | `aiken check` verde en CI; `plutus.json` coincide con el código |
-| 2 | Unit tests **≥95% coverage** | Reporte de coverage en CI (hoy: **0 tests**) |
+| 2 | Unit tests **≥95% coverage** | **73 tests** en `aiken check`, verdes en CI. `aiken` no mide coverage de líneas, así que la evidencia es la tabla **punto de rechazo → test** de `contracts/CLAUDE.md` (D-057) |
 | 3 | **≥8 stages** con signers/percentages configurables | Tests parametrizados; plantilla estándar de 10 stages |
 | 4 | **3 participantes piloto** confirman que refleja el avance de obra y la lógica de certificación | Carta firmada |
 | 5 | Endpoints documentados | Colección Postman/OpenAPI publicada |
@@ -84,8 +84,9 @@ se dejan para el final.
 | Pantallas | **1 de 53** | Solo `/login`, y no conforma: pide email (M2-D2 pide *Username*), sin las 4 solapas de rol, sin `LanguageToggle`, sin `GradientHeader`. |
 | Componentes | **4 de 36 por nombre, 0 conformes** | `HashChip` no trunca 6+4 y usa emoji en vez de Lucide; `StatusPill` es booleano en vez de la matriz de 5 estados. `MilestoneStateBadge` y `AppHeader` no existen en M2-D3. |
 | Entidades | **6 de ~18** | Falta `Unit` —sobre la que giran contrato, releases y dossier— y el rol `notary`. |
-| Contratos | topología correcta, **0 tests** | El criterio 2 pide ≥95%. Las 6 ops `M3-SC-01..06` no existen como tales. |
-| i18n · tokens · shell mobile · Merkle · `AnchorPort` | **0%** | Nada implementado. |
+| Contratos | datum alineado con M1-D2, thread token, **73 tests** | El criterio 2 está cubierto (D-057, D-058). Las 6 ops `M3-SC-01..06` siguen sin existir como tales. |
+| i18n · tokens · shell mobile | **0%** | Nada implementado. |
+| Merkle · `AnchorPort` | **hechos** | `merkleRoot` en `packages/shared`, `AnchorPort` con adaptador simulado y real (D-060, D-061, SPEC-013). Falta la superficie de UI. |
 
 **Conformidad global ≈ 2%.** El código existente es una **semilla** cuyo valor son decisiones de
 arquitectura, no superficie terminada:
@@ -118,7 +119,7 @@ conformidad. Lo que sigue es lo que hay que cambiar, por palanca:
 | 2 | **`packages/shared` vacío desactiva la regla 6**, que es lo único que vuelve imposible el drift API↔web. Bloqueada por el skew TS 5.8/6.0. | — | **resuelto** — SPEC-008: TS unificado en 6.0, contrato de auth compartido, 21 tests |
 | 3 | **El principio 1 ya se violaba:** jerarquía de precedencia escrita **4 veces**; "2% de conformidad" **4 veces**; trampas del front duplicadas entre `CLAUDE.md` y un skill; 267 líneas de README de scaffold sin información del proyecto. | grep | **resuelto** — contexto por subárbol (D-032) |
 | 4 | **Los 6 criterios que no se programan estaban todos en la última rebanada.** El criterio 4 (3 pilotos) depende de gente externa y tiene el lead time más largo del proyecto; el 12 (URL pública) hacía caer el primer deploy real al final. | plan | **resuelto** — Track C, abajo |
-| 5 | **Contratos: 0 tests contra un criterio de ≥95%**, declarado paralelo y sin nadie encima. Único criterio duro sin plan B. | `aiken check` verde vacío | **track propio** |
+| 5 | **Contratos: 0 tests contra un criterio de ≥95%**, declarado paralelo y sin nadie encima. Único criterio duro sin plan B. | `aiken check` verde vacío | **resuelto** 2026-08-23 — 73 tests (D-057, D-058) |
 | 6 | **El rename D-023 sigue sin hacerse** y hoy es lo más barato que va a ser. | — | **SPEC-009** |
 | 7 | **`contracts/aiken.toml` con naming de scaffold** (`j/milestone-fsm`, `version = "0.0.0"`, que incumple D-015). | — | **SPEC-009** |
 | 9 | **La segunda capa de autorización es una función que hay que acordarse de llamar**, no un middleware que no se pueda olvidar. `requireRole` está en la cadena o no está; `canAccessProject` devuelve un booleano que alguien tiene que chequear, y un endpoint que se lo olvide **no tiene segunda capa y nada lo detecta**: ni el compilador, ni un test, ni la puerta. Hoy son 27 endpoints auditados sin agujeros; el backlog de M2-D5 son ~80. | auditoría 🔴 del 2026-08-20 + repaso del 2026-08-21 | **mitigado, no resuelto** — `scripts/check-project-access.py` corre en la puerta y hace que olvidarse sea ruidoso (D-044). La **forma** sigue 🔴 y con dueño humano: un `requireProjectAccess(...)` de Express que lea `req.params.projectId`. Se hace al arrancar la rebanada 1, o antes si el detector salta (trigger en D-044) |
