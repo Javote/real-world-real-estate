@@ -1,3 +1,4 @@
+import { asegurarDirectorioLocal, DEFAULT_DATABASE_URL } from "../db/local-db";
 import { SqliteTypeCoercionPlugin } from "../db/sqlite-type-plugin";
 import type { Database } from "../db/types";
 import { Kysely } from "./kysely";
@@ -15,9 +16,12 @@ import { LibsqlDialect } from "./libsql-dialect";
 // instala las dos sin dedupear porque los rangos no se solapan, y el `Client`
 // de una no tipa contra el `Client` de la otra. `db.destroy()` sí cierra la
 // conexión en este modo (Kysely es dueño del cliente que crea).
+const databaseUrl = process.env.DATABASE_URL ?? DEFAULT_DATABASE_URL;
+asegurarDirectorioLocal(databaseUrl);
+
 export const db = new Kysely<Database>({
   dialect: new LibsqlDialect({
-    url: process.env.DATABASE_URL ?? "file:./dev.db",
+    url: databaseUrl,
     authToken: process.env.DATABASE_AUTH_TOKEN
   }),
   plugins: [new SqliteTypeCoercionPlugin()]

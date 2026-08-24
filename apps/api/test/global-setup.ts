@@ -28,7 +28,11 @@ import { LibsqlDialect } from "../src/lib/libsql-dialect";
 //
 // El migrador propio (D-049) resuelve rutas relativas al cwd del proceso (acá,
 // apps/api), así que `file:./.data/...` cae dentro de apps/api.
-export const TEST_DB_DIR = ".data";
+// `.data/test/` y no `.data/` a secas: **este directorio se borra entero en
+// cada corrida**, y `.data/dev.db` vive al lado (SPEC-015 §7). Borrar la base
+// de desarrollo cada vez que alguien corre los tests sería exactamente el
+// problema que la separación dev/test existe para evitar.
+export const TEST_DB_DIR = path.join(".data", "test");
 export const TEMPLATE_DB = path.join(TEST_DB_DIR, "test.template.db");
 
 const DATABASE_URL = `file:./${TEMPLATE_DB}`;

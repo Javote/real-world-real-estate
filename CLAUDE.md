@@ -145,7 +145,7 @@ IDs de M2-D5 se transcriben literales, incluso `INV-STAGE-MILESTONE-001`.
 - **No editar migraciones aplicadas** — con la condición de D-063: mientras la única base sea local,
   el esquema se corrige editando el archivo y borrando la base. Con Turso vivo, se termina.
 - No tocar `contracts/build/` ni editar `aiken.lock` a mano.
-- No commitear `.env`, `dev.db`, `uploads/` ni artefactos de build.
+- No commitear `.env`, `apps/api/.data/` (las bases locales), `uploads/` ni artefactos de build.
 - No "arreglar" tests cambiando contratos de API o esquema de DB para que pasen.
 - **No editar nada dentro de `docs/`** (D-022).
 

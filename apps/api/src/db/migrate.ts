@@ -2,6 +2,7 @@ import "dotenv/config";
 import { existsSync, readdirSync, readFileSync } from "node:fs";
 import path from "node:path";
 import { type Client, createClient } from "../lib/libsql-client";
+import { asegurarDirectorioLocal, DEFAULT_DATABASE_URL } from "./local-db";
 
 // Kysely no trae generador de migraciones (D-049): `migrations/*.sql` es SQL
 // plano que se escribe a mano, con `--> statement-breakpoint` entre statements
@@ -81,8 +82,11 @@ export async function applyPendingMigrations(client: Client): Promise<string[]> 
 }
 
 async function main() {
+  const url = process.env.DATABASE_URL ?? DEFAULT_DATABASE_URL;
+  asegurarDirectorioLocal(url);
+
   const client = createClient({
-    url: process.env.DATABASE_URL ?? "file:./dev.db",
+    url,
     authToken: process.env.DATABASE_AUTH_TOKEN
   });
 
@@ -94,7 +98,7 @@ async function main() {
 }
 
 // Solo corre como script. Sin este guardia, importarlo desde la suite de tests
-// dispararía una migración contra `dev.db` como efecto secundario del import.
+// dispararía una migración contra la base local como efecto secundario del import.
 if (require.main === module) {
   main().catch((e) => {
     console.error(e);

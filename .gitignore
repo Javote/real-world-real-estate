@@ -11,13 +11,17 @@ dist/
 .env.*
 !.env.example
 
-# SQLite de desarrollo (Kysely sobre @libsql/client, D-049).
-apps/api/dev.db
-apps/api/dev.db-journal
-apps/api/dev.db-wal
-apps/api/dev.db-shm
-# Bases de la suite: una por archivo de test, más la plantilla (SPEC-015 §1).
+# Bases SQLite locales (Kysely sobre @libsql/client, D-049): `dev.db` para
+# desarrollo y `.data/test/` para la suite —una base por archivo de test, más su
+# plantilla—. Una sola regla en vez de ocho líneas de sufijos de SQLite
+# (`-journal`, `-wal`, `-shm`) por base (SPEC-015 §7).
 apps/api/.data/
+
+# Rutas LEGADAS: hasta SPEC-015 §7 las bases vivían sueltas en `apps/api/`. Un
+# árbol viejo las tiene todavía, y sin estas líneas el primer `git add -A` las
+# commitea. Se pueden borrar cuando nadie tenga un árbol de antes.
+apps/api/dev.db*
+apps/api/test.db*
 
 # Archivos subidos por usuarios (runtime, no código). El `/uploads` de la raíz
 # no debería existir nunca; está por si alguien arranca la API desde ahí.

@@ -90,13 +90,13 @@ jobs:
       - name: Base migrada y sembrada
         run: pnpm db:migrate && pnpm db:seed
         env:
-          DATABASE_URL: file:./dev.db
+          DATABASE_URL: file:./.data/dev.db
           JWT_SECRET: ci-secret-jamas-en-produccion
 
       - name: E2E
         run: pnpm e2e
         env:
-          DATABASE_URL: file:./dev.db
+          DATABASE_URL: file:./.data/dev.db
           JWT_SECRET: ci-secret-jamas-en-produccion
           # El default (20) no alcanza: la suite hace ~10 logins por proyecto y
           # son dos, así que el segundo recibía 429 en todo. Ver el comentario

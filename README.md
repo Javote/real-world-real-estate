@@ -200,7 +200,7 @@ versionan (regla 12 de `CLAUDE.md`).
 | `apps/`, `packages/`, `contracts/`, `.claude/`, `.github/` | **Pública** | Código, contratos y CI |
 | `docs/`, `specs/`, `README.md`, `CLAUDE.md`, `DECISIONS.md` | **Pública** | Entregables oficiales y documentación de trabajo |
 | `apps/api/.env`, `apps/web/.env` | **Privada** — nunca versionada | Secretos locales. El ejemplo público es `.env.example` |
-| `apps/api/dev.db` | **Privada** — nunca versionada | Base SQLite de desarrollo |
+| `apps/api/.data/` | **Privada** — nunca versionada | Bases SQLite locales: `dev.db` y las de la suite |
 | `apps/api/uploads/` | **Privada** — nunca versionada | Evidencia subida en runtime |
 | `apps/web/e2e/.artifacts/` | **Privada** — nunca versionada | Capturas, videos y traces de la suite E2E |
 

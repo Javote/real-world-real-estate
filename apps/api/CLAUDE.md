@@ -387,7 +387,7 @@ riesgo genérico de módulo nativo. **Bajar el cost no es opción: la regla 4 fi
 
 `pnpm --filter @plataforma/api test` — vitest + supertest contra **una base SQLite propia**
 (`test.db`), que `test/global-setup.ts` crea aplicando las migraciones (`src/db/migrate.ts`, D-049)
-y siembra en cada corrida. Nunca contra `dev.db`: un test no puede depender del seed de desarrollo
+y siembra en cada corrida. Nunca contra `.data/dev.db`: un test no puede depender del seed de desarrollo
 ni ensuciarlo.
 
 Se aplican las migraciones reales (`migrations/*.sql`) **con el mismo runner que corre en producción**
@@ -409,7 +409,7 @@ reconstruir mentalmente aplicando seis archivos en orden, incluida una reconstru
 a leerse en un solo lugar.
 
 **La regla "no editar una migración aplicada" tiene condición, y hay que saber cuál.** Protege
-entornos donde ya corrió. Mientras la única base sea `dev.db` y la `test.db` que la suite recrea,
+entornos donde ya corrió. Mientras las únicas bases sean `.data/dev.db` y las que la suite recrea en `.data/test/`,
 corregir el esquema es editar el archivo y **borrar la base local**. En cuanto exista una base
 desplegada —Turso—, esto se termina: toda corrección es migración nueva, sin excepción.
 
@@ -421,4 +421,4 @@ No hay `db:generate` ni `db:studio` (D-049): Kysely no trae generador de migraci
 inspección. Una migración nueva se escribe a mano en `migrations/*.sql`, con el mismo separador
 `--> statement-breakpoint` (convención de archivo para tener más de un statement, no sintaxis de
 Kysely). Para inspeccionar
-la base, un cliente SQLite cualquiera contra `dev.db`/`file:` — es deuda menor, no bloqueante.
+la base, un cliente SQLite cualquiera contra `.data/dev.db` — es deuda menor, no bloqueante.
