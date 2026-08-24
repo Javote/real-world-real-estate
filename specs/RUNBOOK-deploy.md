@@ -11,14 +11,21 @@
 
 | Servicio | Qué es | URL | Arranca con |
 |---|---|---|---|
-| `propnexus-api` | Express 4 sobre Node | `https://propnexus-api.onrender.com` | migraciones + `server.js` |
-| `propnexus-web` | TanStack Start (SSR) sobre Nitro | `https://propnexus-web.onrender.com` | `.output/server/index.mjs` |
+| `propnexus-api` | Express 5 sobre Node | `https://propnexus-api.onrender.com` | migraciones + `server.js` |
+| `propnexus-web` | SPA estática (TanStack Router + Vite) | `https://propnexus-web.onrender.com` | servida desde CDN, sin proceso |
 | base | SQLite gestionada | `libsql://…turso.io` | — |
 
-El web **proxea** `/api/**` y `/health` hacia la API (route rules de Nitro, horneadas en el build).
-Consecuencia práctica: **no hay CORS y el navegador nunca ve la URL de la API**; el front pega
-siempre a rutas relativas del mismo origen. `API_ORIGIN` es una variable de **build time**, no de
-runtime — cambiarla exige *redeploy* del web, no un restart.
+**El web NO proxea nada.** Hasta D-065 era un servicio SSR sobre Nitro que reenviaba `/api/**`
+desde su propio origen, y por eso no había CORS. Como **SPA estática** vive en otro origen y pega
+a la URL absoluta de la API, así que:
+
+- el navegador **sí** ve la URL de la API, y **sí** hay preflight de CORS;
+- la API acepta al web por **lista blanca** (`WEB_ORIGIN`), nunca con `*`;
+- `VITE_API_ORIGIN` es de **build time** — cambiarla exige *redeploy* del web, no un restart;
+- `WEB_ORIGIN` es de **runtime** en la API: toma con un restart.
+
+Las dos variables son el par que hace que la app funcione. Si falta una, el web carga y ninguna
+request pasa. Ver §2.
 
 ## 1 · Alta por primera vez
 
@@ -103,11 +110,15 @@ Verificación post-deploy, en este orden:
 
 ```bash
 curl -s https://propnexus-api.onrender.com/health                 # {"ok":true}
-curl -s https://propnexus-web.onrender.com/health                 # {"ok":true}  ← prueba el proxy
+curl -s -o /dev/null -w '%{http_code}\n' https://propnexus-web.onrender.com/   # 200, el index de la SPA
+
+# El login va DIRECTO a la API (no hay proxy). Con `Origin` del web, para
+# comprobar de paso que la lista blanca de CORS lo acepta:
 curl -s -o /dev/null -w '%{http_code}\n' -X POST \
-  https://propnexus-web.onrender.com/api/v1/auth/login \
+  https://propnexus-api.onrender.com/api/v1/auth/login \
   -H 'Content-Type: application/json' \
-  -d '{"email":"nadie@example.com","password":"incorrecta"}'      # 401, NO 502
+  -H 'Origin: https://propnexus-web.onrender.com' \
+  -d '{"email":"nadie@example.com","password":"incorrecta"}'      # 401
 ```
 
 **Ese último es el canario y no es opcional.** Un `502` ahí significa que se perdió el
@@ -141,7 +152,8 @@ original hasta estar seguro.
 | La API no arranca, log dice `JWT_SECRET` | La variable quedó vacía | D-042: es el comportamiento buscado. Regenerar en el dashboard y redeploy |
 | Todos los logins dan 429 | `TRUST_PROXY_HOPS` distinto de 1 | Con 0 detrás del proxy, todos los clientes comparten balde (D-045). Ponerlo en 1 y restart |
 | `POST` de login devuelve **502** | Se perdió `credentials: "omit"` en las route rules | D-050. Revisar `apps/web/vite.config.ts` y **rebuild del web** (es build time) |
-| El web carga pero toda llamada falla | `API_ORIGIN` mal, o apunta a una URL vieja | Es build time: corregir la variable y **Clear build cache & deploy** |
+| El web carga pero toda llamada falla | `VITE_API_ORIGIN` mal o apuntando a una URL vieja | Es build time: corregir la variable y **Clear build cache & deploy** |
+| El web carga y la consola dice CORS | Falta el origen del web en `WEB_ORIGIN` de la API | Es runtime: corregir la variable y **restart** de la API |
 | Evidencia subida que desapareció | Filesystem efímero | **Es esperado**, no es un incidente. D-051 y §Limitaciones |
 | Servicio suspendido a mitad de mes | Se agotaron las 750 h | Alguien puso un keep-warm. Sacarlo (§Limitaciones) |
 | `ERR_PNPM_OUTDATED_LOCKFILE` en el build | Se tocó un `package.json` sin `pnpm install` | La puerta lo atrapa antes; si llegó acá, `pnpm install` y commitear el lockfile |

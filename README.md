@@ -1,7 +1,7 @@
 # PropNexus — Anclaje de Evidencia Inmobiliaria sobre Cardano
 
 > Catalyst Fund Project **1400106** — *Real-World Real Estate Pre-Sale with Proof & Release*.
-> Monorepo: **pnpm + TanStack Start** (web) + **Express 5 + Kysely** (api) + **Aiken / Plutus V3** (contratos).
+> Monorepo: **pnpm + TanStack Router/Vite** (web, SPA) + **Express 5 + Kysely** (api) + **Aiken / Plutus V3** (contratos).
 
 Ventas inmobiliarias en pozo: estructura el ciclo de obra en **stages**, organiza la **evidencia**
 (planos, fotos, permisos, certificados) y ancla **huellas criptográficas** (SHA-256 / Merkle) en
@@ -25,9 +25,10 @@ El repo es la memoria; los chats son descartables.
 
 ## Requisitos previos
 
-- **Node.js ≥ 20 LTS** y **pnpm ≥ 9** — `corepack enable && corepack prepare pnpm@latest --activate`
-- **Docker** (para MinIO cuando se migre desde disco local — D-011). PostgreSQL ya no es el
-  destino: se mantiene SQLite (D-038)
+- **Node.js ≥ 22.12** y **pnpm ≥ 9** — la versión la fija `engines` del `package.json` raíz,
+  y es la misma que corre el CI — `corepack enable && corepack prepare pnpm@latest --activate`
+- **Docker**, opcional: levanta MinIO y el devnet de Cardano para las dos suites que necesitan
+  infraestructura real (ver §Infraestructura local). Nada del arranque rápido lo necesita
 - **Aiken v1.1.21** para los contratos:
   ```bash
   curl --proto '=https' --tlsv1.2 -LsSf https://install.aiken-lang.org | sh
@@ -44,7 +45,19 @@ pnpm db:seed                                     # usuarios y proyecto demo
 pnpm dev                                         # web en :3000, api en :8787
 ```
 
-Login demo: `admin@example.com` / `admin123` (resto de usuarios en `apps/api/src/db/seed.ts`).
+**En `/login` no hace falta tipear nada:** tocar la solapa del rol prefilla usuario y contraseña
+del seed, que además los imprime al terminar.
+
+| Solapa | Usuario | Aterriza en |
+|---|---|---|
+| Developer | `developer@example.com` / `developer123` | `/developer` |
+| Certifier | `verifier@example.com` / `verifier123` | `/certifier` |
+| Notary | `notary@example.com` / `notary123` | `/notary` |
+| Investor | `buyer@example.com` / `buyer123` | `/investor/buy` |
+
+`admin@example.com` / `admin123` existe pero **no tiene panel todavía**: el login es válido y el
+ruteo lo devuelve a `/login`, que no es un error (SPEC-011 §Casos borde).
+
 Son credenciales **de desarrollo y publicadas**, y por eso el seed solo las usa contra un SQLite
 local: contra cualquier otra base se niega a correr sin `SEED_ADMIN_PASSWORD` (D-047).
 Contratos: `pnpm contracts:check`.
@@ -54,11 +67,15 @@ Contratos: `pnpm contracts:check`.
 Un comando, y es el mismo que corre el CI:
 
 ```bash
-pnpm verify        # lint + typecheck + tests + build
+pnpm verify        # lint + typecheck + trazabilidad de test IDs + tests + build
 ```
 
+`pnpm testids` es parte de `verify` y del CI: compara los test IDs del backlog de M2-D5 contra los
+que el repo reclama, y falla si alguien inventa uno que el entregable no declara o si la cobertura
+baja del piso. `pnpm test:coverage` corre la suite de la API con umbrales.
+
 El linter y el formateador son **Biome** (`pnpm lint:fix` arregla lo mecánico). El CI corre lo
-mismo, más el job de Aiken (`fmt --check`, `check`, `build` y que `plutus.json` esté al día) y
+mismo, más un job de E2E (Playwright, **no bloqueante** por ahora) y el job de Aiken (`fmt --check`, `check`, `build` y que `plutus.json` esté al día) y
 `pnpm install --frozen-lockfile`, que falla si el lockfile no refleja los `package.json`.
 
 **No hay harness.** Hubo uno entre el 2026-08-20 y el 2026-08-23 —puerta ejecutable, hooks
@@ -96,8 +113,11 @@ presupuesto (D-040). El artefacto es **`render.yaml`** en la raíz: dos servicio
 [`specs/RUNBOOK-deploy.md`](specs/RUNBOOK-deploy.md).** Acá solo lo que hay que saber antes de abrirlo:
 
 - Falta **crear las cuentas** (Render, Turso) y pegar cuatro variables. No falta código.
-- El web **proxea** `/api/**` hacia la API: no hay CORS y el navegador nunca ve la URL de la API.
-- `API_ORIGIN` es de **build time**: cambiarla exige redeploy del web, no un restart.
+- **El web ya no proxea.** Desde D-065 es una SPA estática y vive en otro origen, así que el
+  navegador sí ve la URL de la API y sí hay CORS: la API acepta al web por **lista blanca**
+  (`WEB_ORIGIN`), nunca con `*`.
+- `VITE_API_ORIGIN` es de **build time**: cambiarla exige redeploy del web, no un restart.
+  `WEB_ORIGIN`, del lado de la API, es de runtime y toma con un restart.
 - **Keep-warm está prohibido.** Dos servicios despiertos 24/7 son ~1460 h contra las 750 del plan
   y quedan suspendidos cerca del día 15. Se calienta la URL a mano antes de una demo.
 - **La evidencia subida no persiste** (filesystem efímero). Aceptado y marcado en D-051; R2 sale en
@@ -162,7 +182,7 @@ plataforma/
 │   │   ├── migrations/         #   SQL escrito a mano, un solo runner (D-052)
 │   │   ├── src/
 │   │   └── test/
-│   └── web/                    # TanStack Start + Tailwind v4 — servicio en Render
+│   └── web/                    # TanStack Router + Vite (SPA) + Tailwind v4 — static site en Render
 ├── packages/
 │   ├── shared/                 # contrato Zod API↔web: lo importan los dos
 │   └── cardano/                # AnchorPort: la cadena detrás de una interfaz (simulado y real)
@@ -172,7 +192,8 @@ plataforma/
 │   └── plutus.json             #   blueprint, se commitea tras cada build
 ├── docs/                       # entregables aprobados de M1/M2/M3
 ├── specs/                      # specs, plan, runbook de deploy, stack
-├── .github/workflows/ci.yml    # dos jobs en paralelo: App TS · Contratos Aiken
+├── scripts/check-testids.mjs   # trazabilidad backlog M2-D5 → test IDs (corre en verify y CI)
+├── .github/workflows/ci.yml    # App TS · E2E (no bloqueante) · Contratos Aiken
 ├── biome.json                  # linter + formateador (no mira contracts/)
 ├── compose.dev.yml             # infra LOCAL: MinIO + devnet de Cardano (no se despliega, D-062)
 └── render.yaml                 # Blueprint de deploy (2 servicios, free tier)
@@ -183,7 +204,10 @@ plataforma/
 M1 y M2 entregados. **M3 en construcción** — su alcance es el backlog completo de `M2-D5`,
 corriendo íntegramente en **Preprod** (D-013). Mainnet y producción quedan fuera de alcance.
 
-Lo que existe hoy es una **semilla**: aporta decisiones de arquitectura, no superficie terminada.
+Medido al 2026-08-24: **API 64/64 endpoints** del backlog, **modelo de datos 7/7 entidades**,
+**front 27/53 superficies (51%)** con Notary y Certifier completos, y **530 tests**. Los contratos
+compilan y están probados, pero `ANCHOR_MODE=real` todavía lanza excepción: **nunca se ancló nada
+en Preprod**, y eso es lo que bloquea la URL pública, los TXIDs de prueba y el video.
 
 **El estado medido —conformidad, qué bloquea el arranque, rebanadas, tracks paralelos y riesgos—
 vive en `specs/README.md` y solo ahí.** Un número de estado copiado en dos archivos se desactualiza
