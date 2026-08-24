@@ -85,8 +85,6 @@ export interface MilestoneTable {
   validationCritical: SqliteBoolean;
   certifiedAt: SqliteTimestamp | null;
   certifiedById: string | null;
-  scopeType: string;
-  scopeUnitCount: number;
   createdAt: SqliteTimestamp;
   updatedAt: SqliteTimestamp;
 }

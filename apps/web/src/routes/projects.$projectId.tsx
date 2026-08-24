@@ -264,8 +264,7 @@ function MilestoneRow({
           {milestone.certifiedAt
             ? `Certificado el ${new Date(milestone.certifiedAt).toLocaleDateString()} · `
             : ''}
-          {evidence.length} documento{evidence.length === 1 ? '' : 's'} · {milestone.scopeUnitCount}{' '}
-          unidades
+          {evidence.length} documento{evidence.length === 1 ? '' : 's'}
         </p>
 
         {evidence.length > 0 || (canWrite && milestone.state !== 'Completed') ? (

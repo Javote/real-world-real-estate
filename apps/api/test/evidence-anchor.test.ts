@@ -28,8 +28,6 @@ async function crearStage(seq: number) {
       sequenceOrder: seq,
       state: "InProgress",
       validationCritical: true,
-      scopeType: "project",
-      scopeUnitCount: 0,
       createdAt: ahora,
       updatedAt: ahora
     })

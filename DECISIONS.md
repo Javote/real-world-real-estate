@@ -43,7 +43,7 @@
 | D-026 | **La plataforma no certifica, no valida y no decide** — solo registra, ancla y refleja | Aceptada |
 | D-027 | Taxonomía de archivos: el hash es el ticket de entrada a la cadena de prueba | Aceptada |
 | D-028 | Qué significa "evidencia sin firmar" (criterio 7 del SOM) | Aceptada |
-| D-029 | Alcance del dominio: stages del proyecto; la unidad es lo comercial | Aceptada |
+| D-029 | Alcance del dominio: stages del proyecto; la unidad es lo comercial | Aceptada; **su pendiente de schema ejecutado por D-063** |
 | D-030 | Trunk-based: una sola rama `main`, sin PRs | Aceptada (enmendada por D-031) |
 | D-031 | Ramas cortas por track para árboles de trabajo paralelos | **Obsoleta por D-053** — `worktree.sh` borrado; nunca se usó |
 | D-032 | El harness de agentes: la puerta es ejecutable y lo irreversible se bloquea por hook | **Revertida por D-053** |
@@ -77,6 +77,7 @@
 | D-060 | `packages/cardano` vuelve: `AnchorPort` + adaptador simulado con ledger propio (`SPEC-013` §A) | Aceptada (concreta D-014) |
 | D-061 | Todo stage es `validation_critical`; anclar evidencia lo dispara el admin; dos caminos on-chain | Aceptada |
 | D-062 | La infraestructura local corre en Docker (MinIO + devnet), aunque el deploy no lo use | Aceptada (precisa D-041) |
+| D-063 | Las migraciones se colapsan en una; "no editar una aplicada" queda con su condición explícita | Aceptada (ejecuta el pendiente de D-029) |
 
 > **Repaso completo con la documentación oficial: ver §Repaso al final del archivo.** D-001..D-017 se
 > escribieron sin los entregables delante; las 25 entradas se revisaron el 2026-07-29 y cada una
@@ -2355,3 +2356,52 @@ antes de tocar el adaptador real o el storage.
 verdad —por ejemplo, antes de una entrega de Catalyst— estos dos comandos ya existen y solo hay que
 agregar el `docker compose up` al workflow. Y si aparece un `Dockerfile` para el deploy, esta
 decisión y D-041 se revisan juntas.
+
+## D-063 — Las seis migraciones se colapsan en una, y la regla de no editarlas queda con su condición explícita — **Aceptada** · ejecuta el pendiente de D-029
+
+**Contexto (2026-08-23).** Después de conectar el backend con el contrato, el esquema había crecido
+por acumulación: seis migraciones, una de ellas reconstruyendo una tabla entera para invertir un
+`DEFAULT` y otra agregando una columna al final con `ALTER TABLE`. **El esquema real no se podía
+leer en ningún lado**: había que reconstruirlo mentalmente aplicando seis archivos en orden.
+
+La pregunta del dueño fue la correcta: *"estamos desarrollando el backend, no hay nada desplegado en
+ningún lugar. ¿Por qué no podemos matar la migración y armar una sola tabla nueva que esté bien?"*
+
+**Decisión.** Un solo `0000_init.sql` que describe la base entera. Las seis anteriores se borran; el
+historial de git las conserva.
+
+**Por qué esto no viola la regla, y cuál es la regla de verdad.** `CLAUDE.md` prohibía editar una
+migración ya aplicada. Esa prohibición **no es sobre el archivo: es sobre los entornos**. Existe
+porque en una base que ya corrió la migración, editarla produce dos esquemas distintos con el mismo
+número y nadie se entera. Hoy las únicas bases son `dev.db` —que se borra y se vuelve a sembrar en
+diez segundos— y la `test.db` que la suite recrea en cada corrida. **No hay nada que proteger.** La
+regla se reescribe con su condición explícita, que es lo que siempre quiso decir:
+
+> Mientras no exista ninguna base que no podamos recrear, el esquema se corrige editando el archivo
+> y borrando la base local. El día que exista una base desplegada, toda corrección es migración
+> nueva, sin excepción.
+
+**El único modo de falla que esto introduce, y está documentado donde se ve:** el runner registra
+por **nombre de archivo** en `_migrations`. Una `dev.db` que ya aplicó el `0000_init.sql` viejo
+**no** va a aplicar el nuevo — se queda con el esquema anterior en silencio. Por eso el aviso está
+en el encabezado de la propia migración y en `apps/api/CLAUDE.md`: *si tenías una base anterior,
+borrala*.
+
+**De paso se ejecuta un pendiente de D-029.** Aquella entrada decía, textual, que
+`Milestone.scopeType` y `scopeUnitCount` *"se eliminan del schema: nada en la cadena de prueba tiene
+alcance de unidad, así que el campo no distingue nada"*. Nunca se había hecho: las columnas seguían
+ahí, la API las aceptaba por body, y **el dashboard imprimía "0 unidades"** en tres lugares —un dato
+que era siempre cero porque nada lo llenaba. Ahora no existen.
+
+**Lo que NO se hizo, y por qué.** El rename de D-023 (`Milestone` → `ConstructionStage`) es la deuda
+obvia de este esquema y el momento parecía ideal. Son **370 ocurrencias en 22 archivos**, incluye
+los paths HTTP y arrastra el frontend, que el dueño dejó explícitamente para después. Va en su
+propio commit (`SPEC-009`). Que quede claro que no se pospone por costo sino por alcance: mezclarlo
+acá habría convertido un cambio de esquema legible en un diff de 400 líneas donde nadie revisa nada.
+
+**Consecuencia práctica del cambio de regla:** ese rename, cuando llegue, **también se hace editando
+`0000_init.sql`** en vez de agregando una migración de rename. Mientras no haya base desplegada, el
+esquema es un archivo que se corrige, no una pila que se acumula.
+
+**Trigger de revisión.** El día que se cree la base de Turso, esta decisión se cierra sola: a partir
+de ahí, `0000_init.sql` es historia y todo cambio es una migración nueva.

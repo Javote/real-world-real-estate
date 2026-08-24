@@ -30,8 +30,6 @@ export interface Milestone {
   validationCritical: boolean
   certifiedAt: string | null
   certifiedById: string | null
-  scopeType: string
-  scopeUnitCount: number
   createdAt: string
   updatedAt: string
 }

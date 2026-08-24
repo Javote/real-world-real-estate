@@ -42,8 +42,6 @@ beforeAll(async () => {
       sequenceOrder: 1,
       state: "Pending",
       validationCritical: false,
-      scopeType: "project",
-      scopeUnitCount: 0,
       createdAt: ahora,
       updatedAt: ahora
     })

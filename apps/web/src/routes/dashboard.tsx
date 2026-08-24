@@ -155,7 +155,7 @@ function DeveloperDashboard({ projects }: { projects: Project[] }) {
                 key={m.id}
                 milestone={m}
                 priorityClass={m.state === 'Observed' ? 'priority-high' : 'priority-medium'}
-                meta={`Estado: ${m.state === 'Observed' ? 'Observado' : 'En progreso'} · ${m.scopeUnitCount} unidades`}
+                meta={`Estado: ${m.state === 'Observed' ? 'Observado' : 'En progreso'}`}
                 actionLabel="Cargar"
               />
             ))}
@@ -196,7 +196,7 @@ function CertifierDashboard({ projects }: { projects: Project[] }) {
               key={m.id}
               milestone={m}
               priorityClass="priority-medium"
-              meta={`En progreso · ${m.scopeUnitCount} unidades`}
+              meta="En progreso"
               actionLabel="Revisar"
             />
           ))}
@@ -214,7 +214,7 @@ function CertifierDashboard({ projects }: { projects: Project[] }) {
               key={m.id}
               milestone={m}
               priorityClass="priority-high"
-              meta={`Observado · ${m.scopeUnitCount} unidades afectadas`}
+              meta="Observado"
               actionLabel="Ver estado"
             />
           ))}

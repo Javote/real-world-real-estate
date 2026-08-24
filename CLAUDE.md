@@ -184,7 +184,11 @@ No leas los cuatro entregables por costumbre: son ~25k tokens. Abrí lo que la f
 - En el front, no hacer `fetch` fuera de `ApiPort` (`apps/web/src/api/`).
 - No tocar mainnet: `CARDANO_NETWORK=Preprod` siempre (D-013). CI no toca ninguna red.
 - **No subir `@types/express` a v5** mientras `express` sea v4.
-- **No editar migraciones ya aplicadas**; siempre migración nueva.
+- **No editar migraciones ya aplicadas** — con una condición explícita: la regla protege entornos
+  donde la migración ya corrió. **Mientras no exista ninguna base que no podamos recrear** (hoy:
+  solo `dev.db` y la `test.db` de la suite), el esquema se corrige editando el archivo y borrando
+  la base local. El día que exista una base desplegada, esto pasa a ser inviolable y toda corrección
+  es migración nueva (D-063).
 - No tocar `contracts/build/` (generado) ni editar `aiken.lock` a mano.
 - No inventar endpoints, campos o dependencias fuera de spec/docs — proponer, no improvisar.
 - No commitear `.env`, `dev.db`, `uploads/` ni artefactos de build.

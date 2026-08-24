@@ -288,9 +288,7 @@ router.post(
       // handler `mint` del validador lo exige para acuñar el hilo
       // (`valid_initial_datum`), así que dejar elegir el estado inicial acá
       // sería fabricar stages que no se pueden anclar.
-      validationCritical: z.boolean().optional(),
-      scopeType: z.string().optional(),
-      scopeUnitCount: z.number().int().nonnegative().optional()
+      validationCritical: z.boolean().optional()
     });
 
     const parsed = schema.safeParse(req.body);
@@ -311,8 +309,6 @@ router.post(
         // D-061: todo stage es validation-critical. El default deja de ser un
         // flag que alguien se olvida de marcar; desmarcarlo es explícito.
         validationCritical: parsed.data.validationCritical ?? true,
-        scopeType: parsed.data.scopeType ?? "project_wide",
-        scopeUnitCount: parsed.data.scopeUnitCount ?? 0,
         createdAt: now,
         updatedAt: now
       })
@@ -382,9 +378,7 @@ router.patch(
     const schema = z.object({
       name: z.string().min(1).optional(),
       sequenceOrder: z.number().int().positive().optional(),
-      validationCritical: z.boolean().optional(),
-      scopeType: z.string().optional(),
-      scopeUnitCount: z.number().int().nonnegative().optional()
+      validationCritical: z.boolean().optional()
     });
 
     const parsed = schema.safeParse(req.body);

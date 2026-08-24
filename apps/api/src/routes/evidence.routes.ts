@@ -66,8 +66,6 @@ router.get(
         "Milestone.validationCritical as milestone_validationCritical",
         "Milestone.certifiedAt as milestone_certifiedAt",
         "Milestone.certifiedById as milestone_certifiedById",
-        "Milestone.scopeType as milestone_scopeType",
-        "Milestone.scopeUnitCount as milestone_scopeUnitCount",
         "Milestone.createdAt as milestone_createdAt",
         "Milestone.updatedAt as milestone_updatedAt"
       ])
@@ -106,8 +104,6 @@ router.get(
             validationCritical: row.milestone_validationCritical,
             certifiedAt: row.milestone_certifiedAt,
             certifiedById: row.milestone_certifiedById,
-            scopeType: row.milestone_scopeType,
-            scopeUnitCount: row.milestone_scopeUnitCount,
             createdAt: row.milestone_createdAt,
             updatedAt: row.milestone_updatedAt
           }

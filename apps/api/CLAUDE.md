@@ -353,17 +353,24 @@ suite verifica lo mismo que va a correr en producción.
 
 ```bash
 pnpm --filter @plataforma/api dev            # solo la API
-pnpm --filter @plataforma/api db:migrate     # aplica las migraciones pendientes (nunca editar una aplicada)
+pnpm --filter @plataforma/api db:migrate     # aplica las migraciones pendientes
 pnpm --filter @plataforma/api db:seed        # datos demo
 pnpm --filter @plataforma/api test:s3        # storage contra el MinIO de compose.dev.yml — NO corre en CI
 ```
 
-**Seis migraciones** (`0000`..`0005`). Las tres últimas son de la vuelta del anclaje: `0003`
-reconstruye `Milestone` para invertir el default de `validationCritical` (D-061), `0004` agrega
-`EvidenceBundle`, `0005` ata un `OnChainEvent` al archivo que ancló. La cadena completa se verificó
-aplicándola **desde cero contra una base nueva**, no solo incrementalmente sobre `dev.db`: una
-migración que reconstruye una tabla es exactamente la que se rompe en el entorno donde nadie la
-probó así.
+**Una sola migración**, `0000_init.sql`, y describe la base entera. Las seis que existieron hasta el
+2026-08-23 se colapsaron ahí (D-063): nada estaba desplegado, así que el esquema real —que había que
+reconstruir mentalmente aplicando seis archivos en orden, incluida una reconstrucción de tabla— pasó
+a leerse en un solo lugar.
+
+**La regla "no editar una migración aplicada" tiene condición, y hay que saber cuál.** Protege
+entornos donde ya corrió. Mientras la única base sea `dev.db` y la `test.db` que la suite recrea,
+corregir el esquema es editar el archivo y **borrar la base local**. En cuanto exista una base
+desplegada —Turso—, esto se termina: toda corrección es migración nueva, sin excepción.
+
+**Si tenías una `dev.db` de antes, borrala.** El runner registra por nombre de archivo: una base que
+ya aplicó el `0000_init.sql` viejo **no** va a aplicar el nuevo, y se queda con el esquema anterior
+sin avisar. Es el único modo de falla que este colapso introduce.
 
 No hay `db:generate` ni `db:studio` (D-049): Kysely no trae generador de migraciones ni UI de
 inspección. Una migración nueva se escribe a mano en `migrations/*.sql`, con el mismo separador

@@ -30,8 +30,6 @@ async function crearStage(opts: { state?: StageState; validationCritical?: boole
       sequenceOrder: Math.floor(Math.random() * 1_000_000) + 100,
       state: opts.state ?? "Pending",
       validationCritical: opts.validationCritical ?? false,
-      scopeType: "project",
-      scopeUnitCount: 0,
       createdAt: ahora,
       updatedAt: ahora
     })

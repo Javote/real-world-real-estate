@@ -176,8 +176,6 @@ async function main() {
       sequenceOrder: 1,
       state: "Completed",
       validationCritical: true,
-      scopeType: "project_wide",
-      scopeUnitCount: 48,
       createdAt: now,
       updatedAt: now
     })
@@ -193,8 +191,6 @@ async function main() {
       sequenceOrder: 2,
       state: "InProgress",
       validationCritical: true,
-      scopeType: "project_wide",
-      scopeUnitCount: 48,
       createdAt: now,
       updatedAt: now
     })
