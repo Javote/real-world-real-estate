@@ -55,7 +55,7 @@
 | D-038 | Datos: Drizzle (destino, diferido) · SQLite (default, no Postgres) · Turso (hosting en prod) | Aceptada (compromiso de dirección; migración diferida, ver Trigger) |
 | D-039 | Plataforma de deploy: Render. Railway descartado | Aceptada |
 | D-040 | El deploy de M3 corre en free tier ($0/mes). Restricción de diseño, no de presupuesto | Aceptada |
-| D-041 | Deploy con runtime nativo de Node + `render.yaml`. Sin Docker | Aceptada |
+| D-041 | Deploy con runtime nativo de Node + `render.yaml`. Sin Docker | Aceptada (**precisada por D-062**: el desarrollo local sí usa Docker) |
 | D-042 | En la superficie 🔴 el default inseguro no existe: se revienta al arrancar y se cierra al omitir | Aceptada |
 | D-043 | La regla de visibilidad de proyectos existe una sola vez: `projectScope` | Aceptada |
 | D-044 | La segunda capa de autorización la verifica la puerta; el middleware queda diferido | **Revertida por D-053** — el escáner se borró; la regla queda sin enforcement |
@@ -76,6 +76,7 @@
 | D-059 | El backend deja de estar desconectado del validador: FSM en `packages/shared`, productor del datum y tabla `OnChainEvent` | Aceptada (aclara D-007) |
 | D-060 | `packages/cardano` vuelve: `AnchorPort` + adaptador simulado con ledger propio (`SPEC-013` §A) | Aceptada (concreta D-014) |
 | D-061 | Todo stage es `validation_critical`; anclar evidencia lo dispara el admin; dos caminos on-chain | Aceptada |
+| D-062 | La infraestructura local corre en Docker (MinIO + devnet), aunque el deploy no lo use | Aceptada (precisa D-041) |
 
 > **Repaso completo con la documentación oficial: ver §Repaso al final del archivo.** D-001..D-017 se
 > escribieron sin los entregables delante; las 25 entradas se revisaron el 2026-07-29 y cada una
@@ -2314,3 +2315,43 @@ en un comentario). Es la pieza 3 del plan de `SPEC-013 §Plan de trabajo`.
 
 **Trigger de revisión.** Si algún día hace falta un stage no crítico —un hito informativo, sin
 evidencia— la columna sigue ahí y desmarcarla es una línea. Lo que no vuelve es el default.
+
+## D-062 — La infraestructura local corre en Docker, aunque el deploy no lo use — **Aceptada** · precisa D-041
+
+**Contexto (2026-08-23).** El vertical local pedido por el dueño —crear proyecto, subir un PDF,
+anclar su hash— necesita dos cosas que en producción son terceros: un S3 y una cadena. D-041 dice
+**"deploy con runtime nativo de Node, sin Docker"**, y sin esta entrada alguien iba a leer
+`compose.dev.yml` como una contradicción.
+
+**Decisión.** `compose.dev.yml` levanta MinIO y un devnet de Cardano **solo para desarrollo y
+pruebas manuales**. No se despliega, no lo toca el CI, y ningún `Dockerfile` entra al repo. D-041
+sigue intacta: habla del deploy, no del desarrollo.
+
+**El argumento, que es el mismo de D-014 y del principio 7:** probar contra un simulador propio
+demuestra que el código es coherente consigo mismo; probar contra MinIO y contra un nodo Cardano
+demuestra que es coherente **con lo que va a correr en producción**. El storage es el caso más
+claro: el mismo código habla con MinIO en local y con R2 en prod, así que probar contra MinIO
+prueba el camino real. Cambian tres variables de entorno, no el driver.
+
+**Dos cosas se pinean, y no por prolijidad.**
+
+1. **`bloxbean/yaci-cli:0.10.6`, nunca `latest`.** El `latest` de esa imagen quedó en enero de 2024
+   y reporta `protocol_major_ver: 8` — **Babbage, que no ejecuta Plutus V3**. Nuestro validador es
+   V3 (D-019), así que con `latest` el devnet no sirve para lo único que lo queremos. La `0.10.6` da
+   Conway (`10`) con cost models de V3.
+2. **El provider en local es Kupmios, no Blockfrost.** El provider Blockfrost de Lucid 0.6 lee
+   `cost_models_raw`, un campo que la API de Blockfrost agregó después y que yaci-store todavía no
+   devuelve. Contra Preprod se usa Blockfrost, que sí lo trae, y **el adaptador no se entera**:
+   recibe la instancia de Lucid ya construida. Ese desacople es justamente lo que permite que el
+   mismo código corra en los tres entornos.
+
+**Los tests de integración no corren en CI, a propósito.** `test:s3` y `test:yaci` se corren a mano
+con el compose arriba. Meterlos al CI significaría levantar dos servicios en cada push para cubrir
+lo que el `Emulator` y el driver de disco ya cubren en segundos — y un CI que tarda diez minutos se
+empieza a saltear, que es peor que no tenerlo. Quedan como lo que son: la verificación que se hace
+antes de tocar el adaptador real o el storage.
+
+**Trigger de revisión.** Si alguna vez el CI tiene que verificar contra un S3 o una cadena de
+verdad —por ejemplo, antes de una entrega de Catalyst— estos dos comandos ya existen y solo hay que
+agregar el `docker compose up` al workflow. Y si aparece un `Dockerfile` para el deploy, esta
+decisión y D-041 se revisan juntas.

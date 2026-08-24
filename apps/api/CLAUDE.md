@@ -155,6 +155,11 @@ endpoints del backlog **hoy conforman 2**: `POST /auth/login` y `GET /auth/me`.
 
 ## El endpoint de estado de stages, y lo que todavía no cumple
 
+**`POST /evidence/:id/anchor`** (admin) ancla el hash de un archivo por metadata — el otro camino
+on-chain de M1 (D-006, D-061). Es idempotente: si el archivo ya tiene su anclaje devuelve el mismo
+evento en vez de gastar otra transacción. Lo dispara el admin y nunca el upload, porque una vez en
+la cadena no se borra.
+
 `PATCH /milestones/:id/state` es hoy el único lugar donde el registro avanza, y hace cuatro cosas
 (D-059): aplica la tabla de transiciones, exige evidencia para completar un stage
 `validationCritical`, escribe el estado, y registra un `OnChainEvent` **pendiente** — la
@@ -350,7 +355,15 @@ suite verifica lo mismo que va a correr en producción.
 pnpm --filter @plataforma/api dev            # solo la API
 pnpm --filter @plataforma/api db:migrate     # aplica las migraciones pendientes (nunca editar una aplicada)
 pnpm --filter @plataforma/api db:seed        # datos demo
+pnpm --filter @plataforma/api test:s3        # storage contra el MinIO de compose.dev.yml — NO corre en CI
 ```
+
+**Seis migraciones** (`0000`..`0005`). Las tres últimas son de la vuelta del anclaje: `0003`
+reconstruye `Milestone` para invertir el default de `validationCritical` (D-061), `0004` agrega
+`EvidenceBundle`, `0005` ata un `OnChainEvent` al archivo que ancló. La cadena completa se verificó
+aplicándola **desde cero contra una base nueva**, no solo incrementalmente sobre `dev.db`: una
+migración que reconstruye una tabla es exactamente la que se rompe en el entorno donde nadie la
+probó así.
 
 No hay `db:generate` ni `db:studio` (D-049): Kysely no trae generador de migraciones ni UI de
 inspección. Una migración nueva se escribe a mano en `migrations/*.sql`, con el mismo separador

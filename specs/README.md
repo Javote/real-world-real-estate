@@ -141,7 +141,7 @@ Cada rebanada deja la app **corriendo y demostrable** — ese es el criterio de 
 | 1 | `SPEC-011` | Login de 4 roles | Entrás como cada rol y ves su panel, en ambos idiomas, en mobile | **cerrada** 2026-08-21 |
 | **0e** | `SPEC-012` | **`requireProjectAccess`: la segunda capa como middleware** 🔴 *(tampoco es vertical)* | Olvidarse de la membresía se ve en la firma de la ruta, como se ve un `requireRole` faltante | **cerrada** 2026-08-23 |
 | 2 | — | Developer crea proyecto, unidades y stages | Creás un desarrollo con su plantilla de 10 stages | no escrita |
-| 3 | `SPEC-013` | **`AnchorPort`: conectar el registro con la cadena** — en tres cortes (A: puerto + simulador · B: adaptador real · C: reconciliación y `verify()`) | A: el ciclo declarar → anclar → TXID cierra sin red. B: TXID verificable en cardanoscan | **A en curso** |
+| 3 | `SPEC-013` | **`AnchorPort`: conectar el registro con la cadena** — en tres cortes (A: puerto + simulador · B: adaptador real · C: reconciliación y `verify()`) | Subís evidencia, la anclás, completás el stage y el Merkle root queda en la cadena — verificado contra un nodo Cardano local | **A y B cerradas** 2026-08-23; C pendiente |
 | 4 | — | Certifier certifica y observa | La FSM cierra el lazo: observar devuelve el stage al developer | no escrita |
 | 5 | — | Invitación y aceptación | La unidad aparece en el portfolio del investor | no escrita |
 | 6 | — | Releases por stage | Cada liberación con su TXID, visible para ambas partes | no escrita |
@@ -221,7 +221,7 @@ la última rebanada, que es donde los proyectos mueren. Arrancan **ahora**, en p
 | `SPEC-010` | Endurecer la superficie 🔴 | 0c | **cerrada** 2026-08-21 |
 | `SPEC-011` | Login de 4 roles | 1 | **cerrada** 2026-08-21 |
 | `SPEC-012` | `requireProjectAccess`: la segunda capa como middleware | 0e | **cerrada** 2026-08-23 |
-| `SPEC-013` | `AnchorPort`: conectar el registro con la cadena | 3 | **A en curso** 2026-08-23 |
+| `SPEC-013` | `AnchorPort`: conectar el registro con la cadena | 3 | **A y B cerradas** 2026-08-23 · C pendiente |
 
 `SPEC-009` está reservada (rebanada 0b, rename D-023 + naming de contratos) pero todavía no
 escrita.

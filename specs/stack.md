@@ -102,16 +102,25 @@ Ningún validador custodia ni transfiere valor, en ninguna fase (D-021).
 
 ## 7 · Blockchain
 
+> Auditado el **2026-08-23**, después de SPEC-013 §A y §B. Antes esta sección decía "el package
+> está vacío" en cuatro filas: era cierto hasta D-060.
+
 | Pieza | Estado | Decisión |
 |---|---|---|
 | Red: **Preprod en todos los entornos**. Mainnet fuera del alcance de M3 | ● (por configuración) | D-013 |
-| `packages/cardano` con `AnchorPort` (`anchor`/`verify`/`awaitConfirmation`) | ○ — **el package está vacío** | D-014 |
-| Adaptador `simulated` (determinístico; es producto, no stub) | ○ | D-014 |
-| Adaptador real: **Lucid Evolution** + Blockfrost | ○ — decidido; el package está vacío | D-005 |
-| Anclaje Fase A: metadata de tx, label `1904`, strings ≤64 bytes | ○ | D-006 |
+| `packages/cardano` con `AnchorPort` (`openThread`/`advanceThread`/`anchorEvidence`/`verify`/`awaitConfirmation`) | ● | D-014 · D-060 |
+| Adaptador `simulated` (determinístico, con ledger propio; es producto, no stub) | ● | D-014 · D-060 |
+| Adaptador real: **Lucid Evolution `0.6.2`** | ● — probado contra el `Emulator` y contra un devnet local | D-005 |
+| Códec del datum ⇄ `Data` de Plutus, con valor dorado fijado también en Aiken | ● | SPEC-013 |
+| Dirección y policy derivadas del blueprint (nada hardcodeado, regla 11) | ● | SPEC-013 |
+| Anclaje de evidencia: metadata de tx, label `1904`, strings ≤64 bytes | ● — lo dispara el admin | D-006 · D-061 |
+| Merkle root del bundle en el datum, verificado por el validador | ● | D-061 |
+| Devnet local (yaci-devkit `0.10.6`, Conway + PlutusV3) | ● — `compose.dev.yml` | SPEC-013 |
+| Provider contra Preprod: **Blockfrost** | ○ — en local se usa Kupmios; ver `packages/cardano/CLAUDE.md` | D-005 |
 | Cuenta Blockfrost (proyecto Preprod) | ○ — **no creada** | — |
 | Wallet de servicio (seed nueva y exclusiva de Preprod, fondeada por faucet) | ○ — **no creada** | 🔴 |
-| Co-firma CIP-30 para notario/certificador | ○ — decidido, sin implementar | D-009 |
+| Reconciliación y `verify()` público sin cuenta | ○ — rebanada C | SPEC-013 |
+| Co-firma CIP-30 para notario/certificador | — **sin alcance en el validador** | D-009 · D-058 |
 
 ## 8 · Infraestructura y despliegue
 
@@ -278,22 +287,29 @@ a 1440×900. No corre en CI, por decisión.
 
 ### 12.4 · `apps/api`
 
+> Regenerada el **2026-08-23** leyendo lo instalado. La versión anterior de esta tabla decía
+> `express ^4.21.2` y `@types/express` pineado a v4 — quedó vieja con D-054, que subió los dos a v5.
+> Es el riesgo de una tabla de versiones escrita a mano: se desactualiza en silencio.
+
 | Paquete | Declarado | Resuelto | Nota |
 |---|---|---|---|
+| `@aws-sdk/client-s3` | `^3.1116.0` | `3.1116.0` | storage S3: MinIO en dev, R2 en prod (D-011) |
 | `@libsql/client` | `^0.17.4` | `0.17.4` | ESM puro — patrón `require()` de `lib/libsql-client.ts` |
 | `@libsql/kysely-libsql` | `^0.4.1` | `0.4.1` | declara `@libsql/client: ^0.8.0` → §12.7 |
-| `@paralleldrive/cuid2` | `^3.3.0` | `3.3.0` | IDs; ESM puro |
+| `@paralleldrive/cuid2` | `^3.3.0` | `3.3.0` | IDs; ESM puro. **Es el `stage_ref` on-chain** (D-058) |
+| `@plataforma/cardano` | `workspace:^` | link local | el `AnchorPort` (D-060) |
 | `@plataforma/shared` | `workspace:^` | link local | |
 | `bcrypt` | `^5.1.1` | `5.1.1` | **módulo nativo**, cost 10 (regla 4) |
 | `dotenv` | `^16.4.5` | **`16.6.1`** | |
-| `express` | `^4.21.2` | **`4.22.2`** | v4 a propósito |
+| `express` | `^5.2.1` | `5.2.1` | v5 desde D-054 |
 | `express-rate-limit` | `^8.6.2` | `8.6.2` | solo `POST /auth/login`, store en memoria |
+| `helmet` | `^8.3.0` | `8.3.0` | D-054 |
 | `jsonwebtoken` | `^9.0.2` | **`9.0.3`** | HS256, 7 días |
 | `kysely` | `^0.29.5` | `0.29.5` | ESM puro |
 | `multer` | `^2.2.0` | `2.2.0` | D-036 |
 | `zod` | `^4.4.3` | `4.4.3` | |
 | *dev* `@types/bcrypt` | `^5.0.2` | `5.0.2` | |
-| *dev* `@types/express` | `^4.17.25` | `4.17.25` | **pineado a v4**: los tipos v5 rompen 21 rutas |
+| *dev* `@types/express` | `^5.0.6` | `5.0.6` | v5, alineado con `express` |
 | *dev* `@types/jsonwebtoken` | `^9.0.9` | **`9.0.10`** | |
 | *dev* `@types/multer` | `^2.2.0` | `2.2.0` | |
 | *dev* `@types/node` | `^22.13.14` | **`22.20.1`** | |
@@ -303,11 +319,24 @@ a 1440×900. No corre en CI, por decisión.
 | *dev* `typescript` | `^6.0.2` | **`6.0.3`** | |
 | *dev* `vitest` | `^4.1.5` | **`4.1.10`** | |
 
-**Variables de entorno que el código realmente lee** (auditado por `grep`, no por el `.env.example`):
-`DATABASE_URL` · `DATABASE_AUTH_TOKEN` · `JWT_SECRET` · `PORT` · `UPLOAD_DIR` ·
-`MAX_FILE_SIZE_MB` · `TRUST_PROXY_HOPS` · `LOGIN_RATE_LIMIT_MAX` · `SEED_ADMIN_PASSWORD` ·
-`SEED_DEMO_PASSWORD`. En `apps/web`: `WEB_PORT` · `API_ORIGIN` (las dos de **build time**,
-`ports.ts`).
+### 12.4b · `packages/cardano`
+
+| Paquete | Declarado | Resuelto | Nota |
+|---|---|---|---|
+| `@lucid-evolution/lucid` | `^0.6.2` | `0.6.2` | D-005. ESM con build CJS |
+| `@harmoniclabs/bytestring` | `^1.0.0` | `1.0.0` | **peer de Lucid, declarado a mano** |
+| `@harmoniclabs/cbor` | `^1.6.6` | `1.6.6` | idem — **la 2.x rompe en runtime**, ver abajo |
+| `@harmoniclabs/pair` | `^1.0.0` | `1.0.0` | idem |
+| `@plataforma/shared` | `workspace:^` | link local | tipos del datum y la FSM |
+| *dev* `@lucid-evolution/provider` | `^0.2.1` | `0.2.1` | solo por el `Emulator` de los tests |
+| *dev* `@types/node` · `typescript` · `vitest` | | | igual que el resto |
+
+**Los tres `@harmoniclabs/*` están declarados a mano y no es cosmético.** Son peers de Lucid, y
+`auto-install-peers=false` (§12.7, D-052) significa que nadie los instala solo. Peor: **nadie
+verifica la versión**, porque `strict-peer-dependencies=false`. `pnpm add @harmoniclabs/cbor` trae
+la 2.x, `uplc@1.4.1` pide `^1.3.0`, y el síntoma es `TypeError: Right-hand side of 'instanceof' is
+not an object` en el encoder, sin ninguna señal en el typecheck. Antes de tocar estas tres,
+mirá el rango que declara quien las necesita.
 
 ### 12.5 · `packages/shared` y `contracts/`
 

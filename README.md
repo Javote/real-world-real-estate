@@ -110,9 +110,9 @@ Todavía no ejecutados; hacen falta para el **anclaje real**, no para el deploy:
 1. **Blockfrost** — crear cuenta, proyecto **Preprod**, setear `BLOCKFROST_API_KEY`.
 2. **Wallet de servicio** — generar una seed *nueva y exclusiva de Preprod* para que el backend firme
    las transacciones de anclaje, y fondearla desde el [faucet de testnet](https://docs.cardano.org/cardano-testnets/tools/faucet).
-3. **`packages/cardano`** — el `AnchorPort` y el adaptador **simulado** ya existen y corren en CI
-   (`SPEC-013` §A). Falta el adaptador **real** (Lucid + Blockfrost): rebanada B. Hasta entonces,
-   `ANCHOR_MODE=real` revienta al arrancar, a propósito.
+3. **`packages/cardano`** — el `AnchorPort`, el adaptador simulado y el **real** ya existen
+   (`SPEC-013` §A y §B), y el real está probado contra el `Emulator` y contra un devnet local. Lo
+   que falta para Preprod no es código: es la cuenta de Blockfrost y la wallet de los puntos 1 y 2.
 4. **Cloudflare R2** — storage S3-compatible para la evidencia, y mover el SHA-256 para que cubra los
    bytes que terminan en el object storage (D-011, superficie 🔴).
 
@@ -164,7 +164,7 @@ plataforma/
 │   └── web/                    # TanStack Start + Tailwind v4 — servicio en Render
 ├── packages/
 │   ├── shared/                 # contrato Zod API↔web: lo importan los dos
-│   └── cardano/                # AnchorPort: la cadena detrás de una interfaz (hoy, simulado)
+│   └── cardano/                # AnchorPort: la cadena detrás de una interfaz (simulado y real)
 ├── contracts/                  # Aiken · Plutus V3 — no se hostea, toolchain aparte
 │   ├── validators/stage.ak     #   el validador de la FSM + sus tests
 │   ├── lib/propnexus/fsm.ak    #   núcleo puro: tipos, transiciones, datum
@@ -173,6 +173,7 @@ plataforma/
 ├── specs/                      # specs, plan, runbook de deploy, stack
 ├── .github/workflows/ci.yml    # dos jobs en paralelo: App TS · Contratos Aiken
 ├── biome.json                  # linter + formateador (no mira contracts/)
+├── compose.dev.yml             # infra LOCAL: MinIO + devnet de Cardano (no se despliega, D-062)
 └── render.yaml                 # Blueprint de deploy (2 servicios, free tier)
 ```
 

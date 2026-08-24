@@ -98,7 +98,7 @@ nos pasó decidir contra una transcripción errónea (ver Trampas).
 apps/api          Express 5 + Kysely      → servicio en Render
 apps/web          TanStack Start (SSR)    → servicio en Render
 packages/shared   contrato Zod API↔web    → lo importan los dos
-packages/cardano  AnchorPort (D-014)      → lo importa la API; simulado hoy, real en SPEC-013 §B
+packages/cardano  AnchorPort (D-014)      → lo importa la API; simulado y real (Lucid Evolution)
 contracts/        Aiken · Plutus V3       → no se hostea, toolchain aparte
 ```
 
@@ -107,8 +107,9 @@ cambia de un lado y el typecheck del otro falla. Las migraciones son SQL plano e
 `apps/api/migrations/`, aplicadas por un único runner (`src/db/migrate.ts`, D-052).
 
 `contracts/` **no está en el workspace pnpm** a propósito (D-054): otro toolchain, otro lockfile,
-otra caché. `packages/cardano` existe desde SPEC-013 §A: expone el `AnchorPort` y hoy solo trae el
-adaptador simulado — que es producto, no stub (D-014).
+otra caché. `packages/cardano` existe desde SPEC-013 §A: expone el `AnchorPort` con dos
+adaptadores — el simulado, que es producto y no stub (D-014), y el real sobre Lucid Evolution,
+probado contra el `Emulator` y contra un devnet local (D-062).
 
 Tres `.md` en la raíz, a propósito: **`README.md`** (entrada humana, arranque, variables de
 entorno), **`CLAUDE.md`** (este archivo) y **`DECISIONS.md`** (el porqué). El mapa de desarrollo
@@ -179,7 +180,7 @@ No leas los cuatro entregables por costumbre: son ~25k tokens. Abrí lo que la f
 ## Prohibiciones (qué NO hacer aunque parezca buena idea)
 
 - No migrar lógica de negocio on-chain: el backend es la fuente de verdad del **registro** del lifecycle (D-007); on-chain se anclan pruebas.
-- No importar Lucid/Blockfrost fuera del futuro adaptador real de `packages/cardano` (D-014). Las rutas de la API jamás llaman a la chain directo.
+- No importar Lucid/Blockfrost fuera de `packages/cardano` (D-014). Las rutas de la API jamás llaman a la chain directo: piden el puerto.
 - En el front, no hacer `fetch` fuera de `ApiPort` (`apps/web/src/api/`).
 - No tocar mainnet: `CARDANO_NETWORK=Preprod` siempre (D-013). CI no toca ninguna red.
 - **No subir `@types/express` a v5** mientras `express` sea v4.
@@ -284,9 +285,18 @@ pnpm verify                       # app TS: lint + typecheck + tests + build
 pnpm contracts:verify             # Aiken: fmt + check + build
 pnpm verify:all                   # las dos, encadenadas
 pnpm lint:fix                     # Biome arregla lo mecánico
+
+docker compose -f compose.dev.yml up -d       # MinIO + devnet de Cardano (local, NO se despliega)
+pnpm --filter @plataforma/api test:s3         # storage contra MinIO de verdad
+pnpm --filter @plataforma/cardano test:yaci   # anclaje contra un nodo Cardano de verdad
 ```
 
 Los comandos por frente (db:migrate, db:seed, e2e:ui…) están en el `CLAUDE.md` de cada frente.
+
+**Los dos últimos NO corren en CI**, que no levanta infraestructura: se corren a mano con el compose
+arriba. Cubren lo que el `Emulator` y el driver de disco no pueden cubrir — un S3 real y un nodo
+Cardano real. Que el deploy no use Docker (D-041) no dice nada del desarrollo local: acá Docker
+existe para poder probar contra lo mismo que va a correr en producción.
 
 **Sobre `pnpm e2e`:** levanta web+api (reusa los que estén corriendo), recorre la app y deja
 capturas, video y trace en `apps/web/e2e/.artifacts/` (gitignoreado). Se corre a mano, cada tanto.
