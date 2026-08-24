@@ -10,12 +10,11 @@ import { FIXTURES } from "./global-setup";
 // distintas NO se sumen bajo una sola etiqueta, y que un developer no vea los
 // investors de un proyecto ajeno.
 //
-// **Nada de totales exactos.** La suite comparte una sola base y sus archivos
-// corren en paralelo: otro archivo puede estar creando un contrato sobre el
-// mismo proyecto entre la respuesta del endpoint y cualquier lectura de
-// control. Lo que se afirma acá son invariantes —el piso que planta el
-// fixture, y que las partes cierren entre sí— que es lo que el endpoint
-// realmente promete.
+// **Los totales vuelven a ser exactos** (SPEC-015 §1, invariante 6). Estuvieron
+// debilitados a `toBeGreaterThanOrEqual` mientras los archivos compartían una
+// base: el total dependía de si otro archivo ya había creado un contrato. Con
+// una base por archivo, este archivo es el único que la escribe, y una assert
+// exacta vuelve a ser verdad — que es lo que un test tiene que afirmar.
 
 const login = (f: { email: string; password: string }) =>
   request(app).post("/api/v1/auth/login").send({ email: f.email, password: f.password });
@@ -41,8 +40,8 @@ describe("GET /developer/capital/summary", () => {
       .set("Authorization", `Bearer ${tokenDev}`);
 
     expect(res.status).toBe(200);
-    expect(res.body.raisedMinorUnits).toBeGreaterThanOrEqual(12_000_000);
-    expect(res.body.contracts).toBeGreaterThanOrEqual(1);
+    expect(res.body.raisedMinorUnits).toBe(12_000_000);
+    expect(res.body.contracts).toBe(1);
     // Una sola moneda en el proyecto: si conviviera otra, esto sería `null` y
     // los totales no se sumarían bajo una etiqueta que miente.
     expect(res.body.currency).toBe("USD");
@@ -93,12 +92,9 @@ describe("GET /developer/capital/by-project", () => {
 
     expect(res.status).toBe(200);
     const torre = res.body.find((p: { projectName: string }) => p.projectName === "Torre Test");
-    // El contrato del fixture es el piso, no el total: otros archivos de la
-    // suite crean unidades sobre el mismo proyecto en paralelo.
-    expect(torre.raisedMinorUnits).toBeGreaterThanOrEqual(12_000_000);
-    expect(torre.unitsSold).toBeGreaterThanOrEqual(1);
-    // Vendidas nunca supera el total: es la barra de ocupación.
-    expect(torre.unitsSold).toBeLessThanOrEqual(torre.totalUnits);
+    expect(torre.raisedMinorUnits).toBe(12_000_000);
+    expect(torre.unitsSold).toBe(1);
+    expect(torre.totalUnits).toBe(1);
   });
 });
 
@@ -110,8 +106,8 @@ describe("GET /developer/investors", () => {
 
     expect(res.status).toBe(200);
     const investor = res.body.find((i: { email: string }) => i.email === FIXTURES.investor.email);
-    expect(investor.units).toBeGreaterThanOrEqual(1);
-    expect(investor.investedMinorUnits).toBeGreaterThanOrEqual(12_000_000);
+    expect(investor.units).toBe(1);
+    expect(investor.investedMinorUnits).toBe(12_000_000);
     expect(investor.projects).toContain("Torre Test");
   });
 

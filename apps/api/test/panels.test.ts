@@ -34,11 +34,10 @@ describe("GET /developer/kpis", () => {
     expect(typeof res.body.verifiedDocuments).toBe("number");
 
     // `Unit` y `Contract` ya existen, así que estos dos se cuentan de verdad.
-    // El piso es lo que planta el fixture —una unidad, un contrato— y no un
-    // total exacto: la suite comparte una base y otros archivos crean unidades
-    // sobre el mismo proyecto mientras este test corre.
-    expect(res.body.totalUnits).toBeGreaterThanOrEqual(1);
-    expect(res.body.capitalRaisedMinorUnits).toBeGreaterThanOrEqual(12_000_000);
+    // El fixture planta UNA unidad con UN contrato, y con una base por archivo
+    // (SPEC-015 §1) nadie más la toca: la assert puede ser exacta.
+    expect(res.body.totalUnits).toBe(1);
+    expect(res.body.capitalRaisedMinorUnits).toBe(12_000_000);
   });
 
   it("el avance promedio está entre 0 y 100", async () => {
@@ -99,44 +98,22 @@ describe("GET /notary/*", () => {
     // se cuentan de verdad; la distinción null/cero sigue viva en el schema,
     // que es donde importa.
     //
-    // **No se afirman valores exactos a propósito:** la suite comparte una
-    // sola base, y `dossier.test.ts` compila y firma un dossier. Fijar ceros
-    // acá haría que este test dependa del orden de los archivos, que es
-    // justamente el tipo de verde frágil que no queremos.
-    for (const kpi of ["pendingDossiers", "verified", "signed", "unitsUnderReview"]) {
-      expect(typeof res.body[kpi]).toBe("number");
-      expect(res.body[kpi]).toBeGreaterThanOrEqual(0);
-    }
-
-    const total = await db
-      .selectFrom("Dossier")
-      .select((eb) => eb.fn.countAll<number>().as("total"))
-      .executeTakeFirstOrThrow();
-
-    // Pendiente + resuelto = todos: ningún dossier se cuenta dos veces ni se
-    // pierde.
-    expect(res.body.pendingDossiers + res.body.verified).toBe(Number(total.total));
-    expect(res.body.signed).toBeLessThanOrEqual(res.body.verified);
+    // Cero significa lo que dice: este archivo no compila ningún dossier, y
+    // ya no hereda los que compila `dossier.test.ts`.
+    expect(res.body).toEqual({
+      pendingDossiers: 0,
+      verified: 0,
+      signed: 0,
+      unitsUnderReview: 0
+    });
   });
 
-  it("la cola de revisión trae solo dossiers compilados, con su completitud real", async () => {
+  it("la cola de revisión está vacía si nadie compiló un dossier, no inventada", async () => {
     const res = await request(app)
       .get("/api/v1/notary/dossiers/pending")
       .set("Authorization", `Bearer ${tokenAdmin}`);
 
     expect(res.status).toBe(200);
-    expect(Array.isArray(res.body)).toBe(true);
-
-    for (const pendiente of res.body) {
-      expect(pendiente.completeness).toBeGreaterThanOrEqual(0);
-      expect(pendiente.completeness).toBeLessThanOrEqual(100);
-      // Un dossier firmado no está pendiente de revisión.
-      const fila = await db
-        .selectFrom("Dossier")
-        .select("status")
-        .where("id", "=", pendiente.dossierId)
-        .executeTakeFirstOrThrow();
-      expect(fila.status).toBe("compiled");
-    }
+    expect(res.body).toEqual([]);
   });
 });

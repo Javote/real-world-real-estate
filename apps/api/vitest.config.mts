@@ -1,9 +1,13 @@
 import path from "node:path";
 import { defineConfig } from "vitest/config";
 
-// La suite corre contra una base SQLite PROPIA (apps/api/test.db), no contra
-// dev.db: un test no puede depender del seed de desarrollo ni ensuciarlo.
-// La crea y la siembra test/global-setup.ts en cada corrida.
+// La suite corre contra bases SQLite PROPIAS, no contra dev.db: un test no
+// puede depender del seed de desarrollo ni ensuciarlo.
+//
+// **Una base por ARCHIVO de test** (SPEC-015 §1): `global-setup.ts` siembra una
+// plantilla una sola vez y `setup-db.ts` la copia antes de cada archivo. Así
+// ningún archivo ve el estado que dejó otro, y por eso vuelve a poder correr en
+// paralelo.
 export default defineConfig({
   // Los tests resuelven @plataforma/shared al FUENTE, no al dist. Dos razones:
   // no hay que compilar antes de testear, y es imposible testear contra un dist
@@ -27,11 +31,18 @@ export default defineConfig({
   test: {
     include: ["test/**/*.test.ts"],
     globalSetup: ["./test/global-setup.ts"],
+    // Corre una vez POR ARCHIVO y antes de sus imports, que es lo que hace
+    // falta: `src/lib/db.ts` lee DATABASE_URL al importarse.
+    setupFiles: ["./test/setup-db.ts"],
     env: {
-      DATABASE_URL: "file:./test.db",
+      // Piso: `setup-db.ts` lo pisa con la base propia de cada archivo. Queda
+      // apuntando a la plantilla para que nada corra sin base si ese setup no
+      // llegara a ejecutarse.
+      DATABASE_URL: "file:./.data/test.template.db",
       JWT_SECRET: "test-secret-jamas-en-produccion",
       NODE_ENV: "test",
-      // Directorio propio: la suite no puede ensuciar apps/api/uploads.
+      // Piso: `setup-db.ts` lo pisa con un subdirectorio propio por archivo,
+      // porque hay tests que cuentan archivos en disco para detectar huérfanos.
       // Y 1 MB para que el test del límite de tamaño no mueva 10 MB.
       UPLOAD_DIR: "./test-uploads",
       MAX_FILE_SIZE_MB: "1",
@@ -40,8 +51,9 @@ export default defineConfig({
       // del limiter se prueba aparte, con su propio max — ver rate-limit.test.ts.
       LOGIN_RATE_LIMIT_MAX: "100000"
     },
-    // Comparten una sola base sembrada, y un test la muta a propósito
-    // (el de token revocado). Sin esto se pisarían entre archivos.
-    fileParallelism: false
+    // **En paralelo otra vez.** Estuvo en `false` mientras los archivos
+    // compartían una sola base sembrada y se pisaban entre sí; con una base por
+    // archivo (SPEC-015 §1) esa razón desapareció.
+    fileParallelism: true
   }
 });

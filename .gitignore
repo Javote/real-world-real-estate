@@ -16,10 +16,8 @@ apps/api/dev.db
 apps/api/dev.db-journal
 apps/api/dev.db-wal
 apps/api/dev.db-shm
-apps/api/test.db
-apps/api/test.db-journal
-apps/api/test.db-wal
-apps/api/test.db-shm
+# Bases de la suite: una por archivo de test, más la plantilla (SPEC-015 §1).
+apps/api/.data/
 
 # Archivos subidos por usuarios (runtime, no código). El `/uploads` de la raíz
 # no debería existir nunca; está por si alguien arranca la API desde ahí.

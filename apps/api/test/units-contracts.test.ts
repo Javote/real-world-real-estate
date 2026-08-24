@@ -22,10 +22,12 @@ let projectId: string;
 let unitId: string;
 let contractId: string;
 
-// Número de etapa propio de este archivo. La suite comparte una sola base y
-// `Stage` tiene índice único por (proyecto, orden): reusar el 1 choca con
-// `require-project-access.test.ts` según el orden en que corran.
-const ETAPA = 71;
+// Con una base por archivo (SPEC-015 §1) este número ya no se coordina con
+// nadie: puede ser el 1, que es lo natural para la primera etapa de obra.
+// Antes había que repartirlos a mano entre archivos (71, 81…) para no chocar
+// contra el índice único de `Stage`, que es justo la coordinación manual que el
+// invariante 2 de la spec prohíbe.
+const ETAPA = 1;
 
 beforeAll(async () => {
   tokenDev = (await login(FIXTURES.activo)).body.token;

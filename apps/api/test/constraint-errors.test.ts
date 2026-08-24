@@ -24,9 +24,8 @@ let tokenDev: string;
 let tokenAdmin: string;
 let projectId: string;
 
-// Orden propio de este archivo: `Stage` tiene índice único por (proyecto,
-// orden) y la suite comparte una sola base.
-const ETAPA = 81;
+// Base propia por archivo (SPEC-015 §1): este número no se coordina con nadie.
+const ETAPA = 1;
 
 beforeAll(async () => {
   tokenDev = (await login(FIXTURES.activo)).body.token;

@@ -51,18 +51,24 @@ describe("POST /api/v1/auth/login · el tiempo no filtra si el email existe", ()
     // así que revelaba "esta cuenta existe pero está dada de baja".
     await login(FIXTURES.activo.email, "calentando");
 
-    const inactivo = mediana(
-      await Promise.all(
-        [0, 0, 0].map(() => medir(() => login(FIXTURES.inactivo.email, FIXTURES.inactivo.password)))
-      )
-    );
-    const passwordMala = mediana(
-      await Promise.all(
-        [0, 0, 0].map(() => medir(() => login(FIXTURES.activo.email, "password-equivocada")))
-      )
-    );
+    // **Secuencial e intercalado, como el test de arriba.** Estaba con
+    // `Promise.all`: tres logins a la vez contra bcrypt, que es CPU-bound, así
+    // que lo que medía era el encolamiento y no el camino de código. Con la
+    // suite en paralelo (SPEC-015 §1) eso se volvió flaky — falló 1 de cada 3
+    // corridas. Intercalar hace que cualquier frenada de la máquina castigue a
+    // las dos series por igual.
+    const inactivos: number[] = [];
+    const passwordsMalas: number[] = [];
 
-    expect(inactivo).toBeGreaterThan(passwordMala * 0.5);
+    for (let i = 0; i < 3; i++) {
+      inactivos.push(await medir(() => login(FIXTURES.inactivo.email, FIXTURES.inactivo.password)));
+      passwordsMalas.push(await medir(() => login(FIXTURES.activo.email, "password-equivocada")));
+    }
+
+    // Por orden de magnitud, no por milisegundos: la propiedad que importa es
+    // que el camino "inactivo" TAMBIÉN paga el hash, no que tarde exactamente
+    // lo mismo.
+    expect(mediana(inactivos)).toBeGreaterThan(mediana(passwordsMalas) * 0.5);
   });
 
   it("el hash dummy no valida contra ninguna password", async () => {

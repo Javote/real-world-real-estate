@@ -1,4 +1,4 @@
-import { existsSync, rmSync } from "node:fs";
+import { existsSync, mkdirSync, rmSync } from "node:fs";
 import path from "node:path";
 import bcrypt from "bcrypt";
 import { createId } from "../src/db/id";
@@ -9,11 +9,28 @@ import { Kysely } from "../src/lib/kysely";
 import { createClient } from "../src/lib/libsql-client";
 import { LibsqlDialect } from "../src/lib/libsql-dialect";
 
-// El migrador propio (D-049) resuelve rutas relativas al cwd del proceso
-// (acá, apps/api), así que `file:./test.db` cae directo en
-// apps/api/test.db.
-const DATABASE_URL = "file:./test.db";
-const DB_FILE = path.join(process.cwd(), "test.db");
+// ── Una base POR ARCHIVO de test, no una compartida ────────────────────────
+//
+// Acá se siembra la **plantilla**, una sola vez. `test/setup-db.ts` la copia
+// antes de cada archivo y le da su propia base (SPEC-015 §1).
+//
+// **Por qué dejó de ser una sola base compartida.** Con una, el estado se
+// acumulaba entre archivos: las asserts exactas se volvían frágiles —un total
+// dependía de si otro archivo ya había creado un contrato— y había que repartir
+// valores a mano entre archivos para no chocar contra los índices únicos
+// (`sequenceOrder` 71, 81…). Eso es coordinación manual que no escala y que
+// nadie se acuerda de mantener. Además obligaba a `fileParallelism: false`.
+//
+// El migrador propio (D-049) resuelve rutas relativas al cwd del proceso (acá,
+// apps/api), así que `file:./.data/...` cae dentro de apps/api.
+export const TEST_DB_DIR = ".data";
+export const TEMPLATE_DB = path.join(TEST_DB_DIR, "test.template.db");
+
+const DATABASE_URL = `file:./${TEMPLATE_DB}`;
+const DB_FILE = path.join(process.cwd(), TEMPLATE_DB);
+
+/** Los sufijos que SQLite deja al lado del archivo principal. */
+export const SQLITE_SIDECARS = ["", "-journal", "-wal", "-shm"] as const;
 
 export const FIXTURES = {
   /** developer, activo y MIEMBRO del proyecto de prueba */
@@ -46,7 +63,14 @@ export const FIXTURES = {
 };
 
 export default async function setup() {
-  for (const f of [DB_FILE, `${DB_FILE}-journal`, `${DB_FILE}-wal`, `${DB_FILE}-shm`]) {
+  // El directorio de bases de test se rehace entero en cada corrida: así no
+  // sobrevive la base de un archivo que se renombró o se borró.
+  const dir = path.join(process.cwd(), TEST_DB_DIR);
+  if (existsSync(dir)) rmSync(dir, { recursive: true });
+  mkdirSync(dir, { recursive: true });
+
+  for (const sufijo of SQLITE_SIDECARS) {
+    const f = `${DB_FILE}${sufijo}`;
     if (existsSync(f)) rmSync(f);
   }
 

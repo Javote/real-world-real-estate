@@ -39,7 +39,7 @@ beforeAll(async () => {
   const stage = await request(app)
     .post(`/api/v1/projects/${projectId}/stages`)
     .set("Authorization", `Bearer ${tokenDev}`)
-    .send({ name: "Excavación", sequenceOrder: 90 });
+    .send({ name: "Excavación", sequenceOrder: 1 });
   stageId = stage.body.id;
 });
 
