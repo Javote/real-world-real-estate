@@ -20,9 +20,12 @@ import type {
   AuditEvent,
   DeveloperProject,
   DeveloperProjectDetail,
+  DeveloperUnit,
   Evidence,
+  InvestorUnit,
   LoginResponse,
   MeResponse,
+  ProgressRow,
   Project,
   ProjectDetail,
   Stage,
@@ -139,6 +142,12 @@ export const api = {
     const qs = q.toString()
     return request<Paginated<AuditEvent>>(`/api/v1/developer/audit-log${qs ? `?${qs}` : ''}`)
   },
+
+  listDeveloperUnits: () => request<DeveloperUnit[]>('/api/v1/developer/units'),
+
+  getDeveloperProgress: () => request<ProgressRow[]>('/api/v1/developer/progress'),
+
+  listInvestorUnits: () => request<InvestorUnit[]>('/api/v1/investor/units'),
 
   // ── Notificaciones (M2-D5 filas 22 y 62) ─────────────────────────────────
 

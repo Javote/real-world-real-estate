@@ -17,9 +17,13 @@ import { Route as CertifierIndexRouteImport } from './routes/certifier.index'
 import { Route as NotarySignedRouteImport } from './routes/notary.signed'
 import { Route as NotaryProfileRouteImport } from './routes/notary.profile'
 import { Route as NotaryDossiersRouteImport } from './routes/notary.dossiers'
+import { Route as InvestorUnitsRouteImport } from './routes/investor.units'
 import { Route as InvestorNotificationsRouteImport } from './routes/investor.notifications'
+import { Route as InvestorMenuRouteImport } from './routes/investor.menu'
 import { Route as InvestorBuyRouteImport } from './routes/investor.buy'
+import { Route as DeveloperUnitsRouteImport } from './routes/developer.units'
 import { Route as DeveloperProjectsRouteImport } from './routes/developer.projects'
+import { Route as DeveloperProgressRouteImport } from './routes/developer.progress'
 import { Route as DeveloperAuditLogRouteImport } from './routes/developer.audit-log'
 import { Route as CertifierProfileRouteImport } from './routes/certifier.profile'
 import { Route as CertifierIssuedRouteImport } from './routes/certifier.issued'
@@ -69,9 +73,19 @@ const NotaryDossiersRoute = NotaryDossiersRouteImport.update({
   path: '/notary/dossiers',
   getParentRoute: () => rootRouteImport,
 } as any)
+const InvestorUnitsRoute = InvestorUnitsRouteImport.update({
+  id: '/investor/units',
+  path: '/investor/units',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const InvestorNotificationsRoute = InvestorNotificationsRouteImport.update({
   id: '/investor/notifications',
   path: '/investor/notifications',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const InvestorMenuRoute = InvestorMenuRouteImport.update({
+  id: '/investor/menu',
+  path: '/investor/menu',
   getParentRoute: () => rootRouteImport,
 } as any)
 const InvestorBuyRoute = InvestorBuyRouteImport.update({
@@ -79,9 +93,19 @@ const InvestorBuyRoute = InvestorBuyRouteImport.update({
   path: '/investor/buy',
   getParentRoute: () => rootRouteImport,
 } as any)
+const DeveloperUnitsRoute = DeveloperUnitsRouteImport.update({
+  id: '/developer/units',
+  path: '/developer/units',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const DeveloperProjectsRoute = DeveloperProjectsRouteImport.update({
   id: '/developer/projects',
   path: '/developer/projects',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const DeveloperProgressRoute = DeveloperProgressRouteImport.update({
+  id: '/developer/progress',
+  path: '/developer/progress',
   getParentRoute: () => rootRouteImport,
 } as any)
 const DeveloperAuditLogRoute = DeveloperAuditLogRouteImport.update({
@@ -134,9 +158,13 @@ export interface FileRoutesByFullPath {
   '/certifier/issued': typeof CertifierIssuedRoute
   '/certifier/profile': typeof CertifierProfileRoute
   '/developer/audit-log': typeof DeveloperAuditLogRoute
+  '/developer/progress': typeof DeveloperProgressRoute
   '/developer/projects': typeof DeveloperProjectsRoute
+  '/developer/units': typeof DeveloperUnitsRoute
   '/investor/buy': typeof InvestorBuyRoute
+  '/investor/menu': typeof InvestorMenuRoute
   '/investor/notifications': typeof InvestorNotificationsRoute
+  '/investor/units': typeof InvestorUnitsRoute
   '/notary/dossiers': typeof NotaryDossiersRoute
   '/notary/profile': typeof NotaryProfileRoute
   '/notary/signed': typeof NotarySignedRoute
@@ -155,9 +183,13 @@ export interface FileRoutesByTo {
   '/certifier/issued': typeof CertifierIssuedRoute
   '/certifier/profile': typeof CertifierProfileRoute
   '/developer/audit-log': typeof DeveloperAuditLogRoute
+  '/developer/progress': typeof DeveloperProgressRoute
   '/developer/projects': typeof DeveloperProjectsRoute
+  '/developer/units': typeof DeveloperUnitsRoute
   '/investor/buy': typeof InvestorBuyRoute
+  '/investor/menu': typeof InvestorMenuRoute
   '/investor/notifications': typeof InvestorNotificationsRoute
+  '/investor/units': typeof InvestorUnitsRoute
   '/notary/dossiers': typeof NotaryDossiersRoute
   '/notary/profile': typeof NotaryProfileRoute
   '/notary/signed': typeof NotarySignedRoute
@@ -177,9 +209,13 @@ export interface FileRoutesById {
   '/certifier/issued': typeof CertifierIssuedRoute
   '/certifier/profile': typeof CertifierProfileRoute
   '/developer/audit-log': typeof DeveloperAuditLogRoute
+  '/developer/progress': typeof DeveloperProgressRoute
   '/developer/projects': typeof DeveloperProjectsRoute
+  '/developer/units': typeof DeveloperUnitsRoute
   '/investor/buy': typeof InvestorBuyRoute
+  '/investor/menu': typeof InvestorMenuRoute
   '/investor/notifications': typeof InvestorNotificationsRoute
+  '/investor/units': typeof InvestorUnitsRoute
   '/notary/dossiers': typeof NotaryDossiersRoute
   '/notary/profile': typeof NotaryProfileRoute
   '/notary/signed': typeof NotarySignedRoute
@@ -200,9 +236,13 @@ export interface FileRouteTypes {
     | '/certifier/issued'
     | '/certifier/profile'
     | '/developer/audit-log'
+    | '/developer/progress'
     | '/developer/projects'
+    | '/developer/units'
     | '/investor/buy'
+    | '/investor/menu'
     | '/investor/notifications'
+    | '/investor/units'
     | '/notary/dossiers'
     | '/notary/profile'
     | '/notary/signed'
@@ -221,9 +261,13 @@ export interface FileRouteTypes {
     | '/certifier/issued'
     | '/certifier/profile'
     | '/developer/audit-log'
+    | '/developer/progress'
     | '/developer/projects'
+    | '/developer/units'
     | '/investor/buy'
+    | '/investor/menu'
     | '/investor/notifications'
+    | '/investor/units'
     | '/notary/dossiers'
     | '/notary/profile'
     | '/notary/signed'
@@ -242,9 +286,13 @@ export interface FileRouteTypes {
     | '/certifier/issued'
     | '/certifier/profile'
     | '/developer/audit-log'
+    | '/developer/progress'
     | '/developer/projects'
+    | '/developer/units'
     | '/investor/buy'
+    | '/investor/menu'
     | '/investor/notifications'
+    | '/investor/units'
     | '/notary/dossiers'
     | '/notary/profile'
     | '/notary/signed'
@@ -264,9 +312,13 @@ export interface RootRouteChildren {
   CertifierIssuedRoute: typeof CertifierIssuedRoute
   CertifierProfileRoute: typeof CertifierProfileRoute
   DeveloperAuditLogRoute: typeof DeveloperAuditLogRoute
+  DeveloperProgressRoute: typeof DeveloperProgressRoute
   DeveloperProjectsRoute: typeof DeveloperProjectsRoute
+  DeveloperUnitsRoute: typeof DeveloperUnitsRoute
   InvestorBuyRoute: typeof InvestorBuyRoute
+  InvestorMenuRoute: typeof InvestorMenuRoute
   InvestorNotificationsRoute: typeof InvestorNotificationsRoute
+  InvestorUnitsRoute: typeof InvestorUnitsRoute
   NotaryDossiersRoute: typeof NotaryDossiersRoute
   NotaryProfileRoute: typeof NotaryProfileRoute
   NotarySignedRoute: typeof NotarySignedRoute
@@ -337,11 +389,25 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof NotaryDossiersRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/investor/units': {
+      id: '/investor/units'
+      path: '/investor/units'
+      fullPath: '/investor/units'
+      preLoaderRoute: typeof InvestorUnitsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/investor/notifications': {
       id: '/investor/notifications'
       path: '/investor/notifications'
       fullPath: '/investor/notifications'
       preLoaderRoute: typeof InvestorNotificationsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/investor/menu': {
+      id: '/investor/menu'
+      path: '/investor/menu'
+      fullPath: '/investor/menu'
+      preLoaderRoute: typeof InvestorMenuRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/investor/buy': {
@@ -351,11 +417,25 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof InvestorBuyRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/developer/units': {
+      id: '/developer/units'
+      path: '/developer/units'
+      fullPath: '/developer/units'
+      preLoaderRoute: typeof DeveloperUnitsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/developer/projects': {
       id: '/developer/projects'
       path: '/developer/projects'
       fullPath: '/developer/projects'
       preLoaderRoute: typeof DeveloperProjectsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/developer/progress': {
+      id: '/developer/progress'
+      path: '/developer/progress'
+      fullPath: '/developer/progress'
+      preLoaderRoute: typeof DeveloperProgressRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/developer/audit-log': {
@@ -424,9 +504,13 @@ const rootRouteChildren: RootRouteChildren = {
   CertifierIssuedRoute: CertifierIssuedRoute,
   CertifierProfileRoute: CertifierProfileRoute,
   DeveloperAuditLogRoute: DeveloperAuditLogRoute,
+  DeveloperProgressRoute: DeveloperProgressRoute,
   DeveloperProjectsRoute: DeveloperProjectsRoute,
+  DeveloperUnitsRoute: DeveloperUnitsRoute,
   InvestorBuyRoute: InvestorBuyRoute,
+  InvestorMenuRoute: InvestorMenuRoute,
   InvestorNotificationsRoute: InvestorNotificationsRoute,
+  InvestorUnitsRoute: InvestorUnitsRoute,
   NotaryDossiersRoute: NotaryDossiersRoute,
   NotaryProfileRoute: NotaryProfileRoute,
   NotarySignedRoute: NotarySignedRoute,

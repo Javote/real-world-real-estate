@@ -148,6 +148,34 @@ test.describe('Walkthrough', () => {
     await expect(page).toHaveURL(/\/login/)
   })
 
+  test('AUTH-ME-001 · la sesión se revalida contra el servidor en cada pantalla protegida', async ({
+    page
+  }) => {
+    // `useRoleGuard` llama a `GET /auth/me` antes de dejar pasar: un token
+    // corrupto o vencido en sessionStorage no debe abrir una pantalla solo
+    // porque el objeto de sesión sigue ahí (SPEC-011 §invariante 12).
+    const llamadas: number[] = []
+    page.on('response', (r) => {
+      if (r.url().includes('/api/v1/auth/me')) llamadas.push(r.status())
+    })
+
+    await login(page, 'Developer', 'developer@example.com', 'developer123', '/developer')
+    expect(llamadas).toContain(200)
+
+    // Y con un token adulterado, el guard rebota — la validación es del
+    // servidor, no del objeto local.
+    await page.evaluate(() => {
+      const raw = JSON.parse(sessionStorage.getItem('proptrust.session') ?? '{}')
+      sessionStorage.setItem(
+        'proptrust.session',
+        JSON.stringify({ ...raw, token: 'roto.roto.roto' })
+      )
+    })
+    await page.goto('/developer')
+    await expect(page).toHaveURL(/\/login/)
+    expect(llamadas).toContain(401)
+  })
+
   // Las dos pruebas que seguían acá —detalle de proyecto y verificación por
   // hash— recorrían `/dashboard` y `/verify`, que se borraron en D-064: no
   // existen en ningún entregable. Vuelven cuando se transcriban las

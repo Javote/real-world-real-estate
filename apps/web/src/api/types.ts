@@ -125,3 +125,39 @@ export interface AuditEvent {
   actorName: string | null
   actorRole: UserRole | null
 }
+
+/** Fila 44 — inventario de unidades del developer, cruzando proyectos. */
+export interface DeveloperUnit {
+  id: string
+  unitReference: string
+  status: string
+  priceMinorUnits: number | null
+  currency: string | null
+  investorId: string | null
+  projectId: string
+  projectName: string
+}
+
+/** Fila 14 — las unidades del investor, con el avance de SU proyecto (D-029). */
+export interface InvestorUnit {
+  id: string
+  unitReference: string
+  status: string
+  sizeM2: number | null
+  priceMinorUnits: number | null
+  currency: string | null
+  projectId: string
+  projectName: string
+  city: string | null
+  progress: number
+}
+
+/** Fila 45 — el avance por etapa, cruzando todos los proyectos del developer. */
+export interface ProgressRow {
+  stageId: string
+  stageName: string
+  sequenceOrder: number
+  state: StageState
+  projectId: string
+  projectName: string
+}

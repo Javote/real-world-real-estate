@@ -208,7 +208,29 @@ const esAR = {
   'notifications.stage.completed': 'Avance de obra: etapa verificada',
   'notifications.evidence.uploaded': 'Se subió evidencia nueva',
   'notifications.dossier.signed': 'El escribano firmó tu dossier',
-  'notifications.dossier.rejected': 'El escribano devolvió el dossier con observaciones'
+  'notifications.dossier.rejected': 'El escribano devolvió el dossier con observaciones',
+  'unitStatus.sold': 'Vendida',
+  'unitStatus.reserved': 'Reservada',
+  'unitStatus.available': 'Disponible',
+  'developer.units.title': 'Inventario de unidades',
+  'developer.units.context': '{sold} vendidas de {total}',
+  'developer.units.assigned': 'Con inversor asignado',
+  'developer.units.unassigned': 'Sin asignar',
+  'developer.units.empty': 'Todavía no cargaste unidades.',
+  'developer.progress.title': 'Avance de obra',
+  'developer.progress.context': 'Todas tus obras',
+  'developer.progress.timelineAria': 'Avance de {project}',
+  'developer.progress.currentStage': 'Etapa {number}: {name}',
+  'developer.progress.empty': 'Todavía no hay etapas cargadas.',
+  'investor.units.title': 'Mis unidades',
+  'investor.units.context': 'Lo que compraste',
+  'investor.units.empty': 'Todavía no tenés unidades.',
+  'investor.menu.title': 'Menú',
+  'investor.menu.context': 'Todo lo tuyo, en un lugar',
+  'investor.menu.pending': 'Más secciones llegan con las próximas entregas.',
+  'menu.buy': 'Explorar desarrollos',
+  'menu.units': 'Tus unidades y su avance',
+  'menu.notifications': 'Novedades de tus obras'
 } as const
 
 export type TranslationKey = keyof typeof esAR
@@ -418,7 +440,29 @@ const enUS = {
   'notifications.stage.completed': 'Construction progress: stage verified',
   'notifications.evidence.uploaded': 'New evidence uploaded',
   'notifications.dossier.signed': 'The notary signed your dossier',
-  'notifications.dossier.rejected': 'The notary returned the dossier with observations'
+  'notifications.dossier.rejected': 'The notary returned the dossier with observations',
+  'unitStatus.sold': 'Sold',
+  'unitStatus.reserved': 'Reserved',
+  'unitStatus.available': 'Available',
+  'developer.units.title': 'Unit inventory',
+  'developer.units.context': '{sold} sold of {total}',
+  'developer.units.assigned': 'Investor assigned',
+  'developer.units.unassigned': 'Unassigned',
+  'developer.units.empty': 'You have not added units yet.',
+  'developer.progress.title': 'Construction progress',
+  'developer.progress.context': 'All your developments',
+  'developer.progress.timelineAria': 'Progress of {project}',
+  'developer.progress.currentStage': 'Stage {number}: {name}',
+  'developer.progress.empty': 'No stages added yet.',
+  'investor.units.title': 'My units',
+  'investor.units.context': 'What you bought',
+  'investor.units.empty': 'You have no units yet.',
+  'investor.menu.title': 'Menu',
+  'investor.menu.context': 'Everything yours, in one place',
+  'investor.menu.pending': 'More sections arrive with upcoming releases.',
+  'menu.buy': 'Browse developments',
+  'menu.units': 'Your units and their progress',
+  'menu.notifications': 'Updates from your developments'
 } satisfies Record<TranslationKey, string>
 
 export const dictionary: Record<Locale, Record<TranslationKey, string>> = {

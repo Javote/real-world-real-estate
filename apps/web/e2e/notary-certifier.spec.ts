@@ -114,3 +114,32 @@ test.describe('Notary', () => {
     await expect(page.getByText('notary@example.com')).toBeVisible()
   })
 })
+
+// Las cinco superficies de la tanda de cierre (M2-D5 filas 01, 14, 31-32, 44,
+// 45). Una sola aserción cada una: lo que se prueba es que la superficie EXISTE
+// y es alcanzable con su test ID, no su lógica interna.
+test.describe('Superficies de inventario y avance', () => {
+  test('DEV-UNITS-INVENTORY-001 · inventario de unidades', async ({ page }) => {
+    await loginConSolapa(page, 'Developer')
+    await page.goto('/developer/units')
+    await expect(page.getByTestId('DEV-UNITS-INVENTORY-001')).toBeVisible()
+  })
+
+  test('DEV-PROGRESS-001 · avance de obra', async ({ page }) => {
+    await loginConSolapa(page, 'Developer')
+    await page.goto('/developer/progress')
+    await expect(page.getByTestId('DEV-PROGRESS-001')).toBeVisible()
+  })
+
+  test('INV-UNITS-LIST-001 · mis unidades', async ({ page }) => {
+    await loginConSolapa(page, 'Investor')
+    await page.goto('/investor/units')
+    await expect(page.getByTestId('INV-UNITS-LIST-001')).toBeVisible()
+  })
+
+  test('INV-MENU-001 · menú del investor', async ({ page }) => {
+    await loginConSolapa(page, 'Investor')
+    await page.goto('/investor/menu')
+    await expect(page.getByTestId('INV-MENU-001')).toBeVisible()
+  })
+})
