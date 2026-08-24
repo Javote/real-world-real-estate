@@ -54,6 +54,21 @@ que la superficie del entregable no consume pero los tests y el seed sí.
   **La lección general:** el orden de montaje en `app.ts` es semántico, no cosmético. Dos routers
   sobre el mismo prefijo comparten el pipeline: el primero que contesta, contesta por los dos.
 
+- **2026-08-24 · Una restricción de la base violada por el cliente contestaba 500.** Crear un
+  proyecto con un slug que ya existía, dos stages con el mismo orden o dos unidades con la misma
+  referencia caía en el `catch` genérico del `errorHandler`: **5xx en el monitoreo con el servidor
+  perfectamente sano**, y el cliente sin forma de saber qué corregir. Peor: el mensaje crudo de
+  libSQL es `UNIQUE constraint failed: Project.slug` — tabla y columna, que es justo lo que la
+  regla 2 no deja salir.
+  **Fix, y por qué es central y no por ruta:** `errorHandler` mapea `SQLITE_CONSTRAINT_UNIQUE` y
+  `SQLITE_CONSTRAINT_PRIMARYKEY` a **409** (`RESOURCE_ALREADY_EXISTS`) y
+  `SQLITE_CONSTRAINT_FOREIGNKEY` a **400** (`RELATED_RESOURCE_NOT_FOUND`), con mensaje genérico y
+  el detalle solo al log. Son ~10 índices únicos y cada endpoint nuevo que inserte hereda el
+  comportamiento correcto sin acordarse de nada. **Un `select` previo por ruta no alcanza**: dos
+  requests simultáneos lo pasan los dos y uno choca igual — la restricción de la base es la única
+  respuesta verdadera. La forma del error (`LibsqlError`, campo `code`, y también en `cause.code`)
+  se comprobó contra la base real, no contra la documentación.
+
 - **2026-08-24 · Un evento de commitment sin ref no se puede volver a encontrar.** El TXID de un
   `PaymentRelease` se buscaba matcheando el commitment del `OnChainEvent`, y el commitment de un
   release incluye su `releasedAt` — así que el join no matcheaba nunca y el patrón P10 mostraba las

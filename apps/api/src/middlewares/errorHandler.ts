@@ -3,6 +3,52 @@ import { MulterError } from "multer";
 import { HttpError } from "../lib/http-error";
 
 /**
+ * Violaciones de restricción de SQLite que **son culpa de lo que mandó el
+ * cliente**, no nuestra.
+ *
+ * `@libsql/client` tira un `LibsqlError` con estos `code`. Se comprobó contra
+ * la base real, no contra la documentación: el error trae además un `message`
+ * del estilo `UNIQUE constraint failed: Project.slug` — o sea **el nombre de la
+ * tabla y de la columna**, que nunca puede salir al cliente (regla 2). Por eso
+ * acá se mapea el código a una respuesta genérica y el detalle queda en el log.
+ */
+const CONSTRAINT_ERRORS: Record<string, { status: number; code: string; message: string }> = {
+  // Crear algo que ya existe: un slug repetido, dos stages con el mismo orden,
+  // dos unidades con la misma referencia. Es 409, no 500 — el servidor está
+  // perfectamente sano y el cliente puede corregirlo.
+  SQLITE_CONSTRAINT_UNIQUE: {
+    status: 409,
+    code: "RESOURCE_ALREADY_EXISTS",
+    message: "Resource already exists"
+  },
+  SQLITE_CONSTRAINT_PRIMARYKEY: {
+    status: 409,
+    code: "RESOURCE_ALREADY_EXISTS",
+    message: "Resource already exists"
+  },
+  // Referenciar algo que no existe (un `userId` inventado en el body). El
+  // cliente mandó un id que no resuelve: 400.
+  SQLITE_CONSTRAINT_FOREIGNKEY: {
+    status: 400,
+    code: "RELATED_RESOURCE_NOT_FOUND",
+    message: "A referenced resource does not exist"
+  }
+};
+
+/** El `code` de un error de restricción, mirando también la causa. */
+function codigoDeRestriccion(err: unknown): string | undefined {
+  if (typeof err !== "object" || err === null) return undefined;
+
+  const propio = (err as { code?: unknown }).code;
+  if (typeof propio === "string" && propio in CONSTRAINT_ERRORS) return propio;
+
+  const causa = (err as { cause?: { code?: unknown } }).cause?.code;
+  if (typeof causa === "string" && causa in CONSTRAINT_ERRORS) return causa;
+
+  return undefined;
+}
+
+/**
  * El último eslabón: todo lo que nadie manejó termina acá.
  *
  * **Antes devolvía 400 y el `err.message` crudo para CUALQUIER `Error`**, lo que
@@ -37,6 +83,20 @@ export function errorHandler(err: unknown, _req: Request, res: Response, next: N
   // ("File too large", "Unexpected field"). El código sí es útil para el cliente.
   if (err instanceof MulterError) {
     return res.status(400).json({ message: err.message, code: err.code });
+  }
+
+  // Restricción de la base violada por lo que mandó el cliente. **Se resuelve
+  // acá y no ruta por ruta a propósito**: son ~10 índices únicos y cada
+  // endpoint nuevo que inserte hereda el comportamiento correcto sin acordarse
+  // de nada. Un chequeo previo por ruta además no cierra la ventana de carrera
+  // —dos requests simultáneos pasan los dos el `select` y uno choca igual—, así
+  // que la restricción de la base es la única respuesta verdadera.
+  const restriccion = codigoDeRestriccion(err);
+  if (restriccion) {
+    const { status, code, message } = CONSTRAINT_ERRORS[restriccion];
+    // El detalle (tabla y columna) SOLO al log.
+    console.error("[restricción de la base]", err);
+    return res.status(status).json({ message, code });
   }
 
   // Todo lo demás es un fallo nuestro hasta que se demuestre lo contrario.
