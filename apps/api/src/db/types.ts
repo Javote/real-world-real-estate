@@ -48,6 +48,8 @@ export interface UserTable {
   role: UserRole;
   fullName: string;
   isActive: SqliteBoolean;
+  /** Preferencias de notificación, JSON. Ver `PATCH /profile/notifications`. */
+  notificationPrefsJson: string | null;
   createdAt: SqliteTimestamp;
   updatedAt: SqliteTimestamp;
 }
@@ -184,6 +186,13 @@ export interface EvidenceBundleItemTable {
   sha256Hash: string;
 }
 
+/** Favoritos del investor (M2-D5 fila 13). No toca la cadena de prueba. */
+export interface FavoriteTable {
+  userId: string;
+  projectId: string;
+  createdAt: SqliteTimestamp;
+}
+
 export interface Database {
   User: UserTable;
   Project: ProjectTable;
@@ -193,6 +202,7 @@ export interface Database {
   AuditLog: AuditLogTable;
   OnChainEvent: OnChainEventTable;
   SimulatedLedgerUtxo: SimulatedLedgerUtxoTable;
+  Favorite: FavoriteTable;
   EvidenceBundle: EvidenceBundleTable;
   EvidenceBundleItem: EvidenceBundleItemTable;
 }

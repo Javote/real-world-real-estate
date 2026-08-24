@@ -57,3 +57,74 @@ export function merkleRoot(leaves: readonly string[], hashPair: PairHasher): str
 
   return nivel[0] as string;
 }
+
+/**
+ * El camino de prueba de una hoja hasta la raíz.
+ *
+ * **Es lo que vuelve real la promesa de M2-D4 Pattern 5**: *"To verify any
+ * single file, a reviewer can re-compute the file hash, walk the Merkle path,
+ * and check that the root matches the anchored value."* Sin el camino, el root
+ * prueba el conjunto pero nadie puede verificar **su** archivo sin bajarse todos
+ * los demás.
+ *
+ * Cada paso dice con qué hermano combinar y de qué lado va, porque el orden
+ * importa: `hash(A+B)` no es `hash(B+A)`.
+ */
+export interface MerkleStep {
+  sibling: string;
+  position: "left" | "right";
+}
+
+export function merkleProof(
+  leaves: readonly string[],
+  leaf: string,
+  hashPair: PairHasher
+): MerkleStep[] {
+  for (const l of leaves) assertLeaf(l);
+  assertLeaf(leaf);
+
+  let nivel = [...leaves].sort();
+  let indice = nivel.indexOf(leaf);
+  if (indice === -1) {
+    throw new Error("Esa hoja no está en el bundle: no hay camino que probar");
+  }
+
+  const camino: MerkleStep[] = [];
+
+  while (nivel.length > 1) {
+    const siguiente: string[] = [];
+    for (let i = 0; i < nivel.length; i += 2) {
+      const izq = nivel[i] as string;
+      const der = nivel[i + 1];
+
+      if (der === undefined) {
+        // Nodo impar: sube solo, así que no agrega paso al camino.
+        siguiente.push(izq);
+        if (i === indice) indice = siguiente.length - 1;
+        continue;
+      }
+
+      if (i === indice) camino.push({ sibling: der, position: "right" });
+      else if (i + 1 === indice) camino.push({ sibling: izq, position: "left" });
+
+      siguiente.push(hashPair(izq, der));
+      if (i === indice || i + 1 === indice) indice = siguiente.length - 1;
+    }
+    nivel = siguiente;
+  }
+
+  return camino;
+}
+
+/** Rehace la raíz desde una hoja y su camino. Es lo que corre el verificador. */
+export function merkleRootFromProof(
+  leaf: string,
+  proof: readonly MerkleStep[],
+  hashPair: PairHasher
+): string {
+  return proof.reduce(
+    (acc, paso) =>
+      paso.position === "right" ? hashPair(acc, paso.sibling) : hashPair(paso.sibling, acc),
+    leaf
+  );
+}

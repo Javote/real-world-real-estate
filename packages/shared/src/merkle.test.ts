@@ -1,6 +1,6 @@
 import { createHash } from "node:crypto";
 import { describe, expect, it } from "vitest";
-import { merkleRoot } from "./merkle";
+import { merkleProof, merkleRoot, merkleRootFromProof } from "./merkle";
 
 // El hash que usa la API. Acá se inyecta el de Node; el package en sí no
 // importa `node:crypto` porque también lo compila el browser.
@@ -52,5 +52,32 @@ describe("merkleRoot", () => {
   it("rechaza una hoja que no sea SHA-256 en hex", () => {
     expect(() => merkleRoot(["no-es-un-hash"], sha256Pair)).toThrow(/SHA-256/);
     expect(() => merkleRoot([hoja(1).toUpperCase()], sha256Pair)).toThrow(/SHA-256/);
+  });
+});
+
+describe("merkleProof", () => {
+  // La promesa de M2-D4 P5: un revisor rehace SU archivo hasta la raíz sin
+  // necesitar los demás archivos, solo sus hashes hermanos.
+  const hojas = [hoja(1), hoja(2), hoja(3), hoja(4), hoja(5)];
+  const root = merkleRoot(hojas, sha256Pair);
+
+  it("el camino de cada hoja reconstruye la raíz anclada", () => {
+    for (const h of hojas) {
+      const camino = merkleProof(hojas, h, sha256Pair);
+      expect(merkleRootFromProof(h, camino, sha256Pair)).toBe(root);
+    }
+  });
+
+  it("un hash que no está en el bundle no tiene camino", () => {
+    expect(() => merkleProof(hojas, hoja(99), sha256Pair)).toThrow(/no está en el bundle/);
+  });
+
+  it("el camino no sirve para otra hoja: el orden de combinación importa", () => {
+    const camino = merkleProof(hojas, hoja(1), sha256Pair);
+    expect(merkleRootFromProof(hoja(2), camino, sha256Pair)).not.toBe(root);
+  });
+
+  it("con una sola hoja el camino es vacío y la raíz es la hoja", () => {
+    expect(merkleProof([hoja(1)], hoja(1), sha256Pair)).toEqual([]);
   });
 });

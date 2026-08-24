@@ -254,3 +254,25 @@ CREATE TABLE `AuditLog` (
 );
 --> statement-breakpoint
 CREATE INDEX `AuditLog_createdAt_idx` ON `AuditLog` (`createdAt`);
+--> statement-breakpoint
+
+-- Preferencias de notificación del usuario (M2-D5 `PATCH /profile/notifications`).
+-- JSON en una columna y no una tabla: es un blob de preferencias por usuario,
+-- sin relaciones ni consultas por su contenido. El día que haga falta filtrar
+-- por una preferencia, será una tabla.
+ALTER TABLE `User` ADD COLUMN `notificationPrefsJson` text;
+--> statement-breakpoint
+
+-- Favoritos del investor (M2-D1 §Investor bottom nav · M2-D5 fila 13).
+-- Es la entidad más chica del backlog y no toca la cadena de prueba: un usuario
+-- marca un proyecto, nada más.
+CREATE TABLE `Favorite` (
+	`userId` text NOT NULL,
+	`projectId` text NOT NULL,
+	`createdAt` integer NOT NULL,
+	PRIMARY KEY (`userId`, `projectId`),
+	FOREIGN KEY (`userId`) REFERENCES `User`(`id`) ON UPDATE no action ON DELETE cascade,
+	FOREIGN KEY (`projectId`) REFERENCES `Project`(`id`) ON UPDATE no action ON DELETE cascade
+);
+--> statement-breakpoint
+CREATE INDEX `Favorite_userId_idx` ON `Favorite` (`userId`);
