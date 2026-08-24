@@ -1,356 +1,268 @@
 # CLAUDE.md
 
-> ## ⚠️ LEER PRIMERO: `specs/PLAN-2026-08-21-saneamiento-y-flujo.md`
->
-> El 2026-08-21 se descubrió que **este archivo y todo el flujo de trabajo están por reemplazarse**.
-> Dos entregables que son la especificación real del producto se venían ignorando:
-> **`docs/milestone-2-diseno/M2-D2-Screenshots-catalog/`** (70 capturas, la spec visual) y
-> **`docs/milestone-3-implementacion/UI-implementation-plan.md`** (M2-D5: 53 filas de backlog con
-> path, componentes, endpoints, test IDs y patrón por superficie — **el índice maestro**).
->
-> **No implementes ninguna pantalla sin abrir su captura y su fila de M2-D5.** Cuando la prosa de
-> M2-D3 y la captura difieren, gana la captura. El plan trae la deuda medida, los 4 commits de
-> saneamiento y el flujo nuevo. Los borradores aprobados son `specs/propuesta-CLAUDE.md` (reemplaza
-> este archivo) y `specs/propuesta-SPEC-011.md`.
->
-> Lo de abajo sigue vigente **como referencia técnica** (reglas duras, prohibiciones, trampas), pero
-> la sección §Cómo se trabaja acá se reescribió con D-053 (el harness ya no existe).
+Lo transversal. Lo de cada frente vive en `apps/web/CLAUDE.md`, `apps/api/CLAUDE.md`,
+`packages/cardano/CLAUDE.md` y `contracts/CLAUDE.md`, y se carga solo cuando tocás ese subárbol.
 
-> Lo transversal. Lo de cada frente vive en `apps/web/CLAUDE.md`, `apps/api/CLAUDE.md` y
-> `contracts/CLAUDE.md`, y se carga solo cuando tocás ese subárbol.
+**Acá solo hay información vigente.** El porqué de cada decisión está en `DECISIONS.md`; el
+argumento largo, en `specs/archive/`.
 
 ## Contexto (3 líneas)
 
-**PropNexus** (Catalyst 1400106) — plataforma de ventas inmobiliarias en pozo: estructura el ciclo de obra en **stages**, organiza **evidencia** (planos, permisos, actas, certificados) y ancla **huellas criptográficas** (SHA-256/Merkle) en **Cardano** con timestamps. Off-chain: documentos, PII y lógica de negocio. On-chain: solo commitments compactos y TXIDs — **nunca valor** (D-021). Cuatro roles con superficie propia: investor (INV), developer (DEV), notary (NOT), certifier (CER).
+**PropNexus** (Catalyst 1400106) — plataforma de ventas inmobiliarias en pozo: estructura el ciclo
+de obra en **stages**, organiza **evidencia** (planos, permisos, actas, certificados) y ancla
+**huellas criptográficas** (SHA-256/Merkle) en **Cardano** con timestamps. Off-chain: documentos,
+PII y lógica de negocio. On-chain: solo commitments y TXIDs — **nunca valor**. Cuatro roles con
+superficie propia: investor (INV), developer (DEV), notary (NOT), certifier (CER).
 
-**El problema real que resuelve.** Hoy es imposible verificar el estado real de los procesos de aprobación y avance de una obra en pozo: la evidencia está dispersa en canales informales y nada garantiza que lo que se muestra hoy sea lo que existía ayer. Esa opacidad ya causó daño económico real a compradores.
+**El problema real.** Hoy es imposible verificar el estado de los procesos de aprobación de una obra
+en pozo: la evidencia está dispersa en canales informales y nada garantiza que lo que se muestra hoy
+sea lo que existía ayer. Esa opacidad ya causó daño económico real a compradores.
 
-**Lo que la plataforma NO hace** (D-026): no certifica, no valida y no decide nada. Acompaña procesos que ya existen afuera y los refleja. El rol "certifier" verifica **integridad y completitud** contra los hashes anclados — no validez legal. La plataforma solo puede sostener cuatro afirmaciones: *este archivo tiene este hash* · *se registró en este momento* · *declara provenir de esta autoridad externa* · *esta persona atestiguó haberlo revisado*. Si escribís copy, modelo o validador que afirme algo más, está mal.
+**Lo que NO hace.** No certifica, no valida y no decide nada. Solo puede sostener cuatro
+afirmaciones: *este archivo tiene este hash* · *se registró en este momento* · *declara provenir de
+esta autoridad externa* · *esta persona atestiguó haberlo revisado*. Si escribís copy, modelo o
+validador que afirme algo más, está mal (D-026).
 
-## Si llegás nuevo: punto de partida
+---
 
-**El código es una semilla, no la app.** La conformidad con el diseño aprobado es muy baja y
-**eso es lo esperado, no un bug que arreglar de paso** (el número medido vive en `specs/README.md`
-y solo ahí: un número de estado copiado se desactualiza en todas las copias menos una). Lo valioso de lo que existe son decisiones
-de arquitectura (auth en dos capas, SHA-256 en el servidor, `AuditLog` append-only, el patrón
-`ApiPort`, la topología de la FSM en Aiken), no superficie terminada.
+# Cómo se trabaja acá
 
-Orden de lectura:
+**El diseño ya está decidido. El trabajo es transcribirlo, no inventarlo.**
 
-1. Este archivo entero (es lo único que se carga solo, junto al del frente que toques).
-2. `specs/README.md` — el mapa: criterios de aceptación de M3, conformidad medida, rebanadas, riesgos.
-3. `DECISIONS.md` — el porqué. Si algo del código te parece raro, la respuesta está acá antes que en el código.
-4. Lo puntual del frente (ver §Documentación oficial más abajo).
+`docs/` tiene 70 capturas y un backlog de 53 superficies donde cada una ya trae su path, sus
+componentes, sus endpoints y sus test IDs. No hay nada que diseñar y no hay reunión que tener.
 
-**Para trabajar:** leé este archivo y el del frente que toques, implementá, corré `pnpm verify`,
-documentá lo que emergió y commiteá. No hay skill ni protocolo que invocar (D-053).
+## El loop, por pantalla
 
-## Vocabulario: "milestone" tiene dos significados — usá el correcto
+```
+1. abrir la captura           docs/milestone-2-diseno/M2-D2-Screenshots-catalog/<N>-*.png
+2. abrir su fila              docs/milestone-3-implementacion/UI-implementation-plan.md  (M2-D5)
+3. transcribir                los componentes que la fila nombra, ninguno más
+4. endpoints                  los de la fila; si no existen, se crean con la forma que la fila pide
+5. test IDs                   los de la fila, literales
+6. pnpm verify
+7. commit                     con el ID de M2-D5 entre corchetes
+```
 
-| Término | Significa | Dónde |
-|---|---|---|
-| **Milestone** | Hito **Catalyst**: M1, M2, M3… Etapas contractuales del proyecto. | `docs/milestone-N-*/`, reportes de entrega |
-| **Stage** (`ConstructionStage`) | Etapa de **obra** de un desarrollo. Es la entidad del dominio. | Código, API, specs, contratos |
+**Las capturas se leen.** Son PNG y se abren con la herramienta de lectura: no hay que adivinar
+espaciados ni colores mirando prosa.
 
-Nunca uses "milestone" para una etapa de obra (D-023). Si ves `Milestone` en código, es deuda de rename pendiente.
+## Las cinco reglas del loop
+
+1. **Cuando la prosa y la captura difieren, gana la captura.** M2-D3 describe; M2-D2 muestra.
+2. **Ningún componente que M2-D3 no defina.** Si hace falta uno nuevo, es una decisión nueva, no un
+   archivo nuevo.
+3. **Ningún estado que M2-D3 no liste.** *"Never invent new statuses; choose the closest semantic
+   mapping."*
+4. **Ninguna superficie sin sus test IDs.** Una pantalla sin `data-testid` no está terminada — es
+   evidencia que pide el SOM, no un lujo.
+5. **Los tokens no se eligen, se transcriben.** El hex de M2-D3 es normativo.
+
+## Antes de empezar una superficie
+
+| Vas a tocar | Leé primero |
+|---|---|
+| Cualquier pantalla | su captura + su fila de M2-D5 + `M2-D1` (permisos del rol) |
+| Algo que muestre hash, TXID o Merkle root | `M2-D4` — los 10 patrones son **normativos** |
+| Un componente | su ficha en `M2-D3 §Component Library` |
+| Un endpoint | `M2-D5` §4-6 (path, test IDs, work stream) + `M2-D6` §9 |
+| Un validador | `M1-D1` §Workflow + D-020 (FSM) + D-021 (nunca valor) |
+| El modelo de datos | `M1-D2` + `M2-D1` §4 (matriz de permisos) + D-029 |
+
+No leas los cuatro entregables por costumbre: son ~25k tokens. Abrí lo que la fila pide.
+
+---
 
 ## Jerarquía de precedencia
 
-Dos capas, porque son dos autoridades distintas:
-
-- **Obligaciones (el *qué*, la vara de aceptación): manda `docs/`.** Entregables aprobados por
-  reviewers. Ninguna decisión puede reducir lo que debemos. **`docs/` es INMUTABLE** — ni para
-  corregir un error evidente — pero es una regla, no un bloqueo: los originales viven afuera y ya
-  están aprobados (D-022, enmendada).
+- **Obligaciones (el *qué*): manda `docs/`.** Ninguna decisión puede reducir lo que debemos.
+  **`docs/` es inmutable** — ni para corregir un error evidente (D-022).
 - **Implementación (el *cómo*): `DECISIONS.md` > `CLAUDE.md` > `specs/`.**
 
 Un desvío solo es legítimo si (a) el entregable se contradice internamente, (b) es un error de
 redacción, o (c) seguirlo al pie contradiría una verdad del producto declarada por el dueño.
-**Nunca por conveniencia ni por preferencia técnica.**
+**Nunca por conveniencia ni por preferencia técnica.** Los desvíos vigentes están listados en
+`DECISIONS.md`.
 
-**El desarrollo completo de la regla —qué se registra, cómo, y los desvíos vigentes— está en el
-encabezado de `DECISIONS.md` y en D-022. Acá no se repite.** Ante contradicción entre documentos:
-gana el de mayor precedencia y el otro se corrige en el mismo commit. Si la contradicción es con
-código, avisá antes de "arreglar" nada.
+Ante contradicción entre documentos: gana el de mayor precedencia y el otro se corrige **en el mismo
+commit**. Si la contradicción es con código, avisá antes de "arreglar" nada.
 
-**Y antes de declarar que un entregable está mal: verificá que estás mirando el entregable.** Ya
-nos pasó decidir contra una transcripción errónea (ver Trampas).
+**Y antes de declarar que un entregable está mal: verificá que estás mirando el entregable.** Ya nos
+pasó decidir contra una transcripción errónea (ver Trampas).
 
-## Principios de trabajo (los diez que sostienen todo lo demás)
+## Vocabulario: "milestone" tiene dos significados
 
-1. **Una sola fuente de verdad por cosa.** Cada dato vive en un lugar; el resto linkea, nunca copia. La duplicación diverge en silencio; el link roto es un fallo ruidoso — preferí siempre el fallo ruidoso.
-2. **Jerarquía de precedencia explícita.** El documento en conflicto se corrige en el mismo commit en que se detecta la contradicción.
-3. **Decidir rápido con defaults, refutar con spikes cortos** (≤2-3 días). Toda decisión abierta arranca con una opción por defecto; el spike existe para refutarla, no para explorar infinito. Reabrir una decisión aceptada requiere evidencia, no preferencia.
-4. **El repo es la memoria; los chats son descartables.** Toda decisión, trampa o convención que emerja en una sesión se persiste en el mismo commit.
-5. **Documentar contra realidad, no intenciones.** Las specs se escriben cuando hay código real que documentar, un paso antes de necesitarlas. La documentación especulativa produce archivos que nadie corrige.
-6. **Vertical primero (walking skeleton).** Antes de pulir capas, un hilo mínimo que atraviesa todo el sistema de punta a punta. Después se engorda ese hilo.
-7. **Dependencias externas detrás de interfaces propias** con modo real/simulado conmutable por configuración. Los simuladores son producto, no stubs. Acá esa dependencia es Cardano (D-014).
-8. **Redefinir "listo" según lo que controlás.** Si el hito depende de terceros, "listo" es *listo para activar*: todo lo bloqueado detrás de configuración, activable en días.
-9. **LLMs para volumen, humanos para juicio**, con niveles de autonomía explícitos según riesgo. Nada de lógica crítica que el revisor no pueda explicar sin mirar el chat.
-10. **CI desde el primer commit** y **documentación antes que código**, para que toda sesión tenga contexto desde el minuto uno.
+| Término | Significa | Dónde |
+|---|---|---|
+| **Milestone** | Hito **Catalyst**: M1, M2, M3. Etapas contractuales del proyecto | `docs/`, reportes de entrega |
+| **Stage** | Etapa de **obra**. Es la entidad del dominio | código, API, specs, contratos |
 
-## Estructura del repo
+Nunca uses "milestone" para una etapa de obra (D-023, ejecutada por D-067). **Excepción:** los test
+IDs de M2-D5 se transcriben literales, incluso `INV-STAGE-MILESTONE-001`.
 
-**`apps/` es lo que se despliega. `packages/` es librería que alguien importa.** Si una carpeta de
-`packages/` termina siendo un servicio, la convención se rompió (D-055).
+---
+
+# Reglas duras (innegociables)
+
+1. **Datos primero:** dinero jamás en float — montos en unidades enteras mínimas (lovelace como
+   `bigint`; fiat en centavos). Timestamps en UTC. IDs opacos.
+2. **Cero PII on-chain o en logs:** ni nombres, ni emails, ni URLs internas, ni nombres de archivo en
+   metadata, datums o logs. Solo hashes y refs opacas. Strings de metadata ≤ 64 bytes.
+3. **El hash es el ticket de entrada a la cadena de prueba** (D-027). Si un archivo tiene
+   `sha256Hash`, termina anclado — o se muestra "Pendiente", **nunca** "Verificado".
+4. **Passwords solo con bcrypt** (cost 10, D-046). Jamás loguear ni devolver `passwordHash`.
+5. **Autorización en dos capas, siempre:** rol global (`requireRole`) + membresía por proyecto
+   (`requireProjectAccess`). La matriz completa está en M2-D1 §4.
+6. **Todo body se valida con Zod**, y el schema vive en `packages/shared` **antes** que el endpoint.
+7. **Toda mutación relevante escribe `AuditLog`** (append-only) con actor, entidad, acción, timestamp.
+8. **Idempotencia en todo lo que toca chain:** re-ejecutar un anclaje o una migración no duplica
+   efectos.
+9. **La FSM del stage es una sola** (D-020), en `packages/shared` y espejada en Aiken. Si cambia una,
+   cambian las dos en el mismo commit.
+10. **Uploads:** solo `application/pdf`, `image/jpeg`, `image/png`; máximo `MAX_FILE_SIZE_MB`. Si un
+    upload falla la validación después de escribirse, **borrar el archivo huérfano**.
+11. **`contracts/plutus.json` se commitea** tras cada `aiken build`; direcciones derivadas del
+    blueprint, jamás hardcodeadas.
+12. **Secrets solo por env.** Si ves una seed o una key commiteada: frená y avisá.
+13. **Ningún validador custodia ni transfiere valor** (D-021).
+14. **Cero strings hardcodeados en la UI** (D-025). Todo texto sale del diccionario; moneda, fecha y
+    decimales con `Intl.*`. Default `es-AR` con voseo.
+15. **El backend devuelve claves de traducción, nunca copy** (M2-D4 §8.2).
+16. **Los hashes viajan completos al cliente.** La truncación 6+4 es de presentación y la hace
+    `HashChip`. Los TXID son case-sensitive y viajan verbatim.
+17. **Nunca mostrar una señal de prueba que no puedas sustanciar** (M2-D4 §6.2). Sin TXID, el estado
+    es "Pendiente".
+
+# Prohibiciones
+
+- No inventar componentes, estados, endpoints ni superficies fuera de `docs/` — proponer, no improvisar.
+- No abrir un modal de verificación automáticamente (M2-D4 §6.3). Toda superficie de prueba es
+  iniciada por el usuario; la única excepción es `AnchoringSuccessModal`.
+- En el front, no hacer `fetch` fuera de `ApiPort`.
+- No importar Lucid/Blockfrost fuera de `packages/cardano` (D-014).
+- No migrar lógica de negocio on-chain: el backend es fuente de verdad del **registro** (D-007).
+- No tocar mainnet: `CARDANO_NETWORK=Preprod` siempre (D-013).
+- **No editar migraciones aplicadas** — con la condición de D-063: mientras la única base sea local,
+  el esquema se corrige editando el archivo y borrando la base. Con Turso vivo, se termina.
+- No tocar `contracts/build/` ni editar `aiken.lock` a mano.
+- No commitear `.env`, `dev.db`, `uploads/` ni artefactos de build.
+- No "arreglar" tests cambiando contratos de API o esquema de DB para que pasen.
+- **No editar nada dentro de `docs/`** (D-022).
+
+---
+
+# Estructura
 
 ```
 apps/api          Express 5 + Kysely      → servicio en Render
-apps/web          TanStack Start (SSR)    → servicio en Render
-packages/shared   contrato Zod API↔web    → lo importan los dos
-packages/cardano  AnchorPort (D-014)      → lo importa la API; simulado y real (Lucid Evolution)
+apps/web          TanStack Router + Vite  → static site en Render (SPA + PWA)
+packages/shared   contrato Zod (oRPC)     → lo importan los dos
+packages/cardano  AnchorPort              → lo importa la API
 contracts/        Aiken · Plutus V3       → no se hostea, toolchain aparte
 ```
 
-`packages/shared` es lo único que vuelve el drift API↔web **imposible** en vez de prohibido: un tipo
-cambia de un lado y el typecheck del otro falla. Las migraciones son SQL plano escrito a mano en
-`apps/api/migrations/`, aplicadas por un único runner (`src/db/migrate.ts`, D-052).
+`packages/shared` es lo único que vuelve el drift **imposible** en vez de prohibido. `contracts/` no
+está en el workspace pnpm a propósito: otro toolchain, otro lockfile, otra caché.
 
-`contracts/` **no está en el workspace pnpm** a propósito (D-054): otro toolchain, otro lockfile,
-otra caché. `packages/cardano` existe desde SPEC-013 §A: expone el `AnchorPort` con dos
-adaptadores — el simulado, que es producto y no stub (D-014), y el real sobre Lucid Evolution,
-probado contra el `Emulator` y contra un devnet local (D-062).
-
-Tres `.md` en la raíz, a propósito: **`README.md`** (entrada humana, arranque, variables de
-entorno), **`CLAUDE.md`** (este archivo) y **`DECISIONS.md`** (el porqué). El mapa de desarrollo
-está en `specs/README.md`; los entregables oficiales en `docs/`, mapeados en `specs/entregables.md`
-(`docs/` contiene solo entregables: nada nuestro vive ahí adentro — D-033).
-
-No hay `scripts/` ni harness de agentes: se borraron enteros el 2026-08-23 (D-053). En `.claude/`
-queda solo una lista de comandos preaprobados, que es comodidad de sesión y no una regla.
-
-## Stack
-
-Los entregables oficiales **son agnósticos de stack**: el único requisito técnico comprometido es
-que los contratos sean en **Aiken**. Todo lo demás es nuestro, y cambiarlo requiere una `D-0XX`
-nueva, no una edición de una tabla.
-
-Lo que necesitás saber al escribir código:
-
-| Frente | Con qué se escribe | Decisión |
-|---|---|---|
-| **web** | TanStack Start + Router + Query · React 19 · Tailwind v4 · Lucide · shadcn/ui *(falta)* | D-002, D-024 |
-| **api** | Express 5 + Zod + JWT + bcrypt(10) + Multer + helmet, base `/api/v1` | D-016, D-054 |
-| **shared** | Zod — el contrato único API↔web. El schema va acá **antes** que el endpoint | D-012 |
-| **db** | **Kysely** (migración desde Drizzle **completa**, D-049) · **SQLite** en dev · **Turso** en Render | D-016, D-038, D-048, D-049 |
-| **cardano** | `AnchorPort` con adaptadores `simulated` (**existe**) y `blockfrost` (*rebanada B*) | D-005, D-014, D-060 |
-| **contracts** | Aiken v1.1.21 · **Plutus V3** · stdlib v3.0.0 · blueprint commiteado | D-017, D-019 |
-| red | **Preprod siempre**; mainnet fuera de alcance | D-013 |
-
-> **El inventario completo —versiones reales, infraestructura, qué corre y qué está solo decidido,
-> deuda y decisiones abiertas— está en `specs/stack.md` y solo ahí** (D-034). Acá no se repite: una
-> tabla de versiones copiada en dos archivos se desactualiza en uno de los dos.
-
-## Documentación oficial: qué leer antes de tocar cada frente
-
-No leas los cuatro entregables por costumbre: son ~25k tokens. Abrí lo que la fila pide.
-
-| Vas a tocar | Leé primero |
-|---|---|
-| Cualquier pantalla | `M2-D1` (árbol de pantallas y permisos del rol) + `M2-D3` (componentes) |
-| Algo que muestre un hash, TXID o Merkle root | `M2-D4` (los 10 patrones son **normativos**) |
-| Un endpoint | `M2-D5` §4-6 (trae el path, los test IDs y el work stream) + `M2-D6` §9 |
-| Un validador | `M1-D1` §Workflow + D-020 (FSM) + D-021 (nunca valor) |
-| El modelo de datos | `M1-D2b` + `M2-D1` §4 (matriz de permisos) + D-029 |
-
-## Reglas duras (innegociables)
-
-1. **Datos primero:** dinero jamás en float — montos en unidades enteras mínimas (lovelace como `bigint`; moneda fiat en centavos `integer`). Timestamps en UTC. IDs = UUID.
-2. **Cero PII on-chain o en logs:** ni nombres, ni emails, ni URLs internas, ni nombres de archivo en metadata, datums o logs. Solo hashes y refs opacas. Strings de metadata ≤ 64 bytes.
-3. **El hash es el ticket de entrada a la cadena de prueba** (D-027). Solo se hashea lo que se va a anclar. Si un archivo tiene `sha256Hash`, termina anclado — o se muestra como "Pendiente" mientras confirma, **nunca** como "Verificado". El hash lo calcula el servidor y no se recalcula ni se edita después de creado. Los **assets** informativos (renders, folletos, galerías, fotos de unidad de muestra) no se hashean, no se anclan y no muestran ninguna señal de prueba. No hay estado intermedio.
-4. **Passwords solo con bcrypt** (cost 10) — ratificado con argumento, no heredado: en 0.1 CPU un KDF
-   memory-hard es la forma equivocada (D-046). Jamás loguear ni devolver `passwordHash` en ninguna
-   respuesta. La **política** (mín. 8 caracteres, máx. 72 bytes rechazando en vez de truncar, sin reglas
-   de composición) vive en `passwordSchema` de `packages/shared` y se aplica donde la password se
-   **escribe**, nunca en el login.
-5. **Autorización en dos capas, siempre:** rol global (`requireRole`) + membresía por proyecto (`canAccessProject`). `admin` bypasea membresías; el resto solo ve proyectos donde es miembro. La matriz completa está en M2-D1 §4.
-6. **Todo body se valida con Zod** (`safeParse` + 400 con `error.flatten()`). Nada llega a la base sin pasar por un schema. Para endpoints nuevos: el schema va a `packages/shared` ANTES que el endpoint, y el frontend importa el mismo tipo.
-7. **Toda mutación relevante escribe `AuditLog`** (append-only) vía `writeAuditLog`, con actor, entidad, acción, timestamp.
-8. **Idempotencia en todo lo que toca plata o chain:** re-ejecutar un anclaje, release o migración no duplica efectos.
-9. **Máquina de estados del stage:** `Pending → InProgress → {Observed ⇄ InProgress, Completed}`, `Completed` terminal (D-020). `Observed` es remediación, no estado final. Una sola tabla de transiciones, espejada entre backend y `contracts/`. La etiqueta que ve el usuario sale del diccionario i18n, no del nombre del estado.
-10. Uploads: solo `application/pdf`, `image/jpeg`, `image/png`; máximo `MAX_FILE_SIZE_MB` (default 10). Si un upload falla la validación después de que Multer escribió el archivo, **borrar el archivo huérfano** antes de responder.
-11. **`contracts/plutus.json` se commitea** tras cada `aiken build`; direcciones de script derivadas del blueprint, jamás hardcodeadas.
-12. **Secrets solo por env.** Si ves una seed/key commiteada: frená y avisá.
-13. **Ningún validador custodia ni transfiere valor** (D-021). On-chain solo commitments y TXIDs. Si una spec o un prompt te pide un validador que retenga fondos, está mal: frená y avisá. "Release" significa anclar el evento de liberación, no ejecutar el pago.
-14. **Cero strings hardcodeados en la UI** (D-025). Todo texto visible sale del diccionario i18n; toda moneda, fecha, relativo y decimal se formatea con `Intl.*` y el locale activo. Default `es-AR` con voseo ("Mirá tu unidad", no "Mira" ni "Mire").
-15. **El backend devuelve claves de traducción, nunca copy** (M2-D4 §8.2). Vale para acciones de audit log, categorías, etiquetas de rol y nombres de stage. El cliente renderiza.
-16. **Los hashes viajan completos al cliente** (M2-D4 §8.2). La truncación a 6+4 es exclusivamente de presentación, la hace `HashChip`. Nunca truncar en la capa de datos. Los TXID son case-sensitive y se transportan verbatim.
-17. **Nunca mostrar una señal de prueba que no puedas sustanciar** (M2-D4 §6.2). Un pill "Verified", una marca de agua VERIFIED o un `HashChip` requieren un anclaje real. Si no hay TXID, el estado es "Pending", no "Verified".
-
-## Prohibiciones (qué NO hacer aunque parezca buena idea)
-
-- No migrar lógica de negocio on-chain: el backend es la fuente de verdad del **registro** del lifecycle (D-007); on-chain se anclan pruebas.
-- No importar Lucid/Blockfrost fuera de `packages/cardano` (D-014). Las rutas de la API jamás llaman a la chain directo: piden el puerto.
-- En el front, no hacer `fetch` fuera de `ApiPort` (`apps/web/src/api/`).
-- No tocar mainnet: `CARDANO_NETWORK=Preprod` siempre (D-013). CI no toca ninguna red.
-- **No subir `@types/express` a v5** mientras `express` sea v4.
-- **No editar migraciones ya aplicadas** — con una condición explícita: la regla protege entornos
-  donde la migración ya corrió. **Mientras no exista ninguna base que no podamos recrear** (hoy:
-  solo `dev.db` y la `test.db` de la suite), el esquema se corrige editando el archivo y borrando
-  la base local. El día que exista una base desplegada, esto pasa a ser inviolable y toda corrección
-  es migración nueva (D-063).
-- No tocar `contracts/build/` (generado) ni editar `aiken.lock` a mano.
-- No inventar endpoints, campos o dependencias fuera de spec/docs — proponer, no improvisar.
-- No commitear `.env`, `dev.db`, `uploads/` ni artefactos de build.
-- No "arreglar" tests cambiando contratos de API o esquema de DB para que pasen.
-- No crear variantes ad-hoc de los componentes de dominio (HashChip/StatusPill/etc.): viven en `apps/web/src/components/domain/`.
-- **No editar nada dentro de `docs/`** (D-022). Ni para corregir un error evidente.
-- **No inventar estados ni patrones de prueba nuevos.** M2-D3 dice *"never invent new statuses"* y M2-D4 pide documentar un patrón antes de usarlo. Como el documento es inmutable, en la práctica: patrón nuevo = decisión nueva en `DECISIONS.md`.
-- No abrir un modal de verificación automáticamente (M2-D4 §6.3). Toda superficie de prueba es iniciada por el usuario; la única excepción es `AnchoringSuccessModal`.
-
-## Cómo se trabaja acá
-
-**No hay harness.** Lo hubo entre el 2026-08-20 y el 2026-08-23 —una puerta ejecutable, cinco
-hooks bloqueantes, tres subagentes, dos skills, árboles de trabajo por track— y se borró entero
-(**D-053**): 1099 líneas que en tres días de vida necesitaron cinco commits de arreglo a sí mismas
-y no detectaron ninguno de los bugs reales del período. Si venís de leer una spec vieja que
-menciona `scripts/gate.sh`, ese archivo no existe.
-
-**Verificación: dos cadenas separadas, porque son dos cadenas distintas.**
-
-```bash
-pnpm verify             # app TS: lint (Biome) + typecheck + tests + build
-pnpm contracts:verify   # Aiken: fmt --check + check + build
-pnpm verify:all         # las dos, encadenadas
-```
-
-**TypeScript y Aiken no se mezclan** (D-054): distinto toolchain, distintos artefactos, distintos
-modos de falla. Biome no mira `contracts/` y `aiken` no sabe nada de la app. El CI los corre como
-**dos jobs en paralelo**, y ninguno espera al otro: que un validador no compile no dice nada sobre
-la app, y al revés tampoco.
-
-`pnpm install --frozen-lockfile` falla si el lockfile no refleja los `package.json` — un verde
-sobre el entorno equivocado es peor que un rojo.
-
-**Lo demás es criterio, y el criterio va escrito, no ejecutado.** Las reglas duras de este archivo
-son advisory a propósito: bloquear el juicio produce fricción sin seguridad. Las dos excepciones
-donde eso **no** alcanza están declaradas como tales:
-
-- **La segunda capa de autorización** (regla 5) falla en silencio y hoy no la sostiene nada más que
-  quien escribe el endpoint. Ver `apps/api/CLAUDE.md` §`canAccessProject`.
-- **Los secretos** (regla 12) — no hay escáner; leé el diff antes de commitear.
-
-**Dónde vive cada cosa** (si no está en su lugar, no lo copies: movelo):
+Tres `.md` en la raíz: **`README.md`** (entrada humana), **`CLAUDE.md`** (este) y **`DECISIONS.md`**
+(las restricciones). El mapa de desarrollo en `specs/README.md`; los entregables en `docs/`, mapeados
+en `specs/entregables.md`.
 
 | Qué | Dónde |
 |---|---|
-| Obligaciones, la vara de aceptación | `docs/` — copia de los entregables aprobados (D-022) |
+| Obligaciones, la vara de aceptación | `docs/` (inmutable) |
 | Qué archivo de `docs/` es qué entregable | `specs/entregables.md` |
-| Por qué se decidió algo | `DECISIONS.md` |
-| Reglas transversales de sesión | este archivo |
-| Reglas, trampas y deuda de un frente | `<frente>/CLAUDE.md` |
-| Estado, rebanadas, riesgos | `specs/README.md` |
-| Invariantes y casos borde de una rebanada | `specs/SPEC-NNN` |
+| Qué obliga una decisión | `DECISIONS.md` |
+| Por qué se decidió (argumento largo) | `specs/archive/` |
+| Reglas y trampas de un frente | `<frente>/CLAUDE.md` |
+| Invariantes de una rebanada | `specs/SPEC-NNN` |
 | Stack, versiones e infraestructura | `specs/stack.md` |
 | Deploy, rollback e incidentes | `specs/RUNBOOK-deploy.md` |
 
-### Niveles de autonomía (por riesgo del código)
+# Stack
+
+| Frente | Con qué | Decisión |
+|---|---|---|
+| **web** | TanStack Router + Vite (SPA, sin SSR) · React 19 · Tailwind v4 · shadcn/ui · Lucide · PWA | D-065, D-024 |
+| **api** | Express 5 + oRPC + Zod + JWT + bcrypt(10) + Multer + helmet, base `/api/v1` | D-066, D-054 |
+| **shared** | Zod — el contrato único. El schema va acá **antes** que el endpoint | D-012, D-066 |
+| **db** | Kysely · SQLite en dev · Turso en prod · una sola migración | D-038, D-063 |
+| **cardano** | `AnchorPort` con adaptadores `simulated` y real (Lucid Evolution) | D-014, D-060 |
+| **contracts** | Aiken v1.1.21 · Plutus V3 · stdlib v3.0.0 · blueprint commiteado | D-019, D-058 |
+| red | **Preprod siempre**; mainnet fuera de alcance | D-013 |
+
+El inventario completo —versiones reales, qué corre y qué está solo decidido— vive en
+`specs/stack.md` y solo ahí (D-034).
+
+---
+
+# Niveles de autonomía
 
 | Nivel | Qué cubre | Cómo se trabaja |
 |---|---|---|
-| 🟢 Verde | Componentes UI según M2-D3, endpoints CRUD según M2-D5, tests, docs, seeds | El LLM implementa directo |
-| 🟡 Amarillo | Migraciones de DB, auth/permisos/guards, pipeline de anclaje (`packages/cardano`), manejo de archivos/S3, config de CI/deploy, **validadores Aiken** | El LLM propone; revisión humana línea por línea antes de integrar |
-| 🔴 Rojo | Manejo de seeds/keys/firmas, todo lo que toque `SERVICE_WALLET_SEED`, la lógica de `canAccessProject`, hashing y construcción de commitments | El humano lidera y escribe; el LLM asiste. El revisor debe poder explicar cada línea sin mirar el chat |
+| 🟢 Verde | Componentes según M2-D3, superficies según M2-D5, tests, docs, seeds | El LLM implementa directo |
+| 🟡 Amarillo | Migraciones, auth/permisos/guards, `packages/cardano`, archivos/S3, CI/deploy, **validadores Aiken** | El LLM propone; revisión humana línea por línea |
+| 🔴 Rojo | Seeds/keys/firmas, `SERVICE_WALLET_SEED`, hashing y construcción de commitments | El humano lidera; el revisor debe poder explicar cada línea sin mirar el chat |
 
 Si dudás del nivel, es el más alto de los dos.
 
-**Dónde está hoy el código 🔴, y qué tiene abierto: `apps/api/CLAUDE.md` §Superficie 🔴** —
-todo el 🔴 existente vive en ese package, con un **P1 abierto en `lib/jwt.ts` que bloquea el primer
-deploy**. Acá no se repite el inventario.
+# Commits y ramas
 
-### Commits y ramas
-
-Formato: `<tipo>(<scope>): <descripción en imperativo, minúscula, sin punto final> [<REF>]`
+`<tipo>(<scope>): <descripción en imperativo, minúscula, sin punto final> [<REF>]`
 
 - **Tipos:** `feat` · `fix` · `refactor` · `test` · `docs` · `chore` · `perf` · `db`
-- **Scopes (cerrados):** `web` · `api` · `db` · `shared` · `cardano` · `contracts` · `ci` · `repo`
-- **REF:** el ID de M2-D5 entre corchetes cuando aplique (`[M3-BE-13]`, `[M3-FE-18]`, `[M3-SC-05]`)
+- **Scopes:** `web` · `api` · `db` · `shared` · `cardano` · `contracts` · `ci` · `repo`
+- **REF:** el ID de M2-D5 cuando aplique (`[M3-FE-18]`, `[INV-BUY-LIST-001]`) o la decisión (`[D-065]`)
 
-Un commit = un cambio lógico (no mezclar refactor con feature) · el cuerpo explica el *por qué* ·
-`BREAKING CHANGE:` en el footer si rompe contrato de API o esquema on-chain.
+Un commit = un cambio lógico · el cuerpo explica el *por qué* · `BREAKING CHANGE:` si rompe contrato
+de API o esquema on-chain. **`main` es la rama de integración y no hay PRs** (D-030).
 
-**`main` es la rama de integración y no hay PRs** (D-030). Las ramas `track/<nombre>` existen solo
-para que los árboles paralelos no se pisen (D-031): viven horas o días, se integran con
-`merge --ff-only` y se borran. Cuando se sume una segunda persona, esto vuelve a PRs — el trigger
-está en D-030.
-
-## Comandos
+# Comandos
 
 ```bash
 pnpm install                      # bootstrap del workspace
-pnpm dev                          # web + api en paralelo (puertos según el árbol)
-pnpm typecheck                    # typecheck de todos los packages
-pnpm test                         # tests (hoy: solo web — ver §Deuda)
-pnpm contracts:check              # aiken check (compila y corre tests de validadores)
-pnpm contracts:build              # regenera plutus.json (commitearlo)
-pnpm e2e                          # walkthrough Playwright (mobile + desktop) — NO corre en CI
-
+pnpm dev                          # web + api en paralelo
 pnpm verify                       # app TS: lint + typecheck + tests + build
 pnpm contracts:verify             # Aiken: fmt + check + build
 pnpm verify:all                   # las dos, encadenadas
 pnpm lint:fix                     # Biome arregla lo mecánico
 
-docker compose -f compose.dev.yml up -d       # MinIO + devnet de Cardano (local, NO se despliega)
-pnpm --filter @plataforma/api test:s3         # storage contra MinIO de verdad
-pnpm --filter @plataforma/cardano test:yaci   # anclaje contra un nodo Cardano de verdad
+docker compose -f compose.dev.yml up -d       # MinIO + devnet de Cardano (local, D-062)
+pnpm --filter @plataforma/api test:s3         # storage contra MinIO real
+pnpm --filter @plataforma/cardano test:yaci   # anclaje contra un nodo Cardano real
 ```
 
-Los comandos por frente (db:migrate, db:seed, e2e:ui…) están en el `CLAUDE.md` de cada frente.
+**TypeScript y Aiken no se mezclan:** distinto toolchain, distintos artefactos, distintos modos de
+falla. El CI los corre como dos jobs en paralelo. Los dos últimos comandos **no corren en CI** (no
+levanta infraestructura): se corren a mano.
 
-**Los dos últimos NO corren en CI**, que no levanta infraestructura: se corren a mano con el compose
-arriba. Cubren lo que el `Emulator` y el driver de disco no pueden cubrir — un S3 real y un nodo
-Cardano real. Que el deploy no use Docker (D-041) no dice nada del desarrollo local: acá Docker
-existe para poder probar contra lo mismo que va a correr en producción.
+Los comandos por frente (`db:migrate`, `db:seed`, `e2e`) están en el `CLAUDE.md` de cada uno.
 
-**Sobre `pnpm e2e`:** levanta web+api (reusa los que estén corriendo), recorre la app y deja
-capturas, video y trace en `apps/web/e2e/.artifacts/` (gitignoreado). Se corre a mano, cada tanto.
-Produce tres cosas que el SOM de M3 pide como evidencia: los test IDs de M2-D5 ejecutándose,
-capturas, y el video del walkthrough (criterio 13).
+---
 
-## Trampas transversales (sección viva — agregá acá el mismo día que te muerda una)
+# Trampas transversales
 
-Las de cada frente van en su `CLAUDE.md`. Acá solo lo que cruza frentes o toca el método.
+Sección viva: agregá acá el mismo día que te muerda una. Las de cada frente van en su `CLAUDE.md`.
 
-- **2026-08-20 · Un verificador que vive dentro del corpus que verifica se encuentra a sí mismo.**
-  El guardia de Bash matcheaba la *mención* de `docs/`, así que se bloqueó al escribirse; el chequeo
-  de mainnet de la puerta matcheaba el literal de su propio mensaje de error. Y correr la puerta con
-  `GATE_ALLOW_DOCS=1` hacía que la suite de guardias heredara la variable y "pasara" sin verificar
-  nada. **Toda suite tiene que ser hermética**: si su resultado depende del entorno de quien la
-  llama, no es una suite. Los tres artefactos se borraron con el harness (D-053) y la lección se
-  conserva porque aplica a cualquier chequeo automático que se escriba en el futuro: **antes de
-  agregar un verificador, preguntá si el problema no se arregla mejor cambiando la forma de lo
-  verificado.**
-- **2026-08-20 · Editar un `package.json` sin correr `pnpm install` produce un verde falso.** La
-  API declaraba TypeScript 6.0 y tenía 5.9 instalado: el typecheck local pasó, pero verificando
-  con la versión vieja — la unificación nunca se había probado. Lo atrapó el CI con
-  `ERR_PNPM_OUTDATED_LOCKFILE`, que es tarde. **`pnpm install --frozen-lockfile` en el CI es lo que
-  lo atrapa**, y alcanza. Dos corolarios: cambiar una versión declarada no la instala, y un verde
-  sobre el entorno equivocado es peor que un rojo. El primer intento del
-  chequeo usaba `pnpm install --lockfile-only`, que **reescribe el lockfile** — un verificador que
-  muta lo que verifica no es un verificador, así que quedó como comparación textual.
-- **2026-07-29 · Un artefacto derivado contradijo al entregable y nos hizo decidir mal.** Cuatro
-  `.puml` regenerados desde los PDF de M1 tenían las flechas de la FSM invertidas. Durante toda una
-  sesión creímos que el entregable estaba mal y registramos un "desvío" (D-020) que **no existía**.
-  **Antes de concluir que un entregable está mal, verificá que estás mirando el entregable y no una
-  transcripción.** El paquete canónico de M1 es `M1-D2-Architecture-and-Data-Models/`, hasheado en
-  la Proof of Achievement.
-- **2026-07-29 · Las capturas de M2-D2 tienen datos mock, no datos de diseño.** M2-D1 §Primary
-  platform characteristics lo dice: *"the maquette uses mock blockchain interactions"*. El panel
-  del certifier (captura 55) muestra tres unidades del mismo proyecto en tres stages distintos, y
-  **casi me hace modelar los stages por unidad** — cuando el dominio dice que un desarrollo tiene un
-  solo trámite (D-029). Lo normativo de una captura es la **estructura**: layout, componentes,
-  jerarquía, estados. Los valores, no.
-- **2026-07-29 · Grepear solo `*.md` esconde entregables.** Busqué "council of experts" en `docs/`
-  con `--include="*.md"` y concluí que no aparecía. Estaba en un `.csv`, y en una carpeta que
-  todavía no se había copiado. Grepeá sin filtro de extensión, y verificá que el árbol esté
-  completo antes de afirmar una ausencia.
-- **2026-07-29 · Los PDF de este repo no se leen con la herramienta de lectura** (falta
-  `pdftoppm`), y extraerles el texto no alcanza para un diagrama: las flechas son trazos
-  vectoriales, no texto. Renderizalos primero: `qlmanage -t -s 1800 -o <dir> archivo.pdf`.
-- **2026-07-29 · Los códigos de entregable (`D1`, `D2a`…) se reinician en cada milestone y
-  colisionan**: `M1-D1` es el whitepaper, `M2-D1` es el mapa de arquitectura de información. Dentro
-  de los documentos de M2, un "D1 §5" suelto significa siempre M2-D1. Al citar en specs, commits o
-  código, **usá siempre la forma completa** (`M2-D1 §4`).
-- **2026-07-29 · `M2-D5` y `M2-D6` son entregables de Milestone 2, aunque vivan en
-  `docs/milestone-3-implementacion/`**: son los planes *de* M3 escritos *en* M2. Se archivan junto
-  al SOM de M3 porque en la práctica se leen juntos.
+- **Las capturas de M2-D2 tienen datos mock, no datos de diseño.** M2-D1 lo dice: *"the maquette uses
+  mock blockchain interactions"*. Lo normativo de una captura es la **estructura** —layout,
+  componentes, jerarquía, estados—; los valores no. La captura 55 muestra tres unidades del mismo
+  proyecto en tres stages distintos y casi nos hace modelar stages por unidad, cuando el dominio dice
+  que un desarrollo tiene un solo trámite (D-029).
+- **Antes de concluir que un entregable está mal, verificá que estás mirando el entregable.** Cuatro
+  `.puml` regenerados desde los PDF de M1 tenían las flechas de la FSM invertidas, y durante una
+  sesión entera creímos que el entregable estaba mal. El paquete canónico es
+  `M1-D2-Architecture-and-Data-Models/`, hasheado en la Proof of Achievement.
+- **Grepear solo `*.md` esconde entregables.** Una búsqueda con `--include="*.md"` concluyó que algo
+  no aparecía en `docs/`; estaba en un `.csv`. Grepeá sin filtro de extensión.
+- **Los códigos de entregable se reinician en cada milestone y colisionan**: `M1-D1` es el whitepaper,
+  `M2-D1` es el mapa de arquitectura de información. Al citar, usá siempre la forma completa
+  (`M2-D1 §4`). Y `M2-D5`/`M2-D6` son entregables de **Milestone 2** aunque vivan en la carpeta de M3.
+- **Los PDF de este repo no se leen con la herramienta de lectura** (falta `pdftoppm`). Las capturas
+  PNG sí. Para un PDF: `qlmanage -t -s 1800 -o <dir> archivo.pdf`.
+- **Un verificador que vive dentro del corpus que verifica se encuentra a sí mismo.** Un guardia que
+  matcheaba la mención de `docs/` se bloqueó al escribirse. **Antes de agregar un verificador,
+  preguntá si el problema no se arregla mejor cambiando la forma de lo verificado** (D-053).
+- **Editar un `package.json` sin correr `pnpm install` produce un verde falso.** Lo atrapa
+  `pnpm install --frozen-lockfile` en CI, y alcanza. Un verde sobre el entorno equivocado es peor que
+  un rojo.

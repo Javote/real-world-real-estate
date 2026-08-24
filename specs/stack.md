@@ -18,8 +18,8 @@
 |---|---|---|---|
 | pnpm workspaces — `apps/*` (desplegable) + `packages/*` (librería); `contracts/` en el repo pero **fuera** del workspace | `pnpm@9.15.0` | ● | D-001, D-055 |
 | Node | `engines: >=22.12` · `.nvmrc` · CI y Render usan **22** | ● | D-001, D-054 — `>=20` era falso: Nitro pide `^20.19 \|\| >=22.12` y el `require(esm)` de la API necesita 22.12 |
-| TypeScript, estricto, unificado en los tres packages | `6.0.3` | ● | SPEC-008 |
-| Resolución de módulos | `node16` en api y shared · `bundler` en web | ● | SPEC-008 |
+| TypeScript, estricto, unificado en los tres packages | `6.0.3` | ● | `archive/SPEC-008` |
+| Resolución de módulos | `node16` en api y shared · `bundler` en web | ● | `archive/SPEC-008` |
 
 No hay `tsconfig.base.json`: se borró por no gobernar nada. Los tres packages tienen su propio
 `tsconfig.json` autocontenido, y esa autonomía es deliberada — la resolución de módulos difiere
@@ -27,23 +27,30 @@ entre web y los packages de Node.
 
 ## 2 · Frontend — `apps/web`
 
+> **Cambia con D-065**: se suelta TanStack **Start** (SSR) y queda TanStack **Router** sobre Vite,
+> como SPA servida estática, con PWA. La evidencia fue medida: `grep` de
+> `createServerFn|createServerRoute|loader:|beforeLoad:` daba **cero** — pagábamos un runtime de
+> servidor que no usábamos.
+
 | Pieza | Versión | Estado | Nota |
 |---|---|---|---|
-| TanStack Start (SSR) | `1.168.28` | ● | D-002 — SSR por el browse público y el dossier compartido |
 | TanStack Router + Query | `1.170` / `5.90` | ● | rutas por archivo, `routeTree.gen.ts` generado |
+| ~~TanStack Start (SSR)~~ | `1.168.28` | ✂ | se saca (D-065) |
+| ~~Nitro~~ | `3.0.260610-beta` | ✂ | se va con Start. D-037 y D-050 fueron su costo de mantenimiento |
 | React | `19.2.7` | ● | |
-| Vite | `8.1.4` | ● | |
-| Nitro | `3.0.260610-beta` | ● | D-037. Versión publicada, no un nightly. **El `502` en `POST`+`401` está cerrado** (D-050): era el spec de fetch, no h3 |
-| Tailwind CSS | `4.3.2` | ● | vía `@tailwindcss/vite` |
+| Vite | `8.1.4` | ● | pasa a ser el build completo |
+| Tailwind CSS | `4.3.2` | ● | vía `@tailwindcss/vite`; los tokens van en `@theme` |
 | Lucide (iconos) | `0.545` | ● | M2-D3 reserva pares icono-significado |
-| **shadcn/ui** | — | ○ | D-024. Primitivos accesibles para los 36 componentes de M2-D3 |
-| **Tokens de diseño de M2-D3** | — | ○ | D-024. Hoy hay ~1000 líneas de CSS de la maqueta vieja en `styles.css` |
-| **i18n es-AR/en-US** | — | ○ | D-025. Diccionarios propios, sin librería |
-| Vitest + jsdom + Testing Library | `4.1.10` | ● | 4 tests |
+| **shadcn/ui** | — | ○ | D-024. Primitivos accesibles para los componentes de M2-D3 |
+| **Tokens de diseño de M2-D3** | — | ○ | D-024. Se **transcriben**, no se eligen |
+| **Cliente del contrato** (`@orpc/client`) | — | ○ | D-066. Reemplaza el espejo escrito a mano de `api/types.ts` |
+| **PWA** (manifest + service worker) | — | ○ | D-065. Desde el arranque, no al final |
+| **i18n es-AR/en-US** | `245 líneas` | ◐ | D-025. La maquinaria existe; conviven 36 strings hardcodeados |
+| Vitest + jsdom + Testing Library | `4.1.10` | ● | |
 | Playwright (E2E) | `1.62` | ● | solo Chromium · **no corre en CI**, a mano |
 
-El front está a ~2% de conformidad con el diseño aprobado. Lo que se conserva es el patrón
-`ApiPort`; la superficie se reemplaza. Ver `apps/web/CLAUDE.md`.
+El front se reconstruye desde los entregables: ver [`SPEC-014`](SPEC-014-reconstruccion-del-front.md)
+por qué se conserva y qué se borra.
 
 ## 3 · Backend — `apps/api`
 
@@ -66,7 +73,7 @@ Base `/api/v1`. De los ~80 endpoints del backlog de M2-D5, **conforman 2**. Los 
 
 | Pieza | Versión | Estado | Nota |
 |---|---|---|---|
-| Zod como contrato único API↔web | `4.4.3` | ◐ | SPEC-008: **auth migrado**, el resto migra por rebanada |
+| Zod como contrato único API↔web | `4.4.3` | ◐ | `archive/SPEC-008`: auth migrado; el resto migra con el contrato oRPC (D-066) |
 
 Es lo único que vuelve el drift API↔web *imposible* en vez de prohibido. La mecánica de
 resolución (por qué `types` apunta al `.d.ts` y no al fuente) está en `packages/shared/CLAUDE.md`.
@@ -98,7 +105,7 @@ Ningún validador custodia ni transfiere valor, en ninguna fase (D-021).
 | Migraciones | SQL plano en `apps/api/migrations/`, **una sola** (`0000_init.sql`, D-063), tracking propio (`_migrations`), **un solo runner** (D-052) | idempotentes en el `startCommand` | ● — verificado sobre el **compilado**, contra base nueva y re-aplicando | D-012 · D-049 |
 | Archivos de evidencia | `STORAGE_DRIVER=disk` por default; **`s3` implementado y probado contra MinIO** | **Cloudflare R2** en prod (free: 10 GB, egress $0) — mismo código, otras variables | ◐ — el port existe (`apps/api/src/lib/storage.ts`) y con `s3` el SHA-256 cubre los bytes guardados. Falta crear el bucket de R2 y setear las variables | D-011 · D-040 · D-051 |
 | URLs de archivos | descarga por endpoint autenticado | prefirmadas, TTL ≤15 min | ○ | D-011 |
-| Base de tests | SQLite propia (`apps/api/test.db`), migrada y sembrada por corrida | — | ● | SPEC-008 |
+| Base de tests | SQLite propia (`apps/api/test.db`), migrada y sembrada por corrida | — | ● | `archive/SPEC-008` |
 
 ## 7 · Blockchain
 

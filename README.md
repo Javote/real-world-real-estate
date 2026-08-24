@@ -137,9 +137,10 @@ Deliberadamente **tres archivos en la raíz y nada más**. Todo lo demás vive i
 
 | Archivo | Contenido |
 |---|---|
-| `CLAUDE.md` | Lo transversal de cada sesión: vocabulario, principios, reglas duras, prohibiciones, autonomía 🟢🟡🔴, commits, comandos y trampas. |
-| `<frente>/CLAUDE.md` | Lo propio de `apps/web`, `apps/api` y `contracts`: qué leer, trampas verificadas, deuda y comandos. Se cargan solos al tocar el subárbol. |
-| `DECISIONS.md` | **El documento de mayor valor por línea.** 32 ADRs con contexto, alternativas, trigger de revisión y reversión. |
+| `CLAUDE.md` | **Cómo se trabaja acá** —el loop de captura + fila de M2-D5— más vocabulario, reglas duras, prohibiciones, autonomía 🟢🟡🔴, commits, comandos y trampas. Solo información vigente. |
+| `<frente>/CLAUDE.md` | Lo propio de cada subárbol: qué leer, trampas verificadas, deuda y comandos. Se cargan solos al tocarlo. |
+| `DECISIONS.md` | **Las restricciones vigentes**, una o dos líneas cada una: qué obliga hoy. El argumento largo vive en `specs/archive/` (D-068). |
+| `specs/archive/` | La memoria: las 63 decisiones originales enteras y las specs de trabajo ya cerrado. Se consulta, no se mantiene. |
 | `specs/README.md` | **El mapa de desarrollo:** criterios de aceptación de M3, estado medido, rebanadas en orden de dependencia, tracks paralelos, riesgos. |
 | `specs/SPEC-NNN-*.md` | Una por rebanada: invariantes, casos borde (que son los tests) y definición de terminado. |
 | `specs/stack.md` | **Inventario completo del stack:** front, back, contratos, datos, blockchain, infraestructura y verificación, con qué corre hoy y qué está solo decidido. |
