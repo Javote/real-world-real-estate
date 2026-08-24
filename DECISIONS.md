@@ -99,13 +99,18 @@ Evidencia sin firmar es (a) la declarada `authoritative` sin atribución de auto
 rechazo ocurre en la transición, no en el upload**: subir siempre se puede; avanzar no.
 *Estado: implementado el piso (exige que haya evidencia). Faltan las columnas de (a) y (b).*
 
-## D-067 — `Milestone` → `Stage` en todo el dominio
+## D-067 — `Milestone` → `Stage` en todo el dominio — **ejecutada 2026-08-24**
 
 "Milestone" queda reservado a los hitos de Catalyst (M1/M2/M3). Ejecuta D-023, que estuvo abierta un
 mes. **La evidencia que lo decidió:** en `docs/` hay 203 apariciones de "stage" contra 135 de
 "milestone", y en M2-D5 —el índice que vamos a transcribir— **todos los paths y test IDs dicen
 `stage`** (`/projects/:id/stages`, `CER-STAGE-VIEW-001`). Mantener `Milestone` obligaba a traducir
 en cada pantalla. **Excepción: los test IDs se transcriben literales**, incluso `INV-STAGE-MILESTONE-001`.
+
+**No es `ConstructionStage` ni `MilestoneStage`.** Los dos aparecen **cero** veces en `docs/`:
+`ConstructionStage` lo inventó D-023 y `MilestoneStage` no lo escribió nunca nadie. El entregable
+dice `stage` a secas en identificadores y "construction stage" como frase en prosa (8 veces). Se usa
+el identificador.
 
 ---
 

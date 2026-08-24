@@ -1,7 +1,7 @@
 import { z } from "zod";
 import { type StageState, stageStateSchema } from "./stage";
 
-// El productor del datum: cómo una fila de `Milestone` se convierte en el
+// El productor del datum: cómo una fila de `Stage` se convierte en el
 // `StageDatum` que el validador Aiken espera (D-058).
 //
 // Vive acá y no en `apps/api` porque es **el contrato con la cadena**, igual
@@ -83,7 +83,7 @@ export function hexToRef(hex: string): string {
   return ref;
 }
 
-/** La fila de `Milestone` que hace falta para producir el datum. */
+/** La fila de `Stage` que hace falta para producir el datum. */
 export interface StageDatumSource {
   id: string;
   projectId: string;

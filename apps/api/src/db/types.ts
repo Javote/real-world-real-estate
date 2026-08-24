@@ -1,4 +1,4 @@
-import { STAGE_STATES, type StageState } from "@plataforma/shared";
+import type { StageState } from "@plataforma/shared";
 import type { ColumnType, Generated, Insertable, Selectable, Updateable } from "../lib/kysely";
 
 // Los valores son los que declara la migración (`migrations/0000_init.sql`)
@@ -7,10 +7,10 @@ import type { ColumnType, Generated, Insertable, Selectable, Updateable } from "
 export const USER_ROLES = ["admin", "developer", "buyer", "verifier", "notary"] as const;
 export const PROJECT_STATUSES = ["planning", "in_progress", "delayed", "completed"] as const;
 export const MEMBERSHIP_ROLES = ["developer", "buyer", "verifier"] as const;
-// La FSM del stage NO se declara acá: vive en `packages/shared` (`STAGE_STATES`),
-// que es el espejo del validador Aiken (D-059). Se re-exporta para no romper a
-// quien la importe desde el módulo de tipos de la base.
-export const MILESTONE_STATES = STAGE_STATES;
+// La FSM del stage NO se declara acá: vive en `packages/shared`, que es el
+// espejo del validador Aiken (D-059). Se re-exporta para que quien trabaje con
+// la base la tenga a mano sin importar de dos lugares distintos.
+export { STAGE_STATES } from "@plataforma/shared";
 
 /** Estado de un evento on-chain. `Pending` mientras no haya TXID confirmado
  * — la regla 17 prohíbe mostrar prueba sin anclaje real. */
@@ -27,7 +27,7 @@ export const EVIDENCE_TYPES = ["document", "photo", "certificate"] as const;
 export type UserRole = (typeof USER_ROLES)[number];
 export type ProjectStatus = (typeof PROJECT_STATUSES)[number];
 export type MembershipRole = (typeof MEMBERSHIP_ROLES)[number];
-export type MilestoneState = StageState;
+export type { StageState };
 export type OnChainEventStatus = (typeof ONCHAIN_EVENT_STATUSES)[number];
 export type OnChainEventType = (typeof ONCHAIN_EVENT_TYPES)[number];
 export type EvidenceType = (typeof EVIDENCE_TYPES)[number];
@@ -76,12 +76,12 @@ export interface ProjectMemberTable {
   createdAt: SqliteTimestamp;
 }
 
-export interface MilestoneTable {
+export interface StageTable {
   id: GeneratedId;
   projectId: string;
   name: string;
   sequenceOrder: number;
-  state: MilestoneState;
+  state: StageState;
   validationCritical: SqliteBoolean;
   certifiedAt: SqliteTimestamp | null;
   certifiedById: string | null;
@@ -92,7 +92,7 @@ export interface MilestoneTable {
 export interface EvidenceTable {
   id: GeneratedId;
   projectId: string;
-  milestoneId: string | null;
+  stageId: string | null;
   uploadedById: string;
   evidenceType: EvidenceType;
   category: string;
@@ -130,13 +130,13 @@ export interface AuditLogTable {
 export interface OnChainEventTable {
   id: GeneratedId;
   projectId: string;
-  milestoneId: string | null;
+  stageId: string | null;
   /** Solo en `EVIDENCE_ANCHOR`: qué archivo ancló esta transacción. */
   evidenceId: string | null;
   eventIndex: number;
   eventType: OnChainEventType;
-  fromState: MilestoneState | null;
-  toState: MilestoneState | null;
+  fromState: StageState | null;
+  toState: StageState | null;
   /** Commitment anclado (evidence root / SHA-256), hex. */
   commitment: string | null;
   status: OnChainEventStatus;
@@ -169,7 +169,7 @@ export interface SimulatedLedgerUtxoTable {
 export interface EvidenceBundleTable {
   id: GeneratedId;
   projectId: string;
-  milestoneId: string;
+  stageId: string;
   /** Merkle root del bundle, hex de 64. Es el `evidenceRoot` del datum. */
   commitmentHash: string;
   createdById: string | null;
@@ -188,7 +188,7 @@ export interface Database {
   User: UserTable;
   Project: ProjectTable;
   ProjectMember: ProjectMemberTable;
-  Milestone: MilestoneTable;
+  Stage: StageTable;
   Evidence: EvidenceTable;
   AuditLog: AuditLogTable;
   OnChainEvent: OnChainEventTable;
@@ -208,9 +208,9 @@ export type ProjectUpdate = Updateable<ProjectTable>;
 export type ProjectMemberRow = Selectable<ProjectMemberTable>;
 export type NewProjectMember = Insertable<ProjectMemberTable>;
 
-export type MilestoneRow = Selectable<MilestoneTable>;
-export type NewMilestone = Insertable<MilestoneTable>;
-export type MilestoneUpdate = Updateable<MilestoneTable>;
+export type StageRow = Selectable<StageTable>;
+export type NewStage = Insertable<StageTable>;
+export type StageUpdate = Updateable<StageTable>;
 
 export type EvidenceRow = Selectable<EvidenceTable>;
 export type NewEvidence = Insertable<EvidenceTable>;

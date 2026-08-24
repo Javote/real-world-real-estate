@@ -21,7 +21,7 @@ async function crearStage(opts: { state?: StageState; validationCritical?: boole
   const ahora = new Date();
   const id = createId();
   await db
-    .insertInto("Milestone")
+    .insertInto("Stage")
     .values({
       id,
       projectId: proyecto,
@@ -37,7 +37,7 @@ async function crearStage(opts: { state?: StageState; validationCritical?: boole
   return id;
 }
 
-async function agregarEvidencia(milestoneId: string) {
+async function agregarEvidencia(stageId: string) {
   const ahora = new Date();
   const usuario = (
     await db
@@ -52,7 +52,7 @@ async function agregarEvidencia(milestoneId: string) {
     .values({
       id: createId(),
       projectId: proyecto,
-      milestoneId,
+      stageId,
       uploadedById: usuario,
       evidenceType: "certificate",
       category: "permits",
@@ -72,7 +72,7 @@ async function agregarEvidencia(milestoneId: string) {
 
 const patchState = (id: string, state: string) =>
   request(app)
-    .patch(`/api/v1/milestones/${id}/state`)
+    .patch(`/api/v1/stages/${id}/state`)
     .set("Authorization", `Bearer ${token}`)
     .send({ state });
 
@@ -91,7 +91,7 @@ afterAll(async () => {
   await db.destroy();
 });
 
-describe("PATCH /milestones/:id/state · la tabla de transiciones", () => {
+describe("PATCH /stages/:id/state · la tabla de transiciones", () => {
   // Los 16 pares, generados igual que en el validador: ninguno queda sin caso.
   for (const from of STAGE_STATES) {
     for (const to of STAGE_STATES) {
@@ -104,7 +104,7 @@ describe("PATCH /milestones/:id/state · la tabla de transiciones", () => {
           expect(res.body.code).toBe("STAGE_TRANSITION_INVALID");
           // Y el estado no se movió: un rechazo que igual escribe no es un rechazo.
           const fila = await db
-            .selectFrom("Milestone")
+            .selectFrom("Stage")
             .selectAll()
             .where("id", "=", id)
             .executeTakeFirstOrThrow();
@@ -121,7 +121,7 @@ describe("PATCH /milestones/:id/state · la tabla de transiciones", () => {
   });
 });
 
-describe("PATCH /milestones/:id/state · evidencia en stages críticos", () => {
+describe("PATCH /stages/:id/state · evidencia en stages críticos", () => {
   it("409 al completar un stage validation-critical sin evidencia", async () => {
     const id = await crearStage({ state: "InProgress", validationCritical: true });
     const res = await patchState(id, "Completed");
@@ -148,7 +148,7 @@ describe("OnChainEvent · el aterrizaje del anclaje", () => {
     // `POST`, igual que en la cadena. Con `ANCHOR_MODE=simulated` la
     // confirmación es inmediata.
     const creado = await request(app)
-      .post(`/api/v1/projects/${proyecto}/milestones`)
+      .post(`/api/v1/projects/${proyecto}/stages`)
       .set("Authorization", `Bearer ${token}`)
       .send({ name: "Stage con hilo", sequenceOrder: 999_101 });
 
@@ -183,7 +183,7 @@ describe("OnChainEvent · el aterrizaje del anclaje", () => {
     // porque el validador exige 32 bytes para completar un stage crítico. Con
     // el bundle, el circuito cierra entero.
     const creado = await request(app)
-      .post(`/api/v1/projects/${proyecto}/milestones`)
+      .post(`/api/v1/projects/${proyecto}/stages`)
       .set("Authorization", `Bearer ${token}`)
       .send({ name: "Stage crítico", sequenceOrder: 999_102, validationCritical: true });
 
@@ -207,7 +207,7 @@ describe("OnChainEvent · el aterrizaje del anclaje", () => {
     const eventos = await db
       .selectFrom("OnChainEvent")
       .selectAll()
-      .where("milestoneId", "=", id)
+      .where("stageId", "=", id)
       .orderBy("eventIndex", "asc")
       .execute();
 
@@ -222,17 +222,17 @@ describe("OnChainEvent · el aterrizaje del anclaje", () => {
     const eventos = await db
       .selectFrom("OnChainEvent")
       .selectAll()
-      .where("milestoneId", "=", id)
+      .where("stageId", "=", id)
       .execute();
 
     expect(eventos).toHaveLength(0);
   });
 });
 
-describe("POST /projects/:id/milestones · el stage nace en Pending", () => {
+describe("POST /projects/:id/stages · el stage nace en Pending", () => {
   it("ignora el estado que venga por body y abre el hilo en el índice 0", async () => {
     const res = await request(app)
-      .post(`/api/v1/projects/${proyecto}/milestones`)
+      .post(`/api/v1/projects/${proyecto}/stages`)
       .set("Authorization", `Bearer ${token}`)
       .send({ name: "Stage nuevo", sequenceOrder: 999_001, state: "Completed" });
 
@@ -243,11 +243,11 @@ describe("POST /projects/:id/milestones · el stage nace en Pending", () => {
   });
 });
 
-describe("PATCH /milestones/:id · la identidad on-chain", () => {
+describe("PATCH /stages/:id · la identidad on-chain", () => {
   it("deja cambiar orden y criticidad mientras no haya hilo anclado", async () => {
     const id = await crearStage();
     const res = await request(app)
-      .patch(`/api/v1/milestones/${id}`)
+      .patch(`/api/v1/stages/${id}`)
       .set("Authorization", `Bearer ${token}`)
       .send({ validationCritical: true });
 
@@ -262,7 +262,7 @@ describe("PATCH /milestones/:id · la identidad on-chain", () => {
       .values({
         id: createId(),
         projectId: proyecto,
-        milestoneId: id,
+        stageId: id,
         eventIndex: 0,
         eventType: "STAGE_CREATED",
         fromState: null,
@@ -278,7 +278,7 @@ describe("PATCH /milestones/:id · la identidad on-chain", () => {
       .execute();
 
     const res = await request(app)
-      .patch(`/api/v1/milestones/${id}`)
+      .patch(`/api/v1/stages/${id}`)
       .set("Authorization", `Bearer ${token}`)
       .send({ sequenceOrder: 12 });
 
@@ -290,7 +290,7 @@ describe("PATCH /milestones/:id · la identidad on-chain", () => {
 describe("D-061 · todo stage es validation-critical", () => {
   it("un stage creado sin decir nada nace crítico", async () => {
     const res = await request(app)
-      .post(`/api/v1/projects/${proyecto}/milestones`)
+      .post(`/api/v1/projects/${proyecto}/stages`)
       .set("Authorization", `Bearer ${token}`)
       .send({ name: "Stage por default", sequenceOrder: 999_201 });
 
@@ -301,7 +301,7 @@ describe("D-061 · todo stage es validation-critical", () => {
     // Antes de D-061 este mismo stage se completaba sin nada: el default era
     // `false` y nadie lo marcaba. Ese era el agujero.
     const creado = await request(app)
-      .post(`/api/v1/projects/${proyecto}/milestones`)
+      .post(`/api/v1/projects/${proyecto}/stages`)
       .set("Authorization", `Bearer ${token}`)
       .send({ name: "Stage por default 2", sequenceOrder: 999_202 });
 
@@ -314,7 +314,7 @@ describe("D-061 · todo stage es validation-critical", () => {
 
   it("desmarcarlo sigue siendo posible, pero ahora es explícito", async () => {
     const res = await request(app)
-      .post(`/api/v1/projects/${proyecto}/milestones`)
+      .post(`/api/v1/projects/${proyecto}/stages`)
       .set("Authorization", `Bearer ${token}`)
       .send({ name: "Stage no crítico", sequenceOrder: 999_203, validationCritical: false });
 

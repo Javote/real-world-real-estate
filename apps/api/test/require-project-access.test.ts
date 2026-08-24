@@ -10,7 +10,7 @@ import { FIXTURES } from "./global-setup";
 // respuesta de la invariante 4 tiene su caso, en las DOS formas de `source`.
 
 let proyecto: string;
-let milestone: string;
+let stage: string;
 let evidencia: string;
 
 const login = (f: { email: string; password: string }) =>
@@ -32,11 +32,11 @@ beforeAll(async () => {
 
   // Un stage y una evidencia del proyecto de prueba: son lo que la forma B
   // tiene que cargar para averiguar a qué proyecto pertenecen.
-  milestone = createId();
+  stage = createId();
   await db
-    .insertInto("Milestone")
+    .insertInto("Stage")
     .values({
-      id: milestone,
+      id: stage,
       projectId: proyecto,
       name: "Stage de prueba",
       sequenceOrder: 1,
@@ -61,7 +61,7 @@ beforeAll(async () => {
     .values({
       id: evidencia,
       projectId: proyecto,
-      milestoneId: milestone,
+      stageId: stage,
       uploadedById: subeUsuario,
       evidenceType: "document",
       category: "permits",
@@ -85,14 +85,14 @@ afterAll(async () => {
 
 describe("requireProjectAccess · forma A (el projectId está en el path)", () => {
   it("401 sin token — la capa 1 corta antes", async () => {
-    const res = await request(app).get(`/api/v1/projects/${proyecto}/milestones`);
+    const res = await request(app).get(`/api/v1/projects/${proyecto}/stages`);
     expect(res.status).toBe(401);
   });
 
   it("403 para un developer que no es miembro", async () => {
     const token = await tokenDe(FIXTURES.ajeno);
     const res = await request(app)
-      .get(`/api/v1/projects/${proyecto}/milestones`)
+      .get(`/api/v1/projects/${proyecto}/stages`)
       .set("Authorization", `Bearer ${token}`);
     expect(res.status).toBe(403);
   });
@@ -100,7 +100,7 @@ describe("requireProjectAccess · forma A (el projectId está en el path)", () =
   it("200 para el miembro — el control de que no cierra de más", async () => {
     const token = await tokenDe(FIXTURES.activo);
     const res = await request(app)
-      .get(`/api/v1/projects/${proyecto}/milestones`)
+      .get(`/api/v1/projects/${proyecto}/stages`)
       .set("Authorization", `Bearer ${token}`);
     expect(res.status).toBe(200);
   });
@@ -108,7 +108,7 @@ describe("requireProjectAccess · forma A (el projectId está en el path)", () =
   it("403 si el proyecto no existe, incluso para admin (D-043)", async () => {
     const token = await tokenDe(FIXTURES.admin);
     const res = await request(app)
-      .get(`/api/v1/projects/${createId()}/milestones`)
+      .get(`/api/v1/projects/${createId()}/stages`)
       .set("Authorization", `Bearer ${token}`);
     expect(res.status).toBe(403);
   });
@@ -118,10 +118,10 @@ describe("requireProjectAccess · forma B (hay que cargar la entidad)", () => {
   it("404 cuando el stage no existe, con el mensaje de siempre", async () => {
     const token = await tokenDe(FIXTURES.activo);
     const res = await request(app)
-      .get(`/api/v1/milestones/${createId()}`)
+      .get(`/api/v1/stages/${createId()}`)
       .set("Authorization", `Bearer ${token}`);
     expect(res.status).toBe(404);
-    expect(res.body.message).toBe("Milestone not found");
+    expect(res.body.message).toBe("Stage not found");
   });
 
   it("404 cuando la evidencia no existe", async () => {
@@ -136,7 +136,7 @@ describe("requireProjectAccess · forma B (hay que cargar la entidad)", () => {
   it("403 cuando el stage existe pero el usuario no es miembro de su proyecto", async () => {
     const token = await tokenDe(FIXTURES.ajeno);
     const res = await request(app)
-      .get(`/api/v1/milestones/${milestone}`)
+      .get(`/api/v1/stages/${stage}`)
       .set("Authorization", `Bearer ${token}`);
     expect(res.status).toBe(403);
   });
@@ -152,7 +152,7 @@ describe("requireProjectAccess · forma B (hay que cargar la entidad)", () => {
   it("200 para el miembro — sin esto, los 403 de arriba pasarían con todo roto", async () => {
     const token = await tokenDe(FIXTURES.activo);
     const res = await request(app)
-      .get(`/api/v1/milestones/${milestone}`)
+      .get(`/api/v1/stages/${stage}`)
       .set("Authorization", `Bearer ${token}`);
     expect(res.status).toBe(200);
   });
@@ -164,10 +164,10 @@ describe("requireProjectAccess · forma B (hay que cargar la entidad)", () => {
     // asimetría es deuda conocida y declarada (SPEC-012 §Lo que NO hace).
     const token = await tokenDe(FIXTURES.ajeno);
     const existente = await request(app)
-      .get(`/api/v1/milestones/${milestone}`)
+      .get(`/api/v1/stages/${stage}`)
       .set("Authorization", `Bearer ${token}`);
     const inexistente = await request(app)
-      .get(`/api/v1/milestones/${createId()}`)
+      .get(`/api/v1/stages/${createId()}`)
       .set("Authorization", `Bearer ${token}`);
 
     expect(existente.status).toBe(403);

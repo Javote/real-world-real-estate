@@ -280,7 +280,7 @@ capas se leen en el mismo lugar: la firma de la ruta. **Ninguna ruta llama a `ca
 su único llamador es el middleware, que sigue delegando en `projectScope` (D-043).
 
 `source` cubre las dos formas: `{ param: "id" }` cuando el path ya trae el projectId, y
-`{ via: "Milestone" | "Evidence", param: "id" }` cuando hay que cargar la entidad para averiguarlo.
+`{ via: "Stage" | "Evidence", param: "id" }` cuando hay que cargar la entidad para averiguarlo.
 `allowedMemberships` es **posicional y obligatorio**, no rest args: con `...memberships` omitirlo
 compilaría como lista vacía —cerrado, pero en silencio— y D-042 fijó que omitirlo sea un error de
 compilación.

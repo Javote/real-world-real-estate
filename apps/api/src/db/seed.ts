@@ -168,7 +168,7 @@ async function main() {
     .execute();
 
   await db
-    .insertInto("Milestone")
+    .insertInto("Stage")
     .values({
       id: createId(),
       projectId: project.id,
@@ -183,7 +183,7 @@ async function main() {
     .execute();
 
   await db
-    .insertInto("Milestone")
+    .insertInto("Stage")
     .values({
       id: createId(),
       projectId: project.id,

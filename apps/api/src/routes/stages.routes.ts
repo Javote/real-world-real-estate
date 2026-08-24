@@ -10,7 +10,7 @@ import {
 import { type Request, Router } from "express";
 import { z } from "zod";
 import { createId } from "../db/id";
-import type { MilestoneRow, MilestoneState, OnChainEventRow, OnChainEventType } from "../db/types";
+import type { OnChainEventRow, OnChainEventType, StageRow, StageState } from "../db/types";
 import { anchorPort } from "../lib/anchor";
 import { db } from "../lib/db";
 import {
@@ -34,20 +34,20 @@ router.use(authenticate);
  * la UI muestra "Pendiente", nunca "Verificado" (regla 17).
  *
  * `eventIndex` es la posición en el hilo on-chain: 0 es el `mint` del thread
- * token, 1..n las transiciones. El índice único `(milestoneId, eventIndex)` es
+ * token, 1..n las transiciones. El índice único `(stageId, eventIndex)` es
  * lo que vuelve idempotente el anclaje (regla 8).
  */
 async function recordOnChainEvent(input: {
   projectId: string;
-  milestoneId: string;
+  stageId: string;
   eventType: OnChainEventType;
-  fromState: MilestoneState | null;
-  toState: MilestoneState;
+  fromState: StageState | null;
+  toState: StageState;
 }) {
   const previo = await db
     .selectFrom("OnChainEvent")
     .select("eventIndex")
-    .where("milestoneId", "=", input.milestoneId)
+    .where("stageId", "=", input.stageId)
     .orderBy("eventIndex", "desc")
     .limit(1)
     .executeTakeFirst();
@@ -59,7 +59,7 @@ async function recordOnChainEvent(input: {
     .values({
       id: createId(),
       projectId: input.projectId,
-      milestoneId: input.milestoneId,
+      stageId: input.stageId,
       eventIndex: previo ? previo.eventIndex + 1 : 0,
       eventType: input.eventType,
       fromState: input.fromState,
@@ -77,7 +77,7 @@ async function recordOnChainEvent(input: {
 }
 
 /**
- * La fila de `Milestone` en la forma que espera el productor del datum.
+ * La fila de `Stage` en la forma que espera el productor del datum.
  *
  * `evidenceRoot` va vacío **siempre**: el Merkle root del bundle no lo calcula
  * nadie todavía (no existe `EvidenceBundle`). Consecuencia visible y
@@ -85,15 +85,15 @@ async function recordOnChainEvent(input: {
  * `validationCritical` queda **registrado pero no anclado**, porque el
  * validador exige 32 bytes de commitment y acá no hay ninguno.
  */
-function toDatumSource(milestone: MilestoneRow, evidenceRoot: string) {
+function toDatumSource(stage: StageRow, evidenceRoot: string) {
   return {
-    id: milestone.id,
-    projectId: milestone.projectId,
-    sequenceOrder: milestone.sequenceOrder,
-    validationCritical: Boolean(milestone.validationCritical),
-    state: milestone.state,
+    id: stage.id,
+    projectId: stage.projectId,
+    sequenceOrder: stage.sequenceOrder,
+    validationCritical: Boolean(stage.validationCritical),
+    state: stage.state,
     evidenceRoot,
-    completedAt: milestone.certifiedAt ? new Date(milestone.certifiedAt).getTime() : 0
+    completedAt: stage.certifiedAt ? new Date(stage.certifiedAt).getTime() : 0
   };
 }
 
@@ -112,11 +112,11 @@ const sha256Pair = (a: string, b: string) =>
  * momento y no se toca más. Si después se sube más evidencia, es otro bundle —
  * el root ya anclado tiene que seguir verificando.
  */
-async function crearBundle(milestone: MilestoneRow, actorUserId: string): Promise<string | null> {
+async function crearBundle(stage: StageRow, actorUserId: string): Promise<string | null> {
   const evidencias = await db
     .selectFrom("Evidence")
     .select(["id", "sha256Hash"])
-    .where("milestoneId", "=", milestone.id)
+    .where("stageId", "=", stage.id)
     .orderBy("uploadedAt", "asc")
     .execute();
 
@@ -132,8 +132,8 @@ async function crearBundle(milestone: MilestoneRow, actorUserId: string): Promis
     .insertInto("EvidenceBundle")
     .values({
       id: bundleId,
-      projectId: milestone.projectId,
-      milestoneId: milestone.id,
+      projectId: stage.projectId,
+      stageId: stage.id,
       commitmentHash: root,
       createdById: actorUserId,
       createdAt: new Date()
@@ -155,11 +155,11 @@ async function crearBundle(milestone: MilestoneRow, actorUserId: string): Promis
 }
 
 /** El root del último bundle del stage, o vacío si todavía no tiene. */
-async function rootDelStage(milestoneId: string): Promise<string> {
+async function rootDelStage(stageId: string): Promise<string> {
   const bundle = await db
     .selectFrom("EvidenceBundle")
     .select("commitmentHash")
-    .where("milestoneId", "=", milestoneId)
+    .where("stageId", "=", stageId)
     .orderBy("createdAt", "desc")
     .limit(1)
     .executeTakeFirst();
@@ -168,11 +168,11 @@ async function rootDelStage(milestoneId: string): Promise<string> {
 }
 
 /** La cabeza del hilo: el UTxO vivo del thread token de este stage. */
-async function cabezaDelHilo(milestoneId: string): Promise<string | null> {
+async function cabezaDelHilo(stageId: string): Promise<string | null> {
   const ultimo = await db
     .selectFrom("OnChainEvent")
     .selectAll()
-    .where("milestoneId", "=", milestoneId)
+    .where("stageId", "=", stageId)
     .where("outputRef", "is not", null)
     .orderBy("eventIndex", "desc")
     .limit(1)
@@ -191,8 +191,8 @@ async function cabezaDelHilo(milestoneId: string): Promise<string | null> {
  */
 async function anchorEvent(
   event: OnChainEventRow,
-  milestone: MilestoneRow,
-  previous: MilestoneRow | null
+  stage: StageRow,
+  previous: StageRow | null
 ): Promise<OnChainEventRow> {
   // Idempotencia (regla 8): un evento ya anclado no se vuelve a anclar.
   if (event.txid) return event;
@@ -201,20 +201,18 @@ async function anchorEvent(
     // El root que va al datum sale del bundle del stage. Antes de que existiera
     // `EvidenceBundle` esto era siempre vacío, y por eso un stage crítico se
     // completaba en el registro pero el validador rechazaba su anclaje.
-    const root = await rootDelStage(milestone.id);
+    const root = await rootDelStage(stage.id);
     const receipt =
       previous === null
-        ? await anchorPort.openThread({ datum: buildStageDatum(toDatumSource(milestone, "")) })
+        ? await anchorPort.openThread({ datum: buildStageDatum(toDatumSource(stage, "")) })
         : await anchorPort.advanceThread({
-            outputRef: (await cabezaDelHilo(milestone.id)) ?? "",
+            outputRef: (await cabezaDelHilo(stage.id)) ?? "",
             // El datum previo se reconstruye con el root que ya tenía: si el
             // bundle se creó recién, el UTxO viejo NO lo lleva.
             previous: buildStageDatum(
               toDatumSource(previous, previous.state === "Completed" ? root : "")
             ),
-            next: buildStageDatum(
-              toDatumSource(milestone, milestone.state === "Completed" ? root : "")
-            )
+            next: buildStageDatum(toDatumSource(stage, stage.state === "Completed" ? root : ""))
           });
 
     const proof = receipt.status === "Confirmed" ? await anchorPort.verify(receipt.txid) : null;
@@ -227,7 +225,7 @@ async function anchorEvent(
         status: receipt.status,
         // Qué commitment quedó anclado en ESTE evento. Vacío mientras el stage
         // no se completa: hasta entonces el datum no lleva root.
-        commitment: milestone.state === "Completed" ? root : null,
+        commitment: stage.state === "Completed" ? root : null,
         blockTimestamp: proof ? new Date(proof.blockTimestamp) : null,
         updatedAt: new Date()
       })
@@ -249,11 +247,11 @@ async function anchorEvent(
 
 /** ¿Este stage ya tiene hilo en la cadena? Si lo tiene, su identidad on-chain
  * (orden y criticidad) es inmutable: el validador la rechaza reescrita. */
-async function tieneHiloAnclado(milestoneId: string): Promise<boolean> {
+async function tieneHiloAnclado(stageId: string): Promise<boolean> {
   const anclado = await db
     .selectFrom("OnChainEvent")
     .select("id")
-    .where("milestoneId", "=", milestoneId)
+    .where("stageId", "=", stageId)
     .where("txid", "is not", null)
     .limit(1)
     .executeTakeFirst();
@@ -262,11 +260,11 @@ async function tieneHiloAnclado(milestoneId: string): Promise<boolean> {
 }
 
 router.get(
-  "/projects/:id/milestones",
+  "/projects/:id/stages",
   requireProjectAccess({ param: "id" }, ANY_MEMBERSHIP),
   async (req, res) => {
     const result = await db
-      .selectFrom("Milestone")
+      .selectFrom("Stage")
       .selectAll()
       .where("projectId", "=", req.params.id)
       .orderBy("sequenceOrder", "asc")
@@ -277,7 +275,7 @@ router.get(
 );
 
 router.post(
-  "/projects/:id/milestones",
+  "/projects/:id/stages",
   requireRole("admin", "developer"),
   requireProjectAccess({ param: "id" }, ["developer"]),
   async (req: Request<{ id: string }>, res) => {
@@ -298,8 +296,8 @@ router.post(
 
     const now = new Date();
 
-    const milestone = await db
-      .insertInto("Milestone")
+    const stage = await db
+      .insertInto("Stage")
       .values({
         id: createId(),
         projectId: req.params.id,
@@ -316,63 +314,63 @@ router.post(
       .executeTakeFirstOrThrow();
 
     const evento = await recordOnChainEvent({
-      projectId: milestone.projectId,
-      milestoneId: milestone.id,
+      projectId: stage.projectId,
+      stageId: stage.id,
       eventType: "STAGE_CREATED",
       fromState: null,
-      toState: milestone.state
+      toState: stage.state
     });
-    const anchor = await anchorEvent(evento, milestone, null);
+    const anchor = await anchorEvent(evento, stage, null);
 
     await writeAuditLog({
       actorUserId: req.user!.id,
-      action: "CREATE_MILESTONE",
-      entityType: "Milestone",
-      entityId: milestone.id
+      action: "CREATE_STAGE",
+      entityType: "Stage",
+      entityId: stage.id
     });
 
-    return res.status(201).json({ ...milestone, anchor });
+    return res.status(201).json({ ...stage, anchor });
   }
 );
 
 router.get(
-  "/milestones/:id",
-  requireProjectAccess({ via: "Milestone", param: "id" }, ANY_MEMBERSHIP),
+  "/stages/:id",
+  requireProjectAccess({ via: "Stage", param: "id" }, ANY_MEMBERSHIP),
   async (req, res) => {
-    const milestone = await db
-      .selectFrom("Milestone")
+    const stage = await db
+      .selectFrom("Stage")
       .selectAll()
       .where("id", "=", req.params.id)
       .executeTakeFirst();
 
-    if (!milestone) {
-      return res.status(404).json({ message: "Milestone not found" });
+    if (!stage) {
+      return res.status(404).json({ message: "Stage not found" });
     }
 
     const [evidences, project] = await Promise.all([
-      db.selectFrom("Evidence").selectAll().where("milestoneId", "=", milestone.id).execute(),
-      db.selectFrom("Project").selectAll().where("id", "=", milestone.projectId).executeTakeFirst()
+      db.selectFrom("Evidence").selectAll().where("stageId", "=", stage.id).execute(),
+      db.selectFrom("Project").selectAll().where("id", "=", stage.projectId).executeTakeFirst()
     ]);
 
-    return res.json({ ...milestone, evidences, project });
+    return res.json({ ...stage, evidences, project });
   }
 );
 
 router.patch(
-  "/milestones/:id",
+  "/stages/:id",
   requireRole("admin", "developer"),
-  requireProjectAccess({ via: "Milestone", param: "id" }, ["developer"]),
+  requireProjectAccess({ via: "Stage", param: "id" }, ["developer"]),
   // `Request<{ id: string }>` porque en Express 5 `req.params.id` es
   // `string | string[]`, y `tieneHiloAnclado` necesita un id, no una lista.
   async (req: Request<{ id: string }>, res) => {
-    const milestoneExisting = await db
-      .selectFrom("Milestone")
+    const stageExisting = await db
+      .selectFrom("Stage")
       .selectAll()
       .where("id", "=", req.params.id)
       .executeTakeFirst();
 
-    if (!milestoneExisting) {
-      return res.status(404).json({ message: "Milestone not found" });
+    if (!stageExisting) {
+      return res.status(404).json({ message: "Stage not found" });
     }
 
     const schema = z.object({
@@ -400,8 +398,8 @@ router.patch(
       });
     }
 
-    const milestone = await db
-      .updateTable("Milestone")
+    const stage = await db
+      .updateTable("Stage")
       .set({ ...parsed.data, updatedAt: new Date() })
       .where("id", "=", req.params.id)
       .returningAll()
@@ -409,19 +407,19 @@ router.patch(
 
     await writeAuditLog({
       actorUserId: req.user!.id,
-      action: "UPDATE_MILESTONE",
-      entityType: "Milestone",
-      entityId: milestone.id
+      action: "UPDATE_STAGE",
+      entityType: "Stage",
+      entityId: stage.id
     });
 
-    return res.json(milestone);
+    return res.json(stage);
   }
 );
 
 router.patch(
-  "/milestones/:id/state",
+  "/stages/:id/state",
   requireRole("admin", "developer"),
-  requireProjectAccess({ via: "Milestone", param: "id" }, ["developer"]),
+  requireProjectAccess({ via: "Stage", param: "id" }, ["developer"]),
   async (req, res) => {
     const parsed = stageTransitionSchema.safeParse(req.body);
     if (!parsed.success) {
@@ -429,13 +427,13 @@ router.patch(
     }
 
     const existing = await db
-      .selectFrom("Milestone")
+      .selectFrom("Stage")
       .selectAll()
       .where("id", "=", req.params.id)
       .executeTakeFirst();
 
     if (!existing) {
-      return res.status(404).json({ message: "Milestone not found" });
+      return res.status(404).json({ message: "Stage not found" });
     }
 
     const to = parsed.data.state;
@@ -465,7 +463,7 @@ router.patch(
       const evidencia = await db
         .selectFrom("Evidence")
         .select("id")
-        .where("milestoneId", "=", existing.id)
+        .where("stageId", "=", existing.id)
         .limit(1)
         .executeTakeFirst();
 
@@ -492,8 +490,8 @@ router.patch(
       data.certifiedById = req.user!.id;
     }
 
-    const milestone = await db
-      .updateTable("Milestone")
+    const stage = await db
+      .updateTable("Stage")
       .set(data)
       .where("id", "=", req.params.id)
       .returningAll()
@@ -503,28 +501,28 @@ router.patch(
     // root es lo que viaja al datum. Se arma acá y no antes porque es el acta
     // del cierre: la evidencia que existía en el momento de completar.
     if (to === "Completed") {
-      await crearBundle(milestone, req.user!.id);
+      await crearBundle(stage, req.user!.id);
     }
 
     // La declaración quedó registrada; la prueba se ancla a continuación.
     const evento = await recordOnChainEvent({
-      projectId: milestone.projectId,
-      milestoneId: milestone.id,
+      projectId: stage.projectId,
+      stageId: stage.id,
       eventType: "STAGE_TRANSITION",
       fromState: existing.state,
       toState: to
     });
-    const anchor = await anchorEvent(evento, milestone, existing);
+    const anchor = await anchorEvent(evento, stage, existing);
 
     await writeAuditLog({
       actorUserId: req.user!.id,
-      action: "CHANGE_MILESTONE_STATE",
-      entityType: "Milestone",
-      entityId: milestone.id,
+      action: "CHANGE_STAGE_STATE",
+      entityType: "Stage",
+      entityId: stage.id,
       metadata: { from: existing.state, to }
     });
 
-    return res.json({ ...milestone, anchor });
+    return res.json({ ...stage, anchor });
   }
 );
 

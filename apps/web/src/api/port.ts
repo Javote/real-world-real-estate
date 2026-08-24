@@ -6,10 +6,10 @@ import type {
   Evidence,
   LoginResponse,
   MeResponse,
-  Milestone,
-  MilestoneState,
   Project,
-  ProjectDetail
+  ProjectDetail,
+  Stage,
+  StageState
 } from './types'
 
 export class ApiError extends Error {
@@ -76,8 +76,8 @@ export const api = {
       body: form
     }),
 
-  setMilestoneState: (milestoneId: string, state: MilestoneState) =>
-    request<Milestone>(`/api/v1/milestones/${milestoneId}/state`, jsonInit('PATCH', { state })),
+  setMilestoneState: (stageId: string, state: StageState) =>
+    request<Stage>(`/api/v1/stages/${stageId}/state`, jsonInit('PATCH', { state })),
 
   downloadEvidence: async (evidenceId: string): Promise<Blob> => {
     const session = getSession()

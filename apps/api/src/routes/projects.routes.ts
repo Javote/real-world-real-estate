@@ -58,25 +58,25 @@ router.get("/", async (req, res) => {
     .execute();
 
   const projectIds = projectRows.map((p) => p.id);
-  const milestoneRows = projectIds.length
+  const stageRows = projectIds.length
     ? await db
-        .selectFrom("Milestone")
+        .selectFrom("Stage")
         .selectAll()
         .where("projectId", "in", projectIds)
         .orderBy("sequenceOrder", "asc")
         .execute()
     : [];
 
-  const milestonesByProject = new Map<string, typeof milestoneRows>();
-  for (const milestone of milestoneRows) {
-    const list = milestonesByProject.get(milestone.projectId) ?? [];
-    list.push(milestone);
-    milestonesByProject.set(milestone.projectId, list);
+  const stagesByProject = new Map<string, typeof stageRows>();
+  for (const stage of stageRows) {
+    const list = stagesByProject.get(stage.projectId) ?? [];
+    list.push(stage);
+    stagesByProject.set(stage.projectId, list);
   }
 
   const projectList = projectRows.map((project) => ({
     ...project,
-    milestones: milestonesByProject.get(project.id) ?? []
+    stages: stagesByProject.get(project.id) ?? []
   }));
 
   return res.json(projectList);
@@ -146,8 +146,8 @@ router.get("/:id", requireProjectAccess({ param: "id" }, ANY_MEMBERSHIP), async 
     return res.status(404).json({ message: "Project not found" });
   }
 
-  const milestoneRows = await db
-    .selectFrom("Milestone")
+  const stageRows = await db
+    .selectFrom("Stage")
     .selectAll()
     .where("projectId", "=", project.id)
     .orderBy("sequenceOrder", "asc")
@@ -184,7 +184,7 @@ router.get("/:id", requireProjectAccess({ param: "id" }, ANY_MEMBERSHIP), async 
     }
   }));
 
-  return res.json({ ...project, milestones: milestoneRows, members });
+  return res.json({ ...project, stages: stageRows, members });
 });
 
 router.patch("/:id", requireRole("admin"), async (req, res) => {

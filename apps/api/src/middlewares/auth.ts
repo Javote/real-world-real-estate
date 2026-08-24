@@ -148,11 +148,11 @@ export type ProjectSource =
   | { param: string }
   /**
    * El path trae el id de otra entidad y hay que cargarla para saber de qué
-   * proyecto es: `/milestones/:id`. Unión de literales y no un genérico sobre el
+   * proyecto es: `/stages/:id`. Unión de literales y no un genérico sobre el
    * schema a propósito — son dos tablas, sumar una tercera es una palabra, y a
    * cambio el tipo se lee sin resolver nada mental.
    */
-  | { via: "Milestone" | "Evidence"; param: string };
+  | { via: "Stage" | "Evidence"; param: string };
 
 export function requireProjectAccess(source: ProjectSource, allowedMemberships: MembershipRole[]) {
   return async (req: Request, res: Response, next: NextFunction) => {
@@ -180,9 +180,9 @@ export function requireProjectAccess(source: ProjectSource, allowedMemberships: 
 
     if ("via" in source) {
       const fila =
-        source.via === "Milestone"
+        source.via === "Stage"
           ? await db
-              .selectFrom("Milestone")
+              .selectFrom("Stage")
               .select("projectId")
               .where("id", "=", key)
               .executeTakeFirst()

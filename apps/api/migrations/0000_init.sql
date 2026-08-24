@@ -67,11 +67,11 @@ CREATE UNIQUE INDEX `ProjectMember_userId_projectId_membershipRole_key` ON `Proj
 -- Los stages cuelgan del PROYECTO, no de la unidad: un desarrollo tiene un solo
 -- trámite y no se hace movimiento de suelos por departamento (D-029).
 --
--- Se llama `Milestone` por herencia y **es deuda conocida**: el dominio dice
+-- Se llama `Stage` por herencia y **es deuda conocida**: el dominio dice
 -- `ConstructionStage` y "milestone" queda reservado para los hitos de Catalyst
 -- (D-023). El rename son 370 ocurrencias en 22 archivos y va en su propio
 -- commit, con el frontend.
-CREATE TABLE `Milestone` (
+CREATE TABLE `Stage` (
 	`id` text PRIMARY KEY NOT NULL,
 	`projectId` text NOT NULL,
 	`name` text NOT NULL,
@@ -93,7 +93,7 @@ CREATE TABLE `Milestone` (
 	FOREIGN KEY (`certifiedById`) REFERENCES `User`(`id`) ON UPDATE no action ON DELETE set null
 );
 --> statement-breakpoint
-CREATE UNIQUE INDEX `Milestone_projectId_sequenceOrder_key` ON `Milestone` (`projectId`,`sequenceOrder`);
+CREATE UNIQUE INDEX `Stage_projectId_sequenceOrder_key` ON `Stage` (`projectId`,`sequenceOrder`);
 --> statement-breakpoint
 
 -- ── Evidencia ───────────────────────────────────────────────────────────────
@@ -103,7 +103,7 @@ CREATE UNIQUE INDEX `Milestone_projectId_sequenceOrder_key` ON `Milestone` (`pro
 CREATE TABLE `Evidence` (
 	`id` text PRIMARY KEY NOT NULL,
 	`projectId` text NOT NULL,
-	`milestoneId` text,
+	`stageId` text,
 	`uploadedById` text NOT NULL,
 	`evidenceType` text NOT NULL,
 	`category` text NOT NULL,
@@ -121,13 +121,13 @@ CREATE TABLE `Evidence` (
 	`createdAt` integer NOT NULL,
 	`updatedAt` integer NOT NULL,
 	FOREIGN KEY (`projectId`) REFERENCES `Project`(`id`) ON UPDATE no action ON DELETE cascade,
-	FOREIGN KEY (`milestoneId`) REFERENCES `Milestone`(`id`) ON UPDATE no action ON DELETE set null,
+	FOREIGN KEY (`stageId`) REFERENCES `Stage`(`id`) ON UPDATE no action ON DELETE set null,
 	FOREIGN KEY (`uploadedById`) REFERENCES `User`(`id`) ON UPDATE no action ON DELETE no action
 );
 --> statement-breakpoint
 CREATE INDEX `Evidence_projectId_idx` ON `Evidence` (`projectId`);
 --> statement-breakpoint
-CREATE INDEX `Evidence_milestoneId_idx` ON `Evidence` (`milestoneId`);
+CREATE INDEX `Evidence_stageId_idx` ON `Evidence` (`stageId`);
 --> statement-breakpoint
 
 -- El conjunto de evidencia que sostiene el cierre de un stage, con su Merkle
@@ -140,16 +140,16 @@ CREATE INDEX `Evidence_milestoneId_idx` ON `Evidence` (`milestoneId`);
 CREATE TABLE `EvidenceBundle` (
 	`id` text PRIMARY KEY NOT NULL,
 	`projectId` text NOT NULL,
-	`milestoneId` text NOT NULL,
+	`stageId` text NOT NULL,
 	`commitmentHash` text NOT NULL,
 	`createdById` text,
 	`createdAt` integer NOT NULL,
 	FOREIGN KEY (`projectId`) REFERENCES `Project`(`id`) ON UPDATE no action ON DELETE cascade,
-	FOREIGN KEY (`milestoneId`) REFERENCES `Milestone`(`id`) ON UPDATE no action ON DELETE cascade,
+	FOREIGN KEY (`stageId`) REFERENCES `Stage`(`id`) ON UPDATE no action ON DELETE cascade,
 	FOREIGN KEY (`createdById`) REFERENCES `User`(`id`) ON UPDATE no action ON DELETE set null
 );
 --> statement-breakpoint
-CREATE INDEX `EvidenceBundle_milestoneId_idx` ON `EvidenceBundle` (`milestoneId`);
+CREATE INDEX `EvidenceBundle_stageId_idx` ON `EvidenceBundle` (`stageId`);
 --> statement-breakpoint
 
 -- `sha256Hash` se copia acá a propósito, contra el principio 1: si mañana se
@@ -176,11 +176,11 @@ CREATE INDEX `EvidenceBundleItem_evidenceId_idx` ON `EvidenceBundleItem` (`evide
 CREATE TABLE `OnChainEvent` (
 	`id` text PRIMARY KEY NOT NULL,
 	`projectId` text NOT NULL,
-	`milestoneId` text,
+	`stageId` text,
 	-- Solo en `EVIDENCE_ANCHOR`: qué archivo ancló esta transacción.
 	`evidenceId` text,
 	-- Posición en la secuencia de eventos on-chain del stage. El índice único
-	-- con `milestoneId` es lo que vuelve **idempotente** el anclaje (regla 8):
+	-- con `stageId` es lo que vuelve **idempotente** el anclaje (regla 8):
 	-- escribir dos veces el evento N choca contra el índice en vez de anclar
 	-- dos veces la misma transición.
 	`eventIndex` integer NOT NULL,
@@ -200,13 +200,13 @@ CREATE TABLE `OnChainEvent` (
 	`createdAt` integer NOT NULL,
 	`updatedAt` integer NOT NULL,
 	FOREIGN KEY (`projectId`) REFERENCES `Project`(`id`) ON UPDATE no action ON DELETE cascade,
-	FOREIGN KEY (`milestoneId`) REFERENCES `Milestone`(`id`) ON UPDATE no action ON DELETE set null,
+	FOREIGN KEY (`stageId`) REFERENCES `Stage`(`id`) ON UPDATE no action ON DELETE set null,
 	FOREIGN KEY (`evidenceId`) REFERENCES `Evidence`(`id`) ON UPDATE no action ON DELETE set null
 );
 --> statement-breakpoint
-CREATE UNIQUE INDEX `OnChainEvent_milestoneId_eventIndex_key` ON `OnChainEvent` (`milestoneId`,`eventIndex`);
+CREATE UNIQUE INDEX `OnChainEvent_stageId_eventIndex_key` ON `OnChainEvent` (`stageId`,`eventIndex`);
 --> statement-breakpoint
-CREATE INDEX `OnChainEvent_milestoneId_idx` ON `OnChainEvent` (`milestoneId`);
+CREATE INDEX `OnChainEvent_stageId_idx` ON `OnChainEvent` (`stageId`);
 --> statement-breakpoint
 CREATE INDEX `OnChainEvent_evidenceId_idx` ON `OnChainEvent` (`evidenceId`);
 --> statement-breakpoint

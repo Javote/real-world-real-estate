@@ -14,19 +14,19 @@ export type { LoginResponse, MeResponse, SessionUser, UserRole } from '@platafor
 // El resto sigue siendo espejo manual. Cada uno migra a packages/shared cuando
 // su rebanada lo toque (SPEC-008 §NO-alcance): migrarlos todos ahora sería
 // escribir schemas para endpoints que van a cambiar de forma igual.
-// La FSM del stage YA migró (D-059): la tabla de transiciones y sus estados
-// viven en @plataforma/shared, que es el espejo del validador Aiken. El front
-// solo necesita el tipo — `canTransition` es del lado que decide.
-export type MilestoneState = StageState
+// La FSM del stage vive en @plataforma/shared (D-059), que es el espejo del
+// validador Aiken. El front solo necesita el tipo — `canTransition` es del lado
+// que decide.
+export type { StageState }
 export type ProjectStatus = 'planning' | 'in_progress' | 'delayed' | 'completed'
 export type EvidenceType = 'document' | 'photo' | 'certificate'
 
-export interface Milestone {
+export interface Stage {
   id: string
   projectId: string
   name: string
   sequenceOrder: number
-  state: MilestoneState
+  state: StageState
   validationCritical: boolean
   certifiedAt: string | null
   certifiedById: string | null
@@ -48,7 +48,7 @@ export interface Project {
   status: ProjectStatus
   createdAt: string
   updatedAt: string
-  milestones: Milestone[]
+  stages: Stage[]
 }
 
 export interface ProjectMemberUser {
@@ -71,7 +71,7 @@ export interface ProjectDetail extends Project {
 export interface Evidence {
   id: string
   projectId: string
-  milestoneId: string | null
+  stageId: string | null
   uploadedById: string
   evidenceType: EvidenceType
   category: string
@@ -83,6 +83,6 @@ export interface Evidence {
   uploadedAt: string
   createdAt: string
   updatedAt: string
-  milestone?: Milestone | null
+  stage?: Stage | null
   uploadedBy?: { id: string; email: string; fullName: string }
 }

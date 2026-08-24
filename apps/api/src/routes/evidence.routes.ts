@@ -30,7 +30,7 @@ router.use(authenticate);
 const EVIDENCE_SAFE_COLUMNS = [
   "id",
   "projectId",
-  "milestoneId",
+  "stageId",
   "uploadedById",
   "evidenceType",
   "category",
@@ -52,22 +52,22 @@ router.get(
     const rows = await db
       .selectFrom("Evidence")
       .innerJoin("User", "User.id", "Evidence.uploadedById")
-      .leftJoin("Milestone", "Milestone.id", "Evidence.milestoneId")
+      .leftJoin("Stage", "Stage.id", "Evidence.stageId")
       .select([
         ...EVIDENCE_SAFE_COLUMNS.map((c) => `Evidence.${c}` as const),
         "User.id as uploadedBy_id",
         "User.email as uploadedBy_email",
         "User.fullName as uploadedBy_fullName",
-        "Milestone.id as milestone_id",
-        "Milestone.projectId as milestone_projectId",
-        "Milestone.name as milestone_name",
-        "Milestone.sequenceOrder as milestone_sequenceOrder",
-        "Milestone.state as milestone_state",
-        "Milestone.validationCritical as milestone_validationCritical",
-        "Milestone.certifiedAt as milestone_certifiedAt",
-        "Milestone.certifiedById as milestone_certifiedById",
-        "Milestone.createdAt as milestone_createdAt",
-        "Milestone.updatedAt as milestone_updatedAt"
+        "Stage.id as stage_id",
+        "Stage.projectId as stage_projectId",
+        "Stage.name as stage_name",
+        "Stage.sequenceOrder as stage_sequenceOrder",
+        "Stage.state as stage_state",
+        "Stage.validationCritical as stage_validationCritical",
+        "Stage.certifiedAt as stage_certifiedAt",
+        "Stage.certifiedById as stage_certifiedById",
+        "Stage.createdAt as stage_createdAt",
+        "Stage.updatedAt as stage_updatedAt"
       ])
       .where("Evidence.projectId", "=", req.params.id)
       .orderBy("Evidence.uploadedAt", "desc")
@@ -76,7 +76,7 @@ router.get(
     const evidence = rows.map((row) => ({
       id: row.id,
       projectId: row.projectId,
-      milestoneId: row.milestoneId,
+      stageId: row.stageId,
       uploadedById: row.uploadedById,
       evidenceType: row.evidenceType,
       category: row.category,
@@ -94,18 +94,18 @@ router.get(
         email: row.uploadedBy_email,
         fullName: row.uploadedBy_fullName
       },
-      milestone: row.milestone_id
+      stage: row.stage_id
         ? {
-            id: row.milestone_id,
-            projectId: row.milestone_projectId,
-            name: row.milestone_name,
-            sequenceOrder: row.milestone_sequenceOrder,
-            state: row.milestone_state,
-            validationCritical: row.milestone_validationCritical,
-            certifiedAt: row.milestone_certifiedAt,
-            certifiedById: row.milestone_certifiedById,
-            createdAt: row.milestone_createdAt,
-            updatedAt: row.milestone_updatedAt
+            id: row.stage_id,
+            projectId: row.stage_projectId,
+            name: row.stage_name,
+            sequenceOrder: row.stage_sequenceOrder,
+            state: row.stage_state,
+            validationCritical: row.stage_validationCritical,
+            certifiedAt: row.stage_certifiedAt,
+            certifiedById: row.stage_certifiedById,
+            createdAt: row.stage_createdAt,
+            updatedAt: row.stage_updatedAt
           }
         : null
     }));
@@ -136,7 +136,7 @@ router.post(
     }
 
     const schema = z.object({
-      milestoneId: z.string().optional(),
+      stageId: z.string().optional(),
       evidenceType: z.enum(["document", "photo", "certificate"]),
       category: z.string().min(1),
       authoritative: z
@@ -166,20 +166,20 @@ router.post(
       return res.status(404).json({ message: "Project not found" });
     }
 
-    if (parsed.data.milestoneId) {
-      const milestone = await db
-        .selectFrom("Milestone")
+    if (parsed.data.stageId) {
+      const stage = await db
+        .selectFrom("Stage")
         .select("id")
-        .where("id", "=", parsed.data.milestoneId)
+        .where("id", "=", parsed.data.stageId)
         .where("projectId", "=", projectId)
         .executeTakeFirst();
 
-      if (!milestone) {
+      if (!stage) {
         if (fs.existsSync(req.file.path)) {
           fs.unlinkSync(req.file.path);
         }
         return res.status(400).json({
-          message: "Milestone does not belong to project"
+          message: "Stage does not belong to project"
         });
       }
     }
@@ -207,7 +207,7 @@ router.post(
       .values({
         id: createId(),
         projectId,
-        milestoneId: parsed.data.milestoneId ?? null,
+        stageId: parsed.data.stageId ?? null,
         uploadedById: req.user!.id,
         evidenceType: parsed.data.evidenceType,
         category: parsed.data.category,
@@ -256,14 +256,10 @@ router.get(
       return res.status(404).json({ message: "Evidence not found" });
     }
 
-    const [project, milestone, uploadedBy] = await Promise.all([
+    const [project, stage, uploadedBy] = await Promise.all([
       db.selectFrom("Project").selectAll().where("id", "=", evidence.projectId).executeTakeFirst(),
-      evidence.milestoneId
-        ? db
-            .selectFrom("Milestone")
-            .selectAll()
-            .where("id", "=", evidence.milestoneId)
-            .executeTakeFirst()
+      evidence.stageId
+        ? db.selectFrom("Stage").selectAll().where("id", "=", evidence.stageId).executeTakeFirst()
         : Promise.resolve(null),
       db
         .selectFrom("User")
@@ -272,7 +268,7 @@ router.get(
         .executeTakeFirst()
     ]);
 
-    return res.json({ ...evidence, project, milestone, uploadedBy });
+    return res.json({ ...evidence, project, stage, uploadedBy });
   }
 );
 
@@ -326,7 +322,7 @@ router.patch(
       category: z.string().min(1).optional(),
       authoritative: z.boolean().optional(),
       evidenceType: z.enum(["document", "photo", "certificate"]).optional(),
-      milestoneId: z.string().nullable().optional()
+      stageId: z.string().nullable().optional()
     });
 
     const parsed = schema.safeParse(req.body);
@@ -334,17 +330,17 @@ router.patch(
       return res.status(400).json(parsed.error.flatten());
     }
 
-    if (parsed.data.milestoneId) {
-      const milestone = await db
-        .selectFrom("Milestone")
+    if (parsed.data.stageId) {
+      const stage = await db
+        .selectFrom("Stage")
         .select("id")
-        .where("id", "=", parsed.data.milestoneId)
+        .where("id", "=", parsed.data.stageId)
         .where("projectId", "=", existing.projectId)
         .executeTakeFirst();
 
-      if (!milestone) {
+      if (!stage) {
         return res.status(400).json({
-          message: "Milestone does not belong to project"
+          message: "Stage does not belong to project"
         });
       }
     }
@@ -394,7 +390,7 @@ router.post(
   async (req: Request<{ id: string }>, res) => {
     const evidencia = await db
       .selectFrom("Evidence")
-      .select(["id", "projectId", "milestoneId", "sha256Hash"])
+      .select(["id", "projectId", "stageId", "sha256Hash"])
       .where("id", "=", req.params.id)
       .executeTakeFirst();
 
@@ -416,7 +412,7 @@ router.post(
     const previo = await db
       .selectFrom("OnChainEvent")
       .select("eventIndex")
-      .where("milestoneId", "=", evidencia.milestoneId)
+      .where("stageId", "=", evidencia.stageId)
       .orderBy("eventIndex", "desc")
       .limit(1)
       .executeTakeFirst();
@@ -427,7 +423,7 @@ router.post(
       .values({
         id: createId(),
         projectId: evidencia.projectId,
-        milestoneId: evidencia.milestoneId,
+        stageId: evidencia.stageId,
         evidenceId: evidencia.id,
         eventIndex: previo ? previo.eventIndex + 1 : 0,
         eventType: "EVIDENCE_ANCHOR",

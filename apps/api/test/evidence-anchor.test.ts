@@ -20,7 +20,7 @@ async function crearStage(seq: number) {
   const ahora = new Date();
   const id = createId();
   await db
-    .insertInto("Milestone")
+    .insertInto("Stage")
     .values({
       id,
       projectId: proyecto,
@@ -35,7 +35,7 @@ async function crearStage(seq: number) {
   return id;
 }
 
-async function subirEvidencia(milestoneId: string, contenido: string) {
+async function subirEvidencia(stageId: string, contenido: string) {
   const ahora = new Date();
   const id = createId();
   const { createHash } = await import("node:crypto");
@@ -44,7 +44,7 @@ async function subirEvidencia(milestoneId: string, contenido: string) {
     .values({
       id,
       projectId: proyecto,
-      milestoneId,
+      stageId,
       uploadedById: usuario,
       evidenceType: "certificate",
       category: "permits",
@@ -151,7 +151,7 @@ describe("EvidenceBundle · el acta del cierre", () => {
     await subirEvidencia(stage, "certificado-estructural");
 
     const res = await request(app)
-      .patch(`/api/v1/milestones/${stage}/state`)
+      .patch(`/api/v1/stages/${stage}/state`)
       .set("Authorization", `Bearer ${tokenAdmin}`)
       .send({ state: "Completed" });
 
@@ -160,7 +160,7 @@ describe("EvidenceBundle · el acta del cierre", () => {
     const bundle = await db
       .selectFrom("EvidenceBundle")
       .selectAll()
-      .where("milestoneId", "=", stage)
+      .where("stageId", "=", stage)
       .executeTakeFirstOrThrow();
 
     expect(bundle.commitmentHash).toMatch(/^[0-9a-f]{64}$/);
@@ -184,7 +184,7 @@ describe("EvidenceBundle · el acta del cierre", () => {
     await subirEvidencia(stage, "acta-final");
 
     const res = await request(app)
-      .patch(`/api/v1/milestones/${stage}/state`)
+      .patch(`/api/v1/stages/${stage}/state`)
       .set("Authorization", `Bearer ${tokenAdmin}`)
       .send({ state: "Completed" });
 
@@ -194,7 +194,7 @@ describe("EvidenceBundle · el acta del cierre", () => {
     const bundle = await db
       .selectFrom("EvidenceBundle")
       .selectAll()
-      .where("milestoneId", "=", stage)
+      .where("stageId", "=", stage)
       .executeTakeFirstOrThrow();
     expect(bundle.commitmentHash).toMatch(/^[0-9a-f]{64}$/);
   });

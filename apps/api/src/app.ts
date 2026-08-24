@@ -17,8 +17,8 @@ import { trustProxyHops } from "./middlewares/rateLimit";
 import auditRoutes from "./routes/audit.routes";
 import authRoutes from "./routes/auth.routes";
 import evidenceRoutes from "./routes/evidence.routes";
-import milestonesRoutes from "./routes/milestones.routes";
 import projectsRoutes from "./routes/projects.routes";
+import stagesRoutes from "./routes/stages.routes";
 import usersRoutes from "./routes/users.routes";
 
 const app = express();
@@ -98,7 +98,7 @@ app.get("/health", async (_req, res) => {
 app.use("/api/v1/auth", authRoutes);
 app.use("/api/v1/users", usersRoutes);
 app.use("/api/v1/projects", projectsRoutes);
-app.use("/api/v1", milestonesRoutes);
+app.use("/api/v1", stagesRoutes);
 app.use("/api/v1", evidenceRoutes);
 app.use("/api/v1/audit-logs", auditRoutes);
 

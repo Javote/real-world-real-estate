@@ -50,7 +50,7 @@ requireProjectAccess(source, allowedMemberships)
 ```ts
 type ProjectSource =
   | { param: string }                                  // A: el path YA trae el projectId
-  | { via: "Milestone" | "Evidence"; param: string };   // B: cargar la entidad y sacarle projectId
+  | { via: "Stage" | "Evidence"; param: string };   // B: cargar la entidad y sacarle projectId
 ```
 
 `via` es una unión de literales y no un genérico sobre el schema **a propósito**: son dos tablas,
@@ -71,7 +71,7 @@ esta función omitir el argumento tiene que ser **un error de compilación**, y 
 3. **El bypass de `admin` no se toca** — vive en `projectScope` y en ningún otro lado.
 4. **Los códigos de respuesta no cambian**, uno por uno:
    - forma A, sin acceso (o proyecto inexistente) → **403**
-   - forma B, entidad inexistente → **404** con el mismo mensaje de hoy (`"Milestone not found"`,
+   - forma B, entidad inexistente → **404** con el mismo mensaje de hoy (`"Stage not found"`,
      `"Evidence not found"`)
    - forma B, entidad existente sin acceso → **403**
    - sin `req.user` → **401**

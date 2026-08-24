@@ -81,9 +81,14 @@ aprobación explícita.
 | Test IDs | 53 filas | **0** | 0 |
 | Paleta normativa | — | — | **0 coincidencias** |
 
-**API contra M2-D5:** de ~56 endpoints especificados coinciden **2** (`POST /auth/login`,
-`GET /auth/me`). Contra **M2-D6** —la guía de arquitectura— el backend **sí** está alineado: sus seis
-dominios funcionales existen. M2-D6 es prosa arquitectónica; M2-D5 es el contrato.
+**API contra M2-D5:** de los **64** endpoints especificados coinciden **5** exactos —
+`POST /auth/login`, `GET /auth/me`, `GET /projects`, `GET /projects/:id` y
+`GET /projects/:id/stages`, que entró con el rename de D-067—. Contra **M2-D6** —la guía de
+arquitectura— el backend **sí** está alineado: sus seis dominios funcionales existen. M2-D6 es prosa
+arquitectónica; M2-D5 es el contrato.
+
+*(La medición anterior decía "2 de ~56": el extractor se comía los endpoints con anotaciones. Con el
+parser corregido son 5 de 64.)*
 
 ## Orden de trabajo
 
