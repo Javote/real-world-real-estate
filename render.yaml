@@ -90,13 +90,22 @@ services:
         value: Preprod
       - key: ANCHOR_MODE
         value: simulated
+      # Lista blanca de CORS (D-065). El web es estático y vive en otro origen;
+      # sin esto el browser corta cada request con `Authorization`.
+      # Mismo caso: la lista blanca compara contra el header `Origin`, que trae
+      # esquema (`https://propnexus-web.onrender.com`). Acepta varios separados
+      # por coma.
+      - key: WEB_ORIGIN
+        sync: false
 
-  # ── Web (SSR) ──────────────────────────────────────────────────────────────
+  # ── Web (SPA estático) ─────────────────────────────────────────────────────
+  # D-065: dejó de ser un servicio Node con SSR. Como static site no se duerme,
+  # no consume del presupuesto de 750 horas —que ahora es todo de la API— y se
+  # sirve desde CDN. El precio es que vive en otro origen: de ahí
+  # `VITE_API_ORIGIN` acá y la lista blanca de CORS del otro lado.
   - type: web
     name: propnexus-web
-    runtime: node
-    plan: free
-    region: oregon
+    runtime: static
     branch: main
     rootDir: .
     buildFilter:
@@ -111,20 +120,17 @@ services:
       corepack enable &&
       pnpm install --frozen-lockfile &&
       pnpm --filter @plataforma/shared build &&
-      pnpm --filter web build
-    startCommand: node apps/web/.output/server/index.mjs
-    healthCheckPath: /
+      pnpm --filter @plataforma/web build
+    staticPublishPath: apps/web/dist
+    # SPA: cualquier path lo resuelve el router del cliente.
+    routes:
+      - type: rewrite
+        source: /*
+        destination: /index.html
     envVars:
-      - key: NODE_VERSION
-        value: "22"
-      # API_ORIGIN es de BUILD TIME, no de runtime: `apps/web/ports.ts` lo lee
-      # al construir y Nitro lo hornea en las routeRules del bundle
-      # (verificable con `grep API_ORIGIN apps/web/.output/server/index.mjs`).
-      # Cambiarlo exige redeploy del web, no un restart.
-      #
-      # `sync: false` en vez de `fromService`: Render le agrega un sufijo al
-      # hostname si el nombre del servicio ya está tomado por otra cuenta, así
-      # que la URL real recién se conoce después de crear el servicio. Se pega
-      # a mano una vez.
-      - key: API_ORIGIN
-        sync: false                    # https://propnexus-api.onrender.com
+      # De BUILD TIME: cambiarla exige redeploy del web, no un restart.
+      # `sync: false` y no `fromService` porque hace falta la URL **con
+      # esquema** (`https://propnexus-api.onrender.com`) y `fromService` solo
+      # devuelve el host. Se pega a mano una vez, en el dashboard.
+      - key: VITE_API_ORIGIN
+        sync: false

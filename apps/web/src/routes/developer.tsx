@@ -1,38 +1,24 @@
 import { createFileRoute } from '@tanstack/react-router'
-import { Briefcase, Building2, LayoutGrid, TrendingUp, Wallet } from 'lucide-react'
 import { DEV_ROLES } from '../auth/roles'
 import { useRoleGuard } from '../auth/useRoleGuard'
-import type { BottomNavItem } from '../components/domain/BottomNav'
-import { StatCard } from '../components/domain/StatCard'
-import { PanelShell } from '../components/PanelShell'
-import { useTranslation } from '../i18n/useTranslation'
 
-export const Route = createFileRoute('/developer')({ component: DeveloperScreen })
+// **Stub deliberado.** El path es el correcto —fila 33-34 de M2-D5— y el guard de
+// rol es real, así que la navegación por rol funciona de punta a punta. Lo que
+// falta es la superficie: se transcribe desde su captura cuando llegue su
+// vertical (SPEC-014), con los componentes que la fila nombra y el test ID
+// DEV-PANEL-KPIS-001 (M3-FE-14).
+//
+// Existe como stub y no como pantalla a medias a propósito: una pantalla
+// inventada se ve terminada y compite con la captura.
+export const Route = createFileRoute('/developer')({ component: Pendiente })
 
-function DeveloperScreen() {
+function Pendiente() {
   const { ready } = useRoleGuard(DEV_ROLES)
-  const { t } = useTranslation()
-
   if (!ready) return null
 
-  const navItems: BottomNavItem[] = [
-    { key: 'panel', label: t('nav.developer.panel'), icon: LayoutGrid, to: '/developer' },
-    { key: 'projects', label: t('nav.developer.projects'), icon: Briefcase },
-    { key: 'capital', label: t('nav.developer.capital'), icon: Wallet },
-    { key: 'units', label: t('nav.developer.units'), icon: Building2 },
-    { key: 'progress', label: t('nav.developer.progress'), icon: TrendingUp }
-  ]
-
   return (
-    <PanelShell title={t('panel.developer.title')} navItems={navItems}>
-      <div className="grid grid-cols-2 gap-3">
-        <StatCard
-          icon={Wallet}
-          tint="financial"
-          value={t('panel.emptyValue')}
-          label={t('panel.comingSoon')}
-        />
-      </div>
-    </PanelShell>
+    <main data-testid="surface-pending" data-m2d5-row="33-34">
+      <p>Pendiente de transcribir — M2-D5 fila 33-34</p>
+    </main>
   )
 }

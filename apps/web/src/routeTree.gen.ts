@@ -9,21 +9,13 @@
 // Additionally, you should also exclude this file from your linter and/or formatter to prevent it from being checked or modified.
 
 import { Route as rootRouteImport } from './routes/__root'
-import { Route as VerifyRouteImport } from './routes/verify'
 import { Route as NotaryRouteImport } from './routes/notary'
 import { Route as LoginRouteImport } from './routes/login'
 import { Route as DeveloperRouteImport } from './routes/developer'
-import { Route as DashboardRouteImport } from './routes/dashboard'
 import { Route as CertifierRouteImport } from './routes/certifier'
 import { Route as IndexRouteImport } from './routes/index'
-import { Route as ProjectsProjectIdRouteImport } from './routes/projects.$projectId'
 import { Route as InvestorBuyRouteImport } from './routes/investor.buy'
 
-const VerifyRoute = VerifyRouteImport.update({
-  id: '/verify',
-  path: '/verify',
-  getParentRoute: () => rootRouteImport,
-} as any)
 const NotaryRoute = NotaryRouteImport.update({
   id: '/notary',
   path: '/notary',
@@ -39,11 +31,6 @@ const DeveloperRoute = DeveloperRouteImport.update({
   path: '/developer',
   getParentRoute: () => rootRouteImport,
 } as any)
-const DashboardRoute = DashboardRouteImport.update({
-  id: '/dashboard',
-  path: '/dashboard',
-  getParentRoute: () => rootRouteImport,
-} as any)
 const CertifierRoute = CertifierRouteImport.update({
   id: '/certifier',
   path: '/certifier',
@@ -52,11 +39,6 @@ const CertifierRoute = CertifierRouteImport.update({
 const IndexRoute = IndexRouteImport.update({
   id: '/',
   path: '/',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const ProjectsProjectIdRoute = ProjectsProjectIdRouteImport.update({
-  id: '/projects/$projectId',
-  path: '/projects/$projectId',
   getParentRoute: () => rootRouteImport,
 } as any)
 const InvestorBuyRoute = InvestorBuyRouteImport.update({
@@ -68,94 +50,55 @@ const InvestorBuyRoute = InvestorBuyRouteImport.update({
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/certifier': typeof CertifierRoute
-  '/dashboard': typeof DashboardRoute
   '/developer': typeof DeveloperRoute
   '/login': typeof LoginRoute
   '/notary': typeof NotaryRoute
-  '/verify': typeof VerifyRoute
   '/investor/buy': typeof InvestorBuyRoute
-  '/projects/$projectId': typeof ProjectsProjectIdRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/certifier': typeof CertifierRoute
-  '/dashboard': typeof DashboardRoute
   '/developer': typeof DeveloperRoute
   '/login': typeof LoginRoute
   '/notary': typeof NotaryRoute
-  '/verify': typeof VerifyRoute
   '/investor/buy': typeof InvestorBuyRoute
-  '/projects/$projectId': typeof ProjectsProjectIdRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
   '/certifier': typeof CertifierRoute
-  '/dashboard': typeof DashboardRoute
   '/developer': typeof DeveloperRoute
   '/login': typeof LoginRoute
   '/notary': typeof NotaryRoute
-  '/verify': typeof VerifyRoute
   '/investor/buy': typeof InvestorBuyRoute
-  '/projects/$projectId': typeof ProjectsProjectIdRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
   fullPaths:
-    | '/'
-    | '/certifier'
-    | '/dashboard'
-    | '/developer'
-    | '/login'
-    | '/notary'
-    | '/verify'
-    | '/investor/buy'
-    | '/projects/$projectId'
+    '/' | '/certifier' | '/developer' | '/login' | '/notary' | '/investor/buy'
   fileRoutesByTo: FileRoutesByTo
-  to:
-    | '/'
-    | '/certifier'
-    | '/dashboard'
-    | '/developer'
-    | '/login'
-    | '/notary'
-    | '/verify'
-    | '/investor/buy'
-    | '/projects/$projectId'
+  to: '/' | '/certifier' | '/developer' | '/login' | '/notary' | '/investor/buy'
   id:
     | '__root__'
     | '/'
     | '/certifier'
-    | '/dashboard'
     | '/developer'
     | '/login'
     | '/notary'
-    | '/verify'
     | '/investor/buy'
-    | '/projects/$projectId'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   CertifierRoute: typeof CertifierRoute
-  DashboardRoute: typeof DashboardRoute
   DeveloperRoute: typeof DeveloperRoute
   LoginRoute: typeof LoginRoute
   NotaryRoute: typeof NotaryRoute
-  VerifyRoute: typeof VerifyRoute
   InvestorBuyRoute: typeof InvestorBuyRoute
-  ProjectsProjectIdRoute: typeof ProjectsProjectIdRoute
 }
 
 declare module '@tanstack/react-router' {
   interface FileRoutesByPath {
-    '/verify': {
-      id: '/verify'
-      path: '/verify'
-      fullPath: '/verify'
-      preLoaderRoute: typeof VerifyRouteImport
-      parentRoute: typeof rootRouteImport
-    }
     '/notary': {
       id: '/notary'
       path: '/notary'
@@ -177,13 +120,6 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof DeveloperRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/dashboard': {
-      id: '/dashboard'
-      path: '/dashboard'
-      fullPath: '/dashboard'
-      preLoaderRoute: typeof DashboardRouteImport
-      parentRoute: typeof rootRouteImport
-    }
     '/certifier': {
       id: '/certifier'
       path: '/certifier'
@@ -196,13 +132,6 @@ declare module '@tanstack/react-router' {
       path: '/'
       fullPath: '/'
       preLoaderRoute: typeof IndexRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/projects/$projectId': {
-      id: '/projects/$projectId'
-      path: '/projects/$projectId'
-      fullPath: '/projects/$projectId'
-      preLoaderRoute: typeof ProjectsProjectIdRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/investor/buy': {
@@ -218,23 +147,11 @@ declare module '@tanstack/react-router' {
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   CertifierRoute: CertifierRoute,
-  DashboardRoute: DashboardRoute,
   DeveloperRoute: DeveloperRoute,
   LoginRoute: LoginRoute,
   NotaryRoute: NotaryRoute,
-  VerifyRoute: VerifyRoute,
   InvestorBuyRoute: InvestorBuyRoute,
-  ProjectsProjectIdRoute: ProjectsProjectIdRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
   ._addFileTypes<FileRouteTypes>()
-
-import type { getRouter } from './router.tsx'
-import type { createStart } from '@tanstack/react-start'
-declare module '@tanstack/react-start' {
-  interface Register {
-    ssr: true
-    router: Awaited<ReturnType<typeof getRouter>>
-  }
-}

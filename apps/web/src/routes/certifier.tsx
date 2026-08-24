@@ -1,37 +1,24 @@
 import { createFileRoute } from '@tanstack/react-router'
-import { Activity, FileBadge, LayoutGrid, UserCircle } from 'lucide-react'
 import { CERTIFIER_ROLES } from '../auth/roles'
 import { useRoleGuard } from '../auth/useRoleGuard'
-import type { BottomNavItem } from '../components/domain/BottomNav'
-import { StatCard } from '../components/domain/StatCard'
-import { PanelShell } from '../components/PanelShell'
-import { useTranslation } from '../i18n/useTranslation'
 
-export const Route = createFileRoute('/certifier')({ component: CertifierScreen })
+// **Stub deliberado.** El path es el correcto —fila 55 de M2-D5— y el guard de
+// rol es real, así que la navegación por rol funciona de punta a punta. Lo que
+// falta es la superficie: se transcribe desde su captura cuando llegue su
+// vertical (SPEC-014), con los componentes que la fila nombra y el test ID
+// CER-PANEL-001 (M3-FE-26).
+//
+// Existe como stub y no como pantalla a medias a propósito: una pantalla
+// inventada se ve terminada y compite con la captura.
+export const Route = createFileRoute('/certifier')({ component: Pendiente })
 
-function CertifierScreen() {
+function Pendiente() {
   const { ready } = useRoleGuard(CERTIFIER_ROLES)
-  const { t } = useTranslation()
-
   if (!ready) return null
 
-  const navItems: BottomNavItem[] = [
-    { key: 'panel', label: t('nav.certifier.panel'), icon: LayoutGrid, to: '/certifier' },
-    { key: 'assigned', label: t('nav.certifier.assigned'), icon: Activity },
-    { key: 'issued', label: t('nav.certifier.issued'), icon: FileBadge },
-    { key: 'profile', label: t('nav.certifier.profile'), icon: UserCircle }
-  ]
-
   return (
-    <PanelShell title={t('panel.certifier.title')} navItems={navItems}>
-      <div className="grid grid-cols-2 gap-3">
-        <StatCard
-          icon={FileBadge}
-          tint="verification"
-          value={t('panel.emptyValue')}
-          label={t('panel.comingSoon')}
-        />
-      </div>
-    </PanelShell>
+    <main data-testid="surface-pending" data-m2d5-row="55">
+      <p>Pendiente de transcribir — M2-D5 fila 55</p>
+    </main>
   )
 }

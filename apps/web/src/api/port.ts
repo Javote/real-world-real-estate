@@ -21,12 +21,18 @@ export class ApiError extends Error {
   }
 }
 
+// Origen de la API. Vacío en dev: el proxy de Vite manda `/api` a :8787 desde
+// el mismo origen. En producción el web es estático y vive en otro origen, así
+// que `VITE_API_ORIGIN` trae la URL absoluta (D-065) y la API la acepta por su
+// lista blanca de CORS.
+const API_BASE = import.meta.env.VITE_API_ORIGIN ?? ''
+
 async function request<T>(path: string, init: RequestInit = {}): Promise<T> {
   const session = getSession()
   const headers = new Headers(init.headers)
   if (session) headers.set('Authorization', `Bearer ${session.token}`)
 
-  const res = await fetch(path, { ...init, headers })
+  const res = await fetch(`${API_BASE}${path}`, { ...init, headers })
 
   if (res.status === 401) clearSession()
   if (!res.ok) {

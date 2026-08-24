@@ -38,6 +38,40 @@ app.use(helmet());
 // alguien cambie la config de helmet sin darse cuenta.
 app.disable("x-powered-by");
 
+// CORS, y por qué recién ahora: hasta D-065 el web era un servicio SSR que
+// proxeaba `/api` desde su propio origen, así que el browser nunca hacía una
+// request cross-origin. Como SPA estática, el web vive en otro origen y manda
+// `Authorization: Bearer` — una cabecera no simple, o sea preflight, o sea CORS.
+//
+// **Lista blanca explícita, nunca `*`.** `WEB_ORIGIN` acepta orígenes separados
+// por coma; en local el default cubre el puerto del dev server. Un origen que no
+// esté en la lista no recibe cabecera y el browser corta: es el
+// comportamiento correcto, no un error a "arreglar" con un comodín.
+//
+// `credentials` queda en false a propósito: la sesión viaja en el header, no en
+// cookies (D-050 ya nos costó una tarde por asumir lo contrario).
+const origenesPermitidos = (process.env.WEB_ORIGIN ?? "http://localhost:3000")
+  .split(",")
+  .map((o) => o.trim())
+  .filter(Boolean);
+
+app.use((req, res, next) => {
+  const origen = req.headers.origin;
+
+  if (origen && origenesPermitidos.includes(origen)) {
+    res.setHeader("Access-Control-Allow-Origin", origen);
+    res.setHeader("Vary", "Origin");
+    res.setHeader("Access-Control-Allow-Methods", "GET,POST,PATCH,DELETE,OPTIONS");
+    res.setHeader("Access-Control-Allow-Headers", "Authorization,Content-Type");
+    res.setHeader("Access-Control-Max-Age", "86400");
+  }
+
+  // El preflight no lleva token ni body: se contesta y se corta acá.
+  if (req.method === "OPTIONS") return res.sendStatus(204);
+
+  return next();
+});
+
 app.use(express.json());
 
 /**

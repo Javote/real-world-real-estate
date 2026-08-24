@@ -42,23 +42,32 @@ render login
 ```
 
 En el dashboard: **New → Blueprint**, elegí el repo `Javote/real-world-real-estate`, rama `main`.
-Render lee `render.yaml` y propone los dos servicios. Va a pedir los cuatro valores marcados
-`sync: false`:
+Render lee `render.yaml` y propone los dos servicios —**la API como servicio Node y el web como
+static site** (D-065)—. Va a pedir los valores marcados `sync: false`:
 
 | Servicio | Variable | Valor |
 |---|---|---|
 | `propnexus-api` | `DATABASE_URL` | el `libsql://…` de 1.1 |
 | `propnexus-api` | `DATABASE_AUTH_TOKEN` | el token de 1.1 |
-| `propnexus-web` | `API_ORIGIN` | **la URL real de la API**, ver abajo |
+| `propnexus-api` | `WEB_ORIGIN` | **la URL del web, con esquema** — lista blanca de CORS |
+| `propnexus-web` | `VITE_API_ORIGIN` | **la URL de la API, con esquema** |
 
 `JWT_SECRET` **no se pide**: lo genera Render (`generateValue: true`). No lo pongas a mano y no lo
 copies del `.env` local.
 
-**El orden importa.** `API_ORIGIN` es de build time, así que hay que conocer la URL de la API antes
-de que el web termine de construirse. Si Render tuvo que agregarle sufijo al hostname porque el
-nombre estaba tomado, la URL real no es la de la tabla. Procedimiento seguro: dejá que la API
-despliegue primero, copiá su URL del dashboard, pegala en `API_ORIGIN` del web y disparale un
-**Manual Deploy → Clear build cache & deploy**.
+**Las dos URLs se cruzan, y ese cruce tiene un orden.** El web necesita saber dónde está la API
+**en build time**; la API necesita saber dónde está el web para el CORS, pero eso es runtime y se
+puede cargar después. Procedimiento seguro:
+
+1. Dejá que **la API** despliegue primero y copiá su URL del dashboard.
+2. Pegala en `VITE_API_ORIGIN` del web y disparale **Manual Deploy → Clear build cache & deploy**.
+3. Copiá la URL del **web** y pegala en `WEB_ORIGIN` de la API. Esa sí toma con un restart.
+
+Si Render tuvo que agregarle sufijo a un hostname porque el nombre estaba tomado, la URL real no es
+la de la tabla: usá siempre la que muestra el dashboard.
+
+**Síntoma de haberse salteado el paso 3:** la app carga, el login no responde y la consola del
+browser muestra un error de CORS. No es la API caída — es que su lista blanca no tiene ese origen.
 
 ### 1.3 · Sembrar las cuentas de demo
 

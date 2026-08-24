@@ -1,34 +1,25 @@
 import tailwindcss from '@tailwindcss/vite'
-import { devtools } from '@tanstack/devtools-vite'
-
-import { tanstackStart } from '@tanstack/react-start/plugin/vite'
-
+import { tanstackRouter } from '@tanstack/router-plugin/vite'
 import viteReact from '@vitejs/plugin-react'
-import { nitro } from 'nitro/vite'
 import { defineConfig } from 'vite'
 
-// La API (apps/api) corre en :8787 en el árbol principal — ver CLAUDE.md §Comandos.
-// El proxy va por routeRules de nitro (server.proxy de Vite no aplica:
-// nitro atiende las requests antes que el middleware de Vite).
-// Puerto y origen salen de ports.ts para que cada worktree tenga los suyos (D-031).
+// SPA, sin SSR (D-065). Se fue Nitro y con él el proxy por `routeRules`: ahora
+// alcanza el proxy de Vite, que antes no aplicaba porque nitro atendía las
+// requests antes que el middleware de Vite.
 import { API_ORIGIN, WEB_PORT } from './ports.ts'
 
-const config = defineConfig({
-  server: { port: WEB_PORT },
+export default defineConfig({
+  server: {
+    port: WEB_PORT,
+    proxy: {
+      '/api': { target: API_ORIGIN, changeOrigin: true },
+      '/health': { target: API_ORIGIN, changeOrigin: true }
+    }
+  },
   resolve: { tsconfigPaths: true },
   plugins: [
-    devtools(),
-    nitro({
-      rollupConfig: { external: [/^@sentry\//] },
-      routeRules: {
-        '/api/**': { proxy: { to: `${API_ORIGIN}/api/**`, fetchOptions: { credentials: 'omit' } } },
-        '/health': { proxy: { to: `${API_ORIGIN}/health`, fetchOptions: { credentials: 'omit' } } }
-      }
-    }),
+    tanstackRouter({ target: 'react', autoCodeSplitting: true }),
     tailwindcss(),
-    tanstackStart(),
     viteReact()
   ]
 })
-
-export default config

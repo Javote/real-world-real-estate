@@ -153,26 +153,9 @@ test.describe('Walkthrough', () => {
     await expect(page).toHaveURL(/\/login/)
   })
 
-  test('DEV-PROJECT-DETAIL-001 · detalle de proyecto con sus stages y evidencia', async ({
-    page
-  }) => {
-    await login(page, 'Developer', 'developer@example.com', 'developer123', '/developer')
-
-    // /dashboard es la superficie vieja (no conforme, fuera del ruteo de
-    // SPEC-011) que todavía existe para este flujo hasta que la rebanada de
-    // "Developer crea proyecto, unidades y stages" la reemplace.
-    await page.goto('/dashboard')
-    const firstProject = page.locator('a[href^="/projects/"]').first()
-    await expect(firstProject).toBeVisible()
-    await firstProject.click()
-
-    await expect(page).toHaveURL(/\/projects\//)
-    await shot(page, '04-project-detail')
-  })
-
-  test('INV-VERIFY-001 · verificación por hash sin cuenta', async ({ page }) => {
-    await page.goto('/verify')
-    await expect(page.getByRole('heading', { name: /Verificación de documentos/i })).toBeVisible()
-    await shot(page, '05-verify')
-  })
+  // Las dos pruebas que seguían acá —detalle de proyecto y verificación por
+  // hash— recorrían `/dashboard` y `/verify`, que se borraron en D-064: no
+  // existen en ningún entregable. Vuelven cuando se transcriban las
+  // superficies reales que sí están en M2-D5 (`/project/:projectId`, fila
+  // 06-07, y `/public/dossier/:shareToken`), con sus test IDs de verdad.
 })

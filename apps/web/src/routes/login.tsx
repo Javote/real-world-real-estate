@@ -1,4 +1,4 @@
-import { createFileRoute, Link, useNavigate } from '@tanstack/react-router'
+import { createFileRoute, useNavigate } from '@tanstack/react-router'
 import { useState } from 'react'
 import { ApiError, api } from '../api/port'
 import { ROLE_LANDING } from '../auth/roles'
@@ -144,12 +144,6 @@ export function LoginScreen() {
         <PrimaryButton type="submit" disabled={busy} loading={busy}>
           {busy ? t('login.submitting') : t('login.submit')}
         </PrimaryButton>
-
-        <div className="mt-6 text-center">
-          <Link to="/verify" className="text-sm" style={{ color: '#6D4AFF' }}>
-            {t('login.verifyLink')}
-          </Link>
-        </div>
       </form>
     </div>
   )
