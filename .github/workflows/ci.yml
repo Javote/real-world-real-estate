@@ -56,6 +56,63 @@ jobs:
       - name: Build (web + api)
         run: pnpm build
 
+  # ── E2E ────────────────────────────────────────────────────────────────────
+  #
+  # Job propio y **no bloqueante por ahora** (`continue-on-error`), según la
+  # pregunta abierta de SPEC-015 §5: primero se demuestra estable, después se
+  # vuelve bloqueante. Eso es una decisión aparte, no un olvido.
+  #
+  # Es job propio y no un paso del de la app porque necesita otra cosa: levantar
+  # dos servidores y una base sembrada. Encadenarlo ahí haría que un e2e lento
+  # bloquee el feedback de lint y typecheck, que es el que más se usa.
+  e2e:
+    name: E2E Playwright (no bloqueante)
+    runs-on: ubuntu-latest
+    continue-on-error: true
+    steps:
+      - uses: actions/checkout@v7
+      - uses: pnpm/action-setup@v6
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 22
+          cache: pnpm
+
+      - name: Instalar dependencias
+        run: pnpm install --frozen-lockfile
+
+      - name: Navegador de Playwright
+        # Solo chromium: los dos proyectos (mobile y desktop) lo usan — el
+        # perfil iPhone 13 da el viewport, no el motor.
+        run: pnpm --filter web exec playwright install --with-deps chromium
+
+      # Los specs entran con los usuarios del seed, así que la base tiene que
+      # existir y estar sembrada antes de levantar nada.
+      - name: Base migrada y sembrada
+        run: pnpm db:migrate && pnpm db:seed
+        env:
+          DATABASE_URL: file:./dev.db
+          JWT_SECRET: ci-secret-jamas-en-produccion
+
+      - name: E2E
+        run: pnpm e2e
+        env:
+          DATABASE_URL: file:./dev.db
+          JWT_SECRET: ci-secret-jamas-en-produccion
+          # El default (20) no alcanza: la suite hace ~10 logins por proyecto y
+          # son dos, así que el segundo recibía 429 en todo. Ver el comentario
+          # de `playwright.config.ts`.
+          LOGIN_RATE_LIMIT_MAX: "100000"
+
+      # Capturas, video y reporte: el SOM de M3 los pide como evidencia de
+      # entrega (criterios 8 y 13). Se suben aunque el job falle.
+      - name: Subir artefactos
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: e2e-artifacts
+          path: apps/web/e2e/.artifacts/
+          retention-days: 14
+
   contracts:
     name: Contratos Aiken (fmt + check + blueprint al día)
     # Espeja `pnpm contracts:verify`, más el chequeo de que el blueprint

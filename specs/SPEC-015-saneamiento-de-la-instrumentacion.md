@@ -99,4 +99,8 @@ distinguen por su descripción: **un ID identifica una superficie del backlog, n
 - **El umbral de coverage arranca en el piso medido, no en 95%.** Poner el número final antes de
   tenerlo deja el CI rojo por deuda conocida, que enseña a ignorar el rojo. Sube por rebanada.
 - Los e2e en CI necesitan la app levantada. Arrancan como job propio y **no bloqueante** hasta que
-  se demuestren estables; volverlos bloqueantes es una decisión aparte.
+  se demuestren estables; volverlos bloqueantes es una decisión aparte. Al activarlos aparecieron
+  tres cosas, las tres reales: el limiter de login cortaba el segundo proyecto con 429, la aserción
+  del `BottomNav` corría también en desktop —donde M2-D1 lo reemplaza por un sidebar que todavía no
+  existe—, y el `test.fail` del proxy de nitro avisó que su bug se había arreglado con D-065.
+  Quedan 22 de 22 en verde.

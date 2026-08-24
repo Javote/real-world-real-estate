@@ -108,20 +108,15 @@ test.describe('Walkthrough', () => {
   })
 
   test('AUTH-LOGIN-001 · credenciales inválidas no crean sesión', async ({ page }) => {
-    // FALLA ESPERADA — bug del proxy de desarrollo, no de la app.
-    // El proxy de nitro convierte `POST` + `401` en `502 Bad Gateway` ("fetch
-    // failed" en h3), así que el front recibe un 502 y muestra "No se pudo
-    // conectar con la API" en lugar de "Credenciales inválidas". Reproducible al
-    // 100%, y solo esa combinación: GET 401, POST 400 y POST 200 pasan bien.
+    // Estuvo marcado `test.fail` por un bug del proxy de DESARROLLO —no de la
+    // app—: el proxy de nitro convertía `POST` + `401` en `502 Bad Gateway`, así
+    // que el front mostraba "No se pudo conectar con la API" en vez de
+    // "Credenciales inválidas".
     //
-    // Es de `nitro-nightly` + `h3@2.0.1-rc.25` (ambos pre-release) y solo afecta
-    // al dev-worker de Vite: en producción la API es otro origen y no hay proxy.
-    // Se destraba cuando Nitro pase a estable — ver CLAUDE.md §Stack.
-    //
-    // Marcado a propósito: si el bug se arregla, Playwright avisa "expected to
-    // fail but passed" y el recordatorio salta solo. OJO: va acá adentro y no
-    // afuera — a nivel describe, test.fail() aplica a todos los tests que siguen.
-    test.fail(true, 'proxy de nitro dev: POST+401 → 502')
+    // **Se arregló solo con D-065**: el web dejó de ser un servicio SSR con
+    // proxy de nitro y pasó a SPA sobre el proxy de Vite. El marcador hizo
+    // exactamente lo que se esperaba de él —Playwright avisó "expected to fail
+    // but passed" al ponerlo en CI (SPEC-015 §5)— y por eso se saca acá.
 
     await gotoLogin(page)
     await page.getByLabel('Usuario').fill('developer@example.com')

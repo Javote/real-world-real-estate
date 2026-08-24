@@ -2,8 +2,9 @@ import { defineConfig, devices } from '@playwright/test'
 
 import { WEB_PORT } from './ports.ts'
 
-// Suite E2E: NO corre en CI ni en `pnpm test`. Se corre a mano, cada tanto,
-// con `pnpm e2e` (o `pnpm e2e:ui` para el modo interactivo).
+// Suite E2E. Corre en CI como job propio y NO BLOQUEANTE (SPEC-015 §5), y a
+// mano con `pnpm e2e` (o `pnpm e2e:ui` para el modo interactivo). No entra en
+// `pnpm test`: levanta dos servidores y una base, que es otra clase de costo.
 //
 // Por qué existe: además de verificar los flujos, produce tres cosas que el
 // SOM de M3 exige como evidencia de entrega — capturas, video del walkthrough
@@ -49,6 +50,18 @@ export default defineConfig({
     command: 'pnpm dev',
     cwd: '../..',
     url: BASE_URL,
+    env: {
+      // **El limiter de login tiene que subir para el e2e.** Con el default de
+      // desarrollo (20) la suite se queda sin presupuesto: cada proyecto hace
+      // ~10 logins y son dos proyectos, así que `mobile` consumía la cuota y
+      // `desktop` recibía 429 en los cuatro paneles. Se veía como "el login no
+      // funciona en desktop" y era el limiter haciendo su trabajo.
+      //
+      // El comportamiento del limiter se prueba aparte, con su propio máximo
+      // (apps/api/test/rate-limit.test.ts) — mismo criterio que
+      // apps/api/vitest.config.mts.
+      LOGIN_RATE_LIMIT_MAX: '100000'
+    },
     reuseExistingServer: true,
     timeout: 120_000,
     stdout: 'ignore',
