@@ -85,20 +85,32 @@ function DeveloperPanel() {
           navegación lo desviaría de lo que el entregable muestra. Acá van los
           destinos que M2-D1 §5.2 le da al developer sin decir cómo se llega.
 
-          Solo se listan los que EXISTEN. */}
-      <section className="grid grid-cols-2 gap-s3">
-        <ActionCard
-          title={t('panel.developer.investorsAction')}
-          description={t('panel.developer.investorsHint')}
-          icon={Users}
-          onClick={() => void navigate({ to: '/developer/investors' })}
-        />
-        <ActionCard
-          title={t('panel.developer.docsAction')}
-          description={t('panel.developer.docsHint')}
-          icon={FileCheck2}
-          onClick={() => void navigate({ to: '/developer/documentation' })}
-        />
+          Solo se listan los que EXISTEN.
+
+          **Lleva label de sección** porque sin él las dos cards se leen como
+          dos KPIs más y el grid de arriba parece cortarse a la mitad. Son otra
+          cosa —destinos, no métricas— y el label es lo que lo dice. El estilo
+          es el que M2-D3 fija para labels de sección (`--text-label`, bold,
+          mayúsculas), el mismo de TxidModal y MerkleRootProof. */}
+      <section className="flex flex-col gap-s3">
+        <h2 className="text-label font-bold uppercase text-text-muted">
+          {t('panel.developer.shortcuts')}
+        </h2>
+
+        <div className="grid grid-cols-2 gap-s3">
+          <ActionCard
+            title={t('panel.developer.investorsAction')}
+            description={t('panel.developer.investorsHint')}
+            icon={Users}
+            onClick={() => void navigate({ to: '/developer/investors' })}
+          />
+          <ActionCard
+            title={t('panel.developer.docsAction')}
+            description={t('panel.developer.docsHint')}
+            icon={FileCheck2}
+            onClick={() => void navigate({ to: '/developer/documentation' })}
+          />
+        </div>
       </section>
     </PanelLayout>
   )
