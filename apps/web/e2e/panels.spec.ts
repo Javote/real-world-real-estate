@@ -107,3 +107,28 @@ test('DEV-DOCS-LIST-001 · DEV-DOC-ANCHOR-002 · documentación de respaldo', as
   const anclar = page.getByTestId('DEV-DOC-ANCHOR-002').first()
   if (await anclar.count()) await expect(anclar).toBeVisible()
 })
+
+// **M2-D5 filas 34b-34c** — el alta de un desarrollo, desde el tile del Panel.
+//
+// Se verifica el alta REAL y no solo que el formulario renderice: el tile del
+// panel llevaba a sí mismo hasta esta rebanada, así que lo que hay que probar
+// es que ahora termina en un proyecto que existe.
+test('DEV-PROJECT-CREATE-001 · crear un desarrollo desde el panel', async ({ page }) => {
+  await loginConSolapa(page, 'Developer')
+
+  await page.getByRole('button', { name: /nuevo proyecto|new project/i }).click()
+  await expect(page).toHaveURL(/\/developer\/project\/new/)
+  await expect(page.getByTestId('DEV-PROJECT-CREATE-001')).toBeVisible()
+
+  // Nombre único por corrida: el slug se deriva de él y dos corridas seguidas
+  // no pueden pisarse.
+  const nombre = `Torres del Test ${Date.now()}`
+  await page.getByLabel(/nombre del proyecto|project name/i).fill(nombre)
+  await page.getByLabel(/ubicación|location/i).fill('Palermo, CABA')
+
+  await page.getByRole('button', { name: /crear proyecto|create project/i }).click()
+
+  // Aterriza en el detalle del proyecto recién creado: la URL lleva su id.
+  await expect(page).toHaveURL(/\/developer\/project\/[^/]+$/, { timeout: 15_000 })
+  await expect(page.getByTestId('DEV-PROJECT-DETAIL-001')).toBeVisible()
+})

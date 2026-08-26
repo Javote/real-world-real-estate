@@ -22,7 +22,17 @@ test.describe('Evidence flow — M2-D1 §6', () => {
     await page.goto('/developer/projects')
     await expect(page.getByTestId('DEV-PROJECTS-LIST-001')).toBeVisible()
 
-    await page.getByRole('button').filter({ hasText: /torre/i }).first().click()
+    // **Por el nombre EXACTO del proyecto del seed, no por un match laxo.**
+    // Antes era `/torre/i` + `.first()`, y la lista viene ordenada por fecha de
+    // creación descendente: cualquier test que cree un proyecto cuyo nombre
+    // contenga "torre" —el de la fila 34b-34c crea uno— quedaba primero y este
+    // flujo se ejecutaba contra un proyecto SIN stages. Fallaba en "etapa 2" y
+    // parecía un bug del selector de etapas.
+    await page
+      .getByRole('button')
+      .filter({ hasText: /Torre A/ })
+      .first()
+      .click()
     await expect(page.getByTestId('DEV-PROJECT-DETAIL-001')).toBeVisible()
 
     // Por rol y no por texto: el ActionCard es un <button> y su título es un
