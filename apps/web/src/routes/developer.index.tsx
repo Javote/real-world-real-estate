@@ -85,14 +85,19 @@ function DeveloperPanel() {
           navegación lo desviaría de lo que el entregable muestra. Acá van los
           destinos que M2-D1 §5.2 le da al developer sin decir cómo se llega.
 
-          Solo se listan los que EXISTEN: `/developer/documentation` entra con
-          su pantalla, no antes. */}
+          Solo se listan los que EXISTEN. */}
       <section className="grid grid-cols-2 gap-s3">
         <ActionCard
           title={t('panel.developer.investorsAction')}
           description={t('panel.developer.investorsHint')}
           icon={Users}
           onClick={() => void navigate({ to: '/developer/investors' })}
+        />
+        <ActionCard
+          title={t('panel.developer.docsAction')}
+          description={t('panel.developer.docsHint')}
+          icon={FileCheck2}
+          onClick={() => void navigate({ to: '/developer/documentation' })}
         />
       </section>
     </PanelLayout>

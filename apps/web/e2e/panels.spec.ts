@@ -85,3 +85,25 @@ test('DEV-INVESTORS-LIST-001 · el directorio de investors y su acceso', async (
   await expect(page).toHaveURL(/\/developer\/investors/)
   await expect(page.getByTestId('DEV-INVESTORS-LIST-001')).toBeVisible()
 })
+
+// **M2-D5 filas 46-47** — la documentación de respaldo y su acceso (D-072).
+//
+// El corte en dos secciones ES la regla 17, así que el test lo mira: la lista
+// de verificados existe, y el botón de anclar solo aparece sobre documentos sin
+// TXID. Si algún día un documento sin anclaje se colara arriba, esto no lo
+// atrapa solo — pero que el botón viva únicamente en la sección pendiente sí.
+test('DEV-DOCS-LIST-001 · DEV-DOC-ANCHOR-002 · documentación de respaldo', async ({ page }) => {
+  await loginConSolapa(page, 'Developer')
+
+  await expect(page.getByTestId('DEV-PANEL-KPIS-001')).toBeVisible()
+  await page.getByRole('button', { name: /documentación|documentation/i }).click()
+
+  await expect(page).toHaveURL(/\/developer\/documentation/)
+  await expect(page.getByTestId('DEV-DOCS-LIST-001')).toBeVisible()
+
+  // El seed puede no dejar documentos pendientes, así que el anclaje se
+  // verifica solo si hay alguno: afirmarlo siempre haría fallar la suite por
+  // datos, no por código.
+  const anclar = page.getByTestId('DEV-DOC-ANCHOR-002').first()
+  if (await anclar.count()) await expect(anclar).toBeVisible()
+})

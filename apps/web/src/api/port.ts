@@ -7,6 +7,7 @@ import type {
   CertifierCertificate,
   CertifierKpis,
   CertifierStageView,
+  DeveloperDocument,
   DeveloperKpis,
   Dossier,
   InvestorDirectoryEntry,
@@ -149,6 +150,15 @@ export const api = {
   getDeveloperProgress: () => request<ProgressRow[]>('/api/v1/developer/progress'),
 
   listInvestors: () => request<InvestorDirectoryEntry[]>('/api/v1/developer/investors'),
+
+  listDeveloperDocuments: (status?: 'anchored' | 'pending') => {
+    const qs = status ? `?status=${status}` : ''
+    return request<DeveloperDocument[]>(`/api/v1/developer/documents${qs}`)
+  },
+
+  /** Ancla un documento pendiente. Es idempotente: re-anclar devuelve el evento existente. */
+  anchorDocument: (evidenceId: string) =>
+    request<StageEvidenceAnchor>('/api/v1/developer/documents', jsonInit('POST', { evidenceId })),
 
   listInvestorUnits: () => request<InvestorUnit[]>('/api/v1/investor/units'),
 
