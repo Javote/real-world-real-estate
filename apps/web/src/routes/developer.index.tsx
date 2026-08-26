@@ -1,6 +1,6 @@
 import { useQuery } from '@tanstack/react-query'
 import { createFileRoute, useNavigate } from '@tanstack/react-router'
-import { Building2, FileCheck2, Home, Plus, TrendingUp } from 'lucide-react'
+import { Building2, FileCheck2, Home, Plus, TrendingUp, Users } from 'lucide-react'
 import { api } from '#/api/port'
 import { DEV_ROLES } from '#/auth/roles'
 import { useRoleGuard } from '#/auth/useRoleGuard'
@@ -76,6 +76,23 @@ function DeveloperPanel() {
           helper={t('panel.developer.verifiedDocumentsHint')}
           icon={FileCheck2}
           tone="verification"
+        />
+      </section>
+
+      {/* **Los accesos a las pantallas huérfanas (D-072), fuera del grid de
+          KPIs a propósito.** Las capturas 33/34 fijan la composición de ese
+          grid —un ActionCard destacado y siete StatCards— y meterle tiles de
+          navegación lo desviaría de lo que el entregable muestra. Acá van los
+          destinos que M2-D1 §5.2 le da al developer sin decir cómo se llega.
+
+          Solo se listan los que EXISTEN: `/developer/documentation` entra con
+          su pantalla, no antes. */}
+      <section className="grid grid-cols-2 gap-s3">
+        <ActionCard
+          title={t('panel.developer.investorsAction')}
+          description={t('panel.developer.investorsHint')}
+          icon={Users}
+          onClick={() => void navigate({ to: '/developer/investors' })}
         />
       </section>
     </PanelLayout>

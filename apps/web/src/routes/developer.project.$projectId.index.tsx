@@ -96,9 +96,7 @@ function DeveloperProjectDetail() {
             title={t('developer.project.investorsAction')}
             description={t('developer.project.investorsDescription')}
             icon={Users}
-            // Sin destino todavía: la superficie de investors es la fila 48 y
-            // no entra en esta tanda. El tile se ve, no miente.
-            onClick={() => {}}
+            onClick={() => void navigate({ to: '/developer/investors' })}
           />
         </div>
       </section>

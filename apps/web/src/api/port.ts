@@ -9,6 +9,7 @@ import type {
   CertifierStageView,
   DeveloperKpis,
   Dossier,
+  InvestorDirectoryEntry,
   NotaryKpis,
   NotarySignature,
   PendingDossier,
@@ -146,6 +147,8 @@ export const api = {
   listDeveloperUnits: () => request<DeveloperUnit[]>('/api/v1/developer/units'),
 
   getDeveloperProgress: () => request<ProgressRow[]>('/api/v1/developer/progress'),
+
+  listInvestors: () => request<InvestorDirectoryEntry[]>('/api/v1/developer/investors'),
 
   listInvestorUnits: () => request<InvestorUnit[]>('/api/v1/investor/units'),
 

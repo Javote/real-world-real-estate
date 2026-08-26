@@ -26,7 +26,25 @@ interface InvestorCardProps {
   investedLabel: string
   unitLabel: string
   projectName: string
-  status: { tone: StatusTone; label: string }
+  /**
+   * **DEUDA DECLARADA — el pill es normativo y hoy no se puede pintar.**
+   *
+   * M2-D3 §InvestorCard lo pone en la anatomía ("Status pill on the right
+   * (Active / Pending / Completed)") y sus tres States SON esos tres estados.
+   * Pero `investorDirectoryEntrySchema` (packages/shared) no expone `status`, y
+   * `GET /developer/investors` hace `innerJoin Contract`: un investor invitado
+   * y sin contrato ni siquiera llega a la lista.
+   *
+   * Los tres estados son derivables de datos que ya existen —contrato en
+   * proyecto en curso, `Invitation.status`, proyecto en `completed`— pero eso
+   * es cambiar el contrato, y se decidió no hacerlo en esta rebanada. Por eso
+   * el prop es opcional en vez de que la fila 48 invente un estado: un pill que
+   * dice "Active" sin dato detrás es exactamente la señal sin sustento que
+   * prohíbe la regla 17.
+   *
+   * Cuando el contrato crezca, esto vuelve a ser obligatorio.
+   */
+  status?: { tone: StatusTone; label: string }
   onOpen?: () => void
   className?: string
 }
@@ -67,9 +85,11 @@ export function InvestorCard({
         </span>
       </span>
 
-      <StatusPill tone={status.tone} className="shrink-0">
-        {status.label}
-      </StatusPill>
+      {status ? (
+        <StatusPill tone={status.tone} className="shrink-0">
+          {status.label}
+        </StatusPill>
+      ) : null}
     </Contenedor>
   )
 }

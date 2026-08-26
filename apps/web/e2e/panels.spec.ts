@@ -72,3 +72,16 @@ test('DEV-PROFILE-001 · el developer llega a su perfil desde el header', async 
   await expect(page).toHaveURL(/\/developer\/profile/)
   await expect(page.getByTestId('DEV-PROFILE-001')).toBeVisible()
 })
+
+// **M2-D5 fila 48** — el directorio de investors y su acceso desde el Panel.
+// D-072 obliga a que el tile llegue con su pantalla, así que se verifican los
+// dos juntos: un tile que navega a un 404 pasaría un test de render.
+test('DEV-INVESTORS-LIST-001 · el directorio de investors y su acceso', async ({ page }) => {
+  await loginConSolapa(page, 'Developer')
+
+  await expect(page.getByTestId('DEV-PANEL-KPIS-001')).toBeVisible()
+  await page.getByRole('button', { name: /inversores|investors/i }).click()
+
+  await expect(page).toHaveURL(/\/developer\/investors/)
+  await expect(page.getByTestId('DEV-INVESTORS-LIST-001')).toBeVisible()
+})
