@@ -151,6 +151,14 @@ export const api = {
 
   listInvestors: () => request<InvestorDirectoryEntry[]>('/api/v1/developer/investors'),
 
+  createProject: (proyecto: {
+    name: string
+    slug: string
+    address?: string
+    totalUnits?: number
+    estimatedDelivery?: string
+  }) => request<Project>('/api/v1/developer/projects', jsonInit('POST', proyecto)),
+
   listDeveloperDocuments: (status?: 'anchored' | 'pending') => {
     const qs = status ? `?status=${status}` : ''
     return request<DeveloperDocument[]>(`/api/v1/developer/documents${qs}`)

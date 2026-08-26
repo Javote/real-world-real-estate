@@ -48,8 +48,7 @@ function DeveloperPanel() {
           description={t('panel.developer.newProjectHint')}
           icon={Plus}
           featured
-          onClick={() => void navigate({ to: '/developer' })}
-          testId="DEV-PROJECT-CREATE-001"
+          onClick={() => void navigate({ to: '/developer/project/new' })}
         />
         <StatCard
           value={kpi(data?.activeProjects ?? null)}

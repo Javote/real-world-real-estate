@@ -32,6 +32,7 @@ import { Route as CertifierProfileRouteImport } from './routes/certifier.profile
 import { Route as CertifierIssuedRouteImport } from './routes/certifier.issued'
 import { Route as CertifierAssignedRouteImport } from './routes/certifier.assigned'
 import { Route as NotaryDossierDossierIdRouteImport } from './routes/notary.dossier.$dossierId'
+import { Route as DeveloperProjectNewRouteImport } from './routes/developer.project.new'
 import { Route as CertifierStageStageIdRouteImport } from './routes/certifier.stage.$stageId'
 import { Route as DeveloperProjectProjectIdIndexRouteImport } from './routes/developer.project.$projectId.index'
 import { Route as DeveloperProjectProjectIdUploadRouteImport } from './routes/developer.project.$projectId.upload'
@@ -151,6 +152,11 @@ const NotaryDossierDossierIdRoute = NotaryDossierDossierIdRouteImport.update({
   path: '/notary/dossier/$dossierId',
   getParentRoute: () => rootRouteImport,
 } as any)
+const DeveloperProjectNewRoute = DeveloperProjectNewRouteImport.update({
+  id: '/developer/project/new',
+  path: '/developer/project/new',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const CertifierStageStageIdRoute = CertifierStageStageIdRouteImport.update({
   id: '/certifier/stage/$stageId',
   path: '/certifier/stage/$stageId',
@@ -193,6 +199,7 @@ export interface FileRoutesByFullPath {
   '/developer/': typeof DeveloperIndexRoute
   '/notary/': typeof NotaryIndexRoute
   '/certifier/stage/$stageId': typeof CertifierStageStageIdRoute
+  '/developer/project/new': typeof DeveloperProjectNewRoute
   '/notary/dossier/$dossierId': typeof NotaryDossierDossierIdRoute
   '/developer/project/$projectId/upload': typeof DeveloperProjectProjectIdUploadRoute
   '/developer/project/$projectId/': typeof DeveloperProjectProjectIdIndexRoute
@@ -221,6 +228,7 @@ export interface FileRoutesByTo {
   '/developer': typeof DeveloperIndexRoute
   '/notary': typeof NotaryIndexRoute
   '/certifier/stage/$stageId': typeof CertifierStageStageIdRoute
+  '/developer/project/new': typeof DeveloperProjectNewRoute
   '/notary/dossier/$dossierId': typeof NotaryDossierDossierIdRoute
   '/developer/project/$projectId/upload': typeof DeveloperProjectProjectIdUploadRoute
   '/developer/project/$projectId': typeof DeveloperProjectProjectIdIndexRoute
@@ -250,6 +258,7 @@ export interface FileRoutesById {
   '/developer/': typeof DeveloperIndexRoute
   '/notary/': typeof NotaryIndexRoute
   '/certifier/stage/$stageId': typeof CertifierStageStageIdRoute
+  '/developer/project/new': typeof DeveloperProjectNewRoute
   '/notary/dossier/$dossierId': typeof NotaryDossierDossierIdRoute
   '/developer/project/$projectId/upload': typeof DeveloperProjectProjectIdUploadRoute
   '/developer/project/$projectId/': typeof DeveloperProjectProjectIdIndexRoute
@@ -280,6 +289,7 @@ export interface FileRouteTypes {
     | '/developer/'
     | '/notary/'
     | '/certifier/stage/$stageId'
+    | '/developer/project/new'
     | '/notary/dossier/$dossierId'
     | '/developer/project/$projectId/upload'
     | '/developer/project/$projectId/'
@@ -308,6 +318,7 @@ export interface FileRouteTypes {
     | '/developer'
     | '/notary'
     | '/certifier/stage/$stageId'
+    | '/developer/project/new'
     | '/notary/dossier/$dossierId'
     | '/developer/project/$projectId/upload'
     | '/developer/project/$projectId'
@@ -336,6 +347,7 @@ export interface FileRouteTypes {
     | '/developer/'
     | '/notary/'
     | '/certifier/stage/$stageId'
+    | '/developer/project/new'
     | '/notary/dossier/$dossierId'
     | '/developer/project/$projectId/upload'
     | '/developer/project/$projectId/'
@@ -365,6 +377,7 @@ export interface RootRouteChildren {
   DeveloperIndexRoute: typeof DeveloperIndexRoute
   NotaryIndexRoute: typeof NotaryIndexRoute
   CertifierStageStageIdRoute: typeof CertifierStageStageIdRoute
+  DeveloperProjectNewRoute: typeof DeveloperProjectNewRoute
   NotaryDossierDossierIdRoute: typeof NotaryDossierDossierIdRoute
   DeveloperProjectProjectIdUploadRoute: typeof DeveloperProjectProjectIdUploadRoute
   DeveloperProjectProjectIdIndexRoute: typeof DeveloperProjectProjectIdIndexRoute
@@ -533,6 +546,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof NotaryDossierDossierIdRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/developer/project/new': {
+      id: '/developer/project/new'
+      path: '/developer/project/new'
+      fullPath: '/developer/project/new'
+      preLoaderRoute: typeof DeveloperProjectNewRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/certifier/stage/$stageId': {
       id: '/certifier/stage/$stageId'
       path: '/certifier/stage/$stageId'
@@ -581,6 +601,7 @@ const rootRouteChildren: RootRouteChildren = {
   DeveloperIndexRoute: DeveloperIndexRoute,
   NotaryIndexRoute: NotaryIndexRoute,
   CertifierStageStageIdRoute: CertifierStageStageIdRoute,
+  DeveloperProjectNewRoute: DeveloperProjectNewRoute,
   NotaryDossierDossierIdRoute: NotaryDossierDossierIdRoute,
   DeveloperProjectProjectIdUploadRoute: DeveloperProjectProjectIdUploadRoute,
   DeveloperProjectProjectIdIndexRoute: DeveloperProjectProjectIdIndexRoute,
