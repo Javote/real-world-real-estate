@@ -222,6 +222,47 @@ Todo texto visible sale de una clave. Moneda, fecha, relativos y decimales con `
 activo. Default `es-AR` con voseo ("Mirá tu unidad", no "Mira" ni "Mire"). **El backend devuelve
 claves de traducción, nunca copy** (M2-D4 §8.2).
 
+## D-072 — Las tres pantallas huérfanas del developer se alcanzan desde el Panel
+
+**Desvío legítimo por la causal (a)** de la jerarquía de precedencia: *el entregable se contradice
+internamente* (2026-08-26).
+
+M2-D1 §4, matriz de permisos, otorga `R W` sobre *"Profile and notification preferences"* a los
+cuatro roles y lo subraya: *"All roles manage their own profile."* Las reglas de localización lo
+repiten dos veces —el `LanguageToggle` va en *"every profile screen across all four roles"* (§45) y
+*"Login + Profile (all roles)"* (M2-D3 §296)—. Pero el Screen Tree del developer (M2-D1 §5.2) **no
+tiene fila de `/developer/profile`**, y su bottom nav son cinco tabs sin ninguno de perfil.
+
+El mismo documento le da tres pantallas al developer **sin decir cómo se llega a ninguna**:
+
+| Pantalla | Está en | Entrada definida |
+|---|---|---|
+| `/developer/profile` | matriz de permisos §4 | ninguna |
+| `/developer/documentation` | Screen Tree §5.2 | ninguna |
+| `/developer/investors` | Screen Tree §5.2 | ninguna |
+
+Investor llega a su perfil por el tab 5 ("User"); notary y certifier por su tab 4 ("Profile"). El
+developer es el único de los cuatro sin acceso.
+
+**Lo que se descartó y por qué.** Un sexto tab contradice a M2-D3 §Layout (*"4 or 5 tabs depending
+on role"*) y a la tabla taxativa de cinco tabs de M2-D1 §5.2: sería romper algo normativo para
+tapar algo omitido. Y los `StatCard` del panel ("Verified Documents", "Active Investors") **no son
+la entrada implícita**: M2-D3 §StatCard define dos estados, Default y Highlighted, y ninguno es
+interactivo.
+
+**Lo que se hace:**
+
+1. **Perfil → ícono en el slot derecho del `GradientHeader`**, junto a la campana y el toggle de
+   idioma. M2-D3 §GradientHeader ya reserva ese slot para *"utilities: NotificationBell,
+   LanguageToggle, action button"*, así que no se inventa superficie: se usa un slot definido. Solo
+   se monta donde el rol no tiene tab de perfil — los otros tres ya llegan por su nav.
+2. **`/developer/documentation` y `/developer/investors` → `ActionCard` en el Panel.** M2-D3
+   §Layout patterns ya declara la grilla de acción como patrón del Developer Panel (*"New project
+   tile + Active Projects"*), y `ActionCard` es uno de los 36.
+
+**La regla de orden que impone:** un tile entra en el mismo commit que su pantalla, nunca antes. Un
+destino que no existe se ve terminado y no lo está.
+
 ---
 
 # API y contrato

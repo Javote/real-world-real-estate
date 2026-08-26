@@ -59,3 +59,16 @@ for (const panel of PANELES) {
     await page.screenshot({ path: join(SHOTS, `${panel.shot}.png`), fullPage: true })
   })
 }
+
+// **D-072** — el developer es el único rol sin tab de perfil, y llega por el
+// slot derecho del header. Es la única entrada que tiene: si este camino se
+// rompe, la pantalla queda inalcanzable sin escribir la URL a mano.
+test('DEV-PROFILE-001 · el developer llega a su perfil desde el header', async ({ page }) => {
+  await loginConSolapa(page, 'Developer')
+
+  await expect(page.getByTestId('DEV-PANEL-KPIS-001')).toBeVisible()
+  await page.getByRole('button', { name: /mi perfil|my profile/i }).click()
+
+  await expect(page).toHaveURL(/\/developer\/profile/)
+  await expect(page.getByTestId('DEV-PROFILE-001')).toBeVisible()
+})

@@ -1,3 +1,4 @@
+import { User } from 'lucide-react'
 import type { ReactNode } from 'react'
 import { BottomNav } from '#/components/domain/BottomNav'
 import { GradientHeader } from '#/components/domain/GradientHeader'
@@ -21,6 +22,15 @@ interface PanelLayoutProps {
   /** Solo en paneles primarios (M2-D3 §NotificationBell §Usage rules). */
   unread?: number
   onOpenNotifications?: () => void
+  /**
+   * Acceso al perfil desde el slot derecho del header (D-072).
+   *
+   * **Solo lo pasa el rol que no tiene tab de perfil.** Investor llega por su
+   * tab 5 ("User"); notary y certifier por su tab 4 ("Profile"). El developer
+   * es el único de los cuatro que M2-D1 dejó sin entrada, y M2-D3
+   * §GradientHeader reserva este slot justamente para utilidades globales.
+   */
+  onOpenProfile?: () => void
   children: ReactNode
 }
 
@@ -30,6 +40,7 @@ export function PanelLayout({
   context,
   unread,
   onOpenNotifications,
+  onOpenProfile,
   children
 }: PanelLayoutProps) {
   const { t } = useTranslation()
@@ -49,6 +60,16 @@ export function PanelLayout({
                 onClick={onOpenNotifications}
                 ariaLabel={t('notifications.ariaLabel')}
               />
+            ) : null}
+            {onOpenProfile ? (
+              <button
+                type="button"
+                onClick={onOpenProfile}
+                aria-label={t('profile.ariaLabel')}
+                className="flex h-10 w-10 items-center justify-center rounded-full bg-white/20 text-white"
+              >
+                <User size={20} aria-hidden="true" />
+              </button>
             ) : null}
             <LanguageToggle />
           </>
