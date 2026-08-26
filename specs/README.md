@@ -94,11 +94,11 @@ parser corregido son 5 de 64.)*
 
 | # | Qué | Estado |
 |---|---|---|
-| 1 | **Reset documental**: memoria partida, `CLAUDE.md` con el flujo, `SPEC-014` | **en curso** |
-| 2 | **Borrado + tokens + shadcn/ui + rename D-067** | pendiente |
-| 3 | **Los ~12 componentes transversales** de M2-D3 | pendiente |
-| 4 | **Los patrones P1–P10** de M2-D4 | pendiente |
-| 5+ | **Verticales**, en el orden del flujo cross-rol de M2-D1 §6: `evidencia → certificar → liberar` | pendiente |
+| 1 | **Reset documental**: memoria partida, `CLAUDE.md` con el flujo, `SPEC-014` | hecho |
+| 2 | **Borrado + tokens + shadcn/ui + rename D-067** | hecho |
+| 3 | **Los ~12 componentes transversales** de M2-D3 | hecho — 36/36 (ver tabla de arriba) |
+| 4 | **Los patrones P1–P10** de M2-D4 | **en curso** — 8/10 |
+| 5+ | **Verticales**, en el orden del flujo cross-rol de M2-D1 §6: `evidencia → certificar → liberar` | **en curso** — 27/53 superficies (51%), Notary y Certifier completos |
 | — | `AnchorPort` §C: reconciliación y `verify()` público ([`SPEC-013`](SPEC-013-anchorport.md)) | pendiente |
 | — | Preprod: cuenta Blockfrost + wallet de servicio 🔴 | pendiente, externo |
 

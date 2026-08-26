@@ -8,7 +8,7 @@ Aislado del workspace pnpm (D-054): **corre en paralelo y no bloquea a nadie.** 
 para trabajarlo por separado del resto del workspace.
 
 ```
-lib/propnexus/fsm.ak     núcleo puro: tipos, tabla de transiciones, reglas del datum (39 tests)
+lib/propnexus/fsm.ak     núcleo puro: tipos, tabla de transiciones, reglas del datum (40 tests)
 validators/stage.ak      el validador: spend + mint, lo que necesita la tx    (33 tests)
 plutus.json              blueprint — se commitea tras cada build
 ```
@@ -83,9 +83,9 @@ que el producto viene a eliminar.
 
 `aiken check` **no mide coverage de líneas** —solo tiene `--property-coverage`, que es la
 distribución de labels en property tests—, así que el ≥95% del criterio 2 del SOM se demuestra con
-esta tabla. **53 tests, 0 fallando.**
+esta tabla. **73 tests, 0 fallando.**
 
-`lib/propnexus/fsm.ak` — 39:
+`lib/propnexus/fsm.ak` — 40:
 
 | Qué prueba | Tests |
 |---|---|
@@ -95,6 +95,7 @@ esta tabla. **53 tests, 0 fallando.**
 | Un stage crítico exige commitment de 32 bytes; uno no crítico no | `t_critical_needs_a_full_commitment`, `t_non_critical_completes_without_evidence` |
 | Evolución del datum: completar, no completar, y los cruces inválidos | `t_evolution_*` (9) |
 | Nacimiento del hilo: estado inicial, evidencia y fecha en cero, orden positivo, refs no vacías y ≤32 bytes | `t_initial_*` (7) |
+| El datum codifica al mismo CBOR que el códec de `packages/cardano` espera — el "valor dorado" (ver `packages/cardano/CLAUDE.md`) | `t_golden_datum_encoding` (1) |
 
 `validators/stage.ak` — 33 (6 caminos felices + 27 puntos de rechazo):
 
@@ -133,17 +134,20 @@ Los negativos van marcados `test ... fail` porque los `expect` abortan en vez de
 ## Estado y deuda
 
 - **~~El backend no espeja la tabla de transiciones.~~** Cerrado por D-059: la tabla vive en
-  `packages/shared`, la ruta la aplica, y el stage nace en `Pending` como el `mint` exige. Lo que
-  todavía **no** está del otro lado es el commitment de evidencia: la API exige *que haya*
-  evidencia para completar un stage crítico, el validador exige *un Merkle root de 32 bytes*, y
-  nadie lo calcula todavía (no hay `EvidenceBundle`).
+  `packages/shared`, la ruta la aplica, y el stage nace en `Pending` como el `mint` exige.
+- **~~El commitment de evidencia no lo calcula nadie.~~** Cerrado (`SPEC-013` §3): `EvidenceBundle`
+  existe, `crearBundle` congela la evidencia del stage al completarlo y el Merkle root
+  (`packages/shared`) viaja al datum. El estado real vive en `SPEC-013`, no acá.
 - **El `stage_ref` es el id off-chain en bytes, y hoy ese id es cuid2** (24 bytes), no UUID como
   piden M1-D2 y la regla 1. El validador no opina —cualquier `ByteArray` de 1 a 32 bytes entra—
   así que si el backend migra a UUID, migra sin tocar el script. Lo que **no** se puede es cambiar
   de criterio con hilos ya acuñados: el asset name es el id, y no se puede reacuñar.
-- **El anclaje todavía no existe del lado del backend.** No hay `AnchorPort` (D-014) ni tabla de
-  eventos on-chain: nadie construye estas transacciones todavía. El validador está listo y probado,
-  sin nada que lo llame.
+- **~~El anclaje todavía no existe del lado del backend.~~** Cerrado: `packages/cardano` tiene
+  `AnchorPort` completo (puerto + simulador + adaptador real contra `Emulator`/yaci, 40/40 tests) y
+  `apps/api` lo llama desde `PATCH /milestones/:id/state` y `POST /evidence/:id/anchor`
+  (`apps/api/src/lib/anchor.ts`, `apps/api/src/domain/stage-transition.ts`). El detalle de qué
+  falta (rebanada C — `verify()`/`reconcile()` contra la cadena real, y Preprod) vive en
+  `specs/SPEC-013-anchorport.md`, no acá.
 - **Hubo un `contracts/reference/`** con 353 líneas que el compilador no leía y que describía otra
   FSM (`Certified`, salida del terminal). Se borró en **D-056**; no lo recuperes del historial.
 - **La sintaxis de Aiken cambia entre versiones**: verificá contra la pineada (`aiken --version`)
@@ -168,7 +172,7 @@ D-021 — no hay fondos en riesgo.
 ## Comandos
 
 ```bash
-pnpm contracts:check      # aiken check (compila + corre los 53 tests)
+pnpm contracts:check      # aiken check (compila + corre los 73 tests)
 pnpm contracts:build      # regenera plutus.json — commitealo (el CI verifica que esté al día)
 aiken fmt                 # el CI corre 'aiken fmt --check'
 aiken check -m <patrón>   # solo los tests cuyo nombre matchee

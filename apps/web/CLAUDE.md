@@ -6,28 +6,27 @@
 TanStack **Router** sobre Vite — **SPA, sin SSR** (D-065) · React 19 · Tailwind v4 · Lucide ·
 Vitest+jsdom · Playwright.
 
-## Estado: se está reconstruyendo
+## Estado: reconstrucción en curso, por verticales
 
-El front tenía 2% de conformidad y se demolió (D-064). Hoy queda **el esqueleto correcto y nada
-más**: no hay pantallas transcritas todavía.
+El front se demolió por baja conformidad (D-064) y se reconstruye superficie por superficie desde
+`SPEC-014`. **El número de estado vive en `specs/README.md` y solo ahí** (regla del `README.md`
+raíz) — no lo copies acá, se desactualiza. Lo que sí es estable y no rota con cada commit:
 
 | Existe | Qué es |
 |---|---|
 | `api/port.ts` | Único lugar que hace `fetch`. Su cliente pasa a derivarse del contrato (D-066) |
 | `auth/*` | `useRoleGuard` implementa los AuthGuard role groups de M2-D1 §7.2 |
 | `i18n/*` | Diccionario propio, sin librería. Crece con cada pantalla |
-| `routes/login.tsx` | Único path correcto de M2-D5 (fila 01). Falta rehacerle la piel |
-| `routes/{investor.buy,developer,notary,certifier}.tsx` | **Stubs deliberados**: el path y el guard son reales, la superficie no existe |
-| `styles.css` | **Los 51 tokens de M2-D3** en `@theme` — 20 colores normativos, escala tipográfica, espaciado de 4px, radios, elevación, tamaños de ícono |
+| `routes/` | Rutas reales por rol (`investor.*`, `developer.*`, `notary.*`, `certifier.*`), no stubs — el backlog de `SPEC-014` se cierra vertical por vertical, en el orden `evidencia → certificar → liberar` |
+| `styles.css` | **Los tokens de M2-D3** en `@theme` — colores normativos, escala tipográfica, espaciado de 4px, radios, elevación, tamaños de ícono |
 | `lib/cn.ts` · `components.json` | Base de shadcn/ui. Los primitivos se agregan **de a uno**, cuando su componente de dominio los necesita |
-| `components/domain/` | **12 componentes transversales** de M2-D3 + **6 patrones de prueba** de M2-D4 |
+| `components/domain/` | Los componentes transversales de M2-D3 + los patrones de prueba de M2-D4 (P1–P5, P7, P9, P10 como componentes reutilizables; P6 audit log y P8 dossier llegan con su propia vertical, son superficies enteras) |
 | `components/ui/dialog.tsx` | Primitivo de Radix vía shadcn. Editado en un punto: su botón de cierre usa el `SecondaryButton` de M2-D3, no el de shadcn — un solo sistema de botones |
 | `i18n/format.ts` | `Intl` con el locale activo: moneda, fecha, relativos (regla 14) |
 
-**Los 10 patrones de M2-D4 están**, salvo dos que son superficies y no componentes: P6 (audit log)
-y P8 (dossier) llegan con su vertical. Faltan 21 componentes de M2-D3 —las cards, los modales de
-dominio, los inputs que no son texto—. Ver
-[`specs/SPEC-014`](../../specs/SPEC-014-reconstruccion-del-front.md).
+Antes de asumir que una superficie sigue siendo un stub, mirá `routes/` — puede que ya se haya
+transcrito. Ver [`specs/SPEC-014`](../../specs/SPEC-014-reconstruccion-del-front.md) para el plan y
+`specs/README.md` para qué falta hoy.
 
 ## La jerarquía de profundidad, que es lo que hace coherente a la app
 
