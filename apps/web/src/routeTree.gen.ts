@@ -24,6 +24,7 @@ import { Route as InvestorBuyRouteImport } from './routes/investor.buy'
 import { Route as DeveloperUnitsRouteImport } from './routes/developer.units'
 import { Route as DeveloperProjectsRouteImport } from './routes/developer.projects'
 import { Route as DeveloperProgressRouteImport } from './routes/developer.progress'
+import { Route as DeveloperProfileRouteImport } from './routes/developer.profile'
 import { Route as DeveloperAuditLogRouteImport } from './routes/developer.audit-log'
 import { Route as CertifierProfileRouteImport } from './routes/certifier.profile'
 import { Route as CertifierIssuedRouteImport } from './routes/certifier.issued'
@@ -108,6 +109,11 @@ const DeveloperProgressRoute = DeveloperProgressRouteImport.update({
   path: '/developer/progress',
   getParentRoute: () => rootRouteImport,
 } as any)
+const DeveloperProfileRoute = DeveloperProfileRouteImport.update({
+  id: '/developer/profile',
+  path: '/developer/profile',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const DeveloperAuditLogRoute = DeveloperAuditLogRouteImport.update({
   id: '/developer/audit-log',
   path: '/developer/audit-log',
@@ -158,6 +164,7 @@ export interface FileRoutesByFullPath {
   '/certifier/issued': typeof CertifierIssuedRoute
   '/certifier/profile': typeof CertifierProfileRoute
   '/developer/audit-log': typeof DeveloperAuditLogRoute
+  '/developer/profile': typeof DeveloperProfileRoute
   '/developer/progress': typeof DeveloperProgressRoute
   '/developer/projects': typeof DeveloperProjectsRoute
   '/developer/units': typeof DeveloperUnitsRoute
@@ -183,6 +190,7 @@ export interface FileRoutesByTo {
   '/certifier/issued': typeof CertifierIssuedRoute
   '/certifier/profile': typeof CertifierProfileRoute
   '/developer/audit-log': typeof DeveloperAuditLogRoute
+  '/developer/profile': typeof DeveloperProfileRoute
   '/developer/progress': typeof DeveloperProgressRoute
   '/developer/projects': typeof DeveloperProjectsRoute
   '/developer/units': typeof DeveloperUnitsRoute
@@ -209,6 +217,7 @@ export interface FileRoutesById {
   '/certifier/issued': typeof CertifierIssuedRoute
   '/certifier/profile': typeof CertifierProfileRoute
   '/developer/audit-log': typeof DeveloperAuditLogRoute
+  '/developer/profile': typeof DeveloperProfileRoute
   '/developer/progress': typeof DeveloperProgressRoute
   '/developer/projects': typeof DeveloperProjectsRoute
   '/developer/units': typeof DeveloperUnitsRoute
@@ -236,6 +245,7 @@ export interface FileRouteTypes {
     | '/certifier/issued'
     | '/certifier/profile'
     | '/developer/audit-log'
+    | '/developer/profile'
     | '/developer/progress'
     | '/developer/projects'
     | '/developer/units'
@@ -261,6 +271,7 @@ export interface FileRouteTypes {
     | '/certifier/issued'
     | '/certifier/profile'
     | '/developer/audit-log'
+    | '/developer/profile'
     | '/developer/progress'
     | '/developer/projects'
     | '/developer/units'
@@ -286,6 +297,7 @@ export interface FileRouteTypes {
     | '/certifier/issued'
     | '/certifier/profile'
     | '/developer/audit-log'
+    | '/developer/profile'
     | '/developer/progress'
     | '/developer/projects'
     | '/developer/units'
@@ -312,6 +324,7 @@ export interface RootRouteChildren {
   CertifierIssuedRoute: typeof CertifierIssuedRoute
   CertifierProfileRoute: typeof CertifierProfileRoute
   DeveloperAuditLogRoute: typeof DeveloperAuditLogRoute
+  DeveloperProfileRoute: typeof DeveloperProfileRoute
   DeveloperProgressRoute: typeof DeveloperProgressRoute
   DeveloperProjectsRoute: typeof DeveloperProjectsRoute
   DeveloperUnitsRoute: typeof DeveloperUnitsRoute
@@ -438,6 +451,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof DeveloperProgressRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/developer/profile': {
+      id: '/developer/profile'
+      path: '/developer/profile'
+      fullPath: '/developer/profile'
+      preLoaderRoute: typeof DeveloperProfileRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/developer/audit-log': {
       id: '/developer/audit-log'
       path: '/developer/audit-log'
@@ -504,6 +524,7 @@ const rootRouteChildren: RootRouteChildren = {
   CertifierIssuedRoute: CertifierIssuedRoute,
   CertifierProfileRoute: CertifierProfileRoute,
   DeveloperAuditLogRoute: DeveloperAuditLogRoute,
+  DeveloperProfileRoute: DeveloperProfileRoute,
   DeveloperProgressRoute: DeveloperProgressRoute,
   DeveloperProjectsRoute: DeveloperProjectsRoute,
   DeveloperUnitsRoute: DeveloperUnitsRoute,
