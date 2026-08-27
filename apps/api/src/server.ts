@@ -1,10 +1,42 @@
+import type { Server } from "node:http";
 import app from "./app";
+import { initAnchorPort } from "./lib/anchor";
 import { db } from "./lib/db";
 
 const port = Number(process.env.PORT || 8787);
 
-const server = app.listen(port, () => {
-  console.log(`API listening on http://localhost:${port}`);
+// `let` y no `const`: ahora el servidor nace dentro de `arrancar()`, después de
+// que el `AnchorPort` esté listo. Hasta entonces no hay nada que cerrar, y por
+// eso `cerrar()` lo contempla.
+let server: Server | undefined;
+
+/**
+ * El arranque, en orden y explícito.
+ *
+ * **El `AnchorPort` se construye ANTES de escuchar**, igual que las migraciones.
+ * Con `ANCHOR_MODE=real` eso levanta Lucid contra Blockfrost y deriva el admin
+ * desde la wallet de servicio: si la seed es inválida, si falta la API key o si
+ * Blockfrost no responde, el proceso muere acá y queda en los logs de Render
+ * —lo único que hay, porque el free tier no da shell—. La alternativa sería
+ * descubrirlo en el primer anclaje, con la evidencia ya subida y alguien
+ * esperando un TXID que no va a llegar (D-042).
+ *
+ * Es CommonJS, así que no hay top-level await: de ahí esta función.
+ */
+async function arrancar() {
+  const puerto = await initAnchorPort();
+  console.log(`AnchorPort listo en modo "${puerto.mode}"`);
+
+  server = app.listen(port, () => {
+    console.log(`API listening on http://localhost:${port}`);
+  });
+}
+
+arrancar().catch((error) => {
+  // Sin `listen`: el proceso no llegó a aceptar una sola request, que es
+  // exactamente lo que se busca cuando la configuración está mal.
+  console.error("[arranque] la API no pudo levantar", error);
+  process.exit(1);
 });
 
 /**
@@ -25,7 +57,7 @@ function cerrar(senal: NodeJS.Signals) {
   }, 10_000);
   forzar.unref();
 
-  server.close(async () => {
+  const cerrarBase = async () => {
     try {
       await db.destroy();
     } catch (error) {
@@ -33,7 +65,16 @@ function cerrar(senal: NodeJS.Signals) {
     }
     console.log("[cierre] listo");
     process.exit(0);
-  });
+  };
+
+  // La señal puede llegar mientras el `AnchorPort` todavía se está armando: ahí
+  // no hay servidor que cerrar, pero sí una base que soltar.
+  if (!server) {
+    void cerrarBase();
+    return;
+  }
+
+  server.close(cerrarBase);
 }
 
 process.on("SIGTERM", () => cerrar("SIGTERM"));

@@ -246,7 +246,7 @@ Lo que le falta, en orden de importancia:
 | `routes/users.routes.ts` | bcrypt al crear y al cambiar password | ✔ correcto (cost 10, nunca se loguea ni se devuelve) · política endurecida 2026-08-21 (D-046) |
 | `middlewares/auth.ts` · `canAccessProject` | la lógica de membresía | ✔ correcto · fail-closed desde 2026-08-21 · falta que sea middleware |
 | `utils/hashing.ts` | SHA-256 de evidencia | ✔ correcto · R2 lo va a mover |
-| `SERVICE_WALLET_SEED`, construcción de commitments | — | **no existen todavía** (`packages/cardano` vacío) |
+| `SERVICE_WALLET_SEED`, construcción de commitments | `packages/cardano` | el código existe y el factory lo cablea (2026-08-27); **falta la cuenta de Blockfrost y la wallet fondeada**. La seed es 🔴 y no se puede rotar sin migrar los hilos |
 
 ### ~~P1 · `JWT_SECRET` cae a un literal público~~ — cerrado el 2026-08-20
 

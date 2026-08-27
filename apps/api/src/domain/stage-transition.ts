@@ -206,8 +206,8 @@ async function anchorEvent(
     const root = await rootDelStage(stage.id);
     const receipt =
       previous === null
-        ? await anchorPort.openThread({ datum: buildStageDatum(toDatumSource(stage, "")) })
-        : await anchorPort.advanceThread({
+        ? await anchorPort().openThread({ datum: buildStageDatum(toDatumSource(stage, "")) })
+        : await anchorPort().advanceThread({
             outputRef: (await cabezaDelHilo(stage.id)) ?? "",
             // El datum previo se reconstruye con el root que ya tenía: si el
             // bundle se creó recién, el UTxO viejo NO lo lleva.
@@ -217,7 +217,7 @@ async function anchorEvent(
             next: buildStageDatum(toDatumSource(stage, stage.state === "Completed" ? root : ""))
           });
 
-    const proof = receipt.status === "Confirmed" ? await anchorPort.verify(receipt.txid) : null;
+    const proof = receipt.status === "Confirmed" ? await anchorPort().verify(receipt.txid) : null;
 
     return await db
       .updateTable("OnChainEvent")

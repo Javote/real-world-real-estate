@@ -219,7 +219,7 @@ router.post(
 
     let anclado = evento;
     try {
-      const recibo = await anchorPort.anchorCommitment({
+      const recibo = await anchorPort().anchorCommitment({
         sha256: evidencia.sha256Hash,
         // Ref opaca: el id del registro, nunca el nombre del archivo (regla 2).
         reference: evidencia.id

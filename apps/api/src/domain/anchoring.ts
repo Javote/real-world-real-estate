@@ -72,7 +72,7 @@ export async function anchorCommitmentEvent(input: {
     .executeTakeFirstOrThrow();
 
   try {
-    const recibo = await anchorPort.anchorCommitment({
+    const recibo = await anchorPort().anchorCommitment({
       sha256: input.commitment,
       reference: input.reference
     });

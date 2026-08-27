@@ -131,9 +131,14 @@ Todavía no ejecutados; hacen falta para el **anclaje real**, no para el deploy:
 1. **Blockfrost** — crear cuenta, proyecto **Preprod**, setear `BLOCKFROST_API_KEY`.
 2. **Wallet de servicio** — generar una seed *nueva y exclusiva de Preprod* para que el backend firme
    las transacciones de anclaje, y fondearla desde el [faucet de testnet](https://docs.cardano.org/cardano-testnets/tools/faucet).
-3. **`packages/cardano`** — el `AnchorPort`, el adaptador simulado y el **real** ya existen
-   (`SPEC-013` §A y §B), y el real está probado contra el `Emulator` y contra un devnet local. Lo
-   que falta para Preprod no es código: es la cuenta de Blockfrost y la wallet de los puntos 1 y 2.
+3. **`packages/cardano`** — el `AnchorPort`, el adaptador simulado y el **real** existen
+   (`SPEC-013` §A y §B), el real está probado contra el `Emulator` y contra un devnet local, y desde
+   el 2026-08-27 el factory lo **cablea**: `ANCHOR_MODE=real` construye Lucid sobre Blockfrost con la
+   wallet de servicio, y la API no arranca si falta configuración (D-042). Ahora sí es cierto que lo
+   que falta no es código, sino la cuenta y la wallet de los puntos 1 y 2.
+
+   ⚠ **La seed no se puede rotar.** La dirección del script se deriva del admin, que sale de esta
+   wallet: cambiarla obliga a migrar todos los hilos ya anclados. Generala para quedarse.
 
 El inventario honesto de qué existe y qué no está en [`specs/stack.md`](specs/stack.md) §8 y §12.
 

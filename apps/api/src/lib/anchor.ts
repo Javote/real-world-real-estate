@@ -1,4 +1,4 @@
-import type { LedgerStore, LedgerUtxo, OutputRef } from "@plataforma/cardano";
+import type { AnchorPort, LedgerStore, LedgerUtxo, OutputRef } from "@plataforma/cardano";
 import { createAnchorPort } from "@plataforma/cardano";
 import type { StageDatum } from "@plataforma/shared";
 import { db } from "./db";
@@ -66,11 +66,42 @@ class KyselyLedgerStore implements LedgerStore {
   }
 }
 
+// ── El puerto del proceso ──────────────────────────────────────────────────
+//
+// **Se arma en el arranque, no al importar este módulo.** Con `real`, construir
+// el puerto es I/O: hay que levantar Lucid contra Blockfrost y preguntarle la
+// dirección a la wallet. Eso no se puede hacer sincrónicamente, y sobre todo no
+// se debe hacer perezosamente: una seed inválida o un Blockfrost caído tienen
+// que impedir que la API levante —visible en los logs de Render, que es lo único
+// que hay— y no romper el primer anclaje con evidencia ya subida (D-042).
+//
+// Es el mismo patrón que las migraciones: antes de escuchar, o no se escucha.
+
+let puerto: AnchorPort | null = null;
+
+/** Llamado por `server.ts` antes de `listen`, y por el setup de la suite. */
+export async function initAnchorPort(): Promise<AnchorPort> {
+  puerto = await createAnchorPort({
+    mode: process.env.ANCHOR_MODE,
+    store: new KyselyLedgerStore(),
+    blockfrostApiKey: process.env.BLOCKFROST_API_KEY,
+    seed: process.env.SERVICE_WALLET_SEED,
+    network: process.env.CARDANO_NETWORK,
+    blockfrostUrl: process.env.BLOCKFROST_URL
+  });
+  return puerto;
+}
+
 /**
- * El puerto del proceso. `ANCHOR_MODE` no tiene default inseguro (D-042):
- * ausente es `simulated`, y `real` revienta acá hasta que exista la rebanada B.
+ * El puerto ya construido. Es función y no constante justamente para que el
+ * momento de la construcción sea una decisión del proceso y no un efecto de
+ * quién importó qué primero.
  */
-export const anchorPort = createAnchorPort({
-  mode: process.env.ANCHOR_MODE,
-  store: new KyselyLedgerStore()
-});
+export function anchorPort(): AnchorPort {
+  if (!puerto) {
+    throw new Error(
+      "El AnchorPort no está inicializado: falta `await initAnchorPort()` antes de usarlo."
+    );
+  }
+  return puerto;
+}

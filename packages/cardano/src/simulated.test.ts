@@ -166,16 +166,49 @@ describe("advanceThread · el spend", () => {
 });
 
 describe("createAnchorPort", () => {
-  it("por defecto es simulated", () => {
-    expect(createAnchorPort({}).mode).toBe("simulated");
+  it("por defecto es simulated", async () => {
+    expect((await createAnchorPort({})).mode).toBe("simulated");
   });
 
-  it("revienta al pedir real, que todavía no existe", () => {
-    expect(() => createAnchorPort({ mode: "real" })).toThrow(/rebanada B/);
+  it("revienta con un modo inventado", async () => {
+    await expect(createAnchorPort({ mode: "mainnet" })).rejects.toThrow(/ANCHOR_MODE inválido/);
   });
 
-  it("revienta con un modo inventado", () => {
-    expect(() => createAnchorPort({ mode: "mainnet" })).toThrow(/ANCHOR_MODE inválido/);
+  // ── `real`: lo que se puede probar sin red ──────────────────────────────
+  //
+  // El camino feliz de `real` necesita Blockfrost y una wallet, así que vive en
+  // `yaci.test.ts` y en Preprod a mano. Lo que sí se prueba acá —y es lo que
+  // más barato se rompe— son los rechazos de configuración: tienen que ocurrir
+  // ANTES de tocar la red, o el error que llega es un timeout en vez de "te
+  // falta la seed".
+
+  it("rechaza mainnet, que está fuera de alcance", async () => {
+    await expect(
+      createAnchorPort({
+        mode: "real",
+        network: "Mainnet",
+        blockfrostApiKey: "k",
+        seed: "s"
+      })
+    ).rejects.toThrow(/Mainnet está fuera de alcance/);
+  });
+
+  it("exige BLOCKFROST_API_KEY", async () => {
+    await expect(createAnchorPort({ mode: "real", seed: "s" })).rejects.toThrow(
+      /exige BLOCKFROST_API_KEY/
+    );
+  });
+
+  it("exige SERVICE_WALLET_SEED", async () => {
+    await expect(createAnchorPort({ mode: "real", blockfrostApiKey: "k" })).rejects.toThrow(
+      /exige SERVICE_WALLET_SEED/
+    );
+  });
+
+  it("una variable en blanco cuenta como ausente, no como valor", async () => {
+    await expect(
+      createAnchorPort({ mode: "real", blockfrostApiKey: "  ", seed: "s" })
+    ).rejects.toThrow(/exige BLOCKFROST_API_KEY/);
   });
 });
 

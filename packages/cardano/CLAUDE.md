@@ -95,8 +95,16 @@ segundos — de ahí que `VALIDITY_WINDOW_MS` sean 3 minutos y no 10.
 ## Estado
 
 Rebanadas **A** (puerto + simulador) y **B** (códec, blueprint, `Emulator` y **devnet local**)
-cerradas. Falta Preprod —que no cambia el código, solo el provider y la seed— y el
-`reconcile()`/`verify()` completo de la rebanada C, que necesita un indexer.
+cerradas. Desde el 2026-08-27 `factory.ts` **cablea el adaptador real**: `ANCHOR_MODE=real` levanta
+Lucid contra Blockfrost, selecciona la wallet desde `SERVICE_WALLET_SEED` y arma el
+`LucidAnchorAdapter`. Mainnet se rechaza ahí mismo (D-013).
+
+Hasta entonces se decía que "Preprod no cambia el código, solo el provider y la seed", y era
+inexacto: el adaptador no cambiaba, pero **nadie lo construía** — pedir `real` tiraba un error que
+remitía a esta misma rebanada. Ahora sí: lo que falta para Preprod es la cuenta de Blockfrost y una
+wallet fondeada, nada de código.
+
+Queda el `reconcile()`/`verify()` completo de la rebanada C, que necesita un indexer.
 
 ## Comandos
 

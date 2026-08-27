@@ -39,12 +39,26 @@ const uploadsDelArchivo = path.join(process.cwd(), "test-uploads", nombreDelArch
 mkdirSync(uploadsDelArchivo, { recursive: true });
 process.env.UPLOAD_DIR = uploadsDelArchivo;
 
-beforeAll(() => {
+beforeAll(async () => {
   // Deja rastro de qué base usó cada archivo: sin esto, depurar un test que
   // falla solo dentro de la suite es adivinar.
   if (process.env.VITEST_DB_DEBUG) {
     console.log(`[test-db] ${nombreDelArchivo} → ${baseDelArchivo}`);
   }
+
+  // El `AnchorPort` se construye explícitamente, igual que en `server.ts`: la
+  // suite es otro proceso que lo usa, y hace el mismo arranque. Sin
+  // `ANCHOR_MODE` cae a `simulated`, que es lo que la suite quiere y lo único
+  // que no toca la red.
+  //
+  // **Import dinámico, y acá está el porqué:** `../src/lib/anchor` importa
+  // `../src/lib/db`, que lee `DATABASE_URL` al importarse. Un `import` en la
+  // cabecera de este archivo se evalúa ANTES del cuerpo —o sea antes de que las
+  // líneas de arriba apunten la variable a la base de este archivo— y la suite
+  // entera se cae con "no such table: Project" contra la plantilla. Es la misma
+  // trampa que el comentario del encabezado, mordiendo desde otro ángulo.
+  const { initAnchorPort } = await import("../src/lib/anchor.js");
+  await initAnchorPort();
 });
 
 afterAll(() => {
