@@ -35,7 +35,7 @@ const ENTREGABLE = "docs/milestone-3-implementacion/UI-implementation-plan.md";
 const DONDE_SE_RECLAMA = ["apps/web/src", "apps/web/e2e", "apps/api/test"];
 
 // **El piso, no la meta.** Sube con cada rebanada; no baja nunca.
-const COBERTURA_MINIMA = 35;
+const COBERTURA_MINIMA = 38;
 
 // El patrón del entregable: ROLE-AREA...-NNN, con UNO O MÁS segmentos entre el
 // rol y el número.

@@ -138,6 +138,25 @@ export interface DeveloperUnit {
   projectName: string
 }
 
+/**
+ * Fila 44b — la unidad tal cual la guarda el proyecto, del lado del developer.
+ *
+ * Es la fila cruda de `Unit`: el endpoint por proyecto hace `selectAll()` y no
+ * cruza con el investor, así que acá hay `investorId` y nunca un nombre. Por
+ * eso la pantalla rotula "asignada / sin asignar" y no una persona (regla 17).
+ */
+export interface DeveloperProjectUnit {
+  id: string
+  projectId: string
+  unitReference: string
+  status: string
+  floor: number | null
+  sizeM2: number | null
+  priceMinorUnits: number | null
+  currency: string | null
+  investorId: string | null
+}
+
 /** Fila 14 — las unidades del investor, con el avance de SU proyecto (D-029). */
 export interface InvestorUnit {
   id: string

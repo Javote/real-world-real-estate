@@ -1,6 +1,6 @@
 import { useQuery } from '@tanstack/react-query'
 import { createFileRoute, useNavigate } from '@tanstack/react-router'
-import { FileText, Layers, ShieldCheck, Upload, Users } from 'lucide-react'
+import { FileText, Home, Layers, ShieldCheck, Upload, Users } from 'lucide-react'
 import { api } from '#/api/port'
 import { DEV_ROLES } from '#/auth/roles'
 import { useRoleGuard } from '#/auth/useRoleGuard'
@@ -16,10 +16,14 @@ import { useTranslation } from '#/i18n/useTranslation'
 // Es el hub del proyecto: el paso 1 del flujo de evidencia entra por acá
 // ("Project detail → Upload evidence", M2-D1 §6).
 //
-// **La grilla tiene tres acciones y no cuatro.** La cuarta de la captura es
-// "Contratos y liberaciones", que **no se transcribe** (D-070): la plataforma
-// no administra fondos. Dejar el tile llevando a una pantalla que promete
-// liberar pagos sería afirmar algo que el producto no hace.
+// **La grilla tiene cuatro acciones y la captura muestra cuatro, pero no son
+// las mismas cuatro.** "Administrar unidades" y "Subir evidencia" salen tal
+// cual de la captura 37; "Contratos y liberaciones" **no se transcribe**
+// (D-070): la plataforma no administra fondos, y dejar el tile llevando a una
+// pantalla que promete liberar pagos sería afirmar algo que el producto no
+// hace. "Invitar inversor" (fila 39) todavía no tiene pantalla, y un tile entra
+// en el mismo commit que su destino, nunca antes (D-072). En su lugar quedan el
+// registro de auditoría y el directorio de inversores, que sí existen.
 
 // `.index` porque esta ruta TIENE hijas (`/upload`). Sin el sufijo, TanStack la
 // trata como layout de todo lo que cuelga de `/developer/project/:projectId` y
@@ -74,6 +78,17 @@ function DeveloperProjectDetail() {
         </div>
 
         <div className="grid grid-cols-2 gap-s3">
+          <ActionCard
+            title={t('developer.project.unitsAction')}
+            description={t('developer.project.unitsDescription')}
+            icon={Home}
+            onClick={() =>
+              void navigate({
+                to: '/developer/project/$projectId/units',
+                params: { projectId }
+              })
+            }
+          />
           <ActionCard
             title={t('developer.project.uploadAction')}
             description={t('developer.project.uploadDescription')}

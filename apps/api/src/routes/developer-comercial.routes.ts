@@ -131,6 +131,16 @@ router.patch(
       .returningAll()
       .executeTakeFirstOrThrow();
 
+    // Regla 7: editar una unidad es una mutación relevante — cambia el precio,
+    // la superficie o el estado comercial de algo que después se invita y se
+    // contrata. El alta ya lo escribía; la edición se había quedado sin él.
+    await writeAuditLog({
+      actorUserId: req.user!.id,
+      action: "UPDATE_UNIT",
+      entityType: "Unit",
+      entityId: unidad.id
+    });
+
     return res.json(actualizada);
   }
 );

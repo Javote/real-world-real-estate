@@ -22,6 +22,7 @@ import type {
   AuditEvent,
   DeveloperProject,
   DeveloperProjectDetail,
+  DeveloperProjectUnit,
   DeveloperUnit,
   Evidence,
   InvestorUnit,
@@ -146,6 +147,27 @@ export const api = {
   },
 
   listDeveloperUnits: () => request<DeveloperUnit[]>('/api/v1/developer/units'),
+
+  // ── Unidades de un proyecto (M2-D5 fila 44b) ─────────────────────────────
+  //
+  // `unitReference` solo entra en el alta: el PATCH del endpoint no lo acepta,
+  // porque la referencia es la identidad comercial de la unidad y renombrarla
+  // rompería cualquier contrato o invitación que ya la nombre.
+
+  listProjectUnits: (projectId: string) =>
+    request<DeveloperProjectUnit[]>(`/api/v1/developer/projects/${projectId}/units`),
+
+  createProjectUnit: (
+    projectId: string,
+    unidad: { unitReference: string; floor?: number; sizeM2?: number }
+  ) =>
+    request<DeveloperProjectUnit>(
+      `/api/v1/developer/projects/${projectId}/units`,
+      jsonInit('POST', unidad)
+    ),
+
+  updateUnit: (unitId: string, cambios: { floor?: number; sizeM2?: number }) =>
+    request<DeveloperProjectUnit>(`/api/v1/developer/units/${unitId}`, jsonInit('PATCH', cambios)),
 
   getDeveloperProgress: () => request<ProgressRow[]>('/api/v1/developer/progress'),
 
