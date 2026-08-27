@@ -104,7 +104,11 @@ inexacto: el adaptador no cambiaba, pero **nadie lo construía** — pedir `real
 remitía a esta misma rebanada. Ahora sí: lo que falta para Preprod es la cuenta de Blockfrost y una
 wallet fondeada, nada de código.
 
-Queda el `reconcile()`/`verify()` completo de la rebanada C, que necesita un indexer.
+De la rebanada **C** está lo mínimo: `confirmedAt(txid)` en el puerto, que responde con el POSIX ms
+del bloque o `null`. **Existe porque `verify()` no servía**: devuelve un `AnchorProof`, que exige
+`outputRef` y `datum` —cosas de un anclaje **con hilo**—, así que para uno por metadata daba `null`,
+indistinguible de "no confirmó". Queda el `reconcile()`/`verify()` completo, que necesita un
+indexer.
 
 ## Comandos
 

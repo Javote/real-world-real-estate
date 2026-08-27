@@ -3,6 +3,7 @@ import { merkleProof } from "@plataforma/shared";
 import { type Request, Router } from "express";
 import { z } from "zod";
 import { createId } from "../db/id";
+import { reconciliarAnclajes } from "../domain/reconcile";
 import { anchorPort } from "../lib/anchor";
 import { db } from "../lib/db";
 import { storage } from "../lib/storage";
@@ -160,6 +161,26 @@ router.patch(
  * Idempotente (regla 8): si ese archivo ya tiene su anclaje, devuelve el mismo
  * evento en vez de gastar otra transacción.
  */
+/**
+ * `POST /api/v1/evidence/reconcile` — promueve a `Confirmed` los anclajes que
+ * ya entraron en un bloque (SPEC-013 §C).
+ *
+ * **Va antes de `/:id/anchor` a propósito:** Express matchea por orden, y
+ * `"reconcile"` encajaría en `:id` si se declarara después. El síntoma sería un
+ * 404 buscando una evidencia con id "reconcile".
+ *
+ * Sin body y sin parámetros: revisa lo que haya pendiente. Es idempotente por
+ * construcción —un evento ya confirmado no vuelve a consultarse— así que
+ * dispararlo de más no cuesta nada.
+ *
+ * Lo dispara alguien de afuera: hoy a mano, mañana un cron de GitHub Actions.
+ * **Nunca un `setInterval` acá adentro** (D-003 · D-040): con el servicio
+ * dormido a los 15 minutos, un timer interno deja de contar y nadie se entera.
+ */
+router.post("/reconcile", requireRole("admin"), async (_req, res) => {
+  res.json(await reconciliarAnclajes());
+});
+
 router.post(
   "/:id/anchor",
   requireRole("admin"),

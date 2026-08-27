@@ -64,6 +64,12 @@ export interface LucidAnchorOptions {
   validityWindowMs?: number;
   /** Reloj inyectable: los tests fijan el tiempo, no lo padecen. */
   now?: () => number;
+  /**
+   * Para `confirmedAt()`. Opcional a propósito: contra el `Emulator` y contra
+   * el devnet no hay Blockfrost, y ahí `confirmedAt()` devuelve `null` —lo que
+   * es honesto, no roto: sin fuente no se afirma que algo confirmó.
+   */
+  blockfrost?: { url: string; apiKey: string };
 }
 
 export class LucidAnchorAdapter implements AnchorPort {
@@ -74,17 +80,20 @@ export class LucidAnchorAdapter implements AnchorPort {
   private readonly now: () => number;
 
   private readonly validityWindowMs: number;
+  private readonly blockfrost: { url: string; apiKey: string } | undefined;
 
   private constructor(
     lucid: LucidEvolution,
     refs: StageScriptRefs,
     now: () => number,
-    validityWindowMs: number
+    validityWindowMs: number,
+    blockfrost: { url: string; apiKey: string } | undefined
   ) {
     this.lucid = lucid;
     this.refs = refs;
     this.now = now;
     this.validityWindowMs = validityWindowMs;
+    this.blockfrost = blockfrost;
   }
 
   /** La dirección del script, derivada del blueprint con el admin aplicado. */
@@ -110,7 +119,8 @@ export class LucidAnchorAdapter implements AnchorPort {
       options.lucid,
       refs,
       options.now ?? (() => Date.now()),
-      options.validityWindowMs ?? VALIDITY_WINDOW_MS
+      options.validityWindowMs ?? VALIDITY_WINDOW_MS,
+      options.blockfrost
     );
   }
 
@@ -207,6 +217,33 @@ export class LucidAnchorAdapter implements AnchorPort {
     const confirmado = await this.lucid.awaitTx(txid);
     if (!confirmado) return null;
     return this.threadProof(txid);
+  }
+
+  /**
+   * Una sola consulta a Blockfrost: `/txs/{hash}` responde 404 mientras la
+   * transacción no esté en un bloque, y trae `block_time` en segundos cuando sí.
+   *
+   * **`fetch` pelado y no un cliente**: es un GET a un endpoint que devuelve un
+   * campo. Meter una dependencia para eso sería pagar superficie por nada, y el
+   * provider de Lucid no expone la consulta —`awaitTx` **bloquea** hasta que
+   * confirme, que es justo lo que no queremos en una lectura.
+   */
+  async confirmedAt(txid: string): Promise<number | null> {
+    if (!this.blockfrost) return null;
+
+    const res = await fetch(`${this.blockfrost.url}/txs/${txid}`, {
+      headers: { project_id: this.blockfrost.apiKey }
+    });
+
+    // 404 es la respuesta normal de una transacción que todavía no entró en un
+    // bloque, no un error que haya que propagar.
+    if (res.status === 404) return null;
+    if (!res.ok) {
+      throw new Error(`Blockfrost respondió ${res.status} al consultar ${txid}`);
+    }
+
+    const cuerpo = (await res.json()) as { block_time?: number };
+    return typeof cuerpo.block_time === "number" ? cuerpo.block_time * 1000 : null;
   }
 
   async awaitConfirmation(txid: string): Promise<AnchorProof> {

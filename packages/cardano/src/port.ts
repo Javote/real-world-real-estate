@@ -88,6 +88,20 @@ export interface AnchorPort {
   anchorCommitment(input: CommitmentAnchorInput): Promise<MetadataAnchorReceipt>;
   verify(txid: string): Promise<AnchorProof | null>;
   awaitConfirmation(txid: string): Promise<AnchorProof>;
+  /**
+   * ¿Está esta transacción en la cadena? Devuelve el **POSIX ms del bloque**, o
+   * `null` si todavía no confirmó.
+   *
+   * **Existe porque `verify()` no sirve para esto.** `verify()` devuelve un
+   * `AnchorProof`, que exige `outputRef` y `datum`: los tiene un anclaje **con
+   * hilo**, y no los tiene uno por metadata —el de la evidencia—. Preguntarle a
+   * `verify()` por un anclaje de metadata da `null`, que es indistinguible de
+   * "no confirmó" para una transacción que sí está en la cadena.
+   *
+   * Es lo mínimo que hace falta para promover `Pending` → `Confirmed`
+   * (SPEC-013 §C, `reconcile()` en lectura).
+   */
+  confirmedAt(txid: string): Promise<number | null>;
 }
 
 /**

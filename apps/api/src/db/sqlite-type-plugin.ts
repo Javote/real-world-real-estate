@@ -19,8 +19,20 @@ const TIMESTAMP_COLUMNS = new Set([
   "updatedAt",
   "certifiedAt",
   "estimatedDelivery",
-  "uploadedAt"
+  "uploadedAt",
+  // 2026-08-27: faltaba, y `types.ts` la declara `SqliteTimestamp` —o sea `Date`
+  // al leer—. Volvía como `number`, con el typechecker diciendo lo contrario.
+  // Era inofensivo mientras SIEMPRE fue `null`: la reconciliación es lo primero
+  // que la escribe.
+  "blockTimestamp"
 ]);
+
+// ⚠ Siguen faltando cinco, todas declaradas `SqliteTimestamp` en `types.ts` y
+// todas volviendo como `number`: `compiledAt`, `readAt`, `releasedAt`,
+// `respondedAt`, `signedAt`. No se agregan acá de arrastre porque **cambia la
+// forma en el JSON de la API** —`Date` serializa a string ISO, `number` a
+// número— y esas cinco ya tienen datos y consumidores en el front. Es una
+// rebanada propia, con su verificación del lado del web.
 
 const BOOLEAN_COLUMNS = new Set(["isActive", "authoritative", "validationCritical"]);
 

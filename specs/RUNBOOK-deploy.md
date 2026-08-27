@@ -225,12 +225,25 @@ curl -s -X POST https://preprod.koios.rest/api/v1/tx_metadata \
 La metadata trae la etiqueta `1904` con `h` (el SHA-256) y `r` (una referencia **opaca**, nunca el
 nombre del archivo ni PII — regla 2).
 
-**El estado queda `Pending` para siempre, y es correcto.** El adaptador real devuelve `Pending` y
-**nada en el runtime promueve a `Confirmed`**: `awaitConfirmation()` y `reconcile()` son la rebanada
-C de SPEC-013 y necesitan un indexer. O sea que la evidencia se ancla de verdad, el TXID es real y
-verificable, y la UI dice "Pendiente" igual. Es la dirección segura de la regla 17 —nunca afirmamos
-una prueba que no comprobamos— pero conviene saberlo antes de mostrarle la pantalla a alguien: hoy
-**nada llega nunca a "Verificado"**.
+**El anclaje nace `Pending` y hay que reconciliarlo.** Anclar deja el evento en `Pending` porque en
+ese momento la transacción está *enviada*, no confirmada, y la regla 17 prohíbe afirmar una prueba
+sin sustanciarla. Quien la promueve a `Confirmed` es:
+
+```bash
+curl -s -X POST https://propnexus-api.onrender.com/api/v1/evidence/reconcile \
+  -H "Authorization: Bearer <token de admin>"      # → {"revisados":N,"confirmados":M}
+```
+
+Consulta `/txs/{hash}` en Blockfrost por cada pendiente con TXID y confirma los que ya entraron en
+un bloque. Es idempotente: dispararlo de más no cuesta nada, y un evento sin TXID no se toca —ahí no
+hay nada que consultar—.
+
+**Hay que dispararlo desde afuera, y no es pereza:** un `setInterval` dentro de la API deja de contar
+cuando Render duerme el servicio a los 15 minutos, y el free tier no tiene workers (D-003 · D-040).
+Hoy se corre a mano; el paso natural es un cron de GitHub Actions contra ese mismo endpoint.
+
+En Preprod un bloque tarda ~20 s, así que reconciliar inmediatamente después de anclar suele devolver
+`confirmados: 0`. No es un error: es que todavía no confirmó. Volvé a correrlo.
 
 ## 2 · Deploy de todos los días
 

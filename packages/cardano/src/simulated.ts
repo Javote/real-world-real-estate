@@ -146,6 +146,16 @@ export class SimulatedAnchorAdapter implements AnchorPort {
     return proof;
   }
 
+  /**
+   * En el simulador todo confirma al instante, incluidos los anclajes por
+   * metadata —que no dejan `AnchorProof`—. Por eso no se delega en `verify()`:
+   * un anclaje de evidencia daría `null` y la reconciliación creería que nunca
+   * confirmó.
+   */
+  async confirmedAt(_txid: string): Promise<number | null> {
+    return this.now();
+  }
+
   private async commit(txid: string, datum: StageDatum): Promise<AnchorReceipt> {
     const outputRef: OutputRef = `${txid}#0`;
     await this.store.put({ outputRef, assetName: datum.stageRef, datum, spentByTxid: null });

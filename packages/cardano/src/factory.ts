@@ -89,5 +89,9 @@ export async function createAnchorPort(options: AnchorPortOptions): Promise<Anch
   const lucid = await Lucid(new Blockfrost(url, apiKey), network as Network);
   lucid.selectWallet.fromSeed(seed);
 
-  return LucidAnchorAdapter.create({ lucid, network: network as Network });
+  return LucidAnchorAdapter.create({
+    lucid,
+    network: network as Network,
+    blockfrost: { url, apiKey }
+  });
 }
