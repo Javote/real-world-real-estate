@@ -55,6 +55,30 @@ componente: sin TXID no hay forma de pedirle que diga "Verificado".
 la copia y vuelve inverificable el anclaje (regla 16). Trunca 6+4 **contando el prefijo `0x`**, que
 es una contradicción del entregable resuelta en D-069.
 
+## Lo que la captura pide y el contrato no da
+
+Sección viva, **igual que las Trampas**: cuando una captura muestre un dato que no podés sustanciar,
+agregalo acá el mismo día.
+
+El criterio no se negocia y es la regla 17 llevada a los datos: **sin dato, no se dibuja**. Nada de
+placeholders, nada de derivar un valor parecido para que la pantalla "se vea como la captura". Una
+pantalla a la que le falta un campo se nota y se arregla; una que muestra un campo inventado parece
+terminada y nadie la vuelve a mirar.
+
+**La deuda se declara en el prop que no se puede llenar**, no en un documento aparte: ahí es donde
+la va a leer quien intente usarlo. Esta tabla solo dice dónde está cada una.
+
+| Qué falta | Dónde está declarada | Qué costaría |
+|---|---|---|
+| Pill de estado del investor (Active / Pending / Completed) | `InvestorCard` prop `status` | Contrato: `investorDirectoryEntrySchema` no expone `status`, y el endpoint hace `innerJoin Contract` |
+| Nombre de la organización ("Grupo Alpine") | `ProjectCard` prop `developerName` | 🟡 Migración: no hay entidad de organización. `User.fullName` es una persona |
+| "Price from" en el listado del investor | `ProjectCard` prop `priceLabel` | Endpoint: `GET /projects` no agrega el mínimo de las unidades. `GET /developer/projects` **ya lo hace** — es copiar esa agregación |
+
+**Fijate si el dato existe antes de declararlo ausente.** El "Price from" se declaró ausente y no lo
+estaba: el precio existe en `UnitTable.priceMinorUnits`, solo que a nivel unidad. Eso convirtió una
+supuesta migración en un `min()` en la query, y se resolvió el mismo día para el listado del
+developer. Son deudas MUY distintas y la diferencia solo aparece si mirás el esquema.
+
 ## Los tokens no se tocan a mano
 
 `src/styles.test.ts` lee **el entregable** —no una copia— y verifica que los 20 colores normativos

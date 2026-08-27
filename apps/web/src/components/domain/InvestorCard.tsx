@@ -42,7 +42,8 @@ interface InvestorCardProps {
    * dice "Active" sin dato detrás es exactamente la señal sin sustento que
    * prohíbe la regla 17.
    *
-   * Cuando el contrato crezca, esto vuelve a ser obligatorio.
+   * Cuando el contrato crezca, esto vuelve a ser obligatorio. El índice de
+   * estas deudas está en `apps/web/CLAUDE.md`.
    */
   status?: { tone: StatusTone; label: string }
   onOpen?: () => void
