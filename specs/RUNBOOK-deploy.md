@@ -173,9 +173,18 @@ Al sincronizar el Blueprint, Render pide los tres nuevos `sync: false`: `S3_ENDP
 
 ## 2 · Deploy de todos los días
 
-Push a `main`. Render construye por servicio y solo el que corresponda: los `buildFilter` de
-`render.yaml` hacen que un commit de `docs/` o `specs/` no reconstruya nada, lo que además cuida el
-presupuesto de horas.
+Push a `main`. Render reconstruye **los dos servicios en cada push**, toque lo que toque.
+
+**Los `buildFilter` están declarados y no filtran.** Medido el 2026-08-27: el commit `ee357df` tocó
+solo tres `.md` —sin `render.yaml` de por medio— y disparó deploys nuevos en los dos servicios, con
+`trigger = new_commit`, que es justo el caso donde deberían aplicar. Los filtros están bien
+registrados del lado de Render (`render services --output json` los muestra) y ninguna de las tres
+excepciones que documenta Render —cambios al blueprint, deploys manuales, cambios de
+configuración— corresponde. **Causa sin determinar.**
+
+Lo que cuesta: minutos de build y un reinicio en frío por commit. Ya **no** cuesta evidencia — desde
+R2, un redeploy no se lleva nada (§1.4). Antes de asumir que un commit de documentación es gratis,
+verificá: no lo es.
 
 **GitHub Actions no despliega** (D-010, núcleo preservado por D-039). La puerta es el único juez de
 si un cambio puede pushearse; Render solo reacciona a lo que ya pasó por ahí.

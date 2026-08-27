@@ -141,7 +141,7 @@ Ningún validador custodia ni transfiere valor, en ninguna fase (D-021).
 
 | Pieza | Estado | Decisión |
 |---|---|---|
-| **`render.yaml`** (Blueprint: 2 servicios, `plan: free`, `rootDir`, `buildFilter`) | ● — **escrito** | D-041 |
+| **`render.yaml`** (Blueprint: 2 servicios, `plan: free`, `rootDir`, `buildFilter`) | ● — escrito y desplegado; **el `buildFilter` no filtra**, medido el 2026-08-27 (RUNBOOK §2) | D-041 |
 | Runtime: **nativo de Node**, sin imagen propia · `NODE_VERSION=22` (la del CI) | ● — declarado | D-041 |
 | `startCommand` de la API: migraciones **y después** el servidor | ● — verificado sobre el compilado | D-012 · D-040 |
 | Script `start` de `apps/web` (`node .output/server/index.mjs`) | ● — respeta `PORT`, verificado | D-041 |

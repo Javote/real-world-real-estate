@@ -36,8 +36,11 @@ services:
     region: oregon
     branch: main
     rootDir: .
-    # Solo redeploya si cambió algo que la API compila. Sin esto, cada commit
-    # de docs reconstruye los dos servicios y consume horas del presupuesto.
+    # Declarado para que solo redeploye si cambió algo que la API compila.
+    # ⚠ MEDIDO 2026-08-27: NO filtra. Un commit de solo `.md` reconstruyó los dos
+    # servicios igual, con `trigger = new_commit`. Se deja declarado —es correcto
+    # y está bien registrado del lado de Render— pero no cuentes con el ahorro.
+    # RUNBOOK §2.
     buildFilter:
       paths:
         - apps/api/**
