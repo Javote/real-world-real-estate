@@ -16,17 +16,15 @@ import { useTranslation } from '#/i18n/useTranslation'
 // Es el hub del proyecto: el paso 1 del flujo de evidencia entra por acá
 // ("Project detail → Upload evidence", M2-D1 §6).
 //
-// **La grilla tiene cuatro acciones y tres son las de la captura**:
-// "Administrar unidades", "Invitar inversor" y "Subir evidencia". La cuarta de
-// la captura es "Contratos y liberaciones", que **no se transcribe** (D-070):
-// la plataforma no administra fondos, y dejar el tile llevando a una pantalla
-// que promete liberar pagos sería afirmar algo que el producto no hace. En su
-// lugar va el registro de auditoría, que es el destino más cercano a lo que el
-// developer busca ahí: el rastro de lo que pasó con el proyecto.
+// **Los cuatro tiles son los cuatro de la captura.** El de contratos dice
+// "Contratos" y no "Contratos y liberaciones" porque la pantalla a la que
+// lleva es el registro de los acuerdos, no un flujo de pagos (D-070): el tile
+// no puede prometer lo que su destino no hace.
 //
-// El tile de "Inversores" que ocupaba ese lugar se fue con esta rebanada: iba
-// al directorio GLOBAL, no a nada del proyecto, y desde el panel ya se llega.
-// La acción que sí es del proyecto es invitar.
+// Los dos tiles que ocupaban esos lugares mientras las pantallas no existían
+// —"Inversores" y "Registro de auditoría"— se fueron de acá: los dos iban a
+// destinos GLOBALES, no a nada de este proyecto. Viven en los accesos del
+// panel, que es la sección que D-072 creó justamente para eso.
 
 // `.index` porque esta ruta TIENE hijas (`/upload`). Sin el sufijo, TanStack la
 // trata como layout de todo lo que cuelga de `/developer/project/:projectId` y
@@ -116,10 +114,15 @@ function DeveloperProjectDetail() {
             }
           />
           <ActionCard
-            title={t('developer.project.auditAction')}
-            description={t('developer.project.auditDescription')}
+            title={t('developer.project.contractsAction')}
+            description={t('developer.project.contractsDescription')}
             icon={FileText}
-            onClick={() => void navigate({ to: '/developer/audit-log' })}
+            onClick={() =>
+              void navigate({
+                to: '/developer/project/$projectId/contracts',
+                params: { projectId }
+              })
+            }
           />
         </div>
       </section>

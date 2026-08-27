@@ -176,6 +176,29 @@ export interface Invitation {
   createdAt: string
 }
 
+/**
+ * Filas 40-41 — el contrato como REGISTRO (D-070).
+ *
+ * No hay etapas liberadas ni montos por etapa: la plataforma no administra
+ * fondos. Lo que hay es quién acordó qué sobre qué unidad, en qué estado quedó
+ * la unidad y con qué anclaje se registró el acuerdo.
+ *
+ * `txid` es `null` mientras el anclaje no confirmó, y eso ES el estado
+ * pendiente: `VerificationBadge` recibe el TXID, no un booleano (regla 17).
+ */
+export interface DeveloperContract {
+  id: string
+  unitId: string
+  unitReference: string
+  unitStatus: string
+  investorName: string
+  totalMinorUnits: number
+  currency: string
+  signedAt: string | null
+  txid: string | null
+  commitment: string | null
+}
+
 /** Fila 14 — las unidades del investor, con el avance de SU proyecto (D-029). */
 export interface InvestorUnit {
   id: string

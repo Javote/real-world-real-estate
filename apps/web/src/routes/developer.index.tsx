@@ -1,6 +1,6 @@
 import { useQuery } from '@tanstack/react-query'
 import { createFileRoute, useNavigate } from '@tanstack/react-router'
-import { Building2, FileCheck2, Home, Plus, TrendingUp, Users } from 'lucide-react'
+import { Building2, FileCheck2, Home, Plus, ScrollText, TrendingUp, Users } from 'lucide-react'
 import { api } from '#/api/port'
 import { DEV_ROLES } from '#/auth/roles'
 import { useRoleGuard } from '#/auth/useRoleGuard'
@@ -108,6 +108,12 @@ function DeveloperPanel() {
             description={t('panel.developer.docsHint')}
             icon={FileCheck2}
             onClick={() => void navigate({ to: '/developer/documentation' })}
+          />
+          <ActionCard
+            title={t('panel.developer.auditAction')}
+            description={t('panel.developer.auditHint')}
+            icon={ScrollText}
+            onClick={() => void navigate({ to: '/developer/audit-log' })}
           />
         </div>
       </section>

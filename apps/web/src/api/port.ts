@@ -20,6 +20,7 @@ import type {
 import { clearSession, getSession } from '../auth/session'
 import type {
   AuditEvent,
+  DeveloperContract,
   DeveloperProject,
   DeveloperProjectDetail,
   DeveloperProjectUnit,
@@ -177,6 +178,17 @@ export const api = {
    * recibe pesos o dólares del formulario y hace la cuenta una sola vez, acá
    * llega ya convertido.
    */
+  /**
+   * Filas 40-41 — los contratos del proyecto como registro (D-070).
+   *
+   * **No hay método para liberar una etapa y no lo va a haber acá.** El
+   * endpoint existe en el backend como deuda declarada de un encuadre viejo;
+   * exponerlo en el `ApiPort` sería el primer paso para que alguien construya
+   * el botón que D-070 declaró que no es el producto.
+   */
+  listProjectContracts: (projectId: string) =>
+    request<DeveloperContract[]>(`/api/v1/developer/projects/${projectId}/contracts`),
+
   createInvitation: (
     projectId: string,
     invitacion: {

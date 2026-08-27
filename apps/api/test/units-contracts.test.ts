@@ -162,6 +162,38 @@ describe("el ciclo unidad → invitación → contrato → release", () => {
     expect(ajeno.status).toBe(403);
   });
 
+  // **Fila 40-41 · DEV-CONTRACTS-LIST-001** — el contrato como REGISTRO (D-070).
+  //
+  // El GET pasa por dos left joins —Invitation y OnChainEvent— para alcanzar el
+  // anclaje, que lo emite el accept y no el contrato. Un left join que matchee
+  // de más devuelve el mismo contrato dos veces y la lista miente sin fallar,
+  // así que lo primero que se afirma es la CARDINALIDAD.
+  it("el listado de contratos del proyecto trae el registro y su anclaje", async () => {
+    const res = await request(app)
+      .get(`/api/v1/developer/projects/${projectId}/contracts`)
+      .set("Authorization", `Bearer ${tokenDev}`);
+
+    expect(res.status).toBe(200);
+
+    const delContrato = res.body.filter((c: { id: string }) => c.id === contractId);
+    expect(delContrato).toHaveLength(1);
+
+    const contrato = delContrato[0];
+    expect(contrato.unitId).toBe(unitId);
+    expect(contrato.unitReference).toBe("7C");
+    // Lo que D-070 nombra como lo que esta superficie SÍ puede mostrar.
+    expect(contrato.unitStatus).toBe("sold");
+    expect(contrato.investorName).toBeTruthy();
+    expect(contrato.signedAt).not.toBeNull();
+    // El anclaje del acuerdo: "se registró en este momento" (D-026).
+    expect(contrato.txid).toBeTruthy();
+    expect(contrato.commitment).toMatch(/^[0-9a-f]{64}$/);
+
+    // Nada del encuadre de pagos: el registro no expone etapas liberadas.
+    expect(contrato.releases).toBeUndefined();
+    expect(contrato.stagesReleased).toBeUndefined();
+  });
+
   it("el release aparece como artefacto del dossier de la unidad", async () => {
     const res = await request(app)
       .get(`/api/v1/investor/units/${unitId}/dossier`)

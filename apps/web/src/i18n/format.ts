@@ -23,6 +23,30 @@ export function formatCurrency(minorUnits: number, currency: string, locale: Loc
   }).format(minorUnits / 100)
 }
 
+/**
+ * Montos en la forma compacta de las StatCards: "US$ 8,4 M".
+ *
+ * Es la presentación que el entregable usa para dinero en un tile —la captura
+ * 37 muestra "US$ 8.4M"— y existe por una razón de layout, no de gusto: el
+ * número de un StatCard va a 28px y un tile de una grilla de tres no entra un
+ * monto completo sin partirlo en tres líneas.
+ *
+ * El input sigue siendo la unidad mínima entera (regla 1): la división la hace
+ * `Intl`, igual que en `formatCurrency`.
+ */
+export function formatCurrencyCompact(
+  minorUnits: number,
+  currency: string,
+  locale: Locale
+): string {
+  return new Intl.NumberFormat(locale, {
+    style: 'currency',
+    currency,
+    notation: 'compact',
+    maximumFractionDigits: 1
+  }).format(minorUnits / 100)
+}
+
 /** Números grandes en la forma compacta de las StatCards: "4,0 M". */
 export function formatCompact(value: number, locale: Locale): string {
   return new Intl.NumberFormat(locale, { notation: 'compact', maximumFractionDigits: 1 }).format(
