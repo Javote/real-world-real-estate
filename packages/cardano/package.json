@@ -10,7 +10,8 @@
     "prepare": "tsc -p tsconfig.json",
     "typecheck": "tsc -p tsconfig.json --noEmit",
     "test": "vitest run --exclude 'src/yaci.test.ts'",
-    "test:yaci": "YACI_TEST=1 vitest run src/yaci.test.ts"
+    "test:yaci": "YACI_TEST=1 vitest run src/yaci.test.ts",
+    "wallet:new": "node scripts/wallet-preprod.mjs"
   },
   "dependencies": {
     "@harmoniclabs/bytestring": "^1.0.0",

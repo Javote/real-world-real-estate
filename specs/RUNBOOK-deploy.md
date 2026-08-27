@@ -171,6 +171,67 @@ invierte el orden, la API queda caída hasta que se carguen.
 Al sincronizar el Blueprint, Render pide los tres nuevos `sync: false`: `S3_ENDPOINT`,
 `S3_ACCESS_KEY_ID` y `S3_SECRET_ACCESS_KEY`.
 
+### 1.5 · Anclaje real en Preprod
+
+Opcional: la instancia funciona con `ANCHOR_MODE=simulated`, que es el default. Esto la pasa a
+anclar de verdad en Cardano Preprod.
+
+1. **Blockfrost** — cuenta gratis, proyecto **Preprod**, copiar la key (empieza con `preprod`).
+2. **La wallet de servicio**, con el generador del repo:
+
+   ```bash
+   BLOCKFROST_API_KEY='<key preprod>' pnpm --filter @plataforma/cardano wallet:new
+   ```
+
+   Escribe la seed en `~/propnexus-wallet-preprod.txt` con permisos `600` y **no la imprime**;
+   imprime la dirección, que es pública. Se niega a pisar un archivo existente.
+
+   ⚠ **La seed no se rota.** La dirección del script se deriva del `admin`, que sale de esta
+   wallet: reemplazarla deja inalcanzables los hilos ya anclados, sin ningún error visible.
+
+3. **Fondear** la dirección desde el [faucet](https://docs.cardano.org/cardano-testnets/tools/faucet)
+   — **Preprod**, no Preview. Un anclaje cuesta ~0,17 tADA, así que alcanza de sobra.
+
+   Verificar el saldo sin necesitar la key, contra Koios:
+
+   ```bash
+   curl -s -X POST https://preprod.koios.rest/api/v1/address_info \
+     -H 'Content-Type: application/json' -d '{"_addresses":["addr_test1..."]}'
+   ```
+
+4. **Probar en local antes de tocar el deploy**, que es el orden que ya usamos con R2:
+
+   ```bash
+   export BLOCKFROST_API_KEY='<key>'
+   export SERVICE_WALLET_SEED="$(cat ~/propnexus-wallet-preprod.txt)"
+   DATABASE_URL='file:./apps/api/.data/dev.db' JWT_SECRET=local \
+   ANCHOR_MODE=real CARDANO_NETWORK=Preprod PORT=8788 \
+   node apps/api/dist/src/server.js
+   ```
+
+   La línea a mirar es `AnchorPort listo en modo "real"`. Si dice `simulated`, la variable no llegó;
+   si el proceso murió, el error dice qué falta (D-042).
+
+5. **En Render**, sobre `propnexus-api`: `ANCHOR_MODE=real`, `BLOCKFROST_API_KEY`,
+   `SERVICE_WALLET_SEED`. Las tres de runtime, toman con un restart.
+
+**Verificar un anclaje contra la cadena**, sin la key, con el TXID que devuelve el endpoint:
+
+```bash
+curl -s -X POST https://preprod.koios.rest/api/v1/tx_metadata \
+  -H 'Content-Type: application/json' -d '{"_tx_hashes":["<txid>"]}'
+```
+
+La metadata trae la etiqueta `1904` con `h` (el SHA-256) y `r` (una referencia **opaca**, nunca el
+nombre del archivo ni PII — regla 2).
+
+**El estado queda `Pending` para siempre, y es correcto.** El adaptador real devuelve `Pending` y
+**nada en el runtime promueve a `Confirmed`**: `awaitConfirmation()` y `reconcile()` son la rebanada
+C de SPEC-013 y necesitan un indexer. O sea que la evidencia se ancla de verdad, el TXID es real y
+verificable, y la UI dice "Pendiente" igual. Es la dirección segura de la regla 17 —nunca afirmamos
+una prueba que no comprobamos— pero conviene saberlo antes de mostrarle la pantalla a alguien: hoy
+**nada llega nunca a "Verificado"**.
+
 ## 2 · Deploy de todos los días
 
 Push a `main`. Render reconstruye **los dos servicios en cada push**, toque lo que toque.
