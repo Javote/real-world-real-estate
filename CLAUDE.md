@@ -266,3 +266,10 @@ Sección viva: agregá acá el mismo día que te muerda una. Las de cada frente 
 - **Editar un `package.json` sin correr `pnpm install` produce un verde falso.** Lo atrapa
   `pnpm install --frozen-lockfile` en CI, y alcanza. Un verde sobre el entorno equivocado es peor que
   un rojo.
+- **`pnpm.overrides` vive en `package.json` y pnpm 10+ dejó de leerlo.** El pin
+  `"packageManager": "pnpm@9.15.0"` es lo único que hoy lo sostiene: un pnpm más nuevo instalado en
+  la máquina delega a 9.15.0 y el override se aplica igual —lo prueba la línea 8 de `pnpm-lock.yaml`
+  y que `@types/express` resuelva a 5.0.6—, pero avisa `The "pnpm" field in package.json is no longer
+  read by pnpm`. **Ese warning no es ruido: es la cuenta regresiva.** El día que se suba el pin a
+  pnpm 10+, los overrides se ignoran **en silencio** y sin romper el build; hay que moverlos a
+  `pnpm-workspace.yaml` en el mismo commit que sube la versión.

@@ -36,7 +36,7 @@ Se hace una sola vez. Requiere cuentas en Render y Turso (las dos gratis, sin ta
 ```bash
 turso auth login                                  # abre el browser
 turso db create propnexus                         # free: 5 GB · 500M lecturas · 10M escrituras/mes
-turso db show propnexus --url                     # → libsql://propnexus-<org>.turso.io
+turso db show propnexus --url                     # → libsql://propnexus-<org>.<region>.turso.io
 turso db tokens create propnexus                  # → el DATABASE_AUTH_TOKEN
 ```
 
@@ -80,19 +80,40 @@ browser muestra un error de CORS. No es la API caída — es que su lista blanca
 
 El free tier **no da shell remota**, así que el seed se corre desde tu máquina contra Turso:
 
+**El seed NO imprime las passwords que vinieron del entorno** — imprime `(desde
+SEED_ADMIN_PASSWORD)`. Es deliberado, está fijado por el test *"NUNCA imprime una password que vino
+del entorno"* (`apps/api/test/seed-credentials.test.ts`) y es la razón por la que este
+procedimiento tiene **dos pasos**: si generás las passwords inline con `$(openssl …)`, nadie las ve
+nunca y quedan cinco cuentas cuyas credenciales no conoce nadie — sin shell remota para arreglarlo.
+
+Generalas y **guardalas primero**:
+
 ```bash
-DATABASE_URL='libsql://propnexus-<org>.turso.io' \
-DATABASE_AUTH_TOKEN='<token>' \
-SEED_ADMIN_PASSWORD="$(openssl rand -base64 24)" \
-SEED_DEMO_PASSWORD="$(openssl rand -base64 24)" \
+ADMIN_PW=$(openssl rand -base64 24)
+DEMO_PW=$(openssl rand -base64 24)
+echo "admin@example.com  → $ADMIN_PW"    # ← copialas al gestor de passwords AHORA
+echo "los otros cuatro   → $DEMO_PW"
+```
+
+Recién entonces, **en esa misma shell** (las variables solo existen ahí):
+
+```bash
+DATABASE_URL='libsql://propnexus-<org>.<region>.turso.io' \
+DATABASE_AUTH_TOKEN="$(turso db tokens create propnexus)" \
+SEED_ADMIN_PASSWORD="$ADMIN_PW" \
+SEED_DEMO_PASSWORD="$DEMO_PW" \
 JWT_SECRET=cualquier-cosa-el-seed-no-firma-nada \
 pnpm --filter @plataforma/api db:seed
 ```
 
+`$(turso db tokens create propnexus)` evita copiar y pegar el token. Los tokens son **aditivos**:
+crear uno nuevo no invalida el que ya está en Render. Lo que sí rompe la API desplegada es
+`turso db tokens invalidate`, que los mata **todos** de una — no lo corras.
+
 **Las passwords son obligatorias contra Turso y el seed revienta sin ellas** (D-047): las
 credenciales del seed local están publicadas en el repo, y sembrarlas en una instancia desplegada
-deja una cuenta admin de credenciales conocidas. El seed imprime al final las que usó — anotalas,
-son las que se le pasan a un reviewer.
+deja una cuenta admin de credenciales conocidas. Las que guardaste en el paso 1 son las que se le
+pasan a un reviewer.
 
 Las migraciones **no** hay que correrlas a mano: van en el `startCommand` de la API y son
 idempotentes (tabla `_migrations`).
