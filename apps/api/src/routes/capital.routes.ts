@@ -168,6 +168,8 @@ router.get("/capital/by-project", async (req, res) => {
         .reduce((acc, r) => acc + r.amountMinorUnits, 0),
       unitsSold: unidadesDel.filter((u) => u.investorId !== null).length,
       totalUnits: unidadesDel.length,
+      // Distintos, no contratos: quien compra dos unidades es un investor.
+      investors: new Set(delProyecto.map((c) => c.investorId)).size,
       currency: monedaUnica(delProyecto.map((c) => c.currency))
     };
   });

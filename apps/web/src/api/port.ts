@@ -3,6 +3,9 @@
 
 import type {
   Notification as AppNotification,
+  CapitalByProject,
+  CapitalMonthlyPoint,
+  CapitalSummary,
   CertifierAssignment,
   CertifierCertificate,
   CertifierKpis,
@@ -206,6 +209,17 @@ export const api = {
   getDeveloperProgress: () => request<ProgressRow[]>('/api/v1/developer/progress'),
 
   listInvestors: () => request<InvestorDirectoryEntry[]>('/api/v1/developer/investors'),
+
+  // ── Capital del developer (M2-D5 filas 42-43) ────────────────────────────
+  //
+  // **Montos DECLARADOS, no fondos que la plataforma tenga** (D-021): "capital
+  // levantado" es la suma de los contratos firmados.
+
+  getCapitalSummary: () => request<CapitalSummary>('/api/v1/developer/capital/summary'),
+
+  getCapitalMonthly: () => request<CapitalMonthlyPoint[]>('/api/v1/developer/capital/monthly'),
+
+  getCapitalByProject: () => request<CapitalByProject[]>('/api/v1/developer/capital/by-project'),
 
   createProject: (proyecto: {
     name: string

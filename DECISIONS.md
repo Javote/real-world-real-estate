@@ -22,7 +22,7 @@ ya no existen. Partirlo no pierde nada: el porqué sigue estando, deja de pesar.
 > se contradice internamente, (b) es un error de redacción, o (c) seguirlo al pie contradiría una
 > verdad del producto declarada por el dueño — **nunca por conveniencia**.
 >
-> **La numeración no se recicla.** Las decisiones nuevas siguen desde D-071.
+> **La numeración no se recicla.** Las decisiones nuevas siguen desde D-074.
 
 ## Desvíos vigentes
 
@@ -38,6 +38,7 @@ Todos se comunican en la entrega.
 | M2-D5 §2.1 usa notación de rutas Wouter | Las rutas se leen como **paths**, no como elección de router | (b) redacción | D-022 |
 | M2-D4 §Pattern 2 dice "First 6 characters **after** the `0x` prefix" y su ejemplo es `0xdcd5...7994`, que son 6 **contando** el prefijo | Gana el ejemplo: es la única de las cuatro menciones de la regla que muestra el resultado, y las otras tres dicen solo "6+4 characters" | (a) contradicción interna | D-069 |
 | M2-D1 §6 "Evidence flow" pasos 5-6: DEV *"Release stage N payment is enabled"*, INV *"Contract and **payments**… Releases by Stage"* | La plataforma **no administra fondos**: refleja y respalda la vida real, no la ejecuta. Sí puede mostrar el estado comercial de la unidad (vendida / disponible) | (c) verdad del producto | D-070 |
+| M2-D5 fila 42-43 lista un componente `Chart` que M2-D3 no define entre sus 36 | Las barras de la captura 42 son **composición de esa pantalla**, no una entrada nueva de la biblioteca | (a) contradicción interna | D-073 |
 | M2-D5 §3 asume tRPC-libre "REST over HTTPS"… y lo marca `[ASSUMPTION]` anulable | **Se confirma, no se anula**: la columna de endpoints de las 53 filas y la verificación externa por `curl` dependen de REST | — | D-066 |
 
 ---
@@ -262,6 +263,41 @@ interactivo.
 
 **La regla de orden que impone:** un tile entra en el mismo commit que su pantalla, nunca antes. Un
 destino que no existe se ve terminado y no lo está.
+
+## D-073 — El `Chart` de las filas 42-43 es composición de pantalla, no un componente nuevo
+
+**Desvío legítimo por la causal (a)** de la jerarquía de precedencia: *el entregable se contradice
+internamente* (2026-08-26).
+
+M2-D5 fila 42-43 lista `Chart (monthly + per-project)` entre los componentes de `/developer/capital`,
+y M2-D1 §5.2 lo describe: *"Monthly evolution bar chart, By Project breakdown with share-of-total
+bars."* Pero **`Chart` no está entre los 36 componentes de M2-D3 §Component Library**. Un entregable
+manda un componente que el otro no define, y SPEC-014 invariante 1 es taxativo: *"Ningún componente
+fuera de M2-D3. Uno nuevo es una decisión, no un archivo."*
+
+**Qué se miró antes de decidir.** La captura 42. Lo que dibuja son seis barras verticales con su
+valor encima y el nombre del mes debajo. **Sin ejes, sin grilla, sin leyenda, sin tooltip, sin
+interacción.** La altura de cada barra es un porcentaje; el color es `--color-primary`; el radio y
+la tipografía son tokens. No hay nada ahí que M2-D3 no provea ya.
+
+Y las *share-of-total bars* del desglose por proyecto **no son parte del problema**: son el
+`ProgressBar` de M2-D3, que existe desde la primera rebanada.
+
+**Lo que se hace:** las barras se arman **dentro de la ruta** `developer.capital.tsx`, con tokens y
+sin agregar nada a `components/domain/`. No se crea un componente `Chart`.
+
+**Lo que se descartó y por qué.** Crear `Chart.tsx` habría sido inventar una entrada de la
+biblioteca —con su anatomía, sus estados y sus reglas de uso— que ningún entregable especifica: el
+riesgo no es el archivo, es que la próxima pantalla lo herede y la biblioteca crezca por acumulación
+en vez de por decisión. Y una librería de gráficos, además, sería una dependencia nueva para dibujar
+seis rectángulos.
+
+**El criterio que fija, y es lo único que hay que recordar:** una composición se vuelve componente
+cuando la necesita una **segunda** superficie. Hoy son las barras verticales de una sola pantalla.
+El día que otra las pida, se extrae — y eso sí es una decisión, con su número.
+
+Es el mismo criterio con el que `PanelLayout` vive en `components/` sin ser de M2-D3: se extrajo
+porque lo repetían cuatro paneles y repetirlo garantizaba que se desincronizaran.
 
 ---
 

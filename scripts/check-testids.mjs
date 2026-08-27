@@ -56,7 +56,7 @@ function sinComentarios(fuente) {
 }
 
 // **El piso, no la meta.** Sube con cada rebanada; no baja nunca.
-const COBERTURA_MINIMA = 40;
+const COBERTURA_MINIMA = 42;
 
 // El patrón del entregable: ROLE-AREA...-NNN, con UNO O MÁS segmentos entre el
 // rol y el número.
