@@ -16,6 +16,11 @@ dist/
 # plantilla—. Una sola regla en vez de ocho líneas de sufijos de SQLite
 # (`-journal`, `-wal`, `-shm`) por base (SPEC-015 §7).
 apps/api/.data/
+# Y la MISMA regla sin anclar al package: correr el binario compilado desde la
+# raíz (`node apps/api/dist/src/server.js`, como en una prueba por CLI) resuelve
+# `file:./.data/dev.db` contra el cwd y deja una base acá arriba, que
+# `apps/api/.data/` no cubre. Pasó el 2026-08-27 y se coló en un commit.
+.data/
 
 # Rutas LEGADAS: hasta SPEC-015 §7 las bases vivían sueltas en `apps/api/`. Un
 # árbol viejo las tiene todavía, y sin estas líneas el primer `git add -A` las
