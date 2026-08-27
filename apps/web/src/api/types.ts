@@ -157,6 +157,25 @@ export interface DeveloperProjectUnit {
   investorId: string | null
 }
 
+/**
+ * Fila 39 — la invitación que el developer emite sobre una unidad.
+ *
+ * **No trae anclaje y no debería.** M2-D5 anota la fila con "→ anchor TXID",
+ * pero el POST no ancla: el commitment del ciclo se emite cuando el investor
+ * ACEPTA, porque hasta entonces no hay contrato del que hacer commitment.
+ * Emitir una invitación no es un hecho que la cadena tenga que sostener.
+ */
+export interface Invitation {
+  id: string
+  projectId: string
+  unitId: string
+  investorEmail: string
+  amountMinorUnits: number
+  currency: string
+  status: string
+  createdAt: string
+}
+
 /** Fila 14 — las unidades del investor, con el avance de SU proyecto (D-029). */
 export interface InvestorUnit {
   id: string

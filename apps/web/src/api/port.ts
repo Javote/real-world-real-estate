@@ -26,6 +26,7 @@ import type {
   DeveloperUnit,
   Evidence,
   InvestorUnit,
+  Invitation,
   LoginResponse,
   MeResponse,
   ProgressRow,
@@ -168,6 +169,27 @@ export const api = {
 
   updateUnit: (unitId: string, cambios: { floor?: number; sizeM2?: number }) =>
     request<DeveloperProjectUnit>(`/api/v1/developer/units/${unitId}`, jsonInit('PATCH', cambios)),
+
+  /**
+   * Fila 39 — emite la invitación y deja la unidad reservada.
+   *
+   * `amountMinorUnits` es entero y en la unidad mínima (regla 1): la pantalla
+   * recibe pesos o dólares del formulario y hace la cuenta una sola vez, acá
+   * llega ya convertido.
+   */
+  createInvitation: (
+    projectId: string,
+    invitacion: {
+      unitId: string
+      investorEmail: string
+      amountMinorUnits: number
+      currency: string
+    }
+  ) =>
+    request<Invitation>(
+      `/api/v1/developer/projects/${projectId}/invitations`,
+      jsonInit('POST', invitacion)
+    ),
 
   getDeveloperProgress: () => request<ProgressRow[]>('/api/v1/developer/progress'),
 

@@ -16,14 +16,17 @@ import { useTranslation } from '#/i18n/useTranslation'
 // Es el hub del proyecto: el paso 1 del flujo de evidencia entra por acá
 // ("Project detail → Upload evidence", M2-D1 §6).
 //
-// **La grilla tiene cuatro acciones y la captura muestra cuatro, pero no son
-// las mismas cuatro.** "Administrar unidades" y "Subir evidencia" salen tal
-// cual de la captura 37; "Contratos y liberaciones" **no se transcribe**
-// (D-070): la plataforma no administra fondos, y dejar el tile llevando a una
-// pantalla que promete liberar pagos sería afirmar algo que el producto no
-// hace. "Invitar inversor" (fila 39) todavía no tiene pantalla, y un tile entra
-// en el mismo commit que su destino, nunca antes (D-072). En su lugar quedan el
-// registro de auditoría y el directorio de inversores, que sí existen.
+// **La grilla tiene cuatro acciones y tres son las de la captura**:
+// "Administrar unidades", "Invitar inversor" y "Subir evidencia". La cuarta de
+// la captura es "Contratos y liberaciones", que **no se transcribe** (D-070):
+// la plataforma no administra fondos, y dejar el tile llevando a una pantalla
+// que promete liberar pagos sería afirmar algo que el producto no hace. En su
+// lugar va el registro de auditoría, que es el destino más cercano a lo que el
+// developer busca ahí: el rastro de lo que pasó con el proyecto.
+//
+// El tile de "Inversores" que ocupaba ese lugar se fue con esta rebanada: iba
+// al directorio GLOBAL, no a nada del proyecto, y desde el panel ya se llega.
+// La acción que sí es del proyecto es invitar.
 
 // `.index` porque esta ruta TIENE hijas (`/upload`). Sin el sufijo, TanStack la
 // trata como layout de todo lo que cuelga de `/developer/project/:projectId` y
@@ -90,6 +93,17 @@ function DeveloperProjectDetail() {
             }
           />
           <ActionCard
+            title={t('developer.project.inviteAction')}
+            description={t('developer.project.inviteDescription')}
+            icon={Users}
+            onClick={() =>
+              void navigate({
+                to: '/developer/project/$projectId/invite',
+                params: { projectId }
+              })
+            }
+          />
+          <ActionCard
             title={t('developer.project.uploadAction')}
             description={t('developer.project.uploadDescription')}
             icon={Upload}
@@ -106,12 +120,6 @@ function DeveloperProjectDetail() {
             description={t('developer.project.auditDescription')}
             icon={FileText}
             onClick={() => void navigate({ to: '/developer/audit-log' })}
-          />
-          <ActionCard
-            title={t('developer.project.investorsAction')}
-            description={t('developer.project.investorsDescription')}
-            icon={Users}
-            onClick={() => void navigate({ to: '/developer/investors' })}
           />
         </div>
       </section>
