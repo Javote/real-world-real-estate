@@ -241,8 +241,8 @@ D-040, no olvidado.
 ## Limitaciones aceptadas (leer antes de prometer algo)
 
 1. **Cold start de ~1 min** tras 15 min de inactividad. Se acepta a cambio de $0 (D-040).
-2. **La evidencia persiste en R2** (§1.4), no en el filesystem. Cierra D-051 y con eso el
-   bloqueo que pesaba sobre el primer anclaje: un hash anclado ahora tiene un archivo detrás, que es
+2. **La evidencia persiste en R2** (§1.4), no en el filesystem. Cerró D-051 —que pasó al archivo
+   por D-068— y con ella el bloqueo que pesaba sobre el primer anclaje: un hash anclado ahora tiene un archivo detrás, que es
    lo que la regla 17 exige. El filesystem sigue siendo efímero y sigue estando bien que lo sea —
    `UPLOAD_DIR` es solo el staging de Multer y la ruta borra el temporal apenas R2 confirma.
    Lo que sí hay que vigilar es el techo de **10 GB** del free tier.

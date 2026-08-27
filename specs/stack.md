@@ -103,7 +103,7 @@ Ningún validador custodia ni transfiere valor, en ninguna fase (D-021).
 |---|---|---|---|---|
 | Base de datos | **SQLite** (`.data/dev.db`, Kysely sobre `@libsql/client`) | **SQLite** vía **Turso** en prod (free: 5 GB · 500M lecturas · 10M escrituras) | ● — creada y migrada el 2026-08-27 (`propnexus`, org `javote`); verificada contra la instancia desplegada | D-038 · D-040 — Turso **obligatorio**, no preferencia: en free no hay disco. ORM: D-048 → D-049 |
 | Migraciones | SQL plano en `apps/api/migrations/`, **una sola** (`0000_init.sql`, D-063), tracking propio (`_migrations`), **un solo runner** (D-052) | idempotentes en el `startCommand` | ● — verificado sobre el **compilado**, contra base nueva y re-aplicando | D-012 · D-049 |
-| Archivos de evidencia | `STORAGE_DRIVER=disk` por default; **`s3` implementado y probado contra MinIO** | **Cloudflare R2** en prod (free: 10 GB, egress $0) — mismo código, otras variables | ◐ — el port existe (`apps/api/src/lib/storage.ts`) y con `s3` el SHA-256 cubre los bytes guardados; las variables están declaradas en `render.yaml`. Falta crear el bucket de R2 y cargar las claves (RUNBOOK §1.4) | D-011 · D-040 · D-051 |
+| Archivos de evidencia | `STORAGE_DRIVER=disk` por default; **`s3` implementado y probado contra MinIO** | **Cloudflare R2** en prod (free: 10 GB, egress $0) — mismo código, otras variables | ● — bucket `propnexus-evidencia` creado y en uso; los 6 tests de integración pasan contra R2 real y un archivo subido **sobrevivió a un restart** de la API (verificado 2026-08-27) | D-011 · D-040 |
 | URLs de archivos | descarga por endpoint autenticado | prefirmadas, TTL ≤15 min | ○ | D-011 |
 | Base de tests | SQLite propia (`apps/api/test.db`), migrada y sembrada por corrida | — | ● | `archive/SPEC-008` |
 
@@ -156,7 +156,7 @@ Ningún validador custodia ni transfiere valor, en ninguna fase (D-021).
 | **Todo el deploy en free tier — $0/mes** | ● — restricción respetada por el YAML | D-040 |
 | Presupuesto: **750 instance-hours/mes** compartidas · **keep-warm prohibido** | ● — documentado en el YAML y el runbook §5 | D-040 |
 | Cold start ~1 min tras 15 min de inactividad | ● — se calienta a mano antes de demo/grabación | D-040 |
-| Evidencia: `UPLOAD_DIR=/tmp/uploads`, **efímero y marcado** | ● — aceptado a conciencia | **D-051** |
+| Evidencia en **R2**; `UPLOAD_DIR` es solo staging de Multer | ● — la ruta borra el temporal apenas R2 confirma | D-011 |
 | Seed de las cuentas demo: desde tu máquina contra Turso (free no da shell) | ● — procedimiento en el runbook §1.3 | D-047 |
 | **Runbook** (deploy / rollback / incidente) | ● — `specs/RUNBOOK-deploy.md` | criterio 14 |
 | Worker de confirmaciones: **cron de GHA**, no background worker | ○ — nada que disparar todavía (`packages/cardano` vacío) | D-040 · D-003 |
@@ -208,7 +208,7 @@ la ruta en vez de depender de un escáner. Ninguna ruta llama ya a `canAccessPro
 | Deuda | Costo de arrastrarla |
 |---|---|
 | **Nitro sigue en beta** | Sigue sin haber Nitro 3 estable. Pero **el `502` en `POST`+`401` ya no es deuda**: se cerró con `credentials: "omit"` al descubrir que era el spec de fetch y no h3 (D-050) |
-| **Evidencia efímera en la instancia desplegada** | Un archivo subido no sobrevive al primer spin-down. Aceptado a conciencia y marcado (D-051); **vuelve a ser bloqueante el día del primer anclaje** |
+| ~~**Evidencia efímera en la instancia desplegada**~~ | **Cerrada** el 2026-08-27 (D-011): la evidencia vive en Cloudflare R2. No hubo código nuevo —el driver `s3` ya estaba probado contra MinIO—, solo el bucket y las variables. Con esto deja de pesar sobre el primer anclaje |
 | **`bcrypt` es nativo** | Más barata desde D-041: sin imagen propia, el toolchain lo absorbe el entorno de build de Render. Queda el warning de `url.parse()` vía `node-pre-gyp` y el riesgo genérico de módulo nativo. **La alternativa `bcryptjs` (JS puro, ~30% más lento) hoy conviene menos**: Render free da 0.1 CPU, donde los ~81 ms medidos en una máquina rápida se van a varios cientos. Detalle en `apps/api/CLAUDE.md` §Superficie 🔴. Es código 🔴: lo decide el humano |
 | ~~**`contracts/` con 0 tests**~~ | **Cerrada** (D-057, D-058): 73 tests, con la tabla punto de rechazo → test en `contracts/CLAUDE.md`. Era la deuda más grande que quedaba |
 | **`pnpm audit`: 1 crítica + 13 altas** | Casi todas cuelgan de `bcrypt` → `@mapbox/node-pre-gyp` → `tar`, y son cadena de **instalación** (corre en cada build de Render), no de request. D-046 ya dejó anotada la salida: `scrypt` de `node:crypto`, stdlib y cero dependencias. Es 🔴 y lo decide el humano |

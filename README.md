@@ -120,8 +120,9 @@ presupuesto (D-040). El artefacto es **`render.yaml`** en la raíz: dos servicio
   `WEB_ORIGIN`, del lado de la API, es de runtime y toma con un restart.
 - **Keep-warm está prohibido.** Dos servicios despiertos 24/7 son ~1460 h contra las 750 del plan
   y quedan suspendidos cerca del día 15. Se calienta la URL a mano antes de una demo.
-- **La evidencia subida no persiste** (filesystem efímero). Aceptado y marcado en D-051; R2 sale en
-  su propia rebanada y vuelve a ser bloqueante el día del primer anclaje.
+- **La evidencia persiste en Cloudflare R2**, no en el filesystem — que sigue siendo efímero y
+  sigue estando bien que lo sea: `UPLOAD_DIR` es solo el staging de Multer. Lo que hay que vigilar
+  es el techo de 10 GB del free tier.
 
 ## Pasos de infraestructura pendientes
 
@@ -133,8 +134,6 @@ Todavía no ejecutados; hacen falta para el **anclaje real**, no para el deploy:
 3. **`packages/cardano`** — el `AnchorPort`, el adaptador simulado y el **real** ya existen
    (`SPEC-013` §A y §B), y el real está probado contra el `Emulator` y contra un devnet local. Lo
    que falta para Preprod no es código: es la cuenta de Blockfrost y la wallet de los puntos 1 y 2.
-4. **Cloudflare R2** — storage S3-compatible para la evidencia, y mover el SHA-256 para que cubra los
-   bytes que terminan en el object storage (D-011, superficie 🔴).
 
 El inventario honesto de qué existe y qué no está en [`specs/stack.md`](specs/stack.md) §8 y §12.
 

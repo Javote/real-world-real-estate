@@ -85,7 +85,7 @@ services:
         value: /tmp/uploads
       - key: MAX_FILE_SIZE_MB
         value: "10"
-      # ── Evidencia en Cloudflare R2 (D-011 · D-051) ──────────────────────────
+      # ── Evidencia en Cloudflare R2 (D-011) ─────────────────────────────────
       # El MISMO driver que se prueba contra MinIO en local: cambian variables,
       # no el código (`apps/api/src/lib/storage.ts`). Con `s3` el SHA-256 se
       # calcula RELEYENDO el objeto subido, así que cubre los bytes que quedaron

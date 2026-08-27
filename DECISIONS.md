@@ -397,10 +397,6 @@ Es el **mismo código** contra los dos: cambian variables, no el driver. Con `s3
 **releyendo el objeto subido**, así que cubre los bytes guardados y no los del temporal.
 `storagePath` es opaco y **jamás sale al cliente**.
 
-## D-051 — El primer deploy sale con evidencia efímera y marcada
-
-Vuelve a bloquear el día del primer anclaje real.
-
 ---
 
 # Método
