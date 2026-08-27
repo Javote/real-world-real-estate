@@ -98,6 +98,16 @@ export interface DeveloperProject extends Project {
   stageCount: number
   /** 0-100, del proyecto (D-029). */
   progress: number
+  /**
+   * El "desde" de la captura 35-36: el mínimo de las unidades del proyecto,
+   * en unidades mínimas enteras (regla 1). No es un campo de `Project` — no
+   * existe precio a nivel proyecto— sino una agregación que hace el endpoint.
+   *
+   * `null` cuando ninguna unidad tiene precio, o cuando el proyecto mezcla
+   * monedas y el mínimo no se puede sostener.
+   */
+  priceFromMinorUnits: number | null
+  priceCurrency: string | null
 }
 
 export interface DeveloperProjectDetail extends DeveloperProject {

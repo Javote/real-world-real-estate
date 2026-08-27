@@ -227,3 +227,65 @@ describe("inventario de unidades", () => {
     expect(referencias).toContain("7C");
   });
 });
+
+// Fila 35-36 — el "Price from" de la captura. Es una AGREGACIÓN sobre las
+// unidades y no un campo de `Project`, así que lo que hay que fijar es que sea
+// el MÍNIMO: un endpoint que devuelva "la primera unidad que encontró" pasa
+// cualquier test que mire un solo precio y miente en cuanto hay dos.
+describe("GET /developer/projects — el precio 'desde'", () => {
+  it("es el mínimo de las unidades del proyecto, no la primera ni la última", async () => {
+    // Más cara que la 7C (9.000.000) y creada DESPUÉS: si el endpoint no
+    // ordena por precio, la toma a ella y el test se pone rojo.
+    await request(app)
+      .post(`/api/v1/developer/projects/${projectId}/units`)
+      .set("Authorization", `Bearer ${tokenDev}`)
+      .send({
+        unitReference: "9D",
+        floor: 9,
+        sizeM2: 80,
+        priceMinorUnits: 14_000_000,
+        currency: "USD"
+      })
+      .expect(201);
+
+    // Y una más barata, para que el mínimo no sea el primero que se creó.
+    await request(app)
+      .post(`/api/v1/developer/projects/${projectId}/units`)
+      .set("Authorization", `Bearer ${tokenDev}`)
+      .send({
+        unitReference: "1A",
+        floor: 1,
+        sizeM2: 40,
+        priceMinorUnits: 6_500_000,
+        currency: "USD"
+      })
+      .expect(201);
+
+    const res = await request(app)
+      .get("/api/v1/developer/projects")
+      .set("Authorization", `Bearer ${tokenDev}`);
+
+    expect(res.status).toBe(200);
+    const proyecto = res.body.find((p: { id: string }) => p.id === projectId);
+    expect(proyecto.priceFromMinorUnits).toBe(6_500_000);
+    expect(proyecto.priceCurrency).toBe("USD");
+  });
+
+  it("un proyecto sin unidades con precio no inventa un 'desde'", async () => {
+    const vacio = await request(app)
+      .post("/api/v1/developer/projects")
+      .set("Authorization", `Bearer ${tokenDev}`)
+      .send({ name: "Sin unidades", slug: `sin-unidades-${Date.now()}`, totalUnits: 0 })
+      .expect(201);
+
+    const res = await request(app)
+      .get("/api/v1/developer/projects")
+      .set("Authorization", `Bearer ${tokenDev}`);
+
+    const proyecto = res.body.find((p: { id: string }) => p.id === vacio.body.id);
+    // `null`, no 0: cero es un precio y este proyecto no tiene ninguno
+    // (regla 17 — ninguna señal sin sustento).
+    expect(proyecto.priceFromMinorUnits).toBeNull();
+    expect(proyecto.priceCurrency).toBeNull();
+  });
+});
