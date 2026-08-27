@@ -23,7 +23,7 @@ afterAll(() => {
   if (fs.existsSync(temporal)) fs.unlinkSync(temporal);
 });
 
-describe.skipIf(!corre)("StoragePort · s3 contra MinIO", () => {
+describe.skipIf(!corre)("StoragePort · s3 contra un S3 real", () => {
   // Perezoso a propósito: `describe.skipIf` **igual ejecuta el cuerpo** para
   // recolectar los tests, así que construir el storage acá arriba haría
   // explotar la suite entera en cualquier máquina sin MinIO.

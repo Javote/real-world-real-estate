@@ -118,6 +118,46 @@ pasan a un reviewer.
 Las migraciones **no** hay que correrlas a mano: van en el `startCommand` de la API y son
 idempotentes (tabla `_migrations`).
 
+### 1.4 · El bucket de evidencia en Cloudflare R2
+
+R2 free: **10 GB de almacenamiento y egress $0** — esto último es la razón de R2 y no de S3.
+
+El driver ya existe y es el mismo que se prueba contra MinIO en local (D-011): acá no se escribe
+código, se crean un bucket y un par de claves.
+
+1. Dashboard de Cloudflare → **R2** → *Create bucket* → nombre **`propnexus-evidencia`**
+   (tiene que coincidir con `S3_BUCKET` de `render.yaml`). Location *Automatic*.
+2. **R2 → Manage API Tokens → Create API Token**, permiso **Object Read & Write**, alcance
+   limitado a ese bucket. Cloudflare muestra el par **una sola vez**:
+   `Access Key ID` + `Secret Access Key`. Guardalos.
+3. Anotá el **endpoint**: `https://<ACCOUNT_ID>.r2.cloudflarestorage.com`. El `<ACCOUNT_ID>` está
+   en la misma pantalla del token.
+
+**Probá contra R2 ANTES de desplegar.** El mismo test de integración que corre contra MinIO sirve
+apuntado a R2, y es la única forma de saber que las credenciales andan sin arriesgar la API:
+
+```bash
+S3_TEST=1 \
+S3_ENDPOINT='https://<ACCOUNT_ID>.r2.cloudflarestorage.com' \
+S3_BUCKET=propnexus-evidencia \
+S3_ACCESS_KEY_ID='<access key>' \
+S3_SECRET_ACCESS_KEY='<secret>' \
+S3_REGION=auto S3_FORCE_PATH_STYLE=false S3_CREATE_BUCKET=false \
+pnpm --filter @plataforma/api exec vitest run test/storage-s3.test.ts
+```
+
+Las dos últimas variables **no son redundantes**: los defaults del código apuntan a MinIO
+(`us-east-1` y path-style) y R2 quiere `auto` y virtual-hosted-style.
+
+**⚠ El orden es obligatorio, no una recomendación.** `STORAGE_DRIVER=s3` sin las `S3_*` hace que la
+API **no arranque** — `required()` en `storage.ts` tira, y por D-042 eso es a propósito: falla al
+arrancar y no en el primer upload, con un usuario esperando. O sea que las credenciales van al
+dashboard de Render **antes** de que el `render.yaml` con `STORAGE_DRIVER=s3` llegue a `main`. Si se
+invierte el orden, la API queda caída hasta que se carguen.
+
+Al sincronizar el Blueprint, Render pide los tres nuevos `sync: false`: `S3_ENDPOINT`,
+`S3_ACCESS_KEY_ID` y `S3_SECRET_ACCESS_KEY`.
+
 ## 2 · Deploy de todos los días
 
 Push a `main`. Render construye por servicio y solo el que corresponda: los `buildFilter` de
@@ -175,7 +215,8 @@ original hasta estar seguro.
 | `POST` de login devuelve **502** | Se perdió `credentials: "omit"` en las route rules | D-050. Revisar `apps/web/vite.config.ts` y **rebuild del web** (es build time) |
 | El web carga pero toda llamada falla | `VITE_API_ORIGIN` mal o apuntando a una URL vieja | Es build time: corregir la variable y **Clear build cache & deploy** |
 | El web carga y la consola dice CORS | Falta el origen del web en `WEB_ORIGIN` de la API | Es runtime: corregir la variable y **restart** de la API |
-| Evidencia subida que desapareció | Filesystem efímero | **Es esperado**, no es un incidente. D-051 y §Limitaciones |
+| Evidencia subida que desapareció | Con R2 ya no debería pasar | Sí es incidente. Revisar que `STORAGE_DRIVER=s3` esté puesto: con `disk` vuelve al filesystem efímero y se pierde |
+| La API no arranca, log dice `STORAGE_DRIVER=s3 exige …` | Falta una `S3_*` | D-042, y es a propósito. Cargar la variable en el dashboard y restart (§1.4) |
 | Servicio suspendido a mitad de mes | Se agotaron las 750 h | Alguien puso un keep-warm. Sacarlo (§Limitaciones) |
 | `ERR_PNPM_OUTDATED_LOCKFILE` en el build | Se tocó un `package.json` sin `pnpm install` | La puerta lo atrapa antes; si llegó acá, `pnpm install` y commitear el lockfile |
 
@@ -200,10 +241,11 @@ D-040, no olvidado.
 ## Limitaciones aceptadas (leer antes de prometer algo)
 
 1. **Cold start de ~1 min** tras 15 min de inactividad. Se acepta a cambio de $0 (D-040).
-2. **La evidencia subida no persiste.** El filesystem se borra en cada redeploy, restart y
-   spin-down. R2 es el arreglo real y sale en su propia rebanada (D-011, D-051). **La ventana en que
-   esto es tolerable se cierra el día del primer anclaje**: ahí un hash sin archivo sí sería prueba
-   insustanciable (regla 17).
+2. **La evidencia persiste en R2** (§1.4), no en el filesystem. Cierra D-051 y con eso el
+   bloqueo que pesaba sobre el primer anclaje: un hash anclado ahora tiene un archivo detrás, que es
+   lo que la regla 17 exige. El filesystem sigue siendo efímero y sigue estando bien que lo sea —
+   `UPLOAD_DIR` es solo el staging de Multer y la ruta borra el temporal apenas R2 confirma.
+   Lo que sí hay que vigilar es el techo de **10 GB** del free tier.
 3. **750 instance-hours/mes compartidas** entre los dos servicios. Con spin-down normal sobra
    (~1500 visitas frías); con keep-warm no alcanza.
 4. **Sin worker de confirmaciones.** Los background workers de Render no tienen free tier: cuando

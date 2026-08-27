@@ -13,12 +13,18 @@
 #     contra 750 y quedan suspendidos cerca del día 15. Se calienta la URL a
 #     mano antes de una demo o grabación, y se la deja dormir el resto.
 #   · Sin disco persistente, sin shell y sin one-off jobs: por eso las
-#     migraciones van en el startCommand y la base es Turso, no un archivo.
+#     migraciones van en el startCommand, la base es Turso y la evidencia vive
+#     en Cloudflare R2 — nada que importe se guarda en el filesystem.
 #
 # Lo que NO está acá y hay que crear a mano una vez (ver specs/RUNBOOK-deploy.md):
 #   · La base Turso y su token.
+#   · El bucket de R2 y su par de claves S3 (§1.4).
 #   · El seed de las cuentas demo (se corre desde tu máquina contra Turso: en
 #     free tier no hay shell remota).
+#
+# ⚠ ORDEN: `STORAGE_DRIVER=s3` sin las S3_* hace que la API **no arranque**
+# (D-042, `required()` en storage.ts). Las credenciales de R2 van al dashboard
+# ANTES de que este archivo llegue a main.
 # ─────────────────────────────────────────────────────────────────────────────
 
 services:
@@ -71,15 +77,46 @@ services:
         value: "1"
       - key: LOGIN_RATE_LIMIT_MAX
         value: "20"
-      # EFÍMERO A PROPÓSITO — el free tier borra el filesystem en cada redeploy,
-      # restart y spin-down. La evidencia subida acá NO sobrevive. Es deuda
-      # conocida y acotada: R2 es el prerequisito real (D-011 · D-040) y sale en
-      # su propia rebanada. Mientras tanto, no subir evidencia que alguien
-      # espere volver a encontrar (regla 17).
+      # Ahora es SOLO staging de Multer: el archivo aterriza acá, `storage.put()`
+      # lo sube a R2 y la ruta lo borra en el acto (`storage.driver === "s3"`).
+      # Que el filesystem sea efímero dejó de importar — lo que persiste es el
+      # objeto en R2, no esto.
       - key: UPLOAD_DIR
         value: /tmp/uploads
       - key: MAX_FILE_SIZE_MB
         value: "10"
+      # ── Evidencia en Cloudflare R2 (D-011 · D-051) ──────────────────────────
+      # El MISMO driver que se prueba contra MinIO en local: cambian variables,
+      # no el código (`apps/api/src/lib/storage.ts`). Con `s3` el SHA-256 se
+      # calcula RELEYENDO el objeto subido, así que cubre los bytes que quedaron
+      # guardados y no los del temporal — de eso cuelga la cadena de prueba.
+      - key: STORAGE_DRIVER
+        value: s3
+      # `https://<ACCOUNT_ID>.r2.cloudflarestorage.com`. `sync: false` porque
+      # lleva el ID de cuenta de Cloudflare adentro.
+      - key: S3_ENDPOINT
+        sync: false
+      - key: S3_BUCKET
+        value: propnexus-evidencia
+      - key: S3_ACCESS_KEY_ID
+        sync: false
+      - key: S3_SECRET_ACCESS_KEY
+        sync: false
+      # Las dos que siguen NO son redundantes: los defaults del código apuntan a
+      # MinIO y R2 necesita lo contrario en las dos.
+      #   · region: "When using the S3 API, the region for an R2 bucket is `auto`"
+      #     — el default del código es us-east-1.
+      #   · Cloudflare documenta virtual-hosted-style; path-style no está
+      #     garantizado. El default del código es `true`, para MinIO.
+      - key: S3_REGION
+        value: auto
+      - key: S3_FORCE_PATH_STYLE
+        value: "false"
+      # En R2 el bucket se crea a mano desde el dashboard (RUNBOOK §1.4). Que la
+      # API no pueda crearlo es deliberado: sus credenciales son de objeto, no
+      # de administración del bucket.
+      - key: S3_CREATE_BUCKET
+        value: "false"
       # D-013: Preprod SIEMPRE. Mainnet está fuera del alcance de M3.
       # `ANCHOR_MODE=simulated` es el único válido hoy: el adaptador real llega
       # en la rebanada B de SPEC-013 y pedirlo antes revienta al arrancar
