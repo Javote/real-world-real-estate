@@ -18,8 +18,25 @@ interface GradientHeaderProps {
   back?: { label: string; onClick: () => void }
   /** Solo utilidades globales. */
   right?: React.ReactNode
+  /**
+   * Acción primaria de la pantalla, **a la altura del `h1`** — el "+ New" de
+   * la captura 35-36.
+   *
+   * Va acá y no en `right` porque no es lo mismo: `right` son utilidades
+   * globales (notificaciones, idioma, perfil) que se repiten en toda la app y
+   * viven en la fila de arriba. Esta es la acción de ESTA pantalla, y la
+   * captura la alinea con el título.
+   */
+  titleAction?: React.ReactNode
   /** Badge cuadrado a la izquierda del título (el logo del proyecto en el panel). */
   badge?: React.ReactNode
+  /**
+   * **Excepción puntual**: la captura 35/36 (`/developer/projects`) no muestra
+   * el logo — el "← Back to panel" ocupa su lugar en la fila de arriba, junto
+   * al "+ New". Todas las demás capturas con `back` (37) lo muestran debajo
+   * del logo, que sigue siendo el default.
+   */
+  hideBrand?: boolean
   className?: string
 }
 
@@ -29,7 +46,9 @@ export function GradientHeader({
   context,
   back,
   right,
+  titleAction,
   badge,
+  hideBrand,
   className
 }: GradientHeaderProps) {
   return (
@@ -40,10 +59,20 @@ export function GradientHeader({
         className
       )}
     >
-      {/* El logo va SIEMPRE y va primero: es el ancla agnóstica de rol. */}
+      {/* El logo va SIEMPRE, salvo la excepción de arriba: es el ancla
+          agnóstica de rol. */}
       <div className="flex items-start justify-between gap-s3">
         <div className="flex items-center gap-s3">
-          {badge ? (
+          {hideBrand && back ? (
+            <button
+              type="button"
+              onClick={back.onClick}
+              className="flex items-center gap-s1 text-body-sm text-white/80"
+            >
+              <ArrowLeft size={16} aria-hidden="true" />
+              {back.label}
+            </button>
+          ) : badge ? (
             <span className="flex h-12 w-12 items-center justify-center rounded-xl bg-white/20">
               {badge}
             </span>
@@ -54,12 +83,15 @@ export function GradientHeader({
         {right ? <div className="flex items-center gap-s2">{right}</div> : null}
       </div>
 
-      <div className="mt-s4">
-        <h1 className="text-display font-bold leading-tight">{title}</h1>
-        {subtitle ? <p className="text-body-sm text-white/80">{subtitle}</p> : null}
+      <div className="mt-s4 flex items-center justify-between gap-s3">
+        <div className="min-w-0">
+          <h1 className="text-display font-bold leading-tight">{title}</h1>
+          {subtitle ? <p className="text-body-sm text-white/80">{subtitle}</p> : null}
+        </div>
+        {titleAction ? <div className="shrink-0">{titleAction}</div> : null}
       </div>
 
-      {back ? (
+      {back && !hideBrand ? (
         <button
           type="button"
           onClick={back.onClick}

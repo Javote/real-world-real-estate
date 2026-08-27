@@ -31,6 +31,18 @@ interface PanelLayoutProps {
    * §GradientHeader reserva este slot justamente para utilidades globales.
    */
   onOpenProfile?: () => void
+  /**
+   * "← Back to panel" en vez del logo (captura 35/36, `/developer/projects`).
+   * Ninguna otra pantalla lo usa todavía, así que va siempre sin logo — el
+   * día que aparezca una que combine ambos, esto necesita su propio booleano.
+   */
+  back?: { label: string; onClick: () => void }
+  /**
+   * Acción primaria de la pantalla, alineada con el título (el "+ Nuevo" de la
+   * captura 35-36). No compite con las utilidades globales del slot derecho:
+   * ver `titleAction` en GradientHeader.
+   */
+  headerAction?: ReactNode
   children: ReactNode
 }
 
@@ -41,6 +53,8 @@ export function PanelLayout({
   unread,
   onOpenNotifications,
   onOpenProfile,
+  back,
+  headerAction,
   children
 }: PanelLayoutProps) {
   const { t } = useTranslation()
@@ -52,6 +66,8 @@ export function PanelLayout({
       <GradientHeader
         title={title}
         {...(context ? { context } : {})}
+        {...(back ? { back, hideBrand: true } : {})}
+        {...(headerAction ? { titleAction: headerAction } : {})}
         right={
           <>
             {onOpenNotifications ? (

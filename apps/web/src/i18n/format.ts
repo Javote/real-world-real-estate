@@ -59,6 +59,11 @@ export function formatDate(iso: string, locale: Locale): string {
   return new Intl.DateTimeFormat(locale, { dateStyle: 'medium' }).format(new Date(iso))
 }
 
+/** "December 2027" — la fecha de entrega del ProjectCard de developer. */
+export function formatMonthYear(iso: string, locale: Locale): string {
+  return new Intl.DateTimeFormat(locale, { month: 'long', year: 'numeric' }).format(new Date(iso))
+}
+
 /** Fecha + hora, para los eventos del audit log y los anclajes. */
 export function formatDateTime(iso: string, locale: Locale): string {
   return new Intl.DateTimeFormat(locale, { dateStyle: 'medium', timeStyle: 'short' }).format(
