@@ -197,6 +197,13 @@ que la superficie del entregable no consume pero los tests y el seed sí.
   cada `updateTable` que toca una fila con `updatedAt` lo suma explícito a `.set(...)`. Si un
   endpoint nuevo hace un `update` y se olvida `updatedAt`, nada lo va a marcar — a diferencia de
   Drizzle, donde `$onUpdate` lo hacía solo.
+- **2026-08-27 · Los defaults de `createStorage()` son de MinIO, y contra R2 hay que pisarlos.**
+  `S3_REGION` cae a `us-east-1` y `S3_FORCE_PATH_STYLE` a `true` porque el S3 que se prueba local es
+  MinIO. Cloudflare documenta lo contrario en las dos: *"the region for an R2 bucket is `auto`"* y
+  virtual-hosted-style —path-style no está garantizado—. Con credenciales **correctas** y estos dos
+  defaults, R2 falla igual, y el error no dice "te falta setear la región". Están explícitos en
+  `render.yaml` y el porqué está ahí al lado; el comentario de `storage.ts` que dice que R2 "tolera"
+  path-style no está respaldado por la documentación de Cloudflare.
 
 ## El endpoint de estado de stages, y lo que todavía no cumple
 

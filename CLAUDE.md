@@ -217,6 +217,16 @@ Si dudás del nivel, es el más alto de los dos.
 Un commit = un cambio lógico · el cuerpo explica el *por qué* · `BREAKING CHANGE:` si rompe contrato
 de API o esquema on-chain. **`main` es la rama de integración y no hay PRs** (D-030).
 
+**La documentación viaja con el código que la causa, en el mismo commit.** Un cambio que altera cómo
+se opera, se configura o se despliega algo llega con su documentación adentro — no en un `docs(...)`
+posterior. Un `docs(...)` suelto es legítimo solo cuando el cambio **es** documentación: sanear algo
+desactualizado, cerrar una decisión, escribir una trampa recién aprendida.
+
+**Por qué es regla y no gusto:** el 2026-08-27 el commit de R2 salió sin cerrar D-051, y durante tres
+commits `DECISIONS.md` afirmó que la evidencia era efímera mientras la evidencia ya vivía en R2. La
+ventana entre el código y su documentación es una ventana en la que el repo miente, y quien lea en
+el medio no tiene forma de saberlo.
+
 # Comandos
 
 ```bash

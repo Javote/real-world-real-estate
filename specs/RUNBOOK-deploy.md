@@ -127,11 +127,24 @@ código, se crean un bucket y un par de claves.
 
 1. Dashboard de Cloudflare → **R2** → *Create bucket* → nombre **`propnexus-evidencia`**
    (tiene que coincidir con `S3_BUCKET` de `render.yaml`). Location *Automatic*.
-2. **R2 → Manage API Tokens → Create API Token**, permiso **Object Read & Write**, alcance
-   limitado a ese bucket. Cloudflare muestra el par **una sola vez**:
-   `Access Key ID` + `Secret Access Key`. Guardalos.
-3. Anotá el **endpoint**: `https://<ACCOUNT_ID>.r2.cloudflarestorage.com`. El `<ACCOUNT_ID>` está
-   en la misma pantalla del token.
+2. **R2 → Manage API Tokens → Create API Token**, de tipo **Account**, permiso **Object Read &
+   Write**, alcance limitado a ese bucket.
+
+   **Account y no User, y no es un detalle.** Un token de usuario *"inherits your personal
+   permissions and becomes inactive if your user is removed from the account"*: ataría la
+   persistencia de toda la evidencia a que esa persona conserve su acceso. El de cuenta *"remains
+   valid until manually revoked"*. Y **Object** Read & Write, no *Admin*: la API no crea ni borra
+   buckets, de ahí `S3_CREATE_BUCKET=false`.
+
+   Cloudflare muestra el par **una sola vez**: `Access Key ID` + `Secret Access Key`.
+
+3. Anotá el **endpoint**. Cloudflare da el *jurisdiction-specific endpoint* ya armado: **usá ese,
+   verbatim**. Si el bucket quedó en una jurisdicción (EU, por ejemplo) la URL lleva ese segmento en
+   el medio y la forma genérica `https://<ACCOUNT_ID>.r2.cloudflarestorage.com` **no funciona**.
+
+En la misma pantalla Cloudflare entrega además un **token para su API REST**. Ese **no** va a
+Render: el driver habla S3 y se autentica con el par de claves. Cargarlo sería un secreto de más en
+el entorno, con más permisos de los necesarios y sin que nada lo lea.
 
 **Probá contra R2 ANTES de desplegar.** El mismo test de integración que corre contra MinIO sirve
 apuntado a R2, y es la única forma de saber que las credenciales andan sin arriesgar la API:
