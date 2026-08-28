@@ -1,6 +1,6 @@
 import type { CapitalMonthlyPoint } from '@plataforma/shared'
 import { useQuery } from '@tanstack/react-query'
-import { createFileRoute } from '@tanstack/react-router'
+import { createFileRoute, useNavigate } from '@tanstack/react-router'
 import { Building2, DollarSign } from 'lucide-react'
 import { api } from '#/api/port'
 import { DEV_ROLES } from '#/auth/roles'
@@ -47,6 +47,7 @@ export const Route = createFileRoute('/developer/capital')({ component: Develope
 function DeveloperCapital() {
   const { ready } = useRoleGuard(DEV_ROLES)
   const { t, locale } = useTranslation()
+  const navigate = useNavigate()
 
   const { data: resumen } = useQuery({
     queryKey: ['developer', 'capital', 'summary'],
@@ -76,6 +77,11 @@ function DeveloperCapital() {
       rol="developer"
       title={t('developer.capital.title')}
       context={t('developer.capital.context')}
+      back={{
+        label: t('nav.backToPanel'),
+        onClick: () => void navigate({ to: '/developer' })
+      }}
+      hideBrand
     >
       <section
         className="flex flex-col gap-s5 rounded-xl bg-card p-s4 shadow-e1"
