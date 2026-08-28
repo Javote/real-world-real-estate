@@ -1,5 +1,5 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { createFileRoute } from '@tanstack/react-router'
+import { createFileRoute, useNavigate } from '@tanstack/react-router'
 import { FileCheck2, FileClock, ShieldCheck } from 'lucide-react'
 import { api } from '#/api/port'
 import { DEV_ROLES } from '#/auth/roles'
@@ -41,6 +41,7 @@ export const Route = createFileRoute('/developer/documentation')({
 function DeveloperDocumentation() {
   const { ready } = useRoleGuard(DEV_ROLES)
   const { t, locale } = useTranslation()
+  const navigate = useNavigate()
   const queryClient = useQueryClient()
 
   const { data: documentos } = useQuery({
@@ -74,6 +75,11 @@ function DeveloperDocumentation() {
       rol="developer"
       title={t('developer.docs.title')}
       context={t('developer.docs.context', { count: String(documentos?.length ?? 0) })}
+      back={{
+        label: t('nav.backToPanel'),
+        onClick: () => void navigate({ to: '/developer' })
+      }}
+      hideBrand
     >
       <section className="grid grid-cols-2 gap-s4">
         <StatCard
