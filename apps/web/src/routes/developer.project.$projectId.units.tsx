@@ -1,5 +1,5 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { createFileRoute } from '@tanstack/react-router'
+import { createFileRoute, useNavigate } from '@tanstack/react-router'
 import { Plus } from 'lucide-react'
 import { useState } from 'react'
 import { api } from '#/api/port'
@@ -69,6 +69,7 @@ function ProjectUnits() {
   const { projectId } = Route.useParams()
   const { ready } = useRoleGuard(DEV_ROLES)
   const { t, locale } = useTranslation()
+  const navigate = useNavigate()
   const queryClient = useQueryClient()
 
   const [referencia, setReferencia] = useState('')
@@ -142,6 +143,14 @@ function ProjectUnits() {
       rol="developer"
       title={t('developer.projectUnits.title')}
       {...(proyecto ? { context: proyecto.name } : {})}
+      back={{
+        label: t('nav.back'),
+        onClick: () =>
+          void navigate({
+            to: '/developer/project/$projectId',
+            params: { projectId }
+          })
+      }}
     >
       {/*
         Los tiles CUENTAN unidades y los pills CALIFICAN una: en español eso es
