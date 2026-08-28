@@ -33,11 +33,21 @@ export function timelineDeStages(
   }))
 }
 
+/**
+ * Descarga un blob con el nombre que le corresponde.
+ *
+ * **El ancla se adjunta al documento y la URL se revoca en el próximo tick.**
+ * Revocarla sincrónicamente después de `click()` es la carrera clásica: el
+ * navegador todavía no leyó el recurso y la descarga sale vacía o no sale.
+ */
 export function bajarBlob(blob: Blob, nombre: string) {
   const url = URL.createObjectURL(blob)
   const a = document.createElement('a')
   a.href = url
   a.download = nombre
+  a.style.display = 'none'
+  document.body.appendChild(a)
   a.click()
-  URL.revokeObjectURL(url)
+  a.remove()
+  setTimeout(() => URL.revokeObjectURL(url), 0)
 }

@@ -18,6 +18,7 @@ import { PanelLayout } from '#/components/PanelLayout'
 import { Dialog, DialogContent, DialogTitle } from '#/components/ui/dialog'
 import { formatCurrency, formatMonthYear, formatRelative } from '#/i18n/format'
 import { useTranslation } from '#/i18n/useTranslation'
+import { useObjectUrls } from '#/lib/blobUrls'
 import {
   claveEstadoStage,
   claveNovedad,
@@ -46,6 +47,7 @@ function InvestorUnitDetail() {
   const [edificio, setEdificio] = useState(false)
   const [bundleId, setBundleId] = useState<string | null>(null)
   const [prueba, setPrueba] = useState<MerkleProof | null>(null)
+  const objectUrl = useObjectUrls()
 
   const { data: unidad, error } = useQuery({
     queryKey: ['investor', 'unit', unitId],
@@ -98,7 +100,10 @@ function InvestorUnitDetail() {
   const blobs = useQueries({
     queries: fotos.map((f, i) => ({
       queryKey: ['evidence-blob', f.id],
-      queryFn: async () => URL.createObjectURL(await api.downloadEvidence(f.id)),
+      queryFn: async () => objectUrl(await api.downloadEvidence(f.id)),
+      // `gcTime: 0`: la URL se revoca al desmontar, así que la caché no puede
+      // sobrevivirle — devolvería una URL muerta al volver a la pantalla.
+      gcTime: 0,
       enabled: ready && Boolean(unidad) && (galeria || i === 0)
     }))
   })
@@ -297,8 +302,7 @@ function InvestorUnitDetail() {
                     <span className="block truncate text-body-sm text-text-primary">
                       {t(claveNovedad(n.eventType), {
                         stage: n.stageName ?? '',
-                        state: n.toState ? t(claveEstadoStage(n.toState)) : '',
-                        type: n.eventType
+                        state: n.toState ? t(claveEstadoStage(n.toState)) : ''
                       })}
                     </span>
                     <span className="text-caption text-text-muted">

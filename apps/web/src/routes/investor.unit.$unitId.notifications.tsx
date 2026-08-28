@@ -72,6 +72,8 @@ function InvestorUnitNotifications() {
 
   if (!ready) return null
 
+  const primeraSinLeer = notificaciones?.find((n) => n.readAt === null)?.id
+
   return (
     <PanelLayout
       rol="investor"
@@ -107,7 +109,9 @@ function InvestorUnitNotifications() {
                 timestampLabel={formatRelative(String(n.createdAt), locale)}
                 read={n.readAt !== null}
                 readLabel={t('investor.notifications.read')}
-                testId={n.readAt === null ? 'INV-NOTIF-READ-002' : undefined}
+                // Solo la PRIMERA sin leer: el ID marca la acción de marcar
+                // leída, no cada fila. Repetido, deja de ser un selector.
+                {...(n.id === primeraSinLeer ? { testId: 'INV-NOTIF-READ-002' } : {})}
                 {...(filtro ? { category: BORDE[categoria] } : {})}
                 onOpen={n.readAt === null ? () => marcarLeida.mutate(n.id) : undefined}
               />

@@ -121,9 +121,13 @@ function InvestorBuy() {
 
   if (!ready) return null
 
+  // Sin `label`: la captura 3 rotula el pin con el "desde", que `GET /projects`
+  // no agrega. Deuda ya declarada en `ProjectCard.priceLabel` — el pin va sin
+  // etiqueta antes que con un número inventado. Pasar `name` acá no hacía nada:
+  // `MapMarker` no tiene ese campo y se descartaba en silencio.
   const pines = (proyectos ?? []).flatMap((p) =>
     p.latitude != null && p.longitude != null
-      ? [{ id: p.id, latitude: p.latitude, longitude: p.longitude, name: p.name }]
+      ? [{ id: p.id, latitude: p.latitude, longitude: p.longitude }]
       : []
   )
 
@@ -131,7 +135,7 @@ function InvestorBuy() {
 
   const etiquetasCard = { from: t('project.from') }
 
-  const cardDe = (proyecto: Project, testId?: string) => {
+  const cardDe = (proyecto: Project) => {
     const ubicacion = [proyecto.city, proyecto.country].filter(Boolean).join(', ')
     return (
       <ProjectCard
@@ -150,7 +154,6 @@ function InvestorBuy() {
           })
         }
         labels={etiquetasCard}
-        testId={testId ?? `INV-BUY-CARD-${proyecto.id}`}
         favorited={idsFavoritos.has(proyecto.id)}
         onToggleFavorite={() => toggleFavorito.mutate(proyecto)}
         favoriteAriaLabel={
@@ -158,7 +161,9 @@ function InvestorBuy() {
             ? t('investor.favorites.unsave')
             : t('investor.favorites.save')
         }
-        favoriteTestId="INV-FAV-TOGGLE-002"
+        // Sin `favoriteTestId`: INV-FAV-TOGGLE-002 es de la fila 13
+        // (`/investor/favorites`). El corazón acá es la misma acción, no el
+        // mismo ID — repetirlo lo vuelve inutilizable como selector.
       />
     )
   }

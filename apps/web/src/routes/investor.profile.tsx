@@ -16,5 +16,12 @@ export const Route = createFileRoute('/investor/profile')({ component: InvestorP
 function InvestorProfile() {
   const { ready } = useRoleGuard(INVESTOR_ROLES)
   if (!ready) return null
-  return <ProfileScreen rol="investor" testId="INV-PROFILE-VIEW-001" />
+  return (
+    <ProfileScreen
+      rol="investor"
+      testId="INV-PROFILE-VIEW-001"
+      editTestId="INV-PROFILE-EDIT-002"
+      prefsTestId="INV-NOTIF-PREFS-003"
+    />
+  )
 }

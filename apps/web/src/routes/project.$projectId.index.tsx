@@ -14,6 +14,7 @@ import { ProgressTimeline } from '#/components/domain/ProgressTimeline'
 import { PanelLayout } from '#/components/PanelLayout'
 import { formatDate, formatMonthYear } from '#/i18n/format'
 import { useTranslation } from '#/i18n/useTranslation'
+import { useObjectUrls } from '#/lib/blobUrls'
 import { esFoto, formatoArchivo, reintentarSiNoEsAusencia } from '#/lib/investor'
 import { avanceDeStages, bajarBlob, timelineDeStages } from '#/lib/stageProgress'
 
@@ -39,6 +40,7 @@ function InvestorProjectDetail() {
   const [galeria, setGaleria] = useState(false)
   const [mapa, setMapa] = useState(false)
   const [docId, setDocId] = useState<string | null>(null)
+  const objectUrl = useObjectUrls()
 
   const {
     data: proyecto,
@@ -70,7 +72,10 @@ function InvestorProjectDetail() {
   const blobs = useQueries({
     queries: fotos.map((f, i) => ({
       queryKey: ['evidence-blob', f.id],
-      queryFn: async () => URL.createObjectURL(await api.downloadEvidence(f.id)),
+      queryFn: async () => objectUrl(await api.downloadEvidence(f.id)),
+      // `gcTime: 0`: la URL se revoca al desmontar, así que la caché no puede
+      // sobrevivirle — devolvería una URL muerta al volver a la pantalla.
+      gcTime: 0,
       enabled: ready && isSuccess && (galeria || i === 0)
     }))
   })
@@ -83,7 +88,8 @@ function InvestorProjectDetail() {
   const docAbierto = docs.find((d) => d.id === docId)
   const { data: docUrl } = useQuery({
     queryKey: ['evidence-blob', docId],
-    queryFn: async () => URL.createObjectURL(await api.downloadEvidence(docId!)),
+    queryFn: async () => objectUrl(await api.downloadEvidence(docId!)),
+    gcTime: 0,
     enabled: Boolean(docId)
   })
 
@@ -149,9 +155,10 @@ function InvestorProjectDetail() {
               </span>
             )}
           </button>
+          {/* Sin `data-testid`: INV-FAV-TOGGLE-002 vive en la fila 13
+              (`/investor/favorites`). Acá es la misma acción, no el mismo ID. */}
           <button
             type="button"
-            data-testid="INV-FAV-TOGGLE-002"
             aria-pressed={esFavorito}
             aria-label={esFavorito ? t('investor.favorites.unsave') : t('investor.favorites.save')}
             onClick={() => toggleFavorito.mutate()}

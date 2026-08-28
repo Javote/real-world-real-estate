@@ -45,7 +45,7 @@ function InvestorFavorites() {
     >
       <section className="flex flex-col gap-s4" data-testid="INV-FAV-LIST-001">
         {lista.length ? (
-          lista.map((proyecto: Project) => {
+          lista.map((proyecto: Project, i) => {
             const ubicacion = [proyecto.city, proyecto.country].filter(Boolean).join(', ')
             return (
               <ProjectCard
@@ -67,7 +67,10 @@ function InvestorFavorites() {
                 favorited
                 onToggleFavorite={() => quitar.mutate(proyecto.id)}
                 favoriteAriaLabel={t('investor.favorites.unsave')}
-                favoriteTestId="INV-FAV-TOGGLE-002"
+                // **Un test ID identifica una superficie, no N filas.** En la
+                // primera tarjeta: repetido por fila, un `getByTestId` en
+                // strict mode matchea varios elementos y falla.
+                {...(i === 0 ? { favoriteTestId: 'INV-FAV-TOGGLE-002' } : {})}
               />
             )
           })

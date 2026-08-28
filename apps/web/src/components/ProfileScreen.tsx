@@ -38,9 +38,16 @@ interface ProfileScreenProps {
    * 30). El header en sí es el de D-074: logo + utilidades, siempre.
    */
   back?: { label: string; onClick: () => void }
+  /**
+   * Los test IDs de la edición y de las preferencias los pone **la ruta**, como
+   * `testId`: M2-D5 se los da a la fila 30 (investor) y no a los otros tres
+   * roles. Puestos acá dentro, `/developer/profile` emitiría IDs `INV-*`.
+   */
+  editTestId?: string
+  prefsTestId?: string
 }
 
-export function ProfileScreen({ rol, testId, back }: ProfileScreenProps) {
+export function ProfileScreen({ rol, testId, back, editTestId, prefsTestId }: ProfileScreenProps) {
   const { t } = useTranslation()
   const queryClient = useQueryClient()
   const [editando, setEditando] = useState(false)
@@ -99,7 +106,7 @@ export function ProfileScreen({ rol, testId, back }: ProfileScreenProps) {
         {editando ? (
           <form
             className="flex flex-col gap-s3 rounded-xl bg-card p-s4 shadow-e1"
-            data-testid="INV-PROFILE-EDIT-002"
+            {...(editTestId ? { 'data-testid': editTestId } : {})}
             onSubmit={(e) => {
               e.preventDefault()
               const recortado = nombre.trim()
@@ -121,7 +128,7 @@ export function ProfileScreen({ rol, testId, back }: ProfileScreenProps) {
 
         <article
           className="flex flex-col gap-s3 rounded-xl bg-card p-s4 shadow-e1"
-          data-testid="INV-NOTIF-PREFS-003"
+          {...(prefsTestId ? { 'data-testid': prefsTestId } : {})}
         >
           <h2 className="flex items-center gap-s2 text-body font-bold text-text-primary">
             <Bell className="size-icon-sm text-text-muted" aria-hidden="true" />
