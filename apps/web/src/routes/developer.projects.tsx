@@ -20,7 +20,7 @@ import { useTranslation } from '#/i18n/useTranslation'
 // proyecto** (D-029), no de una unidad.
 //
 // El header no muestra el logo: 35/36 lo omiten a favor del "← Back to panel"
-// + "+ New" en la misma fila (ver `hideBrand` en GradientHeader).
+// + "+ New" en la misma fila (`hideBrand` en PanelLayout, patrón A).
 //
 // **Un dato de la captura no se dibuja, y es deuda declarada, no olvido.** El
 // subtítulo dice "3 proyectos" y no "3 projects by Grupo Alpine" porque no hay
@@ -60,6 +60,7 @@ function DeveloperProjects() {
         label: t('developer.projects.backToPanel'),
         onClick: () => void navigate({ to: '/developer' })
       }}
+      hideBrand
       onOpenNotifications={() => void navigate({ to: '/developer' })}
       onOpenProfile={() => void navigate({ to: '/developer/profile' })}
       headerAction={

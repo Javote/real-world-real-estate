@@ -8,6 +8,11 @@ import { PropNexusMark } from './PropNexusMark'
 // **Nunca omite el logo**: es el ancla agnóstica de rol. Y el slot derecho está
 // reservado a utilidades globales —NotificationBell, LanguageToggle, acción
 // primaria—, nunca a acciones contextuales.
+//
+// Las capturas del developer mezclan dos patrones de `back` en pantallas del
+// mismo nivel (Documentación sin logo, Audit log con logo). No se unifican:
+// `hideBrand` es su propio booleano. Con logo, el back va **entre** la marca
+// y el título (capturas 37, 38, 39, 44b, 49) — nunca debajo del h1.
 
 interface GradientHeaderProps {
   title: string
@@ -31,10 +36,8 @@ interface GradientHeaderProps {
   /** Badge cuadrado a la izquierda del título (el logo del proyecto en el panel). */
   badge?: React.ReactNode
   /**
-   * **Excepción puntual**: la captura 35/36 (`/developer/projects`) no muestra
-   * el logo — el "← Back to panel" ocupa su lugar en la fila de arriba, junto
-   * al "+ New". Todas las demás capturas con `back` (37) lo muestran debajo
-   * del logo, que sigue siendo el default.
+   * Patrón A: el back reemplaza al logo (capturas 35/36, 42, 45, 46, 48, 44).
+   * Ausente, el logo queda y el back va entre la marca y el título (patrón B).
    */
   hideBrand?: boolean
   className?: string
@@ -51,6 +54,17 @@ export function GradientHeader({
   hideBrand,
   className
 }: GradientHeaderProps) {
+  const backLink = back ? (
+    <button
+      type="button"
+      onClick={back.onClick}
+      className="flex items-center gap-s1 text-body-sm text-white/80"
+    >
+      <ArrowLeft size={16} aria-hidden="true" />
+      {back.label}
+    </button>
+  ) : null
+
   return (
     <header
       className={cn(
@@ -59,19 +73,11 @@ export function GradientHeader({
         className
       )}
     >
-      {/* El logo va SIEMPRE, salvo la excepción de arriba: es el ancla
-          agnóstica de rol. */}
+      {/* El logo va SIEMPRE, salvo hideBrand: es el ancla agnóstica de rol. */}
       <div className="flex items-start justify-between gap-s3">
         <div className="flex items-center gap-s3">
-          {hideBrand && back ? (
-            <button
-              type="button"
-              onClick={back.onClick}
-              className="flex items-center gap-s1 text-body-sm text-white/80"
-            >
-              <ArrowLeft size={16} aria-hidden="true" />
-              {back.label}
-            </button>
+          {hideBrand && backLink ? (
+            backLink
           ) : badge ? (
             <span className="flex h-12 w-12 items-center justify-center rounded-xl bg-white/20">
               {badge}
@@ -83,6 +89,8 @@ export function GradientHeader({
         {right ? <div className="flex items-center gap-s2">{right}</div> : null}
       </div>
 
+      {back && !hideBrand ? <div className="mt-s3">{backLink}</div> : null}
+
       <div className="mt-s4 flex items-center justify-between gap-s3">
         <div className="min-w-0">
           <h1 className="text-display font-bold leading-tight">{title}</h1>
@@ -90,17 +98,6 @@ export function GradientHeader({
         </div>
         {titleAction ? <div className="shrink-0">{titleAction}</div> : null}
       </div>
-
-      {back && !hideBrand ? (
-        <button
-          type="button"
-          onClick={back.onClick}
-          className="mt-s3 flex items-center gap-s1 text-body-sm text-white/80"
-        >
-          <ArrowLeft size={16} aria-hidden="true" />
-          {back.label}
-        </button>
-      ) : null}
 
       {context ? <p className="mt-s4 text-body text-white/80">{context}</p> : null}
     </header>

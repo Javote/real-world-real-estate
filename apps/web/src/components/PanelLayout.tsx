@@ -32,11 +32,19 @@ interface PanelLayoutProps {
    */
   onOpenProfile?: () => void
   /**
-   * "← Back to panel" en vez del logo (captura 35/36, `/developer/projects`).
-   * Ninguna otra pantalla lo usa todavía, así que va siempre sin logo — el
-   * día que aparezca una que combine ambos, esto necesita su propio booleano.
+   * "← Back to panel" / "← Back". **No implica ocultar el logo.**
+   *
+   * Las capturas del developer mezclan los dos patrones en secciones del
+   * mismo nivel (Documentación 46 va sin logo, Audit log 49 va con logo).
+   * `hideBrand` es el booleano que elige; pasarlo atado a `back` hacía
+   * inalcanzable el patrón B.
    */
   back?: { label: string; onClick: () => void }
+  /**
+   * Patrón A: el back reemplaza al logo. Ausente, el logo queda y el back
+   * va entre la marca y el título (patrón B: capturas 37, 38, 39, 44b, 49).
+   */
+  hideBrand?: boolean
   /**
    * Acción primaria de la pantalla, alineada con el título (el "+ Nuevo" de la
    * captura 35-36). No compite con las utilidades globales del slot derecho:
@@ -54,6 +62,7 @@ export function PanelLayout({
   onOpenNotifications,
   onOpenProfile,
   back,
+  hideBrand,
   headerAction,
   children
 }: PanelLayoutProps) {
@@ -66,7 +75,8 @@ export function PanelLayout({
       <GradientHeader
         title={title}
         {...(context ? { context } : {})}
-        {...(back ? { back, hideBrand: true } : {})}
+        {...(back ? { back } : {})}
+        {...(hideBrand ? { hideBrand: true } : {})}
         {...(headerAction ? { titleAction: headerAction } : {})}
         right={
           <>
