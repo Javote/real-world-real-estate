@@ -1,4 +1,4 @@
-import { Building2, Calendar, MapPin } from 'lucide-react'
+import { Building2, Calendar, Heart, MapPin } from 'lucide-react'
 import { ProgressBar } from './ProgressBar'
 import { StatusPill, type StatusTone } from './StatusPill'
 
@@ -69,6 +69,11 @@ interface ProjectCardProps {
   labels: { from: string; units?: string; progress?: string }
   testId?: string
   variant?: 'buy' | 'developer'
+  /** Fila 13 — el corazón. Sin handler no se dibuja: no hay favorito fantasma. */
+  favorited?: boolean
+  onToggleFavorite?: () => void
+  favoriteAriaLabel?: string
+  favoriteTestId?: string
 }
 
 export function ProjectCard({
@@ -85,12 +90,16 @@ export function ProjectCard({
   onOpen,
   labels,
   testId,
-  variant = 'buy'
+  variant = 'buy',
+  favorited,
+  onToggleFavorite,
+  favoriteAriaLabel,
+  favoriteTestId
 }: ProjectCardProps) {
   const esDeveloper = variant === 'developer'
 
   return (
-    <article className="overflow-hidden rounded-lg bg-card shadow-e1" data-testid={testId}>
+    <article className="relative overflow-hidden rounded-lg bg-card shadow-e1" data-testid={testId}>
       <button type="button" onClick={onOpen} className="block w-full text-left">
         <div className="relative aspect-video w-full bg-surface-alt">
           {imageUrl ? (
@@ -181,6 +190,44 @@ export function ProjectCard({
           ) : null}
         </div>
       </button>
+
+      {onToggleFavorite ? (
+        <FavoriteButton
+          favorited={Boolean(favorited)}
+          onToggle={onToggleFavorite}
+          ariaLabel={favoriteAriaLabel ?? ''}
+          testId={favoriteTestId}
+        />
+      ) : null}
     </article>
+  )
+}
+
+function FavoriteButton({
+  favorited,
+  onToggle,
+  ariaLabel,
+  testId
+}: {
+  favorited: boolean
+  onToggle: () => void
+  ariaLabel: string
+  testId?: string
+}) {
+  return (
+    <button
+      type="button"
+      data-testid={testId}
+      aria-pressed={favorited}
+      aria-label={ariaLabel}
+      onClick={(e) => {
+        e.preventDefault()
+        e.stopPropagation()
+        onToggle()
+      }}
+      className="absolute top-s3 right-s3 z-10 rounded-full bg-card/90 p-s2 text-primary shadow-e1"
+    >
+      <Heart size={20} aria-hidden="true" className={favorited ? 'fill-primary' : ''} />
+    </button>
   )
 }

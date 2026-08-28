@@ -1,5 +1,5 @@
 import { useQuery } from '@tanstack/react-query'
-import { createFileRoute } from '@tanstack/react-router'
+import { createFileRoute, useNavigate } from '@tanstack/react-router'
 import { api } from '#/api/port'
 import { INVESTOR_ROLES } from '#/auth/roles'
 import { useRoleGuard } from '#/auth/useRoleGuard'
@@ -29,6 +29,7 @@ const TONO = {
 function InvestorUnits() {
   const { ready } = useRoleGuard(INVESTOR_ROLES)
   const { t } = useTranslation()
+  const navigate = useNavigate()
 
   const { data: unidades } = useQuery({
     queryKey: ['investor', 'units'],
@@ -57,6 +58,12 @@ function InvestorUnits() {
                 tone: TONO[u.status as keyof typeof TONO] ?? 'neutral',
                 label: t(`unitStatus.${u.status}` as never) ?? u.status
               }}
+              onOpen={() =>
+                void navigate({
+                  to: '/investor/unit/$unitId',
+                  params: { unitId: u.id }
+                })
+              }
             />
           ))
         ) : (

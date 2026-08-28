@@ -13,6 +13,7 @@ import type {
   DeveloperDocument,
   DeveloperKpis,
   Dossier,
+  DossierShare,
   InvestorDirectoryEntry,
   NotaryKpis,
   NotarySignature,
@@ -23,19 +24,31 @@ import type {
 import { clearSession, getSession } from '../auth/session'
 import type {
   AuditEvent,
+  BuildingSchematicFloor,
+  BundleFiles,
+  ContractRelease,
   DeveloperContract,
   DeveloperProject,
   DeveloperProjectDetail,
   DeveloperProjectUnit,
   DeveloperUnit,
   Evidence,
+  InvestorContract,
+  InvestorInvitation,
   InvestorUnit,
+  InvestorUnitDetail,
+  InvestorUnitNews,
   Invitation,
+  InvitationAcceptResult,
   LoginResponse,
   MeResponse,
+  MerkleProof,
   ProgressRow,
   Project,
   ProjectDetail,
+  ProjectDocument,
+  ProjectStageDetail,
+  PublicDossier,
   Stage,
   StageEvidenceAnchor,
   StageState
@@ -99,7 +112,22 @@ export const api = {
 
   me: () => request<MeResponse>('/api/v1/auth/me'),
 
-  listProjects: () => request<Project[]>('/api/v1/projects'),
+  listProjects: (params?: {
+    status?: 'planning' | 'in_progress' | 'delayed' | 'completed'
+    q?: string
+    bbox?: string
+    sort?: 'recent' | 'name' | 'delivery'
+    city?: string
+  }) => {
+    const q = new URLSearchParams()
+    if (params?.status) q.set('status', params.status)
+    if (params?.q) q.set('q', params.q)
+    if (params?.bbox) q.set('bbox', params.bbox)
+    if (params?.sort) q.set('sort', params.sort)
+    if (params?.city) q.set('city', params.city)
+    const qs = q.toString()
+    return request<Project[]>(`/api/v1/projects${qs ? `?${qs}` : ''}`)
+  },
 
   // Paneles de rol (M2-D5 filas 33-34, 51, 55). Los tipos vienen del contrato
   // de `packages/shared`: acá no se declara la forma de nada.
@@ -239,6 +267,72 @@ export const api = {
     request<StageEvidenceAnchor>('/api/v1/developer/documents', jsonInit('POST', { evidenceId })),
 
   listInvestorUnits: () => request<InvestorUnit[]>('/api/v1/investor/units'),
+
+  // ── Superficie del investor (M2-D5 filas 03-13, 15-30, 63) ───────────────
+
+  listProjectDocuments: (id: string) =>
+    request<ProjectDocument[]>(`/api/v1/projects/${id}/documents`),
+
+  listProjectStages: (id: string) => request<Stage[]>(`/api/v1/projects/${id}/stages`),
+
+  getProjectStage: (id: string, stageId: string) =>
+    request<ProjectStageDetail>(`/api/v1/projects/${id}/stages/${stageId}`),
+
+  getBuildingSchematic: (id: string) =>
+    request<BuildingSchematicFloor[]>(`/api/v1/projects/${id}/building-schematic`),
+
+  listFavorites: () => request<Project[]>('/api/v1/investor/favorites'),
+
+  addFavorite: (projectId: string) =>
+    request<void>(`/api/v1/investor/favorites/${projectId}`, { method: 'POST' }),
+
+  removeFavorite: (projectId: string) =>
+    request<void>(`/api/v1/investor/favorites/${projectId}`, { method: 'DELETE' }),
+
+  getInvestorUnit: (id: string) => request<InvestorUnitDetail>(`/api/v1/investor/units/${id}`),
+
+  getInvestorUnitNews: (id: string) =>
+    request<InvestorUnitNews[]>(`/api/v1/investor/units/${id}/news`),
+
+  getInvestorContract: (unitId: string) =>
+    request<InvestorContract>(`/api/v1/investor/contracts/${unitId}`),
+
+  listContractReleases: (contractId: string) =>
+    request<ContractRelease[]>(`/api/v1/contracts/${contractId}/releases`),
+
+  getUnitDossier: (id: string) => request<Dossier>(`/api/v1/investor/units/${id}/dossier`),
+
+  exportUnitDossier: async (id: string): Promise<Blob> => {
+    const session = getSession()
+    const res = await fetch(`${API_BASE}/api/v1/investor/units/${id}/dossier/export.pdf`, {
+      headers: session ? { Authorization: `Bearer ${session.token}` } : {}
+    })
+    if (res.status === 401) clearSession()
+    if (!res.ok) throw new ApiError(res.status, res.statusText)
+    return res.blob()
+  },
+
+  shareUnitDossier: (id: string) =>
+    request<DossierShare>(`/api/v1/investor/units/${id}/dossier/share`, jsonInit('POST', {})),
+
+  getPublicDossier: (shareToken: string) =>
+    request<PublicDossier>(`/api/v1/public/dossier/${shareToken}`),
+
+  getBundleFiles: (bundleId: string) => request<BundleFiles>(`/api/v1/evidence/${bundleId}/files`),
+
+  getMerkleProof: (bundleId: string, fileHash: string) =>
+    request<MerkleProof>(`/api/v1/evidence/${bundleId}/proof/${fileHash}`),
+
+  getInvitation: (id: string) => request<InvestorInvitation>(`/api/v1/investor/invitations/${id}`),
+
+  acceptInvitation: (id: string) =>
+    request<InvitationAcceptResult>(
+      `/api/v1/investor/invitations/${id}/accept`,
+      jsonInit('POST', {})
+    ),
+
+  declineInvitation: (id: string) =>
+    request<void>(`/api/v1/investor/invitations/${id}/decline`, { method: 'POST' }),
 
   // ── Notificaciones (M2-D5 filas 22 y 62) ─────────────────────────────────
 

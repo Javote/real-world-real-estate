@@ -74,6 +74,7 @@ la va a leer quien intente usarlo. Esta tabla solo dice dónde está cada una.
 | Fila de StatCards Active / Pending / Completed en `/developer/investors` | misma deuda: no hay `status` por investor del que agregar | Contrato: sin el campo no hay conteo que no sea inventado |
 | Nombre de la organización ("Grupo Alpine") | `ProjectCard` prop `developerName` | 🟡 Migración: no hay entidad de organización. `User.fullName` es una persona |
 | "Price from" en el listado del investor | `ProjectCard` prop `priceLabel` | Endpoint: `GET /projects` no agrega el mínimo de las unidades. `GET /developer/projects` **ya lo hace** — es copiar esa agregación |
+| Rating / reputación del developer (capturas 6-7) | detalle `/project/:id` — no hay estrellas | Contrato: no hay modelo de rating. Capturas 59/60 no tienen fila en M2-D5 |
 | KPI "Active investors" y "Verified events" del panel (capturas 33/34) | `developer.index.tsx` — no hay tile | Contrato: `developerKpisSchema` no los expone |
 
 **Fijate si el dato existe antes de declararlo ausente.** El "Price from" se declaró ausente y no lo

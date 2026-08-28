@@ -39,6 +39,13 @@ describe('formatDate', () => {
     const iso = '2026-03-09T12:00:00.000Z'
     expect(formatDate(iso, 'es-AR')).not.toBe(formatDate(iso, 'en-US'))
   })
+
+  it('acepta epoch ms (número o dígitos), no solo ISO', () => {
+    const ms = Date.parse('2026-03-09T12:00:00.000Z')
+    const iso = '2026-03-09T12:00:00.000Z'
+    expect(formatDate(ms, 'en-US')).toBe(formatDate(iso, 'en-US'))
+    expect(formatDate(String(ms), 'en-US')).toBe(formatDate(iso, 'en-US'))
+  })
 })
 
 describe('formatRelative', () => {

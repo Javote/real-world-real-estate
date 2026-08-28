@@ -223,6 +223,174 @@ export interface InvestorUnit {
   progress: number
 }
 
+/** Fila 06-07 — documentos del proyecto con su estado de prueba derivado del TXID. */
+export interface ProjectDocument {
+  id: string
+  stageId: string | null
+  evidenceType: EvidenceType
+  category: string
+  authoritative: boolean
+  originalFilename: string
+  mimeType: string
+  sizeBytes: number
+  sha256Hash: string
+  uploadedAt: string
+  txid: string | null
+  anchorStatus: string
+}
+
+/** Fila 09-12 — el stage con su evidencia y el bundle que lo compromete. */
+export interface ProjectStageDetail extends Stage {
+  evidences: Array<{
+    id: string
+    evidenceType: EvidenceType
+    category: string
+    authoritative: boolean
+    originalFilename: string
+    mimeType: string
+    sizeBytes: number
+    sha256Hash: string
+    uploadedAt: string
+  }>
+  bundle: { id: string; commitmentHash: string; createdAt: string } | null
+  events: Array<{
+    eventType: string
+    toState: string | null
+    commitment: string | null
+    txid: string | null
+    status: string
+    createdAt: string
+  }>
+}
+
+/** Fila 21 — unidades agrupadas por piso. `floor` null no se inventa. */
+export interface BuildingSchematicFloor {
+  floor: number | null
+  units: Array<{
+    id: string
+    unitReference: string
+    floor: number | null
+    status: string
+  }>
+}
+
+/** Fila 15-18 — detalle de la unidad, con los stages del PROYECTO (D-029, P9). */
+export interface InvestorUnitStage {
+  stageId: string
+  name: string
+  sequenceOrder: number
+  state: StageState
+  bundleId: string | null
+  txid: string | null
+}
+
+export interface InvestorUnitDetail {
+  id: string
+  unitReference: string
+  status: string
+  sizeM2: number | null
+  floor: number | null
+  priceMinorUnits: number | null
+  currency: string | null
+  investorId: string
+  projectId: string
+  projectName: string
+  city: string | null
+  country: string | null
+  stages: InvestorUnitStage[]
+}
+
+/** Fila 15-18 — novedades: eventos de los stages del proyecto. */
+export interface InvestorUnitNews {
+  id: string
+  eventType: string
+  toState: string | null
+  txid: string | null
+  status: string | null
+  createdAt: string
+  stageName: string | null
+}
+
+/** Fila 23-24 — el contrato como registro. Sin TXID propio en este GET. */
+export interface InvestorContract {
+  id: string
+  totalMinorUnits: number
+  currency: string
+  /** ISO o epoch ms: `signedAt` no entra en el plugin de coerciones de SQLite. */
+  signedAt: string | number | null
+  investorId: string
+  unitReference: string
+}
+
+/** Fila 23-24 — cada release con su TXID (P10). Sin moneda: sale del contrato. */
+export interface ContractRelease {
+  id: string
+  stageNumber: number
+  amountMinorUnits: number
+  releasedAt: string | number
+  commitment: string | null
+  txid: string | null
+  anchorStatus: string | null
+}
+
+/** Fila 25m — archivos del bundle y su Merkle root. */
+export interface BundleFiles {
+  bundleId: string
+  merkleRoot: string
+  files: Array<{
+    evidenceId: string | null
+    sha256Hash: string
+    filename: string | null
+  }>
+}
+
+export interface MerkleProof {
+  merkleRoot: string
+  leaf: string
+  proof: Array<{ sibling: string; position: 'left' | 'right' }>
+}
+
+/** Fila 63 — la invitación que el investor ve. */
+export interface InvestorInvitation {
+  id: string
+  investorEmail: string
+  amountMinorUnits: number
+  currency: string
+  status: string
+  createdAt: string
+  unitReference: string
+  projectName: string
+}
+
+export interface InvitationAcceptResult {
+  contract: {
+    id: string
+    unitId: string
+    totalMinorUnits: number
+    currency: string
+  }
+  anchor: { txid: string | null; status: string }
+}
+
+/** Fila 28s — vista pública, recortada: hashes y TXID, sin PII. */
+export interface PublicDossier {
+  unitReference: string
+  projectName: string
+  masterHash: string
+  compiledAt: string
+  status: string
+  completeness: number
+  signatureTxid: string | null
+  signedAt: string | null
+  artifacts: Array<{
+    kind: string
+    referenceId: string
+    label: string
+    sha256: string | null
+    txid: string | null
+  }>
+}
+
 /** Fila 45 — el avance por etapa, cruzando todos los proyectos del developer. */
 export interface ProgressRow {
   stageId: string

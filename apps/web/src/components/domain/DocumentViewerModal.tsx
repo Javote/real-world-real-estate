@@ -21,6 +21,7 @@ import { VerifiedWatermark } from './VerifiedWatermark'
 interface DocumentViewerModalProps {
   open: boolean
   onClose: () => void
+  testId?: string
   /** Título del documento, no el nombre del archivo. */
   title: string
   filename: string
@@ -45,6 +46,7 @@ interface DocumentViewerModalProps {
 export function DocumentViewerModal({
   open,
   onClose,
+  testId,
   title,
   filename,
   pageUrl,
@@ -58,7 +60,7 @@ export function DocumentViewerModal({
 
   return (
     <Dialog open={open} onOpenChange={(abierto) => !abierto && onClose()}>
-      <DialogContent className="max-w-2xl bg-card">
+      <DialogContent data-testid={testId} className="max-w-2xl bg-card">
         <DialogHeader>
           <DialogTitle className="text-h2 font-bold text-text-primary">{title}</DialogTitle>
           <DialogDescription className="text-body-sm text-text-muted">
@@ -70,11 +72,13 @@ export function DocumentViewerModal({
         {/* `VerifiedWatermark` recibe el TXID, no un booleano: sin anclaje no
             estampa nada, y esa decisión vive en el componente del patrón, no
             acá (regla 17). */}
-        <VerifiedWatermark txid={txid} label={labels.watermark}>
-          <div className="overflow-hidden rounded-lg border border-border">
-            <img src={pageUrl} alt={title} className="w-full object-contain" />
-          </div>
-        </VerifiedWatermark>
+        {pageUrl ? (
+          <VerifiedWatermark txid={txid} label={labels.watermark}>
+            <div className="overflow-hidden rounded-lg border border-border">
+              <img src={pageUrl} alt={title} className="w-full object-contain" />
+            </div>
+          </VerifiedWatermark>
+        ) : null}
 
         <div className="flex items-center justify-between gap-s2">
           <span className="flex items-center gap-s2">

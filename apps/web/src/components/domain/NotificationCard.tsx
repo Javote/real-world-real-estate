@@ -34,6 +34,7 @@ interface NotificationCardProps {
   /** Para el check de leída. */
   readLabel: string
   onOpen?: () => void
+  testId?: string
   className?: string
 }
 
@@ -46,6 +47,7 @@ export function NotificationCard({
   category,
   readLabel,
   onOpen,
+  testId,
   className
 }: NotificationCardProps) {
   const Contenedor = onOpen ? 'button' : 'div'
@@ -53,6 +55,7 @@ export function NotificationCard({
   return (
     <Contenedor
       {...(onOpen ? { type: 'button' as const, onClick: onOpen } : {})}
+      data-testid={testId}
       className={cn(
         'flex w-full items-start gap-s3 rounded-lg p-s3 text-left shadow-e1',
         // Sin leer — tinte púrpura suave. Leída — fondo normal.
