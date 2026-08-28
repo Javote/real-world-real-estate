@@ -1,5 +1,5 @@
 import { useQuery } from '@tanstack/react-query'
-import { createFileRoute } from '@tanstack/react-router'
+import { createFileRoute, useNavigate } from '@tanstack/react-router'
 import { FileSignature, ShieldCheck, Wallet } from 'lucide-react'
 import { api } from '#/api/port'
 import { DEV_ROLES } from '#/auth/roles'
@@ -61,6 +61,7 @@ function ProjectContracts() {
   const { projectId } = Route.useParams()
   const { ready } = useRoleGuard(DEV_ROLES)
   const { t, locale } = useTranslation()
+  const navigate = useNavigate()
 
   const { data: proyecto } = useQuery({
     queryKey: ['developer', 'project', projectId],
@@ -88,6 +89,14 @@ function ProjectContracts() {
       rol="developer"
       title={t('developer.contracts.title')}
       {...(proyecto ? { context: proyecto.name } : {})}
+      back={{
+        label: t('nav.back'),
+        onClick: () =>
+          void navigate({
+            to: '/developer/project/$projectId',
+            params: { projectId }
+          })
+      }}
     >
       <section className="grid grid-cols-3 gap-s3">
         <StatCard
