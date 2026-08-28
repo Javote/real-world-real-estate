@@ -1,5 +1,5 @@
 import { useQuery } from '@tanstack/react-query'
-import { createFileRoute } from '@tanstack/react-router'
+import { createFileRoute, useNavigate } from '@tanstack/react-router'
 import { api } from '#/api/port'
 import { DEV_ROLES } from '#/auth/roles'
 import { useRoleGuard } from '#/auth/useRoleGuard'
@@ -22,12 +22,16 @@ import { useTranslation } from '#/i18n/useTranslation'
 // El resto de la fila sí está entero: la respuesta agrega por investor, así que
 // una card resume TODAS sus unidades y proyectos en vez de repetirlo por
 // contrato. Es la forma que el endpoint ya tenía y la que el directorio pide.
+// La card parte Inversión / Unidad en dos columnas (captura 48); el valor de
+// Unidad es el CONTEO que el contrato da, no una referencia tipo "Depto 4B"
+// — esa no viaja.
 
 export const Route = createFileRoute('/developer/investors')({ component: DeveloperInvestors })
 
 function DeveloperInvestors() {
   const { ready } = useRoleGuard(DEV_ROLES)
   const { t, locale } = useTranslation()
+  const navigate = useNavigate()
 
   const { data: investors } = useQuery({
     queryKey: ['developer', 'investors'],
@@ -42,6 +46,11 @@ function DeveloperInvestors() {
       rol="developer"
       title={t('developer.investors.title')}
       context={t('developer.investors.context', { count: String(investors?.length ?? 0) })}
+      back={{
+        label: t('nav.backToPanel'),
+        onClick: () => void navigate({ to: '/developer' })
+      }}
+      hideBrand
     >
       <section className="flex flex-col gap-s2" data-testid="DEV-INVESTORS-LIST-001">
         {investors?.length ? (
@@ -57,6 +66,8 @@ function DeveloperInvestors() {
               }
               unitLabel={t('developer.investors.units', { count: String(inv.units) })}
               projectName={inv.projects.join(' · ')}
+              investmentHeading={t('developer.investors.investment')}
+              unitHeading={t('developer.investors.unit')}
             />
           ))
         ) : (
