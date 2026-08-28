@@ -142,6 +142,10 @@ no la captura. No reintroducir un `hideBrand`.
   responsive de Tailwind: `hidden md:flex` quedaba oculto en **todos** los viewports. Se fue con el
   archivo, pero la lección queda para cuando entren los tokens: **si escribís una regla con el
   nombre de una utilidad de Tailwind, vas a pelear con el orden del archivo.**
+- **2026-08-28 · `Link` de TanStack Router pinta activo por prefijo.** `activeOptions.exact`
+  vale `false` por defecto: un tab a `/developer` queda activo en `/developer/capital`. En el
+  BottomNav, el tab índice pide `exact` si algún hermano cuelga de su path. No es CSS ni estado
+  local. El investor no lo padece: su primer tab es `/investor/menu`.
 
 ## Comandos
 
