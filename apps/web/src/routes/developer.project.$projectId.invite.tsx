@@ -62,12 +62,6 @@ function InviteInvestor() {
   const [unitId, setUnitId] = useState('')
   const [monto, setMonto] = useState<number | null>(null)
 
-  const { data: proyecto } = useQuery({
-    queryKey: ['developer', 'project', projectId],
-    queryFn: () => api.getDeveloperProject(projectId),
-    enabled: ready
-  })
-
   const { data: unidades } = useQuery({
     queryKey: ['developer', 'project', projectId, 'units'],
     queryFn: () => api.listProjectUnits(projectId),
@@ -120,7 +114,15 @@ function InviteInvestor() {
     <PanelLayout
       rol="developer"
       title={t('developer.invite.title')}
-      {...(proyecto ? { context: proyecto.name } : {})}
+      context={t('developer.invite.context')}
+      back={{
+        label: t('nav.back'),
+        onClick: () =>
+          void navigate({
+            to: '/developer/project/$projectId',
+            params: { projectId }
+          })
+      }}
     >
       <form
         className="flex flex-col gap-s4"
