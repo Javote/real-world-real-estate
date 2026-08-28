@@ -1,6 +1,15 @@
 import { useQuery } from '@tanstack/react-query'
 import { createFileRoute, useNavigate } from '@tanstack/react-router'
-import { Building2, FileCheck2, Home, Plus, ScrollText, TrendingUp, Users } from 'lucide-react'
+import {
+  Building2,
+  DollarSign,
+  FileCheck2,
+  Home,
+  Plus,
+  ScrollText,
+  TrendingUp,
+  Users
+} from 'lucide-react'
 import { api } from '#/api/port'
 import { DEV_ROLES } from '#/auth/roles'
 import { useRoleGuard } from '#/auth/useRoleGuard'
@@ -13,6 +22,12 @@ import { useTranslation } from '#/i18n/useTranslation'
 // **M2-D5 fila 33-34 · `/developer` (Panel)** — captura 33-DEVELOPER-HOME-A.
 // Componentes: StatCard, ActionCard (featured), NotificationBell,
 // GradientHeader. Endpoint: GET /developer/kpis. Test ID: DEV-PANEL-KPIS-001.
+//
+// **Dos tiles de la captura 34 no se dibujan, y es deuda, no olvido.**
+// "Active investors" (7 / 12 total) y "Verified events" (16) están en la
+// maqueta; `developerKpisSchema` no los expone. El directorio y el audit log
+// existen como pantallas, pero el panel no puede afirmar un número que el
+// contrato no trae (regla 17). El índice está en `apps/web/CLAUDE.md`.
 
 // `.index` y no `developer.tsx`: un archivo de ruta sin `.index` es el LAYOUT
 // de todo lo que cuelga del prefijo y tiene que renderizar un `<Outlet/>`. Sin
@@ -56,6 +71,18 @@ function DeveloperPanel() {
           icon={Building2}
           tone="entity"
         />
+        {/* El KPI llega en unidades mínimas (regla 1). KpiValue no sabe de
+            moneda: se divide acá, una sola vez, igual que `formatCurrency`.
+            Sin `currency` en el schema no se puede pintar "US$". */}
+        <StatCard
+          value={kpi(
+            data?.capitalRaisedMinorUnits != null ? data.capitalRaisedMinorUnits / 100 : null
+          )}
+          label={t('panel.developer.capitalRaised')}
+          helper={t('panel.developer.capitalHint')}
+          icon={DollarSign}
+          tone="financial"
+        />
         <StatCard
           value={kpi(data?.totalUnits ?? null)}
           label={t('panel.developer.totalUnits')}
@@ -78,11 +105,15 @@ function DeveloperPanel() {
         />
       </section>
 
-      {/* **Los accesos a las pantallas huérfanas (D-072), fuera del grid de
+      {/*           **Los accesos a las pantallas huérfanas (D-072), fuera del grid de
           KPIs a propósito.** Las capturas 33/34 fijan la composición de ese
           grid —un ActionCard destacado y siete StatCards— y meterle tiles de
           navegación lo desviaría de lo que el entregable muestra. Acá van los
           destinos que M2-D1 §5.2 le da al developer sin decir cómo se llega.
+
+          Del grid de siete, hoy hay cinco: faltan Active investors y Verified
+          events (ver el comentario de arriba). Capital raised sí está: el
+          schema ya lo trae.
 
           Solo se listan los que EXISTEN.
 

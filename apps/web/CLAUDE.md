@@ -71,8 +71,10 @@ la va a leer quien intente usarlo. Esta tabla solo dice dónde está cada una.
 | Qué falta | Dónde está declarada | Qué costaría |
 |---|---|---|
 | Pill de estado del investor (Active / Pending / Completed) | `InvestorCard` prop `status` | Contrato: `investorDirectoryEntrySchema` no expone `status`, y el endpoint hace `innerJoin Contract` |
+| Fila de StatCards Active / Pending / Completed en `/developer/investors` | misma deuda: no hay `status` por investor del que agregar | Contrato: sin el campo no hay conteo que no sea inventado |
 | Nombre de la organización ("Grupo Alpine") | `ProjectCard` prop `developerName` | 🟡 Migración: no hay entidad de organización. `User.fullName` es una persona |
 | "Price from" en el listado del investor | `ProjectCard` prop `priceLabel` | Endpoint: `GET /projects` no agrega el mínimo de las unidades. `GET /developer/projects` **ya lo hace** — es copiar esa agregación |
+| KPI "Active investors" y "Verified events" del panel (capturas 33/34) | `developer.index.tsx` — no hay tile | Contrato: `developerKpisSchema` no los expone |
 
 **Fijate si el dato existe antes de declararlo ausente.** El "Price from" se declaró ausente y no lo
 estaba: el precio existe en `UnitTable.priceMinorUnits`, solo que a nivel unidad. Eso convirtió una
