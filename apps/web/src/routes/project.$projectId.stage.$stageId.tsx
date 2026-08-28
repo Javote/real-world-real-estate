@@ -18,6 +18,7 @@ import { PanelLayout } from '#/components/PanelLayout'
 import { Dialog, DialogContent, DialogTitle } from '#/components/ui/dialog'
 import { formatDate, formatDateTime, formatMonthYear } from '#/i18n/format'
 import { useTranslation } from '#/i18n/useTranslation'
+import { useObjectUrls } from '#/lib/blobUrls'
 import { esFoto, formatoArchivo, reintentarSiNoEsAusencia } from '#/lib/investor'
 import { bajarBlob } from '#/lib/stageProgress'
 
@@ -43,6 +44,7 @@ function InvestorStageDetail() {
   const [txidModal, setTxidModal] = useState<{ txid: string; at: string; label: string } | null>(
     null
   )
+  const objectUrl = useObjectUrls()
 
   const { data: stages } = useQuery({
     queryKey: ['project', projectId, 'stages'],
@@ -64,6 +66,18 @@ function InvestorStageDetail() {
     enabled: ready && hito && Boolean(stage?.bundle?.id)
   })
 
+  // **El anclaje de un documento es el suyo, no el de la etapa.** `GET
+  // /projects/:id/stages/:stageId` devuelve la evidencia sin TXID; el join por
+  // evidencia lo hace `GET /projects/:id/documents` (`projects.routes.ts`), que
+  // deja escrito por qué la derivación vive allá: para que no haya dos
+  // versiones de la regla 17. Acá solo se indexa por id.
+  const { data: documentosDelProyecto } = useQuery({
+    queryKey: ['project', projectId, 'documents'],
+    queryFn: () => api.listProjectDocuments(projectId),
+    enabled: ready,
+    retry: reintentarSiNoEsAusencia
+  })
+
   const fotos = (stage?.evidences ?? []).filter((e) => esFoto(e.evidenceType, e.mimeType))
   const docs = (stage?.evidences ?? []).filter((e) => !esFoto(e.evidenceType, e.mimeType))
 
@@ -73,18 +87,20 @@ function InvestorStageDetail() {
       const pares = await Promise.all(
         fotos.map(async (f) => ({
           id: f.id,
-          url: URL.createObjectURL(await api.downloadEvidence(f.id))
+          url: objectUrl(await api.downloadEvidence(f.id))
         }))
       )
       return Object.fromEntries(pares.map((p) => [p.id, p.url])) as Record<string, string>
     },
+    gcTime: 0,
     enabled: ready && fotos.length > 0
   })
 
   const docAbierto = docs.find((d) => d.id === docId) ?? fotos.find((d) => d.id === docId)
   const { data: docUrl } = useQuery({
     queryKey: ['evidence-blob', docId],
-    queryFn: async () => URL.createObjectURL(await api.downloadEvidence(docId!)),
+    queryFn: async () => objectUrl(await api.downloadEvidence(docId!)),
+    gcTime: 0,
     enabled: Boolean(docId)
   })
 
@@ -100,11 +116,27 @@ function InvestorStageDetail() {
     )
   }
 
-  const txid =
-    stage?.events.find((e) => e.txid)?.txid ??
-    stage?.events.find((e) => e.eventType === 'STAGE_TRANSITION' && e.txid)?.txid ??
-    null
-  const eventoAnclado = stage?.events.find((e) => e.txid)
+  // **Tres anclajes distintos, tres preguntas distintas** (M2-D4 §6.1). Un solo
+  // TXID para todo dice "Verificado" sobre cosas que ese TXID no compromete.
+  //
+  //  1. La etapa (P1, arriba): su transición anclada.
+  //  2. El bundle (P5, el modal del hito): el evento cuyo `commitment` ES la
+  //     raíz del bundle. Sin esa igualdad, el TXID no sustancia estos archivos.
+  //  3. Cada documento: el suyo, que viene del endpoint de documentos.
+  const anclajeDelStage = stage?.events.find((e) => e.eventType === 'STAGE_TRANSITION' && e.txid)
+  const txidDelStage = anclajeDelStage?.txid ?? null
+
+  const raizDelBundle = stage?.bundle?.commitmentHash ?? null
+  const anclajeDelBundle = raizDelBundle
+    ? stage?.events.find((e) => e.txid && e.commitment === raizDelBundle)
+    : undefined
+  const txidDelBundle = anclajeDelBundle?.txid ?? null
+
+  const txidPorEvidencia = new Map(
+    (documentosDelProyecto ?? []).map((d) => [d.id, d.txid] as const)
+  )
+  const txidDe = (evidenceId: string) => txidPorEvidencia.get(evidenceId) ?? null
+
   const total = stages?.length ?? 0
   const visibles = fotos.slice(0, 5)
 
@@ -148,7 +180,7 @@ function InvestorStageDetail() {
             </span>
           ) : null}
           <VerificationBadge
-            txid={txid}
+            txid={txidDelStage}
             verifiedLabel={t('status.verified')}
             pendingLabel={t('status.pending')}
           />
@@ -218,12 +250,12 @@ function InvestorStageDetail() {
                 uploadedAtLabel={formatDate(String(d.uploadedAt), locale)}
                 format={formatoArchivo(d.mimeType, d.category)}
                 sha256={d.sha256Hash}
-                txid={txid}
+                txid={txidDe(d.id)}
                 showHash
                 labels={etiquetasDoc}
                 onView={() => setDocId(d.id)}
                 onDownload={
-                  txid
+                  txidDe(d.id)
                     ? () =>
                         void api
                           .downloadEvidence(d.id)
@@ -269,9 +301,9 @@ function InvestorStageDetail() {
           docAbierto && esFoto(docAbierto.evidenceType, docAbierto.mimeType) ? (docUrl ?? '') : ''
         }
         dateLabel={docAbierto ? formatDate(String(docAbierto.uploadedAt), locale) : ''}
-        txid={txid}
+        txid={docAbierto ? txidDe(docAbierto.id) : null}
         onDownload={
-          docAbierto && txid
+          docAbierto && txidDe(docAbierto.id)
             ? () =>
                 void api
                   .downloadEvidence(docAbierto.id)
@@ -305,8 +337,10 @@ function InvestorStageDetail() {
               <span className="truncate text-body font-medium text-text-primary">
                 {f.filename ?? f.sha256Hash}
               </span>
+              {/* El archivo está dentro del bundle que se ancló: lo que el
+                  TXID sustancia es la raíz, y la raíz compromete este hash. */}
               <VerificationBadge
-                txid={txid}
+                txid={txidDelBundle}
                 verifiedLabel={t('status.verified')}
                 pendingLabel={t('status.pending')}
               />
@@ -319,19 +353,19 @@ function InvestorStageDetail() {
           ))}
           <MerkleRootProof
             testId="INV-MERKLE-PROOF-002"
-            merkleRoot={bundleFiles?.merkleRoot ?? stage?.bundle?.commitmentHash ?? ''}
-            txid={txid}
+            merkleRoot={bundleFiles?.merkleRoot ?? raizDelBundle ?? ''}
+            txid={txidDelBundle}
             archivos={(bundleFiles?.files ?? []).map((f) => ({
               id: f.sha256Hash,
               nombre: f.filename ?? f.sha256Hash,
               sha256: f.sha256Hash
             }))}
             onOpenTxid={
-              txid && eventoAnclado
+              txidDelBundle && anclajeDelBundle
                 ? () =>
                     setTxidModal({
-                      txid,
-                      at: String(eventoAnclado.createdAt),
+                      txid: txidDelBundle,
+                      at: String(anclajeDelBundle.createdAt),
                       label: stage?.name ?? ''
                     })
                 : undefined
@@ -368,10 +402,11 @@ function InvestorStageDetail() {
         </DialogContent>
       </Dialog>
 
+      {/* Sin `testId`: INV-TXID-MODAL-001 es de la fila 25v, que vive dentro
+          del contrato (23-24). Repetirlo acá duplica el ID en la suite. */}
       {txidModal ? (
         <TxidModal
           open
-          testId="INV-TXID-MODAL-001"
           onClose={() => setTxidModal(null)}
           label={txidModal.label}
           anchoredAt={txidModal.at}
