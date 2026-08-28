@@ -38,7 +38,7 @@ function InvestorBuy() {
   if (!ready) return null
 
   return (
-    <PanelLayout rol="investor" title={t('panel.investor.title')} onOpenNotifications={() => {}}>
+    <PanelLayout rol="investor" title={t('panel.investor.title')}>
       <section className="flex flex-col gap-s4" data-testid="INV-BUY-LIST-001">
         {proyectos?.length ? (
           proyectos.map((proyecto) => {

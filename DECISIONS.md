@@ -22,7 +22,7 @@ ya no existen. Partirlo no pierde nada: el porqué sigue estando, deja de pesar.
 > se contradice internamente, (b) es un error de redacción, o (c) seguirlo al pie contradiría una
 > verdad del producto declarada por el dueño — **nunca por conveniencia**.
 >
-> **La numeración no se recicla.** Las decisiones nuevas siguen desde D-074.
+> **La numeración no se recicla.** Las decisiones nuevas siguen desde D-075.
 
 ## Desvíos vigentes
 
@@ -39,6 +39,7 @@ Todos se comunican en la entrega.
 | M2-D4 §Pattern 2 dice "First 6 characters **after** the `0x` prefix" y su ejemplo es `0xdcd5...7994`, que son 6 **contando** el prefijo | Gana el ejemplo: es la única de las cuatro menciones de la regla que muestra el resultado, y las otras tres dicen solo "6+4 characters" | (a) contradicción interna | D-069 |
 | M2-D1 §6 "Evidence flow" pasos 5-6: DEV *"Release stage N payment is enabled"*, INV *"Contract and **payments**… Releases by Stage"* | La plataforma **no administra fondos**: refleja y respalda la vida real, no la ejecuta. Sí puede mostrar el estado comercial de la unidad (vendida / disponible) | (c) verdad del producto | D-070 |
 | M2-D5 fila 42-43 lista un componente `Chart` que M2-D3 no define entre sus 36 | Las barras de la captura 42 son **composición de esa pantalla**, no una entrada nueva de la biblioteca | (a) contradicción interna | D-073 |
+| M2-D2 dibuja headers distintos en secciones hermanas del developer (46 sin logo, 49 con logo) y omite campana / perfil / idioma; M2-D3 dice *never omit the logo* y reserva el slot derecho a esas utilidades | Header autenticado unificado: logo + campana + perfil + idioma; `back` no reemplaza al logo | (a) contradicción interna + (c) verdad del producto | D-074 |
 | M2-D5 §3 asume tRPC-libre "REST over HTTPS"… y lo marca `[ASSUMPTION]` anulable | **Se confirma, no se anula**: la columna de endpoints de las 53 filas y la verificación externa por `curl` dependen de REST | — | D-066 |
 
 ---
@@ -255,8 +256,9 @@ interactivo.
 
 1. **Perfil → ícono en el slot derecho del `GradientHeader`**, junto a la campana y el toggle de
    idioma. M2-D3 §GradientHeader ya reserva ese slot para *"utilities: NotificationBell,
-   LanguageToggle, action button"*, así que no se inventa superficie: se usa un slot definido. Solo
-   se monta donde el rol no tiene tab de perfil — los otros tres ya llegan por su nav.
+   LanguageToggle, action button"*, así que no se inventa superficie: se usa un slot definido.
+   D-074 monta esas tres utilidades en **todo** `PanelLayout`; esta decisión sigue siendo la que
+   explica *por qué el developer llega al perfil por el header* (no tiene tab).
 2. **`/developer/documentation` y `/developer/investors` → `ActionCard` en el Panel.** M2-D3
    §Layout patterns ya declara la grilla de acción como patrón del Developer Panel (*"New project
    tile + Active Projects"*), y `ActionCard` es uno de los 36.
@@ -298,6 +300,35 @@ El día que otra las pida, se extrae — y eso sí es una decisión, con su núm
 
 Es el mismo criterio con el que `PanelLayout` vive en `components/` sin ser de M2-D3: se extrajo
 porque lo repetían cuatro paneles y repetirlo garantizaba que se desincronizaran.
+
+## D-074 — El header autenticado es uno: logo + campana + perfil + idioma
+
+**Desvío legítimo por las causales (a) y (c)** de la jerarquía de precedencia: *el entregable se
+contradice internamente*, y *seguirlo al pie contradiría una verdad del producto declarada por el
+dueño* (2026-08-28).
+
+M2-D3 §GradientHeader es taxativo: *"Never omit the logo — it is the role-agnostic anchor"* y el
+slot derecho está reservado a *"NotificationBell, LanguageToggle, action button"*. Las capturas del
+developer no cumplen ninguna de las dos cosas, y no coinciden entre sí. Documentación (46) e
+Investors (48) reemplazan el logo por "← Back to panel". Audit log (49) y el detalle de proyecto
+(37) dejan el logo y ponen la flecha debajo. Ninguna dibuja campana, avatar ni idioma. Transcribir
+captura por captura produjo tres headers distintos en secciones del mismo panel.
+
+**Lo que se hace.** Toda pantalla autenticada que use `PanelLayout` muestra el header completo:
+
+- Logo PropNexus a la izquierda. No hay forma de ocultarlo.
+- Campana, perfil e idioma a la derecha. La pantalla no los pasa ni los saca.
+- Si hay padre, `back` va **entre** el logo y el título. Nunca en el lugar del logo.
+
+Login no usa `PanelLayout`: ahí sigue solo el toggle de idioma (M2-D3 §LanguageToggle).
+
+La campana cuenta no leídas (`GET /notifications/unread-count`, cross-rol). Solo el investor tiene
+inbox en M2-D5; en los otros tres roles cae al panel. No se inventa una superficie de notificaciones.
+
+**Lo que se descartó.** Seguir transcribiendo el header captura por captura. El resultado ya se
+vio: `/developer/investors` sin logo, `/developer/audit-log` con logo, home con utilidades que las
+otras no tenían. Unificar a la versión *mínima* (solo flecha) contradice M2-D3. Unificar a la
+completa no inventa componentes: usa el slot que el entregable ya definió.
 
 ---
 

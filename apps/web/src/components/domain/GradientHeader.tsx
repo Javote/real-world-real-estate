@@ -5,21 +5,16 @@ import { PropNexusMark } from './PropNexusMark'
 // M2-D3 §Foundation · GradientHeader — *"Use on every primary screen, every
 // modal landing, every detail view"*.
 //
-// **Nunca omite el logo**: es el ancla agnóstica de rol. Y el slot derecho está
-// reservado a utilidades globales —NotificationBell, LanguageToggle, acción
-// primaria—, nunca a acciones contextuales.
-//
-// Las capturas del developer mezclan dos patrones de `back` en pantallas del
-// mismo nivel (Documentación sin logo, Audit log con logo). No se unifican:
-// `hideBrand` es su propio booleano. Con logo, el back va **entre** la marca
-// y el título (capturas 37, 38, 39, 44b, 49) — nunca debajo del h1.
+// El logo no se omite: es el ancla agnóstica de rol (M2-D3 y D-074). El slot
+// derecho es de utilidades globales. Si hay `back`, va **entre** la marca y
+// el título — nunca en el lugar del logo, nunca debajo del h1.
 
 interface GradientHeaderProps {
   title: string
   subtitle?: string
   /** Línea de contexto bajo el título: "Welcome, Admin Alpine". */
   context?: string
-  /** "← Back to <parent>" en pantallas de detalle. */
+  /** "← Back to <parent>" en pantallas que tienen padre. */
   back?: { label: string; onClick: () => void }
   /** Solo utilidades globales. */
   right?: React.ReactNode
@@ -35,11 +30,6 @@ interface GradientHeaderProps {
   titleAction?: React.ReactNode
   /** Badge cuadrado a la izquierda del título (el logo del proyecto en el panel). */
   badge?: React.ReactNode
-  /**
-   * Patrón A: el back reemplaza al logo (capturas 35/36, 42, 45, 46, 48, 44).
-   * Ausente, el logo queda y el back va entre la marca y el título (patrón B).
-   */
-  hideBrand?: boolean
   className?: string
 }
 
@@ -51,7 +41,6 @@ export function GradientHeader({
   right,
   titleAction,
   badge,
-  hideBrand,
   className
 }: GradientHeaderProps) {
   const backLink = back ? (
@@ -73,12 +62,9 @@ export function GradientHeader({
         className
       )}
     >
-      {/* El logo va SIEMPRE, salvo hideBrand: es el ancla agnóstica de rol. */}
       <div className="flex items-start justify-between gap-s3">
         <div className="flex items-center gap-s3">
-          {hideBrand && backLink ? (
-            backLink
-          ) : badge ? (
+          {badge ? (
             <span className="flex h-12 w-12 items-center justify-center rounded-xl bg-white/20">
               {badge}
             </span>
@@ -89,7 +75,7 @@ export function GradientHeader({
         {right ? <div className="flex items-center gap-s2">{right}</div> : null}
       </div>
 
-      {back && !hideBrand ? <div className="mt-s3">{backLink}</div> : null}
+      {backLink ? <div className="mt-s3">{backLink}</div> : null}
 
       <div className="mt-s4 flex items-center justify-between gap-s3">
         <div className="min-w-0">

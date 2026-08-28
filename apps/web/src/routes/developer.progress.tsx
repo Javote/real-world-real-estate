@@ -71,7 +71,6 @@ function DeveloperProgress() {
         label: t('nav.backToPanel'),
         onClick: () => void navigate({ to: '/developer' })
       }}
-      hideBrand
     >
       <section className="grid grid-cols-3 gap-s3">
         <StatCard value={String(completadas)} label={t('developer.progress.completed')} />

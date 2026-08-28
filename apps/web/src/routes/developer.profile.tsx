@@ -12,9 +12,8 @@ import { useTranslation } from '#/i18n/useTranslation'
 // una sola superficie con cuatro entradas.
 //
 // **Sin captura propia.** Notary (54) e investor (30) son tab y no llevan
-// flecha. El developer no tiene tab de perfil: llega desde el header, igual
-// que Documentación o Capital, y esas van patrón A (← Volver al panel, sin
-// logo). Audit log es la excepción B del mismo nivel; no se copia.
+// flecha. El developer no tiene tab de perfil: llega desde el header (D-072),
+// así que lleva back al panel. El header es el de D-074.
 
 export const Route = createFileRoute('/developer/profile')({ component: DeveloperProfile })
 
@@ -31,7 +30,6 @@ function DeveloperProfile() {
         label: t('nav.backToPanel'),
         onClick: () => void navigate({ to: '/developer' })
       }}
-      hideBrand
     />
   )
 }

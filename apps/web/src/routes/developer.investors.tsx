@@ -50,7 +50,6 @@ function DeveloperInvestors() {
         label: t('nav.backToPanel'),
         onClick: () => void navigate({ to: '/developer' })
       }}
-      hideBrand
     >
       <section className="flex flex-col gap-s2" data-testid="DEV-INVESTORS-LIST-001">
         {investors?.length ? (

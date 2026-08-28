@@ -81,7 +81,6 @@ function DeveloperCapital() {
         label: t('nav.backToPanel'),
         onClick: () => void navigate({ to: '/developer' })
       }}
-      hideBrand
     >
       <section
         className="flex flex-col gap-s5 rounded-xl bg-card p-s4 shadow-e1"

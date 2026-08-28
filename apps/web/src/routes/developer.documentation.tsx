@@ -79,7 +79,6 @@ function DeveloperDocumentation() {
         label: t('nav.backToPanel'),
         onClick: () => void navigate({ to: '/developer' })
       }}
-      hideBrand
     >
       <section className="grid grid-cols-2 gap-s4">
         <StatCard

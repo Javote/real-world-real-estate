@@ -18,6 +18,7 @@ import { Route as NotarySignedRouteImport } from './routes/notary.signed'
 import { Route as NotaryProfileRouteImport } from './routes/notary.profile'
 import { Route as NotaryDossiersRouteImport } from './routes/notary.dossiers'
 import { Route as InvestorUnitsRouteImport } from './routes/investor.units'
+import { Route as InvestorProfileRouteImport } from './routes/investor.profile'
 import { Route as InvestorNotificationsRouteImport } from './routes/investor.notifications'
 import { Route as InvestorMenuRouteImport } from './routes/investor.menu'
 import { Route as InvestorBuyRouteImport } from './routes/investor.buy'
@@ -84,6 +85,11 @@ const NotaryDossiersRoute = NotaryDossiersRouteImport.update({
 const InvestorUnitsRoute = InvestorUnitsRouteImport.update({
   id: '/investor/units',
   path: '/investor/units',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const InvestorProfileRoute = InvestorProfileRouteImport.update({
+  id: '/investor/profile',
+  path: '/investor/profile',
   getParentRoute: () => rootRouteImport,
 } as any)
 const InvestorNotificationsRoute = InvestorNotificationsRouteImport.update({
@@ -219,6 +225,7 @@ export interface FileRoutesByFullPath {
   '/investor/buy': typeof InvestorBuyRoute
   '/investor/menu': typeof InvestorMenuRoute
   '/investor/notifications': typeof InvestorNotificationsRoute
+  '/investor/profile': typeof InvestorProfileRoute
   '/investor/units': typeof InvestorUnitsRoute
   '/notary/dossiers': typeof NotaryDossiersRoute
   '/notary/profile': typeof NotaryProfileRoute
@@ -252,6 +259,7 @@ export interface FileRoutesByTo {
   '/investor/buy': typeof InvestorBuyRoute
   '/investor/menu': typeof InvestorMenuRoute
   '/investor/notifications': typeof InvestorNotificationsRoute
+  '/investor/profile': typeof InvestorProfileRoute
   '/investor/units': typeof InvestorUnitsRoute
   '/notary/dossiers': typeof NotaryDossiersRoute
   '/notary/profile': typeof NotaryProfileRoute
@@ -286,6 +294,7 @@ export interface FileRoutesById {
   '/investor/buy': typeof InvestorBuyRoute
   '/investor/menu': typeof InvestorMenuRoute
   '/investor/notifications': typeof InvestorNotificationsRoute
+  '/investor/profile': typeof InvestorProfileRoute
   '/investor/units': typeof InvestorUnitsRoute
   '/notary/dossiers': typeof NotaryDossiersRoute
   '/notary/profile': typeof NotaryProfileRoute
@@ -321,6 +330,7 @@ export interface FileRouteTypes {
     | '/investor/buy'
     | '/investor/menu'
     | '/investor/notifications'
+    | '/investor/profile'
     | '/investor/units'
     | '/notary/dossiers'
     | '/notary/profile'
@@ -354,6 +364,7 @@ export interface FileRouteTypes {
     | '/investor/buy'
     | '/investor/menu'
     | '/investor/notifications'
+    | '/investor/profile'
     | '/investor/units'
     | '/notary/dossiers'
     | '/notary/profile'
@@ -387,6 +398,7 @@ export interface FileRouteTypes {
     | '/investor/buy'
     | '/investor/menu'
     | '/investor/notifications'
+    | '/investor/profile'
     | '/investor/units'
     | '/notary/dossiers'
     | '/notary/profile'
@@ -421,6 +433,7 @@ export interface RootRouteChildren {
   InvestorBuyRoute: typeof InvestorBuyRoute
   InvestorMenuRoute: typeof InvestorMenuRoute
   InvestorNotificationsRoute: typeof InvestorNotificationsRoute
+  InvestorProfileRoute: typeof InvestorProfileRoute
   InvestorUnitsRoute: typeof InvestorUnitsRoute
   NotaryDossiersRoute: typeof NotaryDossiersRoute
   NotaryProfileRoute: typeof NotaryProfileRoute
@@ -501,6 +514,13 @@ declare module '@tanstack/react-router' {
       path: '/investor/units'
       fullPath: '/investor/units'
       preLoaderRoute: typeof InvestorUnitsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/investor/profile': {
+      id: '/investor/profile'
+      path: '/investor/profile'
+      fullPath: '/investor/profile'
+      preLoaderRoute: typeof InvestorProfileRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/investor/notifications': {
@@ -677,6 +697,7 @@ const rootRouteChildren: RootRouteChildren = {
   InvestorBuyRoute: InvestorBuyRoute,
   InvestorMenuRoute: InvestorMenuRoute,
   InvestorNotificationsRoute: InvestorNotificationsRoute,
+  InvestorProfileRoute: InvestorProfileRoute,
   InvestorUnitsRoute: InvestorUnitsRoute,
   NotaryDossiersRoute: NotaryDossiersRoute,
   NotaryProfileRoute: NotaryProfileRoute,

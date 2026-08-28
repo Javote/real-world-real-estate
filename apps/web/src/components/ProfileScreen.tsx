@@ -29,15 +29,14 @@ interface ProfileScreenProps {
   /** Test ID de la fila de ESE rol: son cuatro distintos sobre una pantalla. */
   testId: string
   /**
-   * El developer no tiene tab de perfil (M2-D3 §Usage rules): llega desde el
-   * header. Las capturas hermanas de sección (capital, documentación) van con
-   * patrón A. Notary e investor son tab y no llevan back (capturas 54 y 30).
+   * El developer no tiene tab de perfil (D-072): llega desde el header y
+   * necesita `back`. Notary e investor son tab y no lo llevan (capturas 54 y
+   * 30). El header en sí es el de D-074: logo + utilidades, siempre.
    */
   back?: { label: string; onClick: () => void }
-  hideBrand?: boolean
 }
 
-export function ProfileScreen({ rol, testId, back, hideBrand }: ProfileScreenProps) {
+export function ProfileScreen({ rol, testId, back }: ProfileScreenProps) {
   const { t } = useTranslation()
   const queryClient = useQueryClient()
 
@@ -58,7 +57,6 @@ export function ProfileScreen({ rol, testId, back, hideBrand }: ProfileScreenPro
       title={t('profile.title')}
       {...(perfil ? { context: perfil.fullName } : {})}
       {...(back ? { back } : {})}
-      {...(hideBrand ? { hideBrand: true } : {})}
     >
       <section className="flex flex-col gap-s4" data-testid={testId}>
         <article className="flex items-center gap-s3 rounded-xl bg-card p-s4 shadow-e1">

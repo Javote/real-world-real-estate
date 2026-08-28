@@ -60,9 +60,9 @@ for (const panel of PANELES) {
   })
 }
 
-// **D-072** — el developer es el único rol sin tab de perfil, y llega por el
-// slot derecho del header. Es la única entrada que tiene: si este camino se
-// rompe, la pantalla queda inalcanzable sin escribir la URL a mano.
+// **D-072 / D-074** — el developer no tiene tab de perfil. D-074 monta el
+// ícono en todos los roles; para el developer sigue siendo la única entrada.
+// Si este camino se rompe, la pantalla queda inalcanzable sin escribir la URL.
 test('DEV-PROFILE-001 · el developer llega a su perfil desde el header', async ({ page }) => {
   await loginConSolapa(page, 'Developer')
 
@@ -84,6 +84,11 @@ test('DEV-INVESTORS-LIST-001 · el directorio de investors y su acceso', async (
 
   await expect(page).toHaveURL(/\/developer\/investors/)
   await expect(page.getByTestId('DEV-INVESTORS-LIST-001')).toBeVisible()
+  await expect(page.getByRole('button', { name: /volver al panel|back to panel/i })).toBeVisible()
+  await expect(page.getByRole('button', { name: /notificaciones|notifications/i })).toBeVisible()
+  await expect(page.getByRole('button', { name: /mi perfil|my profile/i })).toBeVisible()
+  await expect(page.getByRole('button', { name: /^idioma$|^language$/i })).toBeVisible()
+  await expect(page.getByRole('banner')).toContainText('Prop')
 })
 
 // **M2-D5 filas 46-47** — la documentación de respaldo y su acceso (D-072).

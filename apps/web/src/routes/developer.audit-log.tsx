@@ -19,8 +19,9 @@ import { useTranslation } from '#/i18n/useTranslation'
 // Test IDs: DEV-AUDIT-LIST-001, DEV-AUDIT-FILTER-002, DEV-AUDIT-VERIFY-001.
 // Patrones: P6 y P3.
 //
-// **Patrón B de header** (captura 49): logo, debajo "← Back", debajo el
-// título. Documentación (46) es sección hermana y va patrón A: no se unifican.
+// El header es el de D-074: logo + utilidades, flecha entre el logo y el
+// título. La captura 49 ya coincidía; las hermanas (46, 48) no, y no se
+// transcribe esa omisión.
 //
 // **Es el paso 7 del flujo de evidencia** (M2-D1 §6): el ciclo entero —subida,
 // certificación— queda indexado acá con sus TXIDs.

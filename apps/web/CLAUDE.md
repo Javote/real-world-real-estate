@@ -97,6 +97,19 @@ entero, con un error que no menciona `@theme`.
 **Un stub no es una pantalla a medias.** Se ve como lo que es y no compite con la captura: una
 pantalla inventada parece terminada y nadie la vuelve a mirar.
 
+## El header es uno (D-074)
+
+`PanelLayout` pinta **siempre** el `GradientHeader` completo. La pantalla no elige piezas:
+
+- Logo PropNexus a la izquierda. No se oculta.
+- Campana, perfil e idioma a la derecha. No se opt-in por ruta.
+- Si la pantalla tiene padre, pasa `back`. La flecha queda **entre** el logo y el título.
+
+Login no usa `PanelLayout`: ahí solo va el toggle de idioma (M2-D3 §LanguageToggle).
+
+Si una captura del developer omite el logo (46, 48, 35) o las utilidades (casi todas), gana D-074,
+no la captura. No reintroducir un `hideBrand`.
+
 ## Específico de este frente
 
 - **Mobile-first de verdad**: la captura es un teléfono de ~380px. El desktop es la adaptación, no

@@ -54,8 +54,6 @@ function DeveloperPanel() {
       rol="developer"
       title={t('panel.developer.title')}
       context={session ? t('panel.welcome', { name: session.user.fullName }) : undefined}
-      onOpenNotifications={() => void navigate({ to: '/developer' })}
-      onOpenProfile={() => void navigate({ to: '/developer/profile' })}
     >
       <section className="grid grid-cols-2 gap-s4" data-testid="DEV-PANEL-KPIS-001">
         <ActionCard

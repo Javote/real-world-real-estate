@@ -3,26 +3,22 @@ import { describe, expect, it, vi } from 'vitest'
 import { GradientHeader } from './GradientHeader'
 
 describe('GradientHeader', () => {
-  it('con hideBrand el back reemplaza al logo (patrón A)', () => {
+  it('con back el logo sigue y la flecha queda entre la marca y el título (D-074)', () => {
     render(
-      <GradientHeader
-        title="Mis proyectos"
-        hideBrand
-        back={{ label: 'Volver al panel', onClick: vi.fn() }}
-      />
+      <GradientHeader title="Inversores" back={{ label: 'Volver al panel', onClick: vi.fn() }} />
     )
-
-    expect(screen.getByRole('button', { name: 'Volver al panel' })).toBeDefined()
-    expect(screen.queryByText('Prop')).toBeNull()
-  })
-
-  it('sin hideBrand el back queda entre el logo y el título (patrón B)', () => {
-    render(<GradientHeader title="Audit log" back={{ label: 'Volver', onClick: vi.fn() }} />)
 
     const header = screen.getByRole('banner')
     const texto = header.textContent ?? ''
     expect(texto.indexOf('Prop')).toBeGreaterThanOrEqual(0)
-    expect(texto.indexOf('Volver')).toBeGreaterThan(texto.indexOf('Nexus'))
-    expect(texto.indexOf('Audit log')).toBeGreaterThan(texto.indexOf('Volver'))
+    expect(texto.indexOf('Volver al panel')).toBeGreaterThan(texto.indexOf('Nexus'))
+    expect(texto.indexOf('Inversores')).toBeGreaterThan(texto.indexOf('Volver al panel'))
+  })
+
+  it('sin back no hay flecha y el logo queda', () => {
+    render(<GradientHeader title="Panel" />)
+
+    expect(screen.queryByRole('button')).toBeNull()
+    expect(screen.getByRole('banner').textContent).toContain('Prop')
   })
 })
