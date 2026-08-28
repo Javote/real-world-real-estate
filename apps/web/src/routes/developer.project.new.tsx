@@ -80,7 +80,15 @@ function NuevoProyecto() {
   const puedeCrear = slugify(nombre).length > 0 && !crear.isPending
 
   return (
-    <PanelLayout rol="developer" title={t('developer.newProject.title')}>
+    <PanelLayout
+      rol="developer"
+      title={t('developer.newProject.title')}
+      context={t('developer.newProject.context')}
+      back={{
+        label: t('nav.back'),
+        onClick: () => void navigate({ to: '/developer/projects' })
+      }}
+    >
       <form
         className="flex flex-col gap-s4"
         data-testid="DEV-PROJECT-CREATE-001"
