@@ -54,7 +54,7 @@ distingue un anclaje real de uno inventado.
 | # | Paso | Nivel |
 |---|---|---|
 | 1 | ~~Borrar el anclaje simulado de la base de producción~~ | 🔴 **hecho 2026-08-31** |
-| 2 | Probar el camino del hilo en local contra Preprod | 🟡 |
+| 2 | ~~Probar el camino del hilo en local contra Preprod~~ | 🟡 **hecho 2026-08-31** |
 | 3 | ~~Defensa 1: la API se niega a simular contra una base remota~~ | 🟢 **hecho 2026-08-31** |
 | 4 | **Secretos en el dashboard + probar el modo real desde ahí**, reversible sin tocar el repo | 🔴 dueño |
 | 5 | Commit de `render.yaml` (el push dispara el deploy que los consume) | 🟢 |
@@ -94,8 +94,46 @@ snake_case plural. Y el free tier no da shell remota: todo se inspecciona con
 **2. Probar el camino del hilo en local contra Preprod.** Es el único pedazo que **nunca corrió
 contra Preprod** —solo contra el `Emulator` y yaci-devkit local— y el de más riesgo: cada
 transacción **adjunta el validador entero** (`packages/cardano/src/real.ts:139`), así que ahí pegan
-los límites de tamaño reales. Se levanta la API local con `ANCHOR_MODE=real` (RUNBOOK §1.5 paso 4)
-y se dispara `PATCH /api/v1/stages/:id/state`. **Si esto falla, no se sigue.**
+los límites de tamaño reales. **Si esto falla, no se sigue.**
+
+**El hilo NO se abre en el `PATCH`**, y esta versión del plan decía que sí. `transitionStage()`
+llama a `anchorEvent(evento, stage, existing)` con `existing` siempre presente, así que siempre cae
+en `advanceThread`. El único `openThread` del código está en `projects-obra.routes.ts:96`, al
+**crear** el stage. Un stage sembrado directo en la base no tiene hilo: pegarle un `PATCH` llama a
+`advanceThread` con `outputRef: ""` y sale `BAD_OUTPUT_REF`. La prueba son dos requests, en orden:
+
+1. `POST /api/v1/projects/:id/stages` → `STAGE_CREATED` → **`openThread`** (mint del thread token).
+2. Esperar confirmación en la cadena, y recién ahí
+   `PATCH /api/v1/stages/:id/state` → **`advanceThread`** (gasta el UTxO del script).
+
+**La espera entre las dos no es opcional.** `advanceThread` necesita que el UTxO del hilo exista
+para el proveedor, y Blockfrost no lo reporta hasta que entra en un bloque (~20 s en Preprod). Es
+el mismo motivo por el que dos anclajes seguidos chocan — el UTxO único de la wallet, en la memoria
+de la wallet de servicio.
+
+✅ **Hecho el 2026-08-31, y encontró un bug real.** El validador corrió en Preprod por primera vez:
+
+| | txid | bloque |
+|---|---|---|
+| `openThread` (mint del hilo) | `555b2a65…14ff` | 5123378 |
+| `advanceThread` (`Pending → InProgress`) | `def11af5…e536` | 5123398 |
+
+El thread token —policy `345116608fb4…`, asset name = el id del stage, según D-058— pasó del UTxO
+viejo del script al nuevo, verificado con `tx_info` de Koios. Fee del avance: 0,307 tADA.
+
+**El primer intento falló, y no por el tamaño del validador.** Salió
+`OutsideValidityIntervalUTxO`: la transacción declaraba `invalidBefore = 132536176`, el nodo validó
+en el slot `132536159` y el tip en ese momento era el bloque 5123377 en el slot `132536158`. **El
+nodo valida contra el slot del último bloque, no contra su reloj**, y `advanceThread` ponía
+`validFrom = now - 1000`. En Preprod los bloques salen cada 13–48 s, así que ese borde está en el
+futuro casi siempre. Se arregló con `TIP_LAG_MARGIN_MS = 2 min` (`real.ts`); el detalle y el
+compromiso que implica están en la constante.
+
+**Por qué el `Emulator` y yaci no lo agarraron**, que es la parte que importa para no repetirlo: el
+`Emulator` mueve los slots con su propio reloj y yaci-devkit hace bloques de ~1 s, así que en
+ninguno de los dos existe el retraso del tip. Y el camino de metadata —el único que ya había
+corrido contra Preprod— no declara ventana de validez. **Ningún entorno de prueba reproducía la
+condición**: por eso el paso 2 existía.
 
 **3. Defensa 1 — el simulador no ancla contra una base remota.** Si `ANCHOR_MODE=simulated` y la
 `DATABASE_URL` es de Turso, el puerto queda **inhabilitado**: la API arranca, pero no produce ni un

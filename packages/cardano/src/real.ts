@@ -56,12 +56,46 @@ export const THREAD_MIN_LOVELACE = 2_000_000n;
  */
 export const VALIDITY_WINDOW_MS = 3 * 60 * 1000;
 
+/**
+ * Cuánto se corre hacia atrás el borde inferior de la ventana, para absorber
+ * el retraso del tip.
+ *
+ * **El nodo NO valida contra su reloj: valida contra el slot del último
+ * bloque.** Una transacción con `validFrom = ahora` se rechaza con
+ * `OutsideValidityIntervalUTxO` siempre que el último bloque tenga más de un
+ * segundo, que en una red real es casi siempre. Medido contra Preprod el
+ * 2026-08-31: la tx declaraba `invalidBefore = 132536176`, el nodo validó en
+ * `132536159` y el tip era el bloque 5123377 en el slot `132536158` — el nodo
+ * estaba exactamente en `tip + 1`.
+ *
+ * **Por qué no se vio antes:** el `Emulator` mueve los slots con su propio
+ * reloj y yaci-devkit hace bloques de ~1 s, así que el retraso no existe en
+ * ninguno de los dos. El camino de metadata —el único que había corrido contra
+ * Preprod— no declara ventana de validez.
+ *
+ * **Dos minutos, y el número es un compromiso explícito.** Los huecos entre
+ * bloques son exponenciales con media 20 s (`activeSlotCoeff = 0.05`), así que
+ * 120 s cubre el 99,75 % de los casos; el 0,25 % restante deja el evento en
+ * `Failed` y se reintenta. El costo del otro lado es real y hay que decirlo:
+ * la ventana es lo que le acota al operador el `completed_at` que puede
+ * escribir (`within_validity_range`), así que ensancharla hacia atrás le da
+ * 120 s de margen para antedatar una finalización. El timestamp del bloque
+ * sigue siendo una cota pública y mucho más ajustada.
+ *
+ * No se consulta el tip al proveedor a propósito: este adaptador es agnóstico
+ * del provider —corre igual contra el `Emulator`, contra yaci y contra
+ * Preprod— y pedir `/blocks/latest` lo ataría a Blockfrost.
+ */
+export const TIP_LAG_MARGIN_MS = 2 * 60 * 1000;
+
 export interface LucidAnchorOptions {
   lucid: LucidEvolution;
   network: Network;
   blueprint?: Blueprint;
   /** Ancho de la ventana de validez. Ver `VALIDITY_WINDOW_MS`. */
   validityWindowMs?: number;
+  /** Margen hacia atrás por el retraso del tip. Ver `TIP_LAG_MARGIN_MS`. */
+  tipLagMarginMs?: number;
   /** Reloj inyectable: los tests fijan el tiempo, no lo padecen. */
   now?: () => number;
   /**
@@ -80,6 +114,7 @@ export class LucidAnchorAdapter implements AnchorPort {
   private readonly now: () => number;
 
   private readonly validityWindowMs: number;
+  private readonly tipLagMarginMs: number;
   private readonly blockfrost: { url: string; apiKey: string } | undefined;
 
   private constructor(
@@ -87,12 +122,14 @@ export class LucidAnchorAdapter implements AnchorPort {
     refs: StageScriptRefs,
     now: () => number,
     validityWindowMs: number,
+    tipLagMarginMs: number,
     blockfrost: { url: string; apiKey: string } | undefined
   ) {
     this.lucid = lucid;
     this.refs = refs;
     this.now = now;
     this.validityWindowMs = validityWindowMs;
+    this.tipLagMarginMs = tipLagMarginMs;
     this.blockfrost = blockfrost;
   }
 
@@ -120,6 +157,7 @@ export class LucidAnchorAdapter implements AnchorPort {
       refs,
       options.now ?? (() => Date.now()),
       options.validityWindowMs ?? VALIDITY_WINDOW_MS,
+      options.tipLagMarginMs ?? TIP_LAG_MARGIN_MS,
       options.blockfrost
     );
   }
@@ -159,7 +197,20 @@ export class LucidAnchorAdapter implements AnchorPort {
     // La ventana tiene que CONTENER el `completed_at` del datum, porque eso es
     // lo que el validador verifica (`within_validity_range`). Si el timestamp
     // cae afuera, la transacción se construye y se firma igual — y se rechaza.
-    const desde = completion ? Math.min(now, completion.now) - 1000 : now - 1000;
+    // `- tipLagMarginMs` y no `- 1000`: el nodo valida contra el slot del
+    // último bloque, no contra su reloj. Ver `TIP_LAG_MARGIN_MS`.
+    //
+    // El borde no puede caer antes del **slot 0 de esta cadena**, y eso hay que
+    // preguntárselo a Lucid: cada red pone su origen en otro lado. En Preprod
+    // nunca entra, pero el `Emulator` arranca su slot 0 en el instante en que se
+    // construye, así que restarle dos minutos lo manda a un slot negativo — que
+    // Lucid serializa como entero sin signo y el nodo lee como
+    // `18446744073709552000`. No es una fecha rara: es un desbordamiento.
+    const origen = this.lucid.slotToUnixTime(0);
+    const desde = Math.max(
+      origen,
+      (completion ? Math.min(now, completion.now) : now) - this.tipLagMarginMs
+    );
     const hasta = Math.max(now, completion?.now ?? now) + this.validityWindowMs;
 
     const tx = await this.lucid
