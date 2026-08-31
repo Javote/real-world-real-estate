@@ -56,8 +56,8 @@ distingue un anclaje real de uno inventado.
 | 1 | ~~Borrar el anclaje simulado de la base de producción~~ | 🔴 **hecho 2026-08-31** |
 | 2 | Probar el camino del hilo en local contra Preprod | 🟡 |
 | 3 | Defensa 1: la API se niega a simular contra una base remota | 🟢 |
-| 4 | Commit de `render.yaml` | 🟢 |
-| 5 | Cargar los dos secretos en el dashboard de Render | 🔴 dueño |
+| 4 | **Cargar los dos secretos en el dashboard de Render** — antes del push | 🔴 dueño |
+| 5 | Commit de `render.yaml` (el push dispara el deploy que los consume) | 🟢 |
 | 6 | Verificar el arranque en los logs | 🟢 |
 | 7 | Un anclaje real de punta a punta | 🟢 |
 | 8 | Reconciliación por demanda, sin cron | 🟢 |
@@ -98,12 +98,35 @@ los límites de tamaño reales. Se levanta la API local con `ANCHOR_MODE=real` (
 y se dispara `PATCH /api/v1/stages/:id/state`. **Si esto falla, no se sigue.**
 
 **3. Defensa 1 — la API se niega a simular contra una base remota.** Si `ANCHOR_MODE=simulated` y
-`DATABASE_URL` empieza con `libsql://`, el proceso no levanta; mismo criterio que D-042. Simular
-contra Turso no tiene caso de uso legítimo. ~10 líneas, sin tocar esquema ni tests. Va en el mismo
-commit que el paso 4: **convierte en ruidosa la falla que hoy es silenciosa**, y esa falla tiene un
-camino de vuelta conocido (abajo).
+la `DATABASE_URL` es de Turso, el proceso no levanta; mismo criterio que D-042. Simular contra Turso
+no tiene caso de uso legítimo, así que no lleva escotilla de escape. **Convierte en ruidosa la falla
+que hoy es silenciosa**, y esa falla tiene un camino de vuelta conocido (paso 5).
 
-**4. Commit de `render.yaml`.** Tres cosas juntas:
+Va **antes** de `createAnchorPort` en `initAnchorPort` (`apps/api/src/lib/anchor.ts`) y no adentro
+del factory: el factory no sabe qué base hay del otro lado, y el arranque es el único momento en que
+fallar sirve de algo. Mirar el **host** además del esquema — `https://…turso.io` también llega a
+Turso, no solo `libsql://`. Y el rechazo tiene que ocurrir antes de reemplazar el puerto vigente.
+
+Se escribió una vez el 2026-08-31 (guard + 4 casos de test, `pnpm verify` verde) y **se descartó
+junto con el paso 5 al reordenar**; se rehace, no es trabajo perdido de más de una hora. Está en el
+reflog si hace falta: `git show 7d046a3`.
+
+**4. Cargar los dos secretos en el dashboard de Render.** 🔴 lo hace el dueño, **antes** del paso 5.
+
+**Este orden se aprendió rompiéndolo el 2026-08-31.** El plan original ponía el commit primero, y
+eso deja producción caída: pushear `render.yaml` dispara un deploy, el deploy arranca con
+`ANCHOR_MODE=real`, y como el puerto se construye **antes** de `listen` (D-042), sin
+`BLOCKFROST_API_KEY` ni `SERVICE_WALLET_SEED` la API no levanta — no falla el primer anclaje: no
+hay API. La ventana dura lo que tarde alguien en cargar los secretos a mano.
+
+Las variables `sync: false` **se pueden cargar antes de que el Blueprint las declare**: quedan
+guardadas esperando, y el deploy siguiente las encuentra. Por eso el orden correcto es secretos
+primero, push después, y así producción no se cae ni un minuto.
+
+⚠ **La seed no se rota.** La dirección del admin del validador se deriva de ella: reemplazarla
+dejaría inalcanzables los hilos ya anclados, sin ningún error visible.
+
+**5. Commit de `render.yaml`.** Tres cosas juntas:
 - `ANCHOR_MODE` a `value: real` — **en el YAML, no solo en el dashboard**. Las variables declaradas
   con `value:` las gobierna el Blueprint: un re-sync pisa cualquier cambio hecho a mano en el
   dashboard y devuelve la API a `simulated` **en silencio**, sin romper nada y sin log de error.
@@ -114,9 +137,11 @@ camino de vuelta conocido (abajo).
   que `simulated` es el único modo válido hoy (el adaptador real ya existe y arranca) y que
   `CARDANO_NETWORK` no lo lee nadie (lo lee `apps/api/src/lib/anchor.ts:89`).
 
-**5. Cargar los dos secretos en el dashboard de Render.** 🔴 lo hace el dueño.
-⚠ **La seed no se rota.** La dirección del admin del validador se deriva de ella: reemplazarla
-dejaría inalcanzables los hilos ya anclados, sin ningún error visible.
+**Antes de pushear, mirá si el paso 2 está hecho.** Con `render.yaml` en `real`, la instancia
+desplegada empieza a intentar transacciones de **hilo** reales, y ese es justamente el camino que
+nunca corrió contra Preprod. El de evidencia (metadata) sí está probado. No corrompe nada —una
+transición que falla devuelve error— pero es la diferencia entre descubrirlo en tu máquina y
+descubrirlo en la demo.
 
 **6. Verificar el arranque.** `render logs` hasta ver `AnchorPort listo en modo "real"`
 (`apps/api/src/server.ts:28`).
