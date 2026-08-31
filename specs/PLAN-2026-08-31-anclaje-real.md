@@ -55,7 +55,7 @@ distingue un anclaje real de uno inventado.
 |---|---|---|
 | 1 | ~~Borrar el anclaje simulado de la base de producción~~ | 🔴 **hecho 2026-08-31** |
 | 2 | Probar el camino del hilo en local contra Preprod | 🟡 |
-| 3 | Defensa 1: la API se niega a simular contra una base remota | 🟢 |
+| 3 | ~~Defensa 1: la API se niega a simular contra una base remota~~ | 🟢 **hecho 2026-08-31** |
 | 4 | **Cargar los dos secretos en el dashboard de Render** — antes del push | 🔴 dueño |
 | 5 | Commit de `render.yaml` (el push dispara el deploy que los consume) | 🟢 |
 | 6 | Verificar el arranque en los logs | 🟢 |
@@ -107,9 +107,21 @@ del factory: el factory no sabe qué base hay del otro lado, y el arranque es el
 fallar sirve de algo. Mirar el **host** además del esquema — `https://…turso.io` también llega a
 Turso, no solo `libsql://`. Y el rechazo tiene que ocurrir antes de reemplazar el puerto vigente.
 
-Se escribió una vez el 2026-08-31 (guard + 4 casos de test, `pnpm verify` verde) y **se descartó
-junto con el paso 5 al reordenar**; se rehace, no es trabajo perdido de más de una hora. Está en el
-reflog si hace falta: `git show 7d046a3`.
+✅ **Hecho el 2026-08-31.** `rechazarSimuladoContraBaseRemota()` en
+`apps/api/src/lib/anchor.ts`, con `apps/api/test/anchor-mode-guard.test.ts` fijando los dos
+esquemas de Turso, el default implícito de `ANCHOR_MODE` y que el rechazo ocurra antes de
+reemplazar el puerto vigente. Se recuperó de `7d046a3`, que lo había escrito junto con el paso 5;
+acá va solo el guard, porque `render.yaml` no se toca hasta que estén cargados los secretos.
+
+**Se adelantó al paso 2 a propósito:** no depende de él, y conviene que el guard exista antes de
+que `render.yaml` pueda volver a `simulated` en un re-sync.
+
+⚠ **No pushear este commit solo.** El guard rechaza justo la configuración que la instancia
+desplegada tiene hoy: `render.yaml:132` declara `ANCHOR_MODE: simulated` y `DATABASE_URL` es de
+Turso. Un push dispara deploy —el `buildFilter` no filtra, verificado el 2026-08-27— y la API no
+levanta: **producción sin API**, no un anclaje que falla. El guard viaja al remoto recién en el
+push del paso 5, después de los secretos del paso 4 y con `ANCHOR_MODE: real` en el mismo commit.
+Hasta entonces queda local, protegiendo al desarrollo.
 
 **4. Cargar los dos secretos en el dashboard de Render.** 🔴 lo hace el dueño, **antes** del paso 5.
 

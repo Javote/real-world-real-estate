@@ -79,8 +79,46 @@ class KyselyLedgerStore implements LedgerStore {
 
 let puerto: AnchorPort | null = null;
 
+/**
+ * El simulador contra una base remota no arranca.
+ *
+ * **Por qué existe.** El simulador devuelve TXIDs bien formados marcados
+ * `Confirmed` (`simulated.ts`), y `OnChainEvent` no registra de qué modo vino un
+ * anclaje: en la base, uno inventado es indistinguible de uno real. El
+ * 2026-08-31 producción tenía exactamente eso —un `EVIDENCE_ANCHOR` `Confirmed`
+ * con un txid que no existe en Preprod—, afirmando una prueba inexistente
+ * contra la regla 17 y D-026.
+ *
+ * **Por qué acá y no en el factory.** El factory no sabe qué base hay del otro
+ * lado; es la API la que junta las dos configuraciones. Y va antes de
+ * `createAnchorPort` para que falle en el arranque y no en el primer anclaje,
+ * mismo criterio que D-042: sin `listen`, y visible en los logs de Render.
+ *
+ * Simular contra Turso no tiene ningún caso de uso legítimo, así que no hay
+ * escotilla de escape. El camino conocido para llegar a este estado sin querer
+ * es un re-sync del Blueprint pisando el `ANCHOR_MODE` del dashboard, que hasta
+ * hoy pasaba **en silencio**: esto lo vuelve ruidoso.
+ */
+function rechazarSimuladoContraBaseRemota(): void {
+  const modo = process.env.ANCHOR_MODE ?? "simulated";
+  const url = process.env.DATABASE_URL ?? "";
+  // Turso se habla por `libsql://`; `https://` contra el mismo host también
+  // llega, así que se mira el host y no solo el esquema.
+  const esRemota = url.startsWith("libsql://") || url.includes(".turso.io");
+
+  if (modo === "simulated" && esRemota) {
+    throw new Error(
+      "ANCHOR_MODE=simulated contra una base remota: el simulador escribe TXIDs " +
+        "falsos marcados Confirmed que no se distinguen de los reales (regla 17, D-026). " +
+        "Poné ANCHOR_MODE=real, o apuntá DATABASE_URL a una base local."
+    );
+  }
+}
+
 /** Llamado por `server.ts` antes de `listen`, y por el setup de la suite. */
 export async function initAnchorPort(): Promise<AnchorPort> {
+  rechazarSimuladoContraBaseRemota();
+
   puerto = await createAnchorPort({
     mode: process.env.ANCHOR_MODE,
     store: new KyselyLedgerStore(),
