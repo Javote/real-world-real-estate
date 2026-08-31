@@ -18,6 +18,28 @@ regla 17 y D-026.
 
 **No falla: miente.** Mismo modo de falla que el push contra un servicio suspendido (RUNBOOK §2).
 
+### Cómo se probó que ese TXID es falso
+
+Verificado dos veces el 2026-08-31, y la segunda prueba no depende de ningún tercero.
+
+**1. La transacción no existe en la cadena.** Koios Preprod devuelve `[]` en `tx_info` y
+`num_confirmations: null` en `tx_status`; mainnet, por las dudas, también `null`. **El control del
+método importa tanto como el resultado**: la misma consulta con una transacción real tomada de un
+bloque reciente de Preprod devuelve `num_confirmations: 0`, así que el endpoint sabe distinguir
+"no existe" de "no sé".
+
+**2. La generó el simulador — y esto se reproduce sin salir de la máquina.** El TXID del simulador
+es determinístico: `sha256("evidence:" + payload canónico)` (`simulated.ts:134` · `txidOf`,
+`canonical`). Recomputándolo con el `sha256Hash` real de la evidencia y el `referenceId` real de la
+fila (`rzjfat31fw1gzpq4o6lvr1l9`, **no** el `evidenceId`, que da otro hash) sale exactamente
+`44b9dd2d…43544f73`.
+
+Que sea reproducible es lo que cierra la pregunta para siempre: no hay que confiar en que un
+explorador esté sincronizado ni en que la red sea la correcta. **Sirve como método general** —
+frente a un TXID sospechoso, recomputar el del simulador es más barato y más concluyente que
+consultar la cadena. Y mientras no exista la columna `anchorMode` (paso 9), es lo único que
+distingue un anclaje real de uno inventado.
+
 ## Ya está hecho — verificado contra el código y contra la cadena
 
 - El factory cablea `ANCHOR_MODE=real` sin defaults inseguros.
@@ -42,8 +64,27 @@ regla 17 y D-026.
 | 9 | Defensa 2 (columna `anchorMode`) y defensa 3 (el simulador devuelve `Pending`) | 🟡 decide el dueño |
 
 **1. Borrar el anclaje simulado de la base de producción.** Antes de encender nada, o queda
-indistinguible para siempre. Es una fila y nada la referencia. Lo hace el dueño: es un borrado en
-producción.
+indistinguible para siempre. Lo hace el dueño: es un borrado en producción.
+
+Es **la única fila** de `OnChainEvent` (`count = 1`) y **ninguna tabla la referencia** — se verificó
+que no hay FKs entrantes hacia `OnChainEvent`, así que el borrado no arrastra nada. Se apunta al
+`id`, no al `txid`:
+
+```bash
+# respaldo de la fila, fuera del repo
+turso db shell propnexus "select * from OnChainEvent" > ~/propnexus-onchainevent-backup-2026-08-31.txt
+
+turso db shell propnexus "delete from OnChainEvent where id = 'bdnzit9h0lssceciet814leu'"
+
+turso db shell propnexus "select count(*) as n from OnChainEvent"   # → 0
+```
+
+La evidencia `jvv2gqwskp210ub6amd6ta8f` vuelve entonces a mostrarse sin anclaje, que es la verdad, y
+queda disponible para ser el primer anclaje real del paso 7.
+
+**Las tablas de Turso están en PascalCase singular** (`OnChainEvent`, `Evidence`), no en
+snake_case plural. Y el free tier no da shell remota: todo se inspecciona con
+`turso db shell propnexus "<sql>"` desde la máquina de uno.
 
 **2. Probar el camino del hilo en local contra Preprod.** Es el único pedazo que **nunca corrió
 contra Preprod** —solo contra el `Emulator` y yaci-devkit local— y el de más riesgo: cada
