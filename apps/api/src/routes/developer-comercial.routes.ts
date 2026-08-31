@@ -257,20 +257,13 @@ router.get(
   requireRole("admin", "developer"),
   requireProjectAccess({ param: "id" }, ["developer"]),
   async (req: Request<{ id: string }>, res) => {
+    // Los dos `innerJoin` son contra la clave primaria, así que esta consulta
+    // devuelve exactamente un registro por contrato. El anclaje se busca aparte
+    // —ver abajo— justamente para que no pueda multiplicar filas.
     const contratos = await db
       .selectFrom("Contract")
       .innerJoin("Unit", "Unit.id", "Contract.unitId")
       .innerJoin("User", "User.id", "Contract.investorId")
-      .leftJoin("Invitation", (join) =>
-        join
-          .onRef("Invitation.unitId", "=", "Contract.unitId")
-          .on("Invitation.status", "=", "accepted")
-      )
-      .leftJoin("OnChainEvent", (join) =>
-        join
-          .onRef("OnChainEvent.referenceId", "=", "Invitation.id")
-          .on("OnChainEvent.eventType", "=", "INVITATION_ACCEPTED")
-      )
       .select([
         "Contract.id as id",
         "Contract.totalMinorUnits as totalMinorUnits",
@@ -280,13 +273,75 @@ router.get(
         "Unit.unitReference as unitReference",
         "Unit.status as unitStatus",
         "User.fullName as investorName",
-        "OnChainEvent.txid as txid",
-        "OnChainEvent.commitment as commitment"
+        "User.email as investorEmail"
       ])
       .where("Unit.projectId", "=", req.params.id)
       .execute();
 
-    return res.json(contratos);
+    const unitIds = [...new Set(contratos.map((c) => c.unitId))];
+
+    // **Segunda consulta y no un `leftJoin`, y no es estilo: un join acá
+    // MULTIPLICA.** Una unidad puede acumular más de una invitación aceptada
+    // —el PATCH de unidad la devuelve a `available` y se re-invita—, y
+    // `OnChainEvent` no tiene índice único por `referenceId`: el único que hay
+    // es `(stageId, eventIndex)`, y en un evento de invitación `stageId` es
+    // NULL, que en SQLite no restringe nada. Cada par de más devolvía el mismo
+    // contrato repetido, con el anclaje de OTRO investor pegado al lado, y la
+    // lista mentía sin fallar.
+    const anclajes = unitIds.length
+      ? await db
+          .selectFrom("Invitation")
+          .innerJoin("OnChainEvent", (join) =>
+            join
+              .onRef("OnChainEvent.referenceId", "=", "Invitation.id")
+              .on("OnChainEvent.eventType", "=", "INVITATION_ACCEPTED")
+          )
+          .select([
+            "Invitation.unitId as unitId",
+            "Invitation.investorEmail as investorEmail",
+            "Invitation.respondedAt as respondedAt",
+            "OnChainEvent.txid as txid",
+            "OnChainEvent.commitment as commitment"
+          ])
+          .where("Invitation.unitId", "in", unitIds)
+          .where("Invitation.status", "=", "accepted")
+          .execute()
+      : [];
+
+    const ms = (fecha: Date | null) => (fecha === null ? null : new Date(fecha).getTime());
+
+    return res.json(
+      contratos.map(({ investorEmail, ...contrato }) => {
+        // La invitación se ata al contrato por unidad **y por investor**: es el
+        // email de la invitación contra el del `User` del contrato. Sin eso,
+        // dos ventas de la misma unidad se cruzan los anclajes.
+        const candidatos = anclajes.filter(
+          (a) => a.unitId === contrato.unitId && a.investorEmail === investorEmail
+        );
+
+        // Si el mismo investor compró la misma unidad dos veces quedan varios:
+        // gana el `respondedAt` más cercano al `signedAt`. Hoy son el MISMO
+        // instante —el accept usa un único `ahora` para los dos— así que el
+        // match es exacto; el criterio es lo que lo mantiene determinístico si
+        // alguna vez dejan de serlo.
+        const firmado = ms(contrato.signedAt);
+        const anclaje = candidatos.reduce<(typeof candidatos)[number] | null>((mejor, a) => {
+          if (mejor === null) return a;
+          if (firmado === null) return mejor;
+          const distancia = (c: (typeof candidatos)[number]) => {
+            const respondido = ms(c.respondedAt);
+            return respondido === null ? Number.POSITIVE_INFINITY : Math.abs(respondido - firmado);
+          };
+          return distancia(a) < distancia(mejor) ? a : mejor;
+        }, null);
+
+        return {
+          ...contrato,
+          txid: anclaje?.txid ?? null,
+          commitment: anclaje?.commitment ?? null
+        };
+      })
+    );
   }
 );
 

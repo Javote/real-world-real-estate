@@ -1,6 +1,7 @@
 import request from "supertest";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import app from "../src/app";
+import { createId } from "../src/db/id";
 import { db } from "../src/lib/db";
 import { FIXTURES } from "./global-setup";
 
@@ -192,6 +193,87 @@ describe("el ciclo unidad → invitación → contrato → release", () => {
     // Nada del encuadre de pagos: el registro no expone etapas liberadas.
     expect(contrato.releases).toBeUndefined();
     expect(contrato.stagesReleased).toBeUndefined();
+  });
+
+  // **La regresión del fan-out.** El listado alcanzaba el anclaje con dos
+  // `leftJoin` encadenados —`Invitation` por `unitId` + `status='accepted'`, y
+  // de ahí `OnChainEvent` por `referenceId`— y ninguno de los dos lados es
+  // único: una unidad puede acumular varias invitaciones aceptadas, y el único
+  // índice único de `OnChainEvent` es `(stageId, eventIndex)`, que con
+  // `stageId` NULL no restringe nada en SQLite.
+  //
+  // Con dos aceptadas sobre la misma unidad el contrato salía DUPLICADO, y una
+  // de las copias traía el TXID del otro investor: una prueba criptográfica
+  // atribuida a quien no la firmó, que es exactamente lo que la regla 17
+  // prohíbe. La lista mentía sin fallar, así que el test entra por la base.
+  it("una segunda invitación aceptada sobre la unidad no duplica ni cruza el anclaje", async () => {
+    const propio = await request(app)
+      .get(`/api/v1/developer/projects/${projectId}/contracts`)
+      .set("Authorization", `Bearer ${tokenDev}`)
+      .expect(200);
+    const txidPropio = propio.body.find((c: { id: string }) => c.id === contractId).txid;
+
+    const ahora = new Date();
+    const invitacionAjena = createId();
+
+    // Una aceptada de OTRO investor sobre la MISMA unidad. No pasa por el
+    // endpoint a propósito: reproducir el estado es el punto, no cómo se llega.
+    await db
+      .insertInto("Invitation")
+      .values({
+        id: invitacionAjena,
+        projectId,
+        unitId,
+        investorEmail: "otro@test.local",
+        amountMinorUnits: 9_000_000,
+        currency: "USD",
+        status: "accepted",
+        createdById: null,
+        createdAt: ahora,
+        respondedAt: ahora
+      })
+      .execute();
+
+    await db
+      .insertInto("OnChainEvent")
+      .values({
+        id: createId(),
+        projectId,
+        stageId: null,
+        evidenceId: null,
+        referenceId: invitacionAjena,
+        eventIndex: 0,
+        eventType: "INVITATION_ACCEPTED",
+        fromState: null,
+        toState: null,
+        commitment: "f".repeat(64),
+        status: "Confirmed",
+        txid: "ajeno".padEnd(64, "0"),
+        outputRef: null,
+        blockTimestamp: null,
+        createdAt: ahora,
+        updatedAt: ahora
+      })
+      .execute();
+
+    const res = await request(app)
+      .get(`/api/v1/developer/projects/${projectId}/contracts`)
+      .set("Authorization", `Bearer ${tokenDev}`)
+      .expect(200);
+
+    const delContrato = res.body.filter((c: { id: string }) => c.id === contractId);
+    // Un contrato, una fila.
+    expect(delContrato).toHaveLength(1);
+    // Y su anclaje, no el del otro.
+    expect(delContrato[0].txid).toBe(txidPropio);
+    expect(delContrato[0].txid).not.toContain("ajeno");
+
+    // El email del investor no viaja en el listado: se usa para atar la
+    // invitación y se descarta (regla 2 — nada de PII que la fila no pida).
+    expect(delContrato[0].investorEmail).toBeUndefined();
+
+    await db.deleteFrom("OnChainEvent").where("referenceId", "=", invitacionAjena).execute();
+    await db.deleteFrom("Invitation").where("id", "=", invitacionAjena).execute();
   });
 
   it("el release aparece como artefacto del dossier de la unidad", async () => {
