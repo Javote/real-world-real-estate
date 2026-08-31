@@ -15,11 +15,18 @@ let server: Server | undefined;
  *
  * **El `AnchorPort` se construye ANTES de escuchar**, igual que las migraciones.
  * Con `ANCHOR_MODE=real` eso levanta Lucid contra Blockfrost y deriva el admin
- * desde la wallet de servicio: si la seed es inválida, si falta la API key o si
- * Blockfrost no responde, el proceso muere acá y queda en los logs de Render
- * —lo único que hay, porque el free tier no da shell—. La alternativa sería
- * descubrirlo en el primer anclaje, con la evidencia ya subida y alguien
- * esperando un TXID que no va a llegar (D-042).
+ * desde la wallet de servicio, y el resultado queda en los logs de Render —lo
+ * único que hay, porque el free tier no da shell—.
+ *
+ * **Pero una configuración de anclaje rota ya no mata el proceso** (D-075). Si
+ * falta la key, si la seed es inválida o si Blockfrost no responde, el puerto
+ * queda inhabilitado y la API levanta igual: anclar falla, el resto del
+ * producto funciona. Matar el proceso castigaba a las otras cincuenta
+ * funciones por el problema de una, y hacía que un push con una variable mal
+ * puesta dejara todo abajo.
+ *
+ * La línea a mirar en los logs sigue siendo la misma, y ahora tiene un tercer
+ * valor posible: `"disabled"`.
  *
  * Es CommonJS, así que no hay top-level await: de ahí esta función.
  */
@@ -33,8 +40,9 @@ async function arrancar() {
 }
 
 arrancar().catch((error) => {
-  // Sin `listen`: el proceso no llegó a aceptar una sola request, que es
-  // exactamente lo que se busca cuando la configuración está mal.
+  // Sin `listen`. Queda para lo que de verdad no tiene modo degradado —una
+  // migración que no corre, la base inalcanzable—; el anclaje ya no llega acá
+  // (D-075), porque para él sí existe un modo seguro de seguir vivo.
   console.error("[arranque] la API no pudo levantar", error);
   process.exit(1);
 });

@@ -97,45 +97,48 @@ transacción **adjunta el validador entero** (`packages/cardano/src/real.ts:139`
 los límites de tamaño reales. Se levanta la API local con `ANCHOR_MODE=real` (RUNBOOK §1.5 paso 4)
 y se dispara `PATCH /api/v1/stages/:id/state`. **Si esto falla, no se sigue.**
 
-**3. Defensa 1 — la API se niega a simular contra una base remota.** Si `ANCHOR_MODE=simulated` y
-la `DATABASE_URL` es de Turso, el proceso no levanta; mismo criterio que D-042. Simular contra Turso
-no tiene caso de uso legítimo, así que no lleva escotilla de escape. **Convierte en ruidosa la falla
-que hoy es silenciosa**, y esa falla tiene un camino de vuelta conocido (paso 5).
+**3. Defensa 1 — el simulador no ancla contra una base remota.** Si `ANCHOR_MODE=simulated` y la
+`DATABASE_URL` es de Turso, el puerto queda **inhabilitado**: la API arranca, pero no produce ni un
+TXID. Simular contra Turso no tiene caso de uso legítimo, así que no lleva escotilla de escape.
+**Convierte en ruidosa la falla que hoy es silenciosa**, y esa falla tiene un camino de vuelta
+conocido (paso 5).
 
 Va **antes** de `createAnchorPort` en `initAnchorPort` (`apps/api/src/lib/anchor.ts`) y no adentro
-del factory: el factory no sabe qué base hay del otro lado, y el arranque es el único momento en que
-fallar sirve de algo. Mirar el **host** además del esquema — `https://…turso.io` también llega a
-Turso, no solo `libsql://`. Y el rechazo tiene que ocurrir antes de reemplazar el puerto vigente.
+del factory: el factory no sabe qué base hay del otro lado. Mira el **host** además del esquema —
+`https://…turso.io` también llega a Turso, no solo `libsql://`.
 
-✅ **Hecho el 2026-08-31.** `rechazarSimuladoContraBaseRemota()` en
-`apps/api/src/lib/anchor.ts`, con `apps/api/test/anchor-mode-guard.test.ts` fijando los dos
-esquemas de Turso, el default implícito de `ANCHOR_MODE` y que el rechazo ocurra antes de
-reemplazar el puerto vigente. Se recuperó de `7d046a3`, que lo había escrito junto con el paso 5;
-acá va solo el guard, porque `render.yaml` no se toca hasta que estén cargados los secretos.
+✅ **Hecho el 2026-08-31.** `motivoParaNoAnclar()` + `inhabilitar()` en
+`apps/api/src/lib/anchor.ts`, `DisabledAnchorAdapter` en `packages/cardano/src/disabled.ts`, con
+tests en los dos lados. Se recuperó de `7d046a3`, que lo había escrito junto con el paso 5; acá va
+solo el guard, porque el `render.yaml` del paso 5 depende de los secretos del paso 4.
 
 **Se adelantó al paso 2 a propósito:** no depende de él, y conviene que el guard exista antes de
 que `render.yaml` pueda volver a `simulated` en un re-sync.
 
-⚠ **No pushear este commit solo.** El guard rechaza justo la configuración que la instancia
-desplegada tiene hoy: `render.yaml:132` declara `ANCHOR_MODE: simulated` y `DATABASE_URL` es de
-Turso. Un push dispara deploy —el `buildFilter` no filtra, verificado el 2026-08-27— y la API no
-levanta: **producción sin API**, no un anclaje que falla. El guard viaja al remoto recién en el
-push del paso 5, después de los secretos del paso 4 y con `ANCHOR_MODE: real` en el mismo commit.
-Hasta entonces queda local, protegiendo al desarrollo.
+**El guard se escribió primero como `throw`, y eso lo volvía impusheable.** Rechazaba justo la
+configuración que la instancia tiene hoy (`render.yaml:132` en `simulated`, `DATABASE_URL` de
+Turso), y como el `buildFilter` de Render no filtra —verificado el 2026-08-27—, cualquier push
+disparaba un deploy que no levantaba: **producción sin API**. El plan pasaba a depender de un orden
+que nadie podía olvidarse.
+
+**Eso se arregló en el código, no en el orden** (D-075): ahora el guard inhabilita el puerto y la
+API arranca igual. El paso 3 se puede pushear cuando sea, y el paso 5 dejó de poder tirar nada.
 
 **4. Cargar los dos secretos en el dashboard de Render, y probar el modo real desde ahí.** 🔴 lo
 hace el dueño, **antes** del paso 5.
 
-**El principio: separar el cambio riesgoso del irreversible.** Arrancar en modo real es lo que
-puede fallar; el push es lo que no se deshace rápido. Son dos cosas distintas y no tienen por qué
-viajar juntas:
+**Ya no es una precaución contra la caída** —D-075 se la llevó: si los secretos no están, la API
+arranca con el anclaje inhabilitado y el resto del producto anda—. Sigue siendo el orden bueno por
+otra razón, más barata: **probar el arranque en real donde deshacerlo es un restart y no un
+revert.**
 
 1. Cargar `BLOCKFROST_API_KEY` y `SERVICE_WALLET_SEED` en el dashboard. No cambia nada todavía:
    la API sigue en `simulated`.
 2. Poner `ANCHOR_MODE=real` **en el dashboard** y reiniciar. Mirar los logs (paso 6).
    - `AnchorPort listo en modo "real"` → verde, se sigue al paso 5.
-   - No levanta → devolver `ANCHOR_MODE` a `simulated` y reiniciar. **Producción vuelve en un
-     minuto y el repo nunca se tocó.**
+   - Arranca `disabled` → falta o está mal alguno de los dos secretos, y el motivo está en la
+     misma línea del log. Se corrige en el dashboard y se reinicia. **El resto de la API estuvo
+     funcionando todo el tiempo.**
 3. Recién con ese verde, el push del paso 5.
 
 Que `ANCHOR_MODE` esté declarado con `value:` no impide el paso 2 de esta lista: el dashboard pisa
@@ -143,11 +146,12 @@ al Blueprint hasta el próximo re-sync. Esa precedencia es justamente el bug que
 pero acá juega a favor —el cambio es temporal y reversible— y por eso se aprovecha antes de
 volverla permanente en el YAML.
 
-**Este orden se aprendió rompiéndolo el 2026-08-31.** El plan original ponía el commit primero, y
-eso deja producción caída: pushear `render.yaml` dispara un deploy, el deploy arranca con
-`ANCHOR_MODE=real`, y como el puerto se construye **antes** de `listen` (D-042), sin
-`BLOCKFROST_API_KEY` ni `SERVICE_WALLET_SEED` la API no levanta — no falla el primer anclaje: no
-hay API. La ventana dura lo que tarde alguien en cargar los secretos a mano.
+**Este orden se aprendió rompiéndolo el 2026-08-31, y después dejó de ser obligatorio.** El plan
+original ponía el commit primero, y con el comportamiento de entonces eso dejaba producción caída:
+pushear `render.yaml` disparaba un deploy que arrancaba en `ANCHOR_MODE=real`, y como el puerto se
+construía **antes** de `listen`, sin los dos secretos la API no levantaba — no fallaba el primer
+anclaje: no había API. **D-075 quitó ese filo**: hoy el peor caso es el anclaje inhabilitado. El
+orden se conserva porque sigue siendo el más barato, no porque el otro sea catastrófico.
 
 Las variables `sync: false` **se pueden cargar antes de que el Blueprint las declare**: quedan
 guardadas esperando, y el deploy siguiente las encuentra. Por eso el orden correcto es secretos

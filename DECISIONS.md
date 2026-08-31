@@ -22,7 +22,7 @@ ya no existen. Partirlo no pierde nada: el porqué sigue estando, deja de pesar.
 > se contradice internamente, (b) es un error de redacción, o (c) seguirlo al pie contradiría una
 > verdad del producto declarada por el dueño — **nunca por conveniencia**.
 >
-> **La numeración no se recicla.** Las decisiones nuevas siguen desde D-075.
+> **La numeración no se recicla.** Las decisiones nuevas siguen desde D-076.
 
 ## Desvíos vigentes
 
@@ -371,7 +371,10 @@ un cliente o un bug); el validador valida al anclar (protege contra nosotros).
 ## D-042 — En la superficie 🔴 el default inseguro no existe
 
 Si falta configuración crítica, el proceso **revienta al arrancar** — no en la primera request con
-un usuario esperando. Aplica a `JWT_SECRET`, `ANCHOR_MODE=real`, `STORAGE_DRIVER=s3`.
+un usuario esperando. Aplica a `JWT_SECRET` y a `STORAGE_DRIVER=s3`: sin ellos no hay forma segura
+de seguir sirviendo.
+
+**Ya no aplica al anclaje**, porque ahí sí la hay — ver D-075.
 
 ## D-043 — La visibilidad de proyectos existe una sola vez: `projectScope`
 
@@ -449,8 +452,35 @@ yaci-store todavía no devuelve. El adaptador no se entera — recibe la instanc
 
 `packages/cardano` expone `AnchorPort`. **El simulador es producto, no stub**: rechaza doble gasto,
 hilo duplicado, transición inválida, identidad reescrita y stage crítico sin commitment. Uno que
-dice que sí a todo miente, y encima da confianza. `ANCHOR_MODE` sin default inseguro (D-042).
+dice que sí a todo miente, y encima da confianza. `ANCHOR_MODE` sin default inseguro; si la
+configuración está rota el puerto se inhabilita y la API sigue viva (D-075).
 **Nada fuera de `packages/cardano` importa Lucid o Blockfrost.**
+
+## D-075 — Una configuración de anclaje rota inhabilita el puerto, no la API
+
+Si el `AnchorPort` no se puede construir —falta `BLOCKFROST_API_KEY`, la seed es inválida,
+Blockfrost no responde, o es `ANCHOR_MODE=simulated` contra una base remota— la API **arranca
+igual** con un puerto inhabilitado que rechaza toda operación de anclaje.
+
+**Por qué se cambió.** Antes eso era `process.exit(1)` por D-042. El costo apareció al planear el
+encendido del modo real: pushear `render.yaml` con `ANCHOR_MODE: real` antes de cargar los secretos
+dejaba la instancia **sin API** —no un anclaje que falla: login, listados, evidencia, contratos, todo
+abajo— y la ventana duraba lo que tardara alguien en cargarlos a mano. Matar el proceso castiga a
+las otras cincuenta funciones por el problema de una.
+
+**Por qué es seguro, que es la pregunta que importa.** El puerto inhabilitado no produce **ni un
+solo TXID**: no puede afirmar una prueba que no existe (regla 17, D-026). Y la degradación ya estaba
+diseñada para el resto del ciclo de vida —SPEC-013 §Invariante 2: si el puerto tira una excepción,
+la declaración queda escrita y el evento queda `Failed`—. Lo único que quedaba afuera del invariante
+era el puerto que nace roto; esto lo mete adentro. Un Blockfrost caído y una key ausente ahora
+producen el mismo resultado visible, que es lo correcto: **una configuración rota no es peor que una
+caída del proveedor, y ninguna de las dos justifica apagar el producto.**
+
+**Lo que se pierde, dicho en voz alta.** D-042 quería que el operador se enterara antes que el
+usuario. Con esto, un anclaje puede fallar con evidencia ya subida. A cambio queda el log de
+arranque (`AnchorPort listo en modo "disabled"` más el motivo), el motivo adentro de cada rechazo,
+y un producto que sigue funcionando. `"disabled"` no es un valor de `ANCHOR_MODE`: no se elige, se
+cae en él.
 
 ## D-008 — Validador state-thread con núcleo puro separado
 

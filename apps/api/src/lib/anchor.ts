@@ -1,5 +1,5 @@
 import type { AnchorPort, LedgerStore, LedgerUtxo, OutputRef } from "@plataforma/cardano";
-import { createAnchorPort } from "@plataforma/cardano";
+import { createAnchorPort, DisabledAnchorAdapter } from "@plataforma/cardano";
 import type { StageDatum } from "@plataforma/shared";
 import { db } from "./db";
 
@@ -80,26 +80,24 @@ class KyselyLedgerStore implements LedgerStore {
 let puerto: AnchorPort | null = null;
 
 /**
- * El simulador contra una base remota no arranca.
+ * ¿Hay algún motivo para no dejar que este proceso ancle? Devuelve el texto, o
+ * `null` si puede.
  *
- * **Por qué existe.** El simulador devuelve TXIDs bien formados marcados
- * `Confirmed` (`simulated.ts`), y `OnChainEvent` no registra de qué modo vino un
- * anclaje: en la base, uno inventado es indistinguible de uno real. El
- * 2026-08-31 producción tenía exactamente eso —un `EVIDENCE_ANCHOR` `Confirmed`
- * con un txid que no existe en Preprod—, afirmando una prueba inexistente
- * contra la regla 17 y D-026.
+ * **El simulador contra una base remota.** El simulador devuelve TXIDs bien
+ * formados marcados `Confirmed` (`simulated.ts`), y `OnChainEvent` no registra
+ * de qué modo vino un anclaje: en la base, uno inventado es indistinguible de
+ * uno real. El 2026-08-31 producción tenía exactamente eso —un
+ * `EVIDENCE_ANCHOR` `Confirmed` con un txid que no existe en Preprod—,
+ * afirmando una prueba inexistente contra la regla 17 y D-026.
  *
  * **Por qué acá y no en el factory.** El factory no sabe qué base hay del otro
- * lado; es la API la que junta las dos configuraciones. Y va antes de
- * `createAnchorPort` para que falle en el arranque y no en el primer anclaje,
- * mismo criterio que D-042: sin `listen`, y visible en los logs de Render.
+ * lado; es la API la que junta las dos configuraciones.
  *
  * Simular contra Turso no tiene ningún caso de uso legítimo, así que no hay
  * escotilla de escape. El camino conocido para llegar a este estado sin querer
- * es un re-sync del Blueprint pisando el `ANCHOR_MODE` del dashboard, que hasta
- * hoy pasaba **en silencio**: esto lo vuelve ruidoso.
+ * es un re-sync del Blueprint pisando el `ANCHOR_MODE` del dashboard.
  */
-function rechazarSimuladoContraBaseRemota(): void {
+function motivoParaNoAnclar(): string | null {
   const modo = process.env.ANCHOR_MODE ?? "simulated";
   const url = process.env.DATABASE_URL ?? "";
   // Turso se habla por `libsql://`; `https://` contra el mismo host también
@@ -107,26 +105,61 @@ function rechazarSimuladoContraBaseRemota(): void {
   const esRemota = url.startsWith("libsql://") || url.includes(".turso.io");
 
   if (modo === "simulated" && esRemota) {
-    throw new Error(
-      "ANCHOR_MODE=simulated contra una base remota: el simulador escribe TXIDs " +
-        "falsos marcados Confirmed que no se distinguen de los reales (regla 17, D-026). " +
-        "Poné ANCHOR_MODE=real, o apuntá DATABASE_URL a una base local."
+    return (
+      "ANCHOR_MODE=simulated contra una base remota. El simulador escribe TXIDs falsos " +
+      "marcados Confirmed que no se distinguen de los reales (regla 17, D-026). " +
+      "Poné ANCHOR_MODE=real, o apuntá DATABASE_URL a una base local."
     );
   }
+
+  return null;
+}
+
+/**
+ * Deja el puerto inhabilitado y lo cuenta fuerte, en vez de matar el proceso.
+ *
+ * **Este es el cambio de D-075.** Antes esto era un `throw` que `server.ts`
+ * convertía en `process.exit(1)`: una variable mal puesta y la API entera no
+ * levantaba —login, listados, subida de evidencia, contratos—, cuando lo único
+ * roto era anclar. Un push podía dejar el producto abajo.
+ *
+ * Sigue sin haber default inseguro, que era lo que D-042 protegía: el puerto
+ * inhabilitado no produce **ni un solo TXID**, así que no puede afirmar una
+ * prueba que no existe. Lo que cambia es a quién se castiga cuando la
+ * configuración está mal.
+ */
+function inhabilitar(motivo: string): AnchorPort {
+  console.error(
+    `[anchor] ANCLAJE INHABILITADO — la API arranca igual, pero todo anclaje va a fallar.\n` +
+      `         Motivo: ${motivo}`
+  );
+  return new DisabledAnchorAdapter(motivo);
 }
 
 /** Llamado por `server.ts` antes de `listen`, y por el setup de la suite. */
 export async function initAnchorPort(): Promise<AnchorPort> {
-  rechazarSimuladoContraBaseRemota();
+  const motivo = motivoParaNoAnclar();
+  if (motivo) {
+    puerto = inhabilitar(motivo);
+    return puerto;
+  }
 
-  puerto = await createAnchorPort({
-    mode: process.env.ANCHOR_MODE,
-    store: new KyselyLedgerStore(),
-    blockfrostApiKey: process.env.BLOCKFROST_API_KEY,
-    seed: process.env.SERVICE_WALLET_SEED,
-    network: process.env.CARDANO_NETWORK,
-    blockfrostUrl: process.env.BLOCKFROST_URL
-  });
+  try {
+    puerto = await createAnchorPort({
+      mode: process.env.ANCHOR_MODE,
+      store: new KyselyLedgerStore(),
+      blockfrostApiKey: process.env.BLOCKFROST_API_KEY,
+      seed: process.env.SERVICE_WALLET_SEED,
+      network: process.env.CARDANO_NETWORK,
+      blockfrostUrl: process.env.BLOCKFROST_URL
+    });
+  } catch (error) {
+    // Falta un secreto, la seed no es válida, Blockfrost no responde, la red no
+    // está permitida. Todo eso rompe el anclaje y nada de eso rompe el resto de
+    // la API: se inhabilita el puerto y se sigue (D-075).
+    puerto = inhabilitar(error instanceof Error ? error.message : String(error));
+  }
+
   return puerto;
 }
 

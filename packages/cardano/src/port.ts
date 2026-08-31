@@ -15,6 +15,18 @@ import type { StageDatum } from "@plataforma/shared";
 export const ANCHOR_MODES = ["simulated", "real"] as const;
 export type AnchorMode = (typeof ANCHOR_MODES)[number];
 
+/**
+ * Lo que el puerto **efectivamente puede ejercer**, que no es lo mismo que lo
+ * que se pidió por configuración.
+ *
+ * `"disabled"` no es un valor válido de `ANCHOR_MODE` —por eso no está en
+ * `ANCHOR_MODES`—: no se elige, se cae en él cuando el puerto no se pudo
+ * construir (D-075). Un puerto inhabilitado no puede decir que es `simulated`
+ * ni `real` sin mentir, y el log de arranque es justamente donde esa mentira
+ * costaría más.
+ */
+export type PortMode = AnchorMode | "disabled";
+
 /** Un UTxO, en la forma en que se persiste: `txid#index`. */
 export type OutputRef = string;
 
@@ -75,7 +87,7 @@ export interface MetadataAnchorReceipt {
 export const EVIDENCE_METADATA_LABEL = 1904;
 
 export interface AnchorPort {
-  readonly mode: AnchorMode;
+  readonly mode: PortMode;
   openThread(input: OpenThreadInput): Promise<AnchorReceipt>;
   advanceThread(input: AdvanceThreadInput): Promise<AnchorReceipt>;
   /**

@@ -67,7 +67,9 @@ son operaciones distintas con precondiciones distintas.
 
 1. **Nada fuera de `packages/cardano` importa Lucid ni Blockfrost** (D-014). La API llama al puerto.
 2. **El registro nunca depende del anclaje.** Si el puerto falla, la declaración ya está escrita y
-   el evento queda `Failed`; jamás al revés (D-059).
+   el evento queda `Failed`; jamás al revés (D-059). **Incluye el puerto que no se pudo construir**
+   (D-075): configuración rota inhabilita el anclaje, no la API. Un puerto inhabilitado rechaza toda
+   operación, así que no produce ningún TXID — degradar nunca significa aflojar la regla 17.
 3. **Idempotencia (regla 8):** un `OnChainEvent` que ya tiene `txid` no se vuelve a anclar. El
    índice único `(milestoneId, eventIndex)` es la barrera.
 4. **Un hilo vivo por stage.** El simulador rechaza abrir un segundo hilo para un `stageRef` que ya
@@ -94,6 +96,7 @@ son operaciones distintas con precondiciones distintas.
 | Anclar dos veces el mismo evento | el segundo no produce transacción nueva |
 | El puerto tira una excepción | la declaración queda escrita, el evento en `Failed`, respuesta 200 |
 | `ANCHOR_MODE=real` en la rebanada A | error explícito al construir el puerto |
+| El puerto no se puede construir (falta un secreto, Blockfrost caído) | la API arranca con el puerto inhabilitado; todo anclaje rechaza (D-075) |
 | El mismo payload anclado dos veces | mismo `txid` (el simulador es determinístico) |
 
 ## Plan de trabajo — el vertical local completo
