@@ -56,7 +56,7 @@ distingue un anclaje real de uno inventado.
 | 1 | ~~Borrar el anclaje simulado de la base de producción~~ | 🔴 **hecho 2026-08-31** |
 | 2 | Probar el camino del hilo en local contra Preprod | 🟡 |
 | 3 | ~~Defensa 1: la API se niega a simular contra una base remota~~ | 🟢 **hecho 2026-08-31** |
-| 4 | **Cargar los dos secretos en el dashboard de Render** — antes del push | 🔴 dueño |
+| 4 | **Secretos en el dashboard + probar el modo real desde ahí**, reversible sin tocar el repo | 🔴 dueño |
 | 5 | Commit de `render.yaml` (el push dispara el deploy que los consume) | 🟢 |
 | 6 | Verificar el arranque en los logs | 🟢 |
 | 7 | Un anclaje real de punta a punta | 🟢 |
@@ -123,7 +123,25 @@ levanta: **producción sin API**, no un anclaje que falla. El guard viaja al rem
 push del paso 5, después de los secretos del paso 4 y con `ANCHOR_MODE: real` en el mismo commit.
 Hasta entonces queda local, protegiendo al desarrollo.
 
-**4. Cargar los dos secretos en el dashboard de Render.** 🔴 lo hace el dueño, **antes** del paso 5.
+**4. Cargar los dos secretos en el dashboard de Render, y probar el modo real desde ahí.** 🔴 lo
+hace el dueño, **antes** del paso 5.
+
+**El principio: separar el cambio riesgoso del irreversible.** Arrancar en modo real es lo que
+puede fallar; el push es lo que no se deshace rápido. Son dos cosas distintas y no tienen por qué
+viajar juntas:
+
+1. Cargar `BLOCKFROST_API_KEY` y `SERVICE_WALLET_SEED` en el dashboard. No cambia nada todavía:
+   la API sigue en `simulated`.
+2. Poner `ANCHOR_MODE=real` **en el dashboard** y reiniciar. Mirar los logs (paso 6).
+   - `AnchorPort listo en modo "real"` → verde, se sigue al paso 5.
+   - No levanta → devolver `ANCHOR_MODE` a `simulated` y reiniciar. **Producción vuelve en un
+     minuto y el repo nunca se tocó.**
+3. Recién con ese verde, el push del paso 5.
+
+Que `ANCHOR_MODE` esté declarado con `value:` no impide el paso 2 de esta lista: el dashboard pisa
+al Blueprint hasta el próximo re-sync. Esa precedencia es justamente el bug que el paso 5 cierra,
+pero acá juega a favor —el cambio es temporal y reversible— y por eso se aprovecha antes de
+volverla permanente en el YAML.
 
 **Este orden se aprendió rompiéndolo el 2026-08-31.** El plan original ponía el commit primero, y
 eso deja producción caída: pushear `render.yaml` dispara un deploy, el deploy arranca con
