@@ -53,7 +53,7 @@ distingue un anclaje real de uno inventado.
 
 | # | Paso | Nivel |
 |---|---|---|
-| 1 | Borrar el anclaje simulado de la base de producción | 🔴 dueño |
+| 1 | ~~Borrar el anclaje simulado de la base de producción~~ | 🔴 **hecho 2026-08-31** |
 | 2 | Probar el camino del hilo en local contra Preprod | 🟡 |
 | 3 | Defensa 1: la API se niega a simular contra una base remota | 🟢 |
 | 4 | Commit de `render.yaml` | 🟢 |
@@ -63,8 +63,13 @@ distingue un anclaje real de uno inventado.
 | 8 | Reconciliación por demanda, sin cron | 🟢 |
 | 9 | Defensa 2 (columna `anchorMode`) y defensa 3 (el simulador devuelve `Pending`) | 🟡 decide el dueño |
 
-**1. Borrar el anclaje simulado de la base de producción.** Antes de encender nada, o queda
-indistinguible para siempre. Lo hace el dueño: es un borrado en producción.
+**1. Borrar el anclaje simulado de la base de producción.** ✅ **Hecho el 2026-08-31 por el dueño.**
+`OnChainEvent` quedó en 0 filas y `Evidence` intacta en 1 — el `ON DELETE set null` va en la otra
+dirección, así que la evidencia no se toca. La fila respaldada quedó fuera del repo. **Producción ya
+no afirma ninguna prueba**, que era la condición para encender el modo real.
+
+Se deja el procedimiento porque vuelve a hacer falta si el Blueprint devuelve la API a `simulated`
+(paso 4) antes de que exista la defensa 1. Era un borrado en producción, y lo hace el dueño.
 
 Es **la única fila** de `OnChainEvent` (`count = 1`) y **ninguna tabla la referencia** — se verificó
 que no hay FKs entrantes hacia `OnChainEvent`, así que el borrado no arrastra nada. Se apunta al
