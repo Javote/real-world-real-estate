@@ -10,6 +10,7 @@ import { SelectDropdown } from '#/components/domain/SelectDropdown'
 import { TextInput } from '#/components/domain/TextInput'
 import { PanelLayout } from '#/components/PanelLayout'
 import { useTranslation } from '#/i18n/useTranslation'
+import { majorToMinor, minorToMajor } from '#/lib/money'
 
 // **M2-D5 fila 39 · `/developer/project/:projectId/invite`** — captura 39.
 // Componentes: TextInput, SelectDropdown (unidad), NumberInput (monto),
@@ -70,12 +71,17 @@ function InviteInvestor() {
 
   const unidad = unidades?.find((u) => u.id === unitId)
 
+  // **El monto entra por parámetro y no se lee del scope.** Es lo que saca el
+  // `as number`: acá `amountMinorUnits` YA es un entero validado, porque el
+  // único que puede llamar a `mutate` es el submit, y para llamarlo tuvo que
+  // estrechar el `null` primero. La guarda deja de ser una promesa y pasa a
+  // ser el tipo.
   const invitar = useMutation({
-    mutationFn: () =>
+    mutationFn: (amountMinorUnits: number) =>
       api.createInvitation(projectId, {
         unitId,
         investorEmail: email.trim(),
-        amountMinorUnits: Math.round((monto ?? 0) * 100),
+        amountMinorUnits,
         currency: unidad?.currency ?? MONEDA_POR_DEFECTO
       }),
     onSuccess: () => {
@@ -97,7 +103,8 @@ function InviteInvestor() {
     // developer puede pactar otro. Solo se prefilla si el campo está vacío,
     // para no pisar lo que ya se tipeó.
     const elegida = unidades?.find((u) => u.id === id)
-    if (monto === null && elegida?.priceMinorUnits != null) setMonto(elegida.priceMinorUnits / 100)
+    if (monto === null && elegida?.priceMinorUnits != null)
+      setMonto(minorToMajor(elegida.priceMinorUnits))
   }
 
   const opciones =
@@ -107,8 +114,19 @@ function InviteInvestor() {
       disabled: u.status !== 'available'
     })) ?? []
 
+  // **La conversión pasa una sola vez y ANTES de habilitar el botón**, no en el
+  // `mutationFn`. Es lo que vuelve imposible mandar un monto que el helper
+  // rechazó: si `majorToMinor` devuelve `null` el formulario no se envía, y el
+  // campo dice por qué en vez de redondear a espaldas de quien lo tipeó.
+  const montoMinor = majorToMinor(monto)
+  const montoInvalido = monto !== null && montoMinor === null
+
   const puedeInvitar =
-    email.trim().length > 0 && unitId !== '' && monto !== null && monto > 0 && !invitar.isPending
+    email.trim().length > 0 &&
+    unitId !== '' &&
+    montoMinor !== null &&
+    montoMinor > 0 &&
+    !invitar.isPending
 
   return (
     <PanelLayout
@@ -129,7 +147,7 @@ function InviteInvestor() {
         data-testid="DEV-INVITE-CREATE-001"
         onSubmit={(e) => {
           e.preventDefault()
-          if (puedeInvitar) invitar.mutate()
+          if (puedeInvitar && montoMinor !== null) invitar.mutate(montoMinor)
         }}
       >
         <article className="rounded-xl bg-card p-s4 shadow-e1">
@@ -164,6 +182,8 @@ function InviteInvestor() {
             value={monto}
             onChange={setMonto}
             min={1}
+            step={0.01}
+            {...(montoInvalido ? { error: t('developer.invite.amountInvalid') } : {})}
             stepUpLabel={t('developer.invite.amountUp')}
             stepDownLabel={t('developer.invite.amountDown')}
           />
