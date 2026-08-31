@@ -29,6 +29,12 @@ interface BottomNavProps {
   ariaLabel: string
 }
 
+// TanStack Link pinta activo por prefijo. Un tab a `/developer` quedaría
+// activo en `/developer/capital` si no pedimos exact en el índice.
+export function tabNeedsExactMatch(tabTo: string, tabs: readonly { to: string }[]): boolean {
+  return tabs.some((other) => other.to !== tabTo && other.to.startsWith(`${tabTo}/`))
+}
+
 export function BottomNav({ tabs, ariaLabel }: BottomNavProps) {
   return (
     <nav
@@ -45,6 +51,7 @@ export function BottomNav({ tabs, ariaLabel }: BottomNavProps) {
             'flex flex-1 flex-col items-center gap-s1 text-caption',
             tab.fab ? 'relative -mt-s6' : ''
           )}
+          activeOptions={{ exact: tabNeedsExactMatch(tab.to, tabs) }}
           activeProps={{ className: 'text-primary font-bold' }}
           inactiveProps={{ className: 'text-text-muted' }}
         >

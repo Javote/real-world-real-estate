@@ -44,7 +44,7 @@ export function ToggleSwitch({
         disabled={disabled}
         onClick={() => onChange(!checked)}
         className={cn(
-          'relative h-6 w-11 shrink-0 rounded-full transition-colors',
+          'relative h-6 w-11 shrink-0 overflow-hidden rounded-full transition-colors',
           'focus:outline-none focus-visible:ring-2 focus-visible:ring-primary',
           checked ? 'bg-primary' : 'bg-disabled',
           disabled && 'cursor-not-allowed opacity-50'
@@ -53,8 +53,11 @@ export function ToggleSwitch({
         <span
           aria-hidden="true"
           className={cn(
-            'absolute top-0.5 size-5 rounded-full bg-card shadow-e1 transition-transform',
-            checked ? 'translate-x-[1.375rem]' : 'translate-x-0.5'
+            // `left-0.5` ancla el thumb antes del transform. Sin eso el motor
+            // calcula un `left` estático (~22px) y `translate-x` lo suma otra
+            // vez: el círculo termina fuera del track.
+            'absolute left-0.5 top-0.5 size-5 rounded-full bg-card shadow-e1 transition-transform',
+            checked ? 'translate-x-5' : 'translate-x-0'
           )}
         />
       </button>

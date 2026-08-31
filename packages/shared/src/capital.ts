@@ -41,6 +41,13 @@ export const capitalByProjectSchema = z.strictObject({
   releasedMinorUnits: z.number().int().nonnegative(),
   unitsSold: z.number().int().nonnegative(),
   totalUnits: z.number().int().nonnegative(),
+  /**
+   * Investors DISTINTOS con contrato en el proyecto, no contratos.
+   *
+   * La captura 42 lo muestra al lado de "Raised" y no es lo mismo que
+   * `unitsSold`: quien compra dos unidades es un investor, no dos.
+   */
+  investors: z.number().int().nonnegative(),
   currency: z.string().nullable()
 });
 export type CapitalByProject = z.infer<typeof capitalByProjectSchema>;

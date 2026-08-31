@@ -6,6 +6,7 @@ import {
   DialogHeader,
   DialogTitle
 } from '#/components/ui/dialog'
+import { HashChip } from './HashChip'
 import { PrimaryButton, SecondaryButton } from './PrimaryButton'
 
 // M2-D3 §Modals · InvitationAcceptModal — la superficie con la que el investor
@@ -32,7 +33,8 @@ interface InvitationAcceptModalProps {
     unit: string
     /** Monto total, ya formateado (reglas 1 y 14). */
     amount: string
-    handover: string
+    /** Ausente si el contrato no trae fecha de entrega. */
+    handover?: string
   }
   /** Resumen del cronograma de pagos. Es dato declarado, no plata (D-021). */
   termsLines?: readonly string[]
@@ -47,7 +49,17 @@ interface InvitationAcceptModalProps {
     decline: string
     accept: string
     submitting: string
+    resolved?: string
   }
+  /**
+   * `false` cuando ya se aceptó o se rechazó: la fila 63 no ofrece el botón,
+   * muestra el estado.
+   */
+  pending?: boolean
+  /** TXID del anclaje, si existe. Sin TXID no hay HashChip (regla 17). */
+  txid?: string | null
+  hashCopyLabel?: string
+  hashCopiedLabel?: string
 }
 
 export function InvitationAcceptModal({
@@ -58,18 +70,22 @@ export function InvitationAcceptModal({
   submitting,
   details,
   termsLines,
-  labels
+  labels,
+  pending = true,
+  txid,
+  hashCopyLabel,
+  hashCopiedLabel
 }: InvitationAcceptModalProps) {
   const bloques = [
     { label: labels.projectLabel, value: details.project },
     { label: labels.unitLabel, value: details.unit },
     { label: labels.amountLabel, value: details.amount },
-    { label: labels.handoverLabel, value: details.handover }
+    ...(details.handover ? [{ label: labels.handoverLabel, value: details.handover }] : [])
   ]
 
   return (
     <Dialog open={open} onOpenChange={(abierto) => !abierto && onClose()}>
-      <DialogContent className="bg-card">
+      <DialogContent className="bg-card" data-testid="INV-INVITE-VIEW-001">
         <DialogHeader>
           <span className="flex size-10 items-center justify-center rounded-full bg-verified-light">
             <BadgeCheck className="size-icon-md text-verified" aria-hidden="true" />
@@ -108,13 +124,31 @@ export function InvitationAcceptModal({
           {labels.anchoredNotice}
         </p>
 
+        {txid && hashCopyLabel && hashCopiedLabel ? (
+          <HashChip hash={txid} copyLabel={hashCopyLabel} copiedLabel={hashCopiedLabel} />
+        ) : null}
+
         <div className="flex justify-end gap-s2">
-          <SecondaryButton onClick={onDecline} disabled={submitting}>
-            {labels.decline}
-          </SecondaryButton>
-          <PrimaryButton onClick={onAccept} disabled={submitting}>
-            {submitting ? labels.submitting : labels.accept}
-          </PrimaryButton>
+          {pending ? (
+            <>
+              <SecondaryButton
+                onClick={onDecline}
+                disabled={submitting}
+                testId="INV-INVITE-DECLINE-003"
+              >
+                {labels.decline}
+              </SecondaryButton>
+              <PrimaryButton
+                onClick={onAccept}
+                disabled={submitting}
+                testId="INV-INVITE-ACCEPT-002"
+              >
+                {submitting ? labels.submitting : labels.accept}
+              </PrimaryButton>
+            </>
+          ) : (
+            <p className="text-body-sm text-text-muted">{labels.resolved}</p>
+          )}
         </div>
       </DialogContent>
     </Dialog>

@@ -14,7 +14,12 @@ interface TextInputProps {
   label: string
   value: string
   onChange: (value: string) => void
-  type?: 'text' | 'password' | 'email' | 'number'
+  /**
+   * `date` está acá porque M2-D3 §TextInput lo contempla en su anatomía:
+   * *"Optional right adornment (eye for passwords, calendar for dates)"*. El
+   * adorno del calendario lo pone el control nativo.
+   */
+  type?: 'text' | 'password' | 'email' | 'number' | 'date'
   placeholder?: string
   /** Ojo, calendario, etc. Va dentro del campo, a la derecha. */
   adornment?: React.ReactNode

@@ -25,6 +25,7 @@ interface ShareDossierModalProps {
   onClose: () => void
   /** URL completa y lista para copiar. La compone quien usa, con su origen. */
   shareUrl: string
+  testId?: string
   labels: {
     title: string
     /** Explica qué es el link y a quién se le da. */
@@ -37,10 +38,16 @@ interface ShareDossierModalProps {
   }
 }
 
-export function ShareDossierModal({ open, onClose, shareUrl, labels }: ShareDossierModalProps) {
+export function ShareDossierModal({
+  open,
+  onClose,
+  shareUrl,
+  labels,
+  testId
+}: ShareDossierModalProps) {
   return (
     <Dialog open={open} onOpenChange={(abierto) => !abierto && onClose()}>
-      <DialogContent className="bg-card">
+      <DialogContent className="bg-card" data-testid={testId}>
         <DialogHeader>
           <DialogTitle className="text-h2 font-bold text-text-primary">{labels.title}</DialogTitle>
           <DialogDescription className="text-body text-text-secondary">

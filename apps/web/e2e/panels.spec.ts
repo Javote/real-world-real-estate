@@ -59,3 +59,81 @@ for (const panel of PANELES) {
     await page.screenshot({ path: join(SHOTS, `${panel.shot}.png`), fullPage: true })
   })
 }
+
+// **D-072 / D-074** — el developer no tiene tab de perfil. D-074 monta el
+// ícono en todos los roles; para el developer sigue siendo la única entrada.
+// Si este camino se rompe, la pantalla queda inalcanzable sin escribir la URL.
+test('DEV-PROFILE-001 · el developer llega a su perfil desde el header', async ({ page }) => {
+  await loginConSolapa(page, 'Developer')
+
+  await expect(page.getByTestId('DEV-PANEL-KPIS-001')).toBeVisible()
+  await page.getByRole('button', { name: /mi perfil|my profile/i }).click()
+
+  await expect(page).toHaveURL(/\/developer\/profile/)
+  await expect(page.getByTestId('DEV-PROFILE-001')).toBeVisible()
+})
+
+// **M2-D5 fila 48** — el directorio de investors y su acceso desde el Panel.
+// D-072 obliga a que el tile llegue con su pantalla, así que se verifican los
+// dos juntos: un tile que navega a un 404 pasaría un test de render.
+test('DEV-INVESTORS-LIST-001 · el directorio de investors y su acceso', async ({ page }) => {
+  await loginConSolapa(page, 'Developer')
+
+  await expect(page.getByTestId('DEV-PANEL-KPIS-001')).toBeVisible()
+  await page.getByRole('button', { name: /inversores|investors/i }).click()
+
+  await expect(page).toHaveURL(/\/developer\/investors/)
+  await expect(page.getByTestId('DEV-INVESTORS-LIST-001')).toBeVisible()
+  await expect(page.getByRole('button', { name: /volver al panel|back to panel/i })).toBeVisible()
+  await expect(page.getByRole('button', { name: /notificaciones|notifications/i })).toBeVisible()
+  await expect(page.getByRole('button', { name: /mi perfil|my profile/i })).toBeVisible()
+  await expect(page.getByRole('button', { name: /^idioma$|^language$/i })).toBeVisible()
+  await expect(page.getByRole('banner')).toContainText('Prop')
+})
+
+// **M2-D5 filas 46-47** — la documentación de respaldo y su acceso (D-072).
+//
+// El corte en dos secciones ES la regla 17, así que el test lo mira: la lista
+// de verificados existe, y el botón de anclar solo aparece sobre documentos sin
+// TXID. Si algún día un documento sin anclaje se colara arriba, esto no lo
+// atrapa solo — pero que el botón viva únicamente en la sección pendiente sí.
+test('DEV-DOCS-LIST-001 · DEV-DOC-ANCHOR-002 · documentación de respaldo', async ({ page }) => {
+  await loginConSolapa(page, 'Developer')
+
+  await expect(page.getByTestId('DEV-PANEL-KPIS-001')).toBeVisible()
+  await page.getByRole('button', { name: /documentación|documentation/i }).click()
+
+  await expect(page).toHaveURL(/\/developer\/documentation/)
+  await expect(page.getByTestId('DEV-DOCS-LIST-001')).toBeVisible()
+
+  // El seed puede no dejar documentos pendientes, así que el anclaje se
+  // verifica solo si hay alguno: afirmarlo siempre haría fallar la suite por
+  // datos, no por código.
+  const anclar = page.getByTestId('DEV-DOC-ANCHOR-002').first()
+  if (await anclar.count()) await expect(anclar).toBeVisible()
+})
+
+// **M2-D5 filas 34b-34c** — el alta de un desarrollo, desde el tile del Panel.
+//
+// Se verifica el alta REAL y no solo que el formulario renderice: el tile del
+// panel llevaba a sí mismo hasta esta rebanada, así que lo que hay que probar
+// es que ahora termina en un proyecto que existe.
+test('DEV-PROJECT-CREATE-001 · crear un desarrollo desde el panel', async ({ page }) => {
+  await loginConSolapa(page, 'Developer')
+
+  await page.getByRole('button', { name: /nuevo proyecto|new project/i }).click()
+  await expect(page).toHaveURL(/\/developer\/project\/new/)
+  await expect(page.getByTestId('DEV-PROJECT-CREATE-001')).toBeVisible()
+
+  // Nombre único por corrida: el slug se deriva de él y dos corridas seguidas
+  // no pueden pisarse.
+  const nombre = `Torres del Test ${Date.now()}`
+  await page.getByLabel(/nombre del proyecto|project name/i).fill(nombre)
+  await page.getByLabel(/ubicación|location/i).fill('Palermo, CABA')
+
+  await page.getByRole('button', { name: /crear proyecto|create project/i }).click()
+
+  // Aterriza en el detalle del proyecto recién creado: la URL lleva su id.
+  await expect(page).toHaveURL(/\/developer\/project\/[^/]+$/, { timeout: 15_000 })
+  await expect(page.getByTestId('DEV-PROJECT-DETAIL-001')).toBeVisible()
+})

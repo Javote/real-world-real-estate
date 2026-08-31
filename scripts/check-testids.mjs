@@ -34,8 +34,29 @@ const ENTREGABLE = "docs/milestone-3-implementacion/UI-implementation-plan.md";
 // Playwright o un test de la API que lo nombre.
 const DONDE_SE_RECLAMA = ["apps/web/src", "apps/web/e2e", "apps/api/test"];
 
+/**
+ * Los comentarios NO reclaman.
+ *
+ * El primer intento matcheaba el archivo entero, y entonces un comentario que
+ * EXPLICA por qué un ID no se implementa lo daba por implementado. Pasó con
+ * `DEV-RELEASE-EXECUTE-002`: la pantalla de las filas 40-41 documenta que no lo
+ * construye (D-070), y esa misma explicación lo hacía contar. Tres IDs
+ * fantasma de un saque, y el número que M2-D5 §8 declara *"la unidad de
+ * medida"* pasó a medir prosa.
+ *
+ * Un `data-testid` en un comentario no es un `data-testid`. Se borran antes de
+ * buscar y el conteo vuelve a ser de código.
+ *
+ * No es un parser: es un barrido de línea y de bloque, que es todo lo que hace
+ * falta cuando lo único que se busca después son IDs. Los strings que contengan
+ * `//` —una URL— pierden su cola, y eso no cambia ningún ID.
+ */
+function sinComentarios(fuente) {
+  return fuente.replace(/\/\*[\s\S]*?\*\//g, " ").replace(/(^|[^:])\/\/.*$/gm, "$1");
+}
+
 // **El piso, no la meta.** Sube con cada rebanada; no baja nunca.
-const COBERTURA_MINIMA = 31;
+const COBERTURA_MINIMA = 74;
 
 // El patrón del entregable: ROLE-AREA...-NNN, con UNO O MÁS segmentos entre el
 // rol y el número.
@@ -70,7 +91,8 @@ const declarados = new Set(readFileSync(path.join(RAIZ, ENTREGABLE), "utf8").mat
 const reclamados = new Map();
 for (const dir of DONDE_SE_RECLAMA) {
   for (const archivo of archivosDe(dir)) {
-    for (const id of readFileSync(archivo, "utf8").match(PATRON) ?? []) {
+    const codigo = sinComentarios(readFileSync(archivo, "utf8"));
+    for (const id of codigo.match(PATRON) ?? []) {
       if (!reclamados.has(id)) reclamados.set(id, path.relative(RAIZ, archivo));
     }
   }

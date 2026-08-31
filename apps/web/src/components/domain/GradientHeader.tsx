@@ -5,19 +5,29 @@ import { PropNexusMark } from './PropNexusMark'
 // M2-D3 §Foundation · GradientHeader — *"Use on every primary screen, every
 // modal landing, every detail view"*.
 //
-// **Nunca omite el logo**: es el ancla agnóstica de rol. Y el slot derecho está
-// reservado a utilidades globales —NotificationBell, LanguageToggle, acción
-// primaria—, nunca a acciones contextuales.
+// El logo no se omite: es el ancla agnóstica de rol (M2-D3 y D-074). El slot
+// derecho es de utilidades globales. Si hay `back`, va **entre** la marca y
+// el título — nunca en el lugar del logo, nunca debajo del h1.
 
 interface GradientHeaderProps {
   title: string
   subtitle?: string
   /** Línea de contexto bajo el título: "Welcome, Admin Alpine". */
   context?: string
-  /** "← Back to <parent>" en pantallas de detalle. */
+  /** "← Back to <parent>" en pantallas que tienen padre. */
   back?: { label: string; onClick: () => void }
   /** Solo utilidades globales. */
   right?: React.ReactNode
+  /**
+   * Acción primaria de la pantalla, **a la altura del `h1`** — el "+ New" de
+   * la captura 35-36.
+   *
+   * Va acá y no en `right` porque no es lo mismo: `right` son utilidades
+   * globales (notificaciones, idioma, perfil) que se repiten en toda la app y
+   * viven en la fila de arriba. Esta es la acción de ESTA pantalla, y la
+   * captura la alinea con el título.
+   */
+  titleAction?: React.ReactNode
   /** Badge cuadrado a la izquierda del título (el logo del proyecto en el panel). */
   badge?: React.ReactNode
   className?: string
@@ -29,9 +39,21 @@ export function GradientHeader({
   context,
   back,
   right,
+  titleAction,
   badge,
   className
 }: GradientHeaderProps) {
+  const backLink = back ? (
+    <button
+      type="button"
+      onClick={back.onClick}
+      className="flex items-center gap-s1 text-body-sm text-white/80"
+    >
+      <ArrowLeft size={16} aria-hidden="true" />
+      {back.label}
+    </button>
+  ) : null
+
   return (
     <header
       className={cn(
@@ -40,7 +62,6 @@ export function GradientHeader({
         className
       )}
     >
-      {/* El logo va SIEMPRE y va primero: es el ancla agnóstica de rol. */}
       <div className="flex items-start justify-between gap-s3">
         <div className="flex items-center gap-s3">
           {badge ? (
@@ -54,21 +75,15 @@ export function GradientHeader({
         {right ? <div className="flex items-center gap-s2">{right}</div> : null}
       </div>
 
-      <div className="mt-s4">
-        <h1 className="text-display font-bold leading-tight">{title}</h1>
-        {subtitle ? <p className="text-body-sm text-white/80">{subtitle}</p> : null}
-      </div>
+      {backLink ? <div className="mt-s3">{backLink}</div> : null}
 
-      {back ? (
-        <button
-          type="button"
-          onClick={back.onClick}
-          className="mt-s3 flex items-center gap-s1 text-body-sm text-white/80"
-        >
-          <ArrowLeft size={16} aria-hidden="true" />
-          {back.label}
-        </button>
-      ) : null}
+      <div className="mt-s4 flex items-center justify-between gap-s3">
+        <div className="min-w-0">
+          <h1 className="text-display font-bold leading-tight">{title}</h1>
+          {subtitle ? <p className="text-body-sm text-white/80">{subtitle}</p> : null}
+        </div>
+        {titleAction ? <div className="shrink-0">{titleAction}</div> : null}
+      </div>
 
       {context ? <p className="mt-s4 text-body text-white/80">{context}</p> : null}
     </header>

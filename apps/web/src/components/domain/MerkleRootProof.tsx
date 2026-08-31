@@ -26,11 +26,16 @@ interface MerkleRootProofProps {
   /** Un nivel más adentro: solo cuando la superficie es el modal de stage. */
   archivos?: ArchivoDelBundle[]
   onOpenTxid?: () => void
+  /** Cargar el camino de Merkle de un archivo: lo inicia el usuario (P5). */
+  onOpenArchivo?: (archivo: ArchivoDelBundle) => void
+  testId?: string
   labels: {
     rootLabel: string
     txidLabel: string
     filesLabel: string
     pending: string
+    /** Sin raíz: hashes por archivo, sin afirmar el paquete. */
+    pendingRoot?: string
     copy: string
     copied: string
   }
@@ -41,13 +46,19 @@ export function MerkleRootProof({
   txid,
   archivos,
   onOpenTxid,
+  onOpenArchivo,
+  testId,
   labels
 }: MerkleRootProofProps) {
   return (
-    <section className="flex flex-col gap-s3">
+    <section className="flex flex-col gap-s3" data-testid={testId}>
       <div className="flex flex-col gap-s1">
         <span className="text-label font-bold uppercase text-text-muted">{labels.rootLabel}</span>
-        <HashChip hash={merkleRoot} copyLabel={labels.copy} copiedLabel={labels.copied} />
+        {merkleRoot ? (
+          <HashChip hash={merkleRoot} copyLabel={labels.copy} copiedLabel={labels.copied} />
+        ) : (
+          <span className="text-body-sm text-pending">{labels.pendingRoot ?? labels.pending}</span>
+        )}
       </div>
 
       <div className="flex flex-col gap-s1">
@@ -77,6 +88,7 @@ export function MerkleRootProof({
                 <span className="truncate text-body-sm text-text-secondary">{archivo.nombre}</span>
                 <HashChip
                   hash={archivo.sha256}
+                  {...(onOpenArchivo ? { onOpenDetail: () => onOpenArchivo(archivo) } : {})}
                   copyLabel={labels.copy}
                   copiedLabel={labels.copied}
                 />

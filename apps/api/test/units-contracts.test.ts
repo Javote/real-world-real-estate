@@ -162,6 +162,38 @@ describe("el ciclo unidad → invitación → contrato → release", () => {
     expect(ajeno.status).toBe(403);
   });
 
+  // **Fila 40-41 · DEV-CONTRACTS-LIST-001** — el contrato como REGISTRO (D-070).
+  //
+  // El GET pasa por dos left joins —Invitation y OnChainEvent— para alcanzar el
+  // anclaje, que lo emite el accept y no el contrato. Un left join que matchee
+  // de más devuelve el mismo contrato dos veces y la lista miente sin fallar,
+  // así que lo primero que se afirma es la CARDINALIDAD.
+  it("el listado de contratos del proyecto trae el registro y su anclaje", async () => {
+    const res = await request(app)
+      .get(`/api/v1/developer/projects/${projectId}/contracts`)
+      .set("Authorization", `Bearer ${tokenDev}`);
+
+    expect(res.status).toBe(200);
+
+    const delContrato = res.body.filter((c: { id: string }) => c.id === contractId);
+    expect(delContrato).toHaveLength(1);
+
+    const contrato = delContrato[0];
+    expect(contrato.unitId).toBe(unitId);
+    expect(contrato.unitReference).toBe("7C");
+    // Lo que D-070 nombra como lo que esta superficie SÍ puede mostrar.
+    expect(contrato.unitStatus).toBe("sold");
+    expect(contrato.investorName).toBeTruthy();
+    expect(contrato.signedAt).not.toBeNull();
+    // El anclaje del acuerdo: "se registró en este momento" (D-026).
+    expect(contrato.txid).toBeTruthy();
+    expect(contrato.commitment).toMatch(/^[0-9a-f]{64}$/);
+
+    // Nada del encuadre de pagos: el registro no expone etapas liberadas.
+    expect(contrato.releases).toBeUndefined();
+    expect(contrato.stagesReleased).toBeUndefined();
+  });
+
   it("el release aparece como artefacto del dossier de la unidad", async () => {
     const res = await request(app)
       .get(`/api/v1/investor/units/${unitId}/dossier`)
@@ -193,5 +225,67 @@ describe("inventario de unidades", () => {
     expect(res.body.length).toBeGreaterThanOrEqual(1);
     const referencias = res.body.map((u: { unitReference: string }) => u.unitReference);
     expect(referencias).toContain("7C");
+  });
+});
+
+// Fila 35-36 — el "Price from" de la captura. Es una AGREGACIÓN sobre las
+// unidades y no un campo de `Project`, así que lo que hay que fijar es que sea
+// el MÍNIMO: un endpoint que devuelva "la primera unidad que encontró" pasa
+// cualquier test que mire un solo precio y miente en cuanto hay dos.
+describe("GET /developer/projects — el precio 'desde'", () => {
+  it("es el mínimo de las unidades del proyecto, no la primera ni la última", async () => {
+    // Más cara que la 7C (9.000.000) y creada DESPUÉS: si el endpoint no
+    // ordena por precio, la toma a ella y el test se pone rojo.
+    await request(app)
+      .post(`/api/v1/developer/projects/${projectId}/units`)
+      .set("Authorization", `Bearer ${tokenDev}`)
+      .send({
+        unitReference: "9D",
+        floor: 9,
+        sizeM2: 80,
+        priceMinorUnits: 14_000_000,
+        currency: "USD"
+      })
+      .expect(201);
+
+    // Y una más barata, para que el mínimo no sea el primero que se creó.
+    await request(app)
+      .post(`/api/v1/developer/projects/${projectId}/units`)
+      .set("Authorization", `Bearer ${tokenDev}`)
+      .send({
+        unitReference: "1A",
+        floor: 1,
+        sizeM2: 40,
+        priceMinorUnits: 6_500_000,
+        currency: "USD"
+      })
+      .expect(201);
+
+    const res = await request(app)
+      .get("/api/v1/developer/projects")
+      .set("Authorization", `Bearer ${tokenDev}`);
+
+    expect(res.status).toBe(200);
+    const proyecto = res.body.find((p: { id: string }) => p.id === projectId);
+    expect(proyecto.priceFromMinorUnits).toBe(6_500_000);
+    expect(proyecto.priceCurrency).toBe("USD");
+  });
+
+  it("un proyecto sin unidades con precio no inventa un 'desde'", async () => {
+    const vacio = await request(app)
+      .post("/api/v1/developer/projects")
+      .set("Authorization", `Bearer ${tokenDev}`)
+      .send({ name: "Sin unidades", slug: `sin-unidades-${Date.now()}`, totalUnits: 0 })
+      .expect(201);
+
+    const res = await request(app)
+      .get("/api/v1/developer/projects")
+      .set("Authorization", `Bearer ${tokenDev}`);
+
+    const proyecto = res.body.find((p: { id: string }) => p.id === vacio.body.id);
+    // `null`, no 0: cero es un precio y este proyecto no tiene ninguno
+    // (regla 17 — ninguna señal sin sustento).
+    expect(proyecto.priceFromMinorUnits).toBeNull();
+    expect(proyecto.priceCurrency).toBeNull();
   });
 });

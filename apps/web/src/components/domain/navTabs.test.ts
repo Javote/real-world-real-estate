@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest'
+import { tabNeedsExactMatch } from './BottomNav'
 import { NAV_TABS } from './navTabs'
 
 // M2-D3 §Foundation · BottomNav §Usage rules define las cuatro composiciones,
@@ -48,6 +49,21 @@ describe('composiciones del BottomNav', () => {
     for (const [rol, tabs] of Object.entries(NAV_TABS)) {
       const paths = tabs.map((t) => t.to)
       expect(new Set(paths).size, rol).toBe(paths.length)
+    }
+  })
+})
+
+describe('tabNeedsExactMatch', () => {
+  it('el panel de DEV/NOT/CER pide exact; el resto no', () => {
+    expect(tabNeedsExactMatch('/developer', NAV_TABS.developer)).toBe(true)
+    expect(tabNeedsExactMatch('/developer/capital', NAV_TABS.developer)).toBe(false)
+    expect(tabNeedsExactMatch('/notary', NAV_TABS.notary)).toBe(true)
+    expect(tabNeedsExactMatch('/certifier', NAV_TABS.certifier)).toBe(true)
+  })
+
+  it('el investor no: ningún tab es prefijo de otro', () => {
+    for (const tab of NAV_TABS.investor) {
+      expect(tabNeedsExactMatch(tab.to, NAV_TABS.investor)).toBe(false)
     }
   })
 })

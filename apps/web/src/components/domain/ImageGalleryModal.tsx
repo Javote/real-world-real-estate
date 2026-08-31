@@ -34,6 +34,7 @@ interface ImageGalleryModalProps {
     /** "2/4" — se arma con `Intl` afuera si el locale lo pide distinto. */
     counter: (actual: number, total: number) => string
   }
+  testId?: string
 }
 
 export function ImageGalleryModal({
@@ -41,7 +42,8 @@ export function ImageGalleryModal({
   onClose,
   images,
   initialIndex = 0,
-  labels
+  labels,
+  testId
 }: ImageGalleryModalProps) {
   const [indice, setIndice] = useState(initialIndex)
 
@@ -60,7 +62,11 @@ export function ImageGalleryModal({
 
   return (
     <Dialog open={open} onOpenChange={(abierto) => !abierto && onClose()}>
-      <DialogContent className="max-w-3xl bg-text-primary p-0" showCloseButton={false}>
+      <DialogContent
+        data-testid={testId}
+        className="max-w-3xl bg-text-primary p-0"
+        showCloseButton={false}
+      >
         <DialogTitle className="sr-only">{labels.title}</DialogTitle>
 
         <div className="relative flex flex-col">

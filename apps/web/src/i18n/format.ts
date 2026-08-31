@@ -23,6 +23,30 @@ export function formatCurrency(minorUnits: number, currency: string, locale: Loc
   }).format(minorUnits / 100)
 }
 
+/**
+ * Montos en la forma compacta de las StatCards: "US$ 8,4 M".
+ *
+ * Es la presentación que el entregable usa para dinero en un tile —la captura
+ * 37 muestra "US$ 8.4M"— y existe por una razón de layout, no de gusto: el
+ * número de un StatCard va a 28px y un tile de una grilla de tres no entra un
+ * monto completo sin partirlo en tres líneas.
+ *
+ * El input sigue siendo la unidad mínima entera (regla 1): la división la hace
+ * `Intl`, igual que en `formatCurrency`.
+ */
+export function formatCurrencyCompact(
+  minorUnits: number,
+  currency: string,
+  locale: Locale
+): string {
+  return new Intl.NumberFormat(locale, {
+    style: 'currency',
+    currency,
+    notation: 'compact',
+    maximumFractionDigits: 1
+  }).format(minorUnits / 100)
+}
+
 /** Números grandes en la forma compacta de las StatCards: "4,0 M". */
 export function formatCompact(value: number, locale: Locale): string {
   return new Intl.NumberFormat(locale, { notation: 'compact', maximumFractionDigits: 1 }).format(
@@ -30,22 +54,42 @@ export function formatCompact(value: number, locale: Locale): string {
   )
 }
 
-/** Fecha corta. El input es ISO —lo que manda el backend—, nunca un `Date` local. */
-export function formatDate(iso: string, locale: Locale): string {
-  return new Intl.DateTimeFormat(locale, { dateStyle: 'medium' }).format(new Date(iso))
+/**
+ * El plugin de SQLite no convierte todas las columnas timestamp: `signedAt` y
+ * `releasedAt` viajan como epoch ms. `new Date("1787…")` es Invalid; el número
+ * crudo no. Aceptamos las dos formas que el JSON realmente manda.
+ */
+function fechaDe(iso: string | number): Date {
+  if (typeof iso === 'number') return new Date(iso)
+  if (/^\d{13}$/.test(iso)) return new Date(Number(iso))
+  return new Date(iso)
+}
+
+/** Fecha corta. ISO o epoch ms — lo que mande el backend, nunca un `Date` local. */
+export function formatDate(iso: string | number, locale: Locale): string {
+  return new Intl.DateTimeFormat(locale, { dateStyle: 'medium' }).format(fechaDe(iso))
+}
+
+/** "December 2027" — la fecha de entrega del ProjectCard de developer. */
+export function formatMonthYear(iso: string | number, locale: Locale): string {
+  return new Intl.DateTimeFormat(locale, { month: 'long', year: 'numeric' }).format(fechaDe(iso))
 }
 
 /** Fecha + hora, para los eventos del audit log y los anclajes. */
-export function formatDateTime(iso: string, locale: Locale): string {
+export function formatDateTime(iso: string | number, locale: Locale): string {
   return new Intl.DateTimeFormat(locale, { dateStyle: 'medium', timeStyle: 'short' }).format(
-    new Date(iso)
+    fechaDe(iso)
   )
 }
 
 /** "hace 2 horas" / "2 hours ago" — la metadata de M2-D3 §Caption. */
-export function formatRelative(iso: string, locale: Locale, now: Date = new Date()): string {
+export function formatRelative(
+  iso: string | number,
+  locale: Locale,
+  now: Date = new Date()
+): string {
   const rtf = new Intl.RelativeTimeFormat(locale, { numeric: 'auto' })
-  const segundos = (new Date(iso).getTime() - now.getTime()) / 1000
+  const segundos = (fechaDe(iso).getTime() - now.getTime()) / 1000
 
   const unidades: Array<[Intl.RelativeTimeFormatUnit, number]> = [
     ['year', 60 * 60 * 24 * 365],

@@ -200,10 +200,14 @@ describe('InvestorCard', () => {
         investedLabel="US$ 120.000"
         unitLabel="7B"
         projectName="Torre A"
+        investmentHeading="Inversión"
+        unitHeading="Unidad"
         status={{ tone: 'verified', label: 'Activo' }}
       />
     )
     expect(screen.getByText('MD')).toBeDefined()
     expect(screen.getByText('Activo')).toBeDefined()
+    expect(screen.getByText('Inversión')).toBeDefined()
+    expect(screen.getByText('Unidad')).toBeDefined()
   })
 })

@@ -50,6 +50,8 @@ espaciados ni colores mirando prosa.
 ## Las cinco reglas del loop
 
 1. **Cuando la prosa y la captura difieren, gana la captura.** M2-D3 describe; M2-D2 muestra.
+   **Excepción (D-074):** el `GradientHeader` autenticado es siempre logo + campana + perfil +
+   idioma. Si la captura omite el logo o las utilidades, no se transcribe esa omisión.
 2. **Ningún componente que M2-D3 no defina.** Si hace falta uno nuevo, es una decisión nueva, no un
    archivo nuevo.
 3. **Ningún estado que M2-D3 no liste.** *"Never invent new statuses; choose the closest semantic
@@ -283,3 +285,7 @@ Sección viva: agregá acá el mismo día que te muerda una. Las de cada frente 
   read by pnpm`. **Ese warning no es ruido: es la cuenta regresiva.** El día que se suba el pin a
   pnpm 10+, los overrides se ignoran **en silencio** y sin romper el build; hay que moverlos a
   `pnpm-workspace.yaml` en el mismo commit que sube la versión.
+- **Las capturas del developer no coinciden en el header.** Documentación (46) va sin logo, Audit
+  log (49) va con logo, ninguna trae campana ni idioma, y M2-D3 dice *never omit the logo*. No se
+  transcribe captura por captura: D-074 unifica. Si una pantalla nueva "sigue la captura" y saca el
+  logo, está mal.

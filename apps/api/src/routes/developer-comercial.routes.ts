@@ -131,6 +131,16 @@ router.patch(
       .returningAll()
       .executeTakeFirstOrThrow();
 
+    // Regla 7: editar una unidad es una mutación relevante — cambia el precio,
+    // la superficie o el estado comercial de algo que después se invita y se
+    // contrata. El alta ya lo escribía; la edición se había quedado sin él.
+    await writeAuditLog({
+      actorUserId: req.user!.id,
+      action: "UPDATE_UNIT",
+      entityType: "Unit",
+      entityId: unidad.id
+    });
+
     return res.json(actualizada);
   }
 );
@@ -226,7 +236,22 @@ router.post(
   }
 );
 
-/** Fila 40-41 — los contratos de un proyecto, del lado del developer. */
+/**
+ * Fila 40-41 — los contratos de un proyecto, del lado del developer.
+ *
+ * **El contrato como REGISTRO, no como flujo de pagos** (D-070): lo que sale de
+ * acá es quién acordó qué sobre qué unidad, en qué estado quedó la unidad y con
+ * qué anclaje se registró el acuerdo. No hay etapas liberadas ni montos por
+ * etapa, porque la plataforma no administra fondos.
+ *
+ * `unitStatus` está porque D-070 lo nombra explícitamente como lo que esta
+ * superficie SÍ puede mostrar; el anclaje, porque es la única de las cuatro
+ * afirmaciones de D-026 que aplica a un contrato: *se registró en este momento*.
+ *
+ * El anclaje se alcanza por la invitación y no por el contrato: quien ancla es
+ * `POST /investor/invitations/:id/accept`, y el `referenceId` del evento es la
+ * invitación. Por eso el join pasa por ahí — el contrato no guarda la ref.
+ */
 router.get(
   "/projects/:id/contracts",
   requireRole("admin", "developer"),
@@ -236,6 +261,16 @@ router.get(
       .selectFrom("Contract")
       .innerJoin("Unit", "Unit.id", "Contract.unitId")
       .innerJoin("User", "User.id", "Contract.investorId")
+      .leftJoin("Invitation", (join) =>
+        join
+          .onRef("Invitation.unitId", "=", "Contract.unitId")
+          .on("Invitation.status", "=", "accepted")
+      )
+      .leftJoin("OnChainEvent", (join) =>
+        join
+          .onRef("OnChainEvent.referenceId", "=", "Invitation.id")
+          .on("OnChainEvent.eventType", "=", "INVITATION_ACCEPTED")
+      )
       .select([
         "Contract.id as id",
         "Contract.totalMinorUnits as totalMinorUnits",
@@ -243,7 +278,10 @@ router.get(
         "Contract.signedAt as signedAt",
         "Unit.id as unitId",
         "Unit.unitReference as unitReference",
-        "User.fullName as investorName"
+        "Unit.status as unitStatus",
+        "User.fullName as investorName",
+        "OnChainEvent.txid as txid",
+        "OnChainEvent.commitment as commitment"
       ])
       .where("Unit.projectId", "=", req.params.id)
       .execute();

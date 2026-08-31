@@ -1,5 +1,5 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { createFileRoute } from '@tanstack/react-router'
+import { createFileRoute, useNavigate } from '@tanstack/react-router'
 import { ShieldCheck } from 'lucide-react'
 import { useState } from 'react'
 import { api } from '#/api/port'
@@ -38,6 +38,7 @@ function UploadEvidence() {
   const { projectId } = Route.useParams()
   const { ready } = useRoleGuard(DEV_ROLES)
   const { t } = useTranslation()
+  const navigate = useNavigate()
   const queryClient = useQueryClient()
 
   const [stageId, setStageId] = useState<string | null>(null)
@@ -82,6 +83,14 @@ function UploadEvidence() {
       rol="developer"
       title={t('developer.upload.title')}
       context={t('developer.upload.context')}
+      back={{
+        label: t('nav.back'),
+        onClick: () =>
+          void navigate({
+            to: '/developer/project/$projectId',
+            params: { projectId }
+          })
+      }}
     >
       <section className="flex flex-col gap-s4" data-testid="DEV-EVIDENCE-UPLOAD-001">
         <article className="flex flex-col gap-s2 rounded-xl bg-card p-s4 shadow-e1">

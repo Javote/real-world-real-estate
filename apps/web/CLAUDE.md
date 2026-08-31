@@ -54,6 +54,33 @@ componente: sin TXID no hay forma de pedirle que diga "Verificado".
 la copia y vuelve inverificable el anclaje (regla 16). Trunca 6+4 **contando el prefijo `0x`**, que
 es una contradicción del entregable resuelta en D-069.
 
+## Lo que la captura pide y el contrato no da
+
+Sección viva, **igual que las Trampas**: cuando una captura muestre un dato que no podés sustanciar,
+agregalo acá el mismo día.
+
+El criterio no se negocia y es la regla 17 llevada a los datos: **sin dato, no se dibuja**. Nada de
+placeholders, nada de derivar un valor parecido para que la pantalla "se vea como la captura". Una
+pantalla a la que le falta un campo se nota y se arregla; una que muestra un campo inventado parece
+terminada y nadie la vuelve a mirar.
+
+**La deuda se declara en el prop que no se puede llenar**, no en un documento aparte: ahí es donde
+la va a leer quien intente usarlo. Esta tabla solo dice dónde está cada una.
+
+| Qué falta | Dónde está declarada | Qué costaría |
+|---|---|---|
+| Pill de estado del investor (Active / Pending / Completed) | `InvestorCard` prop `status` | Contrato: `investorDirectoryEntrySchema` no expone `status`, y el endpoint hace `innerJoin Contract` |
+| Fila de StatCards Active / Pending / Completed en `/developer/investors` | misma deuda: no hay `status` por investor del que agregar | Contrato: sin el campo no hay conteo que no sea inventado |
+| Nombre de la organización ("Grupo Alpine") | `ProjectCard` prop `developerName` | 🟡 Migración: no hay entidad de organización. `User.fullName` es una persona |
+| "Price from" en el listado del investor | `ProjectCard` prop `priceLabel` | Endpoint: `GET /projects` no agrega el mínimo de las unidades. `GET /developer/projects` **ya lo hace** — es copiar esa agregación |
+| Rating / reputación del developer (capturas 6-7) | detalle `/project/:id` — no hay estrellas | Contrato: no hay modelo de rating. Capturas 59/60 no tienen fila en M2-D5 |
+| KPI "Active investors" y "Verified events" del panel (capturas 33/34) | `developer.index.tsx` — no hay tile | Contrato: `developerKpisSchema` no los expone |
+
+**Fijate si el dato existe antes de declararlo ausente.** El "Price from" se declaró ausente y no lo
+estaba: el precio existe en `UnitTable.priceMinorUnits`, solo que a nivel unidad. Eso convirtió una
+supuesta migración en un `min()` en la query, y se resolvió el mismo día para el listado del
+developer. Son deudas MUY distintas y la diferencia solo aparece si mirás el esquema.
+
 ## Los tokens no se tocan a mano
 
 `src/styles.test.ts` lee **el entregable** —no una copia— y verifica que los 20 colores normativos
@@ -69,6 +96,19 @@ entero, con un error que no menciona `@theme`.
 
 **Un stub no es una pantalla a medias.** Se ve como lo que es y no compite con la captura: una
 pantalla inventada parece terminada y nadie la vuelve a mirar.
+
+## El header es uno (D-074)
+
+`PanelLayout` pinta **siempre** el `GradientHeader` completo. La pantalla no elige piezas:
+
+- Logo PropNexus a la izquierda. No se oculta.
+- Campana, perfil e idioma a la derecha. No se opt-in por ruta.
+- Si la pantalla tiene padre, pasa `back`. La flecha queda **entre** el logo y el título.
+
+Login no usa `PanelLayout`: ahí solo va el toggle de idioma (M2-D3 §LanguageToggle).
+
+Si una captura del developer omite el logo (46, 48, 35) o las utilidades (casi todas), gana D-074,
+no la captura. No reintroducir un `hideBrand`.
 
 ## Específico de este frente
 
@@ -102,6 +142,10 @@ pantalla inventada parece terminada y nadie la vuelve a mirar.
   responsive de Tailwind: `hidden md:flex` quedaba oculto en **todos** los viewports. Se fue con el
   archivo, pero la lección queda para cuando entren los tokens: **si escribís una regla con el
   nombre de una utilidad de Tailwind, vas a pelear con el orden del archivo.**
+- **2026-08-28 · `Link` de TanStack Router pinta activo por prefijo.** `activeOptions.exact`
+  vale `false` por defecto: un tab a `/developer` queda activo en `/developer/capital`. En el
+  BottomNav, el tab índice pide `exact` si algún hermano cuelga de su path. No es CSS ni estado
+  local. El investor no lo padece: su primer tab es `/investor/menu`.
 
 ## Comandos
 

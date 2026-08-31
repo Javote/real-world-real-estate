@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { formatCurrency, formatDate, formatRelative } from './format'
+import { formatCurrency, formatCurrencyCompact, formatDate, formatRelative } from './format'
 
 // Regla 14: moneda, fecha y relativos salen de `Intl` con el locale activo. Los
 // tests comparan CONTRA EL OTRO LOCALE, no contra un string fijo: lo que
@@ -20,10 +20,31 @@ describe('formatCurrency', () => {
   })
 })
 
+describe('formatCurrencyCompact', () => {
+  it('recibe unidades mínimas enteras, igual que formatCurrency', () => {
+    // 84_000_000 centavos = US$ 840.000 → compacto. Lo que se afirma es la
+    // MAGNITUD, no la forma: "840K" y "840 mil" son la misma cuenta.
+    expect(formatCurrencyCompact(84_000_000, 'USD', 'en-US')).toContain('840')
+  })
+
+  it('acorta lo que formatCurrency escribe entero', () => {
+    const compacto = formatCurrencyCompact(840_000_000, 'USD', 'en-US')
+    const entero = formatCurrency(840_000_000, 'USD', 'en-US')
+    expect(compacto.length).toBeLessThan(entero.length)
+  })
+})
+
 describe('formatDate', () => {
   it('el orden de los campos cambia con el locale', () => {
     const iso = '2026-03-09T12:00:00.000Z'
     expect(formatDate(iso, 'es-AR')).not.toBe(formatDate(iso, 'en-US'))
+  })
+
+  it('acepta epoch ms (número o dígitos), no solo ISO', () => {
+    const ms = Date.parse('2026-03-09T12:00:00.000Z')
+    const iso = '2026-03-09T12:00:00.000Z'
+    expect(formatDate(ms, 'en-US')).toBe(formatDate(iso, 'en-US'))
+    expect(formatDate(String(ms), 'en-US')).toBe(formatDate(iso, 'en-US'))
   })
 })
 

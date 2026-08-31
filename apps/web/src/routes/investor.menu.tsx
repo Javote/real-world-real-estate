@@ -1,5 +1,5 @@
 import { createFileRoute, useNavigate } from '@tanstack/react-router'
-import { Bell, Home, ShoppingBag } from 'lucide-react'
+import { Bell, Heart, Home, ShoppingBag } from 'lucide-react'
 import { INVESTOR_ROLES } from '#/auth/roles'
 import { useRoleGuard } from '#/auth/useRoleGuard'
 import { ActionCard } from '#/components/domain/ActionCard'
@@ -38,6 +38,12 @@ function InvestorMenu() {
       icon: Home
     },
     {
+      to: '/investor/favorites' as const,
+      title: t('nav.investor.favorites'),
+      desc: t('menu.favorites'),
+      icon: Heart
+    },
+    {
       to: '/investor/notifications' as const,
       title: t('investor.notifications.title'),
       desc: t('menu.notifications'),
@@ -62,8 +68,6 @@ function InvestorMenu() {
           />
         ))}
       </section>
-
-      <p className="text-caption text-text-muted">{t('investor.menu.pending')}</p>
     </PanelLayout>
   )
 }

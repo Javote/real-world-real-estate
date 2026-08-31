@@ -37,7 +37,16 @@ export function StatusPill({ tone, children, className }: StatusPillProps) {
     <span
       // Los pills son de solo lectura: nunca se vuelven botones (M2-D3).
       className={cn(
-        'inline-flex items-center rounded-full px-s2 py-s1 text-caption font-medium',
+        // **`whitespace-nowrap` no es cosmética.** Un pill es `rounded-full`:
+        // si el texto envuelve, el radio deja de ser una cápsula y se convierte
+        // en un óvalo alto que no se parece a ningún estado de M2-D3. Y pasa
+        // con el español, no con el inglés — "En planificación" envuelve donde
+        // "Planning" no (M2-D3 §Text growth: 20-30% más largo).
+        //
+        // Lo que cede es el TÍTULO, que envuelve bien: por eso el pill también
+        // va `shrink-0`. Es la excepción a "nada de anchos fijos" — no se fija
+        // un ancho, se le prohíbe encogerse por debajo de su contenido.
+        'inline-flex shrink-0 items-center whitespace-nowrap rounded-full px-s2 py-s1 text-caption font-medium',
         TONOS[tone],
         className
       )}

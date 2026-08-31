@@ -60,7 +60,7 @@ aprobación explícita.
 | 15 | Lista de **TXIDs** de prueba | Publicada y resoluble en un explorador | ⬜ |
 | 16 | README marca carpetas públicas vs privadas | En `README.md` | ✅ |
 
-## Estado medido (2026-08-24)
+## Estado medido (2026-08-28)
 
 **Backend y cadena: la mitad difícil está hecha.**
 
@@ -71,15 +71,14 @@ aprobación explícita.
 | API | autorización en dos capas, FSM aplicada, bundles con Merkle root, audit log, **138 tests** |
 | Storage | port S3 probado contra MinIO real; el hash cubre los bytes guardados |
 
-**Front: hay que reconstruirlo** — ver [`SPEC-014`](SPEC-014-reconstruccion-del-front.md).
+**Front:** SPEC-016 cierra el backlog de test IDs del investor. Queda `DEV-RELEASE-EXECUTE-002` (D-070, no es deuda).
 
 | Dimensión | Especificado | Existe | Conforme |
 |---|---:|---:|---:|
-| Superficies (M2-D5) | 53 | **27** | 27 (51%) — una superficie cuenta cuando TODOS sus test IDs están reclamados |
+| Superficies (M2-D5) | 53 | **46** | 46 — una superficie cuenta cuando TODOS sus test IDs están reclamados |
 | Componentes (M2-D3) | 36 | **36** | 36 |
-| Patrones de prueba (M2-D4) | 10 | 8 | 8 |
-| Test IDs | **75** | 31 | 31 (41%) — medido por `pnpm testids` |
-| Paleta normativa | — | — | **0 coincidencias** |
+| Patrones de prueba (M2-D4) | 10 | 10 | 10 |
+| Test IDs | **75** | 74 | 74 (98,7%) — medido por `pnpm testids`; el pendiente es D-070 |
 
 **API contra M2-D5:** de los **64** endpoints especificados coinciden **5** exactos —
 `POST /auth/login`, `GET /auth/me`, `GET /projects`, `GET /projects/:id` y
@@ -126,6 +125,7 @@ de corte de una rebanada es que la app quede corriendo y demostrable.**
 | [`SPEC-013`](SPEC-013-anchorport.md) | `AnchorPort`: conectar el registro con la cadena | §A y §B cerradas · §C pendiente |
 | [`SPEC-014`](SPEC-014-reconstruccion-del-front.md) | Reconstrucción del front desde los entregables | **en curso** |
 | [`SPEC-015`](SPEC-015-saneamiento-de-la-instrumentacion.md) | Saneamiento de la instrumentación: tests, fixtures, coverage, CI | **en curso** |
+| [`SPEC-016`](SPEC-016-superficie-del-investor.md) | Superficie del investor (M2-D5 §4) | **cerrada 2026-08-28** |
 
 **La numeración no se recicla.** `SPEC-008`, `SPEC-011` y los planes anteriores están en
 [`archive/`](archive/): describen trabajo cerrado o código que se borró.

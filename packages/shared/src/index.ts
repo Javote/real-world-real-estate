@@ -7,6 +7,7 @@
 export * from "./auth";
 export * from "./capital";
 export * from "./certifier";
+export * from "./documents";
 export * from "./dossier";
 export * from "./merkle";
 export * from "./notifications";

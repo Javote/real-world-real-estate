@@ -160,7 +160,15 @@ test.describe('Walkthrough', () => {
     })
 
     await login(page, 'Developer', 'developer@example.com', 'developer123', '/developer')
-    expect(llamadas).toContain(200)
+
+    // **Se ESPERA la llamada, no se asume que ya ocurrió.** `login` vuelve
+    // apenas la URL pasa a /developer, y recién ahí monta el panel, corre el
+    // efecto del guard y sale el `GET /auth/me`. Afirmarlo en ese instante era
+    // una carrera: pasaba por poco y se caía en cuanto algo cambiaba los
+    // tiempos de montaje. El síntoma era `Received array: []` con la captura
+    // mostrando el panel ya cargado — o sea, la llamada llegó un instante
+    // después de mirarla.
+    await expect.poll(() => llamadas, { timeout: 15_000 }).toContain(200)
 
     // Y con un token adulterado, el guard rebota — la validación es del
     // servidor, no del objeto local.
@@ -173,7 +181,7 @@ test.describe('Walkthrough', () => {
     })
     await page.goto('/developer')
     await expect(page).toHaveURL(/\/login/)
-    expect(llamadas).toContain(401)
+    await expect.poll(() => llamadas, { timeout: 15_000 }).toContain(401)
   })
 
   // Las dos pruebas que seguían acá —detalle de proyecto y verificación por

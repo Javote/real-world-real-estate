@@ -1,5 +1,5 @@
 import { useQuery } from '@tanstack/react-query'
-import { createFileRoute } from '@tanstack/react-router'
+import { createFileRoute, useNavigate } from '@tanstack/react-router'
 import { useState } from 'react'
 import { api } from '#/api/port'
 import { DEV_ROLES } from '#/auth/roles'
@@ -18,6 +18,10 @@ import { useTranslation } from '#/i18n/useTranslation'
 // **M2-D5 filas 49 y 50 · `/developer/audit-log`** — captura 49.
 // Test IDs: DEV-AUDIT-LIST-001, DEV-AUDIT-FILTER-002, DEV-AUDIT-VERIFY-001.
 // Patrones: P6 y P3.
+//
+// El header es el de D-074: logo + utilidades, flecha entre el logo y el
+// título. La captura 49 ya coincidía; las hermanas (46, 48) no, y no se
+// transcribe esa omisión.
 //
 // **Es el paso 7 del flujo de evidencia** (M2-D1 §6): el ciclo entero —subida,
 // certificación— queda indexado acá con sus TXIDs.
@@ -63,6 +67,7 @@ export const Route = createFileRoute('/developer/audit-log')({ component: AuditL
 function AuditLog() {
   const { ready } = useRoleGuard(DEV_ROLES)
   const { t, locale } = useTranslation()
+  const navigate = useNavigate()
   const [filtro, setFiltro] = useState<AuditCategory | null>(null)
   const [verTxid, setVerTxid] = useState<{ txid: string; label: string; at: string } | null>(null)
 
@@ -86,6 +91,10 @@ function AuditLog() {
       rol="developer"
       title={t('developer.audit.title')}
       context={t('developer.audit.context')}
+      back={{
+        label: t('nav.back'),
+        onClick: () => void navigate({ to: '/developer' })
+      }}
     >
       <div
         className="-mx-s4 flex gap-s2 overflow-x-auto px-s4 pb-s1"

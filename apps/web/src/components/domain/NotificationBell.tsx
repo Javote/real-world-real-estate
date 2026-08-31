@@ -2,8 +2,8 @@ import { Bell } from 'lucide-react'
 
 // M2-D3 §Foundation · NotificationBell.
 //
-// *"Badge displays '9+' when count exceeds 9"* — literal del entregable. Y solo
-// se monta en paneles primarios, no en cualquier header.
+// *"Badge displays '9+' when count exceeds 9"* — literal del entregable.
+// D-074 lo monta en todo `PanelLayout`, no solo en el panel primario.
 
 interface NotificationBellProps {
   unread: number
