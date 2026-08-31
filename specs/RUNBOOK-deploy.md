@@ -260,6 +260,31 @@ Lo que cuesta: minutos de build y un reinicio en frío por commit. Ya **no** cue
 R2, un redeploy no se lleva nada (§1.4). Antes de asumir que un commit de documentación es gratis,
 verificá: no lo es.
 
+**Un push que llega con el servicio suspendido se pierde, y reanudar no lo recupera del todo.**
+Medido el 2026-08-31: con los dos servicios suspendidos a mano se pusheó `c435274`; al reanudar, el
+web quedó en el commit nuevo y **la API se quedó cuatro commits atrás**, los dos `live` y sin ningún
+error en los logs. Mirar el estado no lo mostraba: había que mirar el commit.
+
+**La asimetría es lo peligroso, no el atraso.** Producción quedó con el front nuevo hablándole a la
+API vieja, y como los schemas de `packages/shared` son `z.strictObject`, un campo que falta rompe el
+parse entero: una pantalla que venía andando dejó de andar sin que nada en Render dijera nada.
+
+Es la contracara del `buildFilter`: ya sabíamos que Render a veces deploya **de más**, y ahora
+sabemos que a veces deploya **de menos**. Las dos llevan a la misma regla.
+
+> **Después de reanudar un servicio, verificá el commit de cada uno — no que digan `live`.**
+>
+> ```bash
+> render deploys list <srv-id> --output json --confirm < /dev/null | \
+>   python3 -c 'import sys,json; y=json.load(sys.stdin)[0]; print(y["status"], (y.get("commit") or {}).get("id","")[:7])'
+> ```
+>
+> Si alguno quedó atrás, el arreglo es un redeploy y nada más — no hay estado que reparar:
+> `render deploys create <srv-id> --output json --confirm`. Construye desde `main`, y si el build
+> falla Render deja viva la versión actual, así que no hay ventana de caída.
+>
+> El `< /dev/null` no es adorno: sin él, la CLI se come el stdin y dentro de un `for` devuelve vacío.
+
 **GitHub Actions no despliega** (D-010, núcleo preservado por D-039). La puerta es el único juez de
 si un cambio puede pushearse; Render solo reacciona a lo que ya pasó por ahí.
 
@@ -314,6 +339,8 @@ original hasta estar seguro.
 | Evidencia subida que desapareció | Con R2 ya no debería pasar | Sí es incidente. Revisar que `STORAGE_DRIVER=s3` esté puesto: con `disk` vuelve al filesystem efímero y se pierde |
 | La API no arranca, log dice `STORAGE_DRIVER=s3 exige …` | Falta una `S3_*` | D-042, y es a propósito. Cargar la variable en el dashboard y restart (§1.4) |
 | Servicio suspendido a mitad de mes | Se agotaron las 750 h | Alguien puso un keep-warm. Sacarlo (§Limitaciones) |
+| Un servicio quedó en un commit viejo, los dos `live` y sin errores | El push llegó con el servicio suspendido | Reanudar no lo recupera. `render deploys create <srv-id>` (§2) |
+| Pantallas que andaban empiezan a fallar al parsear | Front y API en commits distintos | Mismo caso de arriba. Los `z.strictObject` de `packages/shared` lo vuelven duro: un campo que falta rompe el parse entero |
 | `ERR_PNPM_OUTDATED_LOCKFILE` en el build | Se tocó un `package.json` sin `pnpm install` | La puerta lo atrapa antes; si llegó acá, `pnpm install` y commitear el lockfile |
 
 Logs: **Dashboard → el servicio → Logs** (o `render logs -r <service>`). No hay shell: lo que no se
