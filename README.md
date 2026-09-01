@@ -1,52 +1,39 @@
 # PropNexus — Anclaje de Evidencia Inmobiliaria sobre Cardano
 
 > Catalyst Fund Project **1400106** — *Real-World Real Estate Pre-Sale with Proof & Release*.
-> Monorepo: **pnpm + TanStack Router/Vite** (web, SPA) + **Express 5 + Kysely** (api) + **Aiken / Plutus V3** (contratos).
 
 Ventas inmobiliarias en pozo: estructura el ciclo de obra en **stages**, organiza la **evidencia**
 (planos, fotos, permisos, certificados) y ancla **huellas criptográficas** (SHA-256 / Merkle) en
 Cardano con timestamps verificables. Cuatro roles con superficie propia: **investor**, **developer**,
 **notary**, **certifier**.
 
-**Lo que la plataforma no hace:** no custodia ni transfiere dinero, en ninguna fase (D-021). No
-sustituye registros públicos, procesos notariales ni autorizaciones estatales (M1-D1 §Non-Substitution).
+**El problema.** Hoy es imposible verificar el estado de los trámites de una obra en pozo: la
+evidencia está dispersa en canales informales y nada garantiza que lo que se muestra hoy sea lo que
+existía ayer. Esa opacidad ya causó daño económico real a compradores.
 
-## Jerarquía de precedencia (regla número uno)
+**Lo que la plataforma NO hace.** No certifica, no valida y no decide nada. No custodia ni transfiere
+dinero, en ninguna fase (D-021). No sustituye registros públicos, procesos notariales ni
+autorizaciones estatales. Solo puede sostener cuatro afirmaciones: *este archivo tiene este hash* ·
+*se registró en este momento* · *declara provenir de esta autoridad externa* · *esta persona
+atestiguó haberlo revisado* (D-026).
 
-Dos autoridades distintas: **`docs/` manda sobre las obligaciones** (el *qué* y la vara de
-aceptación — entregables aprobados por reviewers, **inmutables**), y **`DECISIONS.md` > `CLAUDE.md`
-> `specs/` mandan sobre la implementación** (el *cómo*).
-
-**La regla completa —cuándo un desvío es legítimo, cómo se registra y cuáles están vigentes— vive
-en el encabezado de `DECISIONS.md` y en D-022.** Acá no se repite: llegó a estar escrita en cuatro
-archivos, que es exactamente lo que el principio 1 prohíbe.
-
-El repo es la memoria; los chats son descartables.
-
-## Requisitos previos
-
-- **Node.js ≥ 22.12** y **pnpm ≥ 9** — la versión la fija `engines` del `package.json` raíz,
-  y es la misma que corre el CI — `corepack enable && corepack prepare pnpm@latest --activate`
-- **Docker**, opcional: levanta MinIO y el devnet de Cardano para las dos suites que necesitan
-  infraestructura real (ver §Infraestructura local). Nada del arranque rápido lo necesita
-- **Aiken v1.1.21** para los contratos:
-  ```bash
-  curl --proto '=https' --tlsv1.2 -LsSf https://install.aiken-lang.org | sh
-  aikup install v1.1.21
-  ```
+**Stack.** pnpm monorepo: TanStack Router + Vite (web, SPA) · Express 5 + Kysely (api) · Aiken /
+Plutus V3 (contratos) · SQLite en dev, Turso en prod · Cardano **Preprod siempre** (D-013).
 
 ## Arranque rápido
+
+Node ≥ 22.12 y pnpm ≥ 9 (`corepack enable`). Para los contratos, Aiken v1.1.21
+(`curl --proto '=https' --tlsv1.2 -LsSf https://install.aiken-lang.org | sh && aikup install v1.1.21`).
 
 ```bash
 pnpm install
 cp apps/api/.env.example apps/api/.env   # completar JWT_SECRET: openssl rand -hex 32
-pnpm db:migrate                                  # crea la SQLite de dev
-pnpm db:seed                                     # usuarios y proyecto demo
-pnpm dev                                         # web en :3000, api en :8787
+pnpm db:migrate                          # crea la SQLite de dev
+pnpm db:seed                             # usuarios y proyecto demo
+pnpm dev                                 # web en :3000, api en :8787
 ```
 
-**En `/login` no hace falta tipear nada:** tocar la solapa del rol prefilla usuario y contraseña
-del seed, que además los imprime al terminar.
+**En `/login` no hace falta tipear nada:** tocar la solapa del rol prefilla usuario y contraseña.
 
 | Solapa | Usuario | Aterriza en |
 |---|---|---|
@@ -55,246 +42,53 @@ del seed, que además los imprime al terminar.
 | Notary | `notary@example.com` / `notary123` | `/notary` |
 | Investor | `buyer@example.com` / `buyer123` | `/investor/buy` |
 
-`admin@example.com` / `admin123` existe pero **no tiene panel todavía**: el login es válido y el
-ruteo lo devuelve a `/login`, que no es un error (SPEC-011 §Casos borde).
-
-Son credenciales **de desarrollo y publicadas**, y por eso el seed solo las usa contra un SQLite
-local: contra cualquier otra base se niega a correr sin `SEED_ADMIN_PASSWORD` (D-047).
-Contratos: `pnpm contracts:check`.
+Son credenciales **de desarrollo y publicadas**: el seed solo las usa contra un SQLite local, y
+contra cualquier otra base se niega a correr sin `SEED_ADMIN_PASSWORD` (D-047).
 
 ## Verificación
 
-Un comando, y es el mismo que corre el CI:
-
 ```bash
 pnpm verify        # lint + typecheck + trazabilidad de test IDs + tests + build
+pnpm verify:all    # lo anterior, encadenado con la suite de Aiken
 ```
 
-`pnpm testids` es parte de `verify` y del CI: compara los test IDs del backlog de M2-D5 contra los
-que el repo reclama, y falla si alguien inventa uno que el entregable no declara o si la cobertura
-baja del piso. `pnpm test:coverage` corre la suite de la API con umbrales.
+Es lo mismo que corre el CI, y nada se commitea sin que dé verde. `pnpm --filter @plataforma/api
+test:s3` y `test:yaci` corren contra infraestructura real y **no** están incluidos: van a mano, con
+`docker compose -f compose.dev.yml up -d` levantado.
 
-El linter y el formateador son **Biome** (`pnpm lint:fix` arregla lo mecánico). El CI corre lo
-mismo, más un job de E2E (Playwright, **no bloqueante** por ahora) y el job de Aiken (`fmt --check`, `check`, `build` y que `plutus.json` esté al día) y
-`pnpm install --frozen-lockfile`, que falla si el lockfile no refleja los `package.json`.
+## Dónde vive todo
 
-**No hay harness.** Hubo uno entre el 2026-08-20 y el 2026-08-23 —puerta ejecutable, hooks
-bloqueantes, subagentes, skills, árboles por track— y se borró entero: 1099 líneas que en tres días
-necesitaron cinco commits de arreglo a sí mismas y no atajaron ninguno de los bugs reales del
-período. El razonamiento completo, con los números, está en **D-053**.
+Deliberadamente **tres archivos en la raíz y nada más**; el resto vive indexado en una carpeta.
 
-Lo que queda como regla escrita y no como bloqueo: no editar `docs/` (es una copia de los
-entregables aprobados), no editar una migración ya aplicada, no commitear secretos.
+| Dónde | Qué |
+|---|---|
+| **`CLAUDE.md`** | Cómo se trabaja acá: el loop, las reglas duras, las prohibiciones, los niveles de autonomía, **y el estado del trabajo** (qué se hizo y qué falta) |
+| **`DECISIONS.md`** | Las restricciones vigentes: qué obliga hoy y por qué |
+| `<frente>/CLAUDE.md` | Lo propio de cada subárbol: trampas verificadas, deuda y comandos. Se cargan solos al tocarlo |
+| `docs/` | **Los entregables oficiales, inmutables** (D-022, D-033). El mapa de qué archivo es cuál está en `specs/entregables.md` |
+| `specs/README.md` | El mapa de desarrollo: criterios de aceptación, **estado medido**, rebanadas y riesgos |
+| `specs/SPEC-NNN-*.md` | Una por rebanada: invariantes, casos borde y definición de terminado |
+| `specs/stack.md` | Inventario del stack: qué corre hoy y qué está solo decidido |
+| `specs/RUNBOOK-deploy.md` | Alta, deploy, rollback e incidentes |
+| `specs/archive/` | La memoria: las decisiones originales enteras. Se consulta, no se mantiene |
 
-## Variables de entorno
-
-**Un archivo por servicio, y son la referencia:** [`apps/api/.env.example`](apps/api/.env.example)
-y [`apps/web/.env.example`](apps/web/.env.example). Acá no se copian — una lista duplicada se
-desactualiza en la copia, no en el original.
-
-Lo único que no se deduce leyéndolos:
-
-- **`JWT_SECRET` es obligatoria y no tiene default.** Si falta o queda vacía, la API **no arranca**.
-  Es a propósito (D-042): el free tier no da shell para ir a mirar qué variables quedaron cargadas,
-  así que el fallo tiene que ser el arranque y no una request de producción.
-- **Las del anclaje se comportan al revés que `JWT_SECRET`.** Si faltan `BLOCKFROST_API_KEY` o
-  `SERVICE_WALLET_PRIVATE_KEY`, la API **sí arranca**: queda el puerto de anclaje inhabilitado y el
-  log lo dice (D-075). Anclar falla, el resto del producto funciona — un puerto inhabilitado no
-  produce ni un TXID, así que no puede afirmar una prueba que no existe.
-- **Las de `apps/web` son de build time.** Cambiarlas exige rebuild, no restart.
-- **`TRUST_PROXY_HOPS` vale 0 en local y 1 detrás de Render.** Con 0 detrás del proxy, todos los
-  clientes comparten balde de rate limit y la app queda inusable (D-045).
-
-**Secretos solo por env.** Si ves una seed o una key commiteada: frenar y avisar.
+Las variables de entorno no se listan acá: la referencia es
+[`apps/api/.env.example`](apps/api/.env.example) y [`apps/web/.env.example`](apps/web/.env.example).
+Una lista duplicada se desactualiza en la copia, no en el original.
 
 ## Deploy
 
-Todo corre en **free tier, $0/mes** — y eso es una restricción de arquitectura, no una nota de
-presupuesto (D-040). El artefacto es **`render.yaml`** en la raíz: dos servicios Node sobre Render
-(sin Docker, D-041) contra una base **Turso**.
+Free tier, **$0/mes**, y eso es una restricción de arquitectura y no de presupuesto (D-040). El
+artefacto es `render.yaml`: dos servicios en Render contra Turso, evidencia en Cloudflare R2.
+Procedimiento completo en [`specs/RUNBOOK-deploy.md`](specs/RUNBOOK-deploy.md).
 
-**El procedimiento completo —alta, deploy diario, rollback, incidentes y limitaciones— está en
-[`specs/RUNBOOK-deploy.md`](specs/RUNBOOK-deploy.md).** Acá solo lo que hay que saber antes de abrirlo:
+## Este repositorio es público
 
-- Falta **crear las cuentas** (Render, Turso) y pegar cuatro variables. No falta código.
-- **El web ya no proxea.** Desde D-065 es una SPA estática y vive en otro origen, así que el
-  navegador sí ve la URL de la API y sí hay CORS: la API acepta al web por **lista blanca**
-  (`WEB_ORIGIN`), nunca con `*`.
-- `VITE_API_ORIGIN` es de **build time**: cambiarla exige redeploy del web, no un restart.
-  `WEB_ORIGIN`, del lado de la API, es de runtime y toma con un restart.
-- **Keep-warm está prohibido.** Dos servicios despiertos 24/7 son ~1460 h contra las 750 del plan
-  y quedan suspendidos cerca del día 15. Se calienta la URL a mano antes de una demo.
-- **La evidencia persiste en Cloudflare R2**, no en el filesystem — que sigue siendo efímero y
-  sigue estando bien que lo sea: `UPLOAD_DIR` es solo el staging de Multer. Lo que hay que vigilar
-  es el techo de 10 GB del free tier.
+No contiene, en ninguna carpeta, secretos, credenciales, claves de wallet ni datos personales: los
+secretos viajan **solo por variables de entorno** y nunca se versionan (regla 12 de `CLAUDE.md`).
 
-## Dónde estamos — el anclaje real, encendido el 2026-08-31
+Nunca versionado: `apps/api/.env`, `apps/web/.env`, `apps/api/.data/` (bases SQLite locales),
+`apps/api/uploads/` (evidencia de runtime) y `apps/web/e2e/.artifacts/`.
 
-La instancia desplegada **ancla de verdad en Cardano Preprod**. El detalle operativo de cómo se
-llegó está en [`specs/PLAN-2026-08-31-anclaje-real.md`](specs/PLAN-2026-08-31-anclaje-real.md); las
-decisiones, en [`DECISIONS.md`](DECISIONS.md).
-
-> Esto es el **estado del trabajo**, no el estado medido. Los números de conformidad —endpoints,
-> superficies, tests— viven en `specs/README.md` y solo ahí (ver §Estado).
-
-### Hecho el 2026-08-31
-
-| # | Qué | Ref | Evidencia |
-|---|---|---|---|
-| 1 | Borrado el `OnChainEvent` simulado de producción | paso 1 | `OnChainEvent` = 0 filas en Turso |
-| 2 | **Defensa 1**: el simulador no ancla contra una base remota | `597e113` | 4 casos de test |
-| 3 | Orden de encendido: probar el modo real donde un restart lo deshace | `dcdee23` | — |
-| 4 | **D-075**: una configuración de anclaje rota inhabilita el puerto, **no la API** | `82c75b3` | verificado en producción: `disabled` con la API sirviendo |
-| 5 | **Retraso del tip**: la ventana de validez se corre 2 min | `60637ba` | el nodo valida en `tip+1`; medido contra Preprod |
-| 6 | **D-076**: `render.yaml` deja de ser configuración sin verificar | `c0fe8a5` | probado en los dos sentidos: rojo con la configuración vieja |
-| 7 | **D-077**: la lectura confirma el anclaje que ya está en la cadena | `f711b49` | contra Preprod: 2 anclajes → `Confirmed` en una lectura de 0,47 s |
-| 8 | **D-078**: una sola clave, una sola vez — se elimina la seed | `4c631f7` | wallet nueva, fondeada y anclando |
-| 9 | Camino del hilo probado contra Preprod | paso 2 | `openThread` `3a11baa7…` + `advanceThread` `a62b6e37…`, thread token verificado |
-| 10 | Secretos, Blueprint y arranque en la instancia | pasos 4-6 | `AnchorPort listo en modo "real"` |
-
-### Pendiente, en orden
-
-| # | Qué | Por qué ahí | Nivel |
-|---|---|---|---|
-| 1 | **Primer anclaje real en la instancia desplegada** (paso 7) | Convierte "arranca en real" en "ancla de verdad" | 🟢 |
-| 2 | **Columna `network`** en `OnChainEvent` | Un TXID sin red es inverificable, y mainnet es inminente. Producción tiene **0 filas**: es el único momento en que toda fila nace atribuida | 🟡 *decisión: migración nueva, rompe "una sola migración"* |
-| 3 | **Que el simulador deje de mentir**: `confirmedAt()` responde desde su propio registro | Hoy afirma confirmación sobre txids que nunca produjo | 🟢 |
-| 4 | **Mainnet** — runbook, habilitar la red, custodia de la clave | D-013 la hace **imposible por configuración**: es código, no solo procedimiento | 🔴 |
-| 5 | **D-028** — atribución de autoridad en la evidencia | Hoy se exige el piso ("existe una evidencia"). Faltan `issuingAuthority`, `authorityReference` y la atestación | 🟡 |
-| 6 | **Reference script** del validador | Cada transacción lo adjunta entero: fee y tamaño. Optimización, no corrección | 🟡 |
-| 7 | **UTxO único** — cola en memoria + `overrideUTxOs()` | Dos anclajes en ~20 s eligen la misma entrada y el segundo falla | 🟡 |
-| 8 | **`/milestones/` → `/stages/`** | D-023 reserva "milestone" para Catalyst | 🟢 |
-| 9 | `DEV-RELEASE-EXECUTE-002` | Único test ID pendiente de 74. Backlog, no regresión | 🟢 |
-
-## Índice documental
-
-### Documentación oficial (inmutable)
-
-> `docs/` contiene **únicamente entregables** (D-033). El mapa de qué archivo es qué entregable
-> está en `specs/entregables.md`, que sí se puede mantener.
-
-| Ruta | Contenido |
-|---|---|
-| `docs/milestone-1-fundamentos/` | Whitepaper + arquitectura de sistema, modelo de dominio, ciclo de vida y flujo de anclaje (UML). |
-| `docs/milestone-2-diseno/` | Arquitectura de información, catálogo de pantallas, biblioteca de 36 componentes, 10 patrones de renderizado de prueba. |
-| `docs/milestone-3-implementacion/` | SOM de M3 + backlog de 53 entradas (pantalla → endpoint → test ID) + baseline de backend y contratos. |
-
-### Documentación de trabajo (viva)
-
-Deliberadamente **tres archivos en la raíz y nada más**. Todo lo demás vive indexado dentro de una carpeta.
-
-| Archivo | Contenido |
-|---|---|
-| `CLAUDE.md` | **Cómo se trabaja acá** —el loop de captura + fila de M2-D5— más vocabulario, reglas duras, prohibiciones, autonomía 🟢🟡🔴, commits, comandos y trampas. Solo información vigente. |
-| `<frente>/CLAUDE.md` | Lo propio de cada subárbol: qué leer, trampas verificadas, deuda y comandos. Se cargan solos al tocarlo. |
-| `DECISIONS.md` | **Las restricciones vigentes**, una o dos líneas cada una: qué obliga hoy. El argumento largo vive en `specs/archive/` (D-068). |
-| `specs/archive/` | La memoria: las 63 decisiones originales enteras y las specs de trabajo ya cerrado. Se consulta, no se mantiene. |
-| `specs/README.md` | **El mapa de desarrollo:** criterios de aceptación de M3, estado medido, rebanadas en orden de dependencia, tracks paralelos, riesgos. |
-| `specs/SPEC-NNN-*.md` | Una por rebanada: invariantes, casos borde (que son los tests) y definición de terminado. |
-| `specs/stack.md` | **Inventario completo del stack:** front, back, contratos, datos, blockchain, infraestructura y verificación, con qué corre hoy y qué está solo decidido. |
-| `specs/entregables.md` | **Mapa de los entregables oficiales:** qué archivo es cuál y qué contiene. Es un mapa, no una transcripción: ante una duda de contenido, abrí el entregable. |
-
-## Estructura del monorepo
-
-**Un repo git, dos sistemas de build.** La app TypeScript es un monorepo pnpm (un lockfile, un
-`pnpm install`, dependencias entre paquetes por `workspace:^`). `contracts/` está en el mismo repo
-pero **fuera** de ese workspace: lo construye `aiken` con su propio lockfile.
-
-La convención es una sola y no tiene excepciones (D-055): **`apps/` se despliega, `packages/` se
-importa.**
-
-```
-plataforma/
-├── apps/
-│   ├── api/                    # Express 5 + Kysely + SQLite dev — servicio en Render
-│   │   ├── migrations/         #   SQL escrito a mano, un solo runner (D-052)
-│   │   ├── src/
-│   │   └── test/
-│   └── web/                    # TanStack Router + Vite (SPA) + Tailwind v4 — static site en Render
-├── packages/
-│   ├── shared/                 # contrato Zod API↔web: lo importan los dos
-│   └── cardano/                # AnchorPort: la cadena detrás de una interfaz (simulado y real)
-├── contracts/                  # Aiken · Plutus V3 — no se hostea, toolchain aparte
-│   ├── validators/stage.ak     #   el validador de la FSM + sus tests
-│   ├── lib/propnexus/fsm.ak    #   núcleo puro: tipos, transiciones, datum
-│   └── plutus.json             #   blueprint, se commitea tras cada build
-├── docs/                       # entregables aprobados de M1/M2/M3
-├── specs/                      # specs, plan, runbook de deploy, stack
-├── scripts/check-testids.mjs   # trazabilidad backlog M2-D5 → test IDs (corre en verify y CI)
-├── .github/workflows/ci.yml    # App TS · E2E (no bloqueante) · Contratos Aiken
-├── biome.json                  # linter + formateador (no mira contracts/)
-├── compose.dev.yml             # infra LOCAL: MinIO + devnet de Cardano (no se despliega, D-062)
-└── render.yaml                 # Blueprint de deploy (2 servicios, free tier)
-```
-
-## Estado
-
-M1 y M2 entregados. **M3 en construcción** — su alcance es el backlog completo de `M2-D5`,
-corriendo íntegramente en **Preprod** (D-013). Mainnet y producción quedan fuera de alcance.
-
-Medido al 2026-08-24: **API 64/64 endpoints** del backlog, **modelo de datos 7/7 entidades**,
-**front 27/53 superficies (51%)** con Notary y Certifier completos, y **530 tests**.
-
-**Al 2026-08-31 el anclaje real está encendido**: los contratos corrieron contra Preprod y la
-instancia desplegada arranca en `AnchorPort listo en modo "real"`. Lo que antes bloqueaba la URL
-pública, los TXIDs de prueba y el video ya no bloquea — ver §Dónde estamos.
-
-**El estado medido —conformidad, qué bloquea el arranque, rebanadas, tracks paralelos y riesgos—
-vive en `specs/README.md` y solo ahí.** Un número de estado copiado en dos archivos se desactualiza
-en uno de los dos.
-
-## Carpetas públicas y privadas
-
-Este repositorio es **público**. No contiene, en ninguna carpeta, secretos, credenciales, seeds de
-wallet ni datos personales: los secretos viajan **solo por variables de entorno** y nunca se
-versionan (regla 12 de `CLAUDE.md`).
-
-| Ruta | Visibilidad | Qué contiene |
-|---|---|---|
-| `apps/`, `packages/`, `contracts/`, `.claude/`, `.github/` | **Pública** | Código, contratos y CI |
-| `docs/`, `specs/`, `README.md`, `CLAUDE.md`, `DECISIONS.md` | **Pública** | Entregables oficiales y documentación de trabajo |
-| `apps/api/.env`, `apps/web/.env` | **Privada** — nunca versionada | Secretos locales. El ejemplo público es `.env.example` |
-| `apps/api/.data/` | **Privada** — nunca versionada | Bases SQLite locales: `dev.db` y las de la suite |
-| `apps/api/uploads/` | **Privada** — nunca versionada | Evidencia subida en runtime |
-| `apps/web/e2e/.artifacts/` | **Privada** — nunca versionada | Capturas, videos y traces de la suite E2E |
-
-La wallet de servicio de Preprod y la API key de Blockfrost se configuran por entorno en el
+La clave de la wallet de servicio y la API key de Blockfrost se configuran por entorno en el
 proveedor de deploy y **no existen en el repositorio**.
-
-## Reglas duras del equipo
-
-Viven en un solo lugar: **`CLAUDE.md`** (reglas duras + prohibiciones) con las decisiones que las
-respaldan en **`DECISIONS.md`**. Este README no las duplica — cualquier copia divergiría en
-silencio, y preferimos el link.
-
-## Infraestructura local (Docker)
-
-`compose.dev.yml` levanta lo que en producción es un tercero. **No se despliega**: el deploy usa
-runtime nativo de Node, sin Docker (D-041).
-
-```bash
-docker compose -f compose.dev.yml up -d          # MinIO en :9000 (consola :9001) + devnet de Cardano
-pnpm --filter @plataforma/api test:s3            # storage contra MinIO de verdad
-pnpm --filter @plataforma/cardano test:yaci      # anclaje contra un nodo Cardano de verdad
-```
-
-El devnet (yaci-devkit) da **Conway con Plutus V3** y bloques de 1 segundo:
-
-| Servicio | Puerto | Para qué |
-|---|---|---|
-| yaci-store | `8080` | API compatible Blockfrost (`/api/v1`) |
-| Ogmios · Kupo | `1337` · `1442` | el provider que usa Lucid en local |
-| admin del devkit | `10000` | fondear una address (`/local-cluster/api/addresses/topup`) — el faucet local |
-
-Ninguno de los dos tests corre en CI: el CI no levanta infraestructura. Se corren a mano.
-
-Para que la API guarde la evidencia en MinIO en vez del disco:
-
-```bash
-STORAGE_DRIVER=s3 S3_ENDPOINT=http://localhost:9000 S3_BUCKET=propnexus-dev \
-S3_ACCESS_KEY_ID=propnexus S3_SECRET_ACCESS_KEY=propnexus-dev-only S3_CREATE_BUCKET=true \
-pnpm dev
-```
-
-Es **el mismo código** que va a hablar con Cloudflare R2 (D-011): cambian las variables, no el
-driver. Por eso probar contra MinIO prueba lo que va a correr desplegado.

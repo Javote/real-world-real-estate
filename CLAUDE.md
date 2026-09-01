@@ -25,6 +25,48 @@ validador que afirme algo más, está mal (D-026).
 
 ---
 
+# Dónde estamos — el anclaje real, encendido el 2026-08-31
+
+**La instancia desplegada ancla de verdad en Cardano Preprod.** Esta sección es el estado del
+**trabajo**: si retomás el proyecto, empezá por acá. Los números medidos —endpoints, superficies,
+tests— viven en `specs/README.md` y solo ahí. El detalle operativo está en
+`specs/PLAN-2026-08-31-anclaje-real.md`; el porqué de cada decisión, en `DECISIONS.md`.
+
+### Hecho el 2026-08-31
+
+| # | Qué | Ref | Evidencia |
+|---|---|---|---|
+| 1 | Borrado el `OnChainEvent` simulado de producción | paso 1 | `OnChainEvent` = 0 filas en Turso |
+| 2 | **Defensa 1**: el simulador no ancla contra una base remota | `597e113` | 4 casos de test |
+| 3 | Orden de encendido: probar el modo real donde un restart lo deshace | `dcdee23` | — |
+| 4 | **D-075**: una configuración de anclaje rota inhabilita el puerto, **no la API** | `82c75b3` | verificado en producción: `disabled` con la API sirviendo |
+| 5 | **Retraso del tip**: la ventana de validez se corre 2 min | `60637ba` | el nodo valida en `tip+1`; medido contra Preprod |
+| 6 | **D-076**: `render.yaml` deja de ser configuración sin verificar | `c0fe8a5` | probado en los dos sentidos: rojo con la configuración vieja |
+| 7 | **D-077**: la lectura confirma el anclaje que ya está en la cadena | `f711b49` | contra Preprod: 2 anclajes → `Confirmed` en una lectura de 0,47 s |
+| 8 | **D-078**: una sola clave, una sola vez — se elimina la seed | `4c631f7` | wallet nueva, fondeada y anclando |
+| 9 | Camino del hilo probado contra Preprod | paso 2 | `openThread` `3a11baa7…` + `advanceThread` `a62b6e37…`, thread token verificado |
+| 10 | Secretos, Blueprint y arranque en la instancia | pasos 4-6 | `AnchorPort listo en modo "real"` |
+| 11 | **D-079**: el simulador solo confirma lo que él mismo ancló | `101d0fe` | destapó 4 tests que pasaban contra un puerto que mentía |
+
+### Pendiente, en orden
+
+| # | Qué | Por qué ahí | Nivel |
+|---|---|---|---|
+| 1 | **Primer anclaje real en la instancia desplegada** (paso 7) | Convierte "arranca en real" en "ancla de verdad" | 🟢 |
+| 2 | **Columna `network`** en `OnChainEvent` | Un TXID sin red es inverificable, y mainnet es inminente. Producción tiene **0 filas**: es el único momento en que toda fila nace atribuida | 🟡 *decisión: migración nueva, rompe "una sola migración"* |
+| 3 | **Mainnet** — runbook, habilitar la red, custodia de la clave | D-013 la hace **imposible por configuración**: es código, no solo procedimiento | 🔴 |
+| 4 | **D-028** — atribución de autoridad en la evidencia | Hoy se exige el piso ("existe una evidencia"). Faltan `issuingAuthority`, `authorityReference` y la atestación | 🟡 |
+| 5 | **Reference script** del validador | Cada transacción lo adjunta entero: fee y tamaño. Optimización, no corrección | 🟡 |
+| 6 | **UTxO único** — cola en memoria + `overrideUTxOs()` | Dos anclajes en ~20 s eligen la misma entrada y el segundo falla | 🟡 |
+| 7 | **`/milestones/` → `/stages/`** | D-023 reserva "milestone" para Catalyst | 🟢 |
+| 8 | `DEV-RELEASE-EXECUTE-002` | Único test ID pendiente de 74. Backlog, no regresión | 🟢 |
+
+**Lo próximo es el punto 1**: anclar algo de verdad en la instancia desplegada. Los puntos 2 y 3
+están acoplados — la columna `network` conviene que exista **antes** del primer anclaje en mainnet,
+porque un TXID sin red es inverificable cuando existan dos.
+
+---
+
 # Cómo se trabaja acá
 
 **El diseño ya está decidido. El trabajo es transcribirlo, no inventarlo.**
