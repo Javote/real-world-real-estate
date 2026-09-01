@@ -96,6 +96,28 @@ tocar el archivo:
   manejar —que en Node mata el proceso— aunque quien llamó lo haya atrapado.
 - **Vale para un proceso.** Render corre una instancia; con dos, esto no alcanza.
 
+## El validador viaja por referencia, si está publicado
+
+El validador son 2289 bytes. Hasta el 2026-09-01 viajaban adentro de **cada** transacción de hilo;
+ahora, si existe un UTxO que lo lleva, se lo referencia con `readFrom` (D-083). Medido: un
+`openThread` pasa de 2890 a 599 bytes y de 0,2976 a 0,2317 tADA.
+
+```bash
+BLOCKFROST_API_KEY=… SERVICE_WALLET_PRIVATE_KEY=… \
+  pnpm --filter @plataforma/cardano ref:publish    # una vez por red, idempotente
+```
+
+- **Vive en la dirección de la wallet**, no en la del script: ahí sería inmune a la selección de
+  monedas pero también irrecuperable —los ~11 ADA del mínimo quedarían muertos—.
+- **Y por eso hay que filtrarlo a mano.** Para la selección de monedas es plata. El error de Lucid
+  dice que excluye los UTxOs con script, y en 0.6.2 **solo excluye los que la transacción declaró
+  con `readFrom`**: un anclaje por metadata no declara ninguno y se lo lleva puesto. Lo filtra
+  `entradasDeLaWallet()`, que es el único lugar por el que pasan todas.
+- **Se descubre al arrancar**, comparando el hash del script. Publicar con la API arriba no la
+  cambia: hay que reiniciarla.
+- **`null` es un estado legítimo**: sin reference script, el adaptador adjunta el validador y todo
+  funciona igual, más caro. Los tests corren así.
+
 ## El adaptador real es agnóstico del provider, y eso no es cosmético
 
 `LucidAnchorAdapter` recibe una instancia de Lucid ya configurada, así que **el mismo código** corre
@@ -144,7 +166,8 @@ inexacto: el adaptador no cambiaba, pero **nadie lo construía** — pedir `real
 remitía a esta misma rebanada. Ahora sí: lo que falta para Preprod es la cuenta de Blockfrost y una
 wallet fondeada, nada de código.
 
-Desde el 2026-09-01 el adaptador **encadena**: dos anclajes dentro del mismo bloque ya no chocan por
+Desde el 2026-09-01 el adaptador **referencia** el validador en vez de adjuntarlo cuando está
+publicado (D-083), y **encadena**: dos anclajes dentro del mismo bloque ya no chocan por
 el UTxO único de la wallet, y el hilo se puede avanzar sin esperar a que el bloque publique el
 `openThread` (D-082).
 
@@ -158,6 +181,7 @@ indexer.
 
 ```bash
 pnpm --filter @plataforma/cardano test        # códec, blueprint, simulador y Emulator
+pnpm --filter @plataforma/cardano ref:publish # publica el validador como reference script (🟡)
 docker compose -f compose.dev.yml up -d       # MinIO + devnet de Cardano
 pnpm --filter @plataforma/cardano test:yaci   # el flujo completo contra el devnet
 ```

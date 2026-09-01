@@ -22,7 +22,7 @@ ya no existen. Partirlo no pierde nada: el porqué sigue estando, deja de pesar.
 > se contradice internamente, (b) es un error de redacción, o (c) seguirlo al pie contradiría una
 > verdad del producto declarada por el dueño — **nunca por conveniencia**.
 >
-> **La numeración no se recicla.** Las decisiones nuevas siguen desde D-083.
+> **La numeración no se recicla.** Las decisiones nuevas siguen desde D-084.
 
 ## Desvíos vigentes
 
@@ -667,6 +667,45 @@ acá para que se sepa antes de escalar, no después.
 **El `Emulator` reproduce el bug exacto**, y por eso los tests prueban algo: su `getUtxos()` lee
 solo el ledger y deja el mempool afuera, igual que Blockfrost. Un anclaje sin `awaitBlock()` detrás
 es un anclaje contra un proveedor que todavía no vio el anterior.
+
+## D-083 — El validador se publica una vez como reference script, y vive en la wallet
+
+`LucidAnchorAdapter` **referencia** el validador (`readFrom`) en vez de adjuntarlo cuando encuentra
+un UTxO que lo lleva adentro. Lo publica `pnpm --filter @plataforma/cardano ref:publish`, una vez
+por red; el adaptador lo **descubre solo** al arrancar, comparando el hash del script.
+
+**Qué ahorra, medido.** Un `openThread` pasa de 2890 a 599 bytes y de 0,2976 a 0,2317 tADA de fee
+(Emulator, mismos parámetros). El validador son 2289 bytes que hasta ahora viajaban en **cada**
+transacción de hilo.
+
+**Vive en la dirección de la wallet, no en la del script.** En la del script sería inmune a la
+selección de monedas, pero también **irrecuperable**: gastarlo pediría la aprobación de un validador
+que no sabe nada de él, así que los ~11 ADA del mínimo quedarían muertos para siempre. En la wallet
+son recuperables con una transacción deliberada.
+
+**El precio de esa elección, y cómo se paga.** En la wallet, el UTxO del reference script *es plata*
+para la selección de monedas. Lucid dice en sus mensajes de error que excluye los UTxOs con script
+—`Or it contains UTxOs with reference scripts; which are excluded from coin selection`— y en 0.6.2
+**eso no es cierto**: solo excluye los que la propia transacción declaró con `readFrom`, y un
+anclaje por metadata no declara ninguno. Con la wallet corta, ese anclaje se llevaba puesto el
+script. Se filtra en el adaptador, en el único lugar por el que pasan todas las transacciones
+(`entradasDeLaWallet`), pasándole a Lucid `presetWalletInputs`.
+
+**No se configura con una variable.** Un `txid#index` en el entorno se puede desincronizar del
+blueprint, y el síntoma sería una transacción que referencia un script que no es el nuestro. El
+descubrimiento compara el **hash** del script con el que sale del blueprint con el admin aplicado:
+un script viejo no matchea y se ignora.
+
+**Se descubre al arrancar, así que publicar exige reiniciar la API.** Una instancia ya levantada
+sigue adjuntando el validador hasta el próximo restart. No rompe nada: paga de más.
+
+**Los ~11 ADA que quedan inmovilizados no son valor** (D-021), igual que `THREAD_MIN_LOVELACE`: son
+el mínimo que Cardano exige para que un UTxO con un script adentro exista.
+
+**Es una operación de operador y por eso no está en `AnchorPort`**: gasta ADA de la wallet de
+servicio, se hace una vez por red y no produce ningún anclaje. Meterla en el puerto obligaría al
+simulador a fingir que la tiene. Es idempotente (regla 8): vuelve a mirar la cadena antes de
+publicar.
 
 ## D-008 — Validador state-thread con núcleo puro separado
 

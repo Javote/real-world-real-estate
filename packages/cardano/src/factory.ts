@@ -1,7 +1,7 @@
 import { Blockfrost, Lucid, type Network } from "@lucid-evolution/lucid";
 import type { LedgerStore } from "./ledger";
 import { ANCHOR_MODES, type AnchorMode, type AnchorPort } from "./port";
-import { LucidAnchorAdapter } from "./real";
+import { LucidAnchorAdapter, type ReferenceScriptPublication } from "./real";
 import { SimulatedAnchorAdapter } from "./simulated";
 
 /**
@@ -55,6 +55,27 @@ function requerida(valor: string | undefined, nombre: string): string {
   return limpio;
 }
 
+function validarRed(valor: string | undefined): RedPermitida {
+  const network = (valor ?? "Preprod") as RedPermitida;
+  if (!REDES_PERMITIDAS.includes(network)) {
+    throw new Error(
+      `CARDANO_NETWORK="${network}" no está permitida. Valores posibles: ` +
+        `${REDES_PERMITIDAS.join(" | ")}. Mainnet está fuera de alcance (D-013).`
+    );
+  }
+  return network;
+}
+
+function urlDeBlockfrost(explicita: string | undefined, network: RedPermitida): string {
+  const url = explicita?.trim() || BLOCKFROST_URL[network];
+  if (!url) {
+    throw new Error(
+      `No hay URL de Blockfrost para la red "${network}". Pasá blockfrostUrl explícita.`
+    );
+  }
+  return url;
+}
+
 /**
  * Construye el puerto desde la configuración.
  *
@@ -81,23 +102,23 @@ export async function createAnchorPort(options: AnchorPortOptions): Promise<Anch
     return new SimulatedAnchorAdapter(options.store ? { store: options.store } : {});
   }
 
-  const network = (options.network ?? "Preprod") as RedPermitida;
-  if (!REDES_PERMITIDAS.includes(network)) {
-    throw new Error(
-      `CARDANO_NETWORK="${network}" no está permitida. Valores posibles: ` +
-        `${REDES_PERMITIDAS.join(" | ")}. Mainnet está fuera de alcance (D-013).`
-    );
-  }
+  return crearAdaptadorReal(options);
+}
 
+/**
+ * El adaptador real, ya cableado. Lo usa `createAnchorPort` y lo usa el script
+ * que publica el reference script.
+ *
+ * **Devuelve la clase y no el puerto** porque publicar el reference script no es
+ * una operación del puerto: gasta ADA de la wallet, se hace una vez por red y no
+ * produce ningún anclaje. Meterla en `AnchorPort` obligaría al simulador a
+ * fingir que la tiene.
+ */
+async function crearAdaptadorReal(options: AnchorPortOptions): Promise<LucidAnchorAdapter> {
+  const network = validarRed(options.network);
   const apiKey = requerida(options.blockfrostApiKey, "BLOCKFROST_API_KEY");
   const privateKey = requerida(options.privateKey, "SERVICE_WALLET_PRIVATE_KEY");
-  const url = options.blockfrostUrl?.trim() || BLOCKFROST_URL[network];
-
-  if (!url) {
-    throw new Error(
-      `No hay URL de Blockfrost para la red "${network}". Pasá blockfrostUrl explícita.`
-    );
-  }
+  const url = urlDeBlockfrost(options.blockfrostUrl, network);
 
   const lucid = await Lucid(new Blockfrost(url, apiKey), network as Network);
   lucid.selectWallet.fromPrivateKey(privateKey);
@@ -107,4 +128,23 @@ export async function createAnchorPort(options: AnchorPortOptions): Promise<Anch
     network: network as Network,
     blockfrost: { url, apiKey }
   });
+}
+
+/**
+ * Publica el validador como reference script y devuelve **datos planos**.
+ *
+ * Es lo único que el script de operador necesita, y así ni el script ni nadie
+ * fuera de este package toca una instancia de Lucid (D-014).
+ */
+export async function publicarReferenceScript(
+  options: AnchorPortOptions
+): Promise<ReferenceScriptPublication & { walletAddress: string; scriptAddress: string }> {
+  const adaptador = await crearAdaptadorReal(options);
+  const publicacion = await adaptador.publishReferenceScript();
+
+  return {
+    ...publicacion,
+    walletAddress: adaptador.walletAddress,
+    scriptAddress: adaptador.address
+  };
 }

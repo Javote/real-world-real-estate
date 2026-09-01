@@ -1,5 +1,6 @@
 import {
   type LucidEvolution,
+  mintingPolicyToId,
   type Network,
   paymentCredentialOf,
   type TxBuilder,
@@ -110,6 +111,16 @@ export const TIP_LAG_MARGIN_MS = 2 * 60 * 1000;
  */
 export const PENDING_UTXO_TTL_MS = 3 * 60 * 1000;
 
+/** Lo que deja publicar el validador como reference script. */
+export interface ReferenceScriptPublication {
+  /** El UTxO que lleva el validador adentro. */
+  outputRef: OutputRef;
+  /** La transacción que lo creó, o `null` si ya estaba publicado. */
+  txid: string | null;
+  /** El ADA que queda inmovilizado ahí. No es valor: es el mínimo del UTxO. */
+  lovelace: bigint;
+}
+
 export interface LucidAnchorOptions {
   lucid: LucidEvolution;
   network: Network;
@@ -179,6 +190,18 @@ export class LucidAnchorAdapter implements AnchorPort {
   /** Cuándo deja de valer la vista local. `null` = no hay nada en vuelo. */
   private venceLaVistaLocal: number | null = null;
 
+  /**
+   * El UTxO que lleva el validador publicado, si existe. Se descubre en
+   * `create()` — no se configura, por el mismo motivo por el que la dirección
+   * del script tampoco: una variable con un `txid#index` se puede desincronizar
+   * del blueprint, y el síntoma sería una transacción que referencia un script
+   * que no es el nuestro.
+   *
+   * `null` es un estado legítimo: sin él, cada transacción adjunta el validador
+   * entero. Es lo que hacía siempre hasta el 2026-09-01.
+   */
+  private referenceUtxo: UTxO | null;
+
   private constructor(
     lucid: LucidEvolution,
     refs: StageScriptRefs,
@@ -187,7 +210,8 @@ export class LucidAnchorAdapter implements AnchorPort {
     validityWindowMs: number,
     tipLagMarginMs: number,
     pendingUtxoTtlMs: number,
-    blockfrost: { url: string; apiKey: string } | undefined
+    blockfrost: { url: string; apiKey: string } | undefined,
+    referenceUtxo: UTxO | null
   ) {
     this.lucid = lucid;
     this.refs = refs;
@@ -197,6 +221,7 @@ export class LucidAnchorAdapter implements AnchorPort {
     this.tipLagMarginMs = tipLagMarginMs;
     this.pendingUtxoTtlMs = pendingUtxoTtlMs;
     this.blockfrost = blockfrost;
+    this.referenceUtxo = referenceUtxo;
   }
 
   /** La dirección del script, derivada del blueprint con el admin aplicado. */
@@ -218,6 +243,11 @@ export class LucidAnchorAdapter implements AnchorPort {
       options.blueprint ?? loadBlueprint()
     );
 
+    // Una consulta al arrancar, y con eso todas las transacciones de este
+    // proceso dejan de cargar el validador. Si se publica el reference script
+    // con la API arriba, la toma en el próximo reinicio.
+    const referenceUtxo = await buscarReferenceScript(options.lucid, walletAddress, refs.policyId);
+
     return new LucidAnchorAdapter(
       options.lucid,
       refs,
@@ -226,7 +256,8 @@ export class LucidAnchorAdapter implements AnchorPort {
       options.validityWindowMs ?? VALIDITY_WINDOW_MS,
       options.tipLagMarginMs ?? TIP_LAG_MARGIN_MS,
       options.pendingUtxoTtlMs ?? PENDING_UTXO_TTL_MS,
-      options.blockfrost
+      options.blockfrost,
+      referenceUtxo
     );
   }
 
@@ -236,16 +267,17 @@ export class LucidAnchorAdapter implements AnchorPort {
 
     return this.enCola(() =>
       this.enviar(
-        this.lucid
-          .newTx()
-          .mintAssets({ [unit]: 1n }, encodeInitRedeemer())
-          .pay.ToContract(
-            this.refs.address,
-            { kind: "inline", value: encodeStageDatum(datum) },
-            { lovelace: THREAD_MIN_LOVELACE, [unit]: 1n }
-          )
-          .attach.MintingPolicy(this.refs.script)
-          .addSignerKey(this.adminKeyHash())
+        this.conElValidador(
+          this.lucid
+            .newTx()
+            .mintAssets({ [unit]: 1n }, encodeInitRedeemer())
+            .pay.ToContract(
+              this.refs.address,
+              { kind: "inline", value: encodeStageDatum(datum) },
+              { lovelace: THREAD_MIN_LOVELACE, [unit]: 1n }
+            )
+            .addSignerKey(this.adminKeyHash())
+        )
       )
     );
   }
@@ -287,18 +319,19 @@ export class LucidAnchorAdapter implements AnchorPort {
     const hasta = Math.max(now, completion?.now ?? now) + this.validityWindowMs;
 
     const recibo = await this.enviar(
-      this.lucid
-        .newTx()
-        .collectFrom([utxo], encodeAdvanceRedeemer({ to: next.state, completion }))
-        .pay.ToContract(
-          this.refs.address,
-          { kind: "inline", value: encodeStageDatum(next) },
-          utxo.assets
-        )
-        .attach.SpendingValidator(this.refs.script)
-        .addSignerKey(this.adminKeyHash())
-        .validFrom(desde)
-        .validTo(hasta)
+      this.conElValidador(
+        this.lucid
+          .newTx()
+          .collectFrom([utxo], encodeAdvanceRedeemer({ to: next.state, completion }))
+          .pay.ToContract(
+            this.refs.address,
+            { kind: "inline", value: encodeStageDatum(next) },
+            utxo.assets
+          )
+          .addSignerKey(this.adminKeyHash())
+          .validFrom(desde)
+          .validTo(hasta)
+      )
     );
 
     // El hilo que se acaba de gastar deja de ser una respuesta válida para el
@@ -336,6 +369,72 @@ export class LucidAnchorAdapter implements AnchorPort {
       )
     );
     return { txid, status: "Pending" };
+  }
+
+  /**
+   * Publica el validador como **reference script**: un UTxO en la dirección de
+   * la wallet que lleva el script adentro. A partir de ahí las transacciones lo
+   * referencian en vez de adjuntarlo.
+   *
+   * **Es una operación de operador, no de la API**, y por eso no está en
+   * `AnchorPort`: gasta ADA de la wallet de servicio, se hace una vez por red y
+   * su efecto no es un anclaje. La corre `scripts/publish-reference-script.mjs`.
+   *
+   * **Idempotente** (regla 8): vuelve a mirar la cadena antes de publicar. Si ya
+   * está, no gasta nada y devuelve el que hay.
+   *
+   * **La API no lo toma sola**: lo descubre al arrancar, así que después de
+   * publicar hay que reiniciarla.
+   */
+  async publishReferenceScript(): Promise<ReferenceScriptPublication> {
+    return this.enCola(async () => {
+      const yaEsta = await buscarReferenceScript(
+        this.lucid,
+        this.walletAddress,
+        this.refs.policyId
+      );
+      if (yaEsta) {
+        this.referenceUtxo = yaEsta;
+        return {
+          outputRef: `${yaEsta.txHash}#${yaEsta.outputIndex}`,
+          txid: null,
+          lovelace: yaEsta.assets.lovelace ?? 0n
+        };
+      }
+
+      // Sin `assets`: Lucid calcula el mínimo exacto que el UTxO necesita para
+      // existir con el script adentro (`with_asset_and_min_required_coin`).
+      // Elegir un número a mano sería o quedarse corto —la transacción se
+      // rechaza— o inmovilizar de más para siempre.
+      const { salidas, txid } = await this.enviar(
+        this.lucid.newTx().pay.ToAddressWithData(this.walletAddress, undefined, undefined, {
+          ...this.refs.script
+        })
+      );
+
+      const publicado = salidas.find(
+        (salida) => salida.scriptRef && mintingPolicyToId(salida.scriptRef) === this.refs.policyId
+      );
+      if (!publicado) {
+        throw new Error(
+          `La transacción ${txid} se envió pero no dejó ninguna salida con el validador adentro.`
+        );
+      }
+
+      this.referenceUtxo = publicado;
+      return {
+        outputRef: `${publicado.txHash}#${publicado.outputIndex}`,
+        txid,
+        lovelace: publicado.assets.lovelace ?? 0n
+      };
+    });
+  }
+
+  /** El reference script que este adaptador va a usar, si hay alguno. */
+  get referenceScriptOutputRef(): OutputRef | null {
+    return this.referenceUtxo
+      ? `${this.referenceUtxo.txHash}#${this.referenceUtxo.outputIndex}`
+      : null;
   }
 
   /**
@@ -458,13 +557,46 @@ export class LucidAnchorAdapter implements AnchorPort {
    * exactamente lo que el proveedor va a contestar dentro de ~20 s y lo que hoy
    * no contesta.
    */
-  private async enviar(tx: TxBuilder): Promise<AnchorReceipt> {
-    const [utxosDeLaWallet, salidas, firmable] = await tx.chain();
+  private async enviar(tx: TxBuilder): Promise<AnchorReceipt & { salidas: UTxO[] }> {
+    const [utxosDeLaWallet, salidas, firmable] = await tx.chain({
+      presetWalletInputs: await this.entradasDeLaWallet()
+    });
     const firmada = await firmable.sign.withWallet().complete();
     const txid = await firmada.submit();
 
     this.anotarLoEnviado(utxosDeLaWallet, salidas);
-    return { txid, outputRef: `${txid}#0`, status: "Pending" };
+    return { txid, outputRef: `${txid}#0`, status: "Pending", salidas };
+  }
+
+  /**
+   * Le da el validador al builder: **por referencia si está publicado, adjunto
+   * si no**. Un adjunto son 2289 bytes en cada transacción; una referencia son
+   * ~40.
+   *
+   * `attach.MintingPolicy` y `attach.SpendingValidator` son literalmente la
+   * misma función en Lucid, y acá eso además es correcto: el blueprint trae un
+   * solo script con tres handlers (`blueprint.ts`).
+   */
+  private conElValidador(tx: TxBuilder): TxBuilder {
+    return this.referenceUtxo
+      ? tx.readFrom([this.referenceUtxo])
+      : tx.attach.Script(this.refs.script);
+  }
+
+  /**
+   * Lo que la wallet puede gastar, que **no es todo lo que la wallet tiene**.
+   *
+   * Un UTxO que lleva un script adentro no es plata disponible: gastarlo borra
+   * el reference script, y a partir de ahí toda transacción que lo referencie
+   * apunta a una entrada que no existe. Lucid dice en sus errores que excluye
+   * esos UTxOs de la selección, pero en 0.6.2 solo excluye los que la propia
+   * transacción declaró con `readFrom` — o sea, no los de un anclaje por
+   * metadata, que no usa el validador. Se filtra acá, que es el único lugar por
+   * el que pasan todas.
+   */
+  private async entradasDeLaWallet(): Promise<UTxO[]> {
+    const todas = await this.lucid.wallet().getUtxos();
+    return todas.filter((utxo) => !utxo.scriptRef);
   }
 
   /**
@@ -515,4 +647,27 @@ export class LucidAnchorAdapter implements AnchorPort {
       datum: decodeStageDatum(vivo.datum)
     };
   }
+}
+
+/**
+ * Busca el reference script entre los UTxOs de la wallet.
+ *
+ * **Se compara el hash del script, no el `outputRef` ni los bytes.** Es la única
+ * forma de estar seguro de que el UTxO lleva *este* validador: el hash sale del
+ * blueprint con el admin aplicado, así que un script viejo —de antes de un
+ * `aiken build`, o de otra wallet— no matchea y se ignora en vez de producir
+ * transacciones que referencian el validador equivocado.
+ *
+ * Vive fuera de la clase porque `create()` la necesita antes de que la instancia
+ * exista.
+ */
+async function buscarReferenceScript(
+  lucid: LucidEvolution,
+  walletAddress: string,
+  scriptHash: string
+): Promise<UTxO | null> {
+  const utxos = await lucid.utxosAt(walletAddress);
+  return (
+    utxos.find((utxo) => utxo.scriptRef && mintingPolicyToId(utxo.scriptRef) === scriptHash) ?? null
+  );
 }

@@ -37,7 +37,6 @@ números medidos —endpoints, superficies, tests— en `specs/README.md`. Acá 
 | 2 | **Columna `network`** en `OnChainEvent` (D-080) | Un TXID sin red es inverificable, y mainnet es inminente. Producción tiene **0 filas**: el único momento en que toda fila nace atribuida | 🟡 *migración nueva: rompe "una sola migración"* |
 | 3 | **Mainnet** — runbook, habilitar la red, custodia de la clave | D-013 la hace **imposible por configuración**: es código, no solo procedimiento | 🔴 |
 | 4 | **D-028** — atribución de autoridad en la evidencia | Hoy se exige el piso ("existe una evidencia"). Faltan `issuingAuthority`, `authorityReference` y la atestación | 🟡 |
-| 5 | **Reference script** del validador | Cada transacción lo adjunta entero: fee y tamaño | 🟡 |
 
 Los puntos **2 y 3 están acoplados**: `network` conviene que exista antes del primer anclaje en
 mainnet, porque un TXID sin red es inverificable cuando existan dos.

@@ -2,7 +2,7 @@ import { generateEmulatorAccount, Lucid } from "@lucid-evolution/lucid";
 import { Emulator } from "@lucid-evolution/provider";
 import { buildStageDatum } from "@plataforma/shared";
 import { beforeEach, describe, expect, it } from "vitest";
-import { LucidAnchorAdapter, PENDING_UTXO_TTL_MS } from "./real";
+import { LucidAnchorAdapter, PENDING_UTXO_TTL_MS, THREAD_MIN_LOVELACE } from "./real";
 
 // SPEC-013 §B. **Acá el validador se ejecuta de verdad**: el `Emulator` de
 // Lucid evalúa el script Plutus compilado por Aiken, así que un rechazo de este
@@ -28,6 +28,9 @@ const root = "a".repeat(64);
 
 let emulator: Emulator;
 let adapter: LucidAnchorAdapter;
+/** La misma instancia que tiene el adaptador: los tests que arman un segundo
+ * adaptador sobre la misma wallet la necesitan. */
+let lucid: Awaited<ReturnType<typeof Lucid>>;
 /**
  * Cuánto se le suma al reloj del `Emulator`. Los tests de la vista local lo
  * mueven para vencerla sin esperar tres minutos de verdad.
@@ -38,7 +41,7 @@ beforeEach(async () => {
   const cuenta = generateEmulatorAccount({ lovelace: 500_000_000n });
   emulator = new Emulator([cuenta]);
   desfase = 0;
-  const lucid = await Lucid(emulator, "Custom");
+  lucid = await Lucid(emulator, "Custom");
   lucid.selectWallet.fromSeed(cuenta.seedPhrase);
   adapter = await LucidAnchorAdapter.create({
     lucid,
@@ -354,5 +357,132 @@ describe("la vista local vence", () => {
         next: buildStageDatum({ ...otro, state: "InProgress" })
       })
     ).rejects.toThrow(/No existe el UTxO/);
+  });
+});
+
+// ── El reference script ─────────────────────────────────────────────────────
+//
+// Publicar el validador una vez y referenciarlo, en vez de adjuntar sus 2289
+// bytes en cada transacción. Lo que se prueba acá es lo que importa: que el
+// validador **sigue ejecutándose** —referenciado, no adjunto— y que la
+// transacción sale más barata.
+
+/** Lo que la wallet puede mostrar como saldo, sumando todos sus UTxOs. */
+async function saldo(address: string, emu: Emulator): Promise<bigint> {
+  const utxos = await emu.getUtxos(address);
+  return utxos.reduce((total, u) => total + (u.assets.lovelace ?? 0n), 0n);
+}
+
+/** Lo que costó abrir un hilo, sin contar el ADA que queda en el hilo. */
+async function feeDeAbrirHilo(a: LucidAnchorAdapter, emu: Emulator): Promise<bigint> {
+  const antes = await saldo(a.walletAddress, emu);
+  await a.openThread({ datum: buildStageDatum(fuente) });
+  emu.awaitBlock(1);
+  const despues = await saldo(a.walletAddress, emu);
+  return antes - despues - THREAD_MIN_LOVELACE;
+}
+
+describe("el reference script", () => {
+  it("se publica, se descubre solo y no se publica dos veces", async () => {
+    const publicacion = await adapter.publishReferenceScript();
+    emulator.awaitBlock(1);
+
+    expect(publicacion.txid).toMatch(/^[0-9a-f]{64}$/);
+    expect(publicacion.outputRef).toBe(adapter.referenceScriptOutputRef);
+    expect(publicacion.lovelace).toBeGreaterThan(0n);
+
+    // Un adaptador nuevo sobre la misma wallet lo encuentra sin configuración:
+    // es lo que hace la API al arrancar.
+    const otro = await LucidAnchorAdapter.create({
+      lucid,
+      network: "Custom",
+      now: () => emulator.now()
+    });
+    expect(otro.referenceScriptOutputRef).toBe(publicacion.outputRef);
+
+    // Idempotente (regla 8): no gasta de nuevo y devuelve el mismo UTxO.
+    const otraVez = await otro.publishReferenceScript();
+    expect(otraVez.txid).toBeNull();
+    expect(otraVez.outputRef).toBe(publicacion.outputRef);
+  });
+
+  it("el validador se sigue ejecutando, referenciado en vez de adjunto", async () => {
+    await adapter.publishReferenceScript();
+    emulator.awaitBlock(1);
+
+    const abierto = await adapter.openThread({ datum: buildStageDatum(fuente) });
+    const avance = await adapter.advanceThread({
+      outputRef: abierto.outputRef,
+      previous: buildStageDatum(fuente),
+      next: buildStageDatum({ ...fuente, state: "InProgress" })
+    });
+    emulator.awaitBlock(1);
+
+    expect((await adapter.verify(avance.txid))?.datum.state).toBe("InProgress");
+
+    // Y sigue rechazando lo que rechazaba: un reference script que no ejecuta
+    // el validador aceptaría cualquier transición.
+    await expect(
+      adapter.openThread({ datum: buildStageDatum({ ...fuente, state: "InProgress" }) })
+    ).rejects.toThrow(/failed script execution/);
+  });
+
+  it("no se lo come la selección de monedas cuando la wallet queda corta", async () => {
+    // **El modo de falla que este test cierra.** El UTxO del reference script
+    // vive en la dirección de la wallet, así que para la selección de monedas
+    // es plata: gastarlo borra el script, y desde ahí toda transacción que lo
+    // referencie apunta a una entrada que no existe. Lucid dice en sus errores
+    // que excluye esos UTxOs, pero en 0.6.2 solo excluye los que la propia
+    // transacción declaró con `readFrom` — y un anclaje por metadata no usa el
+    // validador, así que no declara ninguno.
+    //
+    // La wallet se funda con lo justo para publicar y quedar corta: el
+    // reference script pasa a ser el único UTxO que puede pagar el anclaje
+    // siguiente. Sin el filtro, ese anclaje "funciona" y se lleva puesto el
+    // script. El número sale medido —el UTxO del script pide 11,04 ADA y el
+    // vuelto queda en 1,08— y por eso está escrito y no calculado: si el
+    // validador cambia de tamaño, este test se pone rojo y hay que volver a
+    // medirlo, que es exactamente lo que queremos que pase.
+    const cuenta = generateEmulatorAccount({ lovelace: 12_400_000n });
+    const pobre = new Emulator([cuenta]);
+    const suLucid = await Lucid(pobre, "Custom");
+    suLucid.selectWallet.fromSeed(cuenta.seedPhrase);
+    const suAdapter = await LucidAnchorAdapter.create({
+      lucid: suLucid,
+      network: "Custom",
+      now: () => pobre.now()
+    });
+
+    await suAdapter.publishReferenceScript();
+    pobre.awaitBlock(1);
+
+    await expect(
+      suAdapter.anchorCommitment({ sha256: "c".repeat(64), reference: "ev_1" })
+    ).rejects.toThrow(/enough funds/);
+
+    const quedan = await pobre.getUtxos(suAdapter.walletAddress);
+    expect(quedan.filter((u) => u.scriptRef)).toHaveLength(1);
+  });
+
+  it("abarata la transacción, que es la única razón por la que existe", async () => {
+    const conAttach = await feeDeAbrirHilo(adapter, emulator);
+
+    const cuenta = generateEmulatorAccount({ lovelace: 500_000_000n });
+    const otroEmulator = new Emulator([cuenta]);
+    const otroLucid = await Lucid(otroEmulator, "Custom");
+    otroLucid.selectWallet.fromSeed(cuenta.seedPhrase);
+    const conRef = await LucidAnchorAdapter.create({
+      lucid: otroLucid,
+      network: "Custom",
+      now: () => otroEmulator.now()
+    });
+    await conRef.publishReferenceScript();
+    otroEmulator.awaitBlock(1);
+
+    const feeConRef = await feeDeAbrirHilo(conRef, otroEmulator);
+
+    // Medido: 0,2976 → 0,2317 tADA. Se exige la mitad del ahorro observado
+    // para no atar el test a los parámetros de protocolo del `Emulator`.
+    expect(feeConRef).toBeLessThan(conAttach - 30_000n);
   });
 });

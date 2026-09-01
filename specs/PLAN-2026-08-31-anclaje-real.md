@@ -92,9 +92,10 @@ snake_case plural. Y el free tier no da shell remota: todo se inspecciona con
 `turso db shell propnexus "<sql>"` desde la máquina de uno.
 
 **2. Probar el camino del hilo en local contra Preprod.** Es el único pedazo que **nunca corrió
-contra Preprod** —solo contra el `Emulator` y yaci-devkit local— y el de más riesgo: cada
-transacción **adjunta el validador entero** (`attach.SpendingValidator` en `real.ts`), así que ahí pegan
-los límites de tamaño reales. **Si esto falla, no se sigue.**
+contra Preprod** —solo contra el `Emulator` y yaci-devkit local— y el de más riesgo: en ese momento
+cada transacción **adjuntaba el validador entero**, así que ahí pegaban los límites de tamaño
+reales. **Si esto falla, no se sigue.** (Desde el 2026-09-01 el validador puede viajar por
+referencia — D-083 — y la transacción es cuatro veces más chica.)
 
 **El hilo NO se abre en el `PATCH`**, y esta versión del plan decía que sí. `transitionStage()`
 llama a `anchorEvent(evento, stage, existing)` con `existing` siempre presente, así que siempre cae
@@ -265,4 +266,7 @@ commit.
 
 ## Qué queda después
 
-Publicar el validador como reference script — hoy cada transacción lo adjunta entero.
+Nada de este plan. ✅ **El reference script se publicó como capacidad el 2026-09-01** (D-083): el
+adaptador referencia el validador en vez de adjuntarlo, y `pnpm --filter @plataforma/cardano
+ref:publish` lo publica una vez por red. Queda como paso operativo en el runbook §1.5, no como
+trabajo pendiente.

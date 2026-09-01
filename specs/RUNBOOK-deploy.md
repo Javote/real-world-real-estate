@@ -195,7 +195,8 @@ anclar de verdad en Cardano Preprod.
 
 3. **Fondear la dirección que imprimió el generador** desde el
    [faucet](https://docs.cardano.org/cardano-testnets/tools/faucet) — **Preprod**, no Preview. Un
-   anclaje cuesta ~0,17 tADA, así que alcanza de sobra.
+   anclaje cuesta ~0,17 tADA y el reference script del paso 6 inmoviliza ~11 tADA, así que alcanza
+   de sobra.
 
    **El faucet pide una dirección, no una clave.** Tiene que ser exactamente la que el servicio
    mira; el arranque de la API la vuelve a imprimir (`Wallet de servicio: addr_test1…`) para poder
@@ -229,6 +230,26 @@ anclar de verdad en Cardano Preprod.
    arranque lo dice —`AnchorPort listo en modo "disabled"`, con el motivo en la línea de arriba— y
    todo anclaje rechaza, así que nunca escribe un TXID que no exista. Es el estado seguro, no el
    estado bueno: hasta cargarlos, la plataforma registra pero no prueba.
+
+6. **Publicar el validador como reference script** (D-083). Se hace **una vez por red**, en cuanto
+   la wallet esté fondeada, y no depende de los pasos anteriores:
+
+   ```bash
+   BLOCKFROST_API_KEY='<key>' \
+   SERVICE_WALLET_PRIVATE_KEY="$(cat ~/propnexus-wallet-preprod.key)" \
+   pnpm --filter @plataforma/cardano ref:publish
+   ```
+
+   Deja un UTxO con el validador adentro en la dirección de la wallet. A partir de ahí cada
+   transacción de hilo lo **referencia** en vez de llevarlo: de 2890 a 599 bytes, de 0,2976 a 0,2317
+   tADA. **Es idempotente**: correrlo dos veces no publica dos veces ni gasta de nuevo.
+
+   Inmoviliza ~11 tADA — el mínimo que Cardano exige para un UTxO con un script adentro, no valor
+   (D-021). Quedan en la wallet y se recuperan con una transacción deliberada.
+
+   ⚠ **Después hay que reiniciar la API.** El reference script se descubre al arrancar el proceso:
+   una instancia ya levantada sigue adjuntando el validador hasta el próximo deploy o restart. No
+   rompe nada, paga de más.
 
 **Verificar un anclaje contra la cadena**, sin la key, con el TXID que devuelve el endpoint:
 
