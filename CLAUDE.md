@@ -6,7 +6,7 @@ Lo transversal. Lo de cada frente vive en `apps/web/CLAUDE.md`, `apps/api/CLAUDE
 **Acá solo hay información vigente.** El porqué de cada decisión está en `DECISIONS.md`; el
 argumento largo, en `specs/archive/`.
 
-## Contexto (3 líneas)
+## Contexto
 
 **PropNexus** (Catalyst 1400106) — plataforma de ventas inmobiliarias en pozo: estructura el ciclo
 de obra en **stages**, organiza **evidencia** (planos, permisos, actas, certificados) y ancla
@@ -110,16 +110,6 @@ commit**. Si la contradicción es con código, avisá antes de "arreglar" nada.
 **Y antes de declarar que un entregable está mal: verificá que estás mirando el entregable.** Ya nos
 pasó decidir contra una transcripción errónea (ver Trampas).
 
-## Vocabulario: "milestone" tiene dos significados
-
-| Término | Significa | Dónde |
-|---|---|---|
-| **Milestone** | Hito **Catalyst**: M1, M2, M3. Etapas contractuales del proyecto | `docs/`, reportes de entrega |
-| **Stage** | Etapa de **obra**. Es la entidad del dominio | código, API, specs, contratos |
-
-Nunca uses "milestone" para una etapa de obra (D-023, ejecutada por D-067). **Excepción:** los test
-IDs de M2-D5 se transcriben literales, incluso `INV-STAGE-MILESTONE-001`.
-
 ---
 
 # Reglas duras (innegociables)
@@ -156,6 +146,9 @@ IDs de M2-D5 se transcriben literales, incluso `INV-STAGE-MILESTONE-001`.
 # Prohibiciones
 
 - No inventar componentes, estados, endpoints ni superficies fuera de `docs/` — proponer, no improvisar.
+- **Nunca "milestone" para una etapa de obra: es `stage`** (D-067). El riesgo sigue vivo porque los
+  entregables usan la palabra y el código ya no. **Excepción:** los test IDs de M2-D5 se transcriben
+  literales, incluso `INV-STAGE-MILESTONE-001`.
 - No abrir un modal de verificación automáticamente (M2-D4 §6.3). Toda superficie de prueba es
   iniciada por el usuario; la única excepción es `AnchoringSuccessModal`.
 - En el front, no hacer `fetch` fuera de `ApiPort`.
