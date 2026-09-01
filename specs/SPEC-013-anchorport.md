@@ -107,7 +107,7 @@ es más que el `AnchorPort`: son seis piezas, y solo dos necesitan Docker.
 
 | # | Pieza | Necesita | Estado |
 |---|---|---|---|
-| 1 | **Todo stage es `validation_critical`** — migración `0003` y su decisión | — | **hecha** (D-061) |
+| 1 | **Todo stage es `validation_critical`** — su decisión | — | **hecha** (D-061) |
 | 2 | Transacciones reales contra el **`Emulator`** de Lucid: `mint` + `spend` con el validador ejecutándose de verdad | — | **hecha** |
 | 3 | **`EvidenceBundle`**, Merkle root y el endpoint de anclaje **manual del admin** | — | **hecha** |
 | 4 | **MinIO** por `compose.dev.yml` + cliente S3 (D-011) | Docker | **hecha** |
@@ -125,10 +125,10 @@ pasa a ser el escalón de realismo (nodo real, fees reales, persistencia). El ca
    donde importa la integridad de la *secuencia*. Anclar todo es más simple de explicar; anclar
    solo los críticos cuesta menos fee y menos ADA inmovilizada. **Default vigente: todos**, porque
    hoy no cuesta nada en Preprod y evita una regla más. Se decide antes de la rebanada B.
-2. ~~**El Merkle root del bundle.**~~ **Cerrada**: `EvidenceBundle` existe (migración `0004`), el
+2. ~~**El Merkle root del bundle.**~~ **Cerrada**: `EvidenceBundle` existe (en `0000_init.sql`), el
    root se calcula con `merkleRoot` de `packages/shared` y viaja al datum al completar. Lo que
-   **sigue abierto** es la otra mitad de D-028: atribución de autoridad (`issuingAuthority`,
-   `authorityReference`) y atestación del revisor, que son columnas que no existen. **Dueño:
+   **sigue abierto** es la otra mitad de D-028: atribución de autoridad (`issuingAuthority`; D-084
+   sacó `authorityReference`) y atestación del revisor, que son columnas que no existen. **Dueño:
    producto.**
 3. **Qué pasa con un anclaje que falla definitivamente.** `status = "Failed"` existe y nadie lo
    escribe todavía. ¿Reintento automático, o queda visible como "no anclado"? Es decisión de

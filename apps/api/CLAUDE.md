@@ -221,8 +221,8 @@ pasar.
 Lo que le falta, en orden de importancia:
 
 - **La evidencia que exige es el piso de D-028, no D-028.** Hoy alcanza con que exista *una*
-  evidencia asociada al stage. D-028 pide además atribución de autoridad (`issuingAuthority`,
-  `authorityReference` obligatorios cuando `authoritative = true`) y la atestación de un revisor.
+  evidencia asociada al stage. D-028 pide además atribución de autoridad (`issuingAuthority`
+  obligatorio cuando `authoritative = true`; D-084 sacó `authorityReference`) y la atestación.
   **Esas columnas no existen** — es una migración y una decisión, no un `if`.
 - **~~Nadie calcula el commitment.~~** Cerrado: al completar, `crearBundle` congela la evidencia
   del stage en un `EvidenceBundle` y su Merkle root viaja al datum. **Es un acta, no un índice:** se

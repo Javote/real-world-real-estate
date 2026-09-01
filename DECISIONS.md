@@ -22,7 +22,7 @@ ya no existen. Partirlo no pierde nada: el porqué sigue estando, deja de pesar.
 > se contradice internamente, (b) es un error de redacción, o (c) seguirlo al pie contradiría una
 > verdad del producto declarada por el dueño — **nunca por conveniencia**.
 >
-> **La numeración no se recicla.** Las decisiones nuevas siguen desde D-084.
+> **La numeración no se recicla.** Las decisiones nuevas siguen desde D-085.
 
 ## Desvíos vigentes
 
@@ -99,9 +99,47 @@ pruebas del proyecto.
 
 La plataforma no valida la firma: **registra la declaración de origen y la atestación de revisión**.
 Evidencia sin firmar es (a) la declarada `authoritative` sin atribución de autoridad
-(`issuingAuthority`, `authorityReference`), o (b) un bundle que ningún revisor atestiguó. **El
-rechazo ocurre en la transición, no en el upload**: subir siempre se puede; avanzar no.
+(`issuingAuthority`), o (b) un bundle que ningún revisor atestiguó. **El rechazo ocurre en la
+transición, no en el upload**: subir siempre se puede; avanzar no.
 *Estado: implementado el piso (exige que haya evidencia). Faltan las columnas de (a) y (b).*
+**Acotada por D-084**, que sacó `authorityReference` de (a).
+
+## D-084 — La atribución de autoridad es **quién**, no **quién más su número de expediente**
+
+La mitad (a) de D-028 pedía dos columnas cuando `authoritative = true`: `issuingAuthority` y
+`authorityReference` (expediente, matrícula). **Queda solo `issuingAuthority`.**
+
+**Por qué se saca.** Ninguno de los dos nombres aparece en `docs/` — los dos los inventamos
+nosotros. La diferencia es que uno tiene contraparte y el otro no: `5-evidence-taxonomy.csv` tiene
+exactamente cuatro columnas —`evidence_category`, `examples`, `typical_source`, `purpose`— y
+`typical_source` **es** la atribución de origen. No hay ninguna columna que corresponda a una
+referencia, y nada en `docs/` menciona expediente, matrícula ni *file/reference/registration
+number*. El resumen del whitepaper describe la taxonomía como *"categoriza la evidencia, sus fuentes
+típicas, qué respaldan y sus métodos de prueba de integridad"*: las cuatro columnas, sin referencia.
+Se cumple estrictamente lo que el entregable pide, sin agregarle.
+
+**No reduce lo que debemos.** El criterio 7 del SOM —*"rejects unsigned evidence"*— sigue satisfecho:
+(a) exige atribución y (b) exige atestación. Lo que se achica es nuestra elaboración, que vive en la
+capa de implementación donde manda este archivo. `docs/` no pierde nada.
+
+**Y es más honesto.** Un número de expediente que la plataforma no verifica da **apariencia** de
+verificabilidad. D-026 dice que no validamos nada; guardar la referencia invita a leerla como si
+alguien la hubiera chequeado. Las cuatro afirmaciones del producto dicen *"declara provenir de esta
+autoridad externa"* — la autoridad, no la autoridad más su trámite.
+
+**Por qué `issuingAuthority` sí se queda, en vez de borrar las dos.** Tres razones, y la primera
+sola alcanzaría: es lo que mapea a `typical_source`, que está en el entregable. Es el dato debajo de
+una de las cuatro afirmaciones, y sin él esa frase es copy sin nada que la sustancie (regla 17). Y
+D-028 separó (a) de (b) **como cobertura**: si el spike de CIP-30 (D-009) sale mal, (b) degrada a
+atestación custodial sin rehacer el modelo. (a) es la mitad sin riesgo técnico; borrarla dejaría
+todo el peso sobre la que puede fallar.
+
+**Lo que se pierde, dicho.** Sin referencia, "lo emitió la Municipalidad de X" no se puede ir a
+chequear al organismo. Es correcto: la plataforma nunca prometió que el permiso fuera válido, solo
+que ese archivo, con esa declaración de origen, existía en ese momento y no cambió.
+
+**Alcance.** No toca la mitad (b). `authoritative` ya existe como columna desde `0000_init.sql`;
+lo que falta es `issuingAuthority`, obligatorio en la transición cuando `authoritative = true`.
 
 ## D-067 — `Milestone` → `Stage` en todo el dominio — **ejecutada 2026-08-24**
 
