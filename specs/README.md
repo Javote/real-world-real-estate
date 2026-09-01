@@ -68,7 +68,7 @@ aprobación explícita.
 |---|---|
 | Contratos | validador con thread token y `mint` validado, datum alineado con M1-D2, **73 tests** |
 | Anclaje | `AnchorPort` simulado y real; probado contra el `Emulator`, contra un devnet local y contra Preprod. El validador viaja por referencia (D-083) |
-| API | autorización en dos capas, FSM aplicada, bundles con Merkle root, audit log, **231 tests** |
+| API | autorización en dos capas, FSM aplicada, bundles con Merkle root, audit log, **235 tests** |
 | Storage | port S3 probado contra MinIO real; el hash cubre los bytes guardados |
 
 **Front:** SPEC-016 cierra el backlog de test IDs del investor. Queda `DEV-RELEASE-EXECUTE-002` (D-070, no es deuda).
