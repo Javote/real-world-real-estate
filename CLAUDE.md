@@ -37,19 +37,22 @@ falta.
 
 | # | Qué | Por qué ahí | Nivel |
 |---|---|---|---|
-| 1 | **`network` + `issuingAuthority`** en una sola migración (D-080, D-084, D-085) | **Es ahora o nunca limpio**: con 0 filas, toda fila nace atribuida. D-085 la resuelve editando `0000_init.sql` y re-sembrando producción, así que sigue habiendo **un solo archivo** | 🟡 *borra y re-siembra producción* |
-| 2 | **Publicar el reference script** en Preprod (D-083) | Va pegado a 1: el deploy de la migración **es** el restart que el descubrimiento necesita. Un solo reinicio en vez de dos | 🟡 *operativo* |
-| 3 | **Primer anclaje real de punta a punta** | Recién acá "arranca en real" pasa a "ancla de verdad", y ya sale con la transacción barata | 🟢 |
-| 4 | **Defensa 3**: que el simulador devuelva `Pending` y no `Confirmed` | Alinea el simulador con el real, para que `Confirmed` signifique sin excepción *algo consultó la cadena*. La defensa 2 (`anchorMode`) ya está **rechazada** por D-080 | 🟡 *decide el dueño* |
-| 5 | **`yaci.test.ts` cubre el camino referenciado** | Es el único suite con un nodo real evaluando el validador, y corre con el validador adjunto: la forma que D-083 dejó de usar | 🟢 |
-| 6 | ~~**D-028** — atestación del revisor~~ | **Cerrado.** D-084 lo acotó a `issuingAuthority` y D-086 eliminó la atestación como condición de avance. La columna entra en el ítem 1 | ✅ |
-| 7 | **7 superficies** (46/53) y los patrones M2-D4 (8/10) | Backlog de transcripción. El test ID que falta (D-070) no es deuda | 🟢 |
-| 8 | **Correr el security review** | Criterio 11 del SOM: el P1 conocido está cerrado, pero el review nunca se corrió | 🟢 |
-| 9 | **Mainnet** — runbook, habilitar la red, custodia de la clave | D-013 la hace **imposible por configuración**: es código, no solo procedimiento | 🔴 |
+| 0 | **Re-sembrar producción** | La base se reconstruyó vacía: hoy hay **0 usuarios** y nadie puede entrar. Lo corre el dueño porque el seed exige `SEED_ADMIN_PASSWORD` y `SEED_DEMO_PASSWORD` (D-047) | 🔴 *dueño* |
+| 1 | **Publicar el reference script** en Preprod (D-083) | El validador viaja adjunto hasta que exista el UTxO. Se descubre al arrancar, así que después hay que reiniciar | 🟡 *operativo* |
+| 2 | **Primer anclaje real de punta a punta** | Recién acá "arranca en real" pasa a "ancla de verdad", y ya sale con la transacción barata | 🟢 |
+| 3 | **Defensa 3**: que el simulador devuelva `Pending` y no `Confirmed` | Alinea el simulador con el real, para que `Confirmed` signifique sin excepción *algo consultó la cadena*. La defensa 2 (`anchorMode`) ya está **rechazada** por D-080 | 🟡 *decide el dueño* |
+| 4 | **7 superficies** (46/53) y los patrones M2-D4 (8/10) | Backlog de transcripción. El test ID que falta (D-070) no es deuda | 🟢 |
+| 5 | **Correr el security review** | Criterio 11 del SOM: el P1 conocido está cerrado, pero el review nunca se corrió | 🟢 |
+| 6 | **Mainnet** — runbook, habilitar la red, custodia de la clave | D-013 la hace **imposible por configuración**: es código, no solo procedimiento | 🔴 |
 
-**El orden no es por tamaño.** Los puntos 1 → 3 son una sola secuencia y se hacen en ese orden: la
-columna `network` tiene una ventana que se cierra sola —el primer anclaje real la cierra— y el
-reference script comparte el reinicio con su deploy. El 9 depende del 1.
+**Cerrados el 2026-09-01:** el reference script (D-083) y su cobertura contra un nodo real; `network`
+e `issuingAuthority`, aplicadas en producción **sin dejar de tener un solo archivo de migración**
+(D-085); y D-028, acotada por D-084 y D-086.
+
+**El 0 bloquea todo lo demás**: sin cuentas no hay forma de entrar a la instancia, y el primer
+anclaje real (2) se dispara desde la app. El 1 conviene antes que el 2 para que el primer anclaje ya
+salga con la transacción barata, pero no lo bloquea: sin reference script todo funciona igual, más
+caro.
 
 # Cómo se trabaja acá
 
