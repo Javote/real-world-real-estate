@@ -22,7 +22,7 @@ ya no existen. Partirlo no pierde nada: el porqué sigue estando, deja de pesar.
 > se contradice internamente, (b) es un error de redacción, o (c) seguirlo al pie contradiría una
 > verdad del producto declarada por el dueño — **nunca por conveniencia**.
 >
-> **La numeración no se recicla.** Las decisiones nuevas siguen desde D-079.
+> **La numeración no se recicla.** Las decisiones nuevas siguen desde D-080.
 
 ## Desvíos vigentes
 
@@ -567,6 +567,30 @@ síntoma.
 
 **Sigue sin poder rotarse.** El admin del validador es el hash de esta clave; reemplazarla deja
 inalcanzables los hilos ya anclados, sin ningún error visible.
+
+## D-079 — El simulador solo confirma lo que él mismo ancló
+
+`SimulatedAnchorAdapter.confirmedAt(txid)` responde desde su propio registro de txid emitidos y
+devuelve `null` para cualquier otro. Antes devolvía `this.now()` para todo.
+
+**Por qué era una mentira y no una simplificación.** Afirmaba confirmación sobre transacciones que
+nunca produjo. Era el único lugar del código que confundía *tengo un hash* con *está confirmada*, y
+esas son dos cosas distintas incluso en Cardano de verdad: **el txid es el hash del cuerpo de la
+transacción**, se computa antes de firmar y antes de enviar (`cardano-cli transaction txid` es
+offline). Un submit exitoso significa "el nodo lo aceptó en su mempool", no "está en un bloque".
+
+**La forma correcta no es un temporizador.** La confirmación no es tiempo transcurrido, es *¿la
+cadena conoce esta transacción?*. El simulador **es** su propia cadena, así que contesta desde su
+ledger — la misma pregunta que el adaptador real le hace a Blockfrost. Se registran los dos caminos,
+incluido el de metadata, que no deja `AnchorProof` y por eso no puede resolverse con `verify()`.
+
+**No cambia el `status` que devuelve al anclar.** Dentro del simulador no hay mempool: el commit
+entra a su ledger en el acto, así que `Confirmed` inmediato es cierto en su modelo. La defensa 1
+(D-075) es la que impide que ese `Confirmed` llegue a una base remota.
+
+**Lo que destapó:** cuatro tests de `reconcile.test.ts` insertaban txid inventados y pasaban porque
+el simulador confirmaba cualquier cosa. Ahora anclan de verdad contra el puerto para obtener su
+txid. Un test que pasa contra un puerto que miente no prueba la promoción, prueba la mentira.
 
 ## D-008 — Validador state-thread con núcleo puro separado
 

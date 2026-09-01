@@ -229,3 +229,55 @@ describe("anchorEvidence · el camino de metadata", () => {
     );
   });
 });
+
+// ── `confirmedAt` deja de afirmar sobre lo que no conoce ───────────────────
+//
+// El simulador es su propia cadena: su ledger es el único lugar donde una
+// transacción suya "está incluida". Contestar `now()` para cualquier txid era
+// afirmar confirmación sobre transacciones ajenas — el único lugar del código
+// que confundía *tengo un hash* con *está confirmada*.
+
+describe("confirmedAt", () => {
+  it("devuelve null para un txid que no produjo", async () => {
+    const puerto = new SimulatedAnchorAdapter();
+
+    expect(await puerto.confirmedAt("f".repeat(64))).toBeNull();
+  });
+
+  it("confirma un anclaje por metadata, que no deja AnchorProof", async () => {
+    const puerto = new SimulatedAnchorAdapter();
+    const { txid } = await puerto.anchorCommitment({
+      sha256: "a".repeat(64),
+      reference: "ref-opaca"
+    });
+
+    // `verify()` no sirve acá —exige outputRef y datum—, y por eso
+    // `confirmedAt` existe aparte.
+    expect(await puerto.verify(txid)).toBeNull();
+    expect(await puerto.confirmedAt(txid)).toEqual(expect.any(Number));
+  });
+
+  it("confirma un anclaje con hilo", async () => {
+    const puerto = new SimulatedAnchorAdapter();
+    const { txid } = await puerto.openThread({ datum: buildStageDatum(fuente) });
+
+    expect(await puerto.confirmedAt(txid)).toEqual(expect.any(Number));
+  });
+
+  it("el momento de inclusión no se mueve al reintentar el mismo anclaje", async () => {
+    // El simulador es determinístico: el segundo intento da el mismo txid. El
+    // bloque en el que entró ya ocurrió, así que su timestamp es historia.
+    let reloj = 1_000;
+    const puerto = new SimulatedAnchorAdapter({ now: () => reloj });
+    const entrada = { sha256: "b".repeat(64), reference: "ref" };
+
+    const primero = await puerto.anchorCommitment(entrada);
+    const cuando = await puerto.confirmedAt(primero.txid);
+
+    reloj = 99_000;
+    const segundo = await puerto.anchorCommitment(entrada);
+
+    expect(segundo.txid).toBe(primero.txid);
+    expect(await puerto.confirmedAt(segundo.txid)).toBe(cuando);
+  });
+});

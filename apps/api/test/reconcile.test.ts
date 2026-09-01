@@ -8,9 +8,15 @@ import { db } from "../src/lib/db";
 import { FIXTURES } from "./global-setup";
 
 // SPEC-013 §C · la parte mínima: promover a `Confirmed` lo que ya está en la
-// cadena. Corre con el adaptador `simulated`, donde `confirmedAt()` siempre
-// responde — lo que se prueba acá es la lógica de promoción, no la consulta al
-// proveedor, que se ejercita contra Preprod a mano.
+// cadena. Corre con el adaptador `simulated`, que desde el 2026-08-31 **solo
+// confirma los txid que él mismo produjo**: un hash inventado le da `null`,
+// igual que se lo daría Blockfrost.
+//
+// Por eso los eventos de esta suite anclan de verdad contra el puerto para
+// obtener su txid, en vez de inventarlo. Antes no hacía falta —el simulador
+// confirmaba cualquier cosa— y eso era justamente lo que había que arreglar:
+// un test que pasa contra un puerto que miente no prueba la promoción, prueba
+// la mentira.
 
 let proyecto: string;
 let tokenAdmin: string;
@@ -18,6 +24,15 @@ let tokenDev: string;
 
 const login = (f: { email: string; password: string }) =>
   request(app).post("/api/v1/auth/login").send({ email: f.email, password: f.password });
+
+/**
+ * Un txid que el simulador reconoce como suyo. El simulador es determinístico,
+ * así que dos `reference` distintas dan dos txid distintos.
+ */
+async function txidReal(reference: string): Promise<string> {
+  const recibo = await anchorPort().anchorCommitment({ sha256: "a".repeat(64), reference });
+  return recibo.txid;
+}
 
 async function evento(campos: {
   txid: string | null;
@@ -68,7 +83,7 @@ beforeAll(async () => {
 
 describe("reconciliarAnclajes", () => {
   it("promueve a Confirmed un Pending que ya está en la cadena, y le pone el timestamp", async () => {
-    const id = await evento({ txid: "f".repeat(64), status: "Pending" });
+    const id = await evento({ txid: await txidReal("barrido-1"), status: "Pending" });
 
     const resultado = await reconciliarAnclajes();
     expect(resultado.confirmados).toBeGreaterThanOrEqual(1);
@@ -89,7 +104,7 @@ describe("reconciliarAnclajes", () => {
   });
 
   it("es idempotente: la segunda pasada no vuelve a contar lo ya confirmado", async () => {
-    await evento({ txid: "e".repeat(64), status: "Pending" });
+    await evento({ txid: await txidReal("idempotencia-1"), status: "Pending" });
     await reconciliarAnclajes();
     const segunda = await reconciliarAnclajes();
     expect(segunda.confirmados).toBe(0);
@@ -133,7 +148,7 @@ describe("POST /evidence/reconcile", () => {
 
 describe("reconciliarParaLectura", () => {
   it("confirma lo que cae dentro del alcance", async () => {
-    const id = await evento({ txid: "1".repeat(64), status: "Pending" });
+    const id = await evento({ txid: await txidReal("alcance-1"), status: "Pending" });
 
     await reconciliarParaLectura({ projectId: proyecto });
 
@@ -150,7 +165,13 @@ describe("reconciliarParaLectura", () => {
         .where("slug", "=", FIXTURES.otroProyecto.slug)
         .executeTakeFirstOrThrow()
     ).id;
-    const id = await evento({ txid: "2".repeat(64), status: "Pending", projectId: ajeno });
+    // El txid es real a propósito: si fuera inventado, este test pasaría porque
+    // el simulador no lo conoce, no porque el alcance lo haya excluido.
+    const id = await evento({
+      txid: await txidReal("fuera-de-alcance-1"),
+      status: "Pending",
+      projectId: ajeno
+    });
 
     await reconciliarParaLectura({ projectId: proyecto });
 
@@ -212,7 +233,7 @@ describe("GET /investor/units/:id/news", () => {
         .where("unitReference", "=", FIXTURES.unidad.unitReference)
         .executeTakeFirstOrThrow()
     ).id;
-    const id = await evento({ txid: "5".repeat(64), status: "Pending" });
+    const id = await evento({ txid: await txidReal("lectura-1"), status: "Pending" });
     const tokenInvestor = (await login(FIXTURES.investor)).body.token;
 
     const res = await request(app)

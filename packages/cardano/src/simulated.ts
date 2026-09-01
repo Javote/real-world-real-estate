@@ -70,6 +70,17 @@ export class SimulatedAnchorAdapter implements AnchorPort {
   private readonly now: () => number;
   private readonly proofs = new Map<string, AnchorProof>();
 
+  /**
+   * Los txid que este simulador **efectivamente produjo**, con el momento en que
+   * entraron a su ledger.
+   *
+   * Existe para que `confirmedAt()` pueda contestar la misma pregunta que le
+   * hace el adaptador real a la cadena —*¿conocés esta transacción?*— en vez de
+   * afirmar que sí sobre cualquier cosa. Cubre los dos caminos, incluido el de
+   * metadata, que no deja `AnchorProof`.
+   */
+  private readonly bloques = new Map<string, number>();
+
   constructor(options: SimulatedAnchorOptions = {}) {
     this.store = options.store ?? new InMemoryLedgerStore();
     this.now = options.now ?? (() => Date.now());
@@ -131,7 +142,9 @@ export class SimulatedAnchorAdapter implements AnchorPort {
     }
     // Determinístico como el resto del simulador: anclar dos veces el mismo
     // archivo da el mismo txid, que es como se ve una doble escritura.
-    return { txid: txidOf("evidence", { sha256, reference }), status: "Confirmed" };
+    const txid = txidOf("evidence", { sha256, reference });
+    this.registrar(txid);
+    return { txid, status: "Confirmed" };
   }
 
   async verify(txid: string): Promise<AnchorProof | null> {
@@ -147,18 +160,39 @@ export class SimulatedAnchorAdapter implements AnchorPort {
   }
 
   /**
-   * En el simulador todo confirma al instante, incluidos los anclajes por
-   * metadata —que no dejan `AnchorProof`—. Por eso no se delega en `verify()`:
-   * un anclaje de evidencia daría `null` y la reconciliación creería que nunca
-   * confirmó.
+   * ¿Está esta transacción en la cadena de este simulador?
+   *
+   * **Antes devolvía `this.now()` para cualquier txid**, incluidos los que nunca
+   * produjo: afirmaba confirmación sobre transacciones que no conocía. Era el
+   * único lugar del código que confundía *tengo un hash* con *está confirmada*,
+   * y esas son dos cosas distintas incluso en Cardano de verdad — el txid es el
+   * hash del cuerpo de la transacción y existe antes de enviarla.
+   *
+   * Ahora contesta desde su propio registro, que es la misma pregunta que el
+   * adaptador real le hace a Blockfrost. Un txid ajeno da `null`.
+   *
+   * No se delega en `verify()`: eso devuelve un `AnchorProof`, que exige
+   * `outputRef` y `datum` —cosas de un anclaje **con hilo**—, así que un anclaje
+   * por metadata daría `null` aunque el simulador lo haya producido.
    */
-  async confirmedAt(_txid: string): Promise<number | null> {
-    return this.now();
+  async confirmedAt(txid: string): Promise<number | null> {
+    return this.bloques.get(txid) ?? null;
+  }
+
+  /**
+   * Anota el txid como incluido. **No pisa el timestamp si ya estaba**: el
+   * simulador es determinístico, así que anclar dos veces el mismo archivo
+   * devuelve el mismo txid, y el momento en que entró a la cadena no se mueve
+   * porque alguien vuelva a intentarlo.
+   */
+  private registrar(txid: string): void {
+    if (!this.bloques.has(txid)) this.bloques.set(txid, this.now());
   }
 
   private async commit(txid: string, datum: StageDatum): Promise<AnchorReceipt> {
     const outputRef: OutputRef = `${txid}#0`;
     await this.store.put({ outputRef, assetName: datum.stageRef, datum, spentByTxid: null });
+    this.registrar(txid);
     this.proofs.set(txid, { txid, outputRef, blockTimestamp: this.now(), datum });
     return { txid, outputRef, status: "Confirmed" };
   }

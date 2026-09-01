@@ -63,6 +63,17 @@ en cualquiera de los dos lados, los dos tests se ponen rojos. Es a propósito.
   base con el faucet y al pasar a clave de pago (D-078) la wallet miraba la enterprise, vacía. **El
   faucet pide una dirección, no una clave: pedile la que el servicio va a usar de verdad.**
 
+## El simulador es su propia cadena, y solo habla de ella
+
+`confirmedAt(txid)` contesta desde el registro de lo que **él mismo ancló**, y da `null` para
+cualquier otro txid (D-079). Antes devolvía `now()` para todo, o sea que afirmaba confirmación sobre
+transacciones ajenas.
+
+**El punto general, que vale para el adaptador real también:** tener un txid no es tener una
+confirmación. El txid es el hash del cuerpo de la transacción y existe antes de enviarla; un submit
+exitoso solo dice que el nodo la aceptó en su mempool. Por eso `openThread`/`advanceThread` devuelven
+`Pending` con txid y la promoción a `Confirmed` la hace `confirmedAt()` (D-077).
+
 ## El adaptador real es agnóstico del provider, y eso no es cosmético
 
 `LucidAnchorAdapter` recibe una instancia de Lucid ya configurada, así que **el mismo código** corre
