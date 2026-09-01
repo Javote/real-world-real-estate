@@ -60,7 +60,7 @@ distingue un anclaje real de uno inventado.
 | 5 | ~~Commit de `render.yaml`~~ | 🟢 **hecho 2026-08-31** |
 | 6 | Verificar el arranque en los logs | 🟢 |
 | 7 | Un anclaje real de punta a punta | 🟢 |
-| 8 | Reconciliación por demanda, sin cron | 🟢 |
+| 8 | ~~Reconciliación por demanda, sin cron~~ | 🟢 **hecho 2026-08-31** |
 | 9 | Defensa 2 (columna `anchorMode`) y defensa 3 (el simulador devuelve `Pending`) | 🟡 decide el dueño |
 
 **1. Borrar el anclaje simulado de la base de producción.** ✅ **Hecho el 2026-08-31 por el dueño.**
@@ -230,6 +230,8 @@ descubrirlo en la demo.
 **7. Un anclaje real de punta a punta**, verificado contra Koios, y reconciliado a mano con
 `POST /api/v1/evidence/reconcile`.
 
+**8. Reconciliación por demanda, sin cron.** ✅ **Hecho el 2026-08-31** — D-077.
+
 **8. Reconciliación por demanda, sin cron.** Se descartó el cron de reconciliación, así que hasta
 que exista este paso ese `curl` a mano es **lo único** que mueve `Pending` → `Confirmed`: con el
 modo real encendido y sin correrlo, la evidencia queda anclada de verdad y la UI dice "Pendiente"
@@ -240,8 +242,8 @@ consultar la cadena para ese evento antes de responder. La confirmación llega e
 alguien la mira, que es el único en que importa; el `POST /reconcile` queda para barridos a mano.
 La alternativa barata —enganchar `reconciliarAnclajes()` al final de cada anclaje nuevo— no cuesta
 requests, pero deja sin confirmar el anclaje solitario hasta que llegue el siguiente.
-El comentario de `apps/api/src/domain/reconcile.ts:14-17` todavía propone un cron de GitHub
-Actions: se corrige en el mismo commit.
+El comentario de `reconcile.ts` que proponía un cron de GitHub Actions se corrigió en el mismo
+commit.
 
 **9. Las otras dos defensas.** Van después del encendido, no antes:
 - **Columna `anchorMode` en `OnChainEvent`**, escrita desde `anchorPort().mode` (el puerto ya lo

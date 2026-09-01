@@ -5,6 +5,7 @@ import { type Request, Router } from "express";
 import { createId } from "../db/id";
 import { anchorCommitmentEvent, commitmentOf } from "../domain/anchoring";
 import { compileDossier } from "../domain/dossier";
+import { reconciliarParaLectura } from "../domain/reconcile";
 import { db } from "../lib/db";
 import { authenticate, requireRole } from "../middlewares/auth";
 import { writeAuditLog } from "../utils/audit";
@@ -193,6 +194,10 @@ router.get(
     if (req.user!.role !== "admin" && unidad.investorId !== req.user!.id) {
       return res.status(403).json({ message: "Forbidden" });
     }
+
+    // El anclaje `Pending` que ya está en la cadena se confirma acá, en el
+    // momento en que alguien lo mira (D-077).
+    await reconciliarParaLectura({ projectId: unidad.projectId });
 
     const eventos = await db
       .selectFrom("OnChainEvent")

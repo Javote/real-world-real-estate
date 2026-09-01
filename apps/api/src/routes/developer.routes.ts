@@ -3,6 +3,7 @@ import { type Request, Router } from "express";
 import { z } from "zod";
 import { createId } from "../db/id";
 import { anchorCommitmentEvent } from "../domain/anchoring";
+import { reconciliarParaLectura } from "../domain/reconcile";
 import { db } from "../lib/db";
 import { authenticate, projectScope, requireProjectAccess, requireRole } from "../middlewares/auth";
 import { writeAuditLog } from "../utils/audit";
@@ -342,6 +343,8 @@ router.post("/documents", async (req, res) => {
     return res.status(400).json({ message: "Document has no hash", code: "NO_HASH" });
   }
 
+  await reconciliarParaLectura({ evidenceId: documento.id });
+
   const yaAnclado = await db
     .selectFrom("OnChainEvent")
     .selectAll()
@@ -391,6 +394,10 @@ router.get("/kpis", requireRole("admin", "developer"), async (req, res) => {
     .select(["state"])
     .where("projectId", "in", ids)
     .execute();
+
+  // El KPI cuenta `Confirmed`: sin esto, un anclaje que ya entró en un bloque
+  // pero sigue `Pending` en la base lo hace contar de menos.
+  await reconciliarParaLectura({ projectIds: ids });
 
   const anclados = await db
     .selectFrom("OnChainEvent")

@@ -2,6 +2,7 @@ import { createHash } from "node:crypto";
 import type { Dossier, DossierArtifact, DossierStatus } from "@plataforma/shared";
 import { createId } from "../db/id";
 import { db } from "../lib/db";
+import { reconciliarParaLectura } from "./reconcile";
 
 // Compilación del dossier (M2-D4 P8, M2-D5 filas 26-29) — **M3-BE-12**.
 //
@@ -182,6 +183,8 @@ export async function compileDossier(unitId: string): Promise<CompiledDossier | 
       .returningAll()
       .executeTakeFirstOrThrow();
   }
+
+  if (fila.status === "signed") await reconciliarParaLectura({ referenceId: fila.id });
 
   const firma =
     fila.status === "signed"

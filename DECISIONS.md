@@ -22,7 +22,7 @@ ya no existen. Partirlo no pierde nada: el porqué sigue estando, deja de pesar.
 > se contradice internamente, (b) es un error de redacción, o (c) seguirlo al pie contradiría una
 > verdad del producto declarada por el dueño — **nunca por conveniencia**.
 >
-> **La numeración no se recicla.** Las decisiones nuevas siguen desde D-077.
+> **La numeración no se recicla.** Las decisiones nuevas siguen desde D-078.
 
 ## Desvíos vigentes
 
@@ -501,6 +501,36 @@ aserción sobre el string `"real"` habría pasado igual y no habría probado nad
 
 Verificado en los dos sentidos antes de commitear: con `ANCHOR_MODE: simulated` —la configuración
 que estuvo desplegada— el test se pone rojo, y sacando cualquier variable declarada, también.
+
+## D-077 — La reconciliación la dispara la lectura, no un cron
+
+Cuando una pantalla va a mostrar un `OnChainEvent` `Pending` **que tiene TXID**, se consulta la
+cadena para ese anclaje **antes** de responder (`reconciliarParaLectura`, acotado por `projectId`,
+`stageId`, `evidenceId` o `referenceId`). `POST /evidence/reconcile` queda para barridos a mano.
+
+**Por qué hace falta algo.** Anclar devuelve `Pending` y eso es correcto: la transacción está
+enviada, no confirmada, y la regla 17 prohíbe afirmar lo que no se puede sustanciar. Pero nadie
+movía `Pending → Confirmed`: con el modo real encendido, la evidencia quedaba anclada de verdad y
+la UI decía "Pendiente" para siempre. No se notaba porque el simulador devuelve `Confirmed` directo.
+
+**Por qué la lectura y no un cron.** El free tier no tiene workers y un `setInterval` deja de contar
+cuando Render duerme el servicio (D-003 · D-040). Un cron externo es un servicio más que mantener y
+un secreto permanente que rotar, para un problema que todavía no duele. La confirmación llega en el
+momento en que alguien la mira, que es el único en que importa.
+
+**Antes de la consulta y no después de la respuesta.** Trece sitios leen `OnChainEvent` con formas
+distintas —unos `selectAll`, otros proyecciones con alias—, así que reconciliar la respuesta pedía
+trece mapeos. Actualizando la base primero, la consulta que ya existía ve el estado nuevo sin
+enterarse.
+
+**Lo que no puede hacer: romper la pantalla.** Si la cadena no responde, se loguea y se sigue con lo
+que hay en la base — `Pending`, que es la verdad de lo que podemos sustanciar. Es SPEC-013
+§Invariante 2 extendido a la lectura. Con el puerto inhabilitado (D-075) ni siquiera consulta la
+base: en una instancia sin secretos eso sería todas las lecturas.
+
+**El costo, acotado a propósito:** tope de 5 anclajes por lectura. En la práctica hay cero o uno —un
+evento confirma en un bloque y deja de estar `Pending`—; lo que quede lo levanta la lectura
+siguiente o el barrido.
 
 ## D-008 — Validador state-thread con núcleo puro separado
 

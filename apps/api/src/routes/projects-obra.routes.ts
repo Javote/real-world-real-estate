@@ -4,6 +4,7 @@ import { INITIAL_STAGE_STATE } from "@plataforma/shared";
 import { type Request, Router } from "express";
 import { z } from "zod";
 import { createId } from "../db/id";
+import { reconciliarParaLectura } from "../domain/reconcile";
 import { anchorEvent, recordOnChainEvent } from "../domain/stage-transition";
 import { db } from "../lib/db";
 import { storage } from "../lib/storage";
@@ -126,6 +127,11 @@ router.get(
       .executeTakeFirst();
 
     if (!stage) return res.status(404).json({ message: "Stage not found" });
+
+    // Antes de leer los eventos, no después: un anclaje `Pending` que ya está en
+    // un bloque se confirma acá y la consulta de abajo lo ve `Confirmed`
+    // (D-077). Es la pantalla donde se mira la prueba de un stage.
+    await reconciliarParaLectura({ stageId: stage.id });
 
     const [evidences, bundle, eventos] = await Promise.all([
       // Sin `storagePath` (D-011): esta lista sale al cliente.

@@ -2,7 +2,8 @@ import request from "supertest";
 import { beforeAll, describe, expect, it } from "vitest";
 import app from "../src/app";
 import { createId } from "../src/db/id";
-import { reconciliarAnclajes } from "../src/domain/reconcile";
+import { reconciliarAnclajes, reconciliarParaLectura } from "../src/domain/reconcile";
+import { anchorPort } from "../src/lib/anchor";
 import { db } from "../src/lib/db";
 import { FIXTURES } from "./global-setup";
 
@@ -18,17 +19,22 @@ let tokenDev: string;
 const login = (f: { email: string; password: string }) =>
   request(app).post("/api/v1/auth/login").send({ email: f.email, password: f.password });
 
-async function evento(campos: { txid: string | null; status: "Pending" | "Confirmed" }) {
+async function evento(campos: {
+  txid: string | null;
+  status: "Pending" | "Confirmed";
+  projectId?: string;
+  referenceId?: string;
+}) {
   const id = createId();
   const ahora = new Date();
   await db
     .insertInto("OnChainEvent")
     .values({
       id,
-      projectId: proyecto,
+      projectId: campos.projectId ?? proyecto,
       stageId: null,
       evidenceId: null,
-      referenceId: createId(),
+      referenceId: campos.referenceId ?? createId(),
       eventIndex: 0,
       eventType: "EVIDENCE_ANCHOR",
       fromState: null,
@@ -115,5 +121,105 @@ describe("POST /evidence/reconcile", () => {
       .post("/api/v1/evidence/reconcile")
       .set("Authorization", `Bearer ${tokenAdmin}`);
     expect(res.status).not.toBe(404);
+  });
+});
+
+// ── D-077 · la reconciliación la dispara la lectura ────────────────────────
+//
+// Sin esto, un anclaje real queda `Pending` para siempre: nadie mueve
+// `Pending → Confirmed` salvo el barrido a mano. Hoy no se nota porque el
+// simulador devuelve `Confirmed` directo; con el modo real encendido, la
+// evidencia queda anclada de verdad y la UI dice "Pendiente" eternamente.
+
+describe("reconciliarParaLectura", () => {
+  it("confirma lo que cae dentro del alcance", async () => {
+    const id = await evento({ txid: "1".repeat(64), status: "Pending" });
+
+    await reconciliarParaLectura({ projectId: proyecto });
+
+    expect((await leer(id)).status).toBe("Confirmed");
+  });
+
+  // El alcance es lo que mantiene barata la lectura: mirar todo en cada pantalla
+  // sería una request al proveedor por cada anclaje pendiente del sistema.
+  it("no toca lo que cae fuera del alcance", async () => {
+    const ajeno = (
+      await db
+        .selectFrom("Project")
+        .select("id")
+        .where("slug", "=", FIXTURES.otroProyecto.slug)
+        .executeTakeFirstOrThrow()
+    ).id;
+    const id = await evento({ txid: "2".repeat(64), status: "Pending", projectId: ajeno });
+
+    await reconciliarParaLectura({ projectId: proyecto });
+
+    expect((await leer(id)).status).toBe("Pending");
+  });
+
+  // La propiedad que importa más que confirmar: una cadena caída no puede
+  // tumbar una pantalla. El registro no depende del anclaje, tampoco para leer
+  // (SPEC-013 §Invariante 2).
+  it("se traga el error del proveedor en vez de propagarlo", async () => {
+    const id = await evento({ txid: "3".repeat(64), status: "Pending" });
+    const puerto = anchorPort();
+    const original = puerto.confirmedAt;
+    puerto.confirmedAt = async () => {
+      throw new Error("Blockfrost 502");
+    };
+
+    try {
+      await expect(reconciliarParaLectura({ projectId: proyecto })).resolves.toBeUndefined();
+      expect((await leer(id)).status).toBe("Pending");
+    } finally {
+      puerto.confirmedAt = original;
+    }
+  });
+
+  it("no consulta la cadena si el puerto está inhabilitado", async () => {
+    const id = await evento({ txid: "4".repeat(64), status: "Pending" });
+    const puerto = anchorPort();
+    const modoOriginal = puerto.mode;
+    let consultas = 0;
+    const original = puerto.confirmedAt;
+    puerto.confirmedAt = async (txid) => {
+      consultas++;
+      return original.call(puerto, txid);
+    };
+    Object.defineProperty(puerto, "mode", { value: "disabled", configurable: true });
+
+    try {
+      await reconciliarParaLectura({ projectId: proyecto });
+
+      expect(consultas).toBe(0);
+      expect((await leer(id)).status).toBe("Pending");
+    } finally {
+      Object.defineProperty(puerto, "mode", { value: modoOriginal, configurable: true });
+      puerto.confirmedAt = original;
+    }
+  });
+});
+
+describe("GET /investor/units/:id/news", () => {
+  // La prueba de que el cableado existe, y no solo la función: sin la llamada en
+  // la ruta, la pantalla sigue mostrando "Pendiente" sobre algo ya confirmado.
+  it("confirma el anclaje pendiente del proyecto antes de responder", async () => {
+    const unidad = (
+      await db
+        .selectFrom("Unit")
+        .select("id")
+        .where("projectId", "=", proyecto)
+        .where("unitReference", "=", FIXTURES.unidad.unitReference)
+        .executeTakeFirstOrThrow()
+    ).id;
+    const id = await evento({ txid: "5".repeat(64), status: "Pending" });
+    const tokenInvestor = (await login(FIXTURES.investor)).body.token;
+
+    const res = await request(app)
+      .get(`/api/v1/investor/units/${unidad}/news`)
+      .set("Authorization", `Bearer ${tokenInvestor}`);
+
+    expect(res.status).toBe(200);
+    expect((await leer(id)).status).toBe("Confirmed");
   });
 });

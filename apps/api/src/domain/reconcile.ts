@@ -2,7 +2,7 @@ import { anchorPort } from "../lib/anchor";
 import { db } from "../lib/db";
 
 // Reconciliación: promover a `Confirmed` los anclajes que ya están en la cadena
-// (SPEC-013 §C, la parte mínima).
+// (SPEC-013 §C).
 //
 // **Por qué existe.** Anclar devuelve `Pending` y es lo correcto: en ese momento
 // la transacción está enviada, no confirmada, y la regla 17 prohíbe mostrar una
@@ -12,13 +12,69 @@ import { db } from "../lib/db";
 //
 // **No hay `setInterval` acá, y es deliberado** (D-003 · D-040): un timer dentro
 // de la API deja de contar cuando Render duerme el servicio a los 15 minutos, y
-// el free tier no tiene workers. El disparo es externo — hoy `POST
-// /evidence/reconcile`, mañana un cron de GitHub Actions contra ese mismo
-// endpoint.
+// el free tier no tiene workers.
+//
+// **Tampoco hay cron, y eso también es una decisión** (D-077, y ver la memoria
+// del cron revertido): el disparo es la propia lectura. Cuando alguien abre una
+// pantalla que muestra un anclaje `Pending` con TXID, se consulta la cadena para
+// ese anclaje antes de responder. La confirmación llega en el momento en que
+// alguien la mira, que es el único en que importa, y no hay servicio nuevo que
+// mantener ni secreto permanente que rotar. `POST /evidence/reconcile` queda
+// para barridos a mano.
 
 export interface ResultadoReconciliacion {
   revisados: number;
   confirmados: number;
+}
+
+/**
+ * Qué anclajes mirar. Son los cuatro ejes por los que las lecturas del repo ya
+ * buscan un `OnChainEvent`; sin alcance se mira todo, que es el barrido.
+ *
+ * `projectIds` existe para los KPIs, que cuentan sobre varios proyectos.
+ */
+export interface AlcanceReconciliacion {
+  projectId?: string;
+  projectIds?: string[];
+  stageId?: string;
+  evidenceId?: string;
+  referenceId?: string;
+}
+
+/**
+ * Cuántos anclajes se consultan como mucho en una lectura.
+ *
+ * Es chico a propósito: cada uno es una request a Blockfrost metida adentro del
+ * tiempo de respuesta de alguien. En la práctica hay cero o uno —los eventos
+ * confirman en un bloque y dejan de estar `Pending`—, y el tope está para que
+ * una acumulación rara no convierta una pantalla en una espera. Lo que quede sin
+ * mirar lo levanta la lectura siguiente, o el barrido.
+ */
+const TOPE_POR_LECTURA = 5;
+
+/** El barrido a mano: `POST /evidence/reconcile`. */
+export async function reconciliarAnclajes(limite = 50): Promise<ResultadoReconciliacion> {
+  return reconciliar({}, limite);
+}
+
+/**
+ * El disparo por lectura. **Se llama antes de la consulta, no después.**
+ *
+ * Reconciliar la *respuesta* obligaría a un mapeo por cada sitio de lectura, y
+ * hay trece con formas distintas —unos `selectAll`, otros proyecciones con
+ * alias—. Actualizando la base primero, la consulta que ya existía ve el estado
+ * nuevo sin enterarse de que esto pasó.
+ *
+ * **Nunca hace fallar la lectura.** Si la cadena no responde, o si el puerto
+ * está inhabilitado, la pantalla se dibuja con lo que haya en la base: eso es
+ * `Pending`, que es la verdad de lo que podemos sustanciar (regla 17).
+ */
+export async function reconciliarParaLectura(alcance: AlcanceReconciliacion): Promise<void> {
+  try {
+    await reconciliar(alcance, TOPE_POR_LECTURA);
+  } catch (error) {
+    console.error("[reconcile] la reconciliación por lectura falló", { alcance, error });
+  }
 }
 
 /**
@@ -28,15 +84,28 @@ export interface ResultadoReconciliacion {
  * Un evento sin `txid` **no se toca**: es un anclaje que falló al enviarse
  * (`Failed`) o que todavía no se envió, y ahí no hay nada que consultar.
  */
-export async function reconciliarAnclajes(limite = 50): Promise<ResultadoReconciliacion> {
-  const pendientes = await db
+async function reconciliar(
+  alcance: AlcanceReconciliacion,
+  limite: number
+): Promise<ResultadoReconciliacion> {
+  // Con el puerto inhabilitado no hay a quién preguntarle, y cada consulta sería
+  // una excepción garantizada. Se corta antes de tocar la base: en una instancia
+  // sin los secretos cargados, esto es todas las lecturas.
+  if (anchorPort().mode === "disabled") return { revisados: 0, confirmados: 0 };
+
+  let query = db
     .selectFrom("OnChainEvent")
     .select(["id", "txid"])
     .where("status", "=", "Pending")
-    .where("txid", "is not", null)
-    .orderBy("createdAt", "asc")
-    .limit(limite)
-    .execute();
+    .where("txid", "is not", null);
+
+  if (alcance.projectId) query = query.where("projectId", "=", alcance.projectId);
+  if (alcance.projectIds) query = query.where("projectId", "in", alcance.projectIds);
+  if (alcance.stageId) query = query.where("stageId", "=", alcance.stageId);
+  if (alcance.evidenceId) query = query.where("evidenceId", "=", alcance.evidenceId);
+  if (alcance.referenceId) query = query.where("referenceId", "=", alcance.referenceId);
+
+  const pendientes = await query.orderBy("createdAt", "asc").limit(limite).execute();
 
   let confirmados = 0;
 

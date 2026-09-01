@@ -4,6 +4,7 @@ import { z } from "zod";
 import { anchorCommitmentEvent, commitmentOf } from "../domain/anchoring";
 import { compileDossier } from "../domain/dossier";
 import { notifyUnitInvestor } from "../domain/notify";
+import { reconciliarParaLectura } from "../domain/reconcile";
 import { db } from "../lib/db";
 import { authenticate, requireRole } from "../middlewares/auth";
 import { writeAuditLog } from "../utils/audit";
@@ -137,6 +138,8 @@ router.post("/dossiers/:id/sign", async (req: Request<{ id: string }>, res) => {
   if (!fila) return res.status(404).json({ message: "Dossier not found" });
 
   if (fila.status === "signed") {
+    await reconciliarParaLectura({ referenceId: fila.id });
+
     const anterior = await db
       .selectFrom("OnChainEvent")
       .selectAll()

@@ -3,7 +3,7 @@ import { merkleProof } from "@plataforma/shared";
 import { type Request, Router } from "express";
 import { z } from "zod";
 import { createId } from "../db/id";
-import { reconciliarAnclajes } from "../domain/reconcile";
+import { reconciliarAnclajes, reconciliarParaLectura } from "../domain/reconcile";
 import { anchorPort } from "../lib/anchor";
 import { db } from "../lib/db";
 import { storage } from "../lib/storage";
@@ -195,6 +195,11 @@ router.post(
     if (!evidencia) {
       return res.status(404).json({ message: "Evidence not found" });
     }
+
+    // Si ya está anclada, la respuesta es ese evento: se confirma antes de
+    // devolverlo, para no contestar "Pendiente" sobre algo que ya está en un
+    // bloque (D-077).
+    await reconciliarParaLectura({ evidenceId: evidencia.id });
 
     const yaAnclada = await db
       .selectFrom("OnChainEvent")
