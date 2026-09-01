@@ -204,7 +204,7 @@ El inventario completo —versiones reales, qué corre y qué está solo decidid
 |---|---|---|
 | 🟢 Verde | Componentes según M2-D3, superficies según M2-D5, tests, docs, seeds | El LLM implementa directo |
 | 🟡 Amarillo | Migraciones, auth/permisos/guards, `packages/cardano`, archivos/S3, CI/deploy, **validadores Aiken** | El LLM propone; revisión humana línea por línea |
-| 🔴 Rojo | Seeds/keys/firmas, `SERVICE_WALLET_SEED`, hashing y construcción de commitments | El humano lidera; el revisor debe poder explicar cada línea sin mirar el chat |
+| 🔴 Rojo | Claves y firmas, `SERVICE_WALLET_PRIVATE_KEY`, hashing y construcción de commitments | El humano lidera; el revisor debe poder explicar cada línea sin mirar el chat |
 
 Si dudás del nivel, es el más alto de los dos.
 

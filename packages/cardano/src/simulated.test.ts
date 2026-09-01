@@ -180,7 +180,7 @@ describe("createAnchorPort", () => {
   // `yaci.test.ts` y en Preprod a mano. Lo que sí se prueba acá —y es lo que
   // más barato se rompe— son los rechazos de configuración: tienen que ocurrir
   // ANTES de tocar la red, o el error que llega es un timeout en vez de "te
-  // falta la seed".
+  // falta la clave".
 
   it("rechaza mainnet, que está fuera de alcance", async () => {
     await expect(
@@ -188,26 +188,26 @@ describe("createAnchorPort", () => {
         mode: "real",
         network: "Mainnet",
         blockfrostApiKey: "k",
-        seed: "s"
+        privateKey: "s"
       })
     ).rejects.toThrow(/Mainnet está fuera de alcance/);
   });
 
   it("exige BLOCKFROST_API_KEY", async () => {
-    await expect(createAnchorPort({ mode: "real", seed: "s" })).rejects.toThrow(
+    await expect(createAnchorPort({ mode: "real", privateKey: "s" })).rejects.toThrow(
       /exige BLOCKFROST_API_KEY/
     );
   });
 
-  it("exige SERVICE_WALLET_SEED", async () => {
+  it("exige SERVICE_WALLET_PRIVATE_KEY", async () => {
     await expect(createAnchorPort({ mode: "real", blockfrostApiKey: "k" })).rejects.toThrow(
-      /exige SERVICE_WALLET_SEED/
+      /exige SERVICE_WALLET_PRIVATE_KEY/
     );
   });
 
   it("una variable en blanco cuenta como ausente, no como valor", async () => {
     await expect(
-      createAnchorPort({ mode: "real", blockfrostApiKey: "  ", seed: "s" })
+      createAnchorPort({ mode: "real", blockfrostApiKey: "  ", privateKey: "s" })
     ).rejects.toThrow(/exige BLOCKFROST_API_KEY/);
   });
 });

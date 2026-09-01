@@ -109,6 +109,15 @@ export interface LucidAnchorOptions {
 export class LucidAnchorAdapter implements AnchorPort {
   readonly mode = "real" as const;
 
+  /**
+   * La dirección de la wallet de servicio — **la que hay que fondear**.
+   *
+   * Se expone para que el arranque la escriba en el log. Sin eso, "el anclaje
+   * falla" y "la wallet está vacía" son el mismo síntoma, y hay que ir a buscar
+   * la dirección a mano para distinguirlos.
+   */
+  readonly walletAddress: string;
+
   private readonly lucid: LucidEvolution;
   private readonly refs: StageScriptRefs;
   private readonly now: () => number;
@@ -120,6 +129,7 @@ export class LucidAnchorAdapter implements AnchorPort {
   private constructor(
     lucid: LucidEvolution,
     refs: StageScriptRefs,
+    walletAddress: string,
     now: () => number,
     validityWindowMs: number,
     tipLagMarginMs: number,
@@ -127,6 +137,7 @@ export class LucidAnchorAdapter implements AnchorPort {
   ) {
     this.lucid = lucid;
     this.refs = refs;
+    this.walletAddress = walletAddress;
     this.now = now;
     this.validityWindowMs = validityWindowMs;
     this.tipLagMarginMs = tipLagMarginMs;
@@ -155,6 +166,7 @@ export class LucidAnchorAdapter implements AnchorPort {
     return new LucidAnchorAdapter(
       options.lucid,
       refs,
+      walletAddress,
       options.now ?? (() => Date.now()),
       options.validityWindowMs ?? VALIDITY_WINDOW_MS,
       options.tipLagMarginMs ?? TIP_LAG_MARGIN_MS,

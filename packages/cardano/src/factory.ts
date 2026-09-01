@@ -23,8 +23,21 @@ export interface AnchorPortOptions {
   store?: LedgerStore | undefined;
   /** Solo `real`. La key de Blockfrost, con el prefijo de red que le corresponde. */
   blockfrostApiKey?: string | undefined;
-  /** Solo `real`. La seed de la wallet de servicio, que firma los anclajes. */
-  seed?: string | undefined;
+  /**
+   * Solo `real`. La **clave de pago** de la wallet de servicio, en bech32
+   * (`ed25519e_sk…`), que firma los anclajes.
+   *
+   * **Es una clave de pago y no una seed, a propósito** (D-078). Una seed BIP-39
+   * deriva el árbol HD entero —todas las cuentas, todas las direcciones, la
+   * clave de staking—; el servicio solo necesita firmar con una. Darle la seed
+   * era más autoridad de la necesaria en una variable de entorno.
+   *
+   * Lucid solo deriva una dirección **enterprise** desde una clave de pago. El
+   * *payment credential* es el mismo que el de la dirección base equivalente, y
+   * ese hash es el admin del validador: por eso el cambio no mueve la dirección
+   * del script ni deja inalcanzables los hilos ya anclados.
+   */
+  privateKey?: string | undefined;
   /** Solo `real`. Default `Preprod` (D-013). */
   network?: string | undefined;
   /** Solo `real`. Para apuntar a un devnet; en Preprod sale de la red. */
@@ -48,7 +61,7 @@ function requerida(valor: string | undefined, nombre: string): string {
  * **Es async por `real` y no por gusto:** `LucidAnchorAdapter.create()` le
  * pregunta la dirección a la wallet para derivar el admin key hash, y eso es
  * I/O. Por eso el puerto se arma en el arranque del proceso —antes de escuchar,
- * como las migraciones— y no al importar un módulo: una seed inválida o un
+ * como las migraciones— y no al importar un módulo: una clave inválida o un
  * Blockfrost caído tienen que impedir que la API levante, no romper el primer
  * anclaje (D-042).
  *
@@ -77,7 +90,7 @@ export async function createAnchorPort(options: AnchorPortOptions): Promise<Anch
   }
 
   const apiKey = requerida(options.blockfrostApiKey, "BLOCKFROST_API_KEY");
-  const seed = requerida(options.seed, "SERVICE_WALLET_SEED");
+  const privateKey = requerida(options.privateKey, "SERVICE_WALLET_PRIVATE_KEY");
   const url = options.blockfrostUrl?.trim() || BLOCKFROST_URL[network];
 
   if (!url) {
@@ -87,7 +100,7 @@ export async function createAnchorPort(options: AnchorPortOptions): Promise<Anch
   }
 
   const lucid = await Lucid(new Blockfrost(url, apiKey), network as Network);
-  lucid.selectWallet.fromSeed(seed);
+  lucid.selectWallet.fromPrivateKey(privateKey);
 
   return LucidAnchorAdapter.create({
     lucid,

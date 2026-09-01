@@ -81,7 +81,7 @@ describe("render.yaml — el anclaje que quedaría desplegado", () => {
 
   it("declara los dos secretos del modo real, y como secretos", () => {
     const env = envDeclaradas();
-    for (const clave of ["BLOCKFROST_API_KEY", "SERVICE_WALLET_SEED"]) {
+    for (const clave of ["BLOCKFROST_API_KEY", "SERVICE_WALLET_PRIVATE_KEY"]) {
       expect(env.get(clave), `${clave} no está declarada en render.yaml`).toBeDefined();
       // `sync: false` = se carga a mano en el dashboard. Un `value:` acá sería
       // un secreto commiteado (regla 12).

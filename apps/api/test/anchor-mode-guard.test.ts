@@ -88,11 +88,11 @@ describe("el puerto inhabilitado", () => {
 
 describe("el modo real sin sus secretos", () => {
   const BLOCKFROST_API_KEY = process.env.BLOCKFROST_API_KEY;
-  const SERVICE_WALLET_SEED = process.env.SERVICE_WALLET_SEED;
+  const SERVICE_WALLET_PRIVATE_KEY = process.env.SERVICE_WALLET_PRIVATE_KEY;
 
   afterEach(() => {
     restaurar("BLOCKFROST_API_KEY", BLOCKFROST_API_KEY);
-    restaurar("SERVICE_WALLET_SEED", SERVICE_WALLET_SEED);
+    restaurar("SERVICE_WALLET_PRIVATE_KEY", SERVICE_WALLET_PRIVATE_KEY);
   });
 
   // Este es el caso que dejaba producción sin API: `render.yaml` en `real` y los
@@ -101,7 +101,7 @@ describe("el modo real sin sus secretos", () => {
     process.env.ANCHOR_MODE = "real";
     process.env.DATABASE_URL = "file:./.data/test.sqlite";
     delete process.env.BLOCKFROST_API_KEY;
-    delete process.env.SERVICE_WALLET_SEED;
+    delete process.env.SERVICE_WALLET_PRIVATE_KEY;
 
     const puerto = await initAnchorPort();
 

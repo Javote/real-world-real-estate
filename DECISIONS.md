@@ -22,7 +22,7 @@ ya no existen. Partirlo no pierde nada: el porqué sigue estando, deja de pesar.
 > se contradice internamente, (b) es un error de redacción, o (c) seguirlo al pie contradiría una
 > verdad del producto declarada por el dueño — **nunca por conveniencia**.
 >
-> **La numeración no se recicla.** Las decisiones nuevas siguen desde D-078.
+> **La numeración no se recicla.** Las decisiones nuevas siguen desde D-079.
 
 ## Desvíos vigentes
 
@@ -531,6 +531,42 @@ base: en una instancia sin secretos eso sería todas las lecturas.
 **El costo, acotado a propósito:** tope de 5 anclajes por lectura. En la práctica hay cero o uno —un
 evento confirma en un bloque y deja de estar `Pending`—; lo que quede lo levanta la lectura
 siguiente o el barrido.
+
+## D-078 — Una sola clave, una sola vez: el servicio recibe una clave de pago
+
+`SERVICE_WALLET_PRIVATE_KEY` (bech32) es **el único secreto de wallet** que el servicio conoce.
+Reemplaza a `SERVICE_WALLET_SEED`. No hay una segunda variable con la dirección.
+
+**Por qué no una seed.** Una seed BIP-39 deriva el árbol HD entero: todas las cuentas, todas las
+direcciones, la clave de staking. El servicio solo necesita firmar con **una** clave de pago. Darle
+la seed era más autoridad de la necesaria en una variable de entorno.
+
+**Por qué tampoco una variable con la dirección.** La dirección se **deriva** de la clave, así que
+es imposible configurar una que la clave no controle. Dos variables serían dos cosas que pueden
+desincronizarse, y el síntoma de esa desincronización es una wallet que parece vacía.
+
+**La dirección es "enterprise", y no es un capricho de la librería.** Una dirección base es *pago +
+staking*: dos credenciales, o sea dos claves. Con una sola clave de pago **no existe** la opción de
+armar una base. La forma de la dirección es la consecuencia del requisito, no una concesión — y para
+un servicio que paga fees y nunca delega, no tener credencial de staking es estrictamente menos
+material de clave, el mismo principio que hizo sacar la seed.
+
+**Cómo se descubrió, porque el rodeo enseñó algo.** La wallet original nació de una seed y quedó
+fondeada en su dirección **base**. Al pasar a clave de pago, Lucid derivaba la *enterprise* y la
+wallet parecía vacía —la clave podía gastar esos UTxOs, el payment credential es el mismo, pero
+Lucid miraba otra dirección—. Se llegó a proponer derivar la clave de la seed y mudar los fondos, y
+hasta escribir un adaptador de `Wallet` propio para conservar la dirección base. **Las dos cosas
+eran arreglos de un problema que no había que tener**: la wallet no debió nacer de una seed. Se
+generó una nueva y se fondeó la dirección que el servicio realmente mira. El faucet pide una
+dirección, no una clave.
+
+**Lo que queda como regla:** `wallet:new` genera la clave, la escribe con permisos 600, **no la
+imprime**, y sí imprime la dirección y el admin. El arranque de la API loguea la dirección de la
+wallet (`server.ts`), para que "el anclaje falla" y "la wallet está vacía" dejen de ser el mismo
+síntoma.
+
+**Sigue sin poder rotarse.** El admin del validador es el hash de esta clave; reemplazarla deja
+inalcanzables los hilos ya anclados, sin ningún error visible.
 
 ## D-008 — Validador state-thread con núcleo puro separado
 

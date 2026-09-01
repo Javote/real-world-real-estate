@@ -15,7 +15,7 @@ no sepa que Cardano existe.
 | | Qué deja funcionando | Qué introduce | Riesgo |
 |---|---|---|---|
 | **A · el puerto y el simulador** ✅ | El ciclo completo: declarar → anclar → TXID → estado del hilo, sin red | `packages/cardano`, `AnchorPort`, adaptador `simulated` con ledger propio | ninguno: sin secretos, sin red, corre en CI |
-| **B · el adaptador real** ✅ *(local)* | Transacciones de verdad: contra el `Emulator` en CI y contra un devnet local con Conway + PlutusV3 | Lucid Evolution, códec CBOR con valor dorado, dirección derivada del blueprint, `compose.dev.yml` | el códec era donde vivían los bugs — cerrado con el dorado. **Falta Preprod**: 🔴 `SERVICE_WALLET_SEED` y cuenta Blockfrost |
+| **B · el adaptador real** ✅ *(local)* | Transacciones de verdad: contra el `Emulator` en CI y contra un devnet local con Conway + PlutusV3 | Lucid Evolution, códec CBOR con valor dorado, dirección derivada del blueprint, `compose.dev.yml` | el códec era donde vivían los bugs — cerrado con el dorado. **Falta Preprod**: 🔴 `SERVICE_WALLET_PRIVATE_KEY` y cuenta Blockfrost |
 | **C · reconciliación y verificación** | `/verify` verifica contra la cadena, no contra la API | `reconcile()` en lectura, `verify()` público, estados de la UI | medio: depende de disponibilidad de Blockfrost |
 
 **Lo que queda de B es Preprod, y no es código:** el adaptador es agnóstico del provider, así que pasar del devnet local a Preprod es cambiar la instancia de Lucid y tener una wallet fondeada.

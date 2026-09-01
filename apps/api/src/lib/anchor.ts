@@ -155,7 +155,7 @@ export async function initAnchorPort(): Promise<AnchorPort> {
       mode: process.env.ANCHOR_MODE,
       store: new KyselyLedgerStore(),
       blockfrostApiKey: process.env.BLOCKFROST_API_KEY,
-      seed: process.env.SERVICE_WALLET_SEED,
+      privateKey: process.env.SERVICE_WALLET_PRIVATE_KEY,
       network: process.env.CARDANO_NETWORK,
       blockfrostUrl: process.env.BLOCKFROST_URL
     });

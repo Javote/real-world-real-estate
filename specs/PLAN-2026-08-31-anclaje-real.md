@@ -170,7 +170,8 @@ arranca con el anclaje inhabilitado y el resto del producto anda—. Sigue siend
 otra razón, más barata: **probar el arranque en real donde deshacerlo es un restart y no un
 revert.**
 
-1. Cargar `BLOCKFROST_API_KEY` y `SERVICE_WALLET_SEED` en el dashboard. No cambia nada todavía:
+1. Cargar `BLOCKFROST_API_KEY` y `SERVICE_WALLET_PRIVATE_KEY` en el dashboard (D-078). No cambia
+   nada todavía:
    la API sigue en `simulated`.
 2. Poner `ANCHOR_MODE=real` **en el dashboard** y reiniciar. Mirar los logs (paso 6).
    - `AnchorPort listo en modo "real"` → verde, se sigue al paso 5.
@@ -195,8 +196,14 @@ Las variables `sync: false` **se pueden cargar antes de que el Blueprint las dec
 guardadas esperando, y el deploy siguiente las encuentra. Por eso el orden correcto es secretos
 primero, push después, y así producción no se cae ni un minuto.
 
-⚠ **La seed no se rota.** La dirección del admin del validador se deriva de ella: reemplazarla
-dejaría inalcanzables los hilos ya anclados, sin ningún error visible.
+⚠ **La clave no se rota.** El admin del validador es su hash: reemplazarla dejaría inalcanzables
+los hilos ya anclados, sin ningún error visible.
+
+**La wallet se rehízo el 2026-08-31** (D-078). La original había nacido de una seed y quedó fondeada
+en su dirección *base*; con una sola clave de pago la dirección es *enterprise*, que es otra. En vez
+de mudar fondos o escribir un adaptador para conservar la vieja, se generó una wallet nueva y se
+fondeó la dirección que el servicio realmente mira. Las tADA de la anterior quedaron ahí y no
+importan.
 
 **5. Commit de `render.yaml`.** ✅ **Hecho el 2026-08-31**, y **antes** del paso 4: con D-075 el
 orden dejó de importar. Si los secretos no están cuando el deploy arranca, el puerto queda
@@ -213,7 +220,7 @@ Tres cosas juntas:
   dashboard y devuelve la API a `simulated` **en silencio**, sin romper nada y sin log de error.
   Ese es el camino por el que el TXID falso vuelve a aparecer, y empeora con el modo real
   encendido: conviven TXIDs reales y falsos en la misma columna sin nada que los separe.
-- Agregar `BLOCKFROST_API_KEY` y `SERVICE_WALLET_SEED` como `sync: false`.
+- Agregar `BLOCKFROST_API_KEY` y `SERVICE_WALLET_PRIVATE_KEY` como `sync: false`.
 - **Corregir los comentarios de las líneas 124-128**, que afirman dos cosas falsas desde `ca610e5`:
   que `simulated` es el único modo válido hoy (el adaptador real ya existe y arranca) y que
   `CARDANO_NETWORK` no lo lee nadie (lo lee `apps/api/src/lib/anchor.ts:89`).

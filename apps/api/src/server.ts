@@ -34,6 +34,14 @@ async function arrancar() {
   const puerto = await initAnchorPort();
   console.log(`AnchorPort listo en modo "${puerto.mode}"`);
 
+  // **Qué dirección hay que fondear.** Sin esta línea, "el anclaje falla" y "la
+  // wallet está vacía" son el mismo síntoma en los logs, y distinguirlos obliga
+  // a derivar la dirección a mano desde la clave. La dirección es pública; la
+  // clave no se imprime nunca.
+  if ("walletAddress" in puerto) {
+    console.log(`Wallet de servicio: ${(puerto as { walletAddress: string }).walletAddress}`);
+  }
+
   server = app.listen(port, () => {
     console.log(`API listening on http://localhost:${port}`);
   });

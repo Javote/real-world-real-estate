@@ -183,14 +183,23 @@ anclar de verdad en Cardano Preprod.
    BLOCKFROST_API_KEY='<key preprod>' pnpm --filter @plataforma/cardano wallet:new
    ```
 
-   Escribe la seed en `~/propnexus-wallet-preprod.txt` con permisos `600` y **no la imprime**;
-   imprime la dirección, que es pública. Se niega a pisar un archivo existente.
+   Escribe la **clave de pago** en `~/propnexus-wallet-preprod.key` con permisos `600` y **no la
+   imprime**; imprime la dirección y el admin, que son públicos. Se niega a pisar un archivo
+   existente.
 
-   ⚠ **La seed no se rota.** La dirección del script se deriva del `admin`, que sale de esta
-   wallet: reemplazarla deja inalcanzables los hilos ya anclados, sin ningún error visible.
+   Es una clave de pago y no una seed (D-078): **una sola clave, una sola vez**. La dirección se
+   deriva de ella, así que no hay una segunda variable que pueda quedar desincronizada.
 
-3. **Fondear** la dirección desde el [faucet](https://docs.cardano.org/cardano-testnets/tools/faucet)
-   — **Preprod**, no Preview. Un anclaje cuesta ~0,17 tADA, así que alcanza de sobra.
+   ⚠ **No se rota.** El admin del validador es el hash de esta clave: reemplazarla deja
+   inalcanzables los hilos ya anclados, sin ningún error visible.
+
+3. **Fondear la dirección que imprimió el generador** desde el
+   [faucet](https://docs.cardano.org/cardano-testnets/tools/faucet) — **Preprod**, no Preview. Un
+   anclaje cuesta ~0,17 tADA, así que alcanza de sobra.
+
+   **El faucet pide una dirección, no una clave.** Tiene que ser exactamente la que el servicio
+   mira; el arranque de la API la vuelve a imprimir (`Wallet de servicio: addr_test1…`) para poder
+   compararla sin derivar nada a mano.
 
    Verificar el saldo sin necesitar la key, contra Koios:
 
@@ -203,7 +212,7 @@ anclar de verdad en Cardano Preprod.
 
    ```bash
    export BLOCKFROST_API_KEY='<key>'
-   export SERVICE_WALLET_SEED="$(cat ~/propnexus-wallet-preprod.txt)"
+   export SERVICE_WALLET_PRIVATE_KEY="$(cat ~/propnexus-wallet-preprod.key)"
    DATABASE_URL='file:./apps/api/.data/dev.db' JWT_SECRET=local \
    ANCHOR_MODE=real CARDANO_NETWORK=Preprod PORT=8788 \
    node apps/api/dist/src/server.js
@@ -212,7 +221,7 @@ anclar de verdad en Cardano Preprod.
    La línea a mirar es `AnchorPort listo en modo "real"`. Si dice `simulated`, la variable no llegó;
    si el proceso murió, el error dice qué falta (D-042).
 
-5. **En Render**, sobre `propnexus-api`: `BLOCKFROST_API_KEY` y `SERVICE_WALLET_SEED`. Son de
+5. **En Render**, sobre `propnexus-api`: `BLOCKFROST_API_KEY` y `SERVICE_WALLET_PRIVATE_KEY`. Son de
    runtime y toman con un restart. `ANCHOR_MODE` **ya no se toca a mano**: el Blueprint lo declara
    con `value: real`, así que un cambio en el dashboard lo pisa el próximo re-sync.
 

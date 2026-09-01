@@ -54,7 +54,14 @@ en cualquiera de los dos lados, los dos tests se ponen rojos. Es a propósito.
   comando: el `overrides` de la raíz (`@types/express`) está siendo **ignorado**. Hoy no rompe nada
   porque `apps/api` ya declara `^5.0.6` directo, pero el override no está haciendo lo que parece.
 - **La dirección del script depende del `admin`.** Rotar la wallet de servicio cambia la dirección,
-  así que **no se puede rotar sin migrar todos los hilos**. Saberlo antes de generar la seed.
+  así que **no se puede rotar sin migrar todos los hilos**. Saberlo antes de generar la clave.
+- **2026-08-31 · `fromSeed` y `fromPrivateKey` dan direcciones distintas para la misma clave.**
+  `fromSeed` arma una dirección **base** (pago + staking, `addr_test1q…`); `fromPrivateKey` solo sabe
+  armar una **enterprise** (`addr_test1v…`, `CML.EnterpriseAddress.new`). El *payment credential* —y
+  por lo tanto el admin del validador— es **el mismo** en las dos, así que la clave puede gastar los
+  UTxOs de las dos; lo que cambia es dónde los **busca** Lucid. Costó un rodeo entero: se fondeó la
+  base con el faucet y al pasar a clave de pago (D-078) la wallet miraba la enterprise, vacía. **El
+  faucet pide una dirección, no una clave: pedile la que el servicio va a usar de verdad.**
 
 ## El adaptador real es agnóstico del provider, y eso no es cosmético
 
@@ -96,7 +103,7 @@ segundos — de ahí que `VALIDITY_WINDOW_MS` sean 3 minutos y no 10.
 
 Rebanadas **A** (puerto + simulador) y **B** (códec, blueprint, `Emulator` y **devnet local**)
 cerradas. Desde el 2026-08-27 `factory.ts` **cablea el adaptador real**: `ANCHOR_MODE=real` levanta
-Lucid contra Blockfrost, selecciona la wallet desde `SERVICE_WALLET_SEED` y arma el
+Lucid contra Blockfrost, selecciona la wallet desde `SERVICE_WALLET_PRIVATE_KEY` y arma el
 `LucidAnchorAdapter`. Mainnet se rechaza ahí mismo (D-013).
 
 Hasta entonces se decía que "Preprod no cambia el código, solo el provider y la seed", y era
