@@ -57,6 +57,9 @@ async function evento(campos: {
       commitment: "a".repeat(64),
       status: campos.status,
       txid: campos.txid,
+      // El CHECK de la tabla no deja un TXID sin red (D-080): el fixture tiene
+      // que construir filas posibles, no filas cómodas.
+      network: campos.txid === null ? null : "Simulated",
       outputRef: null,
       blockTimestamp: null,
       createdAt: ahora,

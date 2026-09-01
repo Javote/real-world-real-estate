@@ -63,6 +63,7 @@ export async function anchorCommitmentEvent(input: {
       commitment: input.commitment,
       status: "Pending",
       txid: null,
+      network: null,
       outputRef: null,
       blockTimestamp: null,
       createdAt: ahora,
@@ -79,7 +80,12 @@ export async function anchorCommitmentEvent(input: {
 
     return await db
       .updateTable("OnChainEvent")
-      .set({ txid: recibo.txid, status: recibo.status, updatedAt: new Date() })
+      .set({
+        txid: recibo.txid,
+        network: anchorPort().network,
+        status: recibo.status,
+        updatedAt: new Date()
+      })
       .where("id", "=", evento.id)
       .returningAll()
       .executeTakeFirstOrThrow();

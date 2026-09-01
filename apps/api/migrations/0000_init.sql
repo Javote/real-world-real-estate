@@ -108,6 +108,11 @@ CREATE TABLE `Evidence` (
 	`evidenceType` text NOT NULL,
 	`category` text NOT NULL,
 	`authoritative` integer DEFAULT false NOT NULL,
+	-- Quién declara haber emitido este documento (D-028 (a), acotada por D-084).
+	-- Es una DECLARACIÓN, no una verificación: la plataforma no valida (D-026).
+	-- Obligatoria cuando `authoritative = true`, y el rechazo ocurre en la
+	-- transición, no en el upload — subir siempre se puede, avanzar no.
+	`issuingAuthority` text,
 	`originalFilename` text NOT NULL,
 	`storedFilename` text NOT NULL,
 	`mimeType` text NOT NULL,
@@ -199,6 +204,15 @@ CREATE TABLE `OnChainEvent` (
 	`commitment` text,
 	`status` text DEFAULT 'Pending' NOT NULL,
 	`txid` text,
+	-- Contra qué ledger resuelve `txid` (D-080). Un TXID sin red es
+	-- inverificable en cuanto exista más de una, y mainnet es inminente.
+	-- Sale del `AnchorPort`, no de `CARDANO_NETWORK`: el env es lo que se pidió,
+	-- el puerto es lo que se construyó, y leer el env acá los dejaría
+	-- desincronizarse en silencio.
+	-- NULL solo mientras no hay TXID —una fila nace `Pending` y puede terminar
+	-- `Failed` sin anclar nunca—; el CHECK de abajo hace imposible el par
+	-- (txid sin red), que es lo único que esta columna existe para impedir.
+	`network` text,
 	-- UTxO del thread token: `txid#index`. **Estado crítico**: si se pierde, el
 	-- token queda en un UTxO que nadie sabe cuál es y ese stage no se puede
 	-- volver a mover nunca (D-058).
@@ -208,7 +222,10 @@ CREATE TABLE `OnChainEvent` (
 	`updatedAt` integer NOT NULL,
 	FOREIGN KEY (`projectId`) REFERENCES `Project`(`id`) ON UPDATE no action ON DELETE cascade,
 	FOREIGN KEY (`stageId`) REFERENCES `Stage`(`id`) ON UPDATE no action ON DELETE set null,
-	FOREIGN KEY (`evidenceId`) REFERENCES `Evidence`(`id`) ON UPDATE no action ON DELETE set null
+	FOREIGN KEY (`evidenceId`) REFERENCES `Evidence`(`id`) ON UPDATE no action ON DELETE set null,
+	-- Un TXID sin red es inverificable: que sea estructuralmente imposible, y no
+	-- una regla que alguien tiene que acordarse de respetar.
+	CONSTRAINT `OnChainEvent_txid_exige_network` CHECK (`txid` IS NULL OR `network` IS NOT NULL)
 );
 --> statement-breakpoint
 CREATE UNIQUE INDEX `OnChainEvent_stageId_eventIndex_key` ON `OnChainEvent` (`stageId`,`eventIndex`);

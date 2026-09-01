@@ -122,6 +122,21 @@ BLOCKFROST_API_KEY=… SERVICE_WALLET_PRIVATE_KEY=… \
   adjunto y el de abajo el referenciado, que es la diferencia que existe en producción según haya o
   no un UTxO publicado.
 
+## El puerto declara su red, y por eso la fila puede ser honesta
+
+`AnchorPort.network` dice contra qué ledger resuelven los TXID que produce: `Preprod`, `Mainnet`,
+`Custom`, o `Simulated` para el simulador —que es su propia cadena y sus TXID resuelven contra
+`SimulatedLedgerUtxo`—. `disabled` devuelve `null`: no produce ninguno.
+
+**Sale del puerto y no de `CARDANO_NETWORK`.** El env es lo que se *pidió*; el puerto es lo que se
+*construyó*. Si la API lee el entorno al insertar la fila, los dos se pueden desincronizar en
+silencio y la columna termina afirmando una red contra la que ese TXID no existe — exactamente lo
+que la columna existe para impedir (D-080). Lo cubre un test que pone `CARDANO_NETWORK=Preprod` con
+el puerto en `simulated` y exige que la fila diga `Simulated`.
+
+**No es la columna `anchorMode` que D-080 rechazó.** Aquella registraba qué adaptador corrió; esta
+registra contra qué ledger se resuelve un TXID. Que correlacionen es incidental.
+
 ## El adaptador real es agnóstico del provider, y eso no es cosmético
 
 `LucidAnchorAdapter` recibe una instancia de Lucid ya configurada, así que **el mismo código** corre

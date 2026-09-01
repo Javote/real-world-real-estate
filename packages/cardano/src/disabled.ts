@@ -35,6 +35,8 @@ export const ANCHOR_DISABLED = "ANCHOR_DISABLED";
 
 export class DisabledAnchorAdapter implements AnchorPort {
   readonly mode = "disabled" as const;
+  /** No produce ningún TXID, así que no hay red que declarar. */
+  readonly network = null;
 
   /**
    * @param reason Por qué quedó inhabilitado, en texto. Va al log de arranque y

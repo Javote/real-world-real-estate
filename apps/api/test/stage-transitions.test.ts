@@ -37,7 +37,10 @@ async function crearStage(opts: { state?: StageState; validationCritical?: boole
   return id;
 }
 
-async function agregarEvidencia(stageId: string) {
+async function agregarEvidencia(
+  stageId: string,
+  opciones: { authoritative?: boolean; issuingAuthority?: string | null } = {}
+) {
   const ahora = new Date();
   const usuario = (
     await db
@@ -56,7 +59,13 @@ async function agregarEvidencia(stageId: string) {
       uploadedById: usuario,
       evidenceType: "certificate",
       category: "permits",
-      authoritative: true,
+      authoritative: opciones.authoritative ?? true,
+      // Por defecto viene atribuida: D-028 (a) la exige cuando es autoritativa,
+      // así que una evidencia sin `issuingAuthority` es el caso raro, no el normal.
+      issuingAuthority:
+        opciones.issuingAuthority === undefined
+          ? "Municipalidad de Córdoba"
+          : opciones.issuingAuthority,
       originalFilename: "acta.pdf",
       storedFilename: "acta-guardada.pdf",
       storagePath: "/tmp/no-existe/acta.pdf",
@@ -140,9 +149,62 @@ describe("PATCH /stages/:id/state · evidencia en stages críticos", () => {
     const id = await crearStage({ state: "InProgress", validationCritical: false });
     expect((await patchState(id, "Completed")).status).toBe(200);
   });
+
+  // D-028 (a), acotada por D-084. Lo que se exige NO es que la autoridad sea
+  // válida —la plataforma no valida (D-026)— sino que la declaración esté
+  // completa: si decís que es autoritativa, decís de quién viene.
+  it("409 al completar con una evidencia autoritativa sin decir quién la emitió", async () => {
+    const id = await crearStage({ state: "InProgress", validationCritical: true });
+    await agregarEvidencia(id, { authoritative: true, issuingAuthority: null });
+    const res = await patchState(id, "Completed");
+    expect(res.status).toBe(409);
+    expect(res.body.code).toBe("STAGE_EVIDENCE_UNATTRIBUTED");
+  });
+
+  it("409 también si `issuingAuthority` es espacios en blanco", async () => {
+    const id = await crearStage({ state: "InProgress", validationCritical: true });
+    await agregarEvidencia(id, { authoritative: true, issuingAuthority: "   " });
+    expect((await patchState(id, "Completed")).body.code).toBe("STAGE_EVIDENCE_UNATTRIBUTED");
+  });
+
+  // El developer sube fotos de obra desde el teléfono y eso no puede pedir
+  // atribución: es exactamente la alternativa que D-028 descartó.
+  it("200 con evidencia NO autoritativa y sin atribución", async () => {
+    const id = await crearStage({ state: "InProgress", validationCritical: true });
+    await agregarEvidencia(id, { authoritative: false, issuingAuthority: null });
+    expect((await patchState(id, "Completed")).status).toBe(200);
+  });
 });
 
 describe("OnChainEvent · el aterrizaje del anclaje", () => {
+  // D-080. El CHECK de la tabla ya vuelve imposible un TXID sin red; esto
+  // asegura lo otro: que la red que se guarda sea la que el PUERTO declara y no
+  // `CARDANO_NETWORK`. La suite corre en `simulated`, así que un "Preprod" acá
+  // significaría que alguien está leyendo el entorno en vez del adaptador.
+  it("persiste la red del puerto junto al TXID, no la del entorno", async () => {
+    const anterior = process.env.CARDANO_NETWORK;
+    process.env.CARDANO_NETWORK = "Preprod";
+
+    try {
+      const creado = await request(app)
+        .post(`/api/v1/projects/${proyecto}/stages`)
+        .set("Authorization", `Bearer ${token}`)
+        .send({ name: "Stage con red", sequenceOrder: 999_401 });
+
+      const evento = await db
+        .selectFrom("OnChainEvent")
+        .select(["txid", "network"])
+        .where("id", "=", creado.body.anchor.id)
+        .executeTakeFirstOrThrow();
+
+      expect(evento.txid).not.toBeNull();
+      expect(evento.network).toBe("Simulated");
+    } finally {
+      if (anterior === undefined) delete process.env.CARDANO_NETWORK;
+      else process.env.CARDANO_NETWORK = anterior;
+    }
+  });
+
   it("ancla la transición de un stage con hilo abierto", async () => {
     // El stage se crea por la API para que su hilo exista: el `mint` pasa por
     // `POST`, igual que en la cadena. Con `ANCHOR_MODE=simulated` la
@@ -270,6 +332,7 @@ describe("PATCH /stages/:id · la identidad on-chain", () => {
         commitment: null,
         status: "Confirmed",
         txid: `${"f".repeat(63)}${Math.floor(Math.random() * 10)}`,
+        network: "Simulated",
         outputRef: `${"f".repeat(64)}#0`,
         blockTimestamp: ahora,
         createdAt: ahora,

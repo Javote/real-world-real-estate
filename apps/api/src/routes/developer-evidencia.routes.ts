@@ -71,7 +71,15 @@ router.post(
       authoritative: z
         .string()
         .optional()
-        .transform((v) => v === "true")
+        .transform((v) => v === "true"),
+      // Declaración de origen (D-028 (a)). Va vacía salvo que se declare
+      // autoritativa, y se guarda `null` en vez de "" para que el guard de la
+      // transición tenga un solo estado de "falta".
+      issuingAuthority: z
+        .string()
+        .max(200)
+        .optional()
+        .transform((v) => v?.trim() || null)
     });
 
     const parsed = schema.safeParse(req.body);
@@ -113,6 +121,7 @@ router.post(
         evidenceType: parsed.data.evidenceType,
         category: parsed.data.category,
         authoritative: parsed.data.authoritative ?? false,
+        issuingAuthority: parsed.data.issuingAuthority,
         originalFilename: req.file.originalname,
         storedFilename: req.file.filename,
         mimeType: req.file.mimetype,

@@ -16,6 +16,7 @@ import {
 } from "./codec";
 import {
   type AdvanceThreadInput,
+  type AnchorNetwork,
   type AnchorPort,
   type AnchorProof,
   type AnchorReceipt,
@@ -145,6 +146,13 @@ export class LucidAnchorAdapter implements AnchorPort {
   readonly mode = "real" as const;
 
   /**
+   * La red contra la que este adaptador ancla. Ya la recibía para derivar la
+   * dirección del script; ahora además se expone, porque es lo que se persiste
+   * por evento (D-080).
+   */
+  readonly network: AnchorNetwork;
+
+  /**
    * La dirección de la wallet de servicio — **la que hay que fondear**.
    *
    * Se expone para que el arranque la escriba en el log. Sin eso, "el anclaje
@@ -206,6 +214,7 @@ export class LucidAnchorAdapter implements AnchorPort {
     lucid: LucidEvolution,
     refs: StageScriptRefs,
     walletAddress: string,
+    network: AnchorNetwork,
     now: () => number,
     validityWindowMs: number,
     tipLagMarginMs: number,
@@ -214,6 +223,7 @@ export class LucidAnchorAdapter implements AnchorPort {
     referenceUtxo: UTxO | null
   ) {
     this.lucid = lucid;
+    this.network = network;
     this.refs = refs;
     this.walletAddress = walletAddress;
     this.now = now;
@@ -252,6 +262,7 @@ export class LucidAnchorAdapter implements AnchorPort {
       options.lucid,
       refs,
       walletAddress,
+      options.network,
       options.now ?? (() => Date.now()),
       options.validityWindowMs ?? VALIDITY_WINDOW_MS,
       options.tipLagMarginMs ?? TIP_LAG_MARGIN_MS,

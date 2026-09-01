@@ -105,6 +105,8 @@ export interface EvidenceTable {
   evidenceType: EvidenceType;
   category: string;
   authoritative: SqliteBoolean;
+  /** Declaración de origen, obligatoria cuando `authoritative` (D-028 (a), D-084). */
+  issuingAuthority: string | null;
   originalFilename: string;
   storedFilename: string;
   mimeType: string;
@@ -151,6 +153,8 @@ export interface OnChainEventTable {
   commitment: string | null;
   status: OnChainEventStatus;
   txid: string | null;
+  /** La red del `txid`. NULL solo si no hay TXID — lo impone un CHECK (D-080). */
+  network: string | null;
   /** UTxO del thread token: `txid#index`. Estado crítico — sin esto el hilo se pierde. */
   outputRef: string | null;
   blockTimestamp: SqliteTimestamp | null;

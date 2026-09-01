@@ -249,6 +249,7 @@ describe("el ciclo unidad → invitación → contrato → release", () => {
         commitment: "f".repeat(64),
         status: "Confirmed",
         txid: "ajeno".padEnd(64, "0"),
+        network: "Simulated",
         outputRef: null,
         blockTimestamp: null,
         createdAt: ahora,

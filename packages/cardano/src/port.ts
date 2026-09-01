@@ -27,6 +27,21 @@ export type AnchorMode = (typeof ANCHOR_MODES)[number];
  */
 export type PortMode = AnchorMode | "disabled";
 
+/**
+ * **Contra qué ledger resuelve un TXID.** Es lo que D-080 pide guardar por
+ * evento: un TXID sin red es inverificable en cuanto exista más de una, y
+ * mainnet es inminente.
+ *
+ * `"Simulated"` está en la lista y **no es el adaptador disfrazado.** D-080
+ * rechazó una columna `anchorMode` porque a la tabla no le importa qué
+ * adaptador corrió; esto es otra cosa: un TXID del simulador resuelve contra
+ * `SimulatedLedgerUtxo`, que es una tabla que existe. El simulador es su propia
+ * cadena y solo habla de ella. Que correlacione con el adaptador es incidental,
+ * no es lo que se guarda.
+ */
+export const ANCHOR_NETWORKS = ["Mainnet", "Preprod", "Preview", "Custom", "Simulated"] as const;
+export type AnchorNetwork = (typeof ANCHOR_NETWORKS)[number];
+
 /** Un UTxO, en la forma en que se persiste: `txid#index`. */
 export type OutputRef = string;
 
@@ -88,6 +103,16 @@ export const EVIDENCE_METADATA_LABEL = 1904;
 
 export interface AnchorPort {
   readonly mode: PortMode;
+  /**
+   * La red de los TXID que este puerto produce, o `null` si no produce
+   * ninguno (`disabled`).
+   *
+   * **Sale del puerto y no de `process.env`** a propósito: la variable de
+   * entorno es lo que se *pidió*, y el puerto es lo que efectivamente se
+   * construyó. Leer el env al insertar la fila las dejaría desincronizarse en
+   * silencio, que es justo lo que la columna existe para impedir.
+   */
+  readonly network: AnchorNetwork | null;
   openThread(input: OpenThreadInput): Promise<AnchorReceipt>;
   advanceThread(input: AdvanceThreadInput): Promise<AnchorReceipt>;
   /**

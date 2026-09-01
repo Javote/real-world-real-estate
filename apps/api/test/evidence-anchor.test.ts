@@ -49,6 +49,9 @@ async function subirEvidencia(stageId: string, contenido: string) {
       evidenceType: "certificate",
       category: "permits",
       authoritative: true,
+      // Autoritativa y atribuida: D-028 (a) no deja completar el stage con una
+      // evidencia que se declara oficial y no dice de dónde viene.
+      issuingAuthority: "Municipalidad de Córdoba",
       originalFilename: `${contenido}.pdf`,
       storedFilename: `${id}.pdf`,
       storagePath: `/tmp/no-existe/${id}.pdf`,

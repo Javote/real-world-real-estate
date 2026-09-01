@@ -53,7 +53,13 @@ export function canTransition(from: StageState, to: StageState): boolean {
  */
 export const STAGE_TRANSITION_ERRORS = {
   invalid: "STAGE_TRANSITION_INVALID",
-  evidenceRequired: "STAGE_EVIDENCE_REQUIRED"
+  evidenceRequired: "STAGE_EVIDENCE_REQUIRED",
+  /**
+   * D-028 (a), acotada por D-084: una evidencia **declarada** `authoritative`
+   * que no dice quién la emitió. No se valida la autoridad —la plataforma no
+   * valida (D-026)—; se exige que la declaración esté completa.
+   */
+  evidenceUnattributed: "STAGE_EVIDENCE_UNATTRIBUTED"
 } as const;
 
 export const stageTransitionSchema = z.strictObject({

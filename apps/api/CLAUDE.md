@@ -220,10 +220,14 @@ pasar.
 
 Lo que le falta, en orden de importancia:
 
-- **La evidencia que exige es el piso de D-028, no D-028.** Hoy alcanza con que exista *una*
-  evidencia asociada al stage. D-028 pide además atribución de autoridad (`issuingAuthority`
-  obligatorio cuando `authoritative = true`; D-084 sacó `authorityReference`) y la atestación.
-  **Esas columnas no existen** — es una migración y una decisión, no un `if`.
+- **~~La evidencia que exige es el piso de D-028.~~** Cerrado el 2026-09-01. Además de exigir que
+  exista *una* evidencia, completar un stage crítico rechaza con `STAGE_EVIDENCE_UNATTRIBUTED` si
+  alguna evidencia se **declara** `authoritative` sin `issuingAuthority`. No se valida la autoridad
+  —la plataforma no valida (D-026)—: se exige que la declaración esté completa. D-084 sacó
+  `authorityReference` y D-086 eliminó la atestación como condición.
+  **El rechazo es en la transición, no en el upload**: subir una evidencia autoritativa sin
+  atribuir siempre se puede; avanzar el stage con ella adentro, no. Y una evidencia **no**
+  autoritativa nunca pide atribución — el developer sube fotos de obra desde el teléfono.
 - **~~Nadie calcula el commitment.~~** Cerrado: al completar, `crearBundle` congela la evidencia
   del stage en un `EvidenceBundle` y su Merkle root viaja al datum. **Es un acta, no un índice:** se
   escribe con lo que existía en ese momento y no se toca. Si después se sube más evidencia, es otro

@@ -223,6 +223,9 @@ async function anchorEvent(
       .updateTable("OnChainEvent")
       .set({
         txid: receipt.txid,
+        // La red viaja con el TXID, siempre en el mismo `set` (D-080): el CHECK
+        // de la tabla rechaza el par incompleto.
+        network: anchorPort().network,
         outputRef: receipt.outputRef,
         status: receipt.status,
         // Qué commitment quedó anclado en ESTE evento. Vacío mientras el stage
@@ -265,7 +268,8 @@ async function tieneHiloAnclado(stageId: string): Promise<boolean> {
 export type TransitionFailure =
   | { ok: false; status: 404; code: "STAGE_NOT_FOUND" }
   | { ok: false; status: 409; code: "STAGE_TRANSITION_INVALID"; from: StageState; to: StageState }
-  | { ok: false; status: 409; code: "STAGE_EVIDENCE_REQUIRED" };
+  | { ok: false; status: 409; code: "STAGE_EVIDENCE_REQUIRED" }
+  | { ok: false; status: 409; code: "STAGE_EVIDENCE_UNATTRIBUTED" };
 
 export type TransitionResult =
   | { ok: true; stage: StageRow; anchor: OnChainEventRow }
@@ -306,15 +310,28 @@ export async function transitionStage(input: {
   }
 
   if (input.to === "Completed" && existing.validationCritical) {
-    const evidencia = await db
+    // Una sola consulta para los dos chequeos. `authoritative` llega como
+    // boolean porque el plugin coerciona el RESULTADO; en un `where` no lo
+    // haría —solo transforma resultados—, así que el filtro vive acá.
+    const evidencias = await db
       .selectFrom("Evidence")
-      .select("id")
+      .select(["id", "authoritative", "issuingAuthority"])
       .where("stageId", "=", existing.id)
-      .limit(1)
-      .executeTakeFirst();
+      .execute();
 
-    if (!evidencia) {
+    if (evidencias.length === 0) {
       return { ok: false, status: 409, code: STAGE_TRANSITION_ERRORS.evidenceRequired };
+    }
+
+    // D-028 (a): el rechazo ocurre en la transición, no en el upload. Subir una
+    // evidencia autoritativa sin atribución siempre se puede; avanzar el stage
+    // con ella adentro, no.
+    //
+    // D-086 eliminó la otra mitad: que un revisor haya atestiguado ya NO es
+    // condición. La app no revisa ni certifica; respalda evidencia verificada
+    // afuera.
+    if (evidencias.some((e) => e.authoritative && !e.issuingAuthority?.trim())) {
+      return { ok: false, status: 409, code: STAGE_TRANSITION_ERRORS.evidenceUnattributed };
     }
   }
 

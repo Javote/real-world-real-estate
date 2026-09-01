@@ -65,6 +65,8 @@ export interface SimulatedAnchorOptions {
 
 export class SimulatedAnchorAdapter implements AnchorPort {
   readonly mode = "simulated" as const;
+  /** Su propia cadena, y solo habla de ella: sus TXID resuelven contra `SimulatedLedgerUtxo`. */
+  readonly network = "Simulated" as const;
 
   private readonly store: LedgerStore;
   private readonly now: () => number;
