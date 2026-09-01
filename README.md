@@ -97,6 +97,10 @@ Lo único que no se deduce leyéndolos:
 - **`JWT_SECRET` es obligatoria y no tiene default.** Si falta o queda vacía, la API **no arranca**.
   Es a propósito (D-042): el free tier no da shell para ir a mirar qué variables quedaron cargadas,
   así que el fallo tiene que ser el arranque y no una request de producción.
+- **Las del anclaje se comportan al revés que `JWT_SECRET`.** Si faltan `BLOCKFROST_API_KEY` o
+  `SERVICE_WALLET_PRIVATE_KEY`, la API **sí arranca**: queda el puerto de anclaje inhabilitado y el
+  log lo dice (D-075). Anclar falla, el resto del producto funciona — un puerto inhabilitado no
+  produce ni un TXID, así que no puede afirmar una prueba que no existe.
 - **Las de `apps/web` son de build time.** Cambiarlas exige rebuild, no restart.
 - **`TRUST_PROXY_HOPS` vale 0 en local y 1 detrás de Render.** Con 0 detrás del proxy, todos los
   clientes comparten balde de rate limit y la app queda inusable (D-045).
@@ -124,23 +128,43 @@ presupuesto (D-040). El artefacto es **`render.yaml`** en la raíz: dos servicio
   sigue estando bien que lo sea: `UPLOAD_DIR` es solo el staging de Multer. Lo que hay que vigilar
   es el techo de 10 GB del free tier.
 
-## Pasos de infraestructura pendientes
+## Dónde estamos — el anclaje real, encendido el 2026-08-31
 
-Todavía no ejecutados; hacen falta para el **anclaje real**, no para el deploy:
+La instancia desplegada **ancla de verdad en Cardano Preprod**. El detalle operativo de cómo se
+llegó está en [`specs/PLAN-2026-08-31-anclaje-real.md`](specs/PLAN-2026-08-31-anclaje-real.md); las
+decisiones, en [`DECISIONS.md`](DECISIONS.md).
 
-1. **Blockfrost** — crear cuenta, proyecto **Preprod**, setear `BLOCKFROST_API_KEY`.
-2. **Wallet de servicio** — generar una seed *nueva y exclusiva de Preprod* para que el backend firme
-   las transacciones de anclaje, y fondearla desde el [faucet de testnet](https://docs.cardano.org/cardano-testnets/tools/faucet).
-3. **`packages/cardano`** — el `AnchorPort`, el adaptador simulado y el **real** existen
-   (`SPEC-013` §A y §B), el real está probado contra el `Emulator` y contra un devnet local, y desde
-   el 2026-08-27 el factory lo **cablea**: `ANCHOR_MODE=real` construye Lucid sobre Blockfrost con la
-   wallet de servicio, y la API no arranca si falta configuración (D-042). Ahora sí es cierto que lo
-   que falta no es código, sino la cuenta y la wallet de los puntos 1 y 2.
+> Esto es el **estado del trabajo**, no el estado medido. Los números de conformidad —endpoints,
+> superficies, tests— viven en `specs/README.md` y solo ahí (ver §Estado).
 
-   ⚠ **La seed no se puede rotar.** La dirección del script se deriva del admin, que sale de esta
-   wallet: cambiarla obliga a migrar todos los hilos ya anclados. Generala para quedarse.
+### Hecho el 2026-08-31
 
-El inventario honesto de qué existe y qué no está en [`specs/stack.md`](specs/stack.md) §8 y §12.
+| # | Qué | Ref | Evidencia |
+|---|---|---|---|
+| 1 | Borrado el `OnChainEvent` simulado de producción | paso 1 | `OnChainEvent` = 0 filas en Turso |
+| 2 | **Defensa 1**: el simulador no ancla contra una base remota | `597e113` | 4 casos de test |
+| 3 | Orden de encendido: probar el modo real donde un restart lo deshace | `dcdee23` | — |
+| 4 | **D-075**: una configuración de anclaje rota inhabilita el puerto, **no la API** | `82c75b3` | verificado en producción: `disabled` con la API sirviendo |
+| 5 | **Retraso del tip**: la ventana de validez se corre 2 min | `60637ba` | el nodo valida en `tip+1`; medido contra Preprod |
+| 6 | **D-076**: `render.yaml` deja de ser configuración sin verificar | `c0fe8a5` | probado en los dos sentidos: rojo con la configuración vieja |
+| 7 | **D-077**: la lectura confirma el anclaje que ya está en la cadena | `f711b49` | contra Preprod: 2 anclajes → `Confirmed` en una lectura de 0,47 s |
+| 8 | **D-078**: una sola clave, una sola vez — se elimina la seed | `4c631f7` | wallet nueva, fondeada y anclando |
+| 9 | Camino del hilo probado contra Preprod | paso 2 | `openThread` `3a11baa7…` + `advanceThread` `a62b6e37…`, thread token verificado |
+| 10 | Secretos, Blueprint y arranque en la instancia | pasos 4-6 | `AnchorPort listo en modo "real"` |
+
+### Pendiente, en orden
+
+| # | Qué | Por qué ahí | Nivel |
+|---|---|---|---|
+| 1 | **Primer anclaje real en la instancia desplegada** (paso 7) | Convierte "arranca en real" en "ancla de verdad" | 🟢 |
+| 2 | **Columna `network`** en `OnChainEvent` | Un TXID sin red es inverificable, y mainnet es inminente. Producción tiene **0 filas**: es el único momento en que toda fila nace atribuida | 🟡 *decisión: migración nueva, rompe "una sola migración"* |
+| 3 | **Que el simulador deje de mentir**: `confirmedAt()` responde desde su propio registro | Hoy afirma confirmación sobre txids que nunca produjo | 🟢 |
+| 4 | **Mainnet** — runbook, habilitar la red, custodia de la clave | D-013 la hace **imposible por configuración**: es código, no solo procedimiento | 🔴 |
+| 5 | **D-028** — atribución de autoridad en la evidencia | Hoy se exige el piso ("existe una evidencia"). Faltan `issuingAuthority`, `authorityReference` y la atestación | 🟡 |
+| 6 | **Reference script** del validador | Cada transacción lo adjunta entero: fee y tamaño. Optimización, no corrección | 🟡 |
+| 7 | **UTxO único** — cola en memoria + `overrideUTxOs()` | Dos anclajes en ~20 s eligen la misma entrada y el segundo falla | 🟡 |
+| 8 | **`/milestones/` → `/stages/`** | D-023 reserva "milestone" para Catalyst | 🟢 |
+| 9 | `DEV-RELEASE-EXECUTE-002` | Único test ID pendiente de 74. Backlog, no regresión | 🟢 |
 
 ## Índice documental
 
@@ -209,9 +233,11 @@ M1 y M2 entregados. **M3 en construcción** — su alcance es el backlog complet
 corriendo íntegramente en **Preprod** (D-013). Mainnet y producción quedan fuera de alcance.
 
 Medido al 2026-08-24: **API 64/64 endpoints** del backlog, **modelo de datos 7/7 entidades**,
-**front 27/53 superficies (51%)** con Notary y Certifier completos, y **530 tests**. Los contratos
-compilan y están probados, pero `ANCHOR_MODE=real` todavía lanza excepción: **nunca se ancló nada
-en Preprod**, y eso es lo que bloquea la URL pública, los TXIDs de prueba y el video.
+**front 27/53 superficies (51%)** con Notary y Certifier completos, y **530 tests**.
+
+**Al 2026-08-31 el anclaje real está encendido**: los contratos corrieron contra Preprod y la
+instancia desplegada arranca en `AnchorPort listo en modo "real"`. Lo que antes bloqueaba la URL
+pública, los TXIDs de prueba y el video ya no bloquea — ver §Dónde estamos.
 
 **El estado medido —conformidad, qué bloquea el arranque, rebanadas, tracks paralelos y riesgos—
 vive en `specs/README.md` y solo ahí.** Un número de estado copiado en dos archivos se desactualiza
