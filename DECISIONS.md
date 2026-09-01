@@ -22,7 +22,7 @@ ya no existen. Partirlo no pierde nada: el porqué sigue estando, deja de pesar.
 > se contradice internamente, (b) es un error de redacción, o (c) seguirlo al pie contradiría una
 > verdad del producto declarada por el dueño — **nunca por conveniencia**.
 >
-> **La numeración no se recicla.** Las decisiones nuevas siguen desde D-076.
+> **La numeración no se recicla.** Las decisiones nuevas siguen desde D-077.
 
 ## Desvíos vigentes
 
@@ -481,6 +481,26 @@ usuario. Con esto, un anclaje puede fallar con evidencia ya subida. A cambio que
 arranque (`AnchorPort listo en modo "disabled"` más el motivo), el motivo adentro de cada rechazo,
 y un producto que sigue funcionando. `"disabled"` no es un valor de `ANCHOR_MODE`: no se elige, se
 cae en él.
+
+## D-076 — `render.yaml` tiene contrato y lo verifica la suite
+
+`apps/api/test/render-config.test.ts` carga el Blueprint y (a) ejecuta las reglas de arranque de la
+API contra el `ANCHOR_MODE` declarado y una `DATABASE_URL` con forma de Turso, exigiendo que el
+puerto no quede inhabilitado; (b) exige que los secretos del modo real estén como `sync: false`;
+(c) exige que **toda** variable que el backend lee esté declarada, con una lista corta de opcionales
+que a su vez se verifica que no envejezca.
+
+**Por qué existe.** El 2026-08-31 se pusheó un commit sabiendo que dejaría el anclaje inhabilitado
+en producción, y eso se verificó *después*, leyendo los logs del deploy. Saber el resultado no es un
+control: `pnpm verify` corre contra el entorno de test, que no es el que declara el Blueprint, y
+entre los dos no había nada. La regresión llegaba a producción y recién ahí se veía.
+
+**La forma importa: el test ejecuta la regla, no la copia.** `motivoParaNoAnclar()` se exporta y se
+invoca; si mañana aparece otra condición que inhabilite el puerto, el contrato la hereda solo. Una
+aserción sobre el string `"real"` habría pasado igual y no habría probado nada.
+
+Verificado en los dos sentidos antes de commitear: con `ANCHOR_MODE: simulated` —la configuración
+que estuvo desplegada— el test se pone rojo, y sacando cualquier variable declarada, también.
 
 ## D-008 — Validador state-thread con núcleo puro separado
 

@@ -121,15 +121,36 @@ services:
       - key: S3_CREATE_BUCKET
         value: "false"
       # D-013: Preprod SIEMPRE. Mainnet está fuera del alcance de M3.
-      # `ANCHOR_MODE=simulated` es el único válido hoy: el adaptador real llega
-      # en la rebanada B de SPEC-013 y pedirlo antes revienta al arrancar
-      # (D-042 — sin defaults inseguros, y sin fallar recién en el primer
-      # anclaje). `CARDANO_NETWORK` no lo lee nadie todavía; se deja declarado
-      # para que el día del adaptador real no haya que tocar infraestructura.
+      # La lee `apps/api/src/lib/anchor.ts` y la valida el factory contra
+      # `REDES_PERMITIDAS`, que no incluye mainnet: pedirla no es un error de
+      # configuración, es imposible.
       - key: CARDANO_NETWORK
         value: Preprod
+      # **El modo vive acá y no solo en el dashboard, y ese es el punto.** Las
+      # variables declaradas con `value:` las gobierna el Blueprint: un re-sync
+      # pisa cualquier cambio hecho a mano. Mientras esto decía `simulated`, ese
+      # re-sync devolvía la API al simulador **en silencio** —sin romper nada y
+      # sin log de error—, que es el camino por el que el 2026-08-27 llegó a
+      # producción un `EVIDENCE_ANCHOR` `Confirmed` con un TXID que no existe en
+      # Preprod. Con el modo real encendido sería peor: convivirían TXIDs reales
+      # e inventados en la misma columna sin nada que los separe.
       - key: ANCHOR_MODE
-        value: simulated
+        value: real
+      # Los dos secretos del modo real. `sync: false` = se cargan a mano en el
+      # dashboard y no viajan en el repo (regla 12).
+      #
+      # **Que falten no tira la API** (D-075): el puerto queda inhabilitado, el
+      # motivo sale en el log de arranque y todo anclaje rechaza — nunca produce
+      # un TXID. Por eso el orden entre cargarlos y pushear esto dejó de
+      # importar; antes, sin ellos, el proceso no levantaba.
+      #
+      # ⚠ `SERVICE_WALLET_SEED` **no se rota**: la dirección del admin del
+      # validador se deriva de ella, y reemplazarla deja inalcanzables los hilos
+      # ya anclados, sin ningún error visible.
+      - key: BLOCKFROST_API_KEY
+        sync: false
+      - key: SERVICE_WALLET_SEED
+        sync: false
       # Lista blanca de CORS (D-065). El web es estático y vive en otro origen;
       # sin esto el browser corta cada request con `Authorization`.
       # Mismo caso: la lista blanca compara contra el header `Origin`, que trae

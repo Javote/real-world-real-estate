@@ -57,7 +57,7 @@ distingue un anclaje real de uno inventado.
 | 2 | ~~Probar el camino del hilo en local contra Preprod~~ | 🟡 **hecho 2026-08-31** |
 | 3 | ~~Defensa 1: la API se niega a simular contra una base remota~~ | 🟢 **hecho 2026-08-31** |
 | 4 | **Secretos en el dashboard + probar el modo real desde ahí**, reversible sin tocar el repo | 🔴 dueño |
-| 5 | Commit de `render.yaml` (el push dispara el deploy que los consume) | 🟢 |
+| 5 | ~~Commit de `render.yaml`~~ | 🟢 **hecho 2026-08-31** |
 | 6 | Verificar el arranque en los logs | 🟢 |
 | 7 | Un anclaje real de punta a punta | 🟢 |
 | 8 | Reconciliación por demanda, sin cron | 🟢 |
@@ -198,7 +198,16 @@ primero, push después, y así producción no se cae ni un minuto.
 ⚠ **La seed no se rota.** La dirección del admin del validador se deriva de ella: reemplazarla
 dejaría inalcanzables los hilos ya anclados, sin ningún error visible.
 
-**5. Commit de `render.yaml`.** Tres cosas juntas:
+**5. Commit de `render.yaml`.** ✅ **Hecho el 2026-08-31**, y **antes** del paso 4: con D-075 el
+orden dejó de importar. Si los secretos no están cuando el deploy arranca, el puerto queda
+inhabilitado y el resto de la API sigue sirviendo — el mismo estado en que ya estaba. Lo que
+cambia es que ahora el Blueprint dice `real`, así que un re-sync no puede devolverla al simulador.
+
+Verificado en producción el 2026-08-31: con el Blueprint todavía en `simulated`, el arranque dejó
+en los logs `AnchorPort listo en modo "disabled"` más el motivo, y `API listening` en la línea
+siguiente. La degradación no es teórica.
+
+Tres cosas juntas:
 - `ANCHOR_MODE` a `value: real` — **en el YAML, no solo en el dashboard**. Las variables declaradas
   con `value:` las gobierna el Blueprint: un re-sync pisa cualquier cambio hecho a mano en el
   dashboard y devuelve la API a `simulated` **en silencio**, sin romper nada y sin log de error.

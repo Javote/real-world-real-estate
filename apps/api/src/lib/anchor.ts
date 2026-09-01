@@ -96,8 +96,14 @@ let puerto: AnchorPort | null = null;
  * Simular contra Turso no tiene ningún caso de uso legítimo, así que no hay
  * escotilla de escape. El camino conocido para llegar a este estado sin querer
  * es un re-sync del Blueprint pisando el `ANCHOR_MODE` del dashboard.
+ *
+ * **Se exporta para que el contrato de `render.yaml` la ejecute** en vez de
+ * reescribirla: `test/render-config.test.ts` le pasa el `ANCHOR_MODE` que
+ * declara el Blueprint contra una `DATABASE_URL` con forma de Turso y exige
+ * `null`. Si mañana aparece otra condición que inhabilite el puerto, el test la
+ * hereda sola — una copia de la regla en el test no lo haría.
  */
-function motivoParaNoAnclar(): string | null {
+export function motivoParaNoAnclar(): string | null {
   const modo = process.env.ANCHOR_MODE ?? "simulated";
   const url = process.env.DATABASE_URL ?? "";
   // Turso se habla por `libsql://`; `https://` contra el mismo host también

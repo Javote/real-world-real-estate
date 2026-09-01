@@ -212,8 +212,14 @@ anclar de verdad en Cardano Preprod.
    La línea a mirar es `AnchorPort listo en modo "real"`. Si dice `simulated`, la variable no llegó;
    si el proceso murió, el error dice qué falta (D-042).
 
-5. **En Render**, sobre `propnexus-api`: `ANCHOR_MODE=real`, `BLOCKFROST_API_KEY`,
-   `SERVICE_WALLET_SEED`. Las tres de runtime, toman con un restart.
+5. **En Render**, sobre `propnexus-api`: `BLOCKFROST_API_KEY` y `SERVICE_WALLET_SEED`. Son de
+   runtime y toman con un restart. `ANCHOR_MODE` **ya no se toca a mano**: el Blueprint lo declara
+   con `value: real`, así que un cambio en el dashboard lo pisa el próximo re-sync.
+
+   **Si falta alguno de los dos, la API levanta igual** con el anclaje inhabilitado (D-075). El
+   arranque lo dice —`AnchorPort listo en modo "disabled"`, con el motivo en la línea de arriba— y
+   todo anclaje rechaza, así que nunca escribe un TXID que no exista. Es el estado seguro, no el
+   estado bueno: hasta cargarlos, la plataforma registra pero no prueba.
 
 **Verificar un anclaje contra la cadena**, sin la key, con el TXID que devuelve el endpoint:
 

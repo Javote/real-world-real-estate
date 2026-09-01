@@ -285,6 +285,14 @@ Sección viva: agregá acá el mismo día que te muerda una. Las de cada frente 
   read by pnpm`. **Ese warning no es ruido: es la cuenta regresiva.** El día que se suba el pin a
   pnpm 10+, los overrides se ignoran **en silencio** y sin romper el build; hay que moverlos a
   `pnpm-workspace.yaml` en el mismo commit que sube la versión.
+- **`pnpm verify` no mira la configuración desplegada, y `render.yaml` es configuración.** La suite
+  corre contra el entorno de test; entre ese entorno y el que declara el Blueprint no había nada. El
+  2026-08-31 se pusheó un commit sabiendo que dejaría el anclaje inhabilitado en producción, y se
+  confirmó **después**, leyendo los logs del deploy — saberlo no es un control. Lo cierra
+  `apps/api/test/render-config.test.ts`: ejecuta las reglas de arranque de la API contra el
+  `render.yaml` y exige que toda variable que el código lee esté declarada. **Si agregás una lectura
+  de `env.*` nueva, declarala en `render.yaml` o el test se pone rojo** — que es el punto.
+
 - **Las capturas del developer no coinciden en el header.** Documentación (46) va sin logo, Audit
   log (49) va con logo, ninguna trae campana ni idioma, y M2-D3 dice *never omit the logo*. No se
   transcribe captura por captura: D-074 unifica. Si una pantalla nueva "sigue la captura" y saca el
