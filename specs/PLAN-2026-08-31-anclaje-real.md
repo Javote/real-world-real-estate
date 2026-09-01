@@ -254,15 +254,16 @@ requests, pero deja sin confirmar el anclaje solitario hasta que llegue el sigui
 El comentario de `reconcile.ts` que proponía un cron de GitHub Actions se corrigió en el mismo
 commit.
 
-**9. Las otras dos defensas.** Van después del encendido, no antes:
-- **Columna `anchorMode` en `OnChainEvent`**, escrita desde `anchorPort().mode` (el puerto ya lo
-  expone en `port.ts:78`). Es la defensa estructural. Con Turso vivo, D-063 exige una **migración
-  nueva** en vez de editar `0000_init.sql`: `migrate.ts:56` lee `migrations/*.sql` ordenados y
-  trackea en `_migrations`, así que el mecanismo lo soporta, pero rompe el "una sola migración" del
-  stack — **esa decisión es del dueño**. 🟡
+**9. Las otras dos defensas.** Queda una sola, y la otra está cerrada:
+- ~~**Columna `anchorMode` en `OnChainEvent`**~~ — **rechazada por D-080.** Mete nuestra
+  configuración en el modelo de dominio, y la premisa correcta es la contraria: si está en la base
+  es un anclaje real, porque D-075 impide que el simulador escriba contra una base remota. Lo que
+  sí va a la tabla es **`network`**, que no es una defensa contra nosotros mismos sino el dato que
+  falta para poder verificar. Esta versión del plan la listaba como pendiente **después** de que
+  D-080 la rechazara: gana `DECISIONS.md`.
 - **Que el simulador devuelva `Pending` y no `Confirmed`**, alineándolo con el adaptador real, para
-  que `Confirmed` signifique sin excepción *algo consultó la cadena*. Opcional una vez que existe
-  la columna; toca tests que hoy esperan `Confirmed` directo.
+  que `Confirmed` signifique sin excepción *algo consultó la cadena*. Toca tests que hoy esperan
+  `Confirmed` directo. 🟡 **Es lo único abierto de este punto.**
 
 ## Qué queda después
 

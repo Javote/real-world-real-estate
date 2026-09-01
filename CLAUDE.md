@@ -40,7 +40,7 @@ falta.
 | 1 | **Columna `network`** en `OnChainEvent` (D-080) | **Es ahora o nunca limpio**: con 0 filas, toda fila nace atribuida. Después del primer anclaje hay backfill, y un TXID sin red es inverificable en cuanto existan dos | 🟡 *migración nueva: rompe "una sola migración"* |
 | 2 | **Publicar el reference script** en Preprod (D-083) | Va pegado a 1: el deploy de la migración **es** el restart que el descubrimiento necesita. Un solo reinicio en vez de dos | 🟡 *operativo* |
 | 3 | **Primer anclaje real de punta a punta** | Recién acá "arranca en real" pasa a "ancla de verdad", y ya sale con la transacción barata | 🟢 |
-| 4 | **Defensas 2 y 3** del TXID simulado (plan §9) | Hacerlas o **descartarlas explícitamente**. Hoy están en un limbo que no es ninguna de las dos | 🟡 *decide el dueño* |
+| 4 | **Defensa 3**: que el simulador devuelva `Pending` y no `Confirmed` | Alinea el simulador con el real, para que `Confirmed` signifique sin excepción *algo consultó la cadena*. La defensa 2 (`anchorMode`) ya está **rechazada** por D-080 | 🟡 *decide el dueño* |
 | 5 | **`yaci.test.ts` cubre el camino referenciado** | Es el único suite con un nodo real evaluando el validador, y corre con el validador adjunto: la forma que D-083 dejó de usar | 🟢 |
 | 6 | **D-028** — atribución de autoridad en la evidencia | Hoy se exige el piso ("existe una evidencia"). Faltan `issuingAuthority`, `authorityReference` y la atestación | 🟡 |
 | 7 | **7 superficies** (46/53) y los patrones M2-D4 (8/10) | Backlog de transcripción. El test ID que falta (D-070) no es deuda | 🟢 |
