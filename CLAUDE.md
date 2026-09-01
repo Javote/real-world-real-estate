@@ -25,57 +25,30 @@ validador que afirme algo más, está mal (D-026).
 
 ---
 
-# Dónde estamos — el anclaje real, encendido el 2026-08-31
+# Estado, y lo próximo
 
-**La instancia desplegada ancla de verdad en Cardano Preprod.** Esta sección es el estado del
-**trabajo**: si retomás el proyecto, empezá por acá. Los números medidos —endpoints, superficies,
-tests— viven en `specs/README.md` y solo ahí. El detalle operativo está en
-`specs/PLAN-2026-08-31-anclaje-real.md`; el porqué de cada decisión, en `DECISIONS.md`.
-
-### Hecho el 2026-08-31
-
-| # | Qué | Ref | Evidencia |
-|---|---|---|---|
-| 1 | Borrado el `OnChainEvent` simulado de producción | paso 1 | `OnChainEvent` = 0 filas en Turso |
-| 2 | **Defensa 1**: el simulador no ancla contra una base remota | `597e113` | 4 casos de test |
-| 3 | Orden de encendido: probar el modo real donde un restart lo deshace | `dcdee23` | — |
-| 4 | **D-075**: una configuración de anclaje rota inhabilita el puerto, **no la API** | `82c75b3` | verificado en producción: `disabled` con la API sirviendo |
-| 5 | **Retraso del tip**: la ventana de validez se corre 2 min | `60637ba` | el nodo valida en `tip+1`; medido contra Preprod |
-| 6 | **D-076**: `render.yaml` deja de ser configuración sin verificar | `c0fe8a5` | probado en los dos sentidos: rojo con la configuración vieja |
-| 7 | **D-077**: la lectura confirma el anclaje que ya está en la cadena | `f711b49` | contra Preprod: 2 anclajes → `Confirmed` en una lectura de 0,47 s |
-| 8 | **D-078**: una sola clave, una sola vez — se elimina la seed | `4c631f7` | wallet nueva, fondeada y anclando |
-| 9 | Camino del hilo probado contra Preprod | paso 2 | `openThread` `3a11baa7…` + `advanceThread` `a62b6e37…`, thread token verificado |
-| 10 | Secretos, Blueprint y arranque en la instancia | pasos 4-6 | `AnchorPort listo en modo "real"` |
-| 11 | **D-079**: el simulador solo confirma lo que él mismo ancló | `101d0fe` | destapó 4 tests que pasaban contra un puerto que mentía |
-
-### Pendiente, en orden
+**La instancia desplegada ancla de verdad en Cardano Preprod** desde el 2026-08-31. Lo que se hizo
+para llegar está en `DECISIONS.md` (D-075 → D-079) y en `specs/PLAN-2026-08-31-anclaje-real.md`; los
+números medidos —endpoints, superficies, tests— en `specs/README.md`. Acá solo lo que falta.
 
 | # | Qué | Por qué ahí | Nivel |
 |---|---|---|---|
-| 1 | **Primer anclaje real en la instancia desplegada** (paso 7) | Convierte "arranca en real" en "ancla de verdad" | 🟢 |
-| 2 | **Columna `network`** en `OnChainEvent` | Un TXID sin red es inverificable, y mainnet es inminente. Producción tiene **0 filas**: es el único momento en que toda fila nace atribuida | 🟡 *decisión: migración nueva, rompe "una sola migración"* |
+| 1 | **Primer anclaje real en la instancia desplegada** | Convierte "arranca en real" en "ancla de verdad" | 🟢 |
+| 2 | **Columna `network`** en `OnChainEvent` | Un TXID sin red es inverificable, y mainnet es inminente. Producción tiene **0 filas**: el único momento en que toda fila nace atribuida | 🟡 *migración nueva: rompe "una sola migración"* |
 | 3 | **Mainnet** — runbook, habilitar la red, custodia de la clave | D-013 la hace **imposible por configuración**: es código, no solo procedimiento | 🔴 |
 | 4 | **D-028** — atribución de autoridad en la evidencia | Hoy se exige el piso ("existe una evidencia"). Faltan `issuingAuthority`, `authorityReference` y la atestación | 🟡 |
-| 5 | **Reference script** del validador | Cada transacción lo adjunta entero: fee y tamaño. Optimización, no corrección | 🟡 |
+| 5 | **Reference script** del validador | Cada transacción lo adjunta entero: fee y tamaño | 🟡 |
 | 6 | **UTxO único** — cola en memoria + `overrideUTxOs()` | Dos anclajes en ~20 s eligen la misma entrada y el segundo falla | 🟡 |
 
-**Dos cosas que parecen pendientes y no lo son**, para que nadie las vuelva a agregar acá:
+Los puntos **2 y 3 están acoplados**: `network` conviene que exista antes del primer anclaje en
+mainnet, porque un TXID sin red es inverificable cuando existan dos.
 
-- **`/milestones/` → `/stages/` ya está hecho.** `app.ts` monta `/api/v1/stages` y no existe
-  ninguna ruta `/milestones`. Queda un `setMilestoneState` en el `ApiPort` del front —nombre de
-  función, no path— y las claves de i18n del test ID `INV-STAGE-MILESTONE-001`, que se transcribe
-  literal por obligación de M2-D5.
+**Rechazado, no pendiente** — no lo agregues acá de nuevo:
+
 - **`DEV-RELEASE-EXECUTE-002` no se implementa nunca.** `pnpm testids` lo reporta pendiente (74 de
-  75, con el piso en 74), pero es el botón *"Release stage N payment"*: ejecutar una liberación de
-  pago. **Implementarlo contradiría la regla 13 y D-021** —ningún validador custodia ni transfiere
-  valor— y D-070, que fija que esas pantallas muestran el contrato como registro y no un botón de
-  liberar. El razonamiento largo está en `developer.project.$projectId.contracts.tsx`.
-
-**Lo próximo es el punto 1**: anclar algo de verdad en la instancia desplegada. Los puntos 2 y 3
-están acoplados — la columna `network` conviene que exista **antes** del primer anclaje en mainnet,
-porque un TXID sin red es inverificable cuando existan dos.
-
----
+  75, piso en 74) y ese es el estado correcto para siempre. Es el botón *"Release stage N payment"*:
+  implementarlo contradiría la **regla 13** y **D-021** —ningún validador custodia ni transfiere
+  valor— y **D-070**. El razonamiento está en `developer.project.$projectId.contracts.tsx`.
 
 # Cómo se trabaja acá
 
@@ -271,6 +244,16 @@ Si dudás del nivel, es el más alto de los dos.
 Un commit = un cambio lógico · el cuerpo explica el *por qué* · `BREAKING CHANGE:` si rompe contrato
 de API o esquema on-chain. **`main` es la rama de integración y no hay PRs** (D-030).
 
+**Testear, commitear y pushear son una sola unidad de trabajo.** `pnpm verify:all` en verde →
+`git commit` → `git push`, siempre juntos y en ese orden. No se junta trabajo local "para pushear al
+final", y no se commitea sin el verde.
+
+**Por qué es regla y no gusto:** un commit local no existe para nadie más, y el remoto queda
+afirmando un estado que no es el real — el mismo modo de falla que el push contra un servicio
+suspendido y que el TXID simulado en producción. **No falla: miente.** Si pushear tiene una
+consecuencia que el dueño debería saber —acá el deploy automático de Render, que el `buildFilter`
+no filtra—, se pushea igual y se avisa; no se retiene el push por eso.
+
 **La documentación viaja con el código que la causa, en el mismo commit.** Un cambio que altera cómo
 se opera, se configura o se despliega algo llega con su documentación adentro — no en un `docs(...)`
 posterior. Un `docs(...)` suelto es legítimo solo cuando el cambio **es** documentación: sanear algo
@@ -337,14 +320,10 @@ Sección viva: agregá acá el mismo día que te muerda una. Las de cada frente 
   read by pnpm`. **Ese warning no es ruido: es la cuenta regresiva.** El día que se suba el pin a
   pnpm 10+, los overrides se ignoran **en silencio** y sin romper el build; hay que moverlos a
   `pnpm-workspace.yaml` en el mismo commit que sube la versión.
-- **`pnpm verify` no mira la configuración desplegada, y `render.yaml` es configuración.** La suite
-  corre contra el entorno de test; entre ese entorno y el que declara el Blueprint no había nada. El
-  2026-08-31 se pusheó un commit sabiendo que dejaría el anclaje inhabilitado en producción, y se
-  confirmó **después**, leyendo los logs del deploy — saberlo no es un control. Lo cierra
-  `apps/api/test/render-config.test.ts`: ejecuta las reglas de arranque de la API contra el
-  `render.yaml` y exige que toda variable que el código lee esté declarada. **Si agregás una lectura
-  de `env.*` nueva, declarala en `render.yaml` o el test se pone rojo** — que es el punto.
-
+- **`pnpm verify` corre contra el entorno de test, no contra el que declara `render.yaml`.** Entre
+  los dos no había nada, y una regresión de configuración solo se veía en los logs del deploy.
+  Lo cierra `apps/api/test/render-config.test.ts` (D-076). **Si agregás una lectura de `env.*`
+  nueva, declarala en `render.yaml` o el test se pone rojo** — que es el punto.
 - **Las capturas del developer no coinciden en el header.** Documentación (46) va sin logo, Audit
   log (49) va con logo, ninguna trae campana ni idioma, y M2-D3 dice *never omit the logo*. No se
   transcribe captura por captura: D-074 unifica. Si una pantalla nueva "sigue la captura" y saca el
