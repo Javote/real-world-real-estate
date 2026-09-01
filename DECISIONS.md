@@ -22,7 +22,7 @@ ya no existen. Partirlo no pierde nada: el porqué sigue estando, deja de pesar.
 > se contradice internamente, (b) es un error de redacción, o (c) seguirlo al pie contradiría una
 > verdad del producto declarada por el dueño — **nunca por conveniencia**.
 >
-> **La numeración no se recicla.** Las decisiones nuevas siguen desde D-085.
+> **La numeración no se recicla.** Las decisiones nuevas siguen desde D-087.
 
 ## Desvíos vigentes
 
@@ -102,7 +102,8 @@ Evidencia sin firmar es (a) la declarada `authoritative` sin atribución de auto
 (`issuingAuthority`), o (b) un bundle que ningún revisor atestiguó. **El rechazo ocurre en la
 transición, no en el upload**: subir siempre se puede; avanzar no.
 *Estado: implementado el piso (exige que haya evidencia). Faltan las columnas de (a) y (b).*
-**Acotada por D-084**, que sacó `authorityReference` de (a).
+**Acotada por D-084**, que sacó `authorityReference` de (a), y por **D-086**, que eliminó (b):
+la atestación se registra, pero ya no condiciona el avance.
 
 ## D-084 — La atribución de autoridad es **quién**, no **quién más su número de expediente**
 
@@ -140,6 +141,60 @@ que ese archivo, con esa declaración de origen, existía en ese momento y no ca
 
 **Alcance.** No toca la mitad (b). `authoritative` ya existe como columna desde `0000_init.sql`;
 lo que falta es `issuingAuthority`, obligatorio en la transición cuando `authoritative = true`.
+
+## D-085 — La migración se corrige editando `0000_init.sql`, y producción se re-siembra
+
+**Sigue habiendo un solo archivo de migración.** `network` en `OnChainEvent` (D-080) e
+`issuingAuthority` en `Evidence` (D-028/D-084) entran editando `0000_init.sql`, no en un `0001_`.
+
+**Contra D-063, y a sabiendas.** D-063 permitía editar el archivo *"mientras la única base sea
+local"* y daba eso por terminado con Turso vivo. El dueño decide sostener la regla en vez de la
+excepción: el costo de una cadena de migraciones es para siempre, y el de re-sembrar una instancia
+demo es de una vez.
+
+**Lo que cuesta, medido antes de decidir.** Producción tenía 5 usuarios, 1 proyecto, 2 stages, 1
+evidencia, 1 bundle y 4 filas de `AuditLog`. `OnChainEvent` ya estaba en 0, así que **no se pierde
+ningún anclaje**. Las cuentas demo **no cambian de password** si se re-siembra con las mismas
+`SEED_ADMIN_PASSWORD` y `SEED_DEMO_PASSWORD`: el seed las lee de ahí (`db/credentials.ts`). Lo único
+irrecuperable son las 4 filas de auditoría, que son de datos sembrados.
+
+**El borrado tiene que incluir `_migrations`, y esto es lo que puede salir mal en silencio.**
+`migrate.ts` corre en el `startCommand` de Render y **saltea todo archivo cuyo nombre ya esté en
+`_migrations`**. Editar `0000_init.sql` no lo vuelve a aplicar: si se deploya sin borrar esa tabla,
+el deploy sale **verde**, la API arranca, y recién falla al consultar una columna que no existe.
+Es el mismo modo de falla de siempre — no rompe, miente.
+
+**El orden es parte de la decisión:** se pushea, se borran **todas** las tablas incluida
+`_migrations`, se reinicia para que `migrate` reconstruya el esquema nuevo, y recién ahí se
+re-siembra. Entre el deploy y el borrado hay una ventana en la que la API está rota; es una
+instancia demo con 0 anclajes y se asume.
+
+**Cuándo deja de valer.** Con datos reales de un tercero —una obra de verdad, un comprador de
+verdad— esto no se puede volver a hacer. La próxima vez que el esquema cambie después de eso, hay
+migración nueva y la cadena empieza ahí.
+
+## D-086 — La atestación del revisor deja de ser condición para avanzar
+
+**Se cae la mitad (b) de D-028.** Ya no se exige que un revisor haya atestiguado un bundle para que
+el stage pueda avanzar. El criterio 7 del SOM —*"rejects unsigned evidence"*— queda sostenido solo
+por (a): `authoritative = true` exige `issuingAuthority`.
+
+**Verdad de producto declarada por el dueño**, que es la cláusula (c) de la jerarquía: *la app no
+revisa ni certifica nada; respalda evidencia que ya fue verificada off-chain*. Es la misma línea que
+D-026, llevada a su consecuencia sobre el modelo: si la verificación ocurrió afuera, exigir una
+atestación adentro como condición de avance convierte a la plataforma en árbitro de un proceso que
+declara no arbitrar.
+
+**Lo que NO cambia.** Los roles `verifier` y `notary` siguen existiendo —están en `docs/`, son dos
+de los cuatro— y sus acciones siguen anclando: `POST /certifier/stages/:id/certify` produce
+`CERTIFY_STAGE` y `POST /notary/dossiers/:id/sign` produce `DOSSIER_SIGNATURE`. La cuarta afirmación
+del producto sigue en pie: *esta persona atestiguó haberlo revisado*. Lo que se cae es que esa
+atestación **bloquee** una transición, no que se registre.
+
+**Lo que se acepta.** Hoy `crearBundle` se llama también desde la subida de evidencia del developer
+(`developer-evidencia.routes.ts`), así que existe un bundle que nace sin que ningún certificador
+toque nada. Con (b) en pie eso era un hueco a cerrar; sin (b) es el comportamiento correcto, porque
+el bundle es un **acta de lo que hay**, no un certificado de que alguien lo miró.
 
 ## D-067 — `Milestone` → `Stage` en todo el dominio — **ejecutada 2026-08-24**
 
