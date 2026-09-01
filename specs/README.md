@@ -111,7 +111,7 @@ de corte de una rebanada es que la app quede corriendo y demostrable.**
 |---|---|---|
 | **Los 3 pilotos no responden a tiempo** | Sin contacto al cerrar la vertical de evidencia | Escalar a los developers socios; es su compromiso elegirlos |
 | **Scope creep de UI**: 53 superficies, 33 componentes | Una vertical no cierra | Cortar superficies secundarias antes que mover la fecha. **Dossier y audit log no son cortables**: son la tesis del producto |
-| Blockfrost caído o limitado | 402/429 en el adaptador | `ANCHOR_MODE=simulated` mantiene el producto usable; cola de re-anclaje |
+| Blockfrost caído o limitado | 402/429 en el adaptador | El anclaje falla y el estado queda `Pending`; se reconcilia en la próxima lectura (D-077). **Caer a `ANCHOR_MODE=simulated` no es plan B**: produciría TXIDs que no existen, que es el incidente del 2026-08-27, y D-075 lo vuelve imposible por código |
 | Confirmaciones lentas rompen la UX | `AnchoringSuccessModal` tarda >30s | Modal en dos tiempos: "enviado" (TXID) → "confirmado" (poll) |
 | Fricción CIP-30 con profesionales | Rechazo de los pilotos | Sin alcance en el validador (D-058); si vuelve, es decisión nueva |
 | La métrica de 12 minutos se descubre tarde | No hay telemetría al llegar a la vertical de invitación | Instrumentarla cuando nazca ese flujo, no después |

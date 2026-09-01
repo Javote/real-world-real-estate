@@ -4,10 +4,10 @@ import type { StageDatum } from "@plataforma/shared";
 import { db } from "./db";
 
 // El cableado del `AnchorPort` (SPEC-013 §A). La API no sabe que Cardano
-// existe: pide el puerto, lo usa, y el día que aparezca el adaptador real
-// (rebanada B) esta configuración es lo único que cambia.
+// existe: pide el puerto y lo usa. El adaptador real existe desde la rebanada B
+// y esta configuración siguió siendo lo único que cambió para encenderlo.
 
-/** El ledger del simulador, sobre la misma SQLite. Ver `0002_simulated_ledger.sql`. */
+/** El ledger del simulador, sobre la misma SQLite. La tabla vive en `0000_init.sql`. */
 class KyselyLedgerStore implements LedgerStore {
   async get(outputRef: OutputRef): Promise<LedgerUtxo | undefined> {
     const fila = await db
