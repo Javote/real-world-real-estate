@@ -118,6 +118,9 @@ async function slotConfigDelDevnet() {
 const esperarBloques = (n = 2) => new Promise((r) => setTimeout(r, n * 1500));
 
 let adapter: LucidAnchorAdapter;
+/** La misma instancia que tiene el adaptador: el test del reference script
+ * arma un segundo adaptador sobre la misma wallet. */
+let lucid: Awaited<ReturnType<typeof Lucid>>;
 
 beforeAll(async () => {
   if (!corre) return;
@@ -130,7 +133,7 @@ beforeAll(async () => {
   // construir Lucid. Ogmios entrega los parámetros de protocolo nativos y no
   // depende de esa forma. En Preprod se usa Blockfrost, que sí lo trae — y el
   // adaptador no se entera: recibe la instancia ya construida.
-  const lucid = await Lucid(new KupmiosDevnet(KUPO_URL, OGMIOS_URL), "Custom", {
+  lucid = await Lucid(new KupmiosDevnet(KUPO_URL, OGMIOS_URL), "Custom", {
     slotConfig: await slotConfigDelDevnet()
   });
   lucid.selectWallet.fromSeed(seed);
@@ -205,4 +208,44 @@ describe.skipIf(!corre)("AnchorPort contra un nodo Cardano local (yaci-devkit)",
       })
     ).rejects.toThrow();
   }, 120_000);
+
+  // **Va último a propósito.** Publicar el reference script muta el adaptador,
+  // así que los tres tests de arriba corren antes y cubren el camino con el
+  // validador ADJUNTO. Este cubre el referenciado: los dos existen en
+  // producción según haya o no un UTxO publicado, y los dos tienen que pasar
+  // por un nodo de verdad.
+  it("publica el reference script, lo descubre solo y el nodo evalúa el validador referenciado", async () => {
+    const publicacion = await adapter.publishReferenceScript();
+    await esperarBloques();
+    expect(publicacion.txid).toMatch(/^[0-9a-f]{64}$/);
+
+    // Un adaptador nuevo sobre la misma wallet lo encuentra sin configuración
+    // — es exactamente lo que hace la API al arrancar.
+    const conRef = await LucidAnchorAdapter.create({ lucid, network: "Custom" });
+    expect(conRef.referenceScriptOutputRef).toBe(publicacion.outputRef);
+
+    // Y es idempotente contra la cadena, no contra memoria: este adaptador
+    // nunca publicó nada y aun así no vuelve a gastar.
+    expect((await conRef.publishReferenceScript()).txid).toBeNull();
+
+    const suyo = { ...fuente, id: "clh3k9x0000008l3fyaciref" };
+    const pendiente = buildStageDatum(suyo);
+    const abierto = await conRef.openThread({ datum: pendiente });
+    await esperarBloques();
+    expect((await conRef.verify(abierto.txid))?.datum.state).toBe("Pending");
+
+    const avance = await conRef.advanceThread({
+      outputRef: abierto.outputRef,
+      previous: pendiente,
+      next: buildStageDatum({ ...suyo, state: "InProgress" })
+    });
+    await esperarBloques();
+    expect((await conRef.verify(avance.txid))?.datum.state).toBe("InProgress");
+
+    // El UTxO del script sigue vivo: la selección de monedas no se lo comió
+    // (`entradasDeLaWallet`). Si se lo hubiera comido, los dos anclajes de
+    // arriba igual pasaban y el hueco recién se vería en el siguiente.
+    const utxos = await lucid.utxosAt(conRef.walletAddress);
+    expect(utxos.filter((u) => u.scriptRef)).toHaveLength(1);
+  }, 180_000);
 });

@@ -116,7 +116,11 @@ BLOCKFROST_API_KEY=… SERVICE_WALLET_PRIVATE_KEY=… \
 - **Se descubre al arrancar**, comparando el hash del script. Publicar con la API arriba no la
   cambia: hay que reiniciarla.
 - **`null` es un estado legítimo**: sin reference script, el adaptador adjunta el validador y todo
-  funciona igual, más caro. Los tests corren así.
+  funciona igual, más caro. Los tres primeros tests de `yaci.test.ts` corren así a propósito.
+- **Los dos caminos están probados contra un nodo de verdad.** El test del reference script va
+  **último** en `yaci.test.ts` porque publicar muta el adaptador: los de arriba cubren el validador
+  adjunto y el de abajo el referenciado, que es la diferencia que existe en producción según haya o
+  no un UTxO publicado.
 
 ## El adaptador real es agnóstico del provider, y eso no es cosmético
 
@@ -148,6 +152,14 @@ adaptador que corre contra el `Emulator` corre contra él sin tocar una línea �
    un campo que la API agregó después y que yaci-store todavía no devuelve (`Cannot read properties
    of undefined (reading 'PlutusV1')`). Ogmios entrega los parámetros nativos. En Preprod se usa
    Blockfrost, que sí lo trae, y el adaptador no se entera.
+
+4. **Tarda ~5 minutos en estar listo, y miente mientras tanto.** Ogmios (1337) y Kupo (1442)
+   contestan casi enseguida, pero **yaci-store (8080) es un Spring Boot** que sigue arrancando: el
+   test lo necesita para `slotConfigDelDevnet()` y hasta entonces falla con *"¿levantaste el
+   compose?"*, que apunta al lugar equivocado. En el medio los logs escupen `Java command not
+   found in the provided JRE folder` — **es ruido**: cae a `java` del PATH (`/opt/java/openjdk`) y
+   arranca igual. La señal buena es `[OK] Yaci Store Started`, o un 200 en
+   `curl localhost:8080/api/v1/blocks/latest`. No conviene diagnosticar nada antes de eso.
 
 Y dos fricciones del devnet que quedaron documentadas en el propio test: los cost models vienen con
 el i64 máximo, que al pasar por un `number` se redondea fuera de rango y CML rechaza; y la **ventana
