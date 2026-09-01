@@ -11,7 +11,9 @@ import { createStorage } from "../src/lib/storage";
 // verificar que el código que va a hablar con R2 funciona contra un S3 de
 // verdad y no solo contra el driver de disco.
 //
-//   docker compose -f compose.dev.yml up -d
+// MinIO lo levanta y lo baja la propia suite (`global-setup-minio.ts`); si ya
+// estaba corriendo, se usa y se deja como estaba.
+//
 //   pnpm --filter @plataforma/api test:s3
 const corre = process.env.S3_TEST === "1";
 

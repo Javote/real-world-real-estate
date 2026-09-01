@@ -169,12 +169,17 @@ adaptador que corre contra el `Emulator` corre contra él sin tocar una línea �
    Blockfrost, que sí lo trae, y el adaptador no se entera.
 
 4. **Tarda ~5 minutos en estar listo, y miente mientras tanto.** Ogmios (1337) y Kupo (1442)
-   contestan casi enseguida, pero **yaci-store (8080) es un Spring Boot** que sigue arrancando: el
-   test lo necesita para `slotConfigDelDevnet()` y hasta entonces falla con *"¿levantaste el
-   compose?"*, que apunta al lugar equivocado. En el medio los logs escupen `Java command not
-   found in the provided JRE folder` — **es ruido**: cae a `java` del PATH (`/opt/java/openjdk`) y
-   arranca igual. La señal buena es `[OK] Yaci Store Started`, o un 200 en
-   `curl localhost:8080/api/v1/blocks/latest`. No conviene diagnosticar nada antes de eso.
+   contestan casi enseguida, pero **yaci-store (8080) es un Spring Boot** que sigue arrancando. En
+   el medio los logs escupen `Java command not found in the provided JRE folder` — **es ruido**:
+   cae a `java` del PATH (`/opt/java/openjdk`) y arranca igual. La señal buena es
+   `[OK] Yaci Store Started`, o un 200 en `curl localhost:8080/api/v1/blocks/latest`.
+   **Esa espera ya no es tuya**: `vitest.devnet.mts` levanta el devnet, aguanta hasta 8 minutos a
+   que `/blocks/latest` conteste, y lo baja al terminar. Solo apaga lo que prendió — si el devnet
+   ya estaba arriba, lo usa y lo deja. El teardown corre aunque los tests fallen, que es justo
+   cuando uno se olvidaría de limpiar.
+5. **`docker compose stop yaci` termina con exit 137, y no es un error.** La imagen no maneja
+   `SIGTERM`, así que compose la mata con `SIGKILL` después del timeout. No hay estado que perder:
+   el devnet se regenera entero en el próximo arranque.
 
 Y dos fricciones del devnet que quedaron documentadas en el propio test: los cost models vienen con
 el i64 máximo, que al pasar por un `number` se redondea fuera de rango y CML rechaza; y la **ventana
@@ -209,8 +214,8 @@ indexer.
 ```bash
 pnpm --filter @plataforma/cardano test        # códec, blueprint, simulador y Emulator
 pnpm --filter @plataforma/cardano ref:publish # publica el validador como reference script (🟡)
-docker compose -f compose.dev.yml up -d       # MinIO + devnet de Cardano
 pnpm --filter @plataforma/cardano test:yaci   # el flujo completo contra el devnet
+docker compose -f compose.dev.yml up -d       # solo si querés dejarlo levantado entre corridas
 ```
 
 `test:yaci` **no corre en CI** (el CI no levanta infraestructura) y está excluido del `test` normal.

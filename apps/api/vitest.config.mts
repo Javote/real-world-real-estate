@@ -30,7 +30,9 @@ export default defineConfig({
   },
   test: {
     include: ["test/**/*.test.ts"],
-    globalSetup: ["./test/global-setup.ts"],
+    // El segundo solo actúa con `S3_TEST=1`: levanta MinIO y lo baja al
+    // terminar. En `pnpm test` entra, ve la variable vacía y sale.
+    globalSetup: ["./test/global-setup.ts", "./test/global-setup-minio.mts"],
     // Corre una vez POR ARCHIVO y antes de sus imports, que es lo que hace
     // falta: `src/lib/db.ts` lee DATABASE_URL al importarse.
     setupFiles: ["./test/setup-db.ts"],

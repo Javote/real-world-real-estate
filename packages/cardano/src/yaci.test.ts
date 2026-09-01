@@ -11,10 +11,13 @@ import { LucidAnchorAdapter } from "./real";
 // levanta un devnet con bloques de 1 segundo y una API compatible con
 // Blockfrost.
 //
-// **No corre en CI** (el CI no levanta infraestructura). Se corre a mano:
+// **No corre en CI** (el CI no levanta infraestructura). Se corre a mano, y el
+// devnet lo levanta y lo baja la propia suite (`vitest.devnet.mts`):
 //
-//   docker compose -f compose.dev.yml up -d
 //   pnpm --filter @plataforma/cardano test:yaci
+//
+// El primer arranque tarda ~5 minutos. Si el devnet ya estaba corriendo, se usa
+// y se deja como estaba.
 //
 // El adaptador es EXACTAMENTE el mismo que corre contra el Emulator y el que
 // va a correr contra Preprod: lo único que cambia es el provider.

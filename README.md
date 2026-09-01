@@ -53,8 +53,9 @@ pnpm verify:all    # lo anterior, encadenado con la suite de Aiken
 ```
 
 Es lo mismo que corre el CI, y nada se commitea sin que dé verde. `pnpm --filter @plataforma/api
-test:s3` y `test:yaci` corren contra infraestructura real y **no** están incluidos: van a mano, con
-`docker compose -f compose.dev.yml up -d` levantado.
+test:s3` y `test:yaci` corren contra infraestructura real y **no** están incluidos: van a mano. Cada
+uno levanta el contenedor que necesita y lo baja al terminar, así que alcanza con tener Docker
+corriendo. Si ya lo tenías levantado, lo usan y lo dejan como estaba.
 
 ## Dónde vive todo
 

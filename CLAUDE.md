@@ -271,9 +271,9 @@ pnpm contracts:verify             # Aiken: fmt + check + build
 pnpm verify:all                   # las dos, encadenadas
 pnpm lint:fix                     # Biome arregla lo mecánico
 
-docker compose -f compose.dev.yml up -d       # MinIO + devnet de Cardano (local, D-062)
 pnpm --filter @plataforma/api test:s3         # storage contra MinIO real
 pnpm --filter @plataforma/cardano test:yaci   # anclaje contra un nodo Cardano real
+docker compose -f compose.dev.yml up -d       # solo si querés la infra levantada aparte
 ```
 
 **TypeScript y Aiken no se mezclan:** distinto toolchain, distintos artefactos, distintos modos de
