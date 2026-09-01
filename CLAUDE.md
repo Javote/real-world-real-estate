@@ -27,19 +27,29 @@ validador que afirme algo más, está mal (D-026).
 
 # Estado, y lo próximo
 
-**La instancia desplegada ancla de verdad en Cardano Preprod** desde el 2026-08-31. Lo que se hizo
-para llegar está en `DECISIONS.md` (D-075 → D-079) y en `specs/PLAN-2026-08-31-anclaje-real.md`; los
-números medidos —endpoints, superficies, tests— en `specs/README.md`. Acá solo lo que falta.
+**La instancia desplegada arranca en modo real contra Cardano Preprod** desde el 2026-08-31:
+`AnchorPort listo en modo "real"` en los logs, con la wallet de servicio derivada de su clave.
+**Todavía no ancló nada** — `OnChainEvent` tiene 0 filas en producción. Son dos afirmaciones
+distintas y esta sección supo confundirlas: *arrancar* en real es configuración, *anclar* es prueba.
+Lo que se hizo para llegar está en `DECISIONS.md` (D-075 → D-083) y en
+`specs/PLAN-2026-08-31-anclaje-real.md`; los números medidos, en `specs/README.md`. Acá solo lo que
+falta.
 
 | # | Qué | Por qué ahí | Nivel |
 |---|---|---|---|
-| 1 | **Primer anclaje real en la instancia desplegada** | Convierte "arranca en real" en "ancla de verdad" | 🟢 |
-| 2 | **Columna `network`** en `OnChainEvent` (D-080) | Un TXID sin red es inverificable, y mainnet es inminente. Producción tiene **0 filas**: el único momento en que toda fila nace atribuida | 🟡 *migración nueva: rompe "una sola migración"* |
-| 3 | **Mainnet** — runbook, habilitar la red, custodia de la clave | D-013 la hace **imposible por configuración**: es código, no solo procedimiento | 🔴 |
-| 4 | **D-028** — atribución de autoridad en la evidencia | Hoy se exige el piso ("existe una evidencia"). Faltan `issuingAuthority`, `authorityReference` y la atestación | 🟡 |
+| 1 | **Columna `network`** en `OnChainEvent` (D-080) | **Es ahora o nunca limpio**: con 0 filas, toda fila nace atribuida. Después del primer anclaje hay backfill, y un TXID sin red es inverificable en cuanto existan dos | 🟡 *migración nueva: rompe "una sola migración"* |
+| 2 | **Publicar el reference script** en Preprod (D-083) | Va pegado a 1: el deploy de la migración **es** el restart que el descubrimiento necesita. Un solo reinicio en vez de dos | 🟡 *operativo* |
+| 3 | **Primer anclaje real de punta a punta** | Recién acá "arranca en real" pasa a "ancla de verdad", y ya sale con la transacción barata | 🟢 |
+| 4 | **Defensas 2 y 3** del TXID simulado (plan §9) | Hacerlas o **descartarlas explícitamente**. Hoy están en un limbo que no es ninguna de las dos | 🟡 *decide el dueño* |
+| 5 | **`yaci.test.ts` cubre el camino referenciado** | Es el único suite con un nodo real evaluando el validador, y corre con el validador adjunto: la forma que D-083 dejó de usar | 🟢 |
+| 6 | **D-028** — atribución de autoridad en la evidencia | Hoy se exige el piso ("existe una evidencia"). Faltan `issuingAuthority`, `authorityReference` y la atestación | 🟡 |
+| 7 | **7 superficies** (46/53) y los patrones M2-D4 (8/10) | Backlog de transcripción. El test ID que falta (D-070) no es deuda | 🟢 |
+| 8 | **Correr el security review** | Criterio 11 del SOM: el P1 conocido está cerrado, pero el review nunca se corrió | 🟢 |
+| 9 | **Mainnet** — runbook, habilitar la red, custodia de la clave | D-013 la hace **imposible por configuración**: es código, no solo procedimiento | 🔴 |
 
-Los puntos **2 y 3 están acoplados**: `network` conviene que exista antes del primer anclaje en
-mainnet, porque un TXID sin red es inverificable cuando existan dos.
+**El orden no es por tamaño.** Los puntos 1 → 3 son una sola secuencia y se hacen en ese orden: la
+columna `network` tiene una ventana que se cierra sola —el primer anclaje real la cierra— y el
+reference script comparte el reinicio con su deploy. El 9 depende del 1.
 
 # Cómo se trabaja acá
 

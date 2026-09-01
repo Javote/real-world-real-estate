@@ -54,21 +54,21 @@ aprobación explícita.
 | 9 | Mediana **reserva → escrow < 12 min** | Telemetría + capturas | ⬜ |
 | 10 | Audit logs persistidos | Ledger append-only paginable (M2-D4 P6) | ◐ tabla sí, superficie no |
 | 11 | **Sin hallazgos P1** de seguridad | Reporte de security review | ◐ el P1 conocido está cerrado; falta correr el review |
-| 12 | Pre-prod en **URL pública** | La URL, viva | ⬜ |
+| 12 | Pre-prod en **URL pública** | La URL, viva | ✅ `propnexus-web.onrender.com` + `propnexus-api.onrender.com`, las dos vivas |
 | 13 | **Video walkthrough** | El video | ⬜ |
 | 14 | **Runbook** deploy / rollback | [`RUNBOOK-deploy.md`](RUNBOOK-deploy.md) | ✅ |
-| 15 | Lista de **TXIDs** de prueba | Publicada y resoluble en un explorador | ⬜ |
+| 15 | Lista de **TXIDs** de prueba | Publicada y resoluble en un explorador | ⬜ hay TXIDs de Preprod probados desde local; falta anclar desde la instancia desplegada y publicarlos |
 | 16 | README marca carpetas públicas vs privadas | En `README.md` | ✅ |
 
-## Estado medido (2026-08-28)
+## Estado medido (2026-09-01)
 
 **Backend y cadena: la mitad difícil está hecha.**
 
 | | |
 |---|---|
 | Contratos | validador con thread token y `mint` validado, datum alineado con M1-D2, **73 tests** |
-| Anclaje | `AnchorPort` con adaptador simulado y real; probado contra el `Emulator` y contra un devnet local |
-| API | autorización en dos capas, FSM aplicada, bundles con Merkle root, audit log, **138 tests** |
+| Anclaje | `AnchorPort` simulado y real; probado contra el `Emulator`, contra un devnet local y contra Preprod. El validador viaja por referencia (D-083) |
+| API | autorización en dos capas, FSM aplicada, bundles con Merkle root, audit log, **231 tests** |
 | Storage | port S3 probado contra MinIO real; el hash cubre los bytes guardados |
 
 **Front:** SPEC-016 cierra el backlog de test IDs del investor. Queda `DEV-RELEASE-EXECUTE-002` (D-070, no es deuda).
@@ -97,10 +97,10 @@ parser corregido son 5 de 64.)*
 | 2 | **Borrado + tokens + shadcn/ui + rename D-067** | hecho |
 | 3 | **Los ~12 componentes transversales** de M2-D3 | hecho — 36/36 (ver tabla de arriba) |
 | 4 | **Los patrones P1–P10** de M2-D4 | **en curso** — 8/10 |
-| 5+ | **Verticales**, en el orden del flujo cross-rol de M2-D1 §6: `evidencia → certificar → liberar` | **en curso** — 27/53 superficies (51%), Notary y Certifier completos |
-| — | `AnchorPort` §C: reconciliación y `verify()` público ([`SPEC-013`](SPEC-013-anchorport.md)) | pendiente |
-| — | **Encender el anclaje real** en la instancia desplegada ([`PLAN-2026-08-31`](PLAN-2026-08-31-anclaje-real.md)) | **lo próximo** — 9 pasos, dos 🔴 |
-| — | Preprod: cuenta Blockfrost + wallet de servicio 🔴 | pendiente, externo |
+| 5+ | **Verticales**, en el orden del flujo cross-rol de M2-D1 §6: `evidencia → certificar → liberar` | **en curso** — 46/53 superficies (87%), Notary y Certifier completos |
+| — | `AnchorPort` §C: reconciliación y `verify()` público ([`SPEC-013`](SPEC-013-anchorport.md)) | **hecho** — `reconciliarParaLectura` cableada en cinco routers (D-077) |
+| — | **Encender el anclaje real** en la instancia desplegada ([`PLAN-2026-08-31`](PLAN-2026-08-31-anclaje-real.md)) | la API **arranca** en modo real; falta el primer anclaje. Ver la tabla de `CLAUDE.md` |
+| — | Preprod: cuenta Blockfrost + wallet de servicio 🔴 | **hecho 2026-08-31** — wallet fondeada, clave cargada en el dashboard |
 
 Cada vertical trae sus endpoints (con paths scopeados por rol, D-066) y sus test IDs. **El criterio
 de corte de una rebanada es que la app quede corriendo y demostrable.**

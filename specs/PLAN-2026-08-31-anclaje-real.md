@@ -56,10 +56,10 @@ distingue un anclaje real de uno inventado.
 | 1 | ~~Borrar el anclaje simulado de la base de producción~~ | 🔴 **hecho 2026-08-31** |
 | 2 | ~~Probar el camino del hilo en local contra Preprod~~ | 🟡 **hecho 2026-08-31** |
 | 3 | ~~Defensa 1: la API se niega a simular contra una base remota~~ | 🟢 **hecho 2026-08-31** |
-| 4 | **Secretos en el dashboard + probar el modo real desde ahí**, reversible sin tocar el repo | 🔴 dueño |
+| 4 | ~~Secretos en el dashboard + probar el modo real desde ahí~~ | 🔴 **hecho 2026-08-31** |
 | 5 | ~~Commit de `render.yaml`~~ | 🟢 **hecho 2026-08-31** |
-| 6 | Verificar el arranque en los logs | 🟢 |
-| 7 | Un anclaje real de punta a punta | 🟢 |
+| 6 | ~~Verificar el arranque en los logs~~ | 🟢 **hecho** — `AnchorPort listo en modo "real"` en Render |
+| 7 | Un anclaje real de punta a punta | 🟢 **lo único que falta de este plan** — `OnChainEvent` sigue en 0 filas |
 | 8 | ~~Reconciliación por demanda, sin cron~~ | 🟢 **hecho 2026-08-31** |
 | 9 | Defensa 2 (columna `anchorMode`) y defensa 3 (el simulador devuelve `Pending`) | 🟡 decide el dueño |
 
