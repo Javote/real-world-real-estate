@@ -22,7 +22,7 @@ ya no existen. Partirlo no pierde nada: el porqué sigue estando, deja de pesar.
 > se contradice internamente, (b) es un error de redacción, o (c) seguirlo al pie contradiría una
 > verdad del producto declarada por el dueño — **nunca por conveniencia**.
 >
-> **La numeración no se recicla.** Las decisiones nuevas siguen desde D-080.
+> **La numeración no se recicla.** Las decisiones nuevas siguen desde D-081.
 
 ## Desvíos vigentes
 
@@ -182,6 +182,17 @@ del acuerdo — no un flujo de pagos.
 Las filas 40-41 (`/developer/project/:projectId/contracts`) y 23-24
 (`/investor/unit/:unitId/contract`) **no se transcriben con el encuadre de pagos**. Cuando se
 construyan, muestran el contrato como registro y el estado de la unidad, no un botón de liberar.
+
+### El test ID que nunca se cubre
+
+`DEV-RELEASE-EXECUTE-002` —el segundo test ID de las filas 40-41, el botón *"Release stage N
+payment"*— **no se implementa nunca**. `pnpm testids` lo reporta pendiente (74 de 75, con el piso en
+74) y **ese es el estado correcto, permanente**: no es deuda que algún día cierre.
+
+Se dice acá porque un medidor en 74/75 invita a completarlo, y completarlo sería romper la regla 13
+y D-021 para que suba un número. Pintarlo sobre otra cosa para que el medidor cierre sería peor:
+mentirle al medidor. El razonamiento largo, con qué se muestra en su lugar, vive en el encabezado de
+`apps/web/src/routes/developer.project.$projectId.contracts.tsx`.
 
 ### Deuda declarada, no resuelta acá
 
@@ -591,6 +602,31 @@ entra a su ledger en el acto, así que `Confirmed` inmediato es cierto en su mod
 **Lo que destapó:** cuatro tests de `reconcile.test.ts` insertaban txid inventados y pasaban porque
 el simulador confirmaba cualquier cosa. Ahora anclan de verdad contra el puerto para obtener su
 txid. Un test que pasa contra un puerto que miente no prueba la promoción, prueba la mentira.
+
+## D-080 — `OnChainEvent` registra la **red**, no el adaptador que lo ancló
+
+Rechazada una columna `anchorMode` (`simulated` | `real`). Lo que va a llevar la tabla es
+**`network`** (`Preprod` | `Mainnet`).
+
+**Por qué se propuso `anchorMode`.** Como tercera defensa contra el TXID inventado del 2026-08-27:
+si cada fila dijera de qué adaptador vino, un anclaje simulado sería distinguible de uno real para
+siempre.
+
+**Por qué se rechaza.** Mete **nuestra configuración** en el modelo de dominio. A la tabla no le
+importa qué adaptador corrió: es una abstracción que se filtra. Y la premisa correcta es la
+contraria — **si está en la base, es un anclaje real**, porque D-075 impide que el simulador escriba
+contra una base remota. La defensa buena es esa, no una columna que documente la posibilidad de
+haber mentido.
+
+**Por qué `network` sí.** Es información de dominio que **hoy falta**: la red es solo una variable
+de proceso (`CARDANO_NETWORK`), no se guarda por evento. Un TXID **sin red es inverificable** en
+cuanto existan dos, y mainnet es inminente. No es una defensa contra nosotros mismos, es el dato que
+falta para poder verificar.
+
+**Cuándo.** Antes del primer anclaje en mainnet. Producción tiene 0 filas, así que hacerlo temprano
+es el único momento en que toda fila nace atribuida; después queda una era de `NULL` que solo se
+reconstruye adivinando. Implica una migración nueva y por lo tanto rompe el "una sola migración" del
+stack (D-063): esa parte la decide el dueño.
 
 ## D-008 — Validador state-thread con núcleo puro separado
 

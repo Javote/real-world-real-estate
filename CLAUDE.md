@@ -34,7 +34,7 @@ números medidos —endpoints, superficies, tests— en `specs/README.md`. Acá 
 | # | Qué | Por qué ahí | Nivel |
 |---|---|---|---|
 | 1 | **Primer anclaje real en la instancia desplegada** | Convierte "arranca en real" en "ancla de verdad" | 🟢 |
-| 2 | **Columna `network`** en `OnChainEvent` | Un TXID sin red es inverificable, y mainnet es inminente. Producción tiene **0 filas**: el único momento en que toda fila nace atribuida | 🟡 *migración nueva: rompe "una sola migración"* |
+| 2 | **Columna `network`** en `OnChainEvent` (D-080) | Un TXID sin red es inverificable, y mainnet es inminente. Producción tiene **0 filas**: el único momento en que toda fila nace atribuida | 🟡 *migración nueva: rompe "una sola migración"* |
 | 3 | **Mainnet** — runbook, habilitar la red, custodia de la clave | D-013 la hace **imposible por configuración**: es código, no solo procedimiento | 🔴 |
 | 4 | **D-028** — atribución de autoridad en la evidencia | Hoy se exige el piso ("existe una evidencia"). Faltan `issuingAuthority`, `authorityReference` y la atestación | 🟡 |
 | 5 | **Reference script** del validador | Cada transacción lo adjunta entero: fee y tamaño | 🟡 |
@@ -42,13 +42,6 @@ números medidos —endpoints, superficies, tests— en `specs/README.md`. Acá 
 
 Los puntos **2 y 3 están acoplados**: `network` conviene que exista antes del primer anclaje en
 mainnet, porque un TXID sin red es inverificable cuando existan dos.
-
-**Rechazado, no pendiente** — no lo agregues acá de nuevo:
-
-- **`DEV-RELEASE-EXECUTE-002` no se implementa nunca.** `pnpm testids` lo reporta pendiente (74 de
-  75, piso en 74) y ese es el estado correcto para siempre. Es el botón *"Release stage N payment"*:
-  implementarlo contradiría la **regla 13** y **D-021** —ningún validador custodia ni transfiere
-  valor— y **D-070**. El razonamiento está en `developer.project.$projectId.contracts.tsx`.
 
 # Cómo se trabaja acá
 
