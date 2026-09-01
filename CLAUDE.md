@@ -58,8 +58,18 @@ tests— viven en `specs/README.md` y solo ahí. El detalle operativo está en
 | 4 | **D-028** — atribución de autoridad en la evidencia | Hoy se exige el piso ("existe una evidencia"). Faltan `issuingAuthority`, `authorityReference` y la atestación | 🟡 |
 | 5 | **Reference script** del validador | Cada transacción lo adjunta entero: fee y tamaño. Optimización, no corrección | 🟡 |
 | 6 | **UTxO único** — cola en memoria + `overrideUTxOs()` | Dos anclajes en ~20 s eligen la misma entrada y el segundo falla | 🟡 |
-| 7 | **`/milestones/` → `/stages/`** | D-023 reserva "milestone" para Catalyst | 🟢 |
-| 8 | `DEV-RELEASE-EXECUTE-002` | Único test ID pendiente de 74. Backlog, no regresión | 🟢 |
+
+**Dos cosas que parecen pendientes y no lo son**, para que nadie las vuelva a agregar acá:
+
+- **`/milestones/` → `/stages/` ya está hecho.** `app.ts` monta `/api/v1/stages` y no existe
+  ninguna ruta `/milestones`. Queda un `setMilestoneState` en el `ApiPort` del front —nombre de
+  función, no path— y las claves de i18n del test ID `INV-STAGE-MILESTONE-001`, que se transcribe
+  literal por obligación de M2-D5.
+- **`DEV-RELEASE-EXECUTE-002` no se implementa nunca.** `pnpm testids` lo reporta pendiente (74 de
+  75, con el piso en 74), pero es el botón *"Release stage N payment"*: ejecutar una liberación de
+  pago. **Implementarlo contradiría la regla 13 y D-021** —ningún validador custodia ni transfiere
+  valor— y D-070, que fija que esas pantallas muestran el contrato como registro y no un botón de
+  liberar. El razonamiento largo está en `developer.project.$projectId.contracts.tsx`.
 
 **Lo próximo es el punto 1**: anclar algo de verdad en la instancia desplegada. Los puntos 2 y 3
 están acoplados — la columna `network` conviene que exista **antes** del primer anclaje en mainnet,

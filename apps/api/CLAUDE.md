@@ -78,7 +78,7 @@ que la superficie del entregable no consume pero los tests y el seed sí.
   **Antes de anclar algo nuevo, preguntá cómo se va a volver del registro a su TXID.**
 
 - **2026-08-23 · La FSM del stage no estaba aplicada acá, y `contracts/` creía que sí** — cerrado
-  el mismo día (D-059). `PATCH /milestones/:id/state` validaba el enum con Zod y escribía: aceptaba
+  el mismo día (D-059). `PATCH .../state` validaba el enum con Zod y escribía: aceptaba
   `Pending → Completed` directo y **salir de `Completed`**, que la regla 9 declara terminal. Los dos
   `CLAUDE.md` decían "una sola tabla de transiciones, espejada 1:1" y la mitad de esa frase era
   falsa. **La lección, que sobrevive al arreglo:** cuando dos sistemas implementan la misma regla y
@@ -212,7 +212,7 @@ on-chain de M1 (D-006, D-061). Es idempotente: si el archivo ya tiene su anclaje
 evento en vez de gastar otra transacción. Lo dispara el admin y nunca el upload, porque una vez en
 la cadena no se borra.
 
-`PATCH /milestones/:id/state` es hoy el único lugar donde el registro avanza, y hace cuatro cosas
+`PATCH /api/v1/stages/:id/state` es hoy el único lugar donde el registro avanza, y hace cuatro cosas
 (D-059): aplica la tabla de transiciones, exige evidencia para completar un stage
 `validationCritical`, escribe el estado, y registra un `OnChainEvent` **pendiente** — la
 declaración queda registrada y la prueba queda `Pending` hasta que exista TXID. Al revés no puede
@@ -228,10 +228,14 @@ Lo que le falta, en orden de importancia:
   del stage en un `EvidenceBundle` y su Merkle root viaja al datum. **Es un acta, no un índice:** se
   escribe con lo que existía en ese momento y no se toca. Si después se sube más evidencia, es otro
   bundle — el root ya anclado tiene que seguir verificando.
-- **El path dice `/milestones/`** y "milestone" está reservado a Catalyst (D-023): debería ser
-  `/stages/`. Cambiarlo toca `apps/web/src/api/port.ts` y los test IDs de M2-D5.
-- **El nombre miente un poco:** `PATCH .../state` suena a editar un campo, cuando lo que ocurre es
-  *registrar una transición* — un evento, no un update.
+- **~~El path dice `/milestones/`~~ — falso desde hace tiempo, y este archivo lo afirmó de más.**
+  `app.ts` monta `app.use("/api/v1/stages", stagesRoutes)` y **no existe ninguna ruta
+  `/milestones`**. Lo único que conserva la palabra es `setMilestoneState` en
+  `apps/web/src/api/port.ts` —un nombre de función, no un path— y las claves de i18n que
+  corresponden al test ID `INV-STAGE-MILESTONE-001`, que M2-D5 obliga a transcribir literal.
+- **El nombre todavía miente un poco:** `PATCH .../state` suena a editar un campo, cuando lo que
+  ocurre es *registrar una transición* — un evento, no un update. Es lo único que queda de esta
+  deuda; el path ya es `/stages/`.
 
 ## Superficie 🔴 — inventario
 
