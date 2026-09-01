@@ -22,7 +22,7 @@ ya no existen. Partirlo no pierde nada: el porqué sigue estando, deja de pesar.
 > se contradice internamente, (b) es un error de redacción, o (c) seguirlo al pie contradiría una
 > verdad del producto declarada por el dueño — **nunca por conveniencia**.
 >
-> **La numeración no se recicla.** Las decisiones nuevas siguen desde D-081.
+> **La numeración no se recicla.** Las decisiones nuevas siguen desde D-083.
 
 ## Desvíos vigentes
 
@@ -627,6 +627,46 @@ falta para poder verificar.
 es el único momento en que toda fila nace atribuida; después queda una era de `NULL` que solo se
 reconstruye adivinando. Implica una migración nueva y por lo tanto rompe el "una sola migración" del
 stack (D-063): esa parte la decide el dueño.
+
+## D-082 — Un anclaje por vez, y el adaptador se acuerda de lo que envió
+
+`LucidAnchorAdapter` serializa **todas** sus transacciones en una cola en memoria, y después de cada
+envío se queda con la vista de lo que acaba de crear: el vuelto de la wallet, vía
+`overrideUTxOs()`, y las salidas al script, en un mapa que `advanceThread` consulta antes que al
+proveedor. Esa vista **vence a los 3 minutos** (`PENDING_UTXO_TTL_MS`).
+
+**El problema.** La wallet de servicio tiene un solo UTxO grande, y `getUtxos()` se lo pregunta al
+proveedor, que solo conoce lo que entró en un bloque —~20 s en Preprod—. Dos anclajes dentro de esa
+ventana eligen la misma entrada: el segundo se arma contra un UTxO ya gastado y muere en `Your
+wallet does not have enough funds`. Del otro lado pasa lo mismo con el hilo: `advanceThread` no
+encuentra el UTxO que `openThread` acaba de crear y devuelve `UNKNOWN_THREAD`. Es la razón por la
+que `PLAN-2026-08-31` §2 tenía que esperar el bloque entre crear un stage y moverlo.
+
+**Las dos mitades, y por qué ninguna sirve sola.** Serializar no arregla nada por sí mismo: dos
+anclajes en serie contra el proveedor eligen igual la misma entrada, porque el proveedor no cambió
+de opinión en el medio. Y encadenar no sirve sin serializar: armar la transacción **lee** el
+conjunto de UTxOs y enviarla lo **invalida**, así que con dos pedidos concurrentes los dos leen
+antes de que ninguno escriba y no hay orden de `overrideUTxOs()` que llegue a tiempo.
+
+**Se construye con `chain()` en vez de `complete()`.** Es la misma transacción —`complete()` es
+`chain()` tirando dos de los tres valores— pero además entrega el conjunto con el que hay que
+quedarse: los UTxOs de la wallet menos los que esta transacción gasta, más el vuelto que crea. O
+sea, exactamente lo que el proveedor va a contestar dentro de veinte segundos.
+
+**El costo, que es real: la vista local puede mentir.** Si el nodo termina descartando una
+transacción, el adaptador queda encadenando sobre un vuelto que no va a existir nunca. Por eso la
+vista vence, por eso el TTL es corto, y por eso **no** se limpia cuando un envío falla: si la
+transacción anterior sí entró al mempool, volver a preguntarle al proveedor devuelve la entrada que
+esa transacción ya gastó y el siguiente anclaje falla igual. Vencer es la única salida del estado
+malo — y es también lo que hace que fondear la wallet se vea.
+
+**Vale para un proceso, y hoy hay uno** (Render, plan free — D-039). Con dos instancias esto no
+alcanza y el arreglo es de otra clase: el estado compartido tendría que salir de la memoria. Se dice
+acá para que se sepa antes de escalar, no después.
+
+**El `Emulator` reproduce el bug exacto**, y por eso los tests prueban algo: su `getUtxos()` lee
+solo el ledger y deja el mempool afuera, igual que Blockfrost. Un anclaje sin `awaitBlock()` detrás
+es un anclaje contra un proveedor que todavía no vio el anterior.
 
 ## D-008 — Validador state-thread con núcleo puro separado
 

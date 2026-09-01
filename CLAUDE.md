@@ -38,7 +38,6 @@ números medidos —endpoints, superficies, tests— en `specs/README.md`. Acá 
 | 3 | **Mainnet** — runbook, habilitar la red, custodia de la clave | D-013 la hace **imposible por configuración**: es código, no solo procedimiento | 🔴 |
 | 4 | **D-028** — atribución de autoridad en la evidencia | Hoy se exige el piso ("existe una evidencia"). Faltan `issuingAuthority`, `authorityReference` y la atestación | 🟡 |
 | 5 | **Reference script** del validador | Cada transacción lo adjunta entero: fee y tamaño | 🟡 |
-| 6 | **UTxO único** — cola en memoria + `overrideUTxOs()` | Dos anclajes en ~20 s eligen la misma entrada y el segundo falla | 🟡 |
 
 Los puntos **2 y 3 están acoplados**: `network` conviene que exista antes del primer anclaje en
 mainnet, porque un TXID sin red es inverificable cuando existan dos.

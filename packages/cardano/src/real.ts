@@ -2,7 +2,7 @@ import {
   type LucidEvolution,
   type Network,
   paymentCredentialOf,
-  type TxSignBuilder,
+  type TxBuilder,
   type UTxO
 } from "@lucid-evolution/lucid";
 import type { StageDatum } from "@plataforma/shared";
@@ -88,6 +88,28 @@ export const VALIDITY_WINDOW_MS = 3 * 60 * 1000;
  */
 export const TIP_LAG_MARGIN_MS = 2 * 60 * 1000;
 
+/**
+ * Cuánto dura la vista local de lo que este proceso ya envió y la cadena
+ * todavía no indexó.
+ *
+ * **El problema que resuelve.** La wallet de servicio tiene un solo UTxO
+ * grande. `getUtxos()` le pregunta al proveedor, y el proveedor solo conoce lo
+ * que entró en un bloque —~20 s en Preprod—, así que dos anclajes seguidos
+ * eligen la misma entrada: el segundo se arma contra un UTxO ya gastado y
+ * muere en `Your wallet does not have enough funds`. Lo mismo del otro lado
+ * con el hilo: `advanceThread` no encuentra el UTxO que `openThread` acaba de
+ * crear (`UNKNOWN_THREAD`).
+ *
+ * **Tres minutos, y el número es una cota superior, no un tuning.** La cola
+ * serializa los anclajes, así que la vista local solo tiene que cubrir el hueco
+ * entre uno y el siguiente; si el siguiente llega más tarde que esto, el
+ * proveedor ya indexó todo y la respuesta buena es preguntarle a él. Vencerla
+ * es lo único que devuelve al adaptador a la realidad después de una
+ * transacción que el nodo terminó descartando —y es también lo que hace que
+ * fondear la wallet se vea— así que corta y no larga.
+ */
+export const PENDING_UTXO_TTL_MS = 3 * 60 * 1000;
+
 export interface LucidAnchorOptions {
   lucid: LucidEvolution;
   network: Network;
@@ -96,6 +118,8 @@ export interface LucidAnchorOptions {
   validityWindowMs?: number;
   /** Margen hacia atrás por el retraso del tip. Ver `TIP_LAG_MARGIN_MS`. */
   tipLagMarginMs?: number;
+  /** Vida de la vista local de lo enviado. Ver `PENDING_UTXO_TTL_MS`. */
+  pendingUtxoTtlMs?: number;
   /** Reloj inyectable: los tests fijan el tiempo, no lo padecen. */
   now?: () => number;
   /**
@@ -124,7 +148,36 @@ export class LucidAnchorAdapter implements AnchorPort {
 
   private readonly validityWindowMs: number;
   private readonly tipLagMarginMs: number;
+  private readonly pendingUtxoTtlMs: number;
   private readonly blockfrost: { url: string; apiKey: string } | undefined;
+
+  /**
+   * La cola: **un anclaje por vez en este proceso**.
+   *
+   * Serializar es la mitad de la solución y no sirve sola —dos anclajes en
+   * serie contra el proveedor eligen igual el mismo UTxO—, pero es la mitad sin
+   * la cual la otra no existe: armar la transacción **lee** el conjunto de
+   * UTxOs y enviarla lo **invalida**, así que las dos cosas tienen que pasar
+   * sin nadie en el medio. Con dos anclajes concurrentes no hay orden de
+   * `overrideUTxOs()` que alcance: los dos leyeron antes de que ninguno
+   * escribiera.
+   *
+   * **Vale para un proceso, y hoy hay uno** (Render, plan free). Con dos
+   * instancias esto no alcanza y el arreglo es de otra clase —el estado
+   * compartido tendría que salir de la memoria—, así que se dice acá en vez de
+   * descubrirse el día que se escale.
+   */
+  private cola: Promise<unknown> = Promise.resolve();
+
+  /**
+   * Las salidas al script que este proceso creó y el proveedor todavía no ve,
+   * por `outputRef`. Es lo que le deja a `advanceThread` encontrar el hilo que
+   * `openThread` abrió hace diez segundos.
+   */
+  private readonly salidasPendientes = new Map<OutputRef, UTxO>();
+
+  /** Cuándo deja de valer la vista local. `null` = no hay nada en vuelo. */
+  private venceLaVistaLocal: number | null = null;
 
   private constructor(
     lucid: LucidEvolution,
@@ -133,6 +186,7 @@ export class LucidAnchorAdapter implements AnchorPort {
     now: () => number,
     validityWindowMs: number,
     tipLagMarginMs: number,
+    pendingUtxoTtlMs: number,
     blockfrost: { url: string; apiKey: string } | undefined
   ) {
     this.lucid = lucid;
@@ -141,6 +195,7 @@ export class LucidAnchorAdapter implements AnchorPort {
     this.now = now;
     this.validityWindowMs = validityWindowMs;
     this.tipLagMarginMs = tipLagMarginMs;
+    this.pendingUtxoTtlMs = pendingUtxoTtlMs;
     this.blockfrost = blockfrost;
   }
 
@@ -170,6 +225,7 @@ export class LucidAnchorAdapter implements AnchorPort {
       options.now ?? (() => Date.now()),
       options.validityWindowMs ?? VALIDITY_WINDOW_MS,
       options.tipLagMarginMs ?? TIP_LAG_MARGIN_MS,
+      options.pendingUtxoTtlMs ?? PENDING_UTXO_TTL_MS,
       options.blockfrost
     );
   }
@@ -178,23 +234,28 @@ export class LucidAnchorAdapter implements AnchorPort {
   async openThread({ datum }: OpenThreadInput): Promise<AnchorReceipt> {
     const unit = this.unitOf(datum);
 
-    const tx = await this.lucid
-      .newTx()
-      .mintAssets({ [unit]: 1n }, encodeInitRedeemer())
-      .pay.ToContract(
-        this.refs.address,
-        { kind: "inline", value: encodeStageDatum(datum) },
-        { lovelace: THREAD_MIN_LOVELACE, [unit]: 1n }
+    return this.enCola(() =>
+      this.enviar(
+        this.lucid
+          .newTx()
+          .mintAssets({ [unit]: 1n }, encodeInitRedeemer())
+          .pay.ToContract(
+            this.refs.address,
+            { kind: "inline", value: encodeStageDatum(datum) },
+            { lovelace: THREAD_MIN_LOVELACE, [unit]: 1n }
+          )
+          .attach.MintingPolicy(this.refs.script)
+          .addSignerKey(this.adminKeyHash())
       )
-      .attach.MintingPolicy(this.refs.script)
-      .addSignerKey(this.adminKeyHash())
-      .complete();
-
-    return this.submit(tx);
+    );
   }
 
   /** `spend`: gasta el hilo y lo recrea con el datum nuevo. */
-  async advanceThread({ outputRef, next }: AdvanceThreadInput): Promise<AnchorReceipt> {
+  async advanceThread(input: AdvanceThreadInput): Promise<AnchorReceipt> {
+    return this.enCola(() => this.avanzar(input));
+  }
+
+  private async avanzar({ outputRef, next }: AdvanceThreadInput): Promise<AnchorReceipt> {
     // El `previous` del puerto acá no se usa: el datum viejo lo trae el propio
     // UTxO, y el validador lo lee de ahí. Sirve en el simulador, que no tiene
     // cadena de dónde leerlo.
@@ -225,21 +286,27 @@ export class LucidAnchorAdapter implements AnchorPort {
     );
     const hasta = Math.max(now, completion?.now ?? now) + this.validityWindowMs;
 
-    const tx = await this.lucid
-      .newTx()
-      .collectFrom([utxo], encodeAdvanceRedeemer({ to: next.state, completion }))
-      .pay.ToContract(
-        this.refs.address,
-        { kind: "inline", value: encodeStageDatum(next) },
-        utxo.assets
-      )
-      .attach.SpendingValidator(this.refs.script)
-      .addSignerKey(this.adminKeyHash())
-      .validFrom(desde)
-      .validTo(hasta)
-      .complete();
+    const recibo = await this.enviar(
+      this.lucid
+        .newTx()
+        .collectFrom([utxo], encodeAdvanceRedeemer({ to: next.state, completion }))
+        .pay.ToContract(
+          this.refs.address,
+          { kind: "inline", value: encodeStageDatum(next) },
+          utxo.assets
+        )
+        .attach.SpendingValidator(this.refs.script)
+        .addSignerKey(this.adminKeyHash())
+        .validFrom(desde)
+        .validTo(hasta)
+    );
 
-    return this.submit(tx);
+    // El hilo que se acaba de gastar deja de ser una respuesta válida para el
+    // siguiente avance: si quedara en la vista local, un segundo `advanceThread`
+    // sobre el mismo `outputRef` armaría una transacción contra una entrada ya
+    // consumida en vez de fallar con `UNKNOWN_THREAD`.
+    this.salidasPendientes.delete(outputRef);
+    return recibo;
   }
 
   /**
@@ -260,12 +327,14 @@ export class LucidAnchorAdapter implements AnchorPort {
       throw new AnchorRejectedError("La ref no entra en un string de metadata", "REF_TOO_LONG");
     }
 
-    const tx = await this.lucid
-      .newTx()
-      .attachMetadata(EVIDENCE_METADATA_LABEL, { h: sha256, r: reference })
-      .complete();
-
-    const { txid } = await this.submit(tx);
+    // Las validaciones de arriba quedan **fuera** de la cola a propósito: un
+    // hash mal formado no espera detrás de una transacción de treinta segundos
+    // para que le digan que está mal formado.
+    const { txid } = await this.enCola(() =>
+      this.enviar(
+        this.lucid.newTx().attachMetadata(EVIDENCE_METADATA_LABEL, { h: sha256, r: reference })
+      )
+    );
     return { txid, status: "Pending" };
   }
 
@@ -335,6 +404,14 @@ export class LucidAnchorAdapter implements AnchorPort {
       throw new AnchorRejectedError(`outputRef mal formado: ${outputRef}`, "BAD_OUTPUT_REF");
     }
 
+    // La vista local antes que el proveedor, y no al revés: si el hilo está
+    // acá es porque esta misma instancia lo creó hace segundos y el proveedor
+    // todavía no lo indexó, así que preguntarle primero es una consulta que ya
+    // sabemos que va a dar vacío. Nadie más puede haberlo gastado en el medio:
+    // el validador exige la firma del admin, que es esta wallet.
+    const local = this.salidasPendientes.get(outputRef);
+    if (local) return local;
+
     const [utxo] = await this.lucid.utxosByOutRef([
       { txHash, outputIndex: Number.parseInt(index, 10) }
     ]);
@@ -345,10 +422,83 @@ export class LucidAnchorAdapter implements AnchorPort {
     return utxo;
   }
 
-  private async submit(tx: TxSignBuilder): Promise<AnchorReceipt> {
-    const signed = await tx.sign.withWallet().complete();
-    const txid = await signed.submit();
+  /**
+   * Encola un trabajo detrás del anterior. Sale por el mismo lugar por el que
+   * saldría sin cola: el error del trabajo es el error que ve quien llamó.
+   */
+  private enCola<T>(trabajo: () => Promise<T>): Promise<T> {
+    // La vista local se vence **acá**, antes de que el trabajo lea nada: el
+    // primero que la consulta es `utxoAt()`, que corre antes de construir la
+    // transacción. Vencerla dentro de `enviar()` llegaría tarde.
+    const turnoDe = async () => {
+      this.caducarVistaLocal();
+      return trabajo();
+    };
+
+    // El mismo trabajo en las dos ramas: que el anclaje anterior haya fallado
+    // no puede cancelar al siguiente.
+    const turno = this.cola.then(turnoDe, turnoDe);
+    // Lo que queda guardado como cola es una promesa que **nunca** rechaza. Si
+    // se guardara `turno` a secas, un anclaje fallido dejaría un rechazo sin
+    // manejar —que en Node mata el proceso— por más que quien llamó lo haya
+    // atrapado.
+    this.cola = turno.then(
+      () => undefined,
+      () => undefined
+    );
+    return turno;
+  }
+
+  /**
+   * Construye con `chain()` en vez de `complete()`, firma y envía.
+   *
+   * `chain()` es el mismo `complete()` —devuelve la misma transacción— pero
+   * además entrega el conjunto de UTxOs con el que hay que quedarse: los de la
+   * wallet menos los que esta transacción gasta, más el vuelto que crea. Eso es
+   * exactamente lo que el proveedor va a contestar dentro de ~20 s y lo que hoy
+   * no contesta.
+   */
+  private async enviar(tx: TxBuilder): Promise<AnchorReceipt> {
+    const [utxosDeLaWallet, salidas, firmable] = await tx.chain();
+    const firmada = await firmable.sign.withWallet().complete();
+    const txid = await firmada.submit();
+
+    this.anotarLoEnviado(utxosDeLaWallet, salidas);
     return { txid, outputRef: `${txid}#0`, status: "Pending" };
+  }
+
+  /**
+   * Deja la wallet mirando el vuelto de la transacción recién enviada y guarda
+   * las salidas al script que crea.
+   *
+   * **No se limpia cuando un envío falla**, y es deliberado: si la transacción
+   * anterior sí entró al mempool, volver a preguntarle al proveedor devolvería
+   * la entrada que esa transacción ya gastó y el siguiente anclaje fallaría
+   * igual. La única salida del estado malo —una transacción que el nodo
+   * descartó— es que la vista local venza.
+   */
+  private anotarLoEnviado(utxosDeLaWallet: UTxO[], salidas: UTxO[]): void {
+    this.lucid.overrideUTxOs(utxosDeLaWallet);
+
+    for (const salida of salidas) {
+      if (salida.address === this.refs.address) {
+        this.salidasPendientes.set(`${salida.txHash}#${salida.outputIndex}`, salida);
+      }
+    }
+
+    this.venceLaVistaLocal = this.now() + this.pendingUtxoTtlMs;
+  }
+
+  /**
+   * Vuelve a creerle al proveedor cuando la vista local ya no puede aportar
+   * nada. Ver `PENDING_UTXO_TTL_MS`.
+   */
+  private caducarVistaLocal(): void {
+    if (this.venceLaVistaLocal === null || this.now() < this.venceLaVistaLocal) return;
+
+    this.salidasPendientes.clear();
+    this.venceLaVistaLocal = null;
+    this.lucid.clearUTxOOverride();
   }
 
   private async threadProof(txid: string): Promise<AnchorProof | null> {

@@ -53,6 +53,11 @@ en cualquiera de los dos lados, los dos tests se ponen rojos. Es a propósito.
 - **2026-08-23 · El warning `The "pnpm" field in package.json is no longer read`** sale en cada
   comando: el `overrides` de la raíz (`@types/express`) está siendo **ignorado**. Hoy no rompe nada
   porque `apps/api` ya declara `^5.0.6` directo, pero el override no está haciendo lo que parece.
+- **2026-09-01 · El `Emulator` no ve su propio mempool, y eso es una ventaja.** `getUtxos()` lee
+  solo el ledger, así que un anclaje sin `emulator.awaitBlock(1)` detrás reproduce **exactamente**
+  la condición de Preprod: un proveedor que todavía no vio la transacción anterior. Los tests de la
+  cola dependen de eso. Si alguna vez agregás un `awaitBlock` "para que pase", lo que estás haciendo
+  es apagar el test.
 - **La dirección del script depende del `admin`.** Rotar la wallet de servicio cambia la dirección,
   así que **no se puede rotar sin migrar todos los hilos**. Saberlo antes de generar la clave.
 - **2026-08-31 · `fromSeed` y `fromPrivateKey` dan direcciones distintas para la misma clave.**
@@ -73,6 +78,23 @@ transacciones ajenas.
 confirmación. El txid es el hash del cuerpo de la transacción y existe antes de enviarla; un submit
 exitoso solo dice que el nodo la aceptó en su mempool. Por eso `openThread`/`advanceThread` devuelven
 `Pending` con txid y la promoción a `Confirmed` la hace `confirmedAt()` (D-077).
+
+## Un anclaje por vez, y el adaptador se acuerda de lo que envió
+
+`LucidAnchorAdapter` serializa todas sus transacciones en una cola en memoria y, después de cada
+envío, se queda con lo que acaba de crear: el vuelto de la wallet (`overrideUTxOs()`) y las salidas
+al script, que `advanceThread` consulta **antes** que al proveedor. La vista vence a los 3 minutos
+(`PENDING_UTXO_TTL_MS`). El porqué completo está en D-082; acá, lo que hay que tener presente al
+tocar el archivo:
+
+- **Se construye con `chain()`, no con `complete()`.** Es la misma transacción; `complete()` es
+  `chain()` tirando dos de los tres valores. Si volvés a `complete()`, el encadenamiento desaparece
+  sin que nada se ponga rojo hasta que haya dos anclajes seguidos.
+- **La vista se vence en `enCola()`, antes del trabajo.** El primero que la lee es `utxoAt()`, que
+  corre antes de construir nada: vencerla dentro de `enviar()` llega tarde.
+- **La cola guarda una promesa que nunca rechaza.** Guardar el turno a secas deja un rechazo sin
+  manejar —que en Node mata el proceso— aunque quien llamó lo haya atrapado.
+- **Vale para un proceso.** Render corre una instancia; con dos, esto no alcanza.
 
 ## El adaptador real es agnóstico del provider, y eso no es cosmético
 
@@ -121,6 +143,10 @@ Hasta entonces se decía que "Preprod no cambia el código, solo el provider y l
 inexacto: el adaptador no cambiaba, pero **nadie lo construía** — pedir `real` tiraba un error que
 remitía a esta misma rebanada. Ahora sí: lo que falta para Preprod es la cuenta de Blockfrost y una
 wallet fondeada, nada de código.
+
+Desde el 2026-09-01 el adaptador **encadena**: dos anclajes dentro del mismo bloque ya no chocan por
+el UTxO único de la wallet, y el hilo se puede avanzar sin esperar a que el bloque publique el
+`openThread` (D-082).
 
 De la rebanada **C** está lo mínimo: `confirmedAt(txid)` en el puerto, que responde con el POSIX ms
 del bloque o `null`. **Existe porque `verify()` no servía**: devuelve un `AnchorProof`, que exige

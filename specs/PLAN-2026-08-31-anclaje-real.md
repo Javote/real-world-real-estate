@@ -93,7 +93,7 @@ snake_case plural. Y el free tier no da shell remota: todo se inspecciona con
 
 **2. Probar el camino del hilo en local contra Preprod.** Es el único pedazo que **nunca corrió
 contra Preprod** —solo contra el `Emulator` y yaci-devkit local— y el de más riesgo: cada
-transacción **adjunta el validador entero** (`packages/cardano/src/real.ts:139`), así que ahí pegan
+transacción **adjunta el validador entero** (`attach.SpendingValidator` en `real.ts`), así que ahí pegan
 los límites de tamaño reales. **Si esto falla, no se sigue.**
 
 **El hilo NO se abre en el `PATCH`**, y esta versión del plan decía que sí. `transitionStage()`
@@ -106,10 +106,11 @@ en `advanceThread`. El único `openThread` del código está en `projects-obra.r
 2. Esperar confirmación en la cadena, y recién ahí
    `PATCH /api/v1/stages/:id/state` → **`advanceThread`** (gasta el UTxO del script).
 
-**La espera entre las dos no es opcional.** `advanceThread` necesita que el UTxO del hilo exista
-para el proveedor, y Blockfrost no lo reporta hasta que entra en un bloque (~20 s en Preprod). Es
-el mismo motivo por el que dos anclajes seguidos chocan — el UTxO único de la wallet, en la memoria
-de la wallet de servicio.
+**La espera entre las dos era obligatoria, y desde el 2026-09-01 no lo es** (D-082). `advanceThread`
+necesitaba que el UTxO del hilo existiera **para el proveedor**, y Blockfrost no lo reporta hasta que
+entra en un bloque (~20 s en Preprod). Era el mismo motivo por el que dos anclajes seguidos chocaban
+—el UTxO único de la wallet— y se arregló de una sola vez: el adaptador encadena sobre lo que él
+mismo envió. Si repetís la prueba hoy, las dos requests salen seguidas.
 
 ✅ **Hecho el 2026-08-31, y encontró un bug real.** El validador corrió en Preprod por primera vez:
 
