@@ -58,23 +58,12 @@ test:s3` y `test:yaci` corren contra infraestructura real y **no** están inclui
 
 ## Dónde vive todo
 
-Deliberadamente **tres archivos en la raíz y nada más**; el resto vive indexado en una carpeta.
+Deliberadamente **tres archivos en la raíz y nada más** —este, `CLAUDE.md` y `DECISIONS.md`—; el
+resto vive indexado en una carpeta. **El mapa completo de qué vive dónde está en `CLAUDE.md`
+§Estructura**, y no se copia acá: una copia diverge del original en silencio.
 
-| Dónde | Qué |
-|---|---|
-| **`CLAUDE.md`** | Cómo se trabaja acá: el loop, las reglas duras, las prohibiciones, los niveles de autonomía, **y el estado del trabajo** (qué se hizo y qué falta) |
-| **`DECISIONS.md`** | Las restricciones vigentes: qué obliga hoy y por qué |
-| `<frente>/CLAUDE.md` | Lo propio de cada subárbol: trampas verificadas, deuda y comandos. Se cargan solos al tocarlo |
-| `docs/` | **Los entregables oficiales, inmutables** (D-022, D-033). El mapa de qué archivo es cuál está en `specs/entregables.md` |
-| `specs/README.md` | El mapa de desarrollo: criterios de aceptación, **estado medido**, rebanadas y riesgos |
-| `specs/SPEC-NNN-*.md` | Una por rebanada: invariantes, casos borde y definición de terminado |
-| `specs/stack.md` | Inventario del stack: qué corre hoy y qué está solo decidido |
-| `specs/RUNBOOK-deploy.md` | Alta, deploy, rollback e incidentes |
-| `specs/archive/` | La memoria: las decisiones originales enteras. Se consulta, no se mantiene |
-
-Las variables de entorno no se listan acá: la referencia es
+Lo mismo con las variables de entorno. La referencia es
 [`apps/api/.env.example`](apps/api/.env.example) y [`apps/web/.env.example`](apps/web/.env.example).
-Una lista duplicada se desactualiza en la copia, no en el original.
 
 ## Deploy
 
