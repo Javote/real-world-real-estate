@@ -1,7 +1,7 @@
 import { stageTransitionSchema } from "@plataforma/shared";
 import { type Request, Router } from "express";
 import { z } from "zod";
-import { tieneHiloAnclado, transitionStage } from "../domain/stage-transition";
+import { cabezaDelHilo, transitionStage } from "../domain/stage-transition";
 import { db } from "../lib/db";
 import {
   ANY_MEMBERSHIP,
@@ -29,12 +29,13 @@ router.get(
       return res.status(404).json({ message: "Stage not found" });
     }
 
-    const [evidences, project] = await Promise.all([
+    const [evidences, project, hilo] = await Promise.all([
       db.selectFrom("Evidence").selectAll().where("stageId", "=", stage.id).execute(),
-      db.selectFrom("Project").selectAll().where("id", "=", stage.projectId).executeTakeFirst()
+      db.selectFrom("Project").selectAll().where("id", "=", stage.projectId).executeTakeFirst(),
+      cabezaDelHilo(stage.id)
     ]);
 
-    return res.json({ ...stage, evidences, project });
+    return res.json({ ...stage, evidences, project, hasOnChainThread: hilo !== null });
   }
 );
 
@@ -43,7 +44,7 @@ router.patch(
   requireRole("admin", "developer"),
   requireProjectAccess({ via: "Stage", param: "id" }, ["developer"]),
   // `Request<{ id: string }>` porque en Express 5 `req.params.id` es
-  // `string | string[]`, y `tieneHiloAnclado` necesita un id, no una lista.
+  // `string | string[]`, y `cabezaDelHilo` necesita un id, no una lista.
   async (req: Request<{ id: string }>, res) => {
     const stageExisting = await db
       .selectFrom("Stage")
@@ -70,10 +71,16 @@ router.patch(
     // stage en el datum, y el validador exige que no cambie nunca
     // (`identity_preserved`). Con el hilo ya anclado, reescribirlas acá dejaría
     // a la base diciendo una cosa y a la cadena otra, sin forma de reconciliar.
+    //
+    // **`cabezaDelHilo`, no "cualquier OnChainEvent con txid"**: un stage puede
+    // tener evidencia anclada por metadata (`EVIDENCE_ANCHOR`) sin tener hilo
+    // — ese anclaje no toca el validador ni la identidad del stage (D-006). Un
+    // chequeo más ancho bloquearía cambios de orden/criticidad sobre un stage
+    // que nunca minteó nada.
     const tocaIdentidad =
       parsed.data.sequenceOrder !== undefined || parsed.data.validationCritical !== undefined;
 
-    if (tocaIdentidad && (await tieneHiloAnclado(req.params.id))) {
+    if (tocaIdentidad && (await cabezaDelHilo(req.params.id)) !== null) {
       return res.status(409).json({
         message: "Stage identity is immutable once anchored",
         code: "STAGE_IDENTITY_IMMUTABLE"

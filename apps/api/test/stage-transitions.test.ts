@@ -305,6 +305,119 @@ describe("POST /projects/:id/stages · el stage nace en Pending", () => {
   });
 });
 
+describe("POST /projects/:id/stages/:stageId/retry-anchor", () => {
+  let adminToken: string;
+
+  beforeAll(async () => {
+    adminToken = (await login(FIXTURES.admin)).body.token;
+  });
+
+  const retry = (stageId: string) =>
+    request(app)
+      .post(`/api/v1/projects/${proyecto}/stages/${stageId}/retry-anchor`)
+      .set("Authorization", `Bearer ${adminToken}`);
+
+  it("reintenta un mint que falló y deja el hilo abierto", async () => {
+    // El escenario que un openThread caído en producción deja: la declaración
+    // ya existe (STAGE_CREATED, Failed, sin outputRef) y el stage sigue
+    // Pending — nunca hubo hilo que gastar.
+    const id = await crearStage({ state: "Pending" });
+    await db
+      .insertInto("OnChainEvent")
+      .values({
+        id: createId(),
+        projectId: proyecto,
+        stageId: id,
+        eventIndex: 0,
+        eventType: "STAGE_CREATED",
+        fromState: null,
+        toState: "Pending",
+        commitment: null,
+        status: "Failed",
+        txid: null,
+        network: null,
+        outputRef: null,
+        blockTimestamp: null,
+        createdAt: new Date(),
+        updatedAt: new Date()
+      })
+      .execute();
+
+    const res = await retry(id);
+
+    expect(res.status).toBe(200);
+    expect(res.body.anchor.status).toBe("Confirmed");
+    expect(res.body.anchor.eventType).toBe("STAGE_CREATED");
+    expect(res.body.anchor.outputRef).toBe(`${res.body.anchor.txid}#0`);
+
+    // El hilo ya existe: una transición normal ahora ancla de verdad, en vez
+    // de repetir el Failed que la prueba de arriba documenta.
+    const avance = await patchState(id, "InProgress");
+    expect(avance.body.anchor.status).toBe("Confirmed");
+  });
+
+  it("409 si el stage ya avanzó sin hilo — no hay mint retroactivo honesto", async () => {
+    const id = await crearStage({ state: "InProgress" });
+    const res = await retry(id);
+
+    expect(res.status).toBe(409);
+    expect(res.body.code).toBe("STAGE_ALREADY_ADVANCED");
+  });
+
+  it("409 si el hilo ya está abierto", async () => {
+    const creado = await request(app)
+      .post(`/api/v1/projects/${proyecto}/stages`)
+      .set("Authorization", `Bearer ${token}`)
+      .send({ name: "Stage con hilo ya abierto", sequenceOrder: 999_103 });
+
+    const res = await retry(creado.body.id);
+
+    expect(res.status).toBe(409);
+    expect(res.body.code).toBe("THREAD_ALREADY_OPEN");
+  });
+
+  it("404 si el stage nunca tuvo un evento de creación que reintentar", async () => {
+    // El caso de un stage sembrado directo (torre-a en producción): Pending,
+    // sin hilo, y sin ningún STAGE_CREATED que retomar.
+    const id = await crearStage({ state: "Pending" });
+    const res = await retry(id);
+
+    expect(res.status).toBe(404);
+    expect(res.body.code).toBe("STAGE_CREATED_EVENT_NOT_FOUND");
+  });
+});
+
+describe("hasOnChainThread · visible sin tener que saber que existe cabezaDelHilo", () => {
+  it("false en un stage sembrado directo, true en uno creado por la API", async () => {
+    const sinHilo = await crearStage({ state: "Pending" });
+    const conHilo = (
+      await request(app)
+        .post(`/api/v1/projects/${proyecto}/stages`)
+        .set("Authorization", `Bearer ${token}`)
+        .send({ name: "Stage con hilo, para el flag", sequenceOrder: 999_104 })
+    ).body.id;
+
+    const [detalleSinHilo, detalleConHilo, anidadoSinHilo, lista] = await Promise.all([
+      request(app).get(`/api/v1/stages/${sinHilo}`).set("Authorization", `Bearer ${token}`),
+      request(app).get(`/api/v1/stages/${conHilo}`).set("Authorization", `Bearer ${token}`),
+      request(app)
+        .get(`/api/v1/projects/${proyecto}/stages/${sinHilo}`)
+        .set("Authorization", `Bearer ${token}`),
+      request(app)
+        .get(`/api/v1/projects/${proyecto}/stages`)
+        .set("Authorization", `Bearer ${token}`)
+    ]);
+
+    expect(detalleSinHilo.body.hasOnChainThread).toBe(false);
+    expect(detalleConHilo.body.hasOnChainThread).toBe(true);
+    expect(anidadoSinHilo.body.hasOnChainThread).toBe(false);
+
+    const enLista = (id: string) => lista.body.find((s: { id: string }) => s.id === id);
+    expect(enLista(sinHilo).hasOnChainThread).toBe(false);
+    expect(enLista(conHilo).hasOnChainThread).toBe(true);
+  });
+});
+
 describe("PATCH /stages/:id · la identidad on-chain", () => {
   it("deja cambiar orden y criticidad mientras no haya hilo anclado", async () => {
     const id = await crearStage();
@@ -347,6 +460,43 @@ describe("PATCH /stages/:id · la identidad on-chain", () => {
 
     expect(res.status).toBe(409);
     expect(res.body.code).toBe("STAGE_IDENTITY_IMMUTABLE");
+  });
+
+  it("un anclaje de metadata (evidencia) no bloquea la identidad — no es hilo", async () => {
+    // El bug que esto cierra: `tieneHiloAnclado` miraba CUALQUIER OnChainEvent
+    // con txid, y un EVIDENCE_ANCHOR (D-006) tiene txid pero nunca outputRef —
+    // no toca el validador ni la identidad del stage. Un stage con evidencia
+    // anclada pero sin hilo real quedaba con `sequenceOrder`/`validationCritical`
+    // bloqueados por error.
+    const id = await crearStage();
+    const ahora = new Date();
+    await db
+      .insertInto("OnChainEvent")
+      .values({
+        id: createId(),
+        projectId: proyecto,
+        stageId: id,
+        eventIndex: 0,
+        eventType: "EVIDENCE_ANCHOR",
+        fromState: null,
+        toState: null,
+        commitment: "a".repeat(64),
+        status: "Confirmed",
+        txid: `${"f".repeat(63)}${Math.floor(Math.random() * 10)}`,
+        network: "Simulated",
+        outputRef: null,
+        blockTimestamp: ahora,
+        createdAt: ahora,
+        updatedAt: ahora
+      })
+      .execute();
+
+    const res = await request(app)
+      .patch(`/api/v1/stages/${id}`)
+      .set("Authorization", `Bearer ${token}`)
+      .send({ sequenceOrder: 13 });
+
+    expect(res.status).toBe(200);
   });
 });
 

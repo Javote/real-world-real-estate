@@ -35,6 +35,25 @@ que la superficie del entregable no consume pero los tests y el seed sí.
 
 ## Trampas verificadas
 
+- **2026-09-03 · `tieneHiloAnclado` miraba CUALQUIER `OnChainEvent` con `txid`, no el hilo.** La
+  función que bloquea `sequenceOrder`/`validationCritical` en `PATCH /stages/:id` una vez "anclado"
+  (`identity_preserved` del validador) filtraba por `txid is not null` — y un anclaje de evidencia
+  por metadata (`EVIDENCE_ANCHOR`, D-006) también tiene `txid`, aunque nunca toca el validador ni la
+  identidad del stage: su `outputRef` es siempre `null` porque no hay UTxO de por medio. Un stage
+  con evidencia anclada pero **sin hilo real** quedaba con la identidad bloqueada por error — el
+  chequeo correcto ya existía en el archivo (`cabezaDelHilo`, que sí filtra por `outputRef`) pero
+  nadie lo había usado acá. Se encontró auditando el área para el hallazgo de abajo, no por un
+  reporte.
+  **Fix:** `tieneHiloAnclado` se borró (quedaba idéntica a `cabezaDelHilo(...) !== null`, sin
+  agregar nada) y `PATCH /stages/:id` llama a `cabezaDelHilo` directo. Test que reproduce el bug
+  original y prueba que quedó cerrado: `test/stage-transitions.test.ts` → *"un anclaje de metadata
+  (evidencia) no bloquea la identidad — no es hilo"*.
+  **La lección:** cuando dos funciones del mismo archivo responden preguntas parecidas
+  ("¿tiene evento anclado?" vs. "¿tiene hilo?"), y solo una filtra por el campo que realmente importa
+  (`outputRef`, no `txid`), la más laxa gana por descuido en el próximo call site nuevo. Antes de
+  escribir un chequeo de "¿ya está anclado?", preguntá **qué tipo** de anclaje importa — no todos
+  los `OnChainEvent` de un stage son su hilo.
+
 - **2026-09-03 · Un stage sembrado directo en la base no tiene hilo on-chain, y `PATCH .../state`
   no lo dice.** El primer anclaje real de state-thread se probó en producción sobre `torre-a` y el
   intento inicial fue transicionar `Estructura` —un stage que ya existía, sembrado por
@@ -46,11 +65,20 @@ que la superficie del entregable no consume pero los tests y el seed sí.
   el `anchor.status` quedando `Failed` en silencio, exactamente el caso que ya cubre
   `test/stage-transitions.test.ts` (*"deja el evento en Failed... si el stage no tiene hilo"*), solo
   que nadie había cruzado ese test con el hecho de que el seed de demo crea stages así.
-  **Fix aplicado:** el primer anclaje de state-thread se hizo sobre un stage **nuevo**
-  ("Terminaciones"), creado con `POST /projects/:id/stages` para abrir el hilo, y recién después
-  `PATCH .../state`. Confirmado con las dos transacciones referenciando el reference script
-  (D-083) en vez de adjuntar el validador — verificado leyendo `reference: true` en los inputs de
-  cada tx contra Blockfrost, no por tamaño/fee nomás. Ver `CLAUDE.md` raíz, cierre del 2026-09-03.
+  **Primer anclaje real, resuelto sobre un stage nuevo:** se probó sobre "Terminaciones", creado con
+  `POST /projects/:id/stages` para abrir el hilo, y recién después `PATCH .../state`. Confirmado con
+  las dos transacciones referenciando el reference script (D-083) en vez de adjuntar el validador —
+  verificado leyendo `reference: true` en los inputs de cada tx contra Blockfrost, no por
+  tamaño/fee nomás. Ver `CLAUDE.md` raíz, cierre del 2026-09-03.
+  **Dos arreglos que salieron de esto, para que no vuelva a sorprender:**
+  1. `POST /projects/:id/stages/:stageId/retry-anchor` (admin) — reintenta el mint cuando
+     genuinamente falló (red caída, wallet sin fondos) y el stage **sigue en `Pending`**. Para un
+     stage que ya avanzó sin hilo —el caso de `Estructura`— da 409 `STAGE_ALREADY_ADVANCED` a
+     propósito: no existe un mint retroactivo honesto una vez que el estado off-chain avanzó sin
+     prueba (`domain/stage-transition.ts` → `retryStageMint`, explica el porqué en su docstring).
+  2. `hasOnChainThread` (calculado, no guardado) en `GET /stages/:id`, `GET /projects/:id/stages` y
+     `GET /projects/:id/stages/:stageId` — para que "¿este stage tiene hilo?" se vea en la respuesta
+     en vez de tener que saber que `cabezaDelHilo` existe y consultarla a mano.
   **Antes de completar o transicionar un stage viejo de `torre-a` para una demo o un test manual:
   confirmá que tiene una fila en `OnChainEvent` con `outputRef` antes de asumir que el hilo existe.**
 

@@ -64,12 +64,17 @@ mint     (STAGE_CREATED)     650 bytes · 0.229280 ADA · 21bae8cb…c294970
 advance  (STAGE_TRANSITION)  645 bytes · 0.238122 ADA · b28eb6cf…36a0dbe
 ```
 
-**Trampa encontrada al hacerlo:** un stage sembrado directo en la base (como los del seed de demo,
-`Cimentación`/`Estructura` de `torre-a`) **no tiene hilo on-chain** — el mint solo ocurre en `POST
-/projects/:id/stages`. Un `PATCH .../state` sobre uno de esos stages no falla la request (la
-declaración se escribe igual, D-059) pero el anclaje queda `Failed` en silencio, porque
+**Trampa encontrada al hacerlo, y dos arreglos que salieron de ahí.** Un stage sembrado directo en
+la base (como `Cimentación`/`Estructura` de `torre-a`) **no tiene hilo on-chain** — el mint solo
+ocurre en `POST /projects/:id/stages`. Un `PATCH .../state` sobre uno de esos stages no falla la
+request (la declaración se escribe igual, D-059) pero el anclaje queda `Failed` en silencio, porque
 `advanceThread` no encuentra ningún UTxO que gastar. Por eso el primer anclaje de state-thread se
-hizo sobre un stage **nuevo**, no sobre los dos que ya existían. Ver `apps/api/CLAUDE.md`.
+hizo sobre un stage **nuevo**, no sobre los dos que ya existían. Se agregó
+`POST .../stages/:stageId/retry-anchor` para el caso legítimo —un mint que falló de verdad sobre un
+stage que sigue en `Pending`— y `hasOnChainThread` (calculado) en las lecturas de stage, para que la
+pregunta se conteste mirando la respuesta y no auditando el código. De paso salió un bug de verdad,
+ya cerrado: `tieneHiloAnclado` bloqueaba la identidad de un stage con cualquier anclaje, incluida
+evidencia por metadata que nunca toca el validador. Los tres, con tests, en `apps/api/CLAUDE.md`.
 
 # Cómo se trabaja acá
 

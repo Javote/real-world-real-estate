@@ -5,7 +5,7 @@ import { type Request, Router } from "express";
 import { z } from "zod";
 import { createId } from "../db/id";
 import { reconciliarParaLectura } from "../domain/reconcile";
-import { anchorEvent, recordOnChainEvent } from "../domain/stage-transition";
+import { anchorEvent, recordOnChainEvent, retryStageMint } from "../domain/stage-transition";
 import { db } from "../lib/db";
 import { storage } from "../lib/storage";
 import { uploadSingleEvidence } from "../lib/upload";
@@ -44,7 +44,25 @@ router.get(
       .orderBy("sequenceOrder", "asc")
       .execute();
 
-    return res.json(result);
+    // Una sola query para todo el listado, no una por stage: qué stages de
+    // este proyecto tienen un UTxO vivo (`cabezaDelHilo`, pero en lote).
+    const conHilo = new Set(
+      (
+        await db
+          .selectFrom("OnChainEvent")
+          .select("stageId")
+          .distinct()
+          .where(
+            "stageId",
+            "in",
+            result.map((s) => s.id)
+          )
+          .where("outputRef", "is not", null)
+          .execute()
+      ).map((r) => r.stageId)
+    );
+
+    return res.json(result.map((stage) => ({ ...stage, hasOnChainThread: conHilo.has(stage.id) })));
   }
 );
 
@@ -108,6 +126,47 @@ router.post(
 );
 
 /**
+ * Reintenta el mint de un stage cuyo `openThread` original falló y quedó sin
+ * hilo on-chain — red caída, wallet sin fondos en el instante del mint.
+ *
+ * No es una superficie de M2-D5: es mantenimiento operativo, como
+ * `POST /evidence/reconcile`. Admin-only y **solo mientras el stage siga en
+ * `Pending`** (`domain/stage-transition.ts` explica por qué no hay reintento
+ * para uno que ya avanzó sin hilo).
+ */
+router.post(
+  "/:id/stages/:stageId/retry-anchor",
+  requireRole("admin"),
+  requireProjectAccess({ param: "id" }, ANY_MEMBERSHIP),
+  async (req: Request<{ id: string; stageId: string }>, res) => {
+    const stage = await db
+      .selectFrom("Stage")
+      .select("id")
+      .where("id", "=", req.params.stageId)
+      .where("projectId", "=", req.params.id)
+      .executeTakeFirst();
+
+    if (!stage) {
+      return res.status(404).json({ message: "Stage does not belong to project" });
+    }
+
+    const result = await retryStageMint(req.params.stageId);
+    if (!result.ok) {
+      return res.status(result.status).json({ code: result.code });
+    }
+
+    await writeAuditLog({
+      actorUserId: req.user!.id,
+      action: "RETRY_STAGE_ANCHOR",
+      entityType: "Stage",
+      entityId: result.stage.id
+    });
+
+    return res.json({ ...result.stage, anchor: result.anchor });
+  }
+);
+
+/**
  * Fila 09-12 — el mismo detalle de stage bajo el path anidado que el backlog
  * pide (INV-STAGE-DETAIL-001), con el bundle que lo compromete.
  *
@@ -160,13 +219,22 @@ router.get(
         .executeTakeFirst(),
       db
         .selectFrom("OnChainEvent")
-        .select(["eventType", "toState", "commitment", "txid", "status", "createdAt"])
+        .select(["eventType", "toState", "commitment", "txid", "status", "outputRef", "createdAt"])
         .where("stageId", "=", stage.id)
         .orderBy("eventIndex", "asc")
         .execute()
     ]);
 
-    return res.json({ ...stage, evidences, bundle: bundle ?? null, events: eventos });
+    return res.json({
+      ...stage,
+      evidences,
+      bundle: bundle ?? null,
+      // Calculado, no guardado (evita una segunda fuente de verdad): el mismo
+      // criterio que `cabezaDelHilo`, sin una query aparte porque `eventos` ya
+      // trae `outputRef`.
+      hasOnChainThread: eventos.some((e) => e.outputRef !== null),
+      events: eventos
+    });
   }
 );
 

@@ -170,7 +170,7 @@ async function rootDelStage(stageId: string): Promise<string> {
 }
 
 /** La cabeza del hilo: el UTxO vivo del thread token de este stage. */
-async function cabezaDelHilo(stageId: string): Promise<string | null> {
+export async function cabezaDelHilo(stageId: string): Promise<string | null> {
   const ultimo = await db
     .selectFrom("OnChainEvent")
     .selectAll()
@@ -248,20 +248,6 @@ async function anchorEvent(
       .returningAll()
       .executeTakeFirstOrThrow();
   }
-}
-
-/** ¿Este stage ya tiene hilo en la cadena? Si lo tiene, su identidad on-chain
- * (orden y criticidad) es inmutable: el validador la rechaza reescrita. */
-async function tieneHiloAnclado(stageId: string): Promise<boolean> {
-  const anclado = await db
-    .selectFrom("OnChainEvent")
-    .select("id")
-    .where("stageId", "=", stageId)
-    .where("txid", "is not", null)
-    .limit(1)
-    .executeTakeFirst();
-
-  return anclado !== undefined;
 }
 
 /** Lo que puede salir mal, con el código que la ruta traduce a HTTP. */
@@ -379,4 +365,56 @@ export async function transitionStage(input: {
   return { ok: true, stage, anchor };
 }
 
-export { anchorEvent, crearBundle, recordOnChainEvent, rootDelStage, tieneHiloAnclado };
+export type RetryMintFailure =
+  | { ok: false; status: 404; code: "STAGE_NOT_FOUND" | "STAGE_CREATED_EVENT_NOT_FOUND" }
+  | { ok: false; status: 409; code: "STAGE_ALREADY_ADVANCED" | "THREAD_ALREADY_OPEN" };
+
+export type RetryMintResult =
+  | { ok: true; stage: StageRow; anchor: OnChainEventRow }
+  | RetryMintFailure;
+
+/**
+ * Reintenta el mint de un stage cuyo `openThread` original falló —red caída,
+ * wallet sin fondos— y quedó sin hilo on-chain. Idempotente por `anchorEvent`
+ * (regla 8): si el mint ya tiene TXID, es un no-op.
+ *
+ * **Solo mientras el stage siga en `Pending`.** Un stage que ya avanzó
+ * off-chain sin hilo —el caso de uno sembrado directo en la base, no de un
+ * mint que falló— no tiene forma honesta de mintear: el validador exige
+ * `valid_initial_datum` (estado `Pending`, sin evidencia, sin fecha), y
+ * fabricar ese datum inicial para un stage que ya progresó sería reescribir
+ * una secuencia que D-008 dice que ni nosotros podemos falsificar. Para ese
+ * caso no hay reintento — queda `Failed`, que es la verdad.
+ */
+export async function retryStageMint(stageId: string): Promise<RetryMintResult> {
+  const stage = await db
+    .selectFrom("Stage")
+    .selectAll()
+    .where("id", "=", stageId)
+    .executeTakeFirst();
+  if (!stage) return { ok: false, status: 404, code: "STAGE_NOT_FOUND" };
+
+  if (stage.state !== "Pending") {
+    return { ok: false, status: 409, code: "STAGE_ALREADY_ADVANCED" };
+  }
+
+  if ((await cabezaDelHilo(stage.id)) !== null) {
+    return { ok: false, status: 409, code: "THREAD_ALREADY_OPEN" };
+  }
+
+  const evento = await db
+    .selectFrom("OnChainEvent")
+    .selectAll()
+    .where("stageId", "=", stage.id)
+    .where("eventType", "=", "STAGE_CREATED")
+    .orderBy("eventIndex", "asc")
+    .limit(1)
+    .executeTakeFirst();
+
+  if (!evento) return { ok: false, status: 404, code: "STAGE_CREATED_EVENT_NOT_FOUND" };
+
+  const anchor = await anchorEvent(evento, stage, null);
+  return { ok: true, stage, anchor };
+}
+
+export { anchorEvent, crearBundle, recordOnChainEvent, rootDelStage };
