@@ -27,21 +27,18 @@ validador que afirme algo más, está mal (D-026).
 
 # Estado, y lo próximo
 
-**La instancia desplegada arranca en modo real contra Cardano Preprod** desde el 2026-08-31:
-`AnchorPort listo en modo "real"` en los logs, con la wallet de servicio derivada de su clave.
-**Todavía no ancló nada** — `OnChainEvent` tiene 0 filas en producción. Son dos afirmaciones
-distintas y esta sección supo confundirlas: *arrancar* en real es configuración, *anclar* es prueba.
-Lo que se hizo para llegar está en `DECISIONS.md` (D-075 → D-083) y en
-`specs/PLAN-2026-08-31-anclaje-real.md`; los números medidos, en `specs/README.md`. Acá solo lo que
-falta.
+**La instancia desplegada ancló de verdad por primera vez el 2026-09-03**, contra Cardano Preprod:
+`OnChainEvent` tiene su primera fila, `Confirmed`, con TXID real
+(`52a2aa42…f2f7aaf406`). Arrancar en real era configuración; esto ya es prueba. Lo que se hizo para
+llegar está en `DECISIONS.md` (D-075 → D-083) y en `specs/PLAN-2026-08-31-anclaje-real.md`; los
+números medidos, en `specs/README.md`. Acá solo lo que falta.
 
 | # | Qué | Por qué ahí | Nivel |
 |---|---|---|---|
-| 0 | **Primer anclaje real de punta a punta** | Recién acá "arranca en real" pasa a "ancla de verdad" | 🟢 |
-| 1 | **Defensa 3**: que el simulador devuelva `Pending` y no `Confirmed` | Alinea el simulador con el real, para que `Confirmed` signifique sin excepción *algo consultó la cadena*. La defensa 2 (`anchorMode`) ya está **rechazada** por D-080 | 🟡 *decide el dueño* |
-| 2 | **7 superficies** (46/53) y los patrones M2-D4 (8/10) | Backlog de transcripción. El test ID que falta (D-070) no es deuda | 🟢 |
-| 3 | **Correr el security review** | Criterio 11 del SOM: el P1 conocido está cerrado, pero el review nunca se corrió | 🟢 |
-| 4 | **Mainnet** — runbook, habilitar la red, custodia de la clave | D-013 la hace **imposible por configuración**: es código, no solo procedimiento | 🔴 |
+| 0 | **Defensa 3**: que el simulador devuelva `Pending` y no `Confirmed` | Alinea el simulador con el real, para que `Confirmed` signifique sin excepción *algo consultó la cadena*. La defensa 2 (`anchorMode`) ya está **rechazada** por D-080 | 🟡 *decide el dueño* |
+| 1 | **7 superficies** (46/53) y los patrones M2-D4 (8/10) | Backlog de transcripción. El test ID que falta (D-070) no es deuda | 🟢 |
+| 2 | **Correr el security review** | Criterio 11 del SOM: el P1 conocido está cerrado, pero el review nunca se corrió | 🟢 |
+| 3 | **Mainnet** — runbook, habilitar la red, custodia de la clave | D-013 la hace **imposible por configuración**: es código, no solo procedimiento | 🔴 |
 
 **Cerrados el 2026-09-01:** el reference script (D-083) y su cobertura contra un nodo real; `network`
 e `issuingAuthority`, aplicadas en producción **sin dejar de tener un solo archivo de migración**
@@ -49,11 +46,19 @@ e `issuingAuthority`, aplicadas en producción **sin dejar de tener un solo arch
 
 **Cerrados el 2026-09-03:** el re-seed de producción — 5 cuentas demo sembradas contra Turso
 (`admin@`, `developer@`, `buyer@`, `verifier@`, `notary@example.com`), verificado con
-`select email from User`; y la **publicación operativa** del reference script en Preprod
+`select email from User`; la **publicación operativa** del reference script en Preprod
 (`pnpm --filter @plataforma/cardano ref:publish`, txid `3c75280a…0ba2c7f1`, confirmado on-chain,
-API reiniciada a las 15:26 UTC). **Ojo:** ningún log dice explícito que el adaptador ya lo esté
-*usando* — eso no se afirma acá, lo confirma el 0: el tamaño y el fee de esa transacción dicen si
-referenció o adjuntó el validador.
+API reiniciada a las 15:26 UTC); y el **primer anclaje real**: `developer@example.com` subió
+evidencia al stage "Estructura" de `torre-a`
+(`POST /developer/projects/:id/stages/:stageId/evidence`), el root del bundle se ancló por
+metadata, y `POST /evidence/reconcile` promovió la fila a `Confirmed` — TXID
+`52a2aa4214b952518ce987fadf74223ab4865886ff11bfc1caa51e42f7aaf406`, 1 confirmación en Preprod.
+
+**Lo que este anclaje NO prueba, y hay que decirlo:** `anchorCommitment` (evidencia por metadata,
+D-006) no pasa por el validador — D-083 solo aplica al camino de **state-thread**
+(`openThread`/`advanceThread`, disparado por `PATCH /stages/:id/state`). Que el reference script
+esté publicado y la API reiniciada no está confirmado en uso todavía; lo confirmaría una transición
+de stage real, que es un anclaje distinto y no se hizo hoy.
 
 # Cómo se trabaja acá
 
