@@ -35,6 +35,18 @@ que la superficie del entregable no consume pero los tests y el seed sí.
 
 ## Trampas verificadas
 
+- **2026-09-03 · `POST/PATCH /users` no podía dar de alta ni promover a `notary` —
+  encontrado evaluando si ya se podía dar acceso real a gente.** El dominio tiene cinco roles
+  (`USER_ROLES` en `db/types.ts` y `userRoleSchema` en `packages/shared/src/auth.ts` ya traían
+  `notary`), pero `users.routes.ts` declaraba su propio `z.enum(["admin", "developer", "buyer",
+  "verifier"])` en vez de importar el schema compartido (regla 6 incumplida en el único lugar donde
+  se crean cuentas reales) — un admin no tenía forma de crear un notary por API, solo existía vía
+  seed/fixtures. **Fix:** las dos rutas ahora usan `userRoleSchema` de `@plataforma/shared`. Test en
+  `test/users-roles.test.ts`.
+  **La lección:** un schema local que "por casualidad" coincide con el compartido no lo reemplaza —
+  cuando el dominio crece un rol, todo el que lo copió a mano se queda atrás en silencio, y acá el
+  síntoma no era un 500 sino un 400 de validación indistinguible de un email inválido.
+
 - **2026-09-03 · `GET /:bundleId/proof/:fileHash` y `GET /:bundleId/files` no tenían segunda capa
   — encontrado en el security review del criterio 11 del SOM.** Cada otra ruta de
   `evidence.routes.ts` (`/:id`, `/:id/download`, `PATCH /:id`, `/:id/anchor`, `DELETE /:id`) suma
