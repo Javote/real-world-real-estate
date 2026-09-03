@@ -19,6 +19,12 @@
 //
 // **No falla** por un ID todavía sin implementar: eso es backlog pendiente, no
 // una regresión. Los lista para que se vea qué falta.
+//
+// Un tercer caso no es ni falla ni backlog: un ID que el entregable declara
+// pero que la plataforma **decidió no construir nunca** (D-070). Ese no
+// cuenta ni como pendiente ni como cubierto — se excluye del denominador en
+// `NO_SE_CONSTRUYE`, más abajo, en vez de dejarlo flotando como un 74/75
+// permanente que nunca cierra.
 
 import { readdirSync, readFileSync, statSync } from "node:fs";
 import path from "node:path";
@@ -86,7 +92,18 @@ function archivosDe(dir) {
   return salida;
 }
 
-const declarados = new Set(readFileSync(path.join(RAIZ, ENTREGABLE), "utf8").match(PATRON) ?? []);
+// IDs que el entregable declara pero que D-070 retira de alcance: no es
+// deuda, es la decisión permanente de que la plataforma no administra fondos.
+// Se excluyen acá, no se borran del entregable — docs/ es inmutable (D-022).
+const NO_SE_CONSTRUYE = new Set([
+  "DEV-RELEASE-EXECUTE-002" // "Release stage N payment" — D-070
+]);
+
+const declarados = new Set(
+  (readFileSync(path.join(RAIZ, ENTREGABLE), "utf8").match(PATRON) ?? []).filter(
+    (id) => !NO_SE_CONSTRUYE.has(id)
+  )
+);
 
 const reclamados = new Map();
 for (const dir of DONDE_SE_RECLAMA) {

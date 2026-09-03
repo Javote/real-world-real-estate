@@ -71,14 +71,15 @@ aprobación explícita.
 | API | autorización en dos capas, FSM aplicada, bundles con Merkle root, audit log, **235 tests** |
 | Storage | port S3 probado contra MinIO real; el hash cubre los bytes guardados |
 
-**Front:** SPEC-016 cierra el backlog de test IDs del investor. Queda `DEV-RELEASE-EXECUTE-002` (D-070, no es deuda).
+**Front:** SPEC-016 cierra el backlog de test IDs del investor. `DEV-RELEASE-EXECUTE-002` está
+excluido del conteo (D-070, no es deuda ni backlog — nunca se implementa).
 
 | Dimensión | Especificado | Existe | Conforme |
 |---|---:|---:|---:|
 | Superficies (M2-D5) | 53 | **46** | 46 — una superficie cuenta cuando TODOS sus test IDs están reclamados |
 | Componentes (M2-D3) | 36 | **36** | 36 |
 | Patrones de prueba (M2-D4) | 10 | 10 | 10 |
-| Test IDs | **75** | 74 | 74 (98,7%) — medido por `pnpm testids`; el pendiente es D-070 |
+| Test IDs | **74** | 74 | 74 (100%) — medido por `pnpm testids`; `DEV-RELEASE-EXECUTE-002` excluido por D-070 |
 
 **API contra M2-D5:** de los **64** endpoints especificados coinciden **5** exactos —
 `POST /auth/login`, `GET /auth/me`, `GET /projects`, `GET /projects/:id` y
@@ -97,7 +98,7 @@ parser corregido son 5 de 64.)*
 | 2 | **Borrado + tokens + shadcn/ui + rename D-067** | hecho |
 | 3 | **Los ~12 componentes transversales** de M2-D3 | hecho — 36/36 (ver tabla de arriba) |
 | 4 | **Los patrones P1–P10** de M2-D4 | **hecho** — 10/10, auditado contra el código el 2026-09-03 |
-| 5+ | **Verticales**, en el orden del flujo cross-rol de M2-D1 §6: `evidencia → certificar → liberar` | **hecho** — 53/53 superficies, auditado el 2026-09-03: los 68 endpoints únicos del backlog existen en `apps/api/src/routes`, 74/75 test IDs (el que falta, `DEV-RELEASE-EXECUTE-002`, es D-070, no deuda) |
+| 5+ | **Verticales**, en el orden del flujo cross-rol de M2-D1 §6: `evidencia → certificar → liberar` | **hecho** — 53/53 superficies, auditado el 2026-09-03: los 68 endpoints únicos del backlog existen en `apps/api/src/routes`, 74/74 test IDs (`DEV-RELEASE-EXECUTE-002` excluido del conteo por D-070, no deuda) |
 | — | `AnchorPort` §C: reconciliación y `verify()` público ([`SPEC-013`](SPEC-013-anchorport.md)) | **hecho** — `reconciliarParaLectura` cableada en cinco routers (D-077) |
 | — | **Encender el anclaje real** en la instancia desplegada ([`PLAN-2026-08-31`](PLAN-2026-08-31-anclaje-real.md)) | **hecho 2026-09-03** — primer anclaje real por metadata y por state-thread, los dos confirmados en Preprod. Ver la tabla de `CLAUDE.md` |
 | — | Preprod: cuenta Blockfrost + wallet de servicio 🔴 | **hecho 2026-08-31** — wallet fondeada, clave cargada en el dashboard |

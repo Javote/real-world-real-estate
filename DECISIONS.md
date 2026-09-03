@@ -279,12 +279,17 @@ construyan, muestran el contrato como registro y el estado de la unidad, no un b
 ### El test ID que nunca se cubre
 
 `DEV-RELEASE-EXECUTE-002` —el segundo test ID de las filas 40-41, el botón *"Release stage N
-payment"*— **no se implementa nunca**. `pnpm testids` lo reporta pendiente (74 de 75, con el piso en
-74) y **ese es el estado correcto, permanente**: no es deuda que algún día cierre.
+payment"*— **no se implementa nunca**. Es la decisión permanente, no backlog que algún día cierre.
 
-Se dice acá porque un medidor en 74/75 invita a completarlo, y completarlo sería romper la regla 13
-y D-021 para que suba un número. Pintarlo sobre otra cosa para que el medidor cierre sería peor:
-mentirle al medidor. El razonamiento largo, con qué se muestra en su lugar, vive en el encabezado de
+**Actualizado 2026-09-03: se excluye del denominador, no se deja pendiente para siempre.** La
+primera versión de esta decisión medía 74/75 a propósito, para que el hueco quedara visible y nadie
+lo completara sin leer esto. En la práctica un medidor pegado en 74/75 para siempre no se lee como
+"decisión permanente": se lee como "falta uno", e invita exactamente a lo que se quería evitar.
+`scripts/check-testids.mjs` ahora excluye `DEV-RELEASE-EXECUTE-002` de `declarados` vía
+`NO_SE_CONSTRUYE` —un set nombrado y comentado, no un ajuste silencioso del piso— y `pnpm testids`
+mide **74/74 (100%)**. El entregable (`docs/`) no se toca: sigue listando el ID en la fila 40-41, tal
+como D-022 exige; lo que cambia es qué cuenta como backlog. El razonamiento de por qué la pantalla no
+lo implementa, con qué se muestra en su lugar, vive en el encabezado de
 `apps/web/src/routes/developer.project.$projectId.contracts.tsx`.
 
 ### Deuda declarada, no resuelta acá

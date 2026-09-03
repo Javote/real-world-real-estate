@@ -84,10 +84,10 @@ no es el recibo el que lo afirma. Detalle en `DECISIONS.md` (D-087) y `packages/
 **Las "7 superficies" no existían — `specs/README.md` estaba desactualizado.** Auditado contra el
 código el 2026-09-03: las 53 superficies del backlog (`docs/milestone-3-implementacion/
 UI-implementation-plan.md` §4-6) tienen su ruta o modal, sus 68 endpoints únicos existen en
-`apps/api/src/routes`, y los 10 patrones M2-D4 están en uso. Test IDs: 74/75 —el que falta,
-`DEV-RELEASE-EXECUTE-002`, ya está documentado como no-deuda (D-070). No verificado fila por fila:
-que cada patrón esté *bien* aplicado donde corresponde, solo que está presente y en uso en algún
-lugar. `specs/README.md` corregido en el mismo commit.
+`apps/api/src/routes`, y los 10 patrones M2-D4 están en uso. Test IDs: 74/74 —
+`DEV-RELEASE-EXECUTE-002` queda excluido del conteo (D-070: decisión permanente, no backlog). No
+verificado fila por fila: que cada patrón esté *bien* aplicado donde corresponde, solo que está
+presente y en uso en algún lugar. `specs/README.md` corregido en el mismo commit.
 
 **El diseño ya está decidido. El trabajo es transcribirlo, no inventarlo.**
 
