@@ -57,7 +57,7 @@ aprobación explícita.
 | 12 | Pre-prod en **URL pública** | La URL, viva | ✅ `propnexus-web.onrender.com` + `propnexus-api.onrender.com`, las dos vivas |
 | 13 | **Video walkthrough** | El video | ⬜ |
 | 14 | **Runbook** deploy / rollback | [`RUNBOOK-deploy.md`](RUNBOOK-deploy.md) | ✅ |
-| 15 | Lista de **TXIDs** de prueba | Publicada y resoluble en un explorador | ⬜ hay TXIDs de Preprod probados desde local; falta anclar desde la instancia desplegada y publicarlos |
+| 15 | Lista de **TXIDs** de prueba | Publicada y resoluble en un explorador | ◐ **anclado desde la instancia desplegada el 2026-09-03** — metadata (`52a2aa42…f2f7aaf406`) y state-thread, mint + advance (`21bae8cb…c294970`, `b28eb6cf…36a0dbe`), los tres confirmados en Preprod. Falta publicar la lista formal |
 | 16 | README marca carpetas públicas vs privadas | En `README.md` | ✅ |
 
 ## Estado medido (2026-09-01)
@@ -96,10 +96,10 @@ parser corregido son 5 de 64.)*
 | 1 | **Reset documental**: memoria partida, `CLAUDE.md` con el flujo, `SPEC-014` | hecho |
 | 2 | **Borrado + tokens + shadcn/ui + rename D-067** | hecho |
 | 3 | **Los ~12 componentes transversales** de M2-D3 | hecho — 36/36 (ver tabla de arriba) |
-| 4 | **Los patrones P1–P10** de M2-D4 | **en curso** — 8/10 |
-| 5+ | **Verticales**, en el orden del flujo cross-rol de M2-D1 §6: `evidencia → certificar → liberar` | **en curso** — 46/53 superficies (87%), Notary y Certifier completos |
+| 4 | **Los patrones P1–P10** de M2-D4 | **hecho** — 10/10, auditado contra el código el 2026-09-03 |
+| 5+ | **Verticales**, en el orden del flujo cross-rol de M2-D1 §6: `evidencia → certificar → liberar` | **hecho** — 53/53 superficies, auditado el 2026-09-03: los 68 endpoints únicos del backlog existen en `apps/api/src/routes`, 74/75 test IDs (el que falta, `DEV-RELEASE-EXECUTE-002`, es D-070, no deuda) |
 | — | `AnchorPort` §C: reconciliación y `verify()` público ([`SPEC-013`](SPEC-013-anchorport.md)) | **hecho** — `reconciliarParaLectura` cableada en cinco routers (D-077) |
-| — | **Encender el anclaje real** en la instancia desplegada ([`PLAN-2026-08-31`](PLAN-2026-08-31-anclaje-real.md)) | la API **arranca** en modo real; falta el primer anclaje. Ver la tabla de `CLAUDE.md` |
+| — | **Encender el anclaje real** en la instancia desplegada ([`PLAN-2026-08-31`](PLAN-2026-08-31-anclaje-real.md)) | **hecho 2026-09-03** — primer anclaje real por metadata y por state-thread, los dos confirmados en Preprod. Ver la tabla de `CLAUDE.md` |
 | — | Preprod: cuenta Blockfrost + wallet de servicio 🔴 | **hecho 2026-08-31** — wallet fondeada, clave cargada en el dashboard |
 
 Cada vertical trae sus endpoints (con paths scopeados por rol, D-066) y sus test IDs. **El criterio

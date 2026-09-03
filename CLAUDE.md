@@ -35,9 +35,8 @@ números medidos, en `specs/README.md`. Acá solo lo que falta.
 
 | # | Qué | Por qué ahí | Nivel |
 |---|---|---|---|
-| 0 | **7 superficies** (46/53) y los patrones M2-D4 (8/10) | Backlog de transcripción. El test ID que falta (D-070) no es deuda | 🟢 |
-| 1 | **Correr el security review** | Criterio 11 del SOM: el P1 conocido está cerrado, pero el review nunca se corrió | 🟢 |
-| 2 | **Mainnet** — runbook, habilitar la red, custodia de la clave | D-013 la hace **imposible por configuración**: es código, no solo procedimiento | 🔴 |
+| 0 | **Correr el security review** | Criterio 11 del SOM: el P1 conocido está cerrado, pero el review nunca se corrió | 🟢 |
+| 1 | **Mainnet** — runbook, habilitar la red, custodia de la clave | D-013 la hace **imposible por configuración**: es código, no solo procedimiento | 🔴 |
 
 **Cerrados el 2026-09-01:** el reference script (D-083) y su cobertura contra un nodo real; `network`
 e `issuingAuthority`, aplicadas en producción **sin dejar de tener un solo archivo de migración**
@@ -82,7 +81,13 @@ los dos declaran `Pending` siempre, y `Confirmed` sale únicamente de un chequeo
 metadata. Ningún test cambió: el chequeo sigue encontrando el anclaje simulado al toque, solo que ya
 no es el recibo el que lo afirma. Detalle en `DECISIONS.md` (D-087) y `packages/cardano/CLAUDE.md`.
 
-# Cómo se trabaja acá
+**Las "7 superficies" no existían — `specs/README.md` estaba desactualizado.** Auditado contra el
+código el 2026-09-03: las 53 superficies del backlog (`docs/milestone-3-implementacion/
+UI-implementation-plan.md` §4-6) tienen su ruta o modal, sus 68 endpoints únicos existen en
+`apps/api/src/routes`, y los 10 patrones M2-D4 están en uso. Test IDs: 74/75 —el que falta,
+`DEV-RELEASE-EXECUTE-002`, ya está documentado como no-deuda (D-070). No verificado fila por fila:
+que cada patrón esté *bien* aplicado donde corresponde, solo que está presente y en uso en algún
+lugar. `specs/README.md` corregido en el mismo commit.
 
 **El diseño ya está decidido. El trabajo es transcribirlo, no inventarlo.**
 
