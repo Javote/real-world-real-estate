@@ -30,15 +30,14 @@ validador que afirme algo más, está mal (D-026).
 **La instancia desplegada ancló de verdad por primera vez el 2026-09-03**, contra Cardano Preprod:
 `OnChainEvent` tiene su primera fila, `Confirmed`, con TXID real
 (`52a2aa42…f2f7aaf406`). Arrancar en real era configuración; esto ya es prueba. Lo que se hizo para
-llegar está en `DECISIONS.md` (D-075 → D-083) y en `specs/PLAN-2026-08-31-anclaje-real.md`; los
+llegar está en `DECISIONS.md` (D-075 → D-087) y en `specs/PLAN-2026-08-31-anclaje-real.md`; los
 números medidos, en `specs/README.md`. Acá solo lo que falta.
 
 | # | Qué | Por qué ahí | Nivel |
 |---|---|---|---|
-| 0 | **Defensa 3**: que el simulador devuelva `Pending` y no `Confirmed` | Alinea el simulador con el real, para que `Confirmed` signifique sin excepción *algo consultó la cadena*. La defensa 2 (`anchorMode`) ya está **rechazada** por D-080 | 🟡 *decide el dueño* |
-| 1 | **7 superficies** (46/53) y los patrones M2-D4 (8/10) | Backlog de transcripción. El test ID que falta (D-070) no es deuda | 🟢 |
-| 2 | **Correr el security review** | Criterio 11 del SOM: el P1 conocido está cerrado, pero el review nunca se corrió | 🟢 |
-| 3 | **Mainnet** — runbook, habilitar la red, custodia de la clave | D-013 la hace **imposible por configuración**: es código, no solo procedimiento | 🔴 |
+| 0 | **7 superficies** (46/53) y los patrones M2-D4 (8/10) | Backlog de transcripción. El test ID que falta (D-070) no es deuda | 🟢 |
+| 1 | **Correr el security review** | Criterio 11 del SOM: el P1 conocido está cerrado, pero el review nunca se corrió | 🟢 |
+| 2 | **Mainnet** — runbook, habilitar la red, custodia de la clave | D-013 la hace **imposible por configuración**: es código, no solo procedimiento | 🔴 |
 
 **Cerrados el 2026-09-01:** el reference script (D-083) y su cobertura contra un nodo real; `network`
 e `issuingAuthority`, aplicadas en producción **sin dejar de tener un solo archivo de migración**
@@ -75,6 +74,13 @@ stage que sigue en `Pending`— y `hasOnChainThread` (calculado) en las lecturas
 pregunta se conteste mirando la respuesta y no auditando el código. De paso salió un bug de verdad,
 ya cerrado: `tieneHiloAnclado` bloqueaba la identidad de un stage con cualquier anclaje, incluida
 evidencia por metadata que nunca toca el validador. Los tres, con tests, en `apps/api/CLAUDE.md`.
+
+**Defensa 3, cerrada el 2026-09-03 (D-087).** El simulador devolvía `Confirmed` directo desde
+`openThread`/`advanceThread`/`anchorCommitment`; el adaptador real siempre devolvió `Pending`. Ahora
+los dos declaran `Pending` siempre, y `Confirmed` sale únicamente de un chequeo aparte
+(`verify()`/`confirmedAt()`) que el código de la API ya hacía para el hilo y ahora también hace para
+metadata. Ningún test cambió: el chequeo sigue encontrando el anclaje simulado al toque, solo que ya
+no es el recibo el que lo afirma. Detalle en `DECISIONS.md` (D-087) y `packages/cardano/CLAUDE.md`.
 
 # Cómo se trabaja acá
 

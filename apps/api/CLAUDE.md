@@ -35,6 +35,16 @@ que la superficie del entregable no consume pero los tests y el seed sí.
 
 ## Trampas verificadas
 
+- **2026-09-03 · Defensa 3 (D-087): dos call sites confiaban en `recibo.status` del puerto sin
+  verificar.** `anchorEvent` (`domain/stage-transition.ts`) solo llamaba a `verify()` si
+  `receipt.status === "Confirmed"` — con el simulador devolviendo `Confirmed` directo, eso nunca
+  hacía falta y el chequeo era código muerto en la práctica. `anchorCommitmentEvent`
+  (`domain/anchoring.ts`) y el `/:id/anchor` de `evidence.routes.ts` ni eso: escribían
+  `status: recibo.status` tal cual, sin ningún chequeo. Los tres corregidos con el mismo patrón —
+  `verify()` para hilo, `confirmedAt()` para metadata, siempre, sin condicionar al literal del
+  recibo. `evidence.routes.ts` y `domain/anchoring.ts` tienen la MISMA lógica de insertar +
+  anclar + `catch → Failed` casi duplicada — no se unificó hoy, queda a la vista para quien lo
+  toque después.
 - **2026-09-03 · `tieneHiloAnclado` miraba CUALQUIER `OnChainEvent` con `txid`, no el hilo.** La
   función que bloquea `sequenceOrder`/`validationCritical` en `PATCH /stages/:id` una vez "anclado"
   (`identity_preserved` del validador) filtraba por `txid is not null` — y un anclaje de evidencia

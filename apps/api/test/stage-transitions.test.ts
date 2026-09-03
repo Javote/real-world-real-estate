@@ -1,3 +1,4 @@
+import { randomBytes } from "node:crypto";
 import { canTransition, STAGE_STATES, type StageState } from "@plataforma/shared";
 import request from "supertest";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
@@ -5,6 +6,11 @@ import app from "../src/app";
 import { createId } from "../src/db/id";
 import { db } from "../src/lib/db";
 import { FIXTURES } from "./global-setup";
+
+/** Un txid de 64 hex, genuinamente aleatorio — no un dígito variable sobre un
+ * literal fijo (eso da solo 10 valores posibles, y `OnChainEvent.txid` es
+ * único: dos fixtures de la misma suite pueden chocar). */
+const txidDeFixture = () => randomBytes(32).toString("hex");
 
 // D-059. La tabla de transiciones vivía SOLO en Aiken y esta ruta aceptaba
 // cualquier estado desde cualquier estado — incluido salir de `Completed`, que
@@ -444,7 +450,7 @@ describe("PATCH /stages/:id · la identidad on-chain", () => {
         toState: "Pending",
         commitment: null,
         status: "Confirmed",
-        txid: `${"f".repeat(63)}${Math.floor(Math.random() * 10)}`,
+        txid: txidDeFixture(),
         network: "Simulated",
         outputRef: `${"f".repeat(64)}#0`,
         blockTimestamp: ahora,
@@ -482,7 +488,7 @@ describe("PATCH /stages/:id · la identidad on-chain", () => {
         toState: null,
         commitment: "a".repeat(64),
         status: "Confirmed",
-        txid: `${"f".repeat(63)}${Math.floor(Math.random() * 10)}`,
+        txid: txidDeFixture(),
         network: "Simulated",
         outputRef: null,
         blockTimestamp: ahora,

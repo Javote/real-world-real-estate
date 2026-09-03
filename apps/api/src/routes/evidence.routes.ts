@@ -251,12 +251,17 @@ router.post(
         reference: evidencia.id
       });
 
+      // El recibo llega `Pending` siempre (D-087): `confirmedAt` es quien
+      // puede decir `Confirmed`, igual que en `domain/anchoring.ts`.
+      const blockTimestamp = await anchorPort().confirmedAt(recibo.txid);
+
       anclado = await db
         .updateTable("OnChainEvent")
         .set({
           txid: recibo.txid,
           network: anchorPort().network,
-          status: recibo.status,
+          status: blockTimestamp !== null ? "Confirmed" : recibo.status,
+          blockTimestamp: blockTimestamp !== null ? new Date(blockTimestamp) : null,
           updatedAt: new Date()
         })
         .where("id", "=", evento.id)

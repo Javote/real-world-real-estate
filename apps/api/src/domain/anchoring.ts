@@ -78,12 +78,20 @@ export async function anchorCommitmentEvent(input: {
       reference: input.reference
     });
 
+    // El recibo llega `Pending` siempre (D-087, mismo contrato que el hilo en
+    // `anchorEvent`): `confirmedAt` es el único que puede decir `Confirmed`.
+    // No hay `verify()` acá porque un anclaje por metadata no tiene datum ni
+    // outputRef — `confirmedAt` es la pregunta que sí le cabe (ver
+    // `SimulatedAnchorAdapter.confirmedAt`).
+    const blockTimestamp = await anchorPort().confirmedAt(recibo.txid);
+
     return await db
       .updateTable("OnChainEvent")
       .set({
         txid: recibo.txid,
         network: anchorPort().network,
-        status: recibo.status,
+        status: blockTimestamp !== null ? "Confirmed" : recibo.status,
+        blockTimestamp: blockTimestamp !== null ? new Date(blockTimestamp) : null,
         updatedAt: new Date()
       })
       .where("id", "=", evento.id)

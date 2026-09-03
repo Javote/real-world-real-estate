@@ -28,6 +28,18 @@ import {
 // El TXID es **determinístico**: `sha256` del payload canónico. Anclar dos
 // veces lo mismo da el mismo TXID, que es la forma barata de ver una doble
 // escritura en los tests.
+//
+// **El recibo dice `Pending`, igual que el adaptador real** (D-087, la
+// "Defensa 3" que quedaba pendiente de D-079/D-080: antes decía `Confirmed`
+// directo, y esa era la única diferencia de contrato entre los dos
+// adaptadores — quien escribía código contra el simulador podía confiar en
+// que un anclaje se resuelve en el mismo request, y eso es falso contra
+// Preprod). Que el simulador **conozca** el txid al toque
+// —`confirmedAt`/`verify` lo encuentran de inmediato, sin esperar nada— sigue
+// siendo cierto y es lo que lo hace barato para tests: la diferencia es que
+// ahora nadie se entera sin preguntar. `Confirmed` sale siempre de ese
+// chequeo aparte (`anchorEvent` en la API, o un `reconcile`), nunca del
+// recibo.
 
 function canonical(value: unknown): string {
   return JSON.stringify(value, (_key, v) =>
@@ -146,15 +158,15 @@ export class SimulatedAnchorAdapter implements AnchorPort {
     // archivo da el mismo txid, que es como se ve una doble escritura.
     const txid = txidOf("evidence", { sha256, reference });
     this.registrar(txid);
-    return { txid, status: "Confirmed" };
+    return { txid, status: "Pending" };
   }
 
   async verify(txid: string): Promise<AnchorProof | null> {
     return this.proofs.get(txid) ?? null;
   }
 
-  /** En el simulador la confirmación es inmediata: el hueco entre declarar y
-   * confirmar se ejercita con el adaptador real (rebanada B). */
+  /** El registro (`bloques`/`proofs`) queda listo desde el `commit`, así que
+   * esto encuentra algo de inmediato — pero solo si alguien lo pregunta. */
   async awaitConfirmation(txid: string): Promise<AnchorProof> {
     const proof = await this.verify(txid);
     if (!proof) reject("UNKNOWN_TXID", `No hay anclaje con txid ${txid}`);
@@ -196,6 +208,6 @@ export class SimulatedAnchorAdapter implements AnchorPort {
     await this.store.put({ outputRef, assetName: datum.stageRef, datum, spentByTxid: null });
     this.registrar(txid);
     this.proofs.set(txid, { txid, outputRef, blockTimestamp: this.now(), datum });
-    return { txid, outputRef, status: "Confirmed" };
+    return { txid, outputRef, status: "Pending" };
   }
 }

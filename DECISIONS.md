@@ -800,7 +800,27 @@ servicio, se hace una vez por red y no produce ningún anclaje. Meterla en el pu
 simulador a fingir que la tiene. Es idempotente (regla 8): vuelve a mirar la cadena antes de
 publicar.
 
-## D-008 — Validador state-thread con núcleo puro separado
+## D-087 — El simulador declara `Pending`, y `Confirmed` sale siempre de un chequeo aparte
+
+**"Defensa 3"**, la que quedaba abierta de las tres que salieron del incidente del 2026-08-31 (una
+fila en producción con TXID inventado, marcada `Confirmed` — ver la memoria del hallazgo). Las
+otras dos: que la API se niegue a simular contra una base remota (D-075, ✅) y `network` en vez de
+una columna `anchorMode` (D-080, ✅). Esta cierra la que quedaba: el simulador devolvía `Confirmed`
+directo desde `openThread`/`advanceThread`/`anchorCommitment`, y el adaptador real siempre devolvió
+`Pending` — la única diferencia de contrato entre los dos adaptadores, y la que hacía ambiguo qué
+significa `Confirmed` en el código que los llama.
+
+**Los dos adaptadores devuelven el mismo recibo ahora: `Pending`, siempre.** `Confirmed` sale
+únicamente de un chequeo aparte —`verify()` para hilos, `confirmedAt()` para metadata— nunca del
+propio recibo. `anchorEvent` (state-thread) y `anchorCommitmentEvent`/`POST /evidence/:id/anchor`
+(metadata) hacen ese chequeo **en el mismo request**, así que en la práctica un anclaje simulado
+sigue confirmando al toque —su ledger queda listo desde el `commit`— pero ya no porque el recibo lo
+afirme: porque algo lo preguntó. Contra Preprod, el chequeo no encuentra nada todavía y el evento
+queda `Pending` hasta que alguien reconcilie — que es exactamente lo que ya pasaba.
+
+**No cambia ningún test.** Los que afirman `Confirmed` contra el simulador lo siguen viendo así,
+porque el chequeo inmediato lo sigue encontrando; lo que cambia es que ya no hay ningún código que
+confíe en el campo `status` del recibo sin verificar.
 
 El validador es cáscara delgada sobre `lib/propnexus/fsm.ak`. **Por qué existe un validador si la
 plataforma no controla nada:** no controla el mundo real, **controla al operador**. Con metadata

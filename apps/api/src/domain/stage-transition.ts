@@ -217,7 +217,11 @@ async function anchorEvent(
             next: buildStageDatum(toDatumSource(stage, stage.state === "Completed" ? root : ""))
           });
 
-    const proof = receipt.status === "Confirmed" ? await anchorPort().verify(receipt.txid) : null;
+    // El receipt llega `Pending` siempre, con los dos adaptadores (D-087): no
+    // se le pregunta si dice "Confirmed" — se verifica, sin excepción. Contra
+    // el simulador esto encuentra el proof al toque (su ledger queda listo
+    // desde el `commit`); contra Preprod, todavía no hay nada que ver.
+    const proof = await anchorPort().verify(receipt.txid);
 
     return await db
       .updateTable("OnChainEvent")
@@ -227,7 +231,7 @@ async function anchorEvent(
         // de la tabla rechaza el par incompleto.
         network: anchorPort().network,
         outputRef: receipt.outputRef,
-        status: receipt.status,
+        status: proof ? "Confirmed" : receipt.status,
         // Qué commitment quedó anclado en ESTE evento. Vacío mientras el stage
         // no se completa: hasta entonces el datum no lleva root.
         commitment: stage.state === "Completed" ? root : null,

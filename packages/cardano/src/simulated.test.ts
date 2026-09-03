@@ -27,8 +27,11 @@ beforeEach(() => {
 describe("openThread · el mint", () => {
   it("abre el hilo y devuelve el UTxO vivo", async () => {
     const recibo = await port.openThread({ datum: buildStageDatum(fuente) });
-    expect(recibo.status).toBe("Confirmed");
+    // D-087: el recibo declara Pending, igual que el adaptador real — que lo
+    // haya confirmado ya (abajo) es otra pregunta, y la contesta `verify`.
+    expect(recibo.status).toBe("Pending");
     expect(recibo.outputRef).toBe(`${recibo.txid}#0`);
+    expect(await port.verify(recibo.txid)).toMatchObject({ outputRef: recibo.outputRef });
   });
 
   it("rechaza un segundo hilo para el mismo stage", async () => {
@@ -153,7 +156,7 @@ describe("advanceThread · el spend", () => {
         completedAt: 5
       })
     });
-    expect(completo.status).toBe("Confirmed");
+    expect(completo.status).toBe("Pending");
   });
 
   it("los rechazos son AnchorRejectedError, no fallos de infraestructura", async () => {
@@ -218,7 +221,7 @@ describe("anchorEvidence · el camino de metadata", () => {
     const a = await port.anchorCommitment({ sha256, reference: "ev_1" });
     const b = await port.anchorCommitment({ sha256, reference: "ev_1" });
     expect(a.txid).toBe(b.txid);
-    expect(a.status).toBe("Confirmed");
+    expect(a.status).toBe("Pending");
   });
 
   it("rechaza un hash que no sea SHA-256", async () => {

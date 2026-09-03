@@ -79,6 +79,14 @@ confirmación. El txid es el hash del cuerpo de la transacción y existe antes d
 exitoso solo dice que el nodo la aceptó en su mempool. Por eso `openThread`/`advanceThread` devuelven
 `Pending` con txid y la promoción a `Confirmed` la hace `confirmedAt()` (D-077).
 
+**Esta frase era cierta para `real.ts` y falsa para `simulated.ts` hasta el 2026-09-03.** El
+simulador devolvía `Confirmed` directo desde `commit()`/`anchorCommitment()` — la "Defensa 3" que
+quedó pendiente del incidente del 2026-08-31 (ver `DECISIONS.md` D-087). Ahora los dos adaptadores
+declaran `Pending` siempre; que el simulador **conozca** el txid al toque (`confirmedAt`/`verify`
+sin esperar nada, la propiedad de arriba) sigue siendo cierto y sigue siendo lo que lo hace barato
+para tests — la diferencia es que ahora nadie se entera de la confirmación sin preguntar
+explícitamente, con los dos adaptadores.
+
 ## Un anclaje por vez, y el adaptador se acuerda de lo que envió
 
 `LucidAnchorAdapter` serializa todas sus transacciones en una cola en memoria y, después de cada
