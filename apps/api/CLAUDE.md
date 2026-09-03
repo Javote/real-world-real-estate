@@ -35,6 +35,25 @@ que la superficie del entregable no consume pero los tests y el seed sí.
 
 ## Trampas verificadas
 
+- **2026-09-03 · Un stage sembrado directo en la base no tiene hilo on-chain, y `PATCH .../state`
+  no lo dice.** El primer anclaje real de state-thread se probó en producción sobre `torre-a` y el
+  intento inicial fue transicionar `Estructura` —un stage que ya existía, sembrado por
+  `db/fixtures.ts` con `insertInto("Stage")` directo—. `advanceThread` necesita un UTxO vivo que
+  gastar (`cabezaDelHilo`, que busca un `OnChainEvent` con `outputRef`), y un stage que nunca pasó
+  por `POST /projects/:id/stages` no tiene ninguno: el mint solo ocurre ahí
+  (`anchorEvent(evento, stage, null)`, línea ~95 de `routes/projects-obra.routes.ts`). El síntoma
+  **no es un error de la request** — D-059 escribe la declaración igual, la respuesta es 200 — es
+  el `anchor.status` quedando `Failed` en silencio, exactamente el caso que ya cubre
+  `test/stage-transitions.test.ts` (*"deja el evento en Failed... si el stage no tiene hilo"*), solo
+  que nadie había cruzado ese test con el hecho de que el seed de demo crea stages así.
+  **Fix aplicado:** el primer anclaje de state-thread se hizo sobre un stage **nuevo**
+  ("Terminaciones"), creado con `POST /projects/:id/stages` para abrir el hilo, y recién después
+  `PATCH .../state`. Confirmado con las dos transacciones referenciando el reference script
+  (D-083) en vez de adjuntar el validador — verificado leyendo `reference: true` en los inputs de
+  cada tx contra Blockfrost, no por tamaño/fee nomás. Ver `CLAUDE.md` raíz, cierre del 2026-09-03.
+  **Antes de completar o transicionar un stage viejo de `torre-a` para una demo o un test manual:
+  confirmá que tiene una fila en `OnChainEvent` con `outputRef` antes de asumir que el hilo existe.**
+
 - **2026-08-24 · Un `router.use(guard)` en un router montado sobre `/api/v1` pelado corre para
   TODA request que le entre, matcheen o no sus rutas.** `developer.routes.ts` tenía
   `router.use(requireRole("admin", "developer"))`, y como estaba montado en `app.use("/api/v1",

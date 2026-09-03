@@ -48,17 +48,28 @@ e `issuingAuthority`, aplicadas en producción **sin dejar de tener un solo arch
 (`admin@`, `developer@`, `buyer@`, `verifier@`, `notary@example.com`), verificado con
 `select email from User`; la **publicación operativa** del reference script en Preprod
 (`pnpm --filter @plataforma/cardano ref:publish`, txid `3c75280a…0ba2c7f1`, confirmado on-chain,
-API reiniciada a las 15:26 UTC); y el **primer anclaje real**: `developer@example.com` subió
-evidencia al stage "Estructura" de `torre-a`
-(`POST /developer/projects/:id/stages/:stageId/evidence`), el root del bundle se ancló por
-metadata, y `POST /evidence/reconcile` promovió la fila a `Confirmed` — TXID
-`52a2aa4214b952518ce987fadf74223ab4865886ff11bfc1caa51e42f7aaf406`, 1 confirmación en Preprod.
+API reiniciada a las 15:26 UTC); el **primer anclaje real por metadata**: `developer@example.com`
+subió evidencia al stage "Estructura" de `torre-a`
+(`POST /developer/projects/:id/stages/:stageId/evidence`), root del bundle anclado, `POST
+/evidence/reconcile` lo confirmó — TXID `52a2aa4214…f7aaf406`; y el **primer anclaje real de
+state-thread**, el otro camino que D-083 existe para abaratar: se creó un stage nuevo
+("Terminaciones", `POST /projects/:id/stages`, mint del thread token) y se transicionó
+Pending→InProgress (`PATCH /stages/:id/state`, gasta y recrea el hilo). **Las dos transacciones
+referenciaron el UTxO publicado en vez de adjuntar el validador** — verificado leyendo los inputs de
+cada una en Blockfrost (`reference: true` sobre el UTxO `3c75280a…0ba2c7f1#0`), no solo por
+tamaño/fee. D-083 queda confirmado en producción en sus dos caminos.
 
-**Lo que este anclaje NO prueba, y hay que decirlo:** `anchorCommitment` (evidencia por metadata,
-D-006) no pasa por el validador — D-083 solo aplica al camino de **state-thread**
-(`openThread`/`advanceThread`, disparado por `PATCH /stages/:id/state`). Que el reference script
-esté publicado y la API reiniciada no está confirmado en uso todavía; lo confirmaría una transición
-de stage real, que es un anclaje distinto y no se hizo hoy.
+```
+mint     (STAGE_CREATED)     650 bytes · 0.229280 ADA · 21bae8cb…c294970
+advance  (STAGE_TRANSITION)  645 bytes · 0.238122 ADA · b28eb6cf…36a0dbe
+```
+
+**Trampa encontrada al hacerlo:** un stage sembrado directo en la base (como los del seed de demo,
+`Cimentación`/`Estructura` de `torre-a`) **no tiene hilo on-chain** — el mint solo ocurre en `POST
+/projects/:id/stages`. Un `PATCH .../state` sobre uno de esos stages no falla la request (la
+declaración se escribe igual, D-059) pero el anclaje queda `Failed` en silencio, porque
+`advanceThread` no encuentra ningún UTxO que gastar. Por eso el primer anclaje de state-thread se
+hizo sobre un stage **nuevo**, no sobre los dos que ya existían. Ver `apps/api/CLAUDE.md`.
 
 # Cómo se trabaja acá
 
