@@ -160,37 +160,36 @@ function UploadEvidence() {
 
       {/* P4 — la confirmación post-anclaje. Se abre sola porque el sistema la
           emite tras un anclaje exitoso; es la única excepción de M2-D4 §6.3. */}
-      <>
-        {/* Solo con TXID: si el anclaje quedó `Failed`, el archivo y su hash
+
+      {/* Solo con TXID: si el anclaje quedó `Failed`, el archivo y su hash
             están escritos pero la prueba no existe, y el modal de éxito
             afirmaría lo que la regla 17 prohíbe. En ese caso se muestra el
             aviso de pendiente y nada más. */}
-        {anclado?.anchor.txid ? (
-          <AnchoringSuccessModal
-            open
-            testId="DEV-ANCHOR-SUCCESS-001"
-            onDone={() => setAnclado(null)}
-            merkleRoot={anclado.merkleRoot}
-            txid={anclado.anchor.txid}
-            labels={{
-              title: t('developer.anchorSuccess.title'),
-              body: t('developer.anchorSuccess.body'),
-              merkleLabel: t('developer.anchorSuccess.merkle'),
-              txidLabel: t('hash.txidLabel'),
-              copy: t('hash.copy'),
-              copied: t('hash.copied'),
-              openExplorer: t('developer.anchorSuccess.explorer'),
-              done: t('developer.anchorSuccess.done')
-            }}
-          />
-        ) : null}
+      {anclado?.anchor.txid ? (
+        <AnchoringSuccessModal
+          open
+          testId="DEV-ANCHOR-SUCCESS-001"
+          onDone={() => setAnclado(null)}
+          merkleRoot={anclado.merkleRoot}
+          txid={anclado.anchor.txid}
+          labels={{
+            title: t('developer.anchorSuccess.title'),
+            body: t('developer.anchorSuccess.body'),
+            merkleLabel: t('developer.anchorSuccess.merkle'),
+            txidLabel: t('hash.txidLabel'),
+            copy: t('hash.copy'),
+            copied: t('hash.copied'),
+            openExplorer: t('developer.anchorSuccess.explorer'),
+            done: t('developer.anchorSuccess.done')
+          }}
+        />
+      ) : null}
 
-        {anclado && !anclado.anchor.txid ? (
-          <p className="rounded-lg bg-pending-light p-s3 text-body-sm text-pending">
-            {t('developer.upload.anchorPending')}
-          </p>
-        ) : null}
-      </>
+      {anclado && !anclado.anchor.txid ? (
+        <p className="rounded-lg bg-pending-light p-s3 text-body-sm text-pending">
+          {t('developer.upload.anchorPending')}
+        </p>
+      ) : null}
     </PanelLayout>
   )
 }
