@@ -37,12 +37,11 @@ falta.
 
 | # | Qué | Por qué ahí | Nivel |
 |---|---|---|---|
-| 0 | **Publicar el reference script** en Preprod (D-083) | El validador viaja adjunto hasta que exista el UTxO. Se descubre al arrancar, así que después hay que reiniciar | 🟡 *operativo* |
-| 1 | **Primer anclaje real de punta a punta** | Recién acá "arranca en real" pasa a "ancla de verdad", y ya sale con la transacción barata | 🟢 |
-| 2 | **Defensa 3**: que el simulador devuelva `Pending` y no `Confirmed` | Alinea el simulador con el real, para que `Confirmed` signifique sin excepción *algo consultó la cadena*. La defensa 2 (`anchorMode`) ya está **rechazada** por D-080 | 🟡 *decide el dueño* |
-| 3 | **7 superficies** (46/53) y los patrones M2-D4 (8/10) | Backlog de transcripción. El test ID que falta (D-070) no es deuda | 🟢 |
-| 4 | **Correr el security review** | Criterio 11 del SOM: el P1 conocido está cerrado, pero el review nunca se corrió | 🟢 |
-| 5 | **Mainnet** — runbook, habilitar la red, custodia de la clave | D-013 la hace **imposible por configuración**: es código, no solo procedimiento | 🔴 |
+| 0 | **Primer anclaje real de punta a punta** | Recién acá "arranca en real" pasa a "ancla de verdad" | 🟢 |
+| 1 | **Defensa 3**: que el simulador devuelva `Pending` y no `Confirmed` | Alinea el simulador con el real, para que `Confirmed` signifique sin excepción *algo consultó la cadena*. La defensa 2 (`anchorMode`) ya está **rechazada** por D-080 | 🟡 *decide el dueño* |
+| 2 | **7 superficies** (46/53) y los patrones M2-D4 (8/10) | Backlog de transcripción. El test ID que falta (D-070) no es deuda | 🟢 |
+| 3 | **Correr el security review** | Criterio 11 del SOM: el P1 conocido está cerrado, pero el review nunca se corrió | 🟢 |
+| 4 | **Mainnet** — runbook, habilitar la red, custodia de la clave | D-013 la hace **imposible por configuración**: es código, no solo procedimiento | 🔴 |
 
 **Cerrados el 2026-09-01:** el reference script (D-083) y su cobertura contra un nodo real; `network`
 e `issuingAuthority`, aplicadas en producción **sin dejar de tener un solo archivo de migración**
@@ -50,12 +49,11 @@ e `issuingAuthority`, aplicadas en producción **sin dejar de tener un solo arch
 
 **Cerrados el 2026-09-03:** el re-seed de producción — 5 cuentas demo sembradas contra Turso
 (`admin@`, `developer@`, `buyer@`, `verifier@`, `notary@example.com`), verificado con
-`select email from User`. Ya se puede entrar a la instancia.
-
-**El 0 conviene antes que el 1** para que el primer anclaje real ya salga con la transacción barata,
-pero no lo bloquea: sin reference script todo funciona igual, más caro. Con el re-seed cerrado, el 1
-ya se puede disparar desde la app — falta probar el login a mano, que quedó pendiente para otro
-momento.
+`select email from User`; y la **publicación operativa** del reference script en Preprod
+(`pnpm --filter @plataforma/cardano ref:publish`, txid `3c75280a…0ba2c7f1`, confirmado on-chain,
+API reiniciada a las 15:26 UTC). **Ojo:** ningún log dice explícito que el adaptador ya lo esté
+*usando* — eso no se afirma acá, lo confirma el 0: el tamaño y el fee de esa transacción dicen si
+referenció o adjuntó el validador.
 
 # Cómo se trabaja acá
 
