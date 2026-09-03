@@ -35,6 +35,28 @@ que la superficie del entregable no consume pero los tests y el seed sí.
 
 ## Trampas verificadas
 
+- **2026-09-03 · `GET /:bundleId/proof/:fileHash` y `GET /:bundleId/files` no tenían segunda capa
+  — encontrado en el security review del criterio 11 del SOM.** Cada otra ruta de
+  `evidence.routes.ts` (`/:id`, `/:id/download`, `PATCH /:id`, `/:id/anchor`, `DELETE /:id`) suma
+  `requireProjectAccess` a `router.use(authenticate)`; estas dos rutas, agregadas para la fila 25m
+  (`INV-STAGE-MILESTONE-001`/`INV-MERKLE-PROOF-002`), solo tenían la primera capa. Cualquier usuario
+  autenticado sin membresía en el proyecto dueño del bundle —un notary sin proyectos, un buyer de
+  otro proyecto— podía leer la raíz Merkle, los `sha256Hash` y los `originalFilename` de la
+  evidencia de un bundle ajeno con solo conocer su `bundleId`. No es el patrón del `/public/` (D-016
+  §dossier): ese vive en su propio router, sin `authenticate`, y documentado como una de las dos
+  únicas rutas sin sesión del backlog — esto no lo era, era un olvido.
+  **Fix:** `ProjectSource` en `middlewares/auth.ts` suma `via: "EvidenceBundle"` (mismo patrón que
+  `Stage`/`Evidence`: la tabla tiene `projectId` directo, no hace falta joinear), y las dos rutas
+  ahora piden `requireProjectAccess({ via: "EvidenceBundle", param: "bundleId" }, ANY_MEMBERSHIP)`.
+  Test que reproduce el bug y prueba el cierre: `test/evidence-anchor.test.ts` → *"un developer sin
+  membresía en el proyecto del bundle recibe 403"*.
+  **La lección:** cuando una ruta nueva se agrega a un archivo con un patrón de autorización
+  consistente en todas las demás, copiar `router.get("/x", async (req, res) => ...)` sin el
+  middleware no rompe nada visible — compila, el happy path funciona, y el agujero solo se ve
+  leyendo la ruta al lado de sus hermanas o auditando expresamente. Ninguna herramienta lo iba a
+  encontrar sola porque no hay un checker de esto (D-053): la forma es el middleware obligatorio en
+  la firma, y acá la firma no lo tenía.
+
 - **2026-09-03 · Defensa 3 (D-087): dos call sites confiaban en `recibo.status` del puerto sin
   verificar.** `anchorEvent` (`domain/stage-transition.ts`) solo llamaba a `verify()` si
   `receipt.status === "Confirmed"` — con el simulador devolviendo `Confirmed` directo, eso nunca

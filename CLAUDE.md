@@ -35,8 +35,7 @@ números medidos, en `specs/README.md`. Acá solo lo que falta.
 
 | # | Qué | Por qué ahí | Nivel |
 |---|---|---|---|
-| 0 | **Correr el security review** | Criterio 11 del SOM: el P1 conocido está cerrado, pero el review nunca se corrió | 🟢 |
-| 1 | **Mainnet** — runbook, habilitar la red, custodia de la clave | D-013 la hace **imposible por configuración**: es código, no solo procedimiento | 🔴 |
+| 0 | **Mainnet** — runbook, habilitar la red, custodia de la clave | D-013 la hace **imposible por configuración**: es código, no solo procedimiento | 🔴 |
 
 **Cerrados el 2026-09-01:** el reference script (D-083) y su cobertura contra un nodo real; `network`
 e `issuingAuthority`, aplicadas en producción **sin dejar de tener un solo archivo de migración**
@@ -61,6 +60,14 @@ tamaño/fee. D-083 queda confirmado en producción en sus dos caminos.
 mint     (STAGE_CREATED)     650 bytes · 0.229280 ADA · 21bae8cb…c294970
 advance  (STAGE_TRANSITION)  645 bytes · 0.238122 ADA · b28eb6cf…36a0dbe
 ```
+
+**El security review del criterio 11, corrido.** Auditoría completa de `apps/api`, `packages/cardano`,
+`packages/shared` y los validadores Aiken contra las reglas duras de este archivo. Un hallazgo real:
+`GET /evidence/:bundleId/proof/:fileHash` y `GET /evidence/:bundleId/files` no tenían la segunda capa
+de autorización (regla 5) — cualquier usuario autenticado, sin importar su membresía, podía leer el
+Merkle root, los hashes y los nombres de archivo de un bundle de evidencia ajeno conociendo su
+`bundleId`. Cerrado en el mismo commit: `ProjectSource` suma `via: "EvidenceBundle"` y ambas rutas
+piden `requireProjectAccess`. Detalle y la lección en `apps/api/CLAUDE.md`.
 
 **Trampa encontrada al hacerlo, y dos arreglos que salieron de ahí.** Un stage sembrado directo en
 la base (como `Cimentación`/`Estructura` de `torre-a`) **no tiene hilo on-chain** — el mint solo

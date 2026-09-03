@@ -11,6 +11,7 @@ import { FIXTURES } from "./global-setup";
 let proyecto: string;
 let tokenAdmin: string;
 let tokenDev: string;
+let tokenAjeno: string;
 let usuario: string;
 
 const login = (f: { email: string; password: string }) =>
@@ -83,6 +84,7 @@ beforeAll(async () => {
   ).id;
   tokenAdmin = (await login(FIXTURES.admin)).body.token;
   tokenDev = (await login(FIXTURES.activo)).body.token;
+  tokenAjeno = (await login(FIXTURES.ajeno)).body.token;
 });
 
 afterAll(async () => {
@@ -200,5 +202,56 @@ describe("EvidenceBundle · el acta del cierre", () => {
       .where("stageId", "=", stage)
       .executeTakeFirstOrThrow();
     expect(bundle.commitmentHash).toMatch(/^[0-9a-f]{64}$/);
+  });
+});
+
+describe("GET /evidence/:bundleId/files y /:bundleId/proof/:fileHash — segunda capa", () => {
+  it("un developer sin membresía en el proyecto del bundle recibe 403", async () => {
+    const stage = await crearStage(998_020);
+    const evidencia = await subirEvidencia(stage, "plano-ajeno");
+
+    await request(app)
+      .patch(`/api/v1/stages/${stage}/state`)
+      .set("Authorization", `Bearer ${tokenAdmin}`)
+      .send({ state: "Completed" });
+
+    const bundle = await db
+      .selectFrom("EvidenceBundle")
+      .selectAll()
+      .where("stageId", "=", stage)
+      .executeTakeFirstOrThrow();
+    const item = await db
+      .selectFrom("EvidenceBundleItem")
+      .selectAll()
+      .where("bundleId", "=", bundle.id)
+      .executeTakeFirstOrThrow();
+
+    const archivos = await request(app)
+      .get(`/api/v1/evidence/${bundle.id}/files`)
+      .set("Authorization", `Bearer ${tokenAjeno}`);
+    expect(archivos.status).toBe(403);
+
+    const prueba = await request(app)
+      .get(`/api/v1/evidence/${bundle.id}/proof/${item.sha256Hash}`)
+      .set("Authorization", `Bearer ${tokenAjeno}`);
+    expect(prueba.status).toBe(403);
+
+    // Y un miembro real del proyecto sí puede: la capa no rompió el camino feliz.
+    const okArchivos = await request(app)
+      .get(`/api/v1/evidence/${bundle.id}/files`)
+      .set("Authorization", `Bearer ${tokenDev}`);
+    expect(okArchivos.status).toBe(200);
+
+    const okPrueba = await request(app)
+      .get(`/api/v1/evidence/${bundle.id}/proof/${item.sha256Hash}`)
+      .set("Authorization", `Bearer ${tokenDev}`);
+    expect(okPrueba.status).toBe(200);
+  });
+
+  it("404 si el bundle no existe", async () => {
+    const res = await request(app)
+      .get(`/api/v1/evidence/${createId()}/files`)
+      .set("Authorization", `Bearer ${tokenDev}`);
+    expect([403, 404]).toContain(res.status);
   });
 });

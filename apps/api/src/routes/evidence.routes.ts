@@ -321,60 +321,68 @@ router.delete("/:id", requireRole("admin"), async (req: Request<{ id: string }>,
  * archivo, camina el árbol con estos hermanos y compara con la raíz anclada.
  * Sin esto, tendría que bajarse todos los archivos del bundle.
  */
-router.get("/:bundleId/proof/:fileHash", async (req, res) => {
-  const items = await db
-    .selectFrom("EvidenceBundleItem")
-    .select(["sha256Hash"])
-    .where("bundleId", "=", req.params.bundleId as string)
-    .execute();
+router.get(
+  "/:bundleId/proof/:fileHash",
+  requireProjectAccess({ via: "EvidenceBundle", param: "bundleId" }, ANY_MEMBERSHIP),
+  async (req, res) => {
+    const items = await db
+      .selectFrom("EvidenceBundleItem")
+      .select(["sha256Hash"])
+      .where("bundleId", "=", req.params.bundleId as string)
+      .execute();
 
-  if (items.length === 0) return res.status(404).json({ message: "Bundle not found" });
+    if (items.length === 0) return res.status(404).json({ message: "Bundle not found" });
 
-  const bundle = await db
-    .selectFrom("EvidenceBundle")
-    .select(["commitmentHash"])
-    .where("id", "=", req.params.bundleId as string)
-    .executeTakeFirstOrThrow();
+    const bundle = await db
+      .selectFrom("EvidenceBundle")
+      .select(["commitmentHash"])
+      .where("id", "=", req.params.bundleId as string)
+      .executeTakeFirstOrThrow();
 
-  const sha256Pair = (a: string, b: string) =>
-    createHash("sha256")
-      .update(Buffer.from(a + b, "hex"))
-      .digest("hex");
+    const sha256Pair = (a: string, b: string) =>
+      createHash("sha256")
+        .update(Buffer.from(a + b, "hex"))
+        .digest("hex");
 
-  try {
-    const proof = merkleProof(
-      items.map((i) => i.sha256Hash),
-      req.params.fileHash as string,
-      sha256Pair
-    );
-    return res.json({ merkleRoot: bundle.commitmentHash, leaf: req.params.fileHash, proof });
-  } catch {
-    return res.status(404).json({ message: "That hash is not part of this bundle" });
+    try {
+      const proof = merkleProof(
+        items.map((i) => i.sha256Hash),
+        req.params.fileHash as string,
+        sha256Pair
+      );
+      return res.json({ merkleRoot: bundle.commitmentHash, leaf: req.params.fileHash, proof });
+    } catch {
+      return res.status(404).json({ message: "That hash is not part of this bundle" });
+    }
   }
-});
+);
 
 /** Fila 25m — los archivos del bundle con sus hashes. */
-router.get("/:bundleId/files", async (req, res) => {
-  const bundle = await db
-    .selectFrom("EvidenceBundle")
-    .selectAll()
-    .where("id", "=", req.params.bundleId as string)
-    .executeTakeFirst();
+router.get(
+  "/:bundleId/files",
+  requireProjectAccess({ via: "EvidenceBundle", param: "bundleId" }, ANY_MEMBERSHIP),
+  async (req, res) => {
+    const bundle = await db
+      .selectFrom("EvidenceBundle")
+      .selectAll()
+      .where("id", "=", req.params.bundleId as string)
+      .executeTakeFirst();
 
-  if (!bundle) return res.status(404).json({ message: "Bundle not found" });
+    if (!bundle) return res.status(404).json({ message: "Bundle not found" });
 
-  const items = await db
-    .selectFrom("EvidenceBundleItem")
-    .leftJoin("Evidence", "Evidence.id", "EvidenceBundleItem.evidenceId")
-    .select([
-      "EvidenceBundleItem.evidenceId as evidenceId",
-      "EvidenceBundleItem.sha256Hash as sha256Hash",
-      "Evidence.originalFilename as filename"
-    ])
-    .where("EvidenceBundleItem.bundleId", "=", bundle.id)
-    .execute();
+    const items = await db
+      .selectFrom("EvidenceBundleItem")
+      .leftJoin("Evidence", "Evidence.id", "EvidenceBundleItem.evidenceId")
+      .select([
+        "EvidenceBundleItem.evidenceId as evidenceId",
+        "EvidenceBundleItem.sha256Hash as sha256Hash",
+        "Evidence.originalFilename as filename"
+      ])
+      .where("EvidenceBundleItem.bundleId", "=", bundle.id)
+      .execute();
 
-  return res.json({ bundleId: bundle.id, merkleRoot: bundle.commitmentHash, files: items });
-});
+    return res.json({ bundleId: bundle.id, merkleRoot: bundle.commitmentHash, files: items });
+  }
+);
 
 export default router;

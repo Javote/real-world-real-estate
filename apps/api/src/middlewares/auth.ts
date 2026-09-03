@@ -152,7 +152,7 @@ export type ProjectSource =
    * schema a propósito — son dos tablas, sumar una tercera es una palabra, y a
    * cambio el tipo se lee sin resolver nada mental.
    */
-  | { via: "Stage" | "Evidence"; param: string };
+  | { via: "Stage" | "Evidence" | "EvidenceBundle"; param: string };
 
 export function requireProjectAccess(source: ProjectSource, allowedMemberships: MembershipRole[]) {
   return async (req: Request, res: Response, next: NextFunction) => {
@@ -186,11 +186,17 @@ export function requireProjectAccess(source: ProjectSource, allowedMemberships: 
               .select("projectId")
               .where("id", "=", key)
               .executeTakeFirst()
-          : await db
-              .selectFrom("Evidence")
-              .select("projectId")
-              .where("id", "=", key)
-              .executeTakeFirst();
+          : source.via === "Evidence"
+            ? await db
+                .selectFrom("Evidence")
+                .select("projectId")
+                .where("id", "=", key)
+                .executeTakeFirst()
+            : await db
+                .selectFrom("EvidenceBundle")
+                .select("projectId")
+                .where("id", "=", key)
+                .executeTakeFirst();
 
       // Mismo 404 y mismo mensaje que devolvía el handler antes de este cambio.
       // Ojo: esto deja distinguir "no existe" de "existe y no podés verlo", que
