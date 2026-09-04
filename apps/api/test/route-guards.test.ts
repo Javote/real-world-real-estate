@@ -138,20 +138,21 @@ const MATRIZ: Record<string, string> = {
   "GET /api/v1/developer/capital/monthly": "auth + autoriza(rol(admin|developer) · soloRol)",
   "GET /api/v1/developer/capital/by-project": "auth + autoriza(rol(admin|developer) · soloRol)",
   "GET /api/v1/developer/investors": "auth + autoriza(rol(admin|developer) · soloRol)",
-  "GET /api/v1/notary/kpis": "auth + rol(admin|notary) + rol(admin|notary)",
-  "GET /api/v1/notary/dossiers/pending": "auth + rol(admin|notary) + rol(admin|notary)",
-  "GET /api/v1/notary/dossiers/:id": "auth + rol(admin|notary)",
-  "POST /api/v1/notary/dossiers/:id/sign": "auth + rol(admin|notary)",
-  "POST /api/v1/notary/dossiers/:id/reject": "auth + rol(admin|notary)",
-  "GET /api/v1/notary/signatures": "auth + rol(admin|notary)",
-  "GET /api/v1/certifier/kpis": "auth + rol(admin|verifier)",
-  "GET /api/v1/certifier/assignments": "auth + rol(admin|verifier)",
-  "GET /api/v1/certifier/stages/:id": "auth + rol(admin|verifier) + proyecto(Stage:id → verifier)",
+  "GET /api/v1/notary/kpis": "auth + autoriza(rol(admin|notary) · soloRol)",
+  "GET /api/v1/notary/dossiers/pending": "auth + autoriza(rol(admin|notary) · soloRol)",
+  "GET /api/v1/notary/dossiers/:id": "auth + autoriza(rol(admin|notary) · soloRol)",
+  "POST /api/v1/notary/dossiers/:id/sign": "auth + autoriza(rol(admin|notary) · soloRol)",
+  "POST /api/v1/notary/dossiers/:id/reject": "auth + autoriza(rol(admin|notary) · soloRol)",
+  "GET /api/v1/notary/signatures": "auth + autoriza(rol(admin|notary) · soloRol)",
+  "GET /api/v1/certifier/kpis": "auth + autoriza(rol(admin|verifier) · soloRol)",
+  "GET /api/v1/certifier/assignments": "auth + autoriza(rol(admin|verifier) · soloRol)",
+  "GET /api/v1/certifier/stages/:id":
+    "auth + autoriza(rol(admin|verifier) · proyecto(Stage:id → verifier))",
   "POST /api/v1/certifier/stages/:id/certify":
-    "auth + rol(admin|verifier) + proyecto(Stage:id → verifier)",
+    "auth + autoriza(rol(admin|verifier) · proyecto(Stage:id → verifier))",
   "POST /api/v1/certifier/stages/:id/observe":
-    "auth + rol(admin|verifier) + proyecto(Stage:id → verifier)",
-  "GET /api/v1/certifier/certificates": "auth + rol(admin|verifier)"
+    "auth + autoriza(rol(admin|verifier) · proyecto(Stage:id → verifier))",
+  "GET /api/v1/certifier/certificates": "auth + autoriza(rol(admin|verifier) · soloRol)"
 };
 
 /**

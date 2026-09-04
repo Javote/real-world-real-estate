@@ -3,7 +3,7 @@ import { type Request, Router } from "express";
 import { z } from "zod";
 import { transitionStage } from "../domain/stage-transition";
 import { db } from "../lib/db";
-import { authenticate, requireProjectAccess, requireRole } from "../middlewares/auth";
+import { authenticate, authorize } from "../middlewares/auth";
 import { proyectosVisibles } from "./_shared";
 
 // Superficie del certifier (M2-D5 filas 56v, 56c, 57, 58).
@@ -21,53 +21,63 @@ const router = Router();
 
 router.use(authenticate);
 
-router.get("/kpis", requireRole("admin", "verifier"), async (req, res) => {
-  const ids = (await proyectosVisibles(req.user!.id, req.user!.role).execute()).map((p) => p.id);
+router.get(
+  "/kpis",
+  authorize({ roles: ["admin", "verifier"], acceso: "soloRol" }),
+  async (req, res) => {
+    const ids = (await proyectosVisibles(req.user!.id, req.user!.role).execute()).map((p) => p.id);
 
-  const stages = ids.length
-    ? await db.selectFrom("Stage").select(["state"]).where("projectId", "in", ids).execute()
-    : [];
+    const stages = ids.length
+      ? await db.selectFrom("Stage").select(["state"]).where("projectId", "in", ids).execute()
+      : [];
 
-  const kpis: CertifierKpis = {
-    // "Asignado" es, por ahora, un stage en curso dentro de un proyecto donde
-    // este usuario es miembro con rol verifier. El modelo de asignación
-    // explícita todavía no existe.
-    assigned: stages.filter((s) => s.state === "InProgress").length,
-    certified: stages.filter((s) => s.state === "Completed").length,
-    observed: stages.filter((s) => s.state === "Observed").length,
-    totalStages: stages.length
-  };
+    const kpis: CertifierKpis = {
+      // "Asignado" es, por ahora, un stage en curso dentro de un proyecto donde
+      // este usuario es miembro con rol verifier. El modelo de asignación
+      // explícita todavía no existe.
+      assigned: stages.filter((s) => s.state === "InProgress").length,
+      certified: stages.filter((s) => s.state === "Completed").length,
+      observed: stages.filter((s) => s.state === "Observed").length,
+      totalStages: stages.length
+    };
 
-  return res.json(kpis);
-});
+    return res.json(kpis);
+  }
+);
 
-router.get("/assignments", requireRole("admin", "verifier"), async (req, res) => {
-  const ids = (await proyectosVisibles(req.user!.id, req.user!.role).execute()).map((p) => p.id);
+router.get(
+  "/assignments",
+  authorize({ roles: ["admin", "verifier"], acceso: "soloRol" }),
+  async (req, res) => {
+    const ids = (await proyectosVisibles(req.user!.id, req.user!.role).execute()).map((p) => p.id);
 
-  if (ids.length === 0) return res.json([] satisfies CertifierAssignment[]);
+    if (ids.length === 0) return res.json([] satisfies CertifierAssignment[]);
 
-  const filas = await db
-    .selectFrom("Stage")
-    .innerJoin("Project", "Project.id", "Stage.projectId")
-    .select([
-      "Stage.id as stageId",
-      "Stage.name as stageName",
-      "Stage.sequenceOrder as sequenceOrder",
-      "Project.name as projectName"
-    ])
-    .where("Stage.projectId", "in", ids)
-    .where("Stage.state", "in", ["InProgress", "Observed"])
-    .orderBy("Stage.sequenceOrder", "asc")
-    .execute();
+    const filas = await db
+      .selectFrom("Stage")
+      .innerJoin("Project", "Project.id", "Stage.projectId")
+      .select([
+        "Stage.id as stageId",
+        "Stage.name as stageName",
+        "Stage.sequenceOrder as sequenceOrder",
+        "Project.name as projectName"
+      ])
+      .where("Stage.projectId", "in", ids)
+      .where("Stage.state", "in", ["InProgress", "Observed"])
+      .orderBy("Stage.sequenceOrder", "asc")
+      .execute();
 
-  return res.json(filas satisfies CertifierAssignment[]);
-});
+    return res.json(filas satisfies CertifierAssignment[]);
+  }
+);
 
 /** Fila 56v — la vista de certificación: el stage con su evidencia. */
 router.get(
   "/stages/:id",
-  requireRole("admin", "verifier"),
-  requireProjectAccess({ via: "Stage", param: "id" }, ["verifier"]),
+  authorize({
+    roles: ["admin", "verifier"],
+    acceso: { proyecto: { via: "Stage", param: "id" }, membresias: ["verifier"] }
+  }),
   async (req: Request<{ id: string }>, res) => {
     const stage = await db
       .selectFrom("Stage")
@@ -103,8 +113,10 @@ router.get(
 /** Fila 56c — certificar: cierra el stage y ancla su bundle. */
 router.post(
   "/stages/:id/certify",
-  requireRole("admin", "verifier"),
-  requireProjectAccess({ via: "Stage", param: "id" }, ["verifier"]),
+  authorize({
+    roles: ["admin", "verifier"],
+    acceso: { proyecto: { via: "Stage", param: "id" }, membresias: ["verifier"] }
+  }),
   async (req: Request<{ id: string }>, res) => {
     const resultado = await transitionStage({
       stageId: req.params.id,
@@ -125,8 +137,10 @@ router.post(
 /** Fila 57 — observar: devuelve el stage al developer con una nota. */
 router.post(
   "/stages/:id/observe",
-  requireRole("admin", "verifier"),
-  requireProjectAccess({ via: "Stage", param: "id" }, ["verifier"]),
+  authorize({
+    roles: ["admin", "verifier"],
+    acceso: { proyecto: { via: "Stage", param: "id" }, membresias: ["verifier"] }
+  }),
   async (req: Request<{ id: string }>, res) => {
     const schema = z.strictObject({ note: z.string().min(1).max(2000) });
     const parsed = schema.safeParse(req.body);
@@ -153,51 +167,55 @@ router.post(
 );
 
 /** Fila 58 — historial de lo emitido, con su hash y su TXID. */
-router.get("/certificates", requireRole("admin", "verifier"), async (req, res) => {
-  const schema = z.object({
-    cursor: z.string().optional(),
-    limit: z.coerce.number().int().min(1).max(100).default(20)
-  });
-  const parsed = schema.safeParse(req.query);
-  if (!parsed.success) return res.status(400).json(parsed.error.flatten());
+router.get(
+  "/certificates",
+  authorize({ roles: ["admin", "verifier"], acceso: "soloRol" }),
+  async (req, res) => {
+    const schema = z.object({
+      cursor: z.string().optional(),
+      limit: z.coerce.number().int().min(1).max(100).default(20)
+    });
+    const parsed = schema.safeParse(req.query);
+    if (!parsed.success) return res.status(400).json(parsed.error.flatten());
 
-  let query = db
-    .selectFrom("Stage")
-    .innerJoin("Project", "Project.id", "Stage.projectId")
-    .leftJoin("EvidenceBundle", "EvidenceBundle.stageId", "Stage.id")
-    .leftJoin("OnChainEvent", (join) =>
-      join
-        .onRef("OnChainEvent.stageId", "=", "Stage.id")
-        .on("OnChainEvent.eventType", "=", "STAGE_TRANSITION")
-        .on("OnChainEvent.toState", "=", "Completed")
-    )
-    .select([
-      "Stage.id as stageId",
-      "Stage.name as stageName",
-      "Stage.certifiedAt as certifiedAt",
-      "Project.name as projectName",
-      "EvidenceBundle.commitmentHash as commitmentHash",
-      "OnChainEvent.txid as txid",
-      "OnChainEvent.status as anchorStatus"
-    ])
-    .where("Stage.state", "=", "Completed")
-    .where("Stage.certifiedById", "=", req.user!.id)
-    .orderBy("Stage.certifiedAt", "desc")
-    .limit(parsed.data.limit);
+    let query = db
+      .selectFrom("Stage")
+      .innerJoin("Project", "Project.id", "Stage.projectId")
+      .leftJoin("EvidenceBundle", "EvidenceBundle.stageId", "Stage.id")
+      .leftJoin("OnChainEvent", (join) =>
+        join
+          .onRef("OnChainEvent.stageId", "=", "Stage.id")
+          .on("OnChainEvent.eventType", "=", "STAGE_TRANSITION")
+          .on("OnChainEvent.toState", "=", "Completed")
+      )
+      .select([
+        "Stage.id as stageId",
+        "Stage.name as stageName",
+        "Stage.certifiedAt as certifiedAt",
+        "Project.name as projectName",
+        "EvidenceBundle.commitmentHash as commitmentHash",
+        "OnChainEvent.txid as txid",
+        "OnChainEvent.status as anchorStatus"
+      ])
+      .where("Stage.state", "=", "Completed")
+      .where("Stage.certifiedById", "=", req.user!.id)
+      .orderBy("Stage.certifiedAt", "desc")
+      .limit(parsed.data.limit);
 
-  // Paginación por cursor (M2-D5 pide `?cursor=` en las tres superficies de
-  // historial): el cursor es el `certifiedAt` de la última fila devuelta.
-  if (parsed.data.cursor) {
-    query = query.where("Stage.certifiedAt", "<", new Date(parsed.data.cursor));
+    // Paginación por cursor (M2-D5 pide `?cursor=` en las tres superficies de
+    // historial): el cursor es el `certifiedAt` de la última fila devuelta.
+    if (parsed.data.cursor) {
+      query = query.where("Stage.certifiedAt", "<", new Date(parsed.data.cursor));
+    }
+
+    const filas = await query.execute();
+    const ultima = filas.at(-1);
+
+    return res.json({
+      items: filas,
+      nextCursor: ultima?.certifiedAt ? new Date(ultima.certifiedAt).toISOString() : null
+    });
   }
-
-  const filas = await query.execute();
-  const ultima = filas.at(-1);
-
-  return res.json({
-    items: filas,
-    nextCursor: ultima?.certifiedAt ? new Date(ultima.certifiedAt).toISOString() : null
-  });
-});
+);
 
 export default router;
