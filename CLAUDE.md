@@ -36,6 +36,7 @@ números medidos, en `specs/README.md`. Acá solo lo que falta.
 | # | Qué | Por qué ahí | Nivel |
 |---|---|---|---|
 | 0 | **Mainnet** — runbook, habilitar la red, custodia de la clave | D-013 la hace **imposible por configuración**: es código, no solo procedimiento | 🔴 |
+| 1 | **`requireOwnership`** — subir a la firma la autorización por pertenencia de la fila | Es la tercera capa, y hoy es la única que no declara nada: vive adentro del handler | 🟡 |
 
 **Cerrados el 2026-09-01:** el reference script (D-083) y su cobertura contra un nodo real; `network`
 e `issuingAuthority`, aplicadas en producción **sin dejar de tener un solo archivo de migración**
@@ -95,6 +96,45 @@ UI-implementation-plan.md` §4-6) tienen su ruta o modal, sus 68 endpoints únic
 `DEV-RELEASE-EXECUTE-002` queda excluido del conteo (D-070: decisión permanente, no backlog). No
 verificado fila por fila: que cada patrón esté *bien* aplicado donde corresponde, solo que está
 presente y en uso en algún lugar. `specs/README.md` corregido en el mismo commit.
+
+**Cerrado el 2026-09-04 · la matriz de permisos dejó de auditarse a ojo.** El security review del
+criterio 11 y el `notary` que no se podía dar de alta son el mismo modo de falla: una ruta que no
+declara su guard compila, pasa los tests y sirve el happy path. Con 87 handlers en 18 archivos, la
+auditoría a mano no escala ni se repite. `apps/api/test/route-guards.test.ts` recorre los routers
+**ya montados** y reconstruye la matriz de las 87 rutas —método, path absoluto y cadena de guards
+declarados— contra un literal en el propio test: una ruta nueva o un guard que cambia lo ponen rojo
+hasta que alguien actualice el literal, y actualizarlo **es** la revisión. Lo sostienen `GUARD` (un
+símbolo global que `requireRole` y `requireProjectAccess` le cuelgan a la closure que devuelven) y
+`MONTAJE` (el montaje de `app.ts` como tabla, porque Express 5 compila el path de montaje a un
+matcher y tira el string — comprobado leyendo el `Layer`, no supuesto). Más tres invariantes
+hermanas: sesión obligatoria salvo las dos rutas públicas declaradas, ninguna lista de roles o
+membresías vacía, y **los routers que comparten prefijo declaran los mismos guards de router** —
+el bug del 2026-08-24 convertido en invariante, que hasta hoy se sostenía solo por disciplina.
+**No es el escáner que borró D-053:** aquel grepeaba el fuente y adivinaba; este interroga el router
+que Express armó, con los middlewares que van a correr. Y se verificó rompiéndolo —tres mutaciones,
+las tres en rojo, las tres revertidas—, no viéndolo verde. El detalle está en `apps/api/CLAUDE.md`
+§La matriz de permisos.
+
+**Lo que eso destapó, y es el punto 1 de la tabla.** La matriz asienta los guards **declarados**, no
+que la autorización sea correcta. Hay un tercer patrón vivo y sin forma: autorizar **adentro** del
+handler. `contracts.routes.ts` llama a `projectScope` a mano, `investor.routes.ts` compara
+`investorId` contra `req.user.id`, `notary.routes.ts` filtra por `signedById`. Se auditaron una por
+una el 2026-09-04 y **ninguna está abierta** — pero su autorización no se lee en la firma, no la
+protege el compilador y no la ve el test nuevo. En la matriz se reconocen porque su columna de
+guards es corta (solo `auth`, o `auth + rol(...)`), y esa columna corta es la lista de entrada:
+~20 rutas de `investor` y `notary`, más `contracts`. **Lo siguiente es un `requireOwnership` hermano
+de los otros dos guards**, para que las tres capas se lean en el mismo lugar. Con la matriz puesta,
+es mecánico: el test dice cuáles faltan.
+
+**Abierto, y es decisión del dueño, no una tarea pendiente.** El JWT dura 7 días y no se puede
+revocar de a uno. La revocación que existe es gruesa: `authenticate()` reconsulta la base en cada
+request, así que dar de baja una cuenta corta sus sesiones al instante; lo que no hay es invalidar
+**un** token sin dar de baja al usuario. Cerrarlo pide refresh tokens con store de revocación —tabla,
+endpoint y front—, o sea infraestructura para un problema que todavía no duele. Se dejó afuera a
+propósito. Lo que sí se hizo el 2026-09-04: `signToken`/`verifyToken` fijan **HS256 explícito** de
+los dos lados. No había agujero —con un secreto de tipo string, jsonwebtoken v9 ya acota la
+verificación a la familia HS*—; lo que se cierra es la dependencia de ese default para el día que la
+clave deje de ser un string.
 
 **El diseño ya está decidido. El trabajo es transcribirlo, no inventarlo.**
 
