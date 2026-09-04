@@ -7,7 +7,7 @@ import type {
 import { Router } from "express";
 import type { UserRole } from "../db/types";
 import { db } from "../lib/db";
-import { authenticate, projectScope, requireRole } from "../middlewares/auth";
+import { authenticate, authorize, projectScope } from "../middlewares/auth";
 
 // Capital e investors del developer (M2-D5 filas 42-43 y 48) — **M3-BE-11** y
 // **M3-BE-15**.
@@ -26,7 +26,6 @@ import { authenticate, projectScope, requireRole } from "../middlewares/auth";
 const router = Router();
 
 router.use(authenticate);
-router.use(requireRole("admin", "developer"));
 
 /** Los ids de los proyectos donde el usuario es developer. */
 async function misProyectoIds(userId: string, role: UserRole): Promise<string[]> {
@@ -88,25 +87,29 @@ function mesUtc(fecha: Date | number): string {
 }
 
 /** Fila 42-43 — los tres StatCard de la cabecera. */
-router.get("/capital/summary", async (req, res) => {
-  const ids = await misProyectoIds(req.user!.id, req.user!.role);
-  const { contratos, releases } = await movimientos(ids);
+router.get(
+  "/capital/summary",
+  authorize({ roles: ["admin", "developer"], acceso: "soloRol" }),
+  async (req, res) => {
+    const ids = await misProyectoIds(req.user!.id, req.user!.role);
+    const { contratos, releases } = await movimientos(ids);
 
-  const raised = contratos.reduce((acc, c) => acc + c.totalMinorUnits, 0);
-  const released = releases.reduce((acc, r) => acc + r.amountMinorUnits, 0);
+    const raised = contratos.reduce((acc, c) => acc + c.totalMinorUnits, 0);
+    const released = releases.reduce((acc, r) => acc + r.amountMinorUnits, 0);
 
-  const resumen: CapitalSummary = {
-    raisedMinorUnits: raised,
-    releasedMinorUnits: released,
-    // No puede ser negativo: liberar más de lo contratado no es un estado
-    // alcanzable, pero si lo fuera el piso es cero y no un número absurdo.
-    pendingMinorUnits: Math.max(raised - released, 0),
-    contracts: contratos.length,
-    currency: monedaUnica(contratos.map((c) => c.currency))
-  };
+    const resumen: CapitalSummary = {
+      raisedMinorUnits: raised,
+      releasedMinorUnits: released,
+      // No puede ser negativo: liberar más de lo contratado no es un estado
+      // alcanzable, pero si lo fuera el piso es cero y no un número absurdo.
+      pendingMinorUnits: Math.max(raised - released, 0),
+      contracts: contratos.length,
+      currency: monedaUnica(contratos.map((c) => c.currency))
+    };
 
-  return res.json(resumen);
-});
+    return res.json(resumen);
+  }
+);
 
 /**
  * Fila 42-43 — la serie mensual del Chart.
@@ -115,67 +118,75 @@ router.get("/capital/summary", async (req, res) => {
  * una serie continua donde no hay dato, y el eje del gráfico lo decide el
  * cliente, que es quien sabe qué ventana está mostrando.
  */
-router.get("/capital/monthly", async (req, res) => {
-  const ids = await misProyectoIds(req.user!.id, req.user!.role);
-  const { contratos, releases } = await movimientos(ids);
+router.get(
+  "/capital/monthly",
+  authorize({ roles: ["admin", "developer"], acceso: "soloRol" }),
+  async (req, res) => {
+    const ids = await misProyectoIds(req.user!.id, req.user!.role);
+    const { contratos, releases } = await movimientos(ids);
 
-  const porMes = new Map<string, CapitalMonthlyPoint>();
-  const acumular = (mes: string) =>
-    porMes.get(mes) ?? { month: mes, raisedMinorUnits: 0, releasedMinorUnits: 0 };
+    const porMes = new Map<string, CapitalMonthlyPoint>();
+    const acumular = (mes: string) =>
+      porMes.get(mes) ?? { month: mes, raisedMinorUnits: 0, releasedMinorUnits: 0 };
 
-  for (const c of contratos) {
-    const mes = mesUtc(c.createdAt);
-    const punto = acumular(mes);
-    punto.raisedMinorUnits += c.totalMinorUnits;
-    porMes.set(mes, punto);
+    for (const c of contratos) {
+      const mes = mesUtc(c.createdAt);
+      const punto = acumular(mes);
+      punto.raisedMinorUnits += c.totalMinorUnits;
+      porMes.set(mes, punto);
+    }
+    for (const r of releases) {
+      const mes = mesUtc(r.releasedAt);
+      const punto = acumular(mes);
+      punto.releasedMinorUnits += r.amountMinorUnits;
+      porMes.set(mes, punto);
+    }
+
+    const serie = [...porMes.values()].sort((a, b) => a.month.localeCompare(b.month));
+    return res.json(serie);
   }
-  for (const r of releases) {
-    const mes = mesUtc(r.releasedAt);
-    const punto = acumular(mes);
-    punto.releasedMinorUnits += r.amountMinorUnits;
-    porMes.set(mes, punto);
-  }
-
-  const serie = [...porMes.values()].sort((a, b) => a.month.localeCompare(b.month));
-  return res.json(serie);
-});
+);
 
 /** Fila 42-43 — el desglose por proyecto, con la barra de ocupación. */
-router.get("/capital/by-project", async (req, res) => {
-  const ids = await misProyectoIds(req.user!.id, req.user!.role);
-  if (ids.length === 0) return res.json([]);
+router.get(
+  "/capital/by-project",
+  authorize({ roles: ["admin", "developer"], acceso: "soloRol" }),
+  async (req, res) => {
+    const ids = await misProyectoIds(req.user!.id, req.user!.role);
+    if (ids.length === 0) return res.json([]);
 
-  const [proyectos, unidades, { contratos, releases }] = await Promise.all([
-    db.selectFrom("Project").select(["id", "name"]).where("id", "in", ids).execute(),
-    db
-      .selectFrom("Unit")
-      .select(["id", "projectId", "investorId"])
-      .where("projectId", "in", ids)
-      .execute(),
-    movimientos(ids)
-  ]);
+    const [proyectos, unidades, { contratos, releases }] = await Promise.all([
+      db.selectFrom("Project").select(["id", "name"]).where("id", "in", ids).execute(),
+      db
+        .selectFrom("Unit")
+        .select(["id", "projectId", "investorId"])
+        .where("projectId", "in", ids)
+        .execute(),
+      movimientos(ids)
+    ]);
 
-  const desglose: CapitalByProject[] = proyectos.map((p) => {
-    const delProyecto = contratos.filter((c) => c.projectId === p.id);
-    const unidadesDel = unidades.filter((u) => u.projectId === p.id);
+    const desglose: CapitalByProject[] = proyectos.map((p) => {
+      const delProyecto = contratos.filter((c) => c.projectId === p.id);
+      const unidadesDel = unidades.filter((u) => u.projectId === p.id);
 
-    return {
-      projectId: p.id,
-      projectName: p.name,
-      raisedMinorUnits: delProyecto.reduce((acc, c) => acc + c.totalMinorUnits, 0),
-      releasedMinorUnits: releases
-        .filter((r) => r.projectId === p.id)
-        .reduce((acc, r) => acc + r.amountMinorUnits, 0),
-      unitsSold: unidadesDel.filter((u) => u.investorId !== null).length,
-      totalUnits: unidadesDel.length,
-      // Distintos, no contratos: quien compra dos unidades es un investor.
-      investors: new Set(delProyecto.map((c) => c.investorId)).size,
-      currency: monedaUnica(delProyecto.map((c) => c.currency))
-    };
-  });
+      return {
+        projectId: p.id,
+        projectName: p.name,
+        raisedMinorUnits: delProyecto.reduce((acc, c) => acc + c.totalMinorUnits, 0),
+        releasedMinorUnits: releases
+          .filter((r) => r.projectId === p.id)
+          .reduce((acc, r) => acc + r.amountMinorUnits, 0),
+        unitsSold: unidadesDel.filter((u) => u.investorId !== null).length,
+        totalUnits: unidadesDel.length,
+        // Distintos, no contratos: quien compra dos unidades es un investor.
+        investors: new Set(delProyecto.map((c) => c.investorId)).size,
+        currency: monedaUnica(delProyecto.map((c) => c.currency))
+      };
+    });
 
-  return res.json(desglose);
-});
+    return res.json(desglose);
+  }
+);
 
 /**
  * Fila 48 — el directorio de investors — **M3-BE-15**.
@@ -185,53 +196,57 @@ router.get("/capital/by-project", async (req, res) => {
  * autorización acá, y sale del `in (misProyectos)` de la query — no de un
  * filtro en memoria que se pueda saltear.
  */
-router.get("/investors", async (req, res) => {
-  const ids = await misProyectoIds(req.user!.id, req.user!.role);
-  if (ids.length === 0) return res.json([]);
+router.get(
+  "/investors",
+  authorize({ roles: ["admin", "developer"], acceso: "soloRol" }),
+  async (req, res) => {
+    const ids = await misProyectoIds(req.user!.id, req.user!.role);
+    if (ids.length === 0) return res.json([]);
 
-  const filas = await db
-    .selectFrom("Contract")
-    .innerJoin("Unit", "Unit.id", "Contract.unitId")
-    .innerJoin("Project", "Project.id", "Unit.projectId")
-    .innerJoin("User", "User.id", "Contract.investorId")
-    .select([
-      "User.id as id",
-      "User.fullName as fullName",
-      "User.email as email",
-      "Contract.totalMinorUnits as totalMinorUnits",
-      "Contract.currency as currency",
-      "Project.name as projectName"
-    ])
-    .where("Unit.projectId", "in", ids)
-    .execute();
+    const filas = await db
+      .selectFrom("Contract")
+      .innerJoin("Unit", "Unit.id", "Contract.unitId")
+      .innerJoin("Project", "Project.id", "Unit.projectId")
+      .innerJoin("User", "User.id", "Contract.investorId")
+      .select([
+        "User.id as id",
+        "User.fullName as fullName",
+        "User.email as email",
+        "Contract.totalMinorUnits as totalMinorUnits",
+        "Contract.currency as currency",
+        "Project.name as projectName"
+      ])
+      .where("Unit.projectId", "in", ids)
+      .execute();
 
-  const porInvestor = new Map<string, InvestorDirectoryEntry & { monedas: (string | null)[] }>();
+    const porInvestor = new Map<string, InvestorDirectoryEntry & { monedas: (string | null)[] }>();
 
-  for (const fila of filas) {
-    const actual = porInvestor.get(fila.id) ?? {
-      id: fila.id,
-      fullName: fila.fullName,
-      email: fila.email,
-      units: 0,
-      investedMinorUnits: 0,
-      currency: null,
-      projects: [],
-      monedas: []
-    };
+    for (const fila of filas) {
+      const actual = porInvestor.get(fila.id) ?? {
+        id: fila.id,
+        fullName: fila.fullName,
+        email: fila.email,
+        units: 0,
+        investedMinorUnits: 0,
+        currency: null,
+        projects: [],
+        monedas: []
+      };
 
-    actual.units += 1;
-    actual.investedMinorUnits += fila.totalMinorUnits;
-    actual.monedas.push(fila.currency);
-    if (!actual.projects.includes(fila.projectName)) actual.projects.push(fila.projectName);
+      actual.units += 1;
+      actual.investedMinorUnits += fila.totalMinorUnits;
+      actual.monedas.push(fila.currency);
+      if (!actual.projects.includes(fila.projectName)) actual.projects.push(fila.projectName);
 
-    porInvestor.set(fila.id, actual);
+      porInvestor.set(fila.id, actual);
+    }
+
+    const directorio: InvestorDirectoryEntry[] = [...porInvestor.values()].map(
+      ({ monedas, ...entrada }) => ({ ...entrada, currency: monedaUnica(monedas) })
+    );
+
+    return res.json(directorio);
   }
-
-  const directorio: InvestorDirectoryEntry[] = [...porInvestor.values()].map(
-    ({ monedas, ...entrada }) => ({ ...entrada, currency: monedaUnica(monedas) })
-  );
-
-  return res.json(directorio);
-});
+);
 
 export default router;

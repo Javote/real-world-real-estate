@@ -3,7 +3,7 @@ import { z } from "zod";
 import { createId } from "../db/id";
 import { anchorCommitmentEvent, commitmentOf } from "../domain/anchoring";
 import { db } from "../lib/db";
-import { authenticate, projectScope, requireProjectAccess, requireRole } from "../middlewares/auth";
+import { authenticate, authorize, projectScope } from "../middlewares/auth";
 import { writeAuditLog } from "../utils/audit";
 
 // **El ciclo comercial del developer**, bajo `/api/v1/developer` (M2-D5 filas
@@ -24,13 +24,14 @@ import { writeAuditLog } from "../utils/audit";
 const router = Router();
 
 router.use(authenticate);
-router.use(requireRole("admin", "developer"));
 
 /** Fila 44b — las unidades de un proyecto, del lado del developer. */
 router.get(
   "/projects/:id/units",
-  requireRole("admin", "developer"),
-  requireProjectAccess({ param: "id" }, ["developer"]),
+  authorize({
+    roles: ["admin", "developer"],
+    acceso: { proyecto: { param: "id" }, membresias: ["developer"] }
+  }),
   async (req: Request<{ id: string }>, res) => {
     const unidades = await db
       .selectFrom("Unit")
@@ -45,8 +46,10 @@ router.get(
 
 router.post(
   "/projects/:id/units",
-  requireRole("admin", "developer"),
-  requireProjectAccess({ param: "id" }, ["developer"]),
+  authorize({
+    roles: ["admin", "developer"],
+    acceso: { proyecto: { param: "id" }, membresias: ["developer"] }
+  }),
   async (req: Request<{ id: string }>, res) => {
     const schema = z.strictObject({
       unitReference: z.string().min(1).max(20),
@@ -92,7 +95,10 @@ router.post(
 
 router.patch(
   "/units/:id",
-  requireRole("admin", "developer"),
+  authorize({
+    roles: ["admin", "developer"],
+    acceso: { proyecto: { via: "Unit", param: "id" }, membresias: ["developer"] }
+  }),
   async (req: Request<{ id: string }>, res) => {
     const schema = z.strictObject({
       status: z.enum(["available", "reserved", "sold", "delivered"]).optional(),
@@ -112,17 +118,6 @@ router.patch(
       .executeTakeFirst();
 
     if (!unidad) return res.status(404).json({ message: "Unit not found" });
-
-    // Segunda capa: la unidad no trae `projectId` en el path, así que la
-    // membresía se verifica con el proyecto de la unidad (regla 5).
-    const permitido = await db
-      .selectFrom("Project")
-      .select("id")
-      .where("id", "=", unidad.projectId)
-      .where((eb) => projectScope(eb, req.user!.role, req.user!.id, ["developer"]))
-      .executeTakeFirst();
-
-    if (!permitido) return res.status(403).json({ message: "Forbidden" });
 
     const actualizada = await db
       .updateTable("Unit")
@@ -146,40 +141,46 @@ router.patch(
 );
 
 /** Fila 44 — el inventario cross-proyecto del developer. */
-router.get("/units", requireRole("admin", "developer"), async (req, res) => {
-  const proyectos = await db
-    .selectFrom("Project")
-    .select("id")
-    .where((eb) => projectScope(eb, req.user!.role, req.user!.id, ["developer"]))
-    .execute();
+router.get(
+  "/units",
+  authorize({ roles: ["admin", "developer"], acceso: "soloRol" }),
+  async (req, res) => {
+    const proyectos = await db
+      .selectFrom("Project")
+      .select("id")
+      .where((eb) => projectScope(eb, req.user!.role, req.user!.id, ["developer"]))
+      .execute();
 
-  const ids = proyectos.map((p) => p.id);
-  if (ids.length === 0) return res.json([]);
+    const ids = proyectos.map((p) => p.id);
+    if (ids.length === 0) return res.json([]);
 
-  const unidades = await db
-    .selectFrom("Unit")
-    .innerJoin("Project", "Project.id", "Unit.projectId")
-    .select([
-      "Unit.id as id",
-      "Unit.unitReference as unitReference",
-      "Unit.status as status",
-      "Unit.priceMinorUnits as priceMinorUnits",
-      "Unit.currency as currency",
-      "Unit.investorId as investorId",
-      "Project.id as projectId",
-      "Project.name as projectName"
-    ])
-    .where("Unit.projectId", "in", ids)
-    .execute();
+    const unidades = await db
+      .selectFrom("Unit")
+      .innerJoin("Project", "Project.id", "Unit.projectId")
+      .select([
+        "Unit.id as id",
+        "Unit.unitReference as unitReference",
+        "Unit.status as status",
+        "Unit.priceMinorUnits as priceMinorUnits",
+        "Unit.currency as currency",
+        "Unit.investorId as investorId",
+        "Project.id as projectId",
+        "Project.name as projectName"
+      ])
+      .where("Unit.projectId", "in", ids)
+      .execute();
 
-  return res.json(unidades);
-});
+    return res.json(unidades);
+  }
+);
 
 /** Fila 39 — el developer emite la invitación. */
 router.post(
   "/projects/:id/invitations",
-  requireRole("admin", "developer"),
-  requireProjectAccess({ param: "id" }, ["developer"]),
+  authorize({
+    roles: ["admin", "developer"],
+    acceso: { proyecto: { param: "id" }, membresias: ["developer"] }
+  }),
   async (req: Request<{ id: string }>, res) => {
     const schema = z.strictObject({
       unitId: z.string().min(1),
@@ -254,8 +255,10 @@ router.post(
  */
 router.get(
   "/projects/:id/contracts",
-  requireRole("admin", "developer"),
-  requireProjectAccess({ param: "id" }, ["developer"]),
+  authorize({
+    roles: ["admin", "developer"],
+    acceso: { proyecto: { param: "id" }, membresias: ["developer"] }
+  }),
   async (req: Request<{ id: string }>, res) => {
     // Los dos `innerJoin` son contra la clave primaria, así que esta consulta
     // devuelve exactamente un registro por contrato. El anclaje se busca aparte
@@ -348,7 +351,10 @@ router.get(
 /** Fila 40-41 — liberar una etapa. **Ancla** (M3-SC-03). */
 router.post(
   "/contracts/:id/releases/:stageNum",
-  requireRole("admin", "developer"),
+  authorize({
+    roles: ["admin", "developer"],
+    acceso: { proyecto: { via: "Contract", param: "id" }, membresias: ["developer"] }
+  }),
   async (req: Request<{ id: string; stageNum: string }>, res) => {
     const schema = z.strictObject({ amountMinorUnits: z.number().int().positive() });
     const parsed = schema.safeParse(req.body);
@@ -372,15 +378,6 @@ router.post(
       .executeTakeFirst();
 
     if (!contrato) return res.status(404).json({ message: "Contract not found" });
-
-    const permitido = await db
-      .selectFrom("Project")
-      .select("id")
-      .where("id", "=", contrato.projectId)
-      .where((eb) => projectScope(eb, req.user!.role, req.user!.id, ["developer"]))
-      .executeTakeFirst();
-
-    if (!permitido) return res.status(403).json({ message: "Forbidden" });
 
     // **La liberación exige que la etapa esté certificada.** El entregable lo
     // dice: "the developer initiates [the release] after the certifier has

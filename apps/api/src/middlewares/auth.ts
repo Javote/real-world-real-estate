@@ -191,10 +191,40 @@ export type ProjectSource =
   /**
    * El path trae el id de otra entidad y hay que cargarla para saber de qué
    * proyecto es: `/stages/:id`. Unión de literales y no un genérico sobre el
-   * schema a propósito — son dos tablas, sumar una tercera es una palabra, y a
-   * cambio el tipo se lee sin resolver nada mental.
+   * schema a propósito — sumar una tabla es una palabra, y a cambio el tipo se
+   * lee sin resolver nada mental.
+   *
+   * `Unit` y `Contract` entraron el 2026-09-04 al migrar la superficie del
+   * developer: `PATCH /developer/units/:id` y
+   * `POST /developer/contracts/:id/releases/:stageNum` resolvían el proyecto a
+   * mano adentro del handler, con once líneas que hacían exactamente esto.
+   * `Contract` es el único que necesita un join —el `projectId` está en la
+   * unidad, no en el contrato—; los demás lo tienen en su propia fila.
    */
-  | { via: "Stage" | "Evidence" | "EvidenceBundle"; param: string };
+  | { via: "Stage" | "Evidence" | "EvidenceBundle" | "Unit" | "Contract"; param: string };
+
+/** El `projectId` de la entidad que nombra el `via`, o `null` si no existe. */
+async function proyectoDeLaEntidad(
+  via: "Stage" | "Evidence" | "EvidenceBundle" | "Unit" | "Contract",
+  key: string
+): Promise<string | null> {
+  if (via === "Contract") {
+    const fila = await db
+      .selectFrom("Contract")
+      .innerJoin("Unit", "Unit.id", "Contract.unitId")
+      .select("Unit.projectId as projectId")
+      .where("Contract.id", "=", key)
+      .executeTakeFirst();
+    return fila?.projectId ?? null;
+  }
+
+  const fila = await db
+    .selectFrom(via)
+    .select("projectId")
+    .where("id", "=", key)
+    .executeTakeFirst();
+  return fila?.projectId ?? null;
+}
 
 /**
  * El veredicto de una regla, **sin escribir la respuesta**.
@@ -243,31 +273,18 @@ async function evaluarProyecto(
   let projectId: string;
 
   if ("via" in source) {
-    const fila =
-      source.via === "Stage"
-        ? await db.selectFrom("Stage").select("projectId").where("id", "=", key).executeTakeFirst()
-        : source.via === "Evidence"
-          ? await db
-              .selectFrom("Evidence")
-              .select("projectId")
-              .where("id", "=", key)
-              .executeTakeFirst()
-          : await db
-              .selectFrom("EvidenceBundle")
-              .select("projectId")
-              .where("id", "=", key)
-              .executeTakeFirst();
+    const encontrado = await proyectoDeLaEntidad(source.via, key);
 
     // Mismo 404 y mismo mensaje que devolvía el handler antes de este cambio.
     // Ojo: esto deja distinguir "no existe" de "existe y no podés verlo", que
     // en teoría permite enumerar ids. Se conserva **a propósito** — cambiar
     // semántica de seguridad adentro de un refactor es como se cuelan los
     // bugs. Está anotado como deuda aparte en SPEC-012.
-    if (!fila) {
+    if (encontrado === null) {
       return { ok: false, status: 404, message: `${source.via} not found` };
     }
 
-    projectId = fila.projectId;
+    projectId = encontrado;
   } else {
     projectId = key;
   }

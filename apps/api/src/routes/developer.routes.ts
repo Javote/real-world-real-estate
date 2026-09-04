@@ -5,7 +5,7 @@ import { createId } from "../db/id";
 import { anchorCommitmentEvent } from "../domain/anchoring";
 import { reconciliarParaLectura } from "../domain/reconcile";
 import { db } from "../lib/db";
-import { authenticate, projectScope, requireProjectAccess, requireRole } from "../middlewares/auth";
+import { authenticate, authorize, projectScope } from "../middlewares/auth";
 import { writeAuditLog } from "../utils/audit";
 import { proyectosVisibles } from "./_shared";
 
@@ -19,7 +19,6 @@ import { proyectosVisibles } from "./_shared";
 const router = Router();
 
 router.use(authenticate);
-router.use(requireRole("admin", "developer"));
 
 function misProyectos(userId: string, role: "admin" | "developer") {
   return db
@@ -29,69 +28,76 @@ function misProyectos(userId: string, role: "admin" | "developer") {
 }
 
 /** Fila 35-36 — el listado de proyectos del developer, con su avance. */
-router.get("/projects", async (req, res) => {
-  const proyectos = await misProyectos(req.user!.id, req.user!.role as "admin" | "developer")
-    .orderBy("createdAt", "desc")
-    .execute();
+router.get(
+  "/projects",
+  authorize({ roles: ["admin", "developer"], acceso: "soloRol" }),
+  async (req, res) => {
+    const proyectos = await misProyectos(req.user!.id, req.user!.role as "admin" | "developer")
+      .orderBy("createdAt", "desc")
+      .execute();
 
-  const ids = proyectos.map((p) => p.id);
-  const stages = ids.length
-    ? await db
-        .selectFrom("Stage")
-        .select(["projectId", "state"])
-        .where("projectId", "in", ids)
-        .execute()
-    : [];
+    const ids = proyectos.map((p) => p.id);
+    const stages = ids.length
+      ? await db
+          .selectFrom("Stage")
+          .select(["projectId", "state"])
+          .where("projectId", "in", ids)
+          .execute()
+      : [];
 
-  // **El "Price from" de la captura 35-36 es una agregación, no un campo.**
-  // El precio vive en la unidad (`Unit.priceMinorUnits`) y no hay precio a
-  // nivel proyecto: el "desde" es el mínimo de las unidades del proyecto.
-  //
-  // Sobre TODAS las unidades y no solo las disponibles, porque la captura lo
-  // decide: Belgrano Park está "Delivered" —o sea, sin nada disponible— y aun
-  // así muestra su precio. Filtrar por disponibilidad dejaría sin precio a
-  // todo proyecto vendido.
-  const unidades = ids.length
-    ? await db
-        .selectFrom("Unit")
-        .select(["projectId", "priceMinorUnits", "currency"])
-        .where("projectId", "in", ids)
-        .where("priceMinorUnits", "is not", null)
-        .execute()
-    : [];
+    // **El "Price from" de la captura 35-36 es una agregación, no un campo.**
+    // El precio vive en la unidad (`Unit.priceMinorUnits`) y no hay precio a
+    // nivel proyecto: el "desde" es el mínimo de las unidades del proyecto.
+    //
+    // Sobre TODAS las unidades y no solo las disponibles, porque la captura lo
+    // decide: Belgrano Park está "Delivered" —o sea, sin nada disponible— y aun
+    // así muestra su precio. Filtrar por disponibilidad dejaría sin precio a
+    // todo proyecto vendido.
+    const unidades = ids.length
+      ? await db
+          .selectFrom("Unit")
+          .select(["projectId", "priceMinorUnits", "currency"])
+          .where("projectId", "in", ids)
+          .where("priceMinorUnits", "is not", null)
+          .execute()
+      : [];
 
-  return res.json(
-    proyectos.map((proyecto) => {
-      const suyos = stages.filter((s) => s.projectId === proyecto.id);
-      const completados = suyos.filter((s) => s.state === "Completed").length;
+    return res.json(
+      proyectos.map((proyecto) => {
+        const suyos = stages.filter((s) => s.projectId === proyecto.id);
+        const completados = suyos.filter((s) => s.state === "Completed").length;
 
-      const conPrecio = unidades.filter((u) => u.projectId === proyecto.id);
-      const monedas = new Set(conPrecio.map((u) => u.currency));
+        const conPrecio = unidades.filter((u) => u.projectId === proyecto.id);
+        const monedas = new Set(conPrecio.map((u) => u.currency));
 
-      // **Con dos monedas en el mismo proyecto no hay "desde" que se pueda
-      // sostener**: comparar unidades mínimas de monedas distintas da un
-      // número sin significado. Antes que un mínimo falso, ningún precio
-      // (regla 17). Hoy no debería pasar; el día que pase, se ve.
-      const barata =
-        monedas.size === 1
-          ? conPrecio.reduce((min, u) => (u.priceMinorUnits! < min.priceMinorUnits! ? u : min))
-          : null;
+        // **Con dos monedas en el mismo proyecto no hay "desde" que se pueda
+        // sostener**: comparar unidades mínimas de monedas distintas da un
+        // número sin significado. Antes que un mínimo falso, ningún precio
+        // (regla 17). Hoy no debería pasar; el día que pase, se ve.
+        const barata =
+          monedas.size === 1
+            ? conPrecio.reduce((min, u) => (u.priceMinorUnits! < min.priceMinorUnits! ? u : min))
+            : null;
 
-      return {
-        ...proyecto,
-        stageCount: suyos.length,
-        progress: suyos.length ? Math.round((completados / suyos.length) * 100) : 0,
-        priceFromMinorUnits: barata?.priceMinorUnits ?? null,
-        priceCurrency: barata?.currency ?? null
-      };
-    })
-  );
-});
+        return {
+          ...proyecto,
+          stageCount: suyos.length,
+          progress: suyos.length ? Math.round((completados / suyos.length) * 100) : 0,
+          priceFromMinorUnits: barata?.priceMinorUnits ?? null,
+          priceCurrency: barata?.currency ?? null
+        };
+      })
+    );
+  }
+);
 
 /** Fila 37 — el detalle, que en la captura es una grilla de acciones + 3 stats. */
 router.get(
   "/projects/:id",
-  requireProjectAccess({ param: "id" }, ["developer"]),
+  authorize({
+    roles: ["admin", "developer"],
+    acceso: { proyecto: { param: "id" }, membresias: ["developer"] }
+  }),
   async (req: Request<{ id: string }>, res) => {
     const proyecto = await db
       .selectFrom("Project")
@@ -123,90 +129,98 @@ router.get(
 );
 
 /** Fila 34b-34c — crear un desarrollo. */
-router.post("/projects", async (req, res) => {
-  const schema = z.strictObject({
-    name: z.string().min(1),
-    slug: z.string().min(1),
-    address: z.string().optional(),
-    city: z.string().optional(),
-    country: z.string().optional(),
-    totalUnits: z.number().int().nonnegative().optional(),
-    estimatedDelivery: z.string().optional()
-  });
+router.post(
+  "/projects",
+  authorize({ roles: ["admin", "developer"], acceso: "soloRol" }),
+  async (req, res) => {
+    const schema = z.strictObject({
+      name: z.string().min(1),
+      slug: z.string().min(1),
+      address: z.string().optional(),
+      city: z.string().optional(),
+      country: z.string().optional(),
+      totalUnits: z.number().int().nonnegative().optional(),
+      estimatedDelivery: z.string().optional()
+    });
 
-  const parsed = schema.safeParse(req.body);
-  if (!parsed.success) return res.status(400).json(parsed.error.flatten());
+    const parsed = schema.safeParse(req.body);
+    if (!parsed.success) return res.status(400).json(parsed.error.flatten());
 
-  const ahora = new Date();
-  const proyecto = await db
-    .insertInto("Project")
-    .values({
-      id: createId(),
-      name: parsed.data.name,
-      slug: parsed.data.slug,
-      address: parsed.data.address ?? null,
-      city: parsed.data.city ?? null,
-      country: parsed.data.country ?? null,
-      totalUnits: parsed.data.totalUnits ?? 0,
-      estimatedDelivery: parsed.data.estimatedDelivery
-        ? new Date(parsed.data.estimatedDelivery)
-        : null,
-      status: "planning",
-      createdAt: ahora,
-      updatedAt: ahora
-    })
-    .returningAll()
-    .executeTakeFirstOrThrow();
+    const ahora = new Date();
+    const proyecto = await db
+      .insertInto("Project")
+      .values({
+        id: createId(),
+        name: parsed.data.name,
+        slug: parsed.data.slug,
+        address: parsed.data.address ?? null,
+        city: parsed.data.city ?? null,
+        country: parsed.data.country ?? null,
+        totalUnits: parsed.data.totalUnits ?? 0,
+        estimatedDelivery: parsed.data.estimatedDelivery
+          ? new Date(parsed.data.estimatedDelivery)
+          : null,
+        status: "planning",
+        createdAt: ahora,
+        updatedAt: ahora
+      })
+      .returningAll()
+      .executeTakeFirstOrThrow();
 
-  // Quien crea el proyecto queda como su developer: sin esto, el creador no
-  // pasaría su propia segunda capa de autorización (regla 5).
-  await db
-    .insertInto("ProjectMember")
-    .values({
-      id: createId(),
-      userId: req.user!.id,
-      projectId: proyecto.id,
-      membershipRole: "developer",
-      createdAt: ahora
-    })
-    .execute();
+    // Quien crea el proyecto queda como su developer: sin esto, el creador no
+    // pasaría su propia segunda capa de autorización (regla 5).
+    await db
+      .insertInto("ProjectMember")
+      .values({
+        id: createId(),
+        userId: req.user!.id,
+        projectId: proyecto.id,
+        membershipRole: "developer",
+        createdAt: ahora
+      })
+      .execute();
 
-  await writeAuditLog({
-    actorUserId: req.user!.id,
-    action: "CREATE_PROJECT",
-    entityType: "Project",
-    entityId: proyecto.id
-  });
+    await writeAuditLog({
+      actorUserId: req.user!.id,
+      action: "CREATE_PROJECT",
+      entityType: "Project",
+      entityId: proyecto.id
+    });
 
-  return res.status(201).json(proyecto);
-});
+    return res.status(201).json(proyecto);
+  }
+);
 
 /** Fila 45 — el avance de obra a través de todos los proyectos. */
-router.get("/progress", async (req, res) => {
-  const ids = (
-    await misProyectos(req.user!.id, req.user!.role as "admin" | "developer").execute()
-  ).map((p) => p.id);
+router.get(
+  "/progress",
+  authorize({ roles: ["admin", "developer"], acceso: "soloRol" }),
+  async (req, res) => {
+    const ids = (
+      await misProyectos(req.user!.id, req.user!.role as "admin" | "developer").execute()
+    ).map((p) => p.id);
 
-  if (ids.length === 0) return res.json([]);
+    if (ids.length === 0) return res.json([]);
 
-  const stages = await db
-    .selectFrom("Stage")
-    .innerJoin("Project", "Project.id", "Stage.projectId")
-    .select([
-      "Stage.id as stageId",
-      "Stage.name as stageName",
-      "Stage.sequenceOrder as sequenceOrder",
-      "Stage.state as state",
-      "Project.id as projectId",
-      "Project.name as projectName"
-    ])
-    .where("Stage.projectId", "in", ids)
-    .orderBy("Project.name", "asc")
-    .orderBy("Stage.sequenceOrder", "asc")
-    .execute();
+    const stages = await db
+      .selectFrom("Stage")
+      .innerJoin("Project", "Project.id", "Stage.projectId")
+      .select([
+        "Stage.id as stageId",
+        "Stage.name as stageName",
+        "Stage.sequenceOrder as sequenceOrder",
+        "Stage.state as state",
+        "Project.id as projectId",
+        "Project.name as projectName"
+      ])
+      .where("Stage.projectId", "in", ids)
+      .orderBy("Project.name", "asc")
+      .orderBy("Stage.sequenceOrder", "asc")
+      .execute();
 
-  return res.json(stages);
-});
+    return res.json(stages);
+  }
+);
 
 /**
  * Fila 46-47 — la documentación del developer, con su estado de anclaje.
@@ -215,43 +229,47 @@ router.get("/progress", async (req, res) => {
  * de stage y documento suelto de proyecto (M3-SC-06). Cuando lo distinga, esta
  * ruta filtra; hoy devuelve todo con su estado real de prueba.
  */
-router.get("/documents", async (req, res) => {
-  const schema = z.object({ status: z.enum(["anchored", "pending"]).optional() });
-  const parsed = schema.safeParse(req.query);
-  if (!parsed.success) return res.status(400).json(parsed.error.flatten());
+router.get(
+  "/documents",
+  authorize({ roles: ["admin", "developer"], acceso: "soloRol" }),
+  async (req, res) => {
+    const schema = z.object({ status: z.enum(["anchored", "pending"]).optional() });
+    const parsed = schema.safeParse(req.query);
+    if (!parsed.success) return res.status(400).json(parsed.error.flatten());
 
-  const ids = (
-    await misProyectos(req.user!.id, req.user!.role as "admin" | "developer").execute()
-  ).map((p) => p.id);
+    const ids = (
+      await misProyectos(req.user!.id, req.user!.role as "admin" | "developer").execute()
+    ).map((p) => p.id);
 
-  if (ids.length === 0) return res.json([]);
+    if (ids.length === 0) return res.json([]);
 
-  const documentos = await db
-    .selectFrom("Evidence")
-    .leftJoin("OnChainEvent", "OnChainEvent.evidenceId", "Evidence.id")
-    .select([
-      "Evidence.id as id",
-      "Evidence.originalFilename as filename",
-      "Evidence.category as category",
-      "Evidence.authoritative as authoritative",
-      "Evidence.sha256Hash as sha256Hash",
-      "Evidence.uploadedAt as uploadedAt",
-      "OnChainEvent.txid as txid",
-      "OnChainEvent.status as anchorStatus"
-    ])
-    .where("Evidence.projectId", "in", ids)
-    .orderBy("Evidence.uploadedAt", "desc")
-    .execute();
+    const documentos = await db
+      .selectFrom("Evidence")
+      .leftJoin("OnChainEvent", "OnChainEvent.evidenceId", "Evidence.id")
+      .select([
+        "Evidence.id as id",
+        "Evidence.originalFilename as filename",
+        "Evidence.category as category",
+        "Evidence.authoritative as authoritative",
+        "Evidence.sha256Hash as sha256Hash",
+        "Evidence.uploadedAt as uploadedAt",
+        "OnChainEvent.txid as txid",
+        "OnChainEvent.status as anchorStatus"
+      ])
+      .where("Evidence.projectId", "in", ids)
+      .orderBy("Evidence.uploadedAt", "desc")
+      .execute();
 
-  const filtrados =
-    parsed.data.status === "anchored"
-      ? documentos.filter((d) => d.txid !== null)
-      : parsed.data.status === "pending"
-        ? documentos.filter((d) => d.txid === null)
-        : documentos;
+    const filtrados =
+      parsed.data.status === "anchored"
+        ? documentos.filter((d) => d.txid !== null)
+        : parsed.data.status === "pending"
+          ? documentos.filter((d) => d.txid === null)
+          : documentos;
 
-  return res.json(filtrados);
-});
+    return res.json(filtrados);
+  }
+);
 
 /**
  * Fila 49 — el audit log, paginado por cursor.
@@ -260,46 +278,50 @@ router.get("/documents", async (req, res) => {
  * stage se re-ancla tras una remediación, el evento original queda y se agrega
  * uno nuevo. Esta ruta solo lee.
  */
-router.get("/audit-log", async (req, res) => {
-  const schema = z.object({
-    category: z.string().optional(),
-    cursor: z.string().optional(),
-    limit: z.coerce.number().int().min(1).max(100).default(20)
-  });
-  const parsed = schema.safeParse(req.query);
-  if (!parsed.success) return res.status(400).json(parsed.error.flatten());
+router.get(
+  "/audit-log",
+  authorize({ roles: ["admin", "developer"], acceso: "soloRol" }),
+  async (req, res) => {
+    const schema = z.object({
+      category: z.string().optional(),
+      cursor: z.string().optional(),
+      limit: z.coerce.number().int().min(1).max(100).default(20)
+    });
+    const parsed = schema.safeParse(req.query);
+    if (!parsed.success) return res.status(400).json(parsed.error.flatten());
 
-  let query = db
-    .selectFrom("AuditLog")
-    .leftJoin("User", "User.id", "AuditLog.actorUserId")
-    .select([
-      "AuditLog.id as id",
-      "AuditLog.action as action",
-      "AuditLog.entityType as entityType",
-      "AuditLog.entityId as entityId",
-      "AuditLog.metadataJson as metadataJson",
-      "AuditLog.createdAt as createdAt",
-      "User.fullName as actorName",
-      "User.role as actorRole"
-    ])
-    .orderBy("AuditLog.createdAt", "desc")
-    .limit(parsed.data.limit);
+    let query = db
+      .selectFrom("AuditLog")
+      .leftJoin("User", "User.id", "AuditLog.actorUserId")
+      .select([
+        "AuditLog.id as id",
+        "AuditLog.action as action",
+        "AuditLog.entityType as entityType",
+        "AuditLog.entityId as entityId",
+        "AuditLog.metadataJson as metadataJson",
+        "AuditLog.createdAt as createdAt",
+        "User.fullName as actorName",
+        "User.role as actorRole"
+      ])
+      .orderBy("AuditLog.createdAt", "desc")
+      .limit(parsed.data.limit);
 
-  if (parsed.data.category) {
-    query = query.where("AuditLog.entityType", "=", parsed.data.category);
+    if (parsed.data.category) {
+      query = query.where("AuditLog.entityType", "=", parsed.data.category);
+    }
+    if (parsed.data.cursor) {
+      query = query.where("AuditLog.createdAt", "<", new Date(parsed.data.cursor));
+    }
+
+    const items = await query.execute();
+    const ultima = items.at(-1);
+
+    return res.json({
+      items,
+      nextCursor: ultima ? new Date(ultima.createdAt).toISOString() : null
+    });
   }
-  if (parsed.data.cursor) {
-    query = query.where("AuditLog.createdAt", "<", new Date(parsed.data.cursor));
-  }
-
-  const items = await query.execute();
-  const ultima = items.at(-1);
-
-  return res.json({
-    items,
-    nextCursor: ultima ? new Date(ultima.createdAt).toISOString() : null
-  });
-});
+);
 
 /**
  * Fila 46-47 — anclar un documento suelto — **M3-BE-14** y **M3-SC-06**.
@@ -317,123 +339,131 @@ router.get("/audit-log", async (req, res) => {
  * **Idempotente** (regla 8): si ese documento ya tiene su TXID, devuelve el
  * mismo evento con 200 en vez de gastar otra transacción.
  */
-router.post("/documents", async (req, res) => {
-  const schema = z.strictObject({ evidenceId: z.string().min(1) });
-  const parsed = schema.safeParse(req.body);
-  if (!parsed.success) return res.status(400).json(parsed.error.flatten());
+router.post(
+  "/documents",
+  authorize({ roles: ["admin", "developer"], acceso: "soloRol" }),
+  async (req, res) => {
+    const schema = z.strictObject({ evidenceId: z.string().min(1) });
+    const parsed = schema.safeParse(req.body);
+    if (!parsed.success) return res.status(400).json(parsed.error.flatten());
 
-  const documento = await db
-    .selectFrom("Evidence")
-    .select(["id", "projectId", "stageId", "sha256Hash"])
-    .where("id", "=", parsed.data.evidenceId)
-    .executeTakeFirst();
+    const documento = await db
+      .selectFrom("Evidence")
+      .select(["id", "projectId", "stageId", "sha256Hash"])
+      .where("id", "=", parsed.data.evidenceId)
+      .executeTakeFirst();
 
-  if (!documento) return res.status(404).json({ message: "Document not found" });
+    if (!documento) return res.status(404).json({ message: "Document not found" });
 
-  // La segunda capa de autorización, hecha a mano porque el id que llega es de
-  // la evidencia y no del proyecto: el developer ancla documentos de SUS
-  // proyectos. Sin esto, cualquier developer anclaría el documento de otro.
-  const propio = await misProyectos(req.user!.id, req.user!.role as "admin" | "developer")
-    .where("Project.id", "=", documento.projectId)
-    .executeTakeFirst();
+    // La segunda capa de autorización, hecha a mano porque el id que llega es de
+    // la evidencia y no del proyecto: el developer ancla documentos de SUS
+    // proyectos. Sin esto, cualquier developer anclaría el documento de otro.
+    const propio = await misProyectos(req.user!.id, req.user!.role as "admin" | "developer")
+      .where("Project.id", "=", documento.projectId)
+      .executeTakeFirst();
 
-  if (!propio) return res.status(403).json({ message: "Forbidden" });
+    if (!propio) return res.status(403).json({ message: "Forbidden" });
 
-  if (!documento.sha256Hash) {
-    return res.status(400).json({ message: "Document has no hash", code: "NO_HASH" });
+    if (!documento.sha256Hash) {
+      return res.status(400).json({ message: "Document has no hash", code: "NO_HASH" });
+    }
+
+    await reconciliarParaLectura({ evidenceId: documento.id });
+
+    const yaAnclado = await db
+      .selectFrom("OnChainEvent")
+      .selectAll()
+      .where("evidenceId", "=", documento.id)
+      .where("txid", "is not", null)
+      .executeTakeFirst();
+
+    if (yaAnclado) return res.status(200).json(yaAnclado);
+
+    const anchor = await anchorCommitmentEvent({
+      projectId: documento.projectId,
+      stageId: documento.stageId,
+      evidenceId: documento.id,
+      eventType: "DOCUMENT_ANCHOR",
+      commitment: documento.sha256Hash,
+      // Ref opaca: el id del registro, jamás el nombre del archivo (regla 2).
+      reference: documento.id
+    });
+
+    await writeAuditLog({
+      actorUserId: req.user!.id,
+      action: "ANCHOR_DOCUMENT",
+      entityType: "Evidence",
+      entityId: documento.id,
+      metadata: { txid: anchor.txid, status: anchor.status }
+    });
+
+    return res.status(201).json(anchor);
   }
+);
 
-  await reconciliarParaLectura({ evidenceId: documento.id });
+router.get(
+  "/kpis",
+  authorize({ roles: ["admin", "developer"], acceso: "soloRol" }),
+  async (req, res) => {
+    const ids = (await proyectosVisibles(req.user!.id, req.user!.role).execute()).map((p) => p.id);
 
-  const yaAnclado = await db
-    .selectFrom("OnChainEvent")
-    .selectAll()
-    .where("evidenceId", "=", documento.id)
-    .where("txid", "is not", null)
-    .executeTakeFirst();
+    if (ids.length === 0) {
+      const vacio: DeveloperKpis = {
+        activeProjects: 0,
+        totalUnits: 0,
+        capitalRaisedMinorUnits: 0,
+        averageProgress: 0,
+        verifiedDocuments: 0
+      };
+      return res.json(vacio);
+    }
 
-  if (yaAnclado) return res.status(200).json(yaAnclado);
+    const stages = await db
+      .selectFrom("Stage")
+      .select(["state"])
+      .where("projectId", "in", ids)
+      .execute();
 
-  const anchor = await anchorCommitmentEvent({
-    projectId: documento.projectId,
-    stageId: documento.stageId,
-    evidenceId: documento.id,
-    eventType: "DOCUMENT_ANCHOR",
-    commitment: documento.sha256Hash,
-    // Ref opaca: el id del registro, jamás el nombre del archivo (regla 2).
-    reference: documento.id
-  });
+    // El KPI cuenta `Confirmed`: sin esto, un anclaje que ya entró en un bloque
+    // pero sigue `Pending` en la base lo hace contar de menos.
+    await reconciliarParaLectura({ projectIds: ids });
 
-  await writeAuditLog({
-    actorUserId: req.user!.id,
-    action: "ANCHOR_DOCUMENT",
-    entityType: "Evidence",
-    entityId: documento.id,
-    metadata: { txid: anchor.txid, status: anchor.status }
-  });
+    const anclados = await db
+      .selectFrom("OnChainEvent")
+      .select((eb) => eb.fn.countAll<number>().as("total"))
+      .where("projectId", "in", ids)
+      .where("eventType", "=", "EVIDENCE_ANCHOR")
+      .where("status", "=", "Confirmed")
+      .executeTakeFirst();
 
-  return res.status(201).json(anchor);
-});
+    const unidades = await db
+      .selectFrom("Unit")
+      .select((eb) => eb.fn.countAll<number>().as("total"))
+      .where("projectId", "in", ids)
+      .executeTakeFirst();
 
-router.get("/kpis", requireRole("admin", "developer"), async (req, res) => {
-  const ids = (await proyectosVisibles(req.user!.id, req.user!.role).execute()).map((p) => p.id);
+    // "Capital levantado" = suma de los contratos firmados. **No es plata que la
+    // plataforma tenga** (D-021): es un monto declarado, en unidades mínimas
+    // enteras (regla 1).
+    const contratos = await db
+      .selectFrom("Contract")
+      .innerJoin("Unit", "Unit.id", "Contract.unitId")
+      .select((eb) => eb.fn.sum<number>("Contract.totalMinorUnits").as("total"))
+      .where("Unit.projectId", "in", ids)
+      .executeTakeFirst();
 
-  if (ids.length === 0) {
-    const vacio: DeveloperKpis = {
-      activeProjects: 0,
-      totalUnits: 0,
-      capitalRaisedMinorUnits: 0,
-      averageProgress: 0,
-      verifiedDocuments: 0
+    const completados = stages.filter((s) => s.state === "Completed").length;
+
+    const kpis: DeveloperKpis = {
+      activeProjects: ids.length,
+      totalUnits: Number(unidades?.total ?? 0),
+      capitalRaisedMinorUnits: Number(contratos?.total ?? 0),
+      averageProgress: stages.length ? Math.round((completados / stages.length) * 100) : 0,
+      verifiedDocuments: Number(anclados?.total ?? 0)
     };
-    return res.json(vacio);
+
+    return res.json(kpis);
   }
-
-  const stages = await db
-    .selectFrom("Stage")
-    .select(["state"])
-    .where("projectId", "in", ids)
-    .execute();
-
-  // El KPI cuenta `Confirmed`: sin esto, un anclaje que ya entró en un bloque
-  // pero sigue `Pending` en la base lo hace contar de menos.
-  await reconciliarParaLectura({ projectIds: ids });
-
-  const anclados = await db
-    .selectFrom("OnChainEvent")
-    .select((eb) => eb.fn.countAll<number>().as("total"))
-    .where("projectId", "in", ids)
-    .where("eventType", "=", "EVIDENCE_ANCHOR")
-    .where("status", "=", "Confirmed")
-    .executeTakeFirst();
-
-  const unidades = await db
-    .selectFrom("Unit")
-    .select((eb) => eb.fn.countAll<number>().as("total"))
-    .where("projectId", "in", ids)
-    .executeTakeFirst();
-
-  // "Capital levantado" = suma de los contratos firmados. **No es plata que la
-  // plataforma tenga** (D-021): es un monto declarado, en unidades mínimas
-  // enteras (regla 1).
-  const contratos = await db
-    .selectFrom("Contract")
-    .innerJoin("Unit", "Unit.id", "Contract.unitId")
-    .select((eb) => eb.fn.sum<number>("Contract.totalMinorUnits").as("total"))
-    .where("Unit.projectId", "in", ids)
-    .executeTakeFirst();
-
-  const completados = stages.filter((s) => s.state === "Completed").length;
-
-  const kpis: DeveloperKpis = {
-    activeProjects: ids.length,
-    totalUnits: Number(unidades?.total ?? 0),
-    capitalRaisedMinorUnits: Number(contratos?.total ?? 0),
-    averageProgress: stages.length ? Math.round((completados / stages.length) * 100) : 0,
-    verifiedDocuments: Number(anclados?.total ?? 0)
-  };
-
-  return res.json(kpis);
-});
+);
 
 export default router;

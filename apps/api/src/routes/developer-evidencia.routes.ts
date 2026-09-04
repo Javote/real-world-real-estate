@@ -9,7 +9,7 @@ import { crearBundle } from "../domain/stage-transition";
 import { db } from "../lib/db";
 import { storage } from "../lib/storage";
 import { uploadSingleEvidence } from "../lib/upload";
-import { authenticate, requireProjectAccess, requireRole } from "../middlewares/auth";
+import { authenticate, authorize } from "../middlewares/auth";
 import { writeAuditLog } from "../utils/audit";
 import { EVIDENCE_SAFE_COLUMNS } from "./_shared";
 
@@ -26,7 +26,6 @@ import { EVIDENCE_SAFE_COLUMNS } from "./_shared";
 const router = Router();
 
 router.use(authenticate);
-router.use(requireRole("admin", "developer"));
 
 /**
  * Fila 38 y 44c — la subida del developer, scopeada al stage — **M3-BE-13** y
@@ -50,8 +49,10 @@ router.use(requireRole("admin", "developer"));
  */
 router.post(
   "/projects/:id/stages/:stageId/evidence",
-  requireRole("admin", "developer"),
-  requireProjectAccess({ param: "id" }, ["developer"]),
+  authorize({
+    roles: ["admin", "developer"],
+    acceso: { proyecto: { param: "id" }, membresias: ["developer"] }
+  }),
   (req, res, next) => {
     uploadSingleEvidence(req, res, (err) => (err ? next(err) : next()));
   },
