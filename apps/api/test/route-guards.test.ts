@@ -1,7 +1,7 @@
 import { afterAll, describe, expect, it } from "vitest";
 import { MONTAJE } from "../src/app";
 import { db } from "../src/lib/db";
-import { type GuardDescriptor, leerGuard } from "../src/middlewares/auth";
+import { type GuardDescriptor, leerGuard, type ReglaDeAcceso } from "../src/middlewares/auth";
 
 afterAll(async () => {
   await db.destroy();
@@ -150,10 +150,23 @@ type Capa = {
   handle: unknown;
 };
 
+function describirAcceso(acceso: ReglaDeAcceso): string {
+  if (acceso === "soloRol") return "soloRol";
+  if ("proyecto" in acceso) {
+    const s = acceso.proyecto;
+    const origen = "via" in s ? `${s.via}:${s.param}` : s.param;
+    return `proyecto(${origen} → ${acceso.membresias.join("|")})`;
+  }
+  if ("dueño" in acceso) return `dueño(${acceso.dueño.via}:${acceso.dueño.param})`;
+  return `alguna[${acceso.alguna.map(describirAcceso).join(" | ")}]`;
+}
+
 function describir(guard: GuardDescriptor): string {
   if (guard.kind === "authenticate") return "auth";
   if (guard.kind === "role") return `rol(${guard.roles.join("|")})`;
   if (guard.kind === "ownership") return `dueño(${guard.source.via}:${guard.source.param})`;
+  if (guard.kind === "authorize")
+    return `autoriza(rol(${guard.roles.join("|")}) · ${describirAcceso(guard.acceso)})`;
 
   const origen =
     "via" in guard.source ? `${guard.source.via}:${guard.source.param}` : guard.source.param;

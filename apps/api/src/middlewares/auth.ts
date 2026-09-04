@@ -36,7 +36,8 @@ export type GuardDescriptor =
   | { kind: "authenticate" }
   | { kind: "role"; roles: UserRole[] }
   | { kind: "projectAccess"; source: ProjectSource; memberships: MembershipRole[] }
-  | { kind: "ownership"; source: OwnerSource };
+  | { kind: "ownership"; source: OwnerSource }
+  | { kind: "authorize"; roles: UserRole[]; acceso: ReglaDeAcceso };
 
 function marcar<T extends object>(fn: T, guard: GuardDescriptor): T {
   return Object.defineProperty(fn, GUARD, { value: guard, enumerable: false }) as T;
@@ -195,6 +196,86 @@ export type ProjectSource =
    */
   | { via: "Stage" | "Evidence" | "EvidenceBundle"; param: string };
 
+/**
+ * El veredicto de una regla, **sin escribir la respuesta**.
+ *
+ * Existe porque `authorize` necesita poder *evaluar* una regla y recién después
+ * decidir: una disyunción (`alguna`) tiene que poder probar la segunda rama
+ * cuando la primera dice que no, y un middleware que ya contestó 403 no deja
+ * probar nada. Los guards sueltos son ahora una cáscara fina sobre estos mismos
+ * evaluadores — **la regla no está escrita dos veces**.
+ */
+type Veredicto = { ok: true } | { ok: false; status: 403 | 404 | 500; message: string };
+
+const PASA: Veredicto = { ok: true };
+const PROHIBIDO: Veredicto = { ok: false, status: 403, message: "Forbidden" };
+
+/**
+ * `req.params[x]` es `string | string[]` en Express 5: path-to-regexp v8 admite
+ * parámetros repetidos (`:id+`), que dan un array. Ninguna ruta de esta API
+ * declara uno, así que un array acá significa que alguien cambió el path y el
+ * guard no sabe sobre cuál de los ids autorizar — **elegir el primero en
+ * silencio sería exactamente el bug que no queremos en la capa de
+ * autorización**. Igual que un parámetro ausente: no es una request inválida, es
+ * la ruta mal declarada. Error de programación, 5xx, y ruidoso.
+ */
+function leerParam(req: Request, param: string): string | Veredicto {
+  const key = req.params[param];
+  if (typeof key !== "string" || !key) {
+    return {
+      ok: false,
+      status: 500,
+      message: `Route misconfiguration: param "${param}" must be a single path value`
+    };
+  }
+  return key;
+}
+
+async function evaluarProyecto(
+  user: NonNullable<Request["user"]>,
+  req: Request,
+  source: ProjectSource,
+  allowedMemberships: MembershipRole[]
+): Promise<Veredicto> {
+  const key = leerParam(req, source.param);
+  if (typeof key !== "string") return key;
+
+  let projectId: string;
+
+  if ("via" in source) {
+    const fila =
+      source.via === "Stage"
+        ? await db.selectFrom("Stage").select("projectId").where("id", "=", key).executeTakeFirst()
+        : source.via === "Evidence"
+          ? await db
+              .selectFrom("Evidence")
+              .select("projectId")
+              .where("id", "=", key)
+              .executeTakeFirst()
+          : await db
+              .selectFrom("EvidenceBundle")
+              .select("projectId")
+              .where("id", "=", key)
+              .executeTakeFirst();
+
+    // Mismo 404 y mismo mensaje que devolvía el handler antes de este cambio.
+    // Ojo: esto deja distinguir "no existe" de "existe y no podés verlo", que
+    // en teoría permite enumerar ids. Se conserva **a propósito** — cambiar
+    // semántica de seguridad adentro de un refactor es como se cuelan los
+    // bugs. Está anotado como deuda aparte en SPEC-012.
+    if (!fila) {
+      return { ok: false, status: 404, message: `${source.via} not found` };
+    }
+
+    projectId = fila.projectId;
+  } else {
+    projectId = key;
+  }
+
+  const allowed = await canAccessProject(user.id, user.role, projectId, allowedMemberships);
+  return allowed ? PASA : PROHIBIDO;
+}
+
 export function requireProjectAccess(source: ProjectSource, allowedMemberships: MembershipRole[]) {
   return marcar(
     async (req: Request, res: Response, next: NextFunction) => {
@@ -202,70 +283,12 @@ export function requireProjectAccess(source: ProjectSource, allowedMemberships: 
         return res.status(401).json({ message: "Unauthorized" });
       }
 
-      const key = req.params[source.param];
-
-      // `req.params[x]` es `string | string[]` en Express 5: path-to-regexp v8
-      // admite parámetros repetidos (`:id+`), que dan un array. Ninguna ruta de
-      // esta API declara uno, así que un array acá significa que alguien cambió
-      // el path y este middleware no sabe sobre cuál de los ids autorizar —
-      // **elegir el primero en silencio sería exactamente el bug que no queremos
-      // en la capa de autorización**. Igual que un parámetro ausente: no es una
-      // request inválida, es la ruta mal declarada. Error de programación, 5xx, y
-      // ruidoso.
-      if (typeof key !== "string" || !key) {
-        return res.status(500).json({
-          message: `Route misconfiguration: param "${source.param}" must be a single path value`
-        });
+      const veredicto = await evaluarProyecto(req.user, req, source, allowedMemberships);
+      if (!veredicto.ok) {
+        return res.status(veredicto.status).json({ message: veredicto.message });
       }
 
-      let projectId: string;
-
-      if ("via" in source) {
-        const fila =
-          source.via === "Stage"
-            ? await db
-                .selectFrom("Stage")
-                .select("projectId")
-                .where("id", "=", key)
-                .executeTakeFirst()
-            : source.via === "Evidence"
-              ? await db
-                  .selectFrom("Evidence")
-                  .select("projectId")
-                  .where("id", "=", key)
-                  .executeTakeFirst()
-              : await db
-                  .selectFrom("EvidenceBundle")
-                  .select("projectId")
-                  .where("id", "=", key)
-                  .executeTakeFirst();
-
-        // Mismo 404 y mismo mensaje que devolvía el handler antes de este cambio.
-        // Ojo: esto deja distinguir "no existe" de "existe y no podés verlo", que
-        // en teoría permite enumerar ids. Se conserva **a propósito** — cambiar
-        // semántica de seguridad adentro de un refactor es como se cuelan los
-        // bugs. Está anotado como deuda aparte en SPEC-012.
-        if (!fila) {
-          return res.status(404).json({ message: `${source.via} not found` });
-        }
-
-        projectId = fila.projectId;
-      } else {
-        projectId = key;
-      }
-
-      const allowed = await canAccessProject(
-        req.user.id,
-        req.user.role,
-        projectId,
-        allowedMemberships
-      );
-
-      if (!allowed) {
-        return res.status(403).json({ message: "Forbidden" });
-      }
-
-      next();
+      return next();
     },
     { kind: "projectAccess", source, memberships: allowedMemberships }
   );
@@ -358,6 +381,28 @@ async function cargarDueño(
   return fila ? { dueño: fila.investorId, contra: "id" } : null;
 }
 
+async function evaluarDueño(
+  user: NonNullable<Request["user"]>,
+  req: Request,
+  source: OwnerSource
+): Promise<Veredicto> {
+  const key = leerParam(req, source.param);
+  if (typeof key !== "string") return key;
+
+  const fila = await cargarDueño(source, key);
+
+  // Mismo 404 y mismo mensaje que devolvía cada handler. Y la misma deuda
+  // declarada de `requireProjectAccess`: desde afuera se distingue "no existe"
+  // de "existe y no es tuyo". Se conserva a propósito.
+  if (!fila) {
+    return { ok: false, status: 404, message: `${NOMBRE_DE_ENTIDAD[source.via]} not found` };
+  }
+
+  if (user.role === "admin") return PASA;
+
+  return fila.dueño !== null && fila.dueño === user[fila.contra] ? PASA : PROHIBIDO;
+}
+
 export function requireOwnership(source: OwnerSource) {
   return marcar(
     async (req: Request, res: Response, next: NextFunction) => {
@@ -365,35 +410,99 @@ export function requireOwnership(source: OwnerSource) {
         return res.status(401).json({ message: "Unauthorized" });
       }
 
-      // Mismo criterio que `requireProjectAccess`: un param ausente o repetido
-      // es la ruta mal declarada, no una request inválida. 5xx y ruidoso.
-      const key = req.params[source.param];
-      if (typeof key !== "string" || !key) {
-        return res.status(500).json({
-          message: `Route misconfiguration: param "${source.param}" must be a single path value`
-        });
-      }
-
-      const fila = await cargarDueño(source, key);
-
-      // Mismo 404 y mismo mensaje que devolvía cada handler. Y la misma deuda
-      // declarada de `requireProjectAccess`: desde afuera se distingue "no
-      // existe" de "existe y no es tuyo". Se conserva a propósito.
-      if (!fila) {
-        return res.status(404).json({ message: `${NOMBRE_DE_ENTIDAD[source.via]} not found` });
-      }
-
-      if (req.user.role === "admin") {
-        return next();
-      }
-
-      if (fila.dueño === null || fila.dueño !== req.user[fila.contra]) {
-        return res.status(403).json({ message: "Forbidden" });
+      const veredicto = await evaluarDueño(req.user, req, source);
+      if (!veredicto.ok) {
+        return res.status(veredicto.status).json({ message: veredicto.message });
       }
 
       return next();
     },
     { kind: "ownership", source }
+  );
+}
+
+/**
+ * **La regla de acceso de una ruta, como dato** (`PLAN-2026-09-04-guard-unico`).
+ *
+ * Las tres capas dejaron de ser tres llamadas encadenadas y pasaron a ser un
+ * objeto con campos obligatorios, por una razón puntual: **hoy nada obliga a
+ * declarar la pertenencia**. Una ruta del investor escrita con
+ * `requireRole("admin", "buyer")` y nada más compila, pasa el happy path y sirve
+ * la unidad de otro. D-042 resolvió eso para las membresías haciendo que omitir
+ * el argumento no compile, y esa jugada no se puede repetir con middlewares
+ * sueltos: **la ausencia de una llamada no es un tipo**.
+ *
+ * `"soloRol"` es la pieza que hace el trabajo. No fuerza a acertar —alguien
+ * apurado lo escribe sin pensar— pero convierte una **ausencia** en una
+ * **afirmación**, y esa es toda la diferencia en revisión: una ausencia es
+ * invisible en un diff, una afirmación es algo que alguien firmó.
+ *
+ * `alguna` existe porque una cadena de middlewares es un AND y hay reglas que
+ * son un OR: `GET /contracts/:contractId/releases` la ve el dueño del contrato
+ * **o** cualquier miembro del proyecto. Con los guards sueltos eso no se podía
+ * expresar y quedaba autorizando adentro del handler.
+ */
+export type ReglaDeAcceso =
+  | { proyecto: ProjectSource; membresias: MembershipRole[] }
+  | { dueño: OwnerSource }
+  | { alguna: ReglaDeAcceso[] }
+  | "soloRol";
+
+async function evaluarRegla(
+  user: NonNullable<Request["user"]>,
+  req: Request,
+  regla: ReglaDeAcceso
+): Promise<Veredicto> {
+  if (regla === "soloRol") return PASA;
+  if ("proyecto" in regla) return evaluarProyecto(user, req, regla.proyecto, regla.membresias);
+  if ("dueño" in regla) return evaluarDueño(user, req, regla.dueño);
+
+  const veredictos: Veredicto[] = [];
+  for (const rama of regla.alguna) {
+    veredictos.push(await evaluarRegla(user, req, rama));
+  }
+
+  // El 500 gana sobre todo, incluso sobre una rama que pasa: una ruta mal
+  // declarada tiene que ser ruidosa, y taparla con el OK de la otra rama sería
+  // esconder un error de programación en la capa de autorización.
+  const roto = veredictos.find((v) => !v.ok && v.status === 500);
+  if (roto) return roto;
+
+  if (veredictos.some((v) => v.ok)) return PASA;
+
+  // Ninguna rama pasó. Se prefiere 403 sobre 404: si una rama dice "no es tuyo"
+  // y la otra "no existe", contestar 404 filtraría que el recurso no existe para
+  // quien tampoco tenía permiso de saberlo.
+  return veredictos.find((v) => !v.ok && v.status === 403) ?? veredictos[0] ?? PROHIBIDO;
+}
+
+/**
+ * El guard único: rol global **y** regla de acceso, los dos obligatorios.
+ *
+ * Se construye sobre los mismos evaluadores que usan `requireRole`,
+ * `requireProjectAccess` y `requireOwnership`: no reimplementa ninguna regla, y
+ * el bypass de `admin` sigue viviendo en `projectScope` (D-043) y en
+ * `evaluarDueño`, en un solo lugar cada uno.
+ */
+export function authorize(regla: { roles: UserRole[]; acceso: ReglaDeAcceso }) {
+  return marcar(
+    async (req: Request, res: Response, next: NextFunction) => {
+      if (!req.user) {
+        return res.status(401).json({ message: "Unauthorized" });
+      }
+
+      if (!regla.roles.includes(req.user.role)) {
+        return res.status(403).json({ message: "Forbidden" });
+      }
+
+      const veredicto = await evaluarRegla(req.user, req, regla.acceso);
+      if (!veredicto.ok) {
+        return res.status(veredicto.status).json({ message: veredicto.message });
+      }
+
+      return next();
+    },
+    { kind: "authorize", roles: regla.roles, acceso: regla.acceso }
   );
 }
 
