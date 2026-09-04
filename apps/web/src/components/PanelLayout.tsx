@@ -114,7 +114,7 @@ export function PanelLayout({
         }
       />
 
-      <main className="flex flex-col gap-s4 p-s4">{children}</main>
+      <main className="mx-auto flex max-w-2xl flex-col gap-s4 p-s4">{children}</main>
 
       <BottomNav tabs={tabs} ariaLabel={t('nav.ariaLabel')} />
     </div>

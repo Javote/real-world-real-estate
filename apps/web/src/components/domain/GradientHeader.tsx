@@ -62,30 +62,32 @@ export function GradientHeader({
         className
       )}
     >
-      <div className="flex items-start justify-between gap-s3">
-        <div className="flex items-center gap-s3">
-          {badge ? (
-            <span className="flex h-12 w-12 items-center justify-center rounded-xl bg-white/20">
-              {badge}
-            </span>
-          ) : (
-            <PropNexusMark />
-          )}
+      <div className="mx-auto max-w-2xl">
+        <div className="flex items-start justify-between gap-s3">
+          <div className="flex items-center gap-s3">
+            {badge ? (
+              <span className="flex h-12 w-12 items-center justify-center rounded-xl bg-white/20">
+                {badge}
+              </span>
+            ) : (
+              <PropNexusMark />
+            )}
+          </div>
+          {right ? <div className="flex items-center gap-s2">{right}</div> : null}
         </div>
-        {right ? <div className="flex items-center gap-s2">{right}</div> : null}
-      </div>
 
-      {backLink ? <div className="mt-s3">{backLink}</div> : null}
+        {backLink ? <div className="mt-s3">{backLink}</div> : null}
 
-      <div className="mt-s4 flex items-center justify-between gap-s3">
-        <div className="min-w-0">
-          <h1 className="text-display font-bold leading-tight">{title}</h1>
-          {subtitle ? <p className="text-body-sm text-white/80">{subtitle}</p> : null}
+        <div className="mt-s4 flex items-center justify-between gap-s3">
+          <div className="min-w-0">
+            <h1 className="text-display font-bold leading-tight">{title}</h1>
+            {subtitle ? <p className="text-body-sm text-white/80">{subtitle}</p> : null}
+          </div>
+          {titleAction ? <div className="shrink-0">{titleAction}</div> : null}
         </div>
-        {titleAction ? <div className="shrink-0">{titleAction}</div> : null}
-      </div>
 
-      {context ? <p className="mt-s4 text-body text-white/80">{context}</p> : null}
+        {context ? <p className="mt-s4 text-body text-white/80">{context}</p> : null}
+      </div>
     </header>
   )
 }
