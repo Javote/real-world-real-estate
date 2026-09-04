@@ -373,13 +373,21 @@ export type OwnerSource =
    * contrato — `GET /investor/contracts/:unitId` busca por unidad, así que la
    * fila se resuelve por esa columna y no por la clave primaria.
    */
-  | { via: "ContractOfUnit"; param: string };
+  | { via: "ContractOfUnit"; param: string }
+  /**
+   * El contrato por su **propio id**: `GET /contracts/:contractId/releases`.
+   * Convive con `ContractOfUnit` a propósito — son dos búsquedas distintas
+   * sobre la misma tabla, y fundirlas en una obligaría a adivinar por cuál de
+   * las dos columnas buscar según el nombre del param.
+   */
+  | { via: "Contract"; param: string };
 
 /** El nombre que sale en el 404. `ContractOfUnit` es un Contract para el cliente. */
 const NOMBRE_DE_ENTIDAD: Record<OwnerSource["via"], string> = {
   Unit: "Unit",
   Invitation: "Invitation",
-  ContractOfUnit: "Contract"
+  ContractOfUnit: "Contract",
+  Contract: "Contract"
 };
 
 /**
@@ -415,7 +423,7 @@ async function cargarDueño(
   const fila = await db
     .selectFrom("Contract")
     .select("investorId")
-    .where("unitId", "=", key)
+    .where(source.via === "Contract" ? "id" : "unitId", "=", key)
     .executeTakeFirst();
   return fila ? { dueño: fila.investorId, contra: "id" } : null;
 }

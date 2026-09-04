@@ -5,7 +5,7 @@ import bcrypt from "bcrypt";
 import { Router } from "express";
 import { db } from "../lib/db";
 import { signToken } from "../lib/jwt";
-import { authenticate } from "../middlewares/auth";
+import { authenticate, authorize, CUALQUIER_ROL } from "../middlewares/auth";
 import { loginRateLimiter } from "../middlewares/rateLimit";
 import { writeAuditLog } from "../utils/audit";
 
@@ -82,26 +82,31 @@ router.post("/login", loginRateLimiter(), async (req, res) => {
   return res.json(body);
 });
 
-router.get("/me", authenticate, async (req, res) => {
-  const user = await db
-    .selectFrom("User")
-    .select(["id", "email", "role", "fullName", "isActive", "createdAt"])
-    .where("id", "=", req.user!.id)
-    .executeTakeFirst();
+router.get(
+  "/me",
+  authenticate,
+  authorize({ roles: CUALQUIER_ROL, acceso: "soloRol" }),
+  async (req, res) => {
+    const user = await db
+      .selectFrom("User")
+      .select(["id", "email", "role", "fullName", "isActive", "createdAt"])
+      .where("id", "=", req.user!.id)
+      .executeTakeFirst();
 
-  // `authenticate` ya validó que existe y está activo, así que esto solo pasa si
-  // lo borraron entre una consulta y la otra. Antes devolvía 200 con body `null`,
-  // que ningún cliente sabe interpretar; 401 es la misma postura que authenticate.
-  if (!user) {
-    return res.status(401).json({ message: "User not active" });
+    // `authenticate` ya validó que existe y está activo, así que esto solo pasa si
+    // lo borraron entre una consulta y la otra. Antes devolvía 200 con body `null`,
+    // que ningún cliente sabe interpretar; 401 es la misma postura que authenticate.
+    if (!user) {
+      return res.status(401).json({ message: "User not active" });
+    }
+
+    const body: MeResponse = {
+      ...user,
+      createdAt: user.createdAt.toISOString() // JSON no tiene tipo fecha; UTC (regla 1)
+    };
+
+    return res.json(body);
   }
-
-  const body: MeResponse = {
-    ...user,
-    createdAt: user.createdAt.toISOString() // JSON no tiene tipo fecha; UTC (regla 1)
-  };
-
-  return res.json(body);
-});
+);
 
 export default router;

@@ -1,7 +1,7 @@
 import { type Request, Router } from "express";
 import { z } from "zod";
 import { db } from "../lib/db";
-import { authenticate } from "../middlewares/auth";
+import { authenticate, authorize, CUALQUIER_ROL } from "../middlewares/auth";
 import { writeAuditLog } from "../utils/audit";
 
 // Perfil y preferencias (M2-D5 fila 30 y sus equivalentes por rol).
@@ -27,7 +27,7 @@ const COLUMNAS_SEGURAS = [
   "updatedAt"
 ] as const;
 
-router.get("/", async (req, res) => {
+router.get("/", authorize({ roles: CUALQUIER_ROL, acceso: "soloRol" }), async (req, res) => {
   const usuario = await db
     .selectFrom("User")
     .select(COLUMNAS_SEGURAS)
@@ -37,65 +37,73 @@ router.get("/", async (req, res) => {
   return res.json(usuario);
 });
 
-router.patch("/", async (req: Request, res) => {
-  // El email y el rol NO se editan acá: cambiar el rol por el endpoint de
-  // perfil sería una escalada de privilegios con forma de preferencia.
-  const schema = z.strictObject({ fullName: z.string().min(1).max(120) });
+router.patch(
+  "/",
+  authorize({ roles: CUALQUIER_ROL, acceso: "soloRol" }),
+  async (req: Request, res) => {
+    // El email y el rol NO se editan acá: cambiar el rol por el endpoint de
+    // perfil sería una escalada de privilegios con forma de preferencia.
+    const schema = z.strictObject({ fullName: z.string().min(1).max(120) });
 
-  const parsed = schema.safeParse(req.body);
-  if (!parsed.success) return res.status(400).json(parsed.error.flatten());
+    const parsed = schema.safeParse(req.body);
+    if (!parsed.success) return res.status(400).json(parsed.error.flatten());
 
-  const usuario = await db
-    .updateTable("User")
-    .set({ fullName: parsed.data.fullName, updatedAt: new Date() })
-    .where("id", "=", req.user!.id)
-    .returning(COLUMNAS_SEGURAS)
-    .executeTakeFirstOrThrow();
+    const usuario = await db
+      .updateTable("User")
+      .set({ fullName: parsed.data.fullName, updatedAt: new Date() })
+      .where("id", "=", req.user!.id)
+      .returning(COLUMNAS_SEGURAS)
+      .executeTakeFirstOrThrow();
 
-  await writeAuditLog({
-    actorUserId: req.user!.id,
-    action: "UPDATE_PROFILE",
-    entityType: "User",
-    entityId: req.user!.id
-  });
+    await writeAuditLog({
+      actorUserId: req.user!.id,
+      action: "UPDATE_PROFILE",
+      entityType: "User",
+      entityId: req.user!.id
+    });
 
-  return res.json(usuario);
-});
+    return res.json(usuario);
+  }
+);
 
-router.patch("/notifications", async (req: Request, res) => {
-  // Las categorías son las cinco del audit log (M2-D4 P6), que son las mismas
-  // sobre las que se notifica.
-  const schema = z.strictObject({
-    stage: z.boolean().optional(),
-    document: z.boolean().optional(),
-    release: z.boolean().optional(),
-    signature: z.boolean().optional(),
-    certificate: z.boolean().optional()
-  });
+router.patch(
+  "/notifications",
+  authorize({ roles: CUALQUIER_ROL, acceso: "soloRol" }),
+  async (req: Request, res) => {
+    // Las categorías son las cinco del audit log (M2-D4 P6), que son las mismas
+    // sobre las que se notifica.
+    const schema = z.strictObject({
+      stage: z.boolean().optional(),
+      document: z.boolean().optional(),
+      release: z.boolean().optional(),
+      signature: z.boolean().optional(),
+      certificate: z.boolean().optional()
+    });
 
-  const parsed = schema.safeParse(req.body);
-  if (!parsed.success) return res.status(400).json(parsed.error.flatten());
+    const parsed = schema.safeParse(req.body);
+    if (!parsed.success) return res.status(400).json(parsed.error.flatten());
 
-  const actual = await db
-    .selectFrom("User")
-    .select("notificationPrefsJson")
-    .where("id", "=", req.user!.id)
-    .executeTakeFirstOrThrow();
+    const actual = await db
+      .selectFrom("User")
+      .select("notificationPrefsJson")
+      .where("id", "=", req.user!.id)
+      .executeTakeFirstOrThrow();
 
-  // Merge, no reemplazo: un PATCH que manda una sola preferencia no puede
-  // apagar las otras cuatro.
-  const previas = actual.notificationPrefsJson
-    ? (JSON.parse(actual.notificationPrefsJson) as Record<string, boolean>)
-    : {};
-  const combinadas = { ...previas, ...parsed.data };
+    // Merge, no reemplazo: un PATCH que manda una sola preferencia no puede
+    // apagar las otras cuatro.
+    const previas = actual.notificationPrefsJson
+      ? (JSON.parse(actual.notificationPrefsJson) as Record<string, boolean>)
+      : {};
+    const combinadas = { ...previas, ...parsed.data };
 
-  await db
-    .updateTable("User")
-    .set({ notificationPrefsJson: JSON.stringify(combinadas), updatedAt: new Date() })
-    .where("id", "=", req.user!.id)
-    .execute();
+    await db
+      .updateTable("User")
+      .set({ notificationPrefsJson: JSON.stringify(combinadas), updatedAt: new Date() })
+      .where("id", "=", req.user!.id)
+      .execute();
 
-  return res.json(combinadas);
-});
+    return res.json(combinadas);
+  }
+);
 
 export default router;

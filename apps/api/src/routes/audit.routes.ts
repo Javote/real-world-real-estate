@@ -1,12 +1,12 @@
 import { Router } from "express";
 import { db } from "../lib/db";
-import { authenticate, requireRole } from "../middlewares/auth";
+import { authenticate, authorize } from "../middlewares/auth";
 
 const router = Router();
 
-router.use(authenticate, requireRole("admin"));
+router.use(authenticate);
 
-router.get("/", async (_req, res) => {
+router.get("/", authorize({ roles: ["admin"], acceso: "soloRol" }), async (_req, res) => {
   const logs = await db
     .selectFrom("AuditLog")
     .selectAll()

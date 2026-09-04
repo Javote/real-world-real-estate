@@ -1,7 +1,7 @@
 import type { UnreadCount } from "@plataforma/shared";
 import { type Request, Router } from "express";
 import { db } from "../lib/db";
-import { authenticate } from "../middlewares/auth";
+import { authenticate, authorize, CUALQUIER_ROL } from "../middlewares/auth";
 
 // Notificaciones (M2-D5 filas 02, 22, 33-34, 62) — **M3-BE-07**.
 //
@@ -22,16 +22,20 @@ const router = Router();
 router.use(authenticate);
 
 /** El badge del `NotificationBell` (filas 02 y 33-34). Cross-rol. */
-router.get("/unread-count", async (req, res) => {
-  const fila = await db
-    .selectFrom("Notification")
-    .select((eb) => eb.fn.countAll<number>().as("total"))
-    .where("userId", "=", req.user!.id)
-    .where("readAt", "is", null)
-    .executeTakeFirstOrThrow();
+router.get(
+  "/unread-count",
+  authorize({ roles: CUALQUIER_ROL, acceso: "soloRol" }),
+  async (req, res) => {
+    const fila = await db
+      .selectFrom("Notification")
+      .select((eb) => eb.fn.countAll<number>().as("total"))
+      .where("userId", "=", req.user!.id)
+      .where("readAt", "is", null)
+      .executeTakeFirstOrThrow();
 
-  return res.json({ unread: Number(fila.total) } satisfies UnreadCount);
-});
+    return res.json({ unread: Number(fila.total) } satisfies UnreadCount);
+  }
+);
 
 /**
  * Marcar leída (filas 22 y 62). **Idempotente** (regla 8): marcar dos veces
@@ -41,25 +45,29 @@ router.get("/unread-count", async (req, res) => {
  * 404 si no es tuya, no 403: no hay por qué confirmarle a nadie que existe una
  * notificación ajena con ese id.
  */
-router.patch("/:id/read", async (req: Request<{ id: string }>, res) => {
-  const notificacion = await db
-    .selectFrom("Notification")
-    .select(["id", "readAt"])
-    .where("id", "=", req.params.id)
-    .where("userId", "=", req.user!.id)
-    .executeTakeFirst();
+router.patch(
+  "/:id/read",
+  authorize({ roles: CUALQUIER_ROL, acceso: "soloRol" }),
+  async (req: Request<{ id: string }>, res) => {
+    const notificacion = await db
+      .selectFrom("Notification")
+      .select(["id", "readAt"])
+      .where("id", "=", req.params.id)
+      .where("userId", "=", req.user!.id)
+      .executeTakeFirst();
 
-  if (!notificacion) return res.status(404).json({ message: "Notification not found" });
+    if (!notificacion) return res.status(404).json({ message: "Notification not found" });
 
-  if (notificacion.readAt === null) {
-    await db
-      .updateTable("Notification")
-      .set({ readAt: new Date() })
-      .where("id", "=", notificacion.id)
-      .execute();
+    if (notificacion.readAt === null) {
+      await db
+        .updateTable("Notification")
+        .set({ readAt: new Date() })
+        .where("id", "=", notificacion.id)
+        .execute();
+    }
+
+    return res.status(204).send();
   }
-
-  return res.status(204).send();
-});
+);
 
 export default router;

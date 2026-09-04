@@ -31,12 +31,12 @@ afterAll(async () => {
  */
 const MATRIZ: Record<string, string> = {
   "POST /api/v1/auth/login": "—",
-  "GET /api/v1/auth/me": "auth",
-  "GET /api/v1/users": "auth + rol(admin)",
-  "POST /api/v1/users": "auth + rol(admin)",
-  "GET /api/v1/users/:id": "auth + rol(admin)",
-  "PATCH /api/v1/users/:id": "auth + rol(admin)",
-  "DELETE /api/v1/users/:id": "auth + rol(admin)",
+  "GET /api/v1/auth/me": "auth + autoriza(rol(admin|developer|buyer|verifier|notary) · soloRol)",
+  "GET /api/v1/users": "auth + autoriza(rol(admin) · soloRol)",
+  "POST /api/v1/users": "auth + autoriza(rol(admin) · soloRol)",
+  "GET /api/v1/users/:id": "auth + autoriza(rol(admin) · soloRol)",
+  "PATCH /api/v1/users/:id": "auth + autoriza(rol(admin) · soloRol)",
+  "DELETE /api/v1/users/:id": "auth + autoriza(rol(admin) · soloRol)",
   "GET /api/v1/projects": "auth + autoriza(rol(admin|developer|buyer|verifier|notary) · soloRol)",
   "POST /api/v1/projects": "auth + autoriza(rol(admin) · soloRol)",
   "GET /api/v1/projects/:id":
@@ -82,13 +82,17 @@ const MATRIZ: Record<string, string> = {
     "auth + autoriza(rol(admin|developer|buyer|verifier|notary) · proyecto(EvidenceBundle:bundleId → developer|buyer|verifier))",
   "GET /api/v1/evidence/:bundleId/files":
     "auth + autoriza(rol(admin|developer|buyer|verifier|notary) · proyecto(EvidenceBundle:bundleId → developer|buyer|verifier))",
-  "GET /api/v1/contracts/:contractId/releases": "auth",
-  "GET /api/v1/notifications/unread-count": "auth",
-  "PATCH /api/v1/notifications/:id/read": "auth",
-  "GET /api/v1/profile": "auth",
-  "PATCH /api/v1/profile": "auth",
-  "PATCH /api/v1/profile/notifications": "auth",
-  "GET /api/v1/audit-logs": "auth + rol(admin)",
+  "GET /api/v1/contracts/:contractId/releases":
+    "auth + autoriza(rol(admin|developer|buyer|verifier|notary) · alguna[dueño(Contract:contractId) | proyecto(Contract:contractId → developer|buyer|verifier)])",
+  "GET /api/v1/notifications/unread-count":
+    "auth + autoriza(rol(admin|developer|buyer|verifier|notary) · soloRol)",
+  "PATCH /api/v1/notifications/:id/read":
+    "auth + autoriza(rol(admin|developer|buyer|verifier|notary) · soloRol)",
+  "GET /api/v1/profile": "auth + autoriza(rol(admin|developer|buyer|verifier|notary) · soloRol)",
+  "PATCH /api/v1/profile": "auth + autoriza(rol(admin|developer|buyer|verifier|notary) · soloRol)",
+  "PATCH /api/v1/profile/notifications":
+    "auth + autoriza(rol(admin|developer|buyer|verifier|notary) · soloRol)",
+  "GET /api/v1/audit-logs": "auth + autoriza(rol(admin) · soloRol)",
   "GET /api/v1/public/dossier/:shareToken": "—",
   "GET /api/v1/investor/favorites": "auth + autoriza(rol(admin|buyer) · soloRol)",
   "POST /api/v1/investor/favorites/:projectId": "auth + autoriza(rol(admin|buyer) · soloRol)",
