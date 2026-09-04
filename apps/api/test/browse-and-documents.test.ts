@@ -209,6 +209,20 @@ describe("POST /developer/documents", () => {
     expect(segunda.body.id).toBe(primera.body.id);
   });
 
+  it("sin `evidenceId` en el body da 400, no 500", async () => {
+    // Desde el 2026-09-04 la regla la declara el guard, y el id le llega por el
+    // body. Un campo de body ausente es input del cliente (400), no una ruta mal
+    // declarada (500) — que es lo que devuelve el mismo guard cuando falta un
+    // param de PATH. Distinguirlos es el punto de `en: "body"`.
+    const res = await request(app)
+      .post("/api/v1/developer/documents")
+      .set("Authorization", `Bearer ${tokenDev}`)
+      .send({});
+
+    expect(res.status).toBe(400);
+    expect(res.body.message).toMatch(/evidenceId/);
+  });
+
   it("un developer sin membresía no ancla el documento de otro", async () => {
     const documento = await db
       .selectFrom("Evidence")

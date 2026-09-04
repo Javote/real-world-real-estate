@@ -203,7 +203,31 @@ export type ProjectSource =
    * `Contract` es el único que necesita un join —el `projectId` está en la
    * unidad, no en el contrato—; los demás lo tienen en su propia fila.
    */
-  | { via: "Stage" | "Evidence" | "EvidenceBundle" | "Unit" | "Contract"; param: string };
+  | {
+      via: "Stage" | "Evidence" | "EvidenceBundle" | "Unit" | "Contract";
+      param: string;
+      /**
+       * De dónde sale el id. `"path"` por default. `"body"` existe para
+       * `POST /developer/documents`, que recibe el `evidenceId` en el cuerpo:
+       * era la última ruta que hacía la segunda capa **a mano** justamente
+       * porque el guard solo miraba el path.
+       *
+       * La diferencia no es cosmética. Un param de path ausente es la **ruta mal
+       * declarada** (500, error de programación); un campo de body ausente es
+       * **input del cliente** (400). Se distinguen porque el modo de falla es
+       * distinto y confundirlos convierte un error de cliente en una página de
+       * error 5xx del monitoreo.
+       */
+      en?: "path" | "body";
+      /**
+       * El nombre que sale en el 404, cuando el cliente conoce la entidad por
+       * otro nombre. `POST /developer/documents` decía `"Document not found"`
+       * antes de declarar su regla, y lo sigue diciendo: para esa superficie la
+       * evidencia **es** un documento (M2-D5 fila 46), y filtrar el nombre de la
+       * tabla al cliente sería un cambio hacia atrás.
+       */
+      nombre?: string;
+    };
 
 /** El `projectId` de la entidad que nombra el `via`, o `null` si no existe. */
 async function proyectoDeLaEntidad(
@@ -237,7 +261,7 @@ async function proyectoDeLaEntidad(
  * probar nada. Los guards sueltos son ahora una cáscara fina sobre estos mismos
  * evaluadores — **la regla no está escrita dos veces**.
  */
-type Veredicto = { ok: true } | { ok: false; status: 403 | 404 | 500; message: string };
+type Veredicto = { ok: true } | { ok: false; status: 400 | 403 | 404 | 500; message: string };
 
 const PASA: Veredicto = { ok: true };
 const PROHIBIDO: Veredicto = { ok: false, status: 403, message: "Forbidden" };
@@ -251,7 +275,21 @@ const PROHIBIDO: Veredicto = { ok: false, status: 403, message: "Forbidden" };
  * autorización**. Igual que un parámetro ausente: no es una request inválida, es
  * la ruta mal declarada. Error de programación, 5xx, y ruidoso.
  */
-function leerParam(req: Request, param: string): string | Veredicto {
+function leerParam(req: Request, param: string, en: "path" | "body" = "path"): string | Veredicto {
+  if (en === "body") {
+    const valor = (req.body as Record<string, unknown> | undefined)?.[param];
+    if (typeof valor !== "string" || !valor) {
+      // Input del cliente, no ruta mal declarada: 400 y con `code`, para que el
+      // front lo distinga de los 400 de Zod que devuelven `error.flatten()`.
+      return {
+        ok: false,
+        status: 400,
+        message: `Missing or invalid "${param}"`
+      };
+    }
+    return valor;
+  }
+
   const key = req.params[param];
   if (typeof key !== "string" || !key) {
     return {
@@ -269,7 +307,7 @@ async function evaluarProyecto(
   source: ProjectSource,
   allowedMemberships: MembershipRole[]
 ): Promise<Veredicto> {
-  const key = leerParam(req, source.param);
+  const key = leerParam(req, source.param, "via" in source ? source.en : "path");
   if (typeof key !== "string") return key;
 
   let projectId: string;
@@ -283,7 +321,7 @@ async function evaluarProyecto(
     // semántica de seguridad adentro de un refactor es como se cuelan los
     // bugs. Está anotado como deuda aparte en SPEC-012.
     if (encontrado === null) {
-      return { ok: false, status: 404, message: `${source.via} not found` };
+      return { ok: false, status: 404, message: `${source.nombre ?? source.via} not found` };
     }
 
     projectId = encontrado;
@@ -447,10 +485,9 @@ async function evaluarDueño(
  * **o** cualquier miembro del proyecto. Con los guards sueltos eso no se podía
  * expresar y quedaba autorizando adentro del handler.
  */
-export type ReglaDeAcceso =
+export type ReglaSimple =
   | { proyecto: ProjectSource; membresias: MembershipRole[] }
   | { dueño: OwnerSource }
-  | { alguna: ReglaDeAcceso[] }
   /**
    * Hay regla de fila y **la aplica el handler**, en su propio query. El string
    * dice cuál: `"Unit.investorId = usuario"`, `"projectScope(developer)"`. Cubre
@@ -461,10 +498,33 @@ export type ReglaDeAcceso =
   /** No hay regla de fila. El rol global es toda la regla. */
   | "soloRol";
 
-async function evaluarRegla(
+/**
+ * La disyunción **no anida**, y el tipo lo impide: `alguna` toma reglas simples
+ * y pide al menos dos.
+ *
+ * Es una restricción deliberada, no una limitación que quedó. Con
+ * `ReglaDeAcceso[]` recursivo, los cuatro consumidores del tipo —el evaluador,
+ * el `describir` de la matriz, el chequeo de membresías vacías y el de
+ * `scopeEnQuery` sin nombrar— tenían que recursionar, y eso es complejidad
+ * repartida en cuatro lugares para expresar algo que **nadie necesita**: un
+ * `alguna` adentro de un `alguna` se aplana a uno solo. Pedir dos ramas mínimo
+ * cierra el otro caso absurdo, la disyunción de una sola cosa, que es una regla
+ * simple escrita raro.
+ *
+ * Hoy la usa **una** ruta (`GET /contracts/:contractId/releases`) y eso también
+ * es información: la disyunción existe porque *dueño de un contrato* y *miembro
+ * del proyecto* son dos vínculos desconectados en el modelo —aceptar una
+ * invitación NO crea `ProjectMember`, verificado en
+ * `POST /investor/invitations/:id/accept`—. Si algún día aceptar creara la
+ * membresía, esta regla colapsaría a un `proyecto` solo y `alguna` se podría
+ * borrar. Mientras tanto, es la forma honesta de decirlo.
+ */
+export type ReglaDeAcceso = ReglaSimple | { alguna: [ReglaSimple, ReglaSimple, ...ReglaSimple[]] };
+
+async function evaluarSimple(
   user: NonNullable<Request["user"]>,
   req: Request,
-  regla: ReglaDeAcceso
+  regla: ReglaSimple
 ): Promise<Veredicto> {
   if (regla === "soloRol") return PASA;
 
@@ -474,17 +534,27 @@ async function evaluarRegla(
   if ("scopeEnQuery" in regla) return PASA;
 
   if ("proyecto" in regla) return evaluarProyecto(user, req, regla.proyecto, regla.membresias);
-  if ("dueño" in regla) return evaluarDueño(user, req, regla.dueño);
+  return evaluarDueño(user, req, regla.dueño);
+}
+
+async function evaluarRegla(
+  user: NonNullable<Request["user"]>,
+  req: Request,
+  regla: ReglaDeAcceso
+): Promise<Veredicto> {
+  if (typeof regla === "string" || !("alguna" in regla)) {
+    return evaluarSimple(user, req, regla);
+  }
 
   const veredictos: Veredicto[] = [];
   for (const rama of regla.alguna) {
-    veredictos.push(await evaluarRegla(user, req, rama));
+    veredictos.push(await evaluarSimple(user, req, rama));
   }
 
   // El 500 gana sobre todo, incluso sobre una rama que pasa: una ruta mal
   // declarada tiene que ser ruidosa, y taparla con el OK de la otra rama sería
   // esconder un error de programación en la capa de autorización.
-  const roto = veredictos.find((v) => !v.ok && v.status === 500);
+  const roto = veredictos.find((v) => !v.ok && (v.status === 500 || v.status === 400));
   if (roto) return roto;
 
   if (veredictos.some((v) => v.ok)) return PASA;

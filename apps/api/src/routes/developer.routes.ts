@@ -343,7 +343,15 @@ router.post(
   "/documents",
   authorize({
     roles: ["admin", "developer"],
-    acceso: { scopeEnQuery: "projectScope(developer) ∋ Evidence.projectId" }
+    acceso: {
+      // El `evidenceId` llega en el BODY, no en el path: por eso esta ruta hacía
+      // la segunda capa a mano hasta el 2026-09-04. `nombre` conserva el
+      // "Document not found" que ya devolvía — en esta superficie la evidencia
+      // es un documento (M2-D5 fila 46), y devolver "Evidence not found" sería
+      // filtrar el nombre de la tabla al cliente.
+      proyecto: { via: "Evidence", param: "evidenceId", en: "body", nombre: "Document" },
+      membresias: ["developer"]
+    }
   }),
   async (req, res) => {
     const schema = z.strictObject({ evidenceId: z.string().min(1) });
@@ -357,15 +365,6 @@ router.post(
       .executeTakeFirst();
 
     if (!documento) return res.status(404).json({ message: "Document not found" });
-
-    // La segunda capa de autorización, hecha a mano porque el id que llega es de
-    // la evidencia y no del proyecto: el developer ancla documentos de SUS
-    // proyectos. Sin esto, cualquier developer anclaría el documento de otro.
-    const propio = await misProyectos(req.user!.id, req.user!.role as "admin" | "developer")
-      .where("Project.id", "=", documento.projectId)
-      .executeTakeFirst();
-
-    if (!propio) return res.status(403).json({ message: "Forbidden" });
 
     if (!documento.sha256Hash) {
       return res.status(400).json({ message: "Document has no hash", code: "NO_HASH" });

@@ -1,7 +1,12 @@
 import { afterAll, describe, expect, it } from "vitest";
 import { MONTAJE } from "../src/app";
 import { db } from "../src/lib/db";
-import { type GuardDescriptor, leerGuard, type ReglaDeAcceso } from "../src/middlewares/auth";
+import {
+  type GuardDescriptor,
+  leerGuard,
+  type ReglaDeAcceso,
+  type ReglaSimple
+} from "../src/middlewares/auth";
 
 afterAll(async () => {
   await db.destroy();
@@ -133,7 +138,7 @@ const MATRIZ: Record<string, string> = {
     "auth + autoriza(rol(admin|developer) · scope(projectScope(developer)))",
   "GET /api/v1/developer/audit-log": "auth + autoriza(rol(admin|developer) · soloRol)",
   "POST /api/v1/developer/documents":
-    "auth + autoriza(rol(admin|developer) · scope(projectScope(developer) ∋ Evidence.projectId))",
+    "auth + autoriza(rol(admin|developer) · proyecto(Evidence:evidenceId@body → developer))",
   "GET /api/v1/developer/kpis":
     "auth + autoriza(rol(admin|developer) · scope(projectScope(cualquier membresía)))",
   "GET /api/v1/developer/projects/:id/units":
@@ -196,16 +201,32 @@ type Capa = {
   handle: unknown;
 };
 
-function describirAcceso(acceso: ReglaDeAcceso): string {
-  if (acceso === "soloRol") return "soloRol";
-  if ("proyecto" in acceso) {
-    const s = acceso.proyecto;
-    const origen = "via" in s ? `${s.via}:${s.param}` : s.param;
-    return `proyecto(${origen} → ${acceso.membresias.join("|")})`;
+/**
+ * Las ramas de una regla, siempre como lista plana. `alguna` no anida —el tipo
+ * lo impide— así que esto es todo lo que hace falta para recorrerla, y por eso
+ * los tres chequeos de abajo se leen sin recursión.
+ */
+function ramas(acceso: ReglaDeAcceso): ReglaSimple[] {
+  return typeof acceso !== "string" && "alguna" in acceso ? [...acceso.alguna] : [acceso];
+}
+
+function describirSimple(regla: ReglaSimple): string {
+  if (regla === "soloRol") return "soloRol";
+  if ("proyecto" in regla) {
+    const s = regla.proyecto;
+    // `@body` no es decoración: dos rutas con la misma entidad y el mismo param
+    // se comportan distinto según de dónde salga el id (500 vs 400 cuando
+    // falta), así que la matriz tiene que distinguirlas.
+    const origen = "via" in s ? `${s.via}:${s.param}${s.en === "body" ? "@body" : ""}` : s.param;
+    return `proyecto(${origen} → ${regla.membresias.join("|")})`;
   }
-  if ("scopeEnQuery" in acceso) return `scope(${acceso.scopeEnQuery})`;
-  if ("dueño" in acceso) return `dueño(${acceso.dueño.via}:${acceso.dueño.param})`;
-  return `alguna[${acceso.alguna.map(describirAcceso).join(" | ")}]`;
+  if ("scopeEnQuery" in regla) return `scope(${regla.scopeEnQuery})`;
+  return `dueño(${regla.dueño.via}:${regla.dueño.param})`;
+}
+
+function describirAcceso(acceso: ReglaDeAcceso): string {
+  const partes = ramas(acceso).map(describirSimple);
+  return partes.length === 1 ? partes[0] : `alguna[${partes.join(" | ")}]`;
 }
 
 function describir(guard: GuardDescriptor): string {
@@ -281,13 +302,10 @@ describe("la matriz de permisos de las rutas montadas", () => {
     // eso siempre es un error de tipeo, nunca una intención. Se recorre el árbol
     // de `acceso` entero: una rama vacía adentro de un `alguna` es igual de
     // muerta y bastante más difícil de ver leyendo.
-    const membresiasVacias = (acceso: ReglaDeAcceso): boolean => {
-      if (acceso === "soloRol") return false;
-      if ("scopeEnQuery" in acceso) return false;
-      if ("proyecto" in acceso) return acceso.membresias.length === 0;
-      if ("dueño" in acceso) return false;
-      return acceso.alguna.some(membresiasVacias);
-    };
+    const membresiasVacias = (acceso: ReglaDeAcceso): boolean =>
+      ramas(acceso).some(
+        (regla) => regla !== "soloRol" && "proyecto" in regla && regla.membresias.length === 0
+      );
 
     const vacias: string[] = [];
     for (const { rutas } of leerMontaje()) {
@@ -311,19 +329,16 @@ describe("la matriz de permisos de las rutas montadas", () => {
     // verifica el compilador, pero deja de ser una casilla vacía.
     const sinNombrar: string[] = [];
 
-    const revisar = (clave: string, acceso: ReglaDeAcceso): void => {
-      if (acceso === "soloRol") return;
-      if ("scopeEnQuery" in acceso) {
-        if (acceso.scopeEnQuery.trim().length === 0) sinNombrar.push(clave);
-        return;
-      }
-      if ("alguna" in acceso) for (const rama of acceso.alguna) revisar(clave, rama);
-    };
+    const enBlanco = (acceso: ReglaDeAcceso): boolean =>
+      ramas(acceso).some(
+        (regla) =>
+          regla !== "soloRol" && "scopeEnQuery" in regla && regla.scopeEnQuery.trim().length === 0
+      );
 
     for (const { rutas } of leerMontaje()) {
       for (const [clave, guards] of rutas) {
         for (const guard of guards) {
-          if (guard.kind === "authorize") revisar(clave, guard.acceso);
+          if (guard.kind === "authorize" && enBlanco(guard.acceso)) sinNombrar.push(clave);
         }
       }
     }
