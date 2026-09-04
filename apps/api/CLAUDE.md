@@ -37,6 +37,32 @@ que la superficie del entregable no consume pero los tests y el seed sí.
 
 ## Trampas verificadas
 
+- **2026-09-04 · Aceptar una invitación no creaba la membresía, y el seed la plantaba a mano — así que
+  los fixtures describían un mundo que el flujo real nunca producía.** `POST
+  /investor/invitations/:id/accept` (M2-D5 fila 63) marcaba la unidad como vendida, creaba el
+  contrato y anclaba el evento, pero **no insertaba `ProjectMember`**. En este código la lectura que
+  M2-D1 §4 le da al investor —Construction stage, Evidence bundle, Contract del proyecto de su
+  unidad— se resuelve con membresía por proyecto (`ANY_MEMBERSHIP` incluye `buyer`), así que un
+  investor real aceptaba y **toda ruta con `requireProjectAccess` le contestaba 403**: los stages de
+  su proyecto, la evidencia, y —lo peor— `GET /evidence/:bundleId/files` y `/proof/:fileHash`, que
+  son el Merkle proof de su propia unidad y llevan sus test IDs (`INV-STAGE-MILESTONE-001`,
+  `INV-MERKLE-PROOF-002`). El paso 6 del flujo de onboarding de M2-D1 —*"Unit now appears in
+  investor's portfolio with progress timeline visible"*— no se cumplía fuera del seed.
+  **Por qué no lo vio nadie:** `test/global-setup.ts` siembra la membresía del investor con un
+  `insertInto("ProjectMember")` directo. Todos los tests del investor corrían sobre un usuario que ya
+  era miembro, así que probaban la superficie con un estado que **solo el seed sabía construir**.
+  **Fix:** el handler inserta la membresía `buyer` con `onConflict().doNothing()` (regla 8) y la
+  registra en el `metadata` del `AuditLog` de `ACCEPT_INVITATION` — otorgar un permiso tiene que
+  poder leerse, no deducirse. Test que reproduce el bug y prueba el cierre:
+  `test/invitation-membership.test.ts`, con el control de que **antes** de aceptar sí da 403.
+  **La lección, que es la misma del 2026-08-24 con otra cara:** cuando el seed construye a mano un
+  estado que en producción produce un endpoint, el seed deja de ser un atajo y pasa a ser una
+  **hipótesis sin verificar** sobre lo que ese endpoint hace. Antes de sembrar una fila que el
+  producto crea solo, preguntá qué endpoint la crea — y si no hay ninguno, ese es el bug.
+  **Ojo si hay datos viejos:** un investor que aceptó antes de este arreglo no tiene la membresía. Se
+  detecta con `select u.email from Unit un join User u on u.id = un.investorId left join
+  ProjectMember pm on pm.userId = u.id and pm.projectId = un.projectId where pm.id is null`.
+
 - **2026-09-04 · Un arranque colgado no se distingue de otro porque el `startCommand` son dos pasos
   y ninguno anunciaba que empezó.** El deploy de `ef8e55e` —un commit de **solo `.md`**— compiló
   bien, corrió `node migrate.js && node server.js` a las 14:56:23 y **no abrió un puerto en catorce

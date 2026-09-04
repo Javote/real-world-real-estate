@@ -871,9 +871,14 @@ aparecieron dos cosas que ninguna herramienta iba a marcar:
 recursivo, los cuatro consumidores tenían que recursionar para expresar algo que nadie necesita — un
 `alguna` adentro de un `alguna` se aplana a uno solo. Que la use **una sola** ruta también es
 información y quedó escrito: la disyunción existe porque *dueño de un contrato* y *miembro del
-proyecto* son vínculos **desconectados** en el modelo (`POST /investor/invitations/:id/accept` no
-crea `ProjectMember`, verificado). Si algún día lo creara, esa regla colapsa a un `proyecto` solo y
-`alguna` se puede borrar.
+proyecto* eran vínculos **desconectados** en el modelo.
+
+**Y mirar eso destapó un bug de verdad, ya cerrado:** `POST /investor/invitations/:id/accept` **no
+creaba `ProjectMember`**, así que un investor real aceptaba y toda ruta con `requireProjectAccess` le
+daba 403 — incluidas las del Merkle proof de su propia evidencia. Ningún test lo veía porque el seed
+plantaba la membresía a mano. Detalle y la lección en `apps/api/CLAUDE.md` §Trampas verificadas.
+**`alguna` se conserva igual**: ahora aceptar crea la membresía, pero los contratos que ya existen
+—y los que nazcan por otro camino— pueden no tenerla, así que *dueño* sigue sin implicar *miembro*.
 
 ## D-087 — El simulador declara `Pending`, y `Confirmed` sale siempre de un chequeo aparte
 

@@ -444,6 +444,33 @@ router.post(
       .where("id", "=", invitacion.unitId)
       .execute();
 
+    // **La membresía, sin la cual aceptar no sirve de nada.** M2-D1 §4 le da al
+    // investor lectura sobre los stages, la evidencia y el contrato del proyecto
+    // de su unidad, y el paso 6 del flujo de onboarding dice que después de
+    // aceptar ve su unidad "with progress timeline visible". En este código esa
+    // lectura se resuelve con membresía por proyecto —`ANY_MEMBERSHIP` incluye
+    // `buyer`— y hasta el 2026-09-04 este handler no la creaba: el investor
+    // aceptaba y toda ruta con `requireProjectAccess` le contestaba 403,
+    // **incluidas las del Merkle proof de su propia evidencia**
+    // (`INV-MERKLE-PROOF-002`).
+    //
+    // No lo veía ningún test porque el seed planta la membresía a mano: los
+    // fixtures describían el mundo que el flujo real nunca producía.
+    //
+    // `doNothing` por la regla 8: el índice único es
+    // (userId, projectId, membershipRole), así que reintentar no duplica.
+    await db
+      .insertInto("ProjectMember")
+      .values({
+        id: createId(),
+        userId: req.user!.id,
+        projectId: invitacion.projectId,
+        membershipRole: "buyer",
+        createdAt: ahora
+      })
+      .onConflict((oc) => oc.doNothing())
+      .execute();
+
     // El contrato nace de la aceptación: es el registro del acuerdo, sin
     // custodiar un centavo (D-021).
     const contrato = await db
@@ -478,7 +505,9 @@ router.post(
       action: "ACCEPT_INVITATION",
       entityType: "Invitation",
       entityId: invitacion.id,
-      metadata: { txid: anchor.txid }
+      // La membresía queda en el mismo asiento: es un otorgamiento de permiso y
+      // tiene que poder leerse en el audit log, no deducirse.
+      metadata: { txid: anchor.txid, membershipRole: "buyer" }
     });
 
     return res.status(201).json({ contract: contrato, anchor });
