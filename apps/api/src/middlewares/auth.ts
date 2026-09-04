@@ -16,6 +16,37 @@ declare global {
   }
 }
 
+/**
+ * La marca que deja leer los guards de una ruta desde el router ya armado.
+ *
+ * `requireRole` y `requireProjectAccess` devuelven closures anónimas: una vez
+ * montadas, el router sabe que hay tres funciones en la cadena y nada más — no
+ * qué rol exigen ni sobre qué proyecto. Sin esto, la única forma de auditar la
+ * matriz de permisos es leer los 18 archivos de rutas a ojo, que es exactamente
+ * como se nos pasaron los dos agujeros de septiembre.
+ *
+ * Es una propiedad no enumerable con un símbolo global: no cambia el
+ * comportamiento del middleware, no aparece en un spread ni en un `JSON.stringify`,
+ * y no se puede pisar por accidente desde otro módulo. La lee
+ * `test/route-guards.test.ts`, que es el único consumidor y la razón de que exista.
+ */
+export const GUARD = Symbol.for("propnexus.guard");
+
+export type GuardDescriptor =
+  | { kind: "authenticate" }
+  | { kind: "role"; roles: UserRole[] }
+  | { kind: "projectAccess"; source: ProjectSource; memberships: MembershipRole[] };
+
+function marcar<T extends object>(fn: T, guard: GuardDescriptor): T {
+  return Object.defineProperty(fn, GUARD, { value: guard, enumerable: false }) as T;
+}
+
+/** El lado lector de `GUARD`. Devuelve `null` para middleware sin marcar. */
+export function leerGuard(fn: unknown): GuardDescriptor | null {
+  if (typeof fn !== "function") return null;
+  return (fn as unknown as Record<symbol, GuardDescriptor | undefined>)[GUARD] ?? null;
+}
+
 export async function authenticate(req: Request, res: Response, next: NextFunction) {
   const authHeader = req.headers.authorization;
 
@@ -49,18 +80,27 @@ export async function authenticate(req: Request, res: Response, next: NextFuncti
   }
 }
 
+// `authenticate` no es una closure de fábrica: se marca acá, una vez declarada.
+Object.defineProperty(authenticate, GUARD, {
+  value: { kind: "authenticate" } satisfies GuardDescriptor,
+  enumerable: false
+});
+
 export function requireRole(...roles: UserRole[]) {
-  return (req: Request, res: Response, next: NextFunction) => {
-    if (!req.user) {
-      return res.status(401).json({ message: "Unauthorized" });
-    }
+  return marcar(
+    (req: Request, res: Response, next: NextFunction) => {
+      if (!req.user) {
+        return res.status(401).json({ message: "Unauthorized" });
+      }
 
-    if (!roles.includes(req.user.role)) {
-      return res.status(403).json({ message: "Forbidden" });
-    }
+      if (!roles.includes(req.user.role)) {
+        return res.status(403).json({ message: "Forbidden" });
+      }
 
-    next();
-  };
+      next();
+    },
+    { kind: "role", roles }
+  );
 }
 
 /**
@@ -155,76 +195,79 @@ export type ProjectSource =
   | { via: "Stage" | "Evidence" | "EvidenceBundle"; param: string };
 
 export function requireProjectAccess(source: ProjectSource, allowedMemberships: MembershipRole[]) {
-  return async (req: Request, res: Response, next: NextFunction) => {
-    if (!req.user) {
-      return res.status(401).json({ message: "Unauthorized" });
-    }
+  return marcar(
+    async (req: Request, res: Response, next: NextFunction) => {
+      if (!req.user) {
+        return res.status(401).json({ message: "Unauthorized" });
+      }
 
-    const key = req.params[source.param];
+      const key = req.params[source.param];
 
-    // `req.params[x]` es `string | string[]` en Express 5: path-to-regexp v8
-    // admite parámetros repetidos (`:id+`), que dan un array. Ninguna ruta de
-    // esta API declara uno, así que un array acá significa que alguien cambió
-    // el path y este middleware no sabe sobre cuál de los ids autorizar —
-    // **elegir el primero en silencio sería exactamente el bug que no queremos
-    // en la capa de autorización**. Igual que un parámetro ausente: no es una
-    // request inválida, es la ruta mal declarada. Error de programación, 5xx, y
-    // ruidoso.
-    if (typeof key !== "string" || !key) {
-      return res.status(500).json({
-        message: `Route misconfiguration: param "${source.param}" must be a single path value`
-      });
-    }
+      // `req.params[x]` es `string | string[]` en Express 5: path-to-regexp v8
+      // admite parámetros repetidos (`:id+`), que dan un array. Ninguna ruta de
+      // esta API declara uno, así que un array acá significa que alguien cambió
+      // el path y este middleware no sabe sobre cuál de los ids autorizar —
+      // **elegir el primero en silencio sería exactamente el bug que no queremos
+      // en la capa de autorización**. Igual que un parámetro ausente: no es una
+      // request inválida, es la ruta mal declarada. Error de programación, 5xx, y
+      // ruidoso.
+      if (typeof key !== "string" || !key) {
+        return res.status(500).json({
+          message: `Route misconfiguration: param "${source.param}" must be a single path value`
+        });
+      }
 
-    let projectId: string;
+      let projectId: string;
 
-    if ("via" in source) {
-      const fila =
-        source.via === "Stage"
-          ? await db
-              .selectFrom("Stage")
-              .select("projectId")
-              .where("id", "=", key)
-              .executeTakeFirst()
-          : source.via === "Evidence"
+      if ("via" in source) {
+        const fila =
+          source.via === "Stage"
             ? await db
-                .selectFrom("Evidence")
+                .selectFrom("Stage")
                 .select("projectId")
                 .where("id", "=", key)
                 .executeTakeFirst()
-            : await db
-                .selectFrom("EvidenceBundle")
-                .select("projectId")
-                .where("id", "=", key)
-                .executeTakeFirst();
+            : source.via === "Evidence"
+              ? await db
+                  .selectFrom("Evidence")
+                  .select("projectId")
+                  .where("id", "=", key)
+                  .executeTakeFirst()
+              : await db
+                  .selectFrom("EvidenceBundle")
+                  .select("projectId")
+                  .where("id", "=", key)
+                  .executeTakeFirst();
 
-      // Mismo 404 y mismo mensaje que devolvía el handler antes de este cambio.
-      // Ojo: esto deja distinguir "no existe" de "existe y no podés verlo", que
-      // en teoría permite enumerar ids. Se conserva **a propósito** — cambiar
-      // semántica de seguridad adentro de un refactor es como se cuelan los
-      // bugs. Está anotado como deuda aparte en SPEC-012.
-      if (!fila) {
-        return res.status(404).json({ message: `${source.via} not found` });
+        // Mismo 404 y mismo mensaje que devolvía el handler antes de este cambio.
+        // Ojo: esto deja distinguir "no existe" de "existe y no podés verlo", que
+        // en teoría permite enumerar ids. Se conserva **a propósito** — cambiar
+        // semántica de seguridad adentro de un refactor es como se cuelan los
+        // bugs. Está anotado como deuda aparte en SPEC-012.
+        if (!fila) {
+          return res.status(404).json({ message: `${source.via} not found` });
+        }
+
+        projectId = fila.projectId;
+      } else {
+        projectId = key;
       }
 
-      projectId = fila.projectId;
-    } else {
-      projectId = key;
-    }
+      const allowed = await canAccessProject(
+        req.user.id,
+        req.user.role,
+        projectId,
+        allowedMemberships
+      );
 
-    const allowed = await canAccessProject(
-      req.user.id,
-      req.user.role,
-      projectId,
-      allowedMemberships
-    );
+      if (!allowed) {
+        return res.status(403).json({ message: "Forbidden" });
+      }
 
-    if (!allowed) {
-      return res.status(403).json({ message: "Forbidden" });
-    }
-
-    next();
-  };
+      next();
+    },
+    { kind: "projectAccess", source, memberships: allowedMemberships }
+  );
 }
 
 /**

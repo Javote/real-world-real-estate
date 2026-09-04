@@ -4,7 +4,7 @@
 > bcrypt, uploads, idempotencia, claves de traducción) están en el `CLAUDE.md` de la raíz y **no
 > se repiten acá**.
 
-Express 4 + Zod + JWT + bcrypt(10) + Multer 2.x + Kysely/SQLite (`@libsql/client`), base `/api/v1`
+Express 5 + Zod + JWT + bcrypt(10) + Multer 2.x + Kysely/SQLite (`@libsql/client`), base `/api/v1`
 (D-016, D-036, D-048 → D-049 — Prisma → Drizzle → Kysely, los dos migrados el 2026-08-21; los
 restos que quedaban se barrieron en D-052).
 
@@ -32,6 +32,8 @@ que la superficie del entregable no consume pero los tests y el seed sí.
 4. `writeAuditLog` si es mutación relevante.
 5. Test del camino feliz y de cada rechazo.
 6. Path y test ID **idénticos** a los de M2-D5.
+7. La ruta entra en la matriz de `test/route-guards.test.ts` — el test se pone rojo hasta que la
+   sumes, y sumarla es donde mirás si los guards son los que querías. Ver §La matriz de permisos.
 
 ## Trampas verificadas
 
@@ -202,8 +204,11 @@ que la superficie del entregable no consume pero los tests y el seed sí.
   consultándola completa, porque nunca la devuelven en el body. Cualquier endpoint nuevo que toque
   `Evidence` tiene que repetir esa lista — no hay un select compartido todavía porque la superficie
   es chica; si crece, vale la pena centralizarlo.
-- **`@types/express` v5 con Express 4 rompe el typecheck** (21 errores `string | string[]` en
-  `req.params`). Está pineado a `^4.17.21`: no lo "actualices" por su cuenta.
+- **`req.params[x]` es `string | string[]`, no `string`.** Con Express 5 + `@types/express` 5.0.6
+  (pineado por `pnpm.overrides` en la raíz), path-to-regexp v8 admite parámetros repetidos (`:id+`)
+  y el tipo lo refleja. Ninguna ruta de esta API declara uno, así que un array significa que alguien
+  cambió el path — `requireProjectAccess` contesta 500 explícito en vez de elegir el primero en
+  silencio, que en la capa de autorización sería el peor default posible.
 - **El warning de `url.parse()` deprecado al arrancar viene de `bcrypt`**, vía
   `@mapbox/node-pre-gyp`, no de Multer ni del código propio. El repo lo atribuyó a Multer durante
   meses y era falso: se comprobó con `tsx --trace-deprecation`, y sobrevivió intacto a la
@@ -480,6 +485,60 @@ existe ahora da `false`, no `true`. Todo en D-043.
 **Deuda que queda a la vista acá.** `GET /projects` sigue leyendo `status` y `city` de la query sin
 Zod (`String(status) as any`). No es autorización y no es 🔴, pero es la regla 6 sin cumplir en el
 único lugar donde el body no aplica.
+
+### La matriz de permisos, asentada — 2026-09-04
+
+**El problema que cierra.** La segunda capa tiene forma que no compila si te la olvidás
+(`allowedMemberships` obligatorio, D-042), pero eso solo protege a quien la escribe: **nada obligaba
+a poner el middleware**. Los dos agujeros de septiembre son el mismo modo de falla —
+`GET /evidence/:bundleId/files` sin `requireProjectAccess`, y `POST /users` con su propio enum de
+roles— y los dos los encontró una auditoría a mano. No había ninguna herramienta que los pudiera
+encontrar, y con 87 handlers en 18 archivos la auditoría a mano no escala ni se repite.
+
+**Cómo funciona.** `test/route-guards.test.ts` recorre los routers **ya montados** y reconstruye la
+matriz de las 87 rutas: método, path absoluto y cadena de guards declarados. La compara contra un
+literal en el propio test. Una ruta nueva, un guard que cambia o uno que desaparece ponen el test en
+rojo hasta que alguien actualice el literal — y actualizarlo es la revisión.
+
+Tres piezas lo sostienen, y las tres son deliberadas:
+
+1. **`GUARD`** (`middlewares/auth.ts`) — un símbolo global, propiedad no enumerable, que
+   `requireRole` y `requireProjectAccess` le cuelgan a la closure que devuelven. Sin esto el router
+   sabe que hay tres funciones anónimas en la cadena y nada más. No cambia el comportamiento del
+   middleware ni aparece en un spread.
+2. **`MONTAJE`** (`app.ts`) — el montaje pasó de 22 `app.use(...)` sueltos a una tabla que el propio
+   `app.ts` recorre para montar. **Express 5 no conserva el path de montaje**: `Layer` lo compila a
+   un matcher y tira el string (comprobado leyendo el layer, no supuesto), así que sin la tabla el
+   test tendría que repetir los prefijos por su cuenta y un cambio de prefijo lo dejaría auditando
+   rutas que ya no existen, en silencio.
+3. **Los tres tests hermanos** — sesión obligatoria salvo las dos rutas públicas declaradas
+   (`/auth/login` y `/public/dossier/:shareToken`); ninguna lista de roles o membresías vacía; y
+   **los routers que comparten prefijo declaran los mismos guards de router**, que es el bug del
+   2026-08-24 convertido en invariante: hoy `/api/v1/developer` tiene cuatro routers y coinciden por
+   disciplina, nada lo obligaba.
+
+**Se verificó rompiéndolo, no solo viéndolo verde.** Tres mutaciones, cada una revertida:
+sacarle `requireProjectAccess` a `GET /evidence/:bundleId/files` (o sea, reintroducir el agujero de
+septiembre) → rojo; agregar una ruta al router público → rojo por dos tests; cambiar el
+`requireRole` de `capital.routes.ts` para que difiera de los otros tres del prefijo `/developer` →
+rojo. **Un test de auditoría que nunca se vio fallar no es evidencia de nada.**
+
+**Qué NO prueba, y hay que tenerlo presente al leer la matriz.** Asienta los guards **declarados**,
+no que la autorización sea correcta ni completa. Hay un tercer patrón, vivo y sin forma: autorizar
+**adentro** del handler. `contracts.routes.ts` llama a `projectScope` a mano;
+`investor.routes.ts` compara `investorId` contra `req.user!.id` en cada handler o adentro de
+`dossierDeLaUnidad`; `notary.routes.ts` filtra por `signedById`. En la matriz esas rutas figuran con
+la columna corta —solo `auth` o `auth + rol(...)`— y **eso no significa que estén abiertas**: se
+auditaron una por una al escribir esto y ninguna lo está. Significa que su autorización no se lee en
+la firma, no la protege el compilador y no la ve este test. **Esa columna corta es la lista de
+candidatas** a subir a la firma con un `requireOwnership` hermano de los otros dos, que es el paso
+siguiente y todavía no está hecho.
+
+**Y una redundancia que la matriz dejó a la vista:** `investor`, `developer`, `notary` y otros
+declaran `requireRole` a nivel de router **y** lo repiten en cada ruta, así que la matriz muestra
+`rol(admin|buyer) + rol(admin|buyer)`. No es un bug —el segundo chequeo es idéntico al primero— y se
+dejó tal cual a propósito: sacarlo es tocar la capa de autorización de 20 rutas para ganar prolijidad,
+y eso se hace con su propia revisión, no de arrastre.
 
 ### ~~El SHA-256 se mueve cuando llegue R2~~ — cerrado el 2026-08-23
 

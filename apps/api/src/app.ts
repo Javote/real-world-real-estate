@@ -124,29 +124,50 @@ app.get("/health", async (_req, res) => {
 // concepto de dominio: la superficie del investor está junta aunque toque
 // unidades, dossier, contratos e invitaciones. Está bien — es como agrupa
 // M2-D5 §4-6, que es el contrato.
-app.use("/api/v1/auth", authRoutes);
-app.use("/api/v1/users", usersRoutes);
-app.use("/api/v1/projects", projectsRoutes);
-app.use("/api/v1/projects", projectsObraRoutes);
-app.use("/api/v1/stages", stagesRoutes);
-app.use("/api/v1/evidence", evidenceRoutes);
-app.use("/api/v1/contracts", contractsRoutes);
-app.use("/api/v1/notifications", notificationsRoutes);
-app.use("/api/v1/profile", profileRoutes);
-app.use("/api/v1/audit-logs", auditRoutes);
-app.use("/api/v1/public", publicRoutes);
-app.use("/api/v1/investor", investorRoutes);
-// **Varios routers sobre el mismo prefijo, y no chocan**: sus paths son
-// disjuntos y ninguno tiene middleware catch-all que no le pertenezca. Se
-// mantienen separados por concern —el ciclo comercial, la subida anclada, el
-// capital— porque un solo archivo de 900 líneas por prefijo esconde las
-// costuras (SPEC-015 §6).
-app.use("/api/v1/developer", developerRoutes);
-app.use("/api/v1/developer", developerComercialRoutes);
-app.use("/api/v1/developer", developerEvidenciaRoutes);
-app.use("/api/v1/developer", capitalRoutes);
-app.use("/api/v1/notary", notaryRoutes);
-app.use("/api/v1/certifier", certifierRoutes);
+//
+// **El montaje es un dato y no una secuencia de llamadas**, para que se pueda
+// leer desde afuera: `test/route-guards.test.ts` lo recorre para reconstruir la
+// matriz de permisos de las ~87 rutas montadas. Si esto fueran 22 `app.use(...)`
+// sueltos, el test tendría que repetir los prefijos en su propia tabla y un
+// cambio de prefijo acá lo dejaría auditando rutas que ya no existen, en
+// silencio. Express 5 no conserva el path de montaje en el router (`Layer` lo
+// compila a un matcher y lo tira), así que no hay forma de recuperarlo del otro
+// lado — comprobado, no supuesto.
+export const MONTAJE = [
+  { prefijo: "/api/v1/auth", router: authRoutes },
+  { prefijo: "/api/v1/users", router: usersRoutes },
+  { prefijo: "/api/v1/projects", router: projectsRoutes },
+  { prefijo: "/api/v1/projects", router: projectsObraRoutes },
+  { prefijo: "/api/v1/stages", router: stagesRoutes },
+  { prefijo: "/api/v1/evidence", router: evidenceRoutes },
+  { prefijo: "/api/v1/contracts", router: contractsRoutes },
+  { prefijo: "/api/v1/notifications", router: notificationsRoutes },
+  { prefijo: "/api/v1/profile", router: profileRoutes },
+  { prefijo: "/api/v1/audit-logs", router: auditRoutes },
+  { prefijo: "/api/v1/public", router: publicRoutes },
+  { prefijo: "/api/v1/investor", router: investorRoutes },
+  // **Varios routers sobre el mismo prefijo, y no chocan**: sus paths son
+  // disjuntos y ninguno tiene middleware catch-all que no le pertenezca. Se
+  // mantienen separados por concern —el ciclo comercial, la subida anclada, el
+  // capital— porque un solo archivo de 900 líneas por prefijo esconde las
+  // costuras (SPEC-015 §6).
+  //
+  // Lo que sí importa y el test asienta: los que comparten prefijo tienen que
+  // declarar los MISMOS guards a nivel de router. Una request que va al segundo
+  // entra igual por el primero —un `router.use(guard)` corre para toda request
+  // que le llega, matcheen o no sus rutas— así que un guard más estricto en el
+  // primero contesta por el segundo antes de que exista.
+  { prefijo: "/api/v1/developer", router: developerRoutes },
+  { prefijo: "/api/v1/developer", router: developerComercialRoutes },
+  { prefijo: "/api/v1/developer", router: developerEvidenciaRoutes },
+  { prefijo: "/api/v1/developer", router: capitalRoutes },
+  { prefijo: "/api/v1/notary", router: notaryRoutes },
+  { prefijo: "/api/v1/certifier", router: certifierRoutes }
+] as const;
+
+for (const { prefijo, router } of MONTAJE) {
+  app.use(prefijo, router);
+}
 
 // Una ruta que no existe tiene que contestar JSON como todo el resto: sin esto,
 // Express devuelve su página HTML por defecto, que además anuncia el framework.
