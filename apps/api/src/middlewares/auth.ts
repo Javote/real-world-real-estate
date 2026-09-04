@@ -131,6 +131,28 @@ const ALL_MEMBERSHIPS = {
 export const ANY_MEMBERSHIP = Object.keys(ALL_MEMBERSHIPS) as MembershipRole[];
 
 /**
+ * "Cualquier usuario autenticado" — para las rutas donde el rol global no acota
+ * nada porque la regla real es otra (la membresía en el proyecto) o porque el
+ * recurso es del propio usuario.
+ *
+ * Se escribe **a mano**, con `satisfies`, por el mismo motivo que
+ * `ALL_MEMBERSHIPS`: un `Object.values` sobre el enum se mantendría solo, que
+ * suena mejor y es peor. Con `notary` entrando al dominio en septiembre, un rol
+ * nuevo habría quedado leyendo todas estas rutas sin que nadie lo decidiera.
+ * Acá agregar un rol al dominio **no compila** hasta que alguien pase por este
+ * renglón y decida.
+ */
+const TODOS_LOS_ROLES = {
+  admin: true,
+  developer: true,
+  buyer: true,
+  verifier: true,
+  notary: true
+} satisfies Record<UserRole, true>;
+
+export const CUALQUIER_ROL = Object.keys(TODOS_LOS_ROLES) as UserRole[];
+
+/**
  * Segunda capa de autorización: rol global (`requireRole`) + membresía por
  * proyecto. `admin` bypasea membresías; el resto solo ve proyectos donde es
  * miembro. La matriz completa está en M2-D1 §4.

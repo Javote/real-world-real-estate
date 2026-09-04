@@ -37,36 +37,51 @@ const MATRIZ: Record<string, string> = {
   "GET /api/v1/users/:id": "auth + rol(admin)",
   "PATCH /api/v1/users/:id": "auth + rol(admin)",
   "DELETE /api/v1/users/:id": "auth + rol(admin)",
-  "GET /api/v1/projects": "auth",
-  "POST /api/v1/projects": "auth + rol(admin)",
-  "GET /api/v1/projects/:id": "auth + proyecto(id → developer|buyer|verifier)",
-  "PATCH /api/v1/projects/:id": "auth + rol(admin)",
-  "DELETE /api/v1/projects/:id": "auth + rol(admin)",
-  "GET /api/v1/projects/:id/members": "auth + proyecto(id → developer|buyer|verifier)",
-  "POST /api/v1/projects/:id/members": "auth + rol(admin)",
-  "GET /api/v1/projects/:id/documents": "auth + proyecto(id → developer|buyer|verifier)",
-  "GET /api/v1/projects/:id/building-schematic": "auth + proyecto(id → developer|buyer|verifier)",
-  "GET /api/v1/projects/:id/stages": "auth + proyecto(id → developer|buyer|verifier)",
-  "POST /api/v1/projects/:id/stages": "auth + rol(admin|developer) + proyecto(id → developer)",
+  "GET /api/v1/projects": "auth + autoriza(rol(admin|developer|buyer|verifier|notary) · soloRol)",
+  "POST /api/v1/projects": "auth + autoriza(rol(admin) · soloRol)",
+  "GET /api/v1/projects/:id":
+    "auth + autoriza(rol(admin|developer|buyer|verifier|notary) · proyecto(id → developer|buyer|verifier))",
+  "PATCH /api/v1/projects/:id": "auth + autoriza(rol(admin) · soloRol)",
+  "DELETE /api/v1/projects/:id": "auth + autoriza(rol(admin) · soloRol)",
+  "GET /api/v1/projects/:id/members":
+    "auth + autoriza(rol(admin|developer|buyer|verifier|notary) · proyecto(id → developer|buyer|verifier))",
+  "POST /api/v1/projects/:id/members": "auth + autoriza(rol(admin) · soloRol)",
+  "GET /api/v1/projects/:id/documents":
+    "auth + autoriza(rol(admin|developer|buyer|verifier|notary) · proyecto(id → developer|buyer|verifier))",
+  "GET /api/v1/projects/:id/building-schematic":
+    "auth + autoriza(rol(admin|developer|buyer|verifier|notary) · proyecto(id → developer|buyer|verifier))",
+  "GET /api/v1/projects/:id/stages":
+    "auth + autoriza(rol(admin|developer|buyer|verifier|notary) · proyecto(id → developer|buyer|verifier))",
+  "POST /api/v1/projects/:id/stages":
+    "auth + autoriza(rol(admin|developer) · proyecto(id → developer))",
   "POST /api/v1/projects/:id/stages/:stageId/retry-anchor":
-    "auth + rol(admin) + proyecto(id → developer|buyer|verifier)",
-  "GET /api/v1/projects/:id/stages/:stageId": "auth + proyecto(id → developer|buyer|verifier)",
-  "GET /api/v1/projects/:id/evidence": "auth + proyecto(id → developer|buyer|verifier)",
-  "POST /api/v1/projects/:id/evidence": "auth + rol(admin|developer) + proyecto(id → developer)",
-  "GET /api/v1/stages/:id": "auth + proyecto(Stage:id → developer|buyer|verifier)",
-  "PATCH /api/v1/stages/:id": "auth + rol(admin|developer) + proyecto(Stage:id → developer)",
-  "PATCH /api/v1/stages/:id/state": "auth + rol(admin|developer) + proyecto(Stage:id → developer)",
-  "GET /api/v1/evidence/:id": "auth + proyecto(Evidence:id → developer|buyer|verifier)",
-  "GET /api/v1/evidence/:id/download": "auth + proyecto(Evidence:id → developer|buyer|verifier)",
-  "PATCH /api/v1/evidence/:id": "auth + rol(admin|developer) + proyecto(Evidence:id → developer)",
-  "POST /api/v1/evidence/reconcile": "auth + rol(admin)",
+    "auth + autoriza(rol(admin) · proyecto(id → developer|buyer|verifier))",
+  "GET /api/v1/projects/:id/stages/:stageId":
+    "auth + autoriza(rol(admin|developer|buyer|verifier|notary) · proyecto(id → developer|buyer|verifier))",
+  "GET /api/v1/projects/:id/evidence":
+    "auth + autoriza(rol(admin|developer|buyer|verifier|notary) · proyecto(id → developer|buyer|verifier))",
+  "POST /api/v1/projects/:id/evidence":
+    "auth + autoriza(rol(admin|developer) · proyecto(id → developer))",
+  "GET /api/v1/stages/:id":
+    "auth + autoriza(rol(admin|developer|buyer|verifier|notary) · proyecto(Stage:id → developer|buyer|verifier))",
+  "PATCH /api/v1/stages/:id":
+    "auth + autoriza(rol(admin|developer) · proyecto(Stage:id → developer))",
+  "PATCH /api/v1/stages/:id/state":
+    "auth + autoriza(rol(admin|developer) · proyecto(Stage:id → developer))",
+  "GET /api/v1/evidence/:id":
+    "auth + autoriza(rol(admin|developer|buyer|verifier|notary) · proyecto(Evidence:id → developer|buyer|verifier))",
+  "GET /api/v1/evidence/:id/download":
+    "auth + autoriza(rol(admin|developer|buyer|verifier|notary) · proyecto(Evidence:id → developer|buyer|verifier))",
+  "PATCH /api/v1/evidence/:id":
+    "auth + autoriza(rol(admin|developer) · proyecto(Evidence:id → developer))",
+  "POST /api/v1/evidence/reconcile": "auth + autoriza(rol(admin) · soloRol)",
   "POST /api/v1/evidence/:id/anchor":
-    "auth + rol(admin) + proyecto(Evidence:id → developer|buyer|verifier)",
-  "DELETE /api/v1/evidence/:id": "auth + rol(admin)",
+    "auth + autoriza(rol(admin) · proyecto(Evidence:id → developer|buyer|verifier))",
+  "DELETE /api/v1/evidence/:id": "auth + autoriza(rol(admin) · soloRol)",
   "GET /api/v1/evidence/:bundleId/proof/:fileHash":
-    "auth + proyecto(EvidenceBundle:bundleId → developer|buyer|verifier)",
+    "auth + autoriza(rol(admin|developer|buyer|verifier|notary) · proyecto(EvidenceBundle:bundleId → developer|buyer|verifier))",
   "GET /api/v1/evidence/:bundleId/files":
-    "auth + proyecto(EvidenceBundle:bundleId → developer|buyer|verifier)",
+    "auth + autoriza(rol(admin|developer|buyer|verifier|notary) · proyecto(EvidenceBundle:bundleId → developer|buyer|verifier))",
   "GET /api/v1/contracts/:contractId/releases": "auth",
   "GET /api/v1/notifications/unread-count": "auth",
   "PATCH /api/v1/notifications/:id/read": "auth",

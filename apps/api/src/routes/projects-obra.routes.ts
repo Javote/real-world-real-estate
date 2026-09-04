@@ -9,12 +9,7 @@ import { anchorEvent, recordOnChainEvent, retryStageMint } from "../domain/stage
 import { db } from "../lib/db";
 import { storage } from "../lib/storage";
 import { uploadSingleEvidence } from "../lib/upload";
-import {
-  ANY_MEMBERSHIP,
-  authenticate,
-  requireProjectAccess,
-  requireRole
-} from "../middlewares/auth";
+import { ANY_MEMBERSHIP, authenticate, authorize, CUALQUIER_ROL } from "../middlewares/auth";
 import { writeAuditLog } from "../utils/audit";
 import { EVIDENCE_SAFE_COLUMNS } from "./_shared";
 
@@ -35,7 +30,10 @@ router.use(authenticate);
 
 router.get(
   "/:id/stages",
-  requireProjectAccess({ param: "id" }, ANY_MEMBERSHIP),
+  authorize({
+    roles: CUALQUIER_ROL,
+    acceso: { proyecto: { param: "id" }, membresias: ANY_MEMBERSHIP }
+  }),
   async (req, res) => {
     const result = await db
       .selectFrom("Stage")
@@ -68,8 +66,10 @@ router.get(
 
 router.post(
   "/:id/stages",
-  requireRole("admin", "developer"),
-  requireProjectAccess({ param: "id" }, ["developer"]),
+  authorize({
+    roles: ["admin", "developer"],
+    acceso: { proyecto: { param: "id" }, membresias: ["developer"] }
+  }),
   async (req: Request<{ id: string }>, res) => {
     const schema = z.object({
       name: z.string().min(1),
@@ -136,8 +136,10 @@ router.post(
  */
 router.post(
   "/:id/stages/:stageId/retry-anchor",
-  requireRole("admin"),
-  requireProjectAccess({ param: "id" }, ANY_MEMBERSHIP),
+  authorize({
+    roles: ["admin"],
+    acceso: { proyecto: { param: "id" }, membresias: ANY_MEMBERSHIP }
+  }),
   async (req: Request<{ id: string; stageId: string }>, res) => {
     const stage = await db
       .selectFrom("Stage")
@@ -176,7 +178,10 @@ router.post(
  */
 router.get(
   "/:id/stages/:stageId",
-  requireProjectAccess({ param: "id" }, ANY_MEMBERSHIP),
+  authorize({
+    roles: CUALQUIER_ROL,
+    acceso: { proyecto: { param: "id" }, membresias: ANY_MEMBERSHIP }
+  }),
   async (req: Request<{ id: string; stageId: string }>, res) => {
     const stage = await db
       .selectFrom("Stage")
@@ -240,7 +245,10 @@ router.get(
 
 router.get(
   "/:id/evidence",
-  requireProjectAccess({ param: "id" }, ANY_MEMBERSHIP),
+  authorize({
+    roles: CUALQUIER_ROL,
+    acceso: { proyecto: { param: "id" }, membresias: ANY_MEMBERSHIP }
+  }),
   async (req, res) => {
     const rows = await db
       .selectFrom("Evidence")
@@ -309,12 +317,14 @@ router.get(
 
 router.post(
   "/:id/evidence",
-  requireRole("admin", "developer"),
   // Antes de Multer a propósito: un request prohibido no llega a escribir el
   // archivo, así que no hay huérfano que limpiar por esta vía. La limpieza de
   // huérfanos sigue haciendo falta para lo que se rechaza DESPUÉS de Multer
   // (tipo, tamaño, y los errores de la ruta) — ver SPEC-012.
-  requireProjectAccess({ param: "id" }, ["developer"]),
+  authorize({
+    roles: ["admin", "developer"],
+    acceso: { proyecto: { param: "id" }, membresias: ["developer"] }
+  }),
   (req, res, next) => {
     uploadSingleEvidence(req, res, (err) => {
       if (err) return next(err);

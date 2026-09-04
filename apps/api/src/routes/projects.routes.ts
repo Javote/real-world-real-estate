@@ -7,9 +7,9 @@ import { sql } from "../lib/kysely";
 import {
   ANY_MEMBERSHIP,
   authenticate,
-  projectScope,
-  requireProjectAccess,
-  requireRole
+  authorize,
+  CUALQUIER_ROL,
+  projectScope
 } from "../middlewares/auth";
 import { writeAuditLog } from "../utils/audit";
 
@@ -49,7 +49,7 @@ const listQuerySchema = z.object({
     .optional()
 });
 
-router.get("/", async (req, res) => {
+router.get("/", authorize({ roles: CUALQUIER_ROL, acceso: "soloRol" }), async (req, res) => {
   const filtros = listQuerySchema.safeParse(req.query);
 
   if (!filtros.success) {
@@ -129,7 +129,7 @@ router.get("/", async (req, res) => {
   return res.json(projectList);
 });
 
-router.post("/", requireRole("admin"), async (req, res) => {
+router.post("/", authorize({ roles: ["admin"], acceso: "soloRol" }), async (req, res) => {
   const schema = z.object({
     name: z.string().min(1),
     slug: z.string().min(1),
@@ -182,59 +182,66 @@ router.post("/", requireRole("admin"), async (req, res) => {
   return res.status(201).json(project);
 });
 
-router.get("/:id", requireProjectAccess({ param: "id" }, ANY_MEMBERSHIP), async (req, res) => {
-  const project = await db
-    .selectFrom("Project")
-    .selectAll()
-    .where("id", "=", req.params.id)
-    .executeTakeFirst();
+router.get(
+  "/:id",
+  authorize({
+    roles: CUALQUIER_ROL,
+    acceso: { proyecto: { param: "id" }, membresias: ANY_MEMBERSHIP }
+  }),
+  async (req, res) => {
+    const project = await db
+      .selectFrom("Project")
+      .selectAll()
+      .where("id", "=", req.params.id)
+      .executeTakeFirst();
 
-  if (!project) {
-    return res.status(404).json({ message: "Project not found" });
-  }
-
-  const stageRows = await db
-    .selectFrom("Stage")
-    .selectAll()
-    .where("projectId", "=", project.id)
-    .orderBy("sequenceOrder", "asc")
-    .execute();
-
-  const memberRows = await db
-    .selectFrom("ProjectMember")
-    .innerJoin("User", "User.id", "ProjectMember.userId")
-    .select([
-      "ProjectMember.id",
-      "ProjectMember.userId",
-      "ProjectMember.projectId",
-      "ProjectMember.membershipRole",
-      "ProjectMember.createdAt",
-      "User.id as user_id",
-      "User.email as user_email",
-      "User.fullName as user_fullName",
-      "User.role as user_role"
-    ])
-    .where("ProjectMember.projectId", "=", project.id)
-    .execute();
-
-  const members = memberRows.map((row) => ({
-    id: row.id,
-    userId: row.userId,
-    projectId: row.projectId,
-    membershipRole: row.membershipRole,
-    createdAt: row.createdAt,
-    user: {
-      id: row.user_id,
-      email: row.user_email,
-      fullName: row.user_fullName,
-      role: row.user_role
+    if (!project) {
+      return res.status(404).json({ message: "Project not found" });
     }
-  }));
 
-  return res.json({ ...project, stages: stageRows, members });
-});
+    const stageRows = await db
+      .selectFrom("Stage")
+      .selectAll()
+      .where("projectId", "=", project.id)
+      .orderBy("sequenceOrder", "asc")
+      .execute();
 
-router.patch("/:id", requireRole("admin"), async (req, res) => {
+    const memberRows = await db
+      .selectFrom("ProjectMember")
+      .innerJoin("User", "User.id", "ProjectMember.userId")
+      .select([
+        "ProjectMember.id",
+        "ProjectMember.userId",
+        "ProjectMember.projectId",
+        "ProjectMember.membershipRole",
+        "ProjectMember.createdAt",
+        "User.id as user_id",
+        "User.email as user_email",
+        "User.fullName as user_fullName",
+        "User.role as user_role"
+      ])
+      .where("ProjectMember.projectId", "=", project.id)
+      .execute();
+
+    const members = memberRows.map((row) => ({
+      id: row.id,
+      userId: row.userId,
+      projectId: row.projectId,
+      membershipRole: row.membershipRole,
+      createdAt: row.createdAt,
+      user: {
+        id: row.user_id,
+        email: row.user_email,
+        fullName: row.user_fullName,
+        role: row.user_role
+      }
+    }));
+
+    return res.json({ ...project, stages: stageRows, members });
+  }
+);
+
+router.patch("/:id", authorize({ roles: ["admin"], acceso: "soloRol" }), async (req, res) => {
   const schema = z.object({
     name: z.string().min(1).optional(),
     slug: z.string().min(1).optional(),
@@ -276,22 +283,29 @@ router.patch("/:id", requireRole("admin"), async (req, res) => {
   return res.json(project);
 });
 
-router.delete("/:id", requireRole("admin"), async (req: Request<{ id: string }>, res) => {
-  await db.deleteFrom("Project").where("id", "=", req.params.id).execute();
+router.delete(
+  "/:id",
+  authorize({ roles: ["admin"], acceso: "soloRol" }),
+  async (req: Request<{ id: string }>, res) => {
+    await db.deleteFrom("Project").where("id", "=", req.params.id).execute();
 
-  await writeAuditLog({
-    actorUserId: req.user!.id,
-    action: "DELETE_PROJECT",
-    entityType: "Project",
-    entityId: req.params.id
-  });
+    await writeAuditLog({
+      actorUserId: req.user!.id,
+      action: "DELETE_PROJECT",
+      entityType: "Project",
+      entityId: req.params.id
+    });
 
-  return res.status(204).send();
-});
+    return res.status(204).send();
+  }
+);
 
 router.get(
   "/:id/members",
-  requireProjectAccess({ param: "id" }, ANY_MEMBERSHIP),
+  authorize({
+    roles: CUALQUIER_ROL,
+    acceso: { proyecto: { param: "id" }, membresias: ANY_MEMBERSHIP }
+  }),
   async (req, res) => {
     const memberRows = await db
       .selectFrom("ProjectMember")
@@ -328,38 +342,42 @@ router.get(
   }
 );
 
-router.post("/:id/members", requireRole("admin"), async (req: Request<{ id: string }>, res) => {
-  const schema = z.object({
-    userId: z.string().min(1),
-    membershipRole: z.enum(["developer", "buyer", "verifier"])
-  });
+router.post(
+  "/:id/members",
+  authorize({ roles: ["admin"], acceso: "soloRol" }),
+  async (req: Request<{ id: string }>, res) => {
+    const schema = z.object({
+      userId: z.string().min(1),
+      membershipRole: z.enum(["developer", "buyer", "verifier"])
+    });
 
-  const parsed = schema.safeParse(req.body);
-  if (!parsed.success) {
-    return res.status(400).json(parsed.error.flatten());
+    const parsed = schema.safeParse(req.body);
+    if (!parsed.success) {
+      return res.status(400).json(parsed.error.flatten());
+    }
+
+    const member = await db
+      .insertInto("ProjectMember")
+      .values({
+        id: createId(),
+        userId: parsed.data.userId,
+        projectId: req.params.id,
+        membershipRole: parsed.data.membershipRole,
+        createdAt: new Date()
+      })
+      .returningAll()
+      .executeTakeFirstOrThrow();
+
+    await writeAuditLog({
+      actorUserId: req.user!.id,
+      action: "ADD_PROJECT_MEMBER",
+      entityType: "ProjectMember",
+      entityId: member.id
+    });
+
+    return res.status(201).json(member);
   }
-
-  const member = await db
-    .insertInto("ProjectMember")
-    .values({
-      id: createId(),
-      userId: parsed.data.userId,
-      projectId: req.params.id,
-      membershipRole: parsed.data.membershipRole,
-      createdAt: new Date()
-    })
-    .returningAll()
-    .executeTakeFirstOrThrow();
-
-  await writeAuditLog({
-    actorUserId: req.user!.id,
-    action: "ADD_PROJECT_MEMBER",
-    entityType: "ProjectMember",
-    entityId: member.id
-  });
-
-  return res.status(201).json(member);
-});
+);
 
 /**
  * Fila 06-07 — los documentos del proyecto (INV-PROJECT-DOCS-002).
@@ -374,7 +392,10 @@ router.post("/:id/members", requireRole("admin"), async (req: Request<{ id: stri
  */
 router.get(
   "/:id/documents",
-  requireProjectAccess({ param: "id" }, ANY_MEMBERSHIP),
+  authorize({
+    roles: CUALQUIER_ROL,
+    acceso: { proyecto: { param: "id" }, membresias: ANY_MEMBERSHIP }
+  }),
   async (req: Request<{ id: string }>, res) => {
     const filas = await db
       .selectFrom("Evidence")
@@ -413,7 +434,10 @@ router.get(
 /** Fila 21 — el esquema del edificio: las unidades por piso. */
 router.get(
   "/:id/building-schematic",
-  requireProjectAccess({ param: "id" }, ["developer", "buyer", "verifier"]),
+  authorize({
+    roles: CUALQUIER_ROL,
+    acceso: { proyecto: { param: "id" }, membresias: ["developer", "buyer", "verifier"] }
+  }),
   async (req: Request<{ id: string }>, res) => {
     const unidades = await db
       .selectFrom("Unit")

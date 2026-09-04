@@ -3,12 +3,7 @@ import { type Request, Router } from "express";
 import { z } from "zod";
 import { cabezaDelHilo, transitionStage } from "../domain/stage-transition";
 import { db } from "../lib/db";
-import {
-  ANY_MEMBERSHIP,
-  authenticate,
-  requireProjectAccess,
-  requireRole
-} from "../middlewares/auth";
+import { ANY_MEMBERSHIP, authenticate, authorize, CUALQUIER_ROL } from "../middlewares/auth";
 import { writeAuditLog } from "../utils/audit";
 
 const router = Router();
@@ -17,7 +12,10 @@ router.use(authenticate);
 
 router.get(
   "/:id",
-  requireProjectAccess({ via: "Stage", param: "id" }, ANY_MEMBERSHIP),
+  authorize({
+    roles: CUALQUIER_ROL,
+    acceso: { proyecto: { via: "Stage", param: "id" }, membresias: ANY_MEMBERSHIP }
+  }),
   async (req, res) => {
     const stage = await db
       .selectFrom("Stage")
@@ -41,8 +39,10 @@ router.get(
 
 router.patch(
   "/:id",
-  requireRole("admin", "developer"),
-  requireProjectAccess({ via: "Stage", param: "id" }, ["developer"]),
+  authorize({
+    roles: ["admin", "developer"],
+    acceso: { proyecto: { via: "Stage", param: "id" }, membresias: ["developer"] }
+  }),
   // `Request<{ id: string }>` porque en Express 5 `req.params.id` es
   // `string | string[]`, y `cabezaDelHilo` necesita un id, no una lista.
   async (req: Request<{ id: string }>, res) => {
@@ -107,8 +107,10 @@ router.patch(
 
 router.patch(
   "/:id/state",
-  requireRole("admin", "developer"),
-  requireProjectAccess({ via: "Stage", param: "id" }, ["developer"]),
+  authorize({
+    roles: ["admin", "developer"],
+    acceso: { proyecto: { via: "Stage", param: "id" }, membresias: ["developer"] }
+  }),
   async (req: Request<{ id: string }>, res) => {
     const parsed = stageTransitionSchema.safeParse(req.body);
     if (!parsed.success) {

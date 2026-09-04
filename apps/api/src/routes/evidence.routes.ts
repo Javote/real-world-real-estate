@@ -7,12 +7,7 @@ import { reconciliarAnclajes, reconciliarParaLectura } from "../domain/reconcile
 import { anchorPort } from "../lib/anchor";
 import { db } from "../lib/db";
 import { storage } from "../lib/storage";
-import {
-  ANY_MEMBERSHIP,
-  authenticate,
-  requireProjectAccess,
-  requireRole
-} from "../middlewares/auth";
+import { ANY_MEMBERSHIP, authenticate, authorize, CUALQUIER_ROL } from "../middlewares/auth";
 import { writeAuditLog } from "../utils/audit";
 import { EVIDENCE_SAFE_COLUMNS } from "./_shared";
 
@@ -22,7 +17,10 @@ router.use(authenticate);
 
 router.get(
   "/:id",
-  requireProjectAccess({ via: "Evidence", param: "id" }, ANY_MEMBERSHIP),
+  authorize({
+    roles: CUALQUIER_ROL,
+    acceso: { proyecto: { via: "Evidence", param: "id" }, membresias: ANY_MEMBERSHIP }
+  }),
   async (req, res) => {
     const evidence = await db
       .selectFrom("Evidence")
@@ -52,7 +50,10 @@ router.get(
 
 router.get(
   "/:id/download",
-  requireProjectAccess({ via: "Evidence", param: "id" }, ANY_MEMBERSHIP),
+  authorize({
+    roles: CUALQUIER_ROL,
+    acceso: { proyecto: { via: "Evidence", param: "id" }, membresias: ANY_MEMBERSHIP }
+  }),
   async (req, res) => {
     const evidence = await db
       .selectFrom("Evidence")
@@ -83,8 +84,10 @@ router.get(
 
 router.patch(
   "/:id",
-  requireRole("admin", "developer"),
-  requireProjectAccess({ via: "Evidence", param: "id" }, ["developer"]),
+  authorize({
+    roles: ["admin", "developer"],
+    acceso: { proyecto: { via: "Evidence", param: "id" }, membresias: ["developer"] }
+  }),
   async (req: Request<{ id: string }>, res) => {
     const existing = await db
       .selectFrom("Evidence")
@@ -177,14 +180,16 @@ router.patch(
  * **Nunca un `setInterval` acá adentro** (D-003 · D-040): con el servicio
  * dormido a los 15 minutos, un timer interno deja de contar y nadie se entera.
  */
-router.post("/reconcile", requireRole("admin"), async (_req, res) => {
+router.post("/reconcile", authorize({ roles: ["admin"], acceso: "soloRol" }), async (_req, res) => {
   res.json(await reconciliarAnclajes());
 });
 
 router.post(
   "/:id/anchor",
-  requireRole("admin"),
-  requireProjectAccess({ via: "Evidence", param: "id" }, ANY_MEMBERSHIP),
+  authorize({
+    roles: ["admin"],
+    acceso: { proyecto: { via: "Evidence", param: "id" }, membresias: ANY_MEMBERSHIP }
+  }),
   async (req: Request<{ id: string }>, res) => {
     const evidencia = await db
       .selectFrom("Evidence")
@@ -289,30 +294,34 @@ router.post(
   }
 );
 
-router.delete("/:id", requireRole("admin"), async (req: Request<{ id: string }>, res) => {
-  const existing = await db
-    .selectFrom("Evidence")
-    .selectAll()
-    .where("id", "=", req.params.id)
-    .executeTakeFirst();
+router.delete(
+  "/:id",
+  authorize({ roles: ["admin"], acceso: "soloRol" }),
+  async (req: Request<{ id: string }>, res) => {
+    const existing = await db
+      .selectFrom("Evidence")
+      .selectAll()
+      .where("id", "=", req.params.id)
+      .executeTakeFirst();
 
-  if (!existing) {
-    return res.status(404).json({ message: "Evidence not found" });
+    if (!existing) {
+      return res.status(404).json({ message: "Evidence not found" });
+    }
+
+    await storage.remove(existing.storagePath);
+
+    await db.deleteFrom("Evidence").where("id", "=", req.params.id).execute();
+
+    await writeAuditLog({
+      actorUserId: req.user!.id,
+      action: "DELETE_EVIDENCE",
+      entityType: "Evidence",
+      entityId: req.params.id
+    });
+
+    return res.status(204).send();
   }
-
-  await storage.remove(existing.storagePath);
-
-  await db.deleteFrom("Evidence").where("id", "=", req.params.id).execute();
-
-  await writeAuditLog({
-    actorUserId: req.user!.id,
-    action: "DELETE_EVIDENCE",
-    entityType: "Evidence",
-    entityId: req.params.id
-  });
-
-  return res.status(204).send();
-});
+);
 
 /**
  * Fila 25m — el camino de Merkle de un archivo dentro de su bundle.
@@ -323,7 +332,10 @@ router.delete("/:id", requireRole("admin"), async (req: Request<{ id: string }>,
  */
 router.get(
   "/:bundleId/proof/:fileHash",
-  requireProjectAccess({ via: "EvidenceBundle", param: "bundleId" }, ANY_MEMBERSHIP),
+  authorize({
+    roles: CUALQUIER_ROL,
+    acceso: { proyecto: { via: "EvidenceBundle", param: "bundleId" }, membresias: ANY_MEMBERSHIP }
+  }),
   async (req, res) => {
     const items = await db
       .selectFrom("EvidenceBundleItem")
@@ -360,7 +372,10 @@ router.get(
 /** Fila 25m — los archivos del bundle con sus hashes. */
 router.get(
   "/:bundleId/files",
-  requireProjectAccess({ via: "EvidenceBundle", param: "bundleId" }, ANY_MEMBERSHIP),
+  authorize({
+    roles: CUALQUIER_ROL,
+    acceso: { proyecto: { via: "EvidenceBundle", param: "bundleId" }, membresias: ANY_MEMBERSHIP }
+  }),
   async (req, res) => {
     const bundle = await db
       .selectFrom("EvidenceBundle")
