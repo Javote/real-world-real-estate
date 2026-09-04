@@ -1,5 +1,13 @@
 # SPEC-012 — La segunda capa de autorización pasa a ser middleware
 
+> **Superada el 2026-09-04 por D-088.** `requireProjectAccess` ya no existe: la segunda capa se
+> declara ahora como el campo `acceso` de `authorize({ roles, acceso })`, junto con el rol global y
+> la pertenencia de fila. **Todo lo que esta spec fija sigue vigente** —`membresias` obligatorio
+> (D-042), `projectScope` como única definición (D-043), las dos formas de `ProjectSource`, y la
+> deuda declarada de distinguir 404 de 403 desde afuera—; lo único que cambió es dónde se escribe.
+> El porqué está en D-088 y la secuencia en `PLAN-2026-09-04-guard-unico.md`.
+
+
 > Rebanada **0e** de `specs/README.md`. Superficie **🔴**: toca la ruta de
 > `canAccessProject`, así que se revisa línea por línea.
 >

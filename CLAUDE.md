@@ -145,6 +145,28 @@ los dos lados. No había agujero —con un secreto de tipo string, jsonwebtoken 
 verificación a la familia HS*—; lo que se cierra es la dependencia de ese default para el día que la
 clave deje de ser un string.
 
+**Y cerrado el mismo día: una sola forma de declarar autorización (D-088).** Las tres capas dejaron
+de ser tres middlewares encadenados y pasaron a ser `authorize({ roles, acceso })`, con los dos
+campos obligatorios; **las 87 rutas montadas lo declaran**, y las únicas dos sin él son las dos sin
+sesión que M2-D5 §2.2 declara. El motivo es uno y no conviene inflarlo: no es que las tres hicieran
+lo mismo ni que se lea mejor, es que **nada obligaba a declarar la pertenencia** — y esa jugada,
+hacer que omitir no compile, es la misma de D-042, que con middlewares sueltos no se podía repetir
+porque *la ausencia de una llamada no es un tipo*. De yapa, `{ alguna: [...] }` expresó la
+disyunción que una cadena de middlewares no puede, y `GET /contracts/:contractId/releases` dejó de
+autorizar adentro del handler: **ya no queda ninguna ruta que lo haga**. `requireRole`,
+`requireProjectAccess` y `requireOwnership` se borraron. Ninguna ruta ganó ni perdió acceso, y eso
+se probó, no se afirmó: 275 tests en verde y la matriz equivalente ruta por ruta en cada uno de los
+seis pasos. Se pudo hacer recién ahora porque `SPEC-012` prohíbe cambiar semántica de seguridad
+adentro de un refactor y hasta que existió la matriz no había forma de *probar* que un refactor no
+la cambiaba — matriz → `requireOwnership` → unificación, cada paso habilita el siguiente.
+
+**Lo único que queda abierto de eso, y es una decisión del dueño:** `"soloRol"` quedó en 45 de las
+87 rutas. Doce son admin-only y ahí es honesto; los otros 33 son listados y KPIs que se acotan
+**adentro del query**, y ahí la etiqueta afirma algo que no es cierto: dice "no hay regla de fila"
+cuando la hay, escrita a mano en el `where`. Está **propuesto y sin decidir** partirlo en
+`"soloRol"` / `"scopeEnQuery"`. Si la etiqueta puede mentir, el refactor no compró del todo lo que
+dice comprar.
+
 **El diseño ya está decidido. El trabajo es transcribirlo, no inventarlo.**
 
 `docs/` tiene 70 capturas y un backlog de 53 superficies donde cada una ya trae su path, sus

@@ -3,7 +3,7 @@ import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import app from "../src/app";
 import { createId } from "../src/db/id";
 import { db } from "../src/lib/db";
-import { ANY_MEMBERSHIP, requireProjectAccess } from "../src/middlewares/auth";
+import { ANY_MEMBERSHIP, authorize, CUALQUIER_ROL } from "../src/middlewares/auth";
 import { FIXTURES } from "./global-setup";
 
 // SPEC-012 §Invariantes. Es la capa 2 de la regla 5 y es 🔴: cada código de
@@ -83,7 +83,7 @@ afterAll(async () => {
   await db.destroy();
 });
 
-describe("requireProjectAccess · forma A (el projectId está en el path)", () => {
+describe("la regla de proyecto · forma A (el projectId está en el path)", () => {
   it("401 sin token — la capa 1 corta antes", async () => {
     const res = await request(app).get(`/api/v1/projects/${proyecto}/stages`);
     expect(res.status).toBe(401);
@@ -114,7 +114,7 @@ describe("requireProjectAccess · forma A (el projectId está en el path)", () =
   });
 });
 
-describe("requireProjectAccess · forma B (hay que cargar la entidad)", () => {
+describe("la regla de proyecto · forma B (hay que cargar la entidad)", () => {
   it("404 cuando el stage no existe, con el mensaje de siempre", async () => {
     const token = await tokenDe(FIXTURES.activo);
     const res = await request(app)
@@ -175,21 +175,38 @@ describe("requireProjectAccess · forma B (hay que cargar la entidad)", () => {
   });
 });
 
-describe("requireProjectAccess · la forma no deja omitir las membresías", () => {
-  it("no compila si falta `allowedMemberships`", () => {
-    // Igual que en `canAccessProject` (D-042), lo verifica el TYPECHECK: si el
-    // parámetro se volviera opcional o pasara a rest args, tsc falla con
-    // "Unused '@ts-expect-error' directive". Con rest args esto COMPILARÍA y
-    // significaría lista vacía — cerrado, pero en silencio. Por eso es
-    // posicional y obligatorio.
+describe("la forma de `authorize` no deja omitir nada", () => {
+  it("no compila si la regla de proyecto no dice qué membresías acepta", () => {
+    // Igual que en `canAccessProject` (D-042), lo verifica el TYPECHECK: si
+    // `membresias` se volviera opcional, tsc falla con "Unused
+    // '@ts-expect-error' directive". Omitirlo significaría lista vacía —
+    // cerrado, pero en silencio.
     const nuncaSeLlama = () =>
-      // @ts-expect-error — `allowedMemberships` es obligatorio (SPEC-012)
-      requireProjectAccess({ param: "id" });
+      // @ts-expect-error — `membresias` es obligatorio (D-042, SPEC-012)
+      authorize({ roles: CUALQUIER_ROL, acceso: { proyecto: { param: "id" } } });
+
+    expect(nuncaSeLlama).toBeTypeOf("function");
+  });
+
+  it("no compila si falta `acceso`: la AUSENCIA dejó de ser una opción", () => {
+    // La invariante que trajo el guard único (PLAN-2026-09-04). Con guards
+    // sueltos, "me olvidé de poner requireProjectAccess" era invisible: la
+    // ausencia de una llamada no es un tipo. Acá hay que escribir algo, aunque
+    // ese algo sea `"soloRol"` — y eso ya es una afirmación que se discute en un
+    // diff, no un hueco.
+    const nuncaSeLlama = () =>
+      // @ts-expect-error — `acceso` es obligatorio (PLAN-2026-09-04)
+      authorize({ roles: CUALQUIER_ROL });
 
     expect(nuncaSeLlama).toBeTypeOf("function");
   });
 
   it("ANY_MEMBERSHIP sigue siendo lo que se escribe para abrir a cualquier miembro", () => {
-    expect(requireProjectAccess({ param: "id" }, ANY_MEMBERSHIP)).toBeTypeOf("function");
+    const guard = authorize({
+      roles: CUALQUIER_ROL,
+      acceso: { proyecto: { param: "id" }, membresias: ANY_MEMBERSHIP }
+    });
+
+    expect(guard).toBeTypeOf("function");
   });
 });

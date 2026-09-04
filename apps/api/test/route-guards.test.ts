@@ -186,14 +186,7 @@ function describirAcceso(acceso: ReglaDeAcceso): string {
 
 function describir(guard: GuardDescriptor): string {
   if (guard.kind === "authenticate") return "auth";
-  if (guard.kind === "role") return `rol(${guard.roles.join("|")})`;
-  if (guard.kind === "ownership") return `dueño(${guard.source.via}:${guard.source.param})`;
-  if (guard.kind === "authorize")
-    return `autoriza(rol(${guard.roles.join("|")}) · ${describirAcceso(guard.acceso)})`;
-
-  const origen =
-    "via" in guard.source ? `${guard.source.via}:${guard.source.param}` : guard.source.param;
-  return `proyecto(${origen} → ${guard.memberships.join("|")})`;
+  return `autoriza(rol(${guard.roles.join("|")}) · ${describirAcceso(guard.acceso)})`;
 }
 
 type Montaje = {
@@ -258,17 +251,26 @@ describe("la matriz de permisos de las rutas montadas", () => {
   });
 
   it("no hay listas de roles ni de membresías vacías", () => {
-    // Una lista vacía no es "cualquiera": `requireRole()` rechaza a todos y
-    // `projectScope` con `[]` deniega todo. Es fail-closed, así que no abre nada
-    // — pero es una ruta muerta que contesta 403 a todo el mundo, y eso siempre
-    // es un error de tipeo, nunca una intención.
+    // Una lista vacía no es "cualquiera": `authorize` con `roles: []` rechaza a
+    // todos y `projectScope` con `[]` deniega todo. Es fail-closed, así que no
+    // abre nada — pero es una ruta muerta que contesta 403 a todo el mundo, y
+    // eso siempre es un error de tipeo, nunca una intención. Se recorre el árbol
+    // de `acceso` entero: una rama vacía adentro de un `alguna` es igual de
+    // muerta y bastante más difícil de ver leyendo.
+    const membresiasVacias = (acceso: ReglaDeAcceso): boolean => {
+      if (acceso === "soloRol") return false;
+      if ("proyecto" in acceso) return acceso.membresias.length === 0;
+      if ("dueño" in acceso) return false;
+      return acceso.alguna.some(membresiasVacias);
+    };
+
     const vacias: string[] = [];
     for (const { rutas } of leerMontaje()) {
       for (const [clave, guards] of rutas) {
         for (const guard of guards) {
-          if (guard.kind === "role" && guard.roles.length === 0) vacias.push(`${clave} · rol`);
-          if (guard.kind === "projectAccess" && guard.memberships.length === 0)
-            vacias.push(`${clave} · proyecto`);
+          if (guard.kind !== "authorize") continue;
+          if (guard.roles.length === 0) vacias.push(`${clave} · rol`);
+          if (membresiasVacias(guard.acceso)) vacias.push(`${clave} · proyecto`);
         }
       }
     }

@@ -81,9 +81,9 @@ Un commit por paso, cada uno con `pnpm verify:all` en verde y la matriz actualiz
 |---|---|---|
 | 1 | `authorize` y sus tipos, sobre los tres actuales. **Ninguna ruta migrada.** | ✅ **hecho** `0bfa8a4` — 265 en verde, matriz sin una sola fila tocada |
 | 2 | Migrar **investor** (14 rutas) | ✅ **hecho** — 265 en verde, matriz equivalente ruta por ruta, `requireRole` de router eliminado. **Punto de control con el dueño: acá está** |
-| 3 | `developer` (22), `projects`/`stages`/`evidence` (26), `certifier` (6), `notary` (6), el resto | Un commit por superficie |
-| 4 | `/contracts/:contractId/releases` pasa a `alguna: [...]` | Deja de ser la excepción documentada |
-| 5 | Cerrar la decisión en `DECISIONS.md` y corregir `SPEC-012`, que describe la forma anterior | En el mismo commit que el último paso |
+| 3 | `developer` (20), `projects`/`stages`/`evidence` (26), `certifier` + `notary` (12), el resto (14) | ✅ **hecho** — `bccb68d`, `daa759b`, `4d4434f`, `a646911` |
+| 4 | `/contracts/:contractId/releases` pasa a `alguna: [...]` | ✅ **hecho** `a646911` — con un test por rama |
+| 5 | Cerrar la decisión en `DECISIONS.md` y corregir `SPEC-012`, que describe la forma anterior | ✅ **hecho** — D-088, y los tres guards viejos borrados |
 
 **Investor va primero a propósito:** es la superficie que acaba de cambiar, la que tiene los tests más
 frescos (`test/require-ownership.test.ts`, 13 casos) y la única que ejercita las tres capas juntas.
@@ -109,3 +109,35 @@ El punto de control del paso 2 existe para poder abandonar barato. Se frena y se
   de "no es tuyo"— se conserva tal cual. Cambiar semántica de seguridad adentro de un refactor es
   precisamente lo que este plan no hace.
 - **No agrega revocación de tokens** ni toca nada de `lib/jwt.ts`.
+
+---
+
+## Cerrado el 2026-09-04
+
+Las 87 rutas montadas declaran su regla con `authorize`. Las únicas dos sin él son las dos sin
+sesión que M2-D5 §2.2 declara: `POST /auth/login` y `GET /public/dossier/:shareToken`.
+
+`requireRole`, `requireProjectAccess` y `requireOwnership` **se borraron** — no quedaron como
+internos: no tenían ningún llamador, y un guard exportado que nadie usa es una forma vieja esperando
+que alguien la copie. Lo que sobrevive de ellos son los evaluadores, que es donde siempre estuvo la
+regla.
+
+**Las tres señales de freno no se dispararon**, aunque una rozó. El reparto final de las 87:
+
+| `acceso` | Rutas |
+|---|---|
+| `"soloRol"` | 45 |
+| `{ proyecto }` | 30 |
+| `{ dueño }` | 9 |
+| `{ alguna }` | 1 |
+| sin sesión (`/auth/login`, `/public/dossier/:shareToken`) | 2 |
+
+`"soloRol"` en 45 de 87 es mucho, y hay que decir por qué no es cajón de sastre y dónde sí molesta.
+**12 son admin-only**, donde el rol global es honestamente toda la regla. Las otras 33 son sobre todo
+**listados y KPIs que se acotan adentro del query** —por `userId` o por `projectScope`—, y ahí
+`"soloRol"` **está afirmando algo que no es cierto**: dice "esta ruta no tiene regla de fila" cuando
+la tiene, escrita a mano en el `where` y sin ninguna relación con el guard.
+
+La partición en `"soloRol"` / `"scopeEnQuery"` quedó **propuesta y sin decidir**. Es lo único que
+este plan deja pendiente, y la razón por la que importa está en D-088: si la etiqueta puede mentir,
+el refactor no compró del todo lo que decía comprar.

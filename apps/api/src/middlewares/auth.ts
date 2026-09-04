@@ -34,9 +34,6 @@ export const GUARD = Symbol.for("propnexus.guard");
 
 export type GuardDescriptor =
   | { kind: "authenticate" }
-  | { kind: "role"; roles: UserRole[] }
-  | { kind: "projectAccess"; source: ProjectSource; memberships: MembershipRole[] }
-  | { kind: "ownership"; source: OwnerSource }
   | { kind: "authorize"; roles: UserRole[]; acceso: ReglaDeAcceso };
 
 function marcar<T extends object>(fn: T, guard: GuardDescriptor): T {
@@ -87,23 +84,6 @@ Object.defineProperty(authenticate, GUARD, {
   value: { kind: "authenticate" } satisfies GuardDescriptor,
   enumerable: false
 });
-
-export function requireRole(...roles: UserRole[]) {
-  return marcar(
-    (req: Request, res: Response, next: NextFunction) => {
-      if (!req.user) {
-        return res.status(401).json({ message: "Unauthorized" });
-      }
-
-      if (!roles.includes(req.user.role)) {
-        return res.status(403).json({ message: "Forbidden" });
-      }
-
-      next();
-    },
-    { kind: "role", roles }
-  );
-}
 
 /**
  * "Cualquier membresía sirve" — para los endpoints de lectura, donde alcanza con
@@ -315,24 +295,6 @@ async function evaluarProyecto(
   return allowed ? PASA : PROHIBIDO;
 }
 
-export function requireProjectAccess(source: ProjectSource, allowedMemberships: MembershipRole[]) {
-  return marcar(
-    async (req: Request, res: Response, next: NextFunction) => {
-      if (!req.user) {
-        return res.status(401).json({ message: "Unauthorized" });
-      }
-
-      const veredicto = await evaluarProyecto(req.user, req, source, allowedMemberships);
-      if (!veredicto.ok) {
-        return res.status(veredicto.status).json({ message: veredicto.message });
-      }
-
-      return next();
-    },
-    { kind: "projectAccess", source, memberships: allowedMemberships }
-  );
-}
-
 /**
  * La tercera capa: **el recurso es de quien lo pide.**
  *
@@ -448,24 +410,6 @@ async function evaluarDueño(
   if (user.role === "admin") return PASA;
 
   return fila.dueño !== null && fila.dueño === user[fila.contra] ? PASA : PROHIBIDO;
-}
-
-export function requireOwnership(source: OwnerSource) {
-  return marcar(
-    async (req: Request, res: Response, next: NextFunction) => {
-      if (!req.user) {
-        return res.status(401).json({ message: "Unauthorized" });
-      }
-
-      const veredicto = await evaluarDueño(req.user, req, source);
-      if (!veredicto.ok) {
-        return res.status(veredicto.status).json({ message: veredicto.message });
-      }
-
-      return next();
-    },
-    { kind: "ownership", source }
-  );
 }
 
 /**

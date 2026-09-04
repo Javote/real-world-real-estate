@@ -805,6 +805,45 @@ servicio, se hace una vez por red y no produce ningún anclaje. Meterla en el pu
 simulador a fingir que la tiene. Es idempotente (regla 8): vuelve a mirar la cadena antes de
 publicar.
 
+## D-088 — Una sola forma de declarar autorización: `authorize({ roles, acceso })`
+
+Las tres capas de la regla 5 eran tres middlewares encadenados. Pasan a ser **un objeto con dos
+campos obligatorios**, y las 87 rutas montadas lo declaran.
+
+**El motivo es uno solo y conviene no inflarlo.** No es que las tres hicieran lo mismo (el rol sale
+del token, las otras dos cargan una fila) ni que se lea mejor (la matriz de `route-guards.test.ts`
+ya daba la regla completa en una línea). Es que **nada obligaba a declarar la pertenencia**: una
+ruta del investor escrita con `requireRole("admin", "buyer")` y nada más compilaba, pasaba el happy
+path y servía la unidad de otro. D-042 resolvió eso para las membresías haciendo que omitir el
+argumento **no compile**, y esa jugada no se puede repetir con middlewares sueltos porque **la
+ausencia de una llamada no es un tipo**.
+
+`acceso` obligatorio lo convierte en una afirmación: `"soloRol"` no fuerza a acertar —alguien
+apurado lo escribe sin pensar— pero una ausencia es invisible en un diff y una afirmación es algo
+que alguien firmó y que el revisor puede discutir. Hay un test que lo fija: `authorize({ roles })`
+sin `acceso` **no compila** (`test/require-project-access.test.ts`).
+
+**Lo que destrabó, y no era el objetivo:** `{ alguna: [...] }` expresa disyunciones, que una cadena
+de middlewares no puede porque una cadena es un AND. `GET /contracts/:contractId/releases` —dueño
+del contrato **o** miembro del proyecto— dejó de autorizar adentro del handler. Para que eso fuera
+posible hubo que separar **evaluar** de **responder**: los evaluadores devuelven un `Veredicto` y
+`authorize` decide, porque un middleware que ya contestó 403 no deja probar la segunda rama.
+
+**Qué NO cambió, y es la parte importante de un refactor de autorización.** Ninguna ruta ganó ni
+perdió acceso. `projectScope` sigue siendo la única definición de "qué proyectos ve este usuario"
+(D-043), con el bypass de `admin` adentro; `ANY_MEMBERSHIP` sigue siendo una lista literal (D-042);
+la deuda de distinguir 404 de 403 desde afuera se conserva tal cual (`SPEC-012`). Se probó con los
+275 tests en verde y la matriz equivalente ruta por ruta en cada paso.
+
+**Se pudo hacer recién ahora.** `SPEC-012` prohíbe cambiar semántica de seguridad adentro de un
+refactor, y hasta que existió la matriz no había forma de *probar* que un refactor no la cambiaba.
+Matriz (2026-09-03) → `requireOwnership` (2026-09-04) → unificación: cada paso habilita el
+siguiente. La secuencia completa está en `specs/PLAN-2026-09-04-guard-unico.md`.
+
+**Queda abierto:** `"soloRol"` lo usan tanto rutas sin regla de fila como listados que se acotan por
+`userId`/`projectScope` adentro del query. Las segundas están afirmando algo que no es cierto. La
+partición en `"soloRol"` / `"scopeEnQuery"` está propuesta y **sin decidir**.
+
 ## D-087 — El simulador declara `Pending`, y `Confirmed` sale siempre de un chequeo aparte
 
 **"Defensa 3"**, la que quedaba abierta de las tres que salieron del incidente del 2026-08-31 (una

@@ -123,7 +123,7 @@ de corte de una rebanada es que la app quede corriendo y demostrable.**
 | Spec | Título | Estado |
 |---|---|---|
 | [`SPEC-010`](SPEC-010-superficie-roja.md) | Endurecer la superficie 🔴 | cerrada 2026-08-21 |
-| [`SPEC-012`](SPEC-012-segunda-capa-como-middleware.md) | `requireProjectAccess`: la segunda capa como middleware | cerrada 2026-08-23 |
+| [`SPEC-012`](SPEC-012-segunda-capa-como-middleware.md) | `requireProjectAccess`: la segunda capa como middleware | cerrada 2026-08-23 · **superada por D-088** el 2026-09-04 |
 | [`SPEC-013`](SPEC-013-anchorport.md) | `AnchorPort`: conectar el registro con la cadena | §A y §B cerradas · §C pendiente |
 | [`SPEC-014`](SPEC-014-reconstruccion-del-front.md) | Reconstrucción del front desde los entregables | **en curso** |
 | [`SPEC-015`](SPEC-015-saneamiento-de-la-instrumentacion.md) | Saneamiento de la instrumentación: tests, fixtures, coverage, CI | **en curso** |
@@ -131,9 +131,9 @@ de corte de una rebanada es que la app quede corriendo y demostrable.**
 
 Los planes fechados no llevan número: [`PLAN-2026-08-31-anclaje-real.md`](PLAN-2026-08-31-anclaje-real.md)
 fue la secuencia operativa para pasar la instancia desplegada a `ANCHOR_MODE=real` (cerrada el
-2026-09-03), y [`PLAN-2026-09-04-guard-unico.md`](PLAN-2026-09-04-guard-unico.md) es la vigente:
-unificar los tres guards de autorización en uno de campos obligatorios, por superficie, con punto de
-control después del investor.
+2026-09-03), y [`PLAN-2026-09-04-guard-unico.md`](PLAN-2026-09-04-guard-unico.md) unificó los tres guards de
+autorización en uno de campos obligatorios (**cerrado el 2026-09-04**, D-088: las 87 rutas montadas
+declaran su regla con `authorize`).
 
 **La numeración no se recicla.** `SPEC-008`, `SPEC-011` y los planes anteriores están en
 [`archive/`](archive/): describen trabajo cerrado o código que se borró.

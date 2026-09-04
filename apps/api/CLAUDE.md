@@ -27,7 +27,7 @@ que la superficie del entregable no consume pero los tests y el seed sí.
    mismo tipo. Es lo único que vuelve imposible el drift API↔web.
 2. Ruta con **`authorize({ roles, acceso })`**, los dos campos obligatorios. `acceso` es
    `"soloRol"`, `{ proyecto, membresias }`, `{ dueño }` o `{ alguna: [...] }`. Nunca un `if`
-   adentro del handler. **Ojo con el estado de la migración** — ver §Dos formas conviviendo.
+   adentro del handler — **no hay otra forma**: los tres guards sueltos se borraron (D-088).
 3. `safeParse` → 400 con `error.flatten()`.
 4. `writeAuditLog` si es mutación relevante.
 5. Test del camino feliz y de cada rechazo.
@@ -556,9 +556,9 @@ la firma, no la protege el compilador y no la ve este test. **Esa columna corta 
 candidatas** a subir a la firma con un `requireOwnership` hermano de los otros dos, que es el paso
 siguiente y todavía no está hecho.
 
-**La lista de candidatas, resuelta el mismo día.** Ver §La tercera capa, abajo. Queda una sola ruta
-autorizando adentro del handler a propósito: `GET /contracts/:contractId/releases`, y el porqué está
-ahí.
+**La lista de candidatas, resuelta el mismo día**, y la última —`GET /contracts/:contractId/releases`,
+la única regla disyuntiva— con `{ alguna: [...] }` cuando llegó el guard único. **Ya no queda
+ninguna ruta autorizando adentro del handler.**
 
 **Y una redundancia que la matriz dejó a la vista:** `investor`, `developer`, `notary` y otros
 declaran `requireRole` a nivel de router **y** lo repiten en cada ruta, así que la matriz muestra
@@ -576,30 +576,42 @@ estaríamos anclando la huella de un archivo que no existe en ningún lado.
 `utils/hashing.ts` se borró: su única función quedó adentro del port, y dos lugares que hashean es
 uno de más.
 
-### Dos formas conviviendo — leé esto antes de escribir una ruta
+### El guard único — `authorize`, 2026-09-04 (D-088)
 
-**Hoy el repo tiene dos formas de declarar autorización, y es transitorio a propósito**
-(`specs/PLAN-2026-09-04-guard-unico.md`):
+**Las 87 rutas montadas declaran su regla en la firma.** Las únicas dos sin `authorize` son las dos
+sin sesión que M2-D5 §2.2 declara: `POST /auth/login` y `GET /public/dossier/:shareToken`.
 
-| Superficie | Forma | Estado |
-|---|---|---|
-| `investor` (14 rutas) | `authorize({ roles, acceso })` | migrada 2026-09-04 |
-| todas las demás (73) | `requireRole` + `requireProjectAccess` + `requireOwnership` encadenados | pendiente |
+```ts
+authorize({ roles: ["admin", "developer"], acceso: { proyecto: { param: "id" }, membresias: ["developer"] } })
+authorize({ roles: CUALQUIER_ROL, acceso: { dueño: { via: "Unit", param: "id" } } })
+authorize({ roles: ["admin"], acceso: "soloRol" })
+```
 
-**En una ruta nueva usá `authorize`**, sea cual sea la superficie: las dos formas corren sobre los
-mismos evaluadores, así que no hay riesgo de que se comporten distinto, y una ruta nueva en la forma
-vieja es una migración más que hacer después.
+**Por qué, en una línea:** con guards sueltos, omitir la capa de pertenencia compilaba — *la
+ausencia de una llamada no es un tipo*. `acceso` obligatorio convierte esa ausencia en un
+`"soloRol"` explícito, que es algo que alguien firmó y que se discute en un diff. El argumento
+completo está en D-088.
 
-**Por qué se unifica, en una línea:** con guards sueltos, omitir la capa de pertenencia compila —
-*la ausencia de una llamada no es un tipo*—, y `acceso` obligatorio convierte esa ausencia en un
-`"soloRol"` explícito, que es algo que alguien firmó y que se puede discutir en un diff. El
-argumento largo, el orden de migración y las tres señales para frenar están en el plan.
+**`requireRole`, `requireProjectAccess` y `requireOwnership` se borraron**, no quedaron como
+internos: un guard exportado que nadie llama es una forma vieja esperando que alguien la copie. Lo
+que sobrevive son los **evaluadores** (`evaluarProyecto`, `evaluarDueño`, `evaluarRegla`), que
+devuelven un `Veredicto` en vez de contestar. Esa separación no es estética: `{ alguna: [...] }`
+necesita probar la segunda rama cuando la primera dice que no, y un middleware que ya contestó 403
+no deja probar nada.
 
-**Y lo que la unificación destrabó:** `{ alguna: [...] }` expresa la disyunción que una cadena de
-middlewares no puede (una cadena es un AND). Cuando le toque el turno a `contracts.routes.ts`, su
-regla —*dueño **o** miembro del proyecto*— deja de vivir adentro del handler.
+**Dos decisiones del `alguna` que no se leen del tipo:** un `500` gana sobre todo, incluso sobre una
+rama que pasa —una ruta mal declarada tiene que ser ruidosa y no taparse con el OK de la otra—, y
+entre `403` y `404` gana el `403`, porque contestar "no existe" a quien tampoco podía saberlo filtra
+justamente eso.
 
-### La tercera capa — `requireOwnership`, 2026-09-04
+**El reparto, medido:** `"soloRol"` 45 · `{ proyecto }` 30 · `{ dueño }` 9 · `{ alguna }` 1 · sin
+sesión 2. De los 45 `"soloRol"`, **12 son admin-only** —ahí el rol global es honestamente toda la
+regla— y los otros 33 son sobre todo listados y KPIs que se acotan **adentro del query**. En esos,
+`"soloRol"` afirma algo que no es cierto: dice "no hay regla de fila" cuando la hay, escrita a mano
+en el `where`. **Está propuesto partirlo en `"soloRol"` / `"scopeEnQuery"` y no está decidido.** Si
+vas a agregar una ruta de listado, sabé que estás escribiendo esa etiqueta imperfecta a propósito.
+
+### La tercera capa — la pertenencia de fila, 2026-09-04
 
 **Qué contesta.** `requireRole` responde "¿este rol puede tocar esta superficie?" y
 `requireProjectAccess` responde "¿es miembro de este proyecto?". Ninguna responde la pregunta que
