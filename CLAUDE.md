@@ -36,6 +36,12 @@ números medidos, en `specs/README.md`. Acá solo lo que falta.
 | # | Qué | Por qué ahí | Nivel |
 |---|---|---|---|
 | 0 | **Mainnet** — runbook, habilitar la red, custodia de la clave | D-013 la hace **imposible por configuración**: es código, no solo procedimiento | 🔴 |
+| 1 | **Sidebar de desktop** — `PanelLayout` esconde `BottomNav` con `md:hidden` a partir de 768px y no hay ningún reemplazo: en desktop no hay navegación | M2-D3 Principio 4 pide el swap a sidebar + columnas en desktop, y `M2-D2` captura 61 (`61-DESKTOP-HOME.png`) lo muestra. No es un componente ya creado sin conectar — no existe ningún `Sidebar`/`SideNav` bajo ningún nombre en `components/domain/`; toca las 4 superficies de rol porque `PanelLayout` es compartido | 🟢 |
+| 2 | **Pantalla de creación de stage** — `POST /projects/:id/stages` existe y funciona (es el mismo endpoint que mintió el hilo real de D-083 el 2026-09-03) pero ninguna fila de `M2-D5` la pide y no hay ruta ni componente que la llame | `docs/` es inmutable (D-022): agregar la superficie es una decisión del dueño antes que una tarea de implementación — no se inventa por conveniencia | — |
+
+**Encontrados el 2026-09-04, probando el flujo real end-to-end contra producción** (login con las
+credenciales del re-seed, crear un proyecto, subir y anclar evidencia — vía Claude en Chrome, no un
+test). Detalle del #1 en `apps/web/CLAUDE.md` §Trampas verificadas.
 
 **Cerrados el 2026-09-01:** el reference script (D-083) y su cobertura contra un nodo real; `network`
 e `issuingAuthority`, aplicadas en producción **sin dejar de tener un solo archivo de migración**

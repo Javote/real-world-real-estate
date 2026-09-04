@@ -125,6 +125,29 @@ no la captura. No reintroducir un `hideBrand`.
 
 ## Trampas verificadas
 
+- **2026-09-04 · `PanelLayout` no tenía `max-width`, y en desktop el `aspect-video` de `ProjectCard`
+  escalaba con el viewport.** Sin límite de ancho, cada card medía más de 1000px de alto —
+  `1502×1034px` medido en un viewport de 1534px— y una lista con proyectos reales (`/developer/projects`
+  con 2 proyectos) se veía vacía sin scrollear una enormidad: solo entraba en pantalla el ícono
+  "sin imagen" de la primera card. **No lo encontró un test** — la suite no verifica layout en
+  viewports anchos — sino probar el flujo real contra producción con Claude en Chrome: crear un
+  proyecto nuevo y volver a `/developer/projects`. `get_page_text` (que prioriza un solo `<article>`)
+  hizo parecer al principio que faltaba un proyecto entero; la causa real apareció recién midiendo
+  `getBoundingClientRect()` de los dos `<article>` — ambos estaban en el DOM, ambos con texto
+  correcto, solo que gigantes.
+  **Fix (commit `0428f13`):** `max-w-2xl mx-auto` en el `<main>` de `PanelLayout` y en el contenido
+  interno de `GradientHeader` (que antes también se estiraba a todo el ancho) — mismo patrón que ya
+  usaban `login.tsx` (`max-w-md`) y `public.dossier.$shareToken.tsx` (`max-w-lg`), que nunca se
+  llevó a `PanelLayout`.
+  **Lo que destapó y sigue sin cerrar:** `BottomNav` tiene `md:hidden` (se oculta a partir de
+  768px) pero no existe ningún componente que lo reemplace en desktop — verificado a mano en el
+  navegador (`getComputedStyle(nav).display === "none"` a 1534px) y buscando `Sidebar`/`SideNav`/
+  `DesktopNav` bajo cualquier nombre en `components/domain/`: no hay ninguno, no es un componente
+  desconectado. M2-D3 Principio 4 ("desktop swaps BottomNav for a left sidebar and adds columns")
+  lo pide, y `M2-D2` captura 61 (`61-DESKTOP-HOME.png`) lo muestra — pero es la única captura de
+  desktop en todo el catálogo y es del panel de investor, sin equivalente para developer/notary/
+  certifier. Queda en la tabla de pendientes de `CLAUDE.md` raíz (#1) para una sesión aparte: toca
+  las 4 superficies de rol porque `PanelLayout` es compartido.
 - **Un `*.test.tsx` dentro de `src/routes/`** lo escanea el generador de rutas y avisa "does not
   export a Route": prefijalo con `-` o configurá `routeFileIgnorePattern`. Y `vitest` excluye `e2e/`
   explícitamente porque su `include` por defecto matchea `spec` además de `test`.
