@@ -26,7 +26,7 @@ export function useRoleGuard(allowedRoles: readonly UserRole[]) {
       }
 
       // Valida el token contra el servidor (invariante 12): un token
-      // corrupto/expirado en localStorage no debe dejar pasar solo porque
+      // corrupto/expirado en sessionStorage no debe dejar pasar solo porque
       // el objeto de sesión sigue ahí.
       try {
         await api.me()

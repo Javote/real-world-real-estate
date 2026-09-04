@@ -340,7 +340,7 @@ Lo que le falta, en orden de importancia:
 
 | Archivo | Qué lo hace 🔴 | Estado |
 |---|---|---|
-| `lib/jwt.ts` | manejo de la clave de firma | ✔ cerrado 2026-08-20 — sin fallback (D-042, `SPEC-010`) |
+| `lib/jwt.ts` | manejo de la clave de firma | ✔ cerrado 2026-08-20 — sin fallback (D-042, `SPEC-010`) · algoritmo fijado a HS256 de los dos lados el 2026-09-04 |
 | `routes/auth.routes.ts` | bcrypt en login | ✔ cerrado 2026-08-20 — hash dummy (`SPEC-010`) |
 | `routes/users.routes.ts` | bcrypt al crear y al cambiar password | ✔ correcto (cost 10, nunca se loguea ni se devuelve) · política endurecida 2026-08-21 (D-046) |
 | `middlewares/auth.ts` · `canAccessProject` | la lógica de membresía | ✔ correcto · fail-closed desde 2026-08-21 · falta que sea middleware |
@@ -363,6 +363,28 @@ las invariantes y los casos borde, en `specs/SPEC-010`.
 **Lo que hay que sostener.** El `render.yaml` que falta escribir (D-041) tiene que declarar
 `JWT_SECRET` con `generateValue: true`. Y `pnpm dev` ahora falla en un checkout sin
 `apps/api/.env`: es el comportamiento buscado, no una regresión.
+
+### El algoritmo de firma se fija; el ciclo de vida del token sigue abierto
+
+**Cerrado el 2026-09-04 · `signToken`/`verifyToken` fijan HS256 explícito.** Antes se firmaba sin
+declarar `algorithm` y se verificaba sin `algorithms`, o sea que la garantía la ponía el default de
+la librería y no el código. **No había agujero:** con un secreto de tipo `string`, jsonwebtoken v9
+acota la verificación a la familia HS* por su cuenta, así que ni `alg: "none"` ni la confusión HS/RS
+llegaban a entrar. Lo que se cierra es la **dependencia** de ese default — el día que la clave deje
+de ser un string (un KMS, un par asimétrico) la allowlist deja de deducirse sola y el token pasa a
+elegir su propio algoritmo, sin que nada en el diff de ese cambio lo señale. Test:
+`test/jwt.test.ts` → *"el algoritmo de firma está fijado de los dos lados"*, que asienta las tres
+mitades (HS512 con la clave real se rechaza, HS256 se acepta, el header emitido dice HS256).
+
+**Abierto, y es una decisión del dueño, no una tarea:** el token dura **7 días y no se puede
+revocar**. La revocación que hoy existe es indirecta y gruesa — `authenticate()` reconsulta la base
+en cada request y rechaza si `isActive` es `false`, así que dar de baja una cuenta sí corta sus
+sesiones al instante; lo que no hay es forma de invalidar **un** token (un robo, un logout que
+importe) sin dar de baja al usuario entero. Cerrarlo de verdad pide refresh tokens con un store de
+revocación: tabla nueva, endpoint nuevo, y el front tocado. **No se hizo a propósito**: es
+infraestructura para un problema que todavía no duele, con la superficie hoy en demo y el token en
+`sessionStorage` (muere al cerrar la pestaña). Si alguna vez hay usuarios reales con sesiones
+largas, esto se reabre y ahí sí conviene medir cuánto cuesta el store antes de elegir la forma.
 
 ### ~~El comentario del login promete más de lo que el código cumple~~ — cerrado el 2026-08-20
 

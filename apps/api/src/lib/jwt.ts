@@ -39,10 +39,23 @@ export type JwtPayload = {
   email: string;
 };
 
+/**
+ * El algoritmo se fija de los dos lados en vez de quedar librado al default.
+ *
+ * Hoy no hay agujero: con un secreto de tipo string, jsonwebtoken v9 ya acota
+ * la verificación a la familia HS* por su cuenta, así que ni `alg: "none"` ni
+ * la confusión HS/RS entran. Lo que se cierra es la dependencia de ese default:
+ * el día que la clave deje de ser un string —un KMS, un par asimétrico— la
+ * allowlist deja de deducirse sola y el token elige su propio algoritmo. Que la
+ * garantía sea explícita cuesta una línea; que sea implícita cuesta una
+ * auditoría de la librería cada vez que se toca la clave.
+ */
+const JWT_ALGORITHM = "HS256" as const;
+
 export function signToken(payload: JwtPayload) {
-  return jwt.sign(payload, JWT_SECRET, { expiresIn: "7d" });
+  return jwt.sign(payload, JWT_SECRET, { algorithm: JWT_ALGORITHM, expiresIn: "7d" });
 }
 
 export function verifyToken(token: string): JwtPayload {
-  return jwt.verify(token, JWT_SECRET) as JwtPayload;
+  return jwt.verify(token, JWT_SECRET, { algorithms: [JWT_ALGORITHM] }) as JwtPayload;
 }

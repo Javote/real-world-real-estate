@@ -3,7 +3,7 @@ import request from "supertest";
 import { afterAll, afterEach, describe, expect, it, vi } from "vitest";
 import app from "../src/app";
 import { db } from "../src/lib/db";
-import { requireJwtSecret } from "../src/lib/jwt";
+import { requireJwtSecret, signToken, verifyToken } from "../src/lib/jwt";
 import { FIXTURES } from "./global-setup";
 
 afterAll(async () => {
@@ -53,6 +53,35 @@ describe("arranque de la API", () => {
     // La extensión `.js` la exige moduleResolution node16 (apps/api es CJS);
     // vitest la resuelve al `.ts` real. Ver packages/shared/CLAUDE.md.
     await expect(import("../src/lib/jwt.js")).rejects.toThrow(/JWT_SECRET/);
+  });
+});
+
+describe("el algoritmo de firma está fijado de los dos lados", () => {
+  const payload = { userId: "x", role: "admin", email: "x@example.com" };
+
+  it("un token HS512 firmado con la clave REAL es rechazado", () => {
+    // El control importa: la clave es la buena y el payload es válido, así que
+    // lo único que puede causar el 401 es el algoritmo. Sin la allowlist, la
+    // familia HS* entera entra — hoy sin consecuencia, porque el secreto es un
+    // string y todas las variantes usan la misma clave; el día que no lo sea, sí.
+    const otroAlgoritmo = jwt.sign(payload, process.env.JWT_SECRET!, {
+      algorithm: "HS512",
+      expiresIn: "7d"
+    });
+
+    expect(() => verifyToken(otroAlgoritmo)).toThrow(/algorithm/i);
+  });
+
+  it("el token que emite signToken se verifica", () => {
+    expect(verifyToken(signToken(payload))).toMatchObject(payload);
+  });
+
+  it("signToken emite HS256, no lo que elija el default de la librería", () => {
+    const header = JSON.parse(
+      Buffer.from(signToken(payload).split(".")[0], "base64url").toString()
+    );
+
+    expect(header.alg).toBe("HS256");
   });
 });
 
