@@ -24,7 +24,7 @@ router.use(authenticate);
 /** El badge del `NotificationBell` (filas 02 y 33-34). Cross-rol. */
 router.get(
   "/unread-count",
-  authorize({ roles: CUALQUIER_ROL, acceso: "soloRol" }),
+  authorize({ roles: CUALQUIER_ROL, acceso: { scopeEnQuery: "Notification.userId = usuario" } }),
   async (req, res) => {
     const fila = await db
       .selectFrom("Notification")
@@ -47,7 +47,7 @@ router.get(
  */
 router.patch(
   "/:id/read",
-  authorize({ roles: CUALQUIER_ROL, acceso: "soloRol" }),
+  authorize({ roles: CUALQUIER_ROL, acceso: { scopeEnQuery: "Notification.userId = usuario" } }),
   async (req: Request<{ id: string }>, res) => {
     const notificacion = await db
       .selectFrom("Notification")

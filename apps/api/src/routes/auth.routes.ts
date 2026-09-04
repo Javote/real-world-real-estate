@@ -85,7 +85,7 @@ router.post("/login", loginRateLimiter(), async (req, res) => {
 router.get(
   "/me",
   authenticate,
-  authorize({ roles: CUALQUIER_ROL, acceso: "soloRol" }),
+  authorize({ roles: CUALQUIER_ROL, acceso: { scopeEnQuery: "User.id = usuario" } }),
   async (req, res) => {
     const user = await db
       .selectFrom("User")

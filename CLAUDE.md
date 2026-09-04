@@ -36,6 +36,7 @@ números medidos, en `specs/README.md`. Acá solo lo que falta.
 | # | Qué | Por qué ahí | Nivel |
 |---|---|---|---|
 | 0 | **Mainnet** — runbook, habilitar la red, custodia de la clave | D-013 la hace **imposible por configuración**: es código, no solo procedimiento | 🔴 |
+| 1 | **`GET /developer/audit-log` no acota por proyecto** — decidir qué debe mostrar y acotarlo | Es la regla 5 sin su segunda capa: hoy un developer ve los eventos de todos los proyectos y el nombre de todos los usuarios | 🟡 |
 
 **Cerrados el 2026-09-01:** el reference script (D-083) y su cobertura contra un nodo real; `network`
 e `issuingAuthority`, aplicadas en producción **sin dejar de tener un solo archivo de migración**
@@ -160,12 +161,20 @@ seis pasos. Se pudo hacer recién ahora porque `SPEC-012` prohíbe cambiar semá
 adentro de un refactor y hasta que existió la matriz no había forma de *probar* que un refactor no
 la cambiaba — matriz → `requireOwnership` → unificación, cada paso habilita el siguiente.
 
-**Lo único que queda abierto de eso, y es una decisión del dueño:** `"soloRol"` quedó en 45 de las
-87 rutas. Doce son admin-only y ahí es honesto; los otros 33 son listados y KPIs que se acotan
-**adentro del query**, y ahí la etiqueta afirma algo que no es cierto: dice "no hay regla de fila"
-cuando la hay, escrita a mano en el `where`. Está **propuesto y sin decidir** partirlo en
-`"soloRol"` / `"scopeEnQuery"`. Si la etiqueta puede mentir, el refactor no compró del todo lo que
-dice comprar.
+**Y la partición que faltaba, hecha el mismo día.** `"soloRol"` quedaba en 45 de 87 rutas y **26
+mentían**: los listados se acotan con `where userId = ...` o `projectScope(...)` adentro del query,
+así que decir "no hay regla de fila" se leía como una revisión hecha. Esas 26 declaran ahora
+`{ scopeEnQuery: "<el filtro>" }`, con un test que exige que el texto no esté vacío — si la etiqueta
+pudiera quedar en blanco, sería `"soloRol"` con otro nombre. Reparto final: `"soloRol"` 19 ·
+`{ scopeEnQuery }` 26 · `{ proyecto }` 30 · `{ dueño }` 9 · `{ alguna }` 1 · sin sesión 2.
+
+**Etiquetar obliga a leer el handler, y por eso apareció el punto 1 de la tabla.**
+`GET /developer/audit-log` devuelve el `AuditLog` **entero**, sin acotar por proyecto, con
+`actorName` y `actorRole` de cada usuario del sistema: un developer con membresía en un proyecto ve
+los eventos de todos los demás. Es la regla 5 sin su segunda capa, misma familia que el agujero de
+`GET /evidence/:bundleId/files`, y ninguna herramienta lo iba a marcar. **No se tocó**, porque este
+refactor no cambia autorización y qué debe mostrar ese audit log es decisión de producto. Quedó con
+`"soloRol"` —que es la verdad— y por eso **destaca** en la matriz al lado de los otros listados.
 
 **El diseño ya está decidido. El trabajo es transcribirlo, no inventarlo.**
 

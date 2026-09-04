@@ -840,9 +840,31 @@ refactor, y hasta que existió la matriz no había forma de *probar* que un refa
 Matriz (2026-09-03) → `requireOwnership` (2026-09-04) → unificación: cada paso habilita el
 siguiente. La secuencia completa está en `specs/PLAN-2026-09-04-guard-unico.md`.
 
-**Queda abierto:** `"soloRol"` lo usan tanto rutas sin regla de fila como listados que se acotan por
-`userId`/`projectScope` adentro del query. Las segundas están afirmando algo que no es cierto. La
-partición en `"soloRol"` / `"scopeEnQuery"` está propuesta y **sin decidir**.
+**La partición, hecha el mismo día.** `"soloRol"` quedaba en 45 de 87 rutas y **26 de ellas sí
+tenían regla de fila**, aplicada por el handler en su query. Decir "esta ruta no tiene regla de fila"
+cuando la tiene es peor que no decir nada, porque se lee como una revisión hecha. Ahora esas 26
+declaran `{ scopeEnQuery: "<el filtro>" }` — `"Unit.investorId = usuario"`,
+`"projectScope(developer)"`— y un test exige que el texto **no esté vacío**: sin eso sería
+`"soloRol"` con otro nombre. No lo verifica el compilador —el handler podría no aplicarlo— pero la
+afirmación pasa a ser concreta y contrastable contra el `where` de al lado. Reparto final:
+`"soloRol"` 19 · `{ scopeEnQuery }` 26 · `{ proyecto }` 30 · `{ dueño }` 9 · `{ alguna }` 1 · sin
+sesión 2.
+
+**Y encontró lo que tenía que encontrar.** Etiquetar obliga a leer el handler, y al leerlos
+aparecieron dos cosas que ninguna herramienta iba a marcar:
+
+- **`GET /developer/audit-log` devuelve el `AuditLog` entero, sin acotar por proyecto** — con
+  `actorName` y `actorRole` de cada usuario del sistema. Un developer con membresía en un proyecto ve
+  los eventos de todos los demás. Es la regla 5 sin su segunda capa, de la misma familia que el
+  agujero de `GET /evidence/:bundleId/files`. **No se tocó acá**: qué debe mostrar el audit log del
+  developer es una decisión de producto, y este refactor no cambia autorización. Hoy queda con
+  `"soloRol"`, que es la verdad —no tiene regla de fila— y por eso **destaca** en la matriz al lado de
+  los otros listados, que sí la declaran.
+- **`POST /developer/documents` hacía la segunda capa a mano** porque el id que le llega es de la
+  evidencia y no del proyecto. Quedó como `{ scopeEnQuery: "projectScope(developer) ∋
+  Evidence.projectId" }`: la regla existe y la aplica el handler. Declararla en el guard pediría que
+  `ProjectSource` sepa leer del body y no solo del path — cambio chico, pero cambia el 400 de Zod por
+  uno del guard, así que no entra en un refactor que promete no cambiar comportamiento.
 
 ## D-087 — El simulador declara `Pending`, y `Confirmed` sale siempre de un chequeo aparte
 

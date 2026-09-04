@@ -143,7 +143,7 @@ router.patch(
 /** Fila 44 — el inventario cross-proyecto del developer. */
 router.get(
   "/units",
-  authorize({ roles: ["admin", "developer"], acceso: "soloRol" }),
+  authorize({ roles: ["admin", "developer"], acceso: { scopeEnQuery: "projectScope(developer)" } }),
   async (req, res) => {
     const proyectos = await db
       .selectFrom("Project")

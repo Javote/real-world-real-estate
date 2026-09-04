@@ -23,7 +23,10 @@ router.use(authenticate);
 
 router.get(
   "/kpis",
-  authorize({ roles: ["admin", "verifier"], acceso: "soloRol" }),
+  authorize({
+    roles: ["admin", "verifier"],
+    acceso: { scopeEnQuery: "projectScope(cualquier membresía)" }
+  }),
   async (req, res) => {
     const ids = (await proyectosVisibles(req.user!.id, req.user!.role).execute()).map((p) => p.id);
 
@@ -47,7 +50,10 @@ router.get(
 
 router.get(
   "/assignments",
-  authorize({ roles: ["admin", "verifier"], acceso: "soloRol" }),
+  authorize({
+    roles: ["admin", "verifier"],
+    acceso: { scopeEnQuery: "projectScope(cualquier membresía)" }
+  }),
   async (req, res) => {
     const ids = (await proyectosVisibles(req.user!.id, req.user!.role).execute()).map((p) => p.id);
 
@@ -169,7 +175,10 @@ router.post(
 /** Fila 58 — historial de lo emitido, con su hash y su TXID. */
 router.get(
   "/certificates",
-  authorize({ roles: ["admin", "verifier"], acceso: "soloRol" }),
+  authorize({
+    roles: ["admin", "verifier"],
+    acceso: { scopeEnQuery: "Stage.certifiedById = usuario" }
+  }),
   async (req, res) => {
     const schema = z.object({
       cursor: z.string().optional(),

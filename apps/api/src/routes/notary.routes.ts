@@ -48,7 +48,10 @@ router.use(authenticate);
  */
 router.get(
   "/kpis",
-  authorize({ roles: ["admin", "notary"], acceso: "soloRol" }),
+  authorize({
+    roles: ["admin", "notary"],
+    acceso: { scopeEnQuery: "Dossier.signedById = usuario" }
+  }),
   async (req, res) => {
     const filas = await db
       .selectFrom("Dossier")
@@ -285,7 +288,10 @@ router.post(
 /** Fila 53 — el historial de lo firmado, paginado por cursor. */
 router.get(
   "/signatures",
-  authorize({ roles: ["admin", "notary"], acceso: "soloRol" }),
+  authorize({
+    roles: ["admin", "notary"],
+    acceso: { scopeEnQuery: "Dossier.signedById = usuario" }
+  }),
   async (req, res) => {
     const schema = z.object({
       cursor: z.string().optional(),

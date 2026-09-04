@@ -27,19 +27,23 @@ const COLUMNAS_SEGURAS = [
   "updatedAt"
 ] as const;
 
-router.get("/", authorize({ roles: CUALQUIER_ROL, acceso: "soloRol" }), async (req, res) => {
-  const usuario = await db
-    .selectFrom("User")
-    .select(COLUMNAS_SEGURAS)
-    .where("id", "=", req.user!.id)
-    .executeTakeFirstOrThrow();
+router.get(
+  "/",
+  authorize({ roles: CUALQUIER_ROL, acceso: { scopeEnQuery: "User.id = usuario" } }),
+  async (req, res) => {
+    const usuario = await db
+      .selectFrom("User")
+      .select(COLUMNAS_SEGURAS)
+      .where("id", "=", req.user!.id)
+      .executeTakeFirstOrThrow();
 
-  return res.json(usuario);
-});
+    return res.json(usuario);
+  }
+);
 
 router.patch(
   "/",
-  authorize({ roles: CUALQUIER_ROL, acceso: "soloRol" }),
+  authorize({ roles: CUALQUIER_ROL, acceso: { scopeEnQuery: "User.id = usuario" } }),
   async (req: Request, res) => {
     // El email y el rol NO se editan acá: cambiar el rol por el endpoint de
     // perfil sería una escalada de privilegios con forma de preferencia.
@@ -68,7 +72,7 @@ router.patch(
 
 router.patch(
   "/notifications",
-  authorize({ roles: CUALQUIER_ROL, acceso: "soloRol" }),
+  authorize({ roles: CUALQUIER_ROL, acceso: { scopeEnQuery: "User.id = usuario" } }),
   async (req: Request, res) => {
     // Las categorías son las cinco del audit log (M2-D4 P6), que son las mismas
     // sobre las que se notifica.

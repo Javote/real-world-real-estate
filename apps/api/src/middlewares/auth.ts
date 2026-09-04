@@ -428,6 +428,20 @@ async function evaluarDueño(
  * **afirmación**, y esa es toda la diferencia en revisión: una ausencia es
  * invisible en un diff, una afirmación es algo que alguien firmó.
  *
+ * **`scopeEnQuery` existe porque `"soloRol"` podía mentir.** Al migrar las 87
+ * rutas quedaron 45 en `"soloRol"`, y 27 de ellas **sí tenían** regla de fila:
+ * la aplicaba el handler adentro del query (`where userId = ...`,
+ * `projectScope(...)`). Decir "esta ruta no tiene regla de fila" cuando la tiene
+ * es peor que no decir nada, porque se lee como una revisión hecha. Ahora esas
+ * rutas declaran **cuál** es el filtro, en texto: no lo verifica el compilador
+ * —el handler podría no aplicarlo— pero deja de poder pasar por "acá no hay
+ * nada que mirar", y el texto es grepeable contra el `where` de al lado.
+ *
+ * La diferencia práctica está en la matriz: una ruta de listado que quedó en
+ * `"soloRol"` ahora **destaca**, y `GET /developer/audit-log` —que devuelve el
+ * AuditLog entero sin acotar por proyecto— es exactamente lo que esta partición
+ * hizo visible.
+ *
  * `alguna` existe porque una cadena de middlewares es un AND y hay reglas que
  * son un OR: `GET /contracts/:contractId/releases` la ve el dueño del contrato
  * **o** cualquier miembro del proyecto. Con los guards sueltos eso no se podía
@@ -437,6 +451,14 @@ export type ReglaDeAcceso =
   | { proyecto: ProjectSource; membresias: MembershipRole[] }
   | { dueño: OwnerSource }
   | { alguna: ReglaDeAcceso[] }
+  /**
+   * Hay regla de fila y **la aplica el handler**, en su propio query. El string
+   * dice cuál: `"Unit.investorId = usuario"`, `"projectScope(developer)"`. Cubre
+   * tanto los listados que se acotan como los chequeos por fila hechos con una
+   * query scopeada.
+   */
+  | { scopeEnQuery: string }
+  /** No hay regla de fila. El rol global es toda la regla. */
   | "soloRol";
 
 async function evaluarRegla(
@@ -445,6 +467,12 @@ async function evaluarRegla(
   regla: ReglaDeAcceso
 ): Promise<Veredicto> {
   if (regla === "soloRol") return PASA;
+
+  // `scopeEnQuery` no autoriza acá: es una **declaración** de que el handler lo
+  // hace en su query. El guard la deja pasar igual que `"soloRol"` — lo que
+  // cambia es lo que la ruta afirma, no lo que el guard ejecuta.
+  if ("scopeEnQuery" in regla) return PASA;
+
   if ("proyecto" in regla) return evaluarProyecto(user, req, regla.proyecto, regla.membresias);
   if ("dueño" in regla) return evaluarDueño(user, req, regla.dueño);
 

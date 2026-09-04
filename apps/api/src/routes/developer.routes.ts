@@ -30,7 +30,7 @@ function misProyectos(userId: string, role: "admin" | "developer") {
 /** Fila 35-36 — el listado de proyectos del developer, con su avance. */
 router.get(
   "/projects",
-  authorize({ roles: ["admin", "developer"], acceso: "soloRol" }),
+  authorize({ roles: ["admin", "developer"], acceso: { scopeEnQuery: "projectScope(developer)" } }),
   async (req, res) => {
     const proyectos = await misProyectos(req.user!.id, req.user!.role as "admin" | "developer")
       .orderBy("createdAt", "desc")
@@ -194,7 +194,7 @@ router.post(
 /** Fila 45 — el avance de obra a través de todos los proyectos. */
 router.get(
   "/progress",
-  authorize({ roles: ["admin", "developer"], acceso: "soloRol" }),
+  authorize({ roles: ["admin", "developer"], acceso: { scopeEnQuery: "projectScope(developer)" } }),
   async (req, res) => {
     const ids = (
       await misProyectos(req.user!.id, req.user!.role as "admin" | "developer").execute()
@@ -231,7 +231,7 @@ router.get(
  */
 router.get(
   "/documents",
-  authorize({ roles: ["admin", "developer"], acceso: "soloRol" }),
+  authorize({ roles: ["admin", "developer"], acceso: { scopeEnQuery: "projectScope(developer)" } }),
   async (req, res) => {
     const schema = z.object({ status: z.enum(["anchored", "pending"]).optional() });
     const parsed = schema.safeParse(req.query);
@@ -341,7 +341,10 @@ router.get(
  */
 router.post(
   "/documents",
-  authorize({ roles: ["admin", "developer"], acceso: "soloRol" }),
+  authorize({
+    roles: ["admin", "developer"],
+    acceso: { scopeEnQuery: "projectScope(developer) ∋ Evidence.projectId" }
+  }),
   async (req, res) => {
     const schema = z.strictObject({ evidenceId: z.string().min(1) });
     const parsed = schema.safeParse(req.body);
@@ -403,7 +406,10 @@ router.post(
 
 router.get(
   "/kpis",
-  authorize({ roles: ["admin", "developer"], acceso: "soloRol" }),
+  authorize({
+    roles: ["admin", "developer"],
+    acceso: { scopeEnQuery: "projectScope(cualquier membresía)" }
+  }),
   async (req, res) => {
     const ids = (await proyectosVisibles(req.user!.id, req.user!.role).execute()).map((p) => p.id);
 

@@ -31,13 +31,15 @@ afterAll(async () => {
  */
 const MATRIZ: Record<string, string> = {
   "POST /api/v1/auth/login": "—",
-  "GET /api/v1/auth/me": "auth + autoriza(rol(admin|developer|buyer|verifier|notary) · soloRol)",
+  "GET /api/v1/auth/me":
+    "auth + autoriza(rol(admin|developer|buyer|verifier|notary) · scope(User.id = usuario))",
   "GET /api/v1/users": "auth + autoriza(rol(admin) · soloRol)",
   "POST /api/v1/users": "auth + autoriza(rol(admin) · soloRol)",
   "GET /api/v1/users/:id": "auth + autoriza(rol(admin) · soloRol)",
   "PATCH /api/v1/users/:id": "auth + autoriza(rol(admin) · soloRol)",
   "DELETE /api/v1/users/:id": "auth + autoriza(rol(admin) · soloRol)",
-  "GET /api/v1/projects": "auth + autoriza(rol(admin|developer|buyer|verifier|notary) · soloRol)",
+  "GET /api/v1/projects":
+    "auth + autoriza(rol(admin|developer|buyer|verifier|notary) · scope(projectScope(cualquier membresía)))",
   "POST /api/v1/projects": "auth + autoriza(rol(admin) · soloRol)",
   "GET /api/v1/projects/:id":
     "auth + autoriza(rol(admin|developer|buyer|verifier|notary) · proyecto(id → developer|buyer|verifier))",
@@ -85,19 +87,24 @@ const MATRIZ: Record<string, string> = {
   "GET /api/v1/contracts/:contractId/releases":
     "auth + autoriza(rol(admin|developer|buyer|verifier|notary) · alguna[dueño(Contract:contractId) | proyecto(Contract:contractId → developer|buyer|verifier)])",
   "GET /api/v1/notifications/unread-count":
-    "auth + autoriza(rol(admin|developer|buyer|verifier|notary) · soloRol)",
+    "auth + autoriza(rol(admin|developer|buyer|verifier|notary) · scope(Notification.userId = usuario))",
   "PATCH /api/v1/notifications/:id/read":
-    "auth + autoriza(rol(admin|developer|buyer|verifier|notary) · soloRol)",
-  "GET /api/v1/profile": "auth + autoriza(rol(admin|developer|buyer|verifier|notary) · soloRol)",
-  "PATCH /api/v1/profile": "auth + autoriza(rol(admin|developer|buyer|verifier|notary) · soloRol)",
+    "auth + autoriza(rol(admin|developer|buyer|verifier|notary) · scope(Notification.userId = usuario))",
+  "GET /api/v1/profile":
+    "auth + autoriza(rol(admin|developer|buyer|verifier|notary) · scope(User.id = usuario))",
+  "PATCH /api/v1/profile":
+    "auth + autoriza(rol(admin|developer|buyer|verifier|notary) · scope(User.id = usuario))",
   "PATCH /api/v1/profile/notifications":
-    "auth + autoriza(rol(admin|developer|buyer|verifier|notary) · soloRol)",
+    "auth + autoriza(rol(admin|developer|buyer|verifier|notary) · scope(User.id = usuario))",
   "GET /api/v1/audit-logs": "auth + autoriza(rol(admin) · soloRol)",
   "GET /api/v1/public/dossier/:shareToken": "—",
-  "GET /api/v1/investor/favorites": "auth + autoriza(rol(admin|buyer) · soloRol)",
+  "GET /api/v1/investor/favorites":
+    "auth + autoriza(rol(admin|buyer) · scope(Favorite.userId = usuario))",
   "POST /api/v1/investor/favorites/:projectId": "auth + autoriza(rol(admin|buyer) · soloRol)",
-  "DELETE /api/v1/investor/favorites/:projectId": "auth + autoriza(rol(admin|buyer) · soloRol)",
-  "GET /api/v1/investor/units": "auth + autoriza(rol(admin|buyer) · soloRol)",
+  "DELETE /api/v1/investor/favorites/:projectId":
+    "auth + autoriza(rol(admin|buyer) · scope(Favorite.userId = usuario))",
+  "GET /api/v1/investor/units":
+    "auth + autoriza(rol(admin|buyer) · scope(Unit.investorId = usuario))",
   "GET /api/v1/investor/units/:id": "auth + autoriza(rol(admin|buyer) · dueño(Unit:id))",
   "GET /api/v1/investor/units/:id/news": "auth + autoriza(rol(admin|buyer) · dueño(Unit:id))",
   "GET /api/v1/investor/units/:id/dossier": "auth + autoriza(rol(admin|buyer) · dueño(Unit:id))",
@@ -105,7 +112,8 @@ const MATRIZ: Record<string, string> = {
     "auth + autoriza(rol(admin|buyer) · dueño(Unit:id))",
   "POST /api/v1/investor/units/:id/dossier/share":
     "auth + autoriza(rol(admin|buyer) · dueño(Unit:id))",
-  "GET /api/v1/investor/notifications": "auth + autoriza(rol(admin|buyer) · soloRol)",
+  "GET /api/v1/investor/notifications":
+    "auth + autoriza(rol(admin|buyer) · scope(Notification.userId = usuario))",
   "GET /api/v1/investor/invitations/:id":
     "auth + autoriza(rol(admin|buyer) · dueño(Invitation:id))",
   "POST /api/v1/investor/invitations/:id/accept":
@@ -114,22 +122,28 @@ const MATRIZ: Record<string, string> = {
     "auth + autoriza(rol(admin|buyer) · dueño(Invitation:id))",
   "GET /api/v1/investor/contracts/:unitId":
     "auth + autoriza(rol(admin|buyer) · dueño(ContractOfUnit:unitId))",
-  "GET /api/v1/developer/projects": "auth + autoriza(rol(admin|developer) · soloRol)",
+  "GET /api/v1/developer/projects":
+    "auth + autoriza(rol(admin|developer) · scope(projectScope(developer)))",
   "GET /api/v1/developer/projects/:id":
     "auth + autoriza(rol(admin|developer) · proyecto(id → developer))",
   "POST /api/v1/developer/projects": "auth + autoriza(rol(admin|developer) · soloRol)",
-  "GET /api/v1/developer/progress": "auth + autoriza(rol(admin|developer) · soloRol)",
-  "GET /api/v1/developer/documents": "auth + autoriza(rol(admin|developer) · soloRol)",
+  "GET /api/v1/developer/progress":
+    "auth + autoriza(rol(admin|developer) · scope(projectScope(developer)))",
+  "GET /api/v1/developer/documents":
+    "auth + autoriza(rol(admin|developer) · scope(projectScope(developer)))",
   "GET /api/v1/developer/audit-log": "auth + autoriza(rol(admin|developer) · soloRol)",
-  "POST /api/v1/developer/documents": "auth + autoriza(rol(admin|developer) · soloRol)",
-  "GET /api/v1/developer/kpis": "auth + autoriza(rol(admin|developer) · soloRol)",
+  "POST /api/v1/developer/documents":
+    "auth + autoriza(rol(admin|developer) · scope(projectScope(developer) ∋ Evidence.projectId))",
+  "GET /api/v1/developer/kpis":
+    "auth + autoriza(rol(admin|developer) · scope(projectScope(cualquier membresía)))",
   "GET /api/v1/developer/projects/:id/units":
     "auth + autoriza(rol(admin|developer) · proyecto(id → developer))",
   "POST /api/v1/developer/projects/:id/units":
     "auth + autoriza(rol(admin|developer) · proyecto(id → developer))",
   "PATCH /api/v1/developer/units/:id":
     "auth + autoriza(rol(admin|developer) · proyecto(Unit:id → developer))",
-  "GET /api/v1/developer/units": "auth + autoriza(rol(admin|developer) · soloRol)",
+  "GET /api/v1/developer/units":
+    "auth + autoriza(rol(admin|developer) · scope(projectScope(developer)))",
   "POST /api/v1/developer/projects/:id/invitations":
     "auth + autoriza(rol(admin|developer) · proyecto(id → developer))",
   "GET /api/v1/developer/projects/:id/contracts":
@@ -138,25 +152,34 @@ const MATRIZ: Record<string, string> = {
     "auth + autoriza(rol(admin|developer) · proyecto(Contract:id → developer))",
   "POST /api/v1/developer/projects/:id/stages/:stageId/evidence":
     "auth + autoriza(rol(admin|developer) · proyecto(id → developer))",
-  "GET /api/v1/developer/capital/summary": "auth + autoriza(rol(admin|developer) · soloRol)",
-  "GET /api/v1/developer/capital/monthly": "auth + autoriza(rol(admin|developer) · soloRol)",
-  "GET /api/v1/developer/capital/by-project": "auth + autoriza(rol(admin|developer) · soloRol)",
-  "GET /api/v1/developer/investors": "auth + autoriza(rol(admin|developer) · soloRol)",
-  "GET /api/v1/notary/kpis": "auth + autoriza(rol(admin|notary) · soloRol)",
+  "GET /api/v1/developer/capital/summary":
+    "auth + autoriza(rol(admin|developer) · scope(projectScope(developer)))",
+  "GET /api/v1/developer/capital/monthly":
+    "auth + autoriza(rol(admin|developer) · scope(projectScope(developer)))",
+  "GET /api/v1/developer/capital/by-project":
+    "auth + autoriza(rol(admin|developer) · scope(projectScope(developer)))",
+  "GET /api/v1/developer/investors":
+    "auth + autoriza(rol(admin|developer) · scope(projectScope(developer)))",
+  "GET /api/v1/notary/kpis":
+    "auth + autoriza(rol(admin|notary) · scope(Dossier.signedById = usuario))",
   "GET /api/v1/notary/dossiers/pending": "auth + autoriza(rol(admin|notary) · soloRol)",
   "GET /api/v1/notary/dossiers/:id": "auth + autoriza(rol(admin|notary) · soloRol)",
   "POST /api/v1/notary/dossiers/:id/sign": "auth + autoriza(rol(admin|notary) · soloRol)",
   "POST /api/v1/notary/dossiers/:id/reject": "auth + autoriza(rol(admin|notary) · soloRol)",
-  "GET /api/v1/notary/signatures": "auth + autoriza(rol(admin|notary) · soloRol)",
-  "GET /api/v1/certifier/kpis": "auth + autoriza(rol(admin|verifier) · soloRol)",
-  "GET /api/v1/certifier/assignments": "auth + autoriza(rol(admin|verifier) · soloRol)",
+  "GET /api/v1/notary/signatures":
+    "auth + autoriza(rol(admin|notary) · scope(Dossier.signedById = usuario))",
+  "GET /api/v1/certifier/kpis":
+    "auth + autoriza(rol(admin|verifier) · scope(projectScope(cualquier membresía)))",
+  "GET /api/v1/certifier/assignments":
+    "auth + autoriza(rol(admin|verifier) · scope(projectScope(cualquier membresía)))",
   "GET /api/v1/certifier/stages/:id":
     "auth + autoriza(rol(admin|verifier) · proyecto(Stage:id → verifier))",
   "POST /api/v1/certifier/stages/:id/certify":
     "auth + autoriza(rol(admin|verifier) · proyecto(Stage:id → verifier))",
   "POST /api/v1/certifier/stages/:id/observe":
     "auth + autoriza(rol(admin|verifier) · proyecto(Stage:id → verifier))",
-  "GET /api/v1/certifier/certificates": "auth + autoriza(rol(admin|verifier) · soloRol)"
+  "GET /api/v1/certifier/certificates":
+    "auth + autoriza(rol(admin|verifier) · scope(Stage.certifiedById = usuario))"
 };
 
 /**
@@ -180,6 +203,7 @@ function describirAcceso(acceso: ReglaDeAcceso): string {
     const origen = "via" in s ? `${s.via}:${s.param}` : s.param;
     return `proyecto(${origen} → ${acceso.membresias.join("|")})`;
   }
+  if ("scopeEnQuery" in acceso) return `scope(${acceso.scopeEnQuery})`;
   if ("dueño" in acceso) return `dueño(${acceso.dueño.via}:${acceso.dueño.param})`;
   return `alguna[${acceso.alguna.map(describirAcceso).join(" | ")}]`;
 }
@@ -259,6 +283,7 @@ describe("la matriz de permisos de las rutas montadas", () => {
     // muerta y bastante más difícil de ver leyendo.
     const membresiasVacias = (acceso: ReglaDeAcceso): boolean => {
       if (acceso === "soloRol") return false;
+      if ("scopeEnQuery" in acceso) return false;
       if ("proyecto" in acceso) return acceso.membresias.length === 0;
       if ("dueño" in acceso) return false;
       return acceso.alguna.some(membresiasVacias);
@@ -276,6 +301,34 @@ describe("la matriz de permisos de las rutas montadas", () => {
     }
 
     expect(vacias).toEqual([]);
+  });
+
+  it("toda ruta con `scopeEnQuery` nombra el filtro que aplica", () => {
+    // El punto entero de la partición. `scopeEnQuery` sin texto sería
+    // `"soloRol"` con otro nombre: la etiqueta volvería a poder decir "acá no
+    // hay nada que mirar". Con el filtro escrito, la afirmación es concreta y
+    // se puede contrastar contra el `where` del handler de al lado — no lo
+    // verifica el compilador, pero deja de ser una casilla vacía.
+    const sinNombrar: string[] = [];
+
+    const revisar = (clave: string, acceso: ReglaDeAcceso): void => {
+      if (acceso === "soloRol") return;
+      if ("scopeEnQuery" in acceso) {
+        if (acceso.scopeEnQuery.trim().length === 0) sinNombrar.push(clave);
+        return;
+      }
+      if ("alguna" in acceso) for (const rama of acceso.alguna) revisar(clave, rama);
+    };
+
+    for (const { rutas } of leerMontaje()) {
+      for (const [clave, guards] of rutas) {
+        for (const guard of guards) {
+          if (guard.kind === "authorize") revisar(clave, guard.acceso);
+        }
+      }
+    }
+
+    expect(sinNombrar).toEqual([]);
   });
 });
 

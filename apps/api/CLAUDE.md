@@ -604,12 +604,27 @@ rama que pasa —una ruta mal declarada tiene que ser ruidosa y no taparse con e
 entre `403` y `404` gana el `403`, porque contestar "no existe" a quien tampoco podía saberlo filtra
 justamente eso.
 
-**El reparto, medido:** `"soloRol"` 45 · `{ proyecto }` 30 · `{ dueño }` 9 · `{ alguna }` 1 · sin
-sesión 2. De los 45 `"soloRol"`, **12 son admin-only** —ahí el rol global es honestamente toda la
-regla— y los otros 33 son sobre todo listados y KPIs que se acotan **adentro del query**. En esos,
-`"soloRol"` afirma algo que no es cierto: dice "no hay regla de fila" cuando la hay, escrita a mano
-en el `where`. **Está propuesto partirlo en `"soloRol"` / `"scopeEnQuery"` y no está decidido.** Si
-vas a agregar una ruta de listado, sabé que estás escribiendo esa etiqueta imperfecta a propósito.
+**El reparto, medido:** `"soloRol"` 19 · `{ scopeEnQuery }` 26 · `{ proyecto }` 30 · `{ dueño }` 9 ·
+`{ alguna }` 1 · sin sesión 2.
+
+**`scopeEnQuery` es la etiqueta de "hay regla de fila y la aplica el handler".** Nació porque
+`"soloRol"` quedaba en 45 rutas y 26 mentían: los listados se acotan con `where userId = ...` o
+`projectScope(...)` adentro del query, así que decir "no hay regla de fila" se leía como una revisión
+hecha cuando no lo era. Ahora cada una nombra su filtro —`"Unit.investorId = usuario"`,
+`"projectScope(developer)"`— y hay un test que exige que el texto **no esté vacío**: sin eso sería
+`"soloRol"` con otro nombre. **No lo verifica el compilador**; el valor es que la afirmación sea
+concreta y se pueda contrastar contra el `where` de al lado.
+
+**Al escribir una ruta nueva, elegí entre las dos leyendo tu propio handler**, no por costumbre. Si
+tu query filtra por el usuario o por `projectScope`, es `scopeEnQuery` y hay que decir por qué campo.
+
+**⚠ `GET /developer/audit-log` quedó en `"soloRol"` y eso es correcto como descripción y probablemente
+incorrecto como producto:** devuelve el `AuditLog` **entero**, sin acotar por proyecto, con
+`actorName` y `actorRole` de cada usuario del sistema. Un developer con membresía en un proyecto ve
+los eventos de todos los demás. Es la regla 5 sin su segunda capa, de la misma familia que el agujero
+de `GET /evidence/:bundleId/files`, y lo destapó justamente etiquetar. **No se tocó**: qué debe
+mostrar ese audit log es decisión de producto. En la matriz destaca al lado de los otros listados,
+que sí declaran su filtro — que era exactamente el punto de la partición.
 
 ### La tercera capa — la pertenencia de fila, 2026-09-04
 

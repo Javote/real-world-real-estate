@@ -89,7 +89,7 @@ function mesUtc(fecha: Date | number): string {
 /** Fila 42-43 — los tres StatCard de la cabecera. */
 router.get(
   "/capital/summary",
-  authorize({ roles: ["admin", "developer"], acceso: "soloRol" }),
+  authorize({ roles: ["admin", "developer"], acceso: { scopeEnQuery: "projectScope(developer)" } }),
   async (req, res) => {
     const ids = await misProyectoIds(req.user!.id, req.user!.role);
     const { contratos, releases } = await movimientos(ids);
@@ -120,7 +120,7 @@ router.get(
  */
 router.get(
   "/capital/monthly",
-  authorize({ roles: ["admin", "developer"], acceso: "soloRol" }),
+  authorize({ roles: ["admin", "developer"], acceso: { scopeEnQuery: "projectScope(developer)" } }),
   async (req, res) => {
     const ids = await misProyectoIds(req.user!.id, req.user!.role);
     const { contratos, releases } = await movimientos(ids);
@@ -150,7 +150,7 @@ router.get(
 /** Fila 42-43 — el desglose por proyecto, con la barra de ocupación. */
 router.get(
   "/capital/by-project",
-  authorize({ roles: ["admin", "developer"], acceso: "soloRol" }),
+  authorize({ roles: ["admin", "developer"], acceso: { scopeEnQuery: "projectScope(developer)" } }),
   async (req, res) => {
     const ids = await misProyectoIds(req.user!.id, req.user!.role);
     if (ids.length === 0) return res.json([]);
@@ -198,7 +198,7 @@ router.get(
  */
 router.get(
   "/investors",
-  authorize({ roles: ["admin", "developer"], acceso: "soloRol" }),
+  authorize({ roles: ["admin", "developer"], acceso: { scopeEnQuery: "projectScope(developer)" } }),
   async (req, res) => {
     const ids = await misProyectoIds(req.user!.id, req.user!.role);
     if (ids.length === 0) return res.json([]);

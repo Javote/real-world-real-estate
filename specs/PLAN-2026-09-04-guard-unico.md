@@ -138,6 +138,11 @@ regla.
 `"soloRol"` **está afirmando algo que no es cierto**: dice "esta ruta no tiene regla de fila" cuando
 la tiene, escrita a mano en el `where` y sin ninguna relación con el guard.
 
-La partición en `"soloRol"` / `"scopeEnQuery"` quedó **propuesta y sin decidir**. Es lo único que
-este plan deja pendiente, y la razón por la que importa está en D-088: si la etiqueta puede mentir,
-el refactor no compró del todo lo que decía comprar.
+**La partición se hizo el mismo día** (paso 6, fuera de la tabla original): 26 de esas 45 pasaron a
+`{ scopeEnQuery: "<el filtro>" }`, con un test que exige que el texto no esté vacío. Quedan 19 en
+`"soloRol"`, y ahí la etiqueta es cierta.
+
+Y sirvió para lo que tenía que servir: etiquetar obliga a leer el handler, y aparecieron
+`GET /developer/audit-log` —que devuelve el `AuditLog` entero sin acotar por proyecto— y
+`POST /developer/documents` —que hacía la segunda capa a mano sobre un id que llega en el body—.
+Ninguno se tocó acá: este plan no cambia autorización. Los dos están en D-088.

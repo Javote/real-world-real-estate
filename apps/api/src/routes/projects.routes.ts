@@ -49,85 +49,92 @@ const listQuerySchema = z.object({
     .optional()
 });
 
-router.get("/", authorize({ roles: CUALQUIER_ROL, acceso: "soloRol" }), async (req, res) => {
-  const filtros = listQuerySchema.safeParse(req.query);
+router.get(
+  "/",
+  authorize({
+    roles: CUALQUIER_ROL,
+    acceso: { scopeEnQuery: "projectScope(cualquier membresía)" }
+  }),
+  async (req, res) => {
+    const filtros = listQuerySchema.safeParse(req.query);
 
-  if (!filtros.success) {
-    return res.status(400).json(filtros.error.flatten());
+    if (!filtros.success) {
+      return res.status(400).json(filtros.error.flatten());
+    }
+
+    const { status, city, q, sort, bbox } = filtros.data;
+
+    // El scope de visibilidad sale de `projectScope` y no de un query propio: es
+    // la MISMA regla que aplica `canAccessProject` a un proyecto puntual (D-048,
+    // D-049 — reimplementado con el query builder de Kysely, misma semántica:
+    // `EXISTS` correlacionado, sin duplicar filas de un usuario con dos
+    // membresías sobre el mismo proyecto).
+    let query = db.selectFrom("Project").selectAll("Project");
+
+    if (status) query = query.where("status", "=", status);
+    if (city) query = query.where("city", "=", city);
+
+    if (q) {
+      // `escape` explícito: sin él, un `%` tipeado en el buscador matchea todo y
+      // un `_` matchea cualquier carácter — el usuario cree que filtró y no.
+      const patron = `%${q.replace(/[\\%_]/g, "\\$&")}%`;
+      query = query.where((eb) =>
+        eb.or([
+          eb("name", "like", sql<string>`${patron} escape '\\'`),
+          eb("city", "like", sql<string>`${patron} escape '\\'`)
+        ])
+      );
+    }
+
+    if (bbox) {
+      const [minLon, minLat, maxLon, maxLat] = bbox.split(",").map(Number);
+      // Un proyecto sin coordenadas no entra al mapa. No se le inventa un punto.
+      query = query
+        .where("longitude", ">=", minLon)
+        .where("longitude", "<=", maxLon)
+        .where("latitude", ">=", minLat)
+        .where("latitude", "<=", maxLat);
+    }
+
+    const projectRows = await query
+      .where((eb) => projectScope(eb, req.user!.role, req.user!.id, ANY_MEMBERSHIP))
+      .$call((qb) => {
+        if (sort === "name") return qb.orderBy("name", "asc");
+        // `estimatedDelivery` nullable: las entregas sin fecha van al final en
+        // vez de encabezar el listado por ser NULL.
+        if (sort === "delivery")
+          return qb
+            .orderBy(sql`case when estimatedDelivery is null then 1 else 0 end`)
+            .orderBy("estimatedDelivery", "asc");
+        return qb.orderBy("createdAt", "desc");
+      })
+      .execute();
+
+    const projectIds = projectRows.map((p) => p.id);
+    const stageRows = projectIds.length
+      ? await db
+          .selectFrom("Stage")
+          .selectAll()
+          .where("projectId", "in", projectIds)
+          .orderBy("sequenceOrder", "asc")
+          .execute()
+      : [];
+
+    const stagesByProject = new Map<string, typeof stageRows>();
+    for (const stage of stageRows) {
+      const list = stagesByProject.get(stage.projectId) ?? [];
+      list.push(stage);
+      stagesByProject.set(stage.projectId, list);
+    }
+
+    const projectList = projectRows.map((project) => ({
+      ...project,
+      stages: stagesByProject.get(project.id) ?? []
+    }));
+
+    return res.json(projectList);
   }
-
-  const { status, city, q, sort, bbox } = filtros.data;
-
-  // El scope de visibilidad sale de `projectScope` y no de un query propio: es
-  // la MISMA regla que aplica `canAccessProject` a un proyecto puntual (D-048,
-  // D-049 — reimplementado con el query builder de Kysely, misma semántica:
-  // `EXISTS` correlacionado, sin duplicar filas de un usuario con dos
-  // membresías sobre el mismo proyecto).
-  let query = db.selectFrom("Project").selectAll("Project");
-
-  if (status) query = query.where("status", "=", status);
-  if (city) query = query.where("city", "=", city);
-
-  if (q) {
-    // `escape` explícito: sin él, un `%` tipeado en el buscador matchea todo y
-    // un `_` matchea cualquier carácter — el usuario cree que filtró y no.
-    const patron = `%${q.replace(/[\\%_]/g, "\\$&")}%`;
-    query = query.where((eb) =>
-      eb.or([
-        eb("name", "like", sql<string>`${patron} escape '\\'`),
-        eb("city", "like", sql<string>`${patron} escape '\\'`)
-      ])
-    );
-  }
-
-  if (bbox) {
-    const [minLon, minLat, maxLon, maxLat] = bbox.split(",").map(Number);
-    // Un proyecto sin coordenadas no entra al mapa. No se le inventa un punto.
-    query = query
-      .where("longitude", ">=", minLon)
-      .where("longitude", "<=", maxLon)
-      .where("latitude", ">=", minLat)
-      .where("latitude", "<=", maxLat);
-  }
-
-  const projectRows = await query
-    .where((eb) => projectScope(eb, req.user!.role, req.user!.id, ANY_MEMBERSHIP))
-    .$call((qb) => {
-      if (sort === "name") return qb.orderBy("name", "asc");
-      // `estimatedDelivery` nullable: las entregas sin fecha van al final en
-      // vez de encabezar el listado por ser NULL.
-      if (sort === "delivery")
-        return qb
-          .orderBy(sql`case when estimatedDelivery is null then 1 else 0 end`)
-          .orderBy("estimatedDelivery", "asc");
-      return qb.orderBy("createdAt", "desc");
-    })
-    .execute();
-
-  const projectIds = projectRows.map((p) => p.id);
-  const stageRows = projectIds.length
-    ? await db
-        .selectFrom("Stage")
-        .selectAll()
-        .where("projectId", "in", projectIds)
-        .orderBy("sequenceOrder", "asc")
-        .execute()
-    : [];
-
-  const stagesByProject = new Map<string, typeof stageRows>();
-  for (const stage of stageRows) {
-    const list = stagesByProject.get(stage.projectId) ?? [];
-    list.push(stage);
-    stagesByProject.set(stage.projectId, list);
-  }
-
-  const projectList = projectRows.map((project) => ({
-    ...project,
-    stages: stagesByProject.get(project.id) ?? []
-  }));
-
-  return res.json(projectList);
-});
+);
 
 router.post("/", authorize({ roles: ["admin"], acceso: "soloRol" }), async (req, res) => {
   const schema = z.object({

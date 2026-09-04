@@ -52,7 +52,7 @@ async function dossierDeLaUnidad(unitId: string) {
 
 router.get(
   "/favorites",
-  authorize({ roles: ["admin", "buyer"], acceso: "soloRol" }),
+  authorize({ roles: ["admin", "buyer"], acceso: { scopeEnQuery: "Favorite.userId = usuario" } }),
   async (req, res) => {
     const favoritos = await db
       .selectFrom("Favorite")
@@ -91,7 +91,7 @@ router.post(
 
 router.delete(
   "/favorites/:projectId",
-  authorize({ roles: ["admin", "buyer"], acceso: "soloRol" }),
+  authorize({ roles: ["admin", "buyer"], acceso: { scopeEnQuery: "Favorite.userId = usuario" } }),
   async (req: Request<{ projectId: string }>, res) => {
     await db
       .deleteFrom("Favorite")
@@ -108,7 +108,7 @@ router.delete(
 /** Fila 14 — My Units: las del investor autenticado. */
 router.get(
   "/units",
-  authorize({ roles: ["admin", "buyer"], acceso: "soloRol" }),
+  authorize({ roles: ["admin", "buyer"], acceso: { scopeEnQuery: "Unit.investorId = usuario" } }),
   async (req, res) => {
     const unidades = await db
       .selectFrom("Unit")
@@ -351,7 +351,10 @@ router.post(
  */
 router.get(
   "/notifications",
-  authorize({ roles: ["admin", "buyer"], acceso: "soloRol" }),
+  authorize({
+    roles: ["admin", "buyer"],
+    acceso: { scopeEnQuery: "Notification.userId = usuario" }
+  }),
   async (req, res) => {
     const filtros = notificationQuerySchema.safeParse(req.query);
     if (!filtros.success) return res.status(400).json(filtros.error.flatten());
