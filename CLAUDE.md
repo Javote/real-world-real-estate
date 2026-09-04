@@ -36,7 +36,6 @@ números medidos, en `specs/README.md`. Acá solo lo que falta.
 | # | Qué | Por qué ahí | Nivel |
 |---|---|---|---|
 | 0 | **Mainnet** — runbook, habilitar la red, custodia de la clave | D-013 la hace **imposible por configuración**: es código, no solo procedimiento | 🔴 |
-| 1 | **`requireOwnership`** — subir a la firma la autorización por pertenencia de la fila | Es la tercera capa, y hoy es la única que no declara nada: vive adentro del handler | 🟡 |
 
 **Cerrados el 2026-09-01:** el reference script (D-083) y su cobertura contra un nodo real; `network`
 e `issuingAuthority`, aplicadas en producción **sin dejar de tener un solo archivo de migración**
@@ -115,16 +114,26 @@ que Express armó, con los middlewares que van a correr. Y se verificó rompién
 las tres en rojo, las tres revertidas—, no viéndolo verde. El detalle está en `apps/api/CLAUDE.md`
 §La matriz de permisos.
 
-**Lo que eso destapó, y es el punto 1 de la tabla.** La matriz asienta los guards **declarados**, no
-que la autorización sea correcta. Hay un tercer patrón vivo y sin forma: autorizar **adentro** del
-handler. `contracts.routes.ts` llama a `projectScope` a mano, `investor.routes.ts` compara
-`investorId` contra `req.user.id`, `notary.routes.ts` filtra por `signedById`. Se auditaron una por
-una el 2026-09-04 y **ninguna está abierta** — pero su autorización no se lee en la firma, no la
-protege el compilador y no la ve el test nuevo. En la matriz se reconocen porque su columna de
-guards es corta (solo `auth`, o `auth + rol(...)`), y esa columna corta es la lista de entrada:
-~20 rutas de `investor` y `notary`, más `contracts`. **Lo siguiente es un `requireOwnership` hermano
-de los otros dos guards**, para que las tres capas se lean en el mismo lugar. Con la matriz puesta,
-es mecánico: el test dice cuáles faltan.
+**Lo que eso destapó, y se cerró el mismo día: la tercera capa existe.** La matriz asienta los guards
+**declarados**, no que la autorización sea correcta, y dejó a la vista un tercer patrón que vivía sin
+forma: autorizar **adentro** del handler. Ninguna de esas rutas estaba abierta —se auditaron una por
+una— pero su regla no se leía en la firma, no la protegía el compilador y no la veía el test nuevo.
+Ahora hay un `requireOwnership` hermano de los otros dos guards, con tres formas de `OwnerSource`
+(`Unit`, `Invitation` —que compara contra el **email**, porque la invitación existe antes que la
+cuenta— y `ContractOfUnit`, que resuelve la fila por `unitId` y no por su clave primaria). **Nueve
+rutas del investor** pasaron el `if` copiado a la firma, con el bypass de `admin` y la regla de que
+un dueño `null` es 403 en un solo lugar cada uno. Verificado neutralizando el guard: 7 de 13 tests
+en rojo, todos los de rechazo.
+
+**Y corrige algo que este archivo afirmó de más ayer.** Decía "~20 rutas de `investor` y `notary`":
+`notary` **no era candidato**. Sus rutas de dossier no tienen regla de pertenencia y no es un olvido
+—el dossier pendiente es una cola de trabajo compartida, cualquier notary firma cualquiera— y lo que
+sus listados hacen con `signedById` es acotar la vista, que es scope y no autorización. **Antes de
+subir un filtro a la firma, preguntá si es una regla de acceso o un criterio de listado.** Queda una
+sola ruta autorizando adentro a propósito: `GET /contracts/:contractId/releases`, cuya regla es
+*dueño **o** miembro del proyecto* — una disyunción, y una cadena de middlewares es una conjunción.
+El combinador se escribe el día que aparezca la segunda, no antes. Todo en `apps/api/CLAUDE.md`
+§La tercera capa.
 
 **Abierto, y es decisión del dueño, no una tarea pendiente.** El JWT dura 7 días y no se puede
 revocar de a uno. La revocación que existe es gruesa: `authenticate()` reconsulta la base en cada

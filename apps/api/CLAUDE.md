@@ -25,9 +25,11 @@ que la superficie del entregable no consume pero los tests y el seed sí.
 
 1. Schema Zod en `packages/shared` — **antes** que el endpoint (regla 6). El front importa el
    mismo tipo. Es lo único que vuelve imposible el drift API↔web.
-2. Ruta con `requireRole` + `canAccessProject`, diciendo **qué membresías** acepta —
+2. Ruta con `requireRole` + `requireProjectAccess`, diciendo **qué membresías** acepta —
    `ANY_MEMBERSHIP` si alcanza con ser miembro. No es opcional: omitirlo no compila (D-042).
-   (🔴 `canAccessProject` lo lidera el humano.)
+   (🔴 `canAccessProject`, que es a quien delega, lo lidera el humano.) Y si el recurso es **de
+   alguien** —una unidad, una invitación, un contrato— suma `requireOwnership`: la tercera capa
+   va en la firma como las otras dos, nunca como un `if` adentro del handler.
 3. `safeParse` → 400 con `error.flatten()`.
 4. `writeAuditLog` si es mutación relevante.
 5. Test del camino feliz y de cada rechazo.
@@ -534,6 +536,10 @@ la firma, no la protege el compilador y no la ve este test. **Esa columna corta 
 candidatas** a subir a la firma con un `requireOwnership` hermano de los otros dos, que es el paso
 siguiente y todavía no está hecho.
 
+**La lista de candidatas, resuelta el mismo día.** Ver §La tercera capa, abajo. Queda una sola ruta
+autorizando adentro del handler a propósito: `GET /contracts/:contractId/releases`, y el porqué está
+ahí.
+
 **Y una redundancia que la matriz dejó a la vista:** `investor`, `developer`, `notary` y otros
 declaran `requireRole` a nivel de router **y** lo repiten en cada ruta, así que la matriz muestra
 `rol(admin|buyer) + rol(admin|buyer)`. No es un bug —el segundo chequeo es idéntico al primero— y se
@@ -549,6 +555,62 @@ estaríamos anclando la huella de un archivo que no existe en ningún lado.
 
 `utils/hashing.ts` se borró: su única función quedó adentro del port, y dos lugares que hashean es
 uno de más.
+
+### La tercera capa — `requireOwnership`, 2026-09-04
+
+**Qué contesta.** `requireRole` responde "¿este rol puede tocar esta superficie?" y
+`requireProjectAccess` responde "¿es miembro de este proyecto?". Ninguna responde la pregunta que
+rige la superficie del investor: *¿esta unidad, esta invitación, este contrato son suyos?* — el
+aislamiento cross-rol de M2-D1 §Cross-role data isolation. Eso vivía como un `if` copiado en **nueve
+handlers**, siempre igual: `req.user!.role !== "admin" && fila.x !== req.user!.id`.
+
+**Contra qué argumento se cambió.** `investor.routes.ts` justificaba tenerlo suelto con que *"el dato
+que decide —quién es el dueño— sale de la fila, no del token"*. Es cierto y no alcanza:
+`requireProjectAccess` **ya carga una fila** para averiguar el `projectId` cuando el path trae un
+`stageId` o un `evidenceId`, y a nadie se le ocurrió bajarlo al handler por eso. Lo que sí traía el
+chequeo suelto es el modo de falla de siempre — una ruta nueva que se olvida el `if` compila, pasa el
+happy path y sirve la unidad de otro. Es el agujero de `GET /evidence/:bundleId/files` otra vez, y la
+respuesta es la que ya dio D-042: que se lea en la firma.
+
+**Las tres formas de `OwnerSource`,** ramas explícitas y no una query con nombres de tabla en
+variables (mismo criterio que `ProjectSource`):
+
+| `via` | Fila | Compara contra |
+|---|---|---|
+| `Unit` | `Unit.investorId` por PK | `user.id` |
+| `Invitation` | `Invitation.investorEmail` por PK | **`user.email`** |
+| `ContractOfUnit` | `Contract.investorId` **por `unitId`** | `user.id` |
+
+Las dos rarezas son reales y por eso están tipadas aparte. La invitación compara contra el **email**
+porque existe antes de que el investor tenga cuenta: si comparara ids, ninguna invitación sería de
+nadie. Y `ContractOfUnit` resuelve la fila por `unitId` y no por su clave primaria, porque el path de
+`GET /investor/contracts/:unitId` trae la unidad — el 404 igual dice `Contract not found`, que es lo
+que decía antes.
+
+**Dos decisiones que quedan adentro, en un solo lugar cada una.** El bypass de `admin`, igual que en
+`projectScope` (D-043). Y que **un dueño `null` es 403, no un pase libre**: una unidad sin vender no
+es de nadie, y para un no-admin es tan ajena como cualquier otra. Antes eso salía de cómo se comporta
+`!==` con `null`; ahora está escrito, y hay un test que existe para que nadie lo "simplifique".
+
+**Se verificó neutralizando el guard**, no solo viéndolo verde: con `requireOwnership` convertido en
+un `next()` pelado, 7 de los 13 tests de `test/require-ownership.test.ts` se ponen rojos — todos los
+de rechazo. Los 6 que sobreviven son los caminos felices y los 404 que el handler todavía produce por
+su cuenta, que es exactamente lo que se espera.
+
+**La que queda afuera, a propósito: `GET /contracts/:contractId/releases`.** Su regla es
+*el dueño del contrato **o** cualquier miembro del proyecto* — una disyunción, y una cadena de
+middlewares es una conjunción. Expresarla pediría un combinador `o(...)` en la capa de autorización:
+más maquinaria y más superficie 🟡 para una sola ruta. Autoriza adentro del handler, con
+`projectScope` a mano, y está bien mientras sea una. **Si aparece una segunda ruta con regla
+disyuntiva, ahí sí conviene el combinador** — dos copias de una regla de autorización es como
+empezaron las nueve.
+
+**Lo que `notary` NO era.** Al ir a aplicarlo apareció que `GET /dossiers/:id`, `/sign` y `/reject`
+**no tienen** regla de pertenencia y no es un olvido: el dossier pendiente es una **cola de trabajo
+compartida**, cualquier notary firma cualquiera, y `signedById` se escribe al firmar. Los listados
+(`/kpis`, `/signatures`) filtran por `signedById` para acotar la vista, que es scope y no
+autorización. Antes de subir un filtro a la firma, preguntá si es una regla de acceso o un criterio
+de listado — no son lo mismo y el middleware solo sirve para la primera.
 
 ### bcrypt: se queda nativo
 

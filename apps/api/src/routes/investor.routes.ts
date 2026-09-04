@@ -7,7 +7,7 @@ import { anchorCommitmentEvent, commitmentOf } from "../domain/anchoring";
 import { compileDossier } from "../domain/dossier";
 import { reconciliarParaLectura } from "../domain/reconcile";
 import { db } from "../lib/db";
-import { authenticate, requireRole } from "../middlewares/auth";
+import { authenticate, requireOwnership, requireRole } from "../middlewares/auth";
 import { writeAuditLog } from "../utils/audit";
 import { renderTextPdf } from "../utils/pdf";
 import { avancePorProyecto } from "./_shared";
@@ -28,20 +28,26 @@ import { avancePorProyecto } from "./_shared";
 //
 // **El aislamiento cross-rol es la regla de acceso de casi todo lo de acá**
 // (M2-D1 §Cross-role data isolation): el investor ve SU unidad, SU contrato, SU
-// dossier. Ese chequeo va en cada handler y no en un middleware porque el dato
-// que decide —quién es el dueño— sale de la fila, no del token.
+// dossier. Ese chequeo es `requireOwnership` y se lee en la firma de cada ruta,
+// como las otras dos capas. Vivió suelto adentro de cada handler hasta el
+// 2026-09-04, con el argumento de que el dato que decide sale de la fila y no
+// del token — cierto, y no alcanza: `requireProjectAccess` también carga una
+// fila y nadie lo bajó al handler por eso. Lo que traía era el modo de falla de
+// siempre: una ruta nueva que se olvida el `if` compila y sirve la unidad ajena.
 
 const router = Router();
 
 router.use(authenticate);
 router.use(requireRole("admin", "buyer"));
 
-/** El investor ve SU dossier y ninguno más. */
-async function dossierDeLaUnidad(unitId: string, user: { id: string; role: string }) {
+/**
+ * El dossier de la unidad. **Ya no autoriza**: las tres rutas que lo usan entran
+ * por `requireOwnership({ via: "Unit" })`, así que acá solo queda el 404 de una
+ * unidad que existe pero todavía no compila un dossier.
+ */
+async function dossierDeLaUnidad(unitId: string) {
   const dossier = await compileDossier(unitId);
-  if (!dossier) return { error: 404 as const };
-  if (user.role !== "admin" && dossier.investorId !== user.id) return { error: 403 as const };
-  return { dossier };
+  return dossier ? { dossier } : { error: 404 as const };
 }
 
 router.get("/favorites", requireRole("admin", "buyer"), async (req, res) => {
@@ -123,6 +129,7 @@ router.get("/units", requireRole("admin", "buyer"), async (req, res) => {
 router.get(
   "/units/:id",
   requireRole("admin", "buyer"),
+  requireOwnership({ via: "Unit", param: "id" }),
   async (req: Request<{ id: string }>, res) => {
     const unidad = await db
       .selectFrom("Unit")
@@ -145,12 +152,6 @@ router.get(
       .executeTakeFirst();
 
     if (!unidad) return res.status(404).json({ message: "Unit not found" });
-
-    // **Aislamiento cross-rol** (M2-D1 §Cross-role data isolation): el investor
-    // ve SU unidad y ninguna otra.
-    if (req.user!.role !== "admin" && unidad.investorId !== req.user!.id) {
-      return res.status(403).json({ message: "Forbidden" });
-    }
 
     // Los stages son del proyecto, con su estado de anclaje: esto alimenta los
     // StageChips del patrón P9.
@@ -183,6 +184,7 @@ router.get(
 router.get(
   "/units/:id/news",
   requireRole("admin", "buyer"),
+  requireOwnership({ via: "Unit", param: "id" }),
   async (req: Request<{ id: string }>, res) => {
     const unidad = await db
       .selectFrom("Unit")
@@ -191,9 +193,6 @@ router.get(
       .executeTakeFirst();
 
     if (!unidad) return res.status(404).json({ message: "Unit not found" });
-    if (req.user!.role !== "admin" && unidad.investorId !== req.user!.id) {
-      return res.status(403).json({ message: "Forbidden" });
-    }
 
     // El anclaje `Pending` que ya está en la cadena se confirma acá, en el
     // momento en que alguien lo mira (D-077).
@@ -221,14 +220,17 @@ router.get(
 );
 
 /** Fila 26-29 — el dossier compilado, con su hash maestro. */
-router.get("/units/:id/dossier", async (req: Request<{ id: string }>, res) => {
-  const resultado = await dossierDeLaUnidad(req.params.id, req.user!);
-  if (resultado.error === 404) return res.status(404).json({ message: "Unit not found" });
-  if (resultado.error === 403) return res.status(403).json({ message: "Forbidden" });
+router.get(
+  "/units/:id/dossier",
+  requireOwnership({ via: "Unit", param: "id" }),
+  async (req: Request<{ id: string }>, res) => {
+    const resultado = await dossierDeLaUnidad(req.params.id);
+    if (resultado.error === 404) return res.status(404).json({ message: "Unit not found" });
 
-  const { investorId: _investorId, ...dossier } = resultado.dossier;
-  return res.json(dossier);
-});
+    const { investorId: _investorId, ...dossier } = resultado.dossier;
+    return res.json(dossier);
+  }
+);
 
 /**
  * Fila 26-29 — el export. El PDF es una TRANSCRIPCIÓN del dossier, no una
@@ -237,53 +239,56 @@ router.get("/units/:id/dossier", async (req: Request<{ id: string }>, res) => {
  * cuenta. Un artefacto que dijera "verificado" sin traer con qué comprobarlo
  * sería exactamente lo que D-026 prohíbe.
  */
-router.get("/units/:id/dossier/export.pdf", async (req: Request<{ id: string }>, res) => {
-  const resultado = await dossierDeLaUnidad(req.params.id, req.user!);
-  if (resultado.error === 404) return res.status(404).json({ message: "Unit not found" });
-  if (resultado.error === 403) return res.status(403).json({ message: "Forbidden" });
+router.get(
+  "/units/:id/dossier/export.pdf",
+  requireOwnership({ via: "Unit", param: "id" }),
+  async (req: Request<{ id: string }>, res) => {
+    const resultado = await dossierDeLaUnidad(req.params.id);
+    if (resultado.error === 404) return res.status(404).json({ message: "Unit not found" });
 
-  const d = resultado.dossier;
-  const pdf = renderTextPdf([
-    "PropNexus - Proof dossier",
-    "",
-    `Project:      ${d.projectName}`,
-    `Unit:         ${d.unitReference}`,
-    `Compiled at:  ${d.compiledAt.toISOString()}`,
-    `Status:       ${d.status}`,
-    `Master hash:  ${d.masterHash}`,
-    `Notary TXID:  ${d.signatureTxid ?? "(pending)"}`,
-    `Completeness: ${d.completeness}% of artifacts have an on-chain reference`,
-    "",
-    "This document asserts only that these hashes were registered at these times,",
-    "and, where a signature TXID is present, that a notary attested to reviewing them.",
-    "It certifies nothing about the construction itself.",
-    "",
-    "Artifacts",
-    "---------",
-    ...d.artifacts.flatMap((a) => [
-      `[${a.kind}] ${a.label}`,
-      `  sha256: ${a.sha256 ?? "(none)"}`,
-      `  txid:   ${a.txid ?? "(pending)"}`
-    ])
-  ]);
+    const d = resultado.dossier;
+    const pdf = renderTextPdf([
+      "PropNexus - Proof dossier",
+      "",
+      `Project:      ${d.projectName}`,
+      `Unit:         ${d.unitReference}`,
+      `Compiled at:  ${d.compiledAt.toISOString()}`,
+      `Status:       ${d.status}`,
+      `Master hash:  ${d.masterHash}`,
+      `Notary TXID:  ${d.signatureTxid ?? "(pending)"}`,
+      `Completeness: ${d.completeness}% of artifacts have an on-chain reference`,
+      "",
+      "This document asserts only that these hashes were registered at these times,",
+      "and, where a signature TXID is present, that a notary attested to reviewing them.",
+      "It certifies nothing about the construction itself.",
+      "",
+      "Artifacts",
+      "---------",
+      ...d.artifacts.flatMap((a) => [
+        `[${a.kind}] ${a.label}`,
+        `  sha256: ${a.sha256 ?? "(none)"}`,
+        `  txid:   ${a.txid ?? "(pending)"}`
+      ])
+    ]);
 
-  await writeAuditLog({
-    actorUserId: req.user!.id,
-    action: "EXPORT_DOSSIER",
-    entityType: "Dossier",
-    entityId: d.id,
-    metadata: { masterHash: d.masterHash }
-  });
+    await writeAuditLog({
+      actorUserId: req.user!.id,
+      action: "EXPORT_DOSSIER",
+      entityType: "Dossier",
+      entityId: d.id,
+      metadata: { masterHash: d.masterHash }
+    });
 
-  res.setHeader("Content-Type", "application/pdf");
-  // El nombre lleva la ref de la unidad, que no es PII. Nunca el nombre del
-  // investor.
-  res.setHeader(
-    "Content-Disposition",
-    `attachment; filename="dossier-${d.unitReference.replace(/[^\w.-]/g, "_")}.pdf"`
-  );
-  return res.send(pdf);
-});
+    res.setHeader("Content-Type", "application/pdf");
+    // El nombre lleva la ref de la unidad, que no es PII. Nunca el nombre del
+    // investor.
+    res.setHeader(
+      "Content-Disposition",
+      `attachment; filename="dossier-${d.unitReference.replace(/[^\w.-]/g, "_")}.pdf"`
+    );
+    return res.send(pdf);
+  }
+);
 
 /**
  * Fila 28s — compartir. El token es opaco y de 256 bits: es la única
@@ -293,40 +298,43 @@ router.get("/units/:id/dossier/export.pdf", async (req: Request<{ id: string }>,
  * **Idempotente** (regla 8): volver a compartir devuelve el MISMO token en vez
  * de invalidar el link que ya se mandó por mail.
  */
-router.post("/units/:id/dossier/share", async (req: Request<{ id: string }>, res) => {
-  const resultado = await dossierDeLaUnidad(req.params.id, req.user!);
-  if (resultado.error === 404) return res.status(404).json({ message: "Unit not found" });
-  if (resultado.error === 403) return res.status(403).json({ message: "Forbidden" });
+router.post(
+  "/units/:id/dossier/share",
+  requireOwnership({ via: "Unit", param: "id" }),
+  async (req: Request<{ id: string }>, res) => {
+    const resultado = await dossierDeLaUnidad(req.params.id);
+    if (resultado.error === 404) return res.status(404).json({ message: "Unit not found" });
 
-  const d = resultado.dossier;
+    const d = resultado.dossier;
 
-  const fila = await db
-    .selectFrom("Dossier")
-    .select("shareToken")
-    .where("id", "=", d.id)
-    .executeTakeFirstOrThrow();
+    const fila = await db
+      .selectFrom("Dossier")
+      .select("shareToken")
+      .where("id", "=", d.id)
+      .executeTakeFirstOrThrow();
 
-  let token = fila.shareToken;
-  if (!token) {
-    token = randomBytes(32).toString("hex");
-    await db.updateTable("Dossier").set({ shareToken: token }).where("id", "=", d.id).execute();
+    let token = fila.shareToken;
+    if (!token) {
+      token = randomBytes(32).toString("hex");
+      await db.updateTable("Dossier").set({ shareToken: token }).where("id", "=", d.id).execute();
 
-    await writeAuditLog({
-      actorUserId: req.user!.id,
-      action: "SHARE_DOSSIER",
-      entityType: "Dossier",
-      entityId: d.id
-    });
+      await writeAuditLog({
+        actorUserId: req.user!.id,
+        action: "SHARE_DOSSIER",
+        entityType: "Dossier",
+        entityId: d.id
+      });
+    }
+
+    // Path sin host: el cliente lo compone con su propio origen. La API no
+    // sabe —ni debe saber— bajo qué dominio se sirve el front.
+    return res.status(201).json({
+      shareToken: token,
+      path: `/api/v1/public/dossier/${token}`,
+      masterHash: d.masterHash
+    } satisfies DossierShare);
   }
-
-  // Path sin host: el cliente lo compone con su propio origen. La API no
-  // sabe —ni debe saber— bajo qué dominio se sirve el front.
-  return res.status(201).json({
-    shareToken: token,
-    path: `/api/v1/public/dossier/${token}`,
-    masterHash: d.masterHash
-  } satisfies DossierShare);
-});
+);
 
 /**
  * El listado (filas 22 y 62). `unitId` y `category` son los dos filtros que
@@ -366,6 +374,7 @@ router.get("/notifications", async (req, res) => {
 router.get(
   "/invitations/:id",
   requireRole("admin", "buyer"),
+  requireOwnership({ via: "Invitation", param: "id" }),
   async (req: Request<{ id: string }>, res) => {
     const invitacion = await db
       .selectFrom("Invitation")
@@ -386,11 +395,6 @@ router.get(
 
     if (!invitacion) return res.status(404).json({ message: "Invitation not found" });
 
-    // La invitación es para quien tiene ese email: nadie más la ve.
-    if (req.user!.role !== "admin" && invitacion.investorEmail !== req.user!.email) {
-      return res.status(403).json({ message: "Forbidden" });
-    }
-
     return res.json(invitacion);
   }
 );
@@ -399,6 +403,7 @@ router.get(
 router.post(
   "/invitations/:id/accept",
   requireRole("admin", "buyer"),
+  requireOwnership({ via: "Invitation", param: "id" }),
   async (req: Request<{ id: string }>, res) => {
     const invitacion = await db
       .selectFrom("Invitation")
@@ -407,9 +412,6 @@ router.post(
       .executeTakeFirst();
 
     if (!invitacion) return res.status(404).json({ message: "Invitation not found" });
-    if (req.user!.role !== "admin" && invitacion.investorEmail !== req.user!.email) {
-      return res.status(403).json({ message: "Forbidden" });
-    }
     if (invitacion.status !== "pending") {
       return res.status(409).json({
         message: `Invitation already ${invitacion.status}`,
@@ -476,6 +478,7 @@ router.post(
 router.post(
   "/invitations/:id/decline",
   requireRole("admin", "buyer"),
+  requireOwnership({ via: "Invitation", param: "id" }),
   async (req: Request<{ id: string }>, res) => {
     const invitacion = await db
       .selectFrom("Invitation")
@@ -484,9 +487,6 @@ router.post(
       .executeTakeFirst();
 
     if (!invitacion) return res.status(404).json({ message: "Invitation not found" });
-    if (req.user!.role !== "admin" && invitacion.investorEmail !== req.user!.email) {
-      return res.status(403).json({ message: "Forbidden" });
-    }
     if (invitacion.status !== "pending") {
       return res.status(409).json({ message: `Invitation already ${invitacion.status}` });
     }
@@ -520,6 +520,7 @@ router.post(
 router.get(
   "/contracts/:unitId",
   requireRole("admin", "buyer"),
+  requireOwnership({ via: "ContractOfUnit", param: "unitId" }),
   async (req: Request<{ unitId: string }>, res) => {
     const contrato = await db
       .selectFrom("Contract")
@@ -536,9 +537,6 @@ router.get(
       .executeTakeFirst();
 
     if (!contrato) return res.status(404).json({ message: "Contract not found" });
-    if (req.user!.role !== "admin" && contrato.investorId !== req.user!.id) {
-      return res.status(403).json({ message: "Forbidden" });
-    }
 
     return res.json(contrato);
   }

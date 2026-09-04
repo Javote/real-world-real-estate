@@ -35,7 +35,8 @@ export const GUARD = Symbol.for("propnexus.guard");
 export type GuardDescriptor =
   | { kind: "authenticate" }
   | { kind: "role"; roles: UserRole[] }
-  | { kind: "projectAccess"; source: ProjectSource; memberships: MembershipRole[] };
+  | { kind: "projectAccess"; source: ProjectSource; memberships: MembershipRole[] }
+  | { kind: "ownership"; source: OwnerSource };
 
 function marcar<T extends object>(fn: T, guard: GuardDescriptor): T {
   return Object.defineProperty(fn, GUARD, { value: guard, enumerable: false }) as T;
@@ -267,6 +268,132 @@ export function requireProjectAccess(source: ProjectSource, allowedMemberships: 
       next();
     },
     { kind: "projectAccess", source, memberships: allowedMemberships }
+  );
+}
+
+/**
+ * La tercera capa: **el recurso es de quien lo pide.**
+ *
+ * `requireRole` contesta "¿este rol puede tocar esta superficie?" y
+ * `requireProjectAccess` contesta "¿es miembro de este proyecto?". Ninguna de las
+ * dos contesta la que rige la superficie del investor: *¿esta unidad, esta
+ * invitación, este contrato son suyos?* — el aislamiento cross-rol de M2-D1
+ * §Cross-role data isolation.
+ *
+ * **Por qué es un middleware, contra lo que decía el comentario que reemplaza.**
+ * `investor.routes.ts` justificaba tenerlo adentro de cada handler con que "el
+ * dato que decide sale de la fila, no del token". Es cierto y no alcanza:
+ * `requireProjectAccess` ya carga una fila para averiguar el `projectId` cuando
+ * el path trae un `stageId` o un `evidenceId`, y nadie lo bajó al handler por
+ * eso. Lo que sí trae el chequeo suelto es el modo de falla de siempre — una
+ * ruta nueva que se olvida el `if` compila, pasa el happy path y sirve la unidad
+ * de otro. Es exactamente el agujero de `GET /evidence/:bundleId/files`, y la
+ * respuesta es la misma que dio D-042: que se lea en la firma.
+ *
+ * **El bypass de `admin` vive acá y en ningún otro lado**, igual que en
+ * `projectScope` (D-043). Los nueve call sites lo repetían con la misma línea
+ * (`req.user!.role !== "admin" && fila.x !== req.user!.id`), que es una regla de
+ * autorización copiada nueve veces: la clase de cosa que coincide por casualidad
+ * hasta el día que no.
+ *
+ * **Un dueño `null` no es "de nadie, pasá":** una unidad sin `investorId` es una
+ * unidad sin vender, y para un no-admin es 403 como cualquier otra ajena. Es el
+ * mismo resultado que daba la comparación suelta (`null !== id`), explícito acá
+ * para que no dependa de cómo se comporta `!==` con `null`.
+ */
+export type OwnerSource =
+  /** La unidad es del investor: `Unit.investorId`. */
+  | { via: "Unit"; param: string }
+  /** La invitación es para su email: `Invitation.investorEmail`. */
+  | { via: "Invitation"; param: string }
+  /**
+   * El contrato de una unidad. El path trae el **`unitId`**, no el id del
+   * contrato — `GET /investor/contracts/:unitId` busca por unidad, así que la
+   * fila se resuelve por esa columna y no por la clave primaria.
+   */
+  | { via: "ContractOfUnit"; param: string };
+
+/** El nombre que sale en el 404. `ContractOfUnit` es un Contract para el cliente. */
+const NOMBRE_DE_ENTIDAD: Record<OwnerSource["via"], string> = {
+  Unit: "Unit",
+  Invitation: "Invitation",
+  ContractOfUnit: "Contract"
+};
+
+/**
+ * Carga el dueño de la fila. Ramas explícitas y no una query armada con nombres
+ * de tabla en variables: son tres, y a cambio se lee sin resolver nada mental
+ * (mismo criterio que `ProjectSource`).
+ *
+ * `contra` dice con qué campo del token se compara — la invitación viaja al
+ * **email**, porque existe antes de que el investor tenga cuenta.
+ */
+async function cargarDueño(
+  source: OwnerSource,
+  key: string
+): Promise<{ dueño: string | null; contra: "id" | "email" } | null> {
+  if (source.via === "Unit") {
+    const fila = await db
+      .selectFrom("Unit")
+      .select("investorId")
+      .where("id", "=", key)
+      .executeTakeFirst();
+    return fila ? { dueño: fila.investorId, contra: "id" } : null;
+  }
+
+  if (source.via === "Invitation") {
+    const fila = await db
+      .selectFrom("Invitation")
+      .select("investorEmail")
+      .where("id", "=", key)
+      .executeTakeFirst();
+    return fila ? { dueño: fila.investorEmail, contra: "email" } : null;
+  }
+
+  const fila = await db
+    .selectFrom("Contract")
+    .select("investorId")
+    .where("unitId", "=", key)
+    .executeTakeFirst();
+  return fila ? { dueño: fila.investorId, contra: "id" } : null;
+}
+
+export function requireOwnership(source: OwnerSource) {
+  return marcar(
+    async (req: Request, res: Response, next: NextFunction) => {
+      if (!req.user) {
+        return res.status(401).json({ message: "Unauthorized" });
+      }
+
+      // Mismo criterio que `requireProjectAccess`: un param ausente o repetido
+      // es la ruta mal declarada, no una request inválida. 5xx y ruidoso.
+      const key = req.params[source.param];
+      if (typeof key !== "string" || !key) {
+        return res.status(500).json({
+          message: `Route misconfiguration: param "${source.param}" must be a single path value`
+        });
+      }
+
+      const fila = await cargarDueño(source, key);
+
+      // Mismo 404 y mismo mensaje que devolvía cada handler. Y la misma deuda
+      // declarada de `requireProjectAccess`: desde afuera se distingue "no
+      // existe" de "existe y no es tuyo". Se conserva a propósito.
+      if (!fila) {
+        return res.status(404).json({ message: `${NOMBRE_DE_ENTIDAD[source.via]} not found` });
+      }
+
+      if (req.user.role === "admin") {
+        return next();
+      }
+
+      if (fila.dueño === null || fila.dueño !== req.user[fila.contra]) {
+        return res.status(403).json({ message: "Forbidden" });
+      }
+
+      return next();
+    },
+    { kind: "ownership", source }
   );
 }
 
