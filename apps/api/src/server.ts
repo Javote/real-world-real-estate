@@ -31,6 +31,12 @@ let server: Server | undefined;
  * Es CommonJS, así que no hay top-level await: de ahí esta función.
  */
 async function arrancar() {
+  // El otro extremo del par que abre `migrate`: si el log muestra
+  // `[migrate] sin migraciones pendientes` y NO muestra esta línea, el proceso
+  // murió entre los dos pasos del `startCommand`. Sin esto, los dos casos se ven
+  // igual desde afuera — que es lo que costó catorce minutos el 2026-09-04.
+  console.log("[arranque] migraciones listas, levantando la API");
+
   const puerto = await initAnchorPort();
   console.log(`AnchorPort listo en modo "${puerto.mode}"`);
 

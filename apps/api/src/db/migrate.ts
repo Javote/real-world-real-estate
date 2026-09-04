@@ -81,18 +81,71 @@ export async function applyPendingMigrations(client: Client): Promise<string[]> 
   return aplicadas;
 }
 
+/**
+ * Techo de tiempo para la migración entera, **incluida la conexión**.
+ *
+ * El 2026-09-04 un deploy de la API se colgó acá: el build salió bien, el
+ * `startCommand` arrancó, y el proceso no abrió un puerto en catorce minutos
+ * hasta que Render lo dio por muerto por *port scan timeout*. Sin techo, una
+ * base que no responde no falla — **se queda esperando**, y consume el margen
+ * entero de la plataforma antes de que nadie se entere.
+ *
+ * 120s es holgado a propósito: un arranque sano tarda ~5s contra Turso, así que
+ * hay 24× de margen y el techo no puede cortar una migración lenta pero viva.
+ * Lo que compra es que el modo de falla pase de catorce minutos de silencio a
+ * dos minutos con una línea que dice qué pasó.
+ */
+const TECHO_MS = 120_000;
+
+export async function conTecho<T>(
+  promesa: Promise<T>,
+  queEsperaba: string,
+  ms: number = TECHO_MS
+): Promise<T> {
+  let reloj: ReturnType<typeof setTimeout> | undefined;
+
+  try {
+    return await Promise.race([
+      promesa,
+      new Promise<never>((_, rechazar) => {
+        reloj = setTimeout(
+          () => rechazar(new Error(`${queEsperaba} no respondió en ${ms / 1000}s`)),
+          ms
+        );
+      })
+    ]);
+  } finally {
+    if (reloj) clearTimeout(reloj);
+  }
+}
+
 async function main() {
   const url = process.env.DATABASE_URL ?? DEFAULT_DATABASE_URL;
   asegurarDirectorioLocal(url);
+
+  // **Estas dos líneas existen para que el silencio se pueda leer.** El
+  // `startCommand` de Render son dos pasos —`migrate && server`— y hasta hoy
+  // ninguno anunciaba que había empezado: un arranque colgado adentro de la
+  // migración y uno colgado adentro del servidor producían exactamente el mismo
+  // log vacío, y el free tier no da shell para ir a mirar.
+  console.log("[migrate] conectando a la base");
 
   const client = createClient({
     url,
     authToken: process.env.DATABASE_AUTH_TOKEN
   });
 
-  for (const file of await applyPendingMigrations(client)) {
+  const aplicadas = await conTecho(applyPendingMigrations(client), "la base");
+
+  for (const file of aplicadas) {
     console.log(`Applied ${file}`);
   }
+
+  console.log(
+    aplicadas.length === 0
+      ? "[migrate] sin migraciones pendientes"
+      : `[migrate] ${aplicadas.length} migración(es) aplicada(s)`
+  );
 
   client.close();
 }

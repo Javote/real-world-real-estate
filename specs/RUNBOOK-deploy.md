@@ -378,6 +378,29 @@ original hasta estar seguro.
 | Un servicio quedó en un commit viejo, los dos `live` y sin errores | El push llegó con el servicio suspendido | Reanudar no lo recupera. `render deploys create <srv-id>` (§2) |
 | Pantallas que andaban empiezan a fallar al parsear | Front y API en commits distintos | Mismo caso de arriba. Los `z.strictObject` de `packages/shared` lo vuelven duro: un campo que falta rompe el parse entero |
 | `ERR_PNPM_OUTDATED_LOCKFILE` en el build | Se tocó un `package.json` sin `pnpm install` | La puerta lo atrapa antes; si llegó acá, `pnpm install` y commitear el lockfile |
+| `Port scan timeout reached, no open ports detected` y después `Timed Out` | El build salió bien y el proceso **nunca escuchó**. El `startCommand` es `migrate && server` | Leé las tres líneas de arranque en orden (abajo). Render tarda ~15 min en darlo por muerto y en free tier **la instancia vieja ya se cerró**: es caída, no degradación |
+
+### Leer un arranque en los logs
+
+El `startCommand` tiene dos pasos y cada uno anuncia principio y fin. Miralos en orden — dónde se
+corta el log dice dónde se colgó el proceso:
+
+```
+[migrate] conectando a la base                       ← migrate arrancó
+[migrate] sin migraciones pendientes                 ← migrate terminó (o "N migración(es) aplicada(s)")
+[arranque] migraciones listas, levantando la API     ← server.js arrancó
+AnchorPort listo en modo "real"                      ← el puerto de anclaje resolvió
+API listening on http://localhost:10000              ← escuchando: acá el deploy pasa a live
+```
+
+Un arranque sano imprime las cinco en unos 5 segundos. Si falta la segunda, la base no responde y
+`conTecho` va a cortar a los 120s con `la base no respondió en 120s`. Si están las tres primeras y no
+la última, el problema es del servidor, no de la migración.
+
+**Esto existe por el incidente del 2026-09-04**, cuando ninguna de las líneas se imprimía: un arranque
+colgado en la migración y uno colgado en el servidor se veían exactamente igual —un log vacío— y la
+API estuvo ~18 minutos caída por un commit de solo documentación. Detalle en `apps/api/CLAUDE.md`
+§Trampas verificadas.
 
 Logs: **Dashboard → el servicio → Logs** (o `render logs -r <service>`). No hay shell: lo que no se
 loguee no se puede ir a mirar. Es la razón por la que D-042 hace que la API **reviente al arrancar**

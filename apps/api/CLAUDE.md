@@ -37,6 +37,28 @@ que la superficie del entregable no consume pero los tests y el seed sí.
 
 ## Trampas verificadas
 
+- **2026-09-04 · Un arranque colgado no se distingue de otro porque el `startCommand` son dos pasos
+  y ninguno anunciaba que empezó.** El deploy de `ef8e55e` —un commit de **solo `.md`**— compiló
+  bien, corrió `node migrate.js && node server.js` a las 14:56:23 y **no abrió un puerto en catorce
+  minutos**, hasta que Render lo mató por *port scan timeout*. La API estuvo caída ~18 minutos; el
+  deploy siguiente, con más código encima, levantó en 5 segundos. **No fue una regresión**: el código
+  de `ef8e55e` es idéntico al de `ae782be`, que había arrancado bien catorce minutos antes.
+  **Lo que no se pudo determinar, y por qué importa:** `migrate` solo imprimía al *aplicar* una
+  migración (`Applied ${file}`), así que en el caso normal —sin pendientes— no decía nada. Un
+  arranque colgado adentro de `migrate` y uno colgado adentro de `server.js` antes de su primer log
+  producían **exactamente el mismo log vacío**, y el free tier no da shell para ir a mirar.
+  **Fix, tres piezas:** `migrate` ahora abre con `[migrate] conectando a la base` y cierra con
+  `[migrate] sin migraciones pendientes` o `[migrate] N migración(es) aplicada(s)`; `server.ts` abre
+  con `[arranque] migraciones listas, levantando la API`; y `conTecho` le pone un techo de **120s** a
+  la migración entera, conexión incluida, para que una base que no responde **falle** en vez de
+  esperar. Verificado contra una IP muerta: sale con error y con causa a los pocos segundos. Tests en
+  `test/migrate-techo.test.ts`, incluido el del `clearTimeout` — sin él, un techo de 120s deja el
+  proceso despierto dos minutos **después** de migrar, y como el comando es `migrate && server`, la
+  API no arrancaría hasta que ese timer se apague.
+  **La lección:** en una plataforma sin shell, el log es el único instrumento, y **un paso que no
+  anuncia que empezó es un paso que no se puede diagnosticar**. Si agregás un paso al `startCommand`,
+  que diga que arrancó y que diga que terminó.
+
 - **2026-09-03 · `POST/PATCH /users` no podía dar de alta ni promover a `notary` —
   encontrado evaluando si ya se podía dar acceso real a gente.** El dominio tiene cinco roles
   (`USER_ROLES` en `db/types.ts` y `userRoleSchema` en `packages/shared/src/auth.ts` ya traían

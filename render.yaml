@@ -37,10 +37,14 @@ services:
     branch: main
     rootDir: .
     # Declarado para que solo redeploye si cambió algo que la API compila.
-    # ⚠ MEDIDO 2026-08-27: NO filtra. Un commit de solo `.md` reconstruyó los dos
-    # servicios igual, con `trigger = new_commit`. Se deja declarado —es correcto
-    # y está bien registrado del lado de Render— pero no cuentes con el ahorro.
-    # RUNBOOK §2.
+    # ⚠ MEDIDO 2026-08-27 y otra vez el 2026-09-04: NO filtra. Un commit de solo
+    # `.md` reconstruye los dos servicios igual, con `trigger = new_commit`.
+    # El 2026-09-04 se confirmó que el filtro SÍ llega a Render —leído de la API
+    # con `render services --output json`, los dos servicios traen su
+    # `buildFilter.paths` completo—, así que el problema no es que no se aplique
+    # el blueprint: es que Render no lo respeta. Causa sin determinar.
+    # **No es gratis**: ese día un commit de solo documentación (`ef8e55e`)
+    # disparó el redeploy que dejó la API caída ~18 minutos. RUNBOOK §2.
     buildFilter:
       paths:
         - apps/api/**
