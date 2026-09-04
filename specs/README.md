@@ -130,7 +130,10 @@ de corte de una rebanada es que la app quede corriendo y demostrable.**
 | [`SPEC-016`](SPEC-016-superficie-del-investor.md) | Superficie del investor (M2-D5 §4) | **cerrada 2026-08-28** |
 
 Los planes fechados no llevan número: [`PLAN-2026-08-31-anclaje-real.md`](PLAN-2026-08-31-anclaje-real.md)
-es la secuencia operativa vigente para pasar la instancia desplegada a `ANCHOR_MODE=real`.
+fue la secuencia operativa para pasar la instancia desplegada a `ANCHOR_MODE=real` (cerrada el
+2026-09-03), y [`PLAN-2026-09-04-guard-unico.md`](PLAN-2026-09-04-guard-unico.md) es la vigente:
+unificar los tres guards de autorización en uno de campos obligatorios, por superficie, con punto de
+control después del investor.
 
 **La numeración no se recicla.** `SPEC-008`, `SPEC-011` y los planes anteriores están en
 [`archive/`](archive/): describen trabajo cerrado o código que se borró.
