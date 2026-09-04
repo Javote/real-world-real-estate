@@ -25,11 +25,9 @@ que la superficie del entregable no consume pero los tests y el seed sí.
 
 1. Schema Zod en `packages/shared` — **antes** que el endpoint (regla 6). El front importa el
    mismo tipo. Es lo único que vuelve imposible el drift API↔web.
-2. Ruta con `requireRole` + `requireProjectAccess`, diciendo **qué membresías** acepta —
-   `ANY_MEMBERSHIP` si alcanza con ser miembro. No es opcional: omitirlo no compila (D-042).
-   (🔴 `canAccessProject`, que es a quien delega, lo lidera el humano.) Y si el recurso es **de
-   alguien** —una unidad, una invitación, un contrato— suma `requireOwnership`: la tercera capa
-   va en la firma como las otras dos, nunca como un `if` adentro del handler.
+2. Ruta con **`authorize({ roles, acceso })`**, los dos campos obligatorios. `acceso` es
+   `"soloRol"`, `{ proyecto, membresias }`, `{ dueño }` o `{ alguna: [...] }`. Nunca un `if`
+   adentro del handler. **Ojo con el estado de la migración** — ver §Dos formas conviviendo.
 3. `safeParse` → 400 con `error.flatten()`.
 4. `writeAuditLog` si es mutación relevante.
 5. Test del camino feliz y de cada rechazo.
@@ -555,6 +553,29 @@ estaríamos anclando la huella de un archivo que no existe en ningún lado.
 
 `utils/hashing.ts` se borró: su única función quedó adentro del port, y dos lugares que hashean es
 uno de más.
+
+### Dos formas conviviendo — leé esto antes de escribir una ruta
+
+**Hoy el repo tiene dos formas de declarar autorización, y es transitorio a propósito**
+(`specs/PLAN-2026-09-04-guard-unico.md`):
+
+| Superficie | Forma | Estado |
+|---|---|---|
+| `investor` (14 rutas) | `authorize({ roles, acceso })` | migrada 2026-09-04 |
+| todas las demás (73) | `requireRole` + `requireProjectAccess` + `requireOwnership` encadenados | pendiente |
+
+**En una ruta nueva usá `authorize`**, sea cual sea la superficie: las dos formas corren sobre los
+mismos evaluadores, así que no hay riesgo de que se comporten distinto, y una ruta nueva en la forma
+vieja es una migración más que hacer después.
+
+**Por qué se unifica, en una línea:** con guards sueltos, omitir la capa de pertenencia compila —
+*la ausencia de una llamada no es un tipo*—, y `acceso` obligatorio convierte esa ausencia en un
+`"soloRol"` explícito, que es algo que alguien firmó y que se puede discutir en un diff. El
+argumento largo, el orden de migración y las tres señales para frenar están en el plan.
+
+**Y lo que la unificación destrabó:** `{ alguna: [...] }` expresa la disyunción que una cadena de
+middlewares no puede (una cadena es un AND). Cuando le toque el turno a `contracts.routes.ts`, su
+regla —*dueño **o** miembro del proyecto*— deja de vivir adentro del handler.
 
 ### La tercera capa — `requireOwnership`, 2026-09-04
 

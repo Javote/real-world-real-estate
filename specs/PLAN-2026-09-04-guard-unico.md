@@ -79,8 +79,8 @@ Un commit por paso, cada uno con `pnpm verify:all` en verde y la matriz actualiz
 
 | # | Paso | Criterio de cierre |
 |---|---|---|
-| 1 | `authorize` y sus tipos, sobre los tres actuales. **Ninguna ruta migrada.** | Compila, 265 en verde, matriz sin cambios |
-| 2 | Migrar **investor** (14 rutas) | Matriz equivalente ruta por ruta · **punto de control con el dueño** |
+| 1 | `authorize` y sus tipos, sobre los tres actuales. **Ninguna ruta migrada.** | ✅ **hecho** `0bfa8a4` — 265 en verde, matriz sin una sola fila tocada |
+| 2 | Migrar **investor** (14 rutas) | ✅ **hecho** — 265 en verde, matriz equivalente ruta por ruta, `requireRole` de router eliminado. **Punto de control con el dueño: acá está** |
 | 3 | `developer` (22), `projects`/`stages`/`evidence` (26), `certifier` (6), `notary` (6), el resto | Un commit por superficie |
 | 4 | `/contracts/:contractId/releases` pasa a `alguna: [...]` | Deja de ser la excepción documentada |
 | 5 | Cerrar la decisión en `DECISIONS.md` y corregir `SPEC-012`, que describe la forma anterior | En el mismo commit que el último paso |

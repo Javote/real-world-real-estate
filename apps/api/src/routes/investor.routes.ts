@@ -7,7 +7,7 @@ import { anchorCommitmentEvent, commitmentOf } from "../domain/anchoring";
 import { compileDossier } from "../domain/dossier";
 import { reconciliarParaLectura } from "../domain/reconcile";
 import { db } from "../lib/db";
-import { authenticate, requireOwnership, requireRole } from "../middlewares/auth";
+import { authenticate, authorize } from "../middlewares/auth";
 import { writeAuditLog } from "../utils/audit";
 import { renderTextPdf } from "../utils/pdf";
 import { avancePorProyecto } from "./_shared";
@@ -28,8 +28,8 @@ import { avancePorProyecto } from "./_shared";
 //
 // **El aislamiento cross-rol es la regla de acceso de casi todo lo de acá**
 // (M2-D1 §Cross-role data isolation): el investor ve SU unidad, SU contrato, SU
-// dossier. Ese chequeo es `requireOwnership` y se lee en la firma de cada ruta,
-// como las otras dos capas. Vivió suelto adentro de cada handler hasta el
+// dossier. Ese chequeo es el `acceso: { dueño: ... }` de `authorize` y se lee en
+// la firma de cada ruta, junto con el rol. Vivió suelto adentro de cada handler hasta el
 // 2026-09-04, con el argumento de que el dato que decide sale de la fila y no
 // del token — cierto, y no alcanza: `requireProjectAccess` también carga una
 // fila y nadie lo bajó al handler por eso. Lo que traía era el modo de falla de
@@ -38,11 +38,11 @@ import { avancePorProyecto } from "./_shared";
 const router = Router();
 
 router.use(authenticate);
-router.use(requireRole("admin", "buyer"));
 
 /**
  * El dossier de la unidad. **Ya no autoriza**: las tres rutas que lo usan entran
- * por `requireOwnership({ via: "Unit" })`, así que acá solo queda el 404 de una
+ * por `authorize({ ..., acceso: { dueño: { via: "Unit" } } })`, así que acá solo
+ * queda el 404 de una
  * unidad que existe pero todavía no compila un dossier.
  */
 async function dossierDeLaUnidad(unitId: string) {
@@ -50,21 +50,25 @@ async function dossierDeLaUnidad(unitId: string) {
   return dossier ? { dossier } : { error: 404 as const };
 }
 
-router.get("/favorites", requireRole("admin", "buyer"), async (req, res) => {
-  const favoritos = await db
-    .selectFrom("Favorite")
-    .innerJoin("Project", "Project.id", "Favorite.projectId")
-    .selectAll("Project")
-    .where("Favorite.userId", "=", req.user!.id)
-    .orderBy("Favorite.createdAt", "desc")
-    .execute();
+router.get(
+  "/favorites",
+  authorize({ roles: ["admin", "buyer"], acceso: "soloRol" }),
+  async (req, res) => {
+    const favoritos = await db
+      .selectFrom("Favorite")
+      .innerJoin("Project", "Project.id", "Favorite.projectId")
+      .selectAll("Project")
+      .where("Favorite.userId", "=", req.user!.id)
+      .orderBy("Favorite.createdAt", "desc")
+      .execute();
 
-  return res.json(favoritos);
-});
+    return res.json(favoritos);
+  }
+);
 
 router.post(
   "/favorites/:projectId",
-  requireRole("admin", "buyer"),
+  authorize({ roles: ["admin", "buyer"], acceso: "soloRol" }),
   async (req: Request<{ projectId: string }>, res) => {
     const proyecto = await db
       .selectFrom("Project")
@@ -87,7 +91,7 @@ router.post(
 
 router.delete(
   "/favorites/:projectId",
-  requireRole("admin", "buyer"),
+  authorize({ roles: ["admin", "buyer"], acceso: "soloRol" }),
   async (req: Request<{ projectId: string }>, res) => {
     await db
       .deleteFrom("Favorite")
@@ -102,34 +106,37 @@ router.delete(
 );
 
 /** Fila 14 — My Units: las del investor autenticado. */
-router.get("/units", requireRole("admin", "buyer"), async (req, res) => {
-  const unidades = await db
-    .selectFrom("Unit")
-    .innerJoin("Project", "Project.id", "Unit.projectId")
-    .select([
-      "Unit.id as id",
-      "Unit.unitReference as unitReference",
-      "Unit.status as status",
-      "Unit.sizeM2 as sizeM2",
-      "Unit.priceMinorUnits as priceMinorUnits",
-      "Unit.currency as currency",
-      "Project.id as projectId",
-      "Project.name as projectName",
-      "Project.city as city"
-    ])
-    .where("Unit.investorId", "=", req.user!.id)
-    .execute();
+router.get(
+  "/units",
+  authorize({ roles: ["admin", "buyer"], acceso: "soloRol" }),
+  async (req, res) => {
+    const unidades = await db
+      .selectFrom("Unit")
+      .innerJoin("Project", "Project.id", "Unit.projectId")
+      .select([
+        "Unit.id as id",
+        "Unit.unitReference as unitReference",
+        "Unit.status as status",
+        "Unit.sizeM2 as sizeM2",
+        "Unit.priceMinorUnits as priceMinorUnits",
+        "Unit.currency as currency",
+        "Project.id as projectId",
+        "Project.name as projectName",
+        "Project.city as city"
+      ])
+      .where("Unit.investorId", "=", req.user!.id)
+      .execute();
 
-  const avance = await avancePorProyecto([...new Set(unidades.map((u) => u.projectId))]);
+    const avance = await avancePorProyecto([...new Set(unidades.map((u) => u.projectId))]);
 
-  return res.json(unidades.map((u) => ({ ...u, progress: avance.get(u.projectId) ?? 0 })));
-});
+    return res.json(unidades.map((u) => ({ ...u, progress: avance.get(u.projectId) ?? 0 })));
+  }
+);
 
 /** Fila 15-18 — el detalle de la unidad, con los stages del proyecto y su anclaje. */
 router.get(
   "/units/:id",
-  requireRole("admin", "buyer"),
-  requireOwnership({ via: "Unit", param: "id" }),
+  authorize({ roles: ["admin", "buyer"], acceso: { dueño: { via: "Unit", param: "id" } } }),
   async (req: Request<{ id: string }>, res) => {
     const unidad = await db
       .selectFrom("Unit")
@@ -183,8 +190,7 @@ router.get(
 /** Fila 15-18 — las novedades de la unidad: los eventos de sus stages. */
 router.get(
   "/units/:id/news",
-  requireRole("admin", "buyer"),
-  requireOwnership({ via: "Unit", param: "id" }),
+  authorize({ roles: ["admin", "buyer"], acceso: { dueño: { via: "Unit", param: "id" } } }),
   async (req: Request<{ id: string }>, res) => {
     const unidad = await db
       .selectFrom("Unit")
@@ -222,7 +228,7 @@ router.get(
 /** Fila 26-29 — el dossier compilado, con su hash maestro. */
 router.get(
   "/units/:id/dossier",
-  requireOwnership({ via: "Unit", param: "id" }),
+  authorize({ roles: ["admin", "buyer"], acceso: { dueño: { via: "Unit", param: "id" } } }),
   async (req: Request<{ id: string }>, res) => {
     const resultado = await dossierDeLaUnidad(req.params.id);
     if (resultado.error === 404) return res.status(404).json({ message: "Unit not found" });
@@ -241,7 +247,7 @@ router.get(
  */
 router.get(
   "/units/:id/dossier/export.pdf",
-  requireOwnership({ via: "Unit", param: "id" }),
+  authorize({ roles: ["admin", "buyer"], acceso: { dueño: { via: "Unit", param: "id" } } }),
   async (req: Request<{ id: string }>, res) => {
     const resultado = await dossierDeLaUnidad(req.params.id);
     if (resultado.error === 404) return res.status(404).json({ message: "Unit not found" });
@@ -300,7 +306,7 @@ router.get(
  */
 router.post(
   "/units/:id/dossier/share",
-  requireOwnership({ via: "Unit", param: "id" }),
+  authorize({ roles: ["admin", "buyer"], acceso: { dueño: { via: "Unit", param: "id" } } }),
   async (req: Request<{ id: string }>, res) => {
     const resultado = await dossierDeLaUnidad(req.params.id);
     if (resultado.error === 404) return res.status(404).json({ message: "Unit not found" });
@@ -343,38 +349,41 @@ router.post(
  * Un filtro inválido es 400 y no un listado vacío: quien filtra por una
  * categoría que no existe tiene que enterarse, no ver "no hay novedades".
  */
-router.get("/notifications", async (req, res) => {
-  const filtros = notificationQuerySchema.safeParse(req.query);
-  if (!filtros.success) return res.status(400).json(filtros.error.flatten());
+router.get(
+  "/notifications",
+  authorize({ roles: ["admin", "buyer"], acceso: "soloRol" }),
+  async (req, res) => {
+    const filtros = notificationQuerySchema.safeParse(req.query);
+    if (!filtros.success) return res.status(400).json(filtros.error.flatten());
 
-  let query = db
-    .selectFrom("Notification")
-    .select(["id", "category", "titleKey", "paramsJson", "unitId", "readAt", "createdAt"])
-    .where("userId", "=", req.user!.id);
+    let query = db
+      .selectFrom("Notification")
+      .select(["id", "category", "titleKey", "paramsJson", "unitId", "readAt", "createdAt"])
+      .where("userId", "=", req.user!.id);
 
-  if (filtros.data.unitId) query = query.where("unitId", "=", filtros.data.unitId);
-  if (filtros.data.category) query = query.where("category", "=", filtros.data.category);
+    if (filtros.data.unitId) query = query.where("unitId", "=", filtros.data.unitId);
+    if (filtros.data.category) query = query.where("category", "=", filtros.data.category);
 
-  const filas = await query.orderBy("createdAt", "desc").limit(100).execute();
+    const filas = await query.orderBy("createdAt", "desc").limit(100).execute();
 
-  const notificaciones = filas.map((fila) => ({
-    id: fila.id,
-    category: fila.category,
-    titleKey: fila.titleKey,
-    params: fila.paramsJson ? JSON.parse(fila.paramsJson) : {},
-    unitId: fila.unitId,
-    readAt: fila.readAt,
-    createdAt: fila.createdAt
-  })) as Notification[];
+    const notificaciones = filas.map((fila) => ({
+      id: fila.id,
+      category: fila.category,
+      titleKey: fila.titleKey,
+      params: fila.paramsJson ? JSON.parse(fila.paramsJson) : {},
+      unitId: fila.unitId,
+      readAt: fila.readAt,
+      createdAt: fila.createdAt
+    })) as Notification[];
 
-  return res.json(notificaciones);
-});
+    return res.json(notificaciones);
+  }
+);
 
 /** Fila 63 — el investor ve la invitación que le llegó. */
 router.get(
   "/invitations/:id",
-  requireRole("admin", "buyer"),
-  requireOwnership({ via: "Invitation", param: "id" }),
+  authorize({ roles: ["admin", "buyer"], acceso: { dueño: { via: "Invitation", param: "id" } } }),
   async (req: Request<{ id: string }>, res) => {
     const invitacion = await db
       .selectFrom("Invitation")
@@ -402,8 +411,7 @@ router.get(
 /** Fila 63 — aceptar. **Ancla** (M3-SC-01). */
 router.post(
   "/invitations/:id/accept",
-  requireRole("admin", "buyer"),
-  requireOwnership({ via: "Invitation", param: "id" }),
+  authorize({ roles: ["admin", "buyer"], acceso: { dueño: { via: "Invitation", param: "id" } } }),
   async (req: Request<{ id: string }>, res) => {
     const invitacion = await db
       .selectFrom("Invitation")
@@ -477,8 +485,7 @@ router.post(
 /** Fila 63 — rechazar. **No ancla**: no hay nada que probar sobre lo que no pasó. */
 router.post(
   "/invitations/:id/decline",
-  requireRole("admin", "buyer"),
-  requireOwnership({ via: "Invitation", param: "id" }),
+  authorize({ roles: ["admin", "buyer"], acceso: { dueño: { via: "Invitation", param: "id" } } }),
   async (req: Request<{ id: string }>, res) => {
     const invitacion = await db
       .selectFrom("Invitation")
@@ -519,8 +526,10 @@ router.post(
 /** Fila 23-24 — el contrato de la unidad del investor. */
 router.get(
   "/contracts/:unitId",
-  requireRole("admin", "buyer"),
-  requireOwnership({ via: "ContractOfUnit", param: "unitId" }),
+  authorize({
+    roles: ["admin", "buyer"],
+    acceso: { dueño: { via: "ContractOfUnit", param: "unitId" } }
+  }),
   async (req: Request<{ unitId: string }>, res) => {
     const contrato = await db
       .selectFrom("Contract")

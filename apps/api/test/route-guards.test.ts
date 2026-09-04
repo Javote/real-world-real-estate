@@ -75,25 +75,26 @@ const MATRIZ: Record<string, string> = {
   "PATCH /api/v1/profile/notifications": "auth",
   "GET /api/v1/audit-logs": "auth + rol(admin)",
   "GET /api/v1/public/dossier/:shareToken": "—",
-  "GET /api/v1/investor/favorites": "auth + rol(admin|buyer) + rol(admin|buyer)",
-  "POST /api/v1/investor/favorites/:projectId": "auth + rol(admin|buyer) + rol(admin|buyer)",
-  "DELETE /api/v1/investor/favorites/:projectId": "auth + rol(admin|buyer) + rol(admin|buyer)",
-  "GET /api/v1/investor/units": "auth + rol(admin|buyer) + rol(admin|buyer)",
-  "GET /api/v1/investor/units/:id": "auth + rol(admin|buyer) + rol(admin|buyer) + dueño(Unit:id)",
-  "GET /api/v1/investor/units/:id/news":
-    "auth + rol(admin|buyer) + rol(admin|buyer) + dueño(Unit:id)",
-  "GET /api/v1/investor/units/:id/dossier": "auth + rol(admin|buyer) + dueño(Unit:id)",
-  "GET /api/v1/investor/units/:id/dossier/export.pdf": "auth + rol(admin|buyer) + dueño(Unit:id)",
-  "POST /api/v1/investor/units/:id/dossier/share": "auth + rol(admin|buyer) + dueño(Unit:id)",
-  "GET /api/v1/investor/notifications": "auth + rol(admin|buyer)",
+  "GET /api/v1/investor/favorites": "auth + autoriza(rol(admin|buyer) · soloRol)",
+  "POST /api/v1/investor/favorites/:projectId": "auth + autoriza(rol(admin|buyer) · soloRol)",
+  "DELETE /api/v1/investor/favorites/:projectId": "auth + autoriza(rol(admin|buyer) · soloRol)",
+  "GET /api/v1/investor/units": "auth + autoriza(rol(admin|buyer) · soloRol)",
+  "GET /api/v1/investor/units/:id": "auth + autoriza(rol(admin|buyer) · dueño(Unit:id))",
+  "GET /api/v1/investor/units/:id/news": "auth + autoriza(rol(admin|buyer) · dueño(Unit:id))",
+  "GET /api/v1/investor/units/:id/dossier": "auth + autoriza(rol(admin|buyer) · dueño(Unit:id))",
+  "GET /api/v1/investor/units/:id/dossier/export.pdf":
+    "auth + autoriza(rol(admin|buyer) · dueño(Unit:id))",
+  "POST /api/v1/investor/units/:id/dossier/share":
+    "auth + autoriza(rol(admin|buyer) · dueño(Unit:id))",
+  "GET /api/v1/investor/notifications": "auth + autoriza(rol(admin|buyer) · soloRol)",
   "GET /api/v1/investor/invitations/:id":
-    "auth + rol(admin|buyer) + rol(admin|buyer) + dueño(Invitation:id)",
+    "auth + autoriza(rol(admin|buyer) · dueño(Invitation:id))",
   "POST /api/v1/investor/invitations/:id/accept":
-    "auth + rol(admin|buyer) + rol(admin|buyer) + dueño(Invitation:id)",
+    "auth + autoriza(rol(admin|buyer) · dueño(Invitation:id))",
   "POST /api/v1/investor/invitations/:id/decline":
-    "auth + rol(admin|buyer) + rol(admin|buyer) + dueño(Invitation:id)",
+    "auth + autoriza(rol(admin|buyer) · dueño(Invitation:id))",
   "GET /api/v1/investor/contracts/:unitId":
-    "auth + rol(admin|buyer) + rol(admin|buyer) + dueño(ContractOfUnit:unitId)",
+    "auth + autoriza(rol(admin|buyer) · dueño(ContractOfUnit:unitId))",
   "GET /api/v1/developer/projects": "auth + rol(admin|developer)",
   "GET /api/v1/developer/projects/:id": "auth + rol(admin|developer) + proyecto(id → developer)",
   "POST /api/v1/developer/projects": "auth + rol(admin|developer)",
