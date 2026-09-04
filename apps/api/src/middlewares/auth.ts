@@ -634,3 +634,100 @@ export function projectScope(
       .where("ProjectMember.membershipRole", "in", allowedMemberships)
   );
 }
+
+/**
+ * **El scope del audit log**, como condición de Kysely.
+ *
+ * `GET /developer/audit-log` devolvía la tabla `AuditLog` **entera**, sin acotar
+ * por proyecto, con `actorName` y `actorRole` de cada usuario del sistema: un
+ * developer con membresía en un proyecto veía los eventos de todos los demás.
+ * Es la regla 5 sin su segunda capa. Lo destapó etiquetar la ruta al partir
+ * `"soloRol"` (D-088), no un reporte.
+ *
+ * **El entregable ya lo tenía decidido y no era una decisión de producto
+ * abierta:** M2-D1 §4 — *"developer sees project-scoped events"* — y M2-D4 §P6 —
+ * *"all events scoped to that developer's projects"*.
+ *
+ * **Por qué es esto y no una columna `projectId` en `AuditLog`.** La columna
+ * sería mejor forma: la pregunta se contestaría sin joins y no habría manera de
+ * que un `entityType` nuevo quede afuera del mapeo. Pero pide una migración
+ * sobre una base desplegada —la primera desde que Turso está vivo (D-063)— y un
+ * backfill que para varias filas viejas no tiene respuesta. Se resuelve por
+ * query ahora y **la columna queda anotada como la forma que corresponde** el
+ * día que se toque el esquema por otro motivo.
+ *
+ * **Fail-closed a propósito:** un `entityType` que no esté en este mapeo no se
+ * muestra. Si mañana alguien audita una entidad nueva y se olvida de sumarla
+ * acá, el síntoma es "no aparece en el audit log" y no "la ve todo el mundo".
+ * `User` está afuera **por diseño**: crear usuarios o cambiar roles no pertenece
+ * a ningún proyecto, y esos eventos son del admin, que bypasea todo esto.
+ */
+export function auditScope(
+  eb: ExpressionBuilder<Database, "AuditLog">,
+  role: UserRole,
+  userId: string,
+  allowedMemberships: MembershipRole[]
+): ExpressionWrapper<Database, "AuditLog", SqlBool> {
+  if (role === "admin") return eb(sql.lit(1), "=", sql.lit(1));
+
+  // Los proyectos del usuario, como subquery: reusa `projectScope` para que la
+  // regla de membresía siga viviendo en un solo lugar (D-043).
+  const misProyectos = eb
+    .selectFrom("Project")
+    .select("Project.id")
+    .where((e) => projectScope(e, role, userId, allowedMemberships));
+
+  /** El evento apunta a una fila de `tabla` que cae en uno de mis proyectos. */
+  const via = (
+    tabla: "Stage" | "Evidence" | "Invitation" | "Unit" | "ProjectMember",
+    columna: "projectId"
+  ) =>
+    eb.and([
+      eb("AuditLog.entityType", "=", tabla),
+      eb.exists(
+        eb
+          .selectFrom(tabla)
+          .select(sql.lit(1).as("one"))
+          .whereRef(`${tabla}.id`, "=", "AuditLog.entityId")
+          .where(`${tabla}.${columna}`, "in", misProyectos)
+      )
+    ]);
+
+  return eb.or([
+    // El proyecto mismo: el id del evento ES el projectId.
+    eb.and([
+      eb("AuditLog.entityType", "=", "Project"),
+      eb("AuditLog.entityId", "in", misProyectos)
+    ]),
+    via("Stage", "projectId"),
+    via("Evidence", "projectId"),
+    via("Invitation", "projectId"),
+    via("Unit", "projectId"),
+    via("ProjectMember", "projectId"),
+    // El dossier cuelga de la unidad, no del proyecto.
+    eb.and([
+      eb("AuditLog.entityType", "=", "Dossier"),
+      eb.exists(
+        eb
+          .selectFrom("Dossier")
+          .innerJoin("Unit", "Unit.id", "Dossier.unitId")
+          .select(sql.lit(1).as("one"))
+          .whereRef("Dossier.id", "=", "AuditLog.entityId")
+          .where("Unit.projectId", "in", misProyectos)
+      )
+    ]),
+    // Y la liberación cuelga del contrato, que cuelga de la unidad.
+    eb.and([
+      eb("AuditLog.entityType", "=", "PaymentRelease"),
+      eb.exists(
+        eb
+          .selectFrom("PaymentRelease")
+          .innerJoin("Contract", "Contract.id", "PaymentRelease.contractId")
+          .innerJoin("Unit", "Unit.id", "Contract.unitId")
+          .select(sql.lit(1).as("one"))
+          .whereRef("PaymentRelease.id", "=", "AuditLog.entityId")
+          .where("Unit.projectId", "in", misProyectos)
+      )
+    ])
+  ]);
+}

@@ -5,7 +5,7 @@ import { createId } from "../db/id";
 import { anchorCommitmentEvent } from "../domain/anchoring";
 import { reconciliarParaLectura } from "../domain/reconcile";
 import { db } from "../lib/db";
-import { authenticate, authorize, projectScope } from "../middlewares/auth";
+import { auditScope, authenticate, authorize, projectScope } from "../middlewares/auth";
 import { writeAuditLog } from "../utils/audit";
 import { proyectosVisibles } from "./_shared";
 
@@ -280,7 +280,10 @@ router.get(
  */
 router.get(
   "/audit-log",
-  authorize({ roles: ["admin", "developer"], acceso: "soloRol" }),
+  authorize({
+    roles: ["admin", "developer"],
+    acceso: { scopeEnQuery: "auditScope(developer)" }
+  }),
   async (req, res) => {
     const schema = z.object({
       category: z.string().optional(),
@@ -293,6 +296,10 @@ router.get(
     let query = db
       .selectFrom("AuditLog")
       .leftJoin("User", "User.id", "AuditLog.actorUserId")
+      // **Acota a los proyectos del developer** (M2-D1 §4, M2-D4 §P6). Sin esto
+      // devolvía la tabla entera, con el nombre y el rol de cada usuario del
+      // sistema. El bypass de `admin` vive adentro de `auditScope`.
+      .where((eb) => auditScope(eb, req.user!.role, req.user!.id, ["developer"]))
       .select([
         "AuditLog.id as id",
         "AuditLog.action as action",

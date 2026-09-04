@@ -618,13 +618,27 @@ concreta y se pueda contrastar contra el `where` de al lado.
 **Al escribir una ruta nueva, elegí entre las dos leyendo tu propio handler**, no por costumbre. Si
 tu query filtra por el usuario o por `projectScope`, es `scopeEnQuery` y hay que decir por qué campo.
 
-**⚠ `GET /developer/audit-log` quedó en `"soloRol"` y eso es correcto como descripción y probablemente
-incorrecto como producto:** devuelve el `AuditLog` **entero**, sin acotar por proyecto, con
-`actorName` y `actorRole` de cada usuario del sistema. Un developer con membresía en un proyecto ve
-los eventos de todos los demás. Es la regla 5 sin su segunda capa, de la misma familia que el agujero
-de `GET /evidence/:bundleId/files`, y lo destapó justamente etiquetar. **No se tocó**: qué debe
-mostrar ese audit log es decisión de producto. En la matriz destaca al lado de los otros listados,
-que sí declaran su filtro — que era exactamente el punto de la partición.
+**El agujero que destapó etiquetar, y cómo quedó.** `GET /developer/audit-log` devolvía el `AuditLog`
+**entero**, sin acotar por proyecto, con `actorName` y `actorRole` de cada usuario del sistema. Es la
+regla 5 sin su segunda capa. **No era decisión de producto:** M2-D1 §4 (*"developer sees
+project-scoped events"*) y M2-D4 §P6 (*"all events scoped to that developer's projects"*) ya la
+tenían tomada, y el código no la cumplía.
+
+Lo cierra `auditScope` (`middlewares/auth.ts`), hermana de `projectScope`: el bypass de `admin`
+adentro, y para el resto un `OR` de `EXISTS` que resuelve `entityType`/`entityId` → proyecto
+(`Project` directo; `Stage`/`Evidence`/`Invitation`/`Unit`/`ProjectMember` por su `projectId`;
+`Dossier` por su unidad; `PaymentRelease` por contrato → unidad). Reusa `projectScope` adentro para
+que la regla de membresía siga en un solo lugar (D-043).
+
+**Es fail-closed y hay que saberlo:** un `entityType` que no esté en ese mapeo **no se muestra**. Si
+auditás una entidad nueva y te olvidás de sumarla, el síntoma es "no aparece en el audit log", no "la
+ve todo el mundo". `User` está afuera **por diseño** — crear usuarios o cambiar roles no pertenece a
+ningún proyecto.
+
+**La forma que corresponde es una columna `projectId` en `AuditLog`**, escrita por `writeAuditLog`:
+sin joins y sin mapeo que se pueda olvidar. No se hizo porque pide la primera migración sobre una
+base desplegada (D-063) y un backfill que para varias filas viejas no tiene respuesta. **Si alguna
+vez tocás el esquema de `AuditLog` por otro motivo, sumá la columna en el mismo commit.**
 
 ### La tercera capa — la pertenencia de fila, 2026-09-04
 

@@ -36,7 +36,6 @@ números medidos, en `specs/README.md`. Acá solo lo que falta.
 | # | Qué | Por qué ahí | Nivel |
 |---|---|---|---|
 | 0 | **Mainnet** — runbook, habilitar la red, custodia de la clave | D-013 la hace **imposible por configuración**: es código, no solo procedimiento | 🔴 |
-| 1 | **`GET /developer/audit-log` no acota por proyecto** — decidir qué debe mostrar y acotarlo | Es la regla 5 sin su segunda capa: hoy un developer ve los eventos de todos los proyectos y el nombre de todos los usuarios | 🟡 |
 
 **Cerrados el 2026-09-01:** el reference script (D-083) y su cobertura contra un nodo real; `network`
 e `issuingAuthority`, aplicadas en producción **sin dejar de tener un solo archivo de migración**
@@ -168,13 +167,19 @@ así que decir "no hay regla de fila" se leía como una revisión hecha. Esas 26
 pudiera quedar en blanco, sería `"soloRol"` con otro nombre. Reparto final: `"soloRol"` 19 ·
 `{ scopeEnQuery }` 26 · `{ proyecto }` 30 · `{ dueño }` 9 · `{ alguna }` 1 · sin sesión 2.
 
-**Etiquetar obliga a leer el handler, y por eso apareció el punto 1 de la tabla.**
-`GET /developer/audit-log` devuelve el `AuditLog` **entero**, sin acotar por proyecto, con
-`actorName` y `actorRole` de cada usuario del sistema: un developer con membresía en un proyecto ve
+**Etiquetar obliga a leer el handler, y así apareció un agujero real, ya cerrado.**
+`GET /developer/audit-log` devolvía el `AuditLog` **entero**, sin acotar por proyecto, con
+`actorName` y `actorRole` de cada usuario del sistema: un developer con membresía en un proyecto veía
 los eventos de todos los demás. Es la regla 5 sin su segunda capa, misma familia que el agujero de
-`GET /evidence/:bundleId/files`, y ninguna herramienta lo iba a marcar. **No se tocó**, porque este
-refactor no cambia autorización y qué debe mostrar ese audit log es decisión de producto. Quedó con
-`"soloRol"` —que es la verdad— y por eso **destaca** en la matriz al lado de los otros listados.
+`GET /evidence/:bundleId/files`, y ninguna herramienta lo iba a marcar. **No era una decisión de
+producto abierta —el entregable ya la tenía tomada**: M2-D1 §4 dice *"developer sees project-scoped
+events"* y M2-D4 §P6 *"all events scoped to that developer's projects"*. Se cerró con `auditScope`,
+una condición de Kysely hermana de `projectScope` que resuelve `entityType`/`entityId` → proyecto y
+**es fail-closed**: un `entityType` que nadie mapeó no se muestra, en vez de mostrarse a todos.
+`User` queda afuera por diseño. La forma que corresponde de verdad es una columna `projectId` en
+`AuditLog` —sin joins y sin mapeo que se pueda olvidar—, y está anotada para el día que se toque el
+esquema: hoy pediría la primera migración sobre una base desplegada (D-063) y un backfill que para
+varias filas viejas no tiene respuesta.
 
 **El diseño ya está decidido. El trabajo es transcribirlo, no inventarlo.**
 

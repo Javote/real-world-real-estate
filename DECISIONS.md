@@ -853,18 +853,27 @@ sesión 2.
 **Y encontró lo que tenía que encontrar.** Etiquetar obliga a leer el handler, y al leerlos
 aparecieron dos cosas que ninguna herramienta iba a marcar:
 
-- **`GET /developer/audit-log` devuelve el `AuditLog` entero, sin acotar por proyecto** — con
-  `actorName` y `actorRole` de cada usuario del sistema. Un developer con membresía en un proyecto ve
-  los eventos de todos los demás. Es la regla 5 sin su segunda capa, de la misma familia que el
-  agujero de `GET /evidence/:bundleId/files`. **No se tocó acá**: qué debe mostrar el audit log del
-  developer es una decisión de producto, y este refactor no cambia autorización. Hoy queda con
-  `"soloRol"`, que es la verdad —no tiene regla de fila— y por eso **destaca** en la matriz al lado de
-  los otros listados, que sí la declaran.
-- **`POST /developer/documents` hacía la segunda capa a mano** porque el id que le llega es de la
-  evidencia y no del proyecto. Quedó como `{ scopeEnQuery: "projectScope(developer) ∋
-  Evidence.projectId" }`: la regla existe y la aplica el handler. Declararla en el guard pediría que
-  `ProjectSource` sepa leer del body y no solo del path — cambio chico, pero cambia el 400 de Zod por
-  uno del guard, así que no entra en un refactor que promete no cambiar comportamiento.
+- **`GET /developer/audit-log` devolvía el `AuditLog` entero, sin acotar por proyecto** — con
+  `actorName` y `actorRole` de cada usuario del sistema. Es la regla 5 sin su segunda capa, de la
+  misma familia que el agujero de `GET /evidence/:bundleId/files`. **No era decisión de producto:**
+  M2-D1 §4 y M2-D4 §P6 ya decían *project-scoped*, y el código no lo cumplía. Cerrado con
+  `auditScope`, hermana de `projectScope`, fail-closed. La forma que corresponde es una columna
+  `projectId` en `AuditLog`; no se hizo porque pide la primera migración sobre base desplegada
+  (D-063) y un backfill sin respuesta para filas viejas — anotada para el día que se toque ese
+  esquema.
+- **`POST /developer/documents` hacía la segunda capa a mano** porque el id le llega en el **body** y
+  el guard solo miraba el path. Cerrado: `ProjectSource` acepta `en: "body"`, y la distinción no es
+  cosmética — un param de path ausente es la ruta mal declarada (500) y un campo de body ausente es
+  input del cliente (400). `nombre` conserva el `"Document not found"` que ya devolvía.
+
+**Y `alguna` dejó de anidar.** `ReglaDeAcceso` se partió en `ReglaSimple` + la disyunción, que toma
+`[ReglaSimple, ReglaSimple, ...ReglaSimple[]]`: mínimo dos ramas, ninguna anidada. Con el tipo
+recursivo, los cuatro consumidores tenían que recursionar para expresar algo que nadie necesita — un
+`alguna` adentro de un `alguna` se aplana a uno solo. Que la use **una sola** ruta también es
+información y quedó escrito: la disyunción existe porque *dueño de un contrato* y *miembro del
+proyecto* son vínculos **desconectados** en el modelo (`POST /investor/invitations/:id/accept` no
+crea `ProjectMember`, verificado). Si algún día lo creara, esa regla colapsa a un `proyecto` solo y
+`alguna` se puede borrar.
 
 ## D-087 — El simulador declara `Pending`, y `Confirmed` sale siempre de un chequeo aparte
 

@@ -136,7 +136,8 @@ const MATRIZ: Record<string, string> = {
     "auth + autoriza(rol(admin|developer) · scope(projectScope(developer)))",
   "GET /api/v1/developer/documents":
     "auth + autoriza(rol(admin|developer) · scope(projectScope(developer)))",
-  "GET /api/v1/developer/audit-log": "auth + autoriza(rol(admin|developer) · soloRol)",
+  "GET /api/v1/developer/audit-log":
+    "auth + autoriza(rol(admin|developer) · scope(auditScope(developer)))",
   "POST /api/v1/developer/documents":
     "auth + autoriza(rol(admin|developer) · proyecto(Evidence:evidenceId@body → developer))",
   "GET /api/v1/developer/kpis":
