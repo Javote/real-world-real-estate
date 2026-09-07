@@ -48,12 +48,12 @@ aprobación explícita.
 | 3 | **≥8 stages** con signers/percentages configurables | Tests parametrizados; plantilla de 10 stages | ⬜ |
 | 4 | **3 pilotos** confirman | Carta firmada | ⬜ externo |
 | 5 | Endpoints documentados | OpenAPI — sale solo del contrato oRPC (D-066) | ◐ |
-| 6 | Proof objects validados | Tests por patrón P1–P10 contra M2-D4 §8.1 | ⬜ |
+| 6 | Proof objects validados | El SOM pide literal "hash + timestamp + signer": `GET /evidence/:bundleId/proof/:fileHash` ahora devuelve `signerUserId`/`txid`/`timestamp` (regla 17: null hasta `Confirmed`), `test/evidence-anchor.test.ts`. Los patrones P1–P10 de M2-D4 §8.1 (UI) son un criterio aparte, siguen sin auditar test-por-test | ◐ |
 | 7 | **Rechaza evidencia sin firmar** | Test de rechazo. Definido en D-028; implementado el piso | ◐ |
 | 8 | Flujos de UI end-to-end en pre-prod | Test IDs de M2-D5 verdes + walkthrough | ⬜ |
 | 9 | Mediana **reserva → escrow < 12 min** | Telemetría + capturas | ⬜ |
 | 10 | Audit logs persistidos | Ledger append-only paginable (M2-D4 P6) | ◐ tabla sí, superficie no |
-| 11 | **Sin hallazgos P1** de seguridad | Reporte de security review | ◐ el P1 conocido está cerrado; falta correr el review |
+| 11 | **Sin hallazgos P1** de seguridad | Reporte de security review | ✅ [`SECURITY-REVIEW-2026-09.md`](SECURITY-REVIEW-2026-09.md) — 3 P1 cerrados, dependencias escaneadas, 0 P1 abiertos |
 | 12 | Pre-prod en **URL pública** | La URL, viva | ✅ `propnexus-web.onrender.com` + `propnexus-api.onrender.com`, las dos vivas |
 | 13 | **Video walkthrough** | El video | ⬜ |
 | 14 | **Runbook** deploy / rollback | [`RUNBOOK-deploy.md`](RUNBOOK-deploy.md) | ✅ |
