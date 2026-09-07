@@ -3,11 +3,17 @@ import { RouterProvider } from '@tanstack/react-router'
 import { StrictMode } from 'react'
 import { createRoot } from 'react-dom/client'
 import { LocaleProvider } from './i18n/useTranslation'
+import { initObservability } from './lib/observability'
 import { getRouter } from './router'
 import './styles.css'
 
 // Punto de entrada del SPA (D-065). Lo que antes hacía el `shellComponent` de
 // TanStack Start —html, head, providers— vive acá y en `index.html`.
+//
+// Antes de armar el router: si algo en el arranque del router mismo tira,
+// Sentry ya tiene que estar escuchando.
+initObservability()
+
 const router = getRouter()
 
 const queryClient = new QueryClient({

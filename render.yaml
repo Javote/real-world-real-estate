@@ -234,3 +234,12 @@ services:
       # devuelve el host. Se pega a mano una vez, en el dashboard.
       - key: VITE_API_ORIGIN
         sync: false
+      # ── Observabilidad del cliente (opcional, M3 §4/§5) ────────────────────
+      # De build time, igual que la de arriba: cambiarlas exige redeploy del
+      # web. Apagadas hasta que el dueño cree las cuentas — ver .env.example.
+      - key: VITE_SENTRY_DSN
+        sync: false
+      - key: VITE_POSTHOG_KEY
+        sync: false
+      - key: VITE_POSTHOG_HOST
+        sync: false
