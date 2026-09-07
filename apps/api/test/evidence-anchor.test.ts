@@ -255,3 +255,91 @@ describe("GET /evidence/:bundleId/files y /:bundleId/proof/:fileHash — segunda
     expect([403, 404]).toContain(res.status);
   });
 });
+
+describe("GET /evidence/:bundleId/proof/:fileHash — proof object (hash + timestamp + signer)", () => {
+  it("sin anclaje confirmado: signer sí, txid y timestamp en null (regla 17)", async () => {
+    const stage = await crearStage(998_030);
+    await subirEvidencia(stage, "plano-sin-anclar");
+
+    await request(app)
+      .patch(`/api/v1/stages/${stage}/state`)
+      .set("Authorization", `Bearer ${tokenAdmin}`)
+      .send({ state: "Completed" });
+
+    const bundle = await db
+      .selectFrom("EvidenceBundle")
+      .selectAll()
+      .where("stageId", "=", stage)
+      .executeTakeFirstOrThrow();
+    const item = await db
+      .selectFrom("EvidenceBundleItem")
+      .selectAll()
+      .where("bundleId", "=", bundle.id)
+      .executeTakeFirstOrThrow();
+
+    const res = await request(app)
+      .get(`/api/v1/evidence/${bundle.id}/proof/${item.sha256Hash}`)
+      .set("Authorization", `Bearer ${tokenDev}`);
+
+    expect(res.status).toBe(200);
+    expect(res.body.merkleRoot).toBe(bundle.commitmentHash);
+    expect(res.body.leaf).toBe(item.sha256Hash);
+    expect(res.body.signerUserId).toBe(usuario);
+    expect(res.body.txid).toBeNull();
+    expect(res.body.timestamp).toBeNull();
+  });
+
+  it("con anclaje confirmado: txid y timestamp viajan", async () => {
+    const stage = await crearStage(998_031);
+    const evidenciaId = await subirEvidencia(stage, "plano-anclado");
+
+    await request(app)
+      .patch(`/api/v1/stages/${stage}/state`)
+      .set("Authorization", `Bearer ${tokenAdmin}`)
+      .send({ state: "Completed" });
+
+    const ahora = new Date();
+    await db
+      .insertInto("OnChainEvent")
+      .values({
+        id: createId(),
+        projectId: proyecto,
+        stageId: stage,
+        evidenceId: evidenciaId,
+        referenceId: null,
+        eventIndex: 1,
+        eventType: "EVIDENCE_ANCHOR",
+        fromState: null,
+        toState: null,
+        commitment: "a".repeat(64),
+        status: "Confirmed",
+        txid: "a".repeat(64),
+        network: "Preprod",
+        outputRef: null,
+        blockTimestamp: ahora,
+        createdAt: ahora,
+        updatedAt: ahora
+      })
+      .execute();
+
+    const bundle = await db
+      .selectFrom("EvidenceBundle")
+      .selectAll()
+      .where("stageId", "=", stage)
+      .executeTakeFirstOrThrow();
+    const item = await db
+      .selectFrom("EvidenceBundleItem")
+      .selectAll()
+      .where("bundleId", "=", bundle.id)
+      .executeTakeFirstOrThrow();
+
+    const res = await request(app)
+      .get(`/api/v1/evidence/${bundle.id}/proof/${item.sha256Hash}`)
+      .set("Authorization", `Bearer ${tokenDev}`);
+
+    expect(res.status).toBe(200);
+    expect(res.body.txid).toBe("a".repeat(64));
+    expect(res.body.anchorStatus).toBe("Confirmed");
+    expect(typeof res.body.timestamp).toBe("string");
+  });
+});

@@ -22,3 +22,32 @@ export const developerDocumentSchema = z.strictObject({
   anchorStatus: z.string().nullable()
 });
 export type DeveloperDocument = z.infer<typeof developerDocumentSchema>;
+
+/** Un paso del camino de Merkle: con qué hermano combinar y de qué lado. */
+export const merkleStepSchema = z.strictObject({
+  sibling: z.string(),
+  position: z.enum(["left", "right"])
+});
+
+/**
+ * El proof object de `GET /evidence/:bundleId/proof/:fileHash` (M3 §2 —
+ * "API returns proof objects: hash + timestamp + signer"). El revisor
+ * rehashea su archivo, camina `proof` con `merkleRootFromProof` y compara
+ * contra `merkleRoot`.
+ *
+ * `signerUserId` es quien subió el archivo (`Evidence.uploadedById`): la
+ * cuarta afirmación que la plataforma puede sostener — "esta persona
+ * atestiguó haberlo revisado" — no que la firma sea criptográfica.
+ * `timestamp`/`txid` viajan `null` hasta que el anclaje esté `Confirmed`
+ * (regla 17: sin TXID, el estado es "Pendiente", nunca "Verificado").
+ */
+export const evidenceProofSchema = z.strictObject({
+  merkleRoot: z.string(),
+  leaf: z.string(),
+  proof: z.array(merkleStepSchema),
+  signerUserId: z.string(),
+  anchorStatus: z.string().nullable(),
+  txid: z.string().nullable(),
+  timestamp: z.string().datetime().nullable()
+});
+export type EvidenceProof = z.infer<typeof evidenceProofSchema>;

@@ -1,5 +1,5 @@
 import { createHash } from "node:crypto";
-import { merkleProof } from "@plataforma/shared";
+import { type EvidenceProof, merkleProof } from "@plataforma/shared";
 import { type Request, Router } from "express";
 import { z } from "zod";
 import { createId } from "../db/id";
@@ -339,7 +339,7 @@ router.get(
   async (req, res) => {
     const items = await db
       .selectFrom("EvidenceBundleItem")
-      .select(["sha256Hash"])
+      .select(["sha256Hash", "evidenceId"])
       .where("bundleId", "=", req.params.bundleId as string)
       .execute();
 
@@ -349,6 +349,27 @@ router.get(
       .selectFrom("EvidenceBundle")
       .select(["commitmentHash"])
       .where("id", "=", req.params.bundleId as string)
+      .executeTakeFirstOrThrow();
+
+    const item = items.find((i) => i.sha256Hash === req.params.fileHash);
+    if (!item) return res.status(404).json({ message: "That hash is not part of this bundle" });
+
+    await reconciliarParaLectura({ evidenceId: item.evidenceId });
+
+    const evidencia = await db
+      .selectFrom("Evidence")
+      .leftJoin("OnChainEvent", (join) =>
+        join
+          .onRef("OnChainEvent.evidenceId", "=", "Evidence.id")
+          .on("OnChainEvent.eventType", "=", "EVIDENCE_ANCHOR")
+      )
+      .select([
+        "Evidence.uploadedById as signerUserId",
+        "OnChainEvent.status as anchorStatus",
+        "OnChainEvent.txid as txid",
+        "OnChainEvent.blockTimestamp as blockTimestamp"
+      ])
+      .where("Evidence.id", "=", item.evidenceId)
       .executeTakeFirstOrThrow();
 
     const sha256Pair = (a: string, b: string) =>
@@ -362,7 +383,21 @@ router.get(
         req.params.fileHash as string,
         sha256Pair
       );
-      return res.json({ merkleRoot: bundle.commitmentHash, leaf: req.params.fileHash, proof });
+      // Regla 17: sin TXID confirmado no hay timestamp que sostener.
+      const confirmado = evidencia.anchorStatus === "Confirmed" && evidencia.txid !== null;
+      const body: EvidenceProof = {
+        merkleRoot: bundle.commitmentHash,
+        leaf: req.params.fileHash as string,
+        proof,
+        signerUserId: evidencia.signerUserId,
+        anchorStatus: evidencia.anchorStatus,
+        txid: confirmado ? evidencia.txid : null,
+        timestamp:
+          confirmado && evidencia.blockTimestamp
+            ? new Date(evidencia.blockTimestamp).toISOString()
+            : null
+      };
+      return res.json(body);
     } catch {
       return res.status(404).json({ message: "That hash is not part of this bundle" });
     }
