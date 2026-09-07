@@ -54,9 +54,18 @@ services:
         - pnpm-workspace.yaml
         - package.json
         - render.yaml
+    # `NODE_ENV=development` INLINE, solo en el `install`: sacar `NODE_ENV` de
+    # `envVars` (commit anterior) no alcanzó — Render lo sigue mandando
+    # `production` en el entorno del build igual (probablemente un valor que
+    # quedó sincronizado en el dashboard de una corrida vieja y no se retira
+    # solo al borrar la declaración del Blueprint). En vez de depender de que
+    # Render lo saque, el comando queda inmune a lo que sea que el entorno
+    # traiga: fuerza `development` para el único paso que le importa
+    # (`pnpm install`, que con `NODE_ENV=production` saltea devDependencies —
+    # `@types/node` incluido, y `packages/cardano` no compila sin eso).
     buildCommand: >-
       corepack enable &&
-      pnpm install --frozen-lockfile &&
+      NODE_ENV=development pnpm install --frozen-lockfile &&
       pnpm --filter @plataforma/shared build &&
       pnpm --filter @plataforma/cardano build &&
       pnpm --filter @plataforma/api build
@@ -217,9 +226,13 @@ services:
         - pnpm-workspace.yaml
         - package.json
         - render.yaml
+    # Mismo motivo que en `propnexus-api`: si el entorno del build trae
+    # NODE_ENV=production (Render lo manda igual, sin que este Blueprint lo
+    # declare), `pnpm install` saltea devDependencies —vite, typescript—
+    # y este build también se cae sin ellas.
     buildCommand: >-
       corepack enable &&
-      pnpm install --frozen-lockfile &&
+      NODE_ENV=development pnpm install --frozen-lockfile &&
       pnpm --filter @plataforma/shared build &&
       pnpm --filter @plataforma/web build
     staticPublishPath: apps/web/dist

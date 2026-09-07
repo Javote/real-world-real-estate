@@ -30,16 +30,20 @@ interface Servicio {
   name: string;
   envVars?: EnvVar[];
   startCommand?: string;
+  buildCommand?: string;
 }
 
-function servicioApi(): Servicio {
+function servicioPorNombre(nombre: string): Servicio {
   const doc = load(readFileSync(join(RAIZ, "render.yaml"), "utf8")) as {
     services: Servicio[];
   };
-  const api = doc.services.find((s) => s.name === "propnexus-api");
-  if (!api) throw new Error("render.yaml no declara el servicio `propnexus-api`");
-  return api;
+  const servicio = doc.services.find((s) => s.name === nombre);
+  if (!servicio) throw new Error(`render.yaml no declara el servicio \`${nombre}\``);
+  return servicio;
 }
+
+const servicioApi = () => servicioPorNombre("propnexus-api");
+const servicioWeb = () => servicioPorNombre("propnexus-web");
 
 const envDeclaradas = (): Map<string, EnvVar> =>
   new Map((servicioApi().envVars ?? []).map((v) => [v.key, v]));
@@ -203,5 +207,23 @@ describe("render.yaml — startCommand", () => {
 
   it("el startCommand fija NODE_ENV=production inline, para el proceso del servidor", () => {
     expect(servicioApi().startCommand ?? "").toMatch(/\bNODE_ENV=production\b/);
+  });
+});
+
+// 2026-09-07 · Sacar `NODE_ENV` de `envVars` (el test de arriba) NO alcanzó:
+// Render lo siguió mandando `production` en el entorno del build igual —
+// probablemente un valor que quedó sincronizado en el dashboard de una
+// corrida vieja, que no se retira solo porque el Blueprint deje de
+// declararlo. `pnpm install --frozen-lockfile` con `NODE_ENV=production`
+// saltea `devDependencies` y el build se cae. El `buildCommand` tiene que
+// ser inmune a lo que sea que el entorno traiga, no depender de que Render
+// lo saque solo.
+describe("render.yaml — buildCommand instala devDependencies pase lo que pase", () => {
+  it.each([
+    ["propnexus-api", servicioApi],
+    ["propnexus-web", servicioWeb]
+  ])("%s fuerza NODE_ENV=development antes de pnpm install", (_nombre, servicio) => {
+    const comando = servicio().buildCommand ?? "";
+    expect(comando).toMatch(/NODE_ENV=development\s+pnpm install/);
   });
 });
