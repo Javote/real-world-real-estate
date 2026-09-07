@@ -406,6 +406,21 @@ Logs: **Dashboard → el servicio → Logs** (o `render logs -r <service>`). No 
 loguee no se puede ir a mirar. Es la razón por la que D-042 hace que la API **reviente al arrancar**
 en vez de fallar en una request.
 
+**Incidente del 2026-09-07, dos fallas seguidas en el mismo push.** Al instrumentar Sentry/OTel
+(`instrumentation.ts`, precargado con `node --require`), dos deploys seguidos fallaron: primero
+`--require` sin `./` (resuelve como paquete de `node_modules`, no como archivo — `MODULE_NOT_FOUND`
+al arrancar); después, al arreglar eso, `NODE_ENV: production` declarado como env var del servicio
+rompió el **build** (`pnpm install` saltea `devDependencies` con esa variable puesta, y
+`packages/cardano` se quedó sin `@types/node`). El segundo synced siguió fallando incluso después de
+sacar la declaración del Blueprint — Render lo siguió mandando en el entorno del build igual. El fix
+real fue hacer el `buildCommand` inmune a lo que traiga el entorno (`NODE_ENV=development` inline
+antes de `pnpm install`), no depender de qué variables tiene declaradas el Blueprint. Detalle técnico
+completo y los tests que lo cierran en `apps/api/CLAUDE.md` §Trampas verificadas.
+**La lección que generaliza:** cualquier cambio a `render.yaml` en un servicio ya desplegado se
+reproduce local con el comando **literal** —build y arranque, en ese orden, con `NODE_ENV=production`
+exportado a mano para simular el entorno real de Render— antes de pushear. `pnpm verify` en verde no
+prueba que el deploy vaya a arrancar.
+
 ## 5 · Antes de una demo, revisión o grabación
 
 Las dos URLs duermen. Calentarlas a mano, ~2 minutos antes:
