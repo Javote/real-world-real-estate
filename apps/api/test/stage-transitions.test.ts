@@ -136,6 +136,12 @@ describe("PATCH /stages/:id/state · la tabla de transiciones", () => {
   });
 });
 
+// M3 criterio 2 — "API rejects unsigned evidence". No hay firma criptográfica
+// de archivos en el dominio (D-026: la plataforma no certifica ni valida);
+// D-028/D-084/D-086 relee "sin firmar" como evidencia declarada
+// `authoritative` sin `issuingAuthority` — la única mitad de D-028 que sigue
+// bloqueando una transición. Los tests de este describe son la prueba de ese
+// criterio, no una casualidad de nombres.
 describe("PATCH /stages/:id/state · evidencia en stages críticos", () => {
   it("409 al completar un stage validation-critical sin evidencia", async () => {
     const id = await crearStage({ state: "InProgress", validationCritical: true });
