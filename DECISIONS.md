@@ -22,7 +22,7 @@ ya no existen. Partirlo no pierde nada: el porqué sigue estando, deja de pesar.
 > se contradice internamente, (b) es un error de redacción, o (c) seguirlo al pie contradiría una
 > verdad del producto declarada por el dueño — **nunca por conveniencia**.
 >
-> **La numeración no se recicla.** Las decisiones nuevas siguen desde D-087.
+> **La numeración no se recicla.** Las decisiones nuevas siguen desde D-090.
 
 ## Desvíos vigentes
 
@@ -41,6 +41,7 @@ Todos se comunican en la entrega.
 | M2-D5 fila 42-43 lista un componente `Chart` que M2-D3 no define entre sus 36 | Las barras de la captura 42 son **composición de esa pantalla**, no una entrada nueva de la biblioteca | (a) contradicción interna | D-073 |
 | M2-D2 dibuja headers distintos en secciones hermanas del developer (46 sin logo, 49 con logo) y omite campana / perfil / idioma; M2-D3 dice *never omit the logo* y reserva el slot derecho a esas utilidades | Header autenticado unificado: logo + campana + perfil + idioma; `back` no reemplaza al logo | (a) contradicción interna + (c) verdad del producto | D-074 |
 | M2-D5 §3 asume tRPC-libre "REST over HTTPS"… y lo marca `[ASSUMPTION]` anulable | **Se confirma, no se anula**: la columna de endpoints de las 53 filas y la verificación externa por `curl` dependen de REST | — | D-066 |
+| M3 SOM: state machine "with parameterized roles and ≥8 construction stages, **timeouts, and fallback branches**" | Nada en `docs/` (el `.puml` canónico de M1-D2, el resumen del whitepaper) define timeouts ni una rama de fallback en la FSM on-chain. Se releen como robustez del **pipeline de anclaje**, no como una feature nueva del validador: ver D-089 | (c) verdad del producto | D-089 |
 
 ---
 
@@ -610,6 +611,34 @@ aserción sobre el string `"real"` habría pasado igual y no habría probado nad
 
 Verificado en los dos sentidos antes de commitear: con `ANCHOR_MODE: simulated` —la configuración
 que estuvo desplegada— el test se pone rojo, y sacando cualquier variable declarada, también.
+
+## D-089 — "Timeouts" y "fallback branches" son del pipeline de anclaje, no del validador
+
+**Contexto.** El SOM de M3 pide una state machine "with parameterized roles and ≥8 construction
+stages, timeouts, and fallback branches". Nada en `docs/` lo define: el `.puml` canónico de M1-D2
+(`3-milestone-lifecycle.puml`) tiene 4 estados y transiciones puramente por evento, sin deadline ni
+rama de cancelación; el resumen del whitepaper tampoco lo menciona. Es la misma familia que D-021 —
+vocabulario del SOM sin correlato en el entregable.
+
+**Decisión.** No se agrega un estado de cancelación ni un deadline al validador. La FSM que D-020
+ratifica queda como está — Aiken es zona 🟡 y el objetivo es cerrar M3, no reabrir un contrato que
+ya está hasheado en la Proof of Achievement por un requisito que ningún entregable pidió con esa
+forma. Cardano tampoco ejecuta nada "solo": todo lo que pasa on-chain es una transacción que alguien
+firma, así que un "timeout" que dispara sin intervención no existe en este modelo sin agregar una
+transacción externa que lo dispare — y eso es exactamente lo que ya hace el pipeline de anclaje.
+
+**Cómo se releen los dos términos, contra código ya construido:**
+
+| Término del SOM | Qué es en realidad | Dónde ya está |
+|---|---|---|
+| "timeouts" | Una transacción de anclaje que no confirma en el momento en que se declara no bloquea nada: el evento queda `Pending` y se reconcilia solo cuando alguien vuelve a leer ese proyecto/stage/evidencia — no hay una espera fija, pero tampoco un límite que rompa algo | D-077 (`reconciliarParaLectura`), `POST /evidence/reconcile` para barridos a mano |
+| "fallback branches" | Si el `AnchorPort` tira una excepción o la configuración de anclaje está rota, la declaración off-chain se escribe **igual** y el evento queda `Failed` — el camino que toma el sistema cuando el camino feliz (anclar) no sale | D-075, D-059; `POST /projects/:id/stages/:stageId/retry-anchor` para el caso de un mint que falló de verdad sobre un stage que sigue en `Pending` (`STAGE_ALREADY_ADVANCED` si ya avanzó sin hilo — no hay retroactivo honesto) |
+
+**Por qué es la lectura correcta y no una excusa.** Las dos mitades —qué pasa si una tx tarda, qué
+pasa si una tx falla— ya estaban resueltas antes de que este SOM se escribiera, con sus tests y su
+verificación. Llamarlas "timeout" y "fallback branch" no es forzar el vocabulario: es la traducción
+literal de lo que esas palabras significan para un pipeline que depende de una cadena externa, y es
+exactamente el mismo movimiento que D-028 hizo con "unsigned evidence".
 
 ## D-077 — La reconciliación la dispara la lectura, no un cron
 

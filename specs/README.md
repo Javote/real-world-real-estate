@@ -44,6 +44,7 @@ aprobación explícita.
 | # | Criterio | Evidencia | Estado |
 |---|---|---|---|
 | 1 | Los contratos compilan | `aiken check` verde en CI; `plutus.json` al día | ✅ |
+| — | Output 1: state machine "with... timeouts, and fallback branches" | Ninguno de los dos existe en el validador ni lo pide `docs/` (D-089): se releen como robustez del pipeline de anclaje —`Pending`/`Failed`/reconciliación/retry-anchor, todo ya construido y testeado— en vez de agregar deadline o estado de cancelación a un contrato ya hasheado | ✅ [`DECISIONS.md` D-089](../DECISIONS.md) |
 | 2 | Unit tests **≥95% coverage** | **73 tests**; `aiken` no mide coverage de líneas, así que la evidencia es la tabla punto de rechazo → test de `contracts/CLAUDE.md` | ✅ |
 | 3 | **≥8 stages** con signers/percentages configurables | Tests parametrizados; plantilla de 10 stages | ◐ `DEFAULT_STAGE_CATALOG` (8 etapas, `progressPercentage` suma 100 — D-021, es avance de obra, no dinero) sembrado en `torre-a` y aceptado por `POST /projects/:id/stages`. Falta "signers" (rol configurable por stage): pausado, el dueño lo define con el developer partner |
 | 4 | **3 pilotos** confirman | Carta firmada | ⬜ externo |
