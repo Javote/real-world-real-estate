@@ -324,6 +324,16 @@ sabemos que a veces deploya **de menos**. Las dos llevan a la misma regla.
 **GitHub Actions no despliega** (D-010, núcleo preservado por D-039). La puerta es el único juez de
 si un cambio puede pushearse; Render solo reacciona a lo que ya pasó por ahí.
 
+**Un `sync: false` nuevo, agregado a un servicio que ya existe, NO aparece solo en el dashboard.**
+§1.2 y §1.4 describen que Render "pide" los valores — eso es cierto para el asistente interactivo
+**New → Blueprint** (alta por primera vez) y para un **Sync** manual disparado desde la pestaña
+Blueprints del dashboard. Un push normal a `main` que agrega una `sync: false` nueva a un servicio
+ya desplegado **no** dispara ese diálogo: la variable no se crea sola, ni vacía ni con ningún valor
+—confirmado el 2026-09-07 con `SENTRY_DSN`/`OTEL_EXPORTER_OTLP_*`/`VITE_POSTHOG_*`—. Hay que ir a
+**el servicio → Environment → Add Environment Variable** y crearla a mano, con el mismo `key` exacto
+que declara `render.yaml`. Una vez creada así, Render la trata como cualquier otra `sync: false`: no
+la pisa un sync futuro.
+
 Verificación post-deploy, en este orden:
 
 ```bash
