@@ -72,7 +72,7 @@ services:
     # parchear los módulos antes de que algo los cargue sin parche.
     startCommand: >-
       node apps/api/dist/src/db/migrate.js &&
-      node --require apps/api/dist/src/instrumentation.js apps/api/dist/src/server.js
+      node --require ./apps/api/dist/src/instrumentation.js apps/api/dist/src/server.js
     healthCheckPath: /health
     envVars:
       - key: NODE_VERSION
