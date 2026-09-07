@@ -29,6 +29,7 @@ interface EnvVar {
 interface Servicio {
   name: string;
   envVars?: EnvVar[];
+  startCommand?: string;
 }
 
 function servicioApi(): Servicio {
@@ -102,9 +103,14 @@ describe("render.yaml — cobertura de variables", () => {
    * Las que el código lee y el Blueprint no declara **a propósito**.
    *
    * `PORT` la inyecta Render sola. `BLOCKFROST_URL` solo se usa para apuntar a
-   * un devnet; en Preprod la resuelve el factory desde la red.
+   * un devnet; en Preprod la resuelve el factory desde la red. `NODE_ENV` NO
+   * puede ser una env var del servicio a propósito: declararla ahí la aplica
+   * también al `buildCommand`, y con `NODE_ENV=production` puesto `pnpm
+   * install` saltea las devDependencies —rompió el build el 2026-09-07,
+   * `packages/cardano` no encontraba `@types/node`—. Va inline en el
+   * `startCommand`, solo para el proceso del servidor.
    */
-  const OPCIONALES = new Set(["PORT", "BLOCKFROST_URL"]);
+  const OPCIONALES = new Set(["PORT", "BLOCKFROST_URL", "NODE_ENV"]);
 
   /**
    * Toda variable que el backend lee, sacada del código y no de una lista a
@@ -160,5 +166,42 @@ describe("render.yaml — cobertura de variables", () => {
     const sobrantes = [...OPCIONALES].filter((v) => !leidas.has(v));
 
     expect(sobrantes, `sobran en OPCIONALES: ${sobrantes.join(", ")}`).toEqual([]);
+  });
+});
+
+// 2026-09-07 · `node --require apps/api/dist/.../instrumentation.js` (sin
+// `./`) tumbó producción: a diferencia del script principal (posicional,
+// resuelto relativo al cwd sin importar el prefijo), `--require` sigue la
+// resolución de `require()` — una ruta sin `./` ni `/` se busca como paquete
+// de node_modules, no como archivo. Ninguna suite corre el `startCommand`
+// compilado de punta a punta (`pnpm dev` usa tsx, que resuelve distinto; los
+// tests importan `app.ts` directo), así que esto es lo más cerca que se
+// puede probar sin ejecutar el build real dentro del test.
+describe("render.yaml — startCommand", () => {
+  it("toda ruta de --require/-r/--loader/--import empieza con ./ o /", () => {
+    const comando = servicioApi().startCommand ?? "";
+    const flags = /(?:--require|-r|--loader|--import)[= ]([^\s&]+)/g;
+    const rutas = [...comando.matchAll(flags)].map((m) => m[1]);
+
+    expect(rutas.length, "no se encontró ningún --require en el startCommand").toBeGreaterThan(0);
+
+    const sinPrefijo = rutas.filter((r) => !r.startsWith("./") && !r.startsWith("/"));
+    expect(
+      sinPrefijo,
+      `sin ./ ni / — se resuelve como paquete, no como archivo: ${sinPrefijo.join(", ")}`
+    ).toEqual([]);
+  });
+
+  // 2026-09-07 · `NODE_ENV: production` como env var del servicio rompió el
+  // build: se aplica también al `buildCommand`, y con esa variable puesta
+  // `pnpm install` saltea las devDependencies — `packages/cardano` se quedó
+  // sin `@types/node` y `tsc` falló (TS2688). Tiene que ir inline en el
+  // `startCommand`, nunca declarada acá.
+  it("NODE_ENV nunca es una env var del servicio — rompe pnpm install en el build", () => {
+    expect(envDeclaradas().has("NODE_ENV")).toBe(false);
+  });
+
+  it("el startCommand fija NODE_ENV=production inline, para el proceso del servidor", () => {
+    expect(servicioApi().startCommand ?? "").toMatch(/\bNODE_ENV=production\b/);
   });
 });

@@ -37,6 +37,49 @@ que la superficie del entregable no consume pero los tests y el seed sí.
 
 ## Trampas verificadas
 
+- **2026-09-07 · `node --require` no resuelve rutas relativas igual que un script posicional —
+  tumbó producción (`Failed deploy`).** El `startCommand` de `render.yaml` quedó como
+  `node --require apps/api/dist/src/instrumentation.js apps/api/dist/src/server.js`, sin `./`
+  adelante. `apps/api/dist/src/db/migrate.js`, en la línea de arriba, **nunca tuvo el problema**
+  porque es el script principal (posicional) que Node ejecuta, y ese sí se resuelve relativo al
+  `cwd` sin importar el prefijo. `--require` en cambio sigue la resolución de `require()`: una ruta
+  sin `./` ni `/` al principio se busca como paquete de `node_modules`, no como archivo — y
+  `apps/api/dist/src/instrumentation.js` calzaba justo esa forma. El proceso moría al arrancar con
+  `MODULE_NOT_FOUND` antes de escuchar el puerto, así que Render nunca vio el health check y marcó
+  el deploy fallido.
+  **Por qué no lo atrapó nada:** ninguna suite corre el `startCommand` compilado de punta a punta.
+  `pnpm dev` usa `tsx watch --require ./src/instrumentation.ts` (con `./`, y además `tsx` resuelve
+  distinto), y los tests importan `app.ts` directo sin pasar por Node ni por `--require`. Local y
+  CI quedaron ciegos al único camino que corre en producción.
+  **Fix:** agregar el `./` (commit `2d65fca`). **La lección:** cualquier flag de Node que reciba una
+  ruta de archivo (`--require`, `-r`, `--loader`, `--import`) hay que probarlo con el mismo comando
+  exacto que va a correr el deploy —no alcanza con que el script principal al lado funcione, ni con
+  correrlo desde otro directorio de trabajo.
+
+- **2026-09-07 · `NODE_ENV: production` como env var del SERVICIO rompió el `buildCommand`, no el
+  `startCommand` — segundo incidente en el mismo deploy.** El fix del `./` de arriba se pusheó y
+  Render armó bien el `startCommand`, pero el build entero falló antes de llegar ahí:
+  `packages/cardano prepare: error TS2688: Cannot find type definition file for 'node'`. La causa
+  no tenía nada que ver con `--require` — `NODE_ENV=production` se había agregado como `envVars` del
+  servicio (para que `instrumentation.ts` etiquetara bien el ambiente en Sentry), y Render aplica
+  las `envVars` del servicio a **las dos** fases, build y arranque, no solo a la que las necesita.
+  Con `NODE_ENV=production` puesto, `pnpm install` saltea las `devDependencies` —`@types/node`
+  incluido— y `tsc` de `packages/cardano` no encuentra el tipo `node`.
+  **Reproducido a propósito, las dos ramas:** `NODE_ENV=production pnpm install --frozen-lockfile`
+  falla igual que Render; sin la variable, instala `devDependencies` y compila. No hizo falta
+  adivinar — se corrió el mismo comando que loguea Render, con y sin la variable.
+  **Fix:** sacar `NODE_ENV` de `envVars` del servicio y ponerlo **inline en el `startCommand`**
+  (`NODE_ENV=production node --require ...`), que solo alcanza a ese proceso — el `buildCommand` es
+  una invocación de shell aparte y no lo hereda. `test/render-config.test.ts` ahora tiene dos
+  guardas: que `NODE_ENV` nunca sea una `envVars` del servicio, y que el `startCommand` lo fije
+  inline.
+  **La lección, que generaliza más allá de `NODE_ENV`:** en un Blueprint de Render, `envVars` del
+  servicio es un solo balde compartido entre `buildCommand` y `startCommand` — no hay forma de
+  declarar una variable "solo para el arranque" ahí. Cualquier variable cuyo valor cambie el
+  comportamiento de una **herramienta del toolchain** (`NODE_ENV` para npm/pnpm, pero la misma
+  familia de riesgo aplica a cualquier var que un instalador o un compilador lean) es candidata a
+  ir inline en el comando que la necesita, no en `envVars`.
+
 - **2026-09-04 · Aceptar una invitación no creaba la membresía, y el seed la plantaba a mano — así que
   los fixtures describían un mundo que el flujo real nunca producía.** `POST
   /investor/invitations/:id/accept` (M2-D5 fila 63) marcaba la unidad como vendida, creaba el

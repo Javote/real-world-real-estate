@@ -70,9 +70,15 @@ services:
     # proceso carga PRIMERO — antes de `server.js`, que es el que hace
     # `require` de Express — para que las auto-instrumentaciones alcancen a
     # parchear los módulos antes de que algo los cargue sin parche.
+    #
+    # `NODE_ENV=production` va INLINE acá, no como env var del servicio.
+    # Declararla como env var la aplica también al `buildCommand` — probado:
+    # rompió el build entero, porque con esa variable puesta `pnpm install`
+    # saltea las devDependencies (`@types/node` incluido) y
+    # `packages/cardano` no compila (TS2688). Inline, solo la ve este proceso.
     startCommand: >-
       node apps/api/dist/src/db/migrate.js &&
-      node --require ./apps/api/dist/src/instrumentation.js apps/api/dist/src/server.js
+      NODE_ENV=production node --require ./apps/api/dist/src/instrumentation.js apps/api/dist/src/server.js
     healthCheckPath: /health
     envVars:
       - key: NODE_VERSION
@@ -174,11 +180,6 @@ services:
       # por coma.
       - key: WEB_ORIGIN
         sync: false
-      # No asumido: Render no lo setea solo para un servicio `runtime: node`
-      # (a diferencia de `PORT`, que sí inyecta). Sin esto, `instrumentation.ts`
-      # etiquetaba los errores de Sentry como "development" en producción.
-      - key: NODE_ENV
-        value: production
       # ── Observabilidad (M3 §4 "error budgets" · monitoring) ────────────────
       # Las dos son opcionales de verdad: `instrumentation.ts` (precargado por
       # `--require` en el startCommand de arriba) queda apagado sin ellas, sin
