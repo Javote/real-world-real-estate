@@ -434,5 +434,10 @@ D-040, no olvidado.
    exista el pipeline de anclaje, se dispara desde un cron de GitHub Actions contra un endpoint
    autenticado — **nunca un `setInterval` dentro de la API**, que deja de contar cuando el servicio
    duerme (D-003, D-040).
-5. **Sin telemetría ni monitoreo todavía** (criterios 9 y 14). Los logs de Render son lo único que
-   hay.
+5. **Monitoreo: código listo, cuentas pendientes.** Sentry (errores, back+front) y
+   OpenTelemetry→Grafana Cloud (traces/métricas del backend) están instrumentados
+   (`apps/api/src/instrumentation.ts`, `apps/web/src/lib/observability.ts`) pero quedan apagados
+   sin `SENTRY_DSN`/`OTEL_EXPORTER_OTLP_ENDPOINT` — nadie creó esas cuentas todavía. Sin ellas, los
+   logs de Render siguen siendo lo único que hay. Render Metrics Stream (infra nativa: CPU/RAM del
+   contenedor) es de plan Pro+, no está en free — el dashboard gratis de Render alcanza para
+   mirarlo, solo no se puede exportar a Grafana Cloud sin subir de plan.

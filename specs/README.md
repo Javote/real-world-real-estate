@@ -56,7 +56,7 @@ aprobación explícita.
 | 11 | **Sin hallazgos P1** de seguridad | Reporte de security review | ✅ [`SECURITY-REVIEW-2026-09.md`](SECURITY-REVIEW-2026-09.md) — 3 P1 cerrados, dependencias escaneadas, análisis estático (Semgrep) en CI desde este commit, 0 P1 abiertos |
 | 12 | Pre-prod en **URL pública** | La URL, viva | ✅ `propnexus-web.onrender.com` + `propnexus-api.onrender.com`, las dos vivas |
 | 13 | **Video walkthrough** | El video | ⬜ |
-| 14 | **Runbook** deploy / rollback | [`RUNBOOK-deploy.md`](RUNBOOK-deploy.md) | ✅ |
+| 14 | **Runbook** deploy / rollback | [`RUNBOOK-deploy.md`](RUNBOOK-deploy.md) | ✅ Runbook cerrado. La evidencia de M5 también pide "monitoring screenshots": Sentry (errores) + OTel→Grafana Cloud (traces/métricas) + PostHog (web vitals, sin PII) instrumentados en código (`apps/api/src/instrumentation.ts`, `apps/web/src/lib/observability.ts`), ◐ apagados hasta que el dueño cree las 3 cuentas y cargue las env vars en Render — sin eso no hay nada que capturar todavía |
 | 15 | Lista de **TXIDs** de prueba | Publicada y resoluble en un explorador | ◐ **anclado desde la instancia desplegada el 2026-09-03** — metadata (`52a2aa42…f2f7aaf406`) y state-thread, mint + advance (`21bae8cb…c294970`, `b28eb6cf…36a0dbe`), los tres confirmados en Preprod. Falta publicar la lista formal |
 | 16 | README marca carpetas públicas vs privadas | En `README.md` | ✅ |
 
