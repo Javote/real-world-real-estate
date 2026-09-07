@@ -63,9 +63,16 @@ services:
     # Las migraciones corren ANTES de escuchar, en cada arranque. Son
     # idempotentes (tabla `_migrations`, D-049) y no hay alternativa: el free
     # tier no da shell ni one-off jobs (D-012 · D-040).
+    #
+    # `--require .../instrumentation.js` en el segundo comando, no en el
+    # primero: Sentry/OTel instrumentan Express y el driver de la base, y
+    # `migrate.js` no usa ninguno de los dos. Tiene que ser el módulo que el
+    # proceso carga PRIMERO — antes de `server.js`, que es el que hace
+    # `require` de Express — para que las auto-instrumentaciones alcancen a
+    # parchear los módulos antes de que algo los cargue sin parche.
     startCommand: >-
       node apps/api/dist/src/db/migrate.js &&
-      node apps/api/dist/src/server.js
+      node --require apps/api/dist/src/instrumentation.js apps/api/dist/src/server.js
     healthCheckPath: /health
     envVars:
       - key: NODE_VERSION
@@ -166,6 +173,29 @@ services:
       # esquema (`https://propnexus-web.onrender.com`). Acepta varios separados
       # por coma.
       - key: WEB_ORIGIN
+        sync: false
+      # No asumido: Render no lo setea solo para un servicio `runtime: node`
+      # (a diferencia de `PORT`, que sí inyecta). Sin esto, `instrumentation.ts`
+      # etiquetaba los errores de Sentry como "development" en producción.
+      - key: NODE_ENV
+        value: production
+      # ── Observabilidad (M3 §4 "error budgets" · monitoring) ────────────────
+      # Las dos son opcionales de verdad: `instrumentation.ts` (precargado por
+      # `--require` en el startCommand de arriba) queda apagado sin ellas, sin
+      # tumbar el proceso — mismo criterio que D-075 con el AnchorPort. Se
+      # cargan a mano en el dashboard cuando exista la cuenta de Sentry/Grafana
+      # Cloud, nunca en el repo (regla 12).
+      - key: SENTRY_DSN
+        sync: false
+      # Grafana Cloud da un endpoint OTLP propio por stack (con Basic Auth vía
+      # header, ver .env.example) — no hace falta Render Pro ni su Metrics
+      # Stream: el proceso exporta directo por HTTPS.
+      - key: OTEL_EXPORTER_OTLP_ENDPOINT
+        sync: false
+      # Grafana Cloud exige auth: "Authorization=Basic <base64(instanceID:apiKey)>".
+      # El SDK de OTel lee este env var solo, sin que `instrumentation.ts`
+      # tenga que tocarlo (los exporters lo leen internamente).
+      - key: OTEL_EXPORTER_OTLP_HEADERS
         sync: false
 
   # ── Web (SPA estático) ─────────────────────────────────────────────────────

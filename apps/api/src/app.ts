@@ -10,6 +10,7 @@ import "dotenv/config";
 
 import express from "express";
 import helmet from "helmet";
+import { Sentry } from "./instrumentation";
 import { db } from "./lib/db";
 import { sql } from "./lib/kysely";
 import { errorHandler } from "./middlewares/errorHandler";
@@ -172,6 +173,12 @@ export const MONTAJE = [
 for (const { prefijo, router } of MONTAJE) {
   app.use(prefijo, router);
 }
+
+// Después de TODAS las rutas y antes de cualquier otro error middleware —así
+// lo pide Sentry (`setupExpressErrorHandler`): tiene que ver el error antes
+// de que `errorHandler` lo traduzca a una respuesta JSON. No-op si
+// `SENTRY_DSN` no estaba seteado cuando corrió `instrumentation.ts`.
+Sentry.setupExpressErrorHandler(app);
 
 // Una ruta que no existe tiene que contestar JSON como todo el resto: sin esto,
 // Express devuelve su página HTML por defecto, que además anuncia el framework.
