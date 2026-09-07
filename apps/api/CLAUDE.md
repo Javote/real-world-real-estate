@@ -760,12 +760,15 @@ pnpm --filter @plataforma/api dev            # solo la API
 pnpm --filter @plataforma/api db:migrate     # aplica las migraciones pendientes
 pnpm --filter @plataforma/api db:seed        # datos demo
 pnpm --filter @plataforma/api test:s3        # storage contra el MinIO de compose.dev.yml — NO corre en CI
+pnpm --filter @plataforma/api docs:api       # regenera specs/postman/*.json desde el router montado
 ```
 
-**Una sola migración**, `0000_init.sql`, y describe la base entera. Las seis que existieron hasta el
-2026-08-23 se colapsaron ahí (D-063): nada estaba desplegado, así que el esquema real —que había que
-reconstruir mentalmente aplicando seis archivos en orden, incluida una reconstrucción de tabla— pasó
-a leerse en un solo lugar.
+**`0000_init.sql` describe la base al 2026-08-23**, colapsando las seis que existieron hasta esa
+fecha (D-063): nada estaba desplegado, así que el esquema real —que había que reconstruir mentalmente
+aplicando seis archivos en orden, incluida una reconstrucción de tabla— pasó a leerse en un solo
+lugar. **Desde que Turso está en producción (2026-09-03), toda corrección es una migración nueva**
+(`0001_stage_progress.sql`, `0002_payment_attestation.sql`, …), nunca una edición de `0000_init.sql`
+ni de ninguna ya aplicada.
 
 **La regla "no editar una migración aplicada" tiene condición, y hay que saber cuál.** Protege
 entornos donde ya corrió. Mientras las únicas bases sean `.data/dev.db` y las que la suite recrea en `.data/test/`,

@@ -1,12 +1,7 @@
 import { afterAll, describe, expect, it } from "vitest";
-import { MONTAJE } from "../src/app";
 import { db } from "../src/lib/db";
-import {
-  type GuardDescriptor,
-  leerGuard,
-  type ReglaDeAcceso,
-  type ReglaSimple
-} from "../src/middlewares/auth";
+import { describir, leerMontaje, matrizViva, ramas } from "../src/lib/route-inventory";
+import type { ReglaDeAcceso } from "../src/middlewares/auth";
 
 afterAll(async () => {
   await db.destroy();
@@ -196,89 +191,9 @@ const MATRIZ: Record<string, string> = {
  */
 const SIN_SESION = new Set(["POST /api/v1/auth/login", "GET /api/v1/public/dossier/:shareToken"]);
 
-// Lo que Express expone del router ya armado. `Layer` no conserva el path de
-// montaje (lo compila a un matcher), por eso el prefijo sale de MONTAJE.
-type Capa = {
-  route?: { path: string; methods: Record<string, boolean>; stack: { handle: unknown }[] };
-  handle: unknown;
-};
-
-/**
- * Las ramas de una regla, siempre como lista plana. `alguna` no anida —el tipo
- * lo impide— así que esto es todo lo que hace falta para recorrerla, y por eso
- * los tres chequeos de abajo se leen sin recursión.
- */
-function ramas(acceso: ReglaDeAcceso): ReglaSimple[] {
-  return typeof acceso !== "string" && "alguna" in acceso ? [...acceso.alguna] : [acceso];
-}
-
-function describirSimple(regla: ReglaSimple): string {
-  if (regla === "soloRol") return "soloRol";
-  if ("proyecto" in regla) {
-    const s = regla.proyecto;
-    // `@body` no es decoración: dos rutas con la misma entidad y el mismo param
-    // se comportan distinto según de dónde salga el id (500 vs 400 cuando
-    // falta), así que la matriz tiene que distinguirlas.
-    const origen = "via" in s ? `${s.via}:${s.param}${s.en === "body" ? "@body" : ""}` : s.param;
-    return `proyecto(${origen} → ${regla.membresias.join("|")})`;
-  }
-  if ("scopeEnQuery" in regla) return `scope(${regla.scopeEnQuery})`;
-  return `dueño(${regla.dueño.via}:${regla.dueño.param})`;
-}
-
-function describirAcceso(acceso: ReglaDeAcceso): string {
-  const partes = ramas(acceso).map(describirSimple);
-  return partes.length === 1 ? partes[0] : `alguna[${partes.join(" | ")}]`;
-}
-
-function describir(guard: GuardDescriptor): string {
-  if (guard.kind === "authenticate") return "auth";
-  return `autoriza(rol(${guard.roles.join("|")}) · ${describirAcceso(guard.acceso)})`;
-}
-
-type Montaje = {
-  prefijo: string;
-  guardsDeRouter: GuardDescriptor[];
-  rutas: Map<string, GuardDescriptor[]>;
-};
-
-function leerMontaje(): Montaje[] {
-  return MONTAJE.map(({ prefijo, router }) => {
-    const guardsDeRouter: GuardDescriptor[] = [];
-    const rutas = new Map<string, GuardDescriptor[]>();
-
-    for (const capa of (router as unknown as { stack: Capa[] }).stack) {
-      if (!capa.route) {
-        // Middleware a nivel de router (`router.use(...)`): aplica a TODA request
-        // que entra, matcheen o no sus rutas. Se acumula para las que siguen.
-        const guard = leerGuard(capa.handle);
-        if (guard) guardsDeRouter.push(guard);
-        continue;
-      }
-
-      const propios = capa.route.stack
-        .map((s) => leerGuard(s.handle))
-        .filter((g): g is GuardDescriptor => g !== null);
-      const path = `${prefijo}${capa.route.path}`.replace(/\/$/, "") || "/";
-
-      for (const metodo of Object.keys(capa.route.methods)) {
-        rutas.set(`${metodo.toUpperCase()} ${path}`, [...guardsDeRouter, ...propios]);
-      }
-    }
-
-    return { prefijo, guardsDeRouter, rutas };
-  });
-}
-
-function matrizViva(): Record<string, string> {
-  const salida: Record<string, string> = {};
-  for (const { rutas } of leerMontaje()) {
-    for (const [clave, guards] of rutas) {
-      salida[clave] = guards.map(describir).join(" + ") || "—";
-    }
-  }
-  return salida;
-}
+// La introspección del router (`leerMontaje`, `describir`, `matrizViva`) vive
+// en `src/lib/route-inventory.ts` — la comparte `scripts/generate-api-docs.ts`
+// (M3 §2, "endpoints documentados") para no leer el árbol de Express dos veces.
 
 describe("la matriz de permisos de las rutas montadas", () => {
   it("es exactamente la declarada — una ruta nueva no entra sin pasar por acá", () => {

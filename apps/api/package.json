@@ -9,6 +9,7 @@
     "start": "node dist/src/server.js",
     "db:migrate": "tsx src/db/migrate.ts",
     "db:seed": "tsx src/db/seed.ts",
+    "docs:api": "tsx scripts/generate-api-docs.ts",
     "test": "vitest run",
     "test:s3": "S3_TEST=1 S3_ENDPOINT=http://localhost:9000 S3_BUCKET=propnexus-dev S3_ACCESS_KEY_ID=propnexus S3_SECRET_ACCESS_KEY=propnexus-dev-only S3_CREATE_BUCKET=true vitest run test/storage-s3.test.ts"
   },
