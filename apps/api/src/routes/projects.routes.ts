@@ -78,9 +78,14 @@ router.get(
       // `escape` explícito: sin él, un `%` tipeado en el buscador matchea todo y
       // un `_` matchea cualquier carácter — el usuario cree que filtró y no.
       const patron = `%${q.replace(/[\\%_]/g, "\\$&")}%`;
+      // Falso positivo de Semgrep en las dos líneas de abajo: es SQL
+      // parametrizado por Kysely (el `sql` tag hace bind, no concatena), no
+      // HTML — la regla lo confunde por la sintaxis de template literal.
       query = query.where((eb) =>
         eb.or([
+          // nosemgrep: javascript.express.security.injection.raw-html-format.raw-html-format
           eb("name", "like", sql<string>`${patron} escape '\\'`),
+          // nosemgrep: javascript.express.security.injection.raw-html-format.raw-html-format
           eb("city", "like", sql<string>`${patron} escape '\\'`)
         ])
       );

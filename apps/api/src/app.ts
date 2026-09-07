@@ -71,6 +71,10 @@ app.use((req, res, next) => {
   const origen = req.headers.origin;
 
   if (origen && origenesPermitidos.includes(origen)) {
+    // Falso positivo de Semgrep: la regla ve `origen` (derivado de un header)
+    // llegando a `Access-Control-Allow-Origin` sin ver el `if` de arriba, que
+    // es exactamente la lista blanca explícita que la regla pide.
+    // nosemgrep: javascript.express.security.cors-misconfiguration.cors-misconfiguration
     res.setHeader("Access-Control-Allow-Origin", origen);
     res.setHeader("Vary", "Origin");
     res.setHeader("Access-Control-Allow-Methods", "GET,POST,PATCH,DELETE,OPTIONS");

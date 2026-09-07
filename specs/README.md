@@ -53,7 +53,7 @@ aprobación explícita.
 | 8 | Flujos de UI end-to-end en pre-prod | Test IDs de M2-D5 verdes + walkthrough | ⬜ |
 | 9 | Mediana **reserva → escrow < 12 min** | Telemetría + capturas | ◐ `GET /audit-logs/telemetry/reservation-to-escrow` calcula la mediana sobre `OnChainEvent` (D-021); falta la muestra real (nadie confirmó una reserva en Preprod todavía) y la captura |
 | 10 | Audit logs persistidos | Ledger append-only paginable (M2-D4 P6) | ✅ tabla append-only + superficie `apps/web/src/routes/developer.audit-log.tsx` (M2-D5 filas 49-50, test IDs `DEV-AUDIT-LIST-001`/`DEV-AUDIT-FILTER-002`/`DEV-AUDIT-VERIFY-001`) — esta fila estaba desactualizada, no el código |
-| 11 | **Sin hallazgos P1** de seguridad | Reporte de security review | ✅ [`SECURITY-REVIEW-2026-09.md`](SECURITY-REVIEW-2026-09.md) — 3 P1 cerrados, dependencias escaneadas, 0 P1 abiertos |
+| 11 | **Sin hallazgos P1** de seguridad | Reporte de security review | ✅ [`SECURITY-REVIEW-2026-09.md`](SECURITY-REVIEW-2026-09.md) — 3 P1 cerrados, dependencias escaneadas, análisis estático (Semgrep) en CI desde este commit, 0 P1 abiertos |
 | 12 | Pre-prod en **URL pública** | La URL, viva | ✅ `propnexus-web.onrender.com` + `propnexus-api.onrender.com`, las dos vivas |
 | 13 | **Video walkthrough** | El video | ⬜ |
 | 14 | **Runbook** deploy / rollback | [`RUNBOOK-deploy.md`](RUNBOOK-deploy.md) | ✅ |

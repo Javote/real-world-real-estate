@@ -20,12 +20,12 @@ jobs:
     name: App TS (lint + typecheck + tests + build)
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v7
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
 
-      - uses: pnpm/action-setup@v6
+      - uses: pnpm/action-setup@0977fd99725f1db4007ccb2928dbb4e90d06cc86 # v6
         # toma la versión de "packageManager" del package.json raíz
 
-      - uses: actions/setup-node@v7
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7
         with:
           node-version: 22
           cache: pnpm
@@ -70,9 +70,9 @@ jobs:
     runs-on: ubuntu-latest
     continue-on-error: true
     steps:
-      - uses: actions/checkout@v7
-      - uses: pnpm/action-setup@v6
-      - uses: actions/setup-node@v7
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+      - uses: pnpm/action-setup@0977fd99725f1db4007ccb2928dbb4e90d06cc86 # v6
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7
         with:
           node-version: 22
           cache: pnpm
@@ -107,7 +107,7 @@ jobs:
       # entrega (criterios 8 y 13). Se suben aunque el job falle.
       - name: Subir artefactos
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         with:
           name: e2e-artifacts
           path: apps/web/e2e/.artifacts/
@@ -122,9 +122,9 @@ jobs:
       run:
         working-directory: contracts
     steps:
-      - uses: actions/checkout@v7
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
 
-      - uses: aiken-lang/setup-aiken@v1
+      - uses: aiken-lang/setup-aiken@1728a4be43be099752e22d8b841706caaa6fdd88 # v1
         with:
           version: v1.1.21   # misma versión pineada que usa el equipo
 
@@ -137,3 +137,48 @@ jobs:
 
       - name: Verificar que plutus.json commiteado está al día
         run: git diff --exit-code plutus.json || (echo "::error::plutus.json desactualizado — corré 'aiken build' y commiteá" && exit 1)
+
+  # ── Análisis estático de seguridad ───────────────────────────────────────
+  #
+  # M3 §4 pide "static analysis" además de dependency scans (que ya corre
+  # `pnpm audit`, ver specs/SECURITY-REVIEW-2026-09.md). Job propio, en
+  # paralelo con los otros tres — mismo criterio que TS/Aiken: nada de esto
+  # depende de que compile o pase el resto.
+  #
+  # `p/security-audit` + `p/owasp-top-ten` son los rulesets públicos de
+  # Semgrep, mantenidos por ellos — no hay reglas propias que mantener acá.
+  # El CLI es gratis y sin cuenta (a diferencia de su plataforma SaaS, que no
+  # hace falta: el job falla solo con el exit code).
+  #
+  # Tres reglas de *hardening* de supply-chain quedan excluidas a propósito,
+  # no ignoradas por comodidad:
+  #   - las tres de pnpm (`blockExoticSubdeps`, `minimumReleaseAge`,
+  #     `trustPolicy`) piden pnpm 10.16+/10.21+/10.26+, y el repo está
+  #     pineado a pnpm@9.15.0 (ver "El pin pnpm@9.15.0" en CLAUDE.md raíz).
+  #     Agregarlas hoy sería la MISMA trampa que ya mordió una vez con
+  #     `pnpm.overrides`: un setting que el pnpm real no lee, en silencio.
+  #   - la de npm (`min-release-age` en `.npmrc`) es de npm, no de pnpm — el
+  #     repo no instala con npm, así que su aplicabilidad no está confirmada.
+  # Las tres quedan para cuando se suba el pin de pnpm (ver la trampa en
+  # CLAUDE.md), no se resuelven acá.
+  security:
+    name: Static analysis (Semgrep)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+
+      - name: Instalar Semgrep
+        run: pip install semgrep
+
+      - name: Semgrep (security-audit + owasp-top-ten)
+        run: |
+          semgrep scan \
+            --config=p/security-audit \
+            --config=p/owasp-top-ten \
+            --exclude-rule package_managers.pnpm.pnpm-block-exotic-sub-dependencies.pnpm-block-exotic-sub-dependencies \
+            --exclude-rule package_managers.pnpm.pnpm-missing-minimum-release-age.pnpm-minimum-release-age \
+            --exclude-rule package_managers.pnpm.pnpm-trust-policy.pnpm-trust-policy \
+            --exclude-rule package_managers.npm.npm-missing-minimum-release-age.npm-missing-minimum-release-age \
+            --exclude contracts/build \
+            --exclude specs/postman \
+            --error

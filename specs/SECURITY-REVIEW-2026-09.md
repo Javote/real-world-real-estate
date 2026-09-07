@@ -30,6 +30,10 @@ código controla; ingeniería social; el cliente Cardano (Lucid Evolution) como 
    runtime de dependencia de instalación o de build/test.
 4. **Timing de canales laterales** — medido, no estimado, con `test/auth-timing.test.ts` (9 corridas
    intercaladas, comparación por orden de magnitud).
+5. **Análisis estático (Semgrep)** — `p/security-audit` + `p/owasp-top-ten`, corrido local el
+   2026-09-07 y cableado en CI como job propio (`.github/workflows/ci.yml` → `security`, en paralelo
+   con TS/E2E/Aiken). Se verificó que atrapa de verdad, no solo que da verde: un XSS reflejado
+   sintético (`res.send(`<h1>...${req.query.q}</h1>`)`) lo detecta con dos reglas y sale con exit 1.
 
 ## Hallazgos
 
@@ -46,6 +50,8 @@ código controla; ingeniería social; el cliente Cardano (Lucid Evolution) como 
 | 9 | `tar@6.2.1` con 1 crítico + 7 altos — pero la cadena completa es `bcrypt → @mapbox/node-pre-gyp → tar`: node-pre-gyp solo corre en `postinstall`, para descomprimir el binario prebuilt de bcrypt. No procesa ningún input de un request | Crítico/Alto, **no explotable en runtime** | Abierto, sin plan de cierre inmediato | — | forzar `tar@7.x` es un salto de major sobre una herramienta que el build de un módulo nativo (🔴, D-046) usa en `postinstall`; el riesgo de romper el build supera el riesgo de un vector que no es alcanzable por un cliente. Se revisita si `bcrypt`/`node-pre-gyp` publican una versión que ya lo resuelva |
 | 10 | `brace-expansion`, `browserslist`, `nanoid`, `undici`, `postcss` — 6 altos + 6 moderados, todos en la cadena de `vite`/`vitest`/`jsdom`/`@babel` (build y test) o del propio `node-pre-gyp` (`rimraf→glob→minimatch`) | Alto/Moderate, **no explotable en runtime** | Abierto, sin plan de cierre inmediato | — | ninguno de estos paquetes se sirve en el bundle de producción ni corre en el proceso de la API desplegada; se resuelven solos con el próximo bump de las herramientas de build, no ameritan un override manual hoy |
 | 11 | Revocación de un JWT individual no existe (dura 7 días, solo se corta dando de baja la cuenta entera) | — (decisión de producto, no hallazgo) | Abierto a propósito | — | ver `CLAUDE.md` raíz — "es infraestructura para un problema que todavía no duele"; mitigado porque `authenticate()` reconsulta `isActive` en cada request |
+| 12 | 9 referencias a GitHub Actions por tag mutable (`@v7`, `@v6`, `@v1`) en `ci.yml` — un tag repointeado en el repo de la Action es supply-chain, no un bug de este código | Bajo (hardening, no vulnerabilidad activa) | Cerrado | 2026-09-07 | pineadas a su SHA de commit (`git ls-remote` contra cada repo), con el tag como comentario para legibilidad |
+| 13 | Semgrep marca 3 settings de pnpm (`blockExoticSubdeps`, `minimumReleaseAge`, `trustPolicy`) y 1 de npm (`min-release-age`) como faltantes en `pnpm-workspace.yaml`/`.npmrc` | Bajo (hardening) | Abierto a propósito | — | las tres de pnpm piden pnpm 10.16+/10.21+/10.26+ y el repo está pineado a `pnpm@9.15.0` — agregarlas hoy sería la misma trampa que `pnpm.overrides` con pnpm 10+: un setting que el pnpm real no lee, en silencio. La de npm no aplica: el repo no instala con npm. Excluidas explícitamente del job de CI (`--exclude-rule`), no ignoradas por default |
 
 ## Conclusión
 
@@ -54,7 +60,11 @@ en evidencia, audit-log sin acotar) están cerrados en código, con test que rep
 y prueba el cierre. Los hallazgos de dependencias con severidad crítica/alta (`tar` y su cadena)
 están confinados a rutas de instalación y build que un cliente de la API desplegada no alcanza — se
 dejan documentados y abiertos como deuda de higiene, no como riesgo de producción. El único hallazgo
-de dependencia con exposición real de runtime (`qs`, moderate) se cerró el mismo día.
+de dependencia con exposición real de runtime (`qs`, moderate) se cerró el mismo día. El análisis
+estático (Semgrep, M3 §4) corre en CI desde este commit y no encontró código vulnerable — los 16
+hallazgos iniciales eran 2 falsos positivos (ya suprimidos con `nosemgrep` y su porqué documentado
+en el código) y 14 de hardening de supply-chain, de los cuales el pineo de GitHub Actions se cerró y
+los settings de pnpm/npm quedan deferred por incompatibilidad de versión (hallazgo 13).
 
 ## Reproducir este review
 
@@ -62,4 +72,10 @@ de dependencia con exposición real de runtime (`qs`, moderate) se cerró el mis
 pnpm --filter @plataforma/api test route-guards.test.ts require-ownership.test.ts \
   auth-timing.test.ts jwt.test.ts users-roles.test.ts evidence-anchor.test.ts
 pnpm audit
+pip install semgrep && semgrep scan --config=p/security-audit --config=p/owasp-top-ten \
+  --exclude-rule package_managers.pnpm.pnpm-block-exotic-sub-dependencies.pnpm-block-exotic-sub-dependencies \
+  --exclude-rule package_managers.pnpm.pnpm-missing-minimum-release-age.pnpm-minimum-release-age \
+  --exclude-rule package_managers.pnpm.pnpm-trust-policy.pnpm-trust-policy \
+  --exclude-rule package_managers.npm.npm-missing-minimum-release-age.npm-missing-minimum-release-age \
+  --exclude contracts/build --exclude specs/postman --error
 ```

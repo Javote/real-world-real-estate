@@ -1,5 +1,6 @@
 import type { ReservationToEscrowTelemetry } from "@plataforma/shared";
 import { Router } from "express";
+import { reconciliarAnclajes } from "../domain/reconcile";
 import { db } from "../lib/db";
 import { authenticate, authorize } from "../middlewares/auth";
 
@@ -32,11 +33,19 @@ function mediana(valores: readonly number[]): number | null {
  * (a propósito, ver `specs/SECURITY-REVIEW-2026-09.md`/`CLAUDE.md`), así que
  * la mediana mide lo que tardó el TXID en confirmar **más** lo que tardó
  * alguien en volver a leer algo de ese proyecto y disparar la reconciliación.
+ *
+ * Por eso este endpoint reconcilia antes de leer: sin esto, un
+ * `INVITATION_ACCEPTED` que ya confirmó en la cadena real podía seguir
+ * `Pending` en la base —si nadie más había leído nada de ese proyecto
+ * todavía— y quedar afuera de la muestra en silencio, no como dato
+ * incorrecto sino como muestra faltante.
  */
 router.get(
   "/telemetry/reservation-to-escrow",
   authorize({ roles: ["admin"], acceso: "soloRol" }),
   async (_req, res) => {
+    await reconciliarAnclajes();
+
     const eventos = await db
       .selectFrom("OnChainEvent")
       .select(["createdAt", "updatedAt"])
