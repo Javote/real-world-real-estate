@@ -102,6 +102,7 @@ const MATRIZ: Record<string, string> = {
   "PATCH /api/v1/profile/notifications":
     "auth + autoriza(rol(admin|developer|buyer|verifier|notary) · scope(User.id = usuario))",
   "GET /api/v1/audit-logs": "auth + autoriza(rol(admin) · soloRol)",
+  "GET /api/v1/audit-logs/telemetry/reservation-to-escrow": "auth + autoriza(rol(admin) · soloRol)",
   "GET /api/v1/public/dossier/:shareToken": "—",
   "GET /api/v1/investor/favorites":
     "auth + autoriza(rol(admin|buyer) · scope(Favorite.userId = usuario))",

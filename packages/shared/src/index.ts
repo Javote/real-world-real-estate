@@ -15,3 +15,4 @@ export * from "./panels";
 export * from "./profile";
 export * from "./stage";
 export * from "./stage-datum";
+export * from "./telemetry";
