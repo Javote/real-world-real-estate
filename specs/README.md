@@ -45,7 +45,7 @@ aprobación explícita.
 |---|---|---|---|
 | 1 | Los contratos compilan | `aiken check` verde en CI; `plutus.json` al día | ✅ |
 | 2 | Unit tests **≥95% coverage** | **73 tests**; `aiken` no mide coverage de líneas, así que la evidencia es la tabla punto de rechazo → test de `contracts/CLAUDE.md` | ✅ |
-| 3 | **≥8 stages** con signers/percentages configurables | Tests parametrizados; plantilla de 10 stages | ⬜ |
+| 3 | **≥8 stages** con signers/percentages configurables | Tests parametrizados; plantilla de 10 stages | ◐ `DEFAULT_STAGE_CATALOG` (8 etapas, `progressPercentage` suma 100 — D-021, es avance de obra, no dinero) sembrado en `torre-a` y aceptado por `POST /projects/:id/stages`. Falta "signers" (rol configurable por stage): pausado, el dueño lo define con el developer partner |
 | 4 | **3 pilotos** confirman | Carta firmada | ⬜ externo |
 | 5 | Endpoints documentados | OpenAPI — sale solo del contrato oRPC (D-066) | ◐ |
 | 6 | Proof objects validados | El SOM pide literal "hash + timestamp + signer": `GET /evidence/:bundleId/proof/:fileHash` ahora devuelve `signerUserId`/`txid`/`timestamp` (regla 17: null hasta `Confirmed`), `test/evidence-anchor.test.ts`. Los patrones P1–P10 de M2-D4 §8.1 (UI) son un criterio aparte, siguen sin auditar test-por-test | ◐ |

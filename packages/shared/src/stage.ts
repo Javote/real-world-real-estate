@@ -67,3 +67,29 @@ export const stageTransitionSchema = z.strictObject({
 });
 
 export type StageTransitionInput = z.infer<typeof stageTransitionSchema>;
+
+/**
+ * Catálogo placeholder de etapas de obra (M3 §1 — "≥8 stages"). `POST
+ * /projects/:id/stages` sigue aceptando un stage libre, uno por uno: esto es
+ * lo que la UI puede ofrecer como punto de partida al crear un proyecto, no
+ * una restricción. `progressPercentage` es avance de obra (D-021), nunca
+ * dinero — las 8 filas suman 100 a propósito, para que un proyecto que
+ * adopta el catálogo tal cual tenga un 100% coherente; un developer que edita
+ * o agrega stages después rompe esa suma y es esperable que la rompa.
+ */
+export interface StageCatalogEntry {
+  name: string;
+  sequenceOrder: number;
+  progressPercentage: number;
+}
+
+export const DEFAULT_STAGE_CATALOG: readonly StageCatalogEntry[] = [
+  { name: "Movimiento de suelos", sequenceOrder: 1, progressPercentage: 5 },
+  { name: "Cimentación", sequenceOrder: 2, progressPercentage: 15 },
+  { name: "Estructura", sequenceOrder: 3, progressPercentage: 20 },
+  { name: "Mampostería", sequenceOrder: 4, progressPercentage: 10 },
+  { name: "Instalaciones", sequenceOrder: 5, progressPercentage: 15 },
+  { name: "Revoques y contrapisos", sequenceOrder: 6, progressPercentage: 10 },
+  { name: "Terminaciones", sequenceOrder: 7, progressPercentage: 15 },
+  { name: "Entrega", sequenceOrder: 8, progressPercentage: 10 }
+] as const;

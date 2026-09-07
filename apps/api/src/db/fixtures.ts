@@ -146,7 +146,12 @@ export async function sembrarMembresias(
 export async function sembrarStages(
   db: KyselyDb<Database>,
   projectId: string,
-  stages: readonly { name: string; sequenceOrder: number; state: StageState }[]
+  stages: readonly {
+    name: string;
+    sequenceOrder: number;
+    state: StageState;
+    progressPercentage?: number;
+  }[]
 ): Promise<void> {
   const ahora = new Date();
 
@@ -161,6 +166,7 @@ export async function sembrarStages(
         state: stage.state,
         // D-061: todo stage es validation-critical.
         validationCritical: true,
+        progressPercentage: stage.progressPercentage ?? null,
         createdAt: ahora,
         updatedAt: ahora
       })

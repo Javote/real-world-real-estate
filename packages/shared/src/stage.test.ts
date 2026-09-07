@@ -1,5 +1,11 @@
 import { describe, expect, it } from "vitest";
-import { canTransition, INITIAL_STAGE_STATE, STAGE_STATES, stageStateSchema } from "./stage";
+import {
+  canTransition,
+  DEFAULT_STAGE_CATALOG,
+  INITIAL_STAGE_STATE,
+  STAGE_STATES,
+  stageStateSchema
+} from "./stage";
 
 // El espejo del validador se prueba igual que el validador: **exhaustivo**.
 // `contracts/lib/propnexus/fsm.ak` tiene los mismos 16 pares (4 × 4) uno por
@@ -42,5 +48,21 @@ describe("stageStateSchema", () => {
 
   it("nace en Pending", () => {
     expect(INITIAL_STAGE_STATE).toBe("Pending");
+  });
+});
+
+describe("DEFAULT_STAGE_CATALOG", () => {
+  it("tiene al menos 8 etapas (M3 §1)", () => {
+    expect(DEFAULT_STAGE_CATALOG.length).toBeGreaterThanOrEqual(8);
+  });
+
+  it("progressPercentage suma 100 — es avance de obra, no dinero (D-021)", () => {
+    const total = DEFAULT_STAGE_CATALOG.reduce((acc, e) => acc + e.progressPercentage, 0);
+    expect(total).toBe(100);
+  });
+
+  it("sequenceOrder es 1..N sin huecos ni repetidos", () => {
+    const ordenes = DEFAULT_STAGE_CATALOG.map((e) => e.sequenceOrder).sort((a, b) => a - b);
+    expect(ordenes).toEqual(DEFAULT_STAGE_CATALOG.map((_, i) => i + 1));
   });
 });

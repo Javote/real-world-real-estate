@@ -1,4 +1,5 @@
 import "dotenv/config";
+import { DEFAULT_STAGE_CATALOG } from "@plataforma/shared";
 import { compileDossier } from "../domain/dossier";
 import { db } from "../lib/db";
 import { paraMostrar, passwordDeDemo } from "./credentials";
@@ -100,10 +101,19 @@ async function main() {
     { userId: id("verifier@example.com"), membershipRole: "verifier" }
   ]);
 
-  await sembrarStages(db, projectId, [
-    { name: "Cimentación", sequenceOrder: 1, state: "Completed" },
-    { name: "Estructura", sequenceOrder: 2, state: "InProgress" }
-  ]);
+  // M3 §1 — placeholder de "≥8 stages" (D-021, DEFAULT_STAGE_CATALOG): las
+  // dos primeras siguen en el estado que ya mostraba la demo (una completa,
+  // una en curso); el resto nace `Pending`, sin tocar.
+  await sembrarStages(
+    db,
+    projectId,
+    DEFAULT_STAGE_CATALOG.map((etapa, i) => ({
+      name: etapa.name,
+      sequenceOrder: etapa.sequenceOrder,
+      progressPercentage: etapa.progressPercentage,
+      state: i === 0 ? "Completed" : i === 1 ? "InProgress" : "Pending"
+    }))
+  );
 
   // Una unidad vendida con su contrato: sin ella los paneles de capital, el
   // dossier y el directorio de investors arrancan vacíos y la demo no muestra

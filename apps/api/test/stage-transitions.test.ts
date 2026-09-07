@@ -211,6 +211,30 @@ describe("OnChainEvent · el aterrizaje del anclaje", () => {
     }
   });
 
+  it("acepta progressPercentage (avance de obra, D-021) y lo persiste — es opcional", async () => {
+    const conPorcentaje = await request(app)
+      .post(`/api/v1/projects/${proyecto}/stages`)
+      .set("Authorization", `Bearer ${token}`)
+      .send({ name: "Con avance", sequenceOrder: 999_402, progressPercentage: 15 });
+    expect(conPorcentaje.status).toBe(201);
+    expect(conPorcentaje.body.progressPercentage).toBe(15);
+
+    const sinPorcentaje = await request(app)
+      .post(`/api/v1/projects/${proyecto}/stages`)
+      .set("Authorization", `Bearer ${token}`)
+      .send({ name: "Sin avance", sequenceOrder: 999_403 });
+    expect(sinPorcentaje.status).toBe(201);
+    expect(sinPorcentaje.body.progressPercentage).toBeNull();
+  });
+
+  it("rechaza progressPercentage fuera de 0-100", async () => {
+    const res = await request(app)
+      .post(`/api/v1/projects/${proyecto}/stages`)
+      .set("Authorization", `Bearer ${token}`)
+      .send({ name: "Avance imposible", sequenceOrder: 999_404, progressPercentage: 150 });
+    expect(res.status).toBe(400);
+  });
+
   it("ancla la transición de un stage con hilo abierto", async () => {
     // El stage se crea por la API para que su hilo exista: el `mint` pasa por
     // `POST`, igual que en la cadena. Con `ANCHOR_MODE=simulated` la

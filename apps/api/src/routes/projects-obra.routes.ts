@@ -78,7 +78,10 @@ router.post(
       // handler `mint` del validador lo exige para acuñar el hilo
       // (`valid_initial_datum`), así que dejar elegir el estado inicial acá
       // sería fabricar stages que no se pueden anclar.
-      validationCritical: z.boolean().optional()
+      validationCritical: z.boolean().optional(),
+      // Avance de obra que este stage representa sobre el 100% del proyecto
+      // (D-021, placeholder de M3 §1 — DEFAULT_STAGE_CATALOG). Nunca dinero.
+      progressPercentage: z.number().int().min(0).max(100).optional()
     });
 
     const parsed = schema.safeParse(req.body);
@@ -99,6 +102,7 @@ router.post(
         // D-061: todo stage es validation-critical. El default deja de ser un
         // flag que alguien se olvida de marcar; desmarcarlo es explícito.
         validationCritical: parsed.data.validationCritical ?? true,
+        progressPercentage: parsed.data.progressPercentage ?? null,
         createdAt: now,
         updatedAt: now
       })
