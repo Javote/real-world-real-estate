@@ -402,7 +402,7 @@ router.post(
     // Idempotencia (regla 8): el índice único (contrato, etapa) impide liberar
     // dos veces la misma.
     const yaLiberada = await db
-      .selectFrom("PaymentRelease")
+      .selectFrom("PaymentAttestation")
       .selectAll()
       .where("contractId", "=", contrato.id)
       .where("stageNumber", "=", stageNumber)
@@ -412,7 +412,7 @@ router.post(
 
     const ahora = new Date();
     const release = await db
-      .insertInto("PaymentRelease")
+      .insertInto("PaymentAttestation")
       .values({
         id: createId(),
         contractId: contrato.id,
@@ -440,7 +440,7 @@ router.post(
     await writeAuditLog({
       actorUserId: req.user!.id,
       action: "RELEASE_PAYMENT",
-      entityType: "PaymentRelease",
+      entityType: "PaymentAttestation",
       entityId: release.id,
       metadata: { stageNumber, txid: anchor.txid }
     });

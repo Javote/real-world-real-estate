@@ -66,12 +66,12 @@ async function movimientos(projectIds: string[]) {
     contratos.length === 0
       ? []
       : await db
-          .selectFrom("PaymentRelease")
-          .innerJoin("Contract", "Contract.id", "PaymentRelease.contractId")
+          .selectFrom("PaymentAttestation")
+          .innerJoin("Contract", "Contract.id", "PaymentAttestation.contractId")
           .innerJoin("Unit", "Unit.id", "Contract.unitId")
           .select([
-            "PaymentRelease.amountMinorUnits as amountMinorUnits",
-            "PaymentRelease.releasedAt as releasedAt",
+            "PaymentAttestation.amountMinorUnits as amountMinorUnits",
+            "PaymentAttestation.releasedAt as releasedAt",
             "Unit.projectId as projectId"
           ])
           .where("Unit.projectId", "in", projectIds)

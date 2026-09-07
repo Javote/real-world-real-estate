@@ -54,23 +54,23 @@ router.get(
     // —el commitment incluye el timestamp de liberación— y sin la ref no había
     // forma de volver del registro off-chain a su transacción.
     const releases = await db
-      .selectFrom("PaymentRelease")
+      .selectFrom("PaymentAttestation")
       .leftJoin("OnChainEvent", (join) =>
         join
-          .onRef("OnChainEvent.referenceId", "=", "PaymentRelease.id")
+          .onRef("OnChainEvent.referenceId", "=", "PaymentAttestation.id")
           .on("OnChainEvent.eventType", "=", "PAYMENT_RELEASE")
       )
       .select([
-        "PaymentRelease.id as id",
-        "PaymentRelease.stageNumber as stageNumber",
-        "PaymentRelease.amountMinorUnits as amountMinorUnits",
-        "PaymentRelease.releasedAt as releasedAt",
+        "PaymentAttestation.id as id",
+        "PaymentAttestation.stageNumber as stageNumber",
+        "PaymentAttestation.amountMinorUnits as amountMinorUnits",
+        "PaymentAttestation.releasedAt as releasedAt",
         "OnChainEvent.commitment as commitment",
         "OnChainEvent.txid as txid",
         "OnChainEvent.status as anchorStatus"
       ])
-      .where("PaymentRelease.contractId", "=", contrato.id)
-      .orderBy("PaymentRelease.stageNumber", "asc")
+      .where("PaymentAttestation.contractId", "=", contrato.id)
+      .orderBy("PaymentAttestation.stageNumber", "asc")
       .execute();
 
     return res.json(releases);

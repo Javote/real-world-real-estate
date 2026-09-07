@@ -716,16 +716,16 @@ export function auditScope(
           .where("Unit.projectId", "in", misProyectos)
       )
     ]),
-    // Y la liberación cuelga del contrato, que cuelga de la unidad.
+    // Y la atestación de pago cuelga del contrato, que cuelga de la unidad.
     eb.and([
-      eb("AuditLog.entityType", "=", "PaymentRelease"),
+      eb("AuditLog.entityType", "=", "PaymentAttestation"),
       eb.exists(
         eb
-          .selectFrom("PaymentRelease")
-          .innerJoin("Contract", "Contract.id", "PaymentRelease.contractId")
+          .selectFrom("PaymentAttestation")
+          .innerJoin("Contract", "Contract.id", "PaymentAttestation.contractId")
           .innerJoin("Unit", "Unit.id", "Contract.unitId")
           .select(sql.lit(1).as("one"))
-          .whereRef("PaymentRelease.id", "=", "AuditLog.entityId")
+          .whereRef("PaymentAttestation.id", "=", "AuditLog.entityId")
           .where("Unit.projectId", "in", misProyectos)
       )
     ])

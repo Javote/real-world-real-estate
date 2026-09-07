@@ -100,21 +100,21 @@ export async function compileDossier(unitId: string): Promise<CompiledDossier | 
   // ── Liberaciones: la prueba financiera por release del patrón P10. Se
   // encuentran por `referenceId`, que es el id del propio release.
   const releases = await db
-    .selectFrom("PaymentRelease")
-    .innerJoin("Contract", "Contract.id", "PaymentRelease.contractId")
+    .selectFrom("PaymentAttestation")
+    .innerJoin("Contract", "Contract.id", "PaymentAttestation.contractId")
     .leftJoin("OnChainEvent", (join) =>
       join
-        .onRef("OnChainEvent.referenceId", "=", "PaymentRelease.id")
+        .onRef("OnChainEvent.referenceId", "=", "PaymentAttestation.id")
         .on("OnChainEvent.eventType", "=", "PAYMENT_RELEASE")
     )
     .select([
-      "PaymentRelease.id as id",
-      "PaymentRelease.stageNumber as stageNumber",
+      "PaymentAttestation.id as id",
+      "PaymentAttestation.stageNumber as stageNumber",
       "OnChainEvent.commitment as commitment",
       "OnChainEvent.txid as txid"
     ])
     .where("Contract.unitId", "=", unidad.id)
-    .orderBy("PaymentRelease.stageNumber", "asc")
+    .orderBy("PaymentAttestation.stageNumber", "asc")
     .execute();
 
   const artifacts: DossierArtifact[] = [

@@ -245,7 +245,13 @@ export interface ContractTable {
   createdAt: SqliteTimestamp;
 }
 
-export interface PaymentReleaseTable {
+/**
+ * La declaración de que la parte del pago de una etapa ya se liberó por los
+ * canales normales entre developer e investor — la plataforma no la ejecuta,
+ * la atestigua y ancla su hash (D-021, D-070). Se llamó `PaymentRelease`
+ * hasta que el nombre sonó a que la plataforma movía la plata.
+ */
+export interface PaymentAttestationTable {
   id: GeneratedId;
   contractId: string;
   stageNumber: number;
@@ -292,7 +298,7 @@ export interface Database {
   Unit: UnitTable;
   Invitation: InvitationTable;
   Contract: ContractTable;
-  PaymentRelease: PaymentReleaseTable;
+  PaymentAttestation: PaymentAttestationTable;
   Dossier: DossierTable;
   Notification: NotificationTable;
   EvidenceBundle: EvidenceBundleTable;
