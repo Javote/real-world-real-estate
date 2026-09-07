@@ -15,9 +15,58 @@ import { describir, leerMontaje } from "../src/lib/route-inventory";
 // porque lee el árbol real, no un mapa mantenido a mano — la misma garantía
 // que la matriz de permisos, aplicada a la documentación.
 //
-// **Lo que NO genera:** bodies de request/response. Esos salen de los schemas
-// Zod de `packages/shared` donde existen; agregarlos es la iteración
-// siguiente, endpoint por endpoint, no un bloqueante para tener el resto.
+// **Bodies de ejemplo: acotados a propósito.** Automatizarlos para las 87
+// rutas pediría que cada handler exportara su schema en un lugar
+// introspectable — varios lo definen como `z.object` local (ver
+// `POST /projects/:id/stages`), y migrarlos todos es un proyecto aparte que
+// nadie pidió. `EJEMPLOS_CAMINO_FELIZ` cubre a mano el puñado de endpoints
+// que un reviewer de Catalyst va a ejercitar de verdad —login, crear
+// proyecto, crear stage, subir evidencia, aceptar invitación, transicionar
+// un stage, liberar un pago— transcritos del `schema.safeParse` real de cada
+// ruta. El resto de las 88 rutas queda con método+path+auth, que alcanza
+// para navegar aunque no para copiar y pegar un body.
+
+type EjemploBody =
+  | { modo: "raw"; body: Record<string, unknown> }
+  | { modo: "formdata"; campos: { key: string; value?: string; type: "text" | "file" }[] };
+
+const EJEMPLOS_CAMINO_FELIZ: Record<string, EjemploBody> = {
+  "POST /api/v1/auth/login": {
+    modo: "raw",
+    body: { email: "developer@example.com", password: "{{password}}" }
+  },
+  "POST /api/v1/projects": {
+    modo: "raw",
+    body: {
+      name: "Torre Ejemplo",
+      slug: "torre-ejemplo",
+      city: "Buenos Aires",
+      country: "Argentina",
+      totalUnits: 24,
+      status: "planning"
+    }
+  },
+  "POST /api/v1/projects/:id/stages": {
+    modo: "raw",
+    body: { name: "Cimentación", sequenceOrder: 1, progressPercentage: 15 }
+  },
+  "POST /api/v1/projects/:id/evidence": {
+    modo: "formdata",
+    campos: [
+      { key: "file", type: "file" },
+      { key: "stageId", type: "text", value: "" },
+      { key: "evidenceType", type: "text", value: "document" },
+      { key: "category", type: "text", value: "permits" },
+      { key: "authoritative", type: "text", value: "false" }
+    ]
+  },
+  "POST /api/v1/investor/invitations/:id/accept": { modo: "raw", body: {} },
+  "PATCH /api/v1/stages/:id/state": { modo: "raw", body: { state: "InProgress" } },
+  "POST /api/v1/developer/contracts/:id/releases/:stageNum": {
+    modo: "raw",
+    body: { amountMinorUnits: 1_000_000 }
+  }
+};
 
 interface PostmanRequestItem {
   name: string;
@@ -26,6 +75,9 @@ interface PostmanRequestItem {
     header: { key: string; value: string }[];
     url: { raw: string; host: string[]; path: string[] };
     description: string;
+    body?:
+      | { mode: "raw"; raw: string; options: { raw: { language: "json" } } }
+      | { mode: "formdata"; formdata: { key: string; value?: string; type: "text" | "file" }[] };
   };
 }
 
@@ -52,6 +104,7 @@ function agruparPorPrefijo(): Map<string, Map<string, string>> {
 function aItemPostman(clave: string, descripcionGuards: string): PostmanRequestItem {
   const [metodo, ruta] = clave.split(" ");
   const segmentos = ruta.split("/").filter(Boolean);
+  const ejemplo = EJEMPLOS_CAMINO_FELIZ[clave];
 
   return {
     name: clave,
@@ -64,7 +117,17 @@ function aItemPostman(clave: string, descripcionGuards: string): PostmanRequestI
         host: ["{{baseUrl}}"],
         path: segmentos
       },
-      description: descripcionGuards
+      description: descripcionGuards,
+      ...(ejemplo?.modo === "raw" && {
+        body: {
+          mode: "raw",
+          raw: JSON.stringify(ejemplo.body, null, 2),
+          options: { raw: { language: "json" } }
+        }
+      }),
+      ...(ejemplo?.modo === "formdata" && {
+        body: { mode: "formdata", formdata: ejemplo.campos }
+      })
     }
   };
 }
@@ -91,7 +154,11 @@ export function buildPostmanCollection(): object {
     },
     variable: [
       { key: "baseUrl", value: "http://localhost:3001" },
-      { key: "token", value: "" }
+      { key: "token", value: "" },
+      // Nunca un literal acá: la password de demo vive en apps/api/.env
+      // (D-047) o se pide al dueño para el ambiente real. Ver
+      // apps/api/CLAUDE.md — "las credenciales del seed son públicas".
+      { key: "password", value: "" }
     ],
     item: folders
   };

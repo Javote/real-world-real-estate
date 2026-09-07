@@ -12,6 +12,10 @@
     {
       "key": "token",
       "value": ""
+    },
+    {
+      "key": "password",
+      "value": ""
     }
   ],
   "item": [
@@ -115,7 +119,16 @@
                 "login"
               ]
             },
-            "description": "—"
+            "description": "—",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"developer@example.com\",\n  \"password\": \"{{password}}\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
           }
         }
       ]
@@ -698,7 +711,16 @@
                 ":stageNum"
               ]
             },
-            "description": "auth + autoriza(rol(admin|developer) · proyecto(Contract:id → developer))"
+            "description": "auth + autoriza(rol(admin|developer) · proyecto(Contract:id → developer))",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"amountMinorUnits\": 1000000\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
           }
         },
         {
@@ -1360,7 +1382,16 @@
                 "accept"
               ]
             },
-            "description": "auth + autoriza(rol(admin|buyer) · dueño(Invitation:id))"
+            "description": "auth + autoriza(rol(admin|buyer) · dueño(Invitation:id))",
+            "body": {
+              "mode": "raw",
+              "raw": "{}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
           }
         },
         {
@@ -1995,7 +2026,16 @@
                 "projects"
               ]
             },
-            "description": "auth + autoriza(rol(admin) · soloRol)"
+            "description": "auth + autoriza(rol(admin) · soloRol)",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Torre Ejemplo\",\n  \"slug\": \"torre-ejemplo\",\n  \"city\": \"Buenos Aires\",\n  \"country\": \"Argentina\",\n  \"totalUnits\": 24,\n  \"status\": \"planning\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
           }
         },
         {
@@ -2021,7 +2061,36 @@
                 "evidence"
               ]
             },
-            "description": "auth + autoriza(rol(admin|developer) · proyecto(id → developer))"
+            "description": "auth + autoriza(rol(admin|developer) · proyecto(id → developer))",
+            "body": {
+              "mode": "formdata",
+              "formdata": [
+                {
+                  "key": "file",
+                  "type": "file"
+                },
+                {
+                  "key": "stageId",
+                  "type": "text",
+                  "value": ""
+                },
+                {
+                  "key": "evidenceType",
+                  "type": "text",
+                  "value": "document"
+                },
+                {
+                  "key": "category",
+                  "type": "text",
+                  "value": "permits"
+                },
+                {
+                  "key": "authoritative",
+                  "type": "text",
+                  "value": "false"
+                }
+              ]
+            }
           }
         },
         {
@@ -2073,7 +2142,16 @@
                 "stages"
               ]
             },
-            "description": "auth + autoriza(rol(admin|developer) · proyecto(id → developer))"
+            "description": "auth + autoriza(rol(admin|developer) · proyecto(id → developer))",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Cimentación\",\n  \"sequenceOrder\": 1,\n  \"progressPercentage\": 15\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
           }
         },
         {
@@ -2208,7 +2286,16 @@
                 "state"
               ]
             },
-            "description": "auth + autoriza(rol(admin|developer) · proyecto(Stage:id → developer))"
+            "description": "auth + autoriza(rol(admin|developer) · proyecto(Stage:id → developer))",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"state\": \"InProgress\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
           }
         }
       ]
