@@ -37,8 +37,6 @@ números medidos, en `specs/README.md`. Acá solo lo que falta.
 |---|---|---|---|
 | 0 | **Mainnet** — runbook, habilitar la red, custodia de la clave. **Sin confirmar que sea de este milestone** (2026-09-08, el dueño) | D-013 la hace **imposible por configuración**: es código, no solo procedimiento | 🔴 |
 | 1 | **El "Stage template" de `/developer/project/new` — con captura real (34C), deliberadamente sin implementar.** No es una pantalla faltante: la fila 34b-34c de M2-D5 **sí** está implementada, solo falta el selector. El código (`developer.project.new.tsx`) ya documenta por qué — los 10 nombres de etapa no son normativos en ningún entregable, y `POST /projects/:id/stages` ancla on-chain **de a uno**, sin transaccionalidad para 10 escrituras por un solo submit. Aparte: **no existe ninguna captura** para "agregar una etapa a un proyecto ya creado" (verificado contra las 70), así que esa pantalla, si se construye, sí sería inventar | Bloqueado en dos decisiones del dueño, no en código: nombrar las 10 etapas de forma normativa, y si el backend suma un endpoint transaccional de bulk-create antes de exponerlo en la UI | 🔴 (decisión, no implementación) |
-| 2 | **`/notary/dossier/:dossierId` (vista) — el checklist distingue verificado/pendiente solo por color de ícono, sin label de texto.** Viola directamente M2-D3 §Accessibility ("status colour is never the sole carrier of meaning") en la pantalla donde un notario decide firmar | Auditoría profunda del 2026-09-08 (9 superficies con componente de M2-D5 sustituido; 6 resultaron falsos positivos ya documentados en el código como `developer.documentation`/D-021/captura, 1 de forma —`developer.capital` recrea `StatCard` a mano sin comentario, funcionalmente igual—, y estas dos reales). Detalle completo en el historial de la sesión, no en un archivo aparte | 🟢 |
-| 3 | **`/investor/unit/:unitId/dossier` — falta estructura real frente a la captura**: `DocumentCard` completo (nombre, formato, pill, ver/descargar), `ProgressTimeline` de nodos y fecha+hash por stage; el código solo tiene una barra de progreso y una lista plana sin fechas ni acciones | Mismo hallazgo del 2026-09-08. Es pérdida de información que la captura 26-29 y la fila de M2-D5 piden, no una diferencia de nombre | 🟢 |
 
 **Encontrados el 2026-09-04, probando el flujo real end-to-end contra producción** (login con las
 credenciales del re-seed, crear un proyecto, subir y anclar evidencia — vía Claude en Chrome, no un
@@ -216,7 +214,20 @@ capturas contra la instancia local, no solo `pnpm test`. 144 tests verdes.
 **Y de paso, auditado el resto de las 53 superficies contra M2-D5** — no solo el sidebar. Ninguna
 falta ni es un stub (la auditoría del 2026-09-03 tenía razón en eso), pero 9 reemplazan un componente
 que la fila nombra por otro distinto sin dejar una decisión escrita, mismo patrón silencioso que el
-sidebar. Detalle en la tabla de pendientes, ítem #2.
+sidebar. De esas 9, una auditoría más profunda separó 6 falsos positivos (ya documentados en el
+código) y 1 de forma de **2 reales**, cerrados el mismo día — ver el párrafo siguiente. También se
+cruzaron las 70 capturas contra las 51 filas de M2-D5: solo 3 sin fila (59, 60 — gap de contrato ya
+documentado, no nuevo — y 61, el sidebar de arriba).
+
+**Cerrado el 2026-09-08 · los dos hallazgos reales de esa auditoría, sin componentes nuevos.**
+`/notary/dossier/:dossierId` cambió el ícono de color-solo por `VerificationBadge` (texto + color)
+por artefacto — cierra la violación de M2-D3 §Accessibility. `/investor/unit/:unitId/dossier` sumó
+un `ProgressTimeline` real (mismos datos que ya usa `getInvestorUnit` en `/investor/unit/:unitId`,
+sin query nueva del backend) y `VerificationBadge` por artefacto. **Lo que no se cerró, a propósito:**
+`DocumentCard` completo (nombre, fecha, formato) sigue sin poder armarse — `dossierArtifactSchema`
+no tiene esos campos y no se inventan (regla 17). Es deuda de contrato declarada, no una tarea
+pendiente de UI. Verificado con Chrome logueado como notary e investor contra la instancia local,
+144 tests verdes.
 
 **El diseño ya está decidido. El trabajo es transcribirlo, no inventarlo.**
 

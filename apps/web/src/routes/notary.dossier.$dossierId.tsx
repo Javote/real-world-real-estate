@@ -1,6 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { createFileRoute, useNavigate } from '@tanstack/react-router'
-import { AlertCircle, FileCheck2, ShieldCheck } from 'lucide-react'
+import { AlertCircle, ShieldCheck } from 'lucide-react'
 import { useState } from 'react'
 import { api } from '#/api/port'
 import { NOTARY_ROLES } from '#/auth/roles'
@@ -10,6 +10,7 @@ import { ObserveStageModal } from '#/components/domain/ObserveStageModal'
 import { PrimaryButton, SecondaryButton } from '#/components/domain/PrimaryButton'
 import { ProgressBar } from '#/components/domain/ProgressBar'
 import { StatusPill } from '#/components/domain/StatusPill'
+import { VerificationBadge } from '#/components/domain/VerificationBadge'
 import { PanelLayout } from '#/components/PanelLayout'
 import { useTranslation } from '#/i18n/useTranslation'
 
@@ -114,8 +115,10 @@ function DossierReview() {
               ) : null}
             </article>
 
-            {/* Los checklists por sección de la captura. Cada artefacto muestra
-                su huella y si tiene prueba: un tilde teal solo cuando hay TXID. */}
+            {/* Los checklists por sección de la captura. M2-D3 §Accessibility:
+                "status colour is never the sole carrier of meaning" — el color
+                del ícono solo no alcanza; VerificationBadge trae el label de
+                texto que la regla pide. */}
             <article className="flex flex-col gap-s3 rounded-xl bg-card p-s4 shadow-e1">
               <h3 className="text-body font-bold text-text-primary">
                 {t('notary.dossier.artifacts')}
@@ -130,14 +133,6 @@ function DossierReview() {
                       key={`${a.kind}-${a.referenceId}`}
                       className="flex items-center gap-s2 rounded-lg bg-surface-alt p-s2"
                     >
-                      <FileCheck2
-                        aria-hidden="true"
-                        className={
-                          a.txid
-                            ? 'size-icon-sm shrink-0 text-verified'
-                            : 'size-icon-sm shrink-0 text-disabled'
-                        }
-                      />
                       <span className="min-w-0 flex-1 truncate text-body-sm text-text-secondary">
                         {a.label}
                       </span>
@@ -148,6 +143,11 @@ function DossierReview() {
                           copiedLabel={t('hash.copied')}
                         />
                       ) : null}
+                      <VerificationBadge
+                        txid={a.txid}
+                        verifiedLabel={t('status.verified')}
+                        pendingLabel={t('status.pending')}
+                      />
                     </li>
                   ))}
                 </ul>

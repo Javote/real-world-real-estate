@@ -75,6 +75,7 @@ la va a leer quien intente usarlo. Esta tabla solo dice dónde está cada una.
 | "Price from" en el listado del investor | `ProjectCard` prop `priceLabel` | Endpoint: `GET /projects` no agrega el mínimo de las unidades. `GET /developer/projects` **ya lo hace** — es copiar esa agregación |
 | Rating / reputación del developer (capturas 6-7) | detalle `/project/:id` — no hay estrellas | Contrato: no hay modelo de rating. Capturas 59/60 no tienen fila en M2-D5 |
 | KPI "Active investors" y "Verified events" del panel (capturas 33/34) | `developer.index.tsx` — no hay tile | Contrato: `developerKpisSchema` no los expone |
+| `DocumentCard` completo (nombre, fecha, formato) en los artefactos del dossier (investor y notary) | `investor.unit.$unitId.dossier.tsx` y `notary.dossier.$dossierId.tsx` — la lista de artefactos solo tiene label + hash + `VerificationBadge` | Contrato: `dossierArtifactSchema` solo tiene `kind`, `referenceId`, `label`, `sha256`, `txid` — sin `filename`/`uploadedAt`/`format` no hay nada real que ponerle a `DocumentCard` |
 
 **Fijate si el dato existe antes de declararlo ausente.** El "Price from" se declaró ausente y no lo
 estaba: el precio existe en `UnitTable.priceMinorUnits`, solo que a nivel unidad. Eso convirtió una

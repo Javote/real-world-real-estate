@@ -8,17 +8,25 @@ import { useRoleGuard } from '#/auth/useRoleGuard'
 import { HashChip } from '#/components/domain/HashChip'
 import { PrimaryButton, SecondaryButton } from '#/components/domain/PrimaryButton'
 import { ProgressBar } from '#/components/domain/ProgressBar'
+import { ProgressTimeline } from '#/components/domain/ProgressTimeline'
 import { ShareDossierModal } from '#/components/domain/ShareDossierModal'
 import { VerificationBadge } from '#/components/domain/VerificationBadge'
 import { PanelLayout } from '#/components/PanelLayout'
-import { formatDate } from '#/i18n/format'
+import { formatDate, formatMonthYear } from '#/i18n/format'
 import { useTranslation } from '#/i18n/useTranslation'
-import { reintentarSiNoEsAusencia } from '#/lib/investor'
-import { bajarBlob } from '#/lib/stageProgress'
+import { reintentarSiNoEsAusencia, unicosPorStageId } from '#/lib/investor'
+import { bajarBlob, timelineDeStages } from '#/lib/stageProgress'
 
 // **M2-D5 filas 26-29 y 28s · `/investor/unit/:unitId/dossier`**
 // Test IDs: INV-DOSSIER-VIEW-001, INV-DOSSIER-EXPORT-002, INV-DOSSIER-SHARE-001.
 // Patrón P8. El dossier incompleto no se bloquea: la barra lo refleja.
+//
+// **Dos dimensiones, dos componentes** (M2-D4 §6.1 — "patterns compose, never
+// overlap"): `ProgressBar` de acá abajo es la de PRUEBA — qué fracción de los
+// artefactos tiene TXID (regla 17). El `ProgressTimeline` que se agregó es la
+// de OBRA — en qué etapa va la construcción, mismos datos que ya usa
+// `/investor/unit/:unitId` vía `getInvestorUnit`. Son preguntas distintas y
+// las capturas 26-29 muestran las dos.
 
 export const Route = createFileRoute('/investor/unit/$unitId/dossier')({
   component: InvestorDossier
@@ -37,6 +45,23 @@ function InvestorDossier() {
     enabled: ready,
     retry: reintentarSiNoEsAusencia
   })
+
+  const { data: unidad } = useQuery({
+    queryKey: ['investor', 'unit', unitId],
+    queryFn: () => api.getInvestorUnit(unitId),
+    enabled: ready,
+    retry: reintentarSiNoEsAusencia
+  })
+
+  const { data: proyecto } = useQuery({
+    queryKey: ['project', unidad?.projectId],
+    queryFn: () => api.getProject(unidad!.projectId),
+    enabled: ready && Boolean(unidad?.projectId),
+    retry: reintentarSiNoEsAusencia
+  })
+
+  const stages = unicosPorStageId(unidad?.stages ?? [])
+  const timeline = timelineDeStages(stages)
 
   const exportar = useMutation({
     mutationFn: () => api.exportUnitDossier(unitId),
@@ -114,6 +139,25 @@ function InvestorDossier() {
               />
             </article>
 
+            {timeline.length > 0 ? (
+              <article className="flex flex-col gap-s3 rounded-xl bg-card p-s4 shadow-e1">
+                <h2 className="text-body font-bold text-text-primary">
+                  {t('investor.unit.progress')}
+                </h2>
+                <ProgressTimeline
+                  stages={timeline}
+                  ariaLabel={t('investor.project.timelineAria')}
+                  finalizationLabel={
+                    proyecto?.estimatedDelivery
+                      ? t('investor.project.delivery', {
+                          date: formatMonthYear(String(proyecto.estimatedDelivery), locale)
+                        })
+                      : undefined
+                  }
+                />
+              </article>
+            ) : null}
+
             <article className="flex flex-col gap-s3 rounded-xl bg-card p-s4 shadow-e1">
               <h2 className="text-body font-bold text-text-primary">
                 {t('investor.dossier.completeness')}
@@ -167,6 +211,11 @@ function InvestorDossier() {
                         copiedLabel={t('hash.copied')}
                       />
                     ) : null}
+                    <VerificationBadge
+                      txid={a.txid}
+                      verifiedLabel={t('status.verified')}
+                      pendingLabel={t('status.pending')}
+                    />
                   </li>
                 ))}
               </ul>
