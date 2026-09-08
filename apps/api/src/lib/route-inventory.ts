@@ -23,6 +23,11 @@ export type Montaje = {
   prefijo: string;
   guardsDeRouter: GuardDescriptor[];
   rutas: Map<string, GuardDescriptor[]>;
+  /** El handler terminal de cada ruta (el último de la cadena, la lógica de
+   * negocio) — para introspección más allá de los guards. Lo usa
+   * `generate-openapi.ts` para leer el código de éxito real de la respuesta
+   * en vez de adivinarlo por verbo HTTP. */
+  handlers: Map<string, unknown>;
 };
 
 /** Las ramas de una regla, siempre como lista plana. `alguna` no anida. */
@@ -56,6 +61,7 @@ export function leerMontaje(): Montaje[] {
   return MONTAJE.map(({ prefijo, router }) => {
     const guardsDeRouter: GuardDescriptor[] = [];
     const rutas = new Map<string, GuardDescriptor[]>();
+    const handlers = new Map<string, unknown>();
 
     for (const capa of (router as unknown as { stack: Capa[] }).stack) {
       if (!capa.route) {
@@ -68,13 +74,19 @@ export function leerMontaje(): Montaje[] {
         .map((s) => leerGuard(s.handle))
         .filter((g): g is GuardDescriptor => g !== null);
       const path = `${prefijo}${capa.route.path}`.replace(/\/$/, "") || "/";
+      // El último de la pila es la lógica de negocio; los anteriores son los
+      // middlewares (`authenticate`, `authorize`, Multer) que ya se leyeron
+      // arriba como guards.
+      const terminal = capa.route.stack.at(-1)?.handle;
 
       for (const metodo of Object.keys(capa.route.methods)) {
-        rutas.set(`${metodo.toUpperCase()} ${path}`, [...guardsDeRouter, ...propios]);
+        const clave = `${metodo.toUpperCase()} ${path}`;
+        rutas.set(clave, [...guardsDeRouter, ...propios]);
+        handlers.set(clave, terminal);
       }
     }
 
-    return { prefijo, guardsDeRouter, rutas };
+    return { prefijo, guardsDeRouter, rutas, handlers };
   });
 }
 

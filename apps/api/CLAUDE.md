@@ -930,7 +930,25 @@ pnpm --filter @plataforma/api db:migrate     # aplica las migraciones pendientes
 pnpm --filter @plataforma/api db:seed        # datos demo
 pnpm --filter @plataforma/api test:s3        # storage contra el MinIO de compose.dev.yml — NO corre en CI
 pnpm --filter @plataforma/api docs:api       # regenera specs/postman/*.json desde el router montado
+pnpm --filter @plataforma/api docs:openapi   # regenera specs/openapi/*.json, mismo router, formato OpenAPI 3.1
 ```
+
+**`docs:openapi` existía como pendiente hasta el 2026-09-08: 23 de los 26 endpoints que validan
+con Zod tenían su schema declarado inline, y `zod-openapi` necesita una referencia importable, no
+un literal dentro del handler.** Se resolvió moviendo esos 23 schemas a `packages/shared` (regla 6,
+que ya lo pedía por otro motivo) — ver `CLAUDE.md` raíz. El generador
+(`apps/api/scripts/generate-openapi.ts`) reusa la misma introspección que `docs:api` y
+`route-guards.test.ts` (`route-inventory.ts`, que ahora también expone el handler terminal de cada
+ruta) y mapea a mano las 26 rutas validadas a su schema real — la lista está en
+`REQUEST_SCHEMAS`, y **se edita el mismo día que se agrega un `safeParse` nuevo**, igual que el
+literal de la matriz de permisos. El código de éxito se lee del `res.status(2xx)` real del handler,
+no se adivina por verbo HTTP — la primera versión sí adivinaba y mentía en `POST /auth/login`
+(200, no 201), `POST /evidence/reconcile` (200) y `POST /invitations/:id/decline` (204). Las
+respuestas quedan sin schema a propósito: la mayoría de los handlers devuelve un tipo TS inferido
+de Kysely, no un schema Zod en runtime, y documentarlas pediría inventar uno. `specs/openapi/` está
+excluido del formatter de Biome (`biome.json`), mismo motivo que `specs/postman`: Biome colapsa
+arrays cortos a una línea y eso rompe el test de frescura, que compara contra el
+`JSON.stringify(doc, null, 2)` crudo.
 
 **`0000_init.sql` describe la base al 2026-08-23**, colapsando las seis que existieron hasta esa
 fecha (D-063): nada estaba desplegado, así que el esquema real —que había que reconstruir mentalmente

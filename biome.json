@@ -17,7 +17,8 @@
       "!apps/api/src/db/id.ts",
       "!apps/api/src/lib/kysely.ts",
       "!apps/api/src/lib/libsql-client.ts",
-      "!specs/postman"
+      "!specs/postman",
+      "!specs/openapi"
     ]
   },
   "css": {

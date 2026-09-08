@@ -1,0 +1,3481 @@
+{
+  "openapi": "3.1.0",
+  "info": {
+    "title": "PropNexus API",
+    "version": "1.0.0",
+    "description": "Generado desde el router montado (`pnpm --filter @plataforma/api docs:openapi`), no mantenido a mano — ver apps/api/scripts/generate-openapi.ts. El código de éxito se lee del `res.status(2xx)` real del handler (con el de creación si el handler tiene más de uno, caso idempotente); las respuestas no traen schema (ver el comentario del generador). Body y query sí son el schema Zod real donde existe."
+  },
+  "servers": [
+    {
+      "url": "http://localhost:3001/api/v1",
+      "description": "Local (pnpm dev)"
+    }
+  ],
+  "paths": {
+    "/api/v1/auth/login": {
+      "post": {
+        "summary": "POST /api/v1/auth/login",
+        "description": "Sin sesión — pública (M2-D5 §2.2)",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "email": {
+                    "type": "string",
+                    "format": "email",
+                    "pattern": "^(?!\\.)(?!.*\\.\\.)([A-Za-z0-9_'+\\-\\.]*)[A-Za-z0-9_+-]@([A-Za-z0-9][A-Za-z0-9\\-]*\\.)+[A-Za-z]{2,}$"
+                  },
+                  "password": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 1024
+                  }
+                },
+                "required": [
+                  "email",
+                  "password"
+                ]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "OK"
+          },
+          "400": {
+            "description": "Body o query no pasan el schema",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/auth/me": {
+      "get": {
+        "summary": "GET /api/v1/auth/me",
+        "description": "auth + autoriza(rol(admin|developer|buyer|verifier|notary) · scope(User.id = usuario))",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          },
+          "401": {
+            "description": "Sin sesión o token inválido"
+          },
+          "403": {
+            "description": "Rol o membresía insuficiente"
+          }
+        }
+      }
+    },
+    "/api/v1/users": {
+      "get": {
+        "summary": "GET /api/v1/users",
+        "description": "auth + autoriza(rol(admin) · soloRol)",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          },
+          "401": {
+            "description": "Sin sesión o token inválido"
+          },
+          "403": {
+            "description": "Rol o membresía insuficiente"
+          }
+        }
+      },
+      "post": {
+        "summary": "POST /api/v1/users",
+        "description": "auth + autoriza(rol(admin) · soloRol)",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "email": {
+                    "type": "string",
+                    "format": "email",
+                    "pattern": "^(?!\\.)(?!.*\\.\\.)([A-Za-z0-9_'+\\-\\.]*)[A-Za-z0-9_+-]@([A-Za-z0-9][A-Za-z0-9\\-]*\\.)+[A-Za-z]{2,}$"
+                  },
+                  "password": {
+                    "type": "string"
+                  },
+                  "role": {
+                    "type": "string",
+                    "enum": [
+                      "admin",
+                      "developer",
+                      "buyer",
+                      "verifier",
+                      "notary"
+                    ]
+                  },
+                  "fullName": {
+                    "type": "string",
+                    "minLength": 1
+                  }
+                },
+                "required": [
+                  "email",
+                  "password",
+                  "role",
+                  "fullName"
+                ]
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "OK"
+          },
+          "400": {
+            "description": "Body o query no pasan el schema",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ValidationError"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Sin sesión o token inválido"
+          },
+          "403": {
+            "description": "Rol o membresía insuficiente"
+          }
+        }
+      }
+    },
+    "/api/v1/users/{id}": {
+      "get": {
+        "summary": "GET /api/v1/users/:id",
+        "description": "auth + autoriza(rol(admin) · soloRol)",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "schema": {
+              "type": "string"
+            },
+            "required": true
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          },
+          "401": {
+            "description": "Sin sesión o token inválido"
+          },
+          "403": {
+            "description": "Rol o membresía insuficiente"
+          }
+        }
+      },
+      "patch": {
+        "summary": "PATCH /api/v1/users/:id",
+        "description": "auth + autoriza(rol(admin) · soloRol)",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "schema": {
+              "type": "string"
+            },
+            "required": true
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "fullName": {
+                    "type": "string",
+                    "minLength": 1
+                  },
+                  "role": {
+                    "type": "string",
+                    "enum": [
+                      "admin",
+                      "developer",
+                      "buyer",
+                      "verifier",
+                      "notary"
+                    ]
+                  },
+                  "isActive": {
+                    "type": "boolean"
+                  },
+                  "password": {
+                    "type": "string"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "OK"
+          },
+          "400": {
+            "description": "Body o query no pasan el schema",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ValidationError"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Sin sesión o token inválido"
+          },
+          "403": {
+            "description": "Rol o membresía insuficiente"
+          }
+        }
+      },
+      "delete": {
+        "summary": "DELETE /api/v1/users/:id",
+        "description": "auth + autoriza(rol(admin) · soloRol)",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "schema": {
+              "type": "string"
+            },
+            "required": true
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Sin contenido"
+          },
+          "401": {
+            "description": "Sin sesión o token inválido"
+          },
+          "403": {
+            "description": "Rol o membresía insuficiente"
+          }
+        }
+      }
+    },
+    "/api/v1/projects": {
+      "get": {
+        "summary": "GET /api/v1/projects",
+        "description": "auth + autoriza(rol(admin|developer|buyer|verifier|notary) · scope(projectScope(cualquier membresía)))",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "in": "query",
+            "name": "status",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "planning",
+                "in_progress",
+                "delayed",
+                "completed"
+              ]
+            }
+          },
+          {
+            "in": "query",
+            "name": "city",
+            "schema": {
+              "type": "string",
+              "minLength": 1
+            }
+          },
+          {
+            "in": "query",
+            "name": "q",
+            "schema": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 120
+            }
+          },
+          {
+            "in": "query",
+            "name": "sort",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "recent",
+                "name",
+                "delivery"
+              ]
+            }
+          },
+          {
+            "in": "query",
+            "name": "bbox",
+            "schema": {
+              "type": "string",
+              "pattern": "^-?\\d+(\\.\\d+)?(,-?\\d+(\\.\\d+)?){3}$"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          },
+          "400": {
+            "description": "Body o query no pasan el schema",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ValidationError"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Sin sesión o token inválido"
+          },
+          "403": {
+            "description": "Rol o membresía insuficiente"
+          }
+        }
+      },
+      "post": {
+        "summary": "POST /api/v1/projects",
+        "description": "auth + autoriza(rol(admin) · soloRol)",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "name": {
+                    "type": "string",
+                    "minLength": 1
+                  },
+                  "slug": {
+                    "type": "string",
+                    "minLength": 1
+                  },
+                  "address": {
+                    "type": "string"
+                  },
+                  "city": {
+                    "type": "string"
+                  },
+                  "country": {
+                    "type": "string"
+                  },
+                  "latitude": {
+                    "type": "number"
+                  },
+                  "longitude": {
+                    "type": "number"
+                  },
+                  "totalUnits": {
+                    "default": 0,
+                    "type": "integer",
+                    "minimum": 0,
+                    "maximum": 9007199254740991
+                  },
+                  "estimatedDelivery": {
+                    "type": "string",
+                    "format": "date-time",
+                    "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d(?::[0-5]\\d(?:\\.\\d+)?)?(?:Z))$"
+                  },
+                  "status": {
+                    "default": "planning",
+                    "type": "string",
+                    "enum": [
+                      "planning",
+                      "in_progress",
+                      "delayed",
+                      "completed"
+                    ]
+                  }
+                },
+                "required": [
+                  "name",
+                  "slug"
+                ]
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "OK"
+          },
+          "400": {
+            "description": "Body o query no pasan el schema",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ValidationError"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Sin sesión o token inválido"
+          },
+          "403": {
+            "description": "Rol o membresía insuficiente"
+          }
+        }
+      }
+    },
+    "/api/v1/projects/{id}": {
+      "get": {
+        "summary": "GET /api/v1/projects/:id",
+        "description": "auth + autoriza(rol(admin|developer|buyer|verifier|notary) · proyecto(id → developer|buyer|verifier))",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "schema": {
+              "type": "string"
+            },
+            "required": true
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          },
+          "401": {
+            "description": "Sin sesión o token inválido"
+          },
+          "403": {
+            "description": "Rol o membresía insuficiente"
+          }
+        }
+      },
+      "patch": {
+        "summary": "PATCH /api/v1/projects/:id",
+        "description": "auth + autoriza(rol(admin) · soloRol)",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "schema": {
+              "type": "string"
+            },
+            "required": true
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "name": {
+                    "type": "string",
+                    "minLength": 1
+                  },
+                  "slug": {
+                    "type": "string",
+                    "minLength": 1
+                  },
+                  "address": {
+                    "type": "string"
+                  },
+                  "city": {
+                    "type": "string"
+                  },
+                  "country": {
+                    "type": "string"
+                  },
+                  "latitude": {
+                    "type": "number"
+                  },
+                  "longitude": {
+                    "type": "number"
+                  },
+                  "totalUnits": {
+                    "type": "integer",
+                    "minimum": 0,
+                    "maximum": 9007199254740991
+                  },
+                  "estimatedDelivery": {
+                    "type": "string",
+                    "format": "date-time",
+                    "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d(?::[0-5]\\d(?:\\.\\d+)?)?(?:Z))$"
+                  },
+                  "status": {
+                    "type": "string",
+                    "enum": [
+                      "planning",
+                      "in_progress",
+                      "delayed",
+                      "completed"
+                    ]
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "OK"
+          },
+          "400": {
+            "description": "Body o query no pasan el schema",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ValidationError"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Sin sesión o token inválido"
+          },
+          "403": {
+            "description": "Rol o membresía insuficiente"
+          }
+        }
+      },
+      "delete": {
+        "summary": "DELETE /api/v1/projects/:id",
+        "description": "auth + autoriza(rol(admin) · soloRol)",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "schema": {
+              "type": "string"
+            },
+            "required": true
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Sin contenido"
+          },
+          "401": {
+            "description": "Sin sesión o token inválido"
+          },
+          "403": {
+            "description": "Rol o membresía insuficiente"
+          }
+        }
+      }
+    },
+    "/api/v1/projects/{id}/members": {
+      "get": {
+        "summary": "GET /api/v1/projects/:id/members",
+        "description": "auth + autoriza(rol(admin|developer|buyer|verifier|notary) · proyecto(id → developer|buyer|verifier))",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "schema": {
+              "type": "string"
+            },
+            "required": true
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          },
+          "401": {
+            "description": "Sin sesión o token inválido"
+          },
+          "403": {
+            "description": "Rol o membresía insuficiente"
+          }
+        }
+      },
+      "post": {
+        "summary": "POST /api/v1/projects/:id/members",
+        "description": "auth + autoriza(rol(admin) · soloRol)",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "schema": {
+              "type": "string"
+            },
+            "required": true
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "userId": {
+                    "type": "string",
+                    "minLength": 1
+                  },
+                  "membershipRole": {
+                    "type": "string",
+                    "enum": [
+                      "developer",
+                      "buyer",
+                      "verifier"
+                    ]
+                  }
+                },
+                "required": [
+                  "userId",
+                  "membershipRole"
+                ]
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "OK"
+          },
+          "400": {
+            "description": "Body o query no pasan el schema",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ValidationError"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Sin sesión o token inválido"
+          },
+          "403": {
+            "description": "Rol o membresía insuficiente"
+          }
+        }
+      }
+    },
+    "/api/v1/projects/{id}/documents": {
+      "get": {
+        "summary": "GET /api/v1/projects/:id/documents",
+        "description": "auth + autoriza(rol(admin|developer|buyer|verifier|notary) · proyecto(id → developer|buyer|verifier))",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "schema": {
+              "type": "string"
+            },
+            "required": true
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          },
+          "401": {
+            "description": "Sin sesión o token inválido"
+          },
+          "403": {
+            "description": "Rol o membresía insuficiente"
+          }
+        }
+      }
+    },
+    "/api/v1/projects/{id}/building-schematic": {
+      "get": {
+        "summary": "GET /api/v1/projects/:id/building-schematic",
+        "description": "auth + autoriza(rol(admin|developer|buyer|verifier|notary) · proyecto(id → developer|buyer|verifier))",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "schema": {
+              "type": "string"
+            },
+            "required": true
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          },
+          "401": {
+            "description": "Sin sesión o token inválido"
+          },
+          "403": {
+            "description": "Rol o membresía insuficiente"
+          }
+        }
+      }
+    },
+    "/api/v1/projects/{id}/stages": {
+      "get": {
+        "summary": "GET /api/v1/projects/:id/stages",
+        "description": "auth + autoriza(rol(admin|developer|buyer|verifier|notary) · proyecto(id → developer|buyer|verifier))",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "schema": {
+              "type": "string"
+            },
+            "required": true
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          },
+          "401": {
+            "description": "Sin sesión o token inválido"
+          },
+          "403": {
+            "description": "Rol o membresía insuficiente"
+          }
+        }
+      }
+    },
+    "/api/v1/projects/{id}/stages/{stageId}/retry-anchor": {
+      "post": {
+        "summary": "POST /api/v1/projects/:id/stages/:stageId/retry-anchor",
+        "description": "auth + autoriza(rol(admin) · proyecto(id → developer|buyer|verifier))",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "schema": {
+              "type": "string"
+            },
+            "required": true
+          },
+          {
+            "in": "path",
+            "name": "stageId",
+            "schema": {
+              "type": "string"
+            },
+            "required": true
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          },
+          "401": {
+            "description": "Sin sesión o token inválido"
+          },
+          "403": {
+            "description": "Rol o membresía insuficiente"
+          }
+        }
+      }
+    },
+    "/api/v1/projects/{id}/stages/{stageId}": {
+      "get": {
+        "summary": "GET /api/v1/projects/:id/stages/:stageId",
+        "description": "auth + autoriza(rol(admin|developer|buyer|verifier|notary) · proyecto(id → developer|buyer|verifier))",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "schema": {
+              "type": "string"
+            },
+            "required": true
+          },
+          {
+            "in": "path",
+            "name": "stageId",
+            "schema": {
+              "type": "string"
+            },
+            "required": true
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          },
+          "401": {
+            "description": "Sin sesión o token inválido"
+          },
+          "403": {
+            "description": "Rol o membresía insuficiente"
+          }
+        }
+      }
+    },
+    "/api/v1/stages/{id}": {
+      "get": {
+        "summary": "GET /api/v1/stages/:id",
+        "description": "auth + autoriza(rol(admin|developer|buyer|verifier|notary) · proyecto(Stage:id → developer|buyer|verifier))",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "schema": {
+              "type": "string"
+            },
+            "required": true
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          },
+          "401": {
+            "description": "Sin sesión o token inválido"
+          },
+          "403": {
+            "description": "Rol o membresía insuficiente"
+          }
+        }
+      },
+      "patch": {
+        "summary": "PATCH /api/v1/stages/:id",
+        "description": "auth + autoriza(rol(admin|developer) · proyecto(Stage:id → developer))",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "schema": {
+              "type": "string"
+            },
+            "required": true
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "name": {
+                    "type": "string",
+                    "minLength": 1
+                  },
+                  "sequenceOrder": {
+                    "type": "integer",
+                    "exclusiveMinimum": 0,
+                    "maximum": 9007199254740991
+                  },
+                  "validationCritical": {
+                    "type": "boolean"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "OK"
+          },
+          "400": {
+            "description": "Body o query no pasan el schema",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ValidationError"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Sin sesión o token inválido"
+          },
+          "403": {
+            "description": "Rol o membresía insuficiente"
+          }
+        }
+      }
+    },
+    "/api/v1/stages/{id}/state": {
+      "patch": {
+        "summary": "PATCH /api/v1/stages/:id/state",
+        "description": "auth + autoriza(rol(admin|developer) · proyecto(Stage:id → developer))",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "schema": {
+              "type": "string"
+            },
+            "required": true
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "state": {
+                    "type": "string",
+                    "enum": [
+                      "Pending",
+                      "InProgress",
+                      "Observed",
+                      "Completed"
+                    ]
+                  }
+                },
+                "required": [
+                  "state"
+                ],
+                "additionalProperties": false
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "OK"
+          },
+          "400": {
+            "description": "Body o query no pasan el schema",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ValidationError"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Sin sesión o token inválido"
+          },
+          "403": {
+            "description": "Rol o membresía insuficiente"
+          }
+        }
+      }
+    },
+    "/api/v1/evidence/{id}": {
+      "get": {
+        "summary": "GET /api/v1/evidence/:id",
+        "description": "auth + autoriza(rol(admin|developer|buyer|verifier|notary) · proyecto(Evidence:id → developer|buyer|verifier))",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "schema": {
+              "type": "string"
+            },
+            "required": true
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          },
+          "401": {
+            "description": "Sin sesión o token inválido"
+          },
+          "403": {
+            "description": "Rol o membresía insuficiente"
+          }
+        }
+      },
+      "patch": {
+        "summary": "PATCH /api/v1/evidence/:id",
+        "description": "auth + autoriza(rol(admin|developer) · proyecto(Evidence:id → developer))",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "schema": {
+              "type": "string"
+            },
+            "required": true
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "category": {
+                    "type": "string",
+                    "minLength": 1
+                  },
+                  "authoritative": {
+                    "type": "boolean"
+                  },
+                  "evidenceType": {
+                    "type": "string",
+                    "enum": [
+                      "document",
+                      "photo",
+                      "certificate"
+                    ]
+                  },
+                  "stageId": {
+                    "anyOf": [
+                      {
+                        "type": "string"
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ]
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "OK"
+          },
+          "400": {
+            "description": "Body o query no pasan el schema",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ValidationError"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Sin sesión o token inválido"
+          },
+          "403": {
+            "description": "Rol o membresía insuficiente"
+          }
+        }
+      },
+      "delete": {
+        "summary": "DELETE /api/v1/evidence/:id",
+        "description": "auth + autoriza(rol(admin) · soloRol)",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "schema": {
+              "type": "string"
+            },
+            "required": true
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Sin contenido"
+          },
+          "401": {
+            "description": "Sin sesión o token inválido"
+          },
+          "403": {
+            "description": "Rol o membresía insuficiente"
+          }
+        }
+      }
+    },
+    "/api/v1/evidence/{id}/download": {
+      "get": {
+        "summary": "GET /api/v1/evidence/:id/download",
+        "description": "auth + autoriza(rol(admin|developer|buyer|verifier|notary) · proyecto(Evidence:id → developer|buyer|verifier))",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "schema": {
+              "type": "string"
+            },
+            "required": true
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          },
+          "401": {
+            "description": "Sin sesión o token inválido"
+          },
+          "403": {
+            "description": "Rol o membresía insuficiente"
+          }
+        }
+      }
+    },
+    "/api/v1/evidence/reconcile": {
+      "post": {
+        "summary": "POST /api/v1/evidence/reconcile",
+        "description": "auth + autoriza(rol(admin) · soloRol)",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          },
+          "401": {
+            "description": "Sin sesión o token inválido"
+          },
+          "403": {
+            "description": "Rol o membresía insuficiente"
+          }
+        }
+      }
+    },
+    "/api/v1/evidence/{id}/anchor": {
+      "post": {
+        "summary": "POST /api/v1/evidence/:id/anchor",
+        "description": "auth + autoriza(rol(admin) · proyecto(Evidence:id → developer|buyer|verifier))",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "schema": {
+              "type": "string"
+            },
+            "required": true
+          }
+        ],
+        "responses": {
+          "201": {
+            "description": "OK"
+          },
+          "401": {
+            "description": "Sin sesión o token inválido"
+          },
+          "403": {
+            "description": "Rol o membresía insuficiente"
+          }
+        }
+      }
+    },
+    "/api/v1/evidence/{bundleId}/proof/{fileHash}": {
+      "get": {
+        "summary": "GET /api/v1/evidence/:bundleId/proof/:fileHash",
+        "description": "auth + autoriza(rol(admin|developer|buyer|verifier|notary) · proyecto(EvidenceBundle:bundleId → developer|buyer|verifier))",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "in": "path",
+            "name": "bundleId",
+            "schema": {
+              "type": "string"
+            },
+            "required": true
+          },
+          {
+            "in": "path",
+            "name": "fileHash",
+            "schema": {
+              "type": "string"
+            },
+            "required": true
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          },
+          "401": {
+            "description": "Sin sesión o token inválido"
+          },
+          "403": {
+            "description": "Rol o membresía insuficiente"
+          }
+        }
+      }
+    },
+    "/api/v1/evidence/{bundleId}/files": {
+      "get": {
+        "summary": "GET /api/v1/evidence/:bundleId/files",
+        "description": "auth + autoriza(rol(admin|developer|buyer|verifier|notary) · proyecto(EvidenceBundle:bundleId → developer|buyer|verifier))",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "in": "path",
+            "name": "bundleId",
+            "schema": {
+              "type": "string"
+            },
+            "required": true
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          },
+          "401": {
+            "description": "Sin sesión o token inválido"
+          },
+          "403": {
+            "description": "Rol o membresía insuficiente"
+          }
+        }
+      }
+    },
+    "/api/v1/contracts/{contractId}/releases": {
+      "get": {
+        "summary": "GET /api/v1/contracts/:contractId/releases",
+        "description": "auth + autoriza(rol(admin|developer|buyer|verifier|notary) · alguna[dueño(Contract:contractId) | proyecto(Contract:contractId → developer|buyer|verifier)])",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "in": "path",
+            "name": "contractId",
+            "schema": {
+              "type": "string"
+            },
+            "required": true
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          },
+          "401": {
+            "description": "Sin sesión o token inválido"
+          },
+          "403": {
+            "description": "Rol o membresía insuficiente"
+          }
+        }
+      }
+    },
+    "/api/v1/notifications/unread-count": {
+      "get": {
+        "summary": "GET /api/v1/notifications/unread-count",
+        "description": "auth + autoriza(rol(admin|developer|buyer|verifier|notary) · scope(Notification.userId = usuario))",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          },
+          "401": {
+            "description": "Sin sesión o token inválido"
+          },
+          "403": {
+            "description": "Rol o membresía insuficiente"
+          }
+        }
+      }
+    },
+    "/api/v1/notifications/{id}/read": {
+      "patch": {
+        "summary": "PATCH /api/v1/notifications/:id/read",
+        "description": "auth + autoriza(rol(admin|developer|buyer|verifier|notary) · scope(Notification.userId = usuario))",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "schema": {
+              "type": "string"
+            },
+            "required": true
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Sin contenido"
+          },
+          "401": {
+            "description": "Sin sesión o token inválido"
+          },
+          "403": {
+            "description": "Rol o membresía insuficiente"
+          }
+        }
+      }
+    },
+    "/api/v1/profile": {
+      "get": {
+        "summary": "GET /api/v1/profile",
+        "description": "auth + autoriza(rol(admin|developer|buyer|verifier|notary) · scope(User.id = usuario))",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          },
+          "401": {
+            "description": "Sin sesión o token inválido"
+          },
+          "403": {
+            "description": "Rol o membresía insuficiente"
+          }
+        }
+      },
+      "patch": {
+        "summary": "PATCH /api/v1/profile",
+        "description": "auth + autoriza(rol(admin|developer|buyer|verifier|notary) · scope(User.id = usuario))",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "fullName": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 120
+                  }
+                },
+                "required": [
+                  "fullName"
+                ],
+                "additionalProperties": false
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "OK"
+          },
+          "400": {
+            "description": "Body o query no pasan el schema",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ValidationError"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Sin sesión o token inválido"
+          },
+          "403": {
+            "description": "Rol o membresía insuficiente"
+          }
+        }
+      }
+    },
+    "/api/v1/profile/notifications": {
+      "patch": {
+        "summary": "PATCH /api/v1/profile/notifications",
+        "description": "auth + autoriza(rol(admin|developer|buyer|verifier|notary) · scope(User.id = usuario))",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "stage": {
+                    "default": true,
+                    "type": "boolean"
+                  },
+                  "document": {
+                    "default": true,
+                    "type": "boolean"
+                  },
+                  "release": {
+                    "default": true,
+                    "type": "boolean"
+                  },
+                  "signature": {
+                    "default": true,
+                    "type": "boolean"
+                  },
+                  "certificate": {
+                    "default": true,
+                    "type": "boolean"
+                  }
+                },
+                "additionalProperties": false
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "OK"
+          },
+          "400": {
+            "description": "Body o query no pasan el schema",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ValidationError"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Sin sesión o token inválido"
+          },
+          "403": {
+            "description": "Rol o membresía insuficiente"
+          }
+        }
+      }
+    },
+    "/api/v1/audit-logs": {
+      "get": {
+        "summary": "GET /api/v1/audit-logs",
+        "description": "auth + autoriza(rol(admin) · soloRol)",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          },
+          "401": {
+            "description": "Sin sesión o token inválido"
+          },
+          "403": {
+            "description": "Rol o membresía insuficiente"
+          }
+        }
+      }
+    },
+    "/api/v1/audit-logs/telemetry/reservation-to-escrow": {
+      "get": {
+        "summary": "GET /api/v1/audit-logs/telemetry/reservation-to-escrow",
+        "description": "auth + autoriza(rol(admin) · soloRol)",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          },
+          "401": {
+            "description": "Sin sesión o token inválido"
+          },
+          "403": {
+            "description": "Rol o membresía insuficiente"
+          }
+        }
+      }
+    },
+    "/api/v1/public/dossier/{shareToken}": {
+      "get": {
+        "summary": "GET /api/v1/public/dossier/:shareToken",
+        "description": "Sin sesión — pública (M2-D5 §2.2)",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "shareToken",
+            "schema": {
+              "type": "string"
+            },
+            "required": true
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/api/v1/investor/favorites": {
+      "get": {
+        "summary": "GET /api/v1/investor/favorites",
+        "description": "auth + autoriza(rol(admin|buyer) · scope(Favorite.userId = usuario))",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          },
+          "401": {
+            "description": "Sin sesión o token inválido"
+          },
+          "403": {
+            "description": "Rol o membresía insuficiente"
+          }
+        }
+      }
+    },
+    "/api/v1/investor/favorites/{projectId}": {
+      "post": {
+        "summary": "POST /api/v1/investor/favorites/:projectId",
+        "description": "auth + autoriza(rol(admin|buyer) · soloRol)",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "in": "path",
+            "name": "projectId",
+            "schema": {
+              "type": "string"
+            },
+            "required": true
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Sin contenido"
+          },
+          "401": {
+            "description": "Sin sesión o token inválido"
+          },
+          "403": {
+            "description": "Rol o membresía insuficiente"
+          }
+        }
+      },
+      "delete": {
+        "summary": "DELETE /api/v1/investor/favorites/:projectId",
+        "description": "auth + autoriza(rol(admin|buyer) · scope(Favorite.userId = usuario))",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "in": "path",
+            "name": "projectId",
+            "schema": {
+              "type": "string"
+            },
+            "required": true
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Sin contenido"
+          },
+          "401": {
+            "description": "Sin sesión o token inválido"
+          },
+          "403": {
+            "description": "Rol o membresía insuficiente"
+          }
+        }
+      }
+    },
+    "/api/v1/investor/units": {
+      "get": {
+        "summary": "GET /api/v1/investor/units",
+        "description": "auth + autoriza(rol(admin|buyer) · scope(Unit.investorId = usuario))",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          },
+          "401": {
+            "description": "Sin sesión o token inválido"
+          },
+          "403": {
+            "description": "Rol o membresía insuficiente"
+          }
+        }
+      }
+    },
+    "/api/v1/investor/units/{id}": {
+      "get": {
+        "summary": "GET /api/v1/investor/units/:id",
+        "description": "auth + autoriza(rol(admin|buyer) · dueño(Unit:id))",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "schema": {
+              "type": "string"
+            },
+            "required": true
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          },
+          "401": {
+            "description": "Sin sesión o token inválido"
+          },
+          "403": {
+            "description": "Rol o membresía insuficiente"
+          }
+        }
+      }
+    },
+    "/api/v1/investor/units/{id}/news": {
+      "get": {
+        "summary": "GET /api/v1/investor/units/:id/news",
+        "description": "auth + autoriza(rol(admin|buyer) · dueño(Unit:id))",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "schema": {
+              "type": "string"
+            },
+            "required": true
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          },
+          "401": {
+            "description": "Sin sesión o token inválido"
+          },
+          "403": {
+            "description": "Rol o membresía insuficiente"
+          }
+        }
+      }
+    },
+    "/api/v1/investor/units/{id}/dossier": {
+      "get": {
+        "summary": "GET /api/v1/investor/units/:id/dossier",
+        "description": "auth + autoriza(rol(admin|buyer) · dueño(Unit:id))",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "schema": {
+              "type": "string"
+            },
+            "required": true
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          },
+          "401": {
+            "description": "Sin sesión o token inválido"
+          },
+          "403": {
+            "description": "Rol o membresía insuficiente"
+          }
+        }
+      }
+    },
+    "/api/v1/investor/units/{id}/dossier/export.pdf": {
+      "get": {
+        "summary": "GET /api/v1/investor/units/:id/dossier/export.pdf",
+        "description": "auth + autoriza(rol(admin|buyer) · dueño(Unit:id))",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "schema": {
+              "type": "string"
+            },
+            "required": true
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          },
+          "401": {
+            "description": "Sin sesión o token inválido"
+          },
+          "403": {
+            "description": "Rol o membresía insuficiente"
+          }
+        }
+      }
+    },
+    "/api/v1/investor/units/{id}/dossier/share": {
+      "post": {
+        "summary": "POST /api/v1/investor/units/:id/dossier/share",
+        "description": "auth + autoriza(rol(admin|buyer) · dueño(Unit:id))",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "schema": {
+              "type": "string"
+            },
+            "required": true
+          }
+        ],
+        "responses": {
+          "201": {
+            "description": "OK"
+          },
+          "401": {
+            "description": "Sin sesión o token inválido"
+          },
+          "403": {
+            "description": "Rol o membresía insuficiente"
+          }
+        }
+      }
+    },
+    "/api/v1/investor/notifications": {
+      "get": {
+        "summary": "GET /api/v1/investor/notifications",
+        "description": "auth + autoriza(rol(admin|buyer) · scope(Notification.userId = usuario))",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "in": "query",
+            "name": "unitId",
+            "schema": {
+              "type": "string",
+              "minLength": 1
+            }
+          },
+          {
+            "in": "query",
+            "name": "category",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "stage",
+                "document",
+                "release",
+                "signature",
+                "certificate"
+              ]
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          },
+          "400": {
+            "description": "Body o query no pasan el schema",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ValidationError"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Sin sesión o token inválido"
+          },
+          "403": {
+            "description": "Rol o membresía insuficiente"
+          }
+        }
+      }
+    },
+    "/api/v1/investor/invitations/{id}": {
+      "get": {
+        "summary": "GET /api/v1/investor/invitations/:id",
+        "description": "auth + autoriza(rol(admin|buyer) · dueño(Invitation:id))",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "schema": {
+              "type": "string"
+            },
+            "required": true
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          },
+          "401": {
+            "description": "Sin sesión o token inválido"
+          },
+          "403": {
+            "description": "Rol o membresía insuficiente"
+          }
+        }
+      }
+    },
+    "/api/v1/investor/invitations/{id}/accept": {
+      "post": {
+        "summary": "POST /api/v1/investor/invitations/:id/accept",
+        "description": "auth + autoriza(rol(admin|buyer) · dueño(Invitation:id))",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "schema": {
+              "type": "string"
+            },
+            "required": true
+          }
+        ],
+        "responses": {
+          "201": {
+            "description": "OK"
+          },
+          "401": {
+            "description": "Sin sesión o token inválido"
+          },
+          "403": {
+            "description": "Rol o membresía insuficiente"
+          }
+        }
+      }
+    },
+    "/api/v1/investor/invitations/{id}/decline": {
+      "post": {
+        "summary": "POST /api/v1/investor/invitations/:id/decline",
+        "description": "auth + autoriza(rol(admin|buyer) · dueño(Invitation:id))",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "schema": {
+              "type": "string"
+            },
+            "required": true
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Sin contenido"
+          },
+          "401": {
+            "description": "Sin sesión o token inválido"
+          },
+          "403": {
+            "description": "Rol o membresía insuficiente"
+          }
+        }
+      }
+    },
+    "/api/v1/investor/contracts/{unitId}": {
+      "get": {
+        "summary": "GET /api/v1/investor/contracts/:unitId",
+        "description": "auth + autoriza(rol(admin|buyer) · dueño(ContractOfUnit:unitId))",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "in": "path",
+            "name": "unitId",
+            "schema": {
+              "type": "string"
+            },
+            "required": true
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          },
+          "401": {
+            "description": "Sin sesión o token inválido"
+          },
+          "403": {
+            "description": "Rol o membresía insuficiente"
+          }
+        }
+      }
+    },
+    "/api/v1/developer/projects": {
+      "get": {
+        "summary": "GET /api/v1/developer/projects",
+        "description": "auth + autoriza(rol(admin|developer) · scope(projectScope(developer)))",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          },
+          "401": {
+            "description": "Sin sesión o token inválido"
+          },
+          "403": {
+            "description": "Rol o membresía insuficiente"
+          }
+        }
+      },
+      "post": {
+        "summary": "POST /api/v1/developer/projects",
+        "description": "auth + autoriza(rol(admin|developer) · soloRol)",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "name": {
+                    "type": "string",
+                    "minLength": 1
+                  },
+                  "slug": {
+                    "type": "string",
+                    "minLength": 1
+                  },
+                  "address": {
+                    "type": "string"
+                  },
+                  "city": {
+                    "type": "string"
+                  },
+                  "country": {
+                    "type": "string"
+                  },
+                  "totalUnits": {
+                    "type": "integer",
+                    "minimum": 0,
+                    "maximum": 9007199254740991
+                  },
+                  "estimatedDelivery": {
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "name",
+                  "slug"
+                ],
+                "additionalProperties": false
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "OK"
+          },
+          "400": {
+            "description": "Body o query no pasan el schema",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ValidationError"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Sin sesión o token inválido"
+          },
+          "403": {
+            "description": "Rol o membresía insuficiente"
+          }
+        }
+      }
+    },
+    "/api/v1/developer/projects/{id}": {
+      "get": {
+        "summary": "GET /api/v1/developer/projects/:id",
+        "description": "auth + autoriza(rol(admin|developer) · proyecto(id → developer))",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "schema": {
+              "type": "string"
+            },
+            "required": true
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          },
+          "401": {
+            "description": "Sin sesión o token inválido"
+          },
+          "403": {
+            "description": "Rol o membresía insuficiente"
+          }
+        }
+      }
+    },
+    "/api/v1/developer/progress": {
+      "get": {
+        "summary": "GET /api/v1/developer/progress",
+        "description": "auth + autoriza(rol(admin|developer) · scope(projectScope(developer)))",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          },
+          "401": {
+            "description": "Sin sesión o token inválido"
+          },
+          "403": {
+            "description": "Rol o membresía insuficiente"
+          }
+        }
+      }
+    },
+    "/api/v1/developer/documents": {
+      "get": {
+        "summary": "GET /api/v1/developer/documents",
+        "description": "auth + autoriza(rol(admin|developer) · scope(projectScope(developer)))",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "in": "query",
+            "name": "status",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "anchored",
+                "pending"
+              ]
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          },
+          "400": {
+            "description": "Body o query no pasan el schema",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ValidationError"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Sin sesión o token inválido"
+          },
+          "403": {
+            "description": "Rol o membresía insuficiente"
+          }
+        }
+      },
+      "post": {
+        "summary": "POST /api/v1/developer/documents",
+        "description": "auth + autoriza(rol(admin|developer) · proyecto(Evidence:evidenceId@body → developer))",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "evidenceId": {
+                    "type": "string",
+                    "minLength": 1
+                  }
+                },
+                "required": [
+                  "evidenceId"
+                ],
+                "additionalProperties": false
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "OK"
+          },
+          "400": {
+            "description": "Body o query no pasan el schema",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ValidationError"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Sin sesión o token inválido"
+          },
+          "403": {
+            "description": "Rol o membresía insuficiente"
+          }
+        }
+      }
+    },
+    "/api/v1/developer/audit-log": {
+      "get": {
+        "summary": "GET /api/v1/developer/audit-log",
+        "description": "auth + autoriza(rol(admin|developer) · scope(auditScope(developer)))",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "in": "query",
+            "name": "cursor",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "limit",
+            "schema": {
+              "default": 20,
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 100
+            }
+          },
+          {
+            "in": "query",
+            "name": "category",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          },
+          "400": {
+            "description": "Body o query no pasan el schema",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ValidationError"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Sin sesión o token inválido"
+          },
+          "403": {
+            "description": "Rol o membresía insuficiente"
+          }
+        }
+      }
+    },
+    "/api/v1/developer/kpis": {
+      "get": {
+        "summary": "GET /api/v1/developer/kpis",
+        "description": "auth + autoriza(rol(admin|developer) · scope(projectScope(cualquier membresía)))",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          },
+          "401": {
+            "description": "Sin sesión o token inválido"
+          },
+          "403": {
+            "description": "Rol o membresía insuficiente"
+          }
+        }
+      }
+    },
+    "/api/v1/developer/projects/{id}/units": {
+      "get": {
+        "summary": "GET /api/v1/developer/projects/:id/units",
+        "description": "auth + autoriza(rol(admin|developer) · proyecto(id → developer))",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "schema": {
+              "type": "string"
+            },
+            "required": true
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          },
+          "401": {
+            "description": "Sin sesión o token inválido"
+          },
+          "403": {
+            "description": "Rol o membresía insuficiente"
+          }
+        }
+      },
+      "post": {
+        "summary": "POST /api/v1/developer/projects/:id/units",
+        "description": "auth + autoriza(rol(admin|developer) · proyecto(id → developer))",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "schema": {
+              "type": "string"
+            },
+            "required": true
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "unitReference": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 20
+                  },
+                  "floor": {
+                    "type": "integer",
+                    "minimum": -9007199254740991,
+                    "maximum": 9007199254740991
+                  },
+                  "sizeM2": {
+                    "type": "integer",
+                    "exclusiveMinimum": 0,
+                    "maximum": 9007199254740991
+                  },
+                  "priceMinorUnits": {
+                    "type": "integer",
+                    "minimum": 0,
+                    "maximum": 9007199254740991
+                  },
+                  "currency": {
+                    "type": "string",
+                    "minLength": 3,
+                    "maxLength": 3
+                  }
+                },
+                "required": [
+                  "unitReference"
+                ],
+                "additionalProperties": false
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "OK"
+          },
+          "400": {
+            "description": "Body o query no pasan el schema",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ValidationError"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Sin sesión o token inválido"
+          },
+          "403": {
+            "description": "Rol o membresía insuficiente"
+          }
+        }
+      }
+    },
+    "/api/v1/developer/units/{id}": {
+      "patch": {
+        "summary": "PATCH /api/v1/developer/units/:id",
+        "description": "auth + autoriza(rol(admin|developer) · proyecto(Unit:id → developer))",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "schema": {
+              "type": "string"
+            },
+            "required": true
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "status": {
+                    "type": "string",
+                    "enum": [
+                      "available",
+                      "reserved",
+                      "sold",
+                      "delivered"
+                    ]
+                  },
+                  "floor": {
+                    "type": "integer",
+                    "minimum": -9007199254740991,
+                    "maximum": 9007199254740991
+                  },
+                  "sizeM2": {
+                    "type": "integer",
+                    "exclusiveMinimum": 0,
+                    "maximum": 9007199254740991
+                  },
+                  "priceMinorUnits": {
+                    "type": "integer",
+                    "minimum": 0,
+                    "maximum": 9007199254740991
+                  },
+                  "currency": {
+                    "type": "string",
+                    "minLength": 3,
+                    "maxLength": 3
+                  }
+                },
+                "additionalProperties": false
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "OK"
+          },
+          "400": {
+            "description": "Body o query no pasan el schema",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ValidationError"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Sin sesión o token inválido"
+          },
+          "403": {
+            "description": "Rol o membresía insuficiente"
+          }
+        }
+      }
+    },
+    "/api/v1/developer/units": {
+      "get": {
+        "summary": "GET /api/v1/developer/units",
+        "description": "auth + autoriza(rol(admin|developer) · scope(projectScope(developer)))",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          },
+          "401": {
+            "description": "Sin sesión o token inválido"
+          },
+          "403": {
+            "description": "Rol o membresía insuficiente"
+          }
+        }
+      }
+    },
+    "/api/v1/developer/projects/{id}/invitations": {
+      "post": {
+        "summary": "POST /api/v1/developer/projects/:id/invitations",
+        "description": "auth + autoriza(rol(admin|developer) · proyecto(id → developer))",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "schema": {
+              "type": "string"
+            },
+            "required": true
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "unitId": {
+                    "type": "string",
+                    "minLength": 1
+                  },
+                  "investorEmail": {
+                    "type": "string",
+                    "format": "email",
+                    "pattern": "^(?!\\.)(?!.*\\.\\.)([A-Za-z0-9_'+\\-\\.]*)[A-Za-z0-9_+-]@([A-Za-z0-9][A-Za-z0-9\\-]*\\.)+[A-Za-z]{2,}$"
+                  },
+                  "amountMinorUnits": {
+                    "type": "integer",
+                    "exclusiveMinimum": 0,
+                    "maximum": 9007199254740991
+                  },
+                  "currency": {
+                    "type": "string",
+                    "minLength": 3,
+                    "maxLength": 3
+                  }
+                },
+                "required": [
+                  "unitId",
+                  "investorEmail",
+                  "amountMinorUnits",
+                  "currency"
+                ],
+                "additionalProperties": false
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "OK"
+          },
+          "400": {
+            "description": "Body o query no pasan el schema",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ValidationError"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Sin sesión o token inválido"
+          },
+          "403": {
+            "description": "Rol o membresía insuficiente"
+          }
+        }
+      }
+    },
+    "/api/v1/developer/projects/{id}/contracts": {
+      "get": {
+        "summary": "GET /api/v1/developer/projects/:id/contracts",
+        "description": "auth + autoriza(rol(admin|developer) · proyecto(id → developer))",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "schema": {
+              "type": "string"
+            },
+            "required": true
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          },
+          "401": {
+            "description": "Sin sesión o token inválido"
+          },
+          "403": {
+            "description": "Rol o membresía insuficiente"
+          }
+        }
+      }
+    },
+    "/api/v1/developer/contracts/{id}/releases/{stageNum}": {
+      "post": {
+        "summary": "POST /api/v1/developer/contracts/:id/releases/:stageNum",
+        "description": "auth + autoriza(rol(admin|developer) · proyecto(Contract:id → developer))",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "schema": {
+              "type": "string"
+            },
+            "required": true
+          },
+          {
+            "in": "path",
+            "name": "stageNum",
+            "schema": {
+              "type": "string"
+            },
+            "required": true
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "amountMinorUnits": {
+                    "type": "integer",
+                    "exclusiveMinimum": 0,
+                    "maximum": 9007199254740991
+                  }
+                },
+                "required": [
+                  "amountMinorUnits"
+                ],
+                "additionalProperties": false
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "OK"
+          },
+          "400": {
+            "description": "Body o query no pasan el schema",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ValidationError"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Sin sesión o token inválido"
+          },
+          "403": {
+            "description": "Rol o membresía insuficiente"
+          }
+        }
+      }
+    },
+    "/api/v1/developer/projects/{id}/stages/{stageId}/evidence": {
+      "post": {
+        "summary": "POST /api/v1/developer/projects/:id/stages/:stageId/evidence",
+        "description": "auth + autoriza(rol(admin|developer) · proyecto(id → developer))",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "schema": {
+              "type": "string"
+            },
+            "required": true
+          },
+          {
+            "in": "path",
+            "name": "stageId",
+            "schema": {
+              "type": "string"
+            },
+            "required": true
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "multipart/form-data": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "evidenceType": {
+                    "type": "string",
+                    "enum": [
+                      "document",
+                      "photo",
+                      "certificate"
+                    ]
+                  },
+                  "category": {
+                    "type": "string",
+                    "minLength": 1
+                  },
+                  "description": {
+                    "type": "string",
+                    "maxLength": 2000
+                  },
+                  "authoritative": {
+                    "type": "string"
+                  },
+                  "issuingAuthority": {
+                    "type": "string",
+                    "maxLength": 200
+                  }
+                },
+                "required": [
+                  "evidenceType",
+                  "category"
+                ]
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "OK"
+          },
+          "400": {
+            "description": "Body o query no pasan el schema",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ValidationError"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Sin sesión o token inválido"
+          },
+          "403": {
+            "description": "Rol o membresía insuficiente"
+          }
+        }
+      }
+    },
+    "/api/v1/developer/capital/summary": {
+      "get": {
+        "summary": "GET /api/v1/developer/capital/summary",
+        "description": "auth + autoriza(rol(admin|developer) · scope(projectScope(developer)))",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          },
+          "401": {
+            "description": "Sin sesión o token inválido"
+          },
+          "403": {
+            "description": "Rol o membresía insuficiente"
+          }
+        }
+      }
+    },
+    "/api/v1/developer/capital/monthly": {
+      "get": {
+        "summary": "GET /api/v1/developer/capital/monthly",
+        "description": "auth + autoriza(rol(admin|developer) · scope(projectScope(developer)))",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          },
+          "401": {
+            "description": "Sin sesión o token inválido"
+          },
+          "403": {
+            "description": "Rol o membresía insuficiente"
+          }
+        }
+      }
+    },
+    "/api/v1/developer/capital/by-project": {
+      "get": {
+        "summary": "GET /api/v1/developer/capital/by-project",
+        "description": "auth + autoriza(rol(admin|developer) · scope(projectScope(developer)))",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          },
+          "401": {
+            "description": "Sin sesión o token inválido"
+          },
+          "403": {
+            "description": "Rol o membresía insuficiente"
+          }
+        }
+      }
+    },
+    "/api/v1/developer/investors": {
+      "get": {
+        "summary": "GET /api/v1/developer/investors",
+        "description": "auth + autoriza(rol(admin|developer) · scope(projectScope(developer)))",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          },
+          "401": {
+            "description": "Sin sesión o token inválido"
+          },
+          "403": {
+            "description": "Rol o membresía insuficiente"
+          }
+        }
+      }
+    },
+    "/api/v1/notary/kpis": {
+      "get": {
+        "summary": "GET /api/v1/notary/kpis",
+        "description": "auth + autoriza(rol(admin|notary) · scope(Dossier.signedById = usuario))",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          },
+          "401": {
+            "description": "Sin sesión o token inválido"
+          },
+          "403": {
+            "description": "Rol o membresía insuficiente"
+          }
+        }
+      }
+    },
+    "/api/v1/notary/dossiers/pending": {
+      "get": {
+        "summary": "GET /api/v1/notary/dossiers/pending",
+        "description": "auth + autoriza(rol(admin|notary) · soloRol)",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          },
+          "401": {
+            "description": "Sin sesión o token inválido"
+          },
+          "403": {
+            "description": "Rol o membresía insuficiente"
+          }
+        }
+      }
+    },
+    "/api/v1/notary/dossiers/{id}": {
+      "get": {
+        "summary": "GET /api/v1/notary/dossiers/:id",
+        "description": "auth + autoriza(rol(admin|notary) · soloRol)",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "schema": {
+              "type": "string"
+            },
+            "required": true
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          },
+          "401": {
+            "description": "Sin sesión o token inválido"
+          },
+          "403": {
+            "description": "Rol o membresía insuficiente"
+          }
+        }
+      }
+    },
+    "/api/v1/notary/dossiers/{id}/sign": {
+      "post": {
+        "summary": "POST /api/v1/notary/dossiers/:id/sign",
+        "description": "auth + autoriza(rol(admin|notary) · soloRol)",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "schema": {
+              "type": "string"
+            },
+            "required": true
+          }
+        ],
+        "responses": {
+          "201": {
+            "description": "OK"
+          },
+          "401": {
+            "description": "Sin sesión o token inválido"
+          },
+          "403": {
+            "description": "Rol o membresía insuficiente"
+          }
+        }
+      }
+    },
+    "/api/v1/notary/dossiers/{id}/reject": {
+      "post": {
+        "summary": "POST /api/v1/notary/dossiers/:id/reject",
+        "description": "auth + autoriza(rol(admin|notary) · soloRol)",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "schema": {
+              "type": "string"
+            },
+            "required": true
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "note": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 2000
+                  }
+                },
+                "required": [
+                  "note"
+                ],
+                "additionalProperties": false
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "OK"
+          },
+          "400": {
+            "description": "Body o query no pasan el schema",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ValidationError"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Sin sesión o token inválido"
+          },
+          "403": {
+            "description": "Rol o membresía insuficiente"
+          }
+        }
+      }
+    },
+    "/api/v1/notary/signatures": {
+      "get": {
+        "summary": "GET /api/v1/notary/signatures",
+        "description": "auth + autoriza(rol(admin|notary) · scope(Dossier.signedById = usuario))",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "in": "query",
+            "name": "cursor",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "limit",
+            "schema": {
+              "default": 20,
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 100
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          },
+          "400": {
+            "description": "Body o query no pasan el schema",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ValidationError"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Sin sesión o token inválido"
+          },
+          "403": {
+            "description": "Rol o membresía insuficiente"
+          }
+        }
+      }
+    },
+    "/api/v1/certifier/kpis": {
+      "get": {
+        "summary": "GET /api/v1/certifier/kpis",
+        "description": "auth + autoriza(rol(admin|verifier) · scope(projectScope(cualquier membresía)))",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          },
+          "401": {
+            "description": "Sin sesión o token inválido"
+          },
+          "403": {
+            "description": "Rol o membresía insuficiente"
+          }
+        }
+      }
+    },
+    "/api/v1/certifier/assignments": {
+      "get": {
+        "summary": "GET /api/v1/certifier/assignments",
+        "description": "auth + autoriza(rol(admin|verifier) · scope(projectScope(cualquier membresía)))",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          },
+          "401": {
+            "description": "Sin sesión o token inválido"
+          },
+          "403": {
+            "description": "Rol o membresía insuficiente"
+          }
+        }
+      }
+    },
+    "/api/v1/certifier/stages/{id}": {
+      "get": {
+        "summary": "GET /api/v1/certifier/stages/:id",
+        "description": "auth + autoriza(rol(admin|verifier) · proyecto(Stage:id → verifier))",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "schema": {
+              "type": "string"
+            },
+            "required": true
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          },
+          "401": {
+            "description": "Sin sesión o token inválido"
+          },
+          "403": {
+            "description": "Rol o membresía insuficiente"
+          }
+        }
+      }
+    },
+    "/api/v1/certifier/stages/{id}/certify": {
+      "post": {
+        "summary": "POST /api/v1/certifier/stages/:id/certify",
+        "description": "auth + autoriza(rol(admin|verifier) · proyecto(Stage:id → verifier))",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "schema": {
+              "type": "string"
+            },
+            "required": true
+          }
+        ],
+        "responses": {
+          "201": {
+            "description": "OK"
+          },
+          "401": {
+            "description": "Sin sesión o token inválido"
+          },
+          "403": {
+            "description": "Rol o membresía insuficiente"
+          }
+        }
+      }
+    },
+    "/api/v1/certifier/stages/{id}/observe": {
+      "post": {
+        "summary": "POST /api/v1/certifier/stages/:id/observe",
+        "description": "auth + autoriza(rol(admin|verifier) · proyecto(Stage:id → verifier))",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "schema": {
+              "type": "string"
+            },
+            "required": true
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "note": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 2000
+                  }
+                },
+                "required": [
+                  "note"
+                ],
+                "additionalProperties": false
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "OK"
+          },
+          "400": {
+            "description": "Body o query no pasan el schema",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ValidationError"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Sin sesión o token inválido"
+          },
+          "403": {
+            "description": "Rol o membresía insuficiente"
+          }
+        }
+      }
+    },
+    "/api/v1/certifier/certificates": {
+      "get": {
+        "summary": "GET /api/v1/certifier/certificates",
+        "description": "auth + autoriza(rol(admin|verifier) · scope(Stage.certifiedById = usuario))",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "in": "query",
+            "name": "cursor",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "limit",
+            "schema": {
+              "default": 20,
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 100
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          },
+          "400": {
+            "description": "Body o query no pasan el schema",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ValidationError"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Sin sesión o token inválido"
+          },
+          "403": {
+            "description": "Rol o membresía insuficiente"
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "schemas": {
+      "ValidationError": {
+        "type": "object",
+        "properties": {
+          "formErrors": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "fieldErrors": {
+            "type": "object",
+            "propertyNames": {
+              "type": "string"
+            },
+            "additionalProperties": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            }
+          }
+        },
+        "required": [
+          "formErrors",
+          "fieldErrors"
+        ],
+        "additionalProperties": false
+      }
+    },
+    "securitySchemes": {
+      "bearerAuth": {
+        "type": "http",
+        "scheme": "bearer",
+        "bearerFormat": "JWT"
+      }
+    }
+  }
+}
