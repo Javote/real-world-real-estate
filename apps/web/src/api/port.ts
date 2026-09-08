@@ -32,7 +32,6 @@ import type {
   DeveloperProjectDetail,
   DeveloperProjectUnit,
   DeveloperUnit,
-  Evidence,
   InvestorContract,
   InvestorInvitation,
   InvestorUnit,
@@ -139,15 +138,6 @@ export const api = {
   getNotaryPendingDossiers: () => request<PendingDossier[]>('/api/v1/notary/dossiers/pending'),
 
   getProject: (id: string) => request<ProjectDetail>(`/api/v1/projects/${id}`),
-
-  listEvidence: (projectId: string) =>
-    request<Evidence[]>(`/api/v1/projects/${projectId}/evidence`),
-
-  uploadEvidence: (projectId: string, form: FormData) =>
-    request<Evidence>(`/api/v1/projects/${projectId}/evidence`, {
-      method: 'POST',
-      body: form
-    }),
 
   setMilestoneState: (stageId: string, state: StageState) =>
     request<Stage>(`/api/v1/stages/${stageId}/state`, jsonInit('PATCH', { state })),

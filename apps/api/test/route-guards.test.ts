@@ -60,10 +60,6 @@ const MATRIZ: Record<string, string> = {
     "auth + autoriza(rol(admin) · proyecto(id → developer|buyer|verifier))",
   "GET /api/v1/projects/:id/stages/:stageId":
     "auth + autoriza(rol(admin|developer|buyer|verifier|notary) · proyecto(id → developer|buyer|verifier))",
-  "GET /api/v1/projects/:id/evidence":
-    "auth + autoriza(rol(admin|developer|buyer|verifier|notary) · proyecto(id → developer|buyer|verifier))",
-  "POST /api/v1/projects/:id/evidence":
-    "auth + autoriza(rol(admin|developer) · proyecto(id → developer))",
   "GET /api/v1/stages/:id":
     "auth + autoriza(rol(admin|developer|buyer|verifier|notary) · proyecto(Stage:id → developer|buyer|verifier))",
   "PATCH /api/v1/stages/:id":

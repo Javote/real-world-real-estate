@@ -8,6 +8,14 @@ import { createId } from "../src/db/id";
 import { db } from "../src/lib/db";
 import { FIXTURES } from "./global-setup";
 
+// 2026-09-08: `POST /projects/:id/evidence` y `GET /projects/:id/evidence`
+// (CRUD genérico, sin caller real en el front — ver CLAUDE.md raíz) se
+// borraron. Esta suite pasó a probar la ruta real que usa la pantalla,
+// `POST /developer/projects/:id/stages/:stageId/evidence` (M2-D5 fila 38),
+// que exige `stageId` en el path — a diferencia de la vieja, no admite un
+// "documento suelto" sin etapa, y esa es la diferencia real entre las dos:
+// la vieja lo permitía porque nadie lo pedía, no porque alguien lo usara.
+
 const UPLOAD_DIR = resolve(process.cwd(), process.env.UPLOAD_DIR ?? "./test-uploads");
 const PDF = Buffer.from("%PDF-1.4\nevidencia de prueba\n%%EOF\n");
 
@@ -20,6 +28,7 @@ const archivosEnDisco = () => (existsSync(UPLOAD_DIR) ? readdirSync(UPLOAD_DIR).
 let miembro: string;
 let ajeno: string;
 let projectId: string;
+let stageId: string;
 
 beforeAll(async () => {
   miembro = await token(FIXTURES.activo.email, FIXTURES.activo.password);
@@ -30,6 +39,14 @@ beforeAll(async () => {
     .where("slug", "=", FIXTURES.proyecto.slug)
     .executeTakeFirstOrThrow();
   projectId = p.id;
+
+  // Una sola etapa para los tests que no le importa el estado del stage —
+  // los que sí (Pending→InProgress) crean la suya propia, más abajo.
+  const stage = await request(app)
+    .post(`/api/v1/projects/${projectId}/stages`)
+    .set("Authorization", `Bearer ${miembro}`)
+    .send({ name: "Stage para subida de evidencia", sequenceOrder: 999_501 });
+  stageId = stage.body.id;
 });
 
 afterAll(async () => {
@@ -38,11 +55,12 @@ afterAll(async () => {
 
 const subir = (
   tk: string,
+  sId: string,
   campos: Record<string, string>,
   archivo?: { buf: Buffer; nombre: string; tipo: string }
 ) => {
   const req = request(app)
-    .post(`/api/v1/projects/${projectId}/evidence`)
+    .post(`/api/v1/developer/projects/${projectId}/stages/${sId}/evidence`)
     .set("Authorization", `Bearer ${tk}`);
   for (const [k, v] of Object.entries(campos)) req.field(k, v);
   if (archivo)
@@ -50,10 +68,11 @@ const subir = (
   return req;
 };
 
-describe("POST /projects/:id/evidence — subida de evidencia", () => {
+describe("POST /developer/projects/:id/stages/:stageId/evidence — subida de evidencia", () => {
   it("un developer miembro sube un PDF y el servidor calcula el SHA-256", async () => {
     const res = await subir(
       miembro,
+      stageId,
       { evidenceType: "document", category: "permiso" },
       {
         buf: PDF,
@@ -65,14 +84,15 @@ describe("POST /projects/:id/evidence — subida de evidencia", () => {
     expect(res.status).toBe(201);
     // El hash lo calcula el SERVIDOR (regla 3): no llega del cliente, y tiene
     // que ser el del contenido real, no el de otra cosa.
-    expect(res.body.sha256Hash).toBe(createHash("sha256").update(PDF).digest("hex"));
-    expect(res.body.sha256Hash).toMatch(/^[a-f0-9]{64}$/);
+    expect(res.body.evidence.sha256Hash).toBe(createHash("sha256").update(PDF).digest("hex"));
+    expect(res.body.evidence.sha256Hash).toMatch(/^[a-f0-9]{64}$/);
   });
 
   it("rechaza un tipo de archivo no permitido SIN dejar el archivo huérfano", async () => {
     const antes = archivosEnDisco();
     const res = await subir(
       miembro,
+      stageId,
       { evidenceType: "document", category: "x" },
       {
         buf: Buffer.from("MZ ejecutable"),
@@ -91,6 +111,7 @@ describe("POST /projects/:id/evidence — subida de evidencia", () => {
     const gigante = Buffer.alloc(2 * 1024 * 1024, 0x41); // 2 MB contra un límite de 1
     const res = await subir(
       miembro,
+      stageId,
       { evidenceType: "photo", category: "obra" },
       {
         buf: gigante,
@@ -107,6 +128,7 @@ describe("POST /projects/:id/evidence — subida de evidencia", () => {
     // Falta `category`, que el schema exige.
     const res = await subir(
       miembro,
+      stageId,
       { evidenceType: "document" },
       {
         buf: PDF,
@@ -120,7 +142,7 @@ describe("POST /projects/:id/evidence — subida de evidencia", () => {
   });
 
   it("sin archivo devuelve 400", async () => {
-    const res = await subir(miembro, { evidenceType: "document", category: "permiso" });
+    const res = await subir(miembro, stageId, { evidenceType: "document", category: "permiso" });
 
     expect(res.status).toBe(400);
   });
@@ -129,6 +151,7 @@ describe("POST /projects/:id/evidence — subida de evidencia", () => {
     const antes = archivosEnDisco();
     const res = await subir(
       ajeno,
+      stageId,
       { evidenceType: "document", category: "permiso" },
       {
         buf: PDF,
@@ -145,7 +168,7 @@ describe("POST /projects/:id/evidence — subida de evidencia", () => {
 
   it("sin token no se puede subir", async () => {
     const res = await request(app)
-      .post(`/api/v1/projects/${projectId}/evidence`)
+      .post(`/api/v1/developer/projects/${projectId}/stages/${stageId}/evidence`)
       .field("evidenceType", "document")
       .field("category", "permiso")
       .attach("file", PDF, { filename: "x.pdf", contentType: "application/pdf" });
@@ -163,6 +186,7 @@ describe("evidencia — storagePath jamás sale al cliente (D-011)", () => {
   beforeAll(async () => {
     const res = await subir(
       miembro,
+      stageId,
       { evidenceType: "document", category: "permiso" },
       {
         buf: PDF,
@@ -170,12 +194,13 @@ describe("evidencia — storagePath jamás sale al cliente (D-011)", () => {
         tipo: "application/pdf"
       }
     );
-    evidenceId = res.body.id;
+    evidenceId = res.body.evidence.id;
   });
 
-  it("POST /projects/:id/evidence no devuelve storagePath", async () => {
+  it("POST .../evidence no devuelve storagePath", async () => {
     const res = await subir(
       miembro,
+      stageId,
       { evidenceType: "document", category: "permiso" },
       {
         buf: PDF,
@@ -185,12 +210,12 @@ describe("evidencia — storagePath jamás sale al cliente (D-011)", () => {
     );
 
     expect(res.status).toBe(201);
-    expect(res.body).not.toHaveProperty("storagePath");
+    expect(res.body.evidence).not.toHaveProperty("storagePath");
   });
 
-  it("GET /projects/:id/evidence (listado) no devuelve storagePath", async () => {
+  it("GET /developer/documents (listado, cross-proyecto) no devuelve storagePath", async () => {
     const res = await request(app)
-      .get(`/api/v1/projects/${projectId}/evidence`)
+      .get("/api/v1/developer/documents")
       .set("Authorization", `Bearer ${miembro}`);
 
     expect(res.status).toBe(200);
@@ -230,7 +255,7 @@ describe("evidencia — storagePath jamás sale al cliente (D-011)", () => {
 // un developer sube a un stage Pending es la señal de que el trabajo
 // arrancó — sin botón aparte. Ver CLAUDE.md raíz y la restricción de
 // PATCH /stages/:id/state en stage-transitions.test.ts.
-describe("POST /projects/:id/evidence · dispara Pending → InProgress", () => {
+describe("POST .../evidence · dispara Pending → InProgress", () => {
   async function crearStage(estado: "Pending" | "InProgress" | "Observed") {
     const ahora = new Date();
     const id = createId();
@@ -251,11 +276,12 @@ describe("POST /projects/:id/evidence · dispara Pending → InProgress", () => 
   }
 
   it("la primera evidencia mueve el stage de Pending a InProgress", async () => {
-    const stageId = await crearStage("Pending");
+    const nuevo = await crearStage("Pending");
 
     const res = await subir(
       miembro,
-      { evidenceType: "photo", category: "avance", stageId },
+      nuevo,
+      { evidenceType: "photo", category: "avance" },
       { buf: PDF, nombre: "foto.pdf", tipo: "application/pdf" }
     );
     expect(res.status).toBe(201);
@@ -263,17 +289,18 @@ describe("POST /projects/:id/evidence · dispara Pending → InProgress", () => 
     const fila = await db
       .selectFrom("Stage")
       .select("state")
-      .where("id", "=", stageId)
+      .where("id", "=", nuevo)
       .executeTakeFirstOrThrow();
     expect(fila.state).toBe("InProgress");
   });
 
   it("subir evidencia a un stage ya InProgress no dispara nada raro (no-op)", async () => {
-    const stageId = await crearStage("InProgress");
+    const nuevo = await crearStage("InProgress");
 
     const res = await subir(
       miembro,
-      { evidenceType: "photo", category: "avance", stageId },
+      nuevo,
+      { evidenceType: "photo", category: "avance" },
       { buf: PDF, nombre: "foto2.pdf", tipo: "application/pdf" }
     );
     expect(res.status).toBe(201);
@@ -281,17 +308,18 @@ describe("POST /projects/:id/evidence · dispara Pending → InProgress", () => 
     const fila = await db
       .selectFrom("Stage")
       .select("state")
-      .where("id", "=", stageId)
+      .where("id", "=", nuevo)
       .executeTakeFirstOrThrow();
     expect(fila.state).toBe("InProgress");
   });
 
   it("subir evidencia a un stage Observed NO lo reabre solo — esa es una acción aparte", async () => {
-    const stageId = await crearStage("Observed");
+    const nuevo = await crearStage("Observed");
 
     const res = await subir(
       miembro,
-      { evidenceType: "photo", category: "correccion", stageId },
+      nuevo,
+      { evidenceType: "photo", category: "correccion" },
       { buf: PDF, nombre: "correccion.pdf", tipo: "application/pdf" }
     );
     expect(res.status).toBe(201);
@@ -299,18 +327,8 @@ describe("POST /projects/:id/evidence · dispara Pending → InProgress", () => 
     const fila = await db
       .selectFrom("Stage")
       .select("state")
-      .where("id", "=", stageId)
+      .where("id", "=", nuevo)
       .executeTakeFirstOrThrow();
     expect(fila.state).toBe("Observed");
-  });
-
-  it("evidencia sin stageId (documento suelto del proyecto) no toca ningún stage", async () => {
-    const res = await subir(
-      miembro,
-      { evidenceType: "document", category: "general" },
-      { buf: PDF, nombre: "suelto.pdf", tipo: "application/pdf" }
-    );
-    expect(res.status).toBe(201);
-    expect(res.body.stageId).toBeNull();
   });
 });

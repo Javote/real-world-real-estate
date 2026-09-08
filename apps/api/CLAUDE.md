@@ -18,8 +18,15 @@ append-only y el shape de `Project`/`Evidence`.
 van **scopeados por rol** (`/investor/`, `/developer/`, `/notary/`, `/certifier/`). El backlog de
 M2-D5 §4-6 está **completo**: los 18 work streams `M3-BE-XX` tienen sus rutas montadas y con test.
 
-Lo que queda fuera del backlog y sigue vivo: el CRUD genérico (`/projects`, `/users`, `/evidence`),
-que la superficie del entregable no consume pero los tests y el seed sí.
+Lo que queda fuera del backlog y sigue vivo: el CRUD genérico de `/projects` (crear/editar/borrar,
+miembros) y `/users` — admin-only, ops y fixtures, sin caller en el front. `/evidence` genérico
+(`GET/POST /projects/:id/evidence`) **se borró el 2026-09-08**: no era admin-only como el resto de
+esta lista, era `developer`-accesible y sombra exacta de la ruta real
+(`POST /developer/projects/:id/stages/:stageId/evidence`, M2-D5 fila 38) sin que nada lo distinguiera
+— confirmado que ningún componente del front la llamaba, y la confusión entre las dos costó una
+sesión entera. Ver el detalle en `CLAUDE.md` raíz. `POST /projects/:id/stages` (crear una etapa
+suelta) sigue viva a propósito: a diferencia de la de evidencia, no tiene ninguna gemela — es la
+única forma de crear una etapa fuera del template de 10, y la base para el día que exista esa UI.
 
 ## Checklist de un endpoint nuevo
 

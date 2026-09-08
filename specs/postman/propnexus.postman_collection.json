@@ -1876,32 +1876,6 @@
           }
         },
         {
-          "name": "GET /api/v1/projects/:id/evidence",
-          "request": {
-            "method": "GET",
-            "header": [
-              {
-                "key": "Authorization",
-                "value": "Bearer {{token}}"
-              }
-            ],
-            "url": {
-              "raw": "{{baseUrl}}/api/v1/projects/:id/evidence",
-              "host": [
-                "{{baseUrl}}"
-              ],
-              "path": [
-                "api",
-                "v1",
-                "projects",
-                ":id",
-                "evidence"
-              ]
-            },
-            "description": "auth + autoriza(rol(admin|developer|buyer|verifier|notary) · proyecto(id → developer|buyer|verifier))"
-          }
-        },
-        {
           "name": "GET /api/v1/projects/:id/members",
           "request": {
             "method": "GET",
@@ -2035,61 +2009,6 @@
                   "language": "json"
                 }
               }
-            }
-          }
-        },
-        {
-          "name": "POST /api/v1/projects/:id/evidence",
-          "request": {
-            "method": "POST",
-            "header": [
-              {
-                "key": "Authorization",
-                "value": "Bearer {{token}}"
-              }
-            ],
-            "url": {
-              "raw": "{{baseUrl}}/api/v1/projects/:id/evidence",
-              "host": [
-                "{{baseUrl}}"
-              ],
-              "path": [
-                "api",
-                "v1",
-                "projects",
-                ":id",
-                "evidence"
-              ]
-            },
-            "description": "auth + autoriza(rol(admin|developer) · proyecto(id → developer))",
-            "body": {
-              "mode": "formdata",
-              "formdata": [
-                {
-                  "key": "file",
-                  "type": "file"
-                },
-                {
-                  "key": "stageId",
-                  "type": "text",
-                  "value": ""
-                },
-                {
-                  "key": "evidenceType",
-                  "type": "text",
-                  "value": "document"
-                },
-                {
-                  "key": "category",
-                  "type": "text",
-                  "value": "permits"
-                },
-                {
-                  "key": "authoritative",
-                  "type": "text",
-                  "value": "false"
-                }
-              ]
             }
           }
         },

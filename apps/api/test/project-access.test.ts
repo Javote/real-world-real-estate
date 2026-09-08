@@ -111,11 +111,11 @@ describe("los endpoints de lectura siguen exigiendo membresía", () => {
     expect(res.status).toBe(403);
   });
 
-  it("un developer sin membresía no lista la evidencia del proyecto", async () => {
+  it("un developer sin membresía no lista los documentos del proyecto", async () => {
     const token = await tokenDe(FIXTURES.ajeno);
 
     const res = await request(app)
-      .get(`/api/v1/projects/${proyecto}/evidence`)
+      .get(`/api/v1/projects/${proyecto}/documents`)
       .set("Authorization", `Bearer ${token}`);
 
     expect(res.status).toBe(403);

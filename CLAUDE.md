@@ -426,13 +426,21 @@ entregable no consume pero los tests y el seed sí"*) — pero confirmado con `g
 "api.uploadEvidence" apps/web/src`: cero resultados, ningún componente la llama. No es una
 duplicación accidental que haya que resolver; es la distinción de siempre entre CRUD genérico y
 superficie del entregable, y el error fue mío por no chequear cuál de las dos usa la pantalla antes
-de editar. La lógica de auto-avance quedó en las dos rutas por consistencia (comparten
-`transitionStage`, no hay lógica repetida), pero el test que importa —contra la ruta real— se agregó
-en `browse-and-documents.test.ts`.
+de editar.
 
-**El dueño preguntó si hace falta auditar los 87 endpoints por este mismo motivo** (¿hay más pares
-CRUD-genérico / superficie-del-entregable donde no está claro cuál usa el front?) — quedó pendiente,
-a propósito, para otra sesión.
+**Corrección el mismo día: sí había que resolverla.** El dueño preguntó si hacía falta auditar los
+87 endpoints por este mismo motivo — no una auditoría completa (quedó pendiente, a propósito), pero
+sí se clasificaron los ~24 que ni M2-D5 ni M2-D6 declaran. La mayoría es CRUD genérico admin-only
+legítimo (`/users`, `/projects`, `/audit-logs`, `retry-anchor`) o infraestructura de dominio
+compartida ya documentada (`/stages/:id`, `/evidence/:id`). Pero `GET`/`POST /projects/:id/evidence`
+resultaron ser **distintas** del resto de esa lista: `developer`-accesibles (no admin-only) y sin
+ningún caller real en el front — confirmado con `grep -rn "api.uploadEvidence" apps/web/src`, cero
+resultados, la misma verificación que ya había hecho para la primera. Se borraron las dos, con sus
+tests migrados a la ruta real (`evidence-upload.test.ts` reescrito completo;
+`browse-and-documents.test.ts` y `project-access.test.ts` con un caso cada uno). `POST
+/projects/:id/stages` quedó fuera del borrado a propósito: no tiene ninguna gemela — es la única
+forma de crear una etapa suelta, y la base para el día que exista una UI de "agregar etapa". Detalle
+completo en `apps/api/CLAUDE.md` §CRUD genérico.
 
 Verificado de punta a punta con Claude en Chrome contra `pnpm dev` local (`ANCHOR_MODE=simulated`):
 crear un proyecto nuevo deja las 10 etapas minteadas y seleccionables en "Subir evidencia"; subir un

@@ -1,25 +1,14 @@
-import fs from "node:fs";
-import path from "node:path";
 import { INITIAL_STAGE_STATE } from "@plataforma/shared";
 import { type Request, Router } from "express";
 import { z } from "zod";
 import { createId } from "../db/id";
 import { reconciliarParaLectura } from "../domain/reconcile";
-import {
-  anchorEvent,
-  recordOnChainEvent,
-  retryStageMint,
-  transitionStage
-} from "../domain/stage-transition";
+import { anchorEvent, recordOnChainEvent, retryStageMint } from "../domain/stage-transition";
 import { db } from "../lib/db";
-import { storage } from "../lib/storage";
-import { uploadSingleEvidence } from "../lib/upload";
 import { ANY_MEMBERSHIP, authenticate, authorize, CUALQUIER_ROL } from "../middlewares/auth";
 import { writeAuditLog } from "../utils/audit";
-import { EVIDENCE_SAFE_COLUMNS } from "./_shared";
 
-// **El registro de obra de un proyecto**: sus stages y su evidencia (M2-D5
-// filas 08, 09-12).
+// **El registro de obra de un proyecto**: sus stages (M2-D5 filas 08, 09-12).
 //
 // Segundo router sobre `/api/v1/projects`. Se separa de `projects.routes.ts`
 // —que es el CRUD del proyecto y sus miembros— porque son dos cosas distintas
@@ -28,6 +17,17 @@ import { EVIDENCE_SAFE_COLUMNS } from "./_shared";
 //
 // **La FSM del stage no vive acá** (D-020): está en `packages/shared` y espejada
 // en Aiken. Estas rutas la consumen vía `domain/stage-transition`.
+//
+// **La subida de evidencia se borró de acá el 2026-09-08.** `GET/POST
+// /:id/evidence` eran CRUD genérico sin ningún caller real en el front —
+// confirmado con `grep -rn "api.uploadEvidence" apps/web/src`, cero
+// resultados — y la duplicación confundió una sesión entera (ver CLAUDE.md
+// raíz). La subida real vive en `developer-evidencia.routes.ts`
+// (`POST /developer/projects/:id/stages/:stageId/evidence`, M2-D5 fila 38),
+// que además devuelve Merkle root y TXID en la misma respuesta, como pide
+// M2-D5 §2.2. `POST /:id/stages` (crear una etapa suelta) sigue viva: no es
+// una duplicación — no hay ninguna otra ruta que cree una sola etapa, y es
+// la pieza base para el día que exista una UI de "agregar etapa".
 
 const router = Router();
 
@@ -251,225 +251,6 @@ router.get(
       hasOnChainThread: eventos.some((e) => e.outputRef !== null),
       events: eventos
     });
-  }
-);
-
-router.get(
-  "/:id/evidence",
-  authorize({
-    roles: CUALQUIER_ROL,
-    acceso: { proyecto: { param: "id" }, membresias: ANY_MEMBERSHIP }
-  }),
-  async (req, res) => {
-    const rows = await db
-      .selectFrom("Evidence")
-      .innerJoin("User", "User.id", "Evidence.uploadedById")
-      .leftJoin("Stage", "Stage.id", "Evidence.stageId")
-      .select([
-        ...EVIDENCE_SAFE_COLUMNS.map((c) => `Evidence.${c}` as const),
-        "User.id as uploadedBy_id",
-        "User.email as uploadedBy_email",
-        "User.fullName as uploadedBy_fullName",
-        "Stage.id as stage_id",
-        "Stage.projectId as stage_projectId",
-        "Stage.name as stage_name",
-        "Stage.sequenceOrder as stage_sequenceOrder",
-        "Stage.state as stage_state",
-        "Stage.validationCritical as stage_validationCritical",
-        "Stage.certifiedAt as stage_certifiedAt",
-        "Stage.certifiedById as stage_certifiedById",
-        "Stage.createdAt as stage_createdAt",
-        "Stage.updatedAt as stage_updatedAt"
-      ])
-      .where("Evidence.projectId", "=", req.params.id)
-      .orderBy("Evidence.uploadedAt", "desc")
-      .execute();
-
-    const evidence = rows.map((row) => ({
-      id: row.id,
-      projectId: row.projectId,
-      stageId: row.stageId,
-      uploadedById: row.uploadedById,
-      evidenceType: row.evidenceType,
-      category: row.category,
-      authoritative: row.authoritative,
-      originalFilename: row.originalFilename,
-      storedFilename: row.storedFilename,
-      mimeType: row.mimeType,
-      sizeBytes: row.sizeBytes,
-      sha256Hash: row.sha256Hash,
-      uploadedAt: row.uploadedAt,
-      createdAt: row.createdAt,
-      updatedAt: row.updatedAt,
-      uploadedBy: {
-        id: row.uploadedBy_id,
-        email: row.uploadedBy_email,
-        fullName: row.uploadedBy_fullName
-      },
-      stage: row.stage_id
-        ? {
-            id: row.stage_id,
-            projectId: row.stage_projectId,
-            name: row.stage_name,
-            sequenceOrder: row.stage_sequenceOrder,
-            state: row.stage_state,
-            validationCritical: row.stage_validationCritical,
-            certifiedAt: row.stage_certifiedAt,
-            certifiedById: row.stage_certifiedById,
-            createdAt: row.stage_createdAt,
-            updatedAt: row.stage_updatedAt
-          }
-        : null
-    }));
-
-    return res.json(evidence);
-  }
-);
-
-router.post(
-  "/:id/evidence",
-  // Antes de Multer a propósito: un request prohibido no llega a escribir el
-  // archivo, así que no hay huérfano que limpiar por esta vía. La limpieza de
-  // huérfanos sigue haciendo falta para lo que se rechaza DESPUÉS de Multer
-  // (tipo, tamaño, y los errores de la ruta) — ver SPEC-012.
-  authorize({
-    roles: ["admin", "developer"],
-    acceso: { proyecto: { param: "id" }, membresias: ["developer"] }
-  }),
-  (req, res, next) => {
-    uploadSingleEvidence(req, res, (err) => {
-      if (err) return next(err);
-      next();
-    });
-  },
-  async (req: Request<{ id: string }>, res) => {
-    const projectId = req.params.id;
-
-    if (!req.file) {
-      return res.status(400).json({ message: "File is required" });
-    }
-
-    const schema = z.object({
-      stageId: z.string().optional(),
-      evidenceType: z.enum(["document", "photo", "certificate"]),
-      category: z.string().min(1),
-      authoritative: z
-        .string()
-        .optional()
-        .transform((v) => v === "true")
-    });
-
-    const parsed = schema.safeParse(req.body);
-    if (!parsed.success) {
-      if (fs.existsSync(req.file.path)) {
-        fs.unlinkSync(req.file.path);
-      }
-      return res.status(400).json(parsed.error.flatten());
-    }
-
-    const project = await db
-      .selectFrom("Project")
-      .select("id")
-      .where("id", "=", projectId)
-      .executeTakeFirst();
-
-    if (!project) {
-      if (fs.existsSync(req.file.path)) {
-        fs.unlinkSync(req.file.path);
-      }
-      return res.status(404).json({ message: "Project not found" });
-    }
-
-    let stage: { id: string; state: string } | undefined;
-    if (parsed.data.stageId) {
-      stage = await db
-        .selectFrom("Stage")
-        .select(["id", "state"])
-        .where("id", "=", parsed.data.stageId)
-        .where("projectId", "=", projectId)
-        .executeTakeFirst();
-
-      if (!stage) {
-        if (fs.existsSync(req.file.path)) {
-          fs.unlinkSync(req.file.path);
-        }
-        return res.status(400).json({
-          message: "Stage does not belong to project"
-        });
-      }
-    }
-
-    // El archivo pasa por disco (Multer) y de ahí al storage configurado. El
-    // hash que se guarda es el de **los bytes guardados**, no el del temporal:
-    // con `s3`, `put` relee el objeto y lo rehashea. Ver `lib/storage.ts`.
-    const guardado = await storage.put({
-      localPath: path.resolve(req.file.path),
-      key: `evidence/${projectId}/${req.file.filename}`,
-      contentType: req.file.mimetype
-    });
-
-    // Con `s3` el temporal ya cumplió su función; con `disk` el "temporal" ES
-    // el destino, así que no se borra.
-    if (storage.driver === "s3" && fs.existsSync(req.file.path)) {
-      fs.unlinkSync(req.file.path);
-    }
-
-    const sha256Hash = guardado.sha256;
-    const now = new Date();
-
-    const created = await db
-      .insertInto("Evidence")
-      .values({
-        id: createId(),
-        projectId,
-        stageId: parsed.data.stageId ?? null,
-        uploadedById: req.user!.id,
-        evidenceType: parsed.data.evidenceType,
-        category: parsed.data.category,
-        authoritative: parsed.data.authoritative ?? false,
-        originalFilename: req.file.originalname,
-        storedFilename: req.file.filename,
-        mimeType: req.file.mimetype,
-        sizeBytes: req.file.size,
-        storagePath: guardado.storageRef,
-        sha256Hash,
-        uploadedAt: now,
-        createdAt: now,
-        updatedAt: now
-      })
-      .returning("id")
-      .executeTakeFirstOrThrow();
-
-    const evidence = await db
-      .selectFrom("Evidence")
-      .select(EVIDENCE_SAFE_COLUMNS)
-      .where("id", "=", created.id)
-      .executeTakeFirst();
-
-    await writeAuditLog({
-      actorUserId: req.user!.id,
-      action: "CREATE_EVIDENCE",
-      entityType: "Evidence",
-      entityId: created.id
-    });
-
-    // M1-D2c: "Pending → InProgress : work initiated". La primera evidencia
-    // que un developer sube a un stage Pending ES la señal de que el trabajo
-    // arrancó — no hace falta un botón aparte para decir lo que subir el
-    // archivo ya dice. `Observed → InProgress` ("remediation completed") NO
-    // se dispara acá a propósito: significaría reabrir el stage con
-    // cualquier archivo nuevo, sin que el developer decida explícitamente que
-    // la corrección está lista — esa transición pide su propia acción.
-    if (stage?.state === "Pending") {
-      await transitionStage({
-        stageId: stage.id,
-        to: "InProgress",
-        actorUserId: req.user!.id,
-        auditAction: "STAGE_WORK_INITIATED"
-      });
-    }
-
-    return res.status(201).json(evidence);
   }
 );
 

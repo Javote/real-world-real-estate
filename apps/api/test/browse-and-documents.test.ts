@@ -1,8 +1,10 @@
+import { createHash } from "node:crypto";
 import fs from "node:fs";
 import path from "node:path";
 import request from "supertest";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import app from "../src/app";
+import { createId } from "../src/db/id";
 import { db } from "../src/lib/db";
 import { FIXTURES } from "./global-setup";
 
@@ -135,10 +137,9 @@ describe("POST /developer/projects/:id/stages/:stageId/evidence", () => {
   });
 
   // 2026-09-08: esta es la ruta que la pantalla real usa (confirmado con
-  // Claude en Chrome contra dev — `POST /projects/:id/evidence`, sin el
-  // scope de stage en el path, es CRUD genérico que el front nunca llama).
-  // El auto-avance vive en las dos por consistencia, pero acá es donde
-  // importa que esté probado.
+  // Claude en Chrome contra dev). La gemela sin scope de stage en el path
+  // (`POST /projects/:id/evidence`) era CRUD genérico sin caller real y se
+  // borró el mismo día — ver CLAUDE.md raíz.
   it("la primera evidencia mueve el stage de Pending a InProgress", async () => {
     const nuevo = await request(app)
       .post(`/api/v1/projects/${projectId}/stages`)
@@ -209,29 +210,67 @@ describe("GET /projects/:id/documents y /projects/:id/stages/:stageId", () => {
 });
 
 describe("POST /developer/documents", () => {
-  it("ancla un documento suelto, y hacerlo dos veces no gasta otra transacción", async () => {
-    const subida = await request(app)
-      .post(`/api/v1/projects/${projectId}/evidence`)
-      .set("Authorization", `Bearer ${tokenDev}`)
-      .field("evidenceType", "document")
-      .field("category", "plano")
-      .attach("file", pdfDePrueba("suelto.pdf"));
+  // `POST /developer/documents` ancla un `Evidence` **existente** por id — no
+  // sube archivos. M2-D5 (filas 46-47) declara ese endpoint pero no cómo nace
+  // la evidencia sin stage: la única forma que había (`POST /projects/:id/
+  // evidence`, con `stageId` opcional) se borró el 2026-09-08 por ser CRUD
+  // genérico sin caller real. La fila se siembra acá directo, como cualquier
+  // otro fixture de esta suite — lo que se prueba es el anclaje, no la subida.
+  async function sembrarDocumentoSuelto(pid: string, contenido: Buffer) {
+    const usuario = await db
+      .selectFrom("User")
+      .select("id")
+      .where("email", "=", FIXTURES.activo.email)
+      .executeTakeFirstOrThrow();
+    const ahora = new Date();
+    const id = createId();
+    await db
+      .insertInto("Evidence")
+      .values({
+        id,
+        projectId: pid,
+        stageId: null,
+        uploadedById: usuario.id,
+        evidenceType: "document",
+        category: "plano",
+        authoritative: false,
+        originalFilename: "suelto.pdf",
+        storedFilename: `${id}.pdf`,
+        mimeType: "application/pdf",
+        sizeBytes: contenido.length,
+        storagePath: `evidence/${pid}/${id}.pdf`,
+        sha256Hash: createHash("sha256").update(contenido).digest("hex"),
+        uploadedAt: ahora,
+        createdAt: ahora,
+        updatedAt: ahora
+      })
+      .execute();
+    return id;
+  }
 
-    expect(subida.status).toBe(201);
+  it("ancla un documento suelto, y hacerlo dos veces no gasta otra transacción", async () => {
+    const evidenceId = await sembrarDocumentoSuelto(projectId, Buffer.from("plano suelto"));
+    const sha256Hash = (
+      await db
+        .selectFrom("Evidence")
+        .select("sha256Hash")
+        .where("id", "=", evidenceId)
+        .executeTakeFirstOrThrow()
+    ).sha256Hash;
 
     const primera = await request(app)
       .post("/api/v1/developer/documents")
       .set("Authorization", `Bearer ${tokenDev}`)
-      .send({ evidenceId: subida.body.id });
+      .send({ evidenceId });
 
     expect(primera.status).toBe(201);
     expect(primera.body.eventType).toBe("DOCUMENT_ANCHOR");
-    expect(primera.body.commitment).toBe(subida.body.sha256Hash);
+    expect(primera.body.commitment).toBe(sha256Hash);
 
     const segunda = await request(app)
       .post("/api/v1/developer/documents")
       .set("Authorization", `Bearer ${tokenDev}`)
-      .send({ evidenceId: subida.body.id });
+      .send({ evidenceId });
 
     expect(segunda.status).toBe(200);
     expect(segunda.body.id).toBe(primera.body.id);
