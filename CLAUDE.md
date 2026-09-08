@@ -373,17 +373,22 @@ estados a la vez, mismo proyecto—); `Project.status` (`planning`/`in_progress`
 | `InProgress → Observed` | certifier, exclusivo | "Observar" |
 | cualquiera | admin | sin restricción |
 
-**Verificado en vivo contra Preprod, con TXID real, tres de las cuatro:**
-`InProgress → Completed` (2026-09-08, `e842c8ac…571fe22`), `InProgress → Observed` y
-`Observed → InProgress` (mismo día, sobre `torre-a` / `Estructura`, ida y vuelta). **La cuarta,
-`Pending → InProgress`, sigue sin probarse en vivo por Chrome** — no por un bug del auto-avance
-(`evidence-upload.test.ts` la cubre con 4 tests y está en verde), sino porque **ningún proyecto
-tiene hoy una etapa en `Pending`**: `torre-a` gastó las suyas, y un proyecto nuevo nace con **cero**
-etapas — confirmado creando dos (`Torre Belgrano`, `Torre Demo E2E`) y viendo el selector "Elegí la
-etapa" vacío en los dos. Es el mismo pendiente #1 de siempre, con una cara nueva: no es que falte
-un botón de transición, es que falta el botón que crea la etapa **antes** de que cualquier
-transición tenga sentido. Sigue bloqueado en las mismas dos decisiones del dueño (nombrar las 10
-etapas, bulk-create transaccional) — no se atacó hoy, a propósito.
+**Verificado en vivo contra Preprod, con TXID real, las cuatro.** `InProgress → Completed`
+(2026-09-08, `e842c8ac…571fe22`), `InProgress → Observed` y `Observed → InProgress` (mismo día,
+sobre `torre-a` / `Estructura`, ida y vuelta) se probaron antes de que existiera el Stage template;
+`Pending → InProgress` quedó pendiente ese día porque **ningún proyecto tenía una etapa en
+`Pending`** — confirmado creando dos proyectos y viendo el selector "Elegí la etapa" vacío en los
+dos (era el pendiente #1, con una cara nueva). Resuelto el mismo día que se cerró el Stage template:
+creado "Torre Pending Test" (developer, vía `/developer/project/new`, las 10 etapas mintean en
+`Pending`), subida evidencia real a "Adquisición del terreno" (`/developer/project/:id/upload`,
+PDF generado con `pandoc`). Merkle root `25dc32…3dc4c` — coincide exacto con el hash calculado en
+local antes de subir — y **TXID real
+`578e40f5072353d609a5df9e978e396d55cf149bada16b361829cee2eb7a5486`**, confirmado en
+`preprod.cardanoscan.io` (3 confirmaciones, un solo metadato, sin movimiento de valor más que la
+fee). Verificado que el auto-avance ocurrió de verdad **contra la API de producción**, no solo
+mirando la UI: `GET /projects/:id/stages` devuelve la etapa 1 en `"state": "InProgress"` con
+`"hasOnChainThread": true`, las otras 9 siguen en `Pending`. Las cuatro aristas de la FSM del stage
+quedan probadas en vivo, cada una con su TXID.
 
 **Cerrado el mismo día · el pendiente #1 completo: las 10 etapas del template, con nombre y
 mecanismo de anclaje decididos por el dueño.**
