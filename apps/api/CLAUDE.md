@@ -37,6 +37,70 @@ que la superficie del entregable no consume pero los tests y el seed sí.
 
 ## Trampas verificadas
 
+- **2026-09-08 · un `require()` sin tipar no lo agarra ni `tsc` ni pnpm en local — encender OTel de
+  verdad tumbó producción con `MODULE_NOT_FOUND`.** `instrumentation.ts` ya usaba `require()` tardío
+  para los paquetes de OTel (comentario: "si el bloque de arriba no corriera... no tiene sentido
+  pagar el costo"); agregar `diag.setLogger` sumó `require("@opentelemetry/api")` sin declararlo en
+  `dependencies` de `apps/api/package.json`. Local no lo vio: `@opentelemetry/api` ya estaba en
+  `node_modules` como transitiva de `@opentelemetry/sdk-node` y compañía, y como es un `require()`
+  sin tipar, `tsc` lo trata como `any` y no valida el paquete contra ningún `package.json` — el build
+  salió verde. Render sí lo vio: `pnpm install --frozen-lockfile` en limpio arma un `node_modules`
+  por paquete que **no expone transitivas no declaradas**, así que el `--require` de producción
+  murió con `Error: Cannot find module '@opentelemetry/api'` apenas después de "Sentry activo".
+  **Fix:** declarar `@opentelemetry/api` como dependencia directa (versión resuelta del lockfile,
+  `^1.9.1`) y reproducir el `startCommand` real contra ese build antes de pushear — mismo criterio
+  que ya pedía el incidente del 2026-09-07, ahora hecho test: ver `.github/workflows/ci.yml` §Smoke
+  test del arranque compilado.
+  **La lección, que generaliza más allá de OTel:** un `require()` sin tipar (el patrón de esta misma
+  sección para imports ESM tardíos, ver más abajo) bypasea dos redes de seguridad a la vez — `tsc` no
+  valida el módulo porque no está tipado, y un local con `node_modules` viejo/hoisted puede tener el
+  paquete igual sin que esté declarado. Ninguna de las dos cosas se ve hasta una instalación limpia.
+- **2026-09-08 · Sentry (v10) registra sus propios globals de OTel y gana la carrera contra el
+  `NodeSDK` propio — los traces se perdían en silencio, el deploy quedaba `live` igual.**
+  `Sentry.init()` corre primero en `instrumentation.ts`; desde la v8, el SDK de Node de Sentry
+  configura su propio `TracerProvider`/`ContextManager`/`Propagator` de OTel internamente **aunque
+  `tracesSampleRate: 0`** — no es opcional a menos que se le diga. Cuando el `NodeSDK` propio corría
+  `sdk.start()` después, `registerGlobal` (de `@opentelemetry/api`) rechazaba el segundo registro con
+  `Attempted duplicate registration of API: context/propagation/trace` — pero **solo loguea, no
+  tira** — así que las auto-instrumentaciones de `http`/`express` seguían creando spans, solo que
+  contra el `TracerProvider` de Sentry (que los descarta, por el `tracesSampleRate: 0`) en vez del
+  nuestro, que es el único con un `OTLPTraceExporter` colgado. El proceso arrancaba sano, el deploy
+  quedaba `live`, y Tempo se quedaba vacío sin ningún error visible — se encontró recién leyendo los
+  logs con el `diag.setLogger` de la entrada de abajo.
+  **Fix:** `skipOpenTelemetrySetup: true` en `Sentry.init()` — es la forma que documenta Sentry para
+  convivir con un `NodeSDK` propio. Verificado local forzando el mismo arranque con env vars basura
+  (mismo patrón que la entrada de arriba): sin el flag, tres líneas de `Attempted duplicate
+  registration`; con el flag, ninguna.
+  **La lección:** un conflicto de dos SDKs de observability compitiendo por el mismo registro global
+  no tira el proceso — cada uno asume que es el único, y el que pierde queda funcionando pero mudo.
+  Si dos piezas de instrumentación tocan `@opentelemetry/api` en el mismo proceso, hay que preguntar
+  explícitamente cuál gana, no asumir que conviven solas.
+- **2026-09-08 · sin `diag.setLogger`, un exporter OTLP que falla queda mudo — ni acá ni en Grafana
+  aparece nada, solo ausencia de datos.** `@opentelemetry/api` no registra un logger de diagnóstico
+  por default; un exporter que recibe 401/malla de red solo llama a `diag.error(...)`, que sin logger
+  no imprime nada. El síntoma indistinguible de "no hay tráfico" es "el tráfico se pierde" — los dos
+  se ven igual (Grafana sin datos) hasta que se agrega el logger. **Fix:** `diag.setLogger(new
+  DiagConsoleLogger(), DiagLogLevel.ERROR)` antes de `sdk.start()`; con esto se encontraron los dos
+  incidentes siguientes de esta lista el mismo día. **Antes de asumir "no hay tráfico" con un
+  exporter que no dice nada: prendé el diag logger primero.**
+- **2026-09-08 · el asistente "OpenTelemetry (OTLP)" de Grafana Cloud genera el valor de
+  `OTEL_EXPORTER_OTLP_HEADERS` sin el prefijo `Authorization=` — Grafana contestaba 401
+  `"authentication error: no credentials provided"` con un token recién generado y bien copiado.**
+  La pantalla de setup (`Connections → Add new connection → OpenTelemetry (OTLP) → View connection
+  details`) da `export OTEL_EXPORTER_OTLP_HEADERS="<base64(instanceID:apiKey)>"` — el blob solo, sin
+  la clave. El SDK de Node parsea esa variable como pares `clave=valor` separados por coma
+  (`parseKeyPairsIntoRecord` de `@opentelemetry/core`, mismo formato que baggage HTTP); un valor sin
+  `=` antes del primer carácter útil no arma ningún header, así que Grafana literalmente no recibía
+  ningún `Authorization` — de ahí "no credentials provided" y no "token inválido". Verificado leyendo
+  el DOM de la página con Chrome (no la captura de pantalla, que se veía ambigua) y el código fuente
+  de `otlp-node-http-env-configuration.js` en `node_modules`, no adivinado.
+  **Fix, sobre el valor generado por Grafana:** anteponerle `Authorization=Basic%20` a mano antes de
+  pegarlo en Render — queda `Authorization=Basic%20<blob>`. El `%20` es opcional (`parsePairKeyValue`
+  hace `decodeURIComponent` de la parte del valor, así que un espacio literal también funciona), pero
+  usar `%20` evita cualquier ambigüedad de copiado. `apps/api/.env.example` ya documentaba el formato
+  correcto (`Authorization=Basic <base64(...)>`); lo que cambió es que el asistente de Grafana ya no
+  lo arma completo — antes de confiar en un valor generado por un wizard externo, comparalo contra lo
+  que el parser del lado nuestro realmente espera.
 - **2026-09-07 · `node --require` no resuelve rutas relativas igual que un script posicional —
   tumbó producción (`Failed deploy`).** El `startCommand` de `render.yaml` quedó como
   `node --require apps/api/dist/src/instrumentation.js apps/api/dist/src/server.js`, sin `./`

@@ -187,6 +187,22 @@ una condición de Kysely hermana de `projectScope` que resuelve `entityType`/`en
 esquema: hoy pediría la primera migración sobre una base desplegada (D-063) y un backfill que para
 varias filas viejas no tiene respuesta.
 
+**Cerrado el 2026-09-08 · observabilidad real en producción (Sentry + OTel → Grafana Cloud).** Las
+env vars de `render.yaml` (`SENTRY_DSN`, `OTEL_EXPORTER_OTLP_ENDPOINT`/`_HEADERS`,
+`VITE_SENTRY_DSN`, `VITE_POSTHOG_KEY`/`_HOST`) se cargaron a mano en el dashboard y se verificó
+traces reales de `propnexus-api` en Tempo, no solo que el proceso arrancara diciendo "activo". En el
+camino, dos incidentes de producción real: `@opentelemetry/api` sin declarar como dependencia
+directa tumbó el deploy con `MODULE_NOT_FOUND` (un `require()` sin tipar no lo agarra `tsc` ni una
+instalación local con `node_modules` viejo), y Sentry (v10) registrando sus propios globals de OTel
+antes que el `NodeSDK` propio dejaba los traces cayendo en silencio pese a que el deploy quedaba
+`live` — el bug no se hubiera visto sin agregar `diag.setLogger` primero. Los tres fixes, el smoke
+test de CI que ahora corre el `startCommand` real contra el build compilado, y el detalle completo
+de por qué el asistente de Grafana genera el header OTLP incompleto, están en `apps/api/CLAUDE.md`
+§Trampas verificadas y `specs/RUNBOOK-deploy.md` §4. De yapa: un warning de Vite por un chunk de
+619kB en el build del web (React + TanStack + Sentry/PostHog + Radix todo junto) se resolvió
+separando vendor chunks — sin relación con lo anterior, encontrado en el mismo log que se estaba
+revisando.
+
 **El diseño ya está decidido. El trabajo es transcribirlo, no inventarlo.**
 
 `docs/` tiene 70 capturas y un backlog de 53 superficies donde cada una ya trae su path, sus
