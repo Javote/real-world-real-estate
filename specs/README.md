@@ -58,7 +58,7 @@ aprobación explícita.
 | 12 | Pre-prod en **URL pública** | La URL, viva | ✅ `propnexus-web.onrender.com` + `propnexus-api.onrender.com`, las dos vivas |
 | 13 | **Video walkthrough** | El video | ⬜ |
 | 14 | **Runbook** deploy / rollback | [`RUNBOOK-deploy.md`](RUNBOOK-deploy.md) | ✅ Runbook cerrado. La evidencia de M5 también pide "monitoring screenshots": Sentry (errores) + OTel→Grafana Cloud (traces/métricas) + PostHog (web vitals, sin PII) instrumentados en código (`apps/api/src/instrumentation.ts`, `apps/web/src/lib/observability.ts`), **encendidas y verificadas en producción el 2026-09-08**: traces reales de `propnexus-api` confirmados en Tempo (datasource `grafanacloud-giantmountain1601-traces`), cuenta y token de Grafana Cloud creados. Falta solo el screenshot formal para la evidencia de M5 |
-| 15 | Lista de **TXIDs** de prueba | Publicada y resoluble en un explorador | ◐ **anclado desde la instancia desplegada el 2026-09-03** — metadata (`52a2aa42…f2f7aaf406`) y state-thread, mint + advance (`21bae8cb…c294970`, `b28eb6cf…36a0dbe`), los tres confirmados en Preprod. Falta publicar la lista formal |
+| 15 | Lista de **TXIDs** de prueba | Publicada y resoluble en un explorador | ◐ **anclado desde la instancia desplegada el 2026-09-03** — metadata (`52a2aa42…f2f7aaf406`) y state-thread, mint + advance (`21bae8cb…c294970`, `b28eb6cf…36a0dbe`), los tres confirmados en Preprod. **Sumado el 2026-09-08**, evidencia real subida vía Chrome contra producción (`torre-a` / Terminaciones): `ae521653fd9ba003160a9f48a2dfc9a799ee5b3936cbe5fcb8ba6654a793bb8d`, hash SHA-256 verificado contra el archivo local antes de subir. Falta publicar la lista formal |
 | 16 | README marca carpetas públicas vs privadas | En `README.md` | ✅ |
 
 ## Estado medido (2026-09-01)

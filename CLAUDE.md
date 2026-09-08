@@ -229,6 +229,19 @@ no tiene esos campos y no se inventan (regla 17). Es deuda de contrato declarada
 pendiente de UI. Verificado con Chrome logueado como notary e investor contra la instancia local,
 144 tests verdes.
 
+**Probado el 2026-09-08 · flujo real de punta a punta contra producción, vía Claude en Chrome —
+crear proyecto, subir evidencia, hashear, anclar, verificar.** Crear un proyecto nuevo confirmó en
+vivo lo que dice el pendiente #1: sin stages no hay dónde subir evidencia (`/upload` muestra el
+selector de etapa vacío). Se usó `torre-a`, etapa "Terminaciones" (la del hilo on-chain real de
+D-083), con un PDF de texto real generado con `pandoc`. El anclaje devolvió Merkle root
+`8afbf1…4e5e` y **TXID real `ae521653fd9ba003160a9f48a2dfc9a799ee5b3936cbe5fcb8ba6654a793bb8d`**.
+Verificado por dos vías independientes: el hash SHA-256 que muestra `/developer/documentation`
+(`a10b33…eb5b`) coincide **exacto** con el que se calculó en local antes de subir el archivo — no
+se confió en que "dice verificado", se comparó el hash real. La verificación pública en
+`preprod.cardanoscan.io` quedó bloqueada por un challenge de Cloudflare que no se resolvió (no
+está permitido resolver CAPTCHAs) — el TXID queda anotado arriba para que el dueño lo confirme a
+mano cuando quiera. Ver también `specs/README.md` criterio 15.
+
 **El diseño ya está decidido. El trabajo es transcribirlo, no inventarlo.**
 
 `docs/` tiene 70 capturas y un backlog de 53 superficies donde cada una ya trae su path, sus
