@@ -56,6 +56,41 @@ jobs:
       - name: Build (web + api)
         run: pnpm build
 
+      # Ningún otro paso corre el `startCommand` real de `render.yaml`: los
+      # tests importan `app.ts` directo (sin pasar por `--require`) y `tsc` no
+      # tipa lo que entra por un `require()` sin tipar — así pasaron dos
+      # incidentes de deploy seguidos (2026-09-07: `--require` sin `./` no
+      # resuelve igual que un script posicional; 2026-09-08:
+      # `@opentelemetry/api` resolvía como transitiva en local pero no en una
+      # instalación limpia). Este paso reproduce el comando exacto contra el
+      # build recién compilado, con SENTRY_DSN/OTEL_EXPORTER_OTLP_ENDPOINT
+      # puestas (con valores basura, sin red real) para que los mismos
+      # `require()` tardíos que rompieron corran acá también.
+      - name: Smoke test del arranque compilado (startCommand real)
+        run: |
+          node apps/api/dist/src/db/migrate.js
+          NODE_ENV=production node --require ./apps/api/dist/src/instrumentation.js apps/api/dist/src/server.js > api-smoke.log 2>&1 &
+          pid=$!
+          ok=""
+          for i in $(seq 1 20); do
+            grep -q "API listening" api-smoke.log && { ok=1; break; }
+            kill -0 "$pid" 2>/dev/null || break
+            sleep 1
+          done
+          kill "$pid" 2>/dev/null || true
+          wait "$pid" 2>/dev/null || true
+          echo "── log del arranque ──"
+          cat api-smoke.log
+          if [ -z "$ok" ]; then
+            echo "::error::la API no llegó a 'API listening' corriendo el startCommand real"
+            exit 1
+          fi
+        env:
+          DATABASE_URL: file:./.data/smoke.db
+          JWT_SECRET: ci-smoke-secret-jamas-en-produccion
+          SENTRY_DSN: https://smoke@o0.ingest.sentry.io/1
+          OTEL_EXPORTER_OTLP_ENDPOINT: http://localhost:4318
+
   # ── E2E ────────────────────────────────────────────────────────────────────
   #
   # Job propio y **no bloqueante por ahora** (`continue-on-error`), según la
