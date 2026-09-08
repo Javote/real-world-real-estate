@@ -47,6 +47,13 @@ if (process.env.OTEL_EXPORTER_OTLP_ENDPOINT) {
   const { PeriodicExportingMetricReader } = require("@opentelemetry/sdk-metrics");
   const { defaultResource, resourceFromAttributes } = require("@opentelemetry/resources");
   const { ATTR_SERVICE_NAME } = require("@opentelemetry/semantic-conventions");
+  const { diag, DiagConsoleLogger, DiagLogLevel } = require("@opentelemetry/api");
+
+  // Sin esto, un exporter OTLP que falla (auth, endpoint mal armado) no dice
+  // nada — ni acá ni en Grafana Cloud aparece un error, solo ausencia de
+  // datos. ERROR alcanza: no hace falta el ruido de DEBUG para diagnosticar
+  // un rechazo del gateway.
+  diag.setLogger(new DiagConsoleLogger(), DiagLogLevel.ERROR);
 
   const sdk = new NodeSDK({
     resource: defaultResource().merge(
