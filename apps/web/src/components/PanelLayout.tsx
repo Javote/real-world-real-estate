@@ -8,6 +8,7 @@ import { GradientHeader } from '#/components/domain/GradientHeader'
 import { LanguageToggle } from '#/components/domain/LanguageToggle'
 import { NotificationBell } from '#/components/domain/NotificationBell'
 import { NAV_TABS } from '#/components/domain/navTabs'
+import { Sidebar } from '#/components/domain/Sidebar'
 import { useTranslation } from '#/i18n/useTranslation'
 
 // El armazón que comparten los cuatro paneles de rol: header con gradiente,
@@ -88,35 +89,38 @@ export function PanelLayout({
   }
 
   return (
-    <div className="min-h-dvh bg-app-bg pb-24">
-      <GradientHeader
-        title={title}
-        {...(context ? { context } : {})}
-        {...(back ? { back } : {})}
-        {...(headerAction ? { titleAction: headerAction } : {})}
-        right={
-          <>
-            <NotificationBell
-              unread={unread?.unread ?? 0}
-              onClick={abrirNotificaciones}
-              ariaLabel={t('notifications.ariaLabel')}
-            />
-            <button
-              type="button"
-              onClick={abrirPerfil}
-              aria-label={t('profile.ariaLabel')}
-              className="flex h-10 w-10 items-center justify-center rounded-full bg-white/20 text-white"
-            >
-              <User size={20} aria-hidden="true" />
-            </button>
-            <LanguageToggle />
-          </>
-        }
-      />
+    <>
+      <Sidebar tabs={tabs} ariaLabel={t('nav.ariaLabel')} />
+      <div className="min-h-dvh bg-app-bg pb-24 md:pl-64">
+        <GradientHeader
+          title={title}
+          {...(context ? { context } : {})}
+          {...(back ? { back } : {})}
+          {...(headerAction ? { titleAction: headerAction } : {})}
+          right={
+            <>
+              <NotificationBell
+                unread={unread?.unread ?? 0}
+                onClick={abrirNotificaciones}
+                ariaLabel={t('notifications.ariaLabel')}
+              />
+              <button
+                type="button"
+                onClick={abrirPerfil}
+                aria-label={t('profile.ariaLabel')}
+                className="flex h-10 w-10 items-center justify-center rounded-full bg-white/20 text-white"
+              >
+                <User size={20} aria-hidden="true" />
+              </button>
+              <LanguageToggle />
+            </>
+          }
+        />
 
-      <main className="mx-auto flex max-w-2xl flex-col gap-s4 p-s4">{children}</main>
+        <main className="mx-auto flex max-w-2xl flex-col gap-s4 p-s4">{children}</main>
 
-      <BottomNav tabs={tabs} ariaLabel={t('nav.ariaLabel')} />
-    </div>
+        <BottomNav tabs={tabs} ariaLabel={t('nav.ariaLabel')} />
+      </div>
+    </>
   )
 }

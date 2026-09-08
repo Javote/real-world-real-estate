@@ -35,9 +35,9 @@ números medidos, en `specs/README.md`. Acá solo lo que falta.
 
 | # | Qué | Por qué ahí | Nivel |
 |---|---|---|---|
-| 0 | **Mainnet** — runbook, habilitar la red, custodia de la clave | D-013 la hace **imposible por configuración**: es código, no solo procedimiento | 🔴 |
-| 1 | **Sidebar de desktop** — `PanelLayout` esconde `BottomNav` con `md:hidden` a partir de 768px y no hay ningún reemplazo: en desktop no hay navegación | M2-D3 Principio 4 pide el swap a sidebar + columnas en desktop, y `M2-D2` captura 61 (`61-DESKTOP-HOME.png`) lo muestra. No es un componente ya creado sin conectar — no existe ningún `Sidebar`/`SideNav` bajo ningún nombre en `components/domain/`; toca las 4 superficies de rol porque `PanelLayout` es compartido | 🟢 |
-| 2 | **Pantalla de creación de stage** — `POST /projects/:id/stages` existe y funciona (es el mismo endpoint que mintió el hilo real de D-083 el 2026-09-03) pero ninguna fila de `M2-D5` la pide y no hay ruta ni componente que la llame | `docs/` es inmutable (D-022): agregar la superficie es una decisión del dueño antes que una tarea de implementación — no se inventa por conveniencia | — |
+| 0 | **Mainnet** — runbook, habilitar la red, custodia de la clave. **Sin confirmar que sea de este milestone** (2026-09-08, el dueño) | D-013 la hace **imposible por configuración**: es código, no solo procedimiento | 🔴 |
+| 1 | **Pantalla de creación de stage** — `POST /projects/:id/stages` existe y funciona (es el mismo endpoint que mintió el hilo real de D-083 el 2026-09-03) pero ninguna fila de `M2-D5` la pide y no hay ruta ni componente que la llame | `docs/` es inmutable (D-022): agregar la superficie es una decisión del dueño antes que una tarea de implementación — no se inventa por conveniencia | — |
+| 2 | **9 superficies con componentes sustituidos sin documentar** (`investor.unit.$unitId.notifications`, `investor.notifications`, `investor.unit.$unitId.contract`, `investor.unit.$unitId.dossier`, `developer.capital`, `developer.documentation`, `notary` panel, `notary.dossier.$dossierId`, `certifier` panel) — la fila de M2-D5 nombra un componente (`FilterPill`, `StatusPill`, `StageChip`, `ProgressTimeline`, `DocumentCard`, `VerificationBadge`, `StatCard`, `PrimaryButton`) y el código usa otra cosa, sin un comentario tipo D-073 que documente la decisión | Auditoría del 2026-09-08 (ver `specs/README.md` — no hay fila propia, el detalle vive acá y en el hallazgo del subagente de esa sesión): 44/53 ✅, 9/53 ⚠️, 0 ❌, 0 🔲 — ninguna falta ni es stub, pero regla 2 del loop aplica en las dos direcciones | 🟢 |
 
 **Encontrados el 2026-09-04, probando el flujo real end-to-end contra producción** (login con las
 credenciales del re-seed, crear un proyecto, subir y anclar evidencia — vía Claude en Chrome, no un
@@ -202,6 +202,20 @@ de por qué el asistente de Grafana genera el header OTLP incompleto, están en 
 619kB en el build del web (React + TanStack + Sentry/PostHog + Radix todo junto) se resolvió
 separando vendor chunks — sin relación con lo anterior, encontrado en el mismo log que se estaba
 revisando.
+
+**Cerrado el 2026-09-08 · sidebar de desktop (pendiente #1 de la tabla).** `components/domain/Sidebar.tsx`
+reemplaza a `BottomNav` en desktop (`md:flex` vs `md:hidden`, nunca los dos juntos), reusando
+`NAV_TABS` sin duplicar la navegación por rol — mismo `tabNeedsExactMatch` que ya tenía `BottomNav`.
+El activo se pinta como píldora sólida `bg-primary`, no solo texto: la captura 61 es la única
+referencia de desktop en todo el catálogo y ahí el tratamiento es visualmente más fuerte que el
+`BottomNav`, así que gana la captura (regla 1). Verificado con Chrome en 1440px (sidebar visible,
+activo cambia de tab al navegar) y en 390px (sidebar ausente, `BottomNav` sin regresión) — las dos
+capturas contra la instancia local, no solo `pnpm test`. 144 tests verdes.
+
+**Y de paso, auditado el resto de las 53 superficies contra M2-D5** — no solo el sidebar. Ninguna
+falta ni es un stub (la auditoría del 2026-09-03 tenía razón en eso), pero 9 reemplazan un componente
+que la fila nombra por otro distinto sin dejar una decisión escrita, mismo patrón silencioso que el
+sidebar. Detalle en la tabla de pendientes, ítem #2.
 
 **El diseño ya está decidido. El trabajo es transcribirlo, no inventarlo.**
 
