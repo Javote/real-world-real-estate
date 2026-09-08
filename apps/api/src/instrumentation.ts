@@ -29,7 +29,15 @@ if (process.env.SENTRY_DSN) {
     // proveedores por el mismo costo de performance.
     tracesSampleRate: 0,
     // Regla 2: cero PII. `sendDefaultPii` mandaría IP e headers por default.
-    sendDefaultPii: false
+    sendDefaultPii: false,
+    // Sin esto, @sentry/node registra su propio TracerProvider/ContextManager/
+    // Propagator de OTel acá mismo, antes de que el NodeSDK de abajo llame a
+    // sdk.start() — y como el registro global es el que gana la carrera, las
+    // auto-instrumentaciones de http/express terminan creando spans contra el
+    // tracer de Sentry (que los descarta, tracesSampleRate: 0) en vez del
+    // nuestro. No tira el proceso (registerGlobal solo loguea y sigue), así
+    // que quedaba en silencio: el deploy vivía, Tempo se quedaba vacío.
+    skipOpenTelemetrySetup: true
   });
   console.log("[instrumentation] Sentry activo");
 } else {
