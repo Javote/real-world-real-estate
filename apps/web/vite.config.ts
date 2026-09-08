@@ -21,5 +21,21 @@ export default defineConfig({
     tanstackRouter({ target: 'react', autoCodeSplitting: true }),
     tailwindcss(),
     viteReact()
-  ]
+  ],
+  build: {
+    rolldownOptions: {
+      output: {
+        // Separa vendors pesados del bundle de la app: cachean aparte y no
+        // se re-descargan en cada deploy que solo cambia código propio.
+        advancedChunks: {
+          groups: [
+            { name: 'vendor-react', test: /node_modules\/(react|react-dom|scheduler)\// },
+            { name: 'vendor-tanstack', test: /node_modules\/@tanstack\// },
+            { name: 'vendor-observability', test: /node_modules\/(@sentry|posthog-js)\// },
+            { name: 'vendor-radix', test: /node_modules\/radix-ui\// }
+          ]
+        }
+      }
+    }
+  }
 })
