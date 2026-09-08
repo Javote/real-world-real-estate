@@ -4,6 +4,7 @@ import { resolve } from "node:path";
 import request from "supertest";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import app from "../src/app";
+import { createId } from "../src/db/id";
 import { db } from "../src/lib/db";
 import { FIXTURES } from "./global-setup";
 
@@ -222,5 +223,94 @@ describe("evidencia — storagePath jamás sale al cliente (D-011)", () => {
       .set("Authorization", `Bearer ${miembro}`);
 
     expect(res.status).toBe(200);
+  });
+});
+
+// M1-D2c: "Pending → InProgress : work initiated". La primera evidencia que
+// un developer sube a un stage Pending es la señal de que el trabajo
+// arrancó — sin botón aparte. Ver CLAUDE.md raíz y la restricción de
+// PATCH /stages/:id/state en stage-transitions.test.ts.
+describe("POST /projects/:id/evidence · dispara Pending → InProgress", () => {
+  async function crearStage(estado: "Pending" | "InProgress" | "Observed") {
+    const ahora = new Date();
+    const id = createId();
+    await db
+      .insertInto("Stage")
+      .values({
+        id,
+        projectId,
+        name: "Stage para auto-transición",
+        sequenceOrder: Math.floor(Math.random() * 1_000_000) + 500_000,
+        state: estado,
+        validationCritical: false,
+        createdAt: ahora,
+        updatedAt: ahora
+      })
+      .execute();
+    return id;
+  }
+
+  it("la primera evidencia mueve el stage de Pending a InProgress", async () => {
+    const stageId = await crearStage("Pending");
+
+    const res = await subir(
+      miembro,
+      { evidenceType: "photo", category: "avance", stageId },
+      { buf: PDF, nombre: "foto.pdf", tipo: "application/pdf" }
+    );
+    expect(res.status).toBe(201);
+
+    const fila = await db
+      .selectFrom("Stage")
+      .select("state")
+      .where("id", "=", stageId)
+      .executeTakeFirstOrThrow();
+    expect(fila.state).toBe("InProgress");
+  });
+
+  it("subir evidencia a un stage ya InProgress no dispara nada raro (no-op)", async () => {
+    const stageId = await crearStage("InProgress");
+
+    const res = await subir(
+      miembro,
+      { evidenceType: "photo", category: "avance", stageId },
+      { buf: PDF, nombre: "foto2.pdf", tipo: "application/pdf" }
+    );
+    expect(res.status).toBe(201);
+
+    const fila = await db
+      .selectFrom("Stage")
+      .select("state")
+      .where("id", "=", stageId)
+      .executeTakeFirstOrThrow();
+    expect(fila.state).toBe("InProgress");
+  });
+
+  it("subir evidencia a un stage Observed NO lo reabre solo — esa es una acción aparte", async () => {
+    const stageId = await crearStage("Observed");
+
+    const res = await subir(
+      miembro,
+      { evidenceType: "photo", category: "correccion", stageId },
+      { buf: PDF, nombre: "correccion.pdf", tipo: "application/pdf" }
+    );
+    expect(res.status).toBe(201);
+
+    const fila = await db
+      .selectFrom("Stage")
+      .select("state")
+      .where("id", "=", stageId)
+      .executeTakeFirstOrThrow();
+    expect(fila.state).toBe("Observed");
+  });
+
+  it("evidencia sin stageId (documento suelto del proyecto) no toca ningún stage", async () => {
+    const res = await subir(
+      miembro,
+      { evidenceType: "document", category: "general" },
+      { buf: PDF, nombre: "suelto.pdf", tipo: "application/pdf" }
+    );
+    expect(res.status).toBe(201);
+    expect(res.body.stageId).toBeNull();
   });
 });

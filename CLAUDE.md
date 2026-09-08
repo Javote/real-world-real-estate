@@ -317,6 +317,44 @@ verdes, `pnpm verify:all` completo (incluido Aiken) también verde. Detalle, por
 de `authorize()`, y qué tests se movieron a `admin`: `apps/api/CLAUDE.md` §El endpoint de estado de
 stages.
 
+**Y eso destapó una pregunta más profunda, del dueño: "¿no todas las transiciones de la FSM se
+pueden hacer desde el frontend?"** Cierto — verificado grepeando `apps/web/src` entero: el literal
+`"InProgress"` no aparecía ni una vez, en ningún componente. De las 4 aristas, solo 2 tenían botón
+(`InProgress → Completed`/`Observed`, certifier); las dos que **entran** a `InProgress`
+(`Pending → InProgress`, `Observed → InProgress`) no tenían ninguna pantalla, para nadie — ni
+siquiera existe una superficie en M2-D5 que las mencione. No es un bug de implementación: es que
+nadie había definido el mecanismo.
+
+**Cerrado el mismo día, con dos mecanismos distintos** — porque el diagrama canónico
+(`M1-D2-Architecture-and-Data-Models/3-milestone-lifecycle.puml`, el único con las flechas
+correctas) etiqueta las dos aristas distinto, y esa etiqueta importa:
+
+- **`Pending → InProgress` : "work initiated" → automático.** La primera evidencia que un developer
+  sube a un stage `Pending` (`POST /developer/projects/:id/stages/:stageId/evidence`) dispara
+  `transitionStage(→ InProgress)` server-side, sin botón: subir el archivo **es** la señal de que
+  el trabajo arrancó. No hace falta inventar una pantalla para decir lo que la acción que ya existe
+  ya dice.
+- **`Observed → InProgress` : "remediation completed" → manual, a propósito.** Acá NO alcanza con
+  "subieron algo": el developer tiene que decidir explícitamente que la corrección está lista, no
+  que cualquier archivo nuevo reabra el stage solo. Nueva sección "Etapas observadas" en
+  `/developer/progress` (`DEV-PROGRESS-RESUME`, fuera del esquema `ROL-ÁREA-NNN` de M2-D5 a
+  propósito — `scripts/check-testids.mjs` rechaza cualquier ID con esa forma que el entregable no
+  declare, y está bien que lo haga: esto no es una fila de M2-D5, es una decisión nueva y tiene que
+  distinguirse) con botón "Reanudar etapa", que llama al mismo `PATCH /stages/:id/state` ya
+  restringido del punto anterior — el developer solo puede pedir `→ InProgress`, que es exactamente
+  lo único que esta pantalla necesita.
+
+**Por qué ninguna de las dos vive en `/developer/project/:id/upload`, que hubiera sido el lugar
+obvio:** esa pantalla es "la estructura sale de la captura" (38-DEVELOPER-SPECIFIC-PROJECT-UPLOAD-
+EVIDENCE) — meterle un botón de estado sería la regla 1 al revés (la captura no lo muestra, y acá
+no hay excepción D-074 que lo permita). `/developer/progress` no está atada a ninguna captura
+pixel-perfect, así que es terreno legítimo para una decisión nueva sin pisar una ya tomada.
+
+Tests nuevos: `evidence-upload.test.ts` prueba las 4 combinaciones (Pending→InProgress dispara,
+InProgress no hace nada raro con más evidencia, Observed NO se reabre solo, y un documento sin
+`stageId` no toca ningún stage). `pnpm verify` completo en verde, incluido `scripts/
+check-testids.mjs` (74/74, el piso no se movió — el ID nuevo no cuenta ahí a propósito).
+
 **El diseño ya está decidido. El trabajo es transcribirlo, no inventarlo.**
 
 `docs/` tiene 70 capturas y un backlog de 53 superficies donde cada una ya trae su path, sus

@@ -5,7 +5,12 @@ import { type Request, Router } from "express";
 import { z } from "zod";
 import { createId } from "../db/id";
 import { reconciliarParaLectura } from "../domain/reconcile";
-import { anchorEvent, recordOnChainEvent, retryStageMint } from "../domain/stage-transition";
+import {
+  anchorEvent,
+  recordOnChainEvent,
+  retryStageMint,
+  transitionStage
+} from "../domain/stage-transition";
 import { db } from "../lib/db";
 import { storage } from "../lib/storage";
 import { uploadSingleEvidence } from "../lib/upload";
@@ -373,10 +378,11 @@ router.post(
       return res.status(404).json({ message: "Project not found" });
     }
 
+    let stage: { id: string; state: string } | undefined;
     if (parsed.data.stageId) {
-      const stage = await db
+      stage = await db
         .selectFrom("Stage")
-        .select("id")
+        .select(["id", "state"])
         .where("id", "=", parsed.data.stageId)
         .where("projectId", "=", projectId)
         .executeTakeFirst();
@@ -444,6 +450,22 @@ router.post(
       entityType: "Evidence",
       entityId: created.id
     });
+
+    // M1-D2c: "Pending → InProgress : work initiated". La primera evidencia
+    // que un developer sube a un stage Pending ES la señal de que el trabajo
+    // arrancó — no hace falta un botón aparte para decir lo que subir el
+    // archivo ya dice. `Observed → InProgress` ("remediation completed") NO
+    // se dispara acá a propósito: significaría reabrir el stage con
+    // cualquier archivo nuevo, sin que el developer decida explícitamente que
+    // la corrección está lista — esa transición pide su propia acción.
+    if (stage?.state === "Pending") {
+      await transitionStage({
+        stageId: stage.id,
+        to: "InProgress",
+        actorUserId: req.user!.id,
+        auditAction: "STAGE_WORK_INITIATED"
+      });
+    }
 
     return res.status(201).json(evidence);
   }

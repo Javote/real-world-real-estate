@@ -1,10 +1,13 @@
-import { useQuery } from '@tanstack/react-query'
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { createFileRoute, useNavigate } from '@tanstack/react-router'
+import { AlertCircle } from 'lucide-react'
 import { api } from '#/api/port'
 import { DEV_ROLES } from '#/auth/roles'
 import { useRoleGuard } from '#/auth/useRoleGuard'
+import { PrimaryButton } from '#/components/domain/PrimaryButton'
 import { ProgressTimeline, type TimelineStage } from '#/components/domain/ProgressTimeline'
 import { StatCard } from '#/components/domain/StatCard'
+import { StatusPill } from '#/components/domain/StatusPill'
 import { PanelLayout } from '#/components/PanelLayout'
 import { useTranslation } from '#/i18n/useTranslation'
 
@@ -22,6 +25,16 @@ import { useTranslation } from '#/i18n/useTranslation'
 // etapas; acá el endpoint cruza proyectos, así que los conteos y los
 // timelines son por el conjunto, agrupados por proyecto. No hay thumbnail de
 // etapa en el contrato: no se dibuja.
+//
+// **"Etapas observadas" (`DEV-PROGRESS-RESUME`) no está en ninguna
+// captura — es una decisión nueva, no una superficie de M2-D5.** El diagrama
+// canónico (`M1-D2c-milestone-lifecycle`) etiqueta `Observed → InProgress`
+// como "remediation completed": el developer decide cuándo la corrección
+// está lista, así que es una acción explícita y separada de subir evidencia
+// (a diferencia de `Pending → InProgress`, que sí se dispara solo con la
+// primera evidencia — ver `POST /projects/:id/evidence`). Reusa
+// `PATCH /stages/:id/state`, ya restringido a que el developer solo pueda
+// pedir `→ InProgress`.
 
 export const Route = createFileRoute('/developer/progress')({ component: DeveloperProgress })
 
@@ -36,6 +49,7 @@ function DeveloperProgress() {
   const { ready } = useRoleGuard(DEV_ROLES)
   const { t } = useTranslation()
   const navigate = useNavigate()
+  const queryClient = useQueryClient()
 
   const { data: filas } = useQuery({
     queryKey: ['developer', 'progress'],
@@ -43,7 +57,14 @@ function DeveloperProgress() {
     enabled: ready
   })
 
+  const reanudar = useMutation({
+    mutationFn: (stageId: string) => api.setMilestoneState(stageId, 'InProgress'),
+    onSuccess: () => void queryClient.invalidateQueries({ queryKey: ['developer', 'progress'] })
+  })
+
   if (!ready) return null
+
+  const observadas = (filas ?? []).filter((f) => f.state === 'Observed')
 
   // Agrupado por proyecto: la respuesta viene plana, una fila por etapa.
   const porProyecto = new Map<string, { nombre: string; stages: TimelineStage[] }>()
@@ -77,6 +98,41 @@ function DeveloperProgress() {
         <StatCard value={String(enCurso)} label={t('developer.progress.inProgress')} />
         <StatCard value={String(pendientes)} label={t('developer.progress.pending')} />
       </section>
+
+      {observadas.length ? (
+        <section
+          className="flex flex-col gap-s3 rounded-xl bg-card p-s4 shadow-e1"
+          data-testid="DEV-PROGRESS-RESUME"
+        >
+          <h2 className="flex items-center gap-s2 text-body font-bold text-text-primary">
+            <AlertCircle className="size-icon-sm text-pending" aria-hidden="true" />
+            {t('developer.progress.observedTitle')}
+          </h2>
+          <ul className="flex flex-col gap-s2">
+            {observadas.map((f) => (
+              <li
+                key={f.stageId}
+                className="flex items-center justify-between gap-s3 rounded-md bg-surface-alt p-s3"
+              >
+                <div className="flex flex-col gap-s1">
+                  <span className="text-body-sm font-medium text-text-primary">
+                    {f.projectName} · {f.stageName}
+                  </span>
+                  <StatusPill tone="pending">{t('status.observed')}</StatusPill>
+                </div>
+                <PrimaryButton
+                  testId="DEV-PROGRESS-RESUME-BTN"
+                  onClick={() => reanudar.mutate(f.stageId)}
+                  loading={reanudar.isPending && reanudar.variables === f.stageId}
+                  disabled={reanudar.isPending}
+                >
+                  {t('developer.progress.resume')}
+                </PrimaryButton>
+              </li>
+            ))}
+          </ul>
+        </section>
+      ) : null}
 
       <section className="flex flex-col gap-s3" data-testid="DEV-PROGRESS-001">
         {porProyecto.size ? (
