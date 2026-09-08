@@ -7,6 +7,7 @@ import app from "../src/app";
 import { createId } from "../src/db/id";
 import { db } from "../src/lib/db";
 import { FIXTURES } from "./global-setup";
+import { crearStageMinteado } from "./helpers/stages";
 
 // 2026-09-08: `POST /projects/:id/evidence` y `GET /projects/:id/evidence`
 // (CRUD genérico, sin caller real en el front — ver CLAUDE.md raíz) se
@@ -40,13 +41,23 @@ beforeAll(async () => {
     .executeTakeFirstOrThrow();
   projectId = p.id;
 
+  const actorId = (
+    await db
+      .selectFrom("User")
+      .select("id")
+      .where("email", "=", FIXTURES.activo.email)
+      .executeTakeFirstOrThrow()
+  ).id;
+
   // Una sola etapa para los tests que no le importa el estado del stage —
   // los que sí (Pending→InProgress) crean la suya propia, más abajo.
-  const stage = await request(app)
-    .post(`/api/v1/projects/${projectId}/stages`)
-    .set("Authorization", `Bearer ${miembro}`)
-    .send({ name: "Stage para subida de evidencia", sequenceOrder: 999_501 });
-  stageId = stage.body.id;
+  const stage = await crearStageMinteado({
+    projectId,
+    name: "Stage para subida de evidencia",
+    sequenceOrder: 999_501,
+    actorUserId: actorId
+  });
+  stageId = stage.id;
 });
 
 afterAll(async () => {

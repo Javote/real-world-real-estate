@@ -428,26 +428,39 @@ duplicación accidental que haya que resolver; es la distinción de siempre entr
 superficie del entregable, y el error fue mío por no chequear cuál de las dos usa la pantalla antes
 de editar.
 
-**Corrección el mismo día: sí había que resolverla.** El dueño preguntó si hacía falta auditar los
-87 endpoints por este mismo motivo — no una auditoría completa (quedó pendiente, a propósito), pero
-sí se clasificaron los ~24 que ni M2-D5 ni M2-D6 declaran. La mayoría es CRUD genérico admin-only
-legítimo (`/users`, `/projects`, `/audit-logs`, `retry-anchor`) o infraestructura de dominio
-compartida ya documentada (`/stages/:id`, `/evidence/:id`). Pero `GET`/`POST /projects/:id/evidence`
-resultaron ser **distintas** del resto de esa lista: `developer`-accesibles (no admin-only) y sin
-ningún caller real en el front — confirmado con `grep -rn "api.uploadEvidence" apps/web/src`, cero
-resultados, la misma verificación que ya había hecho para la primera. Se borraron las dos, con sus
-tests migrados a la ruta real (`evidence-upload.test.ts` reescrito completo;
-`browse-and-documents.test.ts` y `project-access.test.ts` con un caso cada uno). `POST
-/projects/:id/stages` quedó fuera del borrado a propósito: no tiene ninguna gemela — es la única
-forma de crear una etapa suelta, y la base para el día que exista una UI de "agregar etapa". Detalle
-completo en `apps/api/CLAUDE.md` §CRUD genérico.
+**Corrección el mismo día: sí había que resolverla, y más a fondo de lo que pensé al principio.** El
+dueño preguntó si hacía falta auditar los 87 endpoints por este mismo motivo — no una auditoría
+completa (quedó pendiente, a propósito), pero sí se clasificaron los ~24 que ni M2-D5 ni M2-D6
+declaran. La mayoría es CRUD genérico admin-only legítimo (`/users`, `/projects`, `/audit-logs`,
+`retry-anchor`) o infraestructura de dominio compartida ya documentada (`/stages/:id`,
+`/evidence/:id`). Pero dos resultaron **distintas** del resto: `developer`-accesibles (no
+admin-only) y sin ningún caller real en el front.
+
+`GET`/`POST /projects/:id/evidence` era la sombra exacta que ya se había encontrado — confirmado con
+`grep -rn "api.uploadEvidence" apps/web/src`, cero resultados. Se borró, con sus tests migrados a la
+ruta real (`evidence-upload.test.ts` reescrito completo; `browse-and-documents.test.ts` y
+`project-access.test.ts` con un caso cada uno).
+
+**`POST /projects/:id/stages` (crear una etapa suelta) parecía distinta** —sin ninguna gemela,
+candidata a "la base para una futura UI de agregar etapa"— hasta que `git log` mostró que es
+**anterior** al Stage template de 10 (existía antes de `DEFAULT_STAGE_CATALOG`) y que nadie
+repreguntó si seguía haciendo falta una vez que el template llegó. Ni M1, ni M2 ni M3 mencionan
+agregar etapas después de crear el proyecto — la racionalización de "es la base de una feature
+futura" era mía, no del entregable. Se borró también. Los 12 usos en `stage-transitions.test.ts`
+(más algunos en `constraint-errors.test.ts`, `browse-and-documents.test.ts`, `units-contracts.test.ts`
+y `evidence-upload.test.ts`) que necesitaban un stage con hilo real para probar transiciones migraron
+a `test/helpers/stages.ts` (`crearStageMinteado`): la misma inserción + mint que hacía la ruta, sin
+pasar por HTTP. Dos tests se borraron sin reemplazo por probar comportamiento puramente de la ruta
+que ya no existe (rechazo de `progressPercentage` fuera de rango, y el duplicado de `sequenceOrder`
+en `constraint-errors.test.ts` — el mapeo de restricciones que probaba es genérico y ya lo cubren
+tres casos más en el mismo archivo). Detalle completo en `apps/api/CLAUDE.md` §CRUD genérico.
 
 Verificado de punta a punta con Claude en Chrome contra `pnpm dev` local (`ANCHOR_MODE=simulated`):
 crear un proyecto nuevo deja las 10 etapas minteadas y seleccionables en "Subir evidencia"; subir un
 archivo a una de ellas la mueve a `InProgress`, visible en `/developer/progress`. Tests nuevos en
 `project-stage-template.test.ts` (transaccionalidad, 10 hilos independientes, membresía del creador)
 y `browse-and-documents.test.ts` (el auto-avance contra la ruta real). `pnpm verify` completo en
-verde.
+verde, colección Postman (`specs/postman/`) regenerada.
 
 **El diseño ya está decidido. El trabajo es transcribirlo, no inventarlo.**
 

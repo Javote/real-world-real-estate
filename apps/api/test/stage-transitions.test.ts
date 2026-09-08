@@ -6,6 +6,7 @@ import app from "../src/app";
 import { createId } from "../src/db/id";
 import { db } from "../src/lib/db";
 import { FIXTURES } from "./global-setup";
+import { crearStageMinteado } from "./helpers/stages";
 
 /** Un txid de 64 hex, genuinamente aleatorio — no un dígito variable sobre un
  * literal fijo (eso da solo 10 valores posibles, y `OnChainEvent.txid` es
@@ -20,6 +21,7 @@ const txidDeFixture = () => randomBytes(32).toString("hex");
 let proyecto: string;
 let token: string;
 let tokenAdmin: string;
+let actorId: string;
 
 const login = (f: { email: string; password: string }) =>
   request(app).post("/api/v1/auth/login").send({ email: f.email, password: f.password });
@@ -112,7 +114,28 @@ beforeAll(async () => {
   ).id;
   token = (await login(FIXTURES.activo)).body.token;
   tokenAdmin = (await login(FIXTURES.admin)).body.token;
+  actorId = (
+    await db
+      .selectFrom("User")
+      .select("id")
+      .where("email", "=", FIXTURES.activo.email)
+      .executeTakeFirstOrThrow()
+  ).id;
 });
+
+/** Etapa con hilo real (mint), sin pasar por la ruta HTTP que se borró — ver
+ * `helpers/stages.ts`. `sequenceOrder` random para no chocar con las fijas de
+ * este archivo. */
+const crearStageConHilo = (
+  opts: { validationCritical?: boolean; progressPercentage?: number } = {}
+) =>
+  crearStageMinteado({
+    projectId: proyecto,
+    name: "Stage con hilo",
+    sequenceOrder: Math.floor(Math.random() * 1_000_000) + 200_000,
+    actorUserId: actorId,
+    ...opts
+  });
 
 afterAll(async () => {
   await db.destroy();
@@ -273,15 +296,12 @@ describe("OnChainEvent · el aterrizaje del anclaje", () => {
     process.env.CARDANO_NETWORK = "Preprod";
 
     try {
-      const creado = await request(app)
-        .post(`/api/v1/projects/${proyecto}/stages`)
-        .set("Authorization", `Bearer ${token}`)
-        .send({ name: "Stage con red", sequenceOrder: 999_401 });
+      const creado = await crearStageConHilo();
 
       const evento = await db
         .selectFrom("OnChainEvent")
         .select(["txid", "network"])
-        .where("id", "=", creado.body.anchor.id)
+        .where("id", "=", creado.anchor.id)
         .executeTakeFirstOrThrow();
 
       expect(evento.txid).not.toBeNull();
@@ -293,48 +313,29 @@ describe("OnChainEvent · el aterrizaje del anclaje", () => {
   });
 
   it("acepta progressPercentage (avance de obra, D-021) y lo persiste — es opcional", async () => {
-    const conPorcentaje = await request(app)
-      .post(`/api/v1/projects/${proyecto}/stages`)
-      .set("Authorization", `Bearer ${token}`)
-      .send({ name: "Con avance", sequenceOrder: 999_402, progressPercentage: 15 });
-    expect(conPorcentaje.status).toBe(201);
-    expect(conPorcentaje.body.progressPercentage).toBe(15);
+    const conPorcentaje = await crearStageConHilo({ progressPercentage: 15 });
+    expect(conPorcentaje.progressPercentage).toBe(15);
 
-    const sinPorcentaje = await request(app)
-      .post(`/api/v1/projects/${proyecto}/stages`)
-      .set("Authorization", `Bearer ${token}`)
-      .send({ name: "Sin avance", sequenceOrder: 999_403 });
-    expect(sinPorcentaje.status).toBe(201);
-    expect(sinPorcentaje.body.progressPercentage).toBeNull();
-  });
-
-  it("rechaza progressPercentage fuera de 0-100", async () => {
-    const res = await request(app)
-      .post(`/api/v1/projects/${proyecto}/stages`)
-      .set("Authorization", `Bearer ${token}`)
-      .send({ name: "Avance imposible", sequenceOrder: 999_404, progressPercentage: 150 });
-    expect(res.status).toBe(400);
+    const sinPorcentaje = await crearStageConHilo();
+    expect(sinPorcentaje.progressPercentage).toBeNull();
   });
 
   it("ancla la transición de un stage con hilo abierto", async () => {
-    // El stage se crea por la API para que su hilo exista: el `mint` pasa por
-    // `POST`, igual que en la cadena. Con `ANCHOR_MODE=simulated` la
-    // confirmación es inmediata.
-    const creado = await request(app)
-      .post(`/api/v1/projects/${proyecto}/stages`)
-      .set("Authorization", `Bearer ${token}`)
-      .send({ name: "Stage con hilo", sequenceOrder: 999_101 });
+    // El stage nace con hilo real (mint) vía `crearStageMinteado`, sin pasar
+    // por HTTP — la ruta que lo hacía (`POST /projects/:id/stages`) se borró
+    // el 2026-09-08 por ser anterior al Stage template y sin caller real.
+    const creado = await crearStageConHilo();
 
-    expect(creado.body.anchor.status).toBe("Confirmed");
-    expect(creado.body.anchor.outputRef).toBe(`${creado.body.anchor.txid}#0`);
+    expect(creado.anchor.status).toBe("Confirmed");
+    expect(creado.anchor.outputRef).toBe(`${creado.anchor.txid}#0`);
 
-    const res = await patchState(creado.body.id, "InProgress");
+    const res = await patchState(creado.id, "InProgress");
 
     expect(res.body.anchor.status).toBe("Confirmed");
     expect(res.body.anchor.fromState).toBe("Pending");
     expect(res.body.anchor.toState).toBe("InProgress");
     // El hilo se movió: el UTxO nuevo no es el que abrió el `mint`.
-    expect(res.body.anchor.outputRef).not.toBe(creado.body.anchor.outputRef);
+    expect(res.body.anchor.outputRef).not.toBe(creado.anchor.outputRef);
   });
 
   it("deja el evento en Failed —y la declaración escrita— si el stage no tiene hilo", async () => {
@@ -355,14 +356,11 @@ describe("OnChainEvent · el aterrizaje del anclaje", () => {
     // datum viajaba con `evidenceRoot` vacío y el anclaje quedaba en `Failed`
     // porque el validador exige 32 bytes para completar un stage crítico. Con
     // el bundle, el circuito cierra entero.
-    const creado = await request(app)
-      .post(`/api/v1/projects/${proyecto}/stages`)
-      .set("Authorization", `Bearer ${token}`)
-      .send({ name: "Stage crítico", sequenceOrder: 999_102, validationCritical: true });
+    const creado = await crearStageConHilo({ validationCritical: true });
 
-    await patchState(creado.body.id, "InProgress");
-    await agregarEvidencia(creado.body.id);
-    const res = await patchStateAdmin(creado.body.id, "Completed");
+    await patchState(creado.id, "InProgress");
+    await agregarEvidencia(creado.id);
+    const res = await patchStateAdmin(creado.id, "Completed");
 
     expect(res.status).toBe(200);
     expect(res.body.state).toBe("Completed");
@@ -400,19 +398,13 @@ describe("OnChainEvent · el aterrizaje del anclaje", () => {
 
     expect(eventos).toHaveLength(0);
   });
-});
 
-describe("POST /projects/:id/stages · el stage nace en Pending", () => {
-  it("ignora el estado que venga por body y abre el hilo en el índice 0", async () => {
-    const res = await request(app)
-      .post(`/api/v1/projects/${proyecto}/stages`)
-      .set("Authorization", `Bearer ${token}`)
-      .send({ name: "Stage nuevo", sequenceOrder: 999_001, state: "Completed" });
+  it("todo stage nace en Pending y su mint abre el hilo en el índice 0", async () => {
+    const creado = await crearStageConHilo();
 
-    expect(res.status).toBe(201);
-    expect(res.body.state).toBe("Pending");
-    expect(res.body.anchor.eventIndex).toBe(0);
-    expect(res.body.anchor.eventType).toBe("STAGE_CREATED");
+    expect(creado.state).toBe("Pending");
+    expect(creado.anchor.eventIndex).toBe(0);
+    expect(creado.anchor.eventType).toBe("STAGE_CREATED");
   });
 });
 
@@ -476,12 +468,9 @@ describe("POST /projects/:id/stages/:stageId/retry-anchor", () => {
   });
 
   it("409 si el hilo ya está abierto", async () => {
-    const creado = await request(app)
-      .post(`/api/v1/projects/${proyecto}/stages`)
-      .set("Authorization", `Bearer ${token}`)
-      .send({ name: "Stage con hilo ya abierto", sequenceOrder: 999_103 });
+    const creado = await crearStageConHilo();
 
-    const res = await retry(creado.body.id);
+    const res = await retry(creado.id);
 
     expect(res.status).toBe(409);
     expect(res.body.code).toBe("THREAD_ALREADY_OPEN");
@@ -501,12 +490,7 @@ describe("POST /projects/:id/stages/:stageId/retry-anchor", () => {
 describe("hasOnChainThread · visible sin tener que saber que existe cabezaDelHilo", () => {
   it("false en un stage sembrado directo, true en uno creado por la API", async () => {
     const sinHilo = await crearStage({ state: "Pending" });
-    const conHilo = (
-      await request(app)
-        .post(`/api/v1/projects/${proyecto}/stages`)
-        .set("Authorization", `Bearer ${token}`)
-        .send({ name: "Stage con hilo, para el flag", sequenceOrder: 999_104 })
-    ).body.id;
+    const conHilo = (await crearStageConHilo()).id;
 
     const [detalleSinHilo, detalleConHilo, anidadoSinHilo, lista] = await Promise.all([
       request(app).get(`/api/v1/stages/${sinHilo}`).set("Authorization", `Bearer ${token}`),
@@ -613,35 +597,24 @@ describe("PATCH /stages/:id · la identidad on-chain", () => {
 
 describe("D-061 · todo stage es validation-critical", () => {
   it("un stage creado sin decir nada nace crítico", async () => {
-    const res = await request(app)
-      .post(`/api/v1/projects/${proyecto}/stages`)
-      .set("Authorization", `Bearer ${token}`)
-      .send({ name: "Stage por default", sequenceOrder: 999_201 });
-
-    expect(res.body.validationCritical).toBe(true);
+    const creado = await crearStageConHilo();
+    expect(creado.validationCritical).toBe(true);
   });
 
   it("y por lo tanto no se completa sin evidencia", async () => {
     // Antes de D-061 este mismo stage se completaba sin nada: el default era
     // `false` y nadie lo marcaba. Ese era el agujero.
-    const creado = await request(app)
-      .post(`/api/v1/projects/${proyecto}/stages`)
-      .set("Authorization", `Bearer ${token}`)
-      .send({ name: "Stage por default 2", sequenceOrder: 999_202 });
+    const creado = await crearStageConHilo();
 
-    await patchState(creado.body.id, "InProgress");
-    const res = await patchStateAdmin(creado.body.id, "Completed");
+    await patchState(creado.id, "InProgress");
+    const res = await patchStateAdmin(creado.id, "Completed");
 
     expect(res.status).toBe(409);
     expect(res.body.code).toBe("STAGE_EVIDENCE_REQUIRED");
   });
 
   it("desmarcarlo sigue siendo posible, pero ahora es explícito", async () => {
-    const res = await request(app)
-      .post(`/api/v1/projects/${proyecto}/stages`)
-      .set("Authorization", `Bearer ${token}`)
-      .send({ name: "Stage no crítico", sequenceOrder: 999_203, validationCritical: false });
-
-    expect(res.body.validationCritical).toBe(false);
+    const creado = await crearStageConHilo({ validationCritical: false });
+    expect(creado.validationCritical).toBe(false);
   });
 });

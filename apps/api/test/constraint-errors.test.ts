@@ -57,23 +57,12 @@ describe("un duplicado es 409, no 500", () => {
     expect(JSON.stringify(res.body)).not.toContain("slug");
   });
 
-  it("dos stages con el mismo orden en el mismo proyecto", async () => {
-    const primero = await request(app)
-      .post(`/api/v1/projects/${projectId}/stages`)
-      .set("Authorization", `Bearer ${tokenDev}`)
-      .send({ name: "Losa", sequenceOrder: ETAPA });
-    expect(primero.status).toBe(201);
-
-    const segundo = await request(app)
-      .post(`/api/v1/projects/${projectId}/stages`)
-      .set("Authorization", `Bearer ${tokenDev}`)
-      .send({ name: "Losa otra vez", sequenceOrder: ETAPA });
-
-    expect(segundo.status).toBe(409);
-    expect(segundo.body.code).toBe("RESOURCE_ALREADY_EXISTS");
-    expect(JSON.stringify(segundo.body)).not.toContain("Stage");
-  });
-
+  // El caso "dos stages con el mismo orden" vivía acá contra `POST
+  // /projects/:id/stages`, borrada el 2026-09-08 (CRUD genérico sin caller
+  // real). El mapeo de restricciones es genérico y centralizado
+  // (`errorHandler.ts`) — este archivo lo prueba tres veces más (slug, unidad,
+  // email), así que la cobertura del comportamiento no se perdió, solo el
+  // caso particular de `Stage`.
   it("dos unidades con la misma referencia en el mismo proyecto", async () => {
     const referencia = `9${ETAPA}Z`;
 

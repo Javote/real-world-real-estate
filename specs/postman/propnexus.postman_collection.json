@@ -2039,41 +2039,6 @@
           }
         },
         {
-          "name": "POST /api/v1/projects/:id/stages",
-          "request": {
-            "method": "POST",
-            "header": [
-              {
-                "key": "Authorization",
-                "value": "Bearer {{token}}"
-              }
-            ],
-            "url": {
-              "raw": "{{baseUrl}}/api/v1/projects/:id/stages",
-              "host": [
-                "{{baseUrl}}"
-              ],
-              "path": [
-                "api",
-                "v1",
-                "projects",
-                ":id",
-                "stages"
-              ]
-            },
-            "description": "auth + autoriza(rol(admin|developer) · proyecto(id → developer))",
-            "body": {
-              "mode": "raw",
-              "raw": "{\n  \"name\": \"Cimentación\",\n  \"sequenceOrder\": 1,\n  \"progressPercentage\": 15\n}",
-              "options": {
-                "raw": {
-                  "language": "json"
-                }
-              }
-            }
-          }
-        },
-        {
           "name": "POST /api/v1/projects/:id/stages/:stageId/retry-anchor",
           "request": {
             "method": "POST",

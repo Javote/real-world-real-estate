@@ -1,9 +1,6 @@
-import { INITIAL_STAGE_STATE } from "@plataforma/shared";
 import { type Request, Router } from "express";
-import { z } from "zod";
-import { createId } from "../db/id";
 import { reconciliarParaLectura } from "../domain/reconcile";
-import { anchorEvent, recordOnChainEvent, retryStageMint } from "../domain/stage-transition";
+import { retryStageMint } from "../domain/stage-transition";
 import { db } from "../lib/db";
 import { ANY_MEMBERSHIP, authenticate, authorize, CUALQUIER_ROL } from "../middlewares/auth";
 import { writeAuditLog } from "../utils/audit";
@@ -18,16 +15,19 @@ import { writeAuditLog } from "../utils/audit";
 // **La FSM del stage no vive acá** (D-020): está en `packages/shared` y espejada
 // en Aiken. Estas rutas la consumen vía `domain/stage-transition`.
 //
-// **La subida de evidencia se borró de acá el 2026-09-08.** `GET/POST
-// /:id/evidence` eran CRUD genérico sin ningún caller real en el front —
-// confirmado con `grep -rn "api.uploadEvidence" apps/web/src`, cero
-// resultados — y la duplicación confundió una sesión entera (ver CLAUDE.md
-// raíz). La subida real vive en `developer-evidencia.routes.ts`
-// (`POST /developer/projects/:id/stages/:stageId/evidence`, M2-D5 fila 38),
-// que además devuelve Merkle root y TXID en la misma respuesta, como pide
-// M2-D5 §2.2. `POST /:id/stages` (crear una etapa suelta) sigue viva: no es
-// una duplicación — no hay ninguna otra ruta que cree una sola etapa, y es
-// la pieza base para el día que exista una UI de "agregar etapa".
+// **Tres rutas se borraron de acá el 2026-09-08: `GET/POST /:id/evidence` y
+// `POST /:id/stages`.** Las dos primeras eran CRUD genérico sin ningún
+// caller real en el front (confirmado con `grep -rn "api.uploadEvidence"
+// apps/web/src`, cero resultados) y sombra exacta de la ruta real
+// (`POST /developer/projects/:id/stages/:stageId/evidence`, M2-D5 fila 38,
+// que además devuelve Merkle root y TXID en la misma respuesta). La tercera
+// —crear una etapa suelta— no tenía ninguna gemela, pero tampoco tenía
+// caller real ni una sola línea en M1/M2/M3 que la pidiera: es más vieja que
+// el Stage template de 10 (`git log` la ubica antes del catálogo, D-021),
+// nadie repreguntó si seguía haciendo falta después de que el template
+// existiera. Los tests que la usaban para tener un stage con hilo real
+// migraron a `test/helpers/stages.ts` (`crearStageMinteado`), que hace lo
+// mismo sin pasar por HTTP. Detalle completo en `CLAUDE.md` raíz.
 
 const router = Router();
 
@@ -66,73 +66,6 @@ router.get(
     );
 
     return res.json(result.map((stage) => ({ ...stage, hasOnChainThread: conHilo.has(stage.id) })));
-  }
-);
-
-router.post(
-  "/:id/stages",
-  authorize({
-    roles: ["admin", "developer"],
-    acceso: { proyecto: { param: "id" }, membresias: ["developer"] }
-  }),
-  async (req: Request<{ id: string }>, res) => {
-    const schema = z.object({
-      name: z.string().min(1),
-      sequenceOrder: z.number().int().positive(),
-      // `state` NO se acepta por body: todo stage nace en `Pending`. El
-      // handler `mint` del validador lo exige para acuñar el hilo
-      // (`valid_initial_datum`), así que dejar elegir el estado inicial acá
-      // sería fabricar stages que no se pueden anclar.
-      validationCritical: z.boolean().optional(),
-      // Avance de obra que este stage representa sobre el 100% del proyecto
-      // (D-021). Nunca dinero — y opcional: el catálogo normativo
-      // (DEFAULT_STAGE_CATALOG) no lo trae, el dueño prefirió no inventar un
-      // reparto.
-      progressPercentage: z.number().int().min(0).max(100).optional()
-    });
-
-    const parsed = schema.safeParse(req.body);
-    if (!parsed.success) {
-      return res.status(400).json(parsed.error.flatten());
-    }
-
-    const now = new Date();
-
-    const stage = await db
-      .insertInto("Stage")
-      .values({
-        id: createId(),
-        projectId: req.params.id,
-        name: parsed.data.name,
-        sequenceOrder: parsed.data.sequenceOrder,
-        state: INITIAL_STAGE_STATE,
-        // D-061: todo stage es validation-critical. El default deja de ser un
-        // flag que alguien se olvida de marcar; desmarcarlo es explícito.
-        validationCritical: parsed.data.validationCritical ?? true,
-        progressPercentage: parsed.data.progressPercentage ?? null,
-        createdAt: now,
-        updatedAt: now
-      })
-      .returningAll()
-      .executeTakeFirstOrThrow();
-
-    const evento = await recordOnChainEvent({
-      projectId: stage.projectId,
-      stageId: stage.id,
-      eventType: "STAGE_CREATED",
-      fromState: null,
-      toState: stage.state
-    });
-    const anchor = await anchorEvent(evento, stage, null);
-
-    await writeAuditLog({
-      actorUserId: req.user!.id,
-      action: "CREATE_STAGE",
-      entityType: "Stage",
-      entityId: stage.id
-    });
-
-    return res.status(201).json({ ...stage, anchor });
   }
 );
 

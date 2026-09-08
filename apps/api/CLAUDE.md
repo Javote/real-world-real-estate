@@ -19,14 +19,19 @@ van **scopeados por rol** (`/investor/`, `/developer/`, `/notary/`, `/certifier/
 M2-D5 §4-6 está **completo**: los 18 work streams `M3-BE-XX` tienen sus rutas montadas y con test.
 
 Lo que queda fuera del backlog y sigue vivo: el CRUD genérico de `/projects` (crear/editar/borrar,
-miembros) y `/users` — admin-only, ops y fixtures, sin caller en el front. `/evidence` genérico
-(`GET/POST /projects/:id/evidence`) **se borró el 2026-09-08**: no era admin-only como el resto de
-esta lista, era `developer`-accesible y sombra exacta de la ruta real
-(`POST /developer/projects/:id/stages/:stageId/evidence`, M2-D5 fila 38) sin que nada lo distinguiera
-— confirmado que ningún componente del front la llamaba, y la confusión entre las dos costó una
-sesión entera. Ver el detalle en `CLAUDE.md` raíz. `POST /projects/:id/stages` (crear una etapa
-suelta) sigue viva a propósito: a diferencia de la de evidencia, no tiene ninguna gemela — es la
-única forma de crear una etapa fuera del template de 10, y la base para el día que exista esa UI.
+miembros) y `/users` — admin-only, ops y fixtures, sin caller en el front.
+
+**Tres rutas se borraron el 2026-09-08, todas `developer`-accesibles y sin un solo caller real en
+el front** (confirmado con `grep -rn "api.uploadEvidence" apps/web/src`, cero resultados, y lo mismo
+para la de stages): `GET`/`POST /projects/:id/evidence` (sombra exacta de la ruta real,
+`POST /developer/projects/:id/stages/:stageId/evidence`, M2-D5 fila 38) y `POST /projects/:id/stages`
+(crear una etapa suelta). La primera confundió una sesión entera antes de encontrarse; la segunda se
+pensó al principio como "la base para una futura UI de agregar etapa" —hasta que el historial mostró
+que es **anterior** al Stage template de 10 (`git log`: existía antes de `DEFAULT_STAGE_CATALOG`) y
+que nadie repreguntó si seguía haciendo falta una vez que el template llegó. Ni M1, ni M2 ni M3
+mencionan agregar etapas después de crear el proyecto. Los tests que necesitaban un stage con hilo
+real para probar transiciones migraron a `test/helpers/stages.ts` (`crearStageMinteado`), que hace
+lo mismo sin pasar por HTTP. Ver el detalle en `CLAUDE.md` raíz.
 
 ## Checklist de un endpoint nuevo
 
@@ -312,7 +317,10 @@ suelta) sigue viva a propósito: a diferencia de la de evidencia, no tiene ningu
   `db/fixtures.ts` con `insertInto("Stage")` directo—. `advanceThread` necesita un UTxO vivo que
   gastar (`cabezaDelHilo`, que busca un `OnChainEvent` con `outputRef`), y un stage que nunca pasó
   por `POST /projects/:id/stages` no tiene ninguno: el mint solo ocurre ahí
-  (`anchorEvent(evento, stage, null)`, línea ~95 de `routes/projects-obra.routes.ts`). El síntoma
+  (`anchorEvent(evento, stage, null)`). **Esa ruta se borró el 2026-09-08** (era anterior al Stage
+  template y sin caller real, ver §CRUD genérico); lo que hacía —crear una fila y mintear su
+  hilo— hoy vive en `test/helpers/stages.ts` para tests, y en el loop de
+  `POST /developer/projects` para el template de 10. El síntoma
   **no es un error de la request** — D-059 escribe la declaración igual, la respuesta es 200 — es
   el `anchor.status` quedando `Failed` en silencio, exactamente el caso que ya cubre
   `test/stage-transitions.test.ts` (*"deja el evento en Failed... si el stage no tiene hilo"*), solo

@@ -7,6 +7,7 @@ import app from "../src/app";
 import { createId } from "../src/db/id";
 import { db } from "../src/lib/db";
 import { FIXTURES } from "./global-setup";
+import { crearStageMinteado } from "./helpers/stages";
 
 // M2-D5 filas 03-05 (browse), 06-07 (documentos), 09-12 (stage), 38/44c
 // (subida anclada) y 46-47 (anclaje de documento suelto).
@@ -18,6 +19,7 @@ let tokenDev: string;
 let tokenAdmin: string;
 let projectId: string;
 let stageId: string;
+let actorId: string;
 const temporales: string[] = [];
 
 function pdfDePrueba(nombre: string): string {
@@ -37,12 +39,21 @@ beforeAll(async () => {
     .where("slug", "=", FIXTURES.proyecto.slug)
     .executeTakeFirstOrThrow();
   projectId = proyecto.id;
+  actorId = (
+    await db
+      .selectFrom("User")
+      .select("id")
+      .where("email", "=", FIXTURES.activo.email)
+      .executeTakeFirstOrThrow()
+  ).id;
 
-  const stage = await request(app)
-    .post(`/api/v1/projects/${projectId}/stages`)
-    .set("Authorization", `Bearer ${tokenDev}`)
-    .send({ name: "Excavación", sequenceOrder: 1 });
-  stageId = stage.body.id;
+  const stage = await crearStageMinteado({
+    projectId,
+    name: "Excavación",
+    sequenceOrder: 1,
+    actorUserId: actorId
+  });
+  stageId = stage.id;
 });
 
 afterAll(async () => {
@@ -141,13 +152,15 @@ describe("POST /developer/projects/:id/stages/:stageId/evidence", () => {
   // (`POST /projects/:id/evidence`) era CRUD genérico sin caller real y se
   // borró el mismo día — ver CLAUDE.md raíz.
   it("la primera evidencia mueve el stage de Pending a InProgress", async () => {
-    const nuevo = await request(app)
-      .post(`/api/v1/projects/${projectId}/stages`)
-      .set("Authorization", `Bearer ${tokenDev}`)
-      .send({ name: "Stage para auto-avance", sequenceOrder: 999_301 });
+    const nuevo = await crearStageMinteado({
+      projectId,
+      name: "Stage para auto-avance",
+      sequenceOrder: 999_301,
+      actorUserId: actorId
+    });
 
     const res = await request(app)
-      .post(`/api/v1/developer/projects/${projectId}/stages/${nuevo.body.id}/evidence`)
+      .post(`/api/v1/developer/projects/${projectId}/stages/${nuevo.id}/evidence`)
       .set("Authorization", `Bearer ${tokenDev}`)
       .field("evidenceType", "document")
       .field("category", "permiso")
@@ -158,7 +171,7 @@ describe("POST /developer/projects/:id/stages/:stageId/evidence", () => {
     const fila = await db
       .selectFrom("Stage")
       .select("state")
-      .where("id", "=", nuevo.body.id)
+      .where("id", "=", nuevo.id)
       .executeTakeFirstOrThrow();
     expect(fila.state).toBe("InProgress");
   });

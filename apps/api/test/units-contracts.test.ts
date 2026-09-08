@@ -4,6 +4,7 @@ import app from "../src/app";
 import { createId } from "../src/db/id";
 import { db } from "../src/lib/db";
 import { FIXTURES } from "./global-setup";
+import { crearStageMinteado } from "./helpers/stages";
 
 // M2-D5 filas 39, 44b, 40-41, 23-24 y 63 — **M3-BE-06/08/10**, **M3-SC-01** y
 // **M3-SC-03**.
@@ -23,6 +24,7 @@ let tokenAdmin: string;
 let projectId: string;
 let unitId: string;
 let contractId: string;
+let actorId: string;
 
 // Con una base por archivo (SPEC-015 §1) este número ya no se coordina con
 // nadie: puede ser el 1, que es lo natural para la primera etapa de obra.
@@ -42,6 +44,13 @@ beforeAll(async () => {
     .where("slug", "=", FIXTURES.proyecto.slug)
     .executeTakeFirstOrThrow();
   projectId = proyecto.id;
+  actorId = (
+    await db
+      .selectFrom("User")
+      .select("id")
+      .where("email", "=", FIXTURES.activo.email)
+      .executeTakeFirstOrThrow()
+  ).id;
 });
 
 afterAll(async () => {
@@ -117,11 +126,13 @@ describe("el ciclo unidad → invitación → contrato → release", () => {
     // `validationCritical: false` porque lo que se prueba acá es el vínculo
     // release→TXID, no el requisito de evidencia — eso ya lo cubre
     // `stage-transitions.test.ts`.
-    const stage = await request(app)
-      .post(`/api/v1/projects/${projectId}/stages`)
-      .set("Authorization", `Bearer ${tokenDev}`)
-      .send({ name: "Cimientos", sequenceOrder: ETAPA, validationCritical: false });
-    expect(stage.status).toBe(201);
+    const stage = await crearStageMinteado({
+      projectId,
+      name: "Cimientos",
+      sequenceOrder: ETAPA,
+      validationCritical: false,
+      actorUserId: actorId
+    });
 
     // `InProgress` lo pide el developer; `Completed` es exclusivo del
     // certifier (M2-D1 §Role Permission Matrix) — acá se simula con `admin`,
@@ -132,7 +143,7 @@ describe("el ciclo unidad → invitación → contrato → release", () => {
       ["Completed", tokenAdmin]
     ] as const) {
       const paso = await request(app)
-        .patch(`/api/v1/stages/${stage.body.id}/state`)
+        .patch(`/api/v1/stages/${stage.id}/state`)
         .set("Authorization", `Bearer ${actor}`)
         .send({ state: estado });
       expect(paso.status).toBe(200);
