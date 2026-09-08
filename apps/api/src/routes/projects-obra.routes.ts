@@ -85,7 +85,9 @@ router.post(
       // sería fabricar stages que no se pueden anclar.
       validationCritical: z.boolean().optional(),
       // Avance de obra que este stage representa sobre el 100% del proyecto
-      // (D-021, placeholder de M3 §1 — DEFAULT_STAGE_CATALOG). Nunca dinero.
+      // (D-021). Nunca dinero — y opcional: el catálogo normativo
+      // (DEFAULT_STAGE_CATALOG) no lo trae, el dueño prefirió no inventar un
+      // reparto.
       progressPercentage: z.number().int().min(0).max(100).optional()
     });
 

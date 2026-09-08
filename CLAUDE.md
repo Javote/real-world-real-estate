@@ -36,11 +36,14 @@ números medidos, en `specs/README.md`. Acá solo lo que falta.
 | # | Qué | Por qué ahí | Nivel |
 |---|---|---|---|
 | 0 | **Mainnet** — runbook, habilitar la red, custodia de la clave. **Sin confirmar que sea de este milestone** (2026-09-08, el dueño) | D-013 la hace **imposible por configuración**: es código, no solo procedimiento | 🔴 |
-| 1 | **El "Stage template" de `/developer/project/new` — con captura real (34C), deliberadamente sin implementar.** No es una pantalla faltante: la fila 34b-34c de M2-D5 **sí** está implementada, solo falta el selector. El código (`developer.project.new.tsx`) ya documenta por qué — los 10 nombres de etapa no son normativos en ningún entregable, y `POST /projects/:id/stages` ancla on-chain **de a uno**, sin transaccionalidad para 10 escrituras por un solo submit. Aparte: **no existe ninguna captura** para "agregar una etapa a un proyecto ya creado" (verificado contra las 70), así que esa pantalla, si se construye, sí sería inventar | Bloqueado en dos decisiones del dueño, no en código: nombrar las 10 etapas de forma normativa, y si el backend suma un endpoint transaccional de bulk-create antes de exponerlo en la UI | 🔴 (decisión, no implementación) |
+
+**El "Stage template" (ex-#1) se cerró el 2026-09-08** — las dos decisiones del dueño que lo
+bloqueaban (nombrar las 10 etapas, el mecanismo de anclaje) están resueltas y construidas. Detalle
+completo más abajo, en el cierre del mismo día.
 
 **Encontrados el 2026-09-04, probando el flujo real end-to-end contra producción** (login con las
 credenciales del re-seed, crear un proyecto, subir y anclar evidencia — vía Claude en Chrome, no un
-test). Detalle del #1 en `apps/web/CLAUDE.md` §Trampas verificadas.
+test). Detalle en `apps/web/CLAUDE.md` §Trampas verificadas.
 
 **Cerrados el 2026-09-01:** el reference script (D-083) y su cobertura contra un nodo real; `network`
 e `issuingAuthority`, aplicadas en producción **sin dejar de tener un solo archivo de migración**
@@ -381,6 +384,62 @@ etapa" vacío en los dos. Es el mismo pendiente #1 de siempre, con una cara nuev
 un botón de transición, es que falta el botón que crea la etapa **antes** de que cualquier
 transición tenga sentido. Sigue bloqueado en las mismas dos decisiones del dueño (nombrar las 10
 etapas, bulk-create transaccional) — no se atacó hoy, a propósito.
+
+**Cerrado el mismo día · el pendiente #1 completo: las 10 etapas del template, con nombre y
+mecanismo de anclaje decididos por el dueño.**
+
+**Decisión 1 — los 10 nombres.** La captura `34C-DEVELOPER-NEW-PROJECT-B.png` es el único lugar
+donde existen (mezclados en inglés y español); el dueño los confirmó traducidos y normalizados como
+`DEFAULT_STAGE_CATALOG` (`packages/shared`), **sin `progressPercentage`** — no es obligatorio
+(`Stage.progressPercentage` es `number | null`, sin uso en el validador) y el dueño prefirió no
+inventar un reparto que nadie pidió.
+
+**Decisión 2 — el costo de crear 10 hilos on-chain de un submit.** Se consideró diferir el mint
+hasta que cada etapa arranca de verdad (mismo momento que ya dispara `Pending → InProgress`), pero
+eso resultó tener el mismo costo total (mint + advance, siempre, por etapa que arranca) con una
+complicación real: el validador exige que un mint nazca con datum `Pending`
+(`valid_initial_datum`, `mint_rejects_starting_outside_pending` — confirmado leyendo
+`contracts/lib/propnexus/fsm.ak` y `contracts/validators/stage.ak`, no supuesto), así que "mintear
+tarde" hubiera sido mint-más-advance encadenados, dos eventos por arranque en vez de uno. Agrupar
+los 10 mints en una sola transacción tampoco se puede — `mint_rejects_two_threads_in_one_tx` lo
+prohíbe explícito. **Se resolvió simple:** `POST /developer/projects` inserta el proyecto, la
+membresía y las 10 filas de `Stage` en una sola transacción de base (atómico a nivel de fila — antes
+no existía ningún `db.transaction()` en el código, es el primero) y después mintea cada una en loop,
+tolerando que alguna quede `Failed` sin bloquear a las demás (D-059, `retry-anchor` ya existente para
+el caso legítimo).
+
+**La pantalla** (`developer.project.new.tsx`) recuperó la card "Stage template" que documentaba como
+deuda — `SelectDropdown` con una sola opción (no hay nada que elegir hoy) y la lista de 10, ambos
+como claves de i18n porque el front no puede importar `DEFAULT_STAGE_CATALOG` en runtime (traería
+Zod al bundle). Duplicar la lista en dos lugares es el costo de esa restricción arquitectónica, no
+un descuido — el comentario del archivo dice dónde está la otra copia.
+
+**Y una trampa real, encontrada probando el flujo con Claude en Chrome:** el primer intento de
+verificar el auto-avance (`Pending → InProgress` al subir la primera evidencia) fallaba en
+silencio — la evidencia se anclaba bien, el stage se quedaba en `Pending`. La lógica se había
+escrito en `POST /projects/:id/evidence` (`projects-obra.routes.ts`), pero **la pantalla real llama
+a otra ruta**: `POST /developer/projects/:id/stages/:stageId/evidence`
+(`developer-evidencia.routes.ts`), la que M2-D5 fila 38 exige porque devuelve Merkle root y TXID en
+la misma respuesta para el `AnchoringSuccessModal`. La primera SÍ existe y SÍ funciona — es el CRUD
+genérico que `apps/api/CLAUDE.md` ya documenta (*"el CRUD genérico... que la superficie del
+entregable no consume pero los tests y el seed sí"*) — pero confirmado con `grep -rn
+"api.uploadEvidence" apps/web/src`: cero resultados, ningún componente la llama. No es una
+duplicación accidental que haya que resolver; es la distinción de siempre entre CRUD genérico y
+superficie del entregable, y el error fue mío por no chequear cuál de las dos usa la pantalla antes
+de editar. La lógica de auto-avance quedó en las dos rutas por consistencia (comparten
+`transitionStage`, no hay lógica repetida), pero el test que importa —contra la ruta real— se agregó
+en `browse-and-documents.test.ts`.
+
+**El dueño preguntó si hace falta auditar los 87 endpoints por este mismo motivo** (¿hay más pares
+CRUD-genérico / superficie-del-entregable donde no está claro cuál usa el front?) — quedó pendiente,
+a propósito, para otra sesión.
+
+Verificado de punta a punta con Claude en Chrome contra `pnpm dev` local (`ANCHOR_MODE=simulated`):
+crear un proyecto nuevo deja las 10 etapas minteadas y seleccionables en "Subir evidencia"; subir un
+archivo a una de ellas la mueve a `InProgress`, visible en `/developer/progress`. Tests nuevos en
+`project-stage-template.test.ts` (transaccionalidad, 10 hilos independientes, membresía del creador)
+y `browse-and-documents.test.ts` (el auto-avance contra la ruta real). `pnpm verify` completo en
+verde.
 
 **El diseño ya está decidido. El trabajo es transcribirlo, no inventarlo.**
 

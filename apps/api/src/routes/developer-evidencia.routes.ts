@@ -5,7 +5,7 @@ import { z } from "zod";
 import { createId } from "../db/id";
 import { anchorCommitmentEvent } from "../domain/anchoring";
 import { notifyUnitInvestor } from "../domain/notify";
-import { crearBundle } from "../domain/stage-transition";
+import { crearBundle, transitionStage } from "../domain/stage-transition";
 import { db } from "../lib/db";
 import { storage } from "../lib/storage";
 import { uploadSingleEvidence } from "../lib/upload";
@@ -192,6 +192,20 @@ router.post(
       entityId: creada.id,
       metadata: { bundleId: bundle.id, merkleRoot, txid: anchor.txid }
     });
+
+    // M1-D2c: "Pending → InProgress : work initiated". La primera evidencia
+    // que un developer sube a un stage Pending ES la señal de que el trabajo
+    // arrancó — no hace falta un botón aparte (ver CLAUDE.md raíz). Mismo
+    // criterio que POST /projects/:id/evidence; `Observed → InProgress` no se
+    // dispara acá a propósito, es una acción explícita aparte.
+    if (stage.state === "Pending") {
+      await transitionStage({
+        stageId: stage.id,
+        to: "InProgress",
+        actorUserId: req.user!.id,
+        auditAction: "STAGE_WORK_INITIATED"
+      });
+    }
 
     return res.status(201).json({
       evidence,

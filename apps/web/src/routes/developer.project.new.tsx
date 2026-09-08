@@ -6,35 +6,56 @@ import { DEV_ROLES } from '#/auth/roles'
 import { useRoleGuard } from '#/auth/useRoleGuard'
 import { NumberInput } from '#/components/domain/NumberInput'
 import { PrimaryButton } from '#/components/domain/PrimaryButton'
+import { SelectDropdown } from '#/components/domain/SelectDropdown'
 import { TextInput } from '#/components/domain/TextInput'
 import { PanelLayout } from '#/components/PanelLayout'
+import type { TranslationKey } from '#/i18n/dictionary'
 import { useTranslation } from '#/i18n/useTranslation'
 
 // **M2-D5 filas 34b-34c · `/developer/project/new`** — capturas 34b y 34C.
 // Endpoint: POST /developer/projects. Test ID: DEV-PROJECT-CREATE-001.
 //
-// **Sin la card de "Stage template", y es deuda declarada, no un olvido.**
-// M2-D1 §5.2 la lista como parte del formulario y la captura 34C muestra el
-// selector con sus diez etapas. Dos cosas lo bloquean:
+// **La card de "Stage template" ya no es deuda declarada — cerrada
+// 2026-09-08.** Lo que la bloqueaba, y cómo se cerró:
 //
-// 1. **Los diez nombres no existen en ningún entregable.** Grep sobre `docs/`
-//    entero: M2-D1 los menciona como "Standard, 10 stages" y nunca los lista.
-//    Los únicos nombres son los de la captura, y están mezclados en inglés y
-//    español ("Foundations", "Estructura niveles superiores") — la firma del
-//    dato mock que CLAUDE.md advierte que no es normativo.
-// 2. **El backend no aplica ningún template.** `POST /developer/projects` crea
-//    el proyecto y su membresía; los stages se crean de a uno con
-//    `POST /projects/:id/stages`, y **cada uno ancla on-chain**. Diez
-//    escrituras a cadena disparadas por un submit, sin transaccionalidad y sin
-//    forma de revertir la mitad, no es algo que se resuelva en la vista.
+// 1. **Los diez nombres no existían en ningún entregable.** Los de la captura
+//    (`34C-DEVELOPER-NEW-PROJECT-B.png`) estaban mezclados en inglés y
+//    español. El dueño los confirmó como catálogo normativo, traducidos al
+//    español — viven en `DEFAULT_STAGE_CATALOG` (`packages/shared`) para el
+//    backend, y acá abajo como claves de i18n (regla 14: nada de texto
+//    hardcodeado). Es la misma lista en dos lugares porque el front no
+//    importa valores en runtime de `packages/shared` (solo tipos — no carga
+//    Zod); si el catálogo cambia, cambian los dos.
+// 2. **El backend no aplicaba ningún template.** Ahora `POST
+//    /developer/projects` crea el proyecto, su membresía y las 10 etapas en
+//    una sola transacción de base — atómico a nivel de fila. El anclaje
+//    on-chain de cada etapa es aparte y no puede ser atómico (el validador
+//    rechaza acuñar más de un hilo por transacción,
+//    `mint_rejects_two_threads_in_one_tx`): se intenta una por una, tolerando
+//    que alguna quede `Failed` sin bloquear a las demás (D-059).
 //
-// El template pertenece al servidor y a una decisión de producto. Mostrar acá
-// un selector que no hace nada sería la misma mentira que un tile sin destino.
+// Es la única plantilla que existe — no hay "ninguna" ni otra opción — así
+// que el dropdown siempre muestra la misma selección; existe para que la
+// pantalla coincida con la captura, no porque haya algo que elegir hoy.
 //
 // **El `slug` se deriva del nombre.** El endpoint lo exige y el formulario no
 // lo pide: es un identificador de URL, no un dato que el developer elija.
 
 export const Route = createFileRoute('/developer/project/new')({ component: NuevoProyecto })
+
+/** Espeja `DEFAULT_STAGE_CATALOG` de `packages/shared` — ver el comentario de arriba. */
+const ETAPAS_DEL_TEMPLATE: readonly TranslationKey[] = [
+  'developer.newProject.stageTemplate.stage1',
+  'developer.newProject.stageTemplate.stage2',
+  'developer.newProject.stageTemplate.stage3',
+  'developer.newProject.stageTemplate.stage4',
+  'developer.newProject.stageTemplate.stage5',
+  'developer.newProject.stageTemplate.stage6',
+  'developer.newProject.stageTemplate.stage7',
+  'developer.newProject.stageTemplate.stage8',
+  'developer.newProject.stageTemplate.stage9',
+  'developer.newProject.stageTemplate.stage10'
+]
 
 /** Minúsculas, sin diacríticos, separado por guiones. */
 export function slugify(nombre: string): string {
@@ -135,6 +156,25 @@ function NuevoProyecto() {
             onChange={setEntrega}
             type="date"
           />
+        </article>
+
+        <article className="flex flex-col gap-s3 rounded-xl bg-card p-s4 shadow-e1">
+          <SelectDropdown
+            id="stageTemplate"
+            label={t('developer.newProject.stageTemplate.label')}
+            value="standard"
+            onChange={() => {}}
+            options={[
+              { value: 'standard', label: t('developer.newProject.stageTemplate.standard') }
+            ]}
+          />
+          <ol className="flex flex-col gap-s1 text-body-sm text-text-secondary">
+            {ETAPAS_DEL_TEMPLATE.map((clave, i) => (
+              <li key={clave}>
+                {i + 1}. {t(clave)}
+              </li>
+            ))}
+          </ol>
         </article>
 
         {crear.isError ? (

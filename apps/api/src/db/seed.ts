@@ -101,16 +101,15 @@ async function main() {
     { userId: id("verifier@example.com"), membershipRole: "verifier" }
   ]);
 
-  // M3 §1 — placeholder de "≥8 stages" (D-021, DEFAULT_STAGE_CATALOG): las
-  // dos primeras siguen en el estado que ya mostraba la demo (una completa,
-  // una en curso); el resto nace `Pending`, sin tocar.
+  // El catálogo normativo de 10 etapas (DEFAULT_STAGE_CATALOG): las dos
+  // primeras siguen en el estado que ya mostraba la demo (una completa, una
+  // en curso); el resto nace `Pending`, sin tocar.
   await sembrarStages(
     db,
     projectId,
     DEFAULT_STAGE_CATALOG.map((etapa, i) => ({
       name: etapa.name,
       sequenceOrder: etapa.sequenceOrder,
-      progressPercentage: etapa.progressPercentage,
       state: i === 0 ? "Completed" : i === 1 ? "InProgress" : "Pending"
     }))
   );

@@ -52,13 +52,15 @@ describe("stageStateSchema", () => {
 });
 
 describe("DEFAULT_STAGE_CATALOG", () => {
-  it("tiene al menos 8 etapas (M3 §1)", () => {
-    expect(DEFAULT_STAGE_CATALOG.length).toBeGreaterThanOrEqual(8);
+  // M2-D1 §5.2, captura 34C: "Standard template (10 stages)".
+  it("tiene las 10 etapas del Stage template", () => {
+    expect(DEFAULT_STAGE_CATALOG.length).toBe(10);
   });
 
-  it("progressPercentage suma 100 — es avance de obra, no dinero (D-021)", () => {
-    const total = DEFAULT_STAGE_CATALOG.reduce((acc, e) => acc + e.progressPercentage, 0);
-    expect(total).toBe(100);
+  it("ningún nombre está vacío", () => {
+    for (const etapa of DEFAULT_STAGE_CATALOG) {
+      expect(etapa.name.trim().length).toBeGreaterThan(0);
+    }
   });
 
   it("sequenceOrder es 1..N sin huecos ni repetidos", () => {

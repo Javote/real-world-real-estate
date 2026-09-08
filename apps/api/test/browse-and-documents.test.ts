@@ -133,6 +133,34 @@ describe("POST /developer/projects/:id/stages/:stageId/evidence", () => {
 
     expect(res.status).toBe(404);
   });
+
+  // 2026-09-08: esta es la ruta que la pantalla real usa (confirmado con
+  // Claude en Chrome contra dev — `POST /projects/:id/evidence`, sin el
+  // scope de stage en el path, es CRUD genérico que el front nunca llama).
+  // El auto-avance vive en las dos por consistencia, pero acá es donde
+  // importa que esté probado.
+  it("la primera evidencia mueve el stage de Pending a InProgress", async () => {
+    const nuevo = await request(app)
+      .post(`/api/v1/projects/${projectId}/stages`)
+      .set("Authorization", `Bearer ${tokenDev}`)
+      .send({ name: "Stage para auto-avance", sequenceOrder: 999_301 });
+
+    const res = await request(app)
+      .post(`/api/v1/developer/projects/${projectId}/stages/${nuevo.body.id}/evidence`)
+      .set("Authorization", `Bearer ${tokenDev}`)
+      .field("evidenceType", "document")
+      .field("category", "permiso")
+      .attach("file", pdfDePrueba("upload-auto-avance.pdf"));
+
+    expect(res.status).toBe(201);
+
+    const fila = await db
+      .selectFrom("Stage")
+      .select("state")
+      .where("id", "=", nuevo.body.id)
+      .executeTakeFirstOrThrow();
+    expect(fila.state).toBe("InProgress");
+  });
 });
 
 describe("GET /projects/:id/documents y /projects/:id/stages/:stageId", () => {

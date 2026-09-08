@@ -1,9 +1,11 @@
-import type { DeveloperKpis } from "@plataforma/shared";
+import { DEFAULT_STAGE_CATALOG, type DeveloperKpis, INITIAL_STAGE_STATE } from "@plataforma/shared";
 import { type Request, Router } from "express";
 import { z } from "zod";
 import { createId } from "../db/id";
+import type { OnChainEventRow } from "../db/types";
 import { anchorCommitmentEvent } from "../domain/anchoring";
 import { reconciliarParaLectura } from "../domain/reconcile";
+import { anchorEvent, recordOnChainEvent } from "../domain/stage-transition";
 import { db } from "../lib/db";
 import { auditScope, authenticate, authorize, projectScope } from "../middlewares/auth";
 import { writeAuditLog } from "../utils/audit";
@@ -147,38 +149,70 @@ router.post(
     if (!parsed.success) return res.status(400).json(parsed.error.flatten());
 
     const ahora = new Date();
-    const proyecto = await db
-      .insertInto("Project")
-      .values({
-        id: createId(),
-        name: parsed.data.name,
-        slug: parsed.data.slug,
-        address: parsed.data.address ?? null,
-        city: parsed.data.city ?? null,
-        country: parsed.data.country ?? null,
-        totalUnits: parsed.data.totalUnits ?? 0,
-        estimatedDelivery: parsed.data.estimatedDelivery
-          ? new Date(parsed.data.estimatedDelivery)
-          : null,
-        status: "planning",
-        createdAt: ahora,
-        updatedAt: ahora
-      })
-      .returningAll()
-      .executeTakeFirstOrThrow();
 
-    // Quien crea el proyecto queda como su developer: sin esto, el creador no
-    // pasaría su propia segunda capa de autorización (regla 5).
-    await db
-      .insertInto("ProjectMember")
-      .values({
-        id: createId(),
-        userId: req.user!.id,
-        projectId: proyecto.id,
-        membershipRole: "developer",
-        createdAt: ahora
-      })
-      .execute();
+    // Proyecto + membresía del creador + las 10 etapas del Stage template
+    // (M2-D1 §5.2, captura 34C) nacen juntos, atómicos a nivel de base: las
+    // 10 filas existen todas o ninguna. El anclaje on-chain de cada una es
+    // aparte —no puede ser atómico, cada mint es su propia transacción de
+    // Cardano (D-083, y el validador rechaza acuñar más de un hilo por tx:
+    // `mint_rejects_two_threads_in_one_tx`)— y se intenta después, en loop,
+    // tolerando que alguna quede `Failed` (D-059: la declaración off-chain
+    // nunca depende del anclaje).
+    const { proyecto, stages } = await db.transaction().execute(async (trx) => {
+      const proyecto = await trx
+        .insertInto("Project")
+        .values({
+          id: createId(),
+          name: parsed.data.name,
+          slug: parsed.data.slug,
+          address: parsed.data.address ?? null,
+          city: parsed.data.city ?? null,
+          country: parsed.data.country ?? null,
+          totalUnits: parsed.data.totalUnits ?? 0,
+          estimatedDelivery: parsed.data.estimatedDelivery
+            ? new Date(parsed.data.estimatedDelivery)
+            : null,
+          status: "planning",
+          createdAt: ahora,
+          updatedAt: ahora
+        })
+        .returningAll()
+        .executeTakeFirstOrThrow();
+
+      // Quien crea el proyecto queda como su developer: sin esto, el creador
+      // no pasaría su propia segunda capa de autorización (regla 5).
+      await trx
+        .insertInto("ProjectMember")
+        .values({
+          id: createId(),
+          userId: req.user!.id,
+          projectId: proyecto.id,
+          membershipRole: "developer",
+          createdAt: ahora
+        })
+        .execute();
+
+      const stages = await trx
+        .insertInto("Stage")
+        .values(
+          DEFAULT_STAGE_CATALOG.map((etapa) => ({
+            id: createId(),
+            projectId: proyecto.id,
+            name: etapa.name,
+            sequenceOrder: etapa.sequenceOrder,
+            state: INITIAL_STAGE_STATE,
+            // D-061: todo stage es validation-critical por default.
+            validationCritical: true,
+            progressPercentage: null,
+            createdAt: ahora,
+            updatedAt: ahora
+          }))
+        )
+        .returningAll()
+        .execute();
+
+      return { proyecto, stages };
+    });
 
     await writeAuditLog({
       actorUserId: req.user!.id,
@@ -187,7 +221,26 @@ router.post(
       entityId: proyecto.id
     });
 
-    return res.status(201).json(proyecto);
+    // El mint de cada etapa, uno por uno — nunca en batch (el validador lo
+    // rechaza) y nunca bloqueando entre sí: si la etapa 6 falla, las demás
+    // igual se intentan, y la 6 queda declarada con su anclaje en `Failed`,
+    // reintentable después (`retry-anchor`) como cualquier mint que falla.
+    const anclajes: OnChainEventRow[] = [];
+    for (const stage of stages) {
+      const evento = await recordOnChainEvent({
+        projectId: stage.projectId,
+        stageId: stage.id,
+        eventType: "STAGE_CREATED",
+        fromState: null,
+        toState: stage.state
+      });
+      anclajes.push(await anchorEvent(evento, stage, null));
+    }
+
+    return res.status(201).json({
+      ...proyecto,
+      stages: stages.map((stage, i) => ({ ...stage, anchor: anclajes[i] }))
+    });
   }
 );
 

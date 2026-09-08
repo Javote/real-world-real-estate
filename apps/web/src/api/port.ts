@@ -45,6 +45,7 @@ import type {
   MerkleProof,
   ProgressRow,
   Project,
+  ProjectCreated,
   ProjectDetail,
   ProjectDocument,
   ProjectStageDetail,
@@ -255,7 +256,7 @@ export const api = {
     address?: string
     totalUnits?: number
     estimatedDelivery?: string
-  }) => request<Project>('/api/v1/developer/projects', jsonInit('POST', proyecto)),
+  }) => request<ProjectCreated>('/api/v1/developer/projects', jsonInit('POST', proyecto)),
 
   listDeveloperDocuments: (status?: 'anchored' | 'pending') => {
     const qs = status ? `?status=${status}` : ''

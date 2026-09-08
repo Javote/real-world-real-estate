@@ -51,6 +51,16 @@ export interface Project {
   stages: Stage[]
 }
 
+/**
+ * Respuesta de `POST /developer/projects` — el Stage template (M2-D1 §5.2,
+ * captura 34C) se aplica siempre, así que cada etapa viaja con el resultado
+ * de su propio intento de anclaje: minteos independientes, uno puede quedar
+ * `Failed` sin bloquear a los demás (D-059).
+ */
+export interface ProjectCreated extends Project {
+  stages: (Stage & { anchor: { txid: string | null; status: string } })[]
+}
+
 export interface ProjectMemberUser {
   id: string
   email: string
