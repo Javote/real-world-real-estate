@@ -83,9 +83,9 @@ que el producto viene a eliminar.
 
 `aiken check` **no mide coverage de líneas** —solo tiene `--property-coverage`, que es la
 distribución de labels en property tests—, así que el ≥95% del criterio 2 del SOM se demuestra con
-esta tabla. **73 tests, 0 fallando.**
+esta tabla. **76 tests, 0 fallando.**
 
-`lib/propnexus/fsm.ak` — 40:
+`lib/propnexus/fsm.ak` — 43:
 
 | Qué prueba | Tests |
 |---|---|
@@ -96,6 +96,7 @@ esta tabla. **73 tests, 0 fallando.**
 | Evolución del datum: completar, no completar, y los cruces inválidos | `t_evolution_*` (9) |
 | Nacimiento del hilo: estado inicial, evidencia y fecha en cero, orden positivo, refs no vacías y ≤32 bytes | `t_initial_*` (7) |
 | El datum codifica al mismo CBOR que el códec de `packages/cardano` espera — el "valor dorado" (ver `packages/cardano/CLAUDE.md`) | `t_golden_datum_encoding` (1) |
+| El redeemer (`StageRedeemer`/`MintAction`) codifica al mismo CBOR que `encodeAdvanceRedeemer`/`encodeInitRedeemer` de `packages/cardano` — mismo boundary que el datum, cerrado el 2026-09-08 (`specs/PLAN-2026-09-08-tests-aiken-robustez.md`) | `t_golden_redeemer_*` (3) |
 
 `validators/stage.ak` — 33 (6 caminos felices + 27 puntos de rechazo):
 

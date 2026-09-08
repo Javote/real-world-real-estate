@@ -435,3 +435,24 @@ test t_golden_datum_encoding() {
     }
   cbor.serialise(datum) == #"d8799f4770726f6a65637445737461676501d87a80d879804000ff"
 }
+
+// ── El valor dorado del redeemer ─────────────────────────────────────────
+//
+// Mismo motivo que el datum de arriba, mismo boundary: `packages/cardano`
+// codifica `StageRedeemer`/`MintAction` a mano (`encodeAdvanceRedeemer`,
+// `encodeInitRedeemer` en `codec.ts`) y los fija a estos mismos hex en
+// `codec.test.ts`. Si el redeemer que arma el backend no serializa exacto a
+// esto, la tx se firma, se paga y el validador la rechaza sin decir por qué.
+
+test t_golden_redeemer_advance_without_completion() {
+  cbor.serialise(Advance { to: InProgress, completion: None }) == #"d8799fd87a80d87a80ff"
+}
+
+test t_golden_redeemer_init() {
+  cbor.serialise(Init) == #"d87980"
+}
+
+test t_golden_redeemer_advance_with_completion() {
+  let completion = Completion { evidence_root: root, now: 5 }
+  cbor.serialise(Advance { to: Completed, completion: Some(completion) }) == #"d8799fd87c80d8799fd8799f5820111111111111111111111111111111111111111111111111111111111111111105ffffff"
+}

@@ -56,7 +56,7 @@ no se integra sin que el dueño lo revise línea por línea.
 
 | # | Paso | Criterio de cierre |
 |---|---|---|
-| 1 | Golden CBOR del redeemer: 2 tests en `fsm.ak` (`Advance` con y sin `Completion`, y `Init`) contra los mismos hex que ya fija `codec.test.ts` | Los hex de Aiken y de TS coinciden byte a byte, 0 tests rotos |
+| 1 | Golden CBOR del redeemer: 3 tests en `fsm.ak` (`Advance` sin `Completion`, `Init`, y `Advance` con `Completion` — subido de 2 a 3: el tercer caso también quedó con match exacto, no solo el chequeo parcial que hace `codec.test.ts`) contra los mismos hex que ya fija `codec.test.ts` | ✅ **hecho** — 76/76 verde, `pnpm contracts:verify` completo (fmt+check+build), `plutus.json` sin cambios (no se tocó lógica, solo tests) |
 | 2 | Test del branch `else`: una `Transaction` con purpose no-spend/no-mint, confirmando `fail` | El test nuevo pasa; ningún test existente cambia |
 | 3 | `spend_rejects_utxo_with_two_units_of_own_token` (análogo a su hermano de `mint`) | Test nuevo en rojo antes del fix (si hiciera falta uno) o ya en verde si el validador ya lo cubre — a confirmar al escribirlo |
 | 4 | Boundary exacto de `within_validity_range`: `completed_at == lower` y `completed_at == upper` deben aceptar; `lower - 1`/`upper + 1` deben rechazar | 4 tests nuevos, todos verdes contra el código actual (sin tocar el validador) |
