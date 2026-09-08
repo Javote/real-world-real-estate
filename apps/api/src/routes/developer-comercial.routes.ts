@@ -1,5 +1,10 @@
+import {
+  createInvitationSchema,
+  createUnitSchema,
+  releasePaymentSchema,
+  updateUnitSchema
+} from "@plataforma/shared";
 import { type Request, Router } from "express";
-import { z } from "zod";
 import { createId } from "../db/id";
 import { anchorCommitmentEvent, commitmentOf } from "../domain/anchoring";
 import { db } from "../lib/db";
@@ -51,16 +56,7 @@ router.post(
     acceso: { proyecto: { param: "id" }, membresias: ["developer"] }
   }),
   async (req: Request<{ id: string }>, res) => {
-    const schema = z.strictObject({
-      unitReference: z.string().min(1).max(20),
-      floor: z.number().int().optional(),
-      sizeM2: z.number().int().positive().optional(),
-      // Entero en unidades mínimas: nunca un decimal para dinero (regla 1).
-      priceMinorUnits: z.number().int().nonnegative().optional(),
-      currency: z.string().length(3).optional()
-    });
-
-    const parsed = schema.safeParse(req.body);
+    const parsed = createUnitSchema.safeParse(req.body);
     if (!parsed.success) return res.status(400).json(parsed.error.flatten());
 
     const ahora = new Date();
@@ -100,15 +96,7 @@ router.patch(
     acceso: { proyecto: { via: "Unit", param: "id" }, membresias: ["developer"] }
   }),
   async (req: Request<{ id: string }>, res) => {
-    const schema = z.strictObject({
-      status: z.enum(["available", "reserved", "sold", "delivered"]).optional(),
-      floor: z.number().int().optional(),
-      sizeM2: z.number().int().positive().optional(),
-      priceMinorUnits: z.number().int().nonnegative().optional(),
-      currency: z.string().length(3).optional()
-    });
-
-    const parsed = schema.safeParse(req.body);
+    const parsed = updateUnitSchema.safeParse(req.body);
     if (!parsed.success) return res.status(400).json(parsed.error.flatten());
 
     const unidad = await db
@@ -182,14 +170,7 @@ router.post(
     acceso: { proyecto: { param: "id" }, membresias: ["developer"] }
   }),
   async (req: Request<{ id: string }>, res) => {
-    const schema = z.strictObject({
-      unitId: z.string().min(1),
-      investorEmail: z.string().email(),
-      amountMinorUnits: z.number().int().positive(),
-      currency: z.string().length(3)
-    });
-
-    const parsed = schema.safeParse(req.body);
+    const parsed = createInvitationSchema.safeParse(req.body);
     if (!parsed.success) return res.status(400).json(parsed.error.flatten());
 
     const unidad = await db
@@ -356,8 +337,7 @@ router.post(
     acceso: { proyecto: { via: "Contract", param: "id" }, membresias: ["developer"] }
   }),
   async (req: Request<{ id: string; stageNum: string }>, res) => {
-    const schema = z.strictObject({ amountMinorUnits: z.number().int().positive() });
-    const parsed = schema.safeParse(req.body);
+    const parsed = releasePaymentSchema.safeParse(req.body);
     if (!parsed.success) return res.status(400).json(parsed.error.flatten());
 
     const stageNumber = Number.parseInt(req.params.stageNum, 10);

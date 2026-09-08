@@ -78,6 +78,23 @@ export const stageTransitionSchema = z.strictObject({
 export type StageTransitionInput = z.infer<typeof stageTransitionSchema>;
 
 /**
+ * Body de `PATCH /api/v1/stages/:id`. A diferencia de `stageTransitionSchema`
+ * (que mueve la FSM), esto edita metadata del stage — `sequenceOrder` y
+ * `validationCritical` son parte de su identidad en el datum, y la ruta
+ * bloquea el cambio una vez que el hilo está anclado (ver `stages.routes.ts`).
+ */
+export const updateStageSchema = z.object({
+  name: z.string().min(1).optional(),
+  sequenceOrder: z.number().int().positive().optional(),
+  validationCritical: z.boolean().optional()
+});
+export type UpdateStageInput = z.infer<typeof updateStageSchema>;
+
+/** Body de `POST /certifier/stages/:id/observe` (fila 57). */
+export const observeStageSchema = z.strictObject({ note: z.string().min(1).max(2000) });
+export type ObserveStageInput = z.infer<typeof observeStageSchema>;
+
+/**
  * Catálogo normativo de las 10 etapas del "Stage template" (M2-D1 §5.2,
  * captura 34C — `34C-DEVELOPER-NEW-PROJECT-B.png`). Los 10 nombres son los
  * únicos que existen en algún entregable; se transcriben traducidos al

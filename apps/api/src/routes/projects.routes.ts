@@ -1,7 +1,11 @@
+import {
+  addProjectMemberSchema,
+  createProjectSchema,
+  projectListQuerySchema,
+  updateProjectSchema
+} from "@plataforma/shared";
 import { type Request, Router } from "express";
-import { z } from "zod";
 import { createId } from "../db/id";
-import { PROJECT_STATUSES } from "../db/types";
 import { db } from "../lib/db";
 import { sql } from "../lib/kysely";
 import {
@@ -17,38 +21,6 @@ const router = Router();
 
 router.use(authenticate);
 
-/**
- * Filtros de `GET /projects`. La regla 6 pide Zod en todo lo que entra, y este
- * es el único endpoint donde lo que entra es la query y no el body — se había
- * quedado afuera, con un `String(status) as any` que le mentía al compilador:
- * `status` podía ser cualquier cosa y Kysely lo tomaba como un `ProjectStatus`.
- * No era explotable (SQLite compara contra un valor que no existe y no devuelve
- * nada), pero es exactamente el agujero que la regla 6 cierra.
- *
- * Los dos son opcionales y un valor inválido es 400, no un filtro ignorado en
- * silencio: quien filtra por `status=activo` tiene que enterarse de que ese
- * estado no existe.
- */
-const listQuerySchema = z.object({
-  status: z.enum(PROJECT_STATUSES).optional(),
-  city: z.string().min(1).optional(),
-  /** Fila 04 — el typeahead. Busca en nombre y ciudad. */
-  q: z.string().min(1).max(120).optional(),
-  /** Fila 05 — el orden del `SelectDropdown`. */
-  sort: z.enum(["recent", "name", "delivery"]).optional(),
-  /**
-   * Fila 03 — el viewport del mapa: `minLon,minLat,maxLon,maxLat`.
-   *
-   * Se valida acá y no en el handler porque un bbox mal formado tiene que ser
-   * 400 y no un filtro que se ignora en silencio: quien pide el mapa y recibe
-   * el listado entero no se entera de que su viewport no llegó.
-   */
-  bbox: z
-    .string()
-    .regex(/^-?\d+(\.\d+)?(,-?\d+(\.\d+)?){3}$/)
-    .optional()
-});
-
 router.get(
   "/",
   authorize({
@@ -56,7 +28,13 @@ router.get(
     acceso: { scopeEnQuery: "projectScope(cualquier membresía)" }
   }),
   async (req, res) => {
-    const filtros = listQuerySchema.safeParse(req.query);
+    // La regla 6 pide Zod en todo lo que entra, y este es el único endpoint
+    // donde lo que entra es la query y no el body — se había quedado afuera,
+    // con un `String(status) as any` que le mentía al compilador: `status`
+    // podía ser cualquier cosa y Kysely lo tomaba como un `ProjectStatus`. No
+    // era explotable (SQLite compara contra un valor que no existe y no
+    // devuelve nada), pero es exactamente el agujero que la regla 6 cierra.
+    const filtros = projectListQuerySchema.safeParse(req.query);
 
     if (!filtros.success) {
       return res.status(400).json(filtros.error.flatten());
@@ -142,20 +120,7 @@ router.get(
 );
 
 router.post("/", authorize({ roles: ["admin"], acceso: "soloRol" }), async (req, res) => {
-  const schema = z.object({
-    name: z.string().min(1),
-    slug: z.string().min(1),
-    address: z.string().optional(),
-    city: z.string().optional(),
-    country: z.string().optional(),
-    latitude: z.number().optional(),
-    longitude: z.number().optional(),
-    totalUnits: z.number().int().nonnegative().default(0),
-    estimatedDelivery: z.string().datetime().optional(),
-    status: z.enum(["planning", "in_progress", "delayed", "completed"]).default("planning")
-  });
-
-  const parsed = schema.safeParse(req.body);
+  const parsed = createProjectSchema.safeParse(req.body);
   if (!parsed.success) {
     return res.status(400).json(parsed.error.flatten());
   }
@@ -254,20 +219,7 @@ router.get(
 );
 
 router.patch("/:id", authorize({ roles: ["admin"], acceso: "soloRol" }), async (req, res) => {
-  const schema = z.object({
-    name: z.string().min(1).optional(),
-    slug: z.string().min(1).optional(),
-    address: z.string().optional(),
-    city: z.string().optional(),
-    country: z.string().optional(),
-    latitude: z.number().optional(),
-    longitude: z.number().optional(),
-    totalUnits: z.number().int().nonnegative().optional(),
-    estimatedDelivery: z.string().datetime().optional(),
-    status: z.enum(["planning", "in_progress", "delayed", "completed"]).optional()
-  });
-
-  const parsed = schema.safeParse(req.body);
+  const parsed = updateProjectSchema.safeParse(req.body);
   if (!parsed.success) {
     return res.status(400).json(parsed.error.flatten());
   }
@@ -358,12 +310,7 @@ router.post(
   "/:id/members",
   authorize({ roles: ["admin"], acceso: "soloRol" }),
   async (req: Request<{ id: string }>, res) => {
-    const schema = z.object({
-      userId: z.string().min(1),
-      membershipRole: z.enum(["developer", "buyer", "verifier"])
-    });
-
-    const parsed = schema.safeParse(req.body);
+    const parsed = addProjectMemberSchema.safeParse(req.body);
     if (!parsed.success) {
       return res.status(400).json(parsed.error.flatten());
     }

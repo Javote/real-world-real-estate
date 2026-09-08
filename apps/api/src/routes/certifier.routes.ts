@@ -1,6 +1,10 @@
-import type { CertifierAssignment, CertifierKpis } from "@plataforma/shared";
+import {
+  type CertifierAssignment,
+  type CertifierKpis,
+  cursorPaginationSchema,
+  observeStageSchema
+} from "@plataforma/shared";
 import { type Request, Router } from "express";
-import { z } from "zod";
 import { transitionStage } from "../domain/stage-transition";
 import { db } from "../lib/db";
 import { authenticate, authorize } from "../middlewares/auth";
@@ -148,8 +152,7 @@ router.post(
     acceso: { proyecto: { via: "Stage", param: "id" }, membresias: ["verifier"] }
   }),
   async (req: Request<{ id: string }>, res) => {
-    const schema = z.strictObject({ note: z.string().min(1).max(2000) });
-    const parsed = schema.safeParse(req.body);
+    const parsed = observeStageSchema.safeParse(req.body);
     if (!parsed.success) return res.status(400).json(parsed.error.flatten());
 
     // **La observación va al `AuditLog`, no al datum.** On-chain solo van
@@ -180,11 +183,7 @@ router.get(
     acceso: { scopeEnQuery: "Stage.certifiedById = usuario" }
   }),
   async (req, res) => {
-    const schema = z.object({
-      cursor: z.string().optional(),
-      limit: z.coerce.number().int().min(1).max(100).default(20)
-    });
-    const parsed = schema.safeParse(req.query);
+    const parsed = cursorPaginationSchema.safeParse(req.query);
     if (!parsed.success) return res.status(400).json(parsed.error.flatten());
 
     let query = db

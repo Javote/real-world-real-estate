@@ -1,6 +1,11 @@
-import type { NotaryKpis, NotarySignature, PendingDossier } from "@plataforma/shared";
+import {
+  cursorPaginationSchema,
+  type NotaryKpis,
+  type NotarySignature,
+  type PendingDossier,
+  rejectDossierSchema
+} from "@plataforma/shared";
 import { type Request, Router } from "express";
-import { z } from "zod";
 import { anchorCommitmentEvent, commitmentOf } from "../domain/anchoring";
 import { compileDossier } from "../domain/dossier";
 import { notifyUnitInvestor } from "../domain/notify";
@@ -243,8 +248,7 @@ router.post(
   "/dossiers/:id/reject",
   authorize({ roles: ["admin", "notary"], acceso: "soloRol" }),
   async (req: Request<{ id: string }>, res) => {
-    const schema = z.strictObject({ note: z.string().min(1).max(2000) });
-    const parsed = schema.safeParse(req.body);
+    const parsed = rejectDossierSchema.safeParse(req.body);
     if (!parsed.success) return res.status(400).json(parsed.error.flatten());
 
     const fila = await db
@@ -293,11 +297,7 @@ router.get(
     acceso: { scopeEnQuery: "Dossier.signedById = usuario" }
   }),
   async (req, res) => {
-    const schema = z.object({
-      cursor: z.string().optional(),
-      limit: z.coerce.number().int().min(1).max(100).default(20)
-    });
-    const parsed = schema.safeParse(req.query);
+    const parsed = cursorPaginationSchema.safeParse(req.query);
     if (!parsed.success) return res.status(400).json(parsed.error.flatten());
 
     let query = db

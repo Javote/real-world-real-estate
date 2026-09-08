@@ -1,6 +1,9 @@
-import { STAGE_TRANSITION_ERRORS, stageTransitionSchema } from "@plataforma/shared";
+import {
+  STAGE_TRANSITION_ERRORS,
+  stageTransitionSchema,
+  updateStageSchema
+} from "@plataforma/shared";
 import { type Request, Router } from "express";
-import { z } from "zod";
 import { cabezaDelHilo, transitionStage } from "../domain/stage-transition";
 import { db } from "../lib/db";
 import { ANY_MEMBERSHIP, authenticate, authorize, CUALQUIER_ROL } from "../middlewares/auth";
@@ -56,13 +59,7 @@ router.patch(
       return res.status(404).json({ message: "Stage not found" });
     }
 
-    const schema = z.object({
-      name: z.string().min(1).optional(),
-      sequenceOrder: z.number().int().positive().optional(),
-      validationCritical: z.boolean().optional()
-    });
-
-    const parsed = schema.safeParse(req.body);
+    const parsed = updateStageSchema.safeParse(req.body);
     if (!parsed.success) {
       return res.status(400).json(parsed.error.flatten());
     }

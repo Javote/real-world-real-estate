@@ -1,7 +1,7 @@
 import fs from "node:fs";
 import path from "node:path";
+import { stageEvidenceUploadSchema } from "@plataforma/shared";
 import { type Request, Router } from "express";
-import { z } from "zod";
 import { createId } from "../db/id";
 import { anchorCommitmentEvent } from "../domain/anchoring";
 import { notifyUnitInvestor } from "../domain/notify";
@@ -65,25 +65,7 @@ router.post(
       if (req.file && fs.existsSync(req.file.path)) fs.unlinkSync(req.file.path);
     };
 
-    const schema = z.object({
-      evidenceType: z.enum(["document", "photo", "certificate"]),
-      category: z.string().min(1),
-      description: z.string().max(2000).optional(),
-      authoritative: z
-        .string()
-        .optional()
-        .transform((v) => v === "true"),
-      // Declaración de origen (D-028 (a)). Va vacía salvo que se declare
-      // autoritativa, y se guarda `null` en vez de "" para que el guard de la
-      // transición tenga un solo estado de "falta".
-      issuingAuthority: z
-        .string()
-        .max(200)
-        .optional()
-        .transform((v) => v?.trim() || null)
-    });
-
-    const parsed = schema.safeParse(req.body);
+    const parsed = stageEvidenceUploadSchema.safeParse(req.body);
     if (!parsed.success) {
       borrarHuerfano();
       return res.status(400).json(parsed.error.flatten());

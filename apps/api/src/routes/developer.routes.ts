@@ -1,6 +1,13 @@
-import { DEFAULT_STAGE_CATALOG, type DeveloperKpis, INITIAL_STAGE_STATE } from "@plataforma/shared";
+import {
+  anchorDocumentSchema,
+  auditLogQuerySchema,
+  createDeveloperProjectSchema,
+  DEFAULT_STAGE_CATALOG,
+  type DeveloperKpis,
+  developerDocumentListQuerySchema,
+  INITIAL_STAGE_STATE
+} from "@plataforma/shared";
 import { type Request, Router } from "express";
-import { z } from "zod";
 import { createId } from "../db/id";
 import type { OnChainEventRow } from "../db/types";
 import { anchorCommitmentEvent } from "../domain/anchoring";
@@ -135,17 +142,7 @@ router.post(
   "/projects",
   authorize({ roles: ["admin", "developer"], acceso: "soloRol" }),
   async (req, res) => {
-    const schema = z.strictObject({
-      name: z.string().min(1),
-      slug: z.string().min(1),
-      address: z.string().optional(),
-      city: z.string().optional(),
-      country: z.string().optional(),
-      totalUnits: z.number().int().nonnegative().optional(),
-      estimatedDelivery: z.string().optional()
-    });
-
-    const parsed = schema.safeParse(req.body);
+    const parsed = createDeveloperProjectSchema.safeParse(req.body);
     if (!parsed.success) return res.status(400).json(parsed.error.flatten());
 
     const ahora = new Date();
@@ -286,8 +283,7 @@ router.get(
   "/documents",
   authorize({ roles: ["admin", "developer"], acceso: { scopeEnQuery: "projectScope(developer)" } }),
   async (req, res) => {
-    const schema = z.object({ status: z.enum(["anchored", "pending"]).optional() });
-    const parsed = schema.safeParse(req.query);
+    const parsed = developerDocumentListQuerySchema.safeParse(req.query);
     if (!parsed.success) return res.status(400).json(parsed.error.flatten());
 
     const ids = (
@@ -338,12 +334,7 @@ router.get(
     acceso: { scopeEnQuery: "auditScope(developer)" }
   }),
   async (req, res) => {
-    const schema = z.object({
-      category: z.string().optional(),
-      cursor: z.string().optional(),
-      limit: z.coerce.number().int().min(1).max(100).default(20)
-    });
-    const parsed = schema.safeParse(req.query);
+    const parsed = auditLogQuerySchema.safeParse(req.query);
     if (!parsed.success) return res.status(400).json(parsed.error.flatten());
 
     let query = db
@@ -414,8 +405,7 @@ router.post(
     }
   }),
   async (req, res) => {
-    const schema = z.strictObject({ evidenceId: z.string().min(1) });
-    const parsed = schema.safeParse(req.body);
+    const parsed = anchorDocumentSchema.safeParse(req.body);
     if (!parsed.success) return res.status(400).json(parsed.error.flatten());
 
     const documento = await db

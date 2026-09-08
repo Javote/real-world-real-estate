@@ -74,3 +74,13 @@ export const notarySignatureSchema = z.strictObject({
   status: dossierStatusSchema
 });
 export type NotarySignature = z.infer<typeof notarySignatureSchema>;
+
+/**
+ * Body de `POST /notary/dossiers/:id/reject` (fila 52r). Misma forma que
+ * `observeStageSchema` de `stage.ts` —una nota, 1 a 2000 caracteres— pero es
+ * otro dominio (rechazo de dossier, no observación de stage) y con otro
+ * destino (`Dossier.rejectionNote`, no el `AuditLog` de una transición): dos
+ * schemas iguales de casualidad, no uno compartido.
+ */
+export const rejectDossierSchema = z.strictObject({ note: z.string().min(1).max(2000) });
+export type RejectDossierInput = z.infer<typeof rejectDossierSchema>;

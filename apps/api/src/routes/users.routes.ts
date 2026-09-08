@@ -1,7 +1,6 @@
-import { passwordSchema, userRoleSchema } from "@plataforma/shared";
+import { createUserSchema, updateUserSchema } from "@plataforma/shared";
 import bcrypt from "bcrypt";
 import { type Request, Router } from "express";
-import { z } from "zod";
 import { createId } from "../db/id";
 import { db } from "../lib/db";
 import { authenticate, authorize } from "../middlewares/auth";
@@ -24,14 +23,7 @@ router.get("/", authorize({ roles: ["admin"], acceso: "soloRol" }), async (_req,
 });
 
 router.post("/", authorize({ roles: ["admin"], acceso: "soloRol" }), async (req, res) => {
-  const schema = z.object({
-    email: z.string().email(),
-    password: passwordSchema,
-    role: userRoleSchema,
-    fullName: z.string().min(1)
-  });
-
-  const parsed = schema.safeParse(req.body);
+  const parsed = createUserSchema.safeParse(req.body);
   if (!parsed.success) {
     return res.status(400).json(parsed.error.flatten());
   }
@@ -86,14 +78,7 @@ router.patch(
   "/:id",
   authorize({ roles: ["admin"], acceso: "soloRol" }),
   async (req: Request<{ id: string }>, res) => {
-    const schema = z.object({
-      fullName: z.string().min(1).optional(),
-      role: userRoleSchema.optional(),
-      isActive: z.boolean().optional(),
-      password: passwordSchema.optional()
-    });
-
-    const parsed = schema.safeParse(req.body);
+    const parsed = updateUserSchema.safeParse(req.body);
     if (!parsed.success) {
       return res.status(400).json(parsed.error.flatten());
     }

@@ -37,3 +37,19 @@ export const notificationPrefsSchema = z.strictObject({
   certificate: z.boolean().default(true)
 });
 export type NotificationPrefs = z.infer<typeof notificationPrefsSchema>;
+
+/**
+ * Body de `PATCH /api/v1/profile`. Sin `email` ni `role` a propósito: cambiar
+ * el rol por acá sería una escalada de privilegios con forma de preferencia.
+ */
+export const updateProfileSchema = z.strictObject({ fullName: z.string().min(1).max(120) });
+export type UpdateProfileInput = z.infer<typeof updateProfileSchema>;
+
+/**
+ * Body de `PATCH /api/v1/profile/notifications`. Parcial: un PATCH que manda
+ * una sola preferencia no puede apagar las otras cuatro (merge, no reemplazo,
+ * ver `profile.routes.ts`) — por eso `.partial()` sobre `notificationPrefsSchema`
+ * y no el schema completo, que tiene default y pisaría lo que no vino.
+ */
+export const updateNotificationPrefsSchema = notificationPrefsSchema.partial();
+export type UpdateNotificationPrefsInput = z.infer<typeof updateNotificationPrefsSchema>;

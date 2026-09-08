@@ -1,5 +1,5 @@
+import { updateNotificationPrefsSchema, updateProfileSchema } from "@plataforma/shared";
 import { type Request, Router } from "express";
-import { z } from "zod";
 import { db } from "../lib/db";
 import { authenticate, authorize, CUALQUIER_ROL } from "../middlewares/auth";
 import { writeAuditLog } from "../utils/audit";
@@ -47,9 +47,7 @@ router.patch(
   async (req: Request, res) => {
     // El email y el rol NO se editan acá: cambiar el rol por el endpoint de
     // perfil sería una escalada de privilegios con forma de preferencia.
-    const schema = z.strictObject({ fullName: z.string().min(1).max(120) });
-
-    const parsed = schema.safeParse(req.body);
+    const parsed = updateProfileSchema.safeParse(req.body);
     if (!parsed.success) return res.status(400).json(parsed.error.flatten());
 
     const usuario = await db
@@ -76,15 +74,7 @@ router.patch(
   async (req: Request, res) => {
     // Las categorías son las cinco del audit log (M2-D4 P6), que son las mismas
     // sobre las que se notifica.
-    const schema = z.strictObject({
-      stage: z.boolean().optional(),
-      document: z.boolean().optional(),
-      release: z.boolean().optional(),
-      signature: z.boolean().optional(),
-      certificate: z.boolean().optional()
-    });
-
-    const parsed = schema.safeParse(req.body);
+    const parsed = updateNotificationPrefsSchema.safeParse(req.body);
     if (!parsed.success) return res.status(400).json(parsed.error.flatten());
 
     const actual = await db

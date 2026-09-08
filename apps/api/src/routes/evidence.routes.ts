@@ -1,7 +1,6 @@
 import { createHash } from "node:crypto";
-import { type EvidenceProof, merkleProof } from "@plataforma/shared";
+import { type EvidenceProof, merkleProof, updateEvidenceSchema } from "@plataforma/shared";
 import { type Request, Router } from "express";
-import { z } from "zod";
 import { createId } from "../db/id";
 import { reconciliarAnclajes, reconciliarParaLectura } from "../domain/reconcile";
 import { anchorPort } from "../lib/anchor";
@@ -99,14 +98,7 @@ router.patch(
       return res.status(404).json({ message: "Evidence not found" });
     }
 
-    const schema = z.object({
-      category: z.string().min(1).optional(),
-      authoritative: z.boolean().optional(),
-      evidenceType: z.enum(["document", "photo", "certificate"]).optional(),
-      stageId: z.string().nullable().optional()
-    });
-
-    const parsed = schema.safeParse(req.body);
+    const parsed = updateEvidenceSchema.safeParse(req.body);
     if (!parsed.success) {
       return res.status(400).json(parsed.error.flatten());
     }

@@ -5,6 +5,56 @@ import { z } from "zod";
 // Es la misma `Evidence` que sube el flujo de etapas, vista desde el ángulo del
 // developer: qué documentos del proyecto están anclados y cuáles todavía no.
 
+/** Espeja `Evidence.evidenceType` en la migración. */
+export const EVIDENCE_TYPES = ["document", "photo", "certificate"] as const;
+export const evidenceTypeSchema = z.enum(EVIDENCE_TYPES);
+export type EvidenceType = z.infer<typeof evidenceTypeSchema>;
+
+/**
+ * Body de `POST /developer/projects/:id/stages/:stageId/evidence` (fila 38,
+ * 44c) — el multipart llega con el archivo aparte (`req.file`, Multer); esto
+ * valida los demás campos, que Express entrega como string.
+ */
+export const stageEvidenceUploadSchema = z.object({
+  evidenceType: evidenceTypeSchema,
+  category: z.string().min(1),
+  description: z.string().max(2000).optional(),
+  authoritative: z
+    .string()
+    .optional()
+    .transform((v) => v === "true"),
+  /**
+   * Declaración de origen (D-028 (a)). Va vacía salvo que se declare
+   * autoritativa, y se guarda `null` en vez de "" para que el guard de la
+   * transición tenga un solo estado de "falta".
+   */
+  issuingAuthority: z
+    .string()
+    .max(200)
+    .optional()
+    .transform((v) => v?.trim() || null)
+});
+export type StageEvidenceUploadInput = z.infer<typeof stageEvidenceUploadSchema>;
+
+/** Body de `PATCH /api/v1/evidence/:id`. */
+export const updateEvidenceSchema = z.object({
+  category: z.string().min(1).optional(),
+  authoritative: z.boolean().optional(),
+  evidenceType: evidenceTypeSchema.optional(),
+  stageId: z.string().nullable().optional()
+});
+export type UpdateEvidenceInput = z.infer<typeof updateEvidenceSchema>;
+
+/** Body de `POST /developer/documents` — anclar un documento suelto (M3-BE-14). */
+export const anchorDocumentSchema = z.strictObject({ evidenceId: z.string().min(1) });
+export type AnchorDocumentInput = z.infer<typeof anchorDocumentSchema>;
+
+/** Filtro de `GET /developer/documents` (fila 46-47). */
+export const developerDocumentListQuerySchema = z.object({
+  status: z.enum(["anchored", "pending"]).optional()
+});
+export type DeveloperDocumentListQuery = z.infer<typeof developerDocumentListQuerySchema>;
+
 /** Fila 46-47 — un documento del proyecto, con su huella y su prueba. */
 export const developerDocumentSchema = z.strictObject({
   id: z.string(),
