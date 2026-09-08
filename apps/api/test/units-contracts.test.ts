@@ -19,6 +19,7 @@ const login = (f: { email: string; password: string }) =>
 
 let tokenDev: string;
 let tokenInvestor: string;
+let tokenAdmin: string;
 let projectId: string;
 let unitId: string;
 let contractId: string;
@@ -33,6 +34,7 @@ const ETAPA = 1;
 beforeAll(async () => {
   tokenDev = (await login(FIXTURES.activo)).body.token;
   tokenInvestor = (await login(FIXTURES.investor)).body.token;
+  tokenAdmin = (await login(FIXTURES.admin)).body.token;
 
   const proyecto = await db
     .selectFrom("Project")
@@ -121,10 +123,17 @@ describe("el ciclo unidad → invitación → contrato → release", () => {
       .send({ name: "Cimientos", sequenceOrder: ETAPA, validationCritical: false });
     expect(stage.status).toBe(201);
 
-    for (const estado of ["InProgress", "Completed"]) {
+    // `InProgress` lo pide el developer; `Completed` es exclusivo del
+    // certifier (M2-D1 §Role Permission Matrix) — acá se simula con `admin`,
+    // que no tiene esa restricción, porque lo que se prueba es release→TXID,
+    // no quién certifica.
+    for (const [estado, actor] of [
+      ["InProgress", tokenDev],
+      ["Completed", tokenAdmin]
+    ] as const) {
       const paso = await request(app)
         .patch(`/api/v1/stages/${stage.body.id}/state`)
-        .set("Authorization", `Bearer ${tokenDev}`)
+        .set("Authorization", `Bearer ${actor}`)
         .send({ state: estado });
       expect(paso.status).toBe(200);
     }

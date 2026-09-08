@@ -1,4 +1,4 @@
-import { stageTransitionSchema } from "@plataforma/shared";
+import { STAGE_TRANSITION_ERRORS, stageTransitionSchema } from "@plataforma/shared";
 import { type Request, Router } from "express";
 import { z } from "zod";
 import { cabezaDelHilo, transitionStage } from "../domain/stage-transition";
@@ -115,6 +115,20 @@ router.patch(
     const parsed = stageTransitionSchema.safeParse(req.body);
     if (!parsed.success) {
       return res.status(400).json(parsed.error.flatten());
+    }
+
+    // M2-D1 §Role Permission Matrix: "Stage certification" y "Stage
+    // observation" son acciones exclusivas del certifier — esta ruta es la
+    // del developer, y `authorize` de arriba solo garantiza rol+membresía,
+    // no CUÁL transición. `transitionStage` valida que la FSM lo permita,
+    // no quién la pide, así que sin este chequeo un developer podía
+    // auto-certificar su propio stage vía esta misma ruta. `admin` no tiene
+    // este límite (regla del bypass ya establecida en `projectScope`).
+    if (req.user!.role !== "admin" && parsed.data.state !== "InProgress") {
+      return res.status(403).json({
+        message: "Only a certifier can move a stage to Completed or Observed",
+        code: STAGE_TRANSITION_ERRORS.forbidden
+      });
     }
 
     // Toda la lógica —tabla de transiciones, evidencia, bundle, anclaje,

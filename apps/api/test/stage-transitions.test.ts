@@ -19,6 +19,7 @@ const txidDeFixture = () => randomBytes(32).toString("hex");
 
 let proyecto: string;
 let token: string;
+let tokenAdmin: string;
 
 const login = (f: { email: string; password: string }) =>
   request(app).post("/api/v1/auth/login").send({ email: f.email, password: f.password });
@@ -91,6 +92,16 @@ const patchState = (id: string, state: string) =>
     .set("Authorization", `Bearer ${token}`)
     .send({ state });
 
+// `admin` no tiene la restricción de M2-D1 §Role Permission Matrix
+// ("Stage certification"/"Stage observation" son exclusivas del certifier):
+// la usan los tests que ejercitan la FSM o el anclaje en sí, no la capa de
+// autorización nueva — esa tiene su propio describe más abajo.
+const patchStateAdmin = (id: string, state: string) =>
+  request(app)
+    .patch(`/api/v1/stages/${id}/state`)
+    .set("Authorization", `Bearer ${tokenAdmin}`)
+    .send({ state });
+
 beforeAll(async () => {
   proyecto = (
     await db
@@ -100,6 +111,7 @@ beforeAll(async () => {
       .executeTakeFirstOrThrow()
   ).id;
   token = (await login(FIXTURES.activo)).body.token;
+  tokenAdmin = (await login(FIXTURES.admin)).body.token;
 });
 
 afterAll(async () => {
@@ -108,12 +120,14 @@ afterAll(async () => {
 
 describe("PATCH /stages/:id/state · la tabla de transiciones", () => {
   // Los 16 pares, generados igual que en el validador: ninguno queda sin caso.
+  // Con `admin`, que no tiene la restricción de a quién le toca cada
+  // transición (ver el describe de más abajo) — acá se prueba la FSM sola.
   for (const from of STAGE_STATES) {
     for (const to of STAGE_STATES) {
       const permitido = canTransition(from, to);
       it(`${permitido ? "200" : "409"} para ${from} → ${to}`, async () => {
         const id = await crearStage({ state: from });
-        const res = await patchState(id, to);
+        const res = await patchStateAdmin(id, to);
         expect(res.status).toBe(permitido ? 200 : 409);
         if (!permitido) {
           expect(res.body.code).toBe("STAGE_TRANSITION_INVALID");
@@ -136,6 +150,62 @@ describe("PATCH /stages/:id/state · la tabla de transiciones", () => {
   });
 });
 
+// M2-D1 §Role Permission Matrix: "Stage certification" y "Stage observation"
+// son acciones exclusivas del certifier. Esta ruta (`PATCH /stages/:id/state`)
+// es la del developer, y hasta este cierre un developer podía pedir
+// `→ Completed` o `→ Observed` directo, auto-certificando su propio stage sin
+// pasar por el certifier — la FSM lo permitía y nada más lo impedía.
+describe("PATCH /stages/:id/state · el developer no puede saltear al certifier", () => {
+  it("403 al pedir Completed", async () => {
+    const id = await crearStage({ state: "InProgress" });
+    const res = await patchState(id, "Completed");
+
+    expect(res.status).toBe(403);
+    expect(res.body.code).toBe("STAGE_TRANSITION_FORBIDDEN");
+
+    const fila = await db
+      .selectFrom("Stage")
+      .selectAll()
+      .where("id", "=", id)
+      .executeTakeFirstOrThrow();
+    expect(fila.state).toBe("InProgress");
+  });
+
+  it("403 al pedir Observed", async () => {
+    const id = await crearStage({ state: "InProgress" });
+    const res = await patchState(id, "Observed");
+
+    expect(res.status).toBe(403);
+    expect(res.body.code).toBe("STAGE_TRANSITION_FORBIDDEN");
+  });
+
+  it("el 403 gana aunque la transición también sería inválida por la FSM", async () => {
+    // Pending → Completed es inválido por las dos razones a la vez; lo que
+    // importa es que un developer nunca vea "sí, pero..." — ve 403 siempre
+    // que pida algo que no es InProgress, sin filtrar si además era legal.
+    const id = await crearStage({ state: "Pending" });
+    const res = await patchState(id, "Completed");
+    expect(res.status).toBe(403);
+    expect(res.body.code).toBe("STAGE_TRANSITION_FORBIDDEN");
+  });
+
+  it("200 al pedir InProgress desde Pending — sigue permitido", async () => {
+    const id = await crearStage({ state: "Pending" });
+    expect((await patchState(id, "InProgress")).status).toBe(200);
+  });
+
+  it("200 al pedir InProgress desde Observed — reanudar tras una observación sigue permitido", async () => {
+    const id = await crearStage({ state: "Observed" });
+    expect((await patchState(id, "InProgress")).status).toBe(200);
+  });
+
+  it("admin no tiene esta restricción", async () => {
+    const id = await crearStage({ state: "InProgress" });
+    const res = await patchStateAdmin(id, "Completed");
+    expect(res.status).toBe(200);
+  });
+});
+
 // M3 criterio 2 — "API rejects unsigned evidence". No hay firma criptográfica
 // de archivos en el dominio (D-026: la plataforma no certifica ni valida);
 // D-028/D-084/D-086 relee "sin firmar" como evidencia declarada
@@ -143,9 +213,14 @@ describe("PATCH /stages/:id/state · la tabla de transiciones", () => {
 // bloqueando una transición. Los tests de este describe son la prueba de ese
 // criterio, no una casualidad de nombres.
 describe("PATCH /stages/:id/state · evidencia en stages críticos", () => {
+  // Con `admin` en todo el describe: lo que se prueba acá es la regla de
+  // evidencia de `transitionStage`, no la capa de autorización nueva — esa
+  // ya tiene su propio describe ("el developer no puede saltear al
+  // certifier"), y con el token de developer estos `patchState(..., "Completed")`
+  // darían 403 antes de llegar a la regla de evidencia.
   it("409 al completar un stage validation-critical sin evidencia", async () => {
     const id = await crearStage({ state: "InProgress", validationCritical: true });
-    const res = await patchState(id, "Completed");
+    const res = await patchStateAdmin(id, "Completed");
     expect(res.status).toBe(409);
     expect(res.body.code).toBe("STAGE_EVIDENCE_REQUIRED");
   });
@@ -153,13 +228,13 @@ describe("PATCH /stages/:id/state · evidencia en stages críticos", () => {
   it("200 cuando el stage crítico tiene evidencia", async () => {
     const id = await crearStage({ state: "InProgress", validationCritical: true });
     await agregarEvidencia(id);
-    const res = await patchState(id, "Completed");
+    const res = await patchStateAdmin(id, "Completed");
     expect(res.status).toBe(200);
   });
 
   it("200 para un stage no crítico sin evidencia", async () => {
     const id = await crearStage({ state: "InProgress", validationCritical: false });
-    expect((await patchState(id, "Completed")).status).toBe(200);
+    expect((await patchStateAdmin(id, "Completed")).status).toBe(200);
   });
 
   // D-028 (a), acotada por D-084. Lo que se exige NO es que la autoridad sea
@@ -168,7 +243,7 @@ describe("PATCH /stages/:id/state · evidencia en stages críticos", () => {
   it("409 al completar con una evidencia autoritativa sin decir quién la emitió", async () => {
     const id = await crearStage({ state: "InProgress", validationCritical: true });
     await agregarEvidencia(id, { authoritative: true, issuingAuthority: null });
-    const res = await patchState(id, "Completed");
+    const res = await patchStateAdmin(id, "Completed");
     expect(res.status).toBe(409);
     expect(res.body.code).toBe("STAGE_EVIDENCE_UNATTRIBUTED");
   });
@@ -176,7 +251,7 @@ describe("PATCH /stages/:id/state · evidencia en stages críticos", () => {
   it("409 también si `issuingAuthority` es espacios en blanco", async () => {
     const id = await crearStage({ state: "InProgress", validationCritical: true });
     await agregarEvidencia(id, { authoritative: true, issuingAuthority: "   " });
-    expect((await patchState(id, "Completed")).body.code).toBe("STAGE_EVIDENCE_UNATTRIBUTED");
+    expect((await patchStateAdmin(id, "Completed")).body.code).toBe("STAGE_EVIDENCE_UNATTRIBUTED");
   });
 
   // El developer sube fotos de obra desde el teléfono y eso no puede pedir
@@ -184,7 +259,7 @@ describe("PATCH /stages/:id/state · evidencia en stages críticos", () => {
   it("200 con evidencia NO autoritativa y sin atribución", async () => {
     const id = await crearStage({ state: "InProgress", validationCritical: true });
     await agregarEvidencia(id, { authoritative: false, issuingAuthority: null });
-    expect((await patchState(id, "Completed")).status).toBe(200);
+    expect((await patchStateAdmin(id, "Completed")).status).toBe(200);
   });
 });
 
@@ -287,7 +362,7 @@ describe("OnChainEvent · el aterrizaje del anclaje", () => {
 
     await patchState(creado.body.id, "InProgress");
     await agregarEvidencia(creado.body.id);
-    const res = await patchState(creado.body.id, "Completed");
+    const res = await patchStateAdmin(creado.body.id, "Completed");
 
     expect(res.status).toBe(200);
     expect(res.body.state).toBe("Completed");
@@ -299,7 +374,7 @@ describe("OnChainEvent · el aterrizaje del anclaje", () => {
   it("numera los eventos en orden dentro del hilo", async () => {
     const id = await crearStage({ state: "Pending" });
     await patchState(id, "InProgress");
-    await patchState(id, "Observed");
+    await patchStateAdmin(id, "Observed");
     await patchState(id, "InProgress");
 
     const eventos = await db
@@ -555,7 +630,7 @@ describe("D-061 · todo stage es validation-critical", () => {
       .send({ name: "Stage por default 2", sequenceOrder: 999_202 });
 
     await patchState(creado.body.id, "InProgress");
-    const res = await patchState(creado.body.id, "Completed");
+    const res = await patchStateAdmin(creado.body.id, "Completed");
 
     expect(res.status).toBe(409);
     expect(res.body.code).toBe("STAGE_EVIDENCE_REQUIRED");

@@ -37,6 +37,50 @@ que la superficie del entregable no consume pero los tests y el seed sí.
 
 ## Trampas verificadas
 
+- **2026-09-08 · `PATCH /stages/:id/state` dejaba a un developer auto-certificar su propio stage —
+  encontrado probando el flujo real de certificación con Claude en Chrome, al preguntar si el reparto
+  de roles era el correcto.** `M2-D1 §Role Permission Matrix` es explícita: `Stage certification` y
+  `Stage observation` son **"Certifier-exclusive action"**; el developer solo tiene `R W` sobre el
+  stage (lo define y lo hace progresar). El código no lo cumplía: `stages.routes.ts` autoriza
+  `PATCH /stages/:id/state` a `roles: ["admin", "developer"]`, y `transitionStage()` —el dominio
+  compartido por esa ruta y por `POST /certifier/stages/:id/certify`/`observe`— solo valida que la
+  transición sea legal según la FSM (`canTransition`), **no quién la pide**. Se confirmó corriendo
+  el test existente (`stage-transitions.test.ts`, con el token de `FIXTURES.activo`, un developer):
+  `200 para InProgress → Completed` pasaba en verde. Un developer con su propio token, sin pasar por
+  ninguna pantalla, podía pedir esa ruta con `{state:"Completed"}` sobre su propio stage y quedar
+  como `certifiedById` de sí mismo — exactamente lo que la separación certifier/developer existe
+  para impedir, y la misma familia de riesgo que el agujero de `GET /evidence/:bundleId/files`
+  (autorización de router correcta, regla de negocio faltante adentro).
+  **Fix:** después de validar el body con Zod y antes de llamar a `transitionStage`, si
+  `req.user!.role !== "admin"` y el `state` pedido no es `"InProgress"`, la ruta devuelve **403** con
+  un código nuevo (`STAGE_TRANSITION_ERRORS.forbidden` / `STAGE_TRANSITION_FORBIDDEN`, en
+  `packages/shared/src/stage.ts`) — antes incluso de tocar la FSM, así que un developer nunca ve
+  "sí, pero..." filtrando si la transición además era válida. `admin` conserva acceso total (mismo
+  criterio que el bypass de `projectScope`, D-043). El developer sigue pudiendo pedir `→ InProgress`
+  desde `Pending` (arrancar) y desde `Observed` (reanudar tras una observación) — las dos únicas
+  transiciones que le corresponden.
+  **No es un tercer guard suelto de los que D-088 borró:** `authorize({roles, acceso})` solo describe
+  rol+membresía, y esto es una restricción sobre **qué valor** del body puede pedir ese rol — no hay
+  forma de expresarlo con `proyecto`/`dueño`/`alguna`/`scopeEnQuery` sin inventar un quinto caso para
+  un solo campo. Vive como un chequeo explícito en el handler, con comentario que dice por qué, igual
+  que la validación de Zod de la línea de arriba.
+  **Los tests que asumían que el developer podía completar/observar por esta ruta se movieron a
+  `admin`** (`tokenAdmin` nuevo en `stage-transitions.test.ts` y `units-contracts.test.ts`) porque lo
+  que probaban —la tabla de 16 pares de la FSM, las reglas de evidencia, el Merkle root del bundle—
+  es lógica de dominio, no la nueva capa de autorización; esa tiene su propio describe ("el developer
+  no puede saltear al certifier", 6 tests: 403 a `Completed`, 403 a `Observed`, el 403 gana aunque la
+  FSM también rechazaría, los dos `→ InProgress` que siguen en 200, y que `admin` no tiene el
+  límite). `evidence-anchor.test.ts` y `route-guards.test.ts` ya usaban `admin`/no tocaban el body —
+  no necesitaron cambios. 305 tests verdes, `pnpm verify:all` completo (incluido Aiken) también
+  verde.
+  **La lección, otra vez la misma familia que `GET /evidence/:bundleId/files`:** una ruta con la capa
+  de rol+membresía bien declarada puede seguir dejando pasar una regla de negocio que vive **adentro**
+  del dominio compartido — acá, cuál transición le corresponde a cuál rol, algo que `authorize()`
+  no modela porque no es ownership ni membresía, es una restricción sobre el valor del body. Ningún
+  test la cubría porque el test que sí ejercitaba `InProgress → Completed` (el de los 16 pares) usaba
+  el mismo token developer que la ruta ya autorizaba a nivel de router, así que el 200 parecía
+  correcto sin serlo.
+
 - **2026-09-08 · un `require()` sin tipar no lo agarra ni `tsc` ni pnpm en local — encender OTel de
   verdad tumbó producción con `MODULE_NOT_FOUND`.** `instrumentation.ts` ya usaba `require()` tardío
   para los paquetes de OTel (comentario: "si el bloque de arriba no corriera... no tiene sentido
@@ -463,11 +507,14 @@ on-chain de M1 (D-006, D-061). Es idempotente: si el archivo ya tiene su anclaje
 evento en vez de gastar otra transacción. Lo dispara el admin y nunca el upload, porque una vez en
 la cadena no se borra.
 
-`PATCH /api/v1/stages/:id/state` es hoy el único lugar donde el registro avanza, y hace cuatro cosas
-(D-059): aplica la tabla de transiciones, exige evidencia para completar un stage
-`validationCritical`, escribe el estado, y registra un `OnChainEvent` **pendiente** — la
-declaración queda registrada y la prueba queda `Pending` hasta que exista TXID. Al revés no puede
-pasar.
+`PATCH /api/v1/stages/:id/state` es hoy el único lugar donde el developer avanza el registro, y hace
+cinco cosas (D-059, y el chequeo de rol del 2026-09-08): rechaza si el estado pedido no es
+`InProgress` y quien pide no es `admin` (`Stage certification`/`Stage observation` son
+"Certifier-exclusive action" en `M2-D1 §Role Permission Matrix` — certificar u observar solo pasa por
+`POST /certifier/stages/:id/certify`/`observe`), aplica la tabla de transiciones, exige evidencia
+para completar un stage `validationCritical`, escribe el estado, y registra un `OnChainEvent`
+**pendiente** — la declaración queda registrada y la prueba queda `Pending` hasta que exista TXID. Al
+revés no puede pasar.
 
 Lo que le falta, en orden de importancia:
 

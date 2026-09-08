@@ -59,7 +59,16 @@ export const STAGE_TRANSITION_ERRORS = {
    * que no dice quién la emitió. No se valida la autoridad —la plataforma no
    * valida (D-026)—; se exige que la declaración esté completa.
    */
-  evidenceUnattributed: "STAGE_EVIDENCE_UNATTRIBUTED"
+  evidenceUnattributed: "STAGE_EVIDENCE_UNATTRIBUTED",
+  /**
+   * M2-D1 §Role Permission Matrix: "Stage certification" y "Stage
+   * observation" son acciones **exclusivas del certifier** — el developer
+   * (vía `PATCH /stages/:id/state`) solo puede pedir `→ InProgress`
+   * (arrancar o reanudar tras una observación). Pedir `→ Completed` o
+   * `→ Observed` por esa ruta es a quién le pertenece la acción, no si la FSM
+   * la permite — por eso es un código distinto de `invalid`.
+   */
+  forbidden: "STAGE_TRANSITION_FORBIDDEN"
 } as const;
 
 export const stageTransitionSchema = z.strictObject({

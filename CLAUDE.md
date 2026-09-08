@@ -305,6 +305,18 @@ completos de esta entrada.
 `InProgress → Observed` (mismo botón "Observar" de esta misma pantalla) y el retorno
 `Observed → InProgress`; la lógica está cubierta por tests, solo falta ejercitarla contra Preprod.
 
+**Cerrado el mismo día — agujero real, encontrado al chequear si el reparto de roles de esta prueba
+era el correcto.** La pregunta fue *"¿el certifier certifica, o certifica el developer?"*; la
+matriz de permisos de `M2-D1` es tajante (`Stage certification`/`Stage observation`:
+**"Certifier-exclusive action"**) y el código no la cumplía: un developer podía `PATCH
+/stages/:id/state` con `{state:"Completed"}` sobre su propio stage y auto-certificarse, sin pasar
+por el certifier. Cerrado con un chequeo de rol antes de tocar la FSM (403
+`STAGE_TRANSITION_FORBIDDEN` si no es `admin` y el estado pedido no es `InProgress`); admin sin
+límite, developer conserva `→ InProgress` (arrancar y reanudar tras una observación). 305 tests
+verdes, `pnpm verify:all` completo (incluido Aiken) también verde. Detalle, por qué no es un guard
+de `authorize()`, y qué tests se movieron a `admin`: `apps/api/CLAUDE.md` §El endpoint de estado de
+stages.
+
 **El diseño ya está decidido. El trabajo es transcribirlo, no inventarlo.**
 
 `docs/` tiene 70 capturas y un backlog de 53 superficies donde cada una ya trae su path, sus
