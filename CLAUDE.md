@@ -355,6 +355,33 @@ InProgress no hace nada raro con más evidencia, Observed NO se reabre solo, y u
 `stageId` no toca ningún stage). `pnpm verify` completo en verde, incluido `scripts/
 check-testids.mjs` (74/74, el piso no se movió — el ID nuevo no cuenta ahí a propósito).
 
+**La matriz de "quién puede pedir cada transición", confirmada por el dueño el mismo día** — y una
+corrección de vocabulario que valía la pena hacer explícita: **la FSM es del *stage*, no del
+proyecto.** Un proyecto tiene muchas etapas y cada una su propio estado independiente (ahora mismo,
+en `torre-a`: `Cimentación` y `Terminaciones` en `Completed`, `Estructura` en `InProgress` —tres
+estados a la vez, mismo proyecto—); `Project.status` (`planning`/`in_progress`/`delayed`/
+`completed`) es un campo aparte, no esta FSM.
+
+| Transición | Quién | Mecanismo |
+|---|---|---|
+| `Pending → InProgress` | developer, automático | primera evidencia subida |
+| `Observed → InProgress` | developer, manual | "Reanudar etapa" |
+| `InProgress → Completed` | certifier, exclusivo | "Certificar" |
+| `InProgress → Observed` | certifier, exclusivo | "Observar" |
+| cualquiera | admin | sin restricción |
+
+**Verificado en vivo contra Preprod, con TXID real, tres de las cuatro:**
+`InProgress → Completed` (2026-09-08, `e842c8ac…571fe22`), `InProgress → Observed` y
+`Observed → InProgress` (mismo día, sobre `torre-a` / `Estructura`, ida y vuelta). **La cuarta,
+`Pending → InProgress`, sigue sin probarse en vivo por Chrome** — no por un bug del auto-avance
+(`evidence-upload.test.ts` la cubre con 4 tests y está en verde), sino porque **ningún proyecto
+tiene hoy una etapa en `Pending`**: `torre-a` gastó las suyas, y un proyecto nuevo nace con **cero**
+etapas — confirmado creando dos (`Torre Belgrano`, `Torre Demo E2E`) y viendo el selector "Elegí la
+etapa" vacío en los dos. Es el mismo pendiente #1 de siempre, con una cara nueva: no es que falte
+un botón de transición, es que falta el botón que crea la etapa **antes** de que cualquier
+transición tenga sentido. Sigue bloqueado en las mismas dos decisiones del dueño (nombrar las 10
+etapas, bulk-create transaccional) — no se atacó hoy, a propósito.
+
 **El diseño ya está decidido. El trabajo es transcribirlo, no inventarlo.**
 
 `docs/` tiene 70 capturas y un backlog de 53 superficies donde cada una ya trae su path, sus
