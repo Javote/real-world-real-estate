@@ -242,6 +242,69 @@ se confió en que "dice verificado", se comparó el hash real. La verificación 
 está permitido resolver CAPTCHAs) — el TXID queda anotado arriba para que el dueño lo confirme a
 mano cuando quiera. Ver también `specs/README.md` criterio 15.
 
+**Probado el 2026-09-08 · segunda transición real de state-thread — `InProgress → Completed`, vía
+la única superficie de UI que existe para eso, con verificación independiente en el explorador.**
+Continuación del anclaje del 2026-09-03 (D-083): ese cerró `Pending → InProgress` llamando a la API
+directo; esta sesión cerró el siguiente tramo de la FSM (`packages/shared/src/stage.ts`) **desde el
+navegador**, con las dos cuentas demo que el flujo real exige.
+
+**Primer hallazgo: no hay pantalla de developer para transicionar un stage.**
+`api/port.ts` expone `setMilestoneState` (`PATCH /stages/:id/state`) pero **ningún componente lo
+llama** — se verificó con `grep -rln "setMilestoneState" apps/web/src`, un solo resultado, el propio
+port. La única superficie real que mueve la FSM hacia adelante es la del **certifier**
+(`certifier.stage.$stageId.tsx`, M2-D5 filas 56c/57): "Certificar" (`POST
+/certifier/stages/:id/certify` → `Completed`) y "Observar" (`POST /certifier/stages/:id/observe` →
+`Observed`), las dos delegando en `transitionStage` del lado del servidor. No es una pantalla
+faltante — es la forma en que el dominio modela quién tiene autoridad para cerrar una etapa, y
+coincide con lo que documenta `apps/api/CLAUDE.md` sobre esa ruta.
+
+**El flujo, de punta a punta:**
+
+1. **Developer** (`developer@example.com`) sube evidencia real a "Terminaciones" de `torre-a`
+   (`POST /developer/projects/:id/stages/:stageId/evidence`, vía `/developer/project/:id/upload`),
+   un PDF generado con `pandoc`. Merkle root `c66436…bfe4`, **TXID real
+   `9cca08777b9ab8c44792c3afaacdc06d899d7f15ded743306c94483d3c0fa4d6`**, confirmado en
+   `preprod.cardanoscan.io` sin bloqueo de Cloudflare esta vez (a diferencia del intento del
+   2026-09-08 anterior). Hash local (`shasum -a 256`) coincidió exacto con el que mostró la app antes
+   de anclar.
+2. **Certifier** (`verifier@example.com`, con membresía `verifier` en `torre-a` desde el seed) entra
+   a `/certifier`. El panel mostró **"No tenés etapas asignadas"** en el primer render — no es un
+   bug: `GET /certifier/assignments` filtra `Stage.state in (InProgress, Observed)` dentro de los
+   proyectos donde el usuario es miembro (`apps/api/CLAUDE.md` §`certifier.routes.ts`: "asignado" es,
+   por ahora, cualquier stage en curso de un proyecto propio — no hay tabla de asignación explícita
+   todavía), y el `useQuery` de React Query simplemente no había resuelto en la primera screenshot. Un
+   refresh la mostró.
+3. **"Certificar" estaba deshabilitado** hasta que hubo evidencia (`sinEvidencia` en el componente) —
+   la pantalla lo explica en vez de esconder el botón, tal como documenta su comentario de cabecera.
+   Con la evidencia del paso 1 puesta, el botón se habilitó y el click disparó `certify`.
+4. **TXID real de la transición:
+   `e842c8acb07dfd1b551a1a8d2318e12d9915d40aa69ebcf86d3842759571fe22`**, confirmado en
+   `preprod.cardanoscan.io` (16 confirmaciones al momento de verificar). La pestaña "Entradas de
+   Referencia" de la transacción muestra `3c75280a9205b3d8…735396f0ba2c7f1 #0` — el mismo UTxO del
+   reference script publicado en D-083 — confirmando que esta transacción **referencia** el
+   validador en vez de adjuntarlo, igual que las dos transacciones del 2026-09-03.
+
+**Verificado también que el stage quedó `Completed` sin abrir la base:** el panel del certifier pasó
+de "2 Asignadas" a "1 Asignada" y de "1 Certificada" a "2 Certificadas" apenas terminó el `certify`,
+y `/certifier/issued` lista las cuatro evidencias del bundle (incluida la nueva) con el mismo TXID de
+certificación repetido — consistente con que el commitment ancla el bundle completo, no archivo por
+archivo.
+
+**Trampa nueva, para cuando haga falta el TXID completo desde la UI:** `HashChip` trunca en el
+**dato**, no solo en CSS — ni `read_page` ni `get_page_text` ni los atributos `title`/`aria-label`
+tienen el hash completo en el DOM, porque el componente nunca lo escribe entero; solo el handler de
+"Copiar" lo tiene en un closure y lo manda al portapapeles. `navigator.clipboard.readText()` vía
+`javascript_tool` **cuelga indefinidamente** (timeout a los 45s) en este entorno de automatización —
+aparentemente el prompt de permiso de lectura del portapapeles de la extensión nunca se resuelve
+solo. **Lo que funcionó:** click en "Copiar" y después pegar (`cmd+v`) en el buscador de
+`preprod.cardanoscan.io`, que sí acepta foco y pegado normales — de ahí salieron los dos hashes
+completos de esta entrada.
+
+**Estado de la FSM, probado en vivo hasta ahora:** `Pending → InProgress` (2026-09-03, por API) e
+`InProgress → Completed` (hoy, por la UI real del certifier). Quedan sin probar en vivo
+`InProgress → Observed` (mismo botón "Observar" de esta misma pantalla) y el retorno
+`Observed → InProgress`; la lógica está cubierta por tests, solo falta ejercitarla contra Preprod.
+
 **El diseño ya está decidido. El trabajo es transcribirlo, no inventarlo.**
 
 `docs/` tiene 70 capturas y un backlog de 53 superficies donde cada una ya trae su path, sus
