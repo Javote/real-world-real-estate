@@ -635,3 +635,66 @@ describe("D-061 · todo stage es validation-critical", () => {
     expect(creado.validationCritical).toBe(false);
   });
 });
+
+describe("eventIndex es el log del stage, no el hilo", () => {
+  // `eventIndex` se documentaba como "la posición en el hilo on-chain: 0 el
+  // mint, 1..n las transiciones". Es falso: los EVIDENCE_ANCHOR también
+  // consumen índice y nunca tocan el validador. En producción, "Terminaciones"
+  // de torre-a tiene 0 mint · 1 transición · 2,3,4 evidencia · 5 transición.
+  //
+  // No hay bug porque `cabezaDelHilo` filtra por `outputRef`, no por índice.
+  // Este test existe para que esa garantía deje de sostenerse solo por lectura
+  // de código: si alguien "simplifica" el filtro confiando en el índice,
+  // `advanceThread` gastaría el UTxO equivocado.
+  it("un EVIDENCE_ANCHOR con índice mayor no corre la cabeza del hilo", async () => {
+    const { cabezaDelHilo } = await import("../src/domain/stage-transition.js");
+
+    const stage = await crearStageMinteado({
+      projectId: proyecto,
+      name: "Stage con evidencia intercalada",
+      sequenceOrder: 999_801,
+      actorUserId: actorId
+    });
+
+    // El mint dejó la cabeza del hilo en el índice 0.
+    const cabezaDelMint = await cabezaDelHilo(stage.id);
+    expect(cabezaDelMint).not.toBeNull();
+
+    // Un anclaje por metadata toma el índice SIGUIENTE — más alto que el del
+    // único evento del hilo — y no tiene outputRef.
+    const ahora = new Date();
+    await db
+      .insertInto("OnChainEvent")
+      .values({
+        id: createId(),
+        projectId: proyecto,
+        stageId: stage.id,
+        eventIndex: 1,
+        eventType: "EVIDENCE_ANCHOR",
+        fromState: null,
+        toState: null,
+        commitment: "b".repeat(64),
+        status: "Confirmed",
+        txid: txidDeFixture(),
+        network: "Simulated",
+        outputRef: null,
+        blockTimestamp: ahora,
+        createdAt: ahora,
+        updatedAt: ahora
+      })
+      .execute();
+
+    // El índice más alto del stage ahora es el de la evidencia…
+    const ultimo = await db
+      .selectFrom("OnChainEvent")
+      .select(["eventIndex", "eventType"])
+      .where("stageId", "=", stage.id)
+      .orderBy("eventIndex", "desc")
+      .limit(1)
+      .executeTakeFirstOrThrow();
+    expect(ultimo.eventType).toBe("EVIDENCE_ANCHOR");
+
+    // …y aun así la cabeza del hilo sigue siendo la del mint.
+    expect(await cabezaDelHilo(stage.id)).toBe(cabezaDelMint);
+  });
+});

@@ -55,6 +55,25 @@ lo mismo sin pasar por HTTP. Ver el detalle en `CLAUDE.md` raíz.
 
 ## Trampas verificadas
 
+- **2026-09-09 · `eventIndex` se documentaba como la posición en el hilo on-chain y no lo es.**
+  El docstring de `recordOnChainEvent` decía *"0 es el mint del thread token, 1..n las
+  transiciones"*. Falso: `anchorCommitmentEvent` numera con el mismo contador, así que los
+  `EVIDENCE_ANCHOR` —que nunca tocan el validador— **se intercalan y corren la numeración**. En
+  producción, "Terminaciones" de `torre-a` tiene `0` mint · `1` transición · `2,3,4` evidencia ·
+  `5` transición: **el hilo es una subsecuencia del índice, no el índice**.
+  **No hay bug, y se verificó antes de afirmarlo:** `cabezaDelHilo` no ordena por `eventIndex` a
+  secas, filtra `outputRef is not null` primero, y un anclaje por metadata siempre lo tiene en
+  `null` — confirmado leyendo las filas reales de producción, no solo el código. La unicidad
+  `(stageId, eventIndex)` que sostiene la idempotencia (regla 8) funciona igual sea cual sea el
+  tipo de evento.
+  **Lo que se hizo, además de corregir los dos comentarios:** un test que fija la invariante
+  (`test/stage-transitions.test.ts` → *"un EVIDENCE_ANCHOR con índice mayor no corre la cabeza del
+  hilo"*), verificado en rojo sacándole el filtro a `cabezaDelHilo`. La garantía se sostenía solo
+  por lectura de código, que es exactamente como se coló `tieneHiloAnclado`.
+  **La lección:** un comentario que describe un índice como algo que no es no es un error inocuo —
+  es una invitación a "simplificar" el filtro que lo hace seguro. Si dos productores comparten un
+  contador, decilo en los dos lugares (acá: `stage-transition.ts` y `anchoring.ts`).
+
 - **2026-09-09 · `Completed` era terminal en la FSM pero no en el pipeline de evidencia.**
   `POST /developer/projects/:id/stages/:stageId/evidence` no miraba el estado del stage: se podía
   subir evidencia a una etapa ya certificada. La subida armaba un **bundle nuevo con un root

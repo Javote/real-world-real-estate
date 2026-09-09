@@ -35,9 +35,24 @@ import { writeAuditLog } from "../utils/audit";
  * pasar — nunca hay prueba de algo que no se declaró — y mientras no haya TXID
  * la UI muestra "Pendiente", nunca "Verificado" (regla 17).
  *
- * `eventIndex` es la posición en el hilo on-chain: 0 es el `mint` del thread
- * token, 1..n las transiciones. El índice único `(stageId, eventIndex)` es
- * lo que vuelve idempotente el anclaje (regla 8).
+ * **`eventIndex` es la posición en el log de eventos del stage, NO en su hilo
+ * on-chain.** El comentario decía lo segundo y era falso: los anclajes por
+ * metadata (`EVIDENCE_ANCHOR`, D-006) también consumen índice desde
+ * `anchorCommitmentEvent`, y esos nunca tocan el validador. En producción, el
+ * stage "Terminaciones" de `torre-a` tiene `0` mint · `1` transición · `2,3,4`
+ * evidencia · `5` transición: **el hilo es una subsecuencia del índice**, no el
+ * índice.
+ *
+ * **No hay bug, y conviene saber por qué**: `cabezaDelHilo` no ordena por
+ * `eventIndex` a secas — filtra `outputRef is not null` primero, y un anclaje
+ * por metadata siempre lo tiene en `null` porque no hay UTxO de por medio. Si
+ * alguien alguna vez "simplifica" ese filtro confiando en este índice,
+ * `advanceThread` va a intentar gastar el UTxO equivocado. Hay un test que lo
+ * fija (`stage-transitions.test.ts` → "un EVIDENCE_ANCHOR con índice mayor no
+ * corre la cabeza del hilo").
+ *
+ * El índice único `(stageId, eventIndex)` es lo que vuelve idempotente el
+ * anclaje (regla 8), y eso funciona igual sea cual sea el tipo de evento.
  */
 async function recordOnChainEvent(input: {
   projectId: string;

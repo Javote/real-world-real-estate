@@ -35,6 +35,12 @@ export async function anchorCommitmentEvent(input: {
 }): Promise<OnChainEventRow> {
   const ahora = new Date();
 
+  // **Este índice es compartido con los eventos del hilo, a propósito.** Es la
+  // posición en el log de eventos del stage, no en su hilo: un
+  // `EVIDENCE_ANCHOR` se intercala entre dos `STAGE_TRANSITION` y les corre la
+  // numeración. Lo que distingue al hilo no es el índice sino `outputRef`, que
+  // acá queda `null` siempre — ver `recordOnChainEvent` en
+  // `stage-transition.ts`.
   const previo = input.stageId
     ? await db
         .selectFrom("OnChainEvent")
