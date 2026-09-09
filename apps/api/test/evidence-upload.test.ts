@@ -468,3 +468,134 @@ describe("EvidenceBundle · el acta es idempotente por contenido (regla 8)", () 
     expect(await actas(stage.id)).toHaveLength(0);
   });
 });
+
+describe("POST .../evidence · un stage Completed no acepta más evidencia", () => {
+  // `Completed` es terminal en la FSM (D-020) y hasta hoy el pipeline de
+  // evidencia no se enteraba: la subida armaba un bundle nuevo con un root
+  // nuevo y lo anclaba, mientras el datum del hilo conserva el root congelado
+  // al certificar. La pantalla del stage muestra el bundle MÁS RECIENTE, así
+  // que ese root aparecía al lado del TXID de certificación que no lo
+  // atestigua — regla 17.
+  let admin: string;
+  let actorId: string;
+
+  beforeAll(async () => {
+    admin = await token(FIXTURES.admin.email, FIXTURES.admin.password);
+    actorId = (
+      await db
+        .selectFrom("User")
+        .select("id")
+        .where("email", "=", FIXTURES.activo.email)
+        .executeTakeFirstOrThrow()
+    ).id;
+  });
+
+  async function stageCompletado(sequenceOrder: number) {
+    const stage = await crearStageMinteado({
+      projectId,
+      name: `Stage cerrado ${sequenceOrder}`,
+      sequenceOrder,
+      actorUserId: actorId
+    });
+
+    // Una evidencia mueve el stage a InProgress solo (D-020) y le da al
+    // stage crítico lo que necesita para poder cerrarse.
+    const subida = await subir(
+      miembro,
+      stage.id,
+      { evidenceType: "document", category: "avance" },
+      { buf: PDF, nombre: "previa.pdf", tipo: "application/pdf" }
+    );
+    expect(subida.status).toBe(201);
+
+    const cierre = await request(app)
+      .patch(`/api/v1/stages/${stage.id}/state`)
+      .set("Authorization", `Bearer ${admin}`)
+      .send({ state: "Completed" });
+    expect(cierre.status).toBe(200);
+
+    return stage.id;
+  }
+
+  it("rechaza con 409 STAGE_ALREADY_COMPLETED", async () => {
+    const sId = await stageCompletado(999_701);
+
+    const res = await subir(
+      miembro,
+      sId,
+      { evidenceType: "document", category: "tardia" },
+      { buf: PDF, nombre: "tardia.pdf", tipo: "application/pdf" }
+    );
+
+    expect(res.status).toBe(409);
+    expect(res.body.code).toBe("STAGE_ALREADY_COMPLETED");
+  });
+
+  it("no deja el archivo huérfano en disco (regla 10)", async () => {
+    const sId = await stageCompletado(999_702);
+    const antes = archivosEnDisco();
+
+    await subir(
+      miembro,
+      sId,
+      { evidenceType: "document", category: "tardia" },
+      { buf: PDF, nombre: "tardia2.pdf", tipo: "application/pdf" }
+    );
+
+    expect(archivosEnDisco()).toBe(antes);
+  });
+
+  it("no escribe evidencia, ni acta nueva, ni anclaje", async () => {
+    const sId = await stageCompletado(999_703);
+
+    const contar = async () => ({
+      evidencias: (
+        await db.selectFrom("Evidence").select("id").where("stageId", "=", sId).execute()
+      ).length,
+      actas: (
+        await db.selectFrom("EvidenceBundle").select("id").where("stageId", "=", sId).execute()
+      ).length,
+      eventos: (
+        await db.selectFrom("OnChainEvent").select("id").where("stageId", "=", sId).execute()
+      ).length
+    });
+
+    const antes = await contar();
+    await subir(
+      miembro,
+      sId,
+      { evidenceType: "document", category: "tardia" },
+      { buf: PDF, nombre: "tardia3.pdf", tipo: "application/pdf" }
+    );
+
+    expect(await contar()).toEqual(antes);
+  });
+
+  it("un stage Observed SÍ acepta evidencia — es el camino de remediación", async () => {
+    const stage = await crearStageMinteado({
+      projectId,
+      name: "Stage observado que recibe correccion",
+      sequenceOrder: 999_704,
+      actorUserId: actorId
+    });
+    await subir(
+      miembro,
+      stage.id,
+      { evidenceType: "document", category: "avance" },
+      { buf: PDF, nombre: "inicial.pdf", tipo: "application/pdf" }
+    );
+    const observado = await request(app)
+      .patch(`/api/v1/stages/${stage.id}/state`)
+      .set("Authorization", `Bearer ${admin}`)
+      .send({ state: "Observed" });
+    expect(observado.status).toBe(200);
+
+    const res = await subir(
+      miembro,
+      stage.id,
+      { evidenceType: "document", category: "correccion" },
+      { buf: Buffer.concat([PDF, Buffer.from("fix")]), nombre: "fix.pdf", tipo: "application/pdf" }
+    );
+    expect(res.status).toBe(201);
+  });
+});

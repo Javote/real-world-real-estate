@@ -55,6 +55,31 @@ lo mismo sin pasar por HTTP. Ver el detalle en `CLAUDE.md` raíz.
 
 ## Trampas verificadas
 
+- **2026-09-09 · `Completed` era terminal en la FSM pero no en el pipeline de evidencia.**
+  `POST /developer/projects/:id/stages/:stageId/evidence` no miraba el estado del stage: se podía
+  subir evidencia a una etapa ya certificada. La subida armaba un **bundle nuevo con un root
+  nuevo** y lo anclaba por metadata, mientras el datum del hilo conserva para siempre el root
+  congelado al certificar — el validador no deja salir de `Completed`, así que ese datum ya no se
+  reescribe nunca.
+  **La consecuencia es de la regla 17, y está verificada leyendo la ruta de lectura, no supuesta:**
+  `GET /projects/:id/stages/:stageId` devuelve el bundle **más reciente**
+  (`orderBy createdAt desc limit 1`, `projects-obra.routes.ts`), así que la pantalla mostraría ese
+  `commitmentHash` al lado del evento de certificación, cuyo `commitment` es el viejo. Un root
+  exhibido junto a un TXID que no lo atestigua. El listado del certifier
+  (`GET /certifier/certificates`, que leftJoinea `EvidenceBundle`) tiene el mismo problema.
+  **Fix:** 409 `STAGE_ALREADY_COMPLETED` apenas se resuelve el stage, antes de tocar el storage, con
+  `borrarHuerfano()` como todos los rechazos de esa ruta (regla 10).
+  **Por qué rechazar y no aceptar-sin-rebundlear:** aceptar en silencio dejaría al developer
+  creyendo que subió evidencia de la etapa. La documentación posterior al cierre tiene su lugar y es
+  `POST /developer/documents`, que es a nivel proyecto y no toca el bundle de ningún stage.
+  **`Observed` sigue aceptando**, y hay un test que lo fija: es el camino de remediación (D-020), no
+  un estado cerrado. Cuatro tests en `test/evidence-upload.test.ts`, los tres de rechazo verificados
+  en rojo neutralizando el guard — el de `Observed` queda verde, que es el control de que el guard
+  no es demasiado ancho.
+  **La lección, de la misma familia que `tieneHiloAnclado`:** cuando una FSM declara un estado
+  terminal, preguntá **qué otros pipelines escriben sobre esa entidad** — la terminalidad la hacía
+  cumplir el validador y `canTransition`, y ninguno de los dos ve un `POST` de evidencia.
+
 - **2026-09-08 · `PATCH /stages/:id/state` dejaba a un developer auto-certificar su propio stage —
   encontrado probando el flujo real de certificación con Claude en Chrome, al preguntar si el reparto
   de roles era el correcto.** `M2-D1 §Role Permission Matrix` es explícita: `Stage certification` y

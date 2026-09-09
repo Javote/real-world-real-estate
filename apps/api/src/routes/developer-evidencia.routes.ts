@@ -91,6 +91,30 @@ router.post(
       return res.status(404).json({ message: "Stage does not belong to project" });
     }
 
+    // **`Completed` es terminal en la FSM (D-020) y también acá.** Sin este
+    // chequeo el pipeline de evidencia no se enteraba de que el stage había
+    // cerrado: la subida armaba un bundle NUEVO, con un root nuevo, y lo
+    // anclaba por metadata — mientras el datum del hilo conserva para siempre
+    // el root congelado al certificar.
+    //
+    // La consecuencia es visible y es de la regla 17: `GET /projects/:id/
+    // stages/:stageId` devuelve el bundle **más reciente**
+    // (`orderBy createdAt desc limit 1`), así que la pantalla mostraría ese
+    // `commitmentHash` al lado del evento de certificación, cuyo `commitment`
+    // es el viejo. Un root exhibido junto a un TXID que no lo atestigua.
+    //
+    // **Dónde va la documentación posterior al cierre:** `POST /developer/
+    // documents`, que es a nivel proyecto y no toca el bundle de ningún stage.
+    // Por eso esto rechaza en vez de aceptar-y-no-rebundlear: aceptar en
+    // silencio dejaría al developer creyendo que subió evidencia de la etapa.
+    if (stage.state === "Completed") {
+      borrarHuerfano();
+      return res.status(409).json({
+        message: "A completed stage does not accept more evidence",
+        code: "STAGE_ALREADY_COMPLETED"
+      });
+    }
+
     const guardado = await storage.put({
       localPath: path.resolve(req.file.path),
       key: `evidence/${projectId}/${req.file.filename}`,
