@@ -52,3 +52,36 @@ export const paymentReleaseResultSchema = paymentAttestationSchema.extend({
   anchor: onChainEventSchema
 });
 export type PaymentReleaseResult = z.infer<typeof paymentReleaseResultSchema>;
+
+/**
+ * La fila de `Contract` completa (`POST /investor/invitations/:id/accept`).
+ * `signedAt` es otro de los cinco campos sin coercionar: epoch ms crudo.
+ */
+export const contractSchema = z.strictObject({
+  id: z.string(),
+  unitId: z.string(),
+  investorId: z.string(),
+  totalMinorUnits: z.number().int().positive(),
+  currency: z.string(),
+  signedAt: z.number().nullable(),
+  createdAt: z.coerce.date()
+});
+export type ContractResponse = z.infer<typeof contractSchema>;
+
+/** `POST /investor/invitations/:id/accept`: el contrato recién creado, con su anclaje. */
+export const acceptInvitationResultSchema = z.strictObject({
+  contract: contractSchema,
+  anchor: onChainEventSchema
+});
+export type AcceptInvitationResult = z.infer<typeof acceptInvitationResultSchema>;
+
+/** Fila 23-24 — `GET /investor/contracts/:unitId`: el contrato de la unidad del investor. */
+export const investorContractSchema = z.strictObject({
+  id: z.string(),
+  totalMinorUnits: z.number().int().positive(),
+  currency: z.string(),
+  signedAt: z.number().nullable(),
+  investorId: z.string(),
+  unitReference: z.string()
+});
+export type InvestorContract = z.infer<typeof investorContractSchema>;

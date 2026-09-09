@@ -216,3 +216,15 @@ export const developerProgressItemSchema = z.strictObject({
   projectName: z.string()
 });
 export type DeveloperProgressItem = z.infer<typeof developerProgressItemSchema>;
+
+/** Filas 15-18 — `GET /investor/units/:id/news`: las novedades de la unidad. */
+export const unitNewsEventSchema = z.strictObject({
+  id: z.string(),
+  eventType: onChainEventTypeSchema,
+  toState: stageStateSchema.nullable(),
+  txid: z.string().nullable(),
+  status: onChainEventStatusSchema,
+  createdAt: z.coerce.date(),
+  stageName: z.string().nullable()
+});
+export type UnitNewsEvent = z.infer<typeof unitNewsEventSchema>;

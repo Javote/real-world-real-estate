@@ -40,3 +40,16 @@ export const invitationSchema = z.strictObject({
   respondedAt: z.number().nullable()
 });
 export type InvitationResponse = z.infer<typeof invitationSchema>;
+
+/** Fila 63 — `GET /investor/invitations/:id`: la invitación que le llegó al investor. */
+export const investorInvitationDetailSchema = z.strictObject({
+  id: z.string(),
+  investorEmail: z.email(),
+  amountMinorUnits: z.number().int().positive(),
+  currency: z.string(),
+  status: invitationStatusSchema,
+  createdAt: z.coerce.date(),
+  unitReference: z.string(),
+  projectName: z.string()
+});
+export type InvestorInvitationDetail = z.infer<typeof investorInvitationDetailSchema>;

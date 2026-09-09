@@ -1,10 +1,17 @@
 import { randomBytes } from "node:crypto";
 import {
+  acceptInvitationResultSchema,
   cuidParamSchema,
   dossierSchema,
   dossierShareSchema,
+  investorContractSchema,
+  investorInvitationDetailSchema,
+  investorUnitDetailSchema,
+  investorUnitListItemSchema,
   notificationQuerySchema,
-  notificationSchema
+  notificationSchema,
+  projectSchema,
+  unitNewsEventSchema
 } from "@plataforma/shared";
 import { type Request, Router } from "express";
 import { z } from "zod";
@@ -73,7 +80,7 @@ router.get(
       .orderBy("Favorite.createdAt", "desc")
       .execute();
 
-    return res.json(favoritos);
+    return res.json(z.array(projectSchema).parse(favoritos));
   }
 );
 
@@ -140,7 +147,11 @@ router.get(
 
     const avance = await avancePorProyecto([...new Set(unidades.map((u) => u.projectId))]);
 
-    return res.json(unidades.map((u) => ({ ...u, progress: avance.get(u.projectId) ?? 0 })));
+    return res.json(
+      z
+        .array(investorUnitListItemSchema)
+        .parse(unidades.map((u) => ({ ...u, progress: avance.get(u.projectId) ?? 0 })))
+    );
   }
 );
 
@@ -194,7 +205,7 @@ router.get(
       .orderBy("Stage.sequenceOrder", "asc")
       .execute();
 
-    return res.json({ ...unidad, stages });
+    return res.json(investorUnitDetailSchema.parse({ ...unidad, stages }));
   }
 );
 
@@ -232,7 +243,7 @@ router.get(
       .limit(50)
       .execute();
 
-    return res.json(eventos);
+    return res.json(z.array(unitNewsEventSchema).parse(eventos));
   }
 );
 
@@ -422,7 +433,7 @@ router.get(
 
     if (!invitacion) return res.status(404).json({ message: "Invitation not found" });
 
-    return res.json(invitacion);
+    return res.json(investorInvitationDetailSchema.parse(invitacion));
   }
 );
 
@@ -525,7 +536,7 @@ router.post(
       metadata: { txid: anchor.txid, membershipRole: "buyer" }
     });
 
-    return res.status(201).json({ contract: contrato, anchor });
+    return res.status(201).json(acceptInvitationResultSchema.parse({ contract: contrato, anchor }));
   }
 );
 
@@ -594,7 +605,7 @@ router.get(
 
     if (!contrato) return res.status(404).json({ message: "Contract not found" });
 
-    return res.json(contrato);
+    return res.json(investorContractSchema.parse(contrato));
   }
 );
 

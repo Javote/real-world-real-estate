@@ -2,6 +2,7 @@ import "dotenv/config";
 import { mkdirSync, writeFileSync } from "node:fs";
 import path from "node:path";
 import {
+  acceptInvitationResultSchema,
   addProjectMemberSchema,
   anchorDocumentSchema,
   auditLogEntrySchema,
@@ -38,7 +39,11 @@ import {
   evidenceProofSchema,
   evidenceSchema,
   hex64ParamSchema,
+  investorContractSchema,
   investorDirectoryEntrySchema,
+  investorInvitationDetailSchema,
+  investorUnitDetailSchema,
+  investorUnitListItemSchema,
   invitationSchema,
   loginRequestSchema,
   loginResponseSchema,
@@ -71,6 +76,7 @@ import {
   stageEvidenceUploadSchema,
   stageSchema,
   stageTransitionSchema,
+  unitNewsEventSchema,
   unitSchema,
   unreadCountSchema,
   updateEvidenceSchema,
@@ -259,7 +265,14 @@ const RESPONSE_SCHEMAS: Record<string, ZodType> = {
   "GET /api/v1/developer/projects/:id/contracts": z.array(developerContractSchema),
   // Documenta el 201 (recién liberada); el 200 (idempotente) es
   // paymentAttestationSchema solo, sin `anchor`.
-  "POST /api/v1/developer/contracts/:id/releases/:stageNum": paymentReleaseResultSchema
+  "POST /api/v1/developer/contracts/:id/releases/:stageNum": paymentReleaseResultSchema,
+  "GET /api/v1/investor/favorites": z.array(projectSchema),
+  "GET /api/v1/investor/units": z.array(investorUnitListItemSchema),
+  "GET /api/v1/investor/units/:id": investorUnitDetailSchema,
+  "GET /api/v1/investor/units/:id/news": z.array(unitNewsEventSchema),
+  "GET /api/v1/investor/invitations/:id": investorInvitationDetailSchema,
+  "POST /api/v1/investor/invitations/:id/accept": acceptInvitationResultSchema,
+  "GET /api/v1/investor/contracts/:unitId": investorContractSchema
 };
 
 /** La forma exacta de `ZodError.flatten()`, que es lo que devuelve todo 400. */

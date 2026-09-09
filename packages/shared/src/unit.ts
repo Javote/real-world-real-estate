@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { stageStateSchema } from "./stage";
 
 // La unidad comercial de un proyecto (M2-D5 filas 39, 40-41, 44, 44b).
 
@@ -71,3 +72,47 @@ export const developerUnitDirectoryEntrySchema = z.strictObject({
   projectName: z.string()
 });
 export type DeveloperUnitDirectoryEntry = z.infer<typeof developerUnitDirectoryEntrySchema>;
+
+/** Fila 14 — `GET /investor/units`: las unidades del investor autenticado. */
+export const investorUnitListItemSchema = z.strictObject({
+  id: z.string(),
+  unitReference: z.string(),
+  status: unitStatusSchema,
+  sizeM2: z.number().int().positive().nullable(),
+  priceMinorUnits: z.number().int().nonnegative().nullable(),
+  currency: z.string().nullable(),
+  projectId: z.string(),
+  projectName: z.string(),
+  city: z.string().nullable(),
+  progress: z.number().int().min(0).max(100)
+});
+export type InvestorUnitListItem = z.infer<typeof investorUnitListItemSchema>;
+
+/** Un stage del proyecto, con su anclaje — lo que alimenta los `StageChip` (P9). */
+export const investorUnitStageSchema = z.strictObject({
+  stageId: z.string(),
+  name: z.string(),
+  sequenceOrder: z.number().int().positive(),
+  state: stageStateSchema,
+  bundleId: z.string().nullable(),
+  txid: z.string().nullable()
+});
+export type InvestorUnitStage = z.infer<typeof investorUnitStageSchema>;
+
+/** Filas 15-18 — `GET /investor/units/:id`: la unidad con los stages de su proyecto. */
+export const investorUnitDetailSchema = z.strictObject({
+  id: z.string(),
+  unitReference: z.string(),
+  status: unitStatusSchema,
+  sizeM2: z.number().int().positive().nullable(),
+  floor: z.number().int().nullable(),
+  priceMinorUnits: z.number().int().nonnegative().nullable(),
+  currency: z.string().nullable(),
+  investorId: z.string().nullable(),
+  projectId: z.string(),
+  projectName: z.string(),
+  city: z.string().nullable(),
+  country: z.string().nullable(),
+  stages: z.array(investorUnitStageSchema)
+});
+export type InvestorUnitDetail = z.infer<typeof investorUnitDetailSchema>;
