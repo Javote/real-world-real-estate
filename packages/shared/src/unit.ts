@@ -42,3 +42,32 @@ export const buildingSchematicFloorSchema = z.strictObject({
   )
 });
 export type BuildingSchematicFloor = z.infer<typeof buildingSchematicFloorSchema>;
+
+/** La fila de `Unit` completa (`selectAll()`/`returningAll()`). */
+export const unitSchema = z.strictObject({
+  id: z.string(),
+  projectId: z.string(),
+  unitReference: z.string(),
+  status: unitStatusSchema,
+  floor: z.number().int().nullable(),
+  sizeM2: z.number().int().positive().nullable(),
+  priceMinorUnits: z.number().int().nonnegative().nullable(),
+  currency: z.string().nullable(),
+  investorId: z.string().nullable(),
+  createdAt: z.coerce.date(),
+  updatedAt: z.coerce.date()
+});
+export type UnitResponse = z.infer<typeof unitSchema>;
+
+/** Fila 44 — `GET /developer/units`: el inventario cross-proyecto. */
+export const developerUnitDirectoryEntrySchema = z.strictObject({
+  id: z.string(),
+  unitReference: z.string(),
+  status: unitStatusSchema,
+  priceMinorUnits: z.number().int().nonnegative().nullable(),
+  currency: z.string().nullable(),
+  investorId: z.string().nullable(),
+  projectId: z.string(),
+  projectName: z.string()
+});
+export type DeveloperUnitDirectoryEntry = z.infer<typeof developerUnitDirectoryEntrySchema>;

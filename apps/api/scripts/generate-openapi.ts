@@ -22,6 +22,7 @@ import {
   createUserSchema,
   cuidParamSchema,
   cursorPaginationSchema,
+  developerContractSchema,
   developerDocumentListQuerySchema,
   developerDocumentSchema,
   developerKpisSchema,
@@ -29,6 +30,7 @@ import {
   developerProjectCreateResultSchema,
   developerProjectDetailSchema,
   developerProjectListItemSchema,
+  developerUnitDirectoryEntrySchema,
   dossierRejectResultSchema,
   dossierSchema,
   dossierShareSchema,
@@ -37,6 +39,7 @@ import {
   evidenceSchema,
   hex64ParamSchema,
   investorDirectoryEntrySchema,
+  invitationSchema,
   loginRequestSchema,
   loginResponseSchema,
   meResponseSchema,
@@ -48,6 +51,8 @@ import {
   observeStageSchema,
   onChainEventSchema,
   paginatedResponseSchema,
+  paymentAttestationSchema,
+  paymentReleaseResultSchema,
   pendingDossierSchema,
   positiveIntParamSchema,
   profileSchema,
@@ -66,6 +71,7 @@ import {
   stageEvidenceUploadSchema,
   stageSchema,
   stageTransitionSchema,
+  unitSchema,
   unreadCountSchema,
   updateEvidenceSchema,
   updateNotificationPrefsSchema,
@@ -244,7 +250,16 @@ const RESPONSE_SCHEMAS: Record<string, ZodType> = {
   "GET /api/v1/developer/progress": z.array(developerProgressItemSchema),
   "GET /api/v1/developer/audit-log": paginatedResponseSchema(auditLogEntrySchema),
   // Las dos ramas (200 idempotente, 201 recién anclado) son el mismo OnChainEvent.
-  "POST /api/v1/developer/documents": onChainEventSchema
+  "POST /api/v1/developer/documents": onChainEventSchema,
+  "GET /api/v1/developer/projects/:id/units": z.array(unitSchema),
+  "POST /api/v1/developer/projects/:id/units": unitSchema,
+  "PATCH /api/v1/developer/units/:id": unitSchema,
+  "GET /api/v1/developer/units": z.array(developerUnitDirectoryEntrySchema),
+  "POST /api/v1/developer/projects/:id/invitations": invitationSchema,
+  "GET /api/v1/developer/projects/:id/contracts": z.array(developerContractSchema),
+  // Documenta el 201 (recién liberada); el 200 (idempotente) es
+  // paymentAttestationSchema solo, sin `anchor`.
+  "POST /api/v1/developer/contracts/:id/releases/:stageNum": paymentReleaseResultSchema
 };
 
 /** La forma exacta de `ZodError.flatten()`, que es lo que devuelve todo 400. */

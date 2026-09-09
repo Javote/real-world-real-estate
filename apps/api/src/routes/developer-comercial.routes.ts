@@ -2,11 +2,18 @@ import {
   createInvitationSchema,
   createUnitSchema,
   cuidParamSchema,
+  developerContractSchema,
+  developerUnitDirectoryEntrySchema,
+  invitationSchema,
+  paymentAttestationSchema,
+  paymentReleaseResultSchema,
   positiveIntParamSchema,
   releasePaymentSchema,
+  unitSchema,
   updateUnitSchema
 } from "@plataforma/shared";
 import { type Request, Router } from "express";
+import { z } from "zod";
 import { createId } from "../db/id";
 import { anchorCommitmentEvent, commitmentOf } from "../domain/anchoring";
 import { db } from "../lib/db";
@@ -51,7 +58,7 @@ router.get(
       .orderBy("unitReference", "asc")
       .execute();
 
-    return res.json(unidades);
+    return res.json(z.array(unitSchema).parse(unidades));
   }
 );
 
@@ -91,7 +98,7 @@ router.post(
       entityId: unidad.id
     });
 
-    return res.status(201).json(unidad);
+    return res.status(201).json(unitSchema.parse(unidad));
   }
 );
 
@@ -130,7 +137,7 @@ router.patch(
       entityId: unidad.id
     });
 
-    return res.json(actualizada);
+    return res.json(unitSchema.parse(actualizada));
   }
 );
 
@@ -164,7 +171,7 @@ router.get(
       .where("Unit.projectId", "in", ids)
       .execute();
 
-    return res.json(unidades);
+    return res.json(z.array(developerUnitDirectoryEntrySchema).parse(unidades));
   }
 );
 
@@ -220,7 +227,7 @@ router.post(
       entityId: invitacion.id
     });
 
-    return res.status(201).json(invitacion);
+    return res.status(201).json(invitationSchema.parse(invitacion));
   }
 );
 
@@ -301,36 +308,40 @@ router.get(
     const ms = (fecha: Date | null) => (fecha === null ? null : new Date(fecha).getTime());
 
     return res.json(
-      contratos.map(({ investorEmail, ...contrato }) => {
-        // La invitación se ata al contrato por unidad **y por investor**: es el
-        // email de la invitación contra el del `User` del contrato. Sin eso,
-        // dos ventas de la misma unidad se cruzan los anclajes.
-        const candidatos = anclajes.filter(
-          (a) => a.unitId === contrato.unitId && a.investorEmail === investorEmail
-        );
+      z.array(developerContractSchema).parse(
+        contratos.map(({ investorEmail, ...contrato }) => {
+          // La invitación se ata al contrato por unidad **y por investor**: es el
+          // email de la invitación contra el del `User` del contrato. Sin eso,
+          // dos ventas de la misma unidad se cruzan los anclajes.
+          const candidatos = anclajes.filter(
+            (a) => a.unitId === contrato.unitId && a.investorEmail === investorEmail
+          );
 
-        // Si el mismo investor compró la misma unidad dos veces quedan varios:
-        // gana el `respondedAt` más cercano al `signedAt`. Hoy son el MISMO
-        // instante —el accept usa un único `ahora` para los dos— así que el
-        // match es exacto; el criterio es lo que lo mantiene determinístico si
-        // alguna vez dejan de serlo.
-        const firmado = ms(contrato.signedAt);
-        const anclaje = candidatos.reduce<(typeof candidatos)[number] | null>((mejor, a) => {
-          if (mejor === null) return a;
-          if (firmado === null) return mejor;
-          const distancia = (c: (typeof candidatos)[number]) => {
-            const respondido = ms(c.respondedAt);
-            return respondido === null ? Number.POSITIVE_INFINITY : Math.abs(respondido - firmado);
+          // Si el mismo investor compró la misma unidad dos veces quedan varios:
+          // gana el `respondedAt` más cercano al `signedAt`. Hoy son el MISMO
+          // instante —el accept usa un único `ahora` para los dos— así que el
+          // match es exacto; el criterio es lo que lo mantiene determinístico si
+          // alguna vez dejan de serlo.
+          const firmado = ms(contrato.signedAt);
+          const anclaje = candidatos.reduce<(typeof candidatos)[number] | null>((mejor, a) => {
+            if (mejor === null) return a;
+            if (firmado === null) return mejor;
+            const distancia = (c: (typeof candidatos)[number]) => {
+              const respondido = ms(c.respondedAt);
+              return respondido === null
+                ? Number.POSITIVE_INFINITY
+                : Math.abs(respondido - firmado);
+            };
+            return distancia(a) < distancia(mejor) ? a : mejor;
+          }, null);
+
+          return {
+            ...contrato,
+            txid: anclaje?.txid ?? null,
+            commitment: anclaje?.commitment ?? null
           };
-          return distancia(a) < distancia(mejor) ? a : mejor;
-        }, null);
-
-        return {
-          ...contrato,
-          txid: anclaje?.txid ?? null,
-          commitment: anclaje?.commitment ?? null
-        };
-      })
+        })
+      )
     );
   }
 );
@@ -394,7 +405,7 @@ router.post(
       .where("stageNumber", "=", stageNumber)
       .executeTakeFirst();
 
-    if (yaLiberada) return res.status(200).json(yaLiberada);
+    if (yaLiberada) return res.status(200).json(paymentAttestationSchema.parse(yaLiberada));
 
     const ahora = new Date();
     const release = await db
@@ -431,7 +442,7 @@ router.post(
       metadata: { stageNumber, txid: anchor.txid }
     });
 
-    return res.status(201).json({ ...release, anchor });
+    return res.status(201).json(paymentReleaseResultSchema.parse({ ...release, anchor }));
   }
 );
 
