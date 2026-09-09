@@ -83,7 +83,7 @@ que el producto viene a eliminar.
 
 `aiken check` **no mide coverage de líneas** —solo tiene `--property-coverage`, que es la
 distribución de labels en property tests—, así que el ≥95% del criterio 2 del SOM se demuestra con
-esta tabla. **77 tests, 0 fallando.**
+esta tabla. **78 tests, 0 fallando.**
 
 `lib/propnexus/fsm.ak` — 43:
 
@@ -98,7 +98,7 @@ esta tabla. **77 tests, 0 fallando.**
 | El datum codifica al mismo CBOR que el códec de `packages/cardano` espera — el "valor dorado" (ver `packages/cardano/CLAUDE.md`) | `t_golden_datum_encoding` (1) |
 | El redeemer (`StageRedeemer`/`MintAction`) codifica al mismo CBOR que `encodeAdvanceRedeemer`/`encodeInitRedeemer` de `packages/cardano` — mismo boundary que el datum, cerrado el 2026-09-08 (`specs/PLAN-2026-09-08-tests-aiken-robustez.md`) | `t_golden_redeemer_*` (3) |
 
-`validators/stage.ak` — 34 (6 caminos felices + 27 puntos de rechazo + 1 sobre el `else` genérico):
+`validators/stage.ak` — 35 (6 caminos felices + 28 puntos de rechazo + 1 sobre el `else` genérico):
 
 | Punto de rechazo | Test |
 |---|---|
@@ -120,6 +120,7 @@ esta tabla. **77 tests, 0 fallando.**
 | ventana de validez abierta (sin punta finita) | `spend_rejects_open_ended_validity_range` |
 | el UTxO gastado no lleva thread token | `spend_rejects_utxo_without_thread_token` |
 | el token es el de otro stage | `spend_rejects_thread_token_of_another_stage` |
+| el UTxO gastado lleva 2 unidades del propio thread token, no 1 (análogo al de `mint`) | `spend_rejects_utxo_with_two_units_of_own_token` |
 | la transición se queda con el token | `spend_rejects_dropping_the_thread_token` |
 | acuñar sin firma del operador | `mint_rejects_missing_admin_signature` |
 | acuñar 2 unidades del mismo token | `mint_rejects_two_units_of_the_thread` |

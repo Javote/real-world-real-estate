@@ -632,6 +632,36 @@ test spend_rejects_thread_token_of_another_stage() fail {
   )
 }
 
+test spend_rejects_utxo_with_two_units_of_own_token() fail {
+  let old = datum_at(Pending, True)
+  let new = StageDatum { ..old, state: InProgress }
+  let doubled =
+    assets.from_lovelace(2_000_000)
+      |> assets.add(script_hash, stage_ref, 2)
+  let input =
+    Input {
+      ..script_input(old),
+      output: Output {
+        address: script_address(),
+        value: doubled,
+        datum: InlineDatum(old),
+        reference_script: None,
+      },
+    }
+  stage.spend(
+    admin_key,
+    Some(old),
+    Advance { to: InProgress, completion: None },
+    own_ref,
+    tx(
+      [input],
+      [script_output_with(InlineDatum(new), doubled)],
+      [admin_key],
+      100,
+    ),
+  )
+}
+
 test spend_rejects_dropping_the_thread_token() fail {
   let old = datum_at(Pending, True)
   let new = StageDatum { ..old, state: InProgress }
