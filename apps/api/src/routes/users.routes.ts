@@ -1,4 +1,10 @@
-import { createUserSchema, cuidParamSchema, updateUserSchema } from "@plataforma/shared";
+import {
+  createUserSchema,
+  cuidParamSchema,
+  updateUserSchema,
+  userMutationResultSchema,
+  userSummarySchema
+} from "@plataforma/shared";
 import bcrypt from "bcrypt";
 import { type Request, Router } from "express";
 import { createId } from "../db/id";
@@ -22,7 +28,7 @@ router.get("/", authorize({ roles: ["admin"], acceso: "soloRol" }), async (_req,
     .orderBy("createdAt", "desc")
     .execute();
 
-  return res.json(userList);
+  return res.json(userList.map((u) => userSummarySchema.parse(u)));
 });
 
 router.post("/", authorize({ roles: ["admin"], acceso: "soloRol" }), async (req, res) => {
@@ -56,7 +62,7 @@ router.post("/", authorize({ roles: ["admin"], acceso: "soloRol" }), async (req,
     entityId: user.id
   });
 
-  return res.status(201).json(user);
+  return res.status(201).json(userMutationResultSchema.parse(user));
 });
 
 router.get(
@@ -73,7 +79,7 @@ router.get(
       return res.status(404).json({ message: "User not found" });
     }
 
-    return res.json(user);
+    return res.json(userSummarySchema.parse(user));
   }
 );
 
@@ -115,7 +121,7 @@ router.patch(
       entityId: user.id
     });
 
-    return res.json(user);
+    return res.json(userMutationResultSchema.parse(user));
   }
 );
 

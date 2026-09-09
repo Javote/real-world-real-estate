@@ -124,3 +124,77 @@ export const DEFAULT_STAGE_CATALOG: readonly StageCatalogEntry[] = [
   { name: "Terminaciones", sequenceOrder: 9 },
   { name: "Final de obra y subdivisión", sequenceOrder: 10 }
 ] as const;
+
+/**
+ * `GET /api/v1/stages/:id` y `PATCH /api/v1/stages/:id` devuelven la fila de
+ * `Stage` completa (`returningAll()`/`selectAll()`), coercionada por
+ * `SqliteTypeCoercionPlugin` — `validationCritical` ya es `boolean`,
+ * `certifiedAt`/`createdAt`/`updatedAt` ya son `Date`.
+ */
+export const stageSchema = z.strictObject({
+  id: z.string(),
+  projectId: z.string(),
+  name: z.string(),
+  sequenceOrder: z.number().int().positive(),
+  state: stageStateSchema,
+  validationCritical: z.boolean(),
+  certifiedAt: z.coerce.date().nullable(),
+  certifiedById: z.string().nullable(),
+  progressPercentage: z.number().int().min(0).max(100).nullable(),
+  createdAt: z.coerce.date(),
+  updatedAt: z.coerce.date()
+});
+export type StageResponse = z.infer<typeof stageSchema>;
+
+/**
+ * Estado de un evento on-chain. `Pending` mientras no haya TXID confirmado —
+ * la regla 17 prohíbe mostrar prueba sin anclaje real. Vive acá (y no en
+ * `apps/api/src/db/types.ts`, que la re-exporta) por el mismo motivo que
+ * `STAGE_STATES`: el schema Zod de la respuesta la necesita (regla 6).
+ */
+export const ONCHAIN_EVENT_STATUSES = ["Pending", "Confirmed", "Failed"] as const;
+export const onChainEventStatusSchema = z.enum(ONCHAIN_EVENT_STATUSES);
+export type OnChainEventStatus = z.infer<typeof onChainEventStatusSchema>;
+
+/**
+ * `event_type` de M1-D2 §2 — las seis operaciones on-chain de M2-D5 §7
+ * (`M3-SC-01..06`), más los dos eventos del hilo de stages.
+ */
+export const ONCHAIN_EVENT_TYPES = [
+  "STAGE_CREATED",
+  "STAGE_TRANSITION",
+  "EVIDENCE_ANCHOR",
+  "INVITATION_ACCEPTED",
+  "PAYMENT_RELEASE",
+  "DOSSIER_SIGNATURE",
+  "DOCUMENT_ANCHOR"
+] as const;
+export const onChainEventTypeSchema = z.enum(ONCHAIN_EVENT_TYPES);
+export type OnChainEventType = z.infer<typeof onChainEventTypeSchema>;
+
+/**
+ * Fila de `OnChainEvent` completa (M1-D2 §2). Sin campos que ocultar: son
+ * hashes, refs opacas y timestamps — nunca PII (regla 2). `blockTimestamp`
+ * está en `TIMESTAMP_COLUMNS` del plugin (`sqlite-type-plugin.ts`), así que
+ * también llega como `Date`.
+ */
+export const onChainEventSchema = z.strictObject({
+  id: z.string(),
+  projectId: z.string(),
+  stageId: z.string().nullable(),
+  evidenceId: z.string().nullable(),
+  referenceId: z.string().nullable(),
+  eventIndex: z.number().int().nonnegative(),
+  eventType: onChainEventTypeSchema,
+  fromState: stageStateSchema.nullable(),
+  toState: stageStateSchema.nullable(),
+  commitment: z.string().nullable(),
+  status: onChainEventStatusSchema,
+  txid: z.string().nullable(),
+  network: z.string().nullable(),
+  outputRef: z.string().nullable(),
+  blockTimestamp: z.coerce.date().nullable(),
+  createdAt: z.coerce.date(),
+  updatedAt: z.coerce.date()
+});
+export type OnChainEventResponse = z.infer<typeof onChainEventSchema>;

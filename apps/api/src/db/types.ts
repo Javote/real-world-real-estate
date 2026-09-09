@@ -1,11 +1,19 @@
-import type { EvidenceType, MembershipRole, ProjectStatus, StageState } from "@plataforma/shared";
+import type {
+  EvidenceType,
+  MembershipRole,
+  OnChainEventStatus,
+  OnChainEventType,
+  ProjectStatus,
+  StageState
+} from "@plataforma/shared";
 import type { ColumnType, Generated, Insertable, Selectable, Updateable } from "../lib/kysely";
 
 // Los valores son los que declara la migración (`migrations/0000_init.sql`)
 // (D-016). SQLite no tiene enum nativo: se modelan como `text`, y la
 // restricción real la sigue haciendo Zod en `packages/shared` (regla 6).
 export const USER_ROLES = ["admin", "developer", "buyer", "verifier", "notary"] as const;
-// PROJECT_STATUSES, MEMBERSHIP_ROLES, EVIDENCE_TYPES y la FSM del stage NO se
+// PROJECT_STATUSES, MEMBERSHIP_ROLES, EVIDENCE_TYPES, la FSM del stage y (desde
+// la Tanda 2 de documentación de la API) los dos enums de OnChainEvent NO se
 // declaran acá: viven en `packages/shared`, que es donde el schema Zod de
 // cada endpoint ya los necesita (regla 6). Se re-exportan para que quien
 // trabaje con la base los tenga a mano sin importar de dos lugares distintos
@@ -13,32 +21,21 @@ export const USER_ROLES = ["admin", "developer", "buyer", "verifier", "notary"] 
 export {
   EVIDENCE_TYPES,
   MEMBERSHIP_ROLES,
+  ONCHAIN_EVENT_STATUSES,
+  ONCHAIN_EVENT_TYPES,
   PROJECT_STATUSES,
   STAGE_STATES
 } from "@plataforma/shared";
 
-/** Estado de un evento on-chain. `Pending` mientras no haya TXID confirmado
- * — la regla 17 prohíbe mostrar prueba sin anclaje real. */
-export const ONCHAIN_EVENT_STATUSES = ["Pending", "Confirmed", "Failed"] as const;
-
-/** `event_type` de M1-D2 §2. Hoy solo se escriben los dos del hilo de stages. */
-// Las seis operaciones on-chain de M2-D5 §7 (`M3-SC-01..06`), más los dos
-// eventos del hilo de stages.
-export const ONCHAIN_EVENT_TYPES = [
-  "STAGE_CREATED",
-  "STAGE_TRANSITION",
-  "EVIDENCE_ANCHOR",
-  "INVITATION_ACCEPTED",
-  "PAYMENT_RELEASE",
-  "DOSSIER_SIGNATURE",
-  "DOCUMENT_ANCHOR"
-] as const;
-
 export type UserRole = (typeof USER_ROLES)[number];
-export type { StageState };
-export type OnChainEventStatus = (typeof ONCHAIN_EVENT_STATUSES)[number];
-export type OnChainEventType = (typeof ONCHAIN_EVENT_TYPES)[number];
-export type { EvidenceType, MembershipRole, ProjectStatus };
+export type {
+  EvidenceType,
+  MembershipRole,
+  OnChainEventStatus,
+  OnChainEventType,
+  ProjectStatus,
+  StageState
+};
 
 // Kysely no tiene columnas booleanas/timestamp: SQLite las guarda como
 // `integer` (0/1, epoch ms) y el driver de libSQL las devuelve como

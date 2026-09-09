@@ -1,15 +1,31 @@
 import {
   cuidParamSchema,
+  evidenceSchema,
+  onChainEventSchema,
+  projectSchema,
   STAGE_TRANSITION_ERRORS,
+  stageSchema,
   stageTransitionSchema,
   updateStageSchema
 } from "@plataforma/shared";
 import { type Request, Router } from "express";
+import { z } from "zod";
 import { cabezaDelHilo, transitionStage } from "../domain/stage-transition";
 import { db } from "../lib/db";
 import { ANY_MEMBERSHIP, authenticate, authorize, CUALQUIER_ROL } from "../middlewares/auth";
 import { paramValidator } from "../middlewares/validate-params";
 import { writeAuditLog } from "../utils/audit";
+import { EVIDENCE_SAFE_COLUMNS } from "./_shared";
+
+/**
+ * `GET /:id` compone el stage con su evidencia y su proyecto — describe
+ * exactamente esa forma, ni más ni menos (regla 5).
+ */
+const stageDetailSchema = stageSchema.extend({
+  evidences: z.array(evidenceSchema),
+  project: projectSchema,
+  hasOnChainThread: z.boolean()
+});
 
 const router = Router();
 
@@ -34,13 +50,22 @@ router.get(
       return res.status(404).json({ message: "Stage not found" });
     }
 
+    // EVIDENCE_SAFE_COLUMNS, no selectAll(): esta ruta devolvía storagePath
+    // —la ruta absoluta en disco del servidor— sobre cada evidencia del stage
+    // (D-011). Encontrado escribiendo su schema de respuesta (Tanda 2).
     const [evidences, project, hilo] = await Promise.all([
-      db.selectFrom("Evidence").selectAll().where("stageId", "=", stage.id).execute(),
+      db
+        .selectFrom("Evidence")
+        .select(EVIDENCE_SAFE_COLUMNS)
+        .where("stageId", "=", stage.id)
+        .execute(),
       db.selectFrom("Project").selectAll().where("id", "=", stage.projectId).executeTakeFirst(),
       cabezaDelHilo(stage.id)
     ]);
 
-    return res.json({ ...stage, evidences, project, hasOnChainThread: hilo !== null });
+    return res.json(
+      stageDetailSchema.parse({ ...stage, evidences, project, hasOnChainThread: hilo !== null })
+    );
   }
 );
 
@@ -102,7 +127,7 @@ router.patch(
       entityId: stage.id
     });
 
-    return res.json(stage);
+    return res.json(stageSchema.parse(stage));
   }
 );
 
@@ -157,7 +182,12 @@ router.patch(
       });
     }
 
-    return res.json({ ...resultado.stage, anchor: resultado.anchor });
+    return res.json(
+      stageSchema.extend({ anchor: onChainEventSchema }).parse({
+        ...resultado.stage,
+        anchor: resultado.anchor
+      })
+    );
   }
 );
 

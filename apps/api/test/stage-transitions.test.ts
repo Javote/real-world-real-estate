@@ -513,6 +513,23 @@ describe("hasOnChainThread · visible sin tener que saber que existe cabezaDelHi
   });
 });
 
+describe("GET /stages/:id · storagePath nunca sale (D-011)", () => {
+  it("la evidencia embebida no trae storagePath — encontrado en la Tanda 2 de documentación de la API", async () => {
+    const id = await crearStage();
+    await agregarEvidencia(id);
+
+    const res = await request(app)
+      .get(`/api/v1/stages/${id}`)
+      .set("Authorization", `Bearer ${token}`);
+
+    expect(res.status).toBe(200);
+    expect(res.body.evidences.length).toBeGreaterThanOrEqual(1);
+    for (const evidencia of res.body.evidences) {
+      expect(evidencia).not.toHaveProperty("storagePath");
+    }
+  });
+});
+
 describe("PATCH /stages/:id · la identidad on-chain", () => {
   it("deja cambiar orden y criticidad mientras no haya hilo anclado", async () => {
     const id = await crearStage();

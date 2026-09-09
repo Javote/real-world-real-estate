@@ -25,6 +25,7 @@ import {
   dossierSchema,
   dossierShareSchema,
   evidenceProofSchema,
+  evidenceSchema,
   hex64ParamSchema,
   investorDirectoryEntrySchema,
   loginRequestSchema,
@@ -36,15 +37,18 @@ import {
   notificationQuerySchema,
   notificationSchema,
   observeStageSchema,
+  onChainEventSchema,
   paginatedResponseSchema,
   pendingDossierSchema,
   positiveIntParamSchema,
   profileSchema,
   projectListQuerySchema,
+  projectSchema,
   rejectDossierSchema,
   releasePaymentSchema,
   reservationToEscrowTelemetrySchema,
   stageEvidenceUploadSchema,
+  stageSchema,
   stageTransitionSchema,
   unreadCountSchema,
   updateEvidenceSchema,
@@ -53,7 +57,9 @@ import {
   updateProjectSchema,
   updateStageSchema,
   updateUnitSchema,
-  updateUserSchema
+  updateUserSchema,
+  userMutationResultSchema,
+  userSummarySchema
 } from "@plataforma/shared";
 import { type ZodType, z } from "zod";
 import { createDocument } from "zod-openapi";
@@ -175,7 +181,19 @@ const RESPONSE_SCHEMAS: Record<string, ZodType> = {
   "PATCH /api/v1/profile": profileSchema,
   "PATCH /api/v1/profile/notifications": notificationPrefsSchema,
   "GET /api/v1/evidence/:bundleId/proof/:fileHash": evidenceProofSchema,
-  "GET /api/v1/audit-logs/telemetry/reservation-to-escrow": reservationToEscrowTelemetrySchema
+  "GET /api/v1/audit-logs/telemetry/reservation-to-escrow": reservationToEscrowTelemetrySchema,
+  "GET /api/v1/users": z.array(userSummarySchema),
+  "POST /api/v1/users": userMutationResultSchema,
+  "GET /api/v1/users/:id": userSummarySchema,
+  "PATCH /api/v1/users/:id": userMutationResultSchema,
+  // Mismo `.extend(...)` que arma `stages.routes.ts` — no un schema aparte.
+  "GET /api/v1/stages/:id": stageSchema.extend({
+    evidences: z.array(evidenceSchema),
+    project: projectSchema,
+    hasOnChainThread: z.boolean()
+  }),
+  "PATCH /api/v1/stages/:id": stageSchema,
+  "PATCH /api/v1/stages/:id/state": stageSchema.extend({ anchor: onChainEventSchema })
 };
 
 /** La forma exacta de `ZodError.flatten()`, que es lo que devuelve todo 400. */

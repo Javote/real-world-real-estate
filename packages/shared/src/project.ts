@@ -93,3 +93,27 @@ export const createDeveloperProjectSchema = z.strictObject({
   estimatedDelivery: z.string().optional()
 });
 export type CreateDeveloperProjectInput = z.infer<typeof createDeveloperProjectSchema>;
+
+/**
+ * La fila de `Project` completa, tal como la devuelven la mayoría de los
+ * endpoints que la exponen (`selectAll()`/`returningAll()`). Sin nada que
+ * ocultar — a diferencia de `Evidence`, ninguna columna de `Project` es
+ * sensible. `estimatedDelivery`/`createdAt`/`updatedAt` ya son `Date`
+ * (`SqliteTypeCoercionPlugin`).
+ */
+export const projectSchema = z.strictObject({
+  id: z.string(),
+  name: z.string(),
+  slug: z.string(),
+  address: z.string().nullable(),
+  city: z.string().nullable(),
+  country: z.string().nullable(),
+  latitude: z.number().nullable(),
+  longitude: z.number().nullable(),
+  totalUnits: z.number().int().nonnegative(),
+  estimatedDelivery: z.coerce.date().nullable(),
+  status: projectStatusSchema,
+  createdAt: z.coerce.date(),
+  updatedAt: z.coerce.date()
+});
+export type ProjectResponse = z.infer<typeof projectSchema>;

@@ -36,6 +36,36 @@ export const stageEvidenceUploadSchema = z.object({
 });
 export type StageEvidenceUploadInput = z.infer<typeof stageEvidenceUploadSchema>;
 
+/**
+ * La fila de `Evidence` tal como puede salir al cliente — mismas columnas que
+ * `EVIDENCE_SAFE_COLUMNS` (`apps/api/src/routes/_shared.ts`), **nunca**
+ * `storagePath` (D-011: incidente real de filtración de la ruta absoluta en
+ * disco del servidor) y sin `issuingAuthority` (esa declaración solo se lee
+ * puertas adentro, para el chequeo de `STAGE_EVIDENCE_UNATTRIBUTED`; ningún
+ * endpoint la devuelve hoy). Las dos listas — esta y `EVIDENCE_SAFE_COLUMNS`
+ * — tienen que seguir coincidiendo: si una columna nueva de `Evidence` se
+ * suma a una y no a la otra, o el `select` la esconde sin que el schema lo
+ * sepa, o el schema promete un campo que el `select` nunca trajo.
+ */
+export const evidenceSchema = z.strictObject({
+  id: z.string(),
+  projectId: z.string(),
+  stageId: z.string().nullable(),
+  uploadedById: z.string(),
+  evidenceType: evidenceTypeSchema,
+  category: z.string(),
+  authoritative: z.boolean(),
+  originalFilename: z.string(),
+  storedFilename: z.string(),
+  mimeType: z.string(),
+  sizeBytes: z.number().int().nonnegative(),
+  sha256Hash: z.string(),
+  uploadedAt: z.coerce.date(),
+  createdAt: z.coerce.date(),
+  updatedAt: z.coerce.date()
+});
+export type EvidenceResponse = z.infer<typeof evidenceSchema>;
+
 /** Body de `PATCH /api/v1/evidence/:id`. */
 export const updateEvidenceSchema = z.object({
   category: z.string().min(1).optional(),
