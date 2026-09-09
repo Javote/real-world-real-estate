@@ -32,6 +32,21 @@ export type StageState = z.infer<typeof stageStateSchema>;
  * `Observed` es el camino de remediación, no un estado final. `Completed` no
  * tiene salida: se llama así —y no `Certified`— porque la plataforma no
  * certifica (D-020 sobre D-026).
+ *
+ * **Qué significa cada estado: a quién le toca** (D-020, tabla completa ahí).
+ * Los cuatro no son cuatro momentos de la obra — son de quién es el turno, y
+ * por eso `Pending` e `InProgress` **no** son redundantes aunque lo parezcan:
+ *
+ * | Estado       | Espera a  | Afirma                                     |
+ * |--------------|-----------|--------------------------------------------|
+ * | `Pending`    | developer | declarada y anclada; nada en el registro   |
+ * | `InProgress` | certifier | hay evidencia; nadie la juzgó              |
+ * | `Observed`   | developer | el certifier encontró un problema          |
+ * | `Completed`  | nadie     | cerrada, con el root del bundle en el datum|
+ *
+ * Se comprueba en `certifier.routes.ts`: `GET /certifier/assignments` filtra
+ * `state in (InProgress, Observed)`, así que un stage `Pending` es invisible
+ * para el certifier. Su cola arranca donde arranca su turno.
  */
 export const STAGE_TRANSITIONS: Readonly<Record<StageState, readonly StageState[]>> = {
   Pending: ["InProgress"],

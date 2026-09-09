@@ -90,6 +90,65 @@ En toda superficie visible. La clave de `localStorage` del idioma es `propnexus.
 sola tabla de transiciones**, hoy en `packages/shared` y espejada en `contracts/lib/propnexus/fsm.ak`
 — si cambia una, cambian las dos en el mismo commit.
 
+### Qué afirma cada estado: **a quién le toca**
+
+Los cuatro estados no son cuatro momentos de la obra — son **de quién es el turno**. Queda escrito
+acá porque no estaba escrito en ningún lado, y es el malentendido más caro que tiene la FSM:
+`Pending` e `InProgress` se leen como redundantes hasta que se ve que **esperan a actores
+distintos**.
+
+| Estado | A quién espera | Qué afirma |
+|---|---|---|
+| `Pending` | al **developer** | la etapa está declarada y su hilo anclado; nadie puso nada en el registro todavía |
+| `InProgress` | al **certifier** | hay evidencia en el registro; nadie la juzgó |
+| `Observed` | al **developer** | el certifier la revisó y encontró un problema (la nota va al `AuditLog`, nunca al datum) |
+| `Completed` | a nadie — terminal | el certifier la revisó y la cerró, con el Merkle root del bundle en el datum |
+
+**No es una interpretación nuestra: está en el código.** `GET /certifier/assignments` filtra
+`Stage.state in ("InProgress", "Observed")` — un stage `Pending` es literalmente **invisible** para
+el certifier. Su cola de trabajo arranca en `InProgress`, que es exactamente lo que dice la
+columna "a quién espera".
+
+Corolario que conviene tener a mano: hoy `Pending` es un **hecho derivado**. La única salida
+automática es "se subió la primera evidencia", así que `state = Pending` ⟺ el stage no tiene
+ninguna fila en `Evidence`. Eso no lo vuelve redundante —`InProgress` significa otra cosa, en otro
+eje— pero sí explica por qué lo parece.
+
+### Quién puede pedir cada transición
+
+La misma información vista desde el otro extremo: si `InProgress` espera al certifier, las dos
+aristas que salen de ahí son suyas. Confirmada por el dueño el 2026-09-08.
+
+| Transición | Quién | Mecanismo | Dónde vive |
+|---|---|---|---|
+| `Pending → InProgress` | developer, **automático** | la primera evidencia subida | `developer-evidencia.routes.ts` |
+| `Observed → InProgress` | developer, **manual** | "Reanudar etapa" (`/developer/progress`) | `stages.routes.ts` · `PATCH /:id/state` |
+| `InProgress → Completed` | certifier, **exclusivo** | "Certificar" | `certifier.routes.ts` |
+| `InProgress → Observed` | certifier, **exclusivo** | "Observar" | `certifier.routes.ts` |
+| cualquiera | admin | sin restricción | — |
+
+Por qué las dos entradas a `InProgress` tienen mecanismos distintos: el diagrama canónico
+(`M1-D2/3-milestone-lifecycle.puml`) las etiqueta distinto. *"work initiated"* ya lo dice la acción
+de subir el archivo; *"remediation completed"* no —que aparezca un archivo nuevo no significa que
+el developer dé la corrección por terminada—, así que esa sí es un botón.
+
+`PATCH /stages/:id/state` responde 403 `STAGE_TRANSITION_FORBIDDEN` cuando quien pide no es `admin`
+y el destino no es `InProgress`: **la FSM dice si la transición es posible, no de quién es.** Sin
+ese chequeo un developer se auto-certificaba su propio stage.
+
+### Una tensión con M2-D3, declarada a propósito
+
+M2-D3 §Status pill colour matrix agrupa `Pending` y `Observed` en la **misma píldora naranja**
+(*"Awaiting verification or with observations"*), y esta tabla los separa al máximo. Las dos cosas
+conviven sin contradecirse: el color es presentación —los dos son "todavía no está bien"— y el
+turno es semántica.
+
+**Las etiquetas no se tocan.** El vocabulario del front sigue al del backend y al del validador,
+que son el mismo `StageState`; la maqueta de M2 podía permitirse sinónimos porque no tenía lógica
+detrás, y ahora que la tiene, la consistencia de terminología pesa más que la precisión de una
+etiqueta suelta. Si alguna vez se toca una, es para **acercarla** al resto del proyecto, nunca para
+alejarla.
+
 ## D-029 — Los stages son del proyecto; la unidad es lo comercial
 
 Un desarrollo tiene **un solo trámite**: no se hace movimiento de suelos por departamento. `Unit`

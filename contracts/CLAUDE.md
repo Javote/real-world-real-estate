@@ -29,8 +29,24 @@ camino de remediación: se observa para que el developer corrija y vuelva a `InP
 en datos se llama `Completed` —no `Certified`, porque la plataforma no certifica (D-026)— y la
 etiqueta visible sale del diccionario i18n.
 
+**Qué significa cada estado: a quién le toca.** Los cuatro no son cuatro momentos de la obra —
+son de quién es el turno, y por eso `Pending` e `InProgress` no son redundantes aunque lo parezcan.
+La tabla completa está en D-020; acá va el resumen porque explica el diseño del datum:
+
+| Estado | Espera a | Afirma |
+|---|---|---|
+| `Pending` | developer | declarada y anclada; nada en el registro |
+| `InProgress` | certifier | hay evidencia; nadie la juzgó |
+| `Observed` | developer | el certifier encontró un problema |
+| `Completed` | nadie | cerrada, con el root del bundle en el datum |
+
+**El validador no sabe nada de esos roles, y está bien**: acá todo lo firma el `admin` (ver más
+abajo, D-058), así que quién tenía derecho a pedir cada transición es una regla off-chain que vive
+en `apps/api`. El validador garantiza que la **secuencia** sea legal y que nadie la reescriba
+después; quién la pidió lo garantiza `authorize()`.
+
 **Una sola tabla de transiciones, y desde D-059 el espejo existe de verdad**: la misma tabla vive
-en `packages/shared` (`STAGE_TRANSITIONS`) y la aplica `PATCH /milestones/:id/state` antes de
+en `packages/shared` (`STAGE_TRANSITIONS`) y la aplica `PATCH /stages/:id/state` antes de
 escribir. Si cambia una, cambian las dos en el mismo commit — y las dos suites prueban los 16 pares
 exhaustivamente, así que una divergencia se ve como test rojo, no como una transacción rechazada en
 la cadena.

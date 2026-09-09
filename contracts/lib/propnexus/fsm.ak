@@ -8,6 +8,22 @@
 ////                ↑↓
 ////             Observed                      (remediación, no estado final)
 ////
+//// **Qué significa cada estado: a quién le toca** (D-020, tabla completa ahí).
+//// Los cuatro no son cuatro momentos de la obra — son de quién es el turno, y
+//// por eso `Pending` e `InProgress` NO son redundantes aunque lo parezcan:
+////
+////   Pending      espera al developer  · declarada y anclada; nada en el registro
+////   InProgress   espera al certifier  · hay evidencia; nadie la juzgó
+////   Observed     espera al developer  · el certifier encontró un problema
+////   Completed    no espera a nadie    · cerrada, con el root del bundle en el datum
+////
+//// **El validador no sabe nada de esos roles, y está bien.** Acá todo lo firma
+//// el `admin` (la wallet de servicio; whitepaper §System Overview), así que
+//// quién tenía derecho a pedir cada transición es una regla off-chain que vive
+//// en `apps/api` — no una que este archivo pueda ni deba hacer cumplir. Lo que
+//// el validador garantiza es que la SECUENCIA sea legal y que nadie la
+//// reescriba después; quién la pidió lo garantiza `authorize()`.
+////
 //// El datum sale de `M1-D2/2-core-domain-model.puml` (entidad `Milestone`),
 //// menos todo lo que sea legible: on-chain van refs opacas, un commitment y
 //// un timestamp — nunca nombres (whitepaper §On-Chain/Off-Chain Boundaries y
