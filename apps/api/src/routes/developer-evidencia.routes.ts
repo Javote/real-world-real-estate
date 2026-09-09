@@ -1,6 +1,6 @@
 import fs from "node:fs";
 import path from "node:path";
-import { stageEvidenceUploadSchema } from "@plataforma/shared";
+import { cuidParamSchema, stageEvidenceUploadSchema } from "@plataforma/shared";
 import { type Request, Router } from "express";
 import { createId } from "../db/id";
 import { anchorCommitmentEvent } from "../domain/anchoring";
@@ -10,6 +10,7 @@ import { db } from "../lib/db";
 import { storage } from "../lib/storage";
 import { uploadSingleEvidence } from "../lib/upload";
 import { authenticate, authorize } from "../middlewares/auth";
+import { paramValidator } from "../middlewares/validate-params";
 import { writeAuditLog } from "../utils/audit";
 import { EVIDENCE_SAFE_COLUMNS } from "./_shared";
 
@@ -24,6 +25,9 @@ import { EVIDENCE_SAFE_COLUMNS } from "./_shared";
 // abre sola (M2-D4 §6.3).
 
 const router = Router();
+
+router.param("id", paramValidator(cuidParamSchema));
+router.param("stageId", paramValidator(cuidParamSchema));
 
 router.use(authenticate);
 

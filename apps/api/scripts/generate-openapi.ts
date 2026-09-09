@@ -10,11 +10,14 @@ import {
   createProjectSchema,
   createUnitSchema,
   createUserSchema,
+  cuidParamSchema,
   cursorPaginationSchema,
   developerDocumentListQuerySchema,
+  hex64ParamSchema,
   loginRequestSchema,
   notificationQuerySchema,
   observeStageSchema,
+  positiveIntParamSchema,
   projectListQuerySchema,
   rejectDossierSchema,
   releasePaymentSchema,
@@ -144,6 +147,28 @@ function codigoDeExito(handler: unknown): string {
   return codigos[0] ?? "200";
 }
 
+/**
+ * La forma real de cada param, **por nombre** — no por ruta. En este dominio
+ * el nombre alcanza: cualquier `:id`/`:projectId`/`:stageId`/`:contractId`/
+ * `:unitId`/`:bundleId` es un `cuid2` (`createId()`, la única forma en que
+ * este código genera ids); `:fileHash` y `:shareToken` comparten la forma
+ * hex64 sin compartir origen (ver `packages/shared/src/params.ts`); `:stageNum`
+ * es el único numérico. Es la misma tabla que sostiene los
+ * `router.param(...)` de cada archivo de rutas — si un param nuevo aparece acá
+ * y no ahí (o viceversa), documentación y runtime divergen en silencio.
+ */
+const PARAM_SCHEMAS: Record<string, ZodType> = {
+  id: cuidParamSchema,
+  projectId: cuidParamSchema,
+  stageId: cuidParamSchema,
+  contractId: cuidParamSchema,
+  unitId: cuidParamSchema,
+  bundleId: cuidParamSchema,
+  fileHash: hex64ParamSchema,
+  shareToken: hex64ParamSchema,
+  stageNum: positiveIntParamSchema
+};
+
 function parametrosDePath(ruta: string): string[] {
   return [...ruta.matchAll(/:([A-Za-z0-9_]+)/g)].map((m) => m[1]);
 }
@@ -167,7 +192,9 @@ export function buildOpenApiDocument() {
         params.length > 0 || entrada?.query
           ? {
               ...(params.length > 0 && {
-                path: z.object(Object.fromEntries(params.map((p) => [p, z.string()])))
+                path: z.object(
+                  Object.fromEntries(params.map((p) => [p, PARAM_SCHEMAS[p] ?? z.string()]))
+                )
               }),
               ...(entrada?.query && { query: entrada.query })
             }

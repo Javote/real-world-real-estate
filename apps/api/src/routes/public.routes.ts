@@ -1,6 +1,8 @@
+import { hex64ParamSchema } from "@plataforma/shared";
 import { type Request, Router } from "express";
 import { compileDossier } from "../domain/dossier";
 import { db } from "../lib/db";
+import { paramValidator } from "../middlewares/validate-params";
 
 // **Lo único sin sesión de todo el backlog, junto con `POST /auth/login`**
 // (M2-D5 §2.2): el link de solo lectura que un investor le pasa a un notario
@@ -16,6 +18,8 @@ import { db } from "../lib/db";
 // Lo que sale de acá lo lee cualquiera que tenga el link, así que va recortado.
 
 const router = Router();
+
+router.param("shareToken", paramValidator(hex64ParamSchema));
 
 /**
  * Fila 28s — la vista pública. **Sin sesión**, por diseño (M2-D5 §2.2).

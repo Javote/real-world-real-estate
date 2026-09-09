@@ -1,8 +1,10 @@
+import { cuidParamSchema } from "@plataforma/shared";
 import { type Request, Router } from "express";
 import { reconciliarParaLectura } from "../domain/reconcile";
 import { retryStageMint } from "../domain/stage-transition";
 import { db } from "../lib/db";
 import { ANY_MEMBERSHIP, authenticate, authorize, CUALQUIER_ROL } from "../middlewares/auth";
+import { paramValidator } from "../middlewares/validate-params";
 import { writeAuditLog } from "../utils/audit";
 
 // **El registro de obra de un proyecto**: sus stages (M2-D5 filas 08, 09-12).
@@ -30,6 +32,9 @@ import { writeAuditLog } from "../utils/audit";
 // mismo sin pasar por HTTP. Detalle completo en `CLAUDE.md` raíz.
 
 const router = Router();
+
+router.param("id", paramValidator(cuidParamSchema));
+router.param("stageId", paramValidator(cuidParamSchema));
 
 router.use(authenticate);
 

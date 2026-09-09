@@ -1,6 +1,8 @@
+import { cuidParamSchema } from "@plataforma/shared";
 import { type Request, Router } from "express";
 import { db } from "../lib/db";
 import { authenticate, authorize, CUALQUIER_ROL } from "../middlewares/auth";
+import { paramValidator } from "../middlewares/validate-params";
 
 // Contratos y liberaciones (M2-D5 filas 23-24, 40-41) — **M3-SC-03**.
 //
@@ -10,6 +12,8 @@ import { authenticate, authorize, CUALQUIER_ROL } from "../middlewares/auth";
 // plataforma no mueve un centavo, registra que se liberó.
 
 const router = Router();
+
+router.param("contractId", paramValidator(cuidParamSchema));
 
 router.use(authenticate);
 

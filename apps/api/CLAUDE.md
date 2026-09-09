@@ -41,10 +41,16 @@ lo mismo sin pasar por HTTP. Ver el detalle en `CLAUDE.md` raíz.
    `"soloRol"`, `{ proyecto, membresias }`, `{ dueño }` o `{ alguna: [...] }`. Nunca un `if`
    adentro del handler — **no hay otra forma**: los tres guards sueltos se borraron (D-088).
 3. `safeParse` → 400 con `error.flatten()`.
-4. `writeAuditLog` si es mutación relevante.
-5. Test del camino feliz y de cada rechazo.
-6. Path y test ID **idénticos** a los de M2-D5.
-7. La ruta entra en la matriz de `test/route-guards.test.ts` — el test se pone rojo hasta que la
+4. **Path params con nombre nuevo** (`:algo` que no sea `id`/`projectId`/`stageId`/`contractId`/
+   `unitId`/`bundleId`/`fileHash`/`shareToken`/`stageNum`): sumar su forma a
+   `packages/shared/src/params.ts` y su `router.param(nombre, paramValidator(schema))` en el
+   archivo de rutas — y a `PARAM_SCHEMAS` de `generate-openapi.ts`, o el OpenAPI documenta un
+   `string` genérico para algo que sí valida. Si el nombre ya existe en la lista de arriba, no hay
+   nada que hacer: ya está cubierto en ese router.
+5. `writeAuditLog` si es mutación relevante.
+6. Test del camino feliz y de cada rechazo.
+7. Path y test ID **idénticos** a los de M2-D5.
+8. La ruta entra en la matriz de `test/route-guards.test.ts` — el test se pone rojo hasta que la
    sumes, y sumarla es donde mirás si los guards son los que querías. Ver §La matriz de permisos.
 
 ## Trampas verificadas

@@ -1,6 +1,7 @@
 import {
   type CertifierAssignment,
   type CertifierKpis,
+  cuidParamSchema,
   cursorPaginationSchema,
   observeStageSchema
 } from "@plataforma/shared";
@@ -8,6 +9,7 @@ import { type Request, Router } from "express";
 import { transitionStage } from "../domain/stage-transition";
 import { db } from "../lib/db";
 import { authenticate, authorize } from "../middlewares/auth";
+import { paramValidator } from "../middlewares/validate-params";
 import { proyectosVisibles } from "./_shared";
 
 // Superficie del certifier (M2-D5 filas 56v, 56c, 57, 58).
@@ -22,6 +24,8 @@ import { proyectosVisibles } from "./_shared";
 // lo que hace es cerrar el stage y anclar la prueba.
 
 const router = Router();
+
+router.param("id", paramValidator(cuidParamSchema));
 
 router.use(authenticate);
 

@@ -1,7 +1,8 @@
-import type { UnreadCount } from "@plataforma/shared";
+import { cuidParamSchema, type UnreadCount } from "@plataforma/shared";
 import { type Request, Router } from "express";
 import { db } from "../lib/db";
 import { authenticate, authorize, CUALQUIER_ROL } from "../middlewares/auth";
+import { paramValidator } from "../middlewares/validate-params";
 
 // Notificaciones (M2-D5 filas 02, 22, 33-34, 62) — **M3-BE-07**.
 //
@@ -18,6 +19,8 @@ import { authenticate, authorize, CUALQUIER_ROL } from "../middlewares/auth";
 // son las que ese polling consulta.
 
 const router = Router();
+
+router.param("id", paramValidator(cuidParamSchema));
 
 router.use(authenticate);
 

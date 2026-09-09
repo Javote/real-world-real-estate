@@ -1,6 +1,8 @@
 import {
   createInvitationSchema,
   createUnitSchema,
+  cuidParamSchema,
+  positiveIntParamSchema,
   releasePaymentSchema,
   updateUnitSchema
 } from "@plataforma/shared";
@@ -9,6 +11,7 @@ import { createId } from "../db/id";
 import { anchorCommitmentEvent, commitmentOf } from "../domain/anchoring";
 import { db } from "../lib/db";
 import { authenticate, authorize, projectScope } from "../middlewares/auth";
+import { paramValidator } from "../middlewares/validate-params";
 import { writeAuditLog } from "../utils/audit";
 
 // **El ciclo comercial del developer**, bajo `/api/v1/developer` (M2-D5 filas
@@ -27,6 +30,9 @@ import { writeAuditLog } from "../utils/audit";
 // liberación, no ejecutar un pago.
 
 const router = Router();
+
+router.param("id", paramValidator(cuidParamSchema));
+router.param("stageNum", paramValidator(positiveIntParamSchema));
 
 router.use(authenticate);
 
@@ -340,10 +346,10 @@ router.post(
     const parsed = releasePaymentSchema.safeParse(req.body);
     if (!parsed.success) return res.status(400).json(parsed.error.flatten());
 
+    // `router.param("stageNum", ...)` ya garantiza que esto es un entero
+    // positivo — con ceros a la izquierda incluidos, mismo criterio que
+    // aceptaba el `Number.parseInt` de acá que reemplazó.
     const stageNumber = Number.parseInt(req.params.stageNum, 10);
-    if (!Number.isInteger(stageNumber) || stageNumber < 1) {
-      return res.status(400).json({ message: "stageNum must be a positive integer" });
-    }
 
     const contrato = await db
       .selectFrom("Contract")

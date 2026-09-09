@@ -1,12 +1,15 @@
-import { createUserSchema, updateUserSchema } from "@plataforma/shared";
+import { createUserSchema, cuidParamSchema, updateUserSchema } from "@plataforma/shared";
 import bcrypt from "bcrypt";
 import { type Request, Router } from "express";
 import { createId } from "../db/id";
 import { db } from "../lib/db";
 import { authenticate, authorize } from "../middlewares/auth";
+import { paramValidator } from "../middlewares/validate-params";
 import { writeAuditLog } from "../utils/audit";
 
 const router = Router();
+
+router.param("id", paramValidator(cuidParamSchema));
 
 router.use(authenticate);
 

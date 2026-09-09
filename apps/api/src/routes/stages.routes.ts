@@ -1,4 +1,5 @@
 import {
+  cuidParamSchema,
   STAGE_TRANSITION_ERRORS,
   stageTransitionSchema,
   updateStageSchema
@@ -7,9 +8,12 @@ import { type Request, Router } from "express";
 import { cabezaDelHilo, transitionStage } from "../domain/stage-transition";
 import { db } from "../lib/db";
 import { ANY_MEMBERSHIP, authenticate, authorize, CUALQUIER_ROL } from "../middlewares/auth";
+import { paramValidator } from "../middlewares/validate-params";
 import { writeAuditLog } from "../utils/audit";
 
 const router = Router();
+
+router.param("id", paramValidator(cuidParamSchema));
 
 router.use(authenticate);
 

@@ -2,6 +2,7 @@ import {
   anchorDocumentSchema,
   auditLogQuerySchema,
   createDeveloperProjectSchema,
+  cuidParamSchema,
   DEFAULT_STAGE_CATALOG,
   type DeveloperKpis,
   developerDocumentListQuerySchema,
@@ -15,6 +16,7 @@ import { reconciliarParaLectura } from "../domain/reconcile";
 import { anchorEvent, recordOnChainEvent } from "../domain/stage-transition";
 import { db } from "../lib/db";
 import { auditScope, authenticate, authorize, projectScope } from "../middlewares/auth";
+import { paramValidator } from "../middlewares/validate-params";
 import { writeAuditLog } from "../utils/audit";
 import { proyectosVisibles } from "./_shared";
 
@@ -26,6 +28,8 @@ import { proyectosVisibles } from "./_shared";
 // forma. El día que el CRUD genérico no le sirva a nadie, se borra.
 
 const router = Router();
+
+router.param("id", paramValidator(cuidParamSchema));
 
 router.use(authenticate);
 

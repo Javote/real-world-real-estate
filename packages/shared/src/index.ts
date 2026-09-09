@@ -15,6 +15,7 @@ export * from "./merkle";
 export * from "./notifications";
 export * from "./pagination";
 export * from "./panels";
+export * from "./params";
 export * from "./profile";
 export * from "./project";
 export * from "./stage";

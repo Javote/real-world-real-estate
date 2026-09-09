@@ -32,11 +32,8 @@ exactamente lo que un documento de API existe para evitar.
   un schema de `packages/shared` (verificado con `grep -rn "safeParse(req\." apps/api/src/routes`,
   cero resultados sin nombre). No hay margen para "subir" este número sin inventar validación que
   no existe.
-- **0/70 paths** tienen su path param (`:id`, `:stageNum`, `:fileHash`...) validado con Zod. Hoy se
-  documentan como `string` genérico (`z.object({ [p]: z.string() })`, armado automático en
-  `generate-openapi.ts`) porque el runtime tampoco los valida — con una excepción a medias:
-  `POST /developer/contracts/:id/releases/:stageNum` parsea `stageNum` a mano
-  (`Number.parseInt` + un `if`), sin pasar por Zod.
+- ~~**0/70 paths** tienen su path param validado con Zod~~ — **cerrado el 2026-09-08, Pieza A
+  completa.** Ver el detalle debajo de esa sección.
 - **0/85 respuestas tienen schema en el documento OpenAPI** — pero **eso no significa que no
   exista ninguno**. Auditado (`grep` de `z.strictObject` en `packages/shared/src` + `satisfies` en
   `apps/api/src/routes`): **ya hay 39 schemas de respuesta reales** (`loginResponseSchema`,
@@ -48,33 +45,50 @@ exactamente lo que un documento de API existe para evitar.
 
 ## Dos piezas de trabajo, independientes entre sí
 
-### Pieza A — validar path params con Zod
+### Pieza A — validar path params con Zod — ✅ cerrada el 2026-09-08
 
-**Por qué es más que documentación:** hoy un `:stageNum` no numérico o un `:fileHash` mal formado
-no los rechaza Zod — los rechaza lo que sea que la query de Kysely haga con un valor inesperado
-(un 404 por accidente, no un 400 explicado). Es la regla 6 sin cumplir en 70 paths, no un capricho
-del generador.
+**Por qué era más que documentación:** un `:stageNum` no numérico o un `:fileHash` mal formado no
+los rechazaba Zod — los rechazaba lo que sea que la query de Kysely hiciera con un valor inesperado
+(un 404 por accidente, no un 400 explicado). Era la regla 6 sin cumplir en 51 rutas con params.
 
-1. Auditar los path params reales por forma: la mayoría es un id `cuid2` (`Project`, `Stage`,
-   `Evidence`, `User`...); `stageNum` es numérico; `fileHash` es hex de 64; `shareToken` es un
-   token opaco (¿qué forma tiene hoy? — chequear `dossierShareSchema`/cómo se genera antes de
-   fijarle un `regex`, no inventar uno).
-2. Un schema por FORMA en `packages/shared` (no uno por ruta) — mismo criterio que
-   `passwordSchema`/`userRoleSchema`: `cuidParamSchema`, `numericPathParamSchema`,
-   `hexHash64ParamSchema`. Verificar primero cómo se generan los ids (`createId()`,
-   `@paralleldrive/cuid2`) para que el schema refleje la forma real, no una inventada.
-3. Cada ruta arma su `z.object({ id: cuidParamSchema, ... })` y lo valida con `safeParse(req.params)`
-   → 400 si no matchea — mismo patrón que ya existe para body/query.
-4. `generate-openapi.ts`: reemplazar el `z.object({[p]: z.string()})` genérico por el schema real
-   de cada param, vía una tabla `PARAM_SCHEMAS` paralela a `REQUEST_SCHEMAS` (o fusionada con ella).
-5. Test por forma inválida: un `stageNum` no numérico da 400 (hoy probablemente da 400 igual por el
-   `if` a mano — verificar que no rompa nada existente); un id que no es `cuid2` sigue sin ser
-   explotable (`apps/api/CLAUDE.md` ya lo señala) pero ahora es 400 explicado en vez de un 404 que
-   no distingue "mal formado" de "no existe".
+**Auditado antes de escribir schemas, no asumido:** los 9 nombres de param del árbol de rutas
+(`id`, `projectId`, `stageId`, `contractId`, `unitId`, `bundleId`, `fileHash`, `shareToken`,
+`stageNum`) resultaron ser solo **tres formas**. Los seis primeros son `createId()` de
+`@paralleldrive/cuid2` — confirmado generando muestras reales, no de la documentación de la
+librería: 24 caracteres, minúsculas y dígitos, siempre arrancando con una letra
+(`^[a-z][a-z0-9]{23}$`). `fileHash` y `shareToken` comparten forma hex64 **sin compartir origen**:
+`fileHash` es `Evidence.sha256Hash` real; `shareToken` es `randomBytes(32).toString("hex")`
+(`investor.routes.ts`) — mismo shape, dos cosas distintas, un schema para las dos. `stageNum` es el
+único numérico.
 
-**Nivel:** 🟢 en su mayoría — es forma de datos, no la capa de autorización. Si alguna ruta 🟡
-(auth/permisos) recibe el cambio, el diff de esa ruta puntual pasa por la revisión que ya le toca
-por ser 🟡, no por esto.
+**Cómo quedó, y por qué así:** tres schemas por FORMA en `packages/shared/src/params.ts`
+(`cuidParamSchema`, `hex64ParamSchema`, `positiveIntParamSchema`) — no uno por ruta ni por nombre de
+param. Se conectan con `router.param(nombre, paramValidator(schema))`
+(`apps/api/src/middlewares/validate-params.ts`), **no** con un middleware repetido en cada una de
+las 51 rutas: Express corre el callback de `router.param` para cualquier ruta de ese router cuyo
+path tenga ese nombre, así que un `router.param("id", ...)` por archivo cubre todas sus rutas con
+`:id`. 14 archivos de rutas lo declaran (uno o dos `router.param` cada uno, según cuántos nombres de
+param usan). **Invisible a propósito para `route-inventory.ts`**: `router.param()` no vive en
+`capa.route.stack`, así que ni la matriz de `route-guards.test.ts` ni el handler terminal que lee
+`generate-openapi.ts` lo ven — no hay nada que actualizar ahí. `generate-openapi.ts` conoce la forma
+real de cada param por su **nombre**, en una tabla aparte (`PARAM_SCHEMAS`), consistente con
+`router.param` pero sin depender de introspección.
+
+**Un hallazgo real en el camino:** el `Number.parseInt(v, 10)` a mano que validaba `stageNum`
+truncaba `"1.5"` a `1` en silencio — `positiveIntParamSchema` (`z.coerce.number().int().positive()`)
+lo rechaza (400), que es lo que la regla 6 exige y el `parseInt` a mano no daba. Se sacó el `if`
+redundante del handler; la conversión a número se queda porque el código de negocio la sigue
+necesitando.
+
+**Un test tuvo que actualizarse, no romperse:** `dossier.test.ts` → *"un token que no existe es 404
+sin más detalle"* usaba `"nope"` como `shareToken` — con la validación nueva eso es 400 (mal
+formado), no 404 (no existe), que es justo la distinción que la Pieza A vino a hacer. Se separó en
+dos tests: uno con un hex64 bien formado que nunca se generó (404 real) y uno con `"nope"` (400).
+Test nuevo dedicado a las tres formas: `apps/api/test/validate-params.test.ts` — cuid2 inválido,
+cuid2 válido pero inexistente (sigue dando 404, no se perdió nada), hex64 inválido, entero inválido
+(no numérico, negativo, cero) y entero válido.
+
+`pnpm verify:all` completo en verde (37 test files, incluido Aiken) en cada paso.
 
 ### Pieza B — schema de respuesta para las 85
 
@@ -115,10 +129,9 @@ mano es el momento en que más fácil es notar un campo que no debería viajar (
 
 ## Orden sugerido
 
-1. Pieza A completa primero — es autocontenida, cierra una validación real (no solo documentación),
-   y es más chica.
+1. ~~Pieza A completa primero~~ — ✅ cerrada el 2026-09-08.
 2. Pieza B, Tanda 1 (conectar los ~24 candidatos) — bajo costo, alto impacto en el número que
-   importa para el milestone.
+   importa para el milestone. **Siguiente paso.**
 3. Checkpoint con el dueño.
 4. Pieza B, Tanda 2, por archivo de rutas, en el orden que sea más simple → más complejo: `profile`,
    `users`, `stages`, `evidence`, `projects`, `certifier`, `notary`, `developer*`, `investor`.

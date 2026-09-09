@@ -139,9 +139,16 @@ describe("POST /investor/units/:id/dossier/share", () => {
     expect(publico.body.unitId).toBeUndefined();
   });
 
-  it("un token que no existe es 404 sin más detalle", async () => {
-    const res = await request(app).get("/api/v1/public/dossier/nope");
+  it("un token bien formado que no existe es 404 sin más detalle", async () => {
+    // 64 hex — la forma real de un `shareToken` (`randomBytes(32).toString("hex")`)
+    // — que nunca se generó, para separar "no existe" de "está mal formado".
+    const res = await request(app).get(`/api/v1/public/dossier/${"a".repeat(64)}`);
     expect(res.status).toBe(404);
+  });
+
+  it("un token mal formado es 400, no 404 — el path param se valida antes de tocar la base", async () => {
+    const res = await request(app).get("/api/v1/public/dossier/nope");
+    expect(res.status).toBe(400);
   });
 });
 

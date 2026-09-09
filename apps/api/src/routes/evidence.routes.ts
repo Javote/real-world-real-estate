@@ -1,5 +1,11 @@
 import { createHash } from "node:crypto";
-import { type EvidenceProof, merkleProof, updateEvidenceSchema } from "@plataforma/shared";
+import {
+  cuidParamSchema,
+  type EvidenceProof,
+  hex64ParamSchema,
+  merkleProof,
+  updateEvidenceSchema
+} from "@plataforma/shared";
 import { type Request, Router } from "express";
 import { createId } from "../db/id";
 import { reconciliarAnclajes, reconciliarParaLectura } from "../domain/reconcile";
@@ -7,10 +13,15 @@ import { anchorPort } from "../lib/anchor";
 import { db } from "../lib/db";
 import { storage } from "../lib/storage";
 import { ANY_MEMBERSHIP, authenticate, authorize, CUALQUIER_ROL } from "../middlewares/auth";
+import { paramValidator } from "../middlewares/validate-params";
 import { writeAuditLog } from "../utils/audit";
 import { EVIDENCE_SAFE_COLUMNS } from "./_shared";
 
 const router = Router();
+
+router.param("id", paramValidator(cuidParamSchema));
+router.param("bundleId", paramValidator(cuidParamSchema));
+router.param("fileHash", paramValidator(hex64ParamSchema));
 
 router.use(authenticate);
 

@@ -1,6 +1,7 @@
 import {
   addProjectMemberSchema,
   createProjectSchema,
+  cuidParamSchema,
   projectListQuerySchema,
   updateProjectSchema
 } from "@plataforma/shared";
@@ -15,9 +16,12 @@ import {
   CUALQUIER_ROL,
   projectScope
 } from "../middlewares/auth";
+import { paramValidator } from "../middlewares/validate-params";
 import { writeAuditLog } from "../utils/audit";
 
 const router = Router();
+
+router.param("id", paramValidator(cuidParamSchema));
 
 router.use(authenticate);
 

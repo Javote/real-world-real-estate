@@ -1,4 +1,5 @@
 import {
+  cuidParamSchema,
   cursorPaginationSchema,
   type NotaryKpis,
   type NotarySignature,
@@ -12,6 +13,7 @@ import { notifyUnitInvestor } from "../domain/notify";
 import { reconciliarParaLectura } from "../domain/reconcile";
 import { db } from "../lib/db";
 import { authenticate, authorize } from "../middlewares/auth";
+import { paramValidator } from "../middlewares/validate-params";
 import { writeAuditLog } from "../utils/audit";
 
 // El flujo del notario (M2-D5 filas 52v, 52s, 52r, 53) — **M3-BE-17** y
@@ -39,6 +41,8 @@ import { writeAuditLog } from "../utils/audit";
 // `{ dueño: ... }` y deja de ser `"soloRol"`.
 
 const router = Router();
+
+router.param("id", paramValidator(cuidParamSchema));
 
 router.use(authenticate);
 

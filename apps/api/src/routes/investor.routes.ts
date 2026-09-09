@@ -1,6 +1,10 @@
 import { randomBytes } from "node:crypto";
-import type { DossierShare } from "@plataforma/shared";
-import { type Notification, notificationQuerySchema } from "@plataforma/shared";
+import {
+  cuidParamSchema,
+  type DossierShare,
+  type Notification,
+  notificationQuerySchema
+} from "@plataforma/shared";
 import { type Request, Router } from "express";
 import { createId } from "../db/id";
 import { anchorCommitmentEvent, commitmentOf } from "../domain/anchoring";
@@ -8,6 +12,7 @@ import { compileDossier } from "../domain/dossier";
 import { reconciliarParaLectura } from "../domain/reconcile";
 import { db } from "../lib/db";
 import { authenticate, authorize } from "../middlewares/auth";
+import { paramValidator } from "../middlewares/validate-params";
 import { writeAuditLog } from "../utils/audit";
 import { renderTextPdf } from "../utils/pdf";
 import { avancePorProyecto } from "./_shared";
@@ -36,6 +41,10 @@ import { avancePorProyecto } from "./_shared";
 // siempre: una ruta nueva que se olvida el `if` compila y sirve la unidad ajena.
 
 const router = Router();
+
+router.param("id", paramValidator(cuidParamSchema));
+router.param("projectId", paramValidator(cuidParamSchema));
+router.param("unitId", paramValidator(cuidParamSchema));
 
 router.use(authenticate);
 
