@@ -551,6 +551,17 @@ Lo que le falta, en orden de importancia:
   del stage en un `EvidenceBundle` y su Merkle root viaja al datum. **Es un acta, no un índice:** se
   escribe con lo que existía en ese momento y no se toca. Si después se sube más evidencia, es otro
   bundle — el root ya anclado tiene que seguir verificando.
+  **Y desde el 2026-09-09 es idempotente por contenido** (regla 8): si el acta vigente del stage ya
+  dice ese root, `crearBundle` la devuelve en vez de escribir otra igual. Hacía falta porque
+  completar llamaba a `crearBundle` **dos veces** —una en `POST /developer/projects/:id/stages/
+  :stageId/evidence` y otra desde `transitionStage`— y la segunda insertaba una gemela: en
+  producción, "Terminaciones" de `torre-a` quedó con 3 evidencias, **4 bundles y 3 roots
+  distintos**. Inocuo en valor (el root repetido es el mismo) pero el `leftJoin EvidenceBundle` del
+  listado del certifier duplica filas por eso. Se compara contra el acta **vigente**, que es la
+  misma fila que después lee `rootDelStage` para armar el datum. Tests en
+  `test/evidence-upload.test.ts` §"el acta es idempotente por contenido", verificados en rojo
+  neutralizando el chequeo. **Las 4 filas que ya existen en producción no se tocaron: son
+  historia, y la duplicada tiene el mismo root que la buena.**
 - **~~El path dice `/milestones/`~~ — falso desde hace tiempo, y este archivo lo afirmó de más.**
   `app.ts` monta `app.use("/api/v1/stages", stagesRoutes)` y **no existe ninguna ruta
   `/milestones`**. Lo único que conserva la palabra es `setMilestoneState` en

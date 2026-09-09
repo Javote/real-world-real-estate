@@ -113,6 +113,18 @@ const sha256Pair = (a: string, b: string) =>
  * **Es un acta, no un índice:** se escribe con la evidencia que existía en este
  * momento y no se toca más. Si después se sube más evidencia, es otro bundle —
  * el root ya anclado tiene que seguir verificando.
+ *
+ * **Y es idempotente por contenido** (regla 8): si el acta vigente del stage ya
+ * dice exactamente este root, se devuelve esa en vez de escribir otra igual.
+ * Un acta del mismo conjunto **es** la misma acta — el comentario de arriba lo
+ * afirmaba y el código hacía lo contrario.
+ *
+ * No es teórico: completar un stage llamaba a `crearBundle` dos veces —una en
+ * `POST /developer/projects/:id/stages/:stageId/evidence` y otra acá, desde
+ * `transitionStage`— y la segunda insertaba una fila gemela. En producción, el
+ * stage "Terminaciones" de `torre-a` quedó con 3 evidencias, **4 bundles y 3
+ * roots distintos**. Inocuo en valor (el root repetido es el mismo) pero el
+ * `leftJoin EvidenceBundle` del listado del certifier duplica filas por eso.
  */
 async function crearBundle(stage: StageRow, actorUserId: string): Promise<string | null> {
   const evidencias = await db
@@ -128,6 +140,13 @@ async function crearBundle(stage: StageRow, actorUserId: string): Promise<string
     evidencias.map((e) => e.sha256Hash),
     sha256Pair
   );
+
+  // Se compara contra el acta **vigente** (la última), no contra cualquiera
+  // del historial: lo que se pregunta es "¿el acta de este stage ya dice
+  // esto?", que es la misma fila que después lee `rootDelStage` para armar el
+  // datum. Un root que ya existió y dejó de ser el vigente sí merece acta
+  // nueva — es un conjunto de evidencia distinto del actual.
+  if ((await rootDelStage(stage.id)) === root) return root;
 
   const bundleId = createId();
   await db

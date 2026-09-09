@@ -5,6 +5,7 @@ import request from "supertest";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import app from "../src/app";
 import { createId } from "../src/db/id";
+import { crearBundle } from "../src/domain/stage-transition";
 import { db } from "../src/lib/db";
 import { FIXTURES } from "./global-setup";
 import { crearStageMinteado } from "./helpers/stages";
@@ -341,5 +342,129 @@ describe("POST .../evidence · dispara Pending → InProgress", () => {
       .where("id", "=", nuevo)
       .executeTakeFirstOrThrow();
     expect(fila.state).toBe("Observed");
+  });
+});
+
+describe("EvidenceBundle · el acta es idempotente por contenido (regla 8)", () => {
+  // El bug que cierra: completar un stage llamaba a `crearBundle` dos veces
+  // —una en el POST de evidencia, otra desde `transitionStage`— y la segunda
+  // escribía una fila gemela con el MISMO root. En producción, "Terminaciones"
+  // de `torre-a` quedó con 3 evidencias, 4 bundles y 3 roots distintos.
+  let admin: string;
+  let actorId: string;
+
+  beforeAll(async () => {
+    admin = await token(FIXTURES.admin.email, FIXTURES.admin.password);
+    actorId = (
+      await db
+        .selectFrom("User")
+        .select("id")
+        .where("email", "=", FIXTURES.activo.email)
+        .executeTakeFirstOrThrow()
+    ).id;
+  });
+
+  const actas = (sId: string) =>
+    db.selectFrom("EvidenceBundle").select(["commitmentHash"]).where("stageId", "=", sId).execute();
+
+  it("completar el stage no duplica el acta que la última subida ya escribió", async () => {
+    const stage = await crearStageMinteado({
+      projectId,
+      name: "Stage para actas idempotentes",
+      sequenceOrder: 999_601,
+      actorUserId: actorId
+    });
+
+    // Tres subidas: cada una agrega una hoja, así que cada una es un conjunto
+    // distinto y merece su propia acta.
+    for (const n of [1, 2, 3]) {
+      const res = await subir(
+        miembro,
+        stage.id,
+        { evidenceType: "document", category: "avance" },
+        {
+          buf: Buffer.concat([PDF, Buffer.from(`#${n}`)]),
+          nombre: `a${n}.pdf`,
+          tipo: "application/pdf"
+        }
+      );
+      expect(res.status).toBe(201);
+    }
+    expect(await actas(stage.id)).toHaveLength(3);
+
+    // El stage ya está en `InProgress`: la PRIMERA subida lo movió sola
+    // (D-020, "work initiated"). Pedirlo de nuevo sería 409 — la FSM no tiene
+    // `InProgress → InProgress`.
+    const enCurso = await db
+      .selectFrom("Stage")
+      .select("state")
+      .where("id", "=", stage.id)
+      .executeTakeFirstOrThrow();
+    expect(enCurso.state).toBe("InProgress");
+
+    // Completar NO agrega evidencia, así que el conjunto no cambió: el acta
+    // vigente ya dice ese root y no tiene que escribirse otra igual.
+    const completado = await request(app)
+      .patch(`/api/v1/stages/${stage.id}/state`)
+      .set("Authorization", `Bearer ${admin}`)
+      .send({ state: "Completed" });
+    expect(completado.status).toBe(200);
+
+    const finales = await actas(stage.id);
+    expect(finales).toHaveLength(3);
+    // Y la invariante que importa, la que producción viola hoy: ninguna acta
+    // repite el root de la anterior.
+    expect(new Set(finales.map((b) => b.commitmentHash)).size).toBe(3);
+  });
+
+  it("crearBundle sobre un conjunto que no cambió devuelve el acta vigente sin escribir otra", async () => {
+    const stage = await crearStageMinteado({
+      projectId,
+      name: "Stage para crearBundle repetido",
+      sequenceOrder: 999_602,
+      actorUserId: actorId
+    });
+
+    const res = await subir(
+      miembro,
+      stage.id,
+      { evidenceType: "document", category: "avance" },
+      { buf: PDF, nombre: "unica.pdf", tipo: "application/pdf" }
+    );
+    expect(res.status).toBe(201);
+
+    const fila = await db
+      .selectFrom("Stage")
+      .selectAll()
+      .where("id", "=", stage.id)
+      .executeTakeFirstOrThrow();
+
+    const antes = await actas(stage.id);
+    expect(antes).toHaveLength(1);
+
+    // Dos llamadas más, sin evidencia nueva en el medio: las dos devuelven el
+    // mismo root y ninguna escribe.
+    const root1 = await crearBundle(fila, actorId);
+    const root2 = await crearBundle(fila, actorId);
+    expect(root1).toBe(antes[0].commitmentHash);
+    expect(root2).toBe(antes[0].commitmentHash);
+    expect(await actas(stage.id)).toHaveLength(1);
+  });
+
+  it("un stage sin evidencia sigue devolviendo null, no un acta vacía", async () => {
+    const stage = await crearStageMinteado({
+      projectId,
+      name: "Stage sin evidencia",
+      sequenceOrder: 999_603,
+      actorUserId: actorId
+    });
+    const fila = await db
+      .selectFrom("Stage")
+      .selectAll()
+      .where("id", "=", stage.id)
+      .executeTakeFirstOrThrow();
+
+    expect(await crearBundle(fila, actorId)).toBeNull();
+    expect(await actas(stage.id)).toHaveLength(0);
   });
 });
