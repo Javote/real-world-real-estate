@@ -34,14 +34,12 @@ exactamente lo que un documento de API existe para evitar.
   no existe.
 - ~~**0/70 paths** tienen su path param validado con Zod~~ — **cerrado el 2026-09-08, Pieza A
   completa.** Ver el detalle debajo de esa sección.
-- **0/85 respuestas tienen schema en el documento OpenAPI** — pero **eso no significa que no
-  exista ninguno**. Auditado (`grep` de `z.strictObject` en `packages/shared/src` + `satisfies` en
-  `apps/api/src/routes`): **ya hay 39 schemas de respuesta reales** (`loginResponseSchema`,
-  `dossierSchema`, `developerKpisSchema`, `certifierAssignmentSchema`, `capitalSummarySchema`...) y
-  4 rutas ya tipan su respuesta contra uno de ellos con `satisfies` (sin validar en runtime, solo en
-  compile-time: `certifier.routes.ts`, `notifications.routes.ts`, `investor.routes.ts`). Una
-  estimación de punto de partida, a confirmar en el paso 1 de la Pieza B: **~24 de las 85 ya tienen
-  un schema candidato listo para conectar**, sin escribir nada nuevo.
+- ~~**0/85 respuestas tienen schema en el documento OpenAPI**~~ — **cerrado el 2026-09-09, Pieza B
+  completa: 76/85.** Las 9 restantes son legítimamente sin schema (`204 No Content` o archivo
+  binario). Punto de partida que sí se confirmó al empezar: había 39 schemas de respuesta reales ya
+  escritos (`loginResponseSchema`, `dossierSchema`, `developerKpisSchema`...) sin conectar; ~24
+  candidatos listos (Tanda 1), y las ~61 restantes se escribieron de cero por archivo (Tanda 2). Ver
+  el detalle completo debajo de esa sección.
 
 ## Dos piezas de trabajo, independientes entre sí
 
