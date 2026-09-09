@@ -198,3 +198,10 @@ export const onChainEventSchema = z.strictObject({
   updatedAt: z.coerce.date()
 });
 export type OnChainEventResponse = z.infer<typeof onChainEventSchema>;
+
+/** `POST /api/v1/evidence/reconcile` (`domain/reconcile.ts` → `ResultadoReconciliacion`). */
+export const reconciliationResultSchema = z.strictObject({
+  revisados: z.number().int().nonnegative(),
+  confirmados: z.number().int().nonnegative()
+});
+export type ReconciliationResult = z.infer<typeof reconciliationResultSchema>;

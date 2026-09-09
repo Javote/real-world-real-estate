@@ -1,12 +1,19 @@
 import { createHash } from "node:crypto";
 import {
+  bundleFilesSchema,
   cuidParamSchema,
   evidenceProofSchema,
+  evidenceSchema,
   hex64ParamSchema,
   merkleProof,
+  onChainEventSchema,
+  projectSchema,
+  reconciliationResultSchema,
+  stageSchema,
   updateEvidenceSchema
 } from "@plataforma/shared";
 import { type Request, Router } from "express";
+import { z } from "zod";
 import { createId } from "../db/id";
 import { reconciliarAnclajes, reconciliarParaLectura } from "../domain/reconcile";
 import { anchorPort } from "../lib/anchor";
@@ -16,6 +23,13 @@ import { ANY_MEMBERSHIP, authenticate, authorize, CUALQUIER_ROL } from "../middl
 import { paramValidator } from "../middlewares/validate-params";
 import { writeAuditLog } from "../utils/audit";
 import { EVIDENCE_SAFE_COLUMNS } from "./_shared";
+
+/** `GET /:id` compone la evidencia con su proyecto, stage y quien la subió. */
+const evidenceDetailSchema = evidenceSchema.extend({
+  project: projectSchema,
+  stage: stageSchema.nullable(),
+  uploadedBy: z.strictObject({ id: z.string(), email: z.email(), fullName: z.string() })
+});
 
 const router = Router();
 
@@ -54,7 +68,7 @@ router.get(
         .executeTakeFirst()
     ]);
 
-    return res.json({ ...evidence, project, stage, uploadedBy });
+    return res.json(evidenceDetailSchema.parse({ ...evidence, project, stage, uploadedBy }));
   }
 );
 
@@ -148,7 +162,7 @@ router.patch(
       entityId: req.params.id
     });
 
-    return res.json(evidence);
+    return res.json(evidenceSchema.parse(evidence));
   }
 );
 
@@ -184,7 +198,7 @@ router.patch(
  * dormido a los 15 minutos, un timer interno deja de contar y nadie se entera.
  */
 router.post("/reconcile", authorize({ roles: ["admin"], acceso: "soloRol" }), async (_req, res) => {
-  res.json(await reconciliarAnclajes());
+  res.json(reconciliationResultSchema.parse(await reconciliarAnclajes()));
 });
 
 router.post(
@@ -217,7 +231,7 @@ router.post(
       .executeTakeFirst();
 
     if (yaAnclada) {
-      return res.status(200).json(yaAnclada);
+      return res.status(200).json(onChainEventSchema.parse(yaAnclada));
     }
 
     const previo = await db
@@ -293,7 +307,7 @@ router.post(
       metadata: { txid: anclado.txid, status: anclado.status }
     });
 
-    return res.status(201).json(anclado);
+    return res.status(201).json(onChainEventSchema.parse(anclado));
   }
 );
 
@@ -434,7 +448,13 @@ router.get(
       .where("EvidenceBundleItem.bundleId", "=", bundle.id)
       .execute();
 
-    return res.json({ bundleId: bundle.id, merkleRoot: bundle.commitmentHash, files: items });
+    return res.json(
+      bundleFilesSchema.parse({
+        bundleId: bundle.id,
+        merkleRoot: bundle.commitmentHash,
+        files: items
+      })
+    );
   }
 );
 

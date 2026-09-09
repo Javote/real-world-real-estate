@@ -131,3 +131,18 @@ export const evidenceProofSchema = z.strictObject({
   timestamp: z.string().datetime().nullable()
 });
 export type EvidenceProof = z.infer<typeof evidenceProofSchema>;
+
+/** Fila 25m — `GET /evidence/:bundleId/files`: los archivos del bundle con su hash. */
+export const bundleFilesSchema = z.strictObject({
+  bundleId: z.string(),
+  merkleRoot: z.string(),
+  files: z.array(
+    z.strictObject({
+      evidenceId: z.string(),
+      sha256Hash: z.string(),
+      /** `null` solo si el `leftJoin` con `Evidence` no encontró la fila. */
+      filename: z.string().nullable()
+    })
+  )
+});
+export type BundleFiles = z.infer<typeof bundleFilesSchema>;

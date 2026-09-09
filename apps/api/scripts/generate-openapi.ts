@@ -5,6 +5,7 @@ import {
   addProjectMemberSchema,
   anchorDocumentSchema,
   auditLogQuerySchema,
+  bundleFilesSchema,
   capitalByProjectSchema,
   capitalMonthlyPointSchema,
   capitalSummarySchema,
@@ -44,6 +45,7 @@ import {
   profileSchema,
   projectListQuerySchema,
   projectSchema,
+  reconciliationResultSchema,
   rejectDossierSchema,
   releasePaymentSchema,
   reservationToEscrowTelemetrySchema,
@@ -193,7 +195,19 @@ const RESPONSE_SCHEMAS: Record<string, ZodType> = {
     hasOnChainThread: z.boolean()
   }),
   "PATCH /api/v1/stages/:id": stageSchema,
-  "PATCH /api/v1/stages/:id/state": stageSchema.extend({ anchor: onChainEventSchema })
+  "PATCH /api/v1/stages/:id/state": stageSchema.extend({ anchor: onChainEventSchema }),
+  // Mismo `.extend(...)` que `evidence.routes.ts` — no un schema aparte.
+  "GET /api/v1/evidence/:id": evidenceSchema.extend({
+    project: projectSchema,
+    stage: stageSchema.nullable(),
+    uploadedBy: z.strictObject({ id: z.string(), email: z.email(), fullName: z.string() })
+  }),
+  "PATCH /api/v1/evidence/:id": evidenceSchema,
+  "POST /api/v1/evidence/reconcile": reconciliationResultSchema,
+  // Documenta el 201 (creación); el 200 (idempotente, ya anclada) es el mismo
+  // schema — ver el comentario de `codigoDeExito`.
+  "POST /api/v1/evidence/:id/anchor": onChainEventSchema,
+  "GET /api/v1/evidence/:bundleId/files": bundleFilesSchema
 };
 
 /** La forma exacta de `ZodError.flatten()`, que es lo que devuelve todo 400. */
