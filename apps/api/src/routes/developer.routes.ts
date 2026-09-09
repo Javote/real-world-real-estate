@@ -1,5 +1,6 @@
 import {
   anchorDocumentSchema,
+  auditLogEntrySchema,
   auditLogQuerySchema,
   createDeveloperProjectSchema,
   cuidParamSchema,
@@ -7,7 +8,13 @@ import {
   developerDocumentListQuerySchema,
   developerDocumentSchema,
   developerKpisSchema,
-  INITIAL_STAGE_STATE
+  developerProgressItemSchema,
+  developerProjectCreateResultSchema,
+  developerProjectDetailSchema,
+  developerProjectListItemSchema,
+  INITIAL_STAGE_STATE,
+  onChainEventSchema,
+  paginatedResponseSchema
 } from "@plataforma/shared";
 import { type Request, Router } from "express";
 import { z } from "zod";
@@ -78,30 +85,32 @@ router.get(
       : [];
 
     return res.json(
-      proyectos.map((proyecto) => {
-        const suyos = stages.filter((s) => s.projectId === proyecto.id);
-        const completados = suyos.filter((s) => s.state === "Completed").length;
+      z.array(developerProjectListItemSchema).parse(
+        proyectos.map((proyecto) => {
+          const suyos = stages.filter((s) => s.projectId === proyecto.id);
+          const completados = suyos.filter((s) => s.state === "Completed").length;
 
-        const conPrecio = unidades.filter((u) => u.projectId === proyecto.id);
-        const monedas = new Set(conPrecio.map((u) => u.currency));
+          const conPrecio = unidades.filter((u) => u.projectId === proyecto.id);
+          const monedas = new Set(conPrecio.map((u) => u.currency));
 
-        // **Con dos monedas en el mismo proyecto no hay "desde" que se pueda
-        // sostener**: comparar unidades mínimas de monedas distintas da un
-        // número sin significado. Antes que un mínimo falso, ningún precio
-        // (regla 17). Hoy no debería pasar; el día que pase, se ve.
-        const barata =
-          monedas.size === 1
-            ? conPrecio.reduce((min, u) => (u.priceMinorUnits! < min.priceMinorUnits! ? u : min))
-            : null;
+          // **Con dos monedas en el mismo proyecto no hay "desde" que se pueda
+          // sostener**: comparar unidades mínimas de monedas distintas da un
+          // número sin significado. Antes que un mínimo falso, ningún precio
+          // (regla 17). Hoy no debería pasar; el día que pase, se ve.
+          const barata =
+            monedas.size === 1
+              ? conPrecio.reduce((min, u) => (u.priceMinorUnits! < min.priceMinorUnits! ? u : min))
+              : null;
 
-        return {
-          ...proyecto,
-          stageCount: suyos.length,
-          progress: suyos.length ? Math.round((completados / suyos.length) * 100) : 0,
-          priceFromMinorUnits: barata?.priceMinorUnits ?? null,
-          priceCurrency: barata?.currency ?? null
-        };
-      })
+          return {
+            ...proyecto,
+            stageCount: suyos.length,
+            progress: suyos.length ? Math.round((completados / suyos.length) * 100) : 0,
+            priceFromMinorUnits: barata?.priceMinorUnits ?? null,
+            priceCurrency: barata?.currency ?? null
+          };
+        })
+      )
     );
   }
 );
@@ -135,11 +144,13 @@ router.get(
       .where("projectId", "=", proyecto.id)
       .executeTakeFirst();
 
-    return res.json({
-      ...proyecto,
-      stages,
-      evidenceCount: Number(evidencia?.total ?? 0)
-    });
+    return res.json(
+      developerProjectDetailSchema.parse({
+        ...proyecto,
+        stages,
+        evidenceCount: Number(evidencia?.total ?? 0)
+      })
+    );
   }
 );
 
@@ -240,10 +251,12 @@ router.post(
       anclajes.push(await anchorEvent(evento, stage, null));
     }
 
-    return res.status(201).json({
-      ...proyecto,
-      stages: stages.map((stage, i) => ({ ...stage, anchor: anclajes[i] }))
-    });
+    return res.status(201).json(
+      developerProjectCreateResultSchema.parse({
+        ...proyecto,
+        stages: stages.map((stage, i) => ({ ...stage, anchor: anclajes[i] }))
+      })
+    );
   }
 );
 
@@ -274,7 +287,7 @@ router.get(
       .orderBy("Stage.sequenceOrder", "asc")
       .execute();
 
-    return res.json(stages);
+    return res.json(z.array(developerProgressItemSchema).parse(stages));
   }
 );
 
@@ -373,10 +386,12 @@ router.get(
     const items = await query.execute();
     const ultima = items.at(-1);
 
-    return res.json({
-      items,
-      nextCursor: ultima ? new Date(ultima.createdAt).toISOString() : null
-    });
+    return res.json(
+      paginatedResponseSchema(auditLogEntrySchema).parse({
+        items,
+        nextCursor: ultima ? new Date(ultima.createdAt).toISOString() : null
+      })
+    );
   }
 );
 
@@ -435,7 +450,7 @@ router.post(
       .where("txid", "is not", null)
       .executeTakeFirst();
 
-    if (yaAnclado) return res.status(200).json(yaAnclado);
+    if (yaAnclado) return res.status(200).json(onChainEventSchema.parse(yaAnclado));
 
     const anchor = await anchorCommitmentEvent({
       projectId: documento.projectId,
@@ -455,7 +470,7 @@ router.post(
       metadata: { txid: anchor.txid, status: anchor.status }
     });
 
-    return res.status(201).json(anchor);
+    return res.status(201).json(onChainEventSchema.parse(anchor));
   }
 );
 

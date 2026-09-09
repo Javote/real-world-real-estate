@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { onChainEventSchema } from "./stage";
 
 // La documentación de respaldo del developer (M2-D5 filas 46-47) — **M3-BE-14**.
 //
@@ -174,3 +175,17 @@ export const bundleFilesSchema = z.strictObject({
   )
 });
 export type BundleFiles = z.infer<typeof bundleFilesSchema>;
+
+/**
+ * Fila 38/44c — `POST /developer/projects/:id/stages/:stageId/evidence`. Lo
+ * que alimenta el `AnchoringSuccessModal`: la evidencia recién creada, el
+ * bundle que la contiene y el anclaje — TXID/Merkle root en la misma
+ * respuesta (M2-D5 §2.2).
+ */
+export const stageEvidenceUploadResultSchema = z.strictObject({
+  evidence: evidenceSchema,
+  bundleId: z.string(),
+  merkleRoot: z.string(),
+  anchor: onChainEventSchema
+});
+export type StageEvidenceUploadResult = z.infer<typeof stageEvidenceUploadResultSchema>;

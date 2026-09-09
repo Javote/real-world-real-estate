@@ -205,3 +205,14 @@ export const reconciliationResultSchema = z.strictObject({
   confirmados: z.number().int().nonnegative()
 });
 export type ReconciliationResult = z.infer<typeof reconciliationResultSchema>;
+
+/** Fila 45 — `GET /developer/progress`: el avance a través de todos los proyectos. */
+export const developerProgressItemSchema = z.strictObject({
+  stageId: z.string(),
+  stageName: z.string(),
+  sequenceOrder: z.number().int().positive(),
+  state: stageStateSchema,
+  projectId: z.string(),
+  projectName: z.string()
+});
+export type DeveloperProgressItem = z.infer<typeof developerProgressItemSchema>;

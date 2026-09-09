@@ -4,6 +4,7 @@ import path from "node:path";
 import {
   addProjectMemberSchema,
   anchorDocumentSchema,
+  auditLogEntrySchema,
   auditLogQuerySchema,
   buildingSchematicFloorSchema,
   bundleFilesSchema,
@@ -24,6 +25,10 @@ import {
   developerDocumentListQuerySchema,
   developerDocumentSchema,
   developerKpisSchema,
+  developerProgressItemSchema,
+  developerProjectCreateResultSchema,
+  developerProjectDetailSchema,
+  developerProjectListItemSchema,
   dossierRejectResultSchema,
   dossierSchema,
   dossierShareSchema,
@@ -57,6 +62,7 @@ import {
   rejectDossierSchema,
   releasePaymentSchema,
   reservationToEscrowTelemetrySchema,
+  stageEvidenceUploadResultSchema,
   stageEvidenceUploadSchema,
   stageSchema,
   stageTransitionSchema,
@@ -230,7 +236,15 @@ const RESPONSE_SCHEMAS: Record<string, ZodType> = {
   // Documenta el 201 (recién firmado); el 200 (idempotente) es el mismo schema
   // sin `signedAt` — ver el comentario de `dossierSignResultSchema`.
   "POST /api/v1/notary/dossiers/:id/sign": dossierSignResultSchema,
-  "POST /api/v1/notary/dossiers/:id/reject": dossierRejectResultSchema
+  "POST /api/v1/notary/dossiers/:id/reject": dossierRejectResultSchema,
+  "POST /api/v1/developer/projects/:id/stages/:stageId/evidence": stageEvidenceUploadResultSchema,
+  "GET /api/v1/developer/projects": z.array(developerProjectListItemSchema),
+  "GET /api/v1/developer/projects/:id": developerProjectDetailSchema,
+  "POST /api/v1/developer/projects": developerProjectCreateResultSchema,
+  "GET /api/v1/developer/progress": z.array(developerProgressItemSchema),
+  "GET /api/v1/developer/audit-log": paginatedResponseSchema(auditLogEntrySchema),
+  // Las dos ramas (200 idempotente, 201 recién anclado) son el mismo OnChainEvent.
+  "POST /api/v1/developer/documents": onChainEventSchema
 };
 
 /** La forma exacta de `ZodError.flatten()`, que es lo que devuelve todo 400. */

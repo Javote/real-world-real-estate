@@ -1,6 +1,10 @@
 import fs from "node:fs";
 import path from "node:path";
-import { cuidParamSchema, stageEvidenceUploadSchema } from "@plataforma/shared";
+import {
+  cuidParamSchema,
+  stageEvidenceUploadResultSchema,
+  stageEvidenceUploadSchema
+} from "@plataforma/shared";
 import { type Request, Router } from "express";
 import { createId } from "../db/id";
 import { anchorCommitmentEvent } from "../domain/anchoring";
@@ -193,12 +197,14 @@ router.post(
       });
     }
 
-    return res.status(201).json({
-      evidence,
-      bundleId: bundle.id,
-      merkleRoot: bundle.commitmentHash,
-      anchor
-    });
+    return res.status(201).json(
+      stageEvidenceUploadResultSchema.parse({
+        evidence,
+        bundleId: bundle.id,
+        merkleRoot: bundle.commitmentHash,
+        anchor
+      })
+    );
   }
 );
 

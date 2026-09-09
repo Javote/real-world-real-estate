@@ -1,6 +1,6 @@
 import { z } from "zod";
 import { userRoleSchema } from "./auth";
-import { stageSchema } from "./stage";
+import { onChainEventSchema, stageSchema } from "./stage";
 
 // El proyecto: su CRUD genérico (`/projects`, admin) y la superficie del
 // developer (`/developer/projects`, que además mintea el Stage template —
@@ -161,3 +161,37 @@ export const projectMemberSchema = z.strictObject({
   createdAt: z.coerce.date()
 });
 export type ProjectMemberResponse = z.infer<typeof projectMemberSchema>;
+
+/**
+ * Fila 35-36 — `GET /developer/projects`. `priceFromMinorUnits` es una
+ * agregación (el mínimo de `Unit.priceMinorUnits` del proyecto), no una
+ * columna: `null` si el proyecto no tiene ninguna unidad con precio, o si
+ * tiene precios en más de una moneda (comparar unidades mínimas de monedas
+ * distintas no da un número con significado — regla 17, antes ningún precio
+ * que uno falso).
+ */
+export const developerProjectListItemSchema = projectSchema.extend({
+  stageCount: z.number().int().nonnegative(),
+  progress: z.number().int().min(0).max(100),
+  priceFromMinorUnits: z.number().int().nonnegative().nullable(),
+  priceCurrency: z.string().nullable()
+});
+export type DeveloperProjectListItem = z.infer<typeof developerProjectListItemSchema>;
+
+/** Fila 37 — `GET /developer/projects/:id`. */
+export const developerProjectDetailSchema = projectSchema.extend({
+  stages: z.array(stageSchema),
+  evidenceCount: z.number().int().nonnegative()
+});
+export type DeveloperProjectDetail = z.infer<typeof developerProjectDetailSchema>;
+
+/**
+ * Fila 34b-34c — `POST /developer/projects`. Las 10 etapas del Stage template,
+ * cada una con su mint (D-059: la declaración off-chain nunca depende del
+ * anclaje — un mint que falló deja igual la etapa en la lista, con su
+ * `anchor.status` en `"Failed"`).
+ */
+export const developerProjectCreateResultSchema = projectSchema.extend({
+  stages: z.array(stageSchema.extend({ anchor: onChainEventSchema }))
+});
+export type DeveloperProjectCreateResult = z.infer<typeof developerProjectCreateResultSchema>;
