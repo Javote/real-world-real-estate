@@ -6,6 +6,130 @@ Lo transversal. Lo de cada frente vive en `apps/web/CLAUDE.md`, `apps/api/CLAUDE
 **Acá solo hay información vigente.** El porqué de cada decisión está en `DECISIONS.md`; el
 argumento largo, en `specs/archive/`.
 
+---
+
+# El plan de entrega del Milestone 3 — acordado 2026-09-09
+
+**Esta es la lista completa de lo que falta, y manda sobre cualquier otra lista del repo.** Sale de
+leer los 16 criterios del SOM en `specs/README.md` contra el código, más lo que se encontró
+auditando la FSM del stage. Mientras el milestone no se entregue, lo que no esté acá no se hace.
+
+Dos aclaraciones de vocabulario, porque las dos se habían perdido:
+
+- **"Darle contenido a `Pending`"**: hoy una etapa `Pending` se ve como un chip gris vacío. Pero su
+  mint ya está anclado y prueba algo real —*este proyecto declaró estas 10 etapas, en este orden, a
+  esta hora*, la garantía anti-backdating—. Era mostrar esa fecha y su TXID en vez del vacío.
+- **"Signers configurables"**: la otra mitad del criterio 3. D-021 lo relee como *qué rol puede
+  autorizar cada transición de cada stage* (autorización de estado, no de gasto). Hoy
+  `PATCH /stages/:id/state` tiene los roles fijos para todos los stages por igual.
+
+**Y eso cambia el plan:** la investigación del 2026-09-07 ya había concluido que "signers
+configurables" **no existe en ningún entregable** — solo en el texto del SOM. Es exactamente el
+mismo caso que `progressPercentage`, y con la regla de precedencia del dueño (**entregables M2/M3
+sobre el SOM**, 2026-09-09) se resuelve igual: **no se construye, se explica.** La captura 34C
+tampoco tiene campo de signer. El criterio 3 queda sin código pendiente.
+
+## Tanda 1 — esquema 🟡
+
+| | Qué |
+|---|---|
+| 1.1 | `migrations/0003_drop_stage_progress.sql` + sacarlo de `db/types.ts`, `stageSchema`, el insert de `developer.routes.ts`, `fixtures.ts` y `test/helpers/stages.ts` |
+
+Es todo. **Ningún call site cambia**: al no existir la columna, `selectAll()` deja de devolverla y
+los ~9 `stageSchema.parse` siguen andando. Sin la migración habría que pasar esos 9 a listas
+explícitas de columnas — la migración es el camino con *menos* código tocado, no más.
+
+## Tanda 2 — código
+
+**Alineación con las capturas**
+
+| | Qué | Criterio |
+|---|---|---|
+| 2.1 | `developerProgressItemSchema` suma `certifiedAt` y `estimatedDelivery`; el handler los selecciona | 8 |
+| 2.2 | `/developer/progress`: barra + "Overall Progress: N%" (dibujada por la pantalla, no por `ProgressTimeline`), `finalizationLabel` al timeline, bloque "Stage Detail" sin miniatura | 8 |
+
+**Cierres de criterios**
+
+| | Qué | Criterio |
+|---|---|---|
+| 2.3 | **Auditar los 10 patrones P1–P10 test por test.** `specs/README.md` lo dice explícito: *"siguen sin auditar test-por-test"*. Es lo único de código que traba el criterio 6 | 6 ◐ |
+| 2.4 | Las ~20 claves i18n de `AuditLog` que faltan. El audit log muestra `ACCEPT_INVITATION` en crudo — regla 14 sobre una superficie ya entregada | 10 |
+
+**Saneamiento de la demo** (no es un criterio, pero se demuestra sobre esto)
+
+| | Qué |
+|---|---|
+| 2.5 | `Cimentación` de `torre-a` está `Completed` + `validationCritical` con **0 evidencias, 0 eventos y `certifiedAt` NULL**. Un reviewer que la abra ve exactamente lo que el criterio 7 dice que rechazamos. Lo produjo `sembrarStages`, que escribe `state` directo salteando la FSM |
+
+## Tanda 3 — documentación, decisiones y evidencia
+
+**Decisiones nuevas**
+
+| | Qué |
+|---|---|
+| 3.1 | `DECISIONS.md`: el techo de precedencia — **entregables M2/M3 sobre el SOM**, con `progressPercentage` como el caso que lo estableció. Es lo que evita que alguien vuelva a crear la columna leyendo el SOM |
+| 3.2 | `DECISIONS.md`: el avance es **derivado por proyecto** (`completadas/total`), según captura 45. No hay peso por etapa |
+| 3.3 | `DECISIONS.md`: **"signers configurables" no existe en el diseño** — misma resolución que 3.1, y cierra el criterio 3 |
+
+**Saneamiento de `specs/README.md`** — hoy tiene cinco afirmaciones falsas
+
+| | Qué |
+|---|---|
+| 3.4 | Criterio 3: las cuatro mitades de esa fila son falsas (catálogo de 8→10, `torre-a` con 3 stages, la ruta que aceptaba el campo se borró, no hay forma de configurarlo). Reescribir con 3.1–3.3 |
+| 3.5 | Números viejos: "235 tests" (son **334**), "73 tests" de Aiken (son **82**), superficies "46" cuando este archivo afirma 53/53 auditadas — una de las dos miente |
+| 3.6 | `SPEC-013 §C` figura "pendiente" en el registro y "hecho" en el orden de trabajo, en el mismo archivo |
+
+**Documentación de frente**
+
+| | Qué |
+|---|---|
+| 3.7 | Ficha de `DEFAULT_STAGE_CATALOG`: cambia el motivo del "sin `progressPercentage`" |
+| 3.8 | `apps/web/CLAUDE.md`: la deuda declarada de las miniaturas del Stage Detail |
+| 3.9 | `CLAUDE.md` raíz: reescribir la tabla de pendientes de §Estado con lo que quede |
+
+**Evidencia de entrega** (no es código ni prosa nuestra)
+
+| | Qué | Criterio |
+|---|---|---|
+| 3.10 | Publicar la **lista formal de TXIDs** resolubles en explorador | 15 ◐ |
+| 3.11 | **Screenshot de monitoring** (Sentry / Grafana), ya encendidos y verificados | 14 |
+| 3.12 | **Video walkthrough** | 13 ⬜ |
+| 3.13 | **3 pilotos** — recontactar; `M1-D3-PilotPlan.pdf` ya trae cartas de M1 y probablemente cubre parte | 4 ⬜ externo |
+
+## Al final — la prueba de volumen (ex-pendiente #0)
+
+Va última, **pero no es independiente**: tres criterios dependen de ella.
+
+| Criterio | Qué le da la prueba |
+|---|---|
+| **8** ⬜ | Es literalmente *"flujos de UI end-to-end en pre-prod"* — la prueba **es** la evidencia |
+| **9** ◐ | Falta la muestra real de reserva→escrow; nadie confirmó una en Preprod |
+| **15** ◐ | Los TXIDs que hay que publicar salen de ahí |
+
+Por eso va **antes de 3.10, 3.12 y 3.13**: el video se graba sobre los datos que la prueba deja, y
+la lista de TXIDs también. Presupuesto medido: **~35 ADA por proyecto** (≈15 de fee + 20
+bloqueadas), ~1% del balance de la wallet de servicio. El costo no la condiciona.
+
+## Fuera de alcance de este milestone
+
+| Qué | Por qué |
+|---|---|
+| **Mainnet** | Decisión del dueño, 2026-09-09. D-013 lo hace imposible por configuración y `specs/README.md` ya lo declara fuera |
+| **Fusionar anclaje + transición** | Ahorra ~5% del costo on-chain; es 🟡 sobre el core de anclaje. Después de la prueba de volumen, que da la distribución real. Detalle en `specs/PROPUESTA-2026-09-09-fusionar-anclaje-evidencia-transicion.md` |
+| **`TOPE_POR_LECTURA`** | Medir una carga real antes de tocar el número. El disparador por lectura ya se arregló (2026-09-09) |
+| **"Contenido en `Pending`"** | Mejora de UX, ningún criterio la pide. Necesita que el listado de stages devuelva el anclaje y reconcilie |
+| **Columna `AuditLog.projectId`** | Sacaría el mapeo fail-closed de `auditScope`. Pide backfill que para filas viejas no tiene respuesta |
+| **`validationCritical` siempre `true`** | Config muerta con rama viva y testeada en el validador. No molesta |
+| **Las 2 ADA bloqueadas por etapa** | Sin burn (D-057), son permanentes: 20 por proyecto de 10 etapas. Es el número para la decisión de mainnet, no para este milestone |
+
+## Sin confirmar todavía
+
+1. **El criterio 3 se cierra por documentación** (3.1–3.4), sin construir signers ni percentages. Es
+   la consecuencia directa de la regla de precedencia, pero es un criterio de Catalyst.
+2. **2.5** — si la etapa fabricada de la demo la borra el LLM o la toca el dueño.
+
+---
+
 ## Contexto
 
 **PropNexus** (Catalyst 1400106) — plataforma de ventas inmobiliarias en pozo: estructura el ciclo
@@ -26,6 +150,10 @@ validador que afirme algo más, está mal (D-026).
 ---
 
 # Estado, y lo próximo
+
+> **La tabla de abajo quedó vieja el 2026-09-09.** Lo que falta está en §El plan de entrega, arriba;
+> reescribir esta tabla es el punto 3.9 de ese plan. Se deja hasta entonces porque el resto de la
+> sección —lo ya cerrado— sigue siendo válido.
 
 **La instancia desplegada ancló de verdad por primera vez el 2026-09-03**, contra Cardano Preprod:
 `OnChainEvent` tiene su primera fila, `Confirmed`, con TXID real
