@@ -1,7 +1,9 @@
 import {
   cuidParamSchema,
   cursorPaginationSchema,
+  dossierRejectResultSchema,
   dossierSchema,
+  dossierSignResultSchema,
   notaryKpisSchema,
   notarySignatureSchema,
   paginatedResponseSchema,
@@ -184,9 +186,13 @@ router.post(
         .where("eventType", "=", "DOSSIER_SIGNATURE")
         .executeTakeFirst();
 
-      return res
-        .status(200)
-        .json({ dossierId: fila.id, masterHash: fila.masterHash, anchor: anterior });
+      return res.status(200).json(
+        dossierSignResultSchema.parse({
+          dossierId: fila.id,
+          masterHash: fila.masterHash,
+          anchor: anterior
+        })
+      );
     }
 
     // Se firma el estado ACTUAL, recompilado ahora: firmar el hash guardado
@@ -234,12 +240,14 @@ router.post(
       metadata: { masterHash: dossier.masterHash, txid: anchor.txid }
     });
 
-    return res.status(201).json({
-      dossierId: dossier.id,
-      masterHash: dossier.masterHash,
-      signedAt: ahora,
-      anchor
-    });
+    return res.status(201).json(
+      dossierSignResultSchema.parse({
+        dossierId: dossier.id,
+        masterHash: dossier.masterHash,
+        signedAt: ahora,
+        anchor
+      })
+    );
   }
 );
 
@@ -292,7 +300,9 @@ router.post(
     // 200 y no 201: rechazar no crea nada. La firma sí crea un evento anclado y
     // por eso contesta 201; el rechazo solo cambia el estado de algo que ya
     // existía.
-    return res.status(200).json({ dossierId: fila.id, status: "rejected" });
+    return res
+      .status(200)
+      .json(dossierRejectResultSchema.parse({ dossierId: fila.id, status: "rejected" }));
   }
 );
 

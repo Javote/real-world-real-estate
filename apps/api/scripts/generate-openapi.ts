@@ -24,8 +24,10 @@ import {
   developerDocumentListQuerySchema,
   developerDocumentSchema,
   developerKpisSchema,
+  dossierRejectResultSchema,
   dossierSchema,
   dossierShareSchema,
+  dossierSignResultSchema,
   evidenceProofSchema,
   evidenceSchema,
   hex64ParamSchema,
@@ -221,7 +223,14 @@ const RESPONSE_SCHEMAS: Record<string, ZodType> = {
   "GET /api/v1/projects/:id/members": z.array(projectMemberWithUserSchema),
   "POST /api/v1/projects/:id/members": projectMemberSchema,
   "GET /api/v1/projects/:id/documents": z.array(projectDocumentSchema),
-  "GET /api/v1/projects/:id/building-schematic": z.array(buildingSchematicFloorSchema)
+  "GET /api/v1/projects/:id/building-schematic": z.array(buildingSchematicFloorSchema),
+  // Mismo `.extend(...)` que `PATCH /stages/:id/state` — no un schema aparte.
+  "POST /api/v1/certifier/stages/:id/certify": stageSchema.extend({ anchor: onChainEventSchema }),
+  "POST /api/v1/certifier/stages/:id/observe": stageSchema.extend({ anchor: onChainEventSchema }),
+  // Documenta el 201 (recién firmado); el 200 (idempotente) es el mismo schema
+  // sin `signedAt` — ver el comentario de `dossierSignResultSchema`.
+  "POST /api/v1/notary/dossiers/:id/sign": dossierSignResultSchema,
+  "POST /api/v1/notary/dossiers/:id/reject": dossierRejectResultSchema
 };
 
 /** La forma exacta de `ZodError.flatten()`, que es lo que devuelve todo 400. */

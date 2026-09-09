@@ -6,7 +6,9 @@ import {
   cuidParamSchema,
   cursorPaginationSchema,
   observeStageSchema,
-  paginatedResponseSchema
+  onChainEventSchema,
+  paginatedResponseSchema,
+  stageSchema
 } from "@plataforma/shared";
 import { type Request, Router } from "express";
 import { z } from "zod";
@@ -148,7 +150,12 @@ router.post(
       return res.status(409).json(resultado);
     }
 
-    return res.status(201).json({ ...resultado.stage, anchor: resultado.anchor });
+    return res.status(201).json(
+      stageSchema.extend({ anchor: onChainEventSchema }).parse({
+        ...resultado.stage,
+        anchor: resultado.anchor
+      })
+    );
   }
 );
 
@@ -179,7 +186,12 @@ router.post(
       return res.status(409).json(resultado);
     }
 
-    return res.status(201).json({ ...resultado.stage, anchor: resultado.anchor });
+    return res.status(201).json(
+      stageSchema.extend({ anchor: onChainEventSchema }).parse({
+        ...resultado.stage,
+        anchor: resultado.anchor
+      })
+    );
   }
 );
 

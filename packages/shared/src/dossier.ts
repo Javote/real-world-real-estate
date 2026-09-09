@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { onChainEventSchema } from "./stage";
 
 // El dossier (M2-D5 filas 26-29, 28s, 51-53) — **M3-BE-12** y **M3-BE-17**.
 //
@@ -84,3 +85,24 @@ export type NotarySignature = z.infer<typeof notarySignatureSchema>;
  */
 export const rejectDossierSchema = z.strictObject({ note: z.string().min(1).max(2000) });
 export type RejectDossierInput = z.infer<typeof rejectDossierSchema>;
+
+/**
+ * `POST /notary/dossiers/:id/sign`. Dos formas reales, no una idealizada
+ * (regla 5): recién firmado manda `signedAt` y siempre trae `anchor`; el
+ * camino idempotente (ya estaba `signed`) no manda `signedAt`, y `anchor`
+ * puede faltar si el evento de la firma original no se encontró al reconciliar.
+ */
+export const dossierSignResultSchema = z.strictObject({
+  dossierId: z.string(),
+  masterHash: z.string(),
+  signedAt: z.coerce.date().optional(),
+  anchor: onChainEventSchema.optional()
+});
+export type DossierSignResult = z.infer<typeof dossierSignResultSchema>;
+
+/** `POST /notary/dossiers/:id/reject`. No ancla — no hay `anchor` que devolver. */
+export const dossierRejectResultSchema = z.strictObject({
+  dossierId: z.string(),
+  status: z.literal("rejected")
+});
+export type DossierRejectResult = z.infer<typeof dossierRejectResultSchema>;
