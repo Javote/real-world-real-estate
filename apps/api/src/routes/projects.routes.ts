@@ -15,6 +15,7 @@ import {
 import { type Request, Router } from "express";
 import { z } from "zod";
 import { createId } from "../db/id";
+import { reconciliarParaLectura } from "../domain/reconcile";
 import { db } from "../lib/db";
 import { sql } from "../lib/kysely";
 import {
@@ -368,6 +369,13 @@ router.get(
     acceso: { proyecto: { param: "id" }, membresias: ANY_MEMBERSHIP }
   }),
   async (req: Request<{ id: string }>, res) => {
+    // **Reconciliar antes de consultar** (D-077): esta respuesta lleva
+    // `anchorStatus`, y sin esto un anclaje que ya está en un bloque se sirve
+    // como `Pending` para siempre. La regla vive en `reconcile.ts`: toda
+    // lectura que devuelva el estado de un anclaje reconcilia su propio
+    // alcance primero. Lo fija `test/reconcile-on-read.test.ts`.
+    await reconciliarParaLectura({ projectId: req.params.id });
+
     const filas = await db
       .selectFrom("Evidence")
       .leftJoin("OnChainEvent", (join) =>

@@ -55,6 +55,32 @@ lo mismo sin pasar por HTTP. Ver el detalle en `CLAUDE.md` raíz.
 
 ## Trampas verificadas
 
+- **2026-09-09 · el disparo por lectura no llegaba a tres pantallas que muestran el estado de un
+  anclaje.** `reconciliarParaLectura` no tiene cron ni timer a propósito (D-077): el disparo **es**
+  la lectura. Eso funciona solo si el disparador está donde se muestra el anclaje, y no lo estaba —
+  `GET /projects/:id/documents`, `GET /contracts/:contractId/releases` y
+  `GET /certifier/certificates` devuelven `anchorStatus` y no reconciliaban nunca. Un evento que ya
+  estaba en un bloque se servía `Pending` **para siempre**: no hasta la próxima carga, para siempre,
+  porque ninguna otra lectura lo iba a mirar.
+  **Lo que lo venía tapando:** `GET /developer/kpis` reconcilia con alcance `{projectIds}` sobre
+  todos los proyectos del developer, 5 por carga. Por eso producción muestra confirmaciones
+  salpicadas en vez de un patrón por proyecto — el panel iba levantando de a poco lo que las
+  pantallas propias nunca tocaban.
+  **El tope NO era el problema.** `TOPE_POR_LECTURA = 5` acota **round-trips seriales** a Blockfrost
+  adentro del tiempo de respuesta de alguien (`reconciliar` itera uno por uno a propósito: rate
+  limit, y que un TXID que falla no tumbe la tanda). Subirlo a 10 duplicaba la latencia peor de
+  todas las lecturas que sí reconcilian, para arreglar pantallas que no disparaban nada. Primero el
+  disparador; el tope se mide después, con una carga real.
+  **La invariante, ahora fijada:** toda lectura que devuelva el estado de un anclaje reconcilia su
+  propio alcance antes de consultar. `test/reconcile-on-read.test.ts` la comprueba **por
+  comportamiento y no por inspección del fuente** (D-053): planta un anclaje `Pending` con un txid
+  que el simulador reconoce, pide la ruta por HTTP y mira la base. Con dos controles negativos —un
+  anclaje sin `txid` no se toca, y uno de otro proyecto no se confirma— para que el alcance no sea
+  decorativo. Los tres casos verificados en rojo sacando las llamadas.
+  **La lista se mantiene a mano, igual que el literal de la matriz de permisos:** el test no
+  descubre solo una ruta nueva con `anchorStatus`. Si agregás una, sumala — y sumarla es donde
+  mirás si el alcance que elegiste es el correcto.
+
 - **2026-09-09 · `eventIndex` se documentaba como la posición en el hilo on-chain y no lo es.**
   El docstring de `recordOnChainEvent` decía *"0 es el mint del thread token, 1..n las
   transiciones"*. Falso: `anchorCommitmentEvent` numera con el mismo contador, así que los

@@ -1,6 +1,7 @@
 import { contractReleaseSchema, cuidParamSchema } from "@plataforma/shared";
 import { type Request, Router } from "express";
 import { z } from "zod";
+import { reconciliarParaLectura } from "../domain/reconcile";
 import { db } from "../lib/db";
 import { authenticate, authorize, CUALQUIER_ROL } from "../middlewares/auth";
 import { paramValidator } from "../middlewares/validate-params";
@@ -48,11 +49,19 @@ router.get(
   async (req: Request<{ contractId: string }>, res) => {
     const contrato = await db
       .selectFrom("Contract")
-      .select("id")
-      .where("id", "=", req.params.contractId)
+      .innerJoin("Unit", "Unit.id", "Contract.unitId")
+      .select(["Contract.id as id", "Unit.projectId as projectId"])
+      .where("Contract.id", "=", req.params.contractId)
       .executeTakeFirst();
 
     if (!contrato) return res.status(404).json({ message: "Contract not found" });
+
+    // **Reconciliar antes de consultar** (D-077): esta respuesta lleva
+    // `anchorStatus`, y sin esto un anclaje que ya está en un bloque se sirve
+    // como `Pending` para siempre. La regla vive en `reconcile.ts`: toda
+    // lectura que devuelva el estado de un anclaje reconcilia su propio
+    // alcance primero. Lo fija `test/reconcile-on-read.test.ts`.
+    await reconciliarParaLectura({ projectId: contrato.projectId });
 
     // Cada release con su TXID (patrón P10). El vínculo es `referenceId`, que
     // guarda el id del propio release: buscarlos por su commitment no sirve

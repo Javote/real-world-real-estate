@@ -14,6 +14,16 @@ import { db } from "../lib/db";
 // de la API deja de contar cuando Render duerme el servicio a los 15 minutos, y
 // el free tier no tiene workers.
 //
+// **La invariante, desde el 2026-09-09:** toda lectura que devuelva el estado
+// de un anclaje (`anchorStatus`, `status`, un `OnChainEvent` entero) llama a
+// `reconciliarParaLectura` con su propio alcance **antes** de consultar. Sin
+// eso, el disparo por lectura no alcanza a la pantalla donde se muestra el
+// anclaje y el evento se sirve `Pending` para siempre — no hasta la próxima
+// carga: para siempre, porque nada más lo iba a mirar. Pasó con tres rutas
+// (`GET /projects/:id/documents`, `GET /contracts/:contractId/releases`,
+// `GET /certifier/certificates`). Lo fija `test/reconcile-on-read.test.ts`,
+// que lo comprueba mirando la base después de pedir la ruta por HTTP.
+//
 // **Tampoco hay cron, y eso también es una decisión** (D-077, y ver la memoria
 // del cron revertido): el disparo es la propia lectura. Cuando alguien abre una
 // pantalla que muestra un anclaje `Pending` con TXID, se consulta la cadena para

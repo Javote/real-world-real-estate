@@ -12,6 +12,7 @@ import {
 } from "@plataforma/shared";
 import { type Request, Router } from "express";
 import { z } from "zod";
+import { reconciliarParaLectura } from "../domain/reconcile";
 import { transitionStage } from "../domain/stage-transition";
 import { db } from "../lib/db";
 import { authenticate, authorize } from "../middlewares/auth";
@@ -205,6 +206,18 @@ router.get(
   async (req, res) => {
     const parsed = cursorPaginationSchema.safeParse(req.query);
     if (!parsed.success) return res.status(400).json(parsed.error.flatten());
+
+    // **Reconciliar antes de consultar** (D-077): esta respuesta lleva
+    // `anchorStatus`, y sin esto un anclaje que ya está en un bloque se sirve
+    // como `Pending` para siempre. El alcance son los proyectos que este
+    // certifier ve — sus certificaciones no pueden estar en otro lado. La
+    // regla vive en `reconcile.ts`: toda lectura que devuelva el estado de un
+    // anclaje reconcilia su propio alcance primero, y la fija
+    // `test/reconcile-on-read.test.ts`.
+    const visibles = (await proyectosVisibles(req.user!.id, req.user!.role).execute()).map(
+      (p) => p.id
+    );
+    if (visibles.length) await reconciliarParaLectura({ projectIds: visibles });
 
     let query = db
       .selectFrom("Stage")
