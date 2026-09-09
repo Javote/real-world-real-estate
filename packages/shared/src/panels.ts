@@ -45,9 +45,8 @@ export const certifierAssignmentSchema = z.strictObject({
 export type CertifierAssignment = z.infer<typeof certifierAssignmentSchema>;
 
 /**
- * KPIs del notary. **Los cuatro son `null` hoy**: el dossier es una entidad que
- * no existe (M2-D4 P8) y sin ella no hay nada que contar. El panel se dibuja
- * igual, con su empty-state — que es lo que un notario vería el primer día.
+ * KPIs del notary. `.nullable()` queda por si en el futuro falta la entidad
+ * dossier de nuevo (M2-D4 P8); hoy el handler siempre manda números.
  */
 export const notaryKpisSchema = z.strictObject({
   pendingDossiers: kpiPendiente,
@@ -65,18 +64,3 @@ export const pendingDossierSchema = z.strictObject({
   completeness: z.number().int().min(0).max(100)
 });
 export type PendingDossier = z.infer<typeof pendingDossierSchema>;
-
-/** Resumen de proyecto para la superficie Buy del investor (fila 02). */
-export const projectSummarySchema = z.strictObject({
-  id: z.string(),
-  name: z.string(),
-  city: z.string().nullable(),
-  country: z.string().nullable(),
-  status: z.string(),
-  /** Porcentaje 0-100 de avance de obra. */
-  progress: z.number().int().min(0).max(100),
-  /** Necesita `Unit` y su precio. */
-  fromPriceMinorUnits: kpiPendiente,
-  currency: z.string().nullable()
-});
-export type ProjectSummary = z.infer<typeof projectSummarySchema>;

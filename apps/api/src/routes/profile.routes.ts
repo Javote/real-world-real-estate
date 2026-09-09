@@ -1,4 +1,5 @@
 import {
+  notificationPrefsSchema,
   profileSchema,
   updateNotificationPrefsSchema,
   updateProfileSchema
@@ -100,7 +101,10 @@ router.patch(
       .where("id", "=", req.user!.id)
       .execute();
 
-    return res.json(combinadas);
+    // notificationPrefsSchema completa con su default (true) las claves que
+    // `combinadas` no tenga — el merge sigue guardando solo lo que vino, la
+    // respuesta siempre muestra las 5 (Tanda 2, hallazgo del checkpoint).
+    return res.json(notificationPrefsSchema.parse(combinadas));
   }
 );
 

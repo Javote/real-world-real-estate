@@ -1881,23 +1881,18 @@
                 "type": "object",
                 "properties": {
                   "stage": {
-                    "default": true,
                     "type": "boolean"
                   },
                   "document": {
-                    "default": true,
                     "type": "boolean"
                   },
                   "release": {
-                    "default": true,
                     "type": "boolean"
                   },
                   "signature": {
-                    "default": true,
                     "type": "boolean"
                   },
                   "certificate": {
-                    "default": true,
                     "type": "boolean"
                   }
                 },
@@ -1908,7 +1903,44 @@
         },
         "responses": {
           "200": {
-            "description": "OK"
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "stage": {
+                      "default": true,
+                      "type": "boolean"
+                    },
+                    "document": {
+                      "default": true,
+                      "type": "boolean"
+                    },
+                    "release": {
+                      "default": true,
+                      "type": "boolean"
+                    },
+                    "signature": {
+                      "default": true,
+                      "type": "boolean"
+                    },
+                    "certificate": {
+                      "default": true,
+                      "type": "boolean"
+                    }
+                  },
+                  "required": [
+                    "stage",
+                    "document",
+                    "release",
+                    "signature",
+                    "certificate"
+                  ],
+                  "additionalProperties": false
+                }
+              }
+            }
           },
           "400": {
             "description": "Body o query no pasan el schema",

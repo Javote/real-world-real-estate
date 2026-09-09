@@ -32,6 +32,7 @@ import {
   meResponseSchema,
   notaryKpisSchema,
   notarySignatureSchema,
+  notificationPrefsSchema,
   notificationQuerySchema,
   notificationSchema,
   observeStageSchema,
@@ -172,6 +173,7 @@ const RESPONSE_SCHEMAS: Record<string, ZodType> = {
   "GET /api/v1/developer/investors": z.array(investorDirectoryEntrySchema),
   "GET /api/v1/profile": profileSchema,
   "PATCH /api/v1/profile": profileSchema,
+  "PATCH /api/v1/profile/notifications": notificationPrefsSchema,
   "GET /api/v1/evidence/:bundleId/proof/:fileHash": evidenceProofSchema,
   "GET /api/v1/audit-logs/telemetry/reservation-to-escrow": reservationToEscrowTelemetrySchema
 };
