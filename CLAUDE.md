@@ -35,7 +35,8 @@ números medidos, en `specs/README.md`. Acá solo lo que falta.
 
 | # | Qué | Por qué ahí | Nivel |
 |---|---|---|---|
-| 0 | **Mainnet** — runbook, habilitar la red, custodia de la clave. **Sin confirmar que sea de este milestone** (2026-09-08, el dueño) | D-013 la hace **imposible por configuración**: es código, no solo procedimiento | 🔴 |
+| 0 | **Prueba end-to-end de volumen, en preprod, antes de mainnet** (pedido del dueño, 2026-09-09): desde el front, crear varios proyectos nuevos, completar los 10 stages del template con evidencia real cada uno, y llevar cada stage por **todas** las transiciones posibles de la FSM (`Pending → InProgress → Observed → InProgress → Completed`) — no solo un camino feliz por stage, como hasta ahora. **Falta presupuestar el costo real en preprod** (cantidad de transacciones × fee, y si el balance de la wallet de servicio alcanza o hace falta otro drip del faucet) antes de correrla. | Es la validación final de volumen que falta antes de habilitar mainnet: hasta ahora cada arista de la FSM se probó una vez, sobre un stage aislado — nunca las cuatro juntas, en los 10 stages de un proyecto real, repetido en más de un proyecto | 🟡 |
+| 1 | **Mainnet** — runbook, habilitar la red, custodia de la clave. **Sin confirmar que sea de este milestone** (2026-09-08, el dueño) | D-013 la hace **imposible por configuración**: es código, no solo procedimiento | 🔴 |
 
 **El "Stage template" (ex-#1) se cerró el 2026-09-08** — las dos decisiones del dueño que lo
 bloqueaban (nombrar las 10 etapas, el mecanismo de anclaje) están resueltas y construidas. Detalle
