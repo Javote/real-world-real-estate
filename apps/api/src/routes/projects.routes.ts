@@ -1,11 +1,19 @@
 import {
   addProjectMemberSchema,
+  buildingSchematicFloorSchema,
   createProjectSchema,
   cuidParamSchema,
+  projectDetailSchema,
+  projectDocumentSchema,
+  projectListItemSchema,
   projectListQuerySchema,
+  projectMemberSchema,
+  projectMemberWithUserSchema,
+  projectSchema,
   updateProjectSchema
 } from "@plataforma/shared";
 import { type Request, Router } from "express";
+import { z } from "zod";
 import { createId } from "../db/id";
 import { db } from "../lib/db";
 import { sql } from "../lib/kysely";
@@ -119,7 +127,7 @@ router.get(
       stages: stagesByProject.get(project.id) ?? []
     }));
 
-    return res.json(projectList);
+    return res.json(z.array(projectListItemSchema).parse(projectList));
   }
 );
 
@@ -160,7 +168,7 @@ router.post("/", authorize({ roles: ["admin"], acceso: "soloRol" }), async (req,
     entityId: project.id
   });
 
-  return res.status(201).json(project);
+  return res.status(201).json(projectSchema.parse(project));
 });
 
 router.get(
@@ -218,7 +226,7 @@ router.get(
       }
     }));
 
-    return res.json({ ...project, stages: stageRows, members });
+    return res.json(projectDetailSchema.parse({ ...project, stages: stageRows, members }));
   }
 );
 
@@ -248,7 +256,7 @@ router.patch("/:id", authorize({ roles: ["admin"], acceso: "soloRol" }), async (
     entityId: project.id
   });
 
-  return res.json(project);
+  return res.json(projectSchema.parse(project));
 });
 
 router.delete(
@@ -306,7 +314,7 @@ router.get(
       }
     }));
 
-    return res.json(members);
+    return res.json(z.array(projectMemberWithUserSchema).parse(members));
   }
 );
 
@@ -338,7 +346,7 @@ router.post(
       entityId: member.id
     });
 
-    return res.status(201).json(member);
+    return res.status(201).json(projectMemberSchema.parse(member));
   }
 );
 
@@ -386,10 +394,12 @@ router.get(
       .execute();
 
     return res.json(
-      filas.map((f) => ({
-        ...f,
-        anchorStatus: f.txid ? (f.anchorStatus ?? "Confirmed") : "Pending"
-      }))
+      z.array(projectDocumentSchema).parse(
+        filas.map((f) => ({
+          ...f,
+          anchorStatus: f.txid ? (f.anchorStatus ?? "Confirmed") : "Pending"
+        }))
+      )
     );
   }
 );
@@ -419,7 +429,11 @@ router.get(
       pisos.set(unidad.floor, actual);
     }
 
-    return res.json([...pisos.entries()].map(([floor, units]) => ({ floor, units })));
+    return res.json(
+      z
+        .array(buildingSchematicFloorSchema)
+        .parse([...pisos.entries()].map(([floor, units]) => ({ floor, units })))
+    );
   }
 );
 

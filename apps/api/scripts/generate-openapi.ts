@@ -5,6 +5,7 @@ import {
   addProjectMemberSchema,
   anchorDocumentSchema,
   auditLogQuerySchema,
+  buildingSchematicFloorSchema,
   bundleFilesSchema,
   capitalByProjectSchema,
   capitalMonthlyPointSchema,
@@ -43,7 +44,12 @@ import {
   pendingDossierSchema,
   positiveIntParamSchema,
   profileSchema,
+  projectDetailSchema,
+  projectDocumentSchema,
+  projectListItemSchema,
   projectListQuerySchema,
+  projectMemberSchema,
+  projectMemberWithUserSchema,
   projectSchema,
   reconciliationResultSchema,
   rejectDossierSchema,
@@ -207,7 +213,15 @@ const RESPONSE_SCHEMAS: Record<string, ZodType> = {
   // Documenta el 201 (creación); el 200 (idempotente, ya anclada) es el mismo
   // schema — ver el comentario de `codigoDeExito`.
   "POST /api/v1/evidence/:id/anchor": onChainEventSchema,
-  "GET /api/v1/evidence/:bundleId/files": bundleFilesSchema
+  "GET /api/v1/evidence/:bundleId/files": bundleFilesSchema,
+  "GET /api/v1/projects": z.array(projectListItemSchema),
+  "POST /api/v1/projects": projectSchema,
+  "GET /api/v1/projects/:id": projectDetailSchema,
+  "PATCH /api/v1/projects/:id": projectSchema,
+  "GET /api/v1/projects/:id/members": z.array(projectMemberWithUserSchema),
+  "POST /api/v1/projects/:id/members": projectMemberSchema,
+  "GET /api/v1/projects/:id/documents": z.array(projectDocumentSchema),
+  "GET /api/v1/projects/:id/building-schematic": z.array(buildingSchematicFloorSchema)
 };
 
 /** La forma exacta de `ZodError.flatten()`, que es lo que devuelve todo 400. */

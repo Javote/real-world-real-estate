@@ -27,3 +27,18 @@ export const updateUnitSchema = z.strictObject({
   currency: z.string().length(3).optional()
 });
 export type UpdateUnitInput = z.infer<typeof updateUnitSchema>;
+
+/** Fila 21 — `GET /projects/:id/building-schematic`, agrupado por piso. */
+export const buildingSchematicFloorSchema = z.strictObject({
+  /** `null` agrupa las unidades sin piso asignado, al final. */
+  floor: z.number().int().nullable(),
+  units: z.array(
+    z.strictObject({
+      id: z.string(),
+      unitReference: z.string(),
+      floor: z.number().int().nullable(),
+      status: unitStatusSchema
+    })
+  )
+});
+export type BuildingSchematicFloor = z.infer<typeof buildingSchematicFloorSchema>;

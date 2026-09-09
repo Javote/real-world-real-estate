@@ -1,4 +1,6 @@
 import { z } from "zod";
+import { userRoleSchema } from "./auth";
+import { stageSchema } from "./stage";
 
 // El proyecto: su CRUD genérico (`/projects`, admin) y la superficie del
 // developer (`/developer/projects`, que además mintea el Stage template —
@@ -117,3 +119,45 @@ export const projectSchema = z.strictObject({
   updatedAt: z.coerce.date()
 });
 export type ProjectResponse = z.infer<typeof projectSchema>;
+
+/** `GET /api/v1/projects` (array): cada proyecto con sus stages, ya ordenados. */
+export const projectListItemSchema = projectSchema.extend({
+  stages: z.array(stageSchema)
+});
+export type ProjectListItem = z.infer<typeof projectListItemSchema>;
+
+/**
+ * Un miembro de proyecto, con el usuario embebido. Misma forma en
+ * `GET /projects/:id` (dentro de `members`) y `GET /projects/:id/members`.
+ */
+export const projectMemberWithUserSchema = z.strictObject({
+  id: z.string(),
+  userId: z.string(),
+  projectId: z.string(),
+  membershipRole: membershipRoleSchema,
+  createdAt: z.coerce.date(),
+  user: z.strictObject({
+    id: z.string(),
+    email: z.email(),
+    fullName: z.string(),
+    role: userRoleSchema
+  })
+});
+export type ProjectMemberWithUser = z.infer<typeof projectMemberWithUserSchema>;
+
+/** `GET /api/v1/projects/:id`: el proyecto con sus stages y sus miembros. */
+export const projectDetailSchema = projectSchema.extend({
+  stages: z.array(stageSchema),
+  members: z.array(projectMemberWithUserSchema)
+});
+export type ProjectDetail = z.infer<typeof projectDetailSchema>;
+
+/** `POST /api/v1/projects/:id/members`: la fila de `ProjectMember`, sin el usuario. */
+export const projectMemberSchema = z.strictObject({
+  id: z.string(),
+  userId: z.string(),
+  projectId: z.string(),
+  membershipRole: membershipRoleSchema,
+  createdAt: z.coerce.date()
+});
+export type ProjectMemberResponse = z.infer<typeof projectMemberSchema>;

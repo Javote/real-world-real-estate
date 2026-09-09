@@ -85,6 +85,34 @@ export const developerDocumentListQuerySchema = z.object({
 });
 export type DeveloperDocumentListQuery = z.infer<typeof developerDocumentListQuerySchema>;
 
+/**
+ * Fila 06-07 — `GET /projects/:id/documents` (`INV-PROJECT-DOCS-002`). Distinta
+ * de `developerDocumentSchema`: esta trae `stageId`/`evidenceType`/`category`
+ * (que el `DocumentCard` del developer no pide) y no tiene `filename`
+ * (`originalFilename`, sin renombrar) — dos endpoints que documentan la misma
+ * evidencia para dos pantallas no comparten la forma solo porque comparten la
+ * tabla.
+ *
+ * `anchorStatus` nunca es `null` en la salida: el handler ya lo resuelve a
+ * `"Pending"` sin TXID y a `"Confirmed"` como default cuando hay TXID sin
+ * evento (regla 17 aplicada del lado del servidor, no del cliente).
+ */
+export const projectDocumentSchema = z.strictObject({
+  id: z.string(),
+  stageId: z.string().nullable(),
+  evidenceType: evidenceTypeSchema,
+  category: z.string(),
+  authoritative: z.boolean(),
+  originalFilename: z.string(),
+  mimeType: z.string(),
+  sizeBytes: z.number().int().nonnegative(),
+  sha256Hash: z.string(),
+  uploadedAt: z.coerce.date(),
+  txid: z.string().nullable(),
+  anchorStatus: z.string()
+});
+export type ProjectDocument = z.infer<typeof projectDocumentSchema>;
+
 /** Fila 46-47 — un documento del proyecto, con su huella y su prueba. */
 export const developerDocumentSchema = z.strictObject({
   id: z.string(),
