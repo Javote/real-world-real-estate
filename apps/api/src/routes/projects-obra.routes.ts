@@ -1,11 +1,28 @@
-import { cuidParamSchema } from "@plataforma/shared";
+import {
+  cuidParamSchema,
+  evidenceBundleSummarySchema,
+  onChainEventSchema,
+  stageEventSummarySchema,
+  stageEvidenceSummarySchema,
+  stageSchema,
+  stageWithThreadSchema
+} from "@plataforma/shared";
 import { type Request, Router } from "express";
+import { z } from "zod";
 import { reconciliarParaLectura } from "../domain/reconcile";
 import { retryStageMint } from "../domain/stage-transition";
 import { db } from "../lib/db";
 import { ANY_MEMBERSHIP, authenticate, authorize, CUALQUIER_ROL } from "../middlewares/auth";
 import { paramValidator } from "../middlewares/validate-params";
 import { writeAuditLog } from "../utils/audit";
+
+/** `GET /:id/stages/:stageId` compone el stage con evidencia, bundle y eventos. */
+const stageDetailNestedSchema = stageSchema.extend({
+  evidences: z.array(stageEvidenceSummarySchema),
+  bundle: evidenceBundleSummarySchema.nullable(),
+  hasOnChainThread: z.boolean(),
+  events: z.array(stageEventSummarySchema)
+});
 
 // **El registro de obra de un proyecto**: sus stages (M2-D5 filas 08, 09-12).
 //
@@ -70,7 +87,11 @@ router.get(
       ).map((r) => r.stageId)
     );
 
-    return res.json(result.map((stage) => ({ ...stage, hasOnChainThread: conHilo.has(stage.id) })));
+    return res.json(
+      z
+        .array(stageWithThreadSchema)
+        .parse(result.map((stage) => ({ ...stage, hasOnChainThread: conHilo.has(stage.id) })))
+    );
   }
 );
 
@@ -113,7 +134,12 @@ router.post(
       entityId: result.stage.id
     });
 
-    return res.json({ ...result.stage, anchor: result.anchor });
+    return res.json(
+      stageSchema.extend({ anchor: onChainEventSchema }).parse({
+        ...result.stage,
+        anchor: result.anchor
+      })
+    );
   }
 );
 
@@ -179,16 +205,18 @@ router.get(
         .execute()
     ]);
 
-    return res.json({
-      ...stage,
-      evidences,
-      bundle: bundle ?? null,
-      // Calculado, no guardado (evita una segunda fuente de verdad): el mismo
-      // criterio que `cabezaDelHilo`, sin una query aparte porque `eventos` ya
-      // trae `outputRef`.
-      hasOnChainThread: eventos.some((e) => e.outputRef !== null),
-      events: eventos
-    });
+    return res.json(
+      stageDetailNestedSchema.parse({
+        ...stage,
+        evidences,
+        bundle: bundle ?? null,
+        // Calculado, no guardado (evita una segunda fuente de verdad): el mismo
+        // criterio que `cabezaDelHilo`, sin una query aparte porque `eventos` ya
+        // trae `outputRef`.
+        hasOnChainThread: eventos.some((e) => e.outputRef !== null),
+        events: eventos
+      })
+    );
   }
 );
 

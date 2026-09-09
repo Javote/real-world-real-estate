@@ -1,5 +1,6 @@
-import { reservationToEscrowTelemetrySchema } from "@plataforma/shared";
+import { auditLogRowSchema, reservationToEscrowTelemetrySchema } from "@plataforma/shared";
 import { Router } from "express";
+import { z } from "zod";
 import { reconciliarAnclajes } from "../domain/reconcile";
 import { db } from "../lib/db";
 import { authenticate, authorize } from "../middlewares/auth";
@@ -16,7 +17,7 @@ router.get("/", authorize({ roles: ["admin"], acceso: "soloRol" }), async (_req,
     .limit(200)
     .execute();
 
-  return res.json(logs);
+  return res.json(z.array(auditLogRowSchema).parse(logs));
 });
 
 function mediana(valores: readonly number[]): number | null {

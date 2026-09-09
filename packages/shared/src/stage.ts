@@ -228,3 +228,31 @@ export const unitNewsEventSchema = z.strictObject({
   stageName: z.string().nullable()
 });
 export type UnitNewsEvent = z.infer<typeof unitNewsEventSchema>;
+
+/** `GET /projects/:id/stages` (array): el stage con si tiene hilo on-chain. */
+export const stageWithThreadSchema = stageSchema.extend({ hasOnChainThread: z.boolean() });
+export type StageWithThread = z.infer<typeof stageWithThreadSchema>;
+
+/** Resumen de `EvidenceBundle`, embebido en `GET /projects/:id/stages/:stageId`. */
+export const evidenceBundleSummarySchema = z.strictObject({
+  id: z.string(),
+  commitmentHash: z.string(),
+  createdAt: z.coerce.date()
+});
+export type EvidenceBundleSummary = z.infer<typeof evidenceBundleSummarySchema>;
+
+/**
+ * Un evento del hilo, proyectado — mismo endpoint. Sin `id`/`projectId`/
+ * `stageId`/`evidenceId`/`referenceId`/`network`/`blockTimestamp`/`updatedAt`:
+ * el handler no los selecciona, así que no están en la respuesta real.
+ */
+export const stageEventSummarySchema = z.strictObject({
+  eventType: onChainEventTypeSchema,
+  toState: stageStateSchema.nullable(),
+  commitment: z.string().nullable(),
+  txid: z.string().nullable(),
+  status: onChainEventStatusSchema,
+  outputRef: z.string().nullable(),
+  createdAt: z.coerce.date()
+});
+export type StageEventSummary = z.infer<typeof stageEventSummarySchema>;

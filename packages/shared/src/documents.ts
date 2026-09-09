@@ -67,6 +67,24 @@ export const evidenceSchema = z.strictObject({
 });
 export type EvidenceResponse = z.infer<typeof evidenceSchema>;
 
+/**
+ * Evidencia proyectada, embebida en `GET /projects/:id/stages/:stageId`. Sin
+ * `projectId`/`stageId`/`uploadedById`/`storedFilename`/`createdAt`/
+ * `updatedAt`: el handler no los selecciona (y sin `storagePath`, D-011).
+ */
+export const stageEvidenceSummarySchema = z.strictObject({
+  id: z.string(),
+  evidenceType: evidenceTypeSchema,
+  category: z.string(),
+  authoritative: z.boolean(),
+  originalFilename: z.string(),
+  mimeType: z.string(),
+  sizeBytes: z.number().int().nonnegative(),
+  sha256Hash: z.string(),
+  uploadedAt: z.coerce.date()
+});
+export type StageEvidenceSummary = z.infer<typeof stageEvidenceSummarySchema>;
+
 /** Body de `PATCH /api/v1/evidence/:id`. */
 export const updateEvidenceSchema = z.object({
   category: z.string().min(1).optional(),

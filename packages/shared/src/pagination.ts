@@ -47,3 +47,19 @@ export const auditLogEntrySchema = z.strictObject({
   actorRole: userRoleSchema.nullable()
 });
 export type AuditLogEntry = z.infer<typeof auditLogEntrySchema>;
+
+/**
+ * `GET /audit-logs` (admin, CRUD genérico): la fila de `AuditLog` completa,
+ * sin el `actorName`/`actorRole` proyectados que arma `auditLogEntrySchema` —
+ * acá no hay join con `User`.
+ */
+export const auditLogRowSchema = z.strictObject({
+  id: z.string(),
+  actorUserId: z.string().nullable(),
+  action: z.string(),
+  entityType: z.string(),
+  entityId: z.string(),
+  metadataJson: z.string().nullable(),
+  createdAt: z.coerce.date()
+});
+export type AuditLogRow = z.infer<typeof auditLogRowSchema>;

@@ -1,5 +1,6 @@
-import { cuidParamSchema } from "@plataforma/shared";
+import { contractReleaseSchema, cuidParamSchema } from "@plataforma/shared";
 import { type Request, Router } from "express";
+import { z } from "zod";
 import { db } from "../lib/db";
 import { authenticate, authorize, CUALQUIER_ROL } from "../middlewares/auth";
 import { paramValidator } from "../middlewares/validate-params";
@@ -77,7 +78,7 @@ router.get(
       .orderBy("PaymentAttestation.stageNumber", "asc")
       .execute();
 
-    return res.json(releases);
+    return res.json(z.array(contractReleaseSchema).parse(releases));
   }
 );
 

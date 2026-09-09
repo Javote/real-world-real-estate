@@ -156,11 +156,29 @@ mano es el momento en que más fácil es notar un campo que no debería viajar (
 
 1. ~~Pieza A completa primero~~ — ✅ cerrada el 2026-09-08.
 2. ~~Pieza B, Tanda 1 (conectar los ~24 candidatos)~~ — ✅ cerrada el 2026-09-08.
-3. **Checkpoint con el dueño — pendiente.** Antes de escalar a las ~61 rutas de la Tanda 2: resolver
-   los tres hallazgos de arriba, y confirmar el nivel de detalle esperado sobre 1-2 endpoints chicos.
-4. Pieza B, Tanda 2, por archivo de rutas, en el orden que sea más simple → más complejo: `profile`
-   (falta solo `/notifications`), `users`, `stages`, `evidence`, `projects`, `certifier` (falta
-   `certify`/`observe`), `notary` (falta `sign`/`reject`), `developer*`, `investor`.
+3. ~~Checkpoint con el dueño~~ — ✅ resuelto el 2026-09-09: `projectSummarySchema` se borró (cero
+   endpoints la usaban), el comentario de `notaryKpisSchema` se corrigió, y `PATCH
+   /profile/notifications` se conectó completando las 5 claves con default `true` en la respuesta.
+   Escribir ese último test destapó un bug real y preexistente —
+   `notificationPrefsSchema.partial()` no descartaba el `.default(true)` de cada campo, así que
+   cada PATCH pisaba en silencio las demás preferencias— cerrado en el mismo commit.
+4. ~~Pieza B, Tanda 2~~ — ✅ cerrada el 2026-09-09, por archivo de rutas: `profile`, `users`,
+   `stages`, `evidence`, `projects`, `certifier`, `notary`, `developer-evidencia`, `developer`,
+   `developer-comercial`, `investor`, y tres archivos que esta lista no había contado —
+   `projects-obra.routes.ts`, `contracts.routes.ts`, `audit.routes.ts`, `public.routes.ts`
+   (encontrados auditando la cobertura real del OpenAPI generado contra las 85 rutas, no contra
+   esta lista). Cobertura final: 76/85 rutas con schema de respuesta; las 9 restantes son
+   legítimamente sin schema — `204 No Content` (borrados, favoritos, decline) o archivo binario
+   (`/evidence/:id/download`, `/dossier/export.pdf`).
+
+   **Dos hallazgos reales en el camino, los dos cerrados en el mismo commit que los encontró:**
+   escribir `evidenceSchema` mostró que `GET /stages/:id` hacía `selectAll()` sobre `Evidence` en
+   vez de `EVIDENCE_SAFE_COLUMNS`, filtrando `storagePath` (D-011) en cada evidencia embebida —
+   fix + test de regresión en `stage-transitions.test.ts`. Y `Contract.signedAt`,
+   `Invitation.respondedAt` y `PaymentAttestation.releasedAt` **no** están en `TIMESTAMP_COLUMNS`
+   de `sqlite-type-plugin.ts` (a propósito, documentado ahí): tipearlos con `z.coerce.date()`
+   habría sido un cambio de contrato silencioso (`number` → string ISO) — se tipearon `z.number()`,
+   la forma real, confirmada con la suite completa en verde.
 
 ## Qué NO hace este plan, a propósito
 

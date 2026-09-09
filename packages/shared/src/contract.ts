@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { onChainEventSchema } from "./stage";
+import { onChainEventSchema, onChainEventStatusSchema } from "./stage";
 import { unitStatusSchema } from "./unit";
 
 // El contrato como registro (D-070): quién acordó qué sobre qué unidad, sin
@@ -85,3 +85,19 @@ export const investorContractSchema = z.strictObject({
   unitReference: z.string()
 });
 export type InvestorContract = z.infer<typeof investorContractSchema>;
+
+/**
+ * Fila 23-24 — `GET /contracts/:contractId/releases` (patrón P10). `anchorStatus`
+ * es `null` cuando el `leftJoin` con `OnChainEvent` no encuentra el evento de
+ * la liberación. `releasedAt` sin coercionar, mismo motivo que `signedAt`.
+ */
+export const contractReleaseSchema = z.strictObject({
+  id: z.string(),
+  stageNumber: z.number().int().positive(),
+  amountMinorUnits: z.number().int().positive(),
+  releasedAt: z.number(),
+  commitment: z.string().nullable(),
+  txid: z.string().nullable(),
+  anchorStatus: onChainEventStatusSchema.nullable()
+});
+export type ContractRelease = z.infer<typeof contractReleaseSchema>;

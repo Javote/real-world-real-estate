@@ -106,3 +106,21 @@ export const dossierRejectResultSchema = z.strictObject({
   status: z.literal("rejected")
 });
 export type DossierRejectResult = z.infer<typeof dossierRejectResultSchema>;
+
+/**
+ * Fila 28s — `GET /public/dossier/:shareToken`. **Sin sesión** (M2-D5 §2.2):
+ * recortado a propósito, nada de la unidad ni del investor más allá de su
+ * referencia — sin `id`/`unitId`/`projectId`/`rejectionNote` de `dossierSchema`.
+ */
+export const publicDossierSchema = z.strictObject({
+  unitReference: z.string(),
+  projectName: z.string(),
+  masterHash: z.string(),
+  compiledAt: z.coerce.date(),
+  status: dossierStatusSchema,
+  completeness: z.number().int().min(0).max(100),
+  signatureTxid: z.string().nullable(),
+  signedAt: z.coerce.date().nullable(),
+  artifacts: z.array(dossierArtifactSchema)
+});
+export type PublicDossier = z.infer<typeof publicDossierSchema>;

@@ -1,4 +1,4 @@
-import { hex64ParamSchema } from "@plataforma/shared";
+import { hex64ParamSchema, publicDossierSchema } from "@plataforma/shared";
 import { type Request, Router } from "express";
 import { compileDossier } from "../domain/dossier";
 import { db } from "../lib/db";
@@ -41,17 +41,19 @@ router.get("/dossier/:shareToken", async (req: Request<{ shareToken: string }>, 
   const dossier = await compileDossier(fila.unitId);
   if (!dossier) return res.status(404).json({ message: "Dossier not found" });
 
-  return res.json({
-    unitReference: dossier.unitReference,
-    projectName: dossier.projectName,
-    masterHash: dossier.masterHash,
-    compiledAt: dossier.compiledAt,
-    status: dossier.status,
-    completeness: dossier.completeness,
-    signatureTxid: dossier.signatureTxid,
-    signedAt: dossier.signedAt,
-    artifacts: dossier.artifacts
-  });
+  return res.json(
+    publicDossierSchema.parse({
+      unitReference: dossier.unitReference,
+      projectName: dossier.projectName,
+      masterHash: dossier.masterHash,
+      compiledAt: dossier.compiledAt,
+      status: dossier.status,
+      completeness: dossier.completeness,
+      signatureTxid: dossier.signatureTxid,
+      signedAt: dossier.signedAt,
+      artifacts: dossier.artifacts
+    })
+  );
 });
 
 export default router;

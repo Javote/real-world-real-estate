@@ -7,6 +7,7 @@ import {
   anchorDocumentSchema,
   auditLogEntrySchema,
   auditLogQuerySchema,
+  auditLogRowSchema,
   buildingSchematicFloorSchema,
   bundleFilesSchema,
   capitalByProjectSchema,
@@ -16,6 +17,7 @@ import {
   certifierCertificateSchema,
   certifierKpisSchema,
   certifierStageViewSchema,
+  contractReleaseSchema,
   createDeveloperProjectSchema,
   createInvitationSchema,
   createProjectSchema,
@@ -36,6 +38,7 @@ import {
   dossierSchema,
   dossierShareSchema,
   dossierSignResultSchema,
+  evidenceBundleSummarySchema,
   evidenceProofSchema,
   evidenceSchema,
   hex64ParamSchema,
@@ -68,14 +71,18 @@ import {
   projectMemberSchema,
   projectMemberWithUserSchema,
   projectSchema,
+  publicDossierSchema,
   reconciliationResultSchema,
   rejectDossierSchema,
   releasePaymentSchema,
   reservationToEscrowTelemetrySchema,
+  stageEventSummarySchema,
+  stageEvidenceSummarySchema,
   stageEvidenceUploadResultSchema,
   stageEvidenceUploadSchema,
   stageSchema,
   stageTransitionSchema,
+  stageWithThreadSchema,
   unitNewsEventSchema,
   unitSchema,
   unreadCountSchema,
@@ -108,15 +115,16 @@ import { describir, leerMontaje } from "../src/lib/route-inventory";
 // Body/query van con su schema real donde existe — que es la parte que un
 // reviewer necesita para armar un request válido.
 //
-// **Las respuestas, Tanda 1 del plan (`specs/PLAN-2026-09-08-documentar-api-completa.md`):
-// las ~24 que ya tenían un schema Zod real en `packages/shared` —antes solo
-// usado para tipar en compile-time (`satisfies`) o ni eso— ahora también
-// VALIDAN en runtime (`schema.parse(...)` antes de responder) y se documentan
-// acá en `RESPONSE_SCHEMAS`. Las ~61 restantes siguen sin schema de salida: la
-// mayoría arma su respuesta con un spread de fila de Kysely o delega en un
-// tipo TS que nunca fue un schema Zod (`transitionStage`, `compileDossier`
-// para el caso `investorId` incluido...) — schematizarlas es la Tanda 2, y
-// pide escribir el schema antes de conectarlo, no al revés.
+// **Las respuestas — Tanda 1 y Tanda 2 del plan
+// (`specs/PLAN-2026-09-08-documentar-api-completa.md`), cerradas.** Tanda 1
+// conectó las ~24 que ya tenían un schema Zod real en `packages/shared`
+// —antes solo usado para tipar en compile-time (`satisfies`) o ni eso—; Tanda
+// 2 escribió el schema que faltaba para las ~61 restantes, archivo por
+// archivo. Las dos VALIDAN en runtime (`schema.parse(...)` antes de
+// responder) y se documentan acá en `RESPONSE_SCHEMAS`. De las 85 rutas, solo
+// quedan sin entrada las que legítimamente no tienen cuerpo JSON: `204 No
+// Content` (borrados, favoritos, decline) y las dos que devuelven un archivo
+// binario (`/evidence/:id/download`, `/dossier/export.pdf`).
 //
 // **El código de éxito se lee del handler, no se adivina por verbo HTTP.**
 // La primera versión de este generador usaba una convención (`POST → 201`,
@@ -272,7 +280,20 @@ const RESPONSE_SCHEMAS: Record<string, ZodType> = {
   "GET /api/v1/investor/units/:id/news": z.array(unitNewsEventSchema),
   "GET /api/v1/investor/invitations/:id": investorInvitationDetailSchema,
   "POST /api/v1/investor/invitations/:id/accept": acceptInvitationResultSchema,
-  "GET /api/v1/investor/contracts/:unitId": investorContractSchema
+  "GET /api/v1/investor/contracts/:unitId": investorContractSchema,
+  "GET /api/v1/projects/:id/stages": z.array(stageWithThreadSchema),
+  "POST /api/v1/projects/:id/stages/:stageId/retry-anchor": stageSchema.extend({
+    anchor: onChainEventSchema
+  }),
+  "GET /api/v1/projects/:id/stages/:stageId": stageSchema.extend({
+    evidences: z.array(stageEvidenceSummarySchema),
+    bundle: evidenceBundleSummarySchema.nullable(),
+    hasOnChainThread: z.boolean(),
+    events: z.array(stageEventSummarySchema)
+  }),
+  "GET /api/v1/contracts/:contractId/releases": z.array(contractReleaseSchema),
+  "GET /api/v1/audit-logs": z.array(auditLogRowSchema),
+  "GET /api/v1/public/dossier/:shareToken": publicDossierSchema
 };
 
 /** La forma exacta de `ZodError.flatten()`, que es lo que devuelve todo 400. */
