@@ -57,7 +57,7 @@ no se integra sin que el dueño lo revise línea por línea.
 | # | Paso | Criterio de cierre |
 |---|---|---|
 | 1 | Golden CBOR del redeemer: 3 tests en `fsm.ak` (`Advance` sin `Completion`, `Init`, y `Advance` con `Completion` — subido de 2 a 3: el tercer caso también quedó con match exacto, no solo el chequeo parcial que hace `codec.test.ts`) contra los mismos hex que ya fija `codec.test.ts` | ✅ **hecho** — 76/76 verde, `pnpm contracts:verify` completo (fmt+check+build), `plutus.json` sin cambios (no se tocó lógica, solo tests) |
-| 2 | Test del branch `else`: una `Transaction` con purpose no-spend/no-mint, confirmando `fail` | El test nuevo pasa; ningún test existente cambia |
+| 2 | Test del branch `else`: una `Transaction` con purpose no-spend/no-mint, confirmando `fail` | ✅ **hecho** — 77/77 verde, `pnpm contracts:verify` completo, `plutus.json` sin cambios |
 | 3 | `spend_rejects_utxo_with_two_units_of_own_token` (análogo a su hermano de `mint`) | Test nuevo en rojo antes del fix (si hiciera falta uno) o ya en verde si el validador ya lo cubre — a confirmar al escribirlo |
 | 4 | Boundary exacto de `within_validity_range`: `completed_at == lower` y `completed_at == upper` deben aceptar; `lower - 1`/`upper + 1` deben rechazar | 4 tests nuevos, todos verdes contra el código actual (sin tocar el validador) |
 | 5 | Property tests con `aiken/fuzz` sobre `completion_evidence_ok` (longitud de `evidence_root` fuzzeada) y `valid_ref` (longitud de la ref fuzzeada alrededor de 0 y 32) | `--property-coverage` corrido y leído, no solo "pasó" |

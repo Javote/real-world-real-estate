@@ -20,8 +20,9 @@ use aiken/collection/dict
 use aiken/collection/list
 use aiken/crypto.{VerificationKeyHash}
 use aiken/interval.{Finite}
-use cardano/address.{Address, Script}
+use cardano/address.{Address, Script, VerificationKey}
 use cardano/assets.{PolicyId}
+use cardano/script_context.{ScriptContext, Withdrawing}
 use cardano/transaction.{
   Datum, InlineDatum, Input, NoDatum, Output, OutputReference, Transaction,
   ValidityRange, find_input,
@@ -783,5 +784,22 @@ test mint_rejects_non_inline_datum() fail {
     Init,
     script_hash,
     mint_tx(one_token(), [script_output_with(NoDatum, locked_value())]),
+  )
+}
+
+// ── Tests: el else genérico ──────────────────────────────────────────────
+//
+// `else(_) { fail }` es lo único que decide qué pasa con un purpose que no
+// sea spend ni mint (withdraw, publish, vote, propose). Sin este test la
+// garantía se sostenía solo por lectura de código.
+
+test else_rejects_other_script_purposes() fail {
+  stage.else(
+    admin_key,
+    ScriptContext {
+      transaction: transaction.placeholder,
+      redeemer: 0,
+      info: Withdrawing(VerificationKey(other_key)),
+    },
   )
 }

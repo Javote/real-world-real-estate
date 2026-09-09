@@ -83,7 +83,7 @@ que el producto viene a eliminar.
 
 `aiken check` **no mide coverage de líneas** —solo tiene `--property-coverage`, que es la
 distribución de labels en property tests—, así que el ≥95% del criterio 2 del SOM se demuestra con
-esta tabla. **76 tests, 0 fallando.**
+esta tabla. **77 tests, 0 fallando.**
 
 `lib/propnexus/fsm.ak` — 43:
 
@@ -98,7 +98,7 @@ esta tabla. **76 tests, 0 fallando.**
 | El datum codifica al mismo CBOR que el códec de `packages/cardano` espera — el "valor dorado" (ver `packages/cardano/CLAUDE.md`) | `t_golden_datum_encoding` (1) |
 | El redeemer (`StageRedeemer`/`MintAction`) codifica al mismo CBOR que `encodeAdvanceRedeemer`/`encodeInitRedeemer` de `packages/cardano` — mismo boundary que el datum, cerrado el 2026-09-08 (`specs/PLAN-2026-09-08-tests-aiken-robustez.md`) | `t_golden_redeemer_*` (3) |
 
-`validators/stage.ak` — 33 (6 caminos felices + 27 puntos de rechazo):
+`validators/stage.ak` — 34 (6 caminos felices + 27 puntos de rechazo + 1 sobre el `else` genérico):
 
 | Punto de rechazo | Test |
 |---|---|
@@ -129,6 +129,7 @@ esta tabla. **76 tests, 0 fallando.**
 | nacer fuera de `Pending` | `mint_rejects_starting_outside_pending` |
 | nacer con evidencia o fecha ya puestas | `mint_rejects_preloaded_evidence` |
 | datum inicial no inline | `mint_rejects_non_inline_datum` |
+| purpose que no es spend ni mint (withdraw, publish, vote, propose) — cerrado el 2026-09-08, antes solo se sostenía por lectura de código | `else_rejects_other_script_purposes` |
 
 Los negativos van marcados `test ... fail` porque los `expect` abortan en vez de devolver `False`.
 
