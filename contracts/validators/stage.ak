@@ -577,6 +577,84 @@ test spend_rejects_open_ended_validity_range() fail {
   )
 }
 
+// ── Tests: boundary exacto de la ventana de validez ──────────────────────
+//
+// Todos los tests de arriba usan `now - 1`/`now + 1` de margen (ver `tx()`),
+// así que nunca ejercitan el borde exacto: si `>=`/`<=` se degradara a
+// `>`/`</`, ningún test anterior lo vería.
+
+test spend_accepts_timestamp_at_lower_bound() {
+  let old = datum_at(InProgress, False)
+  let new = StageDatum { ..old, state: Completed, completed_at: 100 }
+  stage.spend(
+    admin_key,
+    Some(old),
+    Advance {
+      to: Completed,
+      completion: Some(Completion { evidence_root: "", now: 100 }),
+    },
+    own_ref,
+    Transaction {
+      ..transition_tx(old, new, 100),
+      validity_range: interval.between(100, 110),
+    },
+  )
+}
+
+test spend_accepts_timestamp_at_upper_bound() {
+  let old = datum_at(InProgress, False)
+  let new = StageDatum { ..old, state: Completed, completed_at: 100 }
+  stage.spend(
+    admin_key,
+    Some(old),
+    Advance {
+      to: Completed,
+      completion: Some(Completion { evidence_root: "", now: 100 }),
+    },
+    own_ref,
+    Transaction {
+      ..transition_tx(old, new, 100),
+      validity_range: interval.between(90, 100),
+    },
+  )
+}
+
+test spend_rejects_timestamp_one_below_lower_bound() fail {
+  let old = datum_at(InProgress, False)
+  let new = StageDatum { ..old, state: Completed, completed_at: 99 }
+  stage.spend(
+    admin_key,
+    Some(old),
+    Advance {
+      to: Completed,
+      completion: Some(Completion { evidence_root: "", now: 99 }),
+    },
+    own_ref,
+    Transaction {
+      ..transition_tx(old, new, 99),
+      validity_range: interval.between(100, 110),
+    },
+  )
+}
+
+test spend_rejects_timestamp_one_above_upper_bound() fail {
+  let old = datum_at(InProgress, False)
+  let new = StageDatum { ..old, state: Completed, completed_at: 101 }
+  stage.spend(
+    admin_key,
+    Some(old),
+    Advance {
+      to: Completed,
+      completion: Some(Completion { evidence_root: "", now: 101 }),
+    },
+    own_ref,
+    Transaction {
+      ..transition_tx(old, new, 101),
+      validity_range: interval.between(90, 100),
+    },
+  )
+}
+
 // ── Tests: thread token en las transiciones ──────────────────────────────
 
 test spend_rejects_utxo_without_thread_token() fail {

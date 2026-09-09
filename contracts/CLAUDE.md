@@ -83,7 +83,7 @@ que el producto viene a eliminar.
 
 `aiken check` **no mide coverage de líneas** —solo tiene `--property-coverage`, que es la
 distribución de labels en property tests—, así que el ≥95% del criterio 2 del SOM se demuestra con
-esta tabla. **78 tests, 0 fallando.**
+esta tabla. **82 tests, 0 fallando.**
 
 `lib/propnexus/fsm.ak` — 43:
 
@@ -98,7 +98,7 @@ esta tabla. **78 tests, 0 fallando.**
 | El datum codifica al mismo CBOR que el códec de `packages/cardano` espera — el "valor dorado" (ver `packages/cardano/CLAUDE.md`) | `t_golden_datum_encoding` (1) |
 | El redeemer (`StageRedeemer`/`MintAction`) codifica al mismo CBOR que `encodeAdvanceRedeemer`/`encodeInitRedeemer` de `packages/cardano` — mismo boundary que el datum, cerrado el 2026-09-08 (`specs/PLAN-2026-09-08-tests-aiken-robustez.md`) | `t_golden_redeemer_*` (3) |
 
-`validators/stage.ak` — 35 (6 caminos felices + 28 puntos de rechazo + 1 sobre el `else` genérico):
+`validators/stage.ak` — 39 (8 caminos felices + 30 puntos de rechazo + 1 sobre el `else` genérico):
 
 | Punto de rechazo | Test |
 |---|---|
@@ -118,6 +118,8 @@ esta tabla. **78 tests, 0 fallando.**
 | el datum nuevo no coincide con el redeemer | `spend_rejects_datum_not_matching_redeemer` |
 | `completed_at` fuera de la ventana de validez | `spend_rejects_timestamp_outside_validity_range` |
 | ventana de validez abierta (sin punta finita) | `spend_rejects_open_ended_validity_range` |
+| `completed_at` un instante antes del borde inferior de la ventana (el borde exacto acepta — caminos felices) | `spend_rejects_timestamp_one_below_lower_bound` |
+| `completed_at` un instante después del borde superior de la ventana | `spend_rejects_timestamp_one_above_upper_bound` |
 | el UTxO gastado no lleva thread token | `spend_rejects_utxo_without_thread_token` |
 | el token es el de otro stage | `spend_rejects_thread_token_of_another_stage` |
 | el UTxO gastado lleva 2 unidades del propio thread token, no 1 (análogo al de `mint`) | `spend_rejects_utxo_with_two_units_of_own_token` |
