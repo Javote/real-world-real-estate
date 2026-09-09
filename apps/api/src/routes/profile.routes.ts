@@ -1,4 +1,8 @@
-import { updateNotificationPrefsSchema, updateProfileSchema } from "@plataforma/shared";
+import {
+  profileSchema,
+  updateNotificationPrefsSchema,
+  updateProfileSchema
+} from "@plataforma/shared";
 import { type Request, Router } from "express";
 import { db } from "../lib/db";
 import { authenticate, authorize, CUALQUIER_ROL } from "../middlewares/auth";
@@ -37,7 +41,7 @@ router.get(
       .where("id", "=", req.user!.id)
       .executeTakeFirstOrThrow();
 
-    return res.json(usuario);
+    return res.json(profileSchema.parse(usuario));
   }
 );
 
@@ -64,7 +68,7 @@ router.patch(
       entityId: req.user!.id
     });
 
-    return res.json(usuario);
+    return res.json(profileSchema.parse(usuario));
   }
 );
 

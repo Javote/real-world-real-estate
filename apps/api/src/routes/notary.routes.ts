@@ -1,12 +1,15 @@
 import {
   cuidParamSchema,
   cursorPaginationSchema,
-  type NotaryKpis,
-  type NotarySignature,
-  type PendingDossier,
+  dossierSchema,
+  notaryKpisSchema,
+  notarySignatureSchema,
+  paginatedResponseSchema,
+  pendingDossierSchema,
   rejectDossierSchema
 } from "@plataforma/shared";
 import { type Request, Router } from "express";
+import { z } from "zod";
 import { anchorCommitmentEvent, commitmentOf } from "../domain/anchoring";
 import { compileDossier } from "../domain/dossier";
 import { notifyUnitInvestor } from "../domain/notify";
@@ -73,14 +76,14 @@ router.get(
     );
     const pendientes = filas.filter((f) => f.status === "compiled");
 
-    const kpis: NotaryKpis = {
+    const kpis = notaryKpisSchema.parse({
       pendingDossiers: pendientes.length,
       // "Verificado" acá es el dossier revisado y resuelto: firmado o rechazado.
       // No afirma nada sobre la obra (D-026).
       verified: filas.filter((f) => f.status !== "compiled").length,
       signed: firmados.length,
       unitsUnderReview: new Set(pendientes.map((f) => f.unitId)).size
-    };
+    });
     return res.json(kpis);
   }
 );
@@ -111,7 +114,7 @@ router.get(
       .limit(50)
       .execute();
 
-    const pendientes: PendingDossier[] = [];
+    const pendientes: z.infer<typeof pendingDossierSchema>[] = [];
     for (const fila of filas) {
       const dossier = await compileDossier(fila.unitId);
       pendientes.push({
@@ -124,7 +127,7 @@ router.get(
       });
     }
 
-    return res.json(pendientes);
+    return res.json(z.array(pendingDossierSchema).parse(pendientes));
   }
 );
 
@@ -145,7 +148,7 @@ router.get(
     if (!dossier) return res.status(404).json({ message: "Dossier not found" });
 
     const { investorId: _investorId, ...publico } = dossier;
-    return res.json(publico);
+    return res.json(dossierSchema.parse(publico));
   }
 );
 
@@ -335,22 +338,26 @@ router.get(
     }
 
     const filas = await query.execute();
-    const items = filas.map((f) => ({
-      dossierId: f.dossierId,
-      unitReference: f.unitReference,
-      projectName: f.projectName,
-      masterHash: f.masterHash,
-      signatureTxid: f.signatureTxid,
-      signedAt: f.signedAt ? new Date(f.signedAt) : null,
-      status: f.status
-    })) as NotarySignature[];
+    const items = z.array(notarySignatureSchema).parse(
+      filas.map((f) => ({
+        dossierId: f.dossierId,
+        unitReference: f.unitReference,
+        projectName: f.projectName,
+        masterHash: f.masterHash,
+        signatureTxid: f.signatureTxid,
+        signedAt: f.signedAt ? new Date(f.signedAt) : null,
+        status: f.status
+      }))
+    );
 
     const ultima = items.at(-1);
 
-    return res.json({
-      items,
-      nextCursor: ultima?.signedAt ? ultima.signedAt.toISOString() : null
-    });
+    return res.json(
+      paginatedResponseSchema(notarySignatureSchema).parse({
+        items,
+        nextCursor: ultima?.signedAt ? ultima.signedAt.toISOString() : null
+      })
+    );
   }
 );
 

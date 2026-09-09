@@ -1,4 +1,4 @@
-import { cuidParamSchema, type UnreadCount } from "@plataforma/shared";
+import { cuidParamSchema, unreadCountSchema } from "@plataforma/shared";
 import { type Request, Router } from "express";
 import { db } from "../lib/db";
 import { authenticate, authorize, CUALQUIER_ROL } from "../middlewares/auth";
@@ -36,7 +36,7 @@ router.get(
       .where("readAt", "is", null)
       .executeTakeFirstOrThrow();
 
-    return res.json({ unread: Number(fila.total) } satisfies UnreadCount);
+    return res.json(unreadCountSchema.parse({ unread: Number(fila.total) }));
   }
 );
 

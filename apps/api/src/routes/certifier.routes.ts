@@ -1,11 +1,15 @@
 import {
-  type CertifierAssignment,
-  type CertifierKpis,
+  certifierAssignmentSchema,
+  certifierCertificateSchema,
+  certifierKpisSchema,
+  certifierStageViewSchema,
   cuidParamSchema,
   cursorPaginationSchema,
-  observeStageSchema
+  observeStageSchema,
+  paginatedResponseSchema
 } from "@plataforma/shared";
 import { type Request, Router } from "express";
+import { z } from "zod";
 import { transitionStage } from "../domain/stage-transition";
 import { db } from "../lib/db";
 import { authenticate, authorize } from "../middlewares/auth";
@@ -42,7 +46,7 @@ router.get(
       ? await db.selectFrom("Stage").select(["state"]).where("projectId", "in", ids).execute()
       : [];
 
-    const kpis: CertifierKpis = {
+    const kpis = certifierKpisSchema.parse({
       // "Asignado" es, por ahora, un stage en curso dentro de un proyecto donde
       // este usuario es miembro con rol verifier. El modelo de asignación
       // explícita todavía no existe.
@@ -50,7 +54,7 @@ router.get(
       certified: stages.filter((s) => s.state === "Completed").length,
       observed: stages.filter((s) => s.state === "Observed").length,
       totalStages: stages.length
-    };
+    });
 
     return res.json(kpis);
   }
@@ -65,7 +69,7 @@ router.get(
   async (req, res) => {
     const ids = (await proyectosVisibles(req.user!.id, req.user!.role).execute()).map((p) => p.id);
 
-    if (ids.length === 0) return res.json([] satisfies CertifierAssignment[]);
+    if (ids.length === 0) return res.json(z.array(certifierAssignmentSchema).parse([]));
 
     const filas = await db
       .selectFrom("Stage")
@@ -81,7 +85,7 @@ router.get(
       .orderBy("Stage.sequenceOrder", "asc")
       .execute();
 
-    return res.json(filas satisfies CertifierAssignment[]);
+    return res.json(z.array(certifierAssignmentSchema).parse(filas));
   }
 );
 
@@ -120,7 +124,7 @@ router.get(
     // El empty-state de la fila 56v es parte del diseño, no un caso de error:
     // un stage sin evidencia se ve, y por eso la lista viaja vacía en vez de
     // 404.
-    return res.json({ ...stage, evidence: evidencia });
+    return res.json(certifierStageViewSchema.parse({ ...stage, evidence: evidencia }));
   }
 );
 
@@ -223,10 +227,12 @@ router.get(
     const filas = await query.execute();
     const ultima = filas.at(-1);
 
-    return res.json({
-      items: filas,
-      nextCursor: ultima?.certifiedAt ? new Date(ultima.certifiedAt).toISOString() : null
-    });
+    return res.json(
+      paginatedResponseSchema(certifierCertificateSchema).parse({
+        items: filas,
+        nextCursor: ultima?.certifiedAt ? new Date(ultima.certifiedAt).toISOString() : null
+      })
+    );
   }
 );
 

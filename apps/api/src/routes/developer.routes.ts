@@ -4,11 +4,13 @@ import {
   createDeveloperProjectSchema,
   cuidParamSchema,
   DEFAULT_STAGE_CATALOG,
-  type DeveloperKpis,
   developerDocumentListQuerySchema,
+  developerDocumentSchema,
+  developerKpisSchema,
   INITIAL_STAGE_STATE
 } from "@plataforma/shared";
 import { type Request, Router } from "express";
+import { z } from "zod";
 import { createId } from "../db/id";
 import type { OnChainEventRow } from "../db/types";
 import { anchorCommitmentEvent } from "../domain/anchoring";
@@ -320,7 +322,7 @@ router.get(
           ? documentos.filter((d) => d.txid === null)
           : documentos;
 
-    return res.json(filtrados);
+    return res.json(z.array(developerDocumentSchema).parse(filtrados));
   }
 );
 
@@ -467,13 +469,13 @@ router.get(
     const ids = (await proyectosVisibles(req.user!.id, req.user!.role).execute()).map((p) => p.id);
 
     if (ids.length === 0) {
-      const vacio: DeveloperKpis = {
+      const vacio = developerKpisSchema.parse({
         activeProjects: 0,
         totalUnits: 0,
         capitalRaisedMinorUnits: 0,
         averageProgress: 0,
         verifiedDocuments: 0
-      };
+      });
       return res.json(vacio);
     }
 
@@ -513,13 +515,13 @@ router.get(
 
     const completados = stages.filter((s) => s.state === "Completed").length;
 
-    const kpis: DeveloperKpis = {
+    const kpis = developerKpisSchema.parse({
       activeProjects: ids.length,
       totalUnits: Number(unidades?.total ?? 0),
       capitalRaisedMinorUnits: Number(contratos?.total ?? 0),
       averageProgress: stages.length ? Math.round((completados / stages.length) * 100) : 0,
       verifiedDocuments: Number(anclados?.total ?? 0)
-    };
+    });
 
     return res.json(kpis);
   }

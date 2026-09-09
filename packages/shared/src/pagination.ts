@@ -16,3 +16,16 @@ export const auditLogQuerySchema = cursorPaginationSchema.extend({
   category: z.string().optional()
 });
 export type AuditLogQuery = z.infer<typeof auditLogQuerySchema>;
+
+/**
+ * La forma de respuesta de las tres superficies de historial paginadas por
+ * cursor: `{ items, nextCursor }`, con `nextCursor` el ISO del último item o
+ * `null` si no hay más. Una función y no un schema fijo porque cada superficie
+ * pagina un item distinto (`certifierCertificateSchema`, `notarySignatureSchema`...).
+ */
+export function paginatedResponseSchema<T extends z.ZodType>(itemSchema: T) {
+  return z.strictObject({
+    items: z.array(itemSchema),
+    nextCursor: z.string().nullable()
+  });
+}

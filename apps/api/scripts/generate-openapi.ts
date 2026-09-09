@@ -5,6 +5,13 @@ import {
   addProjectMemberSchema,
   anchorDocumentSchema,
   auditLogQuerySchema,
+  capitalByProjectSchema,
+  capitalMonthlyPointSchema,
+  capitalSummarySchema,
+  certifierAssignmentSchema,
+  certifierCertificateSchema,
+  certifierKpisSchema,
+  certifierStageViewSchema,
   createDeveloperProjectSchema,
   createInvitationSchema,
   createProjectSchema,
@@ -13,16 +20,32 @@ import {
   cuidParamSchema,
   cursorPaginationSchema,
   developerDocumentListQuerySchema,
+  developerDocumentSchema,
+  developerKpisSchema,
+  dossierSchema,
+  dossierShareSchema,
+  evidenceProofSchema,
   hex64ParamSchema,
+  investorDirectoryEntrySchema,
   loginRequestSchema,
+  loginResponseSchema,
+  meResponseSchema,
+  notaryKpisSchema,
+  notarySignatureSchema,
   notificationQuerySchema,
+  notificationSchema,
   observeStageSchema,
+  paginatedResponseSchema,
+  pendingDossierSchema,
   positiveIntParamSchema,
+  profileSchema,
   projectListQuerySchema,
   rejectDossierSchema,
   releasePaymentSchema,
+  reservationToEscrowTelemetrySchema,
   stageEvidenceUploadSchema,
   stageTransitionSchema,
+  unreadCountSchema,
   updateEvidenceSchema,
   updateNotificationPrefsSchema,
   updateProfileSchema,
@@ -48,12 +71,17 @@ import { describir, leerMontaje } from "../src/lib/route-inventory";
 //
 // **La ambición es la misma que la del Postman: acotada, y a propósito.**
 // Body/query van con su schema real donde existe — que es la parte que un
-// reviewer necesita para armar un request válido. Las *respuestas* quedan
-// genéricas (200/201/204 sin schema): documentarlas pediría que cada handler
-// devolviera un tipo Zod, y hoy la mayoría devuelve un tipo TS inferido de
-// Kysely (`DeveloperKpis`, `NotarySignature`...) que no es un schema en
-// runtime — no hay de dónde derivar un JSON Schema sin inventarlo. Ese es un
-// proyecto aparte que nadie pidió todavía.
+// reviewer necesita para armar un request válido.
+//
+// **Las respuestas, Tanda 1 del plan (`specs/PLAN-2026-09-08-documentar-api-completa.md`):
+// las ~24 que ya tenían un schema Zod real en `packages/shared` —antes solo
+// usado para tipar en compile-time (`satisfies`) o ni eso— ahora también
+// VALIDAN en runtime (`schema.parse(...)` antes de responder) y se documentan
+// acá en `RESPONSE_SCHEMAS`. Las ~61 restantes siguen sin schema de salida: la
+// mayoría arma su respuesta con un spread de fila de Kysely o delega en un
+// tipo TS que nunca fue un schema Zod (`transitionStage`, `compileDossier`
+// para el caso `investorId` incluido...) — schematizarlas es la Tanda 2, y
+// pide escribir el schema antes de conectarlo, no al revés.
 //
 // **El código de éxito se lee del handler, no se adivina por verbo HTTP.**
 // La primera versión de este generador usaba una convención (`POST → 201`,
@@ -113,6 +141,39 @@ const REQUEST_SCHEMAS: Record<string, SchemaEntry> = {
   "POST /api/v1/certifier/stages/:id/observe": { body: observeStageSchema },
   "GET /api/v1/notary/signatures": { query: cursorPaginationSchema },
   "POST /api/v1/notary/dossiers/:id/reject": { body: rejectDossierSchema }
+};
+
+/**
+ * Ruta → su schema de respuesta de éxito. Tanda 1 del plan: solo las que ya
+ * tenían un schema Zod real antes de este cambio — ninguno se escribió acá,
+ * solo se conectó. Si el handler devuelve una lista, el valor es
+ * `z.array(...)`; si es la forma `{ items, nextCursor }`, `paginatedResponseSchema(...)`.
+ */
+const RESPONSE_SCHEMAS: Record<string, ZodType> = {
+  "POST /api/v1/auth/login": loginResponseSchema,
+  "GET /api/v1/auth/me": meResponseSchema,
+  "GET /api/v1/investor/notifications": z.array(notificationSchema),
+  "POST /api/v1/investor/units/:id/dossier/share": dossierShareSchema,
+  "GET /api/v1/investor/units/:id/dossier": dossierSchema,
+  "GET /api/v1/certifier/kpis": certifierKpisSchema,
+  "GET /api/v1/certifier/assignments": z.array(certifierAssignmentSchema),
+  "GET /api/v1/certifier/stages/:id": certifierStageViewSchema,
+  "GET /api/v1/certifier/certificates": paginatedResponseSchema(certifierCertificateSchema),
+  "GET /api/v1/notary/kpis": notaryKpisSchema,
+  "GET /api/v1/notary/dossiers/pending": z.array(pendingDossierSchema),
+  "GET /api/v1/notary/dossiers/:id": dossierSchema,
+  "GET /api/v1/notary/signatures": paginatedResponseSchema(notarySignatureSchema),
+  "GET /api/v1/notifications/unread-count": unreadCountSchema,
+  "GET /api/v1/developer/documents": z.array(developerDocumentSchema),
+  "GET /api/v1/developer/kpis": developerKpisSchema,
+  "GET /api/v1/developer/capital/summary": capitalSummarySchema,
+  "GET /api/v1/developer/capital/monthly": z.array(capitalMonthlyPointSchema),
+  "GET /api/v1/developer/capital/by-project": z.array(capitalByProjectSchema),
+  "GET /api/v1/developer/investors": z.array(investorDirectoryEntrySchema),
+  "GET /api/v1/profile": profileSchema,
+  "PATCH /api/v1/profile": profileSchema,
+  "GET /api/v1/evidence/:bundleId/proof/:fileHash": evidenceProofSchema,
+  "GET /api/v1/audit-logs/telemetry/reservation-to-escrow": reservationToEscrowTelemetrySchema
 };
 
 /** La forma exacta de `ZodError.flatten()`, que es lo que devuelve todo 400. */
@@ -213,7 +274,12 @@ export function buildOpenApiDocument() {
         }),
         ...(autenticado && { security: [{ bearerAuth: [] }] }),
         responses: {
-          [exito]: { description: exito === "204" ? "Sin contenido" : "OK" },
+          [exito]: {
+            description: exito === "204" ? "Sin contenido" : "OK",
+            ...(RESPONSE_SCHEMAS[clave] && {
+              content: { "application/json": { schema: RESPONSE_SCHEMAS[clave] } }
+            })
+          },
           ...(entrada && {
             "400": {
               description: "Body o query no pasan el schema",
@@ -238,8 +304,9 @@ export function buildOpenApiDocument() {
         "Generado desde el router montado (`pnpm --filter @plataforma/api docs:openapi`), " +
         "no mantenido a mano — ver apps/api/scripts/generate-openapi.ts. El código de éxito " +
         "se lee del `res.status(2xx)` real del handler (con el de creación si el handler " +
-        "tiene más de uno, caso idempotente); las respuestas no traen schema (ver el " +
-        "comentario del generador). Body y query sí son el schema Zod real donde existe."
+        "tiene más de uno, caso idempotente). Body, query y ~24 respuestas de éxito son el " +
+        "schema Zod real, validado en runtime antes de responder — el resto de las " +
+        "respuestas sigue sin schema (Tanda 2 de specs/PLAN-2026-09-08-documentar-api-completa.md)."
     },
     servers: [{ url: "http://localhost:3001/api/v1", description: "Local (pnpm dev)" }],
     components: {

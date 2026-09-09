@@ -1,11 +1,13 @@
 import { randomBytes } from "node:crypto";
 import {
   cuidParamSchema,
-  type DossierShare,
-  type Notification,
-  notificationQuerySchema
+  dossierSchema,
+  dossierShareSchema,
+  notificationQuerySchema,
+  notificationSchema
 } from "@plataforma/shared";
 import { type Request, Router } from "express";
+import { z } from "zod";
 import { createId } from "../db/id";
 import { anchorCommitmentEvent, commitmentOf } from "../domain/anchoring";
 import { compileDossier } from "../domain/dossier";
@@ -243,7 +245,7 @@ router.get(
     if (resultado.error === 404) return res.status(404).json({ message: "Unit not found" });
 
     const { investorId: _investorId, ...dossier } = resultado.dossier;
-    return res.json(dossier);
+    return res.json(dossierSchema.parse(dossier));
   }
 );
 
@@ -343,11 +345,13 @@ router.post(
 
     // Path sin host: el cliente lo compone con su propio origen. La API no
     // sabe —ni debe saber— bajo qué dominio se sirve el front.
-    return res.status(201).json({
-      shareToken: token,
-      path: `/api/v1/public/dossier/${token}`,
-      masterHash: d.masterHash
-    } satisfies DossierShare);
+    return res.status(201).json(
+      dossierShareSchema.parse({
+        shareToken: token,
+        path: `/api/v1/public/dossier/${token}`,
+        masterHash: d.masterHash
+      })
+    );
   }
 );
 
@@ -378,15 +382,17 @@ router.get(
 
     const filas = await query.orderBy("createdAt", "desc").limit(100).execute();
 
-    const notificaciones = filas.map((fila) => ({
-      id: fila.id,
-      category: fila.category,
-      titleKey: fila.titleKey,
-      params: fila.paramsJson ? JSON.parse(fila.paramsJson) : {},
-      unitId: fila.unitId,
-      readAt: fila.readAt,
-      createdAt: fila.createdAt
-    })) as Notification[];
+    const notificaciones = z.array(notificationSchema).parse(
+      filas.map((fila) => ({
+        id: fila.id,
+        category: fila.category,
+        titleKey: fila.titleKey,
+        params: fila.paramsJson ? JSON.parse(fila.paramsJson) : {},
+        unitId: fila.unitId,
+        readAt: fila.readAt,
+        createdAt: fila.createdAt
+      }))
+    );
 
     return res.json(notificaciones);
   }

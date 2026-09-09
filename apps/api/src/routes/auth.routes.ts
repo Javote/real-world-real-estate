@@ -1,6 +1,5 @@
 import { randomUUID } from "node:crypto";
-import type { LoginResponse, MeResponse } from "@plataforma/shared";
-import { loginRequestSchema } from "@plataforma/shared";
+import { loginRequestSchema, loginResponseSchema, meResponseSchema } from "@plataforma/shared";
 import bcrypt from "bcrypt";
 import { Router } from "express";
 import { db } from "../lib/db";
@@ -66,10 +65,11 @@ router.post("/login", loginRateLimiter(), async (req, res) => {
     entityId: user.id
   });
 
-  // Tipado explícito a propósito: es lo que impide que un campo nuevo del modelo
-  // —passwordHash, el primero de la lista— se filtre a la respuesta por un
-  // spread distraído. El compilador lo rechaza antes que cualquier revisor.
-  const body: LoginResponse = {
+  // `.parse()` y no solo el tipo: es lo que impide que un campo nuevo del
+  // modelo —passwordHash, el primero de la lista— se filtre a la respuesta
+  // por un spread distraído. `z.strictObject` lo rechaza en RUNTIME, no solo
+  // en el compilador, que un `spread` distraído puede engañar igual.
+  const body = loginResponseSchema.parse({
     token,
     user: {
       id: user.id,
@@ -77,7 +77,7 @@ router.post("/login", loginRateLimiter(), async (req, res) => {
       role: user.role,
       fullName: user.fullName
     }
-  };
+  });
 
   return res.json(body);
 });
@@ -100,10 +100,10 @@ router.get(
       return res.status(401).json({ message: "User not active" });
     }
 
-    const body: MeResponse = {
+    const body = meResponseSchema.parse({
       ...user,
       createdAt: user.createdAt.toISOString() // JSON no tiene tipo fecha; UTC (regla 1)
-    };
+    });
 
     return res.json(body);
   }

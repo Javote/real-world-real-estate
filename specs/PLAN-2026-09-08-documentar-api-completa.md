@@ -102,12 +102,37 @@ sirven tal cual, cuáles necesitan un ajuste chico, y cuáles hay que escribir d
    de una fila de Kysely con spread (`{ ...stage, evidences, project }` — el caso más común y el
    más peligroso: un campo nuevo de la tabla se filtra solo si no hay un schema estricto que lo
    corte, como ya pasó una vez con `passwordHash`)?
-2. **Tanda 1 — conectar lo que ya existe.** Los ~24 candidatos de la auditoría de arriba: sumar su
-   nombre a un `RESPONSE_SCHEMAS` en `generate-openapi.ts` (mismo patrón que `REQUEST_SCHEMAS`) y,
-   donde el handler solo tipa con `satisfies` (compile-time), pasar a `.parse()`/`safeParse()` antes
-   de responder — cierra la brecha entre "el compilador me lo aseguró" y "lo verifiqué en runtime",
-   que es justo la que dejó pasar el agujero de `passwordHash` en su momento. **Un commit, `pnpm
-   verify:all` en verde, sin escribir un schema nuevo.**
+2. **Tanda 1 — conectar lo que ya existe — ✅ cerrada el 2026-09-08.** 24 endpoints (contra la
+   estimación de ~24), verificados uno por uno leyendo el `SELECT`/objeto real del handler contra
+   el schema candidato antes de conectarlo — no por nombre. Los que solo tipaban con `satisfies` o
+   con una anotación de tipo (`const x: Foo = {...}`) pasaron a `schema.parse({...})`: cierra la
+   brecha entre "el compilador me lo aseguró" (una anotación de tipo no impide un campo de más si el
+   objeto se arma con spread) y "lo verifiqué en runtime", que es justo la que dejó pasar el
+   agujero de `passwordHash` en su momento. Se sumó `paginatedResponseSchema(item)` a
+   `packages/shared/src/pagination.ts` para la forma `{ items, nextCursor }` que comparten
+   certificados, firmas y (a futuro) audit-log — una función, no un schema fijo, porque cada
+   superficie pagina un item distinto.
+
+   **Tres hallazgos, ninguno corregido — se preguntan antes de tocar nada:**
+   - `projectSummarySchema` (`panels.ts`) **no lo usa ningún endpoint** — cero resultados
+     grepeando `ProjectSummary`/`projectSummarySchema` en `apps/api` y `apps/web`. Parece escrito
+     para la superficie "Buy" del investor (fila 02) y el endpoint real que la sirve, si existe,
+     usa otros nombres de campo. ¿Se borra, o falta conectarlo a un endpoint que todavía no se
+     escribió?
+   - `notaryKpisSchema` marca sus 4 campos `.nullable()` con un comentario que dice *"los cuatro
+     son null hoy"* — pero el commit del 2026-09-08 documentado en `CLAUDE.md` raíz dice
+     explícitamente *"Ya no son `null`"* y el handler siempre manda números. El schema no está mal
+     (nullable admite number igual), pero el comentario está desactualizado.
+   - `PATCH /profile/notifications` devuelve el merge parcial tal cual se guarda (`combinadas`),
+     que **no siempre tiene las 5 claves** — un primer PATCH con `{stage:false}` devuelve
+     `{stage:false}`, no las 5. Conectar `notificationPrefsSchema` ahí completaría las 4 faltantes
+     con su default `true` en la RESPUESTA sin cambiar lo que se guarda, que es un cambio de
+     comportamiento real (aunque para mejor) — no se tocó en Tanda 1 por eso, queda para decidir en
+     Tanda 2.
+
+   `pnpm verify:all` completo en verde (37 test files, incluido Aiken) — ningún `.parse()` tiró en
+   ninguno de los 24, que es la prueba de que el objeto real y el schema candidato de verdad
+   coincidían y no solo por nombre.
 3. **Punto de control con el dueño**, acá — antes de escalar a las ~60 rutas restantes: elegir 1-2
    endpoints chicos de la Tanda 2 (ej. `profile.routes.ts`, 3 endpoints) como ejemplo del nivel de
    detalle esperado, y confirmar que es el que el dueño espera antes de replicarlo.
@@ -130,11 +155,12 @@ mano es el momento en que más fácil es notar un campo que no debería viajar (
 ## Orden sugerido
 
 1. ~~Pieza A completa primero~~ — ✅ cerrada el 2026-09-08.
-2. Pieza B, Tanda 1 (conectar los ~24 candidatos) — bajo costo, alto impacto en el número que
-   importa para el milestone. **Siguiente paso.**
-3. Checkpoint con el dueño.
-4. Pieza B, Tanda 2, por archivo de rutas, en el orden que sea más simple → más complejo: `profile`,
-   `users`, `stages`, `evidence`, `projects`, `certifier`, `notary`, `developer*`, `investor`.
+2. ~~Pieza B, Tanda 1 (conectar los ~24 candidatos)~~ — ✅ cerrada el 2026-09-08.
+3. **Checkpoint con el dueño — pendiente.** Antes de escalar a las ~61 rutas de la Tanda 2: resolver
+   los tres hallazgos de arriba, y confirmar el nivel de detalle esperado sobre 1-2 endpoints chicos.
+4. Pieza B, Tanda 2, por archivo de rutas, en el orden que sea más simple → más complejo: `profile`
+   (falta solo `/notifications`), `users`, `stages`, `evidence`, `projects`, `certifier` (falta
+   `certify`/`observe`), `notary` (falta `sign`/`reject`), `developer*`, `investor`.
 
 ## Qué NO hace este plan, a propósito
 

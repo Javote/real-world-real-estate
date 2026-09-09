@@ -1,4 +1,4 @@
-import type { ReservationToEscrowTelemetry } from "@plataforma/shared";
+import { reservationToEscrowTelemetrySchema } from "@plataforma/shared";
 import { Router } from "express";
 import { reconciliarAnclajes } from "../domain/reconcile";
 import { db } from "../lib/db";
@@ -57,11 +57,11 @@ router.get(
       .map((e) => (e.updatedAt.getTime() - e.createdAt.getTime()) / 60_000)
       .sort((a, b) => a - b);
 
-    const body: ReservationToEscrowTelemetry = {
+    const body = reservationToEscrowTelemetrySchema.parse({
       sampleSize: minutos.length,
       medianMinutes: mediana(minutos),
       maxMinutes: minutos.length > 0 ? minutos[minutos.length - 1] : null
-    };
+    });
 
     return res.json(body);
   }

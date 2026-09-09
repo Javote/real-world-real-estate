@@ -1,10 +1,12 @@
-import type {
-  CapitalByProject,
-  CapitalMonthlyPoint,
-  CapitalSummary,
-  InvestorDirectoryEntry
+import {
+  capitalByProjectSchema,
+  capitalMonthlyPointSchema,
+  capitalSummarySchema,
+  type InvestorDirectoryEntry,
+  investorDirectoryEntrySchema
 } from "@plataforma/shared";
 import { Router } from "express";
+import { z } from "zod";
 import type { UserRole } from "../db/types";
 import { db } from "../lib/db";
 import { authenticate, authorize, projectScope } from "../middlewares/auth";
@@ -97,7 +99,7 @@ router.get(
     const raised = contratos.reduce((acc, c) => acc + c.totalMinorUnits, 0);
     const released = releases.reduce((acc, r) => acc + r.amountMinorUnits, 0);
 
-    const resumen: CapitalSummary = {
+    const resumen = capitalSummarySchema.parse({
       raisedMinorUnits: raised,
       releasedMinorUnits: released,
       // No puede ser negativo: liberar más de lo contratado no es un estado
@@ -105,7 +107,7 @@ router.get(
       pendingMinorUnits: Math.max(raised - released, 0),
       contracts: contratos.length,
       currency: monedaUnica(contratos.map((c) => c.currency))
-    };
+    });
 
     return res.json(resumen);
   }
@@ -125,7 +127,7 @@ router.get(
     const ids = await misProyectoIds(req.user!.id, req.user!.role);
     const { contratos, releases } = await movimientos(ids);
 
-    const porMes = new Map<string, CapitalMonthlyPoint>();
+    const porMes = new Map<string, z.infer<typeof capitalMonthlyPointSchema>>();
     const acumular = (mes: string) =>
       porMes.get(mes) ?? { month: mes, raisedMinorUnits: 0, releasedMinorUnits: 0 };
 
@@ -143,7 +145,7 @@ router.get(
     }
 
     const serie = [...porMes.values()].sort((a, b) => a.month.localeCompare(b.month));
-    return res.json(serie);
+    return res.json(z.array(capitalMonthlyPointSchema).parse(serie));
   }
 );
 
@@ -165,24 +167,26 @@ router.get(
       movimientos(ids)
     ]);
 
-    const desglose: CapitalByProject[] = proyectos.map((p) => {
-      const delProyecto = contratos.filter((c) => c.projectId === p.id);
-      const unidadesDel = unidades.filter((u) => u.projectId === p.id);
+    const desglose = z.array(capitalByProjectSchema).parse(
+      proyectos.map((p) => {
+        const delProyecto = contratos.filter((c) => c.projectId === p.id);
+        const unidadesDel = unidades.filter((u) => u.projectId === p.id);
 
-      return {
-        projectId: p.id,
-        projectName: p.name,
-        raisedMinorUnits: delProyecto.reduce((acc, c) => acc + c.totalMinorUnits, 0),
-        releasedMinorUnits: releases
-          .filter((r) => r.projectId === p.id)
-          .reduce((acc, r) => acc + r.amountMinorUnits, 0),
-        unitsSold: unidadesDel.filter((u) => u.investorId !== null).length,
-        totalUnits: unidadesDel.length,
-        // Distintos, no contratos: quien compra dos unidades es un investor.
-        investors: new Set(delProyecto.map((c) => c.investorId)).size,
-        currency: monedaUnica(delProyecto.map((c) => c.currency))
-      };
-    });
+        return {
+          projectId: p.id,
+          projectName: p.name,
+          raisedMinorUnits: delProyecto.reduce((acc, c) => acc + c.totalMinorUnits, 0),
+          releasedMinorUnits: releases
+            .filter((r) => r.projectId === p.id)
+            .reduce((acc, r) => acc + r.amountMinorUnits, 0),
+          unitsSold: unidadesDel.filter((u) => u.investorId !== null).length,
+          totalUnits: unidadesDel.length,
+          // Distintos, no contratos: quien compra dos unidades es un investor.
+          investors: new Set(delProyecto.map((c) => c.investorId)).size,
+          currency: monedaUnica(delProyecto.map((c) => c.currency))
+        };
+      })
+    );
 
     return res.json(desglose);
   }
@@ -241,8 +245,11 @@ router.get(
       porInvestor.set(fila.id, actual);
     }
 
-    const directorio: InvestorDirectoryEntry[] = [...porInvestor.values()].map(
-      ({ monedas, ...entrada }) => ({ ...entrada, currency: monedaUnica(monedas) })
+    const directorio = investorDirectoryEntrySchema.array().parse(
+      [...porInvestor.values()].map(({ monedas, ...entrada }) => ({
+        ...entrada,
+        currency: monedaUnica(monedas)
+      }))
     );
 
     return res.json(directorio);

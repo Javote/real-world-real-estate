@@ -1,7 +1,7 @@
 import { createHash } from "node:crypto";
 import {
   cuidParamSchema,
-  type EvidenceProof,
+  evidenceProofSchema,
   hex64ParamSchema,
   merkleProof,
   updateEvidenceSchema
@@ -388,7 +388,7 @@ router.get(
       );
       // Regla 17: sin TXID confirmado no hay timestamp que sostener.
       const confirmado = evidencia.anchorStatus === "Confirmed" && evidencia.txid !== null;
-      const body: EvidenceProof = {
+      const body = evidenceProofSchema.parse({
         merkleRoot: bundle.commitmentHash,
         leaf: req.params.fileHash as string,
         proof,
@@ -399,7 +399,7 @@ router.get(
           confirmado && evidencia.blockTimestamp
             ? new Date(evidencia.blockTimestamp).toISOString()
             : null
-      };
+      });
       return res.json(body);
     } catch {
       return res.status(404).json({ message: "That hash is not part of this bundle" });
