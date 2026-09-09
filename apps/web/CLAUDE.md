@@ -39,7 +39,7 @@ va — dos patrones compitiendo por la misma respuesta es redundancia, no rigor.
 | 1 | ¿está anclado? | `VerificationBadge` (P1) |
 | 2 | ¿cuál hash? (6+4) | `HashChip` (P2) · `StageChips` (P9) |
 | 3 | el hash completo, el explorador, la metadata | `TxidModal` (P3) · `AnchoringSuccessModal` (P4) · `MerkleRootProof` (P5) |
-| 4 | la historia entera o el artefacto compilado | audit log (P6) · dossier (P8) — **pendientes** |
+| 4 | la historia entera o el artefacto compilado | audit log (P6, `developer.audit-log.tsx`) · dossier (P8, `investor.unit.$unitId.dossier.tsx`) |
 
 **Un solo modal se abre solo:** `AnchoringSuccessModal`, porque el sistema lo emite tras un anclaje
 exitoso. Todos los demás los inicia el usuario (M2-D4 §6.3).
@@ -125,6 +125,45 @@ no la captura. No reintroducir un `hideBrand`.
   otro lado — ver `specs/RUNBOOK-deploy.md`.
 
 ## Trampas verificadas
+
+- **2026-09-09 · el `VerificationBadge` del detalle de etapa mostraba el TXID de la transición
+  equivocada.** `stage.events.find(e => e.eventType === 'STAGE_TRANSITION' && e.txid)` devuelve la
+  **primera**, y `GET /projects/:id/stages/:stageId` ordena por `eventIndex asc`. En un stage que
+  recorrió la FSM entera —`Pending → InProgress → Observed → InProgress → Completed`— eso es el
+  arranque, no el cierre: la píldora "Verificado" quedaba al lado de `certifiedAt` sustentada por
+  el TXID de una transición a **otro estado**.
+  **Verificado contra producción, no deducido:** "Terminaciones" de `torre-a` tiene `1` =
+  `Pending → InProgress` (`b28eb6cf…`) y `5` = `InProgress → Completed` (`e842c8ac…`); la pantalla
+  mostraba el primero. Es M2-D4 §6.2 en su forma más literal —*"the system never displays a proof
+  signal that cannot be substantiated"*— porque Depth 1 contesta "¿esto está anclado?" sobre el
+  estado **actual**.
+  **Fix:** `anclajeVigenteDelStage` en `lib/investor.ts` (la última transición anclada, no la
+  primera), con tests en `lib/investor.test.ts`. Vive como helper puro y no inline en la ruta
+  porque las rutas de TanStack no se testean unitariamente acá — mismo criterio que
+  `unicosPorStageId`, que nació del mismo tipo de rareza en la forma de los datos.
+  **La lección:** `.find()` sobre una lista ordenada ascendente devuelve lo más **viejo**. Cada vez
+  que un componente elija "el evento" de una entidad que tiene historia, preguntá si quiere el
+  primero o el último — y si la respuesta es "el que corresponde al estado actual", nunca es el
+  primero.
+
+- **2026-09-09 · dos acciones del hilo de estados no tenían clave de traducción, así que el audit
+  log las mostraba en crudo.** `CHANGE_STAGE_STATE` y `STAGE_WORK_INITIATED` no estaban en
+  `dictionary.ts`; `t()` devuelve `undefined` para una clave ausente y el `?? e.action` de
+  `developer.audit-log.tsx` caía al literal en mayúsculas. Justo las **dos transiciones que entran
+  a `InProgress`** (D-020: el auto-avance al subir la primera evidencia y el "Reanudar etapa"),
+  o sea la mitad del hilo, ilegible en la superficie que M2-D4 §Pattern 6 designa como su casa
+  —*"if a stage is re-anchored (e.g. after a remediation), the original anchor event remains; a new
+  event is appended"*—. Confirmado en producción: `AuditLog` tiene 2 filas `CHANGE_STAGE_STATE` y
+  1 `STAGE_WORK_INITIATED`, todas con `entityType = Stage`, que `auditScope` sí mapea.
+  **Quedan ~20 acciones más sin clave** (`ACCEPT_INVITATION`, `RELEASE_PAYMENT`, `CREATE_UNIT`, …).
+  No se agregaron acá a propósito: son otra tarea y no son el hilo. Las de `entityType = User`
+  (`LOGIN`, `CREATE_USER`, `UPDATE_PROFILE`) **nunca** se ven, porque `auditScope` deja `User`
+  afuera por diseño.
+  **Nada que agregar en la pantalla de la etapa, y esto es lo importante:** M2-D4 §6.1 dice que los
+  patrones no se superponen y que la **historia entera es Depth 4** (P6/P8). El detalle de etapa es
+  Depth 1/2/3. Poner ahí un historial de eventos sería mostrar el mismo material de prueba dos
+  veces en la misma pantalla, que es exactamente lo que §6.1 prohíbe. **Si el hilo no se lee, se
+  arregla el audit log, no la pantalla de la etapa.**
 
 - **2026-09-04 · `PanelLayout` no tenía `max-width`, y en desktop el `aspect-video` de `ProjectCard`
   escalaba con el viewport.** Sin límite de ancho, cada card medía más de 1000px de alto —

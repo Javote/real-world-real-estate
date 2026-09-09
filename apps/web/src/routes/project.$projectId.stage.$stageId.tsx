@@ -19,7 +19,12 @@ import { Dialog, DialogContent, DialogTitle } from '#/components/ui/dialog'
 import { formatDate, formatDateTime, formatMonthYear } from '#/i18n/format'
 import { useTranslation } from '#/i18n/useTranslation'
 import { useObjectUrls } from '#/lib/blobUrls'
-import { esFoto, formatoArchivo, reintentarSiNoEsAusencia } from '#/lib/investor'
+import {
+  anclajeVigenteDelStage,
+  esFoto,
+  formatoArchivo,
+  reintentarSiNoEsAusencia
+} from '#/lib/investor'
 import { bajarBlob } from '#/lib/stageProgress'
 
 // **M2-D5 filas 09-12 y 25m · `/project/:projectId/stage/:stageId`**
@@ -119,12 +124,14 @@ function InvestorStageDetail() {
   // **Tres anclajes distintos, tres preguntas distintas** (M2-D4 §6.1). Un solo
   // TXID para todo dice "Verificado" sobre cosas que ese TXID no compromete.
   //
-  //  1. La etapa (P1, arriba): su transición anclada.
+  //  1. La etapa (P1, arriba): su transición anclada **vigente** — la última,
+  //     no la primera. `events` viene ordenado por `eventIndex asc`, así que
+  //     un `.find()` devolvía el arranque del stage en vez de su estado
+  //     actual; el porqué completo está en `anclajeVigenteDelStage`.
   //  2. El bundle (P5, el modal del hito): el evento cuyo `commitment` ES la
   //     raíz del bundle. Sin esa igualdad, el TXID no sustancia estos archivos.
   //  3. Cada documento: el suyo, que viene del endpoint de documentos.
-  const anclajeDelStage = stage?.events.find((e) => e.eventType === 'STAGE_TRANSITION' && e.txid)
-  const txidDelStage = anclajeDelStage?.txid ?? null
+  const txidDelStage = anclajeVigenteDelStage(stage?.events ?? [])?.txid ?? null
 
   const raizDelBundle = stage?.bundle?.commitmentHash ?? null
   const anclajeDelBundle = raizDelBundle

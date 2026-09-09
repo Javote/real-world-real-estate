@@ -63,3 +63,29 @@ export function unicosPorStageId<T extends { stageId: string; txid?: string | nu
   }
   return [...porId.values()]
 }
+
+/**
+ * El anclaje **vigente** del stage: la ÚLTIMA transición con TXID, no la
+ * primera.
+ *
+ * `GET /projects/:id/stages/:stageId` devuelve `events` ordenados por
+ * `eventIndex asc`, así que un `.find()` devuelve la transición más **vieja**.
+ * En un stage que recorrió la FSM entera —`Pending → InProgress → Observed →
+ * InProgress → Completed`— eso es el arranque, no el cierre: el
+ * `VerificationBadge` de la cabecera quedaba diciendo "Verificado" al lado de
+ * `certifiedAt` con el TXID de una transición a **otro estado**.
+ *
+ * No es hipotético: "Terminaciones" de `torre-a` tiene `1` = `Pending →
+ * InProgress` (`b28eb6cf…`) y `5` = `InProgress → Completed` (`e842c8ac…`), y
+ * la pantalla mostraba el primero.
+ *
+ * Es M2-D4 §6.2 —*"the system never displays a proof signal that cannot be
+ * substantiated"*— en su forma más literal: Depth 1 contesta "¿esto está
+ * anclado?" sobre el estado **actual**, y el TXID tiene que ser el de ese
+ * estado.
+ */
+export function anclajeVigenteDelStage<T extends { eventType: string; txid?: string | null }>(
+  events: readonly T[]
+): T | undefined {
+  return events.filter((e) => e.eventType === 'STAGE_TRANSITION' && e.txid).at(-1)
+}
