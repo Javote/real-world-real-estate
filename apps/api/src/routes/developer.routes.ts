@@ -217,7 +217,6 @@ router.post(
             state: INITIAL_STAGE_STATE,
             // D-061: todo stage es validation-critical por default.
             validationCritical: true,
-            progressPercentage: null,
             createdAt: ahora,
             updatedAt: ahora
           }))

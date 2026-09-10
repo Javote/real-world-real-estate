@@ -150,7 +150,6 @@ export async function sembrarStages(
     name: string;
     sequenceOrder: number;
     state: StageState;
-    progressPercentage?: number;
   }[]
 ): Promise<void> {
   const ahora = new Date();
@@ -166,7 +165,6 @@ export async function sembrarStages(
         state: stage.state,
         // D-061: todo stage es validation-critical.
         validationCritical: true,
-        progressPercentage: stage.progressPercentage ?? null,
         createdAt: ahora,
         updatedAt: ahora
       })

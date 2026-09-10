@@ -126,9 +126,7 @@ beforeAll(async () => {
 /** Etapa con hilo real (mint), sin pasar por la ruta HTTP que se borró — ver
  * `helpers/stages.ts`. `sequenceOrder` random para no chocar con las fijas de
  * este archivo. */
-const crearStageConHilo = (
-  opts: { validationCritical?: boolean; progressPercentage?: number } = {}
-) =>
+const crearStageConHilo = (opts: { validationCritical?: boolean } = {}) =>
   crearStageMinteado({
     projectId: proyecto,
     name: "Stage con hilo",
@@ -310,14 +308,6 @@ describe("OnChainEvent · el aterrizaje del anclaje", () => {
       if (anterior === undefined) delete process.env.CARDANO_NETWORK;
       else process.env.CARDANO_NETWORK = anterior;
     }
-  });
-
-  it("acepta progressPercentage (avance de obra, D-021) y lo persiste — es opcional", async () => {
-    const conPorcentaje = await crearStageConHilo({ progressPercentage: 15 });
-    expect(conPorcentaje.progressPercentage).toBe(15);
-
-    const sinPorcentaje = await crearStageConHilo();
-    expect(sinPorcentaje.progressPercentage).toBeNull();
   });
 
   it("ancla la transición de un stage con hilo abierto", async () => {

@@ -19,7 +19,6 @@ export async function crearStageMinteado(input: {
   name: string;
   sequenceOrder: number;
   validationCritical?: boolean;
-  progressPercentage?: number;
   actorUserId: string;
 }) {
   const now = new Date();
@@ -33,7 +32,6 @@ export async function crearStageMinteado(input: {
       sequenceOrder: input.sequenceOrder,
       state: INITIAL_STAGE_STATE,
       validationCritical: input.validationCritical ?? true,
-      progressPercentage: input.progressPercentage ?? null,
       createdAt: now,
       updatedAt: now
     })

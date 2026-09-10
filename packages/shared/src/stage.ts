@@ -116,11 +116,11 @@ export type ObserveStageInput = z.infer<typeof observeStageSchema>;
  * español (la captura los trae mezclados en inglés y español), confirmado
  * por el dueño el 2026-09-08.
  *
- * **Sin `progressPercentage`, a propósito.** No es obligatorio en
- * `Stage.progressPercentage` (columna `number | null`, sin uso en el
- * validador — es puro dato de UX, D-021, nunca dinero) y el dueño prefirió no
- * inventar un reparto: un developer que lo necesite lo carga manualmente por
- * stage.
+ * **Sin `progressPercentage`.** Existió como columna nullable (M3 §1.1) pero
+ * nunca tuvo call site que lo escribiera ni lo leyera — el avance del
+ * proyecto es derivado (`completadas/total`, D-021 relee "signers/percentages
+ * configurables" así), no un peso declarado por stage. Columna eliminada
+ * 2026-09-10 (migración `0003_drop_stage_progress.sql`).
  */
 export interface StageCatalogEntry {
   name: string;
@@ -155,7 +155,6 @@ export const stageSchema = z.strictObject({
   validationCritical: z.boolean(),
   certifiedAt: z.coerce.date().nullable(),
   certifiedById: z.string().nullable(),
-  progressPercentage: z.number().int().min(0).max(100).nullable(),
   createdAt: z.coerce.date(),
   updatedAt: z.coerce.date()
 });

@@ -791,18 +791,6 @@
                                 }
                               ]
                             },
-                            "progressPercentage": {
-                              "anyOf": [
-                                {
-                                  "type": "integer",
-                                  "minimum": 0,
-                                  "maximum": 100
-                                },
-                                {
-                                  "type": "null"
-                                }
-                              ]
-                            },
                             "createdAt": {
                               "type": "string"
                             },
@@ -819,7 +807,6 @@
                             "validationCritical",
                             "certifiedAt",
                             "certifiedById",
-                            "progressPercentage",
                             "createdAt",
                             "updatedAt"
                           ],
@@ -1239,18 +1226,6 @@
                               }
                             ]
                           },
-                          "progressPercentage": {
-                            "anyOf": [
-                              {
-                                "type": "integer",
-                                "minimum": 0,
-                                "maximum": 100
-                              },
-                              {
-                                "type": "null"
-                              }
-                            ]
-                          },
                           "createdAt": {
                             "type": "string"
                           },
@@ -1267,7 +1242,6 @@
                           "validationCritical",
                           "certifiedAt",
                           "certifiedById",
-                          "progressPercentage",
                           "createdAt",
                           "updatedAt"
                         ],
@@ -2124,18 +2098,6 @@
                           }
                         ]
                       },
-                      "progressPercentage": {
-                        "anyOf": [
-                          {
-                            "type": "integer",
-                            "minimum": 0,
-                            "maximum": 100
-                          },
-                          {
-                            "type": "null"
-                          }
-                        ]
-                      },
                       "createdAt": {
                         "type": "string"
                       },
@@ -2155,7 +2117,6 @@
                       "validationCritical",
                       "certifiedAt",
                       "certifiedById",
-                      "progressPercentage",
                       "createdAt",
                       "updatedAt",
                       "hasOnChainThread"
@@ -2252,18 +2213,6 @@
                       "anyOf": [
                         {
                           "type": "string"
-                        },
-                        {
-                          "type": "null"
-                        }
-                      ]
-                    },
-                    "progressPercentage": {
-                      "anyOf": [
-                        {
-                          "type": "integer",
-                          "minimum": 0,
-                          "maximum": 100
                         },
                         {
                           "type": "null"
@@ -2460,7 +2409,6 @@
                     "validationCritical",
                     "certifiedAt",
                     "certifiedById",
-                    "progressPercentage",
                     "createdAt",
                     "updatedAt",
                     "anchor"
@@ -2556,18 +2504,6 @@
                       "anyOf": [
                         {
                           "type": "string"
-                        },
-                        {
-                          "type": "null"
-                        }
-                      ]
-                    },
-                    "progressPercentage": {
-                      "anyOf": [
-                        {
-                          "type": "integer",
-                          "minimum": 0,
-                          "maximum": 100
                         },
                         {
                           "type": "null"
@@ -2761,7 +2697,6 @@
                     "validationCritical",
                     "certifiedAt",
                     "certifiedById",
-                    "progressPercentage",
                     "createdAt",
                     "updatedAt",
                     "evidences",
@@ -2851,18 +2786,6 @@
                       "anyOf": [
                         {
                           "type": "string"
-                        },
-                        {
-                          "type": "null"
-                        }
-                      ]
-                    },
-                    "progressPercentage": {
-                      "anyOf": [
-                        {
-                          "type": "integer",
-                          "minimum": 0,
-                          "maximum": 100
                         },
                         {
                           "type": "null"
@@ -3083,7 +3006,6 @@
                     "validationCritical",
                     "certifiedAt",
                     "certifiedById",
-                    "progressPercentage",
                     "createdAt",
                     "updatedAt",
                     "evidences",
@@ -3199,18 +3121,6 @@
                         }
                       ]
                     },
-                    "progressPercentage": {
-                      "anyOf": [
-                        {
-                          "type": "integer",
-                          "minimum": 0,
-                          "maximum": 100
-                        },
-                        {
-                          "type": "null"
-                        }
-                      ]
-                    },
                     "createdAt": {
                       "type": "string"
                     },
@@ -3227,7 +3137,6 @@
                     "validationCritical",
                     "certifiedAt",
                     "certifiedById",
-                    "progressPercentage",
                     "createdAt",
                     "updatedAt"
                   ],
@@ -3347,18 +3256,6 @@
                       "anyOf": [
                         {
                           "type": "string"
-                        },
-                        {
-                          "type": "null"
-                        }
-                      ]
-                    },
-                    "progressPercentage": {
-                      "anyOf": [
-                        {
-                          "type": "integer",
-                          "minimum": 0,
-                          "maximum": 100
                         },
                         {
                           "type": "null"
@@ -3555,7 +3452,6 @@
                     "validationCritical",
                     "certifiedAt",
                     "certifiedById",
-                    "progressPercentage",
                     "createdAt",
                     "updatedAt",
                     "anchor"
@@ -3832,18 +3728,6 @@
                                 }
                               ]
                             },
-                            "progressPercentage": {
-                              "anyOf": [
-                                {
-                                  "type": "integer",
-                                  "minimum": 0,
-                                  "maximum": 100
-                                },
-                                {
-                                  "type": "null"
-                                }
-                              ]
-                            },
                             "createdAt": {
                               "type": "string"
                             },
@@ -3860,7 +3744,6 @@
                             "validationCritical",
                             "certifiedAt",
                             "certifiedById",
-                            "progressPercentage",
                             "createdAt",
                             "updatedAt"
                           ],
@@ -7241,18 +7124,6 @@
                               }
                             ]
                           },
-                          "progressPercentage": {
-                            "anyOf": [
-                              {
-                                "type": "integer",
-                                "minimum": 0,
-                                "maximum": 100
-                              },
-                              {
-                                "type": "null"
-                              }
-                            ]
-                          },
                           "createdAt": {
                             "type": "string"
                           },
@@ -7443,7 +7314,6 @@
                           "validationCritical",
                           "certifiedAt",
                           "certifiedById",
-                          "progressPercentage",
                           "createdAt",
                           "updatedAt",
                           "anchor"
@@ -7660,18 +7530,6 @@
                               }
                             ]
                           },
-                          "progressPercentage": {
-                            "anyOf": [
-                              {
-                                "type": "integer",
-                                "minimum": 0,
-                                "maximum": 100
-                              },
-                              {
-                                "type": "null"
-                              }
-                            ]
-                          },
                           "createdAt": {
                             "type": "string"
                           },
@@ -7688,7 +7546,6 @@
                           "validationCritical",
                           "certifiedAt",
                           "certifiedById",
-                          "progressPercentage",
                           "createdAt",
                           "updatedAt"
                         ],
@@ -11274,18 +11131,6 @@
                         }
                       ]
                     },
-                    "progressPercentage": {
-                      "anyOf": [
-                        {
-                          "type": "integer",
-                          "minimum": 0,
-                          "maximum": 100
-                        },
-                        {
-                          "type": "null"
-                        }
-                      ]
-                    },
                     "createdAt": {
                       "type": "string"
                     },
@@ -11476,7 +11321,6 @@
                     "validationCritical",
                     "certifiedAt",
                     "certifiedById",
-                    "progressPercentage",
                     "createdAt",
                     "updatedAt",
                     "anchor"
@@ -11589,18 +11433,6 @@
                         }
                       ]
                     },
-                    "progressPercentage": {
-                      "anyOf": [
-                        {
-                          "type": "integer",
-                          "minimum": 0,
-                          "maximum": 100
-                        },
-                        {
-                          "type": "null"
-                        }
-                      ]
-                    },
                     "createdAt": {
                       "type": "string"
                     },
@@ -11791,7 +11623,6 @@
                     "validationCritical",
                     "certifiedAt",
                     "certifiedById",
-                    "progressPercentage",
                     "createdAt",
                     "updatedAt",
                     "anchor"

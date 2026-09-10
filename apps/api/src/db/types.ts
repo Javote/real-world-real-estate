@@ -92,8 +92,6 @@ export interface StageTable {
   validationCritical: SqliteBoolean;
   certifiedAt: SqliteTimestamp | null;
   certifiedById: string | null;
-  /** Cuánto pesa este stage sobre el 100% de avance de obra del proyecto (D-021). Nunca dinero. */
-  progressPercentage: number | null;
   createdAt: SqliteTimestamp;
   updatedAt: SqliteTimestamp;
 }
