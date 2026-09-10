@@ -4064,11 +4064,95 @@
                       "type": "integer",
                       "minimum": 0,
                       "maximum": 9007199254740991
+                    },
+                    "sospechosos": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "eventId": {
+                            "type": "string"
+                          },
+                          "projectId": {
+                            "type": "string"
+                          },
+                          "stageId": {
+                            "anyOf": [
+                              {
+                                "type": "string"
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ]
+                          },
+                          "eventIndex": {
+                            "type": "integer",
+                            "minimum": 0,
+                            "maximum": 9007199254740991
+                          },
+                          "fromState": {
+                            "anyOf": [
+                              {
+                                "type": "string",
+                                "enum": [
+                                  "Pending",
+                                  "InProgress",
+                                  "Observed",
+                                  "Completed"
+                                ]
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ]
+                          },
+                          "toState": {
+                            "anyOf": [
+                              {
+                                "type": "string",
+                                "enum": [
+                                  "Pending",
+                                  "InProgress",
+                                  "Observed",
+                                  "Completed"
+                                ]
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ]
+                          },
+                          "status": {
+                            "type": "string",
+                            "enum": [
+                              "Pending",
+                              "Confirmed",
+                              "Failed"
+                            ]
+                          },
+                          "createdAt": {
+                            "type": "string"
+                          }
+                        },
+                        "required": [
+                          "eventId",
+                          "projectId",
+                          "stageId",
+                          "eventIndex",
+                          "fromState",
+                          "toState",
+                          "status",
+                          "createdAt"
+                        ],
+                        "additionalProperties": false
+                      }
                     }
                   },
                   "required": [
                     "revisados",
-                    "confirmados"
+                    "confirmados",
+                    "sospechosos"
                   ],
                   "additionalProperties": false
                 }

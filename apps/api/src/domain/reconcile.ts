@@ -1,5 +1,6 @@
 import { anchorPort } from "../lib/anchor";
 import { db } from "../lib/db";
+import { sql } from "../lib/kysely";
 
 // Reconciliación: promover a `Confirmed` los anclajes que ya están en la cadena
 // (SPEC-013 §C).
@@ -151,4 +152,73 @@ async function reconciliar(
   }
 
   return { revisados: pendientes.length, confirmados };
+}
+
+export interface HiloSospechoso {
+  eventId: string;
+  projectId: string;
+  // Nullable en la tabla en general (un `EVIDENCE_ANCHOR` no cuelga de un
+  // stage), pero acá siempre viene poblado: el `where` de abajo filtra por
+  // `eventType: "STAGE_TRANSITION"`, que siempre tiene `stageId`. Se declara
+  // nullable igual para no forzar el tipo con un cast.
+  stageId: string | null;
+  eventIndex: number;
+  fromState: string | null;
+  toState: string | null;
+  status: string;
+  createdAt: Date;
+}
+
+const TOPE_SOSPECHOSOS = 20;
+
+/**
+ * Detección, no reparación, del patrón que la prueba de volumen del
+ * 2026-09-10 encontró a mano (`specs/REPORTE-2026-09-10-prueba-de-volumen.md`
+ * §Hallazgo): una `STAGE_TRANSITION` sin `txid` que el stage ya dejó atrás —
+ * existe un evento con `eventIndex` mayor en el mismo hilo, así que el
+ * anclaje de este no se va a reintentar solo.
+ *
+ * **No distingue los dos casos del reporte, y no puede** sin consultar la
+ * cadena: puede ser que la transacción nunca haya salido (el caso simple,
+ * "etapa 4" — ahí alcanza con reintentar la transición) o que haya salido y
+ * la aplicación haya perdido el recibo antes de este fix (el caso "etapa 3"
+ * — ahí el hilo real vive en un UTxO que esta función no puede nombrar,
+ * porque el `AnchorPort` de hoy busca por `outputRef` conocido, no por el
+ * asset del thread token; nombrarlo pidió Koios a mano en el reporte).
+ * **Cerrar esa distinción es una capacidad nueva del puerto, no de acá.**
+ *
+ * **Por qué no es un `setInterval` ni un cron:** D-003 · D-040 · D-077 — un
+ * timer interno deja de contar cuando Render duerme el servicio, y el free
+ * tier no tiene workers. Esto es una consulta, para correr a demanda
+ * (`POST /evidence/reconcile` la suma a su respuesta) — el mismo criterio
+ * que ya rige `reconciliarAnclajes`.
+ */
+export async function hilosSospechosos(limite = TOPE_SOSPECHOSOS): Promise<HiloSospechoso[]> {
+  return db
+    .selectFrom("OnChainEvent")
+    .select([
+      "id as eventId",
+      "projectId",
+      "stageId",
+      "eventIndex",
+      "fromState",
+      "toState",
+      "status",
+      "createdAt"
+    ])
+    .where("eventType", "=", "STAGE_TRANSITION")
+    .where("txid", "is", null)
+    .where("stageId", "is not", null)
+    .where((eb) =>
+      eb.exists(
+        eb
+          .selectFrom("OnChainEvent as siguiente")
+          .select(sql.lit(1).as("one"))
+          .whereRef("siguiente.stageId", "=", "OnChainEvent.stageId")
+          .whereRef("siguiente.eventIndex", ">", "OnChainEvent.eventIndex")
+      )
+    )
+    .orderBy("createdAt", "asc")
+    .limit(limite)
+    .execute();
 }

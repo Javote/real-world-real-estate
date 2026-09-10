@@ -15,7 +15,8 @@ import {
 import { type Request, Router } from "express";
 import { z } from "zod";
 import { createId } from "../db/id";
-import { reconciliarAnclajes, reconciliarParaLectura } from "../domain/reconcile";
+import { hilosSospechosos, reconciliarAnclajes, reconciliarParaLectura } from "../domain/reconcile";
+import { Sentry } from "../instrumentation";
 import { anchorPort } from "../lib/anchor";
 import { db } from "../lib/db";
 import { storage } from "../lib/storage";
@@ -196,9 +197,15 @@ router.patch(
  * Lo dispara alguien de afuera: hoy a mano, mañana un cron de GitHub Actions.
  * **Nunca un `setInterval` acá adentro** (D-003 · D-040): con el servicio
  * dormido a los 15 minutos, un timer interno deja de contar y nadie se entera.
+ *
+ * **Desde el 2026-09-10 también devuelve `sospechosos`** (`hilosSospechosos`):
+ * transiciones sin TXID que el stage ya dejó atrás — la señal, sin reparar
+ * nada, del patrón que la prueba de volumen de ese día encontró a mano. Ver
+ * `domain/reconcile.ts` y `specs/REPORTE-2026-09-10-prueba-de-volumen.md`.
  */
 router.post("/reconcile", authorize({ roles: ["admin"], acceso: "soloRol" }), async (_req, res) => {
-  res.json(reconciliationResultSchema.parse(await reconciliarAnclajes()));
+  const [resultado, sospechosos] = await Promise.all([reconciliarAnclajes(), hilosSospechosos()]);
+  res.json(reconciliationResultSchema.parse({ ...resultado, sospechosos }));
 });
 
 router.post(
@@ -273,24 +280,54 @@ router.post(
         reference: evidencia.id
       });
 
-      // El recibo llega `Pending` siempre (D-087): `confirmedAt` es quien
-      // puede decir `Confirmed`, igual que en `domain/anchoring.ts`.
-      const blockTimestamp = await anchorPort().confirmedAt(recibo.txid);
-
+      // El recibo se guarda apenas existe, no cuando termina de confirmar —
+      // mismo fix que `anchorEvent`/`anchorCommitmentEvent` (2026-09-10, ver
+      // `specs/REPORTE-2026-09-10-prueba-de-volumen.md` §Cómo hacerlo más
+      // robusto): si el proceso muere entre acá y el `confirmedAt()` de
+      // abajo, el TXID real ya quedó escrito.
       anclado = await db
         .updateTable("OnChainEvent")
         .set({
           txid: recibo.txid,
           network: anchorPort().network,
-          status: blockTimestamp !== null ? "Confirmed" : recibo.status,
-          blockTimestamp: blockTimestamp !== null ? new Date(blockTimestamp) : null,
+          status: recibo.status,
           updatedAt: new Date()
         })
         .where("id", "=", evento.id)
         .returningAll()
         .executeTakeFirstOrThrow();
+
+      // Confirmar es best-effort: si falla, el evento queda `Pending` con
+      // TXID real — nunca `Failed`, el anclaje ya ocurrió. D-077 lo
+      // reconcilia después. El recibo llega `Pending` siempre (D-087):
+      // `confirmedAt` es quien puede decir `Confirmed`, igual que en
+      // `domain/anchoring.ts`.
+      try {
+        const blockTimestamp = await anchorPort().confirmedAt(recibo.txid);
+        if (blockTimestamp !== null) {
+          anclado = await db
+            .updateTable("OnChainEvent")
+            .set({
+              status: "Confirmed",
+              blockTimestamp: new Date(blockTimestamp),
+              updatedAt: new Date()
+            })
+            .where("id", "=", evento.id)
+            .returningAll()
+            .executeTakeFirstOrThrow();
+        }
+      } catch (error) {
+        console.error("[anchor] la confirmación de evidencia falló — el anclaje ya está guardado", {
+          evidenceId: evidencia.id,
+          error
+        });
+      }
     } catch (error) {
       console.error("[anchor] el anclaje de evidencia falló", { evidenceId: evidencia.id, error });
+      Sentry.captureException(error, {
+        tags: { area: "anchor" },
+        extra: { evidenceId: evidencia.id }
+      });
       anclado = await db
         .updateTable("OnChainEvent")
         .set({ status: "Failed", updatedAt: new Date() })

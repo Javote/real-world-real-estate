@@ -4,6 +4,7 @@ import request from "supertest";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import app from "../src/app";
 import { createId } from "../src/db/id";
+import { anchorPort } from "../src/lib/anchor";
 import { db } from "../src/lib/db";
 import { FIXTURES } from "./global-setup";
 import { crearStageMinteado } from "./helpers/stages";
@@ -326,6 +327,46 @@ describe("OnChainEvent · el aterrizaje del anclaje", () => {
     expect(res.body.anchor.toState).toBe("InProgress");
     // El hilo se movió: el UTxO nuevo no es el que abrió el `mint`.
     expect(res.body.anchor.outputRef).not.toBe(creado.anchor.outputRef);
+  });
+
+  it("guarda el TXID real aunque la confirmación falle después — Pending, nunca Failed", async () => {
+    // El escenario real de la prueba de volumen del 2026-09-10
+    // (specs/REPORTE-2026-09-10-prueba-de-volumen.md §Cómo hacerlo más
+    // robusto): la transacción sale a la cadena — hay `receipt`, con `txid` y
+    // `outputRef` reales — pero algo falla DESPUÉS. Antes había un solo
+    // `UPDATE`, corrido recién después de `verify()`: un error acá perdía el
+    // recibo entero, indistinguible de un anclaje que nunca se intentó.
+    const creado = await crearStageConHilo();
+    const puerto = anchorPort();
+    const original = puerto.verify;
+    puerto.verify = async () => {
+      throw new Error("Blockfrost caído");
+    };
+
+    try {
+      const res = await patchState(creado.id, "InProgress");
+
+      expect(res.status).toBe(200);
+      expect(res.body.state).toBe("InProgress");
+      // No es Failed: la transacción sí salió a la cadena, solo no se pudo
+      // confirmar. D-077 la reconcilia en la próxima lectura.
+      expect(res.body.anchor.status).toBe("Pending");
+      expect(res.body.anchor.txid).not.toBeNull();
+      expect(res.body.anchor.outputRef).not.toBeNull();
+
+      // Y quedó escrito en la base, no solo en la respuesta HTTP — es el
+      // punto del fix: el recibo sobrevive aunque el proceso muera acá mismo.
+      const evento = await db
+        .selectFrom("OnChainEvent")
+        .selectAll()
+        .where("id", "=", res.body.anchor.id)
+        .executeTakeFirstOrThrow();
+      expect(evento.txid).toBe(res.body.anchor.txid);
+      expect(evento.outputRef).toBe(res.body.anchor.outputRef);
+      expect(evento.status).toBe("Pending");
+    } finally {
+      puerto.verify = original;
+    }
   });
 
   it("deja el evento en Failed —y la declaración escrita— si el stage no tiene hilo", async () => {

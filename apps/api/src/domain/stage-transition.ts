@@ -1,4 +1,5 @@
 import { createHash } from "node:crypto";
+import type { AnchorReceipt } from "@plataforma/cardano";
 import {
   buildStageDatum,
   canTransition,
@@ -13,6 +14,7 @@ import type {
   OnChainEventType,
   StageRow
 } from "../db/types";
+import { Sentry } from "../instrumentation";
 import { anchorPort } from "../lib/anchor";
 import { db } from "../lib/db";
 import { writeAuditLog } from "../utils/audit";
@@ -224,6 +226,18 @@ export async function cabezaDelHilo(stageId: string): Promise<string | null> {
  * el puerto rechaza o se cae, la declaración ya está escrita y el evento queda
  * `Failed`. La respuesta sigue siendo 200 — lo que el usuario declaró, ocurrió;
  * lo que falta es la prueba, y la UI la muestra como tal (regla 17).
+ *
+ * **El recibo se guarda apenas existe, no cuando termina de confirmar**
+ * (cerrado el 2026-09-10, ver `specs/REPORTE-2026-09-10-prueba-de-volumen.md`
+ * §Cómo hacerlo más robusto). Antes había un solo `UPDATE`, después de
+ * `verify()`: si el proceso moría entre que `openThread`/`advanceThread`
+ * devolvía el `txid` y que ese `UPDATE` corría, la transacción quedaba
+ * confirmada en la cadena y la base no se enteraba nunca — el hilo del stage
+ * quedaba vivo en un UTxO que nadie sabe cuál es (D-058), indistinguible de un
+ * anclaje que nunca se intentó. La prueba de volumen lo produjo de verdad: un
+ * reinicio de Render a mitad de esa ventana. Separar la escritura del recibo
+ * de la espera de confirmación no evita el reinicio — evita que el reinicio se
+ * lleve puesto un TXID que ya es real.
  */
 async function anchorEvent(
   event: OnChainEventRow,
@@ -233,12 +247,15 @@ async function anchorEvent(
   // Idempotencia (regla 8): un evento ya anclado no se vuelve a anclar.
   if (event.txid) return event;
 
+  // El root que va al datum sale del bundle del stage. Antes de que existiera
+  // `EvidenceBundle` esto era siempre vacío, y por eso un stage crítico se
+  // completaba en el registro pero el validador rechazaba su anclaje.
+  const root = await rootDelStage(stage.id);
+  const commitment = stage.state === "Completed" ? root : null;
+
+  let receipt: AnchorReceipt;
   try {
-    // El root que va al datum sale del bundle del stage. Antes de que existiera
-    // `EvidenceBundle` esto era siempre vacío, y por eso un stage crítico se
-    // completaba en el registro pero el validador rechazaba su anclaje.
-    const root = await rootDelStage(stage.id);
-    const receipt =
+    receipt =
       previous === null
         ? await anchorPort().openThread({ datum: buildStageDatum(toDatumSource(stage, "")) })
         : await anchorPort().advanceThread({
@@ -250,34 +267,18 @@ async function anchorEvent(
             ),
             next: buildStageDatum(toDatumSource(stage, stage.state === "Completed" ? root : ""))
           });
-
-    // El receipt llega `Pending` siempre, con los dos adaptadores (D-087): no
-    // se le pregunta si dice "Confirmed" — se verifica, sin excepción. Contra
-    // el simulador esto encuentra el proof al toque (su ledger queda listo
-    // desde el `commit`); contra Preprod, todavía no hay nada que ver.
-    const proof = await anchorPort().verify(receipt.txid);
-
-    return await db
-      .updateTable("OnChainEvent")
-      .set({
-        txid: receipt.txid,
-        // La red viaja con el TXID, siempre en el mismo `set` (D-080): el CHECK
-        // de la tabla rechaza el par incompleto.
-        network: anchorPort().network,
-        outputRef: receipt.outputRef,
-        status: proof ? "Confirmed" : receipt.status,
-        // Qué commitment quedó anclado en ESTE evento. Vacío mientras el stage
-        // no se completa: hasta entonces el datum no lleva root.
-        commitment: stage.state === "Completed" ? root : null,
-        blockTimestamp: proof ? new Date(proof.blockTimestamp) : null,
-        updatedAt: new Date()
-      })
-      .where("id", "=", event.id)
-      .returningAll()
-      .executeTakeFirstOrThrow();
   } catch (error) {
-    // El detalle va al log del servidor, no al cliente (errorHandler §regla 2).
+    // Acá el error es real: nunca hubo receipt, la transacción no salió a la
+    // cadena (rechazo del validador, UTxO inexistente, wallet sin fondos). El
+    // detalle va al log del servidor y a Sentry, no al cliente (errorHandler
+    // §regla 2) — antes solo quedaba en `console.error`, invisible salvo que
+    // alguien fuera a buscarlo en los logs de Render (retención corta) en el
+    // momento exacto.
     console.error("[anchor] el anclaje falló", { eventId: event.id, error });
+    Sentry.captureException(error, {
+      tags: { area: "anchor" },
+      extra: { eventId: event.id, stageId: stage.id }
+    });
 
     return await db
       .updateTable("OnChainEvent")
@@ -286,6 +287,57 @@ async function anchorEvent(
       .returningAll()
       .executeTakeFirstOrThrow();
   }
+
+  // El recibo existe: la transacción salió a la cadena, con TXID real. Se
+  // guarda YA, antes de esperar la confirmación — es la escritura crítica, la
+  // que D-058 no puede permitirse perder.
+  let evento = await db
+    .updateTable("OnChainEvent")
+    .set({
+      txid: receipt.txid,
+      // La red viaja con el TXID, siempre en el mismo `set` (D-080): el CHECK
+      // de la tabla rechaza el par incompleto.
+      network: anchorPort().network,
+      outputRef: receipt.outputRef,
+      status: receipt.status,
+      commitment,
+      updatedAt: new Date()
+    })
+    .where("id", "=", event.id)
+    .returningAll()
+    .executeTakeFirstOrThrow();
+
+  // Confirmar es best-effort, a propósito: si esto falla o el proceso muere
+  // acá, el evento queda `Pending` con TXID real — nunca `Failed`, porque el
+  // anclaje ya ocurrió. D-077 (reconciliación en lectura) lo termina de
+  // resolver la próxima vez que alguien mire este stage.
+  //
+  // El receipt llega `Pending` siempre, con los dos adaptadores (D-087): no
+  // se le pregunta si dice "Confirmed" — se verifica, sin excepción. Contra
+  // el simulador esto encuentra el proof al toque (su ledger queda listo
+  // desde el `commit`); contra Preprod, todavía no hay nada que ver.
+  try {
+    const proof = await anchorPort().verify(receipt.txid);
+    if (proof) {
+      evento = await db
+        .updateTable("OnChainEvent")
+        .set({
+          status: "Confirmed",
+          blockTimestamp: new Date(proof.blockTimestamp),
+          updatedAt: new Date()
+        })
+        .where("id", "=", event.id)
+        .returningAll()
+        .executeTakeFirstOrThrow();
+    }
+  } catch (error) {
+    console.error("[anchor] la confirmación falló — el anclaje ya está guardado", {
+      eventId: event.id,
+      error
+    });
+  }
+
+  return evento;
 }
 
 /** Lo que puede salir mal, con el código que la ruta traduce a HTTP. */

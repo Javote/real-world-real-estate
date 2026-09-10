@@ -1,6 +1,8 @@
 import { createHash } from "node:crypto";
+import type { MetadataAnchorReceipt } from "@plataforma/cardano";
 import { createId } from "../db/id";
 import type { OnChainEventRow, OnChainEventType } from "../db/types";
+import { Sentry } from "../instrumentation";
 import { anchorPort } from "../lib/anchor";
 import { db } from "../lib/db";
 
@@ -78,33 +80,18 @@ export async function anchorCommitmentEvent(input: {
     .returningAll()
     .executeTakeFirstOrThrow();
 
+  let recibo: MetadataAnchorReceipt;
   try {
-    const recibo = await anchorPort().anchorCommitment({
+    recibo = await anchorPort().anchorCommitment({
       sha256: input.commitment,
       reference: input.reference
     });
-
-    // El recibo llega `Pending` siempre (D-087, mismo contrato que el hilo en
-    // `anchorEvent`): `confirmedAt` es el único que puede decir `Confirmed`.
-    // No hay `verify()` acá porque un anclaje por metadata no tiene datum ni
-    // outputRef — `confirmedAt` es la pregunta que sí le cabe (ver
-    // `SimulatedAnchorAdapter.confirmedAt`).
-    const blockTimestamp = await anchorPort().confirmedAt(recibo.txid);
-
-    return await db
-      .updateTable("OnChainEvent")
-      .set({
-        txid: recibo.txid,
-        network: anchorPort().network,
-        status: blockTimestamp !== null ? "Confirmed" : recibo.status,
-        blockTimestamp: blockTimestamp !== null ? new Date(blockTimestamp) : null,
-        updatedAt: new Date()
-      })
-      .where("id", "=", evento.id)
-      .returningAll()
-      .executeTakeFirstOrThrow();
   } catch (error) {
     console.error("[anchor] el anclaje del commitment falló", { eventId: evento.id, error });
+    Sentry.captureException(error, {
+      tags: { area: "anchor" },
+      extra: { eventId: evento.id, eventType: input.eventType }
+    });
     return await db
       .updateTable("OnChainEvent")
       .set({ status: "Failed", updatedAt: new Date() })
@@ -112,4 +99,52 @@ export async function anchorCommitmentEvent(input: {
       .returningAll()
       .executeTakeFirstOrThrow();
   }
+
+  // El recibo se guarda apenas existe, no cuando termina de confirmar — mismo
+  // fix que `anchorEvent` en `stage-transition.ts` (2026-09-10, ver
+  // `specs/REPORTE-2026-09-10-prueba-de-volumen.md` §Cómo hacerlo más
+  // robusto): si el proceso muere entre acá y el `confirmedAt()` de abajo, el
+  // TXID real ya quedó escrito.
+  let anclado = await db
+    .updateTable("OnChainEvent")
+    .set({
+      txid: recibo.txid,
+      network: anchorPort().network,
+      status: recibo.status,
+      updatedAt: new Date()
+    })
+    .where("id", "=", evento.id)
+    .returningAll()
+    .executeTakeFirstOrThrow();
+
+  // Confirmar es best-effort: si falla, el evento queda `Pending` con TXID
+  // real — nunca `Failed`, el anclaje ya ocurrió. D-077 lo reconcilia después.
+  //
+  // El recibo llega `Pending` siempre (D-087, mismo contrato que el hilo en
+  // `anchorEvent`): `confirmedAt` es el único que puede decir `Confirmed`.
+  // No hay `verify()` acá porque un anclaje por metadata no tiene datum ni
+  // outputRef — `confirmedAt` es la pregunta que sí le cabe (ver
+  // `SimulatedAnchorAdapter.confirmedAt`).
+  try {
+    const blockTimestamp = await anchorPort().confirmedAt(recibo.txid);
+    if (blockTimestamp !== null) {
+      anclado = await db
+        .updateTable("OnChainEvent")
+        .set({
+          status: "Confirmed",
+          blockTimestamp: new Date(blockTimestamp),
+          updatedAt: new Date()
+        })
+        .where("id", "=", evento.id)
+        .returningAll()
+        .executeTakeFirstOrThrow();
+    }
+  } catch (error) {
+    console.error("[anchor] la confirmación del commitment falló — el anclaje ya está guardado", {
+      eventId: evento.id,
+      error
+    });
+  }
+
+  return anclado;
 }

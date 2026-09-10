@@ -215,10 +215,29 @@ export const onChainEventSchema = z.strictObject({
 });
 export type OnChainEventResponse = z.infer<typeof onChainEventSchema>;
 
+/**
+ * Un `STAGE_TRANSITION` sin `txid` que el stage ya dejó atrás — señal de que
+ * ese anclaje nunca se reintentó solo, y candidato al patrón que la prueba de
+ * volumen del 2026-09-10 encontró (`domain/reconcile.ts` → `hilosSospechosos`,
+ * que explica ahí por qué esto detecta y no repara).
+ */
+export const hiloSospechosoSchema = z.strictObject({
+  eventId: z.string(),
+  projectId: z.string(),
+  stageId: z.string().nullable(),
+  eventIndex: z.number().int().nonnegative(),
+  fromState: stageStateSchema.nullable(),
+  toState: stageStateSchema.nullable(),
+  status: onChainEventStatusSchema,
+  createdAt: z.coerce.date()
+});
+export type HiloSospechosoResponse = z.infer<typeof hiloSospechosoSchema>;
+
 /** `POST /api/v1/evidence/reconcile` (`domain/reconcile.ts` → `ResultadoReconciliacion`). */
 export const reconciliationResultSchema = z.strictObject({
   revisados: z.number().int().nonnegative(),
-  confirmados: z.number().int().nonnegative()
+  confirmados: z.number().int().nonnegative(),
+  sospechosos: z.array(hiloSospechosoSchema)
 });
 export type ReconciliationResult = z.infer<typeof reconciliationResultSchema>;
 

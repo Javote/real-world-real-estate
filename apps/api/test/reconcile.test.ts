@@ -2,7 +2,11 @@ import request from "supertest";
 import { beforeAll, describe, expect, it } from "vitest";
 import app from "../src/app";
 import { createId } from "../src/db/id";
-import { reconciliarAnclajes, reconciliarParaLectura } from "../src/domain/reconcile";
+import {
+  hilosSospechosos,
+  reconciliarAnclajes,
+  reconciliarParaLectura
+} from "../src/domain/reconcile";
 import { anchorPort } from "../src/lib/anchor";
 import { db } from "../src/lib/db";
 import { FIXTURES } from "./global-setup";
@@ -139,6 +143,96 @@ describe("POST /evidence/reconcile", () => {
       .post("/api/v1/evidence/reconcile")
       .set("Authorization", `Bearer ${tokenAdmin}`);
     expect(res.status).not.toBe(404);
+  });
+
+  it("devuelve sospechosos — el patrón de la prueba de volumen del 2026-09-10", async () => {
+    const res = await request(app)
+      .post("/api/v1/evidence/reconcile")
+      .set("Authorization", `Bearer ${tokenAdmin}`);
+    expect(res.body.sospechosos).toEqual(expect.any(Array));
+  });
+});
+
+// ── hilosSospechosos · detecta, no repara ───────────────────────────────────
+//
+// El hallazgo real de la prueba de volumen del 2026-09-10
+// (specs/REPORTE-2026-09-10-prueba-de-volumen.md §Hallazgo): una
+// STAGE_TRANSITION sin `txid` cuyo stage ya avanzó a un evento más nuevo.
+
+describe("hilosSospechosos", () => {
+  async function stage() {
+    const id = createId();
+    const ahora = new Date();
+    await db
+      .insertInto("Stage")
+      .values({
+        id,
+        projectId: proyecto,
+        name: "Stage de reconciliación",
+        sequenceOrder: Math.floor(Math.random() * 1_000_000) + 500_000,
+        state: "InProgress",
+        validationCritical: false,
+        createdAt: ahora,
+        updatedAt: ahora
+      })
+      .execute();
+    return id;
+  }
+
+  async function transicion(stageId: string, eventIndex: number, txid: string | null) {
+    const ahora = new Date();
+    await db
+      .insertInto("OnChainEvent")
+      .values({
+        id: createId(),
+        projectId: proyecto,
+        stageId,
+        evidenceId: null,
+        referenceId: null,
+        eventIndex,
+        eventType: "STAGE_TRANSITION",
+        fromState: "Observed",
+        toState: "InProgress",
+        commitment: null,
+        status: txid === null ? "Pending" : "Confirmed",
+        txid,
+        network: txid === null ? null : "Simulated",
+        outputRef: txid === null ? null : `${txid}#0`,
+        blockTimestamp: null,
+        createdAt: ahora,
+        updatedAt: ahora
+      })
+      .execute();
+  }
+
+  it("marca una transición sin TXID que el stage ya dejó atrás", async () => {
+    const id = await stage();
+    // El intento que se perdió: sin txid.
+    await transicion(id, 0, null);
+    // El stage siguió — hay un evento más nuevo en el mismo hilo.
+    await transicion(id, 1, await txidReal(`sospechoso-${id}`));
+
+    const sospechosos = await hilosSospechosos();
+    expect(sospechosos.map((s) => s.stageId)).toContain(id);
+  });
+
+  it("NO marca una transición sin TXID que todavía es el último evento del hilo", async () => {
+    // Sin evento más nuevo, puede ser un intento a punto de reintentarse —
+    // no hay nada raro todavía, solo un anclaje que no llegó.
+    const id = await stage();
+    await transicion(id, 0, null);
+
+    const sospechosos = await hilosSospechosos();
+    expect(sospechosos.map((s) => s.stageId)).not.toContain(id);
+  });
+
+  it("no marca una transición que sí tiene TXID", async () => {
+    const id = await stage();
+    await transicion(id, 0, await txidReal(`sano-${id}`));
+    await transicion(id, 1, await txidReal(`sano-siguiente-${id}`));
+
+    const sospechosos = await hilosSospechosos();
+    expect(sospechosos.map((s) => s.stageId)).not.toContain(id);
   });
 });
 
