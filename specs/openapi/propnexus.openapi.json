@@ -7628,11 +7628,31 @@
                           "Completed"
                         ]
                       },
+                      "certifiedAt": {
+                        "anyOf": [
+                          {
+                            "type": "string"
+                          },
+                          {
+                            "type": "null"
+                          }
+                        ]
+                      },
                       "projectId": {
                         "type": "string"
                       },
                       "projectName": {
                         "type": "string"
+                      },
+                      "estimatedDelivery": {
+                        "anyOf": [
+                          {
+                            "type": "string"
+                          },
+                          {
+                            "type": "null"
+                          }
+                        ]
                       }
                     },
                     "required": [
@@ -7640,8 +7660,10 @@
                       "stageName",
                       "sequenceOrder",
                       "state",
+                      "certifiedAt",
                       "projectId",
-                      "projectName"
+                      "projectName",
+                      "estimatedDelivery"
                     ],
                     "additionalProperties": false
                   }

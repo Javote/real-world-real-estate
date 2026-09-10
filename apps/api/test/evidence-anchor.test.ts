@@ -208,7 +208,7 @@ describe("EvidenceBundle · el acta del cierre", () => {
 describe("GET /evidence/:bundleId/files y /:bundleId/proof/:fileHash — segunda capa", () => {
   it("un developer sin membresía en el proyecto del bundle recibe 403", async () => {
     const stage = await crearStage(998_020);
-    const evidencia = await subirEvidencia(stage, "plano-ajeno");
+    await subirEvidencia(stage, "plano-ajeno");
 
     await request(app)
       .patch(`/api/v1/stages/${stage}/state`)

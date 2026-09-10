@@ -59,7 +59,6 @@ import {
   observeStageSchema,
   onChainEventSchema,
   paginatedResponseSchema,
-  paymentAttestationSchema,
   paymentReleaseResultSchema,
   pendingDossierSchema,
   positiveIntParamSchema,

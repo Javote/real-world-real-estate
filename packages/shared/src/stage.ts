@@ -220,14 +220,21 @@ export const reconciliationResultSchema = z.strictObject({
 });
 export type ReconciliationResult = z.infer<typeof reconciliationResultSchema>;
 
-/** Fila 45 — `GET /developer/progress`: el avance a través de todos los proyectos. */
+/**
+ * Fila 45 — `GET /developer/progress`: el avance a través de todos los
+ * proyectos. `certifiedAt` (del stage) y `estimatedDelivery` (del proyecto)
+ * son lo que la captura 45 pide para "Stage Detail" y la etiqueta de
+ * finalización del timeline — ninguno de los dos se deriva, se selecciona.
+ */
 export const developerProgressItemSchema = z.strictObject({
   stageId: z.string(),
   stageName: z.string(),
   sequenceOrder: z.number().int().positive(),
   state: stageStateSchema,
+  certifiedAt: z.coerce.date().nullable(),
   projectId: z.string(),
-  projectName: z.string()
+  projectName: z.string(),
+  estimatedDelivery: z.coerce.date().nullable()
 });
 export type DeveloperProgressItem = z.infer<typeof developerProgressItemSchema>;
 

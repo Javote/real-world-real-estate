@@ -278,8 +278,10 @@ router.get(
         "Stage.name as stageName",
         "Stage.sequenceOrder as sequenceOrder",
         "Stage.state as state",
+        "Stage.certifiedAt as certifiedAt",
         "Project.id as projectId",
-        "Project.name as projectName"
+        "Project.name as projectName",
+        "Project.estimatedDelivery as estimatedDelivery"
       ])
       .where("Stage.projectId", "in", ids)
       .orderBy("Project.name", "asc")
