@@ -29,11 +29,11 @@ mismo caso que `progressPercentage`, y con la regla de precedencia del dueño (*
 sobre el SOM**, 2026-09-09) se resuelve igual: **no se construye, se explica.** La captura 34C
 tampoco tiene campo de signer. El criterio 3 queda sin código pendiente.
 
-## Tanda 1 — esquema 🟡
+## Tanda 1 — esquema 🟡 · ✔ cerrada 2026-09-10
 
 | | Qué |
 |---|---|
-| 1.1 | `migrations/0003_drop_stage_progress.sql` + sacarlo de `db/types.ts`, `stageSchema`, el insert de `developer.routes.ts`, `fixtures.ts` y `test/helpers/stages.ts` |
+| 1.1 | ✔ `migrations/0003_drop_stage_progress.sql` + sacarlo de `db/types.ts`, `stageSchema`, el insert de `developer.routes.ts`, `fixtures.ts` y `test/helpers/stages.ts` — commit `7130c94` |
 
 Es todo. **Ningún call site cambia**: al no existir la columna, `selectAll()` deja de devolverla y
 los ~9 `stageSchema.parse` siguen andando. Sin la migración habría que pasar esos 9 a listas
@@ -45,8 +45,8 @@ explícitas de columnas — la migración es el camino con *menos* código tocad
 
 | | Qué | Criterio |
 |---|---|---|
-| 2.1 | `developerProgressItemSchema` suma `certifiedAt` y `estimatedDelivery`; el handler los selecciona | 8 |
-| 2.2 | `/developer/progress`: barra + "Overall Progress: N%" (dibujada por la pantalla, no por `ProgressTimeline`), `finalizationLabel` al timeline, bloque "Stage Detail" sin miniatura | 8 |
+| 2.1 | ✔ `developerProgressItemSchema` suma `certifiedAt` y `estimatedDelivery`; el handler los selecciona — commit `111f1f6` | 8 |
+| 2.2 | ✔ `/developer/progress`: barra + "Overall Progress: N%" (dibujada por la pantalla, no por `ProgressTimeline`), `finalizationLabel` al timeline, bloque "Stage Detail" sin miniatura — commit `a4743fa`, verificado con Claude en Chrome contra `pnpm dev` local | 8 |
 
 **Cierres de criterios**
 
