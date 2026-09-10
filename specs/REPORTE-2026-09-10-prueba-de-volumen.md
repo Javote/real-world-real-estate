@@ -40,13 +40,14 @@ agrupados por proyecto y etapa.
 **Estado al cierre de esta sesión (mismo día):** la causa raíz de las 4 fallas se confirmó
 (un reinicio de `propnexus-api` por health check fallido en Render, plan Free, sin relación con el
 código) y el gap que permitió perderlas se cerró en producción (§Cómo hacerlo más robusto — 3
-mejoras de código, deployadas). Las 2 etapas afectadas se dejaron **deliberadamente sin reparar**
-(son de un proyecto de prueba, sin corregir D-058 a mano sin un mecanismo probado). Los 176 TXIDs
-reales quedaron reconciliados a `Confirmed` en la base y **verificados 1 a 1 contra Preprod** por
-una fuente independiente (Koios) — 176 de 176 existen en la cadena. El balance real de la wallet de
-servicio se midió: ~99.8 ADA de costo total de la prueba (39.83 ADA de fees + 60 ADA bloqueadas
-permanentemente, D-057), levemente por debajo del estimado del plan (~105 ADA). 3.10/3.12/3.13
-quedan fuera de esta sesión por decisión del dueño.
+mejoras de código, deployadas). Los 176 TXIDs reales quedaron reconciliados a `Confirmed` en la
+base y **verificados 1 a 1 contra Preprod** por una fuente independiente (Koios) — 176 de 176
+existen en la cadena. El balance real de la wallet de servicio se midió: ~99.8 ADA de costo total
+de la prueba (39.83 ADA de fees + 60 ADA bloqueadas permanentemente, D-057), levemente por debajo
+del estimado del plan (~105 ADA). El bookkeeping de la etapa 3 se corrigió (migración
+`0004_reconciliar_hilo_huerfano_etapa3.sql` — ver §Reparación del hilo huérfano de la etapa 3);
+las transacciones on-chain que todavía faltan (1 en la etapa 3, 2 en la etapa 4) quedan para una
+sesión siguiente. 3.10/3.12/3.13 quedan fuera de esta sesión por decisión del dueño.
 
 ## Alcance y objetivo
 
@@ -299,18 +300,19 @@ parado en un punto distinto de la cadena:
 
 ## Qué falta después de este reporte
 
-1. **Decidir qué hacer con los hilos huérfanos de las etapas 3 y 4 — sin resolver a propósito.**
-   Corrección del punto anterior (ver §Hallazgo): la etapa 4 **no** admite un reintento simple por
-   UI — su `Stage.state` ya es `Completed` (las 4 fases de la prueba corrieron sobre las 30 etapas
-   igual, aunque el anclaje de la 3 y la 4 haya fallado), y `Completed` es terminal en la FSM: no
-   hay transición válida que la UI pueda disparar. Las dos etapas quedan en la misma situación —
-   declaradas `Completed`, con el hilo on-chain un paso (etapa 3, `InProgress`) o dos pasos (etapa
-   4, `Observed`) atrás de lo declarado. **Decisión tomada esta sesión: no repararlas a mano.** Son
-   etapas de un proyecto de prueba, sin dato real de cliente detrás; la reparación pediría escribir
-   `outputRef`/`txid` directo en `OnChainEvent` y reconstruir a mano la transacción de anclaje que
-   nunca salió — cirugía sobre D-058 sin un mecanismo probado para hacerlo, y construir uno ahora
-   para un caso único de test es la clase de infraestructura anticipada que este proyecto evita a
-   propósito. Quedan documentadas como deuda conocida, visibles vía `hilosSospechosos()`.
+1. **Reparar los hilos huérfanos de las etapas 3 y 4 — parcialmente hecho, decisión revertida a
+   mitad de sesión.** Corrección del punto anterior (ver §Hallazgo): la etapa 4 **no** admite un
+   reintento simple por UI — su `Stage.state` ya es `Completed` (las 4 fases de la prueba corrieron
+   sobre las 30 etapas igual, aunque el anclaje de la 3 y la 4 haya fallado), y `Completed` es
+   terminal en la FSM: no hay transición válida que la UI pueda disparar. Se había decidido no
+   tocarlas — son etapas de un proyecto de prueba, sin dato real de cliente detrás — pero al revisar
+   el `.env` local se confirmó (derivando la dirección de la wallet desde la clave privada, offline,
+   y comparándola contra la que produjo las 176 transacciones reales) que las credenciales de
+   producción **están disponibles y son las reales**, lo que abarató bastante el costo de reparar.
+   **Etapa 3: bookkeeping corregido** (migración `0004_reconciliar_hilo_huerfano_etapa3.sql`, ver
+   §Reparación del hilo huérfano de la etapa 3) — falta todavía enviar la transacción de
+   "Certificar" que nunca salió. **Etapa 4: sin tocar** — le faltan 2 transacciones completas
+   (nunca se intentaron), no una corrección de datos. Las dos quedan para una sesión siguiente.
 2. ~~Confirmar con logs de servidor la causa~~ **Hecho.** Ver §La causa arriba — confirmado por
    `render logs`, `render deploys list`, `render services` y el mail de Render al dueño
    (16:55 UTC, "HTTP check failed, timed out after 5 seconds"). Ver §Cómo hacerlo más robusto para
@@ -386,13 +388,62 @@ health-check-kill en sí. Es la causa *disparadora* de este caso puntual, pero n
 cuál sea— y es una decisión de costo, no de código; queda para que el dueño la evalúe aparte si
 además quiere bajar la probabilidad de que el proceso se caiga.
 
-**Lo que queda pendiente de esta mejora, y es decisión del dueño:** decidir el mecanismo de
-reconciliación real para el hilo huérfano de la etapa 3 (`9a57f563…#0`, ver §Hallazgo) — sigue sin
-resolverse, `hilosSospechosos()` lo señala pero no lo repara. Y los cambios de código de esta
-sección **no se commitearon ni pushearon** — quedan en el working tree, a la espera de que el
-dueño los revise línea por línea (nivel 🟡, D-014/D-060) antes de que un push dispare el deploy
-automático a producción (D-030, sin PRs).
+**Actualización:** los cambios de código de esta sección se revisaron, commitearon y pushearon el
+mismo día (commit `56556c6`, deploy confirmado `Live` en Render). El mecanismo de reconciliación
+para el hilo huérfano de la etapa 3 —abajo— resultó ser una corrección de datos chica, no una
+ruta nueva.
 
+## Reparación del hilo huérfano de la etapa 3 — bookkeeping corregido, transacción pendiente
+
+**Solo el primer paso.** Corregir el bookkeeping de la etapa 3 (que `cabezaDelHilo()` apunte al
+UTxO real) no ancla nada nuevo — es una corrección de un dato que ya existía on-chain, sin tocar la
+cadena. La transacción de "Certificar" que sigue faltando (para que el hilo on-chain llegue a
+`Completed`, igual que ya dice la base) **no se envió en esta sesión** — queda para la siguiente,
+junto con las 2 de la etapa 4.
+
+**Verificación previa, antes de tocar la base:** se confirmó que las credenciales de
+`apps/api/.env` local (`SERVICE_WALLET_PRIVATE_KEY`, `BLOCKFROST_API_KEY`) son las reales — no
+las de un ambiente viejo. La wallet se verificó **derivando la dirección pública desde la clave
+privada, offline, sin red** (`CML.PrivateKey` de `@lucid-evolution/lucid`, sin exponer la clave) y
+comparándola contra la dirección que produjo las 176 transacciones reales de la prueba: coinciden.
+La API key de Blockfrost, que en un intento anterior de esta misma sesión había dado
+`"Invalid project token"`, resultó ser un error de extracción propio (el valor en `.env` está entre
+comillas literales, `cut -d= -f2-` las dejaba pegadas al valor) — sin comillas, la key funciona
+(`/health` → `is_healthy: true`; el mismo `/txs/.../utxos` que antes fallaba, ahora responde bien).
+
+**El dato en sí, antes de escribirlo:** se hizo un **dry run real** — la corrección envuelta en
+`BEGIN; UPDATE ...; SELECT ...; ROLLBACK;` en una sola invocación de `turso db shell`, para ver la
+fila exactamente como iba a quedar sin comprometer el cambio. Confirmado el resultado, y que el
+`ROLLBACK` efectivamente había dejado la base intacta (un `SELECT` posterior mostró la fila sin
+tocar), se corrió el `UPDATE` real.
+
+**El cambio quedó versionado, no como un `UPDATE` suelto:** `apps/api/migrations/
+0004_reconciliar_hilo_huerfano_etapa3.sql` — mismo formato que las migraciones de schema
+(comentario explicando el qué y el porqué, statement SQL), aunque esta es de datos (DML) y no de
+schema (DDL). Corre con una guarda de idempotencia (`AND txid IS NULL`): en cualquier otra base
+—test, un dev fresco, o la misma producción después de aplicado— el `id` no matchea o el `txid` ya
+no es `NULL`, y el `UPDATE` no hace nada. Se registró a mano en `_migrations` (con el `appliedAt`
+real) porque se corrió directo contra producción, no a través de `db:migrate` — así el próximo
+deploy no lo vuelve a intentar (sería inofensivo si lo hiciera, pero la tabla de tracking queda
+mintiendo si no se lo dice). `pnpm --filter @plataforma/api test` completo en verde con la
+migración nueva presente (340/343, los 3 skip de siempre) — el `id` fijo no existe en la base de
+test, así que ahí el `UPDATE` no afecta ninguna fila, confirmado por el verde.
+
+**Resultado, verificado contra producción:** `POST /evidence/reconcile` ya no lista la etapa 3
+(`htmx2hhsfgazxzl4xsnrh9pz`) entre los `sospechosos` — solo quedan la etapa 4 y el caso preexistente
+no relacionado del 2026-09-08.
+
+```sql
+-- apps/api/migrations/0004_reconciliar_hilo_huerfano_etapa3.sql
+UPDATE `OnChainEvent`
+SET `txid` = '9a57f563e7d5627f22d9a062d26049d48789c91014d8b676298c0eb7c71f9e68',
+    `outputRef` = '9a57f563e7d5627f22d9a062d26049d48789c91014d8b676298c0eb7c71f9e68#0',
+    `network` = 'Preprod',
+    `status` = 'Confirmed',
+    `blockTimestamp` = 1789059296000,
+    `updatedAt` = unixepoch() * 1000
+WHERE `id` = 'amc9u0gyovc9tlf5z9ceh4db' AND `txid` IS NULL;
+```
 
 ## Apéndice — TXIDs por etapa (176 reales, los 176 verificados 1 a 1 contra Preprod)
 
