@@ -405,7 +405,7 @@ lo mismo sin pasar por HTTP. Ver el detalle en `CLAUDE.md` raíz.
   `POST /projects/:id/stages` para abrir el hilo, y recién después `PATCH .../state`. Confirmado con
   las dos transacciones referenciando el reference script (D-083) en vez de adjuntar el validador —
   verificado leyendo `reference: true` en los inputs de cada tx contra Blockfrost, no por
-  tamaño/fee nomás. Ver `CLAUDE.md` raíz, cierre del 2026-09-03.
+  tamaño/fee nomás. Ver `specs/archive/CLAUDE-historial-hasta-2026-09-10.md`, cierre del 2026-09-03.
   **Dos arreglos que salieron de esto, para que no vuelva a sorprender:**
   1. `POST /projects/:id/stages/:stageId/retry-anchor` (admin) — reintenta el mint cuando
      genuinamente falló (red caída, wallet sin fondos) y el stage **sigue en `Pending`**. Para un
