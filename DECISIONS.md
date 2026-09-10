@@ -11,10 +11,13 @@ conserva las 63 entradas originales enteras.
 conformidad. La documentación creció más rápido que el producto, y buena parte describía cosas que
 ya no existen. Partirlo no pierde nada: el porqué sigue estando, deja de pesar.
 
-> **Jerarquía de precedencia — dos capas:**
+> **Jerarquía de precedencia — dos capas, y un techo adentro de la primera (D-090):**
 >
 > - **Obligaciones (el *qué*): `docs/` es ley.** Entregables aprobados por reviewers de Catalyst
->   1400106. Nada de este archivo puede reducir lo que debemos.
+>   1400106. Nada de este archivo puede reducir lo que debemos. **Y adentro de `docs/`: los
+>   entregables de M2/M3 (`M2-D1`…`M2-D6`, las capturas) priman sobre el texto del SOM** — el SOM es
+>   la intención de alto nivel: los entregables son su elaboración ya aprobada, y son lo que el
+>   equipo construye contra. Ver D-090.
 > - **Implementación (el *cómo*): `DECISIONS.md` > `CLAUDE.md` > `specs/`.**
 >
 > **`docs/` no se edita nunca.** Un error o una ambigüedad en un entregable se resuelve con una
@@ -22,7 +25,7 @@ ya no existen. Partirlo no pierde nada: el porqué sigue estando, deja de pesar.
 > se contradice internamente, (b) es un error de redacción, o (c) seguirlo al pie contradiría una
 > verdad del producto declarada por el dueño — **nunca por conveniencia**.
 >
-> **La numeración no se recicla.** Las decisiones nuevas siguen desde D-090.
+> **La numeración no se recicla.** Las decisiones nuevas siguen desde D-093.
 
 ## Desvíos vigentes
 
@@ -32,7 +35,9 @@ Todos se comunican en la entrega.
 | Qué dice el entregable | Resolución | Caso | Decisión |
 |---|---|---|---|
 | M3 SOM: "Plutus **V2** state machine" | El proyecto Aiken compila **Plutus V3**, que es lo que Aiken 1.1.x emite. Ningún entregable fija versión de Aiken | (b) redacción | D-019 |
-| M3 SOM: "signers/**percentages** configurables", "reserva → **escrow**" | La plataforma nunca custodia ni transfiere valor. Los porcentajes son cronograma registrado; el "escrow" es el contrato anclado | (c) verdad del producto | D-021 |
+| M3 SOM: "reserva → **escrow**" | La plataforma nunca custodia ni transfiere valor. El "escrow" es el contrato anclado, nunca fondos retenidos | (c) verdad del producto | D-021 |
+| M3 SOM: "**percentages** configurables" (un `%` de avance por stage) | Ningún entregable de M2/M3 lo define (ni M2-D1, ni M2-D3, ni la captura 34C) — nació de leer el SOM en vez de los entregables. El avance es **derivado**, `completadas/total` por proyecto, sin peso por etapa | (c) verdad del producto + techo de precedencia | D-090, D-091 |
+| M3 SOM: "**signers** configurables" (rol configurable por stage) | Lo que el SOM pide ya existe, con otra forma: D-020 fija **qué rol autoriza cada transición**, construido y testeado — "configurable por proyecto" no aparece en ningún entregable. No se agrega una UI para reasignarlo | (c) verdad del producto + techo de precedencia | D-090, D-092 |
 | M1 §README lista los estados como "…**Certified**…"; el `.puml` dice `Completed` | Gana `Completed`: precedencia interna de M1, y `Certified` implicaría que la plataforma certifica | (a) contradicción interna | D-020, D-026 |
 | M1 §README promete que la taxonomía indica "authoritative" y "anchored on-chain" | El CSV entregado no tiene esas columnas. El hueco lo llenan D-027 y D-028 | (a) contradicción interna | D-027, D-028 |
 | M2-D5 §2.1 usa notación de rutas Wouter | Las rutas se leen como **paths**, no como elección de router | (b) redacción | D-022 |
@@ -74,6 +79,28 @@ se hashean, no se anclan y no muestran ninguna señal de prueba. No hay estado i
 
 Ni para corregir un error evidente. Los originales viven afuera y están aprobados. Los desvíos se
 registran acá arriba.
+
+## D-090 — El techo de precedencia: los entregables M2/M3 priman sobre el SOM
+
+**El caso que lo estableció, `progressPercentage`:** el SOM pide "signers/percentages
+configurables"; se construyó una columna `progressPercentage` en `Stage` leyendo esa frase. Ningún
+entregable de M2/M3 la pedía — ni `M2-D1` (mapa de arquitectura de información), ni `M2-D3`
+(component library), ni `M2-D5` (el backlog de superficies), ni la captura `34C` (la única fuente
+real del catálogo de 10 etapas). Se leyó el SOM en vez de leer lo que el equipo ya había construido
+y Catalyst ya había aprobado.
+
+**La regla, para que no se repita:** cuando el texto del SOM y un entregable de M2/M3 dicen cosas
+distintas sobre el mismo campo, pantalla o comportamiento, **gana el entregable**. El SOM es la
+intención de alto nivel del milestone; los entregables de M2/M3 son esa intención ya elaborada,
+revisada y aprobada — son lo que el equipo efectivamente construye contra, fila por fila, captura
+por captura. El SOM no se ignora: sigue fijando el *qué* general del milestone, pero no agrega
+campos, pantallas ni comportamiento que su propia elaboración aprobada no pidió.
+
+**Consecuencia práctica:** ante una frase del SOM que no aparece en ningún entregable de M2/M3, la
+respuesta no es "construirla para cubrir la frase" — es volver a los entregables, confirmar que
+genuinamente no está, y si no está, **documentar por qué no se construye**, no inventarla. `D-091` y
+`D-092` son las dos mitades de ese "no se construye" para `progressPercentage`/signers, la migración
+que lo revirtió está en `M3-1.1`.
 
 ---
 
@@ -148,6 +175,37 @@ que son el mismo `StageState`; la maqueta de M2 podía permitirse sinónimos por
 detrás, y ahora que la tiene, la consistencia de terminología pesa más que la precisión de una
 etiqueta suelta. Si alguna vez se toca una, es para **acercarla** al resto del proyecto, nunca para
 alejarla.
+
+## D-091 — El avance de un proyecto es derivado: `completadas/total`, sin peso por etapa
+
+La captura 45 (`45-DEVELOPER-PROGRESS.png`, la única referencia real de "Overall Progress") muestra
+un número y una barra por proyecto — no un desglose ponderado por stage. El avance **se deriva**
+contando `Stage.state = 'Completed'` sobre el total de etapas del proyecto (`avanceDeStages()`,
+`apps/web/src/lib/stageProgress.ts`); no se declara, no se guarda, y ninguna etapa pesa más que
+otra. Es la mitad "percentages" del criterio 3 del SOM, resuelta por D-090: no hace falta un campo
+de peso por stage porque ningún entregable pide uno — la fuente de la verdad es la captura, y la
+captura muestra un cociente simple.
+
+**Consecuencia para cualquier pantalla que muestre "N% de avance":** el numerador y el denominador
+tienen que salir de la **misma lista** de etapas del proyecto — nunca de una columna cruda como
+`sequenceOrder`, que puede tener huecos en un proyecto viejo (`torre-a`, `M3-2.5`). El % es sobre
+posiciones, no sobre valores de una columna.
+
+## D-092 — "Signers configurables" no existe como diseño — cierra el criterio 3 del SOM
+
+La mitad "signers" del criterio 3 pide, leído literal, que un admin pueda **reasignar** qué rol
+autoriza cada transición de cada stage, por proyecto. Ningún entregable de M2/M3 lo muestra: ni una
+pantalla de configuración, ni un campo en la captura 34C, ni una mención en `M2-D1`/`M2-D3`/`M2-D5`.
+Por D-090, no se construye.
+
+**Lo que sí existe, y responde la pregunta de fondo que el criterio persigue** ("¿quién puede
+avanzar cada stage?"): la tabla de D-020 §Quién puede pedir cada transición — fija, la misma para
+todo proyecto, construida y testeada (`STAGE_TRANSITION_FORBIDDEN`, D-088). No es *configurable*
+porque nada en `docs/` pide que lo sea; es **determinística y completa**, que es lo que un signer
+schema hace de verdad cuando no hay dos roles compitiendo por la misma transición.
+
+**El criterio 3 del SOM queda sin código pendiente.** Documentación de cierre en `specs/README.md`
+y `M3-3.4`.
 
 ## D-029 — Los stages son del proyecto; la unidad es lo comercial
 
