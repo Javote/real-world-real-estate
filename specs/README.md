@@ -45,8 +45,8 @@ aprobación explícita.
 |---|---|---|---|
 | 1 | Los contratos compilan | `aiken check` verde en CI; `plutus.json` al día | ✅ |
 | — | Output 1: state machine "with... timeouts, and fallback branches" | Ninguno de los dos existe en el validador ni lo pide `docs/` (D-089): se releen como robustez del pipeline de anclaje —`Pending`/`Failed`/reconciliación/retry-anchor, todo ya construido y testeado— en vez de agregar deadline o estado de cancelación a un contrato ya hasheado | ✅ [`DECISIONS.md` D-089](../DECISIONS.md) |
-| 2 | Unit tests **≥95% coverage** | **73 tests**; `aiken` no mide coverage de líneas, así que la evidencia es la tabla punto de rechazo → test de `contracts/CLAUDE.md` | ✅ |
-| 3 | **≥8 stages** con signers/percentages configurables | Tests parametrizados; plantilla de 10 stages | ◐ `DEFAULT_STAGE_CATALOG` (8 etapas, `progressPercentage` suma 100 — D-021, es avance de obra, no dinero) sembrado en `torre-a` y aceptado por `POST /projects/:id/stages`. Falta "signers" (rol configurable por stage): pausado, el dueño lo define con el developer partner |
+| 2 | Unit tests **≥95% coverage** | **82 tests**; `aiken` no mide coverage de líneas, así que la evidencia es la tabla punto de rechazo → test de `contracts/CLAUDE.md` | ✅ |
+| 3 | **≥8 stages** con signers/percentages configurables | `DEFAULT_STAGE_CATALOG` (10 etapas, `packages/shared`, captura 34C) | ✅ Sin código pendiente ([`DECISIONS.md` D-090/D-091/D-092](../DECISIONS.md)): "percentages" es el avance derivado (`completadas/total`, D-091) — ningún entregable de M2/M3 pide un peso por stage, y `progressPercentage` (que sí lo era) se borró en `M3-1.1`. "Signers" ya existe con otra forma: D-020 fija determinísticamente qué rol autoriza cada transición (D-092) — ningún entregable pide que sea configurable por proyecto. `torre-a` tiene 10 stages reales, no 8; la ruta que hubiera aceptado un campo suelto (`POST /projects/:id/stages`) se borró el 2026-09-08 (CRUD genérico sin caller, ver `apps/api/CLAUDE.md`) |
 | 4 | **3 pilotos** confirman | Carta firmada | ⬜ externo |
 | 5 | Endpoints documentados | OpenAPI | ✅ [`specs/openapi/propnexus.openapi.json`](openapi/propnexus.openapi.json) (OpenAPI 3.1, `pnpm --filter @plataforma/api docs:openapi`) — 85 operaciones, 26 con su schema Zod real de body/query (los 23 que hasta el 2026-09-08 vivían inline se movieron a `packages/shared` para poder introspectarlos); el resto queda con método+path+auth. `test/openapi-freshness.test.ts` lo mantiene sincronizado. **Cerrado del todo el 2026-09-09** ([`PLAN-2026-09-08-documentar-api-completa.md`](PLAN-2026-09-08-documentar-api-completa.md)): las respuestas también tienen su schema — 76/85 rutas (las 9 restantes son legítimamente sin cuerpo JSON: `204 No Content` o archivo binario). También sigue existiendo [`specs/postman/propnexus.postman_collection.json`](postman/propnexus.postman_collection.json) (85 rutas, con 7 bodies de ejemplo del camino feliz), que no reemplaza esto sino que sirve para probar a mano contra una instancia corriendo |
 | 6 | Proof objects validados | El SOM pide literal "hash + timestamp + signer": `GET /evidence/:bundleId/proof/:fileHash` ahora devuelve `signerUserId`/`txid`/`timestamp` (regla 17: null hasta `Confirmed`), `test/evidence-anchor.test.ts`. Los patrones P1–P10 de M2-D4 §8.1 (UI), auditados test por test el 2026-09-10: P1 `VerificationBadge.test.tsx`, P2 `HashChip.test.tsx`, P3/P4/P5/P7/P9/P10 en `components/domain/patterns.test.tsx` (cada uno con el caso "sin TXID no hay señal de prueba"), P6 `AuditEventCard` en `components/domain/cards.test.tsx`. P8 (Dossier) no tiene componente propio para testear: compone P1+P2 a nivel dossier y por artefacto en `investor.unit.$unitId.dossier.tsx` y `notary.dossier.$dossierId.tsx` — verificado leyendo las dos rutas, ninguna dibuja el chip fuera del guard de su prop. 10/10 | ✅ |
@@ -67,9 +67,9 @@ aprobación explícita.
 
 | | |
 |---|---|
-| Contratos | validador con thread token y `mint` validado, datum alineado con M1-D2, **73 tests** |
+| Contratos | validador con thread token y `mint` validado, datum alineado con M1-D2, **82 tests** |
 | Anclaje | `AnchorPort` simulado y real; probado contra el `Emulator`, contra un devnet local y contra Preprod. El validador viaja por referencia (D-083) |
-| API | autorización en dos capas, FSM aplicada, bundles con Merkle root, audit log, **235 tests** |
+| API | autorización en dos capas, FSM aplicada, bundles con Merkle root, audit log, **335 tests** |
 | Storage | port S3 probado contra MinIO real; el hash cubre los bytes guardados |
 
 **Front:** SPEC-016 cierra el backlog de test IDs del investor. `DEV-RELEASE-EXECUTE-002` está
@@ -77,7 +77,7 @@ excluido del conteo (D-070, no es deuda ni backlog — nunca se implementa).
 
 | Dimensión | Especificado | Existe | Conforme |
 |---|---:|---:|---:|
-| Superficies (M2-D5) | 53 | **46** | 46 — una superficie cuenta cuando TODOS sus test IDs están reclamados |
+| Superficies (M2-D5) | 53 | **53** | 53 — una superficie cuenta cuando TODOS sus test IDs están reclamados. Esta tabla es del 2026-09-01; el número vigente (53/53, auditado el 2026-09-03 contra el código) está en §Orden de trabajo, más abajo |
 | Componentes (M2-D3) | 36 | **36** | 36 |
 | Patrones de prueba (M2-D4) | 10 | 10 | 10 |
 | Test IDs | **74** | 74 | 74 (100%) — medido por `pnpm testids`; `DEV-RELEASE-EXECUTE-002` excluido por D-070 |
@@ -125,7 +125,7 @@ de corte de una rebanada es que la app quede corriendo y demostrable.**
 |---|---|---|
 | [`SPEC-010`](SPEC-010-superficie-roja.md) | Endurecer la superficie 🔴 | cerrada 2026-08-21 |
 | [`SPEC-012`](SPEC-012-segunda-capa-como-middleware.md) | `requireProjectAccess`: la segunda capa como middleware | cerrada 2026-08-23 · **superada por D-088** el 2026-09-04 |
-| [`SPEC-013`](SPEC-013-anchorport.md) | `AnchorPort`: conectar el registro con la cadena | §A y §B cerradas · §C pendiente |
+| [`SPEC-013`](SPEC-013-anchorport.md) | `AnchorPort`: conectar el registro con la cadena | **cerrada** — §A, §B y §C. §C (`reconcile()` en lectura, `verify()` público, estados de la UI) cerró con D-077 (`reconciliarParaLectura` cableada en cinco routers) — este archivo lo tenía desactualizado contra §Orden de trabajo, más arriba |
 | [`SPEC-014`](SPEC-014-reconstruccion-del-front.md) | Reconstrucción del front desde los entregables | **en curso** |
 | [`SPEC-015`](SPEC-015-saneamiento-de-la-instrumentacion.md) | Saneamiento de la instrumentación: tests, fixtures, coverage, CI | **en curso** |
 | [`SPEC-016`](SPEC-016-superficie-del-investor.md) | Superficie del investor (M2-D5 §4) | **cerrada 2026-08-28** |
