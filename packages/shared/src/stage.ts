@@ -117,10 +117,12 @@ export type ObserveStageInput = z.infer<typeof observeStageSchema>;
  * por el dueño el 2026-09-08.
  *
  * **Sin `progressPercentage`.** Existió como columna nullable (M3 §1.1) pero
- * nunca tuvo call site que lo escribiera ni lo leyera — el avance del
- * proyecto es derivado (`completadas/total`, D-021 relee "signers/percentages
- * configurables" así), no un peso declarado por stage. Columna eliminada
- * 2026-09-10 (migración `0003_drop_stage_progress.sql`).
+ * nunca tuvo call site que lo escribiera ni lo leyera. Nació de leer el texto
+ * del SOM ("percentages configurables") en vez de los entregables — ninguno
+ * la pedía, ni siquiera la captura 34C — y es el caso que estableció el techo
+ * de precedencia de M2/M3 sobre el SOM (D-090). El avance del proyecto es
+ * derivado (`completadas/total`, D-091), no un peso declarado por stage.
+ * Columna eliminada 2026-09-10 (migración `0003_drop_stage_progress.sql`).
  */
 export interface StageCatalogEntry {
   name: string;

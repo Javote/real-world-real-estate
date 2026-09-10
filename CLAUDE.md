@@ -67,25 +67,25 @@ explícitas de columnas — la migración es el camino con *menos* código tocad
 
 | | Qué |
 |---|---|
-| 3.1 | `DECISIONS.md`: el techo de precedencia — **entregables M2/M3 sobre el SOM**, con `progressPercentage` como el caso que lo estableció. Es lo que evita que alguien vuelva a crear la columna leyendo el SOM |
-| 3.2 | `DECISIONS.md`: el avance es **derivado por proyecto** (`completadas/total`), según captura 45. No hay peso por etapa |
-| 3.3 | `DECISIONS.md`: **"signers configurables" no existe en el diseño** — misma resolución que 3.1, y cierra el criterio 3 |
+| 3.1 | ✔ `DECISIONS.md`: el techo de precedencia — **entregables M2/M3 sobre el SOM** (D-090), con `progressPercentage` como el caso que lo estableció |
+| 3.2 | ✔ `DECISIONS.md`: el avance es **derivado por proyecto** (`completadas/total`, D-091), según captura 45. No hay peso por etapa |
+| 3.3 | ✔ `DECISIONS.md`: **"signers configurables" no existe en el diseño** (D-092) — misma resolución que 3.1, y cierra el criterio 3 |
 
 **Saneamiento de `specs/README.md`** — hoy tiene cinco afirmaciones falsas
 
 | | Qué |
 |---|---|
-| 3.4 | Criterio 3: las cuatro mitades de esa fila son falsas (catálogo de 8→10, `torre-a` con 3 stages, la ruta que aceptaba el campo se borró, no hay forma de configurarlo). Reescribir con 3.1–3.3 |
-| 3.5 | Números viejos: "235 tests" (son **334**), "73 tests" de Aiken (son **82**), superficies "46" cuando este archivo afirma 53/53 auditadas — una de las dos miente |
-| 3.6 | `SPEC-013 §C` figura "pendiente" en el registro y "hecho" en el orden de trabajo, en el mismo archivo |
+| 3.4 | ✔ Criterio 3 reescrito con D-090/D-091/D-092: catálogo real de 10 (no 8), sin ruta que acepte el campo, "signers" resuelto por la tabla fija de D-020 |
+| 3.5 | ✔ Números corregidos: **335 tests** de API (eran "235"), **82** de Aiken (eran "73"), superficies **53/53** (eran "46") |
+| 3.6 | ✔ `SPEC-013 §C` — gana "hecho" (D-077 lo sostiene); corregido el registro de specs para que diga lo mismo que el orden de trabajo |
 
 **Documentación de frente**
 
 | | Qué |
 |---|---|
-| 3.7 | Ficha de `DEFAULT_STAGE_CATALOG`: cambia el motivo del "sin `progressPercentage`" |
-| 3.8 | `apps/web/CLAUDE.md`: la deuda declarada de las miniaturas del Stage Detail |
-| 3.9 | `CLAUDE.md` raíz: reescribir la tabla de pendientes de §Estado con lo que quede |
+| 3.7 | ✔ Ficha de `DEFAULT_STAGE_CATALOG`: motivo del "sin `progressPercentage`" ahora cita D-090/D-091 |
+| 3.8 | ✔ `apps/web/CLAUDE.md`: deuda declarada de la miniatura de "Stage Detail" en la tabla de "Lo que la captura pide y el contrato no da" |
+| 3.9 | ✔ `CLAUDE.md` raíz: tabla de pendientes de §Estado reescrita — solo quedan la prueba de volumen y mainnet (fuera de alcance) |
 
 **Evidencia de entrega** (no es código ni prosa nuestra)
 
@@ -150,9 +150,10 @@ validador que afirme algo más, está mal (D-026).
 
 # Estado, y lo próximo
 
-> **La tabla de abajo quedó vieja el 2026-09-09.** Lo que falta está en §El plan de entrega, arriba;
-> reescribir esta tabla es el punto 3.9 de ese plan. Se deja hasta entonces porque el resto de la
-> sección —lo ya cerrado— sigue siendo válido.
+> **La lista completa de lo que falta está en §El plan de entrega, arriba — reescrita el 2026-09-10
+> (`M3-3.9`).** Esta tabla es solo el resumen de los dos ítems que no encajan en ninguna Tanda
+> (uno es la prueba que las tres dependen, el otro está fuera de alcance del milestone). El resto de
+> esta sección —lo ya cerrado— es historial y sigue siendo válido tal cual.
 
 **La instancia desplegada ancló de verdad por primera vez el 2026-09-03**, contra Cardano Preprod:
 `OnChainEvent` tiene su primera fila, `Confirmed`, con TXID real
@@ -162,8 +163,8 @@ números medidos, en `specs/README.md`. Acá solo lo que falta.
 
 | # | Qué | Por qué ahí | Nivel |
 |---|---|---|---|
-| 0 | **Prueba end-to-end de volumen, en preprod, antes de mainnet** (pedido del dueño, 2026-09-09): desde el front, crear varios proyectos nuevos, completar los 10 stages del template con evidencia real cada uno, y llevar cada stage por **todas** las transiciones posibles de la FSM (`Pending → InProgress → Observed → InProgress → Completed`) — no solo un camino feliz por stage, como hasta ahora. **Falta presupuestar el costo real en preprod** (cantidad de transacciones × fee, y si el balance de la wallet de servicio alcanza o hace falta otro drip del faucet) antes de correrla. | Es la validación final de volumen que falta antes de habilitar mainnet: hasta ahora cada arista de la FSM se probó una vez, sobre un stage aislado — nunca las cuatro juntas, en los 10 stages de un proyecto real, repetido en más de un proyecto | 🟡 |
-| 1 | **Mainnet** — runbook, habilitar la red, custodia de la clave. **Sin confirmar que sea de este milestone** (2026-09-08, el dueño) | D-013 la hace **imposible por configuración**: es código, no solo procedimiento | 🔴 |
+| 0 | **Prueba end-to-end de volumen, en preprod, antes de mainnet** (pedido del dueño, 2026-09-09): desde el front, crear varios proyectos nuevos, completar los 10 stages del template con evidencia real cada uno, y llevar cada stage por **todas** las transiciones posibles de la FSM (`Pending → InProgress → Observed → InProgress → Completed`) — no solo un camino feliz por stage, como hasta ahora. El presupuesto ya está medido (**~35 ADA por proyecto**, ≈15 de fee + 20 bloqueadas, ~1% del balance de la wallet de servicio — ver §El plan de entrega, "Al final"); lo que falta es correrla. | Es la validación final de volumen que falta antes de habilitar mainnet: hasta ahora cada arista de la FSM se probó una vez, sobre un stage aislado — nunca las cuatro juntas, en los 10 stages de un proyecto real, repetido en más de un proyecto. Además alimenta los criterios 8, 9 y 15 del SOM | 🟡 |
+| 1 | **Mainnet** — runbook, habilitar la red, custodia de la clave. **Fuera de alcance de este milestone** (decisión del dueño, 2026-09-09 — ver §El plan de entrega) | D-013 la hace **imposible por configuración**: es código, no solo procedimiento | 🔴 |
 
 **El "Stage template" (ex-#1) se cerró el 2026-09-08** — las dos decisiones del dueño que lo
 bloqueaban (nombrar las 10 etapas, el mecanismo de anclaje) están resueltas y construidas. Detalle
