@@ -407,6 +407,8 @@ export interface ProgressRow {
   stageName: string
   sequenceOrder: number
   state: StageState
+  certifiedAt: string | null
   projectId: string
   projectName: string
+  estimatedDelivery: string | null
 }

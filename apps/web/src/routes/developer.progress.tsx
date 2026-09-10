@@ -9,7 +9,9 @@ import { ProgressTimeline, type TimelineStage } from '#/components/domain/Progre
 import { StatCard } from '#/components/domain/StatCard'
 import { StatusPill } from '#/components/domain/StatusPill'
 import { PanelLayout } from '#/components/PanelLayout'
+import { formatMonthYear } from '#/i18n/format'
 import { useTranslation } from '#/i18n/useTranslation'
+import { claveEstadoStage } from '#/lib/investor'
 
 // **M2-D5 fila 45 · `/developer/progress`** — el avance de obra a través de
 // todos los proyectos. Endpoint: GET /developer/progress.
@@ -24,7 +26,13 @@ import { useTranslation } from '#/i18n/useTranslation'
 // endpoint ya trae. La captura 45 los muestra sobre UN desarrollo de diez
 // etapas; acá el endpoint cruza proyectos, así que los conteos y los
 // timelines son por el conjunto, agrupados por proyecto. No hay thumbnail de
-// etapa en el contrato: no se dibuja.
+// etapa en el contrato: no se dibuja (deuda declarada, `apps/web/CLAUDE.md`).
+//
+// **"Overall Progress: N%" (M3 §2.2) es derivado por proyecto** (D-021/
+// DECISIONS.md: `completadas/total`, sin peso por etapa) y lo dibuja esta
+// pantalla — no `ProgressTimeline`, que solo sabe de nodos y una etiqueta.
+// `finalizationLabel` sale de `Project.estimatedDelivery`. "Stage Detail"
+// lista las etapas del proyecto con su `certifiedAt` cuando existe.
 //
 // **"Etapas observadas" (`DEV-PROGRESS-RESUME`) no está en ninguna
 // captura — es una decisión nueva, no una superficie de M2-D5.** El diagrama
@@ -45,9 +53,18 @@ function nodoDe(state: string): TimelineStage['state'] {
   return 'pending'
 }
 
+/** Fila de "Stage Detail" — el dato crudo, no el nodo mapeado del timeline. */
+interface DetalleStage {
+  stageId: string
+  sequenceOrder: number
+  name: string
+  state: string
+  certifiedAt: string | null
+}
+
 function DeveloperProgress() {
   const { ready } = useRoleGuard(DEV_ROLES)
-  const { t } = useTranslation()
+  const { t, locale } = useTranslation()
   const navigate = useNavigate()
   const queryClient = useQueryClient()
 
@@ -67,13 +84,33 @@ function DeveloperProgress() {
   const observadas = (filas ?? []).filter((f) => f.state === 'Observed')
 
   // Agrupado por proyecto: la respuesta viene plana, una fila por etapa.
-  const porProyecto = new Map<string, { nombre: string; stages: TimelineStage[] }>()
+  const porProyecto = new Map<
+    string,
+    {
+      nombre: string
+      stages: TimelineStage[]
+      detalle: DetalleStage[]
+      estimatedDelivery: string | null
+    }
+  >()
   for (const f of filas ?? []) {
-    const actual = porProyecto.get(f.projectId) ?? { nombre: f.projectName, stages: [] }
+    const actual = porProyecto.get(f.projectId) ?? {
+      nombre: f.projectName,
+      stages: [],
+      detalle: [],
+      estimatedDelivery: f.estimatedDelivery
+    }
     actual.stages.push({
       sequenceOrder: f.sequenceOrder,
       name: f.stageName,
       state: nodoDe(f.state)
+    })
+    actual.detalle.push({
+      stageId: f.stageId,
+      sequenceOrder: f.sequenceOrder,
+      name: f.stageName,
+      state: f.state,
+      certifiedAt: f.certifiedAt
     })
     porProyecto.set(f.projectId, actual)
   }
@@ -138,9 +175,31 @@ function DeveloperProgress() {
         {porProyecto.size ? (
           [...porProyecto.entries()].map(([id, p]) => {
             const actual = p.stages.find((s) => s.state === 'current')
+            const total = p.stages.length
+            const completadas = p.stages.filter((s) => s.state === 'completed').length
+            const porcentaje = total ? Math.round((completadas / total) * 100) : 0
             return (
-              <article key={id} className="flex flex-col gap-s3 rounded-xl bg-card p-s4 shadow-e1">
+              <article key={id} className="flex flex-col gap-s4 rounded-xl bg-card p-s4 shadow-e1">
                 <h2 className="text-body font-bold text-text-primary">{p.nombre}</h2>
+
+                <div className="flex flex-col gap-s2">
+                  <span className="text-body font-bold text-text-primary">
+                    {t('developer.progress.overallProgress', { percent: String(porcentaje) })}
+                  </span>
+                  <div
+                    role="progressbar"
+                    aria-valuenow={porcentaje}
+                    aria-valuemin={0}
+                    aria-valuemax={100}
+                    className="h-2 w-full overflow-hidden rounded-full bg-surface-alt"
+                  >
+                    <div
+                      className="h-full rounded-full bg-primary"
+                      style={{ width: `${porcentaje}%` }}
+                    />
+                  </div>
+                </div>
+
                 <ProgressTimeline
                   stages={p.stages}
                   ariaLabel={t('developer.progress.timelineAria', { project: p.nombre })}
@@ -152,7 +211,44 @@ function DeveloperProgress() {
                         })
                       }
                     : {})}
+                  {...(p.estimatedDelivery
+                    ? {
+                        finalizationLabel: t('developer.progress.delivery', {
+                          date: formatMonthYear(p.estimatedDelivery, locale)
+                        })
+                      }
+                    : {})}
                 />
+
+                <div className="flex flex-col gap-s3">
+                  <h3 className="text-body-sm font-bold text-text-primary">
+                    {t('developer.progress.stageDetail')}
+                  </h3>
+                  <ul className="flex flex-col gap-s2">
+                    {p.detalle.map((s) => (
+                      <li
+                        key={s.stageId}
+                        className="flex items-center justify-between gap-s3 rounded-md bg-surface-alt p-s3"
+                      >
+                        <span className="flex flex-col gap-s1">
+                          <span className="text-body-sm font-medium text-text-primary">
+                            {s.name}
+                          </span>
+                          <span className="text-caption text-text-muted">
+                            {t('developer.progress.stageOf', {
+                              number: String(s.sequenceOrder),
+                              total: String(total)
+                            })}
+                            {s.certifiedAt ? ` · ${formatMonthYear(s.certifiedAt, locale)}` : ''}
+                          </span>
+                        </span>
+                        <StatusPill tone={s.state === 'Completed' ? 'verified' : 'pending'}>
+                          {t(claveEstadoStage(s.state))}
+                        </StatusPill>
+                      </li>
+                    ))}
+                  </ul>
+                </div>
               </article>
             )
           })
