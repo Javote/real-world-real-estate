@@ -53,7 +53,7 @@ explícitas de columnas — la migración es el camino con *menos* código tocad
 | | Qué | Criterio |
 |---|---|---|
 | 2.3 | ✔ **Auditar los 10 patrones P1–P10 test por test.** Los 10 ya tenían test cubriendo "sin TXID no hay señal de prueba" — 8 en tests dedicados (`VerificationBadge.test.tsx`, `HashChip.test.tsx`, `patterns.test.tsx` ×6, `AuditEventCard` en `cards.test.tsx`), P8 (Dossier) por composición de P1+P2, verificado leyendo el código de las dos rutas de dossier. No hizo falta código nuevo, solo cerrar el `◐` con la evidencia — `specs/README.md` criterio 6 | 6 ✅ |
-| 2.4 | Las ~20 claves i18n de `AuditLog` que faltan. El audit log muestra `ACCEPT_INVITATION` en crudo — regla 14 sobre una superficie ya entregada | 10 |
+| 2.4 | ✔ Las 20 claves i18n de `AuditLog` que faltaban — verificado con Claude en Chrome (`CREATE_UNIT` real, vía `pnpm dev`): antes mostraba el literal, ahora "Creó una unidad" | 10 |
 
 **Saneamiento de la demo** (no es un criterio, pero se demuestra sobre esto)
 
