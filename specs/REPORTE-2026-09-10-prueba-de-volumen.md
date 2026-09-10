@@ -37,17 +37,21 @@ había ejercitado (dos anclajes disparados casi en simultáneo). El resto del re
 cronología, resultados agregados, el hallazgo y un apéndice con los 176 TXIDs registrados,
 agrupados por proyecto y etapa.
 
-**Estado al cierre de esta sesión (mismo día):** la causa raíz de las 4 fallas se confirmó
-(un reinicio de `propnexus-api` por health check fallido en Render, plan Free, sin relación con el
-código) y el gap que permitió perderlas se cerró en producción (§Cómo hacerlo más robusto — 3
-mejoras de código, deployadas). Los 176 TXIDs reales quedaron reconciliados a `Confirmed` en la
-base y **verificados 1 a 1 contra Preprod** por una fuente independiente (Koios) — 176 de 176
-existen en la cadena. El balance real de la wallet de servicio se midió: ~99.8 ADA de costo total
-de la prueba (39.83 ADA de fees + 60 ADA bloqueadas permanentemente, D-057), levemente por debajo
-del estimado del plan (~105 ADA). El bookkeeping de la etapa 3 se corrigió (migración
-`0004_reconciliar_hilo_huerfano_etapa3.sql` — ver §Reparación del hilo huérfano de la etapa 3);
-las transacciones on-chain que todavía faltan (1 en la etapa 3, 2 en la etapa 4) quedan para una
-sesión siguiente. 3.10/3.12/3.13 quedan fuera de esta sesión por decisión del dueño.
+**Estado final (dos sesiones, mismo día calendario del hallazgo):** la causa raíz de las 4 fallas
+se confirmó (un reinicio de `propnexus-api` por health check fallido en Render, plan Free, sin
+relación con el código) y el gap que permitió perderlas se cerró en producción (§Cómo hacerlo más
+robusto — 3 mejoras de código, deployadas). Los 176 TXIDs de la primera pasada quedaron
+reconciliados a `Confirmed` y **verificados 1 a 1 contra Preprod** por una fuente independiente
+(Koios). El bookkeeping de la etapa 3 se corrigió sin tocar la cadena (migración
+`0004_reconciliar_hilo_huerfano_etapa3.sql`), y las 3 transacciones on-chain que todavía faltaban
+(1 en la etapa 3, 2 en la etapa 4) se enviaron en una sesión siguiente — ver §Cierre de las 3
+transacciones pendientes. **Las 30 etapas de los 3 proyectos están `Completed`, y las 180
+transacciones on-chain que la prueba dispara tienen TXID real y `Confirmed`.** Esa misma sesión
+construyó, a pedido del dueño, una capa de autocura para que este modo de falla no vuelva a
+requerir forensia manual — §Cómo hacerlo autocurable — Capas 0, 1 y 2. El balance real de la wallet
+de servicio se midió: ~99.8 ADA de costo total de la prueba (39.83 ADA de fees + 60 ADA bloqueadas
+permanentemente, D-057), levemente por debajo del estimado del plan (~105 ADA).
+3.10/3.12/3.13 quedan fuera de esta sesión por decisión del dueño.
 
 ## Alcance y objetivo
 
@@ -300,19 +304,16 @@ parado en un punto distinto de la cadena:
 
 ## Qué falta después de este reporte
 
-1. **Reparar los hilos huérfanos de las etapas 3 y 4 — parcialmente hecho, decisión revertida a
-   mitad de sesión.** Corrección del punto anterior (ver §Hallazgo): la etapa 4 **no** admite un
-   reintento simple por UI — su `Stage.state` ya es `Completed` (las 4 fases de la prueba corrieron
-   sobre las 30 etapas igual, aunque el anclaje de la 3 y la 4 haya fallado), y `Completed` es
-   terminal en la FSM: no hay transición válida que la UI pueda disparar. Se había decidido no
-   tocarlas — son etapas de un proyecto de prueba, sin dato real de cliente detrás — pero al revisar
-   el `.env` local se confirmó (derivando la dirección de la wallet desde la clave privada, offline,
-   y comparándola contra la que produjo las 176 transacciones reales) que las credenciales de
-   producción **están disponibles y son las reales**, lo que abarató bastante el costo de reparar.
-   **Etapa 3: bookkeeping corregido** (migración `0004_reconciliar_hilo_huerfano_etapa3.sql`, ver
-   §Reparación del hilo huérfano de la etapa 3) — falta todavía enviar la transacción de
-   "Certificar" que nunca salió. **Etapa 4: sin tocar** — le faltan 2 transacciones completas
-   (nunca se intentaron), no una corrección de datos. Las dos quedan para una sesión siguiente.
+1. ~~Reparar los hilos huérfanos de las etapas 3 y 4~~ **Hecho.** La UI no servía (§Hallazgo:
+   `Stage.state` de las dos ya es `Completed`, terminal en la FSM), así que se resolvió contra el
+   `AnchorPort` directo, con las credenciales reales de producción verificadas primero (derivando
+   la dirección de la wallet desde la clave privada, offline, contra la que produjo las 176
+   transacciones de la primera pasada). **Etapa 3:** bookkeeping corregido sin tocar la cadena
+   (migración `0004_reconciliar_hilo_huerfano_etapa3.sql`, ver §Reparación del hilo huérfano de la
+   etapa 3) y la transacción de "Certificar" que faltaba, enviada. **Etapa 4:** las 2 transacciones
+   que nunca se habían intentado, enviadas. Detalle y los 3 TXIDs en §Cierre de las 3 transacciones
+   pendientes. Las 30 etapas de los 3 proyectos quedan `Completed` con las 180 transacciones
+   on-chain `Confirmed`.
 2. ~~Confirmar con logs de servidor la causa~~ **Hecho.** Ver §La causa arriba — confirmado por
    `render logs`, `render deploys list`, `render services` y el mail de Render al dueño
    (16:55 UTC, "HTTP check failed, timed out after 5 seconds"). Ver §Cómo hacerlo más robusto para
@@ -393,13 +394,13 @@ mismo día (commit `56556c6`, deploy confirmado `Live` en Render). El mecanismo 
 para el hilo huérfano de la etapa 3 —abajo— resultó ser una corrección de datos chica, no una
 ruta nueva.
 
-## Reparación del hilo huérfano de la etapa 3 — bookkeeping corregido, transacción pendiente
+## Reparación del hilo huérfano de la etapa 3 — bookkeeping corregido
 
-**Solo el primer paso.** Corregir el bookkeeping de la etapa 3 (que `cabezaDelHilo()` apunte al
-UTxO real) no ancla nada nuevo — es una corrección de un dato que ya existía on-chain, sin tocar la
-cadena. La transacción de "Certificar" que sigue faltando (para que el hilo on-chain llegue a
-`Completed`, igual que ya dice la base) **no se envió en esta sesión** — queda para la siguiente,
-junto con las 2 de la etapa 4.
+**Solo el primer paso, en el momento en que se hizo.** Corregir el bookkeeping de la etapa 3 (que
+`cabezaDelHilo()` apunte al UTxO real) no ancla nada nuevo — es una corrección de un dato que ya
+existía on-chain, sin tocar la cadena. La transacción de "Certificar" que faltaba para que el hilo
+on-chain llegara a `Completed` se envió después, en la misma sesión — ver §Cierre de las 3
+transacciones pendientes, junto con las 2 de la etapa 4.
 
 **Verificación previa, antes de tocar la base:** se confirmó que las credenciales de
 `apps/api/.env` local (`SERVICE_WALLET_PRIVATE_KEY`, `BLOCKFROST_API_KEY`) son las reales — no
@@ -445,15 +446,148 @@ SET `txid` = '9a57f563e7d5627f22d9a062d26049d48789c91014d8b676298c0eb7c71f9e68',
 WHERE `id` = 'amc9u0gyovc9tlf5z9ceh4db' AND `txid` IS NULL;
 ```
 
-## Apéndice — TXIDs por etapa (176 reales, los 176 verificados 1 a 1 contra Preprod)
+## Cierre de las 3 transacciones pendientes — las 180 confirmadas
 
-**Actualizado tras la reconciliación y la verificación independiente del 2026-09-10** (ver §Qué
-falta después de este reporte, puntos 3 y 4): los 176 TXIDs reales están `Confirmed` en la base —
-ya no `Pending` esperando que alguien abra la pantalla correcta — y los 176 se verificaron
-individualmente contra Cardano Preprod vía Koios, no solo contra lo que dice la propia base.
-`(sin TXID — ver hallazgo)` marca los 4 casos de Torre Volumen 1 / etapas 3 y 4, que quedan
-`Pending`/`Failed` a propósito (ver §Hallazgo e §Impacto real y qué hacer con cada una) — es la
-verdad sustanciable (regla 17), no un resto de la reconciliación.
+Las 3 transacciones que §Qué falta después de este reporte (punto 1) dejó para "una sesión
+siguiente" se enviaron en esta sesión, contra Preprod, con las mismas credenciales verificadas de
+`apps/api/.env` (`SERVICE_WALLET_PRIVATE_KEY`/`BLOCKFROST_API_KEY`, confirmadas reales en
+§Reparación del hilo huérfano de la etapa 3):
+
+| Etapa | Transición | TXID |
+|---|---|---|
+| Torre Volumen 1 · Etapa 3 | `InProgress → Completed` ("Certificar") | `8753cd70211c4f8182da14d25375f81218d8a0568975e4ad0d5e76557ab148a4` |
+| Torre Volumen 1 · Etapa 4 | `Observed → InProgress` ("Reanudar etapa") | `cf23d689952846413a4efedea45c4d148e8a9284796ae47e2010c05a84e10f4a` |
+| Torre Volumen 1 · Etapa 4 | `InProgress → Completed` ("Certificar") | `75b9dcfd267848cefcc7a150f84b816524769736dfca7694012f53380d341ba8` |
+
+**Cómo se enviaron:** un script de un solo uso (precursor de la herramienta de Capa 2, más abajo),
+que construyó cada datum con `buildStageDatum` y llamó a `AnchorPort.advanceThread` contra el
+adaptador real. No tocó la base — imprimió el `UPDATE OnChainEvent` de cada paso para correrlo
+aparte, revisado.
+
+**Un tropiezo en el camino, sin repetir el bug que esta sesión vino a cerrar.** El primer intento
+(`etapa3-certificar`) crasheó *después* de que la transacción ya había salido —un
+`JSON.stringify` sobre el objeto interno del adaptador, que trae un campo `BigInt` que no es parte
+de `AnchorReceipt`—, exactamente la ventana que §Cómo hacerlo más robusto cerró en el código de
+producción. Se resolvió con la misma disciplina forense de §Hallazgo: se buscó la transacción real
+contra Koios (`address_txs` de la wallet de servicio, ordenado por `block_time`), se verificaron
+sus inputs/outputs y se decodificó el datum resultante contra lo esperado antes de dar el TXID por
+bueno. El script se corrigió (loguear los campos del recibo uno por uno, no el objeto entero) y los
+dos pasos restantes corrieron sin problema.
+
+**Verificado contra producción, después de las tres:** `POST /evidence/reconcile` ya no devuelve
+ningún `sospechoso` de Torre Volumen — solo queda el caso preexistente del 2026-09-08, ajeno a esta
+prueba (ver punto 3 de §Qué falta después de este reporte). **Las 30 etapas de los 3 proyectos
+están `Completed` en la base y las 180 transacciones on-chain que la prueba dispara (30 mints + 30
+anclajes de evidencia + 120 transiciones) tienen TXID real, confirmado.** El apéndice, abajo, ya
+refleja las 180.
+
+## Cómo hacerlo autocurable — Capas 0, 1 y 2 (✔ implementadas el 2026-09-10)
+
+El hallazgo de esta prueba (etapas 3 y 4 perdidas en silencio) mostró que **detectar** un hilo
+sospechoso (§Cómo hacerlo más robusto, mejora #2) no alcanza si nadie corre `POST
+/evidence/reconcile` — y que, aun corriéndolo, la única reparación posible hasta ahora era la
+forense manual de §Reparación del hilo huérfano de la etapa 3, repetida a mano por cada caso. Tres
+capas, cada una resolviendo la parte que la anterior deja afuera:
+
+### Capa 0 — que alguien se entere, sin tener que acordarse de mirar
+
+`.github/workflows/reconcile.yml`: un cron de GitHub Actions (`0 */6 * * *`, más
+`workflow_dispatch` para correrlo a mano) que loguea como admin y llama a `POST
+/evidence/reconcile` contra producción. Si la respuesta trae algún `sospechoso` que Capa 1 no pudo
+reparar sola, el job **falla a propósito** (`exit 1`): un run rojo en Actions dispara la
+notificación que GitHub ya manda por default a quien mira el repo, sin agregar un canal de alertas
+nuevo para un problema que hoy es raro.
+
+**Por qué GitHub Actions y no un cron adentro de la API:** D-003 · D-040 · D-077 lo prohíben — un
+timer interno deja de contar en cuanto Render duerme el servicio a los 15 minutos de inactividad
+(plan Free, sin workers). El cron dispara desde **afuera** del proceso, mismo criterio que ya rige
+`POST /evidence/reconcile` como barrido manual — solo que ahora nadie tiene que acordarse de
+correrlo.
+
+**Pendiente de acción del dueño, y no de código:** el workflow necesita dos secrets del repo
+(`RECONCILE_ADMIN_EMAIL`, `RECONCILE_ADMIN_PASSWORD` — las mismas credenciales de admin de
+producción que `apps/api/.env` → `SEED_ADMIN_PASSWORD`) cargados a mano en GitHub (*Settings →
+Secrets and variables → Actions*) antes de que el cron pueda ejecutar el primer login. Sin ellos,
+el job falla con un mensaje explícito (`Faltan los secrets...`), no en silencio.
+
+### Capa 1 — reparar el bookkeeping solo, sin firmar nada
+
+El hallazgo de la etapa 3 tenía dos partes distintas (§Hallazgo): una transacción que **sí** había
+salido y confirmado en cadena, con el registro simplemente sin enterarse; y una que **nunca**
+salió. La primera se puede reparar sin ningún riesgo — no hace falta construir ni firmar nada
+nuevo, solo encontrar el UTxO real y completar el `txid`/`outputRef` que el registro perdió. Hasta
+esta sesión, esa búsqueda pedía Koios a mano (como en §Reparación del hilo huérfano de la etapa 3);
+ahora es una capacidad del puerto.
+
+**`AnchorPort.findLiveThread(stageRef)`** (`packages/cardano/src/port.ts`), implementada en los
+tres adaptadores:
+
+- **`real.ts`**: escanea `lucid.utxosAt(direcciónDelValidador)` y busca el UTxO que lleva el asset
+  `policyId + stageRef` — el mismo criterio que ya usaba `threadProof()` para buscar por `txid`,
+  ahora por asset del thread token (D-058) en vez de por hash de transacción conocido.
+- **`simulated.ts`**: delega en `LedgerStore.findLive(assetName)`, que ya existía — el simulador
+  siempre pudo responder esta pregunta, solo faltaba exponerla en el puerto.
+- **`disabled.ts`**: rechaza, igual que el resto de sus métodos (mismo criterio que `verify()`: un
+  `null` afirmaría "consulté y no hay nada", y este puerto no consultó nada).
+
+**`domain/reconcile.ts` → `repararHilosSospechosos()`**, la pieza que usa esa capacidad: para cada
+sospechoso que `hilosSospechosos()` ya detectaba, busca su hilo vivo por `stageRef` y **solo si el
+`state` del datum encontrado coincide con el `toState` que el evento ya declaraba**, completa
+`txid`/`outputRef`/`network` — sin tocar `status` (queda `Pending`, para que `reconciliarAnclajes`
+lo confirme con la misma pregunta que le hace a cualquier otro anclaje). Si el datum no coincide
+—el caso "etapa 4", donde la transacción nunca salió— no se toca nada: esa reparación sigue siendo
+manual, por diseño (ver Capa 2).
+
+`POST /evidence/reconcile` ahora corre las tres llamadas en orden — reparar, reconciliar, listar
+sospechosos — para que un hilo recién reparado quede `Confirmed` y fuera de la lista de
+sospechosos en la misma respuesta. La ruta devuelve `reparados: [...]` además de `sospechosos`.
+Cubierto por `simulated.test.ts`, `real.test.ts` (contra el `Emulator`, validador de verdad) y
+`reconcile.test.ts` (4 tests: repara cuando coincide, no repara cuando no coincide, no repara sin
+hilo, es idempotente) — `pnpm verify` completo en verde.
+
+### Capa 2 — la herramienta para cuando sí hace falta firmar
+
+Lo que Capa 1 nunca hace a propósito: enviar la transacción que falta cuando el hilo real **no**
+tiene el estado que se necesita (el caso "etapa 4" del hallazgo). Eso sigue siendo 🔴 — firma con
+`SERVICE_WALLET_PRIVATE_KEY` y gasta ADA de verdad — así que la sesión anterior lo resolvió con un
+script de un solo uso, con los `outputRef` y datums de las 3 transacciones hardcodeados (ver §Cierre
+de las 3 transacciones pendientes, arriba). Esa versión no era reusable: cada caso futuro pediría
+escribir un script nuevo.
+
+**`apps/api/scripts/repair-thread.ts`** la generaliza, con el pedido explícito del dueño de que
+"no haya riesgo de gastar ADA":
+
+```bash
+pnpm --filter @plataforma/api exec tsx scripts/repair-thread.ts \
+  --stage <stageId> --to <InProgress|Observed|Completed> \
+  [--evidence-root <hex de 64>] [--completed-at <epoch ms>] [--confirm]
+```
+
+Lee el stage de la base, usa `findLiveThread` (Capa 1) para encontrar su hilo vivo sin que haga
+falta conocer el `outputRef` a mano, valida la transición contra la FSM (`canTransition`) y arma el
+datum siguiente. **El riesgo que se elimina no es que la herramienta pueda firmar — es que lo haga
+sin querer:**
+
+1. **Sin `--confirm`, es un dry run:** imprime el hilo vivo encontrado y el datum que se armaría,
+   y termina ahí. No hay forma de que una corrida por error envíe algo.
+2. **No es una ruta ni un job.** Vive en `scripts/`, igual que `docs:openapi`/`docs:api` — solo
+   corre a mano, con `tsx`. Nada del código de producción la importa, así que no hay wiring que un
+   cron o un endpoint futuro puedan activar sin querer.
+3. **No toca la base.** Igual que el script de la sesión anterior, imprime instrucciones para la
+   reconciliación posterior en vez de escribir `OnChainEvent` directo — esa escritura sigue siendo
+   una revisión humana, como toda mutación de producción de esta sesión.
+
+## Apéndice — TXIDs por etapa (180/180, las 180 confirmadas on-chain)
+
+**Actualizado el 2026-09-10 · las 30 etapas quedan completas.** Los 176 TXIDs de la primera pasada
+se verificaron individualmente contra Cardano Preprod vía Koios, no solo contra lo que dice la
+propia base (ver §Qué falta después de este reporte, puntos 3 y 4). Las 4 transacciones que
+faltaban de Torre Volumen 1 / etapas 3 y 4 se cerraron después (§Cierre de las 3 transacciones
+pendientes: una era bookkeeping puro — la transacción ya estaba en la cadena — y las otras 3 se
+enviaron en esta sesión), verificadas contra la base de producción con `turso db shell` — las
+6 filas de cada una de las dos etapas están `Confirmed`, ninguna quedó `Pending`/`Failed`. Las 180
+transacciones que la prueba dispara (30 mints + 30 anclajes de evidencia + 120 transiciones) tienen
+TXID real y están `Confirmed`.
 
 Agrupados por proyecto y etapa, en el orden de la FSM.
 
@@ -490,8 +624,8 @@ Agrupados por proyecto y etapa, en el orden de la FSM.
 | Ancla evidencia | Confirmed | `0132d1497f2e63247bd78d13728c46c31748114bb3de7e838535c9e428eafb2c` |
 | Auto Pending→InProgress | Confirmed | `49a6be960d61ba55ba4d16de9b766676d4da155581dcbccace52621e2fe4dbf6` |
 | Observar (InProgress→Observed) | Confirmed | `fc37cac7dd081198629a464d038e69f8130ba123295ccf2043775426cce7ea65` |
-| Reanudar (Observed→InProgress) | Pending | *(sin TXID — ver hallazgo)* |
-| Certificar (InProgress→Completed) | Failed | *(sin TXID — ver hallazgo)* |
+| Reanudar (Observed→InProgress) | Confirmed | `9a57f563e7d5627f22d9a062d26049d48789c91014d8b676298c0eb7c71f9e68` |
+| Certificar (InProgress→Completed) | Confirmed | `8753cd70211c4f8182da14d25375f81218d8a0568975e4ad0d5e76557ab148a4` |
 
 **Etapa 4 — Cimentación**
 
@@ -501,8 +635,8 @@ Agrupados por proyecto y etapa, en el orden de la FSM.
 | Ancla evidencia | Confirmed | `46bf2b8c64b10eb26a99005d888339c423ae692eee5d3b02fddfe9d5e40737e7` |
 | Auto Pending→InProgress | Confirmed | `1972aa5e68d4fe800a6542f16f956b7352d8f7bd62752dedd3c5b725f89a12a4` |
 | Observar (InProgress→Observed) | Confirmed | `270cfea4fabf232573e94b69324b69054f41f344fbaeca6b95dfe5d16595dd06` |
-| Reanudar (Observed→InProgress) | Pending | *(sin TXID — ver hallazgo)* |
-| Certificar (InProgress→Completed) | Failed | *(sin TXID — ver hallazgo)* |
+| Reanudar (Observed→InProgress) | Confirmed | `cf23d689952846413a4efedea45c4d148e8a9284796ae47e2010c05a84e10f4a` |
+| Certificar (InProgress→Completed) | Confirmed | `75b9dcfd267848cefcc7a150f84b816524769736dfca7694012f53380d341ba8` |
 
 **Etapa 5 — Estructura planta baja**
 

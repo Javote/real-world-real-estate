@@ -168,6 +168,36 @@ describe("advanceThread · el spend", () => {
   });
 });
 
+describe("findLiveThread — Capa 1, reconciliación sin registro", () => {
+  it("devuelve el UTxO vivo por stageRef, no por el registro de eventos", async () => {
+    const datum = buildStageDatum(fuente);
+    const abierto = await port.openThread({ datum });
+
+    const encontrado = await port.findLiveThread(datum.stageRef);
+
+    expect(encontrado).toEqual({ outputRef: abierto.outputRef, datum });
+  });
+
+  it("sigue al hilo después de un advanceThread — el UTxO viejo ya no es el vivo", async () => {
+    const pending = buildStageDatum(fuente);
+    const inProgress = buildStageDatum({ ...fuente, state: "InProgress" });
+    const abierto = await port.openThread({ datum: pending });
+    const avanzado = await port.advanceThread({
+      outputRef: abierto.outputRef,
+      previous: pending,
+      next: inProgress
+    });
+
+    const encontrado = await port.findLiveThread(pending.stageRef);
+
+    expect(encontrado).toEqual({ outputRef: avanzado.outputRef, datum: inProgress });
+  });
+
+  it("da null para un stage que nunca minteó", async () => {
+    expect(await port.findLiveThread("stage-que-no-existe")).toBeNull();
+  });
+});
+
 describe("createAnchorPort", () => {
   it("por defecto es simulated", async () => {
     expect((await createAnchorPort({})).mode).toBe("simulated");

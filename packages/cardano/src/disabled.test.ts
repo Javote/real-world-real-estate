@@ -25,6 +25,7 @@ describe("DisabledAnchorAdapter", () => {
     ["openThread", () => puerto.openThread({} as never)],
     ["advanceThread", () => puerto.advanceThread({} as never)],
     ["anchorCommitment", () => puerto.anchorCommitment({ sha256: TXID, reference: "r" })],
+    ["findLiveThread", () => puerto.findLiveThread("stage-ref")],
     ["verify", () => puerto.verify(TXID)],
     ["awaitConfirmation", () => puerto.awaitConfirmation(TXID)],
     ["confirmedAt", () => puerto.confirmedAt(TXID)]

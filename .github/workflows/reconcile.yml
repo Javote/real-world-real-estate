@@ -1,0 +1,74 @@
+name: Reconciliación de anclajes
+
+# Capa 0 de specs/REPORTE-2026-09-10-prueba-de-volumen.md §Cómo hacerlo más
+# robusto: que alguien se entere de un anclaje perdido sin tener que acordarse
+# de mirar. `apps/api/src/routes/evidence.routes.ts` ya declaraba esto como
+# pendiente ("hoy a mano, mañana un cron de GitHub Actions") — este archivo es
+# ese "mañana".
+#
+# **Por qué acá y no un `setInterval` adentro de la API** (D-003 · D-040 ·
+# D-077): un timer interno deja de contar en cuanto Render duerme el servicio
+# a los 15 minutos de inactividad, y el plan Free no tiene workers. Un cron
+# de GitHub Actions dispara desde afuera del proceso — el mismo criterio que
+# ya usa `POST /evidence/reconcile` para el barrido a mano, solo que ahora
+# nadie tiene que acordarse de correrlo.
+#
+# **Qué hace, y qué NO hace.** Llama a `POST /evidence/reconcile` — que
+# promueve a `Confirmed` los anclajes que ya están en la cadena Y devuelve
+# `sospechosos` (`domain/reconcile.ts` → `hilosSospechosos`, Capa 1). Si hay
+# algún sospechoso, el job **falla a propósito** (exit 1): un run de Actions
+# en rojo dispara la notificación que GitHub ya manda por default a quien
+# mira el repo, sin agregar un canal de alertas nuevo (Slack, email
+# separado) para un problema que hoy es raro. No repara nada por sí mismo —
+# eso es la Capa 1, si el `AnchorPort` la resuelve on-chain; si no, sigue
+# quedando para revisión manual, como esta sesión.
+#
+# **Credenciales:** `RECONCILE_ADMIN_EMAIL` / `RECONCILE_ADMIN_PASSWORD` son
+# secrets del repo — hay que cargarlos a mano en GitHub (Settings → Secrets
+# and variables → Actions) antes de que este workflow funcione. Son las
+# mismas credenciales del admin de producción que ya se usan en toda esta
+# prueba (`apps/api/.env` → `SEED_ADMIN_PASSWORD`, `admin@example.com`).
+
+on:
+  schedule:
+    # Cada 6 horas. No es urgencia —la reparación real sigue siendo manual
+    # (Capa 2)—, es visibilidad: que un anclaje perdido no tarde más de medio
+    # día en aparecer en algún lado.
+    - cron: "0 */6 * * *"
+  workflow_dispatch: {}
+
+jobs:
+  reconciliar:
+    name: POST /evidence/reconcile contra producción
+    runs-on: ubuntu-latest
+    steps:
+      - name: Login y reconciliar
+        env:
+          ADMIN_EMAIL: ${{ secrets.RECONCILE_ADMIN_EMAIL }}
+          ADMIN_PASSWORD: ${{ secrets.RECONCILE_ADMIN_PASSWORD }}
+        run: |
+          set -euo pipefail
+
+          if [ -z "${ADMIN_EMAIL:-}" ] || [ -z "${ADMIN_PASSWORD:-}" ]; then
+            echo "::error::Faltan los secrets RECONCILE_ADMIN_EMAIL / RECONCILE_ADMIN_PASSWORD del repo."
+            exit 1
+          fi
+
+          token=$(curl -sf -X POST https://propnexus-api.onrender.com/api/v1/auth/login \
+            -H "Content-Type: application/json" \
+            -d "{\"email\":\"${ADMIN_EMAIL}\",\"password\":\"${ADMIN_PASSWORD}\"}" \
+            | python3 -c "import json,sys; print(json.load(sys.stdin)['token'])")
+
+          respuesta=$(curl -sf -X POST https://propnexus-api.onrender.com/api/v1/evidence/reconcile \
+            -H "Authorization: Bearer ${token}")
+
+          echo "$respuesta" | python3 -m json.tool
+
+          sospechosos=$(echo "$respuesta" | python3 -c "import json,sys; print(len(json.load(sys.stdin)['sospechosos']))")
+
+          if [ "$sospechosos" -gt 0 ]; then
+            echo "::error::hilosSospechosos() encontró $sospechosos evento(s) — ver el detalle arriba. Revisar con specs/REPORTE-2026-09-10-prueba-de-volumen.md como guía forense."
+            exit 1
+          fi
+
+          echo "Sin sospechosos. Todo reconciliado."

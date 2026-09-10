@@ -77,6 +77,17 @@ export interface AdvanceThreadInput {
 }
 
 /**
+ * El UTxO vivo del hilo de un stage, leído **directo de la cadena** — no del
+ * registro de eventos, que es justo lo que puede estar desincronizado
+ * (Capa 1 de `specs/REPORTE-2026-09-10-prueba-de-volumen.md`, el caso real
+ * que la motivó: un `OnChainEvent` sin `txid` mientras el UTxO seguía vivo).
+ */
+export interface LiveThread {
+  outputRef: OutputRef;
+  datum: StageDatum;
+}
+
+/**
  * El **otro** camino on-chain de M1: `Evidence Anchor Transactions`
  * (`M1-D2/1-system-architecture.puml`), que es metadata suelta y no pasa por
  * ningún validador (D-006).
@@ -115,6 +126,19 @@ export interface AnchorPort {
   readonly network: AnchorNetwork | null;
   openThread(input: OpenThreadInput): Promise<AnchorReceipt>;
   advanceThread(input: AdvanceThreadInput): Promise<AnchorReceipt>;
+  /**
+   * ¿Existe hoy un UTxO vivo para este hilo, y qué datum tiene? Busca por
+   * `stageRef` (el asset name del thread token, D-058) directo contra el
+   * ledger — nunca contra `OnChainEvent`, que es el registro que este método
+   * existe para poder corregir sin confiar en sí mismo.
+   *
+   * `null` es ambiguo a propósito en dos casos que a este método no le
+   * corresponde distinguir: el stage nunca minteó, o el proveedor todavía no
+   * indexó una transacción reciente. Quien llama decide qué hacer con eso —
+   * acá, `hilosSospechosos`/reconciliación (Capa 1), nunca escribe sobre un
+   * `null`.
+   */
+  findLiveThread(stageRef: string): Promise<LiveThread | null>;
   /**
    * Ancla un commitment por metadata: el hash de un archivo (D-061), la
    * aceptación de una invitación, una liberación, una firma de notario. Todo lo

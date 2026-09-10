@@ -4147,12 +4147,36 @@
                         ],
                         "additionalProperties": false
                       }
+                    },
+                    "reparados": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "eventId": {
+                            "type": "string"
+                          },
+                          "txid": {
+                            "type": "string"
+                          },
+                          "outputRef": {
+                            "type": "string"
+                          }
+                        },
+                        "required": [
+                          "eventId",
+                          "txid",
+                          "outputRef"
+                        ],
+                        "additionalProperties": false
+                      }
                     }
                   },
                   "required": [
                     "revisados",
                     "confirmados",
-                    "sospechosos"
+                    "sospechosos",
+                    "reparados"
                   ],
                   "additionalProperties": false
                 }

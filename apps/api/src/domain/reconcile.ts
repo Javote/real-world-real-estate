@@ -1,3 +1,5 @@
+import type { LiveThread } from "@plataforma/cardano";
+import { refToHex } from "@plataforma/shared";
 import { anchorPort } from "../lib/anchor";
 import { db } from "../lib/db";
 import { sql } from "../lib/kysely";
@@ -185,7 +187,8 @@ const TOPE_SOSPECHOSOS = 20;
  * — ahí el hilo real vive en un UTxO que esta función no puede nombrar,
  * porque el `AnchorPort` de hoy busca por `outputRef` conocido, no por el
  * asset del thread token; nombrarlo pidió Koios a mano en el reporte).
- * **Cerrar esa distinción es una capacidad nueva del puerto, no de acá.**
+ * **Esa distinción ya la cierra `repararHilosSospechosos`, más abajo**, con la
+ * capacidad nueva del puerto (`findLiveThread`, Capa 1).
  *
  * **Por qué no es un `setInterval` ni un cron:** D-003 · D-040 · D-077 — un
  * timer interno deja de contar cuando Render duerme el servicio, y el free
@@ -221,4 +224,85 @@ export async function hilosSospechosos(limite = TOPE_SOSPECHOSOS): Promise<HiloS
     .orderBy("createdAt", "asc")
     .limit(limite)
     .execute();
+}
+
+export interface HiloReparado {
+  eventId: string;
+  txid: string;
+  outputRef: string;
+}
+
+/**
+ * Capa 1: repara el bookkeeping de un hilo sospechoso **sin firmar nada
+ * nuevo**. Cierra el caso "etapa 3" del reporte del 2026-09-10 —una
+ * transacción que sí salió y confirmó, pero cuyo `OnChainEvent` se quedó sin
+ * `txid` porque el proceso se cayó entre el `submit()` y el `UPDATE`— sin
+ * volver a hacer a mano lo que esa sesión hizo con Koios.
+ *
+ * **Por qué es seguro escribir sin revisión humana** (a diferencia de mandar
+ * una transacción, que sigue siendo 🔴 y manual, ver la CLI de Capa 2): esto
+ * nunca gasta ADA ni construye nada — `findLiveThread` solo lee. Y antes de
+ * escribir, compara el `state` del datum encontrado contra el `toState` que
+ * el propio evento ya declaraba: si no coinciden, **no se toca nada**. Eso
+ * descarta el otro caso del reporte ("etapa 4", donde la transacción nunca
+ * salió) sin necesidad de que esta función sepa distinguirlos — si nunca
+ * salió, `findLiveThread` sigue viendo el datum *anterior* (u otro hilo
+ * completamente distinto en un caso patológico), y el chequeo lo filtra
+ * igual.
+ *
+ * **Dos guardas de idempotencia:** `WHERE txid IS NULL` (regla 8, mismo
+ * criterio que la migración 0004) — si dos disparos corren superpuestos, el
+ * segundo no pisa nada — y el filtro de `hilosSospechosos()` en sí, que ya
+ * exige que no haya un evento posterior con `outputRef`.
+ *
+ * El evento queda en `status: "Pending"` a propósito, igual que un anclaje
+ * recién enviado: es `reconciliarAnclajes` (más arriba, y ya corre en el
+ * mismo `POST /evidence/reconcile`) quien lo promueve a `Confirmed` — es la
+ * misma pregunta (`confirmedAt`) que ya le hace a cualquier otro `Pending`
+ * con `txid`, y repetirla acá sería la misma lógica en dos lugares.
+ */
+export async function repararHilosSospechosos(limite = TOPE_SOSPECHOSOS): Promise<HiloReparado[]> {
+  if (anchorPort().mode === "disabled") return [];
+
+  const sospechosos = await hilosSospechosos(limite);
+  const reparados: HiloReparado[] = [];
+
+  for (const sospechoso of sospechosos) {
+    if (!sospechoso.stageId || !sospechoso.toState) continue;
+
+    let vivo: LiveThread | null;
+    try {
+      vivo = await anchorPort().findLiveThread(refToHex(sospechoso.stageId));
+    } catch (error) {
+      console.error("[reconcile] findLiveThread falló para un sospechoso", {
+        eventId: sospechoso.eventId,
+        error
+      });
+      continue;
+    }
+
+    if (!vivo || vivo.datum.state !== sospechoso.toState) continue;
+
+    const [txid] = vivo.outputRef.split("#");
+    if (!txid) continue;
+
+    const escrito = await db
+      .updateTable("OnChainEvent")
+      .set({
+        txid,
+        outputRef: vivo.outputRef,
+        network: anchorPort().network ?? "Preprod",
+        status: "Pending",
+        updatedAt: new Date()
+      })
+      .where("id", "=", sospechoso.eventId)
+      .where("txid", "is", null)
+      .executeTakeFirst();
+
+    if (Number(escrito.numUpdatedRows) > 0) {
+      reparados.push({ eventId: sospechoso.eventId, txid, outputRef: vivo.outputRef });
+    }
+  }
+
+  return reparados;
 }

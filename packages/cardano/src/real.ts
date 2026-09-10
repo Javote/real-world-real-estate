@@ -23,6 +23,7 @@ import {
   AnchorRejectedError,
   type CommitmentAnchorInput,
   EVIDENCE_METADATA_LABEL,
+  type LiveThread,
   type MetadataAnchorReceipt,
   type OpenThreadInput,
   type OutputRef
@@ -296,6 +297,25 @@ export class LucidAnchorAdapter implements AnchorPort {
   /** `spend`: gasta el hilo y lo recrea con el datum nuevo. */
   async advanceThread(input: AdvanceThreadInput): Promise<AnchorReceipt> {
     return this.enCola(() => this.avanzar(input));
+  }
+
+  /**
+   * Busca el UTxO vivo del hilo directo contra el proveedor — no contra
+   * `salidasPendientes` (esa vista es de transacciones que esta misma
+   * instancia acaba de mandar, y lo que se perdió lo mandó otra instancia o
+   * un proceso que después crasheó, como el caso real que esto resuelve) ni
+   * contra `enCola`/`utxoAt` (esos asumen que ya se sabe el `outputRef`; acá
+   * es al revés, no se sabe y hay que encontrarlo por asset).
+   */
+  async findLiveThread(stageRef: string): Promise<LiveThread | null> {
+    const unit = `${this.refs.policyId}${stageRef}`;
+    const utxos = await this.lucid.utxosAt(this.refs.address);
+    const vivo = utxos.find((u) => (u.assets[unit] ?? 0n) > 0n);
+    if (!vivo?.datum) return null;
+    return {
+      outputRef: `${vivo.txHash}#${vivo.outputIndex}`,
+      datum: decodeStageDatum(vivo.datum)
+    };
   }
 
   private async avanzar({ outputRef, next }: AdvanceThreadInput): Promise<AnchorReceipt> {

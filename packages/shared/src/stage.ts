@@ -233,11 +233,27 @@ export const hiloSospechosoSchema = z.strictObject({
 });
 export type HiloSospechosoResponse = z.infer<typeof hiloSospechosoSchema>;
 
+/**
+ * Un hilo sospechoso que se reparó solo — Capa 1 de
+ * `specs/REPORTE-2026-09-10-prueba-de-volumen.md`: el `AnchorPort` encontró un
+ * UTxO vivo para el `stageRef` del evento y su datum coincidía con el
+ * `toState` declarado, así que el bookkeeping (`txid`/`outputRef`) se
+ * completó **sin firmar nada nuevo** — el hilo ya estaba en la cadena, solo
+ * el registro no lo sabía.
+ */
+export const hiloReparadoSchema = z.strictObject({
+  eventId: z.string(),
+  txid: z.string(),
+  outputRef: z.string()
+});
+export type HiloReparadoResponse = z.infer<typeof hiloReparadoSchema>;
+
 /** `POST /api/v1/evidence/reconcile` (`domain/reconcile.ts` → `ResultadoReconciliacion`). */
 export const reconciliationResultSchema = z.strictObject({
   revisados: z.number().int().nonnegative(),
   confirmados: z.number().int().nonnegative(),
-  sospechosos: z.array(hiloSospechosoSchema)
+  sospechosos: z.array(hiloSospechosoSchema),
+  reparados: z.array(hiloReparadoSchema)
 });
 export type ReconciliationResult = z.infer<typeof reconciliationResultSchema>;
 

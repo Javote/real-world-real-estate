@@ -9,6 +9,7 @@ import {
   type AnchorReceipt,
   AnchorRejectedError,
   type CommitmentAnchorInput,
+  type LiveThread,
   type MetadataAnchorReceipt,
   type OpenThreadInput,
   type OutputRef
@@ -145,6 +146,12 @@ export class SimulatedAnchorAdapter implements AnchorPort {
     const txid = txidOf("spend", { outputRef, next });
     await this.store.markSpent(outputRef, txid);
     return this.commit(txid, next);
+  }
+
+  /** `LedgerStore.findLive` ya busca por `stageRef` — es la misma pregunta. */
+  async findLiveThread(stageRef: string): Promise<LiveThread | null> {
+    const vivo = await this.store.findLive(stageRef);
+    return vivo ? { outputRef: vivo.outputRef, datum: vivo.datum } : null;
   }
 
   async anchorCommitment({

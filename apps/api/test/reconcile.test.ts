@@ -1,3 +1,4 @@
+import { buildStageDatum } from "@plataforma/shared";
 import request from "supertest";
 import { beforeAll, describe, expect, it } from "vitest";
 import app from "../src/app";
@@ -5,7 +6,8 @@ import { createId } from "../src/db/id";
 import {
   hilosSospechosos,
   reconciliarAnclajes,
-  reconciliarParaLectura
+  reconciliarParaLectura,
+  repararHilosSospechosos
 } from "../src/domain/reconcile";
 import { anchorPort } from "../src/lib/anchor";
 import { db } from "../src/lib/db";
@@ -151,6 +153,24 @@ describe("POST /evidence/reconcile", () => {
       .set("Authorization", `Bearer ${tokenAdmin}`);
     expect(res.body.sospechosos).toEqual(expect.any(Array));
   });
+
+  it("devuelve reparados — Capa 1, corre antes de listar sospechosos", async () => {
+    const id = await stage();
+    const hilo = await abrirHiloEnInProgress(id);
+    const eventId = await transicion(id, 0, null);
+    await transicion(id, 1, await txidReal(`ruta-reparo-${id}`));
+
+    const res = await request(app)
+      .post("/api/v1/evidence/reconcile")
+      .set("Authorization", `Bearer ${tokenAdmin}`);
+
+    expect(res.body.reparados).toContainEqual({
+      eventId,
+      txid: hilo.txid,
+      outputRef: hilo.outputRef
+    });
+    expect(res.body.sospechosos.map((s: { eventId: string }) => s.eventId)).not.toContain(eventId);
+  });
 });
 
 // ── hilosSospechosos · detecta, no repara ───────────────────────────────────
@@ -159,52 +179,56 @@ describe("POST /evidence/reconcile", () => {
 // (specs/REPORTE-2026-09-10-prueba-de-volumen.md §Hallazgo): una
 // STAGE_TRANSITION sin `txid` cuyo stage ya avanzó a un evento más nuevo.
 
+/** Un stage real, con `sequenceOrder` al azar para no chocar entre corridas. */
+async function stage() {
+  const id = createId();
+  const ahora = new Date();
+  await db
+    .insertInto("Stage")
+    .values({
+      id,
+      projectId: proyecto,
+      name: "Stage de reconciliación",
+      sequenceOrder: Math.floor(Math.random() * 1_000_000) + 500_000,
+      state: "InProgress",
+      validationCritical: false,
+      createdAt: ahora,
+      updatedAt: ahora
+    })
+    .execute();
+  return id;
+}
+
+/** `toState` fijo en `"InProgress"`: coincide con el datum que abre `repararHilosSospechosos`. */
+async function transicion(stageId: string, eventIndex: number, txid: string | null) {
+  const id = createId();
+  const ahora = new Date();
+  await db
+    .insertInto("OnChainEvent")
+    .values({
+      id,
+      projectId: proyecto,
+      stageId,
+      evidenceId: null,
+      referenceId: null,
+      eventIndex,
+      eventType: "STAGE_TRANSITION",
+      fromState: "Observed",
+      toState: "InProgress",
+      commitment: null,
+      status: txid === null ? "Pending" : "Confirmed",
+      txid,
+      network: txid === null ? null : "Simulated",
+      outputRef: txid === null ? null : `${txid}#0`,
+      blockTimestamp: null,
+      createdAt: ahora,
+      updatedAt: ahora
+    })
+    .execute();
+  return id;
+}
+
 describe("hilosSospechosos", () => {
-  async function stage() {
-    const id = createId();
-    const ahora = new Date();
-    await db
-      .insertInto("Stage")
-      .values({
-        id,
-        projectId: proyecto,
-        name: "Stage de reconciliación",
-        sequenceOrder: Math.floor(Math.random() * 1_000_000) + 500_000,
-        state: "InProgress",
-        validationCritical: false,
-        createdAt: ahora,
-        updatedAt: ahora
-      })
-      .execute();
-    return id;
-  }
-
-  async function transicion(stageId: string, eventIndex: number, txid: string | null) {
-    const ahora = new Date();
-    await db
-      .insertInto("OnChainEvent")
-      .values({
-        id: createId(),
-        projectId: proyecto,
-        stageId,
-        evidenceId: null,
-        referenceId: null,
-        eventIndex,
-        eventType: "STAGE_TRANSITION",
-        fromState: "Observed",
-        toState: "InProgress",
-        commitment: null,
-        status: txid === null ? "Pending" : "Confirmed",
-        txid,
-        network: txid === null ? null : "Simulated",
-        outputRef: txid === null ? null : `${txid}#0`,
-        blockTimestamp: null,
-        createdAt: ahora,
-        updatedAt: ahora
-      })
-      .execute();
-  }
-
   it("marca una transición sin TXID que el stage ya dejó atrás", async () => {
     const id = await stage();
     // El intento que se perdió: sin txid.
@@ -233,6 +257,101 @@ describe("hilosSospechosos", () => {
 
     const sospechosos = await hilosSospechosos();
     expect(sospechosos.map((s) => s.stageId)).not.toContain(id);
+  });
+});
+
+// ── repararHilosSospechosos · Capa 1, sin firmar nada ───────────────────────
+//
+// Cierra el caso "etapa 3" del reporte: la transacción sí salió y confirmó,
+// solo el registro perdió el recibo. `findLiveThread` la encuentra por
+// `stageRef` directo en la cadena (acá, el simulador) y el bookkeeping se
+// completa sin volver a construir ni firmar nada.
+
+/**
+ * Abre un hilo real en `Pending` (lo único que el mint acepta) y lo avanza a
+ * `InProgress` — el `toState` fijo que pone `transicion()` — para que
+ * `findLiveThread` encuentre un UTxO vivo en el estado que las pruebas de
+ * reparación necesitan.
+ */
+async function abrirHiloEnInProgress(stageId: string) {
+  const pending = buildStageDatum({
+    id: stageId,
+    projectId: proyecto,
+    sequenceOrder: 1,
+    validationCritical: false,
+    state: "Pending"
+  });
+  const abierto = await anchorPort().openThread({ datum: pending });
+  // `pending` ya es un `StageDatum` (`projectRef`/`stageRef` en hex) — no se
+  // reconstruye con `buildStageDatum`, que espera el source (`id`/`projectId`).
+  const inProgress = { ...pending, state: "InProgress" as const };
+  return anchorPort().advanceThread({
+    outputRef: abierto.outputRef,
+    previous: pending,
+    next: inProgress
+  });
+}
+
+describe("repararHilosSospechosos", () => {
+  it("completa txid/outputRef cuando el hilo real coincide con el toState declarado", async () => {
+    const id = await stage();
+    const hilo = await abrirHiloEnInProgress(id);
+
+    const eventId = await transicion(id, 0, null);
+    await transicion(id, 1, await txidReal(`reparo-siguiente-${id}`));
+
+    const reparados = await repararHilosSospechosos();
+
+    expect(reparados).toContainEqual({ eventId, txid: hilo.txid, outputRef: hilo.outputRef });
+    const fila = await leer(eventId);
+    expect(fila.txid).toBe(hilo.txid);
+    expect(fila.outputRef).toBe(hilo.outputRef);
+    // Queda Pending: es `reconciliarAnclajes`, no esta función, quien confirma.
+    expect(fila.status).toBe("Pending");
+  });
+
+  it("NO repara si el datum del hilo real no coincide con el toState declarado", async () => {
+    const id = await stage();
+    // `state: "Pending"` — el `toState` que pone `transicion()` es `"InProgress"`.
+    const datum = buildStageDatum({
+      id,
+      projectId: proyecto,
+      sequenceOrder: 1,
+      validationCritical: false,
+      state: "Pending"
+    });
+    await anchorPort().openThread({ datum });
+
+    const eventId = await transicion(id, 0, null);
+    await transicion(id, 1, await txidReal(`no-coincide-${id}`));
+
+    const reparados = await repararHilosSospechosos();
+
+    expect(reparados.map((r) => r.eventId)).not.toContain(eventId);
+    expect((await leer(eventId)).txid).toBeNull();
+  });
+
+  it("NO repara un stage que nunca minteó ningún hilo", async () => {
+    const id = await stage();
+    const eventId = await transicion(id, 0, null);
+    await transicion(id, 1, await txidReal(`sin-hilo-${id}`));
+
+    const reparados = await repararHilosSospechosos();
+
+    expect(reparados.map((r) => r.eventId)).not.toContain(eventId);
+    expect((await leer(eventId)).txid).toBeNull();
+  });
+
+  it("es idempotente: un evento ya reparado no se vuelve a tocar", async () => {
+    const id = await stage();
+    await abrirHiloEnInProgress(id);
+    const eventId = await transicion(id, 0, null);
+    await transicion(id, 1, await txidReal(`idempotente-${id}`));
+
+    await repararHilosSospechosos();
+    const segunda = await repararHilosSospechosos();
+
+    expect(segunda.map((r) => r.eventId)).not.toContain(eventId);
   });
 });
 

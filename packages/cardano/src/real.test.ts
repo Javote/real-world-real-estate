@@ -204,6 +204,37 @@ describe("advanceThread contra el validador real", () => {
   });
 });
 
+describe("findLiveThread — Capa 1, contra el proveedor de verdad", () => {
+  it("encuentra el UTxO vivo por stageRef, sin pasar por outputRef ni por verify()", async () => {
+    const datum = buildStageDatum(fuente);
+    const abierto = await abrirHilo(datum);
+
+    const encontrado = await adapter.findLiveThread(datum.stageRef);
+
+    expect(encontrado).toEqual({ outputRef: abierto.outputRef, datum });
+  });
+
+  it("sigue al hilo después de un advanceThread", async () => {
+    const previous = buildStageDatum(fuente);
+    const next = buildStageDatum({ ...fuente, state: "InProgress" });
+    await abrirHilo(previous);
+    const avance = await adapter.advanceThread({
+      outputRef: (await adapter.findLiveThread(previous.stageRef))!.outputRef,
+      previous,
+      next
+    });
+    emulator.awaitBlock(1);
+
+    const encontrado = await adapter.findLiveThread(previous.stageRef);
+
+    expect(encontrado).toEqual({ outputRef: avance.outputRef, datum: next });
+  });
+
+  it("da null para un stage que nunca minteó", async () => {
+    expect(await adapter.findLiveThread("stage-que-no-existe")).toBeNull();
+  });
+});
+
 describe("la dirección y la policy", () => {
   it("salen del blueprint y del admin de la wallet, no de configuración", async () => {
     expect(adapter.address.startsWith("addr_test1")).toBe(true);

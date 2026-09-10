@@ -5,6 +5,7 @@ import {
   type AnchorReceipt,
   AnchorRejectedError,
   type CommitmentAnchorInput,
+  type LiveThread,
   type MetadataAnchorReceipt,
   type OpenThreadInput
 } from "./port";
@@ -65,6 +66,11 @@ export class DisabledAnchorAdapter implements AnchorPort {
   }
 
   async anchorCommitment(_input: CommitmentAnchorInput): Promise<MetadataAnchorReceipt> {
+    this.rechazar();
+  }
+
+  /** Mismo criterio que `verify()`: rechaza, no dice `null` — no consultó nada. */
+  async findLiveThread(_stageRef: string): Promise<LiveThread | null> {
     this.rechazar();
   }
 

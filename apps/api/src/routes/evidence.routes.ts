@@ -15,7 +15,12 @@ import {
 import { type Request, Router } from "express";
 import { z } from "zod";
 import { createId } from "../db/id";
-import { hilosSospechosos, reconciliarAnclajes, reconciliarParaLectura } from "../domain/reconcile";
+import {
+  hilosSospechosos,
+  reconciliarAnclajes,
+  reconciliarParaLectura,
+  repararHilosSospechosos
+} from "../domain/reconcile";
 import { Sentry } from "../instrumentation";
 import { anchorPort } from "../lib/anchor";
 import { db } from "../lib/db";
@@ -199,13 +204,26 @@ router.patch(
  * dormido a los 15 minutos, un timer interno deja de contar y nadie se entera.
  *
  * **Desde el 2026-09-10 también devuelve `sospechosos`** (`hilosSospechosos`):
- * transiciones sin TXID que el stage ya dejó atrás — la señal, sin reparar
- * nada, del patrón que la prueba de volumen de ese día encontró a mano. Ver
- * `domain/reconcile.ts` y `specs/REPORTE-2026-09-10-prueba-de-volumen.md`.
+ * transiciones sin TXID que el stage ya dejó atrás — la señal del patrón que
+ * la prueba de volumen de ese día encontró a mano. Ver `domain/reconcile.ts`
+ * y `specs/REPORTE-2026-09-10-prueba-de-volumen.md`.
+ *
+ * **Y desde la misma fecha, antes de mirar nada, intenta repararlos solo**
+ * (`repararHilosSospechosos`, Capa 1): busca el UTxO vivo de cada sospechoso
+ * directo en la cadena y, si existe y coincide con lo que el evento ya
+ * declaraba, completa el `txid`/`outputRef` que faltaba — sin firmar ni
+ * gastar nada. Por eso el orden de las tres llamadas es secuencial y no un
+ * `Promise.all`: reparar puede dejarle `txid` a un evento que hasta hace un
+ * instante no tenía, y `reconciliarAnclajes` necesita correr **después** para
+ * promoverlo a `Confirmed` en la misma respuesta — si no, quedaría `Pending`
+ * hasta el próximo disparo. `sospechosos` se pide al final para que ya no
+ * liste lo que se acaba de reparar.
  */
 router.post("/reconcile", authorize({ roles: ["admin"], acceso: "soloRol" }), async (_req, res) => {
-  const [resultado, sospechosos] = await Promise.all([reconciliarAnclajes(), hilosSospechosos()]);
-  res.json(reconciliationResultSchema.parse({ ...resultado, sospechosos }));
+  const reparados = await repararHilosSospechosos();
+  const resultado = await reconciliarAnclajes();
+  const sospechosos = await hilosSospechosos();
+  res.json(reconciliationResultSchema.parse({ ...resultado, sospechosos, reparados }));
 });
 
 router.post(
