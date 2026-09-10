@@ -60,8 +60,8 @@ por qué se conserva y qué se borra.
 | **Kysely** (sobre `@libsql/client`) | `0.29.5` | ● | Migración **terminada**: Prisma → Drizzle (D-048) → Kysely (D-049), las dos el 2026-08-21. Desde D-052 no queda rastro de ninguno de los dos en el árbol ni en el lockfile |
 | Zod | `4.4.3` | ● | D-035. Rutas heredadas aún con formas de la 3, que v4 acepta |
 | JWT (`jsonwebtoken`) | `9.0.3` | ● | 7 días, con revalidación de `isActive` por request |
-| **bcrypt** (módulo nativo) | `5.1.1` | ◐ | cost 10. Es el origen del warning de `url.parse()` vía `node-pre-gyp`. El costo de "toolchain en la imagen" **murió con D-041**: no hay imagen |
-| Multer | `2.2.0` | ● | D-036 |
+| **bcrypt** (módulo nativo) | `6.0.0` | ● | cost 10. Bumpeado el 2026-09-10: la 5.1.1 traía `@mapbox/node-pre-gyp` (origen del warning de `url.parse()`), la 6.0.0 lo reemplazó por `node-gyp-build` — el warning ya no aparece. El costo de "toolchain en la imagen" **murió con D-041**: no hay imagen |
+| Multer | `2.3.0` | ● | D-036. `2.3.0` desde el 2026-09-10, parcha GHSA-qvfw-j98x-7q72 |
 | helmet | `8.3.0` | ● | D-054. Cero dependencias transitivas. Con `x-powered-by` desactivado y 404 en JSON |
 | `express-rate-limit` | `8.6.2` | ● | D-045. Solo sobre `POST /auth/login`. Store en memoria: alcanza con **una** instancia, que es lo que da el free tier (D-040) |
 | dotenv | `16.6.1` | ● | `import "dotenv/config"` como primer import, nunca `dotenv.config()` intercalado |
@@ -209,9 +209,9 @@ la ruta en vez de depender de un escáner. Ninguna ruta llama ya a `canAccessPro
 |---|---|
 | **Nitro sigue en beta** | Sigue sin haber Nitro 3 estable. Pero **el `502` en `POST`+`401` ya no es deuda**: se cerró con `credentials: "omit"` al descubrir que era el spec de fetch y no h3 (D-050) |
 | ~~**Evidencia efímera en la instancia desplegada**~~ | **Cerrada** el 2026-08-27 (D-011): la evidencia vive en Cloudflare R2. No hubo código nuevo —el driver `s3` ya estaba probado contra MinIO—, solo el bucket y las variables. Con esto deja de pesar sobre el primer anclaje |
-| **`bcrypt` es nativo** | Más barata desde D-041: sin imagen propia, el toolchain lo absorbe el entorno de build de Render. Queda el warning de `url.parse()` vía `node-pre-gyp` y el riesgo genérico de módulo nativo. **La alternativa `bcryptjs` (JS puro, ~30% más lento) hoy conviene menos**: Render free da 0.1 CPU, donde los ~81 ms medidos en una máquina rápida se van a varios cientos. Detalle en `apps/api/CLAUDE.md` §Superficie 🔴. Es código 🔴: lo decide el humano |
+| ~~**`bcrypt` trae el warning de `url.parse()`**~~ | **Cerrada el 2026-09-10**: bump a `bcrypt@6.0.0`, que reemplazó `@mapbox/node-pre-gyp` por `node-gyp-build` (mismo mecanismo de binario precompilado, sin `url.parse()`). Queda el riesgo genérico de módulo nativo, que no cambia con la versión: sigue siendo más barato desde D-041 (sin imagen propia, el toolchain lo absorbe el entorno de build de Render). **La alternativa `bcryptjs` (JS puro, ~30% más lento) sigue conviniendo menos**: Render free da 0.1 CPU, donde los ~81 ms medidos en una máquina rápida se van a varios cientos. Detalle en `apps/api/CLAUDE.md` §Superficie 🔴. El bump en sí fue mecánico (mismo API de JS); el uso que rodea a `bcrypt` sigue siendo código 🔴 y lo decide el humano |
 | ~~**`contracts/` con 0 tests**~~ | **Cerrada** (D-057, D-058): 73 tests, con la tabla punto de rechazo → test en `contracts/CLAUDE.md`. Era la deuda más grande que quedaba |
-| **`pnpm audit`: 1 crítica + 13 altas** | Casi todas cuelgan de `bcrypt` → `@mapbox/node-pre-gyp` → `tar`, y son cadena de **instalación** (corre en cada build de Render), no de request. D-046 ya dejó anotada la salida: `scrypt` de `node:crypto`, stdlib y cero dependencias. Es 🔴 y lo decide el humano |
+| ~~**`pnpm audit`: 1 crítica + 13 altas, casi todas vía `bcrypt` → `node-pre-gyp` → `tar`**~~ | **Cerrada junto con el bump de arriba** (2026-09-10): sin `@mapbox/node-pre-gyp` en el árbol, esa cadena entera desaparece de `pnpm audit`. De paso se bumpeó `multer` a `2.3.0` (parcha GHSA-qvfw-j98x-7q72, un bypass del límite de tamaño de archivo — fila de Multer en el inventario, arriba). Quedan **12 vulnerabilidades** (8 moderadas, 4 altas), ninguna crítica — casi todas de dependencias de build del front (`@babel/*`/`browserslist`, cadena de instalación, no de request). No revisadas una por una en esta sesión |
 | **`milestone` en el dominio** | D-023 pendiente; encarece con cada pantalla nueva |
 
 ---
@@ -306,14 +306,14 @@ a 1440×900. No corre en CI, por decisión.
 | `@paralleldrive/cuid2` | `^3.3.0` | `3.3.0` | IDs; ESM puro. **Es el `stage_ref` on-chain** (D-058) |
 | `@plataforma/cardano` | `workspace:^` | link local | el `AnchorPort` (D-060) |
 | `@plataforma/shared` | `workspace:^` | link local | |
-| `bcrypt` | `^5.1.1` | `5.1.1` | **módulo nativo**, cost 10 (regla 4) |
+| `bcrypt` | `^6.0.0` | `6.0.0` | **módulo nativo**, cost 10 (regla 4). Bumpeado el 2026-09-10 (era 5.1.1) — cierra el warning de `url.parse()` |
 | `dotenv` | `^16.4.5` | **`16.6.1`** | |
 | `express` | `^5.2.1` | `5.2.1` | v5 desde D-054 |
 | `express-rate-limit` | `^8.6.2` | `8.6.2` | solo `POST /auth/login`, store en memoria |
 | `helmet` | `^8.3.0` | `8.3.0` | D-054 |
 | `jsonwebtoken` | `^9.0.2` | **`9.0.3`** | HS256, 7 días |
 | `kysely` | `^0.29.5` | `0.29.5` | ESM puro |
-| `multer` | `^2.2.0` | `2.2.0` | D-036 |
+| `multer` | `^2.3.0` | `2.3.0` | D-036. Bumpeado el 2026-09-10 (era 2.2.0) — parcha un bypass del límite de tamaño vía race condition en `fileFilter` async (GHSA-qvfw-j98x-7q72) |
 | `zod` | `^4.4.3` | `4.4.3` | |
 | *dev* `@types/bcrypt` | `^5.0.2` | `5.0.2` | |
 | *dev* `@types/express` | `^5.0.6` | `5.0.6` | v5, alineado con `express` |
@@ -369,7 +369,7 @@ No están declaradas por nosotros, pero cada una explica un comportamiento del s
 | `rou3` | `0.8.1` | router de h3 |
 | `esbuild` | `0.28.1` | vía Vite |
 | `lightningcss` | `1.32.0` · `@tailwindcss/oxide` `4.3.2` | binarios nativos de Tailwind v4 |
-| `@mapbox/node-pre-gyp` | `1.0.11` | vía `bcrypt`. **Origen real del warning de `url.parse()`** — atribuido a Multer durante meses (D-036) |
+| ~~`@mapbox/node-pre-gyp`~~ | ya no está en el árbol | traía `bcrypt@5.1.1` — **fue el origen real del warning de `url.parse()`** (atribuido a Multer durante meses, D-036). Se fue al bumpear a `bcrypt@6.0.0` (2026-09-10), que usa `node-gyp-build` en su lugar |
 | `body-parser` `1.20.6` · `qs` `6.15.3` | | vía Express 4 |
 | `busboy` | `1.6.0` | vía Multer |
 | `libsql` (binario nativo) | `0.5.29` | motor de `@libsql/client` |

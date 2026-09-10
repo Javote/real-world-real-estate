@@ -499,13 +499,19 @@ lo mismo sin pasar por HTTP. Ver el detalle en `CLAUDE.md` raíz.
   y el tipo lo refleja. Ninguna ruta de esta API declara uno, así que un array significa que alguien
   cambió el path — `requireProjectAccess` contesta 500 explícito en vez de elegir el primero en
   silencio, que en la capa de autorización sería el peor default posible.
-- **El warning de `url.parse()` deprecado al arrancar viene de `bcrypt`**, vía
-  `@mapbox/node-pre-gyp`, no de Multer ni del código propio. El repo lo atribuyó a Multer durante
-  meses y era falso: se comprobó con `tsx --trace-deprecation`, y sobrevivió intacto a la
-  migración a Multer 2 (D-036). **Antes de atribuir un warning, trazalo.**
-  Es la punta visible de algo que importa más: `bcrypt` es un **módulo nativo**. El argumento caro
-  (toolchain en la imagen Docker) murió con D-041 — no hay imagen. Ver §Superficie 🔴 y
-  `specs/stack.md` §11.
+- ~~El warning de `url.parse()` deprecado al arrancar viene de `bcrypt`~~ — **cerrado el
+  2026-09-10.** Venía de `@mapbox/node-pre-gyp` (que `bcrypt@5.1.1` usaba para bajar binarios
+  precompilados), no de Multer ni de código propio — el repo lo atribuyó a Multer durante meses y
+  era falso: se comprobó con `tsx --trace-deprecation`, y sobrevivió intacto a la migración a
+  Multer 2 (D-036). **Antes de atribuir un warning, trazalo.**
+  `bcrypt@6.0.0` reemplazó `@mapbox/node-pre-gyp` por `node-gyp-build` + `node-addon-api` (mismo
+  mecanismo de binario precompilado, sin el paquete que llamaba `url.parse()`), así que el warning
+  desapareció al bumpear la dependencia — no hizo falta ningún workaround. Verificado: `pnpm
+  --filter @plataforma/api test` ya no lo imprime, y los 345 tests (incluidos los de timing de
+  `auth-timing.test.ts`, que miden el costo real de `bcrypt.compare`) siguen en verde sin cambios.
+  `bcrypt` sigue siendo un **módulo nativo** — eso no cambió, y el argumento caro de antes (toolchain
+  en la imagen Docker) sigue muerto con D-041, no hay imagen. Ver §Superficie 🔴 y `specs/stack.md`
+  §11.
 - **2026-08-21 · La Relational Query API de Drizzle no reescribe un `SQL` a mano para calzar con
   su propio alias interno.** `db.query.projects.findMany({ where: projectScope(...) })` rompía con
   `SQLITE_ERROR: no such column: Project.id`: el RQB alias-ea la tabla base (`"Project" AS
@@ -994,8 +1000,9 @@ largo (mín. 8 caracteres, máx. 72 **bytes**, sin reglas de composición) vive 
 Sobre `bcrypt` vs `bcryptjs`, la recomendación **se dio vuelta** y conviene saber por qué: D-041
 mató el argumento caro (sin Docker, no hay toolchain que meter en una imagen), y apareció un dato
 nuevo — **Render free da 0.1 CPU**, donde los ~81 ms de una máquina rápida se van a varios cientos,
-y `bcryptjs` es ~30% más lento encima de eso. Queda el warning de `url.parse()` (ver Trampas) y el
-riesgo genérico de módulo nativo. **Bajar el cost no es opción: la regla 4 fija 10.**
+y `bcryptjs` es ~30% más lento encima de eso. El warning de `url.parse()` se cerró con el bump a
+`bcrypt@6.0.0` (ver Trampas); queda el riesgo genérico de módulo nativo. **Bajar el cost no es
+opción: la regla 4 fija 10.**
 
 
 ## Tests
