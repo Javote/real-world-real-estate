@@ -481,6 +481,23 @@ están `Completed` en la base y las 180 transacciones on-chain que la prueba dis
 anclajes de evidencia + 120 transiciones) tienen TXID real, confirmado.** El apéndice, abajo, ya
 refleja las 180.
 
+**El caso preexistente del 2026-09-08, cerrado el mismo día que Capa 0 lo hizo visible por
+primera vez.** El primer disparo del cron (`workflow_dispatch` manual, para probar que las
+credenciales cargadas en GitHub funcionaban) falló a propósito, como está diseñado — y sacó a la
+luz que ese caso (`torre-a` · etapa "Estructura", `InProgress → Observed`, `Failed`, sin `txid`)
+**nunca iba a poder repararse solo**: `SELECT COUNT(*) FROM OnChainEvent WHERE stageId = ... AND
+eventType = 'STAGE_CREATED'` dio `0` — este stage se sembró directo en la base (`db/fixtures.ts`,
+antes del Stage template) y **nunca tuvo un hilo on-chain real**, la misma trampa que documenta
+`CLAUDE.md` raíz desde 2026-09-03. A diferencia de las etapas 3/4 de Torre Volumen, acá
+`AnchorPort.findLiveThread` siempre iba a devolver `null`: no hay ningún UTxO que Capa 1 pueda
+encontrar y usar para reparar, así que esta fila iba a reaparecer como `sospechoso` en **cada**
+corrida del cron, para siempre, sin ser una señal real de nada roto. Borrada de producción
+(migración `apps/api/migrations/0005_borrar_intento_sin_hilo_estructura_torre_a.sql`, mismo patrón
+de dry-run + guarda de idempotencia que la 0004). `POST /evidence/reconcile` verificado después:
+`sospechosos: []`. El cron de Capa 0 también se ajustó de cada 6 a cada 24 horas en el mismo
+momento (`.github/workflows/reconcile.yml`) — la visibilidad no pierde nada relevante con esa
+cadencia, y reduce el ruido de un run que hoy es la excepción, no la norma.
+
 ## Camino completo hasta el 100% Completed en Preprod — todos los arreglos, en el orden en que tenían que pasar
 
 Esta sección junta, en una sola línea de tiempo, **los siete arreglos distintos** que hicieron

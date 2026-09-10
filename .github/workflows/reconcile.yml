@@ -31,10 +31,10 @@ name: Reconciliación de anclajes
 
 on:
   schedule:
-    # Cada 6 horas. No es urgencia —la reparación real sigue siendo manual
-    # (Capa 2)—, es visibilidad: que un anclaje perdido no tarde más de medio
-    # día en aparecer en algún lado.
-    - cron: "0 */6 * * *"
+    # Cada 24 horas (era cada 6). No es urgencia —la reparación real sigue
+    # siendo manual (Capa 2)—, es visibilidad: que un anclaje perdido no tarde
+    # más de un día en aparecer en algún lado.
+    - cron: "0 6 * * *"
   workflow_dispatch: {}
 
 jobs:

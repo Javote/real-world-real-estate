@@ -1,0 +1,30 @@
+-- Borra un registro de intento de anclaje que jamás pudo tener éxito, porque el
+-- stage al que pertenece nunca tuvo un hilo on-chain real — specs/REPORTE-2026-09-10-
+-- prueba-de-volumen.md §Cierre de las 3 transacciones pendientes.
+--
+-- `torre-a` · etapa "Estructura" (`s6gcugkq39lg1k124rulhngy`): se sembró directo en la
+-- base (`db/fixtures.ts`) ANTES de que existiera el Stage template con mint real —
+-- confirmado con `SELECT COUNT(*) FROM OnChainEvent WHERE stageId = ... AND eventType
+-- = 'STAGE_CREATED'` devolviendo 0. Es exactamente la trampa que `CLAUDE.md` raíz
+-- documenta desde 2026-09-03: "un stage sembrado directo en la base no tiene hilo
+-- on-chain... un PATCH .../state no falla la request, pero el anclaje queda Failed
+-- en silencio, porque advanceThread no encuentra ningún UTxO que gastar".
+--
+-- A diferencia de las etapas 3/4 de Torre Volumen 1 (2026-09-10), que sí tenían un
+-- hilo real y se repararon con transacciones nuevas, ACÁ no hay ningún hilo que
+-- encontrar: el mint nunca ocurrió. `AnchorPort.findLiveThread` (Capa 1) siempre va
+-- a devolver `null` para este `stageRef`, así que esta fila iba a aparecer como
+-- `sospechoso` en CADA corrida de `POST /evidence/reconcile` (incluido el cron de
+-- Capa 0) para siempre, sin que nada la pudiera resolver — a diferencia de un
+-- sospechoso genuino, no es una señal de que algo esté roto: es un artefacto de una
+-- época del código anterior al Stage template. Dueño autorizó el borrado el
+-- 2026-09-10 al ver el primer disparo del cron.
+--
+-- Registro y contexto quedan acá y en el propio historial de este archivo; no en
+-- AuditLog (esa tabla es append-only por diseño, regla 7, y este no es un evento de
+-- dominio — es limpieza de datos de una época anterior del código).
+--
+-- `AND status = 'Failed' AND txid IS NULL` es la guarda de idempotencia (regla 8):
+-- en cualquier otra base (test, un dev fresco) el `id` no matchea y no hace nada.
+DELETE FROM `OnChainEvent`
+WHERE `id` = 'cdgdvo8bob7e5iyc1xdzdrfe' AND `status` = 'Failed' AND `txid` IS NULL;
