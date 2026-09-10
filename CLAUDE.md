@@ -121,6 +121,7 @@ bloqueadas), ~1% del balance de la wallet de servicio. El costo no la condiciona
 | **Columna `AuditLog.projectId`** | Sacaría el mapeo fail-closed de `auditScope`. Pide backfill que para filas viejas no tiene respuesta |
 | **`validationCritical` siempre `true`** | Config muerta con rama viva y testeada en el validador. No molesta |
 | **Las 2 ADA bloqueadas por etapa** | Sin burn (D-057), son permanentes: 20 por proyecto de 10 etapas. Es el número para la decisión de mainnet, no para este milestone |
+| **Upload directo del navegador a R2 (sin pasar por Render)** | Hoy el archivo hace escala en `UPLOAD_DIR` (Multer disco → `storage.put()` → R2 → se borra, `apps/api/src/lib/storage.ts`) antes de llegar al bucket — es lo que hace que `MAX_FILE_SIZE_MB` (2026-09-10: 10→50) le pese a la RAM del proceso, no solo al límite de R2 (5 GiB por PUT simple). Un presigned URL lo evitaría, pero es un cambio de forma real: CORS nuevo en el bucket, el front pasa de un POST a un flujo de 3 pasos, y el hash sigue teniendo que calcularse releyendo el objeto desde R2 después (D-027) — no se simplifica esa parte. **Después de mainnet**, cuando el volumen de uploads reales lo justifique frente al costo de tocar `storage.ts` (🟡) y el único endpoint que hoy usa `uploadSingleEvidence` |
 
 ## Sin confirmar todavía
 
