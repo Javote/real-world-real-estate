@@ -112,8 +112,12 @@ services:
       # objeto en R2, no esto.
       - key: UPLOAD_DIR
         value: /tmp/uploads
+      # 50, no 10: un PDF de varias decenas de páginas sin optimizar, con fotos
+      # de obra en alta resolución, pasa cómodo los 10 MB del default
+      # original. Ver apps/api/.env.example para el detalle y la advertencia
+      # sobre el FileDropzone del front, que valida el mismo número aparte.
       - key: MAX_FILE_SIZE_MB
-        value: "10"
+        value: "50"
       # ── Evidencia en Cloudflare R2 (D-011) ─────────────────────────────────
       # El MISMO driver que se prueba contra MinIO en local: cambian variables,
       # no el código (`apps/api/src/lib/storage.ts`). Con `s3` el SHA-256 se

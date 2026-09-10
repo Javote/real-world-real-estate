@@ -128,6 +128,8 @@ function UploadEvidence() {
               files={archivos}
               onChange={setArchivos}
               disabled={subir.isPending}
+              // Tiene que coincidir con MAX_FILE_SIZE_MB de apps/api (render.yaml / .env.example).
+              maxSizeMb={50}
               labels={{
                 primary: t('developer.upload.dropzone'),
                 secondary: t('developer.upload.dropzoneHint'),

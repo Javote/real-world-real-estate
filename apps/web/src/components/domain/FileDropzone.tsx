@@ -6,10 +6,11 @@ import { cn } from '#/lib/cn'
 // un bundle de evidencia (captura 38).
 //
 // **Los tipos y el tamaño se validan acá Y en el servidor.** La regla 10 fija
-// `application/pdf`, `image/jpeg`, `image/png` y un máximo; esta validación es
-// de conveniencia —le ahorra al usuario subir 10 MB para que lo rechacen—, no
-// es la que protege. La que protege es la del backend, que además borra el
-// archivo huérfano si el rechazo llega después de escribirlo.
+// `application/pdf`, `image/jpeg`, `image/png` y un máximo (`MAX_FILE_SIZE_MB`,
+// hoy 50); esta validación es de conveniencia —le ahorra al usuario subir un
+// archivo pesado para que lo rechacen—, no es la que protege. La que protege
+// es la del backend, que además borra el archivo huérfano si el rechazo llega
+// después de escribirlo.
 //
 // **No sube nada.** Junta archivos y avisa; quien lo usa decide cuándo y cómo
 // mandarlos. Un dropzone que dispara la request sola haría un anclaje sin que
@@ -31,6 +32,7 @@ interface FileDropzoneProps {
     /** Se muestra cuando un archivo no pasa el filtro de tipo o tamaño. */
     rejected: (nombre: string) => string
   }
+  /** Tiene que coincidir con `MAX_FILE_SIZE_MB` de apps/api (hoy 50) — el front no lee esa variable. */
   maxSizeMb?: number
   disabled?: boolean
   className?: string
@@ -40,7 +42,7 @@ export function FileDropzone({
   files,
   onChange,
   labels,
-  maxSizeMb = 10,
+  maxSizeMb = 50,
   disabled,
   className
 }: FileDropzoneProps) {
