@@ -481,6 +481,93 @@ están `Completed` en la base y las 180 transacciones on-chain que la prueba dis
 anclajes de evidencia + 120 transiciones) tienen TXID real, confirmado.** El apéndice, abajo, ya
 refleja las 180.
 
+## Camino completo hasta el 100% Completed en Preprod — todos los arreglos, en el orden en que tenían que pasar
+
+Esta sección junta, en una sola línea de tiempo, **los siete arreglos distintos** que hicieron
+falta para pasar de "26 de 30 etapas con las 4 transiciones confirmadas" a "30 de 30, con las 180
+transacciones on-chain confirmadas" — repartidos en dos sesiones sobre el mismo hallazgo. Ninguno
+es opcional ni intercambiable de orden: cada uno depende de que el anterior ya esté hecho.
+
+**1. Causa raíz confirmada (§Hallazgo).** Render mató `propnexus-api` por health check sin
+respuesta (16:55 UTC, plan Free) a mitad de que el proceso viejo procesaba "Reanudar etapa" sobre
+las etapas 3 y 4 de Torre Volumen 1. La etapa 3 alcanzó a enviar su transacción antes de morir —
+Preprod la confirmó nueve segundos después, sin nadie para anotarla—; la etapa 4 murió antes de
+llegar a enviar nada. Sin este diagnóstico, ninguno de los pasos siguientes tiene sentido: son dos
+fallas de forma distinta (una transacción huérfana vs. una transacción que nunca salió) y cada una
+pide una reparación distinta.
+
+**2. Tres mejoras de código, para que el próximo crash no vuelva a perder un recibo (§Cómo hacerlo
+más robusto, commit `56556c6`).** Antes de tocar ningún dato de producción: `anchorEvent()` y sus
+dos hermanos duplicados ya no esperan la confirmación antes de guardar `txid`/`outputRef` — el
+`UPDATE` corre apenas la cadena devuelve el recibo, así que la ventana que mató a la etapa 3 (enviar
+sin alcanzar a anotar) se cierra para cualquier anclaje futuro, no solo para este caso puntual.
+Junto con `hilosSospechosos()` (detección) y el `Sentry.captureException` en los tres `catch` de
+broadcast fallido (visibilidad). **Por qué va segundo y no al final:** reparar los datos viejos
+sobre un código que todavía tiene el bug abierto arriesgaría reproducir el mismo problema al enviar
+las transacciones de reparación — cerrar la ventana primero es lo que vuelve seguro construir sobre
+ella después.
+
+**3. Verificación de credenciales, antes de escribir nada (§Reparación del hilo huérfano de la
+etapa 3).** `SERVICE_WALLET_PRIVATE_KEY` se confirmó real derivando la dirección pública offline
+(sin red, sin exponer la clave) y comparándola contra la que produjo las 176 transacciones previas;
+`BLOCKFROST_API_KEY` resultó válida una vez corregido un bug propio de extracción de shell (comillas
+del `.env` pegadas al valor). **Por qué antes de tocar la base o la cadena:** escribir una migración
+o enviar una transacción con la clave equivocada no falla limpio — en el mejor caso rechaza, en el
+peor construye algo contra una wallet que no es la que sostiene los hilos reales. Verificar primero
+es lo que permite confiar en los pasos 4 y 6 sin tener que volver a dudar de ellos.
+
+**4. Migración `0004_reconciliar_hilo_huerfano_etapa3.sql` — corregir el apuntador, antes de
+enviar cualquier transacción nueva.** `cabezaDelHilo()` (la función que decide qué `outputRef`
+gastar en el próximo anclaje de un stage) miraba el `OnChainEvent` de la etapa 3 con `txid = NULL`
+y no encontraba ningún `outputRef` más nuevo — exactamente el estado que el log de las 17:07:48
+mostró fallando con `UNKNOWN_THREAD` contra `fc37cac7…#0`, el UTxO **viejo**, ya gastado por la
+transacción huérfana. El `UPDATE` (dry run primero, `BEGIN; ...; ROLLBACK;`; después el real, con
+guarda `AND txid IS NULL`) no ancla nada — completa el `txid`/`outputRef` que ya existían on-chain,
+para que la base vuelva a decir la verdad sobre cuál es el UTxO vivo del hilo.
+**Por qué este paso tiene que ir antes del paso 6, sin excepción:** `advanceThread` construye la
+transacción a partir del `outputRef` que se le pasa. Si el paso 6 hubiera corrido sin este arreglo
+primero, habría intentado gastar `fc37cac7…#0` otra vez — el mismo `outputRef` viejo que el log ya
+había fallado una vez con `UNKNOWN_THREAD` — porque nada en la base todavía sabía que el UTxO real
+había cambiado. El orden no es una preferencia de estilo: es la única secuencia en la que la
+transacción de "Certificar" se puede construir contra el UTxO que de verdad existe en la cadena.
+
+**5. Las 3 transacciones reales enviadas contra Preprod (§Cierre de las 3 transacciones
+pendientes).** Con el apuntador ya corregido (paso 4), el `outputRef`
+`9a57f563e7d5627f22d9a062d26049d48789c91014d8b676298c0eb7c71f9e68#0` fue el que
+`etapa3-certificar` gastó de verdad — y funcionó al primer intento, sin ningún `UNKNOWN_THREAD`.
+`etapa4-reanudar` y `etapa4-certificar` no necesitaban ningún arreglo de bookkeeping previo (la
+etapa 4 nunca había llegado a escribir nada, así que no había ningún apuntador desactualizado que
+corregir) y se armaron encadenadas: el `outputRef` que devolvió `etapa4-reanudar` fue el que
+`etapa4-certificar` gastó.
+
+**6. Recuperación de un tropiezo propio, con la misma disciplina forense del hallazgo original.**
+El primer intento de `etapa3-certificar` crasheó *después* de que Blockfrost ya había aceptado la
+transacción — un `JSON.stringify` sobre el objeto interno del adaptador (`salidas`, un campo con
+`BigInt` que no es parte de `AnchorReceipt`), no un fallo del anclaje en sí. En vez de asumir que
+había fallado y reintentar a ciegas —que hubiera arriesgado un doble gasto o, peor, dejar otra
+transacción huérfana igual a la que esta sesión entera vino a resolver— se repitió exactamente la
+técnica de §Hallazgo: se buscó la transacción real contra Koios (`address_txs` de la wallet,
+ordenado por `block_time`), se verificaron sus inputs/outputs contra lo esperado, y se decodificó
+el datum resultante antes de dar el TXID por bueno. Solo después de esa verificación se corrigió el
+script (loguear campos del recibo uno por uno, no el objeto entero) y se corrieron los dos pasos
+restantes.
+
+**7. Los `UPDATE OnChainEvent` finales, uno por transacción, revisados antes de correrlos.** El
+script nunca escribe la base — imprime el `UPDATE` con el `txid`/`outputRef` real de cada envío
+para correrlo aparte, mismo criterio que la migración 0004. Con las 3 filas escritas,
+`reconciliarAnclajes` (la misma función que ya venía confirmando las 176 anteriores) promovió las
+3 a `Confirmed` contra Preprod, sin necesitar ningún camino especial.
+
+**Resultado de los siete pasos, verificado por dos vías independientes:** `POST
+/evidence/reconcile` ya no devuelve ningún `sospechoso` de Torre Volumen (`hilosSospechosos()`,
+paso 2, corriendo sobre el estado final), y `turso db shell` contra producción muestra las 12 filas
+de `OnChainEvent` de las etapas 3 y 4 —6 cada una— en `status = 'Confirmed'`, ninguna en
+`Pending`/`Failed`. **30 de 30 etapas `Completed`, 180 de 180 transacciones on-chain
+`Confirmed`.**
+
+**Y después de los siete, un octavo trabajo — no para reparar esta prueba, sino para que la próxima
+vez nadie tenga que repetir los pasos 1, 3, 4 y 6 a mano.** Es lo que sigue en la sección de abajo.
+
 ## Cómo hacerlo autocurable — Capas 0, 1 y 2 (✔ implementadas el 2026-09-10)
 
 El hallazgo de esta prueba (etapas 3 y 4 perdidas en silencio) mostró que **detectar** un hilo
