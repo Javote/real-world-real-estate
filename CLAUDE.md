@@ -59,7 +59,7 @@ explícitas de columnas — la migración es el camino con *menos* código tocad
 
 | | Qué |
 |---|---|
-| 2.5 | `Cimentación` de `torre-a` está `Completed` + `validationCritical` con **0 evidencias, 0 eventos y `certifiedAt` NULL**. Un reviewer que la abra ve exactamente lo que el criterio 7 dice que rechazamos. Lo produjo `sembrarStages`, que escribe `state` directo salteando la FSM |
+| 2.5 | ✔ `Cimentación` de `torre-a` ya no está fabricada — `UPDATE Stage SET state='InProgress'` corrido a mano contra Turso producción (autorizado y verificado con `turso db shell`, 0 evidencia/0 eventos confirmados antes de tocarla), y `seed.ts` ya no pre-marca ninguna etapa nueva `Completed`. Destapó un bug real de UI, cerrado en el mismo commit: "Etapa N/total" usaba `sequenceOrder` crudo en vez de la posición en la lista — con huecos (como los de `torre-a`) el numerador podía superar al total. Afectaba `developer.progress.tsx` (2.2) y `project.$projectId.progress.tsx` (investor); las dos verificadas con Claude en Chrome reproduciendo el hueco a propósito en local |
 
 ## Tanda 3 — documentación, decisiones y evidencia
 
@@ -126,7 +126,6 @@ bloqueadas), ~1% del balance de la wallet de servicio. El costo no la condiciona
 
 1. **El criterio 3 se cierra por documentación** (3.1–3.4), sin construir signers ni percentages. Es
    la consecuencia directa de la regla de precedencia, pero es un criterio de Catalyst.
-2. **2.5** — si la etapa fabricada de la demo la borra el LLM o la toca el dueño.
 
 ---
 

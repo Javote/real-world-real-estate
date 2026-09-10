@@ -101,16 +101,20 @@ async function main() {
     { userId: id("verifier@example.com"), membershipRole: "verifier" }
   ]);
 
-  // El catálogo normativo de 10 etapas (DEFAULT_STAGE_CATALOG): las dos
-  // primeras siguen en el estado que ya mostraba la demo (una completa, una
-  // en curso); el resto nace `Pending`, sin tocar.
+  // M3 §2.5 — antes la primera etapa nacía directo en `Completed`: `sembrarStages`
+  // escribe `state` salteando la FSM (D-020), así que quedaba `validationCritical`
+  // con 0 evidencias, 0 eventos y `certifiedAt` NULL — exactamente lo que el
+  // criterio 7 del SOM dice que el sistema rechaza (D-028), mostrado en la demo
+  // que se supone lo prueba. `InProgress` no tiene esa exigencia (solo completar
+  // la pide): sigue mostrando una etapa "con vida" sin fabricar una prueba que
+  // no existe.
   await sembrarStages(
     db,
     projectId,
     DEFAULT_STAGE_CATALOG.map((etapa, i) => ({
       name: etapa.name,
       sequenceOrder: etapa.sequenceOrder,
-      state: i === 0 ? "Completed" : i === 1 ? "InProgress" : "Pending"
+      state: i === 0 ? "InProgress" : "Pending"
     }))
   );
 

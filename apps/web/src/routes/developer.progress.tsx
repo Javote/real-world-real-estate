@@ -12,6 +12,7 @@ import { PanelLayout } from '#/components/PanelLayout'
 import { formatMonthYear } from '#/i18n/format'
 import { useTranslation } from '#/i18n/useTranslation'
 import { claveEstadoStage } from '#/lib/investor'
+import { avanceDeStages } from '#/lib/stageProgress'
 
 // **M2-D5 fila 45 · `/developer/progress`** — el avance de obra a través de
 // todos los proyectos. Endpoint: GET /developer/progress.
@@ -33,6 +34,17 @@ import { claveEstadoStage } from '#/lib/investor'
 // pantalla — no `ProgressTimeline`, que solo sabe de nodos y una etiqueta.
 // `finalizationLabel` sale de `Project.estimatedDelivery`. "Stage Detail"
 // lista las etapas del proyecto con su `certifiedAt` cuando existe.
+//
+// **"Etapa N/total" usa la POSICIÓN en la lista, no `sequenceOrder` crudo**
+// (M3 §2.5, encontrado corrigiendo la etapa fabricada de `torre-a`). Un
+// proyecto viejo puede tener huecos —`torre-a` en producción tiene
+// `sequenceOrder` 1/2/3 con solo 3 filas, no 10— y numerador/denominador
+// tienen que salir de la MISMA base o el numerador puede superar al total.
+// Tampoco vale hardcodear el tamaño del catálogo (10): la fila 1 de `torre-a`
+// es "Cimentación", que en `DEFAULT_STAGE_CATALOG` es la etapa 4 — decir
+// "1/10" ahí sería una alineación falsa con un catálogo que ese proyecto no
+// usa. La posición en la lista es honesta para cualquier forma que tenga el
+// proyecto.
 //
 // **"Etapas observadas" (`DEV-PROGRESS-RESUME`) no está en ninguna
 // captura — es una decisión nueva, no una superficie de M2-D5.** El diagrama
@@ -56,7 +68,6 @@ function nodoDe(state: string): TimelineStage['state'] {
 /** Fila de "Stage Detail" — el dato crudo, no el nodo mapeado del timeline. */
 interface DetalleStage {
   stageId: string
-  sequenceOrder: number
   name: string
   state: string
   certifiedAt: string | null
@@ -107,7 +118,6 @@ function DeveloperProgress() {
     })
     actual.detalle.push({
       stageId: f.stageId,
-      sequenceOrder: f.sequenceOrder,
       name: f.stageName,
       state: f.state,
       certifiedAt: f.certifiedAt
@@ -174,10 +184,9 @@ function DeveloperProgress() {
       <section className="flex flex-col gap-s3" data-testid="DEV-PROGRESS-001">
         {porProyecto.size ? (
           [...porProyecto.entries()].map(([id, p]) => {
-            const actual = p.stages.find((s) => s.state === 'current')
+            const idxActual = p.stages.findIndex((s) => s.state === 'current')
             const total = p.stages.length
-            const completadas = p.stages.filter((s) => s.state === 'completed').length
-            const porcentaje = total ? Math.round((completadas / total) * 100) : 0
+            const porcentaje = avanceDeStages(p.detalle.map((s) => ({ state: s.state })))
             return (
               <article key={id} className="flex flex-col gap-s4 rounded-xl bg-card p-s4 shadow-e1">
                 <h2 className="text-body font-bold text-text-primary">{p.nombre}</h2>
@@ -203,11 +212,11 @@ function DeveloperProgress() {
                 <ProgressTimeline
                   stages={p.stages}
                   ariaLabel={t('developer.progress.timelineAria', { project: p.nombre })}
-                  {...(actual
+                  {...(idxActual >= 0
                     ? {
                         currentLabel: t('developer.progress.currentStage', {
-                          number: String(actual.sequenceOrder),
-                          name: actual.name
+                          number: String(idxActual + 1),
+                          name: p.stages[idxActual].name
                         })
                       }
                     : {})}
@@ -225,7 +234,7 @@ function DeveloperProgress() {
                     {t('developer.progress.stageDetail')}
                   </h3>
                   <ul className="flex flex-col gap-s2">
-                    {p.detalle.map((s) => (
+                    {p.detalle.map((s, i) => (
                       <li
                         key={s.stageId}
                         className="flex items-center justify-between gap-s3 rounded-md bg-surface-alt p-s3"
@@ -236,7 +245,7 @@ function DeveloperProgress() {
                           </span>
                           <span className="text-caption text-text-muted">
                             {t('developer.progress.stageOf', {
-                              number: String(s.sequenceOrder),
+                              number: String(i + 1),
                               total: String(total)
                             })}
                             {s.certifiedAt ? ` · ${formatMonthYear(s.certifiedAt, locale)}` : ''}

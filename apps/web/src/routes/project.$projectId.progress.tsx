@@ -14,6 +14,12 @@ import { timelineDeStages } from '#/lib/stageProgress'
 
 // **M2-D5 fila 08 · `/project/:projectId/progress`** — captura 8.
 // Test ID: INV-PROJECT-STAGES-001.
+//
+// **"Etapa N/total" usa la posición en `lista`, no `sequenceOrder` crudo**
+// (M3 §2.5): un proyecto con huecos en `sequenceOrder` (como `torre-a` en
+// producción, 1/2/3 con solo 3 filas) rompería el numerador contra el total
+// si viajaran de columnas distintas — ver el comentario largo en
+// `developer.progress.tsx`, mismo patrón.
 
 export const Route = createFileRoute('/project/$projectId/progress')({
   component: InvestorProjectProgress
@@ -111,7 +117,7 @@ function InvestorProjectProgress() {
         <h2 className="text-h2 font-bold text-text-primary">{t('investor.project.stages')}</h2>
 
         {lista.length ? (
-          lista.map((stage) => {
+          lista.map((stage, i) => {
             const fotos = fotosPorStage.get(stage.id) ?? 0
             return (
               <button
@@ -129,7 +135,7 @@ function InvestorProjectProgress() {
                   <span className="text-body font-bold text-text-primary">{stage.name}</span>
                   <span className="text-caption text-text-muted">
                     {t('investor.stage.number', {
-                      number: String(stage.sequenceOrder),
+                      number: String(i + 1),
                       total: String(total)
                     })}
                   </span>
