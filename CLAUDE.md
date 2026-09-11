@@ -385,6 +385,38 @@ suspendido y que el TXID simulado en producción. **No falla: miente.** Si pushe
 consecuencia que el dueño debería saber —acá el deploy automático de Render, que el `buildFilter`
 no filtra—, se pushea igual y se avisa; no se retiene el push por eso.
 
+**La única excepción: un commit donde TODO archivo termina en `.md`, y la decide `git`, no vos.**
+
+```bash
+[ -n "$(git diff --cached --name-only -- ':(exclude)*.md')" ] && pnpm verify:all
+```
+
+Si aparece un solo archivo que no sea `.md`, corre todo. Si no, no corre nada. **La regla es
+mecánica a propósito:** "esto es solo documentación" clasificado a ojo es el mismo verde falso que
+editar un `package.json` sin `pnpm install` (ver Trampas), y el día que el commit arrastre un `.ts`
+chico se saltea igual. El pathspec no tiene ese problema.
+
+**Y es `git` solo, sin `grep`, por una razón medida.** La primera versión era
+`... | grep -qv '\.md$'`, y es correcta con el `grep` del sistema. Pero **bajo `ugrep` —el `grep`
+que shimea Claude Code en su shell— contesta al revés: un commit con `.md` + un `.ts` da
+"saltea"**, que es exactamente la dirección peligrosa. Comprobado en los dos binarios, no supuesto.
+El pathspec de `git` no depende de qué `grep` haya en el PATH. Verificado en seis casos: solo `.md`,
+mixto, solo `.ts`, nada staged, `.md` anidado, y `.MD` en mayúscula — este último manda a correr
+todo, que es el lado seguro del error.
+
+Lo que la sostiene, medido el 2026-09-11 y no estimado:
+
+- **Nada del pipeline lee los `.md` que editamos.** Biome no parsea Markdown, y `typecheck`, `test`
+  y `build` tampoco los miran. El único check que abre un `.md` es `pnpm testids`
+  (`scripts/check-testids.mjs`), y lee `docs/milestone-3-implementacion/UI-implementation-plan.md`
+  — que es **inmutable** por D-022. **Si algún día se tocara algo dentro de `docs/`, el skip no
+  aplica**: ahí sí hay un check que lee.
+- **La red sigue puesta.** `ci.yml` dispara en `push: [main]` sin filtro de paths, así que corre
+  igual en CI. Saltearlo local no saca la verificación: la mueve 98s más tarde a otra máquina.
+- **Son 98s.** Ese es el ahorro completo, y por eso la excepción es una línea de `grep` y no un
+  `verify:docs` en el `package.json` ni un flag: infraestructura nueva para 98s es el patrón que ya
+  se revirtió una vez con el cron.
+
 **La documentación viaja con el código que la causa, en el mismo commit.** Un cambio que altera cómo
 se opera, se configura o se despliega algo llega con su documentación adentro — no en un `docs(...)`
 posterior. Un `docs(...)` suelto es legítimo solo cuando el cambio **es** documentación: sanear algo
