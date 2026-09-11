@@ -33,10 +33,10 @@ ejercitar una vez contra Preprod.
 | 3 pilotos confirmando (criterio 4 del SOM) | Externo | Recontactar developers/notary socios — `M1-D3-PilotPlan.pdf` |
 | Video walkthrough (criterio 13) | Falta grabar | Se graba sobre lo que ya existe y funciona |
 | Screenshot de monitoring (3.11 de `CLAUDE.md`) | Falta la captura | Trivial — Sentry/Grafana ya están prendidos |
-| Lista formal de TXIDs publicada (3.10 / criterio 15) | Falta publicarla en un lugar formal | Los 180 TXIDs ya están: `specs/REPORTE-2026-09-10-prueba-de-volumen.md` §Apéndice |
 
 ## Próxima sesión
 
-No queda nada técnico. La muestra real de reserva → escrow (criterio 9) y `pnpm audit` en CI
-(criterio 4) se cerraron el 2026-09-11. Lo que sigue es exclusivamente evidencia/publicación —
-3.10/3.11/3.12 — y lo externo (3.13, los 3 pilotos).
+No queda nada técnico. La muestra real de reserva → escrow (criterio 9), `pnpm audit` en CI
+(criterio 4) y la lista formal de TXIDs (3.10 / criterio 15) se cerraron el 2026-09-11. Lo que
+sigue: el screenshot de monitoring (3.11), el video walkthrough (3.12) y lo externo (3.13, los 3
+pilotos).

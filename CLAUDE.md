@@ -95,7 +95,7 @@ explícitas de columnas — la migración es el camino con *menos* código tocad
 
 | | Qué | Criterio |
 |---|---|---|
-| 3.10 | Publicar la **lista formal de TXIDs** resolubles en explorador | 15 ◐ |
+| 3.10 | ✔ Publicar la **lista formal de TXIDs** resolubles en explorador — `specs/EVIDENCIA-2026-09-11-lista-formal-de-txids.md` + CSV, las 180 re-verificadas contra Koios el mismo día | 15 ✅ |
 | 3.11 | **Screenshot de monitoring** (Sentry / Grafana), ya encendidos y verificados | 14 |
 | 3.12 | **Video walkthrough** | 13 ⬜ |
 | 3.13 | **3 pilotos** — recontactar; `M1-D3-PilotPlan.pdf` ya trae cartas de M1 y probablemente cubre parte | 4 ⬜ externo |
@@ -109,11 +109,11 @@ Tres criterios dependían de ella, y ya corrió: `specs/REPORTE-2026-09-10-prueb
 |---|---|
 | **8** ✅ | *"Flujos de UI end-to-end en pre-prod"* — la prueba **es** la evidencia |
 | **9** ✅ | Cerrado el 2026-09-11, aparte: es un flujo distinto (compra del investor), la prueba ejercitó la FSM del stage. Mediana real 2.76 min, ver `specs/README.md` |
-| **15** ◐ | Los 180 TXIDs ya existen y están en el apéndice del reporte; falta publicar la **lista formal** (3.10) |
+| **15** ✅ | Cerrado el 2026-09-11: **lista formal** publicada (3.10), las 180 TXIDs re-verificadas contra Koios el mismo día |
 
 Costo real medido: **~99.8 ADA total** (39.83 de fees + 60 bloqueadas, D-057), levemente por debajo
-de lo presupuestado (~105 ADA). Con esto cerrado, 3.10/3.12/3.13 ya pueden avanzar — ver
-`specs/ESTADO-2026-09-10-catalyst-milestone-3.md` para el detalle de qué falta de cada uno.
+de lo presupuestado (~105 ADA). Con esto cerrado, 3.10 se cerró el 2026-09-11; 3.12/3.13 siguen
+abiertos — ver `specs/ESTADO-2026-09-10-catalyst-milestone-3.md` para el detalle.
 
 ## Fuera de alcance de este milestone
 
