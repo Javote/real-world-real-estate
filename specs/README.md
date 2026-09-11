@@ -139,18 +139,22 @@ declaran su regla con `authorize`).
 **La numeración no se recicla.** `SPEC-008`, `SPEC-011` y los planes anteriores están en
 [`archive/`](archive/): describen trabajo cerrado o código que se borró.
 
-### Las dos series de pulido — abiertas el 2026-09-11
+### Las tres series de pulido — abiertas el 2026-09-11
 
-Salen de las dos auditorías del 2026-09-11 y **se numeran aparte a propósito**: la serie **1xx** es
-[`AUDITORIA-…-calidad-del-frente.md`](AUDITORIA-2026-09-11-calidad-del-frente.md) y la **2xx** es
-[`AUDITORIA-…-calidad-del-backend.md`](AUDITORIA-2026-09-11-calidad-del-backend.md), una spec por
+Salen de las tres auditorías del 2026-09-11 y **se numeran aparte a propósito**: la serie **1xx** es
+[`AUDITORIA-…-calidad-del-frente.md`](AUDITORIA-2026-09-11-calidad-del-frente.md), la **2xx** es
+[`AUDITORIA-…-calidad-del-backend.md`](AUDITORIA-2026-09-11-calidad-del-backend.md) y la **3xx** es
+[`AUDITORIA-…-calidad-de-contracts.md`](AUDITORIA-2026-09-11-calidad-de-contracts.md), una spec por
 hallazgo salvo donde partirlos habría sido artificial. **Cada una es independiente y se puede tomar
 sola**; las dependencias, donde existen, están escritas en la spec.
 
-**Nada de esto bloquea el Milestone 3**: ninguna toca los 16 criterios del SOM. Las dos excepciones
-en importancia son `SPEC-201` y `SPEC-202`, que **no son pulido sino corrupción de datos reproducida**
+**Nada de esto bloquea el Milestone 3**: ninguna toca los 16 criterios del SOM. Las excepciones en
+importancia son tres. `SPEC-201` y `SPEC-202` **no son pulido sino corrupción de datos reproducida**
 y valen antes de mainnet — repararlas después es SQL a mano contra producción, como las migraciones
-0004 y 0005.
+0004 y 0005. Y `SPEC-301` tampoco es pulido: hoy `contracts/CLAUDE.md` **afirma una garantía que el
+validador no da** (un thread token por stage), y el backend tiene un camino construido para acuñar
+dos. La parte urgente se cierra sin tocar el script; la de fondo es decisión de mainnet
+(`SPEC-305`).
 
 | Spec | Título | Hallazgo | Estado |
 |---|---|---|---|
@@ -179,8 +183,19 @@ y valen antes de mainnet — repararlas después es SQL a mano contra producció
 | [`SPEC-213`](SPEC-213-un-bundle-por-stage.md) | `EvidenceBundle` duplicado por stage: medir antes de decidir | anexo | abierta 🟡 |
 | [`SPEC-214`](SPEC-214-telemetria-con-blocktimestamp.md) | La telemetría del criterio 9 mide lo que tardó alguien en volver a leer | anexo | abierta |
 | [`SPEC-215`](SPEC-215-seed-idempotente.md) | `pnpm db:seed` revienta sobre una base ya sembrada | anexo | abierta |
+| [`SPEC-301`](SPEC-301-unicidad-del-hilo-no-depende-de-la-base.md) | La unicidad del hilo deja de depender de la base | C-01 (1·2) | abierta 🟡 · **no es pulido** |
+| [`SPEC-302`](SPEC-302-el-burn-queda-fijado-por-un-test.md) | "No hay burn" pasa de argumento a evidencia | C-03 | abierta |
+| [`SPEC-303`](SPEC-303-que-sostiene-la-igualdad-de-valor.md) | Escribir qué sostiene la igualdad de valor en el `spend` | C-05 | abierta |
+| [`SPEC-304`](SPEC-304-la-clave-del-admin-no-se-puede-rotar.md) | La clave del `admin` es irreemplazable por construcción | C-02 | abierta · **antes de mainnet** |
+| [`SPEC-305`](SPEC-305-el-proximo-cambio-de-script-hash.md) | El próximo cambio de script hash: unicidad on-chain y el tope de `evidence_root` | C-01 (3)·C-04 | abierta 🔴 · mainnet |
+| [`SPEC-306`](SPEC-306-property-tests-sobre-la-evolucion-del-datum.md) | Una propiedad sobre `valid_datum_evolution` | C-06 | abierta · opcional |
 
 **Orden sugerido, si se toman en tanda.** Cada auditoría trae el suyo y estas specs lo respetan:
 `201` → `202` → `203` → `204` → `205` → `206`+`207` → el pulido (`208`…`211`) → `212`; y del frente
 `101` → `102` → `103`+`104` → `105`+`106` → `107`+`108` → `109`+`110`. **No es una dependencia**: es
 daño evitado sobre línea tocada.
+
+**La serie 3xx se ordena por otra cosa: por si cambia el script hash.** `301` → `302` → `303` → `304`
+son los cuatro que **no** lo cambian, así que no pueden invalidar los 180 eventos ya anclados y se
+pueden tomar en cualquier momento. `305` sí lo cambia y es la única que hay que decidir antes del
+primer mint en mainnet; `306` es opcional y la propia spec lo dice.

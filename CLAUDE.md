@@ -15,7 +15,7 @@
 > es deuda de pulido, y no propone endpoint, tabla ni superficie nueva.
 > **Ya está transcrita a specs implementables: la serie `SPEC-201`…`SPEC-215`**, una por hallazgo
 > salvo donde partirlas habría sido artificial, cada una independiente — registro y orden en
-> [`specs/README.md` §Las dos series de pulido](specs/README.md).
+> [`specs/README.md` §Las tres series de pulido](specs/README.md).
 >
 > **Deuda de pulido del frente:** [`specs/AUDITORIA-2026-09-11-calidad-del-frente.md`](specs/AUDITORIA-2026-09-11-calidad-del-frente.md)
 > — 18 hallazgos de accesibilidad, responsive y mantenibilidad, medidos en el navegador contra las
@@ -27,6 +27,22 @@
 > la serie 2xx. Con una corrección sobre la auditoría, en `SPEC-101`: los tres tokens **no se
 > agregan** —M2-D3 nombra la escala de íconos por contexto y `sm`/`md`/`lg` no están en el
 > entregable—, los 52 usos se mueven a los cinco nombres normativos.
+>
+> **Calidad de `contracts/`:** [`specs/AUDITORIA-2026-09-11-calidad-de-contracts.md`](specs/AUDITORIA-2026-09-11-calidad-de-contracts.md)
+> — 6 hallazgos sobre los dos archivos Aiken, leídos completos y con todo verificado ejecutándolo.
+> **El veredicto general es bueno y conviene decirlo: es la parte mejor organizada del repo** — el
+> corte de D-008 aplicado de verdad, 82 tests contra cada punto de rechazo, 0 warnings, blueprint
+> reproducible byte por byte, y dos órdenes de magnitud de aire en el presupuesto de ejecución.
+> **Pero uno no es pulido: `contracts/CLAUDE.md` afirma que `mint` acuña "exactamente uno por
+> stage" y el validador solo garantiza uno por transacción** — el handler no mira `tx.inputs`, así
+> que el mismo `stage_ref` se re-acuña (reproducido), y `retryStageMint` tiene el camino construido
+> porque su guarda es una consulta a la base que nunca toca la cadena. Es el estado que ya dejó la
+> prueba de volumen. El segundo que vale antes de mainnet es que **la clave del `admin` es un
+> parámetro del script**, así que no se puede rotar: perderla congela los hilos vivos para siempre.
+> Ninguno toca los 16 criterios del SOM.
+> **Ya está transcrita a specs implementables: la serie `SPEC-301`…`SPEC-306`**, y se ordena por una
+> restricción propia — `301`…`304` **no cambian el script hash** y se pueden tomar cuando sea;
+> `305` sí, y es decisión de mainnet.
 
 Lo transversal. Lo de cada frente vive en `apps/web/CLAUDE.md`, `apps/api/CLAUDE.md`,
 `packages/cardano/CLAUDE.md` y `contracts/CLAUDE.md`, y se carga solo cuando tocás ese subárbol.
