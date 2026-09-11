@@ -12,6 +12,7 @@ import express from "express";
 import helmet from "helmet";
 import { Sentry } from "./instrumentation";
 import { db } from "./lib/db";
+import { statusDeError } from "./lib/error-status";
 import { sql } from "./lib/kysely";
 import { errorHandler } from "./middlewares/errorHandler";
 import { trustProxyHops } from "./middlewares/rateLimit";
@@ -178,7 +179,25 @@ for (const { prefijo, router } of MONTAJE) {
 // lo pide Sentry (`setupExpressErrorHandler`): tiene que ver el error antes
 // de que `errorHandler` lo traduzca a una respuesta JSON. No-op si
 // `SENTRY_DSN` no estaba seteado cuando corrió `instrumentation.ts`.
-Sentry.setupExpressErrorHandler(app);
+//
+// `shouldHandleError` es necesario porque Sentry ve el error ANTES que
+// `errorHandler` le ponga un status: sin esto, el default de Sentry
+// (`!status || status >= 500`) reporta como "Unhandled" cosas que
+// `errorHandler` va a devolver como un 409/400 perfectamente sano — un
+// `SQLITE_CONSTRAINT_UNIQUE` (alguien mandó un slug repetido) quedaba
+// indistinguible en Sentry de un fallo real. `statusDeError` le hace a Sentry
+// la misma pregunta que se hace `errorHandler` un paso después.
+//
+// El SDK de Sentry (v10) marca este `shouldHandleError` como deprecado a
+// favor de configurarlo en `Sentry.expressIntegration()` dentro de
+// `Sentry.init()` (se va en v11) — pero eso obligaría a importar
+// `statusDeError`/`errorHandler` desde `instrumentation.ts`, el archivo que
+// se precarga con `node --require` antes que cualquier otro módulo (ver el
+// comentario al principio de ese archivo). Se queda acá, donde el orden de
+// carga no es delicado, hasta que el bump a v11 fuerce lo otro.
+Sentry.setupExpressErrorHandler(app, {
+  shouldHandleError: (err) => statusDeError(err) >= 500
+});
 
 // Una ruta que no existe tiene que contestar JSON como todo el resto: sin esto,
 // Express devuelve su página HTML por defecto, que además anuncia el framework.

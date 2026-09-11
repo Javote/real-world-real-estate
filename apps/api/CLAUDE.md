@@ -55,6 +55,37 @@ lo mismo sin pasar por HTTP. Ver el detalle en `CLAUDE.md` raíz.
 
 ## Trampas verificadas
 
+- **2026-09-11 · Sentry veía el error ANTES que `errorHandler`, así que reportaba como "Unhandled"
+  cosas que el cliente recibía como un 409/400 perfectamente sano** — encontrado leyendo la propia
+  captura de evidencia de monitoring (`specs/evidence/monitoring/sentry-issues.jpg`): un
+  `SQLITE_CONSTRAINT_UNIQUE` real (mandar el mismo `unitReference` dos veces, generado sin querer
+  ejercitando el criterio 9) aparecía en el feed de issues indistinguible de un fallo de servidor.
+  `Sentry.setupExpressErrorHandler(app)` va montado antes que `errorHandler` a propósito —Sentry
+  necesita ver el error crudo, antes de que se traduzca a JSON— pero eso significa que ve el error
+  **sin status todavía**, y el default del SDK (`!status || status >= 500`) lo captura igual. Un
+  duplicado de slug, de `unitReference`, de email —cualquiera de los ~10 índices únicos que
+  `errorHandler` ya resuelve limpio— se reportaba como si el servidor estuviera roto.
+  **Fix:** `statusDeError` (`lib/error-status.ts`) le hace a Sentry la misma pregunta que
+  `errorHandler` se hace un paso después — reusa el MISMO `CONSTRAINT_ERRORS`/`codigoDeRestriccion`
+  (exportados de `errorHandler.ts`, no copiados) para que las dos clasificaciones no puedan
+  divergir. `Sentry.setupExpressErrorHandler(app, { shouldHandleError: err => statusDeError(err) >=
+  500 })` en `app.ts`. 9 tests en `test/error-status.test.ts`, cubriendo `HttpError`, `MulterError`,
+  los tres códigos de restricción (directos y vía `cause`), y que un error sin clasificar siga
+  siendo 500 — el único caso que a Sentry todavía le toca ver.
+  **Por qué no va en `instrumentation.ts`, que es donde el SDK recomienda hoy configurarlo
+  (`Sentry.expressIntegration({ shouldHandleError })`, ya que pasarlo a `setupExpressErrorHandler`
+  está deprecado desde v10 y se va en v11):** `instrumentation.ts` es el archivo que se precarga con
+  `node --require`, antes que cualquier otro módulo del proceso — mismo motivo que documenta ese
+  archivo para por qué Sentry/OTel arrancan ahí y no en `app.ts`. Importar `statusDeError` (que
+  importa `errorHandler.ts`, que importa `multer`) ahí arriba metería esos módulos en el proceso
+  antes de que la auto-instrumentación tenga la chance de parchearlos. Queda en `app.ts`, donde el
+  orden de carga no es delicado, hasta que el bump a v11 fuerce lo otro.
+  **La lección:** un middleware de error montado "antes" de otro por una buena razón (acá, que
+  Sentry vea el error crudo) hereda una limitación silenciosa — ve el error en un estado que todavía
+  no tiene la clasificación que el siguiente middleware le va a dar. Si dos middlewares de error en
+  cadena necesitan la misma pregunta ("¿esto es grave?"), la respuesta tiene que ser una función
+  compartida, no una que cada uno adivina con su propio default.
+
 - **2026-09-09 · el disparo por lectura no llegaba a tres pantallas que muestran el estado de un
   anclaje.** `reconciliarParaLectura` no tiene cron ni timer a propósito (D-077): el disparo **es**
   la lectura. Eso funciona solo si el disparador está donde se muestra el anclaje, y no lo estaba —

@@ -11,32 +11,37 @@ import { HttpError } from "../lib/http-error";
  * del estilo `UNIQUE constraint failed: Project.slug` — o sea **el nombre de la
  * tabla y de la columna**, que nunca puede salir al cliente (regla 2). Por eso
  * acá se mapea el código a una respuesta genérica y el detalle queda en el log.
+ *
+ * Exportado porque `lib/error-status.ts` (`statusDeError`) necesita el mismo
+ * mapeo — Sentry ve el error antes que este archivo (ver el comentario ahí) y
+ * tiene que poder clasificarlo igual, sin duplicar la tabla.
  */
-const CONSTRAINT_ERRORS: Record<string, { status: number; code: string; message: string }> = {
-  // Crear algo que ya existe: un slug repetido, dos stages con el mismo orden,
-  // dos unidades con la misma referencia. Es 409, no 500 — el servidor está
-  // perfectamente sano y el cliente puede corregirlo.
-  SQLITE_CONSTRAINT_UNIQUE: {
-    status: 409,
-    code: "RESOURCE_ALREADY_EXISTS",
-    message: "Resource already exists"
-  },
-  SQLITE_CONSTRAINT_PRIMARYKEY: {
-    status: 409,
-    code: "RESOURCE_ALREADY_EXISTS",
-    message: "Resource already exists"
-  },
-  // Referenciar algo que no existe (un `userId` inventado en el body). El
-  // cliente mandó un id que no resuelve: 400.
-  SQLITE_CONSTRAINT_FOREIGNKEY: {
-    status: 400,
-    code: "RELATED_RESOURCE_NOT_FOUND",
-    message: "A referenced resource does not exist"
-  }
-};
+export const CONSTRAINT_ERRORS: Record<string, { status: number; code: string; message: string }> =
+  {
+    // Crear algo que ya existe: un slug repetido, dos stages con el mismo orden,
+    // dos unidades con la misma referencia. Es 409, no 500 — el servidor está
+    // perfectamente sano y el cliente puede corregirlo.
+    SQLITE_CONSTRAINT_UNIQUE: {
+      status: 409,
+      code: "RESOURCE_ALREADY_EXISTS",
+      message: "Resource already exists"
+    },
+    SQLITE_CONSTRAINT_PRIMARYKEY: {
+      status: 409,
+      code: "RESOURCE_ALREADY_EXISTS",
+      message: "Resource already exists"
+    },
+    // Referenciar algo que no existe (un `userId` inventado en el body). El
+    // cliente mandó un id que no resuelve: 400.
+    SQLITE_CONSTRAINT_FOREIGNKEY: {
+      status: 400,
+      code: "RELATED_RESOURCE_NOT_FOUND",
+      message: "A referenced resource does not exist"
+    }
+  };
 
-/** El `code` de un error de restricción, mirando también la causa. */
-function codigoDeRestriccion(err: unknown): string | undefined {
+/** El `code` de un error de restricción, mirando también la causa. Exportado por el mismo motivo que `CONSTRAINT_ERRORS`. */
+export function codigoDeRestriccion(err: unknown): string | undefined {
   if (typeof err !== "object" || err === null) return undefined;
 
   const propio = (err as { code?: unknown }).code;
