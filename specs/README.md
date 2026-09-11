@@ -138,3 +138,49 @@ declaran su regla con `authorize`).
 
 **La numeración no se recicla.** `SPEC-008`, `SPEC-011` y los planes anteriores están en
 [`archive/`](archive/): describen trabajo cerrado o código que se borró.
+
+### Las dos series de pulido — abiertas el 2026-09-11
+
+Salen de las dos auditorías del 2026-09-11 y **se numeran aparte a propósito**: la serie **1xx** es
+[`AUDITORIA-…-calidad-del-frente.md`](AUDITORIA-2026-09-11-calidad-del-frente.md) y la **2xx** es
+[`AUDITORIA-…-calidad-del-backend.md`](AUDITORIA-2026-09-11-calidad-del-backend.md), una spec por
+hallazgo salvo donde partirlos habría sido artificial. **Cada una es independiente y se puede tomar
+sola**; las dependencias, donde existen, están escritas en la spec.
+
+**Nada de esto bloquea el Milestone 3**: ninguna toca los 16 criterios del SOM. Las dos excepciones
+en importancia son `SPEC-201` y `SPEC-202`, que **no son pulido sino corrupción de datos reproducida**
+y valen antes de mainnet — repararlas después es SQL a mano contra producción, como las migraciones
+0004 y 0005.
+
+| Spec | Título | Hallazgo | Estado |
+|---|---|---|---|
+| [`SPEC-101`](SPEC-101-escala-de-iconos-y-su-guardia.md) | La escala de íconos vuelve a la de M2-D3, y esta vez con guardia | F-01 | abierta |
+| [`SPEC-102`](SPEC-102-dialog-adaptado.md) | `ui/dialog.tsx`: adaptar el primitivo de los 11 modales | F-02 | abierta |
+| [`SPEC-103`](SPEC-103-el-armazon-que-no-anuncia.md) | El armazón no anuncia dónde estás: `lang`, `title`, `aria-current`, el contador | F-04·05·06·07 | abierta |
+| [`SPEC-104`](SPEC-104-live-regions.md) | Anunciar lo que cambia: las live regions que la app no tiene | F-03 | abierta |
+| [`SPEC-105`](SPEC-105-controles-que-no-son-controles.md) | Tres cosas que son controles y no se comportan como tales | F-08·09·12 | abierta |
+| [`SPEC-106`](SPEC-106-el-pill-estirado-y-el-fondo-de-la-cola.md) | El pill estirado y el fondo de la cola del escribano | F-10·11 | abierta |
+| [`SPEC-107`](SPEC-107-claves-de-traduccion-tipadas.md) | Los 23 `as never` que apagan el chequeo del diccionario | F-14 | abierta |
+| [`SPEC-108`](SPEC-108-higiene-de-componentes.md) | Higiene: el shell de card repetido, el hook disfrazado, la prop que se ignora | F-15·16·17 | abierta |
+| [`SPEC-109`](SPEC-109-tipos-de-respuesta-desde-shared.md) | `api/types.ts`: cerrar la garantía de "drift imposible" | F-13 | abierta 🟡 |
+| [`SPEC-110`](SPEC-110-estado-de-carga.md) | 30 de 42 rutas muestran el empty-state mientras cargan | F-18 | abierta |
+| [`SPEC-201`](SPEC-201-aceptar-invitacion-atomico.md) | Aceptar una invitación deja de poder sacarle la unidad a quien ya la compró | B-01 | abierta · **antes de mainnet** |
+| [`SPEC-202`](SPEC-202-un-dossier-por-unidad.md) | Una unidad, un dossier: el índice único que falta | B-02 | abierta 🟡 · **antes de mainnet** |
+| [`SPEC-203`](SPEC-203-migraciones-atomicas.md) | Una migración que se corta a la mitad tiene que poder volver | B-03 | abierta 🟡 |
+| [`SPEC-204`](SPEC-204-openapi-url-y-descripcion.md) | El OpenAPI publicado apunta a una URL que no existe | B-04 | abierta |
+| [`SPEC-205`](SPEC-205-dos-invariantes-que-hoy-sostiene-el-cliente.md) | Dos invariantes que hoy sostiene la buena fe del cliente | B-05·07 | abierta |
+| [`SPEC-206`](SPEC-206-un-solo-anclaje-por-commitment.md) | El anclaje por commitment está escrito dos veces, y ya divergieron | B-08 | abierta 🟡 |
+| [`SPEC-207`](SPEC-207-audit-log-tipado.md) | El audit log se escribe con strings sueltos y se filtra con un mapeo cerrado | B-09 | abierta |
+| [`SPEC-208`](SPEC-208-tipos-que-dicen-la-verdad.md) | Que los tipos de `apps/api` digan la verdad | B-12·10 | abierta |
+| [`SPEC-209`](SPEC-209-dos-queries-que-la-base-puede-hacer.md) | Dos cosas que hoy hace el proceso y puede hacer la base | B-13·14 | abierta |
+| [`SPEC-210`](SPEC-210-borrar-evidencia-anclada.md) | Borrar evidencia anclada corta el vínculo y devuelve el error equivocado | B-15 | abierta |
+| [`SPEC-211`](SPEC-211-limite-de-tasa-en-la-ruta-publica.md) | La otra ruta sin sesión no tiene límite de tasa | B-11 | abierta 🟡 |
+| [`SPEC-212`](SPEC-212-contrato-en-la-firma-de-la-ruta.md) | `contrato()`: el schema en la firma de la ruta, no en una tabla | B-06 | abierta 🟡 |
+| [`SPEC-213`](SPEC-213-un-bundle-por-stage.md) | `EvidenceBundle` duplicado por stage: medir antes de decidir | anexo | abierta 🟡 |
+| [`SPEC-214`](SPEC-214-telemetria-con-blocktimestamp.md) | La telemetría del criterio 9 mide lo que tardó alguien en volver a leer | anexo | abierta |
+| [`SPEC-215`](SPEC-215-seed-idempotente.md) | `pnpm db:seed` revienta sobre una base ya sembrada | anexo | abierta |
+
+**Orden sugerido, si se toman en tanda.** Cada auditoría trae el suyo y estas specs lo respetan:
+`201` → `202` → `203` → `204` → `205` → `206`+`207` → el pulido (`208`…`211`) → `212`; y del frente
+`101` → `102` → `103`+`104` → `105`+`106` → `107`+`108` → `109`+`110`. **No es una dependencia**: es
+daño evitado sobre línea tocada.

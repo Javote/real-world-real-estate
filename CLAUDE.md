@@ -13,6 +13,9 @@
 > `src`**. Ninguno toca los 16 criterios del SOM, pero los dos primeros valen antes de mainnet —
 > repararlos después es SQL a mano contra producción, como las migraciones 0004 y 0005. El resto sí
 > es deuda de pulido, y no propone endpoint, tabla ni superficie nueva.
+> **Ya está transcrita a specs implementables: la serie `SPEC-201`…`SPEC-215`**, una por hallazgo
+> salvo donde partirlas habría sido artificial, cada una independiente — registro y orden en
+> [`specs/README.md` §Las dos series de pulido](specs/README.md).
 >
 > **Deuda de pulido del frente:** [`specs/AUDITORIA-2026-09-11-calidad-del-frente.md`](specs/AUDITORIA-2026-09-11-calidad-del-frente.md)
 > — 18 hallazgos de accesibilidad, responsive y mantenibilidad, medidos en el navegador contra las
@@ -20,6 +23,10 @@
 > entrega**; ninguno propone pantalla, ruta ni componente nuevo. Es para cuando el milestone deje
 > aire. El primero de la lista (`--size-icon-sm/md/lg` no existen: 52 clases muertas) explica por
 > qué la lista existe — la regla estaba escrita y no tenía guardia.
+> **Ya está transcrita a specs implementables: la serie `SPEC-101`…`SPEC-110`**, mismo criterio que
+> la serie 2xx. Con una corrección sobre la auditoría, en `SPEC-101`: los tres tokens **no se
+> agregan** —M2-D3 nombra la escala de íconos por contexto y `sm`/`md`/`lg` no están en el
+> entregable—, los 52 usos se mueven a los cinco nombres normativos.
 
 Lo transversal. Lo de cada frente vive en `apps/web/CLAUDE.md`, `apps/api/CLAUDE.md`,
 `packages/cardano/CLAUDE.md` y `contracts/CLAUDE.md`, y se carga solo cuando tocás ese subárbol.
