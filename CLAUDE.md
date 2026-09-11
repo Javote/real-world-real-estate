@@ -96,7 +96,7 @@ explícitas de columnas — la migración es el camino con *menos* código tocad
 | | Qué | Criterio |
 |---|---|---|
 | 3.10 | ✔ Publicar la **lista formal de TXIDs** resolubles en explorador — `specs/EVIDENCIA-2026-09-11-lista-formal-de-txids.md` + CSV, las 180 re-verificadas contra Koios el mismo día | 15 ✅ |
-| 3.11 | **Screenshot de monitoring** (Sentry / Grafana), ya encendidos y verificados | 14 |
+| 3.11 | ✔ **Screenshot de monitoring** — `specs/EVIDENCIA-2026-09-11-monitoring-screenshots.md` + capturas de Sentry, Grafana/Tempo y PostHog, tomadas en vivo contra producción | 14 ✅ |
 | 3.12 | **Video walkthrough** | 13 ⬜ |
 | 3.13 | **3 pilotos** — recontactar; `M1-D3-PilotPlan.pdf` ya trae cartas de M1 y probablemente cubre parte | 4 ⬜ externo |
 
