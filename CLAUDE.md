@@ -3,6 +3,13 @@
 > **Documento de trabajo activo:** [`specs/ESTADO-2026-09-10-catalyst-milestone-3.md`](specs/ESTADO-2026-09-10-catalyst-milestone-3.md)
 > — el cruce contra los 5 Outputs oficiales del Milestone 3 tal como los publica Catalyst, con lo
 > que falta consolidado en una tabla. Es el punto de partida de la próxima sesión.
+>
+> **Deuda de pulido del frente:** [`specs/AUDITORIA-2026-09-11-calidad-del-frente.md`](specs/AUDITORIA-2026-09-11-calidad-del-frente.md)
+> — 18 hallazgos de accesibilidad, responsive y mantenibilidad, medidos en el navegador contra las
+> 42 rutas, cada uno con su evidencia y su archivo. **No es un criterio del SOM y no bloquea la
+> entrega**; ninguno propone pantalla, ruta ni componente nuevo. Es para cuando el milestone deje
+> aire. El primero de la lista (`--size-icon-sm/md/lg` no existen: 52 clases muertas) explica por
+> qué la lista existe — la regla estaba escrita y no tenía guardia.
 
 Lo transversal. Lo de cada frente vive en `apps/web/CLAUDE.md`, `apps/api/CLAUDE.md`,
 `packages/cardano/CLAUDE.md` y `contracts/CLAUDE.md`, y se carga solo cuando tocás ese subárbol.
