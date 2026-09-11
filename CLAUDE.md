@@ -108,7 +108,7 @@ Tres criterios dependían de ella, y ya corrió: `specs/REPORTE-2026-09-10-prueb
 | Criterio | Qué le dio la prueba |
 |---|---|
 | **8** ✅ | *"Flujos de UI end-to-end en pre-prod"* — la prueba **es** la evidencia |
-| **9** ◐ | Sigue sin la muestra real de reserva→escrow: es un flujo distinto (compra del investor), la prueba ejercitó la FSM del stage. Falta correrlo una vez |
+| **9** ✅ | Cerrado el 2026-09-11, aparte: es un flujo distinto (compra del investor), la prueba ejercitó la FSM del stage. Mediana real 2.76 min, ver `specs/README.md` |
 | **15** ◐ | Los 180 TXIDs ya existen y están en el apéndice del reporte; falta publicar la **lista formal** (3.10) |
 
 Costo real medido: **~99.8 ADA total** (39.83 de fees + 60 bloqueadas, D-057), levemente por debajo
@@ -170,7 +170,7 @@ validador que afirme algo más, está mal (D-026).
 
 | # | Qué | Estado |
 |---|---|---|
-| 0 | ~~Prueba end-to-end de volumen, en preprod, antes de mainnet~~ | **Cerrada el 2026-09-10** — 30/30 etapas `Completed` en 3 proyectos nuevos, 180/180 eventos on-chain `Confirmed`, las 4 aristas de la FSM ejercitadas por click real en el navegador. Detalle completo, el hallazgo real que dejó (dos etapas con anclaje perdido, causa raíz confirmada) y las 3 capas de autocura que salieron de ahí: `specs/REPORTE-2026-09-10-prueba-de-volumen.md`. Alimentó los criterios 8 y 15 del SOM; el 9 (reserva→escrow) sigue abierto, es un flujo distinto — ver `specs/ESTADO-2026-09-10-catalyst-milestone-3.md` |
+| 0 | ~~Prueba end-to-end de volumen, en preprod, antes de mainnet~~ | **Cerrada el 2026-09-10** — 30/30 etapas `Completed` en 3 proyectos nuevos, 180/180 eventos on-chain `Confirmed`, las 4 aristas de la FSM ejercitadas por click real en el navegador. Detalle completo, el hallazgo real que dejó (dos etapas con anclaje perdido, causa raíz confirmada) y las 3 capas de autocura que salieron de ahí: `specs/REPORTE-2026-09-10-prueba-de-volumen.md`. Alimentó los criterios 8 y 15 del SOM; el 9 (reserva→escrow) se cerró aparte el 2026-09-11, es un flujo distinto — ver `specs/ESTADO-2026-09-10-catalyst-milestone-3.md` |
 | 1 | **Mainnet** — runbook, habilitar la red, custodia de la clave. **Fuera de alcance de este milestone** (decisión del dueño, 2026-09-09 — ver §El plan de entrega) | D-013 la hace **imposible por configuración**: es código, no solo procedimiento. 🔴 |
 
 **El diseño ya está decidido. El trabajo es transcribirlo, no inventarlo.**

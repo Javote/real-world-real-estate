@@ -27,7 +27,10 @@ código controla; ingeniería social; el cliente Cardano (Lucid Evolution) como 
    en `test/require-ownership.test.ts` se ponen rojos.
 3. **Escaneo de dependencias** — `pnpm audit` corrido el 2026-09-07 contra las 750 dependencias del
    workspace, con cada hallazgo trazado a su cadena real (`paths`) para distinguir dependencia de
-   runtime de dependencia de instalación o de build/test.
+   runtime de dependencia de instalación o de build/test. **Desde el 2026-09-11 corre en cada CI**
+   (`.github/workflows/ci.yml` → job `app`), no solo puntual: un paso que nunca falla imprime el
+   reporte completo (la visibilidad de lo ya triado abajo, hallazgos 9 y 10) y otro que sí falla —
+   el gate real — corta en **crítico**, hoy en cero.
 4. **Timing de canales laterales** — medido, no estimado, con `test/auth-timing.test.ts` (9 corridas
    intercaladas, comparación por orden de magnitud).
 5. **Análisis estático (Semgrep)** — `p/security-audit` + `p/owasp-top-ten`, corrido local el
@@ -47,8 +50,8 @@ código controla; ingeniería social; el cliente Cardano (Lucid Evolution) como 
 | 6 | `POST/PATCH /users` usaba un `z.enum` local sin `notary`, incumpliendo regla 6 — un admin no podía dar de alta ni promover un notary por API | P3 | Cerrado | 2026-09-03 | `userRoleSchema` de `@plataforma/shared`; `test/users-roles.test.ts` |
 | 7 | `signToken`/`verifyToken` no fijaban `algorithm`/`algorithms` explícito — dependían del default de `jsonwebtoken` para acotar a HS*. Sin agujero real (el default ya lo hacía con un secreto string), pero una dependencia implícita | P3 | Cerrado | 2026-09-04 | HS256 explícito de los dos lados; `test/jwt.test.ts` → "el algoritmo de firma está fijado" |
 | 8 | `qs@6.15.3` (dependencia real de `express`/`body-parser`, en el camino de cada request) vulnerable a DoS por bypass de array-limit e `isBuffer` | P3 (moderate, CVSS 5.3) | Cerrado | 2026-09-07 | override a `qs@6.16.0` en `package.json`; `pnpm audit` bajó de 10 a 8 moderados |
-| 9 | `tar@6.2.1` con 1 crítico + 7 altos — pero la cadena completa es `bcrypt → @mapbox/node-pre-gyp → tar`: node-pre-gyp solo corre en `postinstall`, para descomprimir el binario prebuilt de bcrypt. No procesa ningún input de un request | Crítico/Alto, **no explotable en runtime** | Abierto, sin plan de cierre inmediato | — | forzar `tar@7.x` es un salto de major sobre una herramienta que el build de un módulo nativo (🔴, D-046) usa en `postinstall`; el riesgo de romper el build supera el riesgo de un vector que no es alcanzable por un cliente. Se revisita si `bcrypt`/`node-pre-gyp` publican una versión que ya lo resuelva |
-| 10 | `brace-expansion`, `browserslist`, `nanoid`, `undici`, `postcss` — 6 altos + 6 moderados, todos en la cadena de `vite`/`vitest`/`jsdom`/`@babel` (build y test) o del propio `node-pre-gyp` (`rimraf→glob→minimatch`) | Alto/Moderate, **no explotable en runtime** | Abierto, sin plan de cierre inmediato | — | ninguno de estos paquetes se sirve en el bundle de producción ni corre en el proceso de la API desplegada; se resuelven solos con el próximo bump de las herramientas de build, no ameritan un override manual hoy |
+| 9 | `tar@6.2.1` con 1 crítico + 7 altos — la cadena era `bcrypt → @mapbox/node-pre-gyp → tar` | Crítico/Alto, **no explotable en runtime** | **Cerrado** | 2026-09-10 | `bcrypt@6.0.0` reemplazó `@mapbox/node-pre-gyp` por `node-gyp-build`/`node-addon-api` (ver Trampas de `apps/api/CLAUDE.md`) y se llevó la cadena entera de `tar` con él, sin buscarlo a propósito. `pnpm audit` ya no lo reporta |
+| 10 | `browserslist`, `nanoid`, `undici`, `vitest`/`@vitest/mocker`, `postcss`, `baseline-browser-mapping` — hoy 4 altos + 8 moderados, todos en la cadena de `vite`/`vitest`/`@babel`/`@tanstack/router-plugin` (build y test) | Alto/Moderate, **no explotable en runtime** | Abierto, sin plan de cierre inmediato | — | ninguno de estos paquetes se sirve en el bundle de producción ni corre en el proceso de la API desplegada; se resuelven solos con el próximo bump de las herramientas de build, no ameritan un override manual hoy. Es exactamente el reporte que el paso no-bloqueante de `pnpm audit` en CI imprime cada corrida (§Metodología) |
 | 11 | Revocación de un JWT individual no existe (dura 7 días, solo se corta dando de baja la cuenta entera) | — (decisión de producto, no hallazgo) | Abierto a propósito | — | ver `CLAUDE.md` raíz — "es infraestructura para un problema que todavía no duele"; mitigado porque `authenticate()` reconsulta `isActive` en cada request |
 | 12 | 9 referencias a GitHub Actions por tag mutable (`@v7`, `@v6`, `@v1`) en `ci.yml` — un tag repointeado en el repo de la Action es supply-chain, no un bug de este código | Bajo (hardening, no vulnerabilidad activa) | Cerrado | 2026-09-07 | pineadas a su SHA de commit (`git ls-remote` contra cada repo), con el tag como comentario para legibilidad |
 | 13 | Semgrep marca 3 settings de pnpm (`blockExoticSubdeps`, `minimumReleaseAge`, `trustPolicy`) y 1 de npm (`min-release-age`) como faltantes en `pnpm-workspace.yaml`/`.npmrc` | Bajo (hardening) | Abierto a propósito | — | las tres de pnpm piden pnpm 10.16+/10.21+/10.26+ y el repo está pineado a `pnpm@9.15.0` — agregarlas hoy sería la misma trampa que `pnpm.overrides` con pnpm 10+: un setting que el pnpm real no lee, en silencio. La de npm no aplica: el repo no instala con npm. Excluidas explícitamente del job de CI (`--exclude-rule`), no ignoradas por default |
@@ -57,12 +60,15 @@ código controla; ingeniería social; el cliente Cardano (Lucid Evolution) como 
 
 **Cero hallazgos P1 abiertos.** Los tres P1 encontrados (JWT_SECRET, segunda capa de autorización
 en evidencia, audit-log sin acotar) están cerrados en código, con test que reproduce el bug original
-y prueba el cierre. Los hallazgos de dependencias con severidad crítica/alta (`tar` y su cadena)
-están confinados a rutas de instalación y build que un cliente de la API desplegada no alcanza — se
-dejan documentados y abiertos como deuda de higiene, no como riesgo de producción. El único hallazgo
-de dependencia con exposición real de runtime (`qs`, moderate) se cerró el mismo día. El análisis
-estático (Semgrep, M3 §4) corre en CI desde este commit y no encontró código vulnerable — los 16
-hallazgos iniciales eran 2 falsos positivos (ya suprimidos con `nosemgrep` y su porqué documentado
+y prueba el cierre. `pnpm audit` corre en cada CI desde el 2026-09-11 (§Metodología): el gate real
+es **cero crítico**, hoy en verde — el único crítico que hubo (`tar`, vía `bcrypt`) se cerró solo con
+el bump a `bcrypt@6.0.0`. Los hallazgos de dependencias con severidad alta/moderada que quedan están
+confinados a rutas de instalación y build que un cliente de la API desplegada no alcanza — se dejan
+documentados y abiertos como deuda de higiene, no como riesgo de producción, y el paso no-bloqueante
+de CI los reporta en cada corrida sin frenar nada. El único hallazgo de dependencia con exposición
+real de runtime (`qs`, moderate) se cerró el mismo día. El análisis estático (Semgrep, M3 §4) corre
+en CI desde este commit y no encontró código vulnerable — los 16 hallazgos iniciales eran 2 falsos
+positivos (ya suprimidos con `nosemgrep` y su porqué documentado
 en el código) y 14 de hardening de supply-chain, de los cuales el pineo de GitHub Actions se cerró y
 los settings de pnpm/npm quedan deferred por incompatibilidad de versión (hallazgo 13).
 

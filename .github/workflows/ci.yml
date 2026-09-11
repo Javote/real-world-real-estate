@@ -53,6 +53,29 @@ jobs:
       - name: Tests + coverage
         run: pnpm test:coverage
 
+      # M3 §4 pide "dependency scans" además de static analysis, y hasta acá
+      # `pnpm audit` era una corrida puntual (`specs/SECURITY-REVIEW-2026-09.md`,
+      # 2026-09-07), no un paso de CI — quedaba desactualizado apenas se
+      # sumaba una dependencia nueva.
+      #
+      # **Dos pasos, a propósito, no uno.** El primero nunca falla: es la
+      # visibilidad completa (todo lo que el security review ya trió como
+      # "alto/moderado, no explotable en runtime" — browserslist, nanoid,
+      # undici, vitest, postcss, todos en la cadena de vite/vitest/@babel de
+      # build y test) para que quede en el log sin bloquear en algo ya
+      # decidido. El segundo es el gate real: falla en **crítico**, hoy en
+      # cero — si una dependencia nueva trae uno, esto se entera antes que un
+      # humano leyendo el log a mano.
+      # **`--ignore-registry-errors`**: un registry caído no tiene que tumbar
+      # el build por algo que no es del código (mismo criterio que
+      # `SQLITE_CONSTRAINT` → 409 en vez de 500: separar "el código está mal"
+      # de "algo externo no respondió").
+      - name: Dependency scan — reporte completo (nunca bloquea)
+        run: pnpm audit --ignore-registry-errors || true
+
+      - name: Dependency scan — gate en crítico
+        run: pnpm audit --audit-level critical --ignore-registry-errors
+
       - name: Build (web + api)
         run: pnpm build
 
@@ -175,10 +198,10 @@ jobs:
 
   # ── Análisis estático de seguridad ───────────────────────────────────────
   #
-  # M3 §4 pide "static analysis" además de dependency scans (que ya corre
-  # `pnpm audit`, ver specs/SECURITY-REVIEW-2026-09.md). Job propio, en
-  # paralelo con los otros tres — mismo criterio que TS/Aiken: nada de esto
-  # depende de que compile o pase el resto.
+  # M3 §4 pide "static analysis" además de dependency scans (que corre en el
+  # job `app`, arriba). Job propio, en paralelo con los otros tres — mismo
+  # criterio que TS/Aiken: nada de esto depende de que compile o pase el
+  # resto.
   #
   # `p/security-audit` + `p/owasp-top-ten` son los rulesets públicos de
   # Semgrep, mantenidos por ellos — no hay reglas propias que mantener acá.
