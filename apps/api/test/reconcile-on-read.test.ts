@@ -33,6 +33,9 @@ let proyecto: string;
 let contratoId: string;
 let tokenDev: string;
 let tokenCert: string;
+let tokenInvestor: string;
+let usuarioDev: string;
+let unidadInvestor: string;
 
 const login = (f: { email: string; password: string }) =>
   request(app).post("/api/v1/auth/login").send({ email: f.email, password: f.password });
@@ -85,6 +88,7 @@ const estado = async (id: string) =>
 beforeAll(async () => {
   tokenDev = (await login(FIXTURES.activo)).body.token;
   tokenCert = (await login(FIXTURES.certificador)).body.token;
+  tokenInvestor = (await login(FIXTURES.investor)).body.token;
 
   proyecto = (
     await db
@@ -102,7 +106,115 @@ beforeAll(async () => {
       .where("Unit.projectId", "=", proyecto)
       .executeTakeFirstOrThrow()
   ).id;
+
+  usuarioDev = (
+    await db
+      .selectFrom("User")
+      .select("id")
+      .where("email", "=", FIXTURES.activo.email)
+      .executeTakeFirstOrThrow()
+  ).id;
+
+  unidadInvestor = (
+    await db
+      .selectFrom("Unit")
+      .innerJoin("User", "User.id", "Unit.investorId")
+      .select("Unit.id as id")
+      .where("User.email", "=", FIXTURES.investor.email)
+      .executeTakeFirstOrThrow()
+  ).id;
 });
+
+/**
+ * Un bundle de un solo archivo, con su `EvidenceBundleItem`, listo para pedirle
+ * `GET /evidence/:bundleId/proof/:fileHash`. No pasa por el flujo real de
+ * completar un stage (ese ya lo cubre `evidence-anchor.test.ts`): acá solo
+ * hace falta la forma mínima que esa ruta necesita para reconciliar.
+ */
+async function bundleConArchivo(): Promise<{ bundleId: string; fileHash: string }> {
+  const ahora = new Date();
+  const stageId = createId();
+  await db
+    .insertInto("Stage")
+    .values({
+      id: stageId,
+      projectId: proyecto,
+      name: "Stage para reconcile-on-read",
+      sequenceOrder: 900_010 + Math.floor(Math.random() * 1000),
+      state: "InProgress",
+      validationCritical: false,
+      createdAt: ahora,
+      updatedAt: ahora
+    })
+    .execute();
+
+  const evidenceId = createId();
+  const fileHash = "d".repeat(64);
+  await db
+    .insertInto("Evidence")
+    .values({
+      id: evidenceId,
+      projectId: proyecto,
+      stageId,
+      uploadedById: usuarioDev,
+      evidenceType: "photo",
+      category: "progress",
+      authoritative: false,
+      originalFilename: "foto.jpg",
+      storedFilename: `${evidenceId}.jpg`,
+      storagePath: `/tmp/no-existe/${evidenceId}.jpg`,
+      mimeType: "image/jpeg",
+      sizeBytes: 1,
+      sha256Hash: fileHash,
+      uploadedAt: ahora,
+      createdAt: ahora,
+      updatedAt: ahora
+    })
+    .execute();
+
+  const bundleId = createId();
+  await db
+    .insertInto("EvidenceBundle")
+    .values({
+      id: bundleId,
+      projectId: proyecto,
+      stageId,
+      commitmentHash: "e".repeat(64),
+      createdById: usuarioDev,
+      createdAt: ahora
+    })
+    .execute();
+
+  await db
+    .insertInto("EvidenceBundleItem")
+    .values({ bundleId, evidenceId, sha256Hash: fileHash })
+    .execute();
+
+  await db
+    .insertInto("OnChainEvent")
+    .values({
+      id: createId(),
+      projectId: proyecto,
+      stageId: null,
+      evidenceId,
+      referenceId: null,
+      eventIndex: 0,
+      eventType: "EVIDENCE_ANCHOR",
+      fromState: null,
+      toState: null,
+      commitment: fileHash,
+      status: "Pending",
+      txid: await txidReal(evidenceId),
+      network: "Simulated",
+      outputRef: null,
+      blockTimestamp: null,
+      createdAt: ahora,
+      updatedAt: ahora
+    })
+    .execute();
+
+  return { bundleId, fileHash };
+}
 
 describe("toda lectura con anchorStatus reconcilia su alcance", () => {
   it("GET /projects/:id/documents", async () => {
@@ -136,6 +248,35 @@ describe("toda lectura con anchorStatus reconcilia su alcance", () => {
     const res = await request(app)
       .get("/api/v1/certifier/certificates")
       .set("Authorization", `Bearer ${tokenCert}`);
+    expect(res.status).toBe(200);
+
+    expect(await estado(id)).toBe("Confirmed");
+  });
+
+  // Ya reconciliaban en el código (`evidence.routes.ts`/`investor.routes.ts`
+  // lo llaman antes de consultar) pero no estaban en esta lista — la misma
+  // clase de agujero que el 2026-09-09, solo que en el test y no en la ruta:
+  // nada impedía que alguien las rompiera sin que ningún rojo lo avisara.
+  it("GET /evidence/:bundleId/proof/:fileHash", async () => {
+    const { bundleId, fileHash } = await bundleConArchivo();
+
+    const res = await request(app)
+      .get(`/api/v1/evidence/${bundleId}/proof/${fileHash}`)
+      .set("Authorization", `Bearer ${tokenDev}`);
+    expect(res.status).toBe(200);
+    // Regla 17: el proof object solo sostiene el TXID si `anchorStatus` ya
+    // reconcilió a `Confirmed` — si esta ruta dejara de reconciliar, el body
+    // seguiría en 200 pero con `txid: null`, así que el chequeo real está acá.
+    expect(res.body.txid).not.toBeNull();
+  });
+
+  it("GET /investor/units/:id/news", async () => {
+    const id = await anclajePendiente();
+    expect(await estado(id)).toBe("Pending");
+
+    const res = await request(app)
+      .get(`/api/v1/investor/units/${unidadInvestor}/news`)
+      .set("Authorization", `Bearer ${tokenInvestor}`);
     expect(res.status).toBe(200);
 
     expect(await estado(id)).toBe("Confirmed");

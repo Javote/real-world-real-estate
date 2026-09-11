@@ -23,6 +23,7 @@ import {
   claveEstadoStage,
   claveNovedad,
   esFoto,
+  intervaloDeNovedades,
   reintentarSiNoEsAusencia,
   unicosPorStageId
 } from '#/lib/investor'
@@ -60,7 +61,13 @@ function InvestorUnitDetail() {
     queryKey: ['investor', 'unit', unitId, 'news'],
     queryFn: () => api.getInvestorUnitNews(unitId),
     enabled: ready && Boolean(unidad),
-    retry: reintentarSiNoEsAusencia
+    retry: reintentarSiNoEsAusencia,
+    refetchInterval: (query) => intervaloDeNovedades(query.state.data),
+    // Sin esto, cambiar de pestaña pausa el poll (default de la librería) y la
+    // confirmación vuelve a depender de que el investor esté mirando esta
+    // pantalla en el instante exacto en que entra al bloque — la misma espera
+    // que el fix existe para evitar.
+    refetchIntervalInBackground: true
   })
 
   const { data: proyecto } = useQuery({

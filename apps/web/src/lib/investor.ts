@@ -89,3 +89,19 @@ export function anclajeVigenteDelStage<T extends { eventType: string; txid?: str
 ): T | undefined {
   return events.filter((e) => e.eventType === 'STAGE_TRANSITION' && e.txid).at(-1)
 }
+
+/**
+ * Cada segundo que pasa entre confirmar en la cadena y que alguien vuelva a
+ * mirar la pantalla es tiempo que `GET /units/:id/news` no reconcilia
+ * (D-077: el disparo es la lectura, no hay cron). Mientras esta pantalla
+ * quede abierta con un evento todavía `Pending`, repreguntamos cada 10s para
+ * que la confirmación llegue sin que el investor tenga que salir y volver.
+ *
+ * `false` apaga el polling — ni bien no queda nada pendiente, o si `news`
+ * todavía no cargó (nada que mirar).
+ */
+export function intervaloDeNovedades(
+  news: { status: string | null }[] | undefined
+): number | false {
+  return news?.some((n) => n.status === 'Pending') ? 10_000 : false
+}

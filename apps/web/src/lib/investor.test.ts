@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { anclajeVigenteDelStage, unicosPorStageId } from './investor'
+import { anclajeVigenteDelStage, intervaloDeNovedades, unicosPorStageId } from './investor'
 
 describe('unicosPorStageId', () => {
   it('deja un stage por id y prefiere el que trae TXID', () => {
@@ -43,5 +43,27 @@ describe('anclajeVigenteDelStage', () => {
   it('devuelve undefined si el stage no tiene ninguna transición anclada', () => {
     expect(anclajeVigenteDelStage([{ eventType: 'STAGE_CREATED', txid: 'mint' }])).toBeUndefined()
     expect(anclajeVigenteDelStage([])).toBeUndefined()
+  })
+})
+
+describe('intervaloDeNovedades', () => {
+  it('pollea cada 10s si hay un evento Pending', () => {
+    expect(intervaloDeNovedades([{ status: 'Pending' }])).toBe(10_000)
+  })
+
+  it('pollea si CUALQUIERA de varios eventos sigue Pending', () => {
+    expect(intervaloDeNovedades([{ status: 'Confirmed' }, { status: 'Pending' }])).toBe(10_000)
+  })
+
+  it('no pollea si todo ya confirmó: nada que reconciliar', () => {
+    expect(intervaloDeNovedades([{ status: 'Confirmed' }, { status: 'Confirmed' }])).toBe(false)
+  })
+
+  it('no pollea con la lista vacía', () => {
+    expect(intervaloDeNovedades([])).toBe(false)
+  })
+
+  it('no pollea mientras `news` no cargó todavía (undefined)', () => {
+    expect(intervaloDeNovedades(undefined)).toBe(false)
   })
 })
