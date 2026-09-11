@@ -139,12 +139,13 @@ declaran su regla con `authorize`).
 **La numeración no se recicla.** `SPEC-008`, `SPEC-011` y los planes anteriores están en
 [`archive/`](archive/): describen trabajo cerrado o código que se borró.
 
-### Las tres series de pulido — abiertas el 2026-09-11
+### Las cuatro series de pulido — abiertas el 2026-09-11
 
-Salen de las tres auditorías del 2026-09-11 y **se numeran aparte a propósito**: la serie **1xx** es
+Salen de las cuatro auditorías del 2026-09-11 y **se numeran aparte a propósito**: la serie **1xx** es
 [`AUDITORIA-…-calidad-del-frente.md`](AUDITORIA-2026-09-11-calidad-del-frente.md), la **2xx** es
-[`AUDITORIA-…-calidad-del-backend.md`](AUDITORIA-2026-09-11-calidad-del-backend.md) y la **3xx** es
-[`AUDITORIA-…-calidad-de-contracts.md`](AUDITORIA-2026-09-11-calidad-de-contracts.md), una spec por
+[`AUDITORIA-…-calidad-del-backend.md`](AUDITORIA-2026-09-11-calidad-del-backend.md), la **3xx** es
+[`AUDITORIA-…-calidad-de-contracts.md`](AUDITORIA-2026-09-11-calidad-de-contracts.md) y la **4xx** es
+[`AUDITORIA-…-calidad-de-packages.md`](AUDITORIA-2026-09-11-calidad-de-packages.md), una spec por
 hallazgo salvo donde partirlos habría sido artificial. **Cada una es independiente y se puede tomar
 sola**; las dependencias, donde existen, están escritas en la spec.
 
@@ -189,6 +190,18 @@ dos. La parte urgente se cierra sin tocar el script; la de fondo es decisión de
 | [`SPEC-304`](SPEC-304-la-clave-del-admin-no-se-puede-rotar.md) | La clave del `admin` es irreemplazable por construcción | C-02 | abierta · **antes de mainnet** |
 | [`SPEC-305`](SPEC-305-el-proximo-cambio-de-script-hash.md) | El próximo cambio de script hash: unicidad on-chain y el tope de `evidence_root` | C-01 (3)·C-04 | abierta 🔴 · mainnet |
 | [`SPEC-306`](SPEC-306-property-tests-sobre-la-evolucion-del-datum.md) | Una propiedad sobre `valid_datum_evolution` | C-06 | abierta · opcional |
+| [`SPEC-401`](SPEC-401-dos-campos-del-contrato-mas-flojos-que-la-realidad.md) | Dos campos del contrato declarados más flojos que la realidad | P-01·02 | abierta |
+| [`SPEC-402`](SPEC-402-los-hashes-y-txid-tienen-forma.md) | Los 36 hashes y TXID del contrato tienen forma | P-03 | abierta · **antes de mainnet** |
+| [`SPEC-403`](SPEC-403-el-authoritative-del-multipart.md) | El `authoritative` del multipart solo entiende el literal `"true"` | P-04 | abierta |
+| [`SPEC-404`](SPEC-404-las-funciones-puras-validan-las-dos-direcciones.md) | Las funciones puras validan las dos direcciones, y `MerkleStep` se declara una vez | P-05·06 | abierta |
+| [`SPEC-405`](SPEC-405-higiene-de-shared.md) | Higiene de `shared`: el idioma, dos tipos, y un comentario al revés | P-07 | abierta |
+| [`SPEC-406`](SPEC-406-el-simulador-no-olvida-lo-que-confirmo.md) | El simulador deja de olvidar lo que confirmó al reiniciarse | C-01 | abierta 🟡 |
+| [`SPEC-407`](SPEC-407-el-outputref-se-busca-no-se-supone.md) | El `outputRef` del recibo se busca, no se supone | C-02 | abierta 🟡 · **antes de mainnet** |
+| [`SPEC-408`](SPEC-408-lo-que-vuelve-de-la-cadena-se-valida.md) | Lo que vuelve de la cadena se valida, por las dos puertas | C-03 | abierta 🟡 · **antes de mainnet** |
+| [`SPEC-409`](SPEC-409-verify-devuelve-el-timestamp-del-bloque.md) | `verify()` devuelve el timestamp del bloque, que ya sabe leer | C-04 | abierta |
+| [`SPEC-410`](SPEC-410-tres-asperezas-del-adaptador.md) | Tres asperezas del adaptador: `canonical()`, un `parseInt` y un `fetch` | C-05 | abierta |
+| [`SPEC-411`](SPEC-411-lucid-se-carga-solo-si-hace-falta.md) | Lucid se carga solo si hace falta: 2 s y 121 MB por proceso | T-01 | abierta |
+| [`SPEC-412`](SPEC-412-el-constructor-de-diez-parametros.md) | El constructor de diez parámetros posicionales | T-02 | abierta |
 
 **Orden sugerido, si se toman en tanda.** Cada auditoría trae el suyo y estas specs lo respetan:
 `201` → `202` → `203` → `204` → `205` → `206`+`207` → el pulido (`208`…`211`) → `212`; y del frente
@@ -199,3 +212,12 @@ daño evitado sobre línea tocada.
 son los cuatro que **no** lo cambian, así que no pueden invalidar los 180 eventos ya anclados y se
 pueden tomar en cualquier momento. `305` sí lo cambia y es la única que hay que decidir antes del
 primer mint en mainnet; `306` es opcional y la propia spec lo dice.
+
+**La serie 4xx se ordena por lo que no se deshace.** Primero `402` → `407` → `408`, los tres que
+tocan hashes, `outputRef` y datum: ninguno está roto hoy, los tres son suposiciones no declaradas en
+los lugares donde equivocarse deja un hilo irrecuperable o una prueba que nadie validó. Después
+`401` → `403` → `406`, que son correcciones con caso reproducido. Y al final `404` → `405` → `409`
+→ `410` → `411` → `412`, que es pulido. `412` es además la más barata de todas y no depende de nada.
+**El hallazgo más grande de `packages/shared` no está en esta serie: ya es
+[`SPEC-109`](SPEC-109-tipos-de-respuesta-desde-shared.md)**, y la auditoría de packages lo confirma
+desde el otro lado con el número que faltaba — 63 de los 107 tipos inferidos no tienen consumidor.

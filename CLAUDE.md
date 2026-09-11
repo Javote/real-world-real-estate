@@ -43,6 +43,24 @@
 > **Ya está transcrita a specs implementables: la serie `SPEC-301`…`SPEC-306`**, y se ordena por una
 > restricción propia — `301`…`304` **no cambian el script hash** y se pueden tomar cuando sea;
 > `305` sí, y es decisión de mainnet.
+>
+> **Calidad de `packages/`:** [`specs/AUDITORIA-2026-09-11-calidad-de-packages.md`](specs/AUDITORIA-2026-09-11-calidad-de-packages.md)
+> — 14 hallazgos sobre los dos packages compartidos, leídos completos (28 archivos, ~5.900 líneas) y
+> todo reproducido ejecutándolo. **El veredicto general es bueno y conviene decirlo: es el código
+> mejor tipado del repo** — cero `any`, cero `@ts-ignore`, `noUncheckedIndexedAccess` y
+> `exactOptionalPropertyTypes` en los dos (`apps/api` tiene solo `strict`), y ningún import que cruce
+> el límite de D-014. **No es spaghetti y no está cerca de serlo.** Ninguno de los 14 toca los 16
+> criterios del SOM. Tres valen antes de mainnet, y los tres son la misma clase de cosa: suposiciones
+> no declaradas donde equivocarse no se deshace — los 36 hashes y TXID que viajan como `z.string()`
+> pelado (`SPEC-402`), el `outputRef` que supone la salida `#0` teniendo la respuesta buena calculada
+> al lado (`SPEC-407`), y el datum que vuelve de la cadena sin validarse (`SPEC-408`). Un cuarto está
+> reproducido con un test en verde: **el simulador olvida todo lo que confirmó en cada reinicio**
+> aunque el ledger sobreviva en SQLite, así que en dev un evento anclado antes de reiniciar queda
+> `Pending` para siempre (`SPEC-406`).
+> **Ya está transcrita a specs implementables: la serie `SPEC-401`…`SPEC-412`.** El hallazgo más
+> grande de `packages/shared` **no** abrió spec nueva porque ya tenía una: `SPEC-109` — esta
+> auditoría lo confirma desde el otro lado del límite con el número que faltaba, **63 de los 107
+> tipos inferidos que el package exporta no tienen ningún consumidor**.
 
 Lo transversal. Lo de cada frente vive en `apps/web/CLAUDE.md`, `apps/api/CLAUDE.md`,
 `packages/cardano/CLAUDE.md` y `contracts/CLAUDE.md`, y se carga solo cuando tocás ese subárbol.
