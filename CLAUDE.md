@@ -4,6 +4,16 @@
 > — el cruce contra los 5 Outputs oficiales del Milestone 3 tal como los publica Catalyst, con lo
 > que falta consolidado en una tabla. Es el punto de partida de la próxima sesión.
 >
+> **Auditoría del backend:** [`specs/AUDITORIA-2026-09-11-calidad-del-backend.md`](specs/AUDITORIA-2026-09-11-calidad-del-backend.md)
+> — 15 hallazgos sobre `apps/api`, leyendo los 51 archivos de `src` completos. **Va antes que la del
+> frente porque dos de ellos no son pulido: son bugs de corrupción de datos, reproducidos
+> ejecutándolos** — B-01 (dos invitaciones sobre la misma unidad le sacan la unidad a quien ya la
+> compró) y B-02 (una unidad puede terminar con dos dossiers, y la firma del escribano queda en el
+> que la pantalla no lee). Los dos salen del mismo lugar: **hay una sola `db.transaction()` en todo
+> `src`**. Ninguno toca los 16 criterios del SOM, pero los dos primeros valen antes de mainnet —
+> repararlos después es SQL a mano contra producción, como las migraciones 0004 y 0005. El resto sí
+> es deuda de pulido, y no propone endpoint, tabla ni superficie nueva.
+>
 > **Deuda de pulido del frente:** [`specs/AUDITORIA-2026-09-11-calidad-del-frente.md`](specs/AUDITORIA-2026-09-11-calidad-del-frente.md)
 > — 18 hallazgos de accesibilidad, responsive y mantenibilidad, medidos en el navegador contra las
 > 42 rutas, cada uno con su evidencia y su archivo. **No es un criterio del SOM y no bloquea la
