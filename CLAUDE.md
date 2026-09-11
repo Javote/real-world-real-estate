@@ -128,10 +128,13 @@ de lo presupuestado (~105 ADA). Con esto cerrado, 3.10/3.12/3.13 ya pueden avanz
 | **Las 2 ADA bloqueadas por etapa** | Sin burn (D-057), son permanentes: 20 por proyecto de 10 etapas. Es el número para la decisión de mainnet, no para este milestone |
 | **Upload directo del navegador a R2 (sin pasar por Render)** | Hoy el archivo hace escala en `UPLOAD_DIR` (Multer disco → `storage.put()` → R2 → se borra, `apps/api/src/lib/storage.ts`) antes de llegar al bucket — es lo que hace que `MAX_FILE_SIZE_MB` (2026-09-10: 10→50) le pese a la RAM del proceso, no solo al límite de R2 (5 GiB por PUT simple). Un presigned URL lo evitaría, pero es un cambio de forma real: CORS nuevo en el bucket, el front pasa de un POST a un flujo de 3 pasos, y el hash sigue teniendo que calcularse releyendo el objeto desde R2 después (D-027) — no se simplifica esa parte. **Después de mainnet**, cuando el volumen de uploads reales lo justifique frente al costo de tocar `storage.ts` (🟡) y el único endpoint que hoy usa `uploadSingleEvidence` |
 
-## Sin confirmar todavía
+## Cerrado, pendiente de aceptación por Catalyst
 
 1. **El criterio 3 se cierra por documentación** (3.1–3.4), sin construir signers ni percentages. Es
-   la consecuencia directa de la regla de precedencia, pero es un criterio de Catalyst.
+   la consecuencia directa de la regla de precedencia del dueño (entregables M2/M3 sobre el SOM,
+   2026-09-09), aplicada de forma consistente con `progressPercentage`. No hay más trabajo posible
+   de este lado — lo único que falta es que Catalyst lo acepte en la entrega, y eso no se sabe hasta
+   entregar.
 
 ---
 
