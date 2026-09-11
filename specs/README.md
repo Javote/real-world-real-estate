@@ -127,7 +127,7 @@ de corte de una rebanada es que la app quede corriendo y demostrable.**
 | [`SPEC-012`](SPEC-012-segunda-capa-como-middleware.md) | `requireProjectAccess`: la segunda capa como middleware | cerrada 2026-08-23 · **superada por D-088** el 2026-09-04 |
 | [`SPEC-013`](SPEC-013-anchorport.md) | `AnchorPort`: conectar el registro con la cadena | **cerrada** — §A, §B y §C. §C (`reconcile()` en lectura, `verify()` público, estados de la UI) cerró con D-077 (`reconciliarParaLectura` cableada en cinco routers) — este archivo lo tenía desactualizado contra §Orden de trabajo, más arriba |
 | [`SPEC-014`](SPEC-014-reconstruccion-del-front.md) | Reconstrucción del front desde los entregables | **cerrada 2026-09-11** |
-| [`SPEC-015`](SPEC-015-saneamiento-de-la-instrumentacion.md) | Saneamiento de la instrumentación: tests, fixtures, coverage, CI | **en curso** |
+| [`SPEC-015`](SPEC-015-saneamiento-de-la-instrumentacion.md) | Saneamiento de la instrumentación: tests, fixtures, coverage, CI | **cerrada 2026-09-11** — los 7 cambios. El 6 cerró **reformulado**: se parte por concern, no por conteo de líneas (§El ítem 6) |
 | [`SPEC-016`](SPEC-016-superficie-del-investor.md) | Superficie del investor (M2-D5 §4) | **cerrada 2026-08-28** |
 
 Los planes fechados no llevan número: [`PLAN-2026-08-31-anclaje-real.md`](PLAN-2026-08-31-anclaje-real.md)

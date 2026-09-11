@@ -4,6 +4,9 @@
 > **ninguno toca el dominio**. El orden de ejecución no es el de gravedad, y la diferencia está
 > explicada abajo.
 
+> **Cerrada el 2026-09-11.** Los siete cambios están hechos. El 6 se cerró **reformulado**, no
+> ejecutado como estaba escrito: ver §El ítem 6 al final. Los otros seis se cerraron tal cual.
+
 ## Propósito
 
 La gobernanza del proyecto (docs inmutables, `DECISIONS.md`, `CLAUDE.md` por frente) está muy por
@@ -30,7 +33,7 @@ acumulativa, y elimina dos clases de bug —no dos instancias— que ya mordiero
 | 3 | Trazabilidad de los 75 test IDs de M2-D5 + coverage | **1ª** | El criterio de aceptación no es medible |
 | 4 | Un prefijo por router en `app.ts` | 4ª | El orden de montaje como carga estructural |
 | 5 | e2e de Playwright en CI | 5ª | Red de seguridad que no se ejecuta |
-| 6 | Partir los routers que pasan las ~500 líneas | 6ª | Un archivo por prefijo esconde las costuras |
+| 6 | Partir un router **cuando mezcla concerns** (no por conteo de líneas) | 6ª | Un archivo por prefijo esconde las costuras |
 | 7 | Bases locales a `apps/api/.data/` | 7ª | Artefactos mezclados con el código fuente |
 
 **Por qué el orden no es el de gravedad.** El más grave es el 3 —M2-D5 §8 declara que los test IDs
@@ -104,3 +107,53 @@ distinguen por su descripción: **un ID identifica una superficie del backlog, n
   del `BottomNav` corría también en desktop —donde M2-D1 lo reemplaza por un sidebar que todavía no
   existe—, y el `test.fail` del proxy de nitro avisó que su bug se había arreglado con D-065.
   Quedan 22 de 22 en verde.
+
+## El ítem 6, cerrado por reformulación — 2026-09-11
+
+Estaba escrito como un umbral de conteo: *"partir los routers que pasan las ~500 líneas"*. Se cierra
+cambiando la regla, y hay que decir por qué, porque **el umbral no estaba mal elegido**.
+
+**Medido el 2026-09-11** con `wc -l apps/api/src/routes/*.routes.ts`:
+
+| Router | Líneas | Rutas |
+|---|---:|---:|
+| `investor.routes.ts` | 612 | 14 |
+| `developer.routes.ts` | 546 | 8 |
+| `evidence.routes.ts` | 516 | 8 |
+| — *umbral de ~500* — | | |
+| `developer-comercial.routes.ts` | 449 | — |
+| `projects.routes.ts` | 448 | — |
+| `notary.routes.ts` | 374 | — |
+
+Los otros 13 quedan por debajo. **El cuarto router marca el acantilado**: los saltos en la cola alta
+son 66 (612→546), 30 (546→516) y **67** (516→449), el más ancho de los tres. El umbral de ~500 cae
+justo ahí y separa exactamente tres archivos — como *descriptor* de la distribución estaba bien
+puesto, no era un número de ocasión.
+
+**Lo que no es, es un predictor de daño.** Tres mediciones, en orden de peso:
+
+1. **La [auditoría del backend del 2026-09-11](AUDITORIA-2026-09-11-calidad-del-backend.md) leyó los
+   51 archivos de `src` completos y produjo 15 hallazgos. Ninguno es el largo de un router.** Los dos
+   graves —B-01 y B-02, corrupción de datos, reproducidos ejecutándolos— salen de otro lado: hay una
+   sola `db.transaction()` en todo `src`. Si el largo escondiera costuras, ese era exactamente el
+   ejercicio que las encontraba, y no las encontró.
+2. **El ítem con dientes de esta zona era el 4, y está cerrado.** Un `router.use(guard)` corre para
+   toda request que entra al router, matcheen o no sus paths: eso contestaba 403 a
+   `/investor/favorites` y 401 al dossier público. Lo cerró el prefijo propio (`MONTAJE` en
+   `app.ts`), no el tamaño del archivo.
+3. **El corte que sí hubo fue por concern, y ya pasó.** `evidence.routes.ts` era 671 al abrir la spec
+   —era *el* disparador de este ítem— y hoy es 516. La diferencia salió de `developer-comercial`,
+   `developer-evidencia`, `projects-obra` y `capital`, que existen porque son conceptos distintos;
+   ninguno nació de contar líneas.
+
+**Y partir los tres restantes por línea agregaría riesgo real.** El comentario de `MONTAJE` asienta
+el precio: los routers que comparten prefijo tienen que declarar **los mismos guards a nivel de
+router**, y `/api/v1/developer` ya tiene cuatro. Cada archivo nuevo es un invariante más que
+sostener. Cortar `evidence.routes.ts` en dos para bajar 16 líneas compra nada y paga eso.
+
+**La regla queda:** un router se parte cuando mezcla concerns, y el nombre del archivo nuevo tiene
+que poder decir cuál. El conteo de líneas es señal para mirar, nunca motivo para cortar.
+
+**Lo que esto NO autoriza.** No es permiso para que un router crezca sin techo. Si `investor.routes.ts`
+—el más grande, 14 rutas— llega a mezclar dos conceptos, se parte por eso, no por haber pasado un
+número. La señal es el nombre que no alcanza, no el `wc -l`.
