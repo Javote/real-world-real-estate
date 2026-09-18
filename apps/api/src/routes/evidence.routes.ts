@@ -300,6 +300,36 @@ router.delete(
       return res.status(404).json({ message: "Evidence not found" });
     }
 
+    // SPEC-210 (B-15): antes esto borraba el archivo y la fila sin mirar si
+    // había anclaje. `OnChainEvent.evidenceId` tiene `ON DELETE set null`, así
+    // que el TXID sobrevivía en la cadena y en la tabla mientras el vínculo
+    // con el archivo que probaba desaparecía — un evento `EVIDENCE_ANCHOR`
+    // que terminaba anclando el hash de nada. Y si la evidencia estaba dentro
+    // de un `EvidenceBundle` (`ON DELETE no action`), el borrado cortaba con
+    // `SQLITE_CONSTRAINT_FOREIGNKEY`, que el errorHandler traduce a 400 "A
+    // referenced resource does not exist" — el mensaje describe el problema
+    // inverso al real (el recurso SÍ existe; lo que pasa es que está
+    // referenciado). La validación va ANTES de tocar storage o la base:
+    // ningún archivo se borra si la fila no se iba a poder borrar.
+    const anclaje = await db
+      .selectFrom("OnChainEvent")
+      .select("id")
+      .where("evidenceId", "=", existing.id)
+      .executeTakeFirst();
+
+    const enBundle = await db
+      .selectFrom("EvidenceBundleItem")
+      .select("bundleId")
+      .where("evidenceId", "=", existing.id)
+      .executeTakeFirst();
+
+    if (anclaje || enBundle) {
+      return res.status(409).json({
+        message: "Evidence is anchored and cannot be deleted",
+        code: "EVIDENCE_ANCHORED"
+      });
+    }
+
     await storage.remove(existing.storagePath);
 
     await db.deleteFrom("Evidence").where("id", "=", req.params.id).execute();
