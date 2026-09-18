@@ -8,7 +8,7 @@ import {
 import { type Request, Router } from "express";
 import { createId } from "../db/id";
 import { anchorCommitmentEvent } from "../domain/anchoring";
-import { notifyUnitInvestor } from "../domain/notify";
+import { notifyUnitInvestors } from "../domain/notify";
 import { crearBundle, transitionStage } from "../domain/stage-transition";
 import { db } from "../lib/db";
 import { storage } from "../lib/storage";
@@ -183,21 +183,30 @@ router.post(
 
     // Los investors del proyecto se enteran de que hay evidencia nueva. Con
     // clave, no con copy (regla 15).
+    //
+    // SPEC-209 (B-13): antes esto era un `SELECT id` seguido de un `for` que
+    // llamaba a `notifyUnitInvestor` por unidad — y esa función VUELVE a
+    // consultar `Unit.investorId`, el dato que la query de acá ya tenía y
+    // descartaba. Dos queries secuenciales por unidad, adentro de la misma
+    // request que el frontend espera para el `AnchoringSuccessModal`. Ahora
+    // se trae `investorId` de una y se inserta todo en un solo `INSERT`.
     const unidades = await db
       .selectFrom("Unit")
-      .select("id")
+      .select(["id", "investorId"])
       .where("projectId", "=", projectId)
       .where("investorId", "is not", null)
       .execute();
 
-    for (const unidad of unidades) {
-      await notifyUnitInvestor({
-        unitId: unidad.id,
+    await notifyUnitInvestors(
+      unidades
+        .filter((u): u is { id: string; investorId: string } => u.investorId !== null)
+        .map((u) => ({ unitId: u.id, investorId: u.investorId })),
+      {
         category: "document",
         titleKey: "notifications.evidence.uploaded",
         params: { stageName: stage.name }
-      });
-    }
+      }
+    );
 
     await writeAuditLog({
       actorUserId: req.user!.id,

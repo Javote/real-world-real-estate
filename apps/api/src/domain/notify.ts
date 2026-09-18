@@ -70,3 +70,46 @@ export async function notifyUnitInvestor(input: {
     unitId: input.unitId
   });
 }
+
+/**
+ * Igual que {@link notifyUnitInvestor}, pero para N unidades a la vez —
+ * SPEC-209 (B-13): un `INSERT` múltiple en vez de un `SELECT` + `INSERT` por
+ * unidad. El llamador ya tiene que traer `investorId`: acá no se vuelve a
+ * consultar `Unit`, que es exactamente el N+1 que esto reemplaza.
+ *
+ * Mismo criterio de "no puede voltear la acción que lo origina" que `notify`:
+ * si el `INSERT` falla, se loguea y se sigue.
+ */
+export async function notifyUnitInvestors(
+  units: { unitId: string; investorId: string }[],
+  input: {
+    category: NotificationCategory;
+    titleKey: string;
+    params?: Record<string, string | number>;
+  }
+): Promise<void> {
+  if (units.length === 0) return;
+
+  try {
+    await db
+      .insertInto("Notification")
+      .values(
+        units.map((u) => ({
+          id: createId(),
+          userId: u.investorId,
+          category: input.category,
+          titleKey: input.titleKey,
+          paramsJson: input.params ? JSON.stringify(input.params) : null,
+          unitId: u.unitId,
+          readAt: null,
+          createdAt: new Date()
+        }))
+      )
+      .execute();
+  } catch (error) {
+    console.error("[notify] no se pudieron registrar las notificaciones", {
+      titleKey: input.titleKey,
+      error
+    });
+  }
+}

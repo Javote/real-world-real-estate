@@ -312,7 +312,7 @@ router.get(
 
     if (ids.length === 0) return res.json([]);
 
-    const documentos = await db
+    let query = db
       .selectFrom("Evidence")
       .leftJoin("OnChainEvent", "OnChainEvent.evidenceId", "Evidence.id")
       .select([
@@ -325,18 +325,23 @@ router.get(
         "OnChainEvent.txid as txid",
         "OnChainEvent.status as anchorStatus"
       ])
-      .where("Evidence.projectId", "in", ids)
-      .orderBy("Evidence.uploadedAt", "desc")
-      .execute();
+      .where("Evidence.projectId", "in", ids);
 
-    const filtrados =
-      parsed.data.status === "anchored"
-        ? documentos.filter((d) => d.txid !== null)
-        : parsed.data.status === "pending"
-          ? documentos.filter((d) => d.txid === null)
-          : documentos;
+    // SPEC-209 (B-14): antes se traía TODA la evidencia de todos los
+    // proyectos y se filtraba en memoria por `d.txid !== null`/`=== null` —
+    // exactamente lo que un `where` sobre la columna ya joineada hace. Mismo
+    // predicado, mismas filas: si `Evidence` tuviera más de un `OnChainEvent`
+    // (el `leftJoin` los multiplicaría), este `where` cuenta lo mismo que
+    // contaba el `.filter()` de antes, ni una fila más ni una menos.
+    if (parsed.data.status === "anchored") {
+      query = query.where("OnChainEvent.txid", "is not", null);
+    } else if (parsed.data.status === "pending") {
+      query = query.where("OnChainEvent.txid", "is", null);
+    }
 
-    return res.json(z.array(developerDocumentSchema).parse(filtrados));
+    const documentos = await query.orderBy("Evidence.uploadedAt", "desc").execute();
+
+    return res.json(z.array(developerDocumentSchema).parse(documentos));
   }
 );
 
