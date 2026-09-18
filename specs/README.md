@@ -161,7 +161,7 @@ mismo— sigue siendo `SPEC-305`, decisión de mainnet.
 |---|---|---|---|
 | [`SPEC-101`](SPEC-101-escala-de-iconos-y-su-guardia.md) | La escala de íconos vuelve a la de M2-D3, y esta vez con guardia | F-01 | **cerrada 2026-09-18** |
 | [`SPEC-102`](SPEC-102-dialog-adaptado.md) | `ui/dialog.tsx`: adaptar el primitivo de los 11 modales | F-02 | **cerrada 2026-09-18** |
-| [`SPEC-103`](SPEC-103-el-armazon-que-no-anuncia.md) | El armazón no anuncia dónde estás: `lang`, `title`, `aria-current`, el contador | F-04·05·06·07 | abierta |
+| [`SPEC-103`](SPEC-103-el-armazon-que-no-anuncia.md) | El armazón no anuncia dónde estás: `lang`, `title`, `aria-current`, el contador | F-04·05·06·07 | **cerrada 2026-09-18** |
 | [`SPEC-104`](SPEC-104-live-regions.md) | Anunciar lo que cambia: las live regions que la app no tiene | F-03 | abierta |
 | [`SPEC-105`](SPEC-105-controles-que-no-son-controles.md) | Tres cosas que son controles y no se comportan como tales | F-08·09·12 | abierta |
 | [`SPEC-106`](SPEC-106-el-pill-estirado-y-el-fondo-de-la-cola.md) | El pill estirado y el fondo de la cola del escribano | F-10·11 | abierta |

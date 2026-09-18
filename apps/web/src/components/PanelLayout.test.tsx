@@ -9,6 +9,7 @@ import {
 } from '@tanstack/react-router'
 import { render, screen } from '@testing-library/react'
 import { describe, expect, it, vi } from 'vitest'
+import { api } from '#/api/port'
 import { LocaleProvider } from '#/i18n/useTranslation'
 import { PanelLayout } from './PanelLayout'
 
@@ -80,5 +81,24 @@ describe('PanelLayout (D-074)', () => {
     expect(texto.indexOf('Prop')).toBeGreaterThanOrEqual(0)
     expect(texto.indexOf('Volver al panel')).toBeGreaterThan(texto.indexOf('Nexus'))
     expect(texto.indexOf('Inversores')).toBeGreaterThan(texto.indexOf('Volver al panel'))
+  })
+
+  // SPEC-103 (F-07): el aria-label de la campana decía solo "Notificaciones",
+  // sin el dato que el prop `unread` ya tenía.
+  describe('campana: el aria-label interpola el conteo real (SPEC-103)', () => {
+    it('unread === 0 usa la clave sin contador', async () => {
+      vi.mocked(api.getUnreadCount).mockResolvedValueOnce({ unread: 0 })
+      renderLayout()
+
+      expect(await screen.findByRole('button', { name: 'Notificaciones' })).toBeDefined()
+    })
+
+    it('unread > 9 dibuja "9+" pero el label dice el número real', async () => {
+      vi.mocked(api.getUnreadCount).mockResolvedValueOnce({ unread: 42 })
+      renderLayout()
+
+      const campana = await screen.findByRole('button', { name: 'Notificaciones, 42 sin leer' })
+      expect(campana.textContent).toContain('9+')
+    })
   })
 })

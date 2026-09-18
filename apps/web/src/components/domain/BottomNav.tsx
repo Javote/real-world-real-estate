@@ -52,7 +52,7 @@ export function BottomNav({ tabs, ariaLabel }: BottomNavProps) {
             tab.fab ? 'relative -mt-s6' : ''
           )}
           activeOptions={{ exact: tabNeedsExactMatch(tab.to, tabs) }}
-          activeProps={{ className: 'text-primary font-bold' }}
+          activeProps={{ className: 'text-primary font-bold', 'aria-current': 'page' }}
           inactiveProps={{ className: 'text-text-muted' }}
         >
           {tab.fab ? (

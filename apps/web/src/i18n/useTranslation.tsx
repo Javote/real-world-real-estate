@@ -22,6 +22,13 @@ export function LocaleProvider({ children }: { children: React.ReactNode }) {
     setLocaleState(getStoredLocale())
   }, [])
 
+  // SPEC-103 (F-04): `index.html` fija `lang="es"` una vez, al parsear el
+  // documento — el toggle nunca lo tocaba. Se corre en cada cambio de
+  // `locale`, no solo al montar, para que quede igual al vigente siempre.
+  useEffect(() => {
+    document.documentElement.lang = locale
+  }, [locale])
+
   const setLocale = useCallback((next: Locale) => {
     setStoredLocale(next)
     setLocaleState(next)

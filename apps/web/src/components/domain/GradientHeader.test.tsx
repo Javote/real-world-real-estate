@@ -21,4 +21,28 @@ describe('GradientHeader', () => {
     expect(screen.queryByRole('button')).toBeNull()
     expect(screen.getByRole('banner').textContent).toContain('Prop')
   })
+
+  // SPEC-103 (F-05): `document.title` era "PropNexus" en las 42 rutas.
+  // GradientHeader es el único lugar que pinta el `h1` real de una pantalla
+  // —directo o vía PanelLayout— así que es el único lugar que hace falta
+  // tocar.
+  describe('document.title (SPEC-103, F-05)', () => {
+    it('publica el título con el sufijo de marca', () => {
+      render(<GradientHeader title="Inversores" />)
+      expect(document.title).toBe('Inversores · PropNexus')
+    })
+
+    it('la marca sola no se duplica (login: title={t("app.name")})', () => {
+      render(<GradientHeader title="PropNexus" />)
+      expect(document.title).toBe('PropNexus')
+    })
+
+    it('cambia en el mismo tick que el título — toggle de idioma sin recargar', () => {
+      const { rerender } = render(<GradientHeader title="Inversores" />)
+      expect(document.title).toBe('Inversores · PropNexus')
+
+      rerender(<GradientHeader title="Investors" />)
+      expect(document.title).toBe('Investors · PropNexus')
+    })
+  })
 })
