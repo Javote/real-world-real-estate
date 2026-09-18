@@ -423,11 +423,17 @@ export function buildOpenApiDocument() {
         "Generado desde el router montado (`pnpm --filter @plataforma/api docs:openapi`), " +
         "no mantenido a mano — ver apps/api/scripts/generate-openapi.ts. El código de éxito " +
         "se lee del `res.status(2xx)` real del handler (con el de creación si el handler " +
-        "tiene más de uno, caso idempotente). Body, query y ~24 respuestas de éxito son el " +
-        "schema Zod real, validado en runtime antes de responder — el resto de las " +
-        "respuestas sigue sin schema (Tanda 2 de specs/PLAN-2026-09-08-documentar-api-completa.md)."
+        "tiene más de uno, caso idempotente). Body, query y 76 de las 85 respuestas de éxito " +
+        "son el schema Zod real, validado en runtime antes de responder — las 9 restantes " +
+        "legítimamente no tienen cuerpo JSON (`204 No Content` o un archivo binario)."
     },
-    servers: [{ url: "http://localhost:3001/api/v1", description: "Local (pnpm dev)" }],
+    // Sin `/api/v1`: los 70 paths ya lo traen (sale de `MONTAJE`, el prefijo es
+    // parte de la clave). Con el prefijo acá TAMBIÉN, un cliente generado o el
+    // botón "Try it" de Swagger UI arman `.../api/v1/api/v1/auth/login` — doble
+    // prefijo, 404 (SPEC-204). El puerto sale de `apps/api/.env.example` (8787
+    // es el puerto de dev), no del 3001 que no aparece en ningún otro lado del
+    // repo.
+    servers: [{ url: "http://localhost:8787", description: "Local (pnpm dev)" }],
     components: {
       securitySchemes: {
         bearerAuth: { type: "http", scheme: "bearer", bearerFormat: "JWT" }
