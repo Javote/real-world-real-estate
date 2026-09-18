@@ -1,3 +1,4 @@
+import type { AuditEntityType } from "@plataforma/shared";
 import type { NextFunction, Request, Response } from "express";
 import type { Database, MembershipRole, UserRole } from "../db/types";
 import { db } from "../lib/db";
@@ -662,6 +663,78 @@ export function projectScope(
  * `User` está afuera **por diseño**: crear usuarios o cambiar roles no pertenece
  * a ningún proyecto, y esos eventos son del admin, que bypasea todo esto.
  */
+/** El scope de un `AuditEntityType`, dada la subquery de "mis proyectos". */
+type AuditEntityScope = (
+  eb: ExpressionBuilder<Database, "AuditLog">,
+  misProyectos: ReturnType<ExpressionBuilder<Database, "AuditLog">["selectFrom"]>
+) => ExpressionWrapper<Database, "AuditLog", SqlBool>;
+
+/** El evento apunta a una fila de `tabla` que cae en uno de mis proyectos. */
+function viaProyecto(
+  tabla: "Stage" | "Evidence" | "Invitation" | "Unit" | "ProjectMember"
+): AuditEntityScope {
+  return (eb, misProyectos) =>
+    eb.and([
+      eb("AuditLog.entityType", "=", tabla),
+      eb.exists(
+        eb
+          .selectFrom(tabla)
+          .select(sql.lit(1).as("one"))
+          .whereRef(`${tabla}.id`, "=", "AuditLog.entityId")
+          .where(`${tabla}.projectId`, "in", misProyectos)
+      )
+    ]);
+}
+
+/**
+ * Un scope por `AuditEntityType`, **salvo `User`** — excluida con
+ * `Exclude<...>`, no por omisión: crear usuarios o cambiar roles no pertenece
+ * a ningún proyecto, y esos eventos son del admin, que bypasea todo esto más
+ * arriba. `satisfies Record<...>` es lo que hace que agregar un
+ * `AuditEntityType` sin decidir acá su scope **no compile** — mismo argumento
+ * que `ALL_MEMBERSHIPS`/`TODOS_LOS_ROLES`, arriba en este archivo.
+ */
+const AUDIT_ENTITY_SCOPES = {
+  // El proyecto mismo: el id del evento ES el projectId.
+  Project: (eb, misProyectos) =>
+    eb.and([
+      eb("AuditLog.entityType", "=", "Project"),
+      eb("AuditLog.entityId", "in", misProyectos)
+    ]),
+  Stage: viaProyecto("Stage"),
+  Evidence: viaProyecto("Evidence"),
+  Invitation: viaProyecto("Invitation"),
+  Unit: viaProyecto("Unit"),
+  ProjectMember: viaProyecto("ProjectMember"),
+  // El dossier cuelga de la unidad, no del proyecto.
+  Dossier: (eb, misProyectos) =>
+    eb.and([
+      eb("AuditLog.entityType", "=", "Dossier"),
+      eb.exists(
+        eb
+          .selectFrom("Dossier")
+          .innerJoin("Unit", "Unit.id", "Dossier.unitId")
+          .select(sql.lit(1).as("one"))
+          .whereRef("Dossier.id", "=", "AuditLog.entityId")
+          .where("Unit.projectId", "in", misProyectos)
+      )
+    ]),
+  // Y la atestación de pago cuelga del contrato, que cuelga de la unidad.
+  PaymentAttestation: (eb, misProyectos) =>
+    eb.and([
+      eb("AuditLog.entityType", "=", "PaymentAttestation"),
+      eb.exists(
+        eb
+          .selectFrom("PaymentAttestation")
+          .innerJoin("Contract", "Contract.id", "PaymentAttestation.contractId")
+          .innerJoin("Unit", "Unit.id", "Contract.unitId")
+          .select(sql.lit(1).as("one"))
+          .whereRef("PaymentAttestation.id", "=", "AuditLog.entityId")
+          .where("Unit.projectId", "in", misProyectos)
+      )
+    ])
+} satisfies Record<Exclude<AuditEntityType, "User">, AuditEntityScope>;
+
 export function auditScope(
   eb: ExpressionBuilder<Database, "AuditLog">,
   role: UserRole,
@@ -677,57 +750,5 @@ export function auditScope(
     .select("Project.id")
     .where((e) => projectScope(e, role, userId, allowedMemberships));
 
-  /** El evento apunta a una fila de `tabla` que cae en uno de mis proyectos. */
-  const via = (
-    tabla: "Stage" | "Evidence" | "Invitation" | "Unit" | "ProjectMember",
-    columna: "projectId"
-  ) =>
-    eb.and([
-      eb("AuditLog.entityType", "=", tabla),
-      eb.exists(
-        eb
-          .selectFrom(tabla)
-          .select(sql.lit(1).as("one"))
-          .whereRef(`${tabla}.id`, "=", "AuditLog.entityId")
-          .where(`${tabla}.${columna}`, "in", misProyectos)
-      )
-    ]);
-
-  return eb.or([
-    // El proyecto mismo: el id del evento ES el projectId.
-    eb.and([
-      eb("AuditLog.entityType", "=", "Project"),
-      eb("AuditLog.entityId", "in", misProyectos)
-    ]),
-    via("Stage", "projectId"),
-    via("Evidence", "projectId"),
-    via("Invitation", "projectId"),
-    via("Unit", "projectId"),
-    via("ProjectMember", "projectId"),
-    // El dossier cuelga de la unidad, no del proyecto.
-    eb.and([
-      eb("AuditLog.entityType", "=", "Dossier"),
-      eb.exists(
-        eb
-          .selectFrom("Dossier")
-          .innerJoin("Unit", "Unit.id", "Dossier.unitId")
-          .select(sql.lit(1).as("one"))
-          .whereRef("Dossier.id", "=", "AuditLog.entityId")
-          .where("Unit.projectId", "in", misProyectos)
-      )
-    ]),
-    // Y la atestación de pago cuelga del contrato, que cuelga de la unidad.
-    eb.and([
-      eb("AuditLog.entityType", "=", "PaymentAttestation"),
-      eb.exists(
-        eb
-          .selectFrom("PaymentAttestation")
-          .innerJoin("Contract", "Contract.id", "PaymentAttestation.contractId")
-          .innerJoin("Unit", "Unit.id", "Contract.unitId")
-          .select(sql.lit(1).as("one"))
-          .whereRef("PaymentAttestation.id", "=", "AuditLog.entityId")
-          .where("Unit.projectId", "in", misProyectos)
-      )
-    ])
-  ]);
+  return eb.or(Object.values(AUDIT_ENTITY_SCOPES).map((scope) => scope(eb, misProyectos)));
 }

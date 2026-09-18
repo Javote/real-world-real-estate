@@ -1,6 +1,7 @@
 import { createHash } from "node:crypto";
 import type { AnchorReceipt } from "@plataforma/cardano";
 import {
+  type AuditAction,
   buildStageDatum,
   canTransition,
   merkleRoot,
@@ -366,7 +367,7 @@ export async function transitionStage(input: {
   actorUserId: string;
   /** Nota del certifier al observar. Va al audit log, no al datum. */
   note?: string;
-  auditAction?: string;
+  auditAction?: AuditAction;
 }): Promise<TransitionResult> {
   const existing = await db
     .selectFrom("Stage")

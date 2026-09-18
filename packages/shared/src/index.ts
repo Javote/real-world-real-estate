@@ -4,6 +4,7 @@
 // sola vez. La API valida con estos schemas; el front importa los tipos
 // inferidos. Si la forma de una respuesta cambia de un lado y no cambia acá, el
 // typecheck del otro lado falla — que es el punto.
+export * from "./audit";
 export * from "./auth";
 export * from "./capital";
 export * from "./certifier";

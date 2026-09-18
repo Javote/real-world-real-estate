@@ -175,7 +175,7 @@ dos. La parte urgente se cierra sin tocar el script; la de fondo es decisión de
 | [`SPEC-204`](SPEC-204-openapi-url-y-descripcion.md) | El OpenAPI publicado apunta a una URL que no existe | B-04 | **cerrada 2026-09-18** |
 | [`SPEC-205`](SPEC-205-dos-invariantes-que-hoy-sostiene-el-cliente.md) | Dos invariantes que hoy sostiene la buena fe del cliente | B-05·07 | abierta |
 | [`SPEC-206`](SPEC-206-un-solo-anclaje-por-commitment.md) | El anclaje por commitment está escrito dos veces, y ya divergieron | B-08 | **cerrada 2026-09-18** 🟡 |
-| [`SPEC-207`](SPEC-207-audit-log-tipado.md) | El audit log se escribe con strings sueltos y se filtra con un mapeo cerrado | B-09 | abierta |
+| [`SPEC-207`](SPEC-207-audit-log-tipado.md) | El audit log se escribe con strings sueltos y se filtra con un mapeo cerrado | B-09 | **cerrada 2026-09-18** |
 | [`SPEC-208`](SPEC-208-tipos-que-dicen-la-verdad.md) | Que los tipos de `apps/api` digan la verdad | B-12·10 | abierta |
 | [`SPEC-209`](SPEC-209-dos-queries-que-la-base-puede-hacer.md) | Dos cosas que hoy hace el proceso y puede hacer la base | B-13·14 | abierta |
 | [`SPEC-210`](SPEC-210-borrar-evidencia-anclada.md) | Borrar evidencia anclada corta el vínculo y devuelve el error equivocado | B-15 | abierta |

@@ -42,7 +42,7 @@ const CATEGORIAS: readonly AuditCategory[] = [
 /**
  * De la acción del `AuditLog` a la categoría de la pill.
  *
- * El backend guarda la acción en crudo (`CREATE_EVIDENCE`, `CERTIFY_STAGE`) y
+ * El backend guarda la acción en crudo (`UPLOAD_STAGE_EVIDENCE`, `CERTIFY_STAGE`) y
  * el mapeo a las cinco categorías del entregable es de presentación. Vive acá y
  * no en la API porque es vocabulario de M2-D3, no del dominio.
  */
