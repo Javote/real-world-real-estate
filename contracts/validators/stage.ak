@@ -895,6 +895,23 @@ test mint_rejects_non_inline_datum() fail {
   )
 }
 
+// SPEC-302: "no hay burn" (D-008) se sostenía solo por consecuencia del
+// patrón `[Pair(asset_name, 1)]`, que no matchea una cantidad negativa —
+// nadie lo había escrito como regla. Un `-1` del propio asset name es lo más
+// cerca que se puede pedir de un burn en el mismo purpose que crea el hilo.
+test mint_rejects_a_burn() fail {
+  let initial = datum_at(Pending, True)
+  stage.mint(
+    admin_key,
+    Init,
+    script_hash,
+    mint_tx(
+      assets.from_asset(script_hash, stage_ref, -1),
+      [script_output_with(InlineDatum(initial), locked_value())],
+    ),
+  )
+}
+
 // ── Tests: el else genérico ──────────────────────────────────────────────
 //
 // `else(_) { fail }` es lo único que decide qué pasa con un purpose que no
