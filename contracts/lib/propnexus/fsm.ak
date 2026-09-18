@@ -30,6 +30,7 @@
 //// regla 2 de `CLAUDE.md`).
 
 use aiken/cbor
+use aiken/fuzz
 use aiken/primitive/bytearray
 
 /// Estados del stage. `Completed`, no `Certified`: la plataforma no certifica
@@ -380,6 +381,156 @@ test t_evolution_rejects_leaving_terminal() {
     }
   let new = StageDatum { ..old, state: Observed }
   !valid_datum_evolution(old, new, Observed, None)
+}
+
+// ── SPEC-306: dos propiedades sobre `valid_datum_evolution` ──────────────
+//
+// Los 9 tests de arriba son sobre valores fijos, como el resto del archivo.
+// `valid_datum_evolution` es el único lugar con espacio de entrada ancho de
+// verdad (estado × estado × `Option<Completion>` × datum arbitrario) — en el
+// resto del archivo un property test no agregaría nada, porque la tabla de
+// transiciones ya está probada exhaustivamente (los 16 pares de 4×4).
+//
+// Las propiedades no reemplazan los tests puntuales: son la red que agarra
+// una regresión que ningún valor fijo ejercita.
+
+/// Genera un `ByteArray` de largo variado a propósito, incluidos 0 y 32
+/// (`commitment_length`) — si el generador solo produjera datums bien
+/// formados, la propiedad no probaría nada.
+fn any_ref() -> Fuzzer<ByteArray> {
+  fuzz.either(
+    fuzz.constant(""),
+    fuzz.either(fuzz.constant(root), fuzz.bytearray()),
+  )
+}
+
+fn any_state() -> Fuzzer<StageState> {
+  fuzz.either(
+    fuzz.constant(Pending),
+    fuzz.either(
+      fuzz.constant(InProgress),
+      fuzz.either(fuzz.constant(Observed), fuzz.constant(Completed)),
+    ),
+  )
+}
+
+fn any_non_completed_state() -> Fuzzer<StageState> {
+  fuzz.either(
+    fuzz.constant(Pending),
+    fuzz.either(fuzz.constant(InProgress), fuzz.constant(Observed)),
+  )
+}
+
+fn any_datum() -> Fuzzer<StageDatum> {
+  let project_ref <- fuzz.and_then(any_ref())
+  let stage_ref <- fuzz.and_then(any_ref())
+  let sequence_order <- fuzz.and_then(fuzz.int())
+  let validation_critical <- fuzz.and_then(fuzz.bool())
+  let state <- fuzz.and_then(any_state())
+  let evidence_root <- fuzz.and_then(any_ref())
+  fuzz.map(
+    fuzz.int(),
+    fn(completed_at) {
+      StageDatum {
+        project_ref,
+        stage_ref,
+        sequence_order,
+        validation_critical,
+        state,
+        evidence_root,
+        completed_at,
+      }
+    },
+  )
+}
+
+fn any_completion() -> Fuzzer<Option<Completion>> {
+  let completion_fuzzer = {
+    let evidence_root <- fuzz.and_then(any_ref())
+    fuzz.map(fuzz.int(), fn(now) { Completion { evidence_root, now } })
+  }
+  fuzz.option(completion_fuzzer)
+}
+
+/// `old` arbitrario; `new` conserva la identidad (única forma legal) y su
+/// estado pasa a `to`, que se restringe a los tres no-terminales — es
+/// justamente el caso que la propiedad quiere ejercitar. `evidence_root` y
+/// `completed_at` de `new` a veces se conservan y a veces no (moneda al
+/// aire), para que la rama interesante de la propiedad —la que exige que se
+/// hayan conservado— se dispare con frecuencia y no solo por casualidad.
+fn prop_preserves_evidence_fixture() -> Fuzzer<
+  (StageDatum, StageState, ByteArray, Int),
+> {
+  let old <- fuzz.and_then(any_datum())
+  let to <- fuzz.and_then(any_non_completed_state())
+  let keep_root <- fuzz.and_then(fuzz.bool())
+  let random_root <- fuzz.and_then(any_ref())
+  let keep_completed_at <- fuzz.and_then(fuzz.bool())
+  fuzz.map(
+    fuzz.int(),
+    fn(random_completed_at) {
+      let new_evidence_root =
+        if keep_root {
+          old.evidence_root
+        } else {
+          random_root
+        }
+      let new_completed_at =
+        if keep_completed_at {
+          old.completed_at
+        } else {
+          random_completed_at
+        }
+      (old, to, new_evidence_root, new_completed_at)
+    },
+  )
+}
+
+/// **Propiedad 1**: si la transición no va a `Completed`, `evidence_root` y
+/// `completed_at` no cambian — para cualquier datum de entrada. Es la
+/// invariante que sostiene que la evidencia no se reescribe por el costado;
+/// hoy la cubren dos tests puntuales de arriba, sobre un datum cada uno.
+test prop_non_completing_evolution_preserves_evidence(
+  (old, to, new_evidence_root, new_completed_at) via prop_preserves_evidence_fixture(),
+) {
+  let new =
+    StageDatum {
+      ..old,
+      state: to,
+      evidence_root: new_evidence_root,
+      completed_at: new_completed_at,
+    }
+  if valid_datum_evolution(old, new, to, None) {
+    and {
+      new_evidence_root == old.evidence_root,
+      new_completed_at == old.completed_at,
+    }
+  } else {
+    True
+  }
+}
+
+fn prop_respects_transition_table_fixture() -> Fuzzer<
+  (StageDatum, StageDatum, StageState, Option<Completion>),
+> {
+  let old <- fuzz.and_then(any_datum())
+  let new <- fuzz.and_then(any_datum())
+  let to <- fuzz.and_then(any_state())
+  fuzz.map(any_completion(), fn(completion) { (old, new, to, completion) })
+}
+
+/// **Propiedad 2**: `valid_datum_evolution` nunca acepta una transición que
+/// `valid_transition` rechaza — la tabla no se puede eludir por la puerta del
+/// datum. Completamente arbitraria de los cuatro lados a propósito: es la
+/// barata, la que se agrega "si la primera resulta barata".
+test prop_evolution_never_bypasses_the_transition_table(
+  (old, new, to, completion) via prop_respects_transition_table_fixture(),
+) {
+  if valid_datum_evolution(old, new, to, completion) {
+    valid_transition(old.state, to)
+  } else {
+    True
+  }
 }
 
 // ── Tests: reglas del nacimiento del hilo ────────────────────────────────
