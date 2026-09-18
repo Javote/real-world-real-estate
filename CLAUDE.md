@@ -229,7 +229,7 @@ validador que afirme algo más, está mal (D-026).
 | # | Qué | Estado |
 |---|---|---|
 | 0 | ~~Prueba end-to-end de volumen, en preprod, antes de mainnet~~ | **Cerrada el 2026-09-10** — 30/30 etapas `Completed` en 3 proyectos nuevos, 180/180 eventos on-chain `Confirmed`, las 4 aristas de la FSM ejercitadas por click real en el navegador. Detalle completo, el hallazgo real que dejó (dos etapas con anclaje perdido, causa raíz confirmada) y las 3 capas de autocura que salieron de ahí: `specs/REPORTE-2026-09-10-prueba-de-volumen.md`. Alimentó los criterios 8 y 15 del SOM; el 9 (reserva→escrow) se cerró aparte el 2026-09-11, es un flujo distinto — ver `specs/ESTADO-2026-09-10-catalyst-milestone-3.md` |
-| 1 | **Mainnet** — runbook, habilitar la red, custodia de la clave. **Fuera de alcance de este milestone** (decisión del dueño, 2026-09-09 — ver §El plan de entrega) | D-013 la hace **imposible por configuración**: es código, no solo procedimiento. 🔴 |
+| 1 | **Mainnet** — runbook, habilitar la red, custodia de la clave. **Fuera de alcance de este milestone** (decisión del dueño, 2026-09-09 — ver §El plan de entrega) | D-013 la hace **imposible por configuración**: es código, no solo procedimiento. 🔴 **Y la clave del `admin` es irreemplazable por construcción** (D-093, `contracts/CLAUDE.md`): es un parámetro del script, así que la custodia no es una tarea de operaciones — es un requisito de diseño que hay que resolver antes del primer mint en mainnet, no después. |
 
 **El diseño ya está decidido. El trabajo es transcribirlo, no inventarlo.**
 
