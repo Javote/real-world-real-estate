@@ -21,7 +21,7 @@ raíz) — no lo copies acá, se desactualiza. Lo que sí es estable y no rota c
 | `styles.css` | **Los tokens de M2-D3** en `@theme` — colores normativos, escala tipográfica, espaciado de 4px, radios, elevación, tamaños de ícono |
 | `lib/cn.ts` · `components.json` | Base de shadcn/ui. Los primitivos se agregan **de a uno**, cuando su componente de dominio los necesita |
 | `components/domain/` | Los componentes transversales de M2-D3 + los patrones de prueba de M2-D4 (P1–P5, P7, P9, P10 como componentes reutilizables; P6 audit log y P8 dossier llegan con su propia vertical, son superficies enteras) |
-| `components/ui/dialog.tsx` | Primitivo de Radix vía shadcn. Editado en un punto: su botón de cierre usa el `SecondaryButton` de M2-D3, no el de shadcn — un solo sistema de botones |
+| `components/ui/dialog.tsx` | Primitivo de Radix vía shadcn. Adaptado del todo (`SPEC-102`): su botón de cierre usa el `SecondaryButton` de M2-D3 y traduce su texto (`common.close`), y toda la escala es la de M2-D3 (fondo, radio, sombra, espaciado) — ningún consumidor pasa `bg-card` a mano |
 | `i18n/format.ts` | `Intl` con el locale activo: moneda, fecha, relativos (regla 14) |
 
 Antes de asumir que una superficie sigue siendo un stub, mirá `routes/` — puede que ya se haya

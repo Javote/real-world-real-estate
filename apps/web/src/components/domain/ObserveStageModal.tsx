@@ -58,7 +58,7 @@ export function ObserveStageModal({
 
   return (
     <Dialog open={open} onOpenChange={(abierto) => !abierto && cerrar()}>
-      <DialogContent className="bg-card">
+      <DialogContent>
         <DialogHeader>
           <DialogTitle className="text-h2 font-bold text-text-primary">{labels.title}</DialogTitle>
           <DialogDescription className="text-body text-text-secondary">

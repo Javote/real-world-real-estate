@@ -1,6 +1,8 @@
-import { render, screen } from '@testing-library/react'
+import { render as renderRTL, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
+import type { ReactElement } from 'react'
 import { describe, expect, it, vi } from 'vitest'
+import { LocaleProvider } from '#/i18n/useTranslation'
 import { AnchoringSuccessModal } from './AnchoringSuccessModal'
 import { MerkleRootProof } from './MerkleRootProof'
 import { ReleaseProofList } from './ReleaseProofList'
@@ -11,6 +13,13 @@ import { VerifiedWatermark } from './VerifiedWatermark'
 // M2-D4 §6.2 · "Patterns never claim more than they can prove". Estos tests son
 // esa regla, ejecutada: cada patrón que puede mostrar una señal de prueba tiene
 // un caso que verifica que NO la muestra cuando no hay anclaje.
+
+// `ui/dialog.tsx` traduce su propio botón de cierre (SPEC-102): TxidModal y
+// AnchoringSuccessModal (P3/P4) lo usan y necesitan el contexto de idioma
+// para montar, aunque este archivo no pruebe i18n.
+function render(ui: ReactElement) {
+  return renderRTL(ui, { wrapper: LocaleProvider })
+}
 
 const TXID = 'b'.repeat(64)
 const ROOT = 'a'.repeat(64)

@@ -321,7 +321,7 @@ function InvestorBuy() {
           if (!abierto) setView(undefined)
         }}
       >
-        <DialogContent data-testid="INV-BUY-FILTER-001" className="bg-card">
+        <DialogContent data-testid="INV-BUY-FILTER-001">
           <div className="flex items-center justify-between">
             <DialogTitle className="text-h2 font-bold text-text-primary">
               {t('buy.filterTitle')}

@@ -1,6 +1,8 @@
-import { render, screen } from '@testing-library/react'
+import { render as renderRTL, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
+import type { ReactElement } from 'react'
 import { describe, expect, it, vi } from 'vitest'
+import { LocaleProvider } from '#/i18n/useTranslation'
 import { BuildingSchematic } from './BuildingSchematic'
 import { DocumentViewerModal } from './DocumentViewerModal'
 import { ImageGalleryModal } from './ImageGalleryModal'
@@ -9,6 +11,14 @@ import { ObserveStageModal } from './ObserveStageModal'
 import { ShareDossierModal } from './ShareDossierModal'
 
 // M2-D3 §Modals & Overlays. Lo que fijan: las reglas de uso del entregable.
+
+// `ui/dialog.tsx` traduce su propio botón de cierre (SPEC-102), así que
+// cualquier modal de este archivo necesita el contexto de idioma para
+// montar — no porque estos tests prueben i18n, sino porque el primitivo que
+// todos comparten ahora lo usa.
+function render(ui: ReactElement) {
+  return renderRTL(ui, { wrapper: LocaleProvider })
+}
 
 const TXID = '3f8a9b2c1d0e4f5a6b7c8d9e0f1a2b3c4d5e6f708192a3b4c5d6e7f8091a2b3c'
 

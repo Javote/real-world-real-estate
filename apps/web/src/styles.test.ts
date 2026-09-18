@@ -202,12 +202,6 @@ function archivosTsx(dir: string): string[] {
 
 const SRC = path.join(import.meta.dirname)
 
-/** Deuda conocida y nombrada, no un archivo silenciado entero (SPEC-101 §Alcance).
- * `ui/dialog.tsx` es el primitivo de shadcn sin adaptar todavía — se adapta
- * en `SPEC-102`. Si esta lista queda vacía después de esa spec, hay que
- * borrarla: significa que ya no hay deuda que nombrar. */
-const DEUDA_CONOCIDA = new Set(['components/ui/dialog.tsx::rounded-xs'])
-
 type Hallazgo = { archivo: string; clase: string; token: string }
 
 /** Cada clase encontrada, con el nombre de la variable CSS que debería
@@ -238,14 +232,7 @@ describe('ninguna clase fantasma en src/**/*.tsx (SPEC-101)', () => {
     expect(hallazgos.length).toBeGreaterThan(100)
   })
 
-  it.each(hallazgos)('$archivo: $clase → $token', ({ archivo, clase, token }) => {
-    const clave = `${archivo}::${clase}`
-    if (DEUDA_CONOCIDA.has(clave)) {
-      // Documentada arriba, con su número de spec. No se silencia el
-      // archivo entero — si aparece una clase fantasma NUEVA en el mismo
-      // archivo, este `it` la va a atrapar igual.
-      return
-    }
+  it.each(hallazgos)('$archivo: $clase → $token', ({ token }) => {
     expect(styles).toContain(`${token}:`)
   })
 })
