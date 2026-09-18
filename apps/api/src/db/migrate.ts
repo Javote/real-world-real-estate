@@ -41,8 +41,17 @@ export const MIGRATIONS_DIR = (() => {
  * Idempotente: re-ejecutarla no duplica efectos (regla 8), que es lo que
  * permite ponerla en el `startCommand` de Render — en free tier no hay shell
  * ni one-off jobs para correrla aparte (D-012, D-040).
+ *
+ * `migrationsDir` es opcional y por default es {@link MIGRATIONS_DIR} — el
+ * único motivo por el que existe el parámetro es que SPEC-203 necesita
+ * probar "un statement falla a mitad de archivo" con un archivo temporal,
+ * sin escribirlo dentro de `migrations/` (que comparten todos los tests que
+ * arrancan una base nueva en paralelo).
  */
-export async function applyPendingMigrations(client: Client): Promise<string[]> {
+export async function applyPendingMigrations(
+  client: Client,
+  migrationsDir: string = MIGRATIONS_DIR
+): Promise<string[]> {
   await client.execute(
     "CREATE TABLE IF NOT EXISTS _migrations (name text PRIMARY KEY NOT NULL, appliedAt integer NOT NULL)"
   );
@@ -53,27 +62,39 @@ export async function applyPendingMigrations(client: Client): Promise<string[]> 
 
   const aplicadas: string[] = [];
 
-  const files = readdirSync(MIGRATIONS_DIR)
+  const files = readdirSync(migrationsDir)
     .filter((file) => file.endsWith(".sql"))
     .sort();
 
   for (const file of files) {
     if (applied.has(file)) continue;
 
-    const sql = readFileSync(path.join(MIGRATIONS_DIR, file), "utf-8");
+    const sql = readFileSync(path.join(migrationsDir, file), "utf-8");
     const statements = sql
       .split("--> statement-breakpoint")
       .map((statement) => statement.trim())
       .filter((statement) => statement.length > 0);
 
-    for (const statement of statements) {
-      await client.execute(statement);
-    }
-
-    await client.execute({
-      sql: "INSERT INTO _migrations (name, appliedAt) VALUES (?, ?)",
-      args: [file, Date.now()]
-    });
+    // SPEC-203 (B-03): un solo `client.batch(..., "write")` en vez del `for`
+    // de antes. Antes, un archivo de 43 statements que fallaba en el número
+    // 20 dejaba los 19 anteriores aplicados y el archivo SIN marcar en
+    // `_migrations` — el próximo arranque volvía a correr `CREATE TABLE
+    // User` y moría con "table already exists", **para siempre, sin
+    // intervención manual** (el free tier de Render no da shell, D-040). SQLite
+    // soporta DDL transaccional y `batch` lo corre así: o entran los N
+    // statements del archivo Y la fila de `_migrations`, o no entra ninguno.
+    // La fila va en el MISMO batch — no después — porque separarla reabriría
+    // la misma ventana que este cambio cierra.
+    await client.batch(
+      [
+        ...statements,
+        {
+          sql: "INSERT INTO _migrations (name, appliedAt) VALUES (?, ?)",
+          args: [file, Date.now()]
+        }
+      ],
+      "write"
+    );
 
     aplicadas.push(file);
   }

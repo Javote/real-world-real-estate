@@ -171,7 +171,7 @@ dos. La parte urgente se cierra sin tocar el script; la de fondo es decisión de
 | [`SPEC-110`](SPEC-110-estado-de-carga.md) | 30 de 42 rutas muestran el empty-state mientras cargan | F-18 | abierta |
 | [`SPEC-201`](SPEC-201-aceptar-invitacion-atomico.md) | Aceptar una invitación deja de poder sacarle la unidad a quien ya la compró | B-01 | **cerrada 2026-09-18** |
 | [`SPEC-202`](SPEC-202-un-dossier-por-unidad.md) | Una unidad, un dossier: el índice único que falta | B-02 | **cerrada 2026-09-18** 🟡 |
-| [`SPEC-203`](SPEC-203-migraciones-atomicas.md) | Una migración que se corta a la mitad tiene que poder volver | B-03 | abierta 🟡 |
+| [`SPEC-203`](SPEC-203-migraciones-atomicas.md) | Una migración que se corta a la mitad tiene que poder volver | B-03 | **cerrada 2026-09-18** 🟡 |
 | [`SPEC-204`](SPEC-204-openapi-url-y-descripcion.md) | El OpenAPI publicado apunta a una URL que no existe | B-04 | abierta |
 | [`SPEC-205`](SPEC-205-dos-invariantes-que-hoy-sostiene-el-cliente.md) | Dos invariantes que hoy sostiene la buena fe del cliente | B-05·07 | abierta |
 | [`SPEC-206`](SPEC-206-un-solo-anclaje-por-commitment.md) | El anclaje por commitment está escrito dos veces, y ya divergieron | B-08 | abierta 🟡 |
