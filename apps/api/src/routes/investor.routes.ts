@@ -51,6 +51,25 @@ import { avancePorProyecto } from "./_shared";
 
 const router = Router();
 
+/**
+ * Rechazo de `accept` con causa (SPEC-201, invariante 4): el 409 que llega al
+ * cliente no puede ser el `RESOURCE_ALREADY_EXISTS` genérico que hoy tira el
+ * índice único de `Contract.unitId` — tiene que decir qué pasó. Se tira
+ * **adentro** de `db.transaction()` a propósito: lanzar es lo único que
+ * revierte las escrituras que ya corrieron en esa misma transacción (Kysely
+ * comitea en un `return` normal, no solo en el camino feliz).
+ */
+class InvitationAcceptError extends Error {
+  constructor(
+    readonly status: number,
+    readonly code: string,
+    message: string
+  ) {
+    super(message);
+    this.name = "InvitationAcceptError";
+  }
+}
+
 router.param("id", paramValidator(cuidParamSchema));
 router.param("projectId", paramValidator(cuidParamSchema));
 router.param("unitId", paramValidator(cuidParamSchema));
@@ -442,101 +461,144 @@ router.post(
   "/invitations/:id/accept",
   authorize({ roles: ["admin", "buyer"], acceso: { dueño: { via: "Invitation", param: "id" } } }),
   async (req: Request<{ id: string }>, res) => {
-    const invitacion = await db
-      .selectFrom("Invitation")
-      .selectAll()
-      .where("id", "=", req.params.id)
-      .executeTakeFirst();
-
-    if (!invitacion) return res.status(404).json({ message: "Invitation not found" });
-    if (invitacion.status !== "pending") {
-      return res.status(409).json({
-        message: `Invitation already ${invitacion.status}`,
-        code: "INVITATION_NOT_PENDING"
-      });
-    }
-
     const ahora = new Date();
 
-    await db
-      .updateTable("Invitation")
-      .set({ status: "accepted", respondedAt: ahora })
-      .where("id", "=", invitacion.id)
-      .execute();
+    // Las 4 escrituras nacen o mueren juntas (SPEC-201): sin esto, un
+    // `INSERT Contract` que choca contra `Contract_unitId_key` dejaba la
+    // unidad ya transferida y la membresía ya otorgada, sin contrato — y a
+    // quien ya la había comprado se la había sacado en silencio.
+    try {
+      const { contrato, invitacion } = await db.transaction().execute(async (trx) => {
+        const invitacion = await trx
+          .selectFrom("Invitation")
+          .selectAll()
+          .where("id", "=", req.params.id)
+          .executeTakeFirst();
 
-    await db
-      .updateTable("Unit")
-      .set({ status: "sold", investorId: req.user!.id, updatedAt: ahora })
-      .where("id", "=", invitacion.unitId)
-      .execute();
+        if (!invitacion) {
+          throw new InvitationAcceptError(404, "INVITATION_NOT_FOUND", "Invitation not found");
+        }
 
-    // **La membresía, sin la cual aceptar no sirve de nada.** M2-D1 §4 le da al
-    // investor lectura sobre los stages, la evidencia y el contrato del proyecto
-    // de su unidad, y el paso 6 del flujo de onboarding dice que después de
-    // aceptar ve su unidad "with progress timeline visible". En este código esa
-    // lectura se resuelve con membresía por proyecto —`ANY_MEMBERSHIP` incluye
-    // `buyer`— y hasta el 2026-09-04 este handler no la creaba: el investor
-    // aceptaba y toda ruta con `requireProjectAccess` le contestaba 403,
-    // **incluidas las del Merkle proof de su propia evidencia**
-    // (`INV-MERKLE-PROOF-002`).
-    //
-    // No lo veía ningún test porque el seed planta la membresía a mano: los
-    // fixtures describían el mundo que el flujo real nunca producía.
-    //
-    // `doNothing` por la regla 8: el índice único es
-    // (userId, projectId, membershipRole), así que reintentar no duplica.
-    await db
-      .insertInto("ProjectMember")
-      .values({
-        id: createId(),
-        userId: req.user!.id,
+        // Guarda atómica (punto 2): el `WHERE status = 'pending'` hace que solo
+        // una de dos requests concurrentes sobre la MISMA invitación gane esta
+        // fila — la otra ve `numUpdatedRows = 0` sin haber tenido que leer el
+        // estado antes, que es exactamente la ventana que dejaba pasar el
+        // `if (invitacion.status !== "pending")` de arriba (invariante 3).
+        const actualizada = await trx
+          .updateTable("Invitation")
+          .set({ status: "accepted", respondedAt: ahora })
+          .where("id", "=", invitacion.id)
+          .where("status", "=", "pending")
+          .executeTakeFirst();
+
+        if (Number(actualizada.numUpdatedRows) === 0) {
+          throw new InvitationAcceptError(
+            409,
+            "INVITATION_NOT_PENDING",
+            `Invitation already ${invitacion.status}`
+          );
+        }
+
+        // Invariante 1: una unidad `sold` no admite invitaciones nuevas. La
+        // emisión ya lo impide desde ahora (developer-comercial.routes.ts), pero
+        // una invitación `pending` emitida ANTES de ese fix puede seguir
+        // existiendo sobre una unidad que otra invitación ya vendió — este
+        // chequeo es lo que hace que ese accept falle sin tocar nada más,
+        // en vez de chocar recién en el `INSERT Contract` con un
+        // `RESOURCE_ALREADY_EXISTS` que no dice qué pasó (invariante 4).
+        const unidad = await trx
+          .selectFrom("Unit")
+          .select(["status"])
+          .where("id", "=", invitacion.unitId)
+          .executeTakeFirstOrThrow();
+
+        if (unidad.status === "sold") {
+          throw new InvitationAcceptError(409, "UNIT_NOT_AVAILABLE", "Unit is no longer available");
+        }
+
+        await trx
+          .updateTable("Unit")
+          .set({ status: "sold", investorId: req.user!.id, updatedAt: ahora })
+          .where("id", "=", invitacion.unitId)
+          .execute();
+
+        // **La membresía, sin la cual aceptar no sirve de nada.** M2-D1 §4 le da al
+        // investor lectura sobre los stages, la evidencia y el contrato del proyecto
+        // de su unidad, y el paso 6 del flujo de onboarding dice que después de
+        // aceptar ve su unidad "with progress timeline visible". En este código esa
+        // lectura se resuelve con membresía por proyecto —`ANY_MEMBERSHIP` incluye
+        // `buyer`— y hasta el 2026-09-04 este handler no la creaba: el investor
+        // aceptaba y toda ruta con `requireProjectAccess` le contestaba 403,
+        // **incluidas las del Merkle proof de su propia evidencia**
+        // (`INV-MERKLE-PROOF-002`).
+        //
+        // `doNothing` por la regla 8: el índice único es
+        // (userId, projectId, membershipRole), así que reintentar no duplica.
+        await trx
+          .insertInto("ProjectMember")
+          .values({
+            id: createId(),
+            userId: req.user!.id,
+            projectId: invitacion.projectId,
+            membershipRole: "buyer",
+            createdAt: ahora
+          })
+          .onConflict((oc) => oc.doNothing())
+          .execute();
+
+        // El contrato nace de la aceptación: es el registro del acuerdo, sin
+        // custodiar un centavo (D-021).
+        const contrato = await trx
+          .insertInto("Contract")
+          .values({
+            id: createId(),
+            unitId: invitacion.unitId,
+            investorId: req.user!.id,
+            totalMinorUnits: invitacion.amountMinorUnits,
+            currency: invitacion.currency,
+            signedAt: ahora,
+            createdAt: ahora
+          })
+          .returningAll()
+          .executeTakeFirstOrThrow();
+
+        return { contrato, invitacion };
+      });
+
+      // El anclaje es una transacción de **Cardano**: no puede ser atómico con
+      // la base, y D-059 dice que el registro nunca depende de él. Se ancla
+      // después del commit, como antes — si falla, la aceptación queda firme y
+      // el evento queda `Pending` para reconciliar.
+      const anchor = await anchorCommitmentEvent({
         projectId: invitacion.projectId,
-        membershipRole: "buyer",
-        createdAt: ahora
-      })
-      .onConflict((oc) => oc.doNothing())
-      .execute();
+        eventType: "INVITATION_ACCEPTED",
+        commitment: commitmentOf({
+          invitationId: invitacion.id,
+          unitId: invitacion.unitId,
+          acceptedAt: ahora.toISOString()
+        }),
+        reference: invitacion.id
+      });
 
-    // El contrato nace de la aceptación: es el registro del acuerdo, sin
-    // custodiar un centavo (D-021).
-    const contrato = await db
-      .insertInto("Contract")
-      .values({
-        id: createId(),
-        unitId: invitacion.unitId,
-        investorId: req.user!.id,
-        totalMinorUnits: invitacion.amountMinorUnits,
-        currency: invitacion.currency,
-        signedAt: ahora,
-        createdAt: ahora
-      })
-      .returningAll()
-      .executeTakeFirstOrThrow();
+      await writeAuditLog({
+        actorUserId: req.user!.id,
+        action: "ACCEPT_INVITATION",
+        entityType: "Invitation",
+        entityId: invitacion.id,
+        // La membresía queda en el mismo asiento: es un otorgamiento de permiso
+        // y tiene que poder leerse en el audit log, no deducirse.
+        metadata: { txid: anchor.txid, membershipRole: "buyer" }
+      });
 
-    // Se ancla el commitment del evento, no sus datos: ni el email ni el monto
-    // van a la cadena (regla 2).
-    const anchor = await anchorCommitmentEvent({
-      projectId: invitacion.projectId,
-      eventType: "INVITATION_ACCEPTED",
-      commitment: commitmentOf({
-        invitationId: invitacion.id,
-        unitId: invitacion.unitId,
-        acceptedAt: ahora.toISOString()
-      }),
-      reference: invitacion.id
-    });
-
-    await writeAuditLog({
-      actorUserId: req.user!.id,
-      action: "ACCEPT_INVITATION",
-      entityType: "Invitation",
-      entityId: invitacion.id,
-      // La membresía queda en el mismo asiento: es un otorgamiento de permiso y
-      // tiene que poder leerse en el audit log, no deducirse.
-      metadata: { txid: anchor.txid, membershipRole: "buyer" }
-    });
-
-    return res.status(201).json(acceptInvitationResultSchema.parse({ contract: contrato, anchor }));
+      return res
+        .status(201)
+        .json(acceptInvitationResultSchema.parse({ contract: contrato, anchor }));
+    } catch (err) {
+      if (err instanceof InvitationAcceptError) {
+        return res.status(err.status).json({ message: err.message, code: err.code });
+      }
+      throw err;
+    }
   }
 );
 

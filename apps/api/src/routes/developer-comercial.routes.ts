@@ -195,6 +195,18 @@ router.post(
 
     if (!unidad) return res.status(400).json({ message: "Unit does not belong to project" });
 
+    // SPEC-201, invariante 1: una unidad `sold` no admite invitaciones nuevas.
+    // Antes de este chequeo se podía emitir una segunda invitación `pending`
+    // sobre una unidad que otra invitación ya había vendido, y esa segunda
+    // invitación quedaba viva esperando un `accept` que terminaba sacándole la
+    // unidad a quien ya la había comprado.
+    if (unidad.status !== "available") {
+      return res.status(409).json({
+        message: `Unit is ${unidad.status}, not available`,
+        code: "UNIT_NOT_AVAILABLE"
+      });
+    }
+
     const ahora = new Date();
     const invitacion = await db
       .insertInto("Invitation")
