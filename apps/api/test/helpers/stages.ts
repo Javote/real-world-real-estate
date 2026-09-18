@@ -2,7 +2,6 @@ import { INITIAL_STAGE_STATE } from "@plataforma/shared";
 import { createId } from "../../src/db/id";
 import { anchorEvent, recordOnChainEvent } from "../../src/domain/stage-transition";
 import { db } from "../../src/lib/db";
-import { writeAuditLog } from "../../src/utils/audit";
 
 // 2026-09-08: reemplaza al `POST /api/v1/projects/:id/stages` que la suite
 // usaba para crear una etapa suelta con hilo real — la ruta se borró (era
@@ -46,13 +45,6 @@ export async function crearStageMinteado(input: {
     toState: stage.state
   });
   const anchor = await anchorEvent(evento, stage, null);
-
-  await writeAuditLog({
-    actorUserId: input.actorUserId,
-    action: "CREATE_STAGE",
-    entityType: "Stage",
-    entityId: stage.id
-  });
 
   return { ...stage, anchor };
 }
