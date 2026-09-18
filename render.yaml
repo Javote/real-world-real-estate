@@ -106,6 +106,12 @@ services:
         value: "1"
       - key: LOGIN_RATE_LIMIT_MAX
         value: "20"
+      # SPEC-211 (B-11): la otra ruta sin sesión (GET /public/dossier/:shareToken)
+      # también corre detrás de un limiter. Más laxo que el del login: acá el
+      # caso legítimo es un escribano reabriendo el link, no un intento de
+      # adivinar una credencial.
+      - key: DOSSIER_RATE_LIMIT_MAX
+        value: "60"
       # Ahora es SOLO staging de Multer: el archivo aterriza acá, `storage.put()`
       # lo sube a R2 y la ruta lo borra en el acto (`storage.driver === "s3"`).
       # Que el filesystem sea efímero dejó de importar — lo que persiste es el

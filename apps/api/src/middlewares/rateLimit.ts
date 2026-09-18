@@ -60,3 +60,37 @@ export function loginRateLimiter(max = loginRateLimitMax(), windowMs = WINDOW_MS
     message: { message: "Too many login attempts" }
   });
 }
+
+const DEFAULT_DOSSIER_MAX = 60;
+
+export function dossierRateLimitMax(env: NodeJS.ProcessEnv = process.env): number {
+  const max = Number.parseInt(env.DOSSIER_RATE_LIMIT_MAX ?? "", 10);
+  return Number.isInteger(max) && max > 0 ? max : DEFAULT_DOSSIER_MAX;
+}
+
+/**
+ * Límite sobre `GET /public/dossier/:shareToken` — SPEC-211 (B-11), la otra
+ * ruta sin sesión del backlog (M2-D5 §2.2, junto a `/auth/login`).
+ *
+ * El token es de 256 bits: enumerar no es el riesgo. El riesgo es que un link
+ * compartido es, por diseño, público — cada hit corre `compileDossier` (cuatro
+ * queries, una escritura si el `masterHash` cambió y, si está firmado, una
+ * consulta a Blockfrost vía `reconciliarParaLectura`) **desde tráfico sin
+ * sesión**. Es un `GET` que escribe, justificado por M2-D5 §3 (compilación
+ * on-demand), pero eso cambia el cálculo de cuánto cuesta una ráfaga.
+ *
+ * Por IP, mismo argumento que el login: limitar por token dejaría que
+ * cualquiera con el link bloquee a los demás que lo tienen. El límite es más
+ * laxo que el de login (`DEFAULT_MAX` 20 en 15 min) porque el caso legítimo acá
+ * es un escribano reabriendo el link varias veces, no un intento de adivinar
+ * una credencial.
+ */
+export function dossierRateLimiter(max = dossierRateLimitMax(), windowMs = WINDOW_MS) {
+  return rateLimit({
+    windowMs,
+    limit: max,
+    standardHeaders: "draft-7",
+    legacyHeaders: false,
+    message: { message: "Too many requests" }
+  });
+}

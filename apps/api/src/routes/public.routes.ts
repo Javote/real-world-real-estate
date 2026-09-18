@@ -2,6 +2,7 @@ import { hex64ParamSchema, publicDossierSchema } from "@plataforma/shared";
 import { type Request, Router } from "express";
 import { compileDossier } from "../domain/dossier";
 import { db } from "../lib/db";
+import { dossierRateLimiter } from "../middlewares/rateLimit";
 import { paramValidator } from "../middlewares/validate-params";
 
 // **Lo único sin sesión de todo el backlog, junto con `POST /auth/login`**
@@ -29,31 +30,35 @@ router.param("shareToken", paramValidator(hex64ParamSchema));
  * investor más allá de su referencia. Un token que no existe es 404 sin más
  * detalle: no hay por qué distinguir "revocado" de "nunca existió".
  */
-router.get("/dossier/:shareToken", async (req: Request<{ shareToken: string }>, res) => {
-  const fila = await db
-    .selectFrom("Dossier")
-    .select(["unitId"])
-    .where("shareToken", "=", req.params.shareToken)
-    .executeTakeFirst();
+router.get(
+  "/dossier/:shareToken",
+  dossierRateLimiter(),
+  async (req: Request<{ shareToken: string }>, res) => {
+    const fila = await db
+      .selectFrom("Dossier")
+      .select(["unitId"])
+      .where("shareToken", "=", req.params.shareToken)
+      .executeTakeFirst();
 
-  if (!fila) return res.status(404).json({ message: "Dossier not found" });
+    if (!fila) return res.status(404).json({ message: "Dossier not found" });
 
-  const dossier = await compileDossier(fila.unitId);
-  if (!dossier) return res.status(404).json({ message: "Dossier not found" });
+    const dossier = await compileDossier(fila.unitId);
+    if (!dossier) return res.status(404).json({ message: "Dossier not found" });
 
-  return res.json(
-    publicDossierSchema.parse({
-      unitReference: dossier.unitReference,
-      projectName: dossier.projectName,
-      masterHash: dossier.masterHash,
-      compiledAt: dossier.compiledAt,
-      status: dossier.status,
-      completeness: dossier.completeness,
-      signatureTxid: dossier.signatureTxid,
-      signedAt: dossier.signedAt,
-      artifacts: dossier.artifacts
-    })
-  );
-});
+    return res.json(
+      publicDossierSchema.parse({
+        unitReference: dossier.unitReference,
+        projectName: dossier.projectName,
+        masterHash: dossier.masterHash,
+        compiledAt: dossier.compiledAt,
+        status: dossier.status,
+        completeness: dossier.completeness,
+        signatureTxid: dossier.signatureTxid,
+        signedAt: dossier.signedAt,
+        artifacts: dossier.artifacts
+      })
+    );
+  }
+);
 
 export default router;

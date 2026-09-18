@@ -179,7 +179,7 @@ mismo— sigue siendo `SPEC-305`, decisión de mainnet.
 | [`SPEC-208`](SPEC-208-tipos-que-dicen-la-verdad.md) | Que los tipos de `apps/api` digan la verdad | B-12·10 | abierta |
 | [`SPEC-209`](SPEC-209-dos-queries-que-la-base-puede-hacer.md) | Dos cosas que hoy hace el proceso y puede hacer la base | B-13·14 | **cerrada 2026-09-18** |
 | [`SPEC-210`](SPEC-210-borrar-evidencia-anclada.md) | Borrar evidencia anclada corta el vínculo y devuelve el error equivocado | B-15 | **cerrada 2026-09-18** |
-| [`SPEC-211`](SPEC-211-limite-de-tasa-en-la-ruta-publica.md) | La otra ruta sin sesión no tiene límite de tasa | B-11 | abierta 🟡 |
+| [`SPEC-211`](SPEC-211-limite-de-tasa-en-la-ruta-publica.md) | La otra ruta sin sesión no tiene límite de tasa | B-11 | **cerrada 2026-09-18** 🟡 |
 | [`SPEC-212`](SPEC-212-contrato-en-la-firma-de-la-ruta.md) | `contrato()`: el schema en la firma de la ruta, no en una tabla | B-06 | abierta 🟡 |
 | [`SPEC-213`](SPEC-213-un-bundle-por-stage.md) | `EvidenceBundle` duplicado por stage: medir antes de decidir | anexo | abierta 🟡 |
 | [`SPEC-214`](SPEC-214-telemetria-con-blocktimestamp.md) | La telemetría del criterio 9 mide lo que tardó alguien en volver a leer | anexo | abierta |
