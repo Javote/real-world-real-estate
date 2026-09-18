@@ -88,7 +88,7 @@ export function InvitationAcceptModal({
       <DialogContent className="bg-card" data-testid="INV-INVITE-VIEW-001">
         <DialogHeader>
           <span className="flex size-10 items-center justify-center rounded-full bg-verified-light">
-            <BadgeCheck className="size-icon-md text-verified" aria-hidden="true" />
+            <BadgeCheck className="size-icon-stat text-verified" aria-hidden="true" />
           </span>
           <DialogTitle className="text-h2 font-bold text-text-primary">{labels.title}</DialogTitle>
           <DialogDescription className="text-body text-text-secondary">
@@ -120,7 +120,7 @@ export function InvitationAcceptModal({
 
         {/* No opcional — ver el comentario de arriba. */}
         <p className="flex items-center gap-s2 text-body-sm text-primary">
-          <Check className="size-icon-sm shrink-0" aria-hidden="true" />
+          <Check className="size-icon-inline shrink-0" aria-hidden="true" />
           {labels.anchoredNotice}
         </p>
 

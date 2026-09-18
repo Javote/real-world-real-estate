@@ -100,7 +100,7 @@ function InvestorDossier() {
       <section className="flex flex-col gap-s4" data-testid="INV-DOSSIER-VIEW-001">
         <div className="flex gap-s3">
           <SecondaryButton onClick={() => compartir.mutate()} disabled={compartir.isPending}>
-            <Share2 className="size-icon-sm" aria-hidden="true" />
+            <Share2 className="size-icon-inline" aria-hidden="true" />
             {t('investor.dossier.share')}
           </SecondaryButton>
           <PrimaryButton
@@ -108,7 +108,7 @@ function InvestorDossier() {
             onClick={() => exportar.mutate()}
             disabled={exportar.isPending}
           >
-            <Download className="size-icon-sm" aria-hidden="true" />
+            <Download className="size-icon-inline" aria-hidden="true" />
             {exportar.isPending ? t('investor.dossier.exporting') : t('investor.dossier.export')}
           </PrimaryButton>
         </div>

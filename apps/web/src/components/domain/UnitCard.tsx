@@ -58,7 +58,7 @@ export function UnitCard(props: UnitCardProps) {
         )}
       >
         <span className="flex size-10 shrink-0 items-center justify-center rounded-md bg-primary-light">
-          <Home className="size-icon-sm text-primary" aria-hidden="true" />
+          <Home className="size-icon-inline text-primary" aria-hidden="true" />
         </span>
 
         <span className="flex min-w-0 flex-1 flex-col">

@@ -70,7 +70,7 @@ export function NotificationCard({
           read ? 'bg-surface-alt text-text-muted' : 'bg-primary text-white'
         )}
       >
-        <Icon className="size-icon-sm" aria-hidden="true" />
+        <Icon className="size-icon-inline" aria-hidden="true" />
       </span>
 
       <span className="flex min-w-0 flex-1 flex-col gap-s1">
@@ -85,7 +85,7 @@ export function NotificationCard({
         <Check
           role="img"
           aria-label={readLabel}
-          className="size-icon-sm shrink-0 text-text-muted"
+          className="size-icon-inline shrink-0 text-text-muted"
         />
       ) : null}
     </Contenedor>

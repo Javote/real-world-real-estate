@@ -174,21 +174,21 @@ function InvestorBuy() {
         selected={search.view === 'map'}
         onSelect={() => setView(search.view === 'map' ? undefined : 'map')}
       >
-        <MapPin className="mr-s1 size-icon-sm" aria-hidden="true" />
+        <MapPin className="mr-s1 size-icon-inline" aria-hidden="true" />
         {t('buy.map')}
       </FilterPill>
       <FilterPill
         selected={search.view === 'search'}
         onSelect={() => setView(search.view === 'search' ? undefined : 'search')}
       >
-        <Search className="mr-s1 size-icon-sm" aria-hidden="true" />
+        <Search className="mr-s1 size-icon-inline" aria-hidden="true" />
         {t('buy.search')}
       </FilterPill>
       <FilterPill
         selected={search.view === 'filter'}
         onSelect={() => setView(search.view === 'filter' ? undefined : 'filter')}
       >
-        <SlidersHorizontal className="mr-s1 size-icon-sm" aria-hidden="true" />
+        <SlidersHorizontal className="mr-s1 size-icon-inline" aria-hidden="true" />
         {t('buy.filters')}
       </FilterPill>
     </div>
@@ -207,7 +207,7 @@ function InvestorBuy() {
             className="inline-flex items-center gap-s1 rounded-full bg-primary-light px-s3 py-s1 text-caption font-medium text-primary"
           >
             {search.q}
-            <X className="size-icon-sm" aria-hidden="true" />
+            <X className="size-icon-inline" aria-hidden="true" />
           </button>
         ) : null}
         {search.status ? (
@@ -217,7 +217,7 @@ function InvestorBuy() {
             className="inline-flex items-center gap-s1 rounded-full bg-primary-light px-s3 py-s1 text-caption font-medium text-primary"
           >
             {t(`project.status.${search.status}` as never)}
-            <X className="size-icon-sm" aria-hidden="true" />
+            <X className="size-icon-inline" aria-hidden="true" />
           </button>
         ) : null}
       </div>
@@ -247,7 +247,7 @@ function InvestorBuy() {
             value={qLocal}
             onChange={setQLocal}
             placeholder={t('buy.searchPlaceholder')}
-            adornment={<Search className="size-icon-sm" aria-hidden="true" />}
+            adornment={<Search className="size-icon-inline" aria-hidden="true" />}
           />
           {qLocal && proyectos?.length ? (
             <ul className="rounded-lg bg-card p-s2 shadow-e1">
@@ -298,14 +298,14 @@ function InvestorBuy() {
             }}
           />
           {seleccionado ? (
-            <div className="absolute inset-x-s4 top-s16 z-[500]">
+            <div className="absolute inset-x-s4 top-s12 z-[500]">
               <button
                 type="button"
                 aria-label={t('buy.close')}
                 onClick={() => setPinSeleccionado(null)}
                 className="absolute top-s2 right-s2 z-10 rounded-full bg-card/90 p-s2 text-text-primary shadow-e1"
               >
-                <X className="size-icon-sm" aria-hidden="true" />
+                <X className="size-icon-inline" aria-hidden="true" />
               </button>
               {cardDe(seleccionado)}
             </div>

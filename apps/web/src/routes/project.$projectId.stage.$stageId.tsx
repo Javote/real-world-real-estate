@@ -195,7 +195,7 @@ function InvestorStageDetail() {
 
         <section className="flex flex-col gap-s3">
           <h2 className="flex items-center gap-s2 text-body font-bold text-text-primary">
-            <Images className="size-icon-sm text-primary" aria-hidden="true" />
+            <Images className="size-icon-inline text-primary" aria-hidden="true" />
             {t('investor.stage.photos')}
           </h2>
           {fotos.length ? (
@@ -218,7 +218,7 @@ function InvestorStageDetail() {
                     />
                   ) : (
                     <span className="flex aspect-square items-center justify-center">
-                      <Images className="size-icon-md text-disabled" aria-hidden="true" />
+                      <Images className="size-icon-stat text-disabled" aria-hidden="true" />
                     </span>
                   )}
                 </button>
@@ -246,7 +246,7 @@ function InvestorStageDetail() {
 
         <section className="flex flex-col gap-s3">
           <h2 className="flex items-center gap-s2 text-body font-bold text-text-primary">
-            <FileText className="size-icon-sm text-primary" aria-hidden="true" />
+            <FileText className="size-icon-inline text-primary" aria-hidden="true" />
             {t('investor.stage.docs')}
           </h2>
           {docs.length ? (

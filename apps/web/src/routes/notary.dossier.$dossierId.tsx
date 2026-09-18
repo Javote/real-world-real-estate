@@ -167,7 +167,7 @@ function DossierReview() {
             onClick={() => setRechazando(true)}
             disabled={firmar.isPending || rechazar.isPending}
           >
-            <AlertCircle className="size-icon-sm" aria-hidden="true" />
+            <AlertCircle className="size-icon-inline" aria-hidden="true" />
             {t('notary.dossier.reject')}
           </SecondaryButton>
 
@@ -177,7 +177,7 @@ function DossierReview() {
             onClick={() => firmar.mutate()}
             disabled={firmar.isPending}
           >
-            <ShieldCheck className="size-icon-sm" aria-hidden="true" />
+            <ShieldCheck className="size-icon-inline" aria-hidden="true" />
             {firmar.isPending ? t('notary.dossier.signing') : t('notary.dossier.sign')}
           </PrimaryButton>
         </div>

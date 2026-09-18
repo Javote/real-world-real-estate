@@ -87,7 +87,7 @@ export function ProfileScreen({ rol, testId, back, editTestId, prefsTestId }: Pr
       <section className="flex flex-col gap-s4" data-testid={testId}>
         <article className="flex items-center gap-s3 rounded-xl bg-card p-s4 shadow-e1">
           <span className="flex size-12 shrink-0 items-center justify-center rounded-full bg-primary-light">
-            <User className="size-icon-md text-primary" aria-hidden="true" />
+            <User className="size-icon-stat text-primary" aria-hidden="true" />
           </span>
           <span className="flex min-w-0 flex-1 flex-col gap-s1">
             <span className="truncate text-body font-bold text-text-primary">
@@ -131,7 +131,7 @@ export function ProfileScreen({ rol, testId, back, editTestId, prefsTestId }: Pr
           {...(prefsTestId ? { 'data-testid': prefsTestId } : {})}
         >
           <h2 className="flex items-center gap-s2 text-body font-bold text-text-primary">
-            <Bell className="size-icon-sm text-text-muted" aria-hidden="true" />
+            <Bell className="size-icon-inline text-text-muted" aria-hidden="true" />
             {t('profile.notificationsTitle')}
           </h2>
 
@@ -153,7 +153,7 @@ export function ProfileScreen({ rol, testId, back, editTestId, prefsTestId }: Pr
             cuál es: la matrícula no está en el modelo todavía (M2-D5 la anida
             "per role" sin definir sus campos). */}
         <article className="flex items-center gap-s2 rounded-xl bg-card p-s4 text-body-sm text-text-secondary shadow-e1">
-          <ShieldCheck className="size-icon-sm text-text-muted" aria-hidden="true" />
+          <ShieldCheck className="size-icon-inline text-text-muted" aria-hidden="true" />
           {t('profile.roleLabel')}:{' '}
           {perfil ? t(`role.${perfil.role}` as never) : t('panel.emptyValue')}
         </article>
@@ -164,7 +164,7 @@ export function ProfileScreen({ rol, testId, back, editTestId, prefsTestId }: Pr
             window.location.assign('/login')
           }}
         >
-          <LogOut className="size-icon-sm" aria-hidden="true" />
+          <LogOut className="size-icon-inline" aria-hidden="true" />
           {t('profile.logout')}
         </DangerButton>
       </section>

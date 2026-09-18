@@ -192,7 +192,7 @@ function InvestorProjectDetail() {
               aria-label={t('investor.project.location')}
             >
               <span className="flex aspect-video items-center justify-center bg-surface-alt text-primary">
-                <Building2 className="size-icon-md" aria-hidden="true" />
+                <Building2 className="size-icon-stat" aria-hidden="true" />
               </span>
               {ubicacion ? (
                 <span className="block truncate px-s3 py-s2 text-caption text-text-muted">
@@ -277,7 +277,7 @@ function InvestorProjectDetail() {
               void navigate({ to: '/project/$projectId/progress', params: { projectId } })
             }
           >
-            <Images className="size-icon-sm" aria-hidden="true" />
+            <Images className="size-icon-inline" aria-hidden="true" />
             {t('investor.project.viewProgress')}
           </PrimaryButton>
         </article>

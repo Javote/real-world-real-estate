@@ -143,12 +143,12 @@ function InvestorProjectProgress() {
                 <span className="flex flex-wrap items-center gap-s2">
                   {fotos ? (
                     <span className="inline-flex items-center gap-s1 rounded-full bg-surface-alt px-s3 py-s1 text-caption text-text-secondary">
-                      <Images className="size-icon-sm" aria-hidden="true" />
+                      <Images className="size-icon-inline" aria-hidden="true" />
                       {t('investor.stage.imagesCount', { count: String(fotos) })}
                     </span>
                   ) : null}
                   <span className="inline-flex items-center gap-s1 rounded-full bg-surface-alt px-s3 py-s1 text-caption text-text-secondary">
-                    <FileText className="size-icon-sm" aria-hidden="true" />
+                    <FileText className="size-icon-inline" aria-hidden="true" />
                     {t('investor.stage.documentation')}
                   </span>
                   <StatusPill tone={stage.state === 'Completed' ? 'verified' : 'pending'}>

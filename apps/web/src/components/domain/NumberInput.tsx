@@ -96,7 +96,7 @@ export function NumberInput({
             onClick={() => paso(1)}
             className="flex flex-1 items-center justify-center px-s2 text-text-secondary hover:bg-surface-alt disabled:text-disabled"
           >
-            <Plus className="size-icon-sm" aria-hidden="true" />
+            <Plus className="size-icon-inline" aria-hidden="true" />
           </button>
           <button
             type="button"
@@ -105,7 +105,7 @@ export function NumberInput({
             onClick={() => paso(-1)}
             className="flex flex-1 items-center justify-center border-border border-t px-s2 text-text-secondary hover:bg-surface-alt disabled:text-disabled"
           >
-            <Minus className="size-icon-sm" aria-hidden="true" />
+            <Minus className="size-icon-inline" aria-hidden="true" />
           </button>
         </div>
       </div>

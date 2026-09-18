@@ -198,7 +198,7 @@ function InvestorUnitDetail() {
             aria-label={t('investor.unit.openMap')}
           >
             <span className="flex aspect-video items-center justify-center bg-surface-alt text-primary">
-              <MapPin className="size-icon-md" aria-hidden="true" />
+              <MapPin className="size-icon-stat" aria-hidden="true" />
             </span>
             {ubicacion ? (
               <span className="block truncate px-s3 py-s2 text-caption text-text-muted">
@@ -210,7 +210,7 @@ function InvestorUnitDetail() {
 
         {tienePisos ? (
           <PrimaryButton onClick={() => setEdificio(true)}>
-            <Building2 className="size-icon-sm" aria-hidden="true" />
+            <Building2 className="size-icon-inline" aria-hidden="true" />
             {t('investor.unit.building')}
           </PrimaryButton>
         ) : null}
@@ -303,7 +303,7 @@ function InvestorUnitDetail() {
               news.slice(0, 3).map((n) => (
                 <div key={n.id} className="flex items-center gap-s3">
                   <span className="flex size-9 shrink-0 items-center justify-center rounded-md bg-primary-light text-primary">
-                    <Images className="size-icon-sm" aria-hidden="true" />
+                    <Images className="size-icon-inline" aria-hidden="true" />
                   </span>
                   <span className="min-w-0 flex-1">
                     <span className="block truncate text-body-sm text-text-primary">
@@ -350,7 +350,7 @@ function InvestorUnitDetail() {
               void navigate({ to: '/investor/unit/$unitId/contract', params: { unitId } })
             }
           >
-            <FileText className="size-icon-sm" aria-hidden="true" />
+            <FileText className="size-icon-inline" aria-hidden="true" />
             {t('investor.unit.viewContract')}
           </PrimaryButton>
         </article>
@@ -386,7 +386,7 @@ function InvestorUnitDetail() {
           <span className="text-body font-medium text-text-primary">
             {t('investor.unit.dossier')}
           </span>
-          <ChevronRight className="size-icon-sm text-text-muted" aria-hidden="true" />
+          <ChevronRight className="size-icon-inline text-text-muted" aria-hidden="true" />
         </button>
       </section>
 

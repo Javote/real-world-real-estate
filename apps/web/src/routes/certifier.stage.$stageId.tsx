@@ -144,7 +144,7 @@ function CertifyStage() {
             onClick={() => setObservando(true)}
             disabled={observar.isPending || certificar.isPending}
           >
-            <AlertCircle className="size-icon-sm" aria-hidden="true" />
+            <AlertCircle className="size-icon-inline" aria-hidden="true" />
             {t('certifier.stage.observe')}
           </SecondaryButton>
 
@@ -154,7 +154,7 @@ function CertifyStage() {
             onClick={() => certificar.mutate()}
             disabled={sinEvidencia || certificar.isPending}
           >
-            <ShieldCheck className="size-icon-sm" aria-hidden="true" />
+            <ShieldCheck className="size-icon-inline" aria-hidden="true" />
             {certificar.isPending ? t('certifier.stage.certifying') : t('certifier.stage.certify')}
           </PrimaryButton>
         </div>

@@ -64,7 +64,7 @@ export function DocumentCard({
     <article className={cn('flex flex-col gap-s2 rounded-lg bg-card p-s3 shadow-e1', className)}>
       <div className="flex items-start gap-s3">
         <span className="flex size-10 shrink-0 items-center justify-center rounded-md bg-surface-alt">
-          <FileText className="size-icon-sm text-text-muted" aria-hidden="true" />
+          <FileText className="size-icon-inline text-text-muted" aria-hidden="true" />
         </span>
 
         <div className="flex min-w-0 flex-1 flex-col">
@@ -108,7 +108,7 @@ export function DocumentCard({
               onClick={onView}
               className="rounded-md p-s1 text-text-muted hover:bg-surface-alt hover:text-primary"
             >
-              <Eye className="size-icon-sm" aria-hidden="true" />
+              <Eye className="size-icon-inline" aria-hidden="true" />
             </button>
           ) : null}
           {onDownload ? (
@@ -121,7 +121,7 @@ export function DocumentCard({
               disabled={!anclado}
               className="rounded-md p-s1 text-text-muted hover:bg-surface-alt hover:text-primary disabled:cursor-not-allowed disabled:text-disabled disabled:hover:bg-transparent"
             >
-              <Download className="size-icon-sm" aria-hidden="true" />
+              <Download className="size-icon-inline" aria-hidden="true" />
             </button>
           ) : null}
         </div>

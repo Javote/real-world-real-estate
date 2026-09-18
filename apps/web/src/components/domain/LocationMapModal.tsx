@@ -219,7 +219,7 @@ export function LocationMapModal({
           onClick={onClose}
           className="absolute top-s3 right-s3 z-[1000] rounded-full bg-card/90 p-s2 text-text-primary shadow-e1 hover:bg-card"
         >
-          <X className="size-icon-sm" aria-hidden="true" />
+          <X className="size-icon-inline" aria-hidden="true" />
         </button>
       ) : null}
 

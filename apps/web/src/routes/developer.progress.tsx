@@ -152,7 +152,7 @@ function DeveloperProgress() {
           data-testid="DEV-PROGRESS-RESUME"
         >
           <h2 className="flex items-center gap-s2 text-body font-bold text-text-primary">
-            <AlertCircle className="size-icon-sm text-pending" aria-hidden="true" />
+            <AlertCircle className="size-icon-inline text-pending" aria-hidden="true" />
             {t('developer.progress.observedTitle')}
           </h2>
           <ul className="flex flex-col gap-s2">
