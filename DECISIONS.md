@@ -757,6 +757,35 @@ verificación. Llamarlas "timeout" y "fallback branch" no es forzar el vocabular
 literal de lo que esas palabras significan para un pipeline que depende de una cadena externa, y es
 exactamente el mismo movimiento que D-028 hizo con "unsigned evidence".
 
+## D-093 — La clave del `admin` no es rotable
+
+**El hecho.** `validator stage(admin: VerificationKeyHash)` — el firmante es un **parámetro del
+script**, aplicado al compilar. La dirección del script y el policy id del thread token son función
+de esa clave (`packages/cardano/src/blueprint.ts`: `applyParamsToScript` + `mintingPolicyToId`).
+
+**La consecuencia, que es la parte que hay que decidir con los ojos abiertos.** Si
+`SERVICE_WALLET_PRIVATE_KEY` se pierde o se compromete, **todos los hilos vivos quedan congelados
+para siempre**: `spend` exige la firma de ese único `admin` sin alternativa, no hay burn, y el hilo
+no tiene otra salida. Los hilos nuevos nacerían bajo otro policy id, así que un stage a medio camino
+bajo la clave vieja no se puede terminar nunca — se corta la continuidad de su cadena de prueba. Es
+más grave que las 2 ADA bloqueadas por etapa (D-057): eso es costo, esto es pérdida de la función del
+producto para las obras en vuelo.
+
+**La decisión: se acepta el riesgo, y la custodia de la clave es el control — no una tarea de
+operaciones, un requisito de diseño.** No se implementa multisig ni una clave de recuperación en
+este milestone: D-058 (un solo firmante, ratificado por el dueño) ya establece que no hace falta
+co-firma, y hoy no hay valor en riesgo (D-021) que justifique el cambio más grande que existe en
+`contracts/` — un multisig o un segundo `recovery` tocan `spend`, `mint` y el armado de la tx en
+`packages/cardano`, y cualquiera de los dos cambia el script hash. Quedan registradas para cuando
+mainnet las vuelva a poner sobre la mesa, en `SPEC-304`.
+
+**Por qué no contradice D-058.** D-058 fija que hay un solo firmante. Esta decisión no cambia eso:
+nombra la consecuencia que D-058 no nombraba — que ese firmante único, al ser parámetro del script,
+es además irremplazable sin abandonar los hilos vivos.
+
+**Antes del primer mint en mainnet, elegir entre las tres opciones que `SPEC-304` deja registradas**
+(dejarlo así, multisig M-de-N, o un segundo VKH de recuperación) — no después.
+
 ## D-077 — La reconciliación la dispara la lectura, no un cron
 
 Cuando una pantalla va a mostrar un `OnChainEvent` `Pending` **que tiene TXID**, se consulta la

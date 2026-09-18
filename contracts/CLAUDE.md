@@ -177,6 +177,14 @@ Los negativos van marcados `test ... fail` porque los `expect` abortan en vez de
   (`apps/api/src/lib/anchor.ts`, `apps/api/src/domain/stage-transition.ts`). El detalle de qué
   falta (rebanada C — `verify()`/`reconcile()` contra la cadena real, y Preprod) vive en
   `specs/SPEC-013-anchorport.md`, no acá.
+- **La clave del `admin` no es rotable (D-093, `SPEC-304`).** Es un parámetro del script: la
+  dirección y el policy id son función de esa clave. Si `SERVICE_WALLET_PRIVATE_KEY` se pierde o se
+  compromete, todos los hilos vivos quedan congelados para siempre —`spend` exige su firma sin
+  alternativa, no hay burn— y los hilos nuevos nacerían bajo otro policy id. Es más grave que las 2
+  ADA bloqueadas por etapa (D-057): eso es costo, esto es pérdida de la función del producto. Para
+  Preprod con datos de demo es aceptable; antes del primer mint en mainnet hay que elegir entre
+  dejarlo así, un multisig M-de-N o un segundo VKH de recuperación — las tres opciones y por qué
+  ninguna se implementa todavía están en `SPEC-304`.
 - **Hubo un `contracts/reference/`** con 353 líneas que el compilador no leía y que describía otra
   FSM (`Certified`, salida del terminal). Se borró en **D-056**; no lo recuperes del historial.
 - **La sintaxis de Aiken cambia entre versiones**: verificá contra la pineada (`aiken --version`)
