@@ -1,8 +1,8 @@
 import { readFileSync } from "node:fs";
 import path from "node:path";
 import { afterEach, describe, expect, it } from "vitest";
-import { createClient } from "../src/lib/libsql-client";
 import { MIGRATIONS_DIR } from "../src/db/migrate";
+import { createClient } from "../src/lib/libsql-client";
 
 // SPEC-202 (B-02) — prueba la migración 0006 en aislamiento, contra una base
 // en memoria con SOLO la tabla `Dossier` (no hace falta el esquema entero: la
@@ -10,7 +10,10 @@ import { MIGRATIONS_DIR } from "../src/db/migrate";
 // auditoría reprodujo. El criterio de desempate está escrito en el propio
 // archivo de migración; acá se verifica que el SQL lo aplica de verdad.
 
-const SQL_MIGRACION = readFileSync(path.join(MIGRATIONS_DIR, "0006_dossier_unitid_unico.sql"), "utf-8");
+const SQL_MIGRACION = readFileSync(
+  path.join(MIGRATIONS_DIR, "0006_dossier_unitid_unico.sql"),
+  "utf-8"
+);
 const STATEMENTS = SQL_MIGRACION.split("--> statement-breakpoint")
   .map((s) => s.trim())
   .filter((s) => s.length > 0);
@@ -100,7 +103,12 @@ describe("migración 0006 — un dossier por unidad", () => {
   it("duplicado con un shareToken: sobrevive la fila compartida, aunque sea la más nueva", async () => {
     const c = await base();
     await insertar(c, { id: "sin-token", unitId: "u1", compiledAt: 100 });
-    await insertar(c, { id: "compartida", unitId: "u1", compiledAt: 200, shareToken: "t".repeat(64) });
+    await insertar(c, {
+      id: "compartida",
+      unitId: "u1",
+      compiledAt: 200,
+      shareToken: "t".repeat(64)
+    });
 
     await correrMigracion(c);
 

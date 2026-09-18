@@ -1,6 +1,6 @@
 import { afterAll, describe, expect, it } from "vitest";
-import { compileDossier } from "../src/domain/dossier";
 import { createId } from "../src/db/id";
+import { compileDossier } from "../src/domain/dossier";
 import { db } from "../src/lib/db";
 import { FIXTURES } from "./global-setup";
 
@@ -99,11 +99,7 @@ describe("compileDossier bajo concurrencia (invariante 2)", () => {
     expect(a?.id).toBeDefined();
     expect(a?.id).toBe(b?.id);
 
-    const filas = await db
-      .selectFrom("Dossier")
-      .selectAll()
-      .where("unitId", "=", unidad)
-      .execute();
+    const filas = await db.selectFrom("Dossier").selectAll().where("unitId", "=", unidad).execute();
     expect(filas).toHaveLength(1);
   });
 
@@ -163,11 +159,7 @@ describe("compileDossier bajo concurrencia (invariante 2)", () => {
     expect(releida?.masterHash).toBe(hashFirmado);
     expect(releida?.status).toBe("signed");
 
-    const filas = await db
-      .selectFrom("Dossier")
-      .selectAll()
-      .where("unitId", "=", unidad)
-      .execute();
+    const filas = await db.selectFrom("Dossier").selectAll().where("unitId", "=", unidad).execute();
     expect(filas).toHaveLength(1);
   });
 });
