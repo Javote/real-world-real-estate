@@ -193,7 +193,15 @@ export async function sembrarUnidadVendida(
 ): Promise<{ unitId: string; contractId: string }> {
   const ahora = new Date();
 
-  const unidad = await db
+  // SPEC-215: `doNothing()` + `executeTakeFirstOrThrow()` es una
+  // contradicción — `doNothing` por definición no devuelve fila cuando la
+  // fila ya existe, así que sobre una base ya sembrada esto tiraba
+  // `NoResultError` y dejaba el seed a medio aplicar (`sembrarUsuarios`, antes
+  // en la secuencia, ya había corrido). Mismo patrón que `sembrarProyecto`:
+  // se tolera el conflicto insertando sin `returning`, y se relee por la
+  // clave natural — así el id es el mismo en la primera corrida y en la
+  // décima.
+  await db
     .insertInto("Unit")
     .values({
       id: createId(),
@@ -209,10 +217,16 @@ export async function sembrarUnidadVendida(
       updatedAt: ahora
     })
     .onConflict((oc) => oc.columns(["projectId", "unitReference"]).doNothing())
-    .returning("id")
+    .execute();
+
+  const unidad = await db
+    .selectFrom("Unit")
+    .select("id")
+    .where("projectId", "=", input.projectId)
+    .where("unitReference", "=", input.unitReference)
     .executeTakeFirstOrThrow();
 
-  const contrato = await db
+  await db
     .insertInto("Contract")
     .values({
       id: createId(),
@@ -224,7 +238,12 @@ export async function sembrarUnidadVendida(
       createdAt: ahora
     })
     .onConflict((oc) => oc.column("unitId").doNothing())
-    .returning("id")
+    .execute();
+
+  const contrato = await db
+    .selectFrom("Contract")
+    .select("id")
+    .where("unitId", "=", unidad.id)
     .executeTakeFirstOrThrow();
 
   return { unitId: unidad.id, contractId: contrato.id };
