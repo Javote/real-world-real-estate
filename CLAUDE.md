@@ -40,9 +40,12 @@
 > prueba de volumen. El segundo que vale antes de mainnet es que **la clave del `admin` es un
 > parámetro del script**, así que no se puede rotar: perderla congela los hilos vivos para siempre.
 > Ninguno toca los 16 criterios del SOM.
-> **Ya está transcrita a specs implementables: la serie `SPEC-301`…`SPEC-306`**, y se ordena por una
-> restricción propia — `301`…`304` **no cambian el script hash** y se pueden tomar cuando sea;
-> `305` sí, y es decisión de mainnet.
+> **Ya está transcrita a specs implementables: la serie `SPEC-301`…`SPEC-306`, y ya está toda
+> revisada.** `301`, `302`, `303`, `304` y `306` están **cerradas** (2026-09-18) — incluida la
+> afirmación falsa de `contracts/CLAUDE.md`, corregida por `SPEC-301`, y la clave del `admin`,
+> registrada como decisión en D-093 por `SPEC-304`. Queda abierta solo `305`, que sí cambia el
+> script hash y es decisión de mainnet — ver `CLAUDE.md` raíz §Antes de mainnet, después del
+> Milestone 3.
 >
 > **Calidad de `packages/`:** [`specs/AUDITORIA-2026-09-11-calidad-de-packages.md`](specs/AUDITORIA-2026-09-11-calidad-de-packages.md)
 > — 14 hallazgos sobre los dos packages compartidos, leídos completos (28 archivos, ~5.900 líneas) y
@@ -183,8 +186,34 @@ abiertos — ver `specs/ESTADO-2026-09-10-catalyst-milestone-3.md` para el detal
 | **"Contenido en `Pending`"** | Mejora de UX, ningún criterio la pide. Necesita que el listado de stages devuelva el anclaje y reconcilie |
 | **Columna `AuditLog.projectId`** | Sacaría el mapeo fail-closed de `auditScope`. Pide backfill que para filas viejas no tiene respuesta |
 | **`validationCritical` siempre `true`** | Config muerta con rama viva y testeada en el validador. No molesta |
-| **Las 2 ADA bloqueadas por etapa** | Sin burn (D-057), son permanentes: 20 por proyecto de 10 etapas. Es el número para la decisión de mainnet, no para este milestone |
 | **Upload directo del navegador a R2 (sin pasar por Render)** | Hoy el archivo hace escala en `UPLOAD_DIR` (Multer disco → `storage.put()` → R2 → se borra, `apps/api/src/lib/storage.ts`) antes de llegar al bucket — es lo que hace que `MAX_FILE_SIZE_MB` (2026-09-10: 10→50) le pese a la RAM del proceso, no solo al límite de R2 (5 GiB por PUT simple). Un presigned URL lo evitaría, pero es un cambio de forma real: CORS nuevo en el bucket, el front pasa de un POST a un flujo de 3 pasos, y el hash sigue teniendo que calcularse releyendo el objeto desde R2 después (D-027) — no se simplifica esa parte. **Después de mainnet**, cuando el volumen de uploads reales lo justifique frente al costo de tocar `storage.ts` (🟡) y el único endpoint que hoy usa `uploadSingleEvidence` |
+
+## Antes de mainnet, después del Milestone 3
+
+**Ninguna de estas bloquea la entrega de M3 — ninguna toca los 16 criterios del SOM, y por eso están
+acá y no en la lista de trabajo.** Pero tampoco son "para siempre después": son las decisiones que
+hay que tomar (con plata, tiempo o riesgo de por medio) antes de habilitar `CARDANO_NETWORK=Mainnet`,
+y hoy vivían dispersas entre `DECISIONS.md`, `specs/README.md` y los `CLAUDE.md` de cada subárbol.
+Esta tabla es el punto de partida cuando llegue el momento — no hay que releer las cuatro auditorías
+del 2026-09-11 de nuevo.
+
+| # | Qué | Por qué espera | Detalle |
+|---|---|---|---|
+| 1 | Habilitar la red: runbook + `CARDANO_NETWORK=Mainnet` | D-013 lo hace imposible **por configuración** hoy — no es solo procedimiento, es código | D-013 |
+| 2 | Custodia y rotabilidad de la clave del `admin` | Es un parámetro del script Aiken, así que es irreemplazable por construcción: perderla o comprometerla congela todos los hilos vivos para siempre. Elegir entre dejarlo así, un multisig M-de-N o un segundo VKH de recuperación — las dos últimas cambian el script hash | D-093, `specs/SPEC-304-la-clave-del-admin-no-se-puede-rotar.md` |
+| 3 | Unicidad del hilo on-chain + tope de `evidence_root` | El validador solo garantiza un token **por transacción**, no por stage (`SPEC-301` ya cerró el camino alcanzable desde el backend; esto es cerrarlo en el validador mismo), y acepta un `evidence_root` de largo arbitrario en stages no críticos. Cambia dirección y policy id de los 180 eventos ya anclados en Preprod — es la única de esta tabla que cambia el script hash | `specs/SPEC-305-el-proximo-cambio-de-script-hash.md` |
+| 4 | Los 36 hashes y TXID que `packages/shared` declara como `z.string()` pelado | Sin forma validada, cualquier string pasa el schema y el error solo se descubre en la cadena | `specs/SPEC-402-los-hashes-y-txid-tienen-forma.md` |
+| 5 | El `outputRef` del recibo se supone `#0` en vez de buscarse | Tiene la respuesta correcta calculada al lado y no la usa — asume una posición de output que puede no serlo | `specs/SPEC-407-el-outputref-se-busca-no-se-supone.md` |
+| 6 | El datum que vuelve de la cadena no se valida, por las dos puertas de lectura | Se confía en la forma sin chequearla — un datum corrupto o de otra versión del contrato se lee como bueno | `specs/SPEC-408-lo-que-vuelve-de-la-cadena-se-valida.md` |
+| 7 | Las 2 ADA bloqueadas por etapa (20 por proyecto de 10 etapas) | Sin burn (D-057) son permanentes — no es un bug, es el número real con el que hay que decidir si el costo por proyecto es aceptable en mainnet | D-057, `specs/REPORTE-2026-09-10-prueba-de-volumen.md` |
+
+**Por qué junta specs de auditorías distintas.** Los ítems 2 y 3 salen de
+`AUDITORIA-2026-09-11-calidad-de-contracts.md`; los ítems 4, 5 y 6, de
+`AUDITORIA-2026-09-11-calidad-de-packages.md`. No comparten numeración porque nacieron de auditorías
+separadas, pero comparten la misma restricción: todas piden una decisión del dueño que no tiene
+sentido apurar para cerrar M3. El resto de las dos series (`SPEC-301`–`SPEC-303`, `SPEC-306`, y todo
+lo que no está en esta tabla de `SPEC-401`…`SPEC-412`) ya está resuelto o es pulido sin fecha —
+`specs/README.md` lleva el estado real de cada una.
 
 ## Cerrado, pendiente de aceptación por Catalyst
 
@@ -229,7 +258,7 @@ validador que afirme algo más, está mal (D-026).
 | # | Qué | Estado |
 |---|---|---|
 | 0 | ~~Prueba end-to-end de volumen, en preprod, antes de mainnet~~ | **Cerrada el 2026-09-10** — 30/30 etapas `Completed` en 3 proyectos nuevos, 180/180 eventos on-chain `Confirmed`, las 4 aristas de la FSM ejercitadas por click real en el navegador. Detalle completo, el hallazgo real que dejó (dos etapas con anclaje perdido, causa raíz confirmada) y las 3 capas de autocura que salieron de ahí: `specs/REPORTE-2026-09-10-prueba-de-volumen.md`. Alimentó los criterios 8 y 15 del SOM; el 9 (reserva→escrow) se cerró aparte el 2026-09-11, es un flujo distinto — ver `specs/ESTADO-2026-09-10-catalyst-milestone-3.md` |
-| 1 | **Mainnet** — runbook, habilitar la red, custodia de la clave. **Fuera de alcance de este milestone** (decisión del dueño, 2026-09-09 — ver §El plan de entrega) | D-013 la hace **imposible por configuración**: es código, no solo procedimiento. 🔴 **Y la clave del `admin` es irreemplazable por construcción** (D-093, `contracts/CLAUDE.md`): es un parámetro del script, así que la custodia no es una tarea de operaciones — es un requisito de diseño que hay que resolver antes del primer mint en mainnet, no después. |
+| 1 | **Mainnet** — runbook, habilitar la red, custodia de la clave. **Fuera de alcance de este milestone** (decisión del dueño, 2026-09-09 — ver §El plan de entrega) | D-013 la hace **imposible por configuración**: es código, no solo procedimiento. 🔴 El checklist completo de lo que hay que decidir antes de encenderla —incluida la clave del `admin`— vive en §Antes de mainnet, después del Milestone 3 |
 
 **El diseño ya está decidido. El trabajo es transcribirlo, no inventarlo.**
 
