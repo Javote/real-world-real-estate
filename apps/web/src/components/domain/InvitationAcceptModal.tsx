@@ -85,7 +85,7 @@ export function InvitationAcceptModal({
 
   return (
     <Dialog open={open} onOpenChange={(abierto) => !abierto && onClose()}>
-      <DialogContent className="bg-card" data-testid="INV-INVITE-VIEW-001">
+      <DialogContent data-testid="INV-INVITE-VIEW-001">
         <DialogHeader>
           <span className="flex size-10 items-center justify-center rounded-full bg-verified-light">
             <BadgeCheck className="size-icon-stat text-verified" aria-hidden="true" />

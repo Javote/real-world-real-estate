@@ -53,7 +53,7 @@ export function TxidModal({
 }: TxidModalProps) {
   return (
     <Dialog open={open} onOpenChange={(abierto) => !abierto && onClose()}>
-      <DialogContent data-testid={testId} className="bg-card">
+      <DialogContent data-testid={testId}>
         <DialogHeader>
           <DialogTitle className="text-h2 font-bold text-text-primary">{labels.title}</DialogTitle>
           <DialogDescription className="text-body text-text-secondary">{label}</DialogDescription>

@@ -2,14 +2,19 @@
 // comportamiento accesible de un diálogo —foco atrapado, Escape, aria-modal—,
 // que es lo que M2-D3 §Accessibility pide y lo más caro de reimplementar.
 //
-// Editado en un punto: el botón de cierre venía del `Button` de shadcn, que
-// sería un segundo sistema de botones. Usa el `SecondaryButton` de M2-D3, que
-// es el que el entregable define.
+// Editado en dos puntos: el botón de cierre usa el `SecondaryButton` de
+// M2-D3 (no el `Button` de shadcn, que sería un segundo sistema de botones),
+// y todo el archivo transcribe la escala de M2-D3 en vez de la default de
+// Tailwind (SPEC-102). Antes era shadcn sin adaptar —`bg-background` no
+// existe acá, así que el modal no tenía fondo propio— y 10 de los 12
+// `<DialogContent>` de la app lo parchaban a mano con `bg-card`. El fondo se
+// decide acá, una sola vez; ningún consumidor vuelve a pasarlo.
 
 import { XIcon } from 'lucide-react'
 import { Dialog as DialogPrimitive } from 'radix-ui'
 import type * as React from 'react'
 import { SecondaryButton } from '#/components/domain/PrimaryButton'
+import { useTranslation } from '#/i18n/useTranslation'
 import { cn } from '#/lib/cn.ts'
 
 function Dialog({ ...props }: React.ComponentProps<typeof DialogPrimitive.Root>) {
@@ -52,13 +57,14 @@ function DialogContent({
 }: React.ComponentProps<typeof DialogPrimitive.Content> & {
   showCloseButton?: boolean
 }) {
+  const { t } = useTranslation()
   return (
     <DialogPortal data-slot="dialog-portal">
       <DialogOverlay />
       <DialogPrimitive.Content
         data-slot="dialog-content"
         className={cn(
-          'fixed top-[50%] left-[50%] z-50 grid w-full max-w-[calc(100%-2rem)] translate-x-[-50%] translate-y-[-50%] gap-4 rounded-lg border bg-background p-6 shadow-lg duration-200 outline-none data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=closed]:zoom-out-95 data-[state=open]:animate-in data-[state=open]:fade-in-0 data-[state=open]:zoom-in-95 sm:max-w-lg',
+          'fixed top-[50%] left-[50%] z-50 grid w-full max-w-[calc(100%-2rem)] translate-x-[-50%] translate-y-[-50%] gap-s4 rounded-xl bg-card p-s6 shadow-modal duration-200 outline-none data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=closed]:zoom-out-95 data-[state=open]:animate-in data-[state=open]:fade-in-0 data-[state=open]:zoom-in-95 sm:max-w-lg',
           className
         )}
         {...props}
@@ -67,10 +73,10 @@ function DialogContent({
         {showCloseButton && (
           <DialogPrimitive.Close
             data-slot="dialog-close"
-            className="absolute top-4 right-4 rounded-xs opacity-70 ring-offset-background transition-opacity hover:opacity-100 focus:ring-2 focus:ring-ring focus:ring-offset-2 focus:outline-hidden disabled:pointer-events-none data-[state=open]:bg-accent data-[state=open]:text-muted-foreground [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-4"
+            className="absolute top-s4 right-s4 rounded-full opacity-70 transition-opacity hover:opacity-100 focus:outline-none focus-visible:ring-2 focus-visible:ring-primary disabled:pointer-events-none [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-icon-inline"
           >
             <XIcon />
-            <span className="sr-only">Close</span>
+            <span className="sr-only">{t('common.close')}</span>
           </DialogPrimitive.Close>
         )}
       </DialogPrimitive.Content>
@@ -82,7 +88,7 @@ function DialogHeader({ className, ...props }: React.ComponentProps<'div'>) {
   return (
     <div
       data-slot="dialog-header"
-      className={cn('flex flex-col gap-2 text-center sm:text-left', className)}
+      className={cn('flex flex-col gap-s2 text-center sm:text-left', className)}
       {...props}
     />
   )
@@ -96,16 +102,17 @@ function DialogFooter({
 }: React.ComponentProps<'div'> & {
   showCloseButton?: boolean
 }) {
+  const { t } = useTranslation()
   return (
     <div
       data-slot="dialog-footer"
-      className={cn('flex flex-col-reverse gap-2 sm:flex-row sm:justify-end', className)}
+      className={cn('flex flex-col-reverse gap-s2 sm:flex-row sm:justify-end', className)}
       {...props}
     >
       {children}
       {showCloseButton && (
         <DialogPrimitive.Close asChild>
-          <SecondaryButton>Close</SecondaryButton>
+          <SecondaryButton>{t('common.close')}</SecondaryButton>
         </DialogPrimitive.Close>
       )}
     </div>
@@ -116,7 +123,7 @@ function DialogTitle({ className, ...props }: React.ComponentProps<typeof Dialog
   return (
     <DialogPrimitive.Title
       data-slot="dialog-title"
-      className={cn('text-lg leading-none font-semibold', className)}
+      className={cn('text-h1 leading-none font-bold', className)}
       {...props}
     />
   )
@@ -129,7 +136,7 @@ function DialogDescription({
   return (
     <DialogPrimitive.Description
       data-slot="dialog-description"
-      className={cn('text-sm text-muted-foreground', className)}
+      className={cn('text-body-sm text-text-muted', className)}
       {...props}
     />
   )

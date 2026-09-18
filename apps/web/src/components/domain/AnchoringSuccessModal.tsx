@@ -52,7 +52,7 @@ export function AnchoringSuccessModal({
 }: AnchoringSuccessModalProps) {
   return (
     <Dialog open={open} onOpenChange={(abierto) => !abierto && onDone()}>
-      <DialogContent data-testid={testId} className="bg-card">
+      <DialogContent data-testid={testId}>
         <DialogHeader>
           <span className="flex h-12 w-12 items-center justify-center rounded-full bg-verified-light text-verified">
             <ShieldCheck size={24} aria-hidden="true" />

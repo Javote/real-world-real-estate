@@ -47,7 +47,7 @@ export function ShareDossierModal({
 }: ShareDossierModalProps) {
   return (
     <Dialog open={open} onOpenChange={(abierto) => !abierto && onClose()}>
-      <DialogContent className="bg-card" data-testid={testId}>
+      <DialogContent data-testid={testId}>
         <DialogHeader>
           <DialogTitle className="text-h2 font-bold text-text-primary">{labels.title}</DialogTitle>
           <DialogDescription className="text-body text-text-secondary">

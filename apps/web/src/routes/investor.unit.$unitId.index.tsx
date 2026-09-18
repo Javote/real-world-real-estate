@@ -422,7 +422,7 @@ function InvestorUnitDetail() {
       ) : null}
 
       <Dialog open={edificio} onOpenChange={(abierto) => !abierto && setEdificio(false)}>
-        <DialogContent data-testid="INV-UNIT-BUILDING-001" className="max-w-lg bg-card">
+        <DialogContent data-testid="INV-UNIT-BUILDING-001" className="max-w-lg">
           <DialogTitle className="text-h2 font-bold text-text-primary">
             {t('schematic.title')}
           </DialogTitle>
@@ -466,7 +466,7 @@ function InvestorUnitDetail() {
           }
         }}
       >
-        <DialogContent data-testid="INV-STAGE-MILESTONE-001" className="bg-card">
+        <DialogContent data-testid="INV-STAGE-MILESTONE-001">
           <DialogTitle className="text-h2 font-bold text-text-primary">
             {stageDelBundle?.name ?? t('investor.stage.milestone')}
           </DialogTitle>

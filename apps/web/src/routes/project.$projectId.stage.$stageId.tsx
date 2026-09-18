@@ -334,7 +334,7 @@ function InvestorStageDetail() {
           }
         }}
       >
-        <DialogContent data-testid="INV-STAGE-MILESTONE-001" className="bg-card">
+        <DialogContent data-testid="INV-STAGE-MILESTONE-001">
           <DialogTitle className="text-h2 font-bold text-text-primary">
             {stage?.name ?? t('investor.stage.milestone')}
           </DialogTitle>
