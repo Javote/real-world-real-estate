@@ -76,7 +76,7 @@ export function ImageGalleryModal({
             onClick={onClose}
             className="absolute top-s2 right-s2 z-10 rounded-full bg-black/40 p-s2 text-white hover:bg-black/60"
           >
-            <X className="size-icon-sm" aria-hidden="true" />
+            <X className="size-icon-inline" aria-hidden="true" />
           </button>
 
           <img src={actual.url} alt={actual.alt} className="max-h-[70vh] w-full object-contain" />
@@ -89,7 +89,7 @@ export function ImageGalleryModal({
                 onClick={() => ir(-1)}
                 className="-translate-y-1/2 absolute top-1/2 left-s2 rounded-full bg-black/40 p-s2 text-white hover:bg-black/60"
               >
-                <ChevronLeft className="size-icon-md" aria-hidden="true" />
+                <ChevronLeft className="size-icon-stat" aria-hidden="true" />
               </button>
               <button
                 type="button"
@@ -97,7 +97,7 @@ export function ImageGalleryModal({
                 onClick={() => ir(1)}
                 className="-translate-y-1/2 absolute top-1/2 right-s2 rounded-full bg-black/40 p-s2 text-white hover:bg-black/60"
               >
-                <ChevronRight className="size-icon-md" aria-hidden="true" />
+                <ChevronRight className="size-icon-stat" aria-hidden="true" />
               </button>
             </>
           ) : null}

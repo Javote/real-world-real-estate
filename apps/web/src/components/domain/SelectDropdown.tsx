@@ -82,7 +82,7 @@ export function SelectDropdown({
 
         <ChevronDown
           aria-hidden="true"
-          className="pointer-events-none absolute top-1/2 right-s3 size-icon-sm -translate-y-1/2 text-text-muted"
+          className="pointer-events-none absolute top-1/2 right-s3 size-icon-inline -translate-y-1/2 text-text-muted"
         />
       </div>
 

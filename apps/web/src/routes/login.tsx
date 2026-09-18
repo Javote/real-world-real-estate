@@ -118,7 +118,7 @@ export function LoginScreen() {
           ))}
         </div>
 
-        <div className="mb-4 rounded-2xl bg-white p-4">
+        <div className="mb-4 rounded-lg bg-white p-4">
           <TextInput
             label={t('login.usernameLabel')}
             type="email"

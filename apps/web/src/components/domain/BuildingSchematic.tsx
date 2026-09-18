@@ -122,7 +122,7 @@ export function BuildingSchematic({
 
       {labels.callout ? (
         <p className="flex items-start gap-s2 rounded-lg bg-primary-light p-s3 text-body-sm text-text-secondary">
-          <MapPin className="size-icon-sm shrink-0 text-primary" aria-hidden="true" />
+          <MapPin className="size-icon-inline shrink-0 text-primary" aria-hidden="true" />
           {labels.callout}
         </p>
       ) : null}

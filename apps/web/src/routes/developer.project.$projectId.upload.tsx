@@ -149,7 +149,7 @@ function UploadEvidence() {
             />
 
             <PrimaryButton onClick={() => subir.mutate()} disabled={!puedeAnclar}>
-              <ShieldCheck className="size-icon-sm" aria-hidden="true" />
+              <ShieldCheck className="size-icon-inline" aria-hidden="true" />
               {subir.isPending ? t('developer.upload.anchoring') : t('developer.upload.anchor')}
             </PrimaryButton>
 

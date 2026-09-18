@@ -97,7 +97,7 @@ function DeveloperDocumentation() {
 
       <section className="flex flex-col gap-s2" data-testid="DEV-DOCS-LIST-001">
         <h2 className="flex items-center gap-s2 text-h2 font-bold text-text-primary">
-          <ShieldCheck className="size-icon-md text-verified" aria-hidden="true" />
+          <ShieldCheck className="size-icon-stat text-verified" aria-hidden="true" />
           {t('developer.docs.verifiedSection')}
         </h2>
 

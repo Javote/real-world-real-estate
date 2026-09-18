@@ -90,7 +90,7 @@ export function FileDropzone({
           disabled && 'opacity-50'
         )}
       >
-        <Upload className="size-icon-lg text-text-muted" aria-hidden="true" />
+        <Upload className="size-icon-empty text-text-muted" aria-hidden="true" />
 
         <label
           htmlFor={inputId}
@@ -151,7 +151,7 @@ export function FileDropzone({
                 onClick={() => onChange(files.filter((_, j) => j !== i))}
                 className="text-text-muted hover:text-danger"
               >
-                <X className="size-icon-sm" aria-hidden="true" />
+                <X className="size-icon-inline" aria-hidden="true" />
               </button>
             </li>
           ))}

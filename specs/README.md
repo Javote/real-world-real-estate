@@ -159,7 +159,7 @@ mismo— sigue siendo `SPEC-305`, decisión de mainnet.
 
 | Spec | Título | Hallazgo | Estado |
 |---|---|---|---|
-| [`SPEC-101`](SPEC-101-escala-de-iconos-y-su-guardia.md) | La escala de íconos vuelve a la de M2-D3, y esta vez con guardia | F-01 | abierta |
+| [`SPEC-101`](SPEC-101-escala-de-iconos-y-su-guardia.md) | La escala de íconos vuelve a la de M2-D3, y esta vez con guardia | F-01 | **cerrada 2026-09-18** |
 | [`SPEC-102`](SPEC-102-dialog-adaptado.md) | `ui/dialog.tsx`: adaptar el primitivo de los 11 modales | F-02 | abierta |
 | [`SPEC-103`](SPEC-103-el-armazon-que-no-anuncia.md) | El armazón no anuncia dónde estás: `lang`, `title`, `aria-current`, el contador | F-04·05·06·07 | abierta |
 | [`SPEC-104`](SPEC-104-live-regions.md) | Anunciar lo que cambia: las live regions que la app no tiene | F-03 | abierta |

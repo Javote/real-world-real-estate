@@ -90,7 +90,7 @@ export function DocumentViewerModal({
 
           {onDownload ? (
             <PrimaryButton onClick={onDownload} disabled={!anclado}>
-              <Download className="size-icon-sm" aria-hidden="true" />
+              <Download className="size-icon-inline" aria-hidden="true" />
               {labels.download}
             </PrimaryButton>
           ) : null}

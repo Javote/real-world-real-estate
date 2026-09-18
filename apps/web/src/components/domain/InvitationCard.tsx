@@ -51,7 +51,7 @@ export function InvitationCard({
       )}
     >
       <span className="flex size-9 shrink-0 items-center justify-center rounded-full bg-primary-light">
-        <Mail className="size-icon-sm text-primary" aria-hidden="true" />
+        <Mail className="size-icon-inline text-primary" aria-hidden="true" />
       </span>
 
       <span className="flex min-w-0 flex-1 flex-col gap-s1">
