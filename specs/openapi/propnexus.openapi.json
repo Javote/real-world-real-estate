@@ -5195,12 +5195,18 @@
                           "type": "null"
                         }
                       ]
+                    },
+                    "withBlockTimestampCount": {
+                      "type": "integer",
+                      "minimum": 0,
+                      "maximum": 9007199254740991
                     }
                   },
                   "required": [
                     "sampleSize",
                     "medianMinutes",
-                    "maxMinutes"
+                    "maxMinutes",
+                    "withBlockTimestampCount"
                   ],
                   "additionalProperties": false
                 }

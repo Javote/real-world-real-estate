@@ -46,6 +46,47 @@ async function crearEvento(minutosHastaConfirmar: number | null) {
     .execute();
 }
 
+/**
+ * SPEC-214: crea un evento `Confirmed` donde `blockTimestamp` y `updatedAt`
+ * pueden divergir a propósito — es lo que reproduce el hueco que el cierre
+ * del criterio 9 encontró (D-077: alguien volvió a leer minutos después de
+ * que la cadena ya había confirmado).
+ */
+async function crearEventoConfirmado(opts: {
+  minutosHastaBloque: number | null;
+  minutosHastaLectura: number;
+}) {
+  const inicio = new Date();
+  const bloque =
+    opts.minutosHastaBloque === null
+      ? null
+      : new Date(inicio.getTime() + opts.minutosHastaBloque * 60_000);
+  const lectura = new Date(inicio.getTime() + opts.minutosHastaLectura * 60_000);
+
+  await db
+    .insertInto("OnChainEvent")
+    .values({
+      id: createId(),
+      projectId: proyecto,
+      stageId: null,
+      evidenceId: null,
+      referenceId: createId(),
+      eventIndex: 0,
+      eventType: "INVITATION_ACCEPTED",
+      fromState: null,
+      toState: null,
+      commitment: "a".repeat(64),
+      status: "Confirmed",
+      txid: createId().padEnd(64, "0"),
+      network: "Preprod",
+      outputRef: null,
+      blockTimestamp: bloque,
+      createdAt: inicio,
+      updatedAt: lectura
+    })
+    .execute();
+}
+
 beforeAll(async () => {
   const proj = await db
     .selectFrom("Project")
@@ -96,5 +137,58 @@ describe("GET /audit-logs/telemetry/reservation-to-escrow", () => {
     expect(res.body.sampleSize).toBe(3);
     expect(res.body.medianMinutes).toBeCloseTo(8, 1);
     expect(res.body.maxMinutes).toBeCloseTo(20, 1);
+    // Los tres tienen blockTimestamp (crearEvento lo iguala a updatedAt).
+    expect(res.body.withBlockTimestampCount).toBe(3);
+  });
+
+  describe("SPEC-214 — mide contra blockTimestamp, no contra updatedAt", () => {
+    it("con blockTimestamp y updatedAt divergentes, mide la latencia de cadena real", async () => {
+      await db.deleteFrom("OnChainEvent").where("eventType", "=", "INVITATION_ACCEPTED").execute();
+      // La cadena confirmó a los 3 min; nadie volvió a leer el proyecto hasta
+      // los 40 — es exactamente el hueco que updatedAt-createdAt inflaba.
+      await crearEventoConfirmado({ minutosHastaBloque: 3, minutosHastaLectura: 40 });
+
+      const res = await request(app)
+        .get("/api/v1/audit-logs/telemetry/reservation-to-escrow")
+        .set("Authorization", `Bearer ${tokenAdmin}`);
+
+      expect(res.status).toBe(200);
+      expect(res.body.sampleSize).toBe(1);
+      expect(res.body.medianMinutes).toBeCloseTo(3, 1);
+      expect(res.body.withBlockTimestampCount).toBe(1);
+    });
+
+    it("una fila Confirmed vieja sin blockTimestamp usa updatedAt como respaldo, y no cuenta en withBlockTimestampCount", async () => {
+      await db.deleteFrom("OnChainEvent").where("eventType", "=", "INVITATION_ACCEPTED").execute();
+      // blockTimestamp null pero Confirmed: el caso de antes de que la
+      // columna se poblara consistentemente.
+      await crearEventoConfirmado({ minutosHastaBloque: null, minutosHastaLectura: 7 });
+
+      const res = await request(app)
+        .get("/api/v1/audit-logs/telemetry/reservation-to-escrow")
+        .set("Authorization", `Bearer ${tokenAdmin}`);
+
+      expect(res.status).toBe(200);
+      expect(res.body.sampleSize).toBe(1);
+      expect(res.body.medianMinutes).toBeCloseTo(7, 1);
+      expect(res.body.withBlockTimestampCount).toBe(0);
+    });
+
+    it("un blockTimestamp anterior a createdAt se descarta, no se publica un negativo", async () => {
+      await db.deleteFrom("OnChainEvent").where("eventType", "=", "INVITATION_ACCEPTED").execute();
+      await crearEventoConfirmado({ minutosHastaBloque: -5, minutosHastaLectura: 10 });
+      await crearEventoConfirmado({ minutosHastaBloque: 6, minutosHastaLectura: 6 });
+
+      const res = await request(app)
+        .get("/api/v1/audit-logs/telemetry/reservation-to-escrow")
+        .set("Authorization", `Bearer ${tokenAdmin}`);
+
+      expect(res.status).toBe(200);
+      // La fila con blockTimestamp negativo queda afuera: sampleSize cuenta
+      // solo la otra, ninguna mediana negativa.
+      expect(res.body.sampleSize).toBe(1);
+      expect(res.body.medianMinutes).toBeCloseTo(6, 1);
+      expect(res.body.medianMinutes).toBeGreaterThanOrEqual(0);
+    });
   });
 });
