@@ -68,4 +68,21 @@ describe('BottomNav · tab activo', () => {
     expect(panel.getAttribute('data-status')).toBe('active')
     expect(capital.getAttribute('data-status')).not.toBe('active')
   })
+
+  // SPEC-103 (F-06): el tab activo se distinguía solo por color y peso — sin
+  // aria-current, la navegación no anuncia dónde está quien usa un lector de
+  // pantalla.
+  it('exactamente un aria-current="page", y coincide con el tab resaltado', async () => {
+    renderNav('/developer/capital')
+
+    const capital = await screen.findByRole('link', { name: 'capital' })
+    expect(capital.getAttribute('aria-current')).toBe('page')
+
+    const otros = ['Panel', 'projects', 'units', 'progress'].map((nombre) =>
+      screen.getByRole('link', { name: nombre })
+    )
+    for (const link of otros) {
+      expect(link.getAttribute('aria-current')).toBeNull()
+    }
+  })
 })

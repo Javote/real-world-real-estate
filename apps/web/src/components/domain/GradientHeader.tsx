@@ -1,4 +1,5 @@
 import { ArrowLeft } from 'lucide-react'
+import { useEffect } from 'react'
 import { cn } from '#/lib/cn'
 import { PropNexusMark } from './PropNexusMark'
 
@@ -8,6 +9,12 @@ import { PropNexusMark } from './PropNexusMark'
 // El logo no se omite: es el ancla agnóstica de rol (M2-D3 y D-074). El slot
 // derecho es de utilidades globales. Si hay `back`, va **entre** la marca y
 // el título — nunca en el lugar del logo, nunca debajo del h1.
+//
+// **También publica `document.title`** (SPEC-103, F-05): todas las pantallas
+// reales pasan por acá —directo o vía `PanelLayout`— así que es el único
+// lugar donde hace falta escribirlo. `title` ya es la traducción que el
+// llamador le pasó al `h1`; nunca un string nuevo. El nombre de marca es la
+// única excepción a "sale del diccionario" (D-018: es marca, no traducción).
 
 interface GradientHeaderProps {
   title: string
@@ -43,6 +50,10 @@ export function GradientHeader({
   badge,
   className
 }: GradientHeaderProps) {
+  useEffect(() => {
+    document.title = title === 'PropNexus' ? title : `${title} · PropNexus`
+  }, [title])
+
   const backLink = back ? (
     <button
       type="button"

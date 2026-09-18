@@ -37,7 +37,7 @@ export function Sidebar({ tabs, ariaLabel }: SidebarProps) {
             to={tab.to}
             activeOptions={{ exact: tabNeedsExactMatch(tab.to, tabs) }}
             className={cn('flex items-center gap-s3 rounded-full px-s4 py-s3 text-body')}
-            activeProps={{ className: 'bg-primary text-white font-bold' }}
+            activeProps={{ className: 'bg-primary text-white font-bold', 'aria-current': 'page' }}
             inactiveProps={{ className: 'text-text-muted' }}
           >
             <tab.icon size={20} aria-hidden="true" />

@@ -102,7 +102,11 @@ export function PanelLayout({
               <NotificationBell
                 unread={unread?.unread ?? 0}
                 onClick={abrirNotificaciones}
-                ariaLabel={t('notifications.ariaLabel')}
+                ariaLabel={
+                  unread?.unread
+                    ? t('notifications.bellWithCount', { count: String(unread.unread) })
+                    : t('notifications.ariaLabel')
+                }
               />
               <button
                 type="button"

@@ -56,6 +56,34 @@ describe('LocaleProvider / useTranslation', () => {
     expect(window.localStorage.getItem('propnexus.lang')).toBe('en-US')
   })
 
+  // SPEC-103 (F-04): `index.html` fija `lang="es"` una vez y el toggle nunca
+  // lo tocaba — `document.documentElement.lang` seguía en "es" con la app
+  // entera ya en inglés.
+  it('invariante SPEC-103: document.documentElement.lang sigue al locale vigente, no solo al montar', async () => {
+    function Toggle() {
+      const { locale, setLocale } = useTranslation()
+      return (
+        <button type="button" onClick={() => setLocale(locale === 'es-AR' ? 'en-US' : 'es-AR')}>
+          toggle
+        </button>
+      )
+    }
+
+    render(
+      <LocaleProvider>
+        <Probe />
+        <Toggle />
+      </LocaleProvider>
+    )
+    await screen.findByText('locale: es-AR')
+    expect(document.documentElement.lang).toBe('es-AR')
+
+    fireEvent.click(screen.getByText('toggle'))
+
+    await screen.findByText('locale: en-US')
+    expect(document.documentElement.lang).toBe('en-US')
+  })
+
   it('persiste la locale elegida entre montajes (localStorage)', async () => {
     window.localStorage.setItem('propnexus.lang', 'en-US')
 
