@@ -1,7 +1,7 @@
 import { randomBytes } from "node:crypto";
 import { canTransition, STAGE_STATES, type StageState } from "@plataforma/shared";
 import request from "supertest";
-import { afterAll, beforeAll, describe, expect, it } from "vitest";
+import { afterAll, beforeAll, describe, expect, it, vi } from "vitest";
 import app from "../src/app";
 import { createId } from "../src/db/id";
 import { anchorPort } from "../src/lib/anchor";
@@ -515,6 +515,97 @@ describe("POST /projects/:id/stages/:stageId/retry-anchor", () => {
 
     expect(res.status).toBe(404);
     expect(res.body.code).toBe("STAGE_CREATED_EVENT_NOT_FOUND");
+  });
+
+  // SPEC-301: el validador solo garantiza un token por transacción, no uno por
+  // stage. `THREAD_ALREADY_OPEN` únicamente sabe lo que dice `OnChainEvent`, y
+  // esa fila puede tener `outputRef` en `null` con el hilo vivo igual — es
+  // exactamente el estado que dejó la prueba de volumen
+  // (`REPORTE-2026-09-10-prueba-de-volumen.md`). Antes de mintear se le
+  // pregunta a la cadena, no solo a la base.
+  describe("la cadena manda sobre la base (SPEC-301)", () => {
+    /** Abre un hilo real y le borra el `outputRef` a su `OnChainEvent`,
+     * dejando la asimetría "outputRef en null, hilo vivo on-chain" a mano. */
+    async function conAsimetria() {
+      const creado = await crearStageConHilo();
+      await db
+        .updateTable("OnChainEvent")
+        .set({ outputRef: null })
+        .where("stageId", "=", creado.id)
+        .execute();
+      return creado.id;
+    }
+
+    it("409 THREAD_ALREADY_ON_CHAIN si la cadena ya tiene el hilo y la base no — cero transacciones nuevas", async () => {
+      const id = await conAsimetria();
+      const openThread = vi.spyOn(anchorPort(), "openThread");
+
+      const res = await retry(id);
+
+      expect(res.status).toBe(409);
+      expect(res.body.code).toBe("THREAD_ALREADY_ON_CHAIN");
+      expect(openThread).not.toHaveBeenCalled();
+      openThread.mockRestore();
+    });
+
+    it("sin asimetría, mintea normal (el caso legítimo de hoy)", async () => {
+      const id = await crearStage({ state: "Pending" });
+      await db
+        .insertInto("OnChainEvent")
+        .values({
+          id: createId(),
+          projectId: proyecto,
+          stageId: id,
+          eventIndex: 0,
+          eventType: "STAGE_CREATED",
+          fromState: null,
+          toState: "Pending",
+          commitment: null,
+          status: "Failed",
+          txid: null,
+          network: null,
+          outputRef: null,
+          blockTimestamp: null,
+          createdAt: new Date(),
+          updatedAt: new Date()
+        })
+        .execute();
+
+      const res = await retry(id);
+
+      expect(res.status).toBe(200);
+      expect(res.body.anchor.status).toBe("Confirmed");
+    });
+
+    it("no mintea si `findLiveThread` tira — fail-closed", async () => {
+      const id = await conAsimetria();
+      const openThread = vi.spyOn(anchorPort(), "openThread");
+      const findLiveThread = vi
+        .spyOn(anchorPort(), "findLiveThread")
+        .mockRejectedValueOnce(new Error("el proveedor no contesta"));
+
+      const res = await retry(id);
+
+      expect(res.status).toBe(500);
+      expect(openThread).not.toHaveBeenCalled();
+
+      findLiveThread.mockRestore();
+      openThread.mockRestore();
+    });
+
+    it("dos retry-anchor concurrentes sobre el mismo stage mintean a lo sumo una vez", async () => {
+      const id = await conAsimetria();
+      const openThread = vi.spyOn(anchorPort(), "openThread");
+
+      const [a, b] = await Promise.all([retry(id), retry(id)]);
+
+      for (const res of [a, b]) {
+        expect(res.status).toBe(409);
+        expect(res.body.code).toBe("THREAD_ALREADY_ON_CHAIN");
+      }
+      expect(openThread).not.toHaveBeenCalled();
+      openThread.mockRestore();
+    });
   });
 });
 

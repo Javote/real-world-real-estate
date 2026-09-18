@@ -4,6 +4,7 @@ import {
   buildStageDatum,
   canTransition,
   merkleRoot,
+  refToHex,
   STAGE_TRANSITION_ERRORS,
   type StageState
 } from "@plataforma/shared";
@@ -457,7 +458,11 @@ export async function transitionStage(input: {
 
 export type RetryMintFailure =
   | { ok: false; status: 404; code: "STAGE_NOT_FOUND" | "STAGE_CREATED_EVENT_NOT_FOUND" }
-  | { ok: false; status: 409; code: "STAGE_ALREADY_ADVANCED" | "THREAD_ALREADY_OPEN" };
+  | {
+      ok: false;
+      status: 409;
+      code: "STAGE_ALREADY_ADVANCED" | "THREAD_ALREADY_OPEN" | "THREAD_ALREADY_ON_CHAIN";
+    };
 
 export type RetryMintResult =
   | { ok: true; stage: StageRow; anchor: OnChainEventRow }
@@ -475,6 +480,22 @@ export type RetryMintResult =
  * fabricar ese datum inicial para un stage que ya progresó sería reescribir
  * una secuencia que D-008 dice que ni nosotros podemos falsificar. Para ese
  * caso no hay reintento — queda `Failed`, que es la verdad.
+ *
+ * **La base no es la única fuente de la decisión de mintear** (SPEC-301). El
+ * validador solo garantiza un token por transacción, no uno por stage —
+ * `THREAD_ALREADY_OPEN` únicamente sabe lo que `OnChainEvent` sabe, y esa
+ * fila puede tener `outputRef` en `null` con el hilo vivo igual (un reinicio
+ * a mitad de `anchorEvent`, ver su docstring). Antes de mintear se le
+ * pregunta a la cadena — la única que de verdad tiene el token — con
+ * `findLiveThread`. Si ya tiene un hilo, **no se mintea**: es
+ * `THREAD_ALREADY_ON_CHAIN`, distinto de `THREAD_ALREADY_OPEN` porque el
+ * remedio es otro (`POST /evidence/reconcile`, no nada).
+ *
+ * **Fail-closed:** si `findLiveThread` tira, el error se propaga sin
+ * capturar y no se llega a mintear — acuñar de más es irreversible (no hay
+ * burn) y no mintear no pierde nada, se reintenta. `mode === "disabled"` se
+ * saltea esta consulta (no hay cadena que preguntarle, mismo criterio que
+ * `repararHilosSospechosos`) y sigue funcionando como antes de esta spec.
  */
 export async function retryStageMint(stageId: string): Promise<RetryMintResult> {
   const stage = await db
@@ -490,6 +511,13 @@ export async function retryStageMint(stageId: string): Promise<RetryMintResult> 
 
   if ((await cabezaDelHilo(stage.id)) !== null) {
     return { ok: false, status: 409, code: "THREAD_ALREADY_OPEN" };
+  }
+
+  if (anchorPort().mode !== "disabled") {
+    const hiloEnCadena = await anchorPort().findLiveThread(refToHex(stage.id));
+    if (hiloEnCadena !== null) {
+      return { ok: false, status: 409, code: "THREAD_ALREADY_ON_CHAIN" };
+    }
   }
 
   const evento = await db
