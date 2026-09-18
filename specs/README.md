@@ -150,12 +150,12 @@ hallazgo salvo donde partirlos habría sido artificial. **Cada una es independie
 sola**; las dependencias, donde existen, están escritas en la spec.
 
 **Nada de esto bloquea el Milestone 3**: ninguna toca los 16 criterios del SOM. Las excepciones en
-importancia son tres. `SPEC-201` y `SPEC-202` **no son pulido sino corrupción de datos reproducida**
-y valen antes de mainnet — repararlas después es SQL a mano contra producción, como las migraciones
-0004 y 0005. Y `SPEC-301` tampoco es pulido: hoy `contracts/CLAUDE.md` **afirma una garantía que el
-validador no da** (un thread token por stage), y el backend tiene un camino construido para acuñar
-dos. La parte urgente se cierra sin tocar el script; la de fondo es decisión de mainnet
-(`SPEC-305`).
+importancia fueron tres, y las tres están **cerradas**. `SPEC-201` y `SPEC-202` no eran pulido sino
+corrupción de datos reproducida —repararlas después habría sido SQL a mano contra producción, como
+las migraciones 0004 y 0005— y `SPEC-301` tampoco: `contracts/CLAUDE.md` afirmaba una garantía que
+el validador no daba (un thread token por stage), y el backend tenía un camino construido para
+acuñar dos. La parte urgente de `SPEC-301` se cerró sin tocar el script; la de fondo —el validador
+mismo— sigue siendo `SPEC-305`, decisión de mainnet.
 
 | Spec | Título | Hallazgo | Estado |
 |---|---|---|---|
@@ -184,12 +184,12 @@ dos. La parte urgente se cierra sin tocar el script; la de fondo es decisión de
 | [`SPEC-213`](SPEC-213-un-bundle-por-stage.md) | `EvidenceBundle` duplicado por stage: medir antes de decidir | anexo | abierta 🟡 |
 | [`SPEC-214`](SPEC-214-telemetria-con-blocktimestamp.md) | La telemetría del criterio 9 mide lo que tardó alguien en volver a leer | anexo | abierta |
 | [`SPEC-215`](SPEC-215-seed-idempotente.md) | `pnpm db:seed` revienta sobre una base ya sembrada | anexo | abierta |
-| [`SPEC-301`](SPEC-301-unicidad-del-hilo-no-depende-de-la-base.md) | La unicidad del hilo deja de depender de la base | C-01 (1·2) | abierta 🟡 · **no es pulido** |
-| [`SPEC-302`](SPEC-302-el-burn-queda-fijado-por-un-test.md) | "No hay burn" pasa de argumento a evidencia | C-03 | abierta |
-| [`SPEC-303`](SPEC-303-que-sostiene-la-igualdad-de-valor.md) | Escribir qué sostiene la igualdad de valor en el `spend` | C-05 | abierta |
-| [`SPEC-304`](SPEC-304-la-clave-del-admin-no-se-puede-rotar.md) | La clave del `admin` es irreemplazable por construcción | C-02 | abierta · **antes de mainnet** |
-| [`SPEC-305`](SPEC-305-el-proximo-cambio-de-script-hash.md) | El próximo cambio de script hash: unicidad on-chain y el tope de `evidence_root` | C-01 (3)·C-04 | abierta 🔴 · mainnet |
-| [`SPEC-306`](SPEC-306-property-tests-sobre-la-evolucion-del-datum.md) | Una propiedad sobre `valid_datum_evolution` | C-06 | abierta · opcional |
+| [`SPEC-301`](SPEC-301-unicidad-del-hilo-no-depende-de-la-base.md) | La unicidad del hilo deja de depender de la base | C-01 (1·2) | **cerrada 2026-09-18** 🟡 · no era pulido |
+| [`SPEC-302`](SPEC-302-el-burn-queda-fijado-por-un-test.md) | "No hay burn" pasa de argumento a evidencia | C-03 | **cerrada 2026-09-18** |
+| [`SPEC-303`](SPEC-303-que-sostiene-la-igualdad-de-valor.md) | Escribir qué sostiene la igualdad de valor en el `spend` | C-05 | **cerrada 2026-09-18** |
+| [`SPEC-304`](SPEC-304-la-clave-del-admin-no-se-puede-rotar.md) | La clave del `admin` es irreemplazable por construcción | C-02 | **cerrada 2026-09-18** (D-093) · el riesgo sigue **antes de mainnet** |
+| [`SPEC-305`](SPEC-305-el-proximo-cambio-de-script-hash.md) | El próximo cambio de script hash: unicidad on-chain y el tope de `evidence_root` | C-01 (3)·C-04 | **revisada 2026-09-18, diferida a propósito** 🔴 · mainnet — ver `CLAUDE.md` raíz §Antes de mainnet, después del Milestone 3 |
+| [`SPEC-306`](SPEC-306-property-tests-sobre-la-evolucion-del-datum.md) | Una propiedad sobre `valid_datum_evolution` | C-06 | **cerrada 2026-09-18** |
 | [`SPEC-401`](SPEC-401-dos-campos-del-contrato-mas-flojos-que-la-realidad.md) | Dos campos del contrato declarados más flojos que la realidad | P-01·02 | abierta |
 | [`SPEC-402`](SPEC-402-los-hashes-y-txid-tienen-forma.md) | Los 36 hashes y TXID del contrato tienen forma | P-03 | abierta · **antes de mainnet** |
 | [`SPEC-403`](SPEC-403-el-authoritative-del-multipart.md) | El `authoritative` del multipart solo entiende el literal `"true"` | P-04 | abierta |
@@ -208,10 +208,14 @@ dos. La parte urgente se cierra sin tocar el script; la de fondo es decisión de
 `101` → `102` → `103`+`104` → `105`+`106` → `107`+`108` → `109`+`110`. **No es una dependencia**: es
 daño evitado sobre línea tocada.
 
-**La serie 3xx se ordena por otra cosa: por si cambia el script hash.** `301` → `302` → `303` → `304`
-son los cuatro que **no** lo cambian, así que no pueden invalidar los 180 eventos ya anclados y se
-pueden tomar en cualquier momento. `305` sí lo cambia y es la única que hay que decidir antes del
-primer mint en mainnet; `306` es opcional y la propia spec lo dice.
+**La serie 3xx está toda revisada, y cerrada salvo una.** `301`, `302`, `303`, `304` y `306` no
+cambian el script hash y ya se tomaron — `304` es la excepción de forma: se cerró como decisión
+(D-093, prosa), no como código, porque el riesgo que describe sigue vivo hasta que mainnet lo
+resuelva de una de sus tres formas. La única que queda abierta a propósito es `305`: cambia el
+script hash, invalidaría (o dejaría en un contrato paralelo) los 180 eventos ya anclados en Preprod,
+y es la única de la serie que hay que decidir antes del primer mint en mainnet — junto con `304`,
+`SPEC-402`, `SPEC-407` y `SPEC-408` de la serie 4xx, todas consolidadas en `CLAUDE.md` raíz §Antes
+de mainnet, después del Milestone 3.
 
 **La serie 4xx se ordena por lo que no se deshace.** Primero `402` → `407` → `408`, los tres que
 tocan hashes, `outputRef` y datum: ninguno está roto hoy, los tres son suposiciones no declaradas en
