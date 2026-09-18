@@ -3,12 +3,13 @@
 > Se carga solo al tocar este subárbol. Las reglas duras (nunca custodiar valor, cero PII,
 > metadata ≤64 bytes, blueprint commiteado) están en el `CLAUDE.md` de la raíz.
 
-Aiken **v1.1.21** · **Plutus V3** (D-019) · stdlib v3.0.0.
+Aiken **v1.1.21** · **Plutus V3** (D-019) · stdlib v3.0.0 · `aiken-lang/fuzz` v2.1.1 (property
+tests, `SPEC-306`).
 Aislado del workspace pnpm (D-054): **corre en paralelo y no bloquea a nadie.** Es el track ideal
 para trabajarlo por separado del resto del workspace.
 
 ```
-lib/propnexus/fsm.ak     núcleo puro: tipos, tabla de transiciones, reglas del datum (40 tests)
+lib/propnexus/fsm.ak     núcleo puro: tipos, tabla de transiciones, reglas del datum (45 tests)
 validators/stage.ak      el validador: spend + mint, lo que necesita la tx    (40 tests)
 plutus.json              blueprint — se commitea tras cada build
 ```
@@ -106,9 +107,10 @@ que el producto viene a eliminar.
 
 `aiken check` **no mide coverage de líneas** —solo tiene `--property-coverage`, que es la
 distribución de labels en property tests—, así que el ≥95% del criterio 2 del SOM se demuestra con
-esta tabla. **83 tests, 0 fallando.**
+esta tabla. **85 tests, 0 fallando** (dos de ellos, property tests, corren 100 casos generados
+cada uno — ver la fila de abajo).
 
-`lib/propnexus/fsm.ak` — 43:
+`lib/propnexus/fsm.ak` — 45:
 
 | Qué prueba | Tests |
 |---|---|
@@ -117,6 +119,7 @@ esta tabla. **83 tests, 0 fallando.**
 | La identidad no se reescribe (proyecto, stage, orden, criticidad) | `t_identity_*` (5) |
 | Un stage crítico exige commitment de 32 bytes; uno no crítico no | `t_critical_needs_a_full_commitment`, `t_non_critical_completes_without_evidence` |
 | Evolución del datum: completar, no completar, y los cruces inválidos | `t_evolution_*` (9) |
+| **Property tests sobre `valid_datum_evolution`** — el único lugar del subárbol con espacio de entrada ancho de verdad; la tabla de transiciones de arriba ya está probada exhaustivamente y ahí un property test no agregaría nada (`SPEC-306`). Generador de `StageDatum` con refs/roots de largo variado, incluidos 0 y 32 | `prop_non_completing_evolution_preserves_evidence`, `prop_evolution_never_bypasses_the_transition_table` (2, 100 casos c/u) |
 | Nacimiento del hilo: estado inicial, evidencia y fecha en cero, orden positivo, refs no vacías y ≤32 bytes | `t_initial_*` (7) |
 | El datum codifica al mismo CBOR que el códec de `packages/cardano` espera — el "valor dorado" (ver `packages/cardano/CLAUDE.md`) | `t_golden_datum_encoding` (1) |
 | El redeemer (`StageRedeemer`/`MintAction`) codifica al mismo CBOR que `encodeAdvanceRedeemer`/`encodeInitRedeemer` de `packages/cardano` — mismo boundary que el datum, cerrado el 2026-09-08 (`specs/PLAN-2026-09-08-tests-aiken-robustez.md`) | `t_golden_redeemer_*` (3) |
@@ -200,6 +203,14 @@ Los negativos van marcados `test ... fail` porque los `expect` abortan en vez de
 - **Un módulo de `lib/` no puede llamarse igual que un validador**: `use propnexus/stage` junto a
   `validator stage` es "two top-level objects referred to as 'stage'". Por eso el núcleo puro es
   `fsm.ak` y no `stage.ak`.
+- **2026-09-18 · `use aiken/fuzz` no anda solo con `aiken-lang/stdlib` como dependencia — hace
+  falta declarar `aiken-lang/fuzz` aparte** (`SPEC-306`). Los `.test.ak` de la propia stdlib
+  (`interval.test.ak`, `cbor.test.ak`) importan `aiken/fuzz` y usan property tests, y eso hizo creer
+  que el módulo venía con el paquete. No: es una dependencia **de stdlib**
+  (`aiken-lang/fuzz v2.1.1`, visible en `build/packages/aiken-lang-stdlib/aiken.toml`), no una
+  re-exportación hacia quien consume stdlib. El error es `unknown module: 'aiken/fuzz'`, sin pista
+  de que la solución es un `[[dependencies]]` nuevo en `aiken.toml` — hay que ir a mirar el `.toml`
+  del propio paquete vendorizado para encontrar el nombre y la versión exactos.
 
 ## Autonomía
 
@@ -209,7 +220,7 @@ D-021 — no hay fondos en riesgo.
 ## Comandos
 
 ```bash
-pnpm contracts:check      # aiken check (compila + corre los 73 tests)
+pnpm contracts:check      # aiken check (compila + corre los tests; ver §Coverage por el total vigente)
 pnpm contracts:build      # regenera plutus.json — commitealo (el CI verifica que esté al día)
 aiken fmt                 # el CI corre 'aiken fmt --check'
 aiken check -m <patrón>   # solo los tests cuyo nombre matchee
