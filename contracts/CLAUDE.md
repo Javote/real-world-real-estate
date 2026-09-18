@@ -84,8 +84,15 @@ secuencia y del momento**, no que un profesional atestiguó. La atestiguación v
 Todos los stages viven en la **misma dirección de script**, así que la dirección no identifica a
 nadie. Lo que identifica al hilo es un **NFT** cuyo asset name es el `stage_ref`:
 
-- `mint` acuña **exactamente uno** por stage y lo deja en el script con un datum inicial legítimo
-  (`Pending`, sin evidencia, sin fecha, `sequence_order > 0`, refs no vacías ≤32 bytes).
+- `mint` acuña **exactamente uno por transacción** y lo deja en el script con un datum inicial
+  legítimo (`Pending`, sin evidencia, sin fecha, `sequence_order > 0`, refs no vacías ≤32 bytes).
+  **La unicidad por stage no la garantiza el validador** — el handler no mira `tx.inputs`, así que
+  nada ata la acuñación a un UTxO consumido y una segunda transacción vuelve a acuñar el mismo
+  `stage_ref` (reproducido en `AUDITORIA-2026-09-11-calidad-de-contracts.md` §C-01). La sostiene el
+  backend: `retryStageMint` (`apps/api/src/domain/stage-transition.ts`) consulta
+  `findLiveThread` contra la cadena antes de mintear, no solo `OnChainEvent`
+  (`SPEC-301`). Cerrar el agujero on-chain de verdad —que el validador exija gastar un UTxO
+  semilla— cambia el script hash y es decisión de mainnet (`SPEC-305`).
 - `spend` exige que el UTxO que se gasta lleve el token **y** que el output de continuación lo siga
   llevando. Un UTxO cualquiera abandonado en la dirección del script no es un hilo.
 - **No hay burn.** Quemar el token sería borrar la historia de un stage, y el punto entero del hilo
