@@ -111,7 +111,17 @@ validator stage(admin: VerificationKeyHash) {
 
     let Advance { to, completion } = redeemer
 
-    // El valor bloqueado no se toca (D-021).
+    // El valor bloqueado no se toca (D-021). **Y también sostiene la retención
+    // del thread token** (SPEC-303): `carrying_thread` de arriba filtra por
+    // payment credential, no por dirección completa, así que sola solo dice
+    // "exactamente un output del script lleva el token" — no que sea ESTE
+    // output de continuación. Como `own_input` ya está verificado con 1
+    // unidad, esta igualdad fuerza al continuing_output a llevarla (si no la
+    // llevara, `carrying_thread` encontraría dos). Relajar esta línea —por
+    // ejemplo, para permitir un top-up de min-ADA— degrada esa garantía a
+    // "algún output del script lo tiene" en silencio, y exige fortalecer
+    // `carrying_thread` para comparar la dirección completa en el mismo
+    // commit.
     expect continuing_output.value == own_input.output.value
 
     // La ventana de tiempo solo aplica cuando se escribe un timestamp.
