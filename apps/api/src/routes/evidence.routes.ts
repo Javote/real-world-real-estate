@@ -14,15 +14,13 @@ import {
 } from "@plataforma/shared";
 import { type Request, Router } from "express";
 import { z } from "zod";
-import { createId } from "../db/id";
+import { anchorCommitmentEvent } from "../domain/anchoring";
 import {
   hilosSospechosos,
   reconciliarAnclajes,
   reconciliarParaLectura,
   repararHilosSospechosos
 } from "../domain/reconcile";
-import { Sentry } from "../instrumentation";
-import { anchorPort } from "../lib/anchor";
 import { db } from "../lib/db";
 import { storage } from "../lib/storage";
 import { ANY_MEMBERSHIP, authenticate, authorize, CUALQUIER_ROL } from "../middlewares/auth";
@@ -259,100 +257,22 @@ router.post(
       return res.status(200).json(onChainEventSchema.parse(yaAnclada));
     }
 
-    const previo = await db
-      .selectFrom("OnChainEvent")
-      .select("eventIndex")
-      .where("stageId", "=", evidencia.stageId)
-      .orderBy("eventIndex", "desc")
-      .limit(1)
-      .executeTakeFirst();
-
-    const now = new Date();
-    const evento = await db
-      .insertInto("OnChainEvent")
-      .values({
-        id: createId(),
-        projectId: evidencia.projectId,
-        stageId: evidencia.stageId,
-        evidenceId: evidencia.id,
-        eventIndex: previo ? previo.eventIndex + 1 : 0,
-        eventType: "EVIDENCE_ANCHOR",
-        fromState: null,
-        toState: null,
-        commitment: evidencia.sha256Hash,
-        status: "Pending",
-        txid: null,
-        outputRef: null,
-        blockTimestamp: null,
-        createdAt: now,
-        updatedAt: now
-      })
-      .returningAll()
-      .executeTakeFirstOrThrow();
-
-    let anclado = evento;
-    try {
-      const recibo = await anchorPort().anchorCommitment({
-        sha256: evidencia.sha256Hash,
-        // Ref opaca: el id del registro, nunca el nombre del archivo (regla 2).
-        reference: evidencia.id
-      });
-
-      // El recibo se guarda apenas existe, no cuando termina de confirmar —
-      // mismo fix que `anchorEvent`/`anchorCommitmentEvent` (2026-09-10, ver
-      // `specs/REPORTE-2026-09-10-prueba-de-volumen.md` §Cómo hacerlo más
-      // robusto): si el proceso muere entre acá y el `confirmedAt()` de
-      // abajo, el TXID real ya quedó escrito.
-      anclado = await db
-        .updateTable("OnChainEvent")
-        .set({
-          txid: recibo.txid,
-          network: anchorPort().network,
-          status: recibo.status,
-          updatedAt: new Date()
-        })
-        .where("id", "=", evento.id)
-        .returningAll()
-        .executeTakeFirstOrThrow();
-
-      // Confirmar es best-effort: si falla, el evento queda `Pending` con
-      // TXID real — nunca `Failed`, el anclaje ya ocurrió. D-077 lo
-      // reconcilia después. El recibo llega `Pending` siempre (D-087):
-      // `confirmedAt` es quien puede decir `Confirmed`, igual que en
-      // `domain/anchoring.ts`.
-      try {
-        const blockTimestamp = await anchorPort().confirmedAt(recibo.txid);
-        if (blockTimestamp !== null) {
-          anclado = await db
-            .updateTable("OnChainEvent")
-            .set({
-              status: "Confirmed",
-              blockTimestamp: new Date(blockTimestamp),
-              updatedAt: new Date()
-            })
-            .where("id", "=", evento.id)
-            .returningAll()
-            .executeTakeFirstOrThrow();
-        }
-      } catch (error) {
-        console.error("[anchor] la confirmación de evidencia falló — el anclaje ya está guardado", {
-          evidenceId: evidencia.id,
-          error
-        });
-      }
-    } catch (error) {
-      console.error("[anchor] el anclaje de evidencia falló", { evidenceId: evidencia.id, error });
-      Sentry.captureException(error, {
-        tags: { area: "anchor" },
-        extra: { evidenceId: evidencia.id }
-      });
-      anclado = await db
-        .updateTable("OnChainEvent")
-        .set({ status: "Failed", updatedAt: new Date() })
-        .where("id", "=", evento.id)
-        .returningAll()
-        .executeTakeFirstOrThrow();
-    }
+    // SPEC-206 (B-08): esto era ~60 líneas reimplementando inline lo que
+    // `anchorCommitmentEvent` ya hace — leer el `eventIndex` previo, insertar
+    // `Pending`, guardar el recibo apenas existe, confirmar best-effort,
+    // marcar `Failed` si el puerto explota. Habían divergido: esta copia no
+    // escribía `referenceId`, así que una evidencia anclada por acá (a
+    // diferencia de una por `POST /developer/documents`) no era reconciliable
+    // por su ref. `reference`/`evidenceId` son el mismo id a propósito: es la
+    // ref opaca al registro, nunca el nombre del archivo (regla 2).
+    const anclado = await anchorCommitmentEvent({
+      projectId: evidencia.projectId,
+      stageId: evidencia.stageId,
+      evidenceId: evidencia.id,
+      eventType: "EVIDENCE_ANCHOR",
+      commitment: evidencia.sha256Hash,
+      reference: evidencia.id
+    });
 
     await writeAuditLog({
       actorUserId: req.user!.id,

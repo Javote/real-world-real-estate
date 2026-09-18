@@ -1,7 +1,8 @@
 import request from "supertest";
-import { afterAll, beforeAll, describe, expect, it } from "vitest";
+import { afterAll, beforeAll, describe, expect, it, vi } from "vitest";
 import app from "../src/app";
 import { createId } from "../src/db/id";
+import { anchorPort } from "../src/lib/anchor";
 import { db } from "../src/lib/db";
 import { FIXTURES } from "./global-setup";
 
@@ -146,6 +147,90 @@ describe("POST /evidence/:id/anchor", () => {
       .post(`/api/v1/evidence/${createId()}/anchor`)
       .set("Authorization", `Bearer ${tokenAdmin}`);
     expect([403, 404]).toContain(res.status);
+  });
+
+  // SPEC-206 (B-08): estos cuatro casos se escribieron ANTES de reemplazar la
+  // reimplementación inline por `anchorCommitmentEvent` (domain/anchoring.ts)
+  // y no se tocaron después — es la prueba de que borrar las ~60 líneas
+  // gemelas no cambió el comportamiento. El de `referenceId` es la excepción
+  // a propósito: es la divergencia que la spec cierra, así que fallaba antes
+  // del refactor y pasa después.
+
+  it("el evento anclado queda con referenceId — lo que permite reconciliarlo por su ref, no solo por evidenceId", async () => {
+    const stage = await crearStage(998_040);
+    const evidencia = await subirEvidencia(stage, "referenceid-check");
+
+    const res = await request(app)
+      .post(`/api/v1/evidence/${evidencia}/anchor`)
+      .set("Authorization", `Bearer ${tokenAdmin}`);
+
+    expect(res.status).toBe(201);
+
+    const evento = await db
+      .selectFrom("OnChainEvent")
+      .select("referenceId")
+      .where("id", "=", res.body.id)
+      .executeTakeFirstOrThrow();
+    expect(evento.referenceId).toBe(evidencia);
+  });
+
+  it("si el puerto de anclaje falla, el evento queda Failed y la respuesta sigue siendo 201", async () => {
+    const stage = await crearStage(998_041);
+    const evidencia = await subirEvidencia(stage, "puerto-falla");
+
+    const anchorCommitment = vi
+      .spyOn(anchorPort(), "anchorCommitment")
+      .mockRejectedValueOnce(new Error("el proveedor no contesta"));
+
+    const res = await request(app)
+      .post(`/api/v1/evidence/${evidencia}/anchor`)
+      .set("Authorization", `Bearer ${tokenAdmin}`);
+
+    anchorCommitment.mockRestore();
+
+    expect(res.status).toBe(201);
+    expect(res.body.status).toBe("Failed");
+    expect(res.body.txid).toBeNull();
+  });
+
+  it("si el puerto confirma tarde, el evento queda Pending con el TXID real, no Failed", async () => {
+    const stage = await crearStage(998_042);
+    const evidencia = await subirEvidencia(stage, "confirma-tarde");
+
+    const confirmedAt = vi.spyOn(anchorPort(), "confirmedAt").mockResolvedValueOnce(null);
+
+    const res = await request(app)
+      .post(`/api/v1/evidence/${evidencia}/anchor`)
+      .set("Authorization", `Bearer ${tokenAdmin}`);
+
+    confirmedAt.mockRestore();
+
+    expect(res.status).toBe(201);
+    expect(res.body.status).toBe("Pending");
+    expect(res.body.txid).toMatch(/^[0-9a-f]{64}$/);
+  });
+
+  it("registra AuditLog ANCHOR_EVIDENCE con el txid y el status finales", async () => {
+    const stage = await crearStage(998_043);
+    const evidencia = await subirEvidencia(stage, "audit-log-check");
+
+    const res = await request(app)
+      .post(`/api/v1/evidence/${evidencia}/anchor`)
+      .set("Authorization", `Bearer ${tokenAdmin}`);
+
+    const entrada = await db
+      .selectFrom("AuditLog")
+      .selectAll()
+      .where("entityId", "=", evidencia)
+      .where("action", "=", "ANCHOR_EVIDENCE")
+      .executeTakeFirstOrThrow();
+
+    const metadata = JSON.parse(entrada.metadataJson as unknown as string) as {
+      txid: string;
+      status: string;
+    };
+    expect(metadata.txid).toBe(res.body.txid);
+    expect(metadata.status).toBe(res.body.status);
   });
 });
 
