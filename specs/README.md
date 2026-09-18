@@ -169,8 +169,8 @@ dos. La parte urgente se cierra sin tocar el script; la de fondo es decisión de
 | [`SPEC-108`](SPEC-108-higiene-de-componentes.md) | Higiene: el shell de card repetido, el hook disfrazado, la prop que se ignora | F-15·16·17 | abierta |
 | [`SPEC-109`](SPEC-109-tipos-de-respuesta-desde-shared.md) | `api/types.ts`: cerrar la garantía de "drift imposible" | F-13 | abierta 🟡 |
 | [`SPEC-110`](SPEC-110-estado-de-carga.md) | 30 de 42 rutas muestran el empty-state mientras cargan | F-18 | abierta |
-| [`SPEC-201`](SPEC-201-aceptar-invitacion-atomico.md) | Aceptar una invitación deja de poder sacarle la unidad a quien ya la compró | B-01 | abierta · **antes de mainnet** |
-| [`SPEC-202`](SPEC-202-un-dossier-por-unidad.md) | Una unidad, un dossier: el índice único que falta | B-02 | abierta 🟡 · **antes de mainnet** |
+| [`SPEC-201`](SPEC-201-aceptar-invitacion-atomico.md) | Aceptar una invitación deja de poder sacarle la unidad a quien ya la compró | B-01 | **cerrada 2026-09-18** |
+| [`SPEC-202`](SPEC-202-un-dossier-por-unidad.md) | Una unidad, un dossier: el índice único que falta | B-02 | **cerrada 2026-09-18** 🟡 |
 | [`SPEC-203`](SPEC-203-migraciones-atomicas.md) | Una migración que se corta a la mitad tiene que poder volver | B-03 | abierta 🟡 |
 | [`SPEC-204`](SPEC-204-openapi-url-y-descripcion.md) | El OpenAPI publicado apunta a una URL que no existe | B-04 | abierta |
 | [`SPEC-205`](SPEC-205-dos-invariantes-que-hoy-sostiene-el-cliente.md) | Dos invariantes que hoy sostiene la buena fe del cliente | B-05·07 | abierta |

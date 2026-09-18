@@ -159,7 +159,13 @@ export async function compileDossier(unitId: string): Promise<CompiledDossier | 
   let fila = existente;
 
   if (!fila) {
-    fila = await db
+    // SPEC-202 (B-02): `Dossier_unitId_key` es único, así que dos
+    // compilaciones concurrentes de la misma unidad ya no pueden insertar dos
+    // filas — la segunda choca y `onConflict().doNothing()` la absorbe. Pero
+    // eso deja a esa segunda llamada sin la fila que acaba de "insertar": hay
+    // que releerla, y la que gana la carrera es la que vale para las dos
+    // (invariante 2).
+    await db
       .insertInto("Dossier")
       .values({
         id: createId(),
@@ -172,7 +178,13 @@ export async function compileDossier(unitId: string): Promise<CompiledDossier | 
         signedAt: null,
         rejectionNote: null
       })
-      .returningAll()
+      .onConflict((oc) => oc.column("unitId").doNothing())
+      .execute();
+
+    fila = await db
+      .selectFrom("Dossier")
+      .selectAll()
+      .where("unitId", "=", unidad.id)
       .executeTakeFirstOrThrow();
   } else if (fila.status !== "signed" && fila.masterHash !== hashCalculado) {
     // Recompilar solo lo no firmado. Ver el comentario de arriba.
