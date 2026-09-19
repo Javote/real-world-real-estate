@@ -164,7 +164,7 @@ mismo— sigue siendo `SPEC-305`, decisión de mainnet.
 | [`SPEC-103`](SPEC-103-el-armazon-que-no-anuncia.md) | El armazón no anuncia dónde estás: `lang`, `title`, `aria-current`, el contador | F-04·05·06·07 | **cerrada 2026-09-18** |
 | [`SPEC-104`](SPEC-104-live-regions.md) | Anunciar lo que cambia: las live regions que la app no tiene | F-03 | **cerrada 2026-09-19** — verificado con tests automatizados; falta la pasada con VoiceOver que pide la spec |
 | [`SPEC-105`](SPEC-105-controles-que-no-son-controles.md) | Tres cosas que son controles y no se comportan como tales | F-08·09·12 | **cerrada 2026-09-19** |
-| [`SPEC-106`](SPEC-106-el-pill-estirado-y-el-fondo-de-la-cola.md) | El pill estirado y el fondo de la cola del escribano | F-10·11 | abierta |
+| [`SPEC-106`](SPEC-106-el-pill-estirado-y-el-fondo-de-la-cola.md) | El pill estirado y el fondo de la cola del escribano | F-10·11 | **cerrada 2026-09-19** — verificado contra las 10 apariciones de `StatusPill`, no solo las 5 nombradas |
 | [`SPEC-107`](SPEC-107-claves-de-traduccion-tipadas.md) | Los 23 `as never` que apagan el chequeo del diccionario | F-14 | abierta |
 | [`SPEC-108`](SPEC-108-higiene-de-componentes.md) | Higiene: el shell de card repetido, el hook disfrazado, la prop que se ignora | F-15·16·17 | abierta |
 | [`SPEC-109`](SPEC-109-tipos-de-respuesta-desde-shared.md) | `api/types.ts`: cerrar la garantía de "drift imposible" | F-13 | abierta 🟡 |

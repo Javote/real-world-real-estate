@@ -57,3 +57,29 @@ del loop) y esta parte de la spec se cierra sin cambio, anotando cuál.
 
 La sonda de la auditoría, repetida: ancho del pill contra el ancho real de su texto vía `Range`, a
 390px y a 1534px, en las 5 superficies.
+
+## Cerrada 2026-09-19 — verificado contra las 10 apariciones de `StatusPill`, no solo las 5 nombradas
+
+Revisé el contexto flex de las 10 rutas/componentes que importan `StatusPill` (no solo las 3 que
+esta spec nombraba), porque la invariante 1 es general. Resultado:
+
+- **`ProjectCard` (variante investor) y `ProfileScreen`** — el bug exacto que describe F-10.
+  `self-start` en las dos.
+- **`developer.progress.tsx`, fila de "Stages observados"** — el mismo defecto exacto (hijo directo
+  de un `flex flex-col`), que la auditoría no había nombrado. Mismo `self-start`.
+- **`investor.unit.$unitId.dossier.tsx`**, la tercera superficie que la spec sí nombraba — **ya no
+  usa `StatusPill`** (verificado con `grep`, no asumido): la ruta cambió desde que se escribió la
+  auditoría y hoy usa `VerificationBadge`, un patrón distinto (P1) que no tiene este problema. Nada
+  que cerrar ahí.
+- Las otras 6 apariciones (`certifier.issued.tsx`, `certifier.stage.$stageId.tsx`,
+  `notary.dossier.$dossierId.tsx`, `notary.signed.tsx`, `developer.project.$projectId.contracts.tsx`,
+  `developer.project.$projectId.index.tsx`, `project.$projectId.progress.tsx`, la variante
+  `developer` de `ProjectCard`) ya viven dentro de una fila (`flex items-start justify-between` o
+  `items-center`), no de una columna — no les toca el bug, verificado leyendo el contenedor de cada
+  una, no solo grepeando `StatusPill`.
+
+**F-11:** `AssignedStagesQueue` tenía el mismo `bg-surface-alt` que `PendingDossiersQueue`, aunque la
+spec solo nombraba a esta última. Mismo defecto, mismo copy-paste — las dos corregidas a `bg-card`.
+
+**El comentario de `StatusPill` que "razonaba largo y erraba el eje"** ahora explica el eje cruzado
+y por qué el componente no puede resolverlo por sí solo (depende de si el padre es fila o columna).
