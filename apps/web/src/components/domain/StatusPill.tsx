@@ -46,6 +46,13 @@ export function StatusPill({ tone, children, className }: StatusPillProps) {
         // Lo que cede es el TÍTULO, que envuelve bien: por eso el pill también
         // va `shrink-0`. Es la excepción a "nada de anchos fijos" — no se fija
         // un ancho, se le prohíbe encogerse por debajo de su contenido.
+        //
+        // **`shrink-0` gobierna el eje PRINCIPAL, no el cruzado** (SPEC-106,
+        // F-10): como hijo directo de una columna (`flex flex-col`), el pill
+        // se blockifica y `align-items: stretch` lo estira al ancho del
+        // contenedor sin que `shrink-0` lo evite. Quien lo monte dentro de una
+        // columna necesita pasar `className="self-start"` — el componente no
+        // puede saberlo por sí solo, porque en una fila (`flex`) no hace falta.
         'inline-flex shrink-0 items-center whitespace-nowrap rounded-full px-s2 py-s1 text-caption font-medium',
         TONOS[tone],
         className

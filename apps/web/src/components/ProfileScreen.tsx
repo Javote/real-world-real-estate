@@ -94,8 +94,11 @@ export function ProfileScreen({ rol, testId, back, editTestId, prefsTestId }: Pr
               {perfil?.fullName}
             </span>
             <span className="truncate text-body-sm text-text-muted">{perfil?.email}</span>
+            {/* SPEC-106 (F-10): hijo directo de una columna flex. */}
             {perfil ? (
-              <StatusPill tone="info">{t(`role.${perfil.role}` as never)}</StatusPill>
+              <StatusPill tone="info" className="self-start">
+                {t(`role.${perfil.role}` as never)}
+              </StatusPill>
             ) : null}
           </span>
           <SecondaryButton onClick={abrirEdicion} className="shrink-0 px-s3 py-s2">

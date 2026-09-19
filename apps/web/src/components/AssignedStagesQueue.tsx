@@ -29,7 +29,12 @@ export function AssignedStagesQueue() {
       {asignados.map((asignacion) => (
         <li
           key={asignacion.stageId}
-          className="flex items-center justify-between gap-s3 rounded-lg bg-surface-alt p-s3"
+          // SPEC-106 (F-11): mismo defecto que PendingDossiersQueue —
+          // `bg-surface-alt` (gris) donde el resto de las listas de la app
+          // usa `bg-card`. La spec solo nombraba la cola del escribano, pero
+          // la invariante 2 ("todas las listas comparten fondo") es general
+          // y esta es la misma cola-tarjeta con el mismo copy-paste.
+          className="flex items-center justify-between gap-s3 rounded-lg bg-card p-s3"
         >
           <div className="flex min-w-0 flex-col">
             <span className="truncate text-body font-bold text-text-primary">

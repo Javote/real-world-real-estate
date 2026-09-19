@@ -26,9 +26,12 @@ export function PendingDossiersQueue() {
   }
 
   return (
+    // SPEC-106 (F-11): todas las demás listas de la app usan `bg-card`
+    // (#ffffff); esta quedaba `bg-surface-alt`, gris contra el
+    // `--color-app-bg` off-white mientras las otras se ven blancas.
     <ul className="mt-s4 flex flex-col gap-s3">
       {pendientes.map((d) => (
-        <li key={d.dossierId} className="flex flex-col gap-s2 rounded-lg bg-surface-alt p-s3">
+        <li key={d.dossierId} className="flex flex-col gap-s2 rounded-lg bg-card p-s3">
           <div className="flex items-center justify-between gap-s3">
             <div className="flex min-w-0 flex-col">
               <span className="truncate text-body font-bold text-text-primary">{d.unitLabel}</span>

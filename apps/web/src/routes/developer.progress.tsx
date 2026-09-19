@@ -165,7 +165,10 @@ function DeveloperProgress() {
                   <span className="text-body-sm font-medium text-text-primary">
                     {f.projectName} · {f.stageName}
                   </span>
-                  <StatusPill tone="pending">{t('status.observed')}</StatusPill>
+                  {/* SPEC-106 (F-10): hijo directo de una columna flex. */}
+                  <StatusPill tone="pending" className="self-start">
+                    {t('status.observed')}
+                  </StatusPill>
                 </div>
                 <PrimaryButton
                   testId="DEV-PROGRESS-RESUME-BTN"

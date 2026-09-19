@@ -68,6 +68,18 @@ describe('PendingDossiersQueue', () => {
     await userEvent.click(boton)
     await screen.findByText('DOSSIER-STUB')
   })
+
+  it('SPEC-106 (F-11): la fila usa bg-card, no bg-surface-alt', async () => {
+    vi.spyOn(api, 'getNotaryPendingDossiers').mockResolvedValue([
+      { dossierId: 'd1', unitLabel: 'Torre A · 4B', investorName: 'Ana Torres', completeness: 60 }
+    ])
+
+    montar(() => <PendingDossiersQueue />, '/notary')
+
+    const fila = (await screen.findByText('Ana Torres')).closest('li')
+    expect(fila?.className).toContain('bg-card')
+    expect(fila?.className).not.toContain('bg-surface-alt')
+  })
 })
 
 describe('AssignedStagesQueue', () => {
@@ -85,5 +97,17 @@ describe('AssignedStagesQueue', () => {
 
     await userEvent.click(boton)
     await screen.findByText('STAGE-STUB')
+  })
+
+  it('SPEC-106 (F-11): la fila usa bg-card, no bg-surface-alt', async () => {
+    vi.spyOn(api, 'getCertifierAssignments').mockResolvedValue([
+      { stageId: 's1', projectName: 'Torre A', stageName: 'Cimentación', sequenceOrder: 1 }
+    ])
+
+    montar(() => <AssignedStagesQueue />, '/certifier')
+
+    const fila = (await screen.findByText('Torre A')).closest('li')
+    expect(fila?.className).toContain('bg-card')
+    expect(fila?.className).not.toContain('bg-surface-alt')
   })
 })

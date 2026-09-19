@@ -175,7 +175,15 @@ export function ProjectCard({
             </span>
           ) : null}
 
-          {!esDeveloper ? <StatusPill tone={status.tone}>{status.label}</StatusPill> : null}
+          {/* SPEC-106 (F-10): hijo directo de una columna flex —
+              `align-items: stretch` lo estira al ancho de la card sin
+              `self-start`. `shrink-0` gobierna el eje principal, no el
+              cruzado, y acá no alcanza. */}
+          {!esDeveloper ? (
+            <StatusPill tone={status.tone} className="self-start">
+              {status.label}
+            </StatusPill>
+          ) : null}
 
           {progress != null ? (
             <div className="flex flex-col gap-s1">
