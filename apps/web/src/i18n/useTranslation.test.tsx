@@ -95,4 +95,33 @@ describe('LocaleProvider / useTranslation', () => {
 
     await screen.findByText('Sign in')
   })
+
+  // SPEC-107 (F-14) — el escape explícito para claves que no salen de una
+  // unión cerrada (p.ej. `titleKey` de una notificación, arbitrario del
+  // backend). Fallback obligatorio, a diferencia de `as never`.
+  it('tDinamico: devuelve la traducción si la clave existe en el diccionario', async () => {
+    function ProbeDinamico() {
+      const { tDinamico } = useTranslation()
+      return <p>{tDinamico('login.submit', 'nunca se ve')}</p>
+    }
+    render(
+      <LocaleProvider>
+        <ProbeDinamico />
+      </LocaleProvider>
+    )
+    await screen.findByText('Ingresar')
+  })
+
+  it('tDinamico: cae al fallback si la clave no existe', async () => {
+    function ProbeDinamico() {
+      const { tDinamico } = useTranslation()
+      return <p>{tDinamico('esto.no.existe.en.el.diccionario', 'texto de respaldo')}</p>
+    }
+    render(
+      <LocaleProvider>
+        <ProbeDinamico />
+      </LocaleProvider>
+    )
+    await screen.findByText('texto de respaldo')
+  })
 })

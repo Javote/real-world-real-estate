@@ -143,7 +143,7 @@ function InvestorBuy() {
         name={proyecto.name}
         location={ubicacion || null}
         status={{
-          label: t(`project.status.${proyecto.status}` as never),
+          label: t(`project.status.${proyecto.status}`),
           tone: TONO_PROYECTO[proyecto.status] ?? 'neutral'
         }}
         progress={avanceDeStages(proyecto.stages ?? [])}
@@ -216,7 +216,7 @@ function InvestorBuy() {
             onClick={() => void navigate({ search: (prev) => ({ ...prev, status: undefined }) })}
             className="inline-flex items-center gap-s1 rounded-full bg-primary-light px-s3 py-s1 text-caption font-medium text-primary"
           >
-            {t(`project.status.${search.status}` as never)}
+            {t(`project.status.${search.status}`)}
             <X className="size-icon-inline" aria-hidden="true" />
           </button>
         ) : null}
@@ -345,7 +345,7 @@ function InvestorBuy() {
                   selected={search.status === s}
                   onSelect={() => void navigate({ search: (prev) => ({ ...prev, status: s }) })}
                 >
-                  {t(`project.status.${s}` as never)}
+                  {t(`project.status.${s}`)}
                 </FilterPill>
               ))}
             </div>

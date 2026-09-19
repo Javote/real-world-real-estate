@@ -95,7 +95,7 @@ function DeveloperProjectDetail() {
               ) : null}
             </div>
             <StatusPill tone={TONO_POR_ESTADO[proyecto.status] ?? 'neutral'}>
-              {t(`project.status.${proyecto.status}` as never)}
+              {t(`project.status.${proyecto.status}`)}
             </StatusPill>
           </article>
         ) : null}

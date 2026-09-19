@@ -248,7 +248,7 @@ function ProjectUnits() {
                 : {})}
               status={{
                 tone: TONO[u.status as keyof typeof TONO] ?? 'neutral',
-                label: t(`unitStatus.${u.status}` as never) ?? u.status
+                label: t(`unitStatus.${u.status}`) ?? u.status
               }}
               onOpen={() => editar(u)}
             />

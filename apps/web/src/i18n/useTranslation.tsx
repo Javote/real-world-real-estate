@@ -64,5 +64,22 @@ export function useTranslation() {
     [ctx.locale]
   )
 
-  return { t, locale: ctx.locale, setLocale: ctx.setLocale }
+  /**
+   * SPEC-107 (F-14) — el escape explícito para claves que NO salen de una
+   * unión cerrada de `packages/shared`: `titleKey` de una notificación es
+   * `z.string()` porque el backend manda claves arbitrarias (regla 15) y no
+   * hay forma de que el compilador verifique un conjunto que no existe en
+   * ningún tipo. A diferencia de `as never` —que apaga el chequeo y
+   * desaparece en el diff—, el fallback acá es **obligatorio** y se ve en
+   * cada call site.
+   */
+  const tDinamico = useCallback(
+    (clave: string, fallback: string) => {
+      const tabla: Record<string, string> = dictionary[ctx.locale]
+      return tabla[clave] ?? fallback
+    },
+    [ctx.locale]
+  )
+
+  return { t, tDinamico, locale: ctx.locale, setLocale: ctx.setLocale }
 }

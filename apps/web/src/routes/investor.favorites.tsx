@@ -53,7 +53,7 @@ function InvestorFavorites() {
                 name={proyecto.name}
                 location={ubicacion || null}
                 status={{
-                  label: t(`project.status.${proyecto.status}` as never),
+                  label: t(`project.status.${proyecto.status}`),
                   tone: TONO_PROYECTO[proyecto.status] ?? 'neutral'
                 }}
                 progress={avanceDeStages(proyecto.stages ?? [])}

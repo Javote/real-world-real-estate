@@ -105,7 +105,7 @@ function AuditLog() {
         </CategoryChip>
         {CATEGORIAS.map((c) => (
           <CategoryChip key={c} selected={filtro === c} onSelect={() => setFiltro(c)}>
-            {t(`audit.category.${c}` as never)}
+            {t(`audit.category.${c}`)}
           </CategoryChip>
         ))}
       </div>
@@ -122,11 +122,11 @@ function AuditLog() {
               <AuditEventCard
                 key={e.id}
                 timestampLabel={formatDateTime(e.createdAt, locale)}
-                title={t(`audit.action.${e.action}` as never) ?? e.action}
-                category={{ key: categoria, label: t(`audit.category.${categoria}` as never) }}
+                title={t(`audit.action.${e.action}`) ?? e.action}
+                category={{ key: categoria, label: t(`audit.category.${categoria}`) }}
                 actor={{
                   role: rolDe(e.actorRole),
-                  roleLabel: t(`role.${e.actorRole ?? 'developer'}` as never),
+                  roleLabel: t(`role.${e.actorRole ?? 'developer'}`),
                   name: e.actorName ?? t('developer.audit.system')
                 }}
                 txid={txid}
@@ -136,7 +136,7 @@ function AuditLog() {
                     ? () =>
                         setVerTxid({
                           txid,
-                          label: t(`audit.action.${e.action}` as never) ?? e.action,
+                          label: t(`audit.action.${e.action}`) ?? e.action,
                           at: e.createdAt
                         })
                     : undefined

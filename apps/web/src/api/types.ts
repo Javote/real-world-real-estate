@@ -7,7 +7,7 @@
 //
 // Son `export type`: el front no carga Zod en runtime, solo usa los tipos, y
 // `verbatimModuleSyntax` los borra al compilar.
-import type { StageState, UserRole } from '@plataforma/shared'
+import type { AuditAction, StageState, UnitStatus, UserRole } from '@plataforma/shared'
 
 export type { LoginResponse, MeResponse, SessionUser, UserRole } from '@plataforma/shared'
 
@@ -137,7 +137,7 @@ export interface StageEvidenceAnchor {
 /** Una fila del audit log (M2-D4 P6). Append-only: nunca se edita ni se borra. */
 export interface AuditEvent {
   id: string
-  action: string
+  action: AuditAction
   entityType: string
   entityId: string
   metadataJson: string | null
@@ -150,7 +150,7 @@ export interface AuditEvent {
 export interface DeveloperUnit {
   id: string
   unitReference: string
-  status: string
+  status: UnitStatus
   priceMinorUnits: number | null
   currency: string | null
   investorId: string | null
@@ -169,7 +169,7 @@ export interface DeveloperProjectUnit {
   id: string
   projectId: string
   unitReference: string
-  status: string
+  status: UnitStatus
   floor: number | null
   sizeM2: number | null
   priceMinorUnits: number | null
@@ -210,7 +210,7 @@ export interface DeveloperContract {
   id: string
   unitId: string
   unitReference: string
-  unitStatus: string
+  unitStatus: UnitStatus
   investorName: string
   totalMinorUnits: number
   currency: string
@@ -223,7 +223,7 @@ export interface DeveloperContract {
 export interface InvestorUnit {
   id: string
   unitReference: string
-  status: string
+  status: UnitStatus
   sizeM2: number | null
   priceMinorUnits: number | null
   currency: string | null
@@ -297,7 +297,7 @@ export interface InvestorUnitStage {
 export interface InvestorUnitDetail {
   id: string
   unitReference: string
-  status: string
+  status: UnitStatus
   sizeM2: number | null
   floor: number | null
   priceMinorUnits: number | null

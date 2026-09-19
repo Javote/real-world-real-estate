@@ -271,9 +271,7 @@ function InvestorUnitDetail() {
             {unidad?.status ? (
               <div className="flex justify-between gap-s2">
                 <dt className="text-text-muted">{t('investor.unit.status')}</dt>
-                <dd className="font-bold text-text-primary">
-                  {t(`unitStatus.${unidad.status}` as never)}
-                </dd>
+                <dd className="font-bold text-text-primary">{t(`unitStatus.${unidad.status}`)}</dd>
               </div>
             ) : null}
             {proyecto?.estimatedDelivery ? (

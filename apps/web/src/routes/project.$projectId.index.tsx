@@ -172,7 +172,7 @@ function InvestorProjectDetail() {
           <article className="flex flex-col gap-s2 rounded-xl bg-card p-s4 shadow-e1">
             {proyecto?.status ? (
               <span className="text-body-sm font-medium text-text-muted">
-                {t(`project.status.${proyecto.status}` as never)}
+                {t(`project.status.${proyecto.status}`)}
               </span>
             ) : null}
             {proyecto?.estimatedDelivery ? (

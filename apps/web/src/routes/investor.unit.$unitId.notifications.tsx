@@ -43,7 +43,7 @@ export const Route = createFileRoute('/investor/unit/$unitId/notifications')({
 function InvestorUnitNotifications() {
   const { unitId } = Route.useParams()
   const { ready } = useRoleGuard(INVESTOR_ROLES)
-  const { t, locale } = useTranslation()
+  const { t, tDinamico, locale } = useTranslation()
   const navigate = useNavigate()
   const queryClient = useQueryClient()
   const [filtro, setFiltro] = useState<NotifCategory | null>(null)
@@ -92,7 +92,7 @@ function InvestorUnitNotifications() {
         </CategoryChip>
         {CATEGORIAS.map((c) => (
           <CategoryChip key={c} selected={filtro === c} onSelect={() => setFiltro(c)}>
-            {t(`audit.category.${BORDE[c]}` as never)}
+            {t(`audit.category.${BORDE[c]}`)}
           </CategoryChip>
         ))}
       </div>
@@ -105,7 +105,7 @@ function InvestorUnitNotifications() {
               <NotificationCard
                 key={n.id}
                 icon={ICONO[categoria] ?? Bell}
-                title={t(n.titleKey as never) ?? n.titleKey}
+                title={tDinamico(n.titleKey, n.titleKey)}
                 timestampLabel={formatRelative(String(n.createdAt), locale)}
                 read={n.readAt !== null}
                 readLabel={t('investor.notifications.read')}

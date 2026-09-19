@@ -97,7 +97,7 @@ export function ProfileScreen({ rol, testId, back, editTestId, prefsTestId }: Pr
             {/* SPEC-106 (F-10): hijo directo de una columna flex. */}
             {perfil ? (
               <StatusPill tone="info" className="self-start">
-                {t(`role.${perfil.role}` as never)}
+                {t(`role.${perfil.role}`)}
               </StatusPill>
             ) : null}
           </span>
@@ -146,7 +146,7 @@ export function ProfileScreen({ rol, testId, back, editTestId, prefsTestId }: Pr
               // enterarse de lo que pasa con su operación.
               checked={prefs[c] ?? true}
               onChange={(valor) => guardarPrefs.mutate({ [c]: valor })}
-              label={t(`profile.prefs.${c}` as never)}
+              label={t(`profile.prefs.${c}`)}
               disabled={guardarPrefs.isPending}
             />
           ))}
@@ -157,8 +157,7 @@ export function ProfileScreen({ rol, testId, back, editTestId, prefsTestId }: Pr
             "per role" sin definir sus campos). */}
         <article className="flex items-center gap-s2 rounded-xl bg-card p-s4 text-body-sm text-text-secondary shadow-e1">
           <ShieldCheck className="size-icon-inline text-text-muted" aria-hidden="true" />
-          {t('profile.roleLabel')}:{' '}
-          {perfil ? t(`role.${perfil.role}` as never) : t('panel.emptyValue')}
+          {t('profile.roleLabel')}: {perfil ? t(`role.${perfil.role}`) : t('panel.emptyValue')}
         </article>
 
         <DangerButton

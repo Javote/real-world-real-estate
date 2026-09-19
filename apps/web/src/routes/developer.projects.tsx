@@ -88,7 +88,7 @@ function DeveloperProjects() {
                 progress={entregado ? null : p.progress}
                 status={{
                   tone: TONO_POR_ESTADO[p.status] ?? 'neutral',
-                  label: t(`projectStatus.${p.status}` as never)
+                  label: t(`projectStatus.${p.status}`)
                 }}
                 priceLabel={
                   p.priceFromMinorUnits != null && p.priceCurrency

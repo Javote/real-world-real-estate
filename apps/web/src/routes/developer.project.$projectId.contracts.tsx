@@ -134,7 +134,7 @@ function ProjectContracts() {
                   </p>
                 </div>
                 <StatusPill tone={TONO[c.unitStatus] ?? 'neutral'}>
-                  {t(`unitStatus.${c.unitStatus}` as never) ?? c.unitStatus}
+                  {t(`unitStatus.${c.unitStatus}`) ?? c.unitStatus}
                 </StatusPill>
               </div>
 

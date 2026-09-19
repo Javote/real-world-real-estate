@@ -1009,7 +1009,7 @@ const enUS = {
   'schematic.occupied': 'Occupied',
   'schematic.mine': 'Your unit',
   'schematic.access': 'ACCESS',
-  'schematic.floorPrefix': 'P',
+  'schematic.floorPrefix': 'F',
   'schematic.callout': 'Floor {floor} · {unit} · {size}',
   'schematic.disclaimer': 'Schematic view for reference. Final plans are in the dossier.',
   'investor.contract.title': 'My contract and payments',
