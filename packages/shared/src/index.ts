@@ -19,6 +19,7 @@ export * from "./panels";
 export * from "./params";
 export * from "./profile";
 export * from "./project";
+export * from "./serialize";
 export * from "./stage";
 export * from "./stage-datum";
 export * from "./telemetry";

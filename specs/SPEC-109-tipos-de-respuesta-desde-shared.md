@@ -71,3 +71,39 @@ paquete.
 `pnpm verify` del front, y una pasada por las superficies que muestran fechas (`/developer/progress`,
 dossier, audit log) para confirmar que **ninguna** pasó a mostrar `Invalid Date` — que es el síntoma
 exacto que el tipo mentiroso venía escondiendo.
+
+## Cerrada 2026-09-19
+
+Los 20 tipos que la spec cubría se derivan con `Serialized<T>` (`packages/shared/src/serialize.ts`,
+nuevo). Verificado **campo por campo contra el schema y contra el handler real** antes de derivar
+cada uno — no alcanzaba con que los nombres coincidieran, dos veces la forma real difería de lo que
+decía el espejo:
+
+1. **Un bug de producción, real.** `DeveloperProjectDetail` heredaba `progress`/`stageCount`/
+   `priceFromMinorUnits`/`priceCurrency` de `DeveloperProject` (la fila de LISTA), pero
+   `GET /developer/projects/:id` (`developer.routes.ts:145`) nunca los manda — devuelve
+   `{...proyecto, stages, evidenceCount}` a secas. `developer.project.$projectId.index.tsx` leía
+   `proyecto?.progress ?? 0`: el StatCard de avance mostraba **0% siempre**, tapado por el
+   fallback. Confirmado con Claude en Chrome contra `pnpm dev` antes y después del fix — Torre A
+   (1/10 etapas completadas) pasó de "0% Avance" a "10% Avance". Se corrigió calculando el avance de
+   `proyecto.stages` con `avanceDeStages` (mismo helper que ya usa el resto de la app), no agregando
+   el campo al backend: el dato completo para calcularlo ya viaja.
+2. **Cuatro sitios donde el backend manda más de lo que el front sabía leer** — la misma familia de
+   hallazgo que SPEC-107 hizo del otro lado del contrato: `MerkleProof` (`GET /evidence/:id/proof/
+   :hash`) sin `signerUserId`/`anchorStatus`/`txid`/`timestamp` (`evidenceProofSchema` sí los tiene);
+   `ProjectStageDetail.events[]` sin `outputRef`; el `anchor` narrow (`{txid, status}`) en
+   `ProjectCreated`, `StageEvidenceAnchor` e `InvitationAcceptResult` donde el evento real es el
+   `OnChainEvent` completo. Ninguno tenía consumidor todavía — quedan disponibles, no invisibles.
+
+`ProjectStageDetail` (uno de los 11 "sin schema") se pudo componer igual, sin inventar un schema
+nuevo: `GET /projects/:id/stages/:stageId` arma su respuesta a partir de tres piezas que sí tienen
+schema cada una (`stageSchema` + `stageEvidenceSummarySchema` + `evidenceBundleSummarySchema` +
+`stageEventSummarySchema`) — el tipo se compone de esas cuatro, sin un quinto schema que las una.
+
+**Los 10 que siguen sin schema, confirmados uno por uno contra `packages/shared`, no supuestos**:
+`ProjectMemberUser` en realidad SÍ tenía equivalente (`ProjectMemberWithUser['user']`) y ya no cuenta
+como manual. Quedan genuinamente sin schema: `AuditEvent` (los dos enums sí llegaron con SPEC-207;
+una fila completa del audit log, no), `ProjectStageDetail` (compuesto, arriba). El resto de los 11
+originales — `DeveloperUnit`, `DeveloperProjectUnit`, `InvestorUnitNews`, `MerkleProof`,
+`InvitationAcceptResult`, `ProgressRow`, `ProjectCreated` — **sí tenían schema y la auditoría no lo
+vio**: el código cambió entre la auditoría y esta sesión, verificado grep por grep, no asumido.

@@ -7,49 +7,93 @@
 //
 // Son `export type`: el front no carga Zod en runtime, solo usa los tipos, y
 // `verbatimModuleSyntax` los borra al compilar.
-import type { AuditAction, StageState, UnitStatus, UserRole } from '@plataforma/shared'
+//
+// SPEC-109 (F-13) — 20 de los 31 tipos de este archivo YA tienen schema Zod en
+// `packages/shared`, y hasta hoy se escribían a mano igual: 414 líneas de
+// espejo manual para un contrato que en 2/3 de los casos ya existía del otro
+// lado. Ahora se DERIVAN con `Serialized<T>` (`packages/shared/src/
+// serialize.ts`): los schemas usan `z.coerce.date()`, así que el tipo
+// inferido crudo dice `Date` mientras el cable manda `string` — `Serialized`
+// hace ese único cambio de forma y deja todo lo demás igual. Un tipo derivado
+// no puede divergir del schema: si el schema gana un campo, el tipo lo gana;
+// si lo pierde, esto no compila. Es la misma economía que el package entero
+// (D-012): volver el drift imposible, no prohibido.
+//
+// **Verificado campo por campo contra el schema Y contra el handler real**
+// antes de derivar cada uno (invariante 3: ante una diferencia, gana el
+// schema, y se investiga antes de asumir). Encontró dos cosas reales:
+//
+// 1. **Un bug en producción.** `DeveloperProjectDetail` (antes) heredaba
+//    `stageCount`/`progress`/`priceFromMinorUnits`/`priceCurrency` de
+//    `DeveloperProject`, pero `GET /developer/projects/:id`
+//    (`developer.routes.ts`) nunca los manda — solo `{...proyecto, stages,
+//    evidenceCount}`. `developer.project.$projectId.index.tsx` leía
+//    `proyecto?.progress` para el StatCard de avance: **siempre mostraba 0%**,
+//    tapado por el `?? 0`. Se corrigió calculando el avance de `proyecto.
+//    stages` con `avanceDeStages`, igual que el resto de la app — el dato
+//    completo ya viaja, solo que en la forma de la lista de stages, no de un
+//    campo agregado que este endpoint nunca calculó.
+// 2. **Varios campos que el backend manda y el front nunca supo que podía
+//    leer** — el mismo síntoma que ya había dejado ver `SPEC-107` del otro
+//    lado del contrato: `MerkleProof` (`GET /evidence/:id/proof/:hash`)
+//    llegaba sin `signerUserId`/`anchorStatus`/`txid`/`timestamp`, que la
+//    respuesta real sí trae (`evidenceProofSchema`); `ProjectStageDetail.
+//    events[]` llegaba sin `outputRef`; `anchor` en `ProjectCreated`/
+//    `StageEvidenceAnchor`/`InvitationAcceptResult` se declaraba como
+//    `{txid, status}` cuando el evento real es el `OnChainEvent` completo.
+//    Ninguno se usa todavía — quedan disponibles para quien los necesite,
+//    en vez de invisibles.
+import type {
+  AcceptInvitationResult,
+  AuditAction,
+  AuditEntityType,
+  BuildingSchematicFloor as BuildingSchematicFloorShared,
+  BundleFiles as BundleFilesShared,
+  ContractRelease as ContractReleaseShared,
+  DeveloperContract as DeveloperContractShared,
+  DeveloperProgressItem,
+  DeveloperProjectCreateResult,
+  DeveloperProjectDetail as DeveloperProjectDetailShared,
+  DeveloperProjectListItem,
+  DeveloperUnitDirectoryEntry,
+  EvidenceBundleSummary,
+  EvidenceProof,
+  EvidenceResponse,
+  EvidenceType as EvidenceTypeShared,
+  InvestorContract as InvestorContractShared,
+  InvestorInvitationDetail,
+  InvestorUnitDetail as InvestorUnitDetailShared,
+  InvestorUnitListItem,
+  InvestorUnitStage as InvestorUnitStageShared,
+  InvitationResponse,
+  ProjectDetail as ProjectDetailShared,
+  ProjectDocument as ProjectDocumentShared,
+  ProjectListItem,
+  ProjectMemberWithUser,
+  PublicDossier as PublicDossierShared,
+  Serialized,
+  StageEventSummary,
+  StageEvidenceSummary,
+  StageEvidenceUploadResult,
+  StageResponse,
+  StageState,
+  UnitNewsEvent,
+  UnitResponse,
+  UserRole
+} from '@plataforma/shared'
 
 export type { LoginResponse, MeResponse, SessionUser, UserRole } from '@plataforma/shared'
 
-// El resto sigue siendo espejo manual. Cada uno migra a packages/shared cuando
-// su rebanada lo toque (SPEC-008 §NO-alcance): migrarlos todos ahora sería
-// escribir schemas para endpoints que van a cambiar de forma igual.
 // La FSM del stage vive en @plataforma/shared (D-059), que es el espejo del
-// validador Aiken. El front solo necesita el tipo — `canTransition` es del lado
-// que decide.
+// validador Aiken. El front solo necesita el tipo — `canTransition` es del
+// lado que decide.
 export type { StageState }
 export type ProjectStatus = 'planning' | 'in_progress' | 'delayed' | 'completed'
-export type EvidenceType = 'document' | 'photo' | 'certificate'
+export type EvidenceType = EvidenceTypeShared
 
-export interface Stage {
-  id: string
-  projectId: string
-  name: string
-  sequenceOrder: number
-  state: StageState
-  validationCritical: boolean
-  certifiedAt: string | null
-  certifiedById: string | null
-  createdAt: string
-  updatedAt: string
-}
+export type Stage = Serialized<StageResponse>
 
-export interface Project {
-  id: string
-  name: string
-  slug: string
-  address: string | null
-  city: string | null
-  country: string | null
-  latitude: number | null
-  longitude: number | null
-  totalUnits: number
-  estimatedDelivery: string | null
-  status: ProjectStatus
-  createdAt: string
-  updatedAt: string
-  stages: Stage[]
-}
+export type Project = Serialized<ProjectListItem>
 
 /**
  * Respuesta de `POST /developer/projects` — el Stage template (M2-D1 §5.2,
@@ -57,88 +101,31 @@ export interface Project {
  * de su propio intento de anclaje: minteos independientes, uno puede quedar
  * `Failed` sin bloquear a los demás (D-059).
  */
-export interface ProjectCreated extends Project {
-  stages: (Stage & { anchor: { txid: string | null; status: string } })[]
-}
+export type ProjectCreated = Serialized<DeveloperProjectCreateResult>
 
-export interface ProjectMemberUser {
-  id: string
-  email: string
-  fullName: string
-  role: UserRole
-}
+export type ProjectMemberUser = Serialized<ProjectMemberWithUser>['user']
 
-export interface ProjectDetail extends Project {
-  members: Array<{
-    id: string
-    userId: string
-    projectId: string
-    membershipRole: 'developer' | 'buyer' | 'verifier'
-    user: ProjectMemberUser
-  }>
-}
+export type ProjectDetail = Serialized<ProjectDetailShared>
 
-export interface Evidence {
-  id: string
-  projectId: string
-  stageId: string | null
-  uploadedById: string
-  evidenceType: EvidenceType
-  category: string
-  authoritative: boolean
-  originalFilename: string
-  mimeType: string
-  sizeBytes: number
-  sha256Hash: string
-  uploadedAt: string
-  createdAt: string
-  updatedAt: string
+export type Evidence = Serialized<EvidenceResponse> & {
   stage?: Stage | null
   uploadedBy?: { id: string; email: string; fullName: string }
 }
 
 // ── Superficie del developer (M2-D5 filas 35-36, 37, 38, 49) ────────────────
-//
-// Estos shapes son de la API y no del contrato de `packages/shared` todavía:
-// son composiciones de lectura (un proyecto con su avance calculado, un evento
-// del log con su actor) y no entidades del dominio. Cuando el cliente salga del
-// contrato oRPC (D-066) se generan solos y esto se borra.
 
-export interface DeveloperProject extends Project {
-  stageCount: number
-  /** 0-100, del proyecto (D-029). */
-  progress: number
-  /**
-   * El "desde" de la captura 35-36: el mínimo de las unidades del proyecto,
-   * en unidades mínimas enteras (regla 1). No es un campo de `Project` — no
-   * existe precio a nivel proyecto— sino una agregación que hace el endpoint.
-   *
-   * `null` cuando ninguna unidad tiene precio, o cuando el proyecto mezcla
-   * monedas y el mínimo no se puede sostener.
-   */
-  priceFromMinorUnits: number | null
-  priceCurrency: string | null
-}
+export type DeveloperProject = Serialized<DeveloperProjectListItem>
 
-export interface DeveloperProjectDetail extends DeveloperProject {
-  stages: Stage[]
-  evidenceCount: number
-}
+export type DeveloperProjectDetail = Serialized<DeveloperProjectDetailShared>
 
 /** Lo que devuelve la subida anclada: la prueba llega con la respuesta. */
-export interface StageEvidenceAnchor {
-  evidence: Evidence
-  bundleId: string
-  /** Merkle root del bundle. Completo (regla 16). */
-  merkleRoot: string
-  anchor: { txid: string | null; status: string; eventType: string }
-}
+export type StageEvidenceAnchor = Serialized<StageEvidenceUploadResult>
 
 /** Una fila del audit log (M2-D4 P6). Append-only: nunca se edita ni se borra. */
 export interface AuditEvent {
   id: string
   action: AuditAction
-  entityType: string
+  entityType: AuditEntityType
   entityId: string
   metadataJson: string | null
   createdAt: string
@@ -147,16 +134,7 @@ export interface AuditEvent {
 }
 
 /** Fila 44 — inventario de unidades del developer, cruzando proyectos. */
-export interface DeveloperUnit {
-  id: string
-  unitReference: string
-  status: UnitStatus
-  priceMinorUnits: number | null
-  currency: string | null
-  investorId: string | null
-  projectId: string
-  projectName: string
-}
+export type DeveloperUnit = Serialized<DeveloperUnitDirectoryEntry>
 
 /**
  * Fila 44b — la unidad tal cual la guarda el proyecto, del lado del developer.
@@ -165,17 +143,7 @@ export interface DeveloperUnit {
  * cruza con el investor, así que acá hay `investorId` y nunca un nombre. Por
  * eso la pantalla rotula "asignada / sin asignar" y no una persona (regla 17).
  */
-export interface DeveloperProjectUnit {
-  id: string
-  projectId: string
-  unitReference: string
-  status: UnitStatus
-  floor: number | null
-  sizeM2: number | null
-  priceMinorUnits: number | null
-  currency: string | null
-  investorId: string | null
-}
+export type DeveloperProjectUnit = Serialized<UnitResponse>
 
 /**
  * Fila 39 — la invitación que el developer emite sobre una unidad.
@@ -185,16 +153,7 @@ export interface DeveloperProjectUnit {
  * ACEPTA, porque hasta entonces no hay contrato del que hacer commitment.
  * Emitir una invitación no es un hecho que la cadena tenga que sostener.
  */
-export interface Invitation {
-  id: string
-  projectId: string
-  unitId: string
-  investorEmail: string
-  amountMinorUnits: number
-  currency: string
-  status: string
-  createdAt: string
-}
+export type Invitation = Serialized<InvitationResponse>
 
 /**
  * Filas 40-41 — el contrato como REGISTRO (D-070).
@@ -206,209 +165,64 @@ export interface Invitation {
  * `txid` es `null` mientras el anclaje no confirmó, y eso ES el estado
  * pendiente: `VerificationBadge` recibe el TXID, no un booleano (regla 17).
  */
-export interface DeveloperContract {
-  id: string
-  unitId: string
-  unitReference: string
-  unitStatus: UnitStatus
-  investorName: string
-  totalMinorUnits: number
-  currency: string
-  signedAt: string | null
-  txid: string | null
-  commitment: string | null
-}
+export type DeveloperContract = Serialized<DeveloperContractShared>
 
 /** Fila 14 — las unidades del investor, con el avance de SU proyecto (D-029). */
-export interface InvestorUnit {
-  id: string
-  unitReference: string
-  status: UnitStatus
-  sizeM2: number | null
-  priceMinorUnits: number | null
-  currency: string | null
-  projectId: string
-  projectName: string
-  city: string | null
-  progress: number
-}
+export type InvestorUnit = Serialized<InvestorUnitListItem>
 
 /** Fila 06-07 — documentos del proyecto con su estado de prueba derivado del TXID. */
-export interface ProjectDocument {
-  id: string
-  stageId: string | null
-  evidenceType: EvidenceType
-  category: string
-  authoritative: boolean
-  originalFilename: string
-  mimeType: string
-  sizeBytes: number
-  sha256Hash: string
-  uploadedAt: string
-  txid: string | null
-  anchorStatus: string
-}
+export type ProjectDocument = Serialized<ProjectDocumentShared>
 
-/** Fila 09-12 — el stage con su evidencia y el bundle que lo compromete. */
-export interface ProjectStageDetail extends Stage {
-  evidences: Array<{
-    id: string
-    evidenceType: EvidenceType
-    category: string
-    authoritative: boolean
-    originalFilename: string
-    mimeType: string
-    sizeBytes: number
-    sha256Hash: string
-    uploadedAt: string
-  }>
-  bundle: { id: string; commitmentHash: string; createdAt: string } | null
-  events: Array<{
-    eventType: string
-    toState: string | null
-    commitment: string | null
-    txid: string | null
-    status: string
-    createdAt: string
-  }>
+/**
+ * Fila 09-12 — el stage con su evidencia y el bundle que lo compromete.
+ *
+ * Compuesto, no un solo schema: `GET /projects/:id/stages/:stageId` arma la
+ * respuesta a partir de tres piezas que sí tienen schema cada una
+ * (`stageSchema` + los tres resúmenes embebidos), sin que exista un cuarto
+ * schema que las una — eso sería inventar un contrato que el backend no
+ * valida como una sola unidad.
+ */
+export type ProjectStageDetail = Serialized<StageResponse> & {
+  evidences: Serialized<StageEvidenceSummary>[]
+  bundle: Serialized<EvidenceBundleSummary> | null
+  events: Serialized<StageEventSummary>[]
 }
 
 /** Fila 21 — unidades agrupadas por piso. `floor` null no se inventa. */
-export interface BuildingSchematicFloor {
-  floor: number | null
-  units: Array<{
-    id: string
-    unitReference: string
-    floor: number | null
-    status: string
-  }>
-}
+export type BuildingSchematicFloor = Serialized<BuildingSchematicFloorShared>
 
 /** Fila 15-18 — detalle de la unidad, con los stages del PROYECTO (D-029, P9). */
-export interface InvestorUnitStage {
-  stageId: string
-  name: string
-  sequenceOrder: number
-  state: StageState
-  bundleId: string | null
-  txid: string | null
-}
+export type InvestorUnitStage = Serialized<InvestorUnitStageShared>
 
-export interface InvestorUnitDetail {
-  id: string
-  unitReference: string
-  status: UnitStatus
-  sizeM2: number | null
-  floor: number | null
-  priceMinorUnits: number | null
-  currency: string | null
-  investorId: string
-  projectId: string
-  projectName: string
-  city: string | null
-  country: string | null
-  stages: InvestorUnitStage[]
-}
+export type InvestorUnitDetail = Serialized<InvestorUnitDetailShared>
 
 /** Fila 15-18 — novedades: eventos de los stages del proyecto. */
-export interface InvestorUnitNews {
-  id: string
-  eventType: string
-  toState: string | null
-  txid: string | null
-  status: string | null
-  createdAt: string
-  stageName: string | null
-}
+export type InvestorUnitNews = Serialized<UnitNewsEvent>
 
 /** Fila 23-24 — el contrato como registro. Sin TXID propio en este GET. */
-export interface InvestorContract {
-  id: string
-  totalMinorUnits: number
-  currency: string
-  /** ISO o epoch ms: `signedAt` no entra en el plugin de coerciones de SQLite. */
-  signedAt: string | number | null
-  investorId: string
-  unitReference: string
-}
+export type InvestorContract = Serialized<InvestorContractShared>
 
 /** Fila 23-24 — cada release con su TXID (P10). Sin moneda: sale del contrato. */
-export interface ContractRelease {
-  id: string
-  stageNumber: number
-  amountMinorUnits: number
-  releasedAt: string | number
-  commitment: string | null
-  txid: string | null
-  anchorStatus: string | null
-}
+export type ContractRelease = Serialized<ContractReleaseShared>
 
 /** Fila 25m — archivos del bundle y su Merkle root. */
-export interface BundleFiles {
-  bundleId: string
-  merkleRoot: string
-  files: Array<{
-    evidenceId: string | null
-    sha256Hash: string
-    filename: string | null
-  }>
-}
+export type BundleFiles = Serialized<BundleFilesShared>
 
-export interface MerkleProof {
-  merkleRoot: string
-  leaf: string
-  proof: Array<{ sibling: string; position: 'left' | 'right' }>
-}
+/**
+ * El proof object de `GET /evidence/:bundleId/proof/:fileHash` — mismo
+ * endpoint que describe `evidenceProofSchema`. El espejo manual anterior solo
+ * declaraba `merkleRoot`/`leaf`/`proof`; la respuesta real también trae
+ * `signerUserId`/`anchorStatus`/`txid`/`timestamp`, sin usar todavía.
+ */
+export type MerkleProof = Serialized<EvidenceProof>
 
 /** Fila 63 — la invitación que el investor ve. */
-export interface InvestorInvitation {
-  id: string
-  investorEmail: string
-  amountMinorUnits: number
-  currency: string
-  status: string
-  createdAt: string
-  unitReference: string
-  projectName: string
-}
+export type InvestorInvitation = Serialized<InvestorInvitationDetail>
 
-export interface InvitationAcceptResult {
-  contract: {
-    id: string
-    unitId: string
-    totalMinorUnits: number
-    currency: string
-  }
-  anchor: { txid: string | null; status: string }
-}
+export type InvitationAcceptResult = Serialized<AcceptInvitationResult>
 
 /** Fila 28s — vista pública, recortada: hashes y TXID, sin PII. */
-export interface PublicDossier {
-  unitReference: string
-  projectName: string
-  masterHash: string
-  compiledAt: string
-  status: string
-  completeness: number
-  signatureTxid: string | null
-  signedAt: string | null
-  artifacts: Array<{
-    kind: string
-    referenceId: string
-    label: string
-    sha256: string | null
-    txid: string | null
-  }>
-}
+export type PublicDossier = Serialized<PublicDossierShared>
 
 /** Fila 45 — el avance por etapa, cruzando todos los proyectos del developer. */
-export interface ProgressRow {
-  stageId: string
-  stageName: string
-  sequenceOrder: number
-  state: StageState
-  certifiedAt: string | null
-  projectId: string
-  projectName: string
-  estimatedDelivery: string | null
-}
+export type ProgressRow = Serialized<DeveloperProgressItem>

@@ -12,6 +12,7 @@ import { formatCurrencyCompact } from '#/i18n/format'
 import { useTranslation } from '#/i18n/useTranslation'
 import { CARD_SHELL } from '#/lib/cardShell'
 import { cn } from '#/lib/cn'
+import { avanceDeStages } from '#/lib/stageProgress'
 
 // **M2-D5 fila 37 · `/developer/project/:projectId`** — captura 37.
 // Componentes: ActionCard (grilla de 4), StatCard (3).
@@ -151,7 +152,12 @@ function DeveloperProjectDetail() {
 
         <div className="grid grid-cols-3 gap-s3">
           <StatCard
-            value={`${proyecto?.progress ?? 0}%`}
+            // SPEC-109 — GET /developer/projects/:id nunca mandó `progress`
+            // (ni `stageCount`/`priceFromMinorUnits`/`priceCurrency`): el
+            // tipo lo prometía por herencia de la fila de LISTA, y esta
+            // pantalla leía `proyecto?.progress ?? 0` — siempre 0%, tapado
+            // por el fallback. Se deriva de `proyecto.stages`, que sí viaja.
+            value={`${avanceDeStages(proyecto?.stages ?? [])}%`}
             label={t('developer.project.progress')}
             icon={TrendingUp}
             tone="trend"
