@@ -1,3 +1,4 @@
+import { CARD_SHELL_DENSE } from '#/lib/cardShell'
 import { cn } from '#/lib/cn'
 import { HashChip } from './HashChip'
 
@@ -63,7 +64,7 @@ export function AuditEventCard({
   className
 }: AuditEventCardProps) {
   return (
-    <article className={cn('flex flex-col gap-s2 rounded-lg bg-card p-s3 shadow-e1', className)}>
+    <article className={cn('flex flex-col gap-s2', CARD_SHELL_DENSE, className)}>
       <div className="flex items-start justify-between gap-s2">
         <span className="text-caption text-text-muted">{timestampLabel}</span>
         <span

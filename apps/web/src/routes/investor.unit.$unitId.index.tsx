@@ -20,6 +20,8 @@ import { formatCurrency, formatMonthYear, formatRelative } from '#/i18n/format'
 import { useTranslation } from '#/i18n/useTranslation'
 import { useAnnounce } from '#/lib/announce'
 import { useObjectUrls } from '#/lib/blobUrls'
+import { CARD_SHELL } from '#/lib/cardShell'
+import { cn } from '#/lib/cn'
 import {
   claveEstadoStage,
   claveNovedad,
@@ -235,7 +237,7 @@ function InvestorUnitDetail() {
           </PrimaryButton>
         ) : null}
 
-        <article className="flex flex-col gap-s3 rounded-xl bg-card p-s4 shadow-e1">
+        <article className={cn('flex flex-col gap-s3', CARD_SHELL)}>
           <h2 className="text-body font-bold text-text-primary">{t('investor.unit.details')}</h2>
           <dl className="flex flex-col gap-s2 text-body-sm">
             <div className="flex justify-between gap-s2">
@@ -291,7 +293,7 @@ function InvestorUnitDetail() {
           </dl>
         </article>
 
-        <article className="flex flex-col gap-s3 rounded-xl bg-card p-s4 shadow-e1">
+        <article className={cn('flex flex-col gap-s3', CARD_SHELL)}>
           <h2 className="text-body font-bold text-text-primary">{t('investor.unit.progress')}</h2>
           {actual ? (
             <p className="text-body-sm text-text-secondary">
@@ -314,7 +316,7 @@ function InvestorUnitDetail() {
           />
         </article>
 
-        <article className="flex flex-col gap-s3 rounded-xl bg-card p-s4 shadow-e1">
+        <article className={cn('flex flex-col gap-s3', CARD_SHELL)}>
           <h2 className="text-body font-bold text-text-primary">{t('investor.unit.news')}</h2>
           <div className="flex flex-col gap-s2" data-testid="INV-UNIT-NEWS-002">
             {news?.length ? (
@@ -354,7 +356,7 @@ function InvestorUnitDetail() {
           </button>
         </article>
 
-        <article className="flex flex-col gap-s3 rounded-xl bg-card p-s4 shadow-e1">
+        <article className={cn('flex flex-col gap-s3', CARD_SHELL)}>
           <h2 className="text-body font-bold text-text-primary">{t('investor.unit.contract')}</h2>
           {contrato ? (
             <p className="text-body-sm text-text-secondary">
@@ -373,7 +375,7 @@ function InvestorUnitDetail() {
           </PrimaryButton>
         </article>
 
-        <article className="flex flex-col gap-s3 rounded-xl bg-card p-s4 shadow-e1">
+        <article className={cn('flex flex-col gap-s3', CARD_SHELL)}>
           <h2 className="text-body font-bold text-text-primary">
             {t('investor.unit.evidenceByStage')}
           </h2>

@@ -61,6 +61,7 @@ export function SecondaryButton({
   children,
   type = 'button',
   disabled,
+  loading,
   onClick,
   className,
   testId
@@ -70,13 +71,17 @@ export function SecondaryButton({
       type={type}
       data-testid={testId}
       onClick={onClick}
-      disabled={disabled}
+      disabled={disabled || loading}
       className={cn(
         BASE,
         'border border-border bg-card text-text-primary active:bg-surface-alt',
         className
       )}
     >
+      {/* SPEC-108 (F-17): `loading` está en el tipo desde siempre — solo
+          `PrimaryButton` lo implementaba, y los otros dos type-checkeaban
+          con `loading` sin hacer nada. */}
+      {loading ? <Loader2 size={18} className="animate-spin" aria-hidden="true" /> : null}
       {children}
     </button>
   )
@@ -91,6 +96,7 @@ export function DangerButton({
   children,
   type = 'button',
   disabled,
+  loading,
   onClick,
   className,
   testId,
@@ -101,13 +107,14 @@ export function DangerButton({
       type={type}
       data-testid={testId}
       onClick={onClick}
-      disabled={disabled}
+      disabled={disabled || loading}
       className={cn(
         BASE,
         variant === 'danger' ? 'bg-danger text-white' : 'bg-pending text-white',
         className
       )}
     >
+      {loading ? <Loader2 size={18} className="animate-spin" aria-hidden="true" /> : null}
       {children}
     </button>
   )

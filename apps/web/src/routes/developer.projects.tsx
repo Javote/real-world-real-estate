@@ -10,6 +10,7 @@ import type { StatusTone } from '#/components/domain/StatusPill'
 import { PanelLayout } from '#/components/PanelLayout'
 import { formatCurrency, formatMonthYear } from '#/i18n/format'
 import { useTranslation } from '#/i18n/useTranslation'
+import { CARD_SHELL_EMPTY } from '#/lib/cardShell'
 
 // **M2-D5 fila 35-36 · `/developer/projects`** — captura 35/36.
 // Componentes: ProjectCard, StatusPill, ProgressTimeline (inline).
@@ -112,9 +113,7 @@ function DeveloperProjects() {
             )
           })
         ) : (
-          <p className="rounded-xl bg-card p-s4 text-body-sm text-text-muted shadow-e1">
-            {t('developer.projects.empty')}
-          </p>
+          <p className={CARD_SHELL_EMPTY}>{t('developer.projects.empty')}</p>
         )}
       </section>
     </PanelLayout>

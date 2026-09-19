@@ -10,6 +10,7 @@ import { StatCard } from '#/components/domain/StatCard'
 import { PanelLayout } from '#/components/PanelLayout'
 import { formatDate } from '#/i18n/format'
 import { useTranslation } from '#/i18n/useTranslation'
+import { CARD_SHELL_EMPTY } from '#/lib/cardShell'
 
 // **M2-D5 filas 46-47 · `/developer/documentation`** — capturas 46 y 47.
 // Endpoints: GET /developer/documents · POST /developer/documents (anclar).
@@ -115,9 +116,7 @@ function DeveloperDocumentation() {
             />
           ))
         ) : (
-          <p className="rounded-xl bg-card p-s4 text-body-sm text-text-muted shadow-e1">
-            {t('developer.docs.emptyVerified')}
-          </p>
+          <p className={CARD_SHELL_EMPTY}>{t('developer.docs.emptyVerified')}</p>
         )}
       </section>
 
@@ -154,9 +153,7 @@ function DeveloperDocumentation() {
             </div>
           ))
         ) : (
-          <p className="rounded-xl bg-card p-s4 text-body-sm text-text-muted shadow-e1">
-            {t('developer.docs.emptyPending')}
-          </p>
+          <p className={CARD_SHELL_EMPTY}>{t('developer.docs.emptyPending')}</p>
         )}
       </section>
     </PanelLayout>

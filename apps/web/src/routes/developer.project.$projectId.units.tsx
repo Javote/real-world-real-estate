@@ -15,6 +15,8 @@ import { PanelLayout } from '#/components/PanelLayout'
 import type { TranslationKey } from '#/i18n/dictionary'
 import { formatCurrency } from '#/i18n/format'
 import { useTranslation } from '#/i18n/useTranslation'
+import { CARD_SHELL, CARD_SHELL_EMPTY } from '#/lib/cardShell'
+import { cn } from '#/lib/cn'
 
 // **M2-D5 fila 44b · `/developer/project/:projectId/units`** — captura 44b.
 // Componentes: UnitCard (variante developer), StatusPill, TextInput,
@@ -173,7 +175,7 @@ function ProjectUnits() {
       </section>
 
       <form
-        className="flex flex-col gap-s4 rounded-xl bg-card p-s4 shadow-e1"
+        className={cn('flex flex-col gap-s4', CARD_SHELL)}
         data-testid={editando ? 'DEV-UNIT-UPDATE-003' : 'DEV-UNIT-CREATE-002'}
         onSubmit={(e) => {
           e.preventDefault()
@@ -254,9 +256,7 @@ function ProjectUnits() {
             />
           ))
         ) : (
-          <p className="rounded-xl bg-card p-s4 text-body-sm text-text-muted shadow-e1">
-            {t('developer.units.empty')}
-          </p>
+          <p className={CARD_SHELL_EMPTY}>{t('developer.units.empty')}</p>
         )}
       </section>
     </PanelLayout>

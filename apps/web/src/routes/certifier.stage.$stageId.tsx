@@ -12,6 +12,8 @@ import { StatusPill } from '#/components/domain/StatusPill'
 import { PanelLayout } from '#/components/PanelLayout'
 import { formatDate } from '#/i18n/format'
 import { useTranslation } from '#/i18n/useTranslation'
+import { CARD_SHELL } from '#/lib/cardShell'
+import { cn } from '#/lib/cn'
 
 // **M2-D5 filas 56v, 56c y 57** — captura 56-CERTIFIER-CERTIFY-STAGE y
 // 57-...-OBSERVE.
@@ -81,7 +83,7 @@ function CertifyStage() {
     >
       <section className="flex flex-col gap-s4" data-testid="CER-STAGE-VIEW-001">
         {stage ? (
-          <article className="flex flex-col gap-s1 rounded-xl bg-card p-s4 shadow-e1">
+          <article className={cn('flex flex-col gap-s1', CARD_SHELL)}>
             <div className="flex items-start justify-between gap-s3">
               <span className="text-body-sm text-text-muted">
                 {t('certifier.stage.number', { number: String(stage.sequenceOrder) })}
@@ -94,7 +96,7 @@ function CertifyStage() {
           </article>
         ) : null}
 
-        <article className="flex flex-col gap-s3 rounded-xl bg-card p-s4 shadow-e1">
+        <article className={cn('flex flex-col gap-s3', CARD_SHELL)}>
           <h3 className="text-body font-bold text-text-primary">
             {t('certifier.stage.evidenceTitle')}
           </h3>

@@ -9,6 +9,8 @@ import { ProgressBar } from '#/components/domain/ProgressBar'
 import { StatCard } from '#/components/domain/StatCard'
 import { PanelLayout } from '#/components/PanelLayout'
 import { useTranslation } from '#/i18n/useTranslation'
+import { CARD_SHELL, CARD_SHELL_EMPTY } from '#/lib/cardShell'
+import { cn } from '#/lib/cn'
 
 // **M2-D5 fila 44 · `/developer/units`** — el inventario cruzando proyectos.
 // Endpoint: GET /developer/units. Test ID: DEV-UNITS-INVENTORY-001.
@@ -87,10 +89,7 @@ function DeveloperUnits() {
             const ocupacion = total > 0 ? Math.round((sold / total) * 100) : 0
 
             return (
-              <article
-                key={grupo.projectId}
-                className="flex flex-col gap-s3 rounded-xl bg-card p-s4 shadow-e1"
-              >
+              <article key={grupo.projectId} className={cn('flex flex-col gap-s3', CARD_SHELL)}>
                 <div className="flex items-center gap-s3">
                   <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-info text-white">
                     <Home className="size-icon-stat" aria-hidden="true" />
@@ -124,9 +123,7 @@ function DeveloperUnits() {
             )
           })
         ) : (
-          <p className="rounded-xl bg-card p-s4 text-body-sm text-text-muted shadow-e1">
-            {t('developer.units.empty')}
-          </p>
+          <p className={CARD_SHELL_EMPTY}>{t('developer.units.empty')}</p>
         )}
       </section>
     </PanelLayout>

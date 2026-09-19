@@ -8,6 +8,8 @@ import { StatusPill } from '#/components/domain/StatusPill'
 import { PanelLayout } from '#/components/PanelLayout'
 import { formatDate } from '#/i18n/format'
 import { useTranslation } from '#/i18n/useTranslation'
+import { CARD_SHELL, CARD_SHELL_EMPTY } from '#/lib/cardShell'
+import { cn } from '#/lib/cn'
 
 // **M2-D5 fila 53 · `/notary/signed`** — captura 53-NOTARY-SIGNED.
 // Componentes: HashChip (dossier hash + signature TXID), StatusPill.
@@ -38,10 +40,7 @@ function SignedDossiers() {
         {data?.items.length ? (
           <ul className="flex flex-col gap-s3">
             {data.items.map((f) => (
-              <li
-                key={f.dossierId}
-                className="flex flex-col gap-s2 rounded-xl bg-card p-s4 shadow-e1"
-              >
+              <li key={f.dossierId} className={cn('flex flex-col gap-s2', CARD_SHELL)}>
                 <div className="flex items-start justify-between gap-s3">
                   <h2 className="text-body font-bold text-text-primary">
                     {f.projectName} · {f.unitReference}
@@ -80,9 +79,7 @@ function SignedDossiers() {
             ))}
           </ul>
         ) : (
-          <p className="rounded-xl bg-card p-s4 text-body-sm text-text-muted shadow-e1">
-            {t('notary.signed.empty')}
-          </p>
+          <p className={CARD_SHELL_EMPTY}>{t('notary.signed.empty')}</p>
         )}
       </section>
     </PanelLayout>

@@ -14,6 +14,7 @@ import { TxidModal } from '#/components/domain/TxidModal'
 import { PanelLayout } from '#/components/PanelLayout'
 import { formatDateTime } from '#/i18n/format'
 import { useTranslation } from '#/i18n/useTranslation'
+import { CARD_SHELL_EMPTY } from '#/lib/cardShell'
 
 // **M2-D5 filas 49 y 50 · `/developer/audit-log`** — captura 49.
 // Test IDs: DEV-AUDIT-LIST-001, DEV-AUDIT-FILTER-002, DEV-AUDIT-VERIFY-001.
@@ -145,9 +146,7 @@ function AuditLog() {
             )
           })
         ) : (
-          <p className="rounded-xl bg-card p-s4 text-body-sm text-text-muted shadow-e1">
-            {t('developer.audit.empty')}
-          </p>
+          <p className={CARD_SHELL_EMPTY}>{t('developer.audit.empty')}</p>
         )}
       </section>
 

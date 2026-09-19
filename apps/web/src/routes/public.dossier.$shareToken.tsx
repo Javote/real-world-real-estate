@@ -8,6 +8,8 @@ import { ProgressBar } from '#/components/domain/ProgressBar'
 import { VerificationBadge } from '#/components/domain/VerificationBadge'
 import { formatDate } from '#/i18n/format'
 import { useTranslation } from '#/i18n/useTranslation'
+import { CARD_SHELL, CARD_SHELL_DENSE } from '#/lib/cardShell'
+import { cn } from '#/lib/cn'
 import { reintentarSiNoEsAusencia } from '#/lib/investor'
 
 // **M2-D5 fila 28s · `/public/dossier/:shareToken`** — Test ID: INV-DOSSIER-PUBLIC-002.
@@ -44,7 +46,7 @@ function PublicDossierPage() {
             <p className="text-body-sm text-text-muted">
               {dossier.projectName} · {dossier.unitReference}
             </p>
-            <article className="flex flex-col gap-s3 rounded-xl bg-card p-s4 shadow-e1">
+            <article className={cn('flex flex-col gap-s3', CARD_SHELL)}>
               <div className="flex items-center justify-between gap-s2">
                 <span className="text-caption text-text-muted">
                   {t('investor.dossier.masterHash')}
@@ -69,7 +71,7 @@ function PublicDossierPage() {
               {dossier.artifacts.map((a) => (
                 <li
                   key={`${a.kind}-${a.referenceId}`}
-                  className="flex items-center gap-s2 rounded-lg bg-card p-s3 shadow-e1"
+                  className={cn('flex items-center gap-s2', CARD_SHELL_DENSE)}
                 >
                   <span className="min-w-0 flex-1 truncate text-body-sm text-text-secondary">
                     {a.label}

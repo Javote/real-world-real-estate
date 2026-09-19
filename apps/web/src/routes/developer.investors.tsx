@@ -7,6 +7,7 @@ import { InvestorCard } from '#/components/domain/InvestorCard'
 import { PanelLayout } from '#/components/PanelLayout'
 import { formatCurrency } from '#/i18n/format'
 import { useTranslation } from '#/i18n/useTranslation'
+import { CARD_SHELL_EMPTY } from '#/lib/cardShell'
 
 // **M2-D5 fila 48 · `/developer/investors`** — captura 48-DEVELOPER-INVESTORS.
 // Endpoint: GET /developer/investors. Test ID: DEV-INVESTORS-LIST-001.
@@ -70,9 +71,7 @@ function DeveloperInvestors() {
             />
           ))
         ) : (
-          <p className="rounded-xl bg-card p-s4 text-body-sm text-text-muted shadow-e1">
-            {t('developer.investors.empty')}
-          </p>
+          <p className={CARD_SHELL_EMPTY}>{t('developer.investors.empty')}</p>
         )}
       </section>
     </PanelLayout>

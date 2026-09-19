@@ -5,10 +5,11 @@ import { api } from '#/api/port'
 import { NOTARY_ROLES } from '#/auth/roles'
 import { useRoleGuard } from '#/auth/useRoleGuard'
 import { StatCard } from '#/components/domain/StatCard'
-import { KpiValue } from '#/components/KpiValue'
 import { PanelLayout } from '#/components/PanelLayout'
 import { PendingDossiersQueue } from '#/components/PendingDossiersQueue'
 import { useTranslation } from '#/i18n/useTranslation'
+import { CARD_SHELL } from '#/lib/cardShell'
+import { useKpiValue } from '#/lib/useKpiValue'
 
 // **M2-D5 fila 51 · `/notary` (Panel)** — captura 51-NOTARY-PANEL.
 // Componentes: StatCard, ProgressTimeline (barras de completitud del dossier),
@@ -31,7 +32,7 @@ export const Route = createFileRoute('/notary/')({ component: NotaryPanel })
 function NotaryPanel() {
   const { session, ready } = useRoleGuard(NOTARY_ROLES)
   const { t } = useTranslation()
-  const kpi = KpiValue()
+  const kpi = useKpiValue()
 
   const { data: kpis } = useQuery({
     queryKey: ['notary', 'kpis'],
@@ -73,7 +74,7 @@ function NotaryPanel() {
         />
       </section>
 
-      <section className="rounded-xl bg-card p-s4 shadow-e1" data-testid="NOT-PENDING-002">
+      <section className={CARD_SHELL} data-testid="NOT-PENDING-002">
         <h2 className="text-h2 font-bold text-text-primary">{t('panel.notary.pendingList')}</h2>
 
         <PendingDossiersQueue />

@@ -13,6 +13,8 @@ import { PrimaryButton } from '#/components/domain/PrimaryButton'
 import { TextArea } from '#/components/domain/TextArea'
 import { PanelLayout } from '#/components/PanelLayout'
 import { useTranslation } from '#/i18n/useTranslation'
+import { CARD_SHELL } from '#/lib/cardShell'
+import { cn } from '#/lib/cn'
 
 // **M2-D5 filas 38, 44c y 44d** — captura 38-DEVELOPER-SPECIFIC-PROJECT-UPLOAD-
 // EVIDENCE. Test IDs: DEV-EVIDENCE-UPLOAD-001, DEV-ANCHOR-SUCCESS-001.
@@ -93,7 +95,7 @@ function UploadEvidence() {
       }}
     >
       <section className="flex flex-col gap-s4" data-testid="DEV-EVIDENCE-UPLOAD-001">
-        <article className="flex flex-col gap-s2 rounded-xl bg-card p-s4 shadow-e1">
+        <article className={cn('flex flex-col gap-s2', CARD_SHELL)}>
           <h2 className="text-body-sm text-text-muted">{t('developer.upload.selectStage')}</h2>
           {/* Scroll horizontal, como la captura: los chips no se encogen. */}
           <div className="-mx-s4 flex gap-s2 overflow-x-auto px-s4 pb-s1">
@@ -114,7 +116,7 @@ function UploadEvidence() {
         </article>
 
         {etapaElegida ? (
-          <article className="flex flex-col gap-s3 rounded-xl bg-card p-s4 shadow-e1">
+          <article className={cn('flex flex-col gap-s3', CARD_SHELL)}>
             <div className="flex flex-col">
               <span className="text-body-sm text-text-muted">
                 {t('developer.upload.selectedStage')}

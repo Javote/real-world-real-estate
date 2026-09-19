@@ -15,6 +15,8 @@ import { PanelLayout } from '#/components/PanelLayout'
 import { formatDate, formatMonthYear } from '#/i18n/format'
 import { useTranslation } from '#/i18n/useTranslation'
 import { useObjectUrls } from '#/lib/blobUrls'
+import { CARD_SHELL } from '#/lib/cardShell'
+import { cn } from '#/lib/cn'
 import { esFoto, formatoArchivo, reintentarSiNoEsAusencia } from '#/lib/investor'
 import { avanceDeStages, bajarBlob, timelineDeStages } from '#/lib/stageProgress'
 
@@ -169,7 +171,7 @@ function InvestorProjectDetail() {
         </div>
 
         <div className="grid grid-cols-2 gap-s3">
-          <article className="flex flex-col gap-s2 rounded-xl bg-card p-s4 shadow-e1">
+          <article className={cn('flex flex-col gap-s2', CARD_SHELL)}>
             {proyecto?.status ? (
               <span className="text-body-sm font-medium text-text-muted">
                 {t(`project.status.${proyecto.status}`)}
@@ -201,7 +203,7 @@ function InvestorProjectDetail() {
               ) : null}
             </button>
           ) : (
-            <article className="flex flex-col justify-center rounded-xl bg-card p-s4 shadow-e1">
+            <article className={cn('flex flex-col justify-center', CARD_SHELL)}>
               {ubicacion ? (
                 <p className="text-body-sm text-text-muted">{ubicacion}</p>
               ) : (
@@ -242,7 +244,7 @@ function InvestorProjectDetail() {
           )}
         </section>
 
-        <article className="flex flex-col gap-s3 rounded-xl bg-card p-s4 shadow-e1">
+        <article className={cn('flex flex-col gap-s3', CARD_SHELL)}>
           <h2 className="text-h2 font-bold text-text-primary">{t('investor.project.progress')}</h2>
           <ProgressTimeline
             stages={timeline}

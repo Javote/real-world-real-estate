@@ -10,6 +10,8 @@ import { StatusPill, type StatusTone } from '#/components/domain/StatusPill'
 import { PanelLayout } from '#/components/PanelLayout'
 import { formatCurrencyCompact } from '#/i18n/format'
 import { useTranslation } from '#/i18n/useTranslation'
+import { CARD_SHELL } from '#/lib/cardShell'
+import { cn } from '#/lib/cn'
 
 // **M2-D5 fila 37 · `/developer/project/:projectId`** — captura 37.
 // Componentes: ActionCard (grilla de 4), StatCard (3).
@@ -87,7 +89,7 @@ function DeveloperProjectDetail() {
     >
       <section className="flex flex-col gap-s4" data-testid="DEV-PROJECT-DETAIL-001">
         {proyecto ? (
-          <article className="flex items-start justify-between gap-s3 rounded-xl bg-card p-s4 shadow-e1">
+          <article className={cn('flex items-start justify-between gap-s3', CARD_SHELL)}>
             <div className="min-w-0">
               <h2 className="truncate text-h2 font-bold text-text-primary">{proyecto.name}</h2>
               {ubicacion ? (

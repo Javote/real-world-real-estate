@@ -10,6 +10,8 @@ import { PanelLayout } from '#/components/PanelLayout'
 import { formatCurrency, formatCurrencyCompact } from '#/i18n/format'
 import type { Locale } from '#/i18n/locale'
 import { useTranslation } from '#/i18n/useTranslation'
+import { CARD_SHELL, CARD_SHELL_EMPTY } from '#/lib/cardShell'
+import { cn } from '#/lib/cn'
 
 // **M2-D5 filas 42-43 · `/developer/capital`** — capturas 42 y 43, que son una
 // sola pantalla larga. Test IDs: DEV-CAPITAL-SUMMARY-001,
@@ -83,7 +85,7 @@ function DeveloperCapital() {
       }}
     >
       <section
-        className="flex flex-col gap-s5 rounded-xl bg-card p-s4 shadow-e1"
+        className={cn('flex flex-col gap-s5', CARD_SHELL)}
         data-testid="DEV-CAPITAL-SUMMARY-001"
       >
         <div className="flex items-center gap-s3">
@@ -119,10 +121,7 @@ function DeveloperCapital() {
 
         {porProyecto?.length ? (
           porProyecto.map((p) => (
-            <article
-              key={p.projectId}
-              className="flex flex-col gap-s3 rounded-xl bg-card p-s4 shadow-e1"
-            >
+            <article key={p.projectId} className={cn('flex flex-col gap-s3', CARD_SHELL)}>
               <div className="flex items-center gap-s3">
                 <span className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-primary-light">
                   <Building2 className="size-icon-stat text-primary" aria-hidden="true" />
@@ -170,9 +169,7 @@ function DeveloperCapital() {
             </article>
           ))
         ) : (
-          <p className="rounded-xl bg-card p-s4 text-body-sm text-text-muted shadow-e1">
-            {t('developer.capital.empty')}
-          </p>
+          <p className={CARD_SHELL_EMPTY}>{t('developer.capital.empty')}</p>
         )}
       </section>
     </PanelLayout>

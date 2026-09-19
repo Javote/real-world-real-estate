@@ -9,6 +9,8 @@ import { StatusPill } from '#/components/domain/StatusPill'
 import { PanelLayout } from '#/components/PanelLayout'
 import { formatMonthYear } from '#/i18n/format'
 import { useTranslation } from '#/i18n/useTranslation'
+import { CARD_SHELL } from '#/lib/cardShell'
+import { cn } from '#/lib/cn'
 import { claveEstadoStage, reintentarSiNoEsAusencia } from '#/lib/investor'
 import { timelineDeStages } from '#/lib/stageProgress'
 
@@ -88,7 +90,7 @@ function InvestorProjectProgress() {
       }}
     >
       <section className="flex flex-col gap-s4" data-testid="INV-PROJECT-STAGES-001">
-        <article className="flex flex-col gap-s3 rounded-xl bg-card p-s4 shadow-e1">
+        <article className={cn('flex flex-col gap-s3', CARD_SHELL)}>
           <h2 className="text-h2 font-bold text-text-primary">{t('investor.project.progress')}</h2>
           <ProgressTimeline
             stages={timeline}

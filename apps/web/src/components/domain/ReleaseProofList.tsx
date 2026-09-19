@@ -1,3 +1,5 @@
+import { CARD_SHELL_DENSE } from '#/lib/cardShell'
+import { cn } from '#/lib/cn'
 import { HashChip } from './HashChip'
 
 // **M2-D4 Pattern 10 · prueba financiera por liberación.**
@@ -41,7 +43,7 @@ export function ReleaseProofList({
       {releases.map((release) => (
         <li
           key={release.stageNumber}
-          className="flex items-center justify-between gap-s3 rounded-lg bg-card p-s3 shadow-e1"
+          className={cn('flex items-center justify-between gap-s3', CARD_SHELL_DENSE)}
         >
           <div className="flex flex-col">
             <span className="text-body font-bold text-text-primary">

@@ -7,6 +7,7 @@ import { useRoleGuard } from '#/auth/useRoleGuard'
 import { ProjectCard } from '#/components/domain/ProjectCard'
 import { PanelLayout } from '#/components/PanelLayout'
 import { useTranslation } from '#/i18n/useTranslation'
+import { CARD_SHELL_EMPTY } from '#/lib/cardShell'
 import { avanceDeStages, TONO_PROYECTO } from '#/lib/stageProgress'
 
 // **M2-D5 fila 13 · `/investor/favorites`** — captura 13.
@@ -75,9 +76,7 @@ function InvestorFavorites() {
             )
           })
         ) : (
-          <p className="rounded-xl bg-card p-s4 text-body-sm text-text-muted shadow-e1">
-            {t('investor.favorites.empty')}
-          </p>
+          <p className={CARD_SHELL_EMPTY}>{t('investor.favorites.empty')}</p>
         )}
       </section>
     </PanelLayout>

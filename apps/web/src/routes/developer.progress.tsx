@@ -11,6 +11,8 @@ import { StatusPill } from '#/components/domain/StatusPill'
 import { PanelLayout } from '#/components/PanelLayout'
 import { formatMonthYear } from '#/i18n/format'
 import { useTranslation } from '#/i18n/useTranslation'
+import { CARD_SHELL, CARD_SHELL_EMPTY } from '#/lib/cardShell'
+import { cn } from '#/lib/cn'
 import { claveEstadoStage } from '#/lib/investor'
 import { avanceDeStages } from '#/lib/stageProgress'
 
@@ -148,7 +150,7 @@ function DeveloperProgress() {
 
       {observadas.length ? (
         <section
-          className="flex flex-col gap-s3 rounded-xl bg-card p-s4 shadow-e1"
+          className={cn('flex flex-col gap-s3', CARD_SHELL)}
           data-testid="DEV-PROGRESS-RESUME"
         >
           <h2 className="flex items-center gap-s2 text-body font-bold text-text-primary">
@@ -191,7 +193,7 @@ function DeveloperProgress() {
             const total = p.stages.length
             const porcentaje = avanceDeStages(p.detalle.map((s) => ({ state: s.state })))
             return (
-              <article key={id} className="flex flex-col gap-s4 rounded-xl bg-card p-s4 shadow-e1">
+              <article key={id} className={cn('flex flex-col gap-s4', CARD_SHELL)}>
                 <h2 className="text-body font-bold text-text-primary">{p.nombre}</h2>
 
                 <div className="flex flex-col gap-s2">
@@ -265,9 +267,7 @@ function DeveloperProgress() {
             )
           })
         ) : (
-          <p className="rounded-xl bg-card p-s4 text-body-sm text-text-muted shadow-e1">
-            {t('developer.progress.empty')}
-          </p>
+          <p className={CARD_SHELL_EMPTY}>{t('developer.progress.empty')}</p>
         )}
       </section>
     </PanelLayout>

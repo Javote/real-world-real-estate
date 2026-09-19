@@ -11,6 +11,8 @@ import { TextInput } from '#/components/domain/TextInput'
 import { PanelLayout } from '#/components/PanelLayout'
 import type { TranslationKey } from '#/i18n/dictionary'
 import { useTranslation } from '#/i18n/useTranslation'
+import { CARD_SHELL } from '#/lib/cardShell'
+import { cn } from '#/lib/cn'
 
 // **M2-D5 filas 34b-34c · `/developer/project/new`** — capturas 34b y 34C.
 // Endpoint: POST /developer/projects. Test ID: DEV-PROJECT-CREATE-001.
@@ -118,7 +120,7 @@ function NuevoProyecto() {
           if (puedeCrear) crear.mutate()
         }}
       >
-        <article className="rounded-xl bg-card p-s4 shadow-e1">
+        <article className={CARD_SHELL}>
           <TextInput
             label={t('developer.newProject.name')}
             value={nombre}
@@ -128,7 +130,7 @@ function NuevoProyecto() {
           />
         </article>
 
-        <article className="rounded-xl bg-card p-s4 shadow-e1">
+        <article className={CARD_SHELL}>
           <TextInput
             label={t('developer.newProject.location')}
             value={direccion}
@@ -137,7 +139,7 @@ function NuevoProyecto() {
           />
         </article>
 
-        <article className="rounded-xl bg-card p-s4 shadow-e1">
+        <article className={CARD_SHELL}>
           <NumberInput
             id="totalUnits"
             label={t('developer.newProject.units')}
@@ -149,7 +151,7 @@ function NuevoProyecto() {
           />
         </article>
 
-        <article className="rounded-xl bg-card p-s4 shadow-e1">
+        <article className={CARD_SHELL}>
           <TextInput
             label={t('developer.newProject.delivery')}
             value={entrega}
@@ -158,7 +160,7 @@ function NuevoProyecto() {
           />
         </article>
 
-        <article className="flex flex-col gap-s3 rounded-xl bg-card p-s4 shadow-e1">
+        <article className={cn('flex flex-col gap-s3', CARD_SHELL)}>
           <SelectDropdown
             id="stageTemplate"
             label={t('developer.newProject.stageTemplate.label')}

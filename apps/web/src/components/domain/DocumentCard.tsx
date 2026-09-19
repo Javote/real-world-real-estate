@@ -1,4 +1,5 @@
 import { Download, Eye, FileText } from 'lucide-react'
+import { CARD_SHELL_DENSE } from '#/lib/cardShell'
 import { cn } from '#/lib/cn'
 import { HashChip } from './HashChip'
 import { StatusPill } from './StatusPill'
@@ -61,7 +62,7 @@ export function DocumentCard({
   const anclado = txid !== null
 
   return (
-    <article className={cn('flex flex-col gap-s2 rounded-lg bg-card p-s3 shadow-e1', className)}>
+    <article className={cn('flex flex-col gap-s2', CARD_SHELL_DENSE, className)}>
       <div className="flex items-start gap-s3">
         <span className="flex size-10 shrink-0 items-center justify-center rounded-md bg-surface-alt">
           <FileText className="size-icon-inline text-text-muted" aria-hidden="true" />

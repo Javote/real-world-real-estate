@@ -10,6 +10,8 @@ import { TextInput } from '#/components/domain/TextInput'
 import { ToggleSwitch } from '#/components/domain/ToggleSwitch'
 import { PanelLayout } from '#/components/PanelLayout'
 import { useTranslation } from '#/i18n/useTranslation'
+import { CARD_SHELL } from '#/lib/cardShell'
+import { cn } from '#/lib/cn'
 
 // **M2-D5 filas 30, 54, dev-prof y cer-prof** — captura 30-INVESTOR-PROFILE
 // (investor) y 54-NOTARY-SETTINGS.
@@ -85,7 +87,7 @@ export function ProfileScreen({ rol, testId, back, editTestId, prefsTestId }: Pr
       {...(back ? { back } : {})}
     >
       <section className="flex flex-col gap-s4" data-testid={testId}>
-        <article className="flex items-center gap-s3 rounded-xl bg-card p-s4 shadow-e1">
+        <article className={cn('flex items-center gap-s3', CARD_SHELL)}>
           <span className="flex size-12 shrink-0 items-center justify-center rounded-full bg-primary-light">
             <User className="size-icon-stat text-primary" aria-hidden="true" />
           </span>
@@ -108,7 +110,7 @@ export function ProfileScreen({ rol, testId, back, editTestId, prefsTestId }: Pr
 
         {editando ? (
           <form
-            className="flex flex-col gap-s3 rounded-xl bg-card p-s4 shadow-e1"
+            className={cn('flex flex-col gap-s3', CARD_SHELL)}
             {...(editTestId ? { 'data-testid': editTestId } : {})}
             onSubmit={(e) => {
               e.preventDefault()
@@ -130,7 +132,7 @@ export function ProfileScreen({ rol, testId, back, editTestId, prefsTestId }: Pr
         ) : null}
 
         <article
-          className="flex flex-col gap-s3 rounded-xl bg-card p-s4 shadow-e1"
+          className={cn('flex flex-col gap-s3', CARD_SHELL)}
           {...(prefsTestId ? { 'data-testid': prefsTestId } : {})}
         >
           <h2 className="flex items-center gap-s2 text-body font-bold text-text-primary">

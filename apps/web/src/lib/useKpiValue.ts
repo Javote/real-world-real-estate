@@ -8,7 +8,7 @@ import { useTranslation } from '#/i18n/useTranslation'
  * ahí sería afirmar algo falso: "no hay unidades vendidas" en vez de "todavía
  * no hay unidades". Se dibuja con el guión de `panel.emptyValue`.
  */
-export function KpiValue() {
+export function useKpiValue() {
   const { t, locale } = useTranslation()
 
   return (valor: number | null, sufijo = ''): string =>

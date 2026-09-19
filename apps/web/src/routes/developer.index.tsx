@@ -15,9 +15,9 @@ import { DEV_ROLES } from '#/auth/roles'
 import { useRoleGuard } from '#/auth/useRoleGuard'
 import { ActionCard } from '#/components/domain/ActionCard'
 import { StatCard } from '#/components/domain/StatCard'
-import { KpiValue } from '#/components/KpiValue'
 import { PanelLayout } from '#/components/PanelLayout'
 import { useTranslation } from '#/i18n/useTranslation'
+import { useKpiValue } from '#/lib/useKpiValue'
 
 // **M2-D5 fila 33-34 · `/developer` (Panel)** — captura 33-DEVELOPER-HOME-A.
 // Componentes: StatCard, ActionCard (featured), NotificationBell,
@@ -38,7 +38,7 @@ export const Route = createFileRoute('/developer/')({ component: DeveloperPanel 
 function DeveloperPanel() {
   const { session, ready } = useRoleGuard(DEV_ROLES)
   const { t } = useTranslation()
-  const kpi = KpiValue()
+  const kpi = useKpiValue()
   const navigate = useNavigate()
 
   const { data } = useQuery({
@@ -69,7 +69,7 @@ function DeveloperPanel() {
           icon={Building2}
           tone="entity"
         />
-        {/* El KPI llega en unidades mínimas (regla 1). KpiValue no sabe de
+        {/* El KPI llega en unidades mínimas (regla 1). useKpiValue no sabe de
             moneda: se divide acá, una sola vez, igual que `formatCurrency`.
             Sin `currency` en el schema no se puede pintar "US$". */}
         <StatCard

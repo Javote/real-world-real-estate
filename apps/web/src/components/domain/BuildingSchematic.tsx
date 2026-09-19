@@ -1,4 +1,5 @@
 import { MapPin } from 'lucide-react'
+import { CARD_SHELL_DENSE } from '#/lib/cardShell'
 import { cn } from '#/lib/cn'
 
 // M2-D3 §Modals · BuildingSchematic — la grilla del edificio con la unidad del
@@ -82,7 +83,7 @@ export function BuildingSchematic({
         </ul>
       </header>
 
-      <div className="flex flex-col gap-s1 rounded-lg bg-card p-s3 shadow-e1">
+      <div className={cn('flex flex-col gap-s1', CARD_SHELL_DENSE)}>
         {pisos.map((piso) => (
           <div key={piso} className="flex items-center gap-s2">
             <span

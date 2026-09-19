@@ -11,6 +11,8 @@ import { VerificationBadge } from '#/components/domain/VerificationBadge'
 import { PanelLayout } from '#/components/PanelLayout'
 import { formatCurrency, formatCurrencyCompact, formatDate } from '#/i18n/format'
 import { useTranslation } from '#/i18n/useTranslation'
+import { CARD_SHELL, CARD_SHELL_EMPTY } from '#/lib/cardShell'
+import { cn } from '#/lib/cn'
 
 // **M2-D5 filas 40-41 · `/developer/project/:projectId/contracts`** — capturas
 // 40 y 41. Test ID: DEV-CONTRACTS-LIST-001.
@@ -122,7 +124,7 @@ function ProjectContracts() {
       <section className="flex flex-col gap-s3" data-testid="DEV-CONTRACTS-LIST-001">
         {lista.length ? (
           lista.map((c) => (
-            <article key={c.id} className="flex flex-col gap-s2 rounded-xl bg-card p-s4 shadow-e1">
+            <article key={c.id} className={cn('flex flex-col gap-s2', CARD_SHELL)}>
               <div className="flex items-start justify-between gap-s2">
                 <div className="flex min-w-0 flex-col">
                   <h2 className="truncate text-h2 font-bold text-text-primary">{c.investorName}</h2>
@@ -162,9 +164,7 @@ function ProjectContracts() {
             </article>
           ))
         ) : (
-          <p className="rounded-xl bg-card p-s4 text-body-sm text-text-muted shadow-e1">
-            {t('developer.contracts.empty')}
-          </p>
+          <p className={CARD_SHELL_EMPTY}>{t('developer.contracts.empty')}</p>
         )}
       </section>
     </PanelLayout>

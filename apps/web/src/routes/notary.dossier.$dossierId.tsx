@@ -13,6 +13,8 @@ import { StatusPill } from '#/components/domain/StatusPill'
 import { VerificationBadge } from '#/components/domain/VerificationBadge'
 import { PanelLayout } from '#/components/PanelLayout'
 import { useTranslation } from '#/i18n/useTranslation'
+import { CARD_SHELL } from '#/lib/cardShell'
+import { cn } from '#/lib/cn'
 
 // **M2-D5 filas 52v, 52s y 52r** — captura 52-NOTARY-DOSSIER-A.
 // Test IDs: NOT-DOSSIER-VIEW-001, NOT-DOSSIER-SIGN-001, NOT-DOSSIER-REJECT-001.
@@ -77,7 +79,7 @@ function DossierReview() {
       <section className="flex flex-col gap-s4" data-testid="NOT-DOSSIER-VIEW-001">
         {dossier ? (
           <>
-            <article className="flex flex-col gap-s3 rounded-xl bg-card p-s4 shadow-e1">
+            <article className={cn('flex flex-col gap-s3', CARD_SHELL)}>
               <div className="flex items-start justify-between gap-s3">
                 <h2 className="text-h2 font-bold text-text-primary">{dossier.unitReference}</h2>
                 <StatusPill tone={firmado ? 'verified' : 'pending'}>
@@ -119,7 +121,7 @@ function DossierReview() {
                 "status colour is never the sole carrier of meaning" — el color
                 del ícono solo no alcanza; VerificationBadge trae el label de
                 texto que la regla pide. */}
-            <article className="flex flex-col gap-s3 rounded-xl bg-card p-s4 shadow-e1">
+            <article className={cn('flex flex-col gap-s3', CARD_SHELL)}>
               <h3 className="text-body font-bold text-text-primary">
                 {t('notary.dossier.artifacts')}
               </h3>

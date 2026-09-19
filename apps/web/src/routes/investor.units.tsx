@@ -6,6 +6,7 @@ import { useRoleGuard } from '#/auth/useRoleGuard'
 import { UnitCard } from '#/components/domain/UnitCard'
 import { PanelLayout } from '#/components/PanelLayout'
 import { useTranslation } from '#/i18n/useTranslation'
+import { CARD_SHELL_EMPTY } from '#/lib/cardShell'
 
 // **M2-D5 fila 14 · `/investor/units`** — "Mis unidades".
 // Endpoint: GET /investor/units. Test ID: INV-UNITS-LIST-001.
@@ -67,9 +68,7 @@ function InvestorUnits() {
             />
           ))
         ) : (
-          <p className="rounded-xl bg-card p-s4 text-body-sm text-text-muted shadow-e1">
-            {t('investor.units.empty')}
-          </p>
+          <p className={CARD_SHELL_EMPTY}>{t('investor.units.empty')}</p>
         )}
       </section>
     </PanelLayout>

@@ -14,6 +14,7 @@ import { NotificationCard } from '#/components/domain/NotificationCard'
 import { PanelLayout } from '#/components/PanelLayout'
 import { formatCurrency, formatRelative } from '#/i18n/format'
 import { useTranslation } from '#/i18n/useTranslation'
+import { CARD_SHELL_EMPTY } from '#/lib/cardShell'
 
 // **M2-D5 filas 62 y 63 · `/investor/notifications`**
 // Test IDs: INV-NOTIF-LIST-001, INV-INVITE-VIEW-001, INV-INVITE-ACCEPT-002,
@@ -154,9 +155,7 @@ function InvestorNotifications() {
             )
           })
         ) : !invitacion ? (
-          <p className="rounded-xl bg-card p-s4 text-body-sm text-text-muted shadow-e1">
-            {t('investor.notifications.empty')}
-          </p>
+          <p className={CARD_SHELL_EMPTY}>{t('investor.notifications.empty')}</p>
         ) : null}
       </section>
 

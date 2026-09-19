@@ -10,6 +10,7 @@ import { SelectDropdown } from '#/components/domain/SelectDropdown'
 import { TextInput } from '#/components/domain/TextInput'
 import { PanelLayout } from '#/components/PanelLayout'
 import { useTranslation } from '#/i18n/useTranslation'
+import { CARD_SHELL } from '#/lib/cardShell'
 import { majorToMinor, minorToMajor } from '#/lib/money'
 
 // **M2-D5 fila 39 · `/developer/project/:projectId/invite`** — captura 39.
@@ -150,7 +151,7 @@ function InviteInvestor() {
           if (puedeInvitar && montoMinor !== null) invitar.mutate(montoMinor)
         }}
       >
-        <article className="rounded-xl bg-card p-s4 shadow-e1">
+        <article className={CARD_SHELL}>
           <TextInput
             label={t('developer.invite.email')}
             value={email}
@@ -162,7 +163,7 @@ function InviteInvestor() {
           />
         </article>
 
-        <article className="rounded-xl bg-card p-s4 shadow-e1">
+        <article className={CARD_SHELL}>
           <SelectDropdown
             id="invite-unit"
             label={t('developer.invite.unit')}
@@ -173,7 +174,7 @@ function InviteInvestor() {
           />
         </article>
 
-        <article className="rounded-xl bg-card p-s4 shadow-e1">
+        <article className={CARD_SHELL}>
           <NumberInput
             id="invite-amount"
             label={t('developer.invite.amount', {

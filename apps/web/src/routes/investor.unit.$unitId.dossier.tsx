@@ -14,6 +14,8 @@ import { VerificationBadge } from '#/components/domain/VerificationBadge'
 import { PanelLayout } from '#/components/PanelLayout'
 import { formatDate, formatMonthYear } from '#/i18n/format'
 import { useTranslation } from '#/i18n/useTranslation'
+import { CARD_SHELL } from '#/lib/cardShell'
+import { cn } from '#/lib/cn'
 import { reintentarSiNoEsAusencia, unicosPorStageId } from '#/lib/investor'
 import { bajarBlob, timelineDeStages } from '#/lib/stageProgress'
 
@@ -140,7 +142,7 @@ function InvestorDossier() {
             </article>
 
             {timeline.length > 0 ? (
-              <article className="flex flex-col gap-s3 rounded-xl bg-card p-s4 shadow-e1">
+              <article className={cn('flex flex-col gap-s3', CARD_SHELL)}>
                 <h2 className="text-body font-bold text-text-primary">
                   {t('investor.unit.progress')}
                 </h2>
@@ -158,7 +160,7 @@ function InvestorDossier() {
               </article>
             ) : null}
 
-            <article className="flex flex-col gap-s3 rounded-xl bg-card p-s4 shadow-e1">
+            <article className={cn('flex flex-col gap-s3', CARD_SHELL)}>
               <h2 className="text-body font-bold text-text-primary">
                 {t('investor.dossier.completeness')}
               </h2>
@@ -169,7 +171,7 @@ function InvestorDossier() {
               <ProgressBar percent={dossier.completeness} />
             </article>
 
-            <article className="flex flex-col gap-s3 rounded-xl bg-card p-s4 shadow-e1">
+            <article className={cn('flex flex-col gap-s3', CARD_SHELL)}>
               <h2 className="text-body font-bold text-text-primary">
                 {t('investor.dossier.summary')}
               </h2>
@@ -191,7 +193,7 @@ function InvestorDossier() {
               </dl>
             </article>
 
-            <article className="flex flex-col gap-s3 rounded-xl bg-card p-s4 shadow-e1">
+            <article className={cn('flex flex-col gap-s3', CARD_SHELL)}>
               <h2 className="text-body font-bold text-text-primary">
                 {t('investor.dossier.artifacts')}
               </h2>

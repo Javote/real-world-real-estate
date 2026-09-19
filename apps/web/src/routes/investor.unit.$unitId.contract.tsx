@@ -10,6 +10,8 @@ import { TxidModal } from '#/components/domain/TxidModal'
 import { PanelLayout } from '#/components/PanelLayout'
 import { formatCurrency, formatDate, formatDateTime } from '#/i18n/format'
 import { useTranslation } from '#/i18n/useTranslation'
+import { CARD_SHELL } from '#/lib/cardShell'
+import { cn } from '#/lib/cn'
 import { reintentarSiNoEsAusencia } from '#/lib/investor'
 
 // **M2-D5 filas 23-24 y 25v · `/investor/unit/:unitId/contract`** — capturas 23-25.
@@ -97,7 +99,7 @@ function InvestorContract() {
     >
       <section className="flex flex-col gap-s4" data-testid="INV-CONTRACT-VIEW-001">
         {contrato ? (
-          <article className="flex flex-col gap-s3 rounded-xl bg-card p-s4 shadow-e1">
+          <article className={cn('flex flex-col gap-s3', CARD_SHELL)}>
             <h2 className="text-label font-bold uppercase text-text-muted">
               {t('investor.contract.summary')}
             </h2>

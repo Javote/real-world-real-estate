@@ -8,6 +8,8 @@ import { StatusPill } from '#/components/domain/StatusPill'
 import { PanelLayout } from '#/components/PanelLayout'
 import { formatDate } from '#/i18n/format'
 import { useTranslation } from '#/i18n/useTranslation'
+import { CARD_SHELL, CARD_SHELL_EMPTY } from '#/lib/cardShell'
+import { cn } from '#/lib/cn'
 
 // **M2-D5 fila 58 · `/certifier/issued`** — captura 58-CERTIFIER-ISSUED.
 // Componentes: HashChip (certificate hash + TXID), StatusPill (Certified).
@@ -45,10 +47,7 @@ function IssuedCertificates() {
             {data.items.map((c) => {
               const anclado = c.txid !== null
               return (
-                <li
-                  key={c.stageId}
-                  className="flex flex-col gap-s2 rounded-xl bg-card p-s4 shadow-e1"
-                >
+                <li key={c.stageId} className={cn('flex flex-col gap-s2', CARD_SHELL)}>
                   <div className="flex items-start justify-between gap-s3">
                     <h2 className="text-body font-bold text-text-primary">{c.projectName}</h2>
                     <StatusPill tone={anclado ? 'verified' : 'pending'}>
@@ -90,9 +89,7 @@ function IssuedCertificates() {
             })}
           </ul>
         ) : (
-          <p className="rounded-xl bg-card p-s4 text-body-sm text-text-muted shadow-e1">
-            {t('certifier.issued.empty')}
-          </p>
+          <p className={CARD_SHELL_EMPTY}>{t('certifier.issued.empty')}</p>
         )}
       </section>
     </PanelLayout>
