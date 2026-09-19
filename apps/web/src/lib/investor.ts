@@ -105,3 +105,21 @@ export function intervaloDeNovedades(
 ): number | false {
   return news?.some((n) => n.status === 'Pending') ? 10_000 : false
 }
+
+/**
+ * Cuántos eventos pasaron de `Pending` a `Confirmed` entre dos lecturas del
+ * poll (SPEC-104, F-03). Puro y testeable por la misma razón que
+ * `anclajeVigenteDelStage`: la ruta de TanStack no se testea unitariamente.
+ *
+ * Es una cuenta, no una lista de anuncios — con la pestaña en background el
+ * poll sigue corriendo (`refetchIntervalInBackground`) y varias confirmaciones
+ * pueden acumularse entre dos renders; se anuncia una sola vez, agregado.
+ */
+export function confirmacionesNuevas(
+  previo: { id: string; status: string | null }[],
+  actual: { id: string; status: string | null }[]
+): number {
+  const estadoPrevio = new Map(previo.map((n) => [n.id, n.status]))
+  return actual.filter((n) => estadoPrevio.get(n.id) === 'Pending' && n.status === 'Confirmed')
+    .length
+}

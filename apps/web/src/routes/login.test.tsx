@@ -14,6 +14,7 @@ import {
 import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { LocaleProvider } from '../i18n/useTranslation'
+import { AnnounceProvider } from '../lib/announce'
 import { LoginScreen, ROLE_PRESETS } from './login'
 
 const DEMO_USER = {
@@ -72,7 +73,9 @@ async function renderLogin() {
   const router = makeRouter()
   render(
     <LocaleProvider>
-      <RouterProvider router={router} />
+      <AnnounceProvider>
+        <RouterProvider router={router} />
+      </AnnounceProvider>
     </LocaleProvider>
   )
   await screen.findByText('Ingresar')
@@ -183,10 +186,17 @@ describe('LoginScreen', () => {
     const router = await renderLogin()
     fireEvent.click(screen.getByText('Ingresar'))
 
-    await screen.findByText('Credenciales inválidas')
+    // El mismo texto ahora también vive en la live region assertive (SPEC-104):
+    // se scopea al párrafo visible para no matchear las dos.
+    await screen.findByText('Credenciales inválidas', { selector: 'p' })
     expect(router.state.location.pathname).toBe('/login')
     expect(screen.queryByText('DEVELOPER-STUB')).toBeNull()
     expect(window.sessionStorage.getItem('proptrust.session')).toBeNull()
+    // SPEC-104 (F-03): el mismo texto que se ve se anuncia, assertive porque
+    // invalida el submit en curso.
+    expect(document.querySelector('[aria-live="assertive"]')?.textContent).toBe(
+      'Credenciales inválidas'
+    )
   })
 
   it('demasiados intentos (429): lo dice, en vez de culpar a la API caída', async () => {
@@ -204,7 +214,7 @@ describe('LoginScreen', () => {
     const router = await renderLogin()
     fireEvent.click(screen.getByText('Ingresar'))
 
-    await screen.findByText(/Demasiados intentos/)
+    await screen.findByText(/Demasiados intentos/, { selector: 'p' })
     expect(screen.queryByText(/No se pudo conectar/)).toBeNull()
     expect(router.state.location.pathname).toBe('/login')
     expect(window.sessionStorage.getItem('proptrust.session')).toBeNull()
@@ -237,6 +247,6 @@ describe('LoginScreen', () => {
     await renderLogin()
     fireEvent.click(screen.getByText('Ingresar'))
 
-    await screen.findByText(/No se pudo conectar con la API/)
+    await screen.findByText(/No se pudo conectar con la API/, { selector: 'p' })
   })
 })

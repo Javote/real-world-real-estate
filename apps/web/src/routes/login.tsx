@@ -9,6 +9,7 @@ import { PrimaryButton } from '../components/domain/PrimaryButton'
 import { TextInput } from '../components/domain/TextInput'
 import type { TranslationKey } from '../i18n/dictionary'
 import { useTranslation } from '../i18n/useTranslation'
+import { useAnnounce } from '../lib/announce'
 
 export const Route = createFileRoute('/login')({ component: LoginScreen })
 
@@ -51,6 +52,7 @@ function errorKeyFor(err: unknown): TranslationKey {
 export function LoginScreen() {
   const navigate = useNavigate()
   const { t } = useTranslation()
+  const announce = useAnnounce()
   const [preset, setPreset] = useState(0)
   const [email, setEmail] = useState<string>(ROLE_PRESETS[0].email)
   const [password, setPassword] = useState<string>(ROLE_PRESETS[0].password)
@@ -79,7 +81,11 @@ export function LoginScreen() {
       const landing = ROLE_LANDING[res.user.role] ?? '/login'
       void navigate({ to: landing })
     } catch (err) {
-      setErrorKey(errorKeyFor(err))
+      const key = errorKeyFor(err)
+      setErrorKey(key)
+      // assertive: invalida la acción en curso, se anuncia el mismo texto que
+      // ya se ve en pantalla (invariante 2, no una segunda redacción).
+      announce(t(key), 'assertive')
     } finally {
       setBusy(false)
     }

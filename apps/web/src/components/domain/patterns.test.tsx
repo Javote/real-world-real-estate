@@ -3,6 +3,7 @@ import userEvent from '@testing-library/user-event'
 import type { ReactElement } from 'react'
 import { describe, expect, it, vi } from 'vitest'
 import { LocaleProvider } from '#/i18n/useTranslation'
+import { AnnounceProvider } from '#/lib/announce'
 import { AnchoringSuccessModal } from './AnchoringSuccessModal'
 import { MerkleRootProof } from './MerkleRootProof'
 import { ReleaseProofList } from './ReleaseProofList'
@@ -17,8 +18,16 @@ import { VerifiedWatermark } from './VerifiedWatermark'
 // `ui/dialog.tsx` traduce su propio botón de cierre (SPEC-102): TxidModal y
 // AnchoringSuccessModal (P3/P4) lo usan y necesitan el contexto de idioma
 // para montar, aunque este archivo no pruebe i18n.
+function Providers({ children }: { children: React.ReactNode }) {
+  return (
+    <LocaleProvider>
+      <AnnounceProvider>{children}</AnnounceProvider>
+    </LocaleProvider>
+  )
+}
+
 function render(ui: ReactElement) {
-  return renderRTL(ui, { wrapper: LocaleProvider })
+  return renderRTL(ui, { wrapper: Providers })
 }
 
 const TXID = 'b'.repeat(64)
@@ -95,6 +104,34 @@ describe('P4 · AnchoringSuccessModal', () => {
     expect(screen.getByText('TXID')).toBeDefined()
     // Dos chips: uno por artefacto.
     expect(screen.getAllByLabelText('Copiar')).toHaveLength(2)
+  })
+
+  it('SPEC-104: al abrirse, anuncia el título + el TXID truncado (no el hash entero)', () => {
+    Object.assign(navigator, { clipboard: { writeText: vi.fn().mockResolvedValue(undefined) } })
+
+    render(
+      <AnchoringSuccessModal
+        open
+        onDone={vi.fn()}
+        merkleRoot={ROOT}
+        txid={TXID}
+        labels={{
+          title: 'Evidencia anclada',
+          body: 'Se generaron los dos artefactos',
+          merkleLabel: 'Merkle root',
+          txidLabel: 'TXID',
+          openExplorer: 'Ver en el explorador',
+          done: 'Listo',
+          copy: 'Copiar',
+          copied: 'Copiado'
+        }}
+      />
+    )
+
+    const anunciado = document.querySelector('[aria-live="polite"]')?.textContent ?? ''
+    expect(anunciado).toContain('Evidencia anclada')
+    expect(anunciado).toContain(`${TXID.slice(0, 6)}...${TXID.slice(-4)}`)
+    expect(anunciado).not.toContain(TXID)
   })
 })
 

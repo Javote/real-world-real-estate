@@ -1,7 +1,7 @@
 import { useQueries, useQuery } from '@tanstack/react-query'
 import { createFileRoute, useNavigate } from '@tanstack/react-router'
 import { Building2, ChevronRight, FileText, Images, MapPin } from 'lucide-react'
-import { useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { ApiError, api } from '#/api/port'
 import type { MerkleProof } from '#/api/types'
 import { INVESTOR_ROLES } from '#/auth/roles'
@@ -18,10 +18,12 @@ import { PanelLayout } from '#/components/PanelLayout'
 import { Dialog, DialogContent, DialogTitle } from '#/components/ui/dialog'
 import { formatCurrency, formatMonthYear, formatRelative } from '#/i18n/format'
 import { useTranslation } from '#/i18n/useTranslation'
+import { useAnnounce } from '#/lib/announce'
 import { useObjectUrls } from '#/lib/blobUrls'
 import {
   claveEstadoStage,
   claveNovedad,
+  confirmacionesNuevas,
   esFoto,
   intervaloDeNovedades,
   reintentarSiNoEsAusencia,
@@ -42,6 +44,7 @@ function InvestorUnitDetail() {
   const { ready } = useRoleGuard(INVESTOR_ROLES)
   const { t, locale } = useTranslation()
   const navigate = useNavigate()
+  const announce = useAnnounce()
 
   const [galeria, setGaleria] = useState(false)
   const [mapa, setMapa] = useState(false)
@@ -69,6 +72,19 @@ function InvestorUnitDetail() {
     // que el fix existe para evitar.
     refetchIntervalInBackground: true
   })
+
+  // SPEC-104 (F-03): el poll de arriba puede confirmar una novedad con la
+  // pestaña en background — se anuncia recién cuando vuelve el foco (el
+  // efecto corre igual, pero el lector de pantalla no lee nada sin foco) y
+  // agregado, no un anuncio por evento: `refetchIntervalInBackground` puede
+  // acumular varias confirmaciones entre dos renders.
+  const noticiasPrevias = useRef<{ id: string; status: string | null }[]>([])
+  useEffect(() => {
+    if (!news) return
+    const nuevas = confirmacionesNuevas(noticiasPrevias.current, news)
+    if (nuevas > 0) announce(t('investor.unit.newsConfirmed', { count: String(nuevas) }))
+    noticiasPrevias.current = news
+  }, [news, announce, t])
 
   const { data: proyecto } = useQuery({
     queryKey: ['project', unidad?.projectId],

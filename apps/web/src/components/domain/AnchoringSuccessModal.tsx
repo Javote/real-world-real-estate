@@ -1,7 +1,9 @@
 import { ShieldCheck } from 'lucide-react'
+import { useEffect, useRef } from 'react'
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '#/components/ui/dialog'
+import { useAnnounce } from '#/lib/announce'
 import { explorerTxUrl } from '#/lib/explorer'
-import { HashChip } from './HashChip'
+import { HashChip, truncateHash } from './HashChip'
 import { PrimaryButton, SecondaryButton } from './PrimaryButton'
 
 // **M2-D4 Pattern 4 · AnchoringSuccessModal — la superficie de emisión de prueba.**
@@ -50,6 +52,20 @@ export function AnchoringSuccessModal({
   txid,
   labels
 }: AnchoringSuccessModalProps) {
+  const announce = useAnnounce()
+  // SPEC-104 (F-03): se anuncia una sola vez, al abrirse — no en cada
+  // re-render mientras `open` sigue en `true`. El texto reusa `labels.title`
+  // (ya en pantalla) y el TXID truncado como lo muestra `HashChip`, nunca el
+  // hash entero letra por letra.
+  const yaAnunciado = useRef(false)
+  useEffect(() => {
+    if (open && !yaAnunciado.current) {
+      yaAnunciado.current = true
+      announce(`${labels.title}: ${truncateHash(txid)}`)
+    }
+    if (!open) yaAnunciado.current = false
+  }, [open, labels.title, txid, announce])
+
   return (
     <Dialog open={open} onOpenChange={(abierto) => !abierto && onDone()}>
       <DialogContent data-testid={testId}>

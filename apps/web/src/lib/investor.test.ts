@@ -1,5 +1,10 @@
 import { describe, expect, it } from 'vitest'
-import { anclajeVigenteDelStage, intervaloDeNovedades, unicosPorStageId } from './investor'
+import {
+  anclajeVigenteDelStage,
+  confirmacionesNuevas,
+  intervaloDeNovedades,
+  unicosPorStageId
+} from './investor'
 
 describe('unicosPorStageId', () => {
   it('deja un stage por id y prefiere el que trae TXID', () => {
@@ -65,5 +70,42 @@ describe('intervaloDeNovedades', () => {
 
   it('no pollea mientras `news` no cargó todavía (undefined)', () => {
     expect(intervaloDeNovedades(undefined)).toBe(false)
+  })
+})
+
+describe('confirmacionesNuevas', () => {
+  it('cuenta un evento que pasó de Pending a Confirmed', () => {
+    const previo = [{ id: 'a', status: 'Pending' }]
+    const actual = [{ id: 'a', status: 'Confirmed' }]
+    expect(confirmacionesNuevas(previo, actual)).toBe(1)
+  })
+
+  it('agrega varias confirmaciones nuevas en un solo número, no una lista', () => {
+    const previo = [
+      { id: 'a', status: 'Pending' },
+      { id: 'b', status: 'Pending' },
+      { id: 'c', status: 'Confirmed' }
+    ]
+    const actual = [
+      { id: 'a', status: 'Confirmed' },
+      { id: 'b', status: 'Confirmed' },
+      { id: 'c', status: 'Confirmed' }
+    ]
+    expect(confirmacionesNuevas(previo, actual)).toBe(2)
+  })
+
+  it('no cuenta un evento que ya estaba Confirmed', () => {
+    const previo = [{ id: 'a', status: 'Confirmed' }]
+    const actual = [{ id: 'a', status: 'Confirmed' }]
+    expect(confirmacionesNuevas(previo, actual)).toBe(0)
+  })
+
+  it('no cuenta un evento nuevo que aparece directamente Confirmed (sin Pending previo)', () => {
+    expect(confirmacionesNuevas([], [{ id: 'a', status: 'Confirmed' }])).toBe(0)
+  })
+
+  it('no cuenta un evento que sigue Pending', () => {
+    const previo = [{ id: 'a', status: 'Pending' }]
+    expect(confirmacionesNuevas(previo, previo)).toBe(0)
   })
 })
