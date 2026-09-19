@@ -4,6 +4,7 @@ import { api } from '#/api/port'
 import { CERTIFIER_ROLES } from '#/auth/roles'
 import { useRoleGuard } from '#/auth/useRoleGuard'
 import { HashChip } from '#/components/domain/HashChip'
+import { Loading } from '#/components/domain/Loading'
 import { StatusPill } from '#/components/domain/StatusPill'
 import { PanelLayout } from '#/components/PanelLayout'
 import { formatDate } from '#/i18n/format'
@@ -27,7 +28,7 @@ function IssuedCertificates() {
   const { ready } = useRoleGuard(CERTIFIER_ROLES)
   const { t, locale } = useTranslation()
 
-  const { data } = useQuery({
+  const { data, isPending } = useQuery({
     queryKey: ['certifier', 'certificates'],
     queryFn: () => api.listCertificates(),
     enabled: ready
@@ -42,7 +43,9 @@ function IssuedCertificates() {
       context={t('certifier.issued.context')}
     >
       <section data-testid="CER-ISSUED-LIST-001">
-        {data?.items.length ? (
+        {isPending ? (
+          <Loading />
+        ) : data?.items.length ? (
           <ul className="flex flex-col gap-s3">
             {data.items.map((c) => {
               const anclado = c.txid !== null

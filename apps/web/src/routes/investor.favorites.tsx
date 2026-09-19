@@ -4,6 +4,7 @@ import { api } from '#/api/port'
 import type { Project } from '#/api/types'
 import { INVESTOR_ROLES } from '#/auth/roles'
 import { useRoleGuard } from '#/auth/useRoleGuard'
+import { Loading } from '#/components/domain/Loading'
 import { ProjectCard } from '#/components/domain/ProjectCard'
 import { PanelLayout } from '#/components/PanelLayout'
 import { useTranslation } from '#/i18n/useTranslation'
@@ -23,7 +24,7 @@ function InvestorFavorites() {
   const navigate = useNavigate()
   const queryClient = useQueryClient()
 
-  const { data: favoritos } = useQuery({
+  const { data: favoritos, isPending } = useQuery({
     queryKey: ['investor', 'favorites'],
     queryFn: api.listFavorites,
     enabled: ready
@@ -45,7 +46,9 @@ function InvestorFavorites() {
       context={t('investor.favorites.context', { count: String(lista.length) })}
     >
       <section className="flex flex-col gap-s4" data-testid="INV-FAV-LIST-001">
-        {lista.length ? (
+        {isPending ? (
+          <Loading />
+        ) : lista.length ? (
           lista.map((proyecto: Project, i) => {
             const ubicacion = [proyecto.city, proyecto.country].filter(Boolean).join(', ')
             return (

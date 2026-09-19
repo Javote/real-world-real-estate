@@ -7,6 +7,7 @@ import type { Project } from '#/api/types'
 import { INVESTOR_ROLES } from '#/auth/roles'
 import { useRoleGuard } from '#/auth/useRoleGuard'
 import { FilterPill } from '#/components/domain/Chips'
+import { Loading } from '#/components/domain/Loading'
 import { LocationMapModal } from '#/components/domain/LocationMapModal'
 import { ProjectCard } from '#/components/domain/ProjectCard'
 import { SelectDropdown } from '#/components/domain/SelectDropdown'
@@ -91,7 +92,7 @@ function InvestorBuy() {
     ...(search.view === 'map' && bbox ? { bbox } : {})
   }
 
-  const { data: proyectos } = useQuery({
+  const { data: proyectos, isPending } = useQuery({
     queryKey: ['projects', params],
     queryFn: () => api.listProjects(params),
     enabled: ready
@@ -225,7 +226,9 @@ function InvestorBuy() {
 
   const listado = (
     <section className="flex flex-col gap-s4" data-testid="INV-BUY-LIST-001">
-      {proyectos?.length ? (
+      {isPending ? (
+        <Loading />
+      ) : proyectos?.length ? (
         proyectos.map((p) => cardDe(p))
       ) : (
         <p className="text-body-sm text-text-muted">

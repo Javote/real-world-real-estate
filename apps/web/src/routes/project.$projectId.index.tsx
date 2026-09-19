@@ -8,6 +8,7 @@ import { useRoleGuard } from '#/auth/useRoleGuard'
 import { DocumentCard } from '#/components/domain/DocumentCard'
 import { DocumentViewerModal } from '#/components/domain/DocumentViewerModal'
 import { ImageGalleryModal } from '#/components/domain/ImageGalleryModal'
+import { Loading } from '#/components/domain/Loading'
 import { LocationMapModal } from '#/components/domain/LocationMapModal'
 import { PrimaryButton } from '#/components/domain/PrimaryButton'
 import { ProgressTimeline } from '#/components/domain/ProgressTimeline'
@@ -55,7 +56,7 @@ function InvestorProjectDetail() {
     retry: reintentarSiNoEsAusencia
   })
 
-  const { data: documentos } = useQuery({
+  const { data: documentos, isPending: documentosPending } = useQuery({
     queryKey: ['project', projectId, 'documents'],
     queryFn: () => api.listProjectDocuments(projectId),
     enabled: ready && isSuccess,
@@ -215,7 +216,9 @@ function InvestorProjectDetail() {
 
         <section className="flex flex-col gap-s3" data-testid="INV-PROJECT-DOCS-002">
           <h2 className="text-h2 font-bold text-text-primary">{t('investor.project.docs')}</h2>
-          {docs.length ? (
+          {documentosPending ? (
+            <Loading />
+          ) : docs.length ? (
             <div className="grid grid-cols-2 gap-s3">
               {docs.map((d) => (
                 <DocumentCard

@@ -10,6 +10,7 @@ import { DocumentCard } from '#/components/domain/DocumentCard'
 import { DocumentViewerModal } from '#/components/domain/DocumentViewerModal'
 import { HashChip } from '#/components/domain/HashChip'
 import { ImageGalleryModal } from '#/components/domain/ImageGalleryModal'
+import { Loading } from '#/components/domain/Loading'
 import { MerkleRootProof } from '#/components/domain/MerkleRootProof'
 import { PrimaryButton } from '#/components/domain/PrimaryButton'
 import { TxidModal } from '#/components/domain/TxidModal'
@@ -58,7 +59,11 @@ function InvestorStageDetail() {
     retry: reintentarSiNoEsAusencia
   })
 
-  const { data: stage, error } = useQuery({
+  const {
+    data: stage,
+    error,
+    isPending
+  } = useQuery({
     queryKey: ['project', projectId, 'stage', stageId],
     queryFn: () => api.getProjectStage(projectId, stageId),
     enabled: ready,
@@ -193,88 +198,94 @@ function InvestorStageDetail() {
           />
         </div>
 
-        <section className="flex flex-col gap-s3">
-          <h2 className="flex items-center gap-s2 text-body font-bold text-text-primary">
-            <Images className="size-icon-inline text-primary" aria-hidden="true" />
-            {t('investor.stage.photos')}
-          </h2>
-          {fotos.length ? (
-            <div className="grid grid-cols-2 gap-s2">
-              {visibles.map((f, i) => (
-                <button
-                  key={f.id}
-                  type="button"
-                  className="overflow-hidden rounded-lg bg-surface-alt"
-                  onClick={() => {
-                    setFotoInicial(i)
-                    setGaleria(true)
-                  }}
-                >
-                  {urls?.[f.id] ? (
-                    <img
-                      src={urls[f.id]}
-                      alt={t('investor.stage.photos')}
-                      className="aspect-square w-full object-cover"
-                    />
-                  ) : (
-                    <span className="flex aspect-square items-center justify-center">
-                      <Images className="size-icon-stat text-disabled" aria-hidden="true" />
-                    </span>
-                  )}
-                </button>
-              ))}
-              {fotos.length > 5 ? (
-                <button
-                  type="button"
-                  onClick={() => {
-                    setFotoInicial(5)
-                    setGaleria(true)
-                  }}
-                  className="flex aspect-square flex-col items-center justify-center rounded-lg bg-surface-alt text-body font-bold text-text-primary"
-                >
-                  {t('investor.stage.imagesCount', { count: String(fotos.length - 5) })}
-                  <span className="text-caption font-medium text-text-muted">
-                    {t('investor.stage.viewAll')}
-                  </span>
-                </button>
-              ) : null}
-            </div>
-          ) : (
-            <p className="text-body-sm text-text-muted">{t('investor.stage.noPhotos')}</p>
-          )}
-        </section>
+        {isPending ? <Loading /> : null}
 
-        <section className="flex flex-col gap-s3">
-          <h2 className="flex items-center gap-s2 text-body font-bold text-text-primary">
-            <FileText className="size-icon-inline text-primary" aria-hidden="true" />
-            {t('investor.stage.docs')}
-          </h2>
-          {docs.length ? (
-            docs.map((d) => (
-              <DocumentCard
-                key={d.id}
-                filename={d.originalFilename}
-                uploadedAtLabel={formatDate(String(d.uploadedAt), locale)}
-                format={formatoArchivo(d.mimeType, d.category)}
-                sha256={d.sha256Hash}
-                txid={txidDe(d.id)}
-                showHash
-                labels={etiquetasDoc}
-                onView={() => setDocId(d.id)}
-                onDownload={
-                  txidDe(d.id)
-                    ? () =>
-                        void api
-                          .downloadEvidence(d.id)
-                          .then((blob) => bajarBlob(blob, d.originalFilename))
-                    : undefined
-                }
-              />
-            ))
-          ) : (
-            <p className="text-body-sm text-text-muted">{t('investor.stage.noDocs')}</p>
-          )}
-        </section>
+        {isPending ? null : (
+          <>
+            <section className="flex flex-col gap-s3">
+              <h2 className="flex items-center gap-s2 text-body font-bold text-text-primary">
+                <Images className="size-icon-inline text-primary" aria-hidden="true" />
+                {t('investor.stage.photos')}
+              </h2>
+              {fotos.length ? (
+                <div className="grid grid-cols-2 gap-s2">
+                  {visibles.map((f, i) => (
+                    <button
+                      key={f.id}
+                      type="button"
+                      className="overflow-hidden rounded-lg bg-surface-alt"
+                      onClick={() => {
+                        setFotoInicial(i)
+                        setGaleria(true)
+                      }}
+                    >
+                      {urls?.[f.id] ? (
+                        <img
+                          src={urls[f.id]}
+                          alt={t('investor.stage.photos')}
+                          className="aspect-square w-full object-cover"
+                        />
+                      ) : (
+                        <span className="flex aspect-square items-center justify-center">
+                          <Images className="size-icon-stat text-disabled" aria-hidden="true" />
+                        </span>
+                      )}
+                    </button>
+                  ))}
+                  {fotos.length > 5 ? (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setFotoInicial(5)
+                        setGaleria(true)
+                      }}
+                      className="flex aspect-square flex-col items-center justify-center rounded-lg bg-surface-alt text-body font-bold text-text-primary"
+                    >
+                      {t('investor.stage.imagesCount', { count: String(fotos.length - 5) })}
+                      <span className="text-caption font-medium text-text-muted">
+                        {t('investor.stage.viewAll')}
+                      </span>
+                    </button>
+                  ) : null}
+                </div>
+              ) : (
+                <p className="text-body-sm text-text-muted">{t('investor.stage.noPhotos')}</p>
+              )}
+            </section>
+
+            <section className="flex flex-col gap-s3">
+              <h2 className="flex items-center gap-s2 text-body font-bold text-text-primary">
+                <FileText className="size-icon-inline text-primary" aria-hidden="true" />
+                {t('investor.stage.docs')}
+              </h2>
+              {docs.length ? (
+                docs.map((d) => (
+                  <DocumentCard
+                    key={d.id}
+                    filename={d.originalFilename}
+                    uploadedAtLabel={formatDate(String(d.uploadedAt), locale)}
+                    format={formatoArchivo(d.mimeType, d.category)}
+                    sha256={d.sha256Hash}
+                    txid={txidDe(d.id)}
+                    showHash
+                    labels={etiquetasDoc}
+                    onView={() => setDocId(d.id)}
+                    onDownload={
+                      txidDe(d.id)
+                        ? () =>
+                            void api
+                              .downloadEvidence(d.id)
+                              .then((blob) => bajarBlob(blob, d.originalFilename))
+                        : undefined
+                    }
+                  />
+                ))
+              ) : (
+                <p className="text-body-sm text-text-muted">{t('investor.stage.noDocs')}</p>
+              )}
+            </section>
+          </>
+        )}
 
         {stage?.bundle ? (
           <PrimaryButton onClick={() => setHito(true)}>

@@ -5,6 +5,7 @@ import { api } from '#/api/port'
 import { DEV_ROLES } from '#/auth/roles'
 import { useRoleGuard } from '#/auth/useRoleGuard'
 import { DocumentCard } from '#/components/domain/DocumentCard'
+import { Loading } from '#/components/domain/Loading'
 import { PrimaryButton } from '#/components/domain/PrimaryButton'
 import { StatCard } from '#/components/domain/StatCard'
 import { PanelLayout } from '#/components/PanelLayout'
@@ -45,7 +46,7 @@ function DeveloperDocumentation() {
   const navigate = useNavigate()
   const queryClient = useQueryClient()
 
-  const { data: documentos } = useQuery({
+  const { data: documentos, isPending } = useQuery({
     queryKey: ['developer', 'documents'],
     queryFn: () => api.listDeveloperDocuments(),
     enabled: ready
@@ -102,7 +103,9 @@ function DeveloperDocumentation() {
           {t('developer.docs.verifiedSection')}
         </h2>
 
-        {verificados.length ? (
+        {isPending ? (
+          <Loading />
+        ) : verificados.length ? (
           verificados.map((d) => (
             <DocumentCard
               key={d.id}
@@ -125,7 +128,9 @@ function DeveloperDocumentation() {
           {t('developer.docs.pendingSection')}
         </h2>
 
-        {pendientes.length ? (
+        {isPending ? (
+          <Loading />
+        ) : pendientes.length ? (
           pendientes.map((d) => (
             <div key={d.id} className="flex flex-col gap-s2">
               <DocumentCard

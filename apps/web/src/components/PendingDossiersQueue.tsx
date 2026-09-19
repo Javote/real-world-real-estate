@@ -1,6 +1,7 @@
 import { useQuery } from '@tanstack/react-query'
 import { useNavigate } from '@tanstack/react-router'
 import { api } from '#/api/port'
+import { Loading } from '#/components/domain/Loading'
 import { SecondaryButton } from '#/components/domain/PrimaryButton'
 import { ProgressBar } from '#/components/domain/ProgressBar'
 import { useTranslation } from '#/i18n/useTranslation'
@@ -16,10 +17,12 @@ import { useTranslation } from '#/i18n/useTranslation'
 export function PendingDossiersQueue() {
   const { t } = useTranslation()
   const navigate = useNavigate()
-  const { data: pendientes } = useQuery({
+  const { data: pendientes, isPending } = useQuery({
     queryKey: ['notary', 'pending'],
     queryFn: api.getNotaryPendingDossiers
   })
+
+  if (isPending) return <Loading />
 
   if (!pendientes?.length) {
     return <p className="mt-s3 text-body-sm text-text-muted">{t('panel.notary.emptyPending')}</p>

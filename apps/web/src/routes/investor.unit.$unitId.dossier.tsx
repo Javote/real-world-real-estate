@@ -6,6 +6,7 @@ import { ApiError, api } from '#/api/port'
 import { INVESTOR_ROLES } from '#/auth/roles'
 import { useRoleGuard } from '#/auth/useRoleGuard'
 import { HashChip } from '#/components/domain/HashChip'
+import { Loading } from '#/components/domain/Loading'
 import { PrimaryButton, SecondaryButton } from '#/components/domain/PrimaryButton'
 import { ProgressBar } from '#/components/domain/ProgressBar'
 import { ProgressTimeline } from '#/components/domain/ProgressTimeline'
@@ -41,7 +42,11 @@ function InvestorDossier() {
   const navigate = useNavigate()
   const [shareUrl, setShareUrl] = useState<string | null>(null)
 
-  const { data: dossier, error } = useQuery({
+  const {
+    data: dossier,
+    error,
+    isPending
+  } = useQuery({
     queryKey: ['investor', 'unit', unitId, 'dossier'],
     queryFn: () => api.getUnitDossier(unitId),
     enabled: ready,
@@ -115,7 +120,9 @@ function InvestorDossier() {
           </PrimaryButton>
         </div>
 
-        {dossier ? (
+        {isPending ? (
+          <Loading />
+        ) : dossier ? (
           <>
             <article className="flex flex-col gap-s3 rounded-xl bg-verified-light p-s4">
               <h2 className="text-body font-bold text-verified">

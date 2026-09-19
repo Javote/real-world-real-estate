@@ -10,6 +10,7 @@ import type { AuditCategory } from '#/components/domain/AuditEventCard'
 import { CategoryChip } from '#/components/domain/Chips'
 import { InvitationAcceptModal } from '#/components/domain/InvitationAcceptModal'
 import { InvitationCard } from '#/components/domain/InvitationCard'
+import { Loading } from '#/components/domain/Loading'
 import { NotificationCard } from '#/components/domain/NotificationCard'
 import { PanelLayout } from '#/components/PanelLayout'
 import { formatCurrency, formatRelative } from '#/i18n/format'
@@ -64,7 +65,7 @@ function InvestorNotifications() {
   const [filtro, setFiltro] = useState<NotifCategory | null>(null)
   const [modal, setModal] = useState(false)
 
-  const { data: notificaciones } = useQuery({
+  const { data: notificaciones, isPending } = useQuery({
     queryKey: ['notifications', filtro],
     queryFn: () => api.listNotifications(filtro ? { category: filtro } : undefined),
     enabled: ready
@@ -138,7 +139,9 @@ function InvestorNotifications() {
           />
         ) : null}
 
-        {notificaciones?.length ? (
+        {isPending ? (
+          <Loading />
+        ) : notificaciones?.length ? (
           notificaciones.map((n) => {
             const categoria = n.category as NotifCategory
             return (

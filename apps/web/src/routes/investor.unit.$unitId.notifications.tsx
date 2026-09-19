@@ -8,6 +8,7 @@ import { INVESTOR_ROLES } from '#/auth/roles'
 import { useRoleGuard } from '#/auth/useRoleGuard'
 import type { AuditCategory } from '#/components/domain/AuditEventCard'
 import { CategoryChip } from '#/components/domain/Chips'
+import { Loading } from '#/components/domain/Loading'
 import { NotificationCard } from '#/components/domain/NotificationCard'
 import { PanelLayout } from '#/components/PanelLayout'
 import { formatRelative } from '#/i18n/format'
@@ -56,7 +57,7 @@ function InvestorUnitNotifications() {
     retry: reintentarSiNoEsAusencia
   })
 
-  const { data: notificaciones } = useQuery({
+  const { data: notificaciones, isPending } = useQuery({
     queryKey: ['notifications', unitId, filtro],
     queryFn: () =>
       api.listNotifications({
@@ -99,7 +100,9 @@ function InvestorUnitNotifications() {
       </div>
 
       <section className="flex flex-col gap-s3" data-testid="INV-NOTIF-UNIT-001">
-        {notificaciones?.length ? (
+        {isPending ? (
+          <Loading />
+        ) : notificaciones?.length ? (
           notificaciones.map((n) => {
             const categoria = n.category as NotifCategory
             return (

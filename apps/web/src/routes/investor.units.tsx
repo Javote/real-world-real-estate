@@ -3,6 +3,7 @@ import { createFileRoute, useNavigate } from '@tanstack/react-router'
 import { api } from '#/api/port'
 import { INVESTOR_ROLES } from '#/auth/roles'
 import { useRoleGuard } from '#/auth/useRoleGuard'
+import { Loading } from '#/components/domain/Loading'
 import { UnitCard } from '#/components/domain/UnitCard'
 import { PanelLayout } from '#/components/PanelLayout'
 import { useTranslation } from '#/i18n/useTranslation'
@@ -32,7 +33,7 @@ function InvestorUnits() {
   const { t } = useTranslation()
   const navigate = useNavigate()
 
-  const { data: unidades } = useQuery({
+  const { data: unidades, isPending } = useQuery({
     queryKey: ['investor', 'units'],
     queryFn: api.listInvestorUnits,
     enabled: ready
@@ -47,7 +48,9 @@ function InvestorUnits() {
       context={t('investor.units.context')}
     >
       <section className="flex flex-col gap-s3" data-testid="INV-UNITS-LIST-001">
-        {unidades?.length ? (
+        {isPending ? (
+          <Loading />
+        ) : unidades?.length ? (
           unidades.map((u) => (
             <UnitCard
               key={u.id}

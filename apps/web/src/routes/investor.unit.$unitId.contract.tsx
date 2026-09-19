@@ -4,6 +4,7 @@ import { useState } from 'react'
 import { ApiError, api } from '#/api/port'
 import { INVESTOR_ROLES } from '#/auth/roles'
 import { useRoleGuard } from '#/auth/useRoleGuard'
+import { Loading } from '#/components/domain/Loading'
 import type { ReleaseRecord } from '#/components/domain/ReleaseProofList'
 import { ReleaseProofList } from '#/components/domain/ReleaseProofList'
 import { TxidModal } from '#/components/domain/TxidModal'
@@ -46,7 +47,7 @@ function InvestorContract() {
     retry: reintentarSiNoEsAusencia
   })
 
-  const { data: releases } = useQuery({
+  const { data: releases, isPending: releasesPending } = useQuery({
     queryKey: ['contract', contrato?.id, 'releases'],
     queryFn: () => api.listContractReleases(contrato!.id),
     enabled: ready && Boolean(contrato?.id)
@@ -126,7 +127,9 @@ function InvestorContract() {
           <h2 className="text-label font-bold uppercase text-text-muted">
             {t('investor.contract.schedule')}
           </h2>
-          {filas.length ? (
+          {releasesPending ? (
+            <Loading />
+          ) : filas.length ? (
             <ReleaseProofList
               releases={filas}
               onOpenTxid={(release) => setTxid(release)}

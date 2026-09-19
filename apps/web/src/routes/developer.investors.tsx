@@ -4,6 +4,7 @@ import { api } from '#/api/port'
 import { DEV_ROLES } from '#/auth/roles'
 import { useRoleGuard } from '#/auth/useRoleGuard'
 import { InvestorCard } from '#/components/domain/InvestorCard'
+import { Loading } from '#/components/domain/Loading'
 import { PanelLayout } from '#/components/PanelLayout'
 import { formatCurrency } from '#/i18n/format'
 import { useTranslation } from '#/i18n/useTranslation'
@@ -34,7 +35,7 @@ function DeveloperInvestors() {
   const { t, locale } = useTranslation()
   const navigate = useNavigate()
 
-  const { data: investors } = useQuery({
+  const { data: investors, isPending } = useQuery({
     queryKey: ['developer', 'investors'],
     queryFn: api.listInvestors,
     enabled: ready
@@ -53,7 +54,9 @@ function DeveloperInvestors() {
       }}
     >
       <section className="flex flex-col gap-s2" data-testid="DEV-INVESTORS-LIST-001">
-        {investors?.length ? (
+        {isPending ? (
+          <Loading />
+        ) : investors?.length ? (
           investors.map((inv) => (
             <InvestorCard
               key={inv.id}

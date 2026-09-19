@@ -10,6 +10,7 @@ import {
   AuditEventCard
 } from '#/components/domain/AuditEventCard'
 import { CategoryChip } from '#/components/domain/Chips'
+import { Loading } from '#/components/domain/Loading'
 import { TxidModal } from '#/components/domain/TxidModal'
 import { PanelLayout } from '#/components/PanelLayout'
 import { formatDateTime } from '#/i18n/format'
@@ -72,7 +73,7 @@ function AuditLog() {
   const [filtro, setFiltro] = useState<AuditCategory | null>(null)
   const [verTxid, setVerTxid] = useState<{ txid: string; label: string; at: string } | null>(null)
 
-  const { data } = useQuery({
+  const { data, isPending } = useQuery({
     queryKey: ['developer', 'audit-log'],
     queryFn: () => api.listAuditLog(),
     enabled: ready
@@ -112,7 +113,9 @@ function AuditLog() {
       </div>
 
       <section className="flex flex-col gap-s3" data-testid="DEV-AUDIT-LIST-001">
-        {eventos.length ? (
+        {isPending ? (
+          <Loading />
+        ) : eventos.length ? (
           eventos.map((e) => {
             const txid = e.metadataJson
               ? ((JSON.parse(e.metadataJson) as { txid?: string | null }).txid ?? null)

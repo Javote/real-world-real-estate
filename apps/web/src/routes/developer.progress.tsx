@@ -4,6 +4,7 @@ import { AlertCircle } from 'lucide-react'
 import { api } from '#/api/port'
 import { DEV_ROLES } from '#/auth/roles'
 import { useRoleGuard } from '#/auth/useRoleGuard'
+import { Loading } from '#/components/domain/Loading'
 import { PrimaryButton } from '#/components/domain/PrimaryButton'
 import { ProgressTimeline, type TimelineStage } from '#/components/domain/ProgressTimeline'
 import { StatCard } from '#/components/domain/StatCard'
@@ -81,7 +82,7 @@ function DeveloperProgress() {
   const navigate = useNavigate()
   const queryClient = useQueryClient()
 
-  const { data: filas } = useQuery({
+  const { data: filas, isPending } = useQuery({
     queryKey: ['developer', 'progress'],
     queryFn: api.getDeveloperProgress,
     enabled: ready
@@ -187,7 +188,9 @@ function DeveloperProgress() {
       ) : null}
 
       <section className="flex flex-col gap-s3" data-testid="DEV-PROGRESS-001">
-        {porProyecto.size ? (
+        {isPending ? (
+          <Loading />
+        ) : porProyecto.size ? (
           [...porProyecto.entries()].map(([id, p]) => {
             const idxActual = p.stages.findIndex((s) => s.state === 'current')
             const total = p.stages.length

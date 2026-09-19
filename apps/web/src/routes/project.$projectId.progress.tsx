@@ -4,6 +4,7 @@ import { FileText, Images } from 'lucide-react'
 import { ApiError, api } from '#/api/port'
 import { INVESTOR_ROLES } from '#/auth/roles'
 import { useRoleGuard } from '#/auth/useRoleGuard'
+import { Loading } from '#/components/domain/Loading'
 import { ProgressTimeline } from '#/components/domain/ProgressTimeline'
 import { StatusPill } from '#/components/domain/StatusPill'
 import { PanelLayout } from '#/components/PanelLayout'
@@ -40,7 +41,11 @@ function InvestorProjectProgress() {
     retry: reintentarSiNoEsAusencia
   })
 
-  const { data: stages, error } = useQuery({
+  const {
+    data: stages,
+    error,
+    isPending
+  } = useQuery({
     queryKey: ['project', projectId, 'stages'],
     queryFn: () => api.listProjectStages(projectId),
     enabled: ready,
@@ -118,7 +123,9 @@ function InvestorProjectProgress() {
 
         <h2 className="text-h2 font-bold text-text-primary">{t('investor.project.stages')}</h2>
 
-        {lista.length ? (
+        {isPending ? (
+          <Loading />
+        ) : lista.length ? (
           lista.map((stage, i) => {
             const fotos = fotosPorStage.get(stage.id) ?? 0
             return (

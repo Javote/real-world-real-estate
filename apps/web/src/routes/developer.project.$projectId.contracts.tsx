@@ -5,6 +5,7 @@ import { api } from '#/api/port'
 import { DEV_ROLES } from '#/auth/roles'
 import { useRoleGuard } from '#/auth/useRoleGuard'
 import { HashChip } from '#/components/domain/HashChip'
+import { Loading } from '#/components/domain/Loading'
 import { StatCard } from '#/components/domain/StatCard'
 import { StatusPill, type StatusTone } from '#/components/domain/StatusPill'
 import { VerificationBadge } from '#/components/domain/VerificationBadge'
@@ -71,7 +72,7 @@ function ProjectContracts() {
     enabled: ready
   })
 
-  const { data: contratos } = useQuery({
+  const { data: contratos, isPending } = useQuery({
     queryKey: ['developer', 'project', projectId, 'contracts'],
     queryFn: () => api.listProjectContracts(projectId),
     enabled: ready
@@ -122,7 +123,9 @@ function ProjectContracts() {
       </section>
 
       <section className="flex flex-col gap-s3" data-testid="DEV-CONTRACTS-LIST-001">
-        {lista.length ? (
+        {isPending ? (
+          <Loading />
+        ) : lista.length ? (
           lista.map((c) => (
             <article key={c.id} className={cn('flex flex-col gap-s2', CARD_SHELL)}>
               <div className="flex items-start justify-between gap-s2">

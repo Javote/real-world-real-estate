@@ -5,6 +5,7 @@ import { api } from '#/api/port'
 import type { DeveloperUnit } from '#/api/types'
 import { DEV_ROLES } from '#/auth/roles'
 import { useRoleGuard } from '#/auth/useRoleGuard'
+import { Loading } from '#/components/domain/Loading'
 import { ProgressBar } from '#/components/domain/ProgressBar'
 import { StatCard } from '#/components/domain/StatCard'
 import { PanelLayout } from '#/components/PanelLayout'
@@ -35,7 +36,7 @@ function DeveloperUnits() {
   const { t } = useTranslation()
   const navigate = useNavigate()
 
-  const { data: unidades } = useQuery({
+  const { data: unidades, isPending } = useQuery({
     queryKey: ['developer', 'units'],
     queryFn: api.listDeveloperUnits,
     enabled: ready
@@ -77,7 +78,9 @@ function DeveloperUnits() {
       </section>
 
       <section className="flex flex-col gap-s3" data-testid="DEV-UNITS-INVENTORY-001">
-        {porProyecto.length ? (
+        {isPending ? (
+          <Loading />
+        ) : porProyecto.length ? (
           porProyecto.map((grupo) => {
             const proyecto = proyectos?.find((p) => p.id === grupo.projectId)
             const ubicacion = [proyecto?.city, proyecto?.country].filter(Boolean).join(', ')

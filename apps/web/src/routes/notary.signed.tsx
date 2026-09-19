@@ -4,6 +4,7 @@ import { api } from '#/api/port'
 import { NOTARY_ROLES } from '#/auth/roles'
 import { useRoleGuard } from '#/auth/useRoleGuard'
 import { HashChip } from '#/components/domain/HashChip'
+import { Loading } from '#/components/domain/Loading'
 import { StatusPill } from '#/components/domain/StatusPill'
 import { PanelLayout } from '#/components/PanelLayout'
 import { formatDate } from '#/i18n/format'
@@ -26,7 +27,7 @@ function SignedDossiers() {
   const { ready } = useRoleGuard(NOTARY_ROLES)
   const { t, locale } = useTranslation()
 
-  const { data } = useQuery({
+  const { data, isPending } = useQuery({
     queryKey: ['notary', 'signatures'],
     queryFn: () => api.listSignatures(),
     enabled: ready
@@ -37,7 +38,9 @@ function SignedDossiers() {
   return (
     <PanelLayout rol="notary" title={t('notary.signed.title')} context={t('notary.signed.context')}>
       <section data-testid="NOT-SIGNED-LIST-001">
-        {data?.items.length ? (
+        {isPending ? (
+          <Loading />
+        ) : data?.items.length ? (
           <ul className="flex flex-col gap-s3">
             {data.items.map((f) => (
               <li key={f.dossierId} className={cn('flex flex-col gap-s2', CARD_SHELL)}>

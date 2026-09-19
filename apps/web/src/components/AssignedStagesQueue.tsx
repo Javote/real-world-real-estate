@@ -1,6 +1,7 @@
 import { useQuery } from '@tanstack/react-query'
 import { useNavigate } from '@tanstack/react-router'
 import { api } from '#/api/port'
+import { Loading } from '#/components/domain/Loading'
 import { SecondaryButton } from '#/components/domain/PrimaryButton'
 import { useTranslation } from '#/i18n/useTranslation'
 
@@ -13,10 +14,12 @@ import { useTranslation } from '#/i18n/useTranslation'
 export function AssignedStagesQueue() {
   const { t } = useTranslation()
   const navigate = useNavigate()
-  const { data: asignados } = useQuery({
+  const { data: asignados, isPending } = useQuery({
     queryKey: ['certifier', 'assignments'],
     queryFn: api.getCertifierAssignments
   })
+
+  if (isPending) return <Loading />
 
   if (!asignados?.length) {
     return (

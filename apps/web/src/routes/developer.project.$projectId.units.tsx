@@ -6,6 +6,7 @@ import { api } from '#/api/port'
 import type { DeveloperProjectUnit } from '#/api/types'
 import { DEV_ROLES } from '#/auth/roles'
 import { useRoleGuard } from '#/auth/useRoleGuard'
+import { Loading } from '#/components/domain/Loading'
 import { NumberInput } from '#/components/domain/NumberInput'
 import { PrimaryButton, SecondaryButton } from '#/components/domain/PrimaryButton'
 import { StatCard } from '#/components/domain/StatCard'
@@ -85,7 +86,7 @@ function ProjectUnits() {
     enabled: ready
   })
 
-  const { data: unidades } = useQuery({
+  const { data: unidades, isPending: unidadesPending } = useQuery({
     queryKey: ['developer', 'project', projectId, 'units'],
     queryFn: () => api.listProjectUnits(projectId),
     enabled: ready
@@ -235,7 +236,9 @@ function ProjectUnits() {
       </form>
 
       <section className="flex flex-col gap-s2" data-testid="DEV-UNITS-LIST-001">
-        {unidades?.length ? (
+        {unidadesPending ? (
+          <Loading />
+        ) : unidades?.length ? (
           unidades.map((u) => (
             <UnitCard
               key={u.id}

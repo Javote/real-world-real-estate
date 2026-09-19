@@ -4,6 +4,7 @@ import { Plus } from 'lucide-react'
 import { api } from '#/api/port'
 import { DEV_ROLES } from '#/auth/roles'
 import { useRoleGuard } from '#/auth/useRoleGuard'
+import { Loading } from '#/components/domain/Loading'
 import { SecondaryButton } from '#/components/domain/PrimaryButton'
 import { ProjectCard } from '#/components/domain/ProjectCard'
 import type { StatusTone } from '#/components/domain/StatusPill'
@@ -44,7 +45,7 @@ function DeveloperProjects() {
   const { t, locale } = useTranslation()
   const navigate = useNavigate()
 
-  const { data: proyectos } = useQuery({
+  const { data: proyectos, isPending } = useQuery({
     queryKey: ['developer', 'projects'],
     queryFn: api.listDeveloperProjects,
     enabled: ready
@@ -69,7 +70,9 @@ function DeveloperProjects() {
       }
     >
       <section className="flex flex-col gap-s3" data-testid="DEV-PROJECTS-LIST-001">
-        {proyectos?.length ? (
+        {isPending ? (
+          <Loading />
+        ) : proyectos?.length ? (
           proyectos.map((p) => {
             const entregado = p.status === 'completed'
             const dateLabel = p.estimatedDelivery

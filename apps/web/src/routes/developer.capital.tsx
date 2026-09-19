@@ -5,6 +5,7 @@ import { Building2, DollarSign } from 'lucide-react'
 import { api } from '#/api/port'
 import { DEV_ROLES } from '#/auth/roles'
 import { useRoleGuard } from '#/auth/useRoleGuard'
+import { Loading } from '#/components/domain/Loading'
 import { ProgressBar } from '#/components/domain/ProgressBar'
 import { PanelLayout } from '#/components/PanelLayout'
 import { formatCurrency, formatCurrencyCompact } from '#/i18n/format'
@@ -51,25 +52,29 @@ function DeveloperCapital() {
   const { t, locale } = useTranslation()
   const navigate = useNavigate()
 
-  const { data: resumen } = useQuery({
+  const { data: resumen, isPending: resumenPending } = useQuery({
     queryKey: ['developer', 'capital', 'summary'],
     queryFn: api.getCapitalSummary,
     enabled: ready
   })
 
-  const { data: mensual } = useQuery({
+  const { data: mensual, isPending: mensualPending } = useQuery({
     queryKey: ['developer', 'capital', 'monthly'],
     queryFn: api.getCapitalMonthly,
     enabled: ready
   })
 
-  const { data: porProyecto } = useQuery({
+  const { data: porProyecto, isPending: porProyectoPending } = useQuery({
     queryKey: ['developer', 'capital', 'by-project'],
     queryFn: api.getCapitalByProject,
     enabled: ready
   })
 
   if (!ready) return null
+
+  // SPEC-110 (F-18): tres queries, un solo estado de carga — no tres
+  // indicadores peleando por la misma pantalla.
+  const cargando = resumenPending || mensualPending || porProyectoPending
 
   const moneda = resumen?.currency
   const total = resumen?.raisedMinorUnits ?? 0
@@ -84,94 +89,104 @@ function DeveloperCapital() {
         onClick: () => void navigate({ to: '/developer' })
       }}
     >
-      <section
-        className={cn('flex flex-col gap-s5', CARD_SHELL)}
-        data-testid="DEV-CAPITAL-SUMMARY-001"
-      >
-        <div className="flex items-center gap-s3">
-          <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-verified text-white">
-            <DollarSign size={20} aria-hidden="true" />
-          </span>
-          <div className="flex min-w-0 flex-col">
-            <span className="text-stat font-bold text-text-primary">
-              {/* Sin moneda única no se suma: el guión es la respuesta honesta
-                  a "cuánto", no un cero (regla 17). */}
-              {moneda ? formatCurrency(total, moneda, locale) : t('panel.emptyValue')}
-            </span>
-            <span className="text-body-sm text-text-muted">
-              {t('developer.capital.totalRaised')}
-            </span>
-          </div>
-        </div>
-
-        <div className="flex flex-col gap-s3" data-testid="DEV-CAPITAL-MONTHLY-002">
-          <h2 className="text-body font-bold text-text-primary">
-            {t('developer.capital.monthly')}
-          </h2>
-          {mensual?.length ? (
-            <BarrasMensuales serie={mensual} moneda={moneda ?? null} locale={locale} />
-          ) : (
-            <p className="text-body-sm text-text-muted">{t('developer.capital.monthlyEmpty')}</p>
-          )}
-        </div>
-      </section>
-
-      <section className="flex flex-col gap-s3">
-        <h2 className="text-h2 font-bold text-text-primary">{t('developer.capital.byProject')}</h2>
-
-        {porProyecto?.length ? (
-          porProyecto.map((p) => (
-            <article key={p.projectId} className={cn('flex flex-col gap-s3', CARD_SHELL)}>
-              <div className="flex items-center gap-s3">
-                <span className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-primary-light">
-                  <Building2 className="size-icon-stat text-primary" aria-hidden="true" />
+      {cargando ? (
+        <Loading />
+      ) : (
+        <>
+          <section
+            className={cn('flex flex-col gap-s5', CARD_SHELL)}
+            data-testid="DEV-CAPITAL-SUMMARY-001"
+          >
+            <div className="flex items-center gap-s3">
+              <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-verified text-white">
+                <DollarSign size={20} aria-hidden="true" />
+              </span>
+              <div className="flex min-w-0 flex-col">
+                <span className="text-stat font-bold text-text-primary">
+                  {/* Sin moneda única no se suma: el guión es la respuesta honesta
+                      a "cuánto", no un cero (regla 17). */}
+                  {moneda ? formatCurrency(total, moneda, locale) : t('panel.emptyValue')}
                 </span>
-                <h3 className="min-w-0 truncate text-body font-bold text-text-primary">
-                  {p.projectName}
-                </h3>
+                <span className="text-body-sm text-text-muted">
+                  {t('developer.capital.totalRaised')}
+                </span>
               </div>
+            </div>
 
-              <div className="grid grid-cols-2 gap-s3">
-                <div className="flex flex-col">
-                  <span className="text-body-sm text-text-muted">
-                    {t('developer.capital.raised')}
-                  </span>
-                  <span className="text-body font-bold text-text-primary tabular-nums">
-                    {p.currency
-                      ? formatCurrency(p.raisedMinorUnits, p.currency, locale)
-                      : t('panel.emptyValue')}
-                  </span>
-                </div>
-                <div className="flex flex-col">
-                  <span className="text-body-sm text-text-muted">
-                    {t('developer.capital.investors')}
-                  </span>
-                  <span className="text-body font-bold text-text-primary tabular-nums">
-                    {p.investors}
-                  </span>
-                </div>
-              </div>
+            <div className="flex flex-col gap-s3" data-testid="DEV-CAPITAL-MONTHLY-002">
+              <h2 className="text-body font-bold text-text-primary">
+                {t('developer.capital.monthly')}
+              </h2>
+              {mensual?.length ? (
+                <BarrasMensuales serie={mensual} moneda={moneda ?? null} locale={locale} />
+              ) : (
+                <p className="text-body-sm text-text-muted">
+                  {t('developer.capital.monthlyEmpty')}
+                </p>
+              )}
+            </div>
+          </section>
 
-              {/* "Share of total" — la barra de M2-D3, no una nueva. El total
+          <section className="flex flex-col gap-s3">
+            <h2 className="text-h2 font-bold text-text-primary">
+              {t('developer.capital.byProject')}
+            </h2>
+
+            {porProyecto?.length ? (
+              porProyecto.map((p) => (
+                <article key={p.projectId} className={cn('flex flex-col gap-s3', CARD_SHELL)}>
+                  <div className="flex items-center gap-s3">
+                    <span className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-primary-light">
+                      <Building2 className="size-icon-stat text-primary" aria-hidden="true" />
+                    </span>
+                    <h3 className="min-w-0 truncate text-body font-bold text-text-primary">
+                      {p.projectName}
+                    </h3>
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-s3">
+                    <div className="flex flex-col">
+                      <span className="text-body-sm text-text-muted">
+                        {t('developer.capital.raised')}
+                      </span>
+                      <span className="text-body font-bold text-text-primary tabular-nums">
+                        {p.currency
+                          ? formatCurrency(p.raisedMinorUnits, p.currency, locale)
+                          : t('panel.emptyValue')}
+                      </span>
+                    </div>
+                    <div className="flex flex-col">
+                      <span className="text-body-sm text-text-muted">
+                        {t('developer.capital.investors')}
+                      </span>
+                      <span className="text-body font-bold text-text-primary tabular-nums">
+                        {p.investors}
+                      </span>
+                    </div>
+                  </div>
+
+                  {/* "Share of total" — la barra de M2-D3, no una nueva. El total
                   puede ser cero cuando todavía no hay contratos: dividir ahí
                   daría NaN y la barra se dibujaría vacía sin decir por qué. */}
-              <div className="flex flex-col gap-s1">
-                <div className="flex items-baseline justify-between gap-s2">
-                  <span className="text-body-sm text-text-muted">
-                    {t('developer.capital.share')}
-                  </span>
-                </div>
-                <ProgressBar
-                  percent={total > 0 ? Math.round((p.raisedMinorUnits / total) * 100) : 0}
-                  showValue
-                />
-              </div>
-            </article>
-          ))
-        ) : (
-          <p className={CARD_SHELL_EMPTY}>{t('developer.capital.empty')}</p>
-        )}
-      </section>
+                  <div className="flex flex-col gap-s1">
+                    <div className="flex items-baseline justify-between gap-s2">
+                      <span className="text-body-sm text-text-muted">
+                        {t('developer.capital.share')}
+                      </span>
+                    </div>
+                    <ProgressBar
+                      percent={total > 0 ? Math.round((p.raisedMinorUnits / total) * 100) : 0}
+                      showValue
+                    />
+                  </div>
+                </article>
+              ))
+            ) : (
+              <p className={CARD_SHELL_EMPTY}>{t('developer.capital.empty')}</p>
+            )}
+          </section>
+        </>
+      )}
     </PanelLayout>
   )
 }
