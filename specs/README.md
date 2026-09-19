@@ -168,7 +168,7 @@ mismo— sigue siendo `SPEC-305`, decisión de mainnet.
 | [`SPEC-107`](SPEC-107-claves-de-traduccion-tipadas.md) | Los 23 `as never` que apagan el chequeo del diccionario | F-14 | **cerrada 2026-09-19** — 21 sin cast (unión ya existía), 2 con `tDinamico` explícito |
 | [`SPEC-108`](SPEC-108-higiene-de-componentes.md) | Higiene: el shell de card repetido, el hook disfrazado, la prop que se ignora | F-15·16·17 | **cerrada 2026-09-19** |
 | [`SPEC-109`](SPEC-109-tipos-de-respuesta-desde-shared.md) | `api/types.ts`: cerrar la garantía de "drift imposible" | F-13 | abierta 🟡 |
-| [`SPEC-110`](SPEC-110-estado-de-carga.md) | 30 de 42 rutas muestran el empty-state mientras cargan | F-18 | abierta |
+| [`SPEC-110`](SPEC-110-estado-de-carga.md) | 30 de 42 rutas muestran el empty-state mientras cargan | F-18 | **cerrada 2026-09-19** — 24 sitios reales (20 rutas + 2 componentes compartidos no nombrados por la auditoría + 2 con isPending mal apuntado), verificado con Claude en Chrome |
 | [`SPEC-201`](SPEC-201-aceptar-invitacion-atomico.md) | Aceptar una invitación deja de poder sacarle la unidad a quien ya la compró | B-01 | **cerrada 2026-09-18** |
 | [`SPEC-202`](SPEC-202-un-dossier-por-unidad.md) | Una unidad, un dossier: el índice único que falta | B-02 | **cerrada 2026-09-18** 🟡 |
 | [`SPEC-203`](SPEC-203-migraciones-atomicas.md) | Una migración que se corta a la mitad tiene que poder volver | B-03 | **cerrada 2026-09-18** 🟡 |
