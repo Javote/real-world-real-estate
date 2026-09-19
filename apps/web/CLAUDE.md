@@ -127,6 +127,19 @@ no la captura. No reintroducir un `hideBrand`.
 
 ## Trampas verificadas
 
+- **2026-09-19 · `styles.test.ts` no tiene un número de tests estable, y no es una regresión de
+  ningún commit.** Corriéndolo solo (`pnpm --filter web test -- styles.test`) da un número; corriendo
+  la suite completa da otro; y varía entre corridas del mismo comando sin tocar nada. Confirmado
+  contra el código **sin modificar** con `git stash` — la inestabilidad ya estaba ahí, no la causó
+  SPEC-108 (que fue cuando se notó, al comparar el total de la suite entre dos commits). El archivo
+  genera sus tests con `it.each` sobre listas que arma parseando `docs/M2-D3-...md` en tiempo de
+  colección (`coloresNormativos()` y análogas para tamaños de ícono y espaciado) — la sospecha es
+  alguna dependencia de orden de ejecución entre archivos de test en el mismo worker de Vitest
+  (un regex con estado global, o algo similar), pero no se investigó a fondo: **cero tests fallan
+  en ninguna corrida**, solo cambia cuántos se coleccionan, así que no bloqueó nada y quedó fuera de
+  alcance de la spec que lo encontró. Si alguna vez este archivo empieza a fallar de verdad (no solo
+  a variar en cantidad), esto es el primer lugar donde mirar.
+
 - **2026-09-09 · el `VerificationBadge` del detalle de etapa mostraba el TXID de la transición
   equivocada.** `stage.events.find(e => e.eventType === 'STAGE_TRANSITION' && e.txid)` devuelve la
   **primera**, y `GET /projects/:id/stages/:stageId` ordena por `eventIndex asc`. En un stage que
