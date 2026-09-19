@@ -74,3 +74,37 @@ participa de un dossier firmado.
 
 - **¿Cuál gana entre dos bundles anclados?** Sin dueño todavía. Si la medición del paso 1 no devuelve
   ese caso, la pregunta se cierra sin responderla.
+
+## Cerrada 2026-09-19 — la invariante 1 estaba mal escrita, corregida al implementar
+
+**Medido (paso 1):** "Terminaciones" de `torre-a` era el único caso en toda la base — 4 bundles, 3
+roots. Los otros 32 stages con bundle tenían exactamente uno. Sí hubo que responder la pregunta
+abierta: de los dos roots anclados (`c664368c…`, dos veces, y otro par de roots más viejos), gana
+`c664368c…` porque es el que el datum de la transición `Completed` dejó grabado — el estado final
+real, no un snapshot intermedio. Detalle completo, con las 4 filas y sus 6 `OnChainEvent`:
+`specs/evidence/evidence-bundle-torre-a-terminaciones-2026-09-18.json`.
+
+**La invariante 1 ("un stage tiene como máximo un `EvidenceBundle`") es falsa, y se comprobó
+implementándola:** `UNIQUE(stageId)` rechazaba con 409 la segunda subida de evidencia de cualquier
+stage, porque `crearBundle` corre en cada subida —no solo al completar— y cada subida antes de
+completar escribe, a propósito, un bundle con un root distinto. Rompía
+`test/evidence-upload.test.ts` → *"un stage Observed SÍ acepta evidencia (remediación)"*, que es
+comportamiento correcto. El hallazgo real de producción era más angosto: **dos bundles con el MISMO
+root para el MISMO stage** — la fila gemela de la doble-llamada a `crearBundle`, no la acumulación
+legítima de evidencia. `EvidenceBundle_stageId_commitmentHash_key` (`UNIQUE(stageId,
+commitmentHash)`, `migrations/0007`) cierra eso sin romper la subida normal.
+
+**Consecuencia para la invariante 2, la que de verdad importa:** ningún índice único hace que un
+stage tenga un solo bundle a lo largo de su vida — legítimamente puede tener varios. Un `leftJoin`
+directo a `EvidenceBundle` sigue multiplicando filas por stage con solo 2+ subidas de evidencia
+antes de completar, sin que haga falta ningún bug. Lo que cierra la invariante 2 de verdad es
+`ultimoBundlePorStage` (`domain/stage-transition.ts`, mismo criterio de "vigente" que ya usaba
+`rootDelStage`: el de `createdAt` más reciente) — los tres `leftJoin` (`dossier.ts`,
+`certifier.routes.ts`, `investor.routes.ts`) lo usan en vez de un `leftJoin` directo.
+
+**La lección:** un hallazgo de auditoría describe bien el síntoma (4 bundles, 3 roots) pero infiere
+mal la causa si no se ejecuta el código alrededor. "Un stage tiene como máximo un bundle" sonaba
+como la lectura obvia de "esto no debería pasar", y era la lectura equivocada — el diseño real
+permite varios bundles por stage a propósito, y el bug era más específico que eso. Verificarlo
+contra el comportamiento (subir dos evidencias a un stage nuevo, mirar cuántos bundles quedan) antes
+de escribir el índice es lo que lo encontró.

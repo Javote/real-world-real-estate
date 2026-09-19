@@ -181,7 +181,7 @@ mismo— sigue siendo `SPEC-305`, decisión de mainnet.
 | [`SPEC-210`](SPEC-210-borrar-evidencia-anclada.md) | Borrar evidencia anclada corta el vínculo y devuelve el error equivocado | B-15 | **cerrada 2026-09-18** |
 | [`SPEC-211`](SPEC-211-limite-de-tasa-en-la-ruta-publica.md) | La otra ruta sin sesión no tiene límite de tasa | B-11 | **cerrada 2026-09-18** 🟡 |
 | [`SPEC-212`](SPEC-212-contrato-en-la-firma-de-la-ruta.md) | `contrato()`: el schema en la firma de la ruta, no en una tabla | B-06 | abierta 🟡 |
-| [`SPEC-213`](SPEC-213-un-bundle-por-stage.md) | `EvidenceBundle` duplicado por stage: medir antes de decidir | anexo | abierta 🟡 |
+| [`SPEC-213`](SPEC-213-un-bundle-por-stage.md) | `EvidenceBundle` duplicado por stage: medir antes de decidir | anexo | **cerrada 2026-09-19** 🟡 — invariante corregida en el camino: no "máximo un bundle", sino `UNIQUE(stageId, commitmentHash)` + `ultimoBundlePorStage` en los 3 leftJoin |
 | [`SPEC-214`](SPEC-214-telemetria-con-blocktimestamp.md) | La telemetría del criterio 9 mide lo que tardó alguien en volver a leer | anexo | **cerrada 2026-09-18** |
 | [`SPEC-215`](SPEC-215-seed-idempotente.md) | `pnpm db:seed` revienta sobre una base ya sembrada | anexo | **cerrada 2026-09-18** |
 | [`SPEC-301`](SPEC-301-unicidad-del-hilo-no-depende-de-la-base.md) | La unicidad del hilo deja de depender de la base | C-01 (1·2) | **cerrada 2026-09-18** 🟡 · no era pulido |
