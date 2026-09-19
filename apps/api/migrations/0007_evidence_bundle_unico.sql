@@ -1,0 +1,59 @@
+-- SPEC-213 (anexo de AUDITORIA-2026-09-11-calidad-del-backend.md) — dos
+-- `EvidenceBundle` del MISMO stage no pueden tener el MISMO root.
+--
+-- La invariante 1 original de la spec ("un stage tiene como máximo un
+-- EvidenceBundle") está mal escrita frente al comportamiento real e
+-- intencional del código: `crearBundle` corre en cada subida de evidencia
+-- (`developer-evidencia.routes.ts`), no solo al completar, así que cualquier
+-- stage con 2+ subidas antes de completarse tiene, legítimamente, más de un
+-- bundle — cada uno con un root distinto porque la evidencia acumulada
+-- cambió. Verificado ejecutándolo antes de escribir esta migración: un
+-- `UNIQUE(stageId)` a secas rechazaba con 409 la segunda subida de evidencia
+-- de cualquier stage — rompía `test/evidence-upload.test.ts` → "un stage
+-- Observed SÍ acepta evidencia (remediación)", que es comportamiento
+-- correcto, no el bug.
+--
+-- El bug real de producción era más angosto: dos bundles con el MISMO root
+-- para el MISMO stage — la fila gemela que dejó la doble-llamada a
+-- `crearBundle` en la misma completación (cerrado el 2026-09-09 por
+-- idempotencia de contenido, pero solo hacia adelante). `EvidenceBundle_
+-- stageId_idx` (0000_init.sql) es un índice común, no único, y no lo
+-- impedía. En producción, "Terminaciones" de `torre-a`
+-- (`j21hzyslz4umeupyr1zpuu1p`) quedó con 4 bundles y 3 roots distintos: dos
+-- de ellos (0c1cc22d…, 8afbf15a…) son historia legítima —snapshots con 1 y 2
+-- evidencias, antes de completar—, y los otros dos (`t1pwuw3yxz4rp764kk0o70oa`,
+-- `g5yxnjs0y1eefuvlzg60plol`) son el duplicado exacto: mismo `commitmentHash`
+-- (`c664368c…`), mismos 3 items.
+--
+-- Medido antes de escribir esto (paso 1 de la spec), no asumido: las 4 filas,
+-- sus items y los 6 `OnChainEvent` del stage quedaron volcados enteros en
+-- `specs/evidence/evidence-bundle-torre-a-terminaciones-2026-09-18.json`
+-- antes de este borrado — la fila que se saca tenía anclaje real
+-- (EVIDENCE_ANCHOR Confirmed), y perder ese contexto sin dejarlo escrito en
+-- otro lado sería exactamente el tipo de pérdida que este proyecto existe
+-- para evitar.
+--
+-- Criterio de desempate entre el par duplicado: sobrevive
+-- `g5yxnjs0y1eefuvlzg60plol` porque es el que datum on-chain de la transición
+-- STAGE_TRANSITION a Completed dejó grabado (txid
+-- e842c8acb07dfd1b551a1a8d2318e12d9915d40aa69ebcf86d3842759571fe22) — no hay
+-- otro criterio posible entre dos filas con contenido idéntico. Autorizado
+-- por el dueño el 2026-09-18.
+--
+-- El `DELETE` es por id literal, no por criterio genérico (a diferencia de
+-- 0006): esto no es un patrón que se repita — es la única vez que pasó en
+-- toda la vida del proyecto, ya medido — así que hardcodear el id es más
+-- honesto que escribir una regla general para un caso de uno. Mismo criterio
+-- que las migraciones 0004/0005. `EvidenceBundleItem` se borra en cascada
+-- (`ON DELETE cascade` en su FK a `EvidenceBundle`, 0000_init.sql), así que
+-- no hace falta un DELETE aparte para esa tabla.
+DELETE FROM `EvidenceBundle`
+WHERE `id` = 't1pwuw3yxz4rp764kk0o70oa';
+--> statement-breakpoint
+-- Redundante con el índice único de abajo, igual que en 0006. `stageId` sigue
+-- siendo el prefijo del compuesto, así que un `WHERE stageId = ?` (p. ej.
+-- `rootDelStage`) sigue usando índice igual que antes.
+DROP INDEX IF EXISTS `EvidenceBundle_stageId_idx`;
+--> statement-breakpoint
+CREATE UNIQUE INDEX IF NOT EXISTS `EvidenceBundle_stageId_commitmentHash_key`
+  ON `EvidenceBundle` (`stageId`, `commitmentHash`);

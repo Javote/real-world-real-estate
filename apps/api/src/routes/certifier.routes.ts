@@ -13,7 +13,7 @@ import {
 import { type Request, Router } from "express";
 import { z } from "zod";
 import { reconciliarParaLectura } from "../domain/reconcile";
-import { transitionStage } from "../domain/stage-transition";
+import { transitionStage, ultimoBundlePorStage } from "../domain/stage-transition";
 import { db } from "../lib/db";
 import { authenticate, authorize } from "../middlewares/auth";
 import { paramValidator } from "../middlewares/validate-params";
@@ -219,10 +219,14 @@ router.get(
     );
     if (visibles.length) await reconciliarParaLectura({ projectIds: visibles });
 
+    // `ultimoBundlePorStage` (SPEC-213) elige el bundle vigente — un stage
+    // acumula uno por cada subida de evidencia antes de completarse, así que
+    // un `leftJoin` directo a `EvidenceBundle` duplicaría filas de este
+    // listado.
     let query = db
       .selectFrom("Stage")
       .innerJoin("Project", "Project.id", "Stage.projectId")
-      .leftJoin("EvidenceBundle", "EvidenceBundle.stageId", "Stage.id")
+      .leftJoin(ultimoBundlePorStage, "EvidenceBundle.stageId", "Stage.id")
       .leftJoin("OnChainEvent", (join) =>
         join
           .onRef("OnChainEvent.stageId", "=", "Stage.id")

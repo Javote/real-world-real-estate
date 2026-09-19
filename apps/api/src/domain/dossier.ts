@@ -3,6 +3,7 @@ import type { Dossier, DossierArtifact, DossierStatus } from "@plataforma/shared
 import { createId } from "../db/id";
 import { db } from "../lib/db";
 import { reconciliarParaLectura } from "./reconcile";
+import { ultimoBundlePorStage } from "./stage-transition";
 
 // Compilación del dossier (M2-D4 P8, M2-D5 filas 26-29) — **M3-BE-12**.
 //
@@ -54,9 +55,17 @@ export async function compileDossier(unitId: string): Promise<CompiledDossier | 
 
   // ── Stages: su prueba es la transición a `Completed`, y su huella el Merkle
   // root del bundle que se ancló al completarlos.
+  //
+  // `ultimoBundlePorStage` (SPEC-213, domain/stage-transition.ts) elige el
+  // bundle vigente, no cualquiera: un stage acumula un bundle por cada subida
+  // de evidencia antes de completarse, así que un `leftJoin` directo a
+  // `EvidenceBundle` duplicaría el artefacto `stage` en `artifacts` — y
+  // `masterHash`, que se calcula sobre esa lista, saldría distinto del que
+  // corresponde. Reproducido contra producción: `specs/evidence/
+  // evidence-bundle-torre-a-terminaciones-2026-09-18.json`.
   const stages = await db
     .selectFrom("Stage")
-    .leftJoin("EvidenceBundle", "EvidenceBundle.stageId", "Stage.id")
+    .leftJoin(ultimoBundlePorStage, "EvidenceBundle.stageId", "Stage.id")
     .leftJoin("OnChainEvent", (join) =>
       join
         .onRef("OnChainEvent.stageId", "=", "Stage.id")

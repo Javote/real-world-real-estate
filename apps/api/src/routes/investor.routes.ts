@@ -19,6 +19,7 @@ import { createId } from "../db/id";
 import { anchorCommitmentEvent, commitmentOf } from "../domain/anchoring";
 import { compileDossier } from "../domain/dossier";
 import { reconciliarParaLectura } from "../domain/reconcile";
+import { ultimoBundlePorStage } from "../domain/stage-transition";
 import { db } from "../lib/db";
 import { authenticate, authorize } from "../middlewares/auth";
 import { paramValidator } from "../middlewares/validate-params";
@@ -203,9 +204,13 @@ router.get(
 
     // Los stages son del proyecto, con su estado de anclaje: esto alimenta los
     // StageChips del patrón P9.
+    //
+    // `ultimoBundlePorStage` (SPEC-213) elige el bundle vigente — un stage
+    // acumula uno por cada subida de evidencia antes de completarse, así que
+    // un `leftJoin` directo a `EvidenceBundle` duplicaría filas acá.
     const stages = await db
       .selectFrom("Stage")
-      .leftJoin("EvidenceBundle", "EvidenceBundle.stageId", "Stage.id")
+      .leftJoin(ultimoBundlePorStage, "EvidenceBundle.stageId", "Stage.id")
       .leftJoin("OnChainEvent", (join) =>
         join
           .onRef("OnChainEvent.stageId", "=", "Stage.id")

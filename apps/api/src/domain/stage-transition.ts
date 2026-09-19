@@ -11,6 +11,7 @@ import {
 } from "@plataforma/shared";
 import { createId } from "../db/id";
 import type {
+  Database,
   StageState as DbStageState,
   OnChainEventRow,
   OnChainEventType,
@@ -19,6 +20,7 @@ import type {
 import { Sentry } from "../instrumentation";
 import { anchorPort } from "../lib/anchor";
 import { db } from "../lib/db";
+import type { ExpressionBuilder } from "../lib/kysely";
 import { writeAuditLog } from "../utils/audit";
 
 // **El único lugar donde el estado de un stage cambia.**
@@ -142,8 +144,15 @@ const sha256Pair = (a: string, b: string) =>
  * `POST /developer/projects/:id/stages/:stageId/evidence` y otra acá, desde
  * `transitionStage`— y la segunda insertaba una fila gemela. En producción, el
  * stage "Terminaciones" de `torre-a` quedó con 3 evidencias, **4 bundles y 3
- * roots distintos**. Inocuo en valor (el root repetido es el mismo) pero el
- * `leftJoin EvidenceBundle` del listado del certifier duplica filas por eso.
+ * roots distintos**. Inocuo en valor (el root repetido es el mismo), pero
+ * `EvidenceBundle_stageId_commitmentHash_key` (SPEC-213, migrations/0007) es
+ * lo que lo vuelve imposible por construcción, no solo esta comparación.
+ *
+ * **Un stage puede tener legítimamente más de un bundle** — cada subida de
+ * evidencia antes de completar escribe el suyo, con un root distinto porque
+ * la evidencia acumulada cambió. Eso NO es este bug. Quien necesite "el
+ * bundle de este stage" para un listado usa `ultimoBundlePorStage`, no un
+ * `leftJoin` directo — ver su docstring.
  */
 async function crearBundle(stage: StageRow, actorUserId: string): Promise<string | null> {
   const evidencias = await db
@@ -205,6 +214,35 @@ async function rootDelStage(stageId: string): Promise<string> {
     .executeTakeFirst();
 
   return bundle?.commitmentHash ?? "";
+}
+
+/**
+ * El `EvidenceBundle` vigente de cada stage — mismo criterio que
+ * `rootDelStage` (el de `createdAt` más reciente), como subquery lista para
+ * un `leftJoin`. Un stage acumula un bundle por cada subida de evidencia
+ * antes de completarse (SPEC-213): un `leftJoin` directo a `EvidenceBundle`
+ * multiplica filas por stage apenas hay 2+ subidas, y eso es lo que infló el
+ * `masterHash` de un dossier — no el bug de duplicación exacta, que ya cierra
+ * `EvidenceBundle_stageId_commitmentHash_key` (migrations/0007). Se alía como
+ * `"EvidenceBundle"` para que el caller pueda seguir escribiendo
+ * `.leftJoin(ultimoBundlePorStage, "EvidenceBundle.stageId", "Stage.id")`
+ * y sus `.select(["EvidenceBundle.commitmentHash as ..."])` sin tocarlos.
+ */
+export function ultimoBundlePorStage(eb: ExpressionBuilder<Database, keyof Database>) {
+  return eb
+    .selectFrom("EvidenceBundle as ultimo")
+    .selectAll("ultimo")
+    .where(({ exists, selectFrom, not }) =>
+      not(
+        exists(
+          selectFrom("EvidenceBundle as masNuevo")
+            .select("masNuevo.id")
+            .whereRef("masNuevo.stageId", "=", "ultimo.stageId")
+            .whereRef("masNuevo.createdAt", ">", "ultimo.createdAt")
+        )
+      )
+    )
+    .as("EvidenceBundle");
 }
 
 /** La cabeza del hilo: el UTxO vivo del thread token de este stage. */

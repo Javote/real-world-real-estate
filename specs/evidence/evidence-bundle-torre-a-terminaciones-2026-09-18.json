@@ -1,0 +1,141 @@
+{
+  "capturedAt": "2026-09-18",
+  "reason": "SPEC-213 (anexo de AUDITORIA-2026-09-11-calidad-del-backend.md) — el stage 'Terminaciones' de torre-a quedó con 4 bundles y 3 roots distintos. Solo UNO de esos 4 es un duplicado real (mismo commitmentHash que otro, producto del bug de doble-llamada a crearBundle ya cerrado el 2026-09-09); los otros dos roots son historial legítimo de evidencia acumulándose antes de completar — un stage puede tener más de un bundle a lo largo de su vida, eso no es el bug. migrations/0007_evidence_bundle_unico.sql solo borra la fila duplicada (t1pwuw3yxz4rp764kk0o70oa) y agrega UNIQUE(stageId, commitmentHash) — no UNIQUE(stageId) a secas, que rompería la subida normal de evidencia (verificado: test/evidence-upload.test.ts). Este archivo preserva el detalle completo de las 4 filas igual, incluida la que sí se borra.",
+  "project": {
+    "id": "m99yzb4h5poi0078rcqpbj6d",
+    "slug": "torre-a",
+    "name": "Torre A"
+  },
+  "stage": {
+    "id": "j21hzyslz4umeupyr1zpuu1p",
+    "name": "Terminaciones",
+    "sequenceOrder": 3,
+    "state": "Completed"
+  },
+  "survivingBundleId": "g5yxnjs0y1eefuvlzg60plol",
+  "survivingBundleReason": "Su commitmentHash (c664368c0839bf0a96d245e17f919784f752eb9391c26a75de173ae43629bfe4) es el que quedó grabado en el datum on-chain de la transición STAGE_TRANSITION a Completed (OnChainEvent xjkq5pytmjbupxqtixngud7l, txid e842c8acb07dfd1b551a1a8d2318e12d9915d40aa69ebcf86d3842759571fe22) — es el estado final real del stage, no un snapshot intermedio.",
+  "onChainEventsOfStage": [
+    {
+      "id": "jev4htoxxkp34nk8f16dz4k5",
+      "eventType": "STAGE_CREATED",
+      "toState": "Pending",
+      "commitment": null,
+      "status": "Confirmed",
+      "txid": "21bae8cbb53cffc0e127e18089f8a9cce49acd407cbcca476c7871f01c294970"
+    },
+    {
+      "id": "z7alfooijcjw34k844kigluq",
+      "eventType": "STAGE_TRANSITION",
+      "toState": "InProgress",
+      "commitment": null,
+      "status": "Confirmed",
+      "txid": "b28eb6cfbcc0f31abd4db6e20e5bc7fa78dce8b68239508e57f882c8736a0dbe"
+    },
+    {
+      "id": "qn1dkyltfo6rzcwxee8fbq3z",
+      "eventType": "EVIDENCE_ANCHOR",
+      "commitment": "0c1cc22dd384226114cc4c3214af1f93c73d542c5dd073105a0ede9b2d36a6cc",
+      "status": "Confirmed",
+      "txid": "ddafe9e1bfcf758ff973da06654afaf00ef8110024f97ed27baef87c6d3e7638",
+      "matchesBundle": "e1jgw5ogddkmtb5kebo968rz"
+    },
+    {
+      "id": "zs6ujrvgcmvhrixt0utzuzhp",
+      "eventType": "EVIDENCE_ANCHOR",
+      "commitment": "8afbf15a1114a9b59509413c0f44f059d55e0d4d4b3afcdb94bff7015c154e5e",
+      "status": "Confirmed",
+      "txid": "ae521653fd9ba003160a9f48a2dfc9a799ee5b3936cbe5fcb8ba6654a793bb8d",
+      "matchesBundle": "fiqn5l9094iejoe6uywxlx3w"
+    },
+    {
+      "id": "juouefa9ojj35uq3yan5s6rv",
+      "eventType": "EVIDENCE_ANCHOR",
+      "commitment": "c664368c0839bf0a96d245e17f919784f752eb9391c26a75de173ae43629bfe4",
+      "status": "Confirmed",
+      "txid": "9cca08777b9ab8c44792c3afaacdc06d899d7f15ded743306c94483d3c0fa4d6",
+      "matchesBundle": "t1pwuw3yxz4rp764kk0o70oa / g5yxnjs0y1eefuvlzg60plol (mismo root)"
+    },
+    {
+      "id": "xjkq5pytmjbupxqtixngud7l",
+      "eventType": "STAGE_TRANSITION",
+      "toState": "Completed",
+      "commitment": "c664368c0839bf0a96d245e17f919784f752eb9391c26a75de173ae43629bfe4",
+      "status": "Confirmed",
+      "txid": "e842c8acb07dfd1b551a1a8d2318e12d9915d40aa69ebcf86d3842759571fe22"
+    }
+  ],
+  "bundles": [
+    {
+      "id": "e1jgw5ogddkmtb5kebo968rz",
+      "commitmentHash": "0c1cc22dd384226114cc4c3214af1f93c73d542c5dd073105a0ede9b2d36a6cc",
+      "createdAt": 1788559049424,
+      "deleted": false,
+      "note": "Snapshot con 1 evidencia (la primera subida al stage). Anclado (EVIDENCE_ANCHOR qn1dkyltfo6rzcwxee8fbq3z). Historial legítimo — NO es el duplicado, no se borra.",
+      "items": [
+        {
+          "evidenceId": "xzvslrkuvmud0aopyx0d9lxl",
+          "sha256Hash": "0c1cc22dd384226114cc4c3214af1f93c73d542c5dd073105a0ede9b2d36a6cc"
+        }
+      ]
+    },
+    {
+      "id": "fiqn5l9094iejoe6uywxlx3w",
+      "commitmentHash": "8afbf15a1114a9b59509413c0f44f059d55e0d4d4b3afcdb94bff7015c154e5e",
+      "createdAt": 1788889855220,
+      "deleted": false,
+      "note": "Snapshot con 2 evidencias. Anclado (EVIDENCE_ANCHOR zs6ujrvgcmvhrixt0utzuzhp). Historial legítimo — NO es el duplicado, no se borra.",
+      "items": [
+        {
+          "evidenceId": "hhhb3ip95hv5klofa4kmgshn",
+          "sha256Hash": "a10b33f4d54ea5f4a4b88cf01dd6e9ec1bfa132b7311c62f91dfe728ec00eb5b"
+        },
+        {
+          "evidenceId": "xzvslrkuvmud0aopyx0d9lxl",
+          "sha256Hash": "0c1cc22dd384226114cc4c3214af1f93c73d542c5dd073105a0ede9b2d36a6cc"
+        }
+      ]
+    },
+    {
+      "id": "t1pwuw3yxz4rp764kk0o70oa",
+      "commitmentHash": "c664368c0839bf0a96d245e17f919784f752eb9391c26a75de173ae43629bfe4",
+      "createdAt": 1788893134228,
+      "deleted": true,
+      "note": "Duplicado exacto del bundle sobreviviente (mismo commitmentHash, mismos 3 items) — la fila que dejó el bug de doble llamada a crearBundle en la misma completación.",
+      "items": [
+        {
+          "evidenceId": "hhhb3ip95hv5klofa4kmgshn",
+          "sha256Hash": "a10b33f4d54ea5f4a4b88cf01dd6e9ec1bfa132b7311c62f91dfe728ec00eb5b"
+        },
+        {
+          "evidenceId": "rmypno0c36xt8frufrb774g4",
+          "sha256Hash": "05909b0ea1ff024e05812837e712bbe1a1e00d1ef94657d3ef66bc063a7b4b5f"
+        },
+        {
+          "evidenceId": "xzvslrkuvmud0aopyx0d9lxl",
+          "sha256Hash": "0c1cc22dd384226114cc4c3214af1f93c73d542c5dd073105a0ede9b2d36a6cc"
+        }
+      ]
+    },
+    {
+      "id": "g5yxnjs0y1eefuvlzg60plol",
+      "commitmentHash": "c664368c0839bf0a96d245e17f919784f752eb9391c26a75de173ae43629bfe4",
+      "createdAt": 1788893249296,
+      "deleted": false,
+      "note": "SOBREVIVE — mismo contenido que t1pwuw3yxz4rp764kk0o70oa, es el root grabado en el datum de la transición a Completed.",
+      "items": [
+        {
+          "evidenceId": "hhhb3ip95hv5klofa4kmgshn",
+          "sha256Hash": "a10b33f4d54ea5f4a4b88cf01dd6e9ec1bfa132b7311c62f91dfe728ec00eb5b"
+        },
+        {
+          "evidenceId": "rmypno0c36xt8frufrb774g4",
+          "sha256Hash": "05909b0ea1ff024e05812837e712bbe1a1e00d1ef94657d3ef66bc063a7b4b5f"
+        },
+        {
+          "evidenceId": "xzvslrkuvmud0aopyx0d9lxl",
+          "sha256Hash": "0c1cc22dd384226114cc4c3214af1f93c73d542c5dd073105a0ede9b2d36a6cc"
+        }
+      ]
+    }
+  ]
+}
