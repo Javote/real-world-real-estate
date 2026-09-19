@@ -1,5 +1,5 @@
 import { useQuery } from '@tanstack/react-query'
-import { Link } from '@tanstack/react-router'
+import { useNavigate } from '@tanstack/react-router'
 import { api } from '#/api/port'
 import { SecondaryButton } from '#/components/domain/PrimaryButton'
 import { useTranslation } from '#/i18n/useTranslation'
@@ -12,6 +12,7 @@ import { useTranslation } from '#/i18n/useTranslation'
 
 export function AssignedStagesQueue() {
   const { t } = useTranslation()
+  const navigate = useNavigate()
   const { data: asignados } = useQuery({
     queryKey: ['certifier', 'assignments'],
     queryFn: api.getCertifierAssignments
@@ -43,12 +44,20 @@ export function AssignedStagesQueue() {
           </div>
 
           {/* La captura muestra un pill compacto de borde naranja: es el
-              SecondaryButton con el token `pending`, no un componente nuevo. */}
-          <Link to="/certifier/stage/$stageId" params={{ stageId: asignacion.stageId }}>
-            <SecondaryButton className="shrink-0 border-pending px-s3 py-s1 text-body-sm text-pending">
-              {t('panel.certifier.certify')}
-            </SecondaryButton>
-          </Link>
+              SecondaryButton con el token `pending`, no un componente nuevo.
+              SPEC-105 (F-08): el botón navega — un Link envolviéndolo era un
+              elemento interactivo anidado dentro de otro. */}
+          <SecondaryButton
+            className="shrink-0 border-pending px-s3 py-s1 text-body-sm text-pending"
+            onClick={() =>
+              void navigate({
+                to: '/certifier/stage/$stageId',
+                params: { stageId: asignacion.stageId }
+              })
+            }
+          >
+            {t('panel.certifier.certify')}
+          </SecondaryButton>
         </li>
       ))}
     </ul>

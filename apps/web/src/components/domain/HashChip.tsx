@@ -65,7 +65,9 @@ export function HashChip({ hash, label, onOpenDetail, copyLabel, copiedLabel }: 
         type="button"
         onClick={copiar}
         aria-label={copiado ? copiedLabel : copyLabel}
-        className="text-text-muted hover:text-text-primary"
+        // SPEC-105 (F-09): el ícono sigue midiendo 14px — `before:-inset-[5px]`
+        // extiende el área táctil a ~24×24 sin agrandarlo (WCAG 2.5.8).
+        className="relative text-text-muted before:absolute before:-inset-[5px] before:content-[''] hover:text-text-primary"
       >
         {copiado ? <Check size={14} aria-hidden="true" /> : <Copy size={14} aria-hidden="true" />}
       </button>
@@ -91,7 +93,9 @@ export function HashChip({ hash, label, onOpenDetail, copyLabel, copiedLabel }: 
         type="button"
         onClick={copiar}
         aria-label={copiado ? copiedLabel : copyLabel}
-        className="text-text-muted hover:text-text-primary"
+        // SPEC-105 (F-09): el ícono sigue midiendo 14px — `before:-inset-[5px]`
+        // extiende el área táctil a ~24×24 sin agrandarlo (WCAG 2.5.8).
+        className="relative text-text-muted before:absolute before:-inset-[5px] before:content-[''] hover:text-text-primary"
       >
         {copiado ? <Check size={14} aria-hidden="true" /> : <Copy size={14} aria-hidden="true" />}
       </button>

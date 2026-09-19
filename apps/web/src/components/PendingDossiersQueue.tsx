@@ -1,5 +1,5 @@
 import { useQuery } from '@tanstack/react-query'
-import { Link } from '@tanstack/react-router'
+import { useNavigate } from '@tanstack/react-router'
 import { api } from '#/api/port'
 import { SecondaryButton } from '#/components/domain/PrimaryButton'
 import { ProgressBar } from '#/components/domain/ProgressBar'
@@ -15,6 +15,7 @@ import { useTranslation } from '#/i18n/useTranslation'
 
 export function PendingDossiersQueue() {
   const { t } = useTranslation()
+  const navigate = useNavigate()
   const { data: pendientes } = useQuery({
     queryKey: ['notary', 'pending'],
     queryFn: api.getNotaryPendingDossiers
@@ -34,11 +35,20 @@ export function PendingDossiersQueue() {
               <span className="truncate text-body-sm text-text-muted">{d.investorName}</span>
             </div>
 
-            <Link to="/notary/dossier/$dossierId" params={{ dossierId: d.dossierId }}>
-              <SecondaryButton className="shrink-0 px-s3 py-s1 text-body-sm">
-                {t('panel.notary.review')}
-              </SecondaryButton>
-            </Link>
+            {/* SPEC-105 (F-08): un solo elemento interactivo, no un botón
+                anidado dentro de un <a> — HTML inválido y nested-interactive
+                de axe. El botón navega, no lo envuelve un Link. */}
+            <SecondaryButton
+              className="shrink-0 px-s3 py-s1 text-body-sm"
+              onClick={() =>
+                void navigate({
+                  to: '/notary/dossier/$dossierId',
+                  params: { dossierId: d.dossierId }
+                })
+              }
+            >
+              {t('panel.notary.review')}
+            </SecondaryButton>
           </div>
 
           <ProgressBar percent={d.completeness} showValue />

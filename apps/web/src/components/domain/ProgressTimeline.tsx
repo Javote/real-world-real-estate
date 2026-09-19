@@ -59,7 +59,11 @@ export function ProgressTimeline({
                 aria-current={stage.state === 'current' ? 'step' : undefined}
                 onClick={() => onSelectStage(stage)}
                 className={cn(
-                  'size-4 shrink-0 rounded-full border-2 transition-colors',
+                  // SPEC-105 (F-09): el nodo sigue midiendo 16px visuales —
+                  // `before:-inset-1` extiende el área táctil a 24×24 sin
+                  // que el círculo dibujado crezca (WCAG 2.5.8).
+                  'relative size-4 shrink-0 rounded-full border-2 transition-colors',
+                  'before:absolute before:-inset-1 before:content-[""]',
                   'focus:outline-none focus-visible:ring-2 focus-visible:ring-primary',
                   NODO[stage.state]
                 )}

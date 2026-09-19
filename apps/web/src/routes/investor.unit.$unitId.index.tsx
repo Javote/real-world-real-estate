@@ -188,8 +188,12 @@ function InvestorUnitDetail() {
         <div className="grid grid-cols-2 gap-s3">
           <button
             type="button"
-            onClick={() => imagenes.length && setGaleria(true)}
-            className="relative overflow-hidden rounded-xl bg-surface-alt"
+            onClick={() => setGaleria(true)}
+            // SPEC-105 (F-12): sin fotos no hay nada que abrir — `disabled`,
+            // no un handler que no hace nada. El usuario tiene que poder
+            // distinguir "no hay nada" de "no anduvo".
+            disabled={fotos.length === 0}
+            className="relative overflow-hidden rounded-xl bg-surface-alt disabled:cursor-not-allowed disabled:opacity-60"
             aria-label={t('investor.unit.openGallery')}
           >
             {portada ? (
@@ -207,10 +211,10 @@ function InvestorUnitDetail() {
           </button>
           <button
             type="button"
-            onClick={() =>
-              proyecto?.latitude != null && proyecto.longitude != null && setMapa(true)
-            }
-            className="overflow-hidden rounded-xl bg-card text-left shadow-e1"
+            onClick={() => setMapa(true)}
+            // SPEC-105 (F-12): sin coordenadas no hay mapa que abrir.
+            disabled={proyecto?.latitude == null || proyecto?.longitude == null}
+            className="overflow-hidden rounded-xl bg-card text-left shadow-e1 disabled:cursor-not-allowed disabled:opacity-60"
             aria-label={t('investor.unit.openMap')}
           >
             <span className="flex aspect-video items-center justify-center bg-surface-alt text-primary">
