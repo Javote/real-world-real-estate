@@ -62,11 +62,13 @@ export async function notifyUnitInvestor(input: {
 
   if (!unidad?.investorId) return;
 
+  // SPEC-208 (B-12): con `exactOptionalPropertyTypes`, `params: undefined`
+  // explícito ya no es lo mismo que omitir la clave.
   await notify({
     userId: unidad.investorId,
     category: input.category,
     titleKey: input.titleKey,
-    params: input.params,
+    ...(input.params ? { params: input.params } : {}),
     unitId: input.unitId
   });
 }

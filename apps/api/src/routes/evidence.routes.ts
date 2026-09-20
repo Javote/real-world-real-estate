@@ -22,6 +22,7 @@ import {
   repararHilosSospechosos
 } from "../domain/reconcile";
 import { db } from "../lib/db";
+import { paramSeguro } from "../lib/params";
 import { storage } from "../lib/storage";
 import { ANY_MEMBERSHIP, authenticate, authorize, CUALQUIER_ROL } from "../middlewares/auth";
 import { paramValidator } from "../middlewares/validate-params";
@@ -53,7 +54,7 @@ router.get(
     const evidence = await db
       .selectFrom("Evidence")
       .select(EVIDENCE_SAFE_COLUMNS)
-      .where("id", "=", req.params.id)
+      .where("id", "=", paramSeguro(req.params.id))
       .executeTakeFirst();
 
     if (!evidence) {
@@ -86,7 +87,7 @@ router.get(
     const evidence = await db
       .selectFrom("Evidence")
       .selectAll()
-      .where("id", "=", req.params.id)
+      .where("id", "=", paramSeguro(req.params.id))
       .executeTakeFirst();
 
     if (!evidence) {
@@ -120,7 +121,7 @@ router.patch(
     const existing = await db
       .selectFrom("Evidence")
       .selectAll()
-      .where("id", "=", req.params.id)
+      .where("id", "=", paramSeguro(req.params.id))
       .executeTakeFirst();
 
     if (!existing) {
@@ -150,13 +151,13 @@ router.patch(
     await db
       .updateTable("Evidence")
       .set({ ...parsed.data, updatedAt: new Date() })
-      .where("id", "=", req.params.id)
+      .where("id", "=", paramSeguro(req.params.id))
       .execute();
 
     const evidence = await db
       .selectFrom("Evidence")
       .select(EVIDENCE_SAFE_COLUMNS)
-      .where("id", "=", req.params.id)
+      .where("id", "=", paramSeguro(req.params.id))
       .executeTakeFirst();
 
     await writeAuditLog({
@@ -234,7 +235,7 @@ router.post(
     const evidencia = await db
       .selectFrom("Evidence")
       .select(["id", "projectId", "stageId", "sha256Hash"])
-      .where("id", "=", req.params.id)
+      .where("id", "=", paramSeguro(req.params.id))
       .executeTakeFirst();
 
     if (!evidencia) {
@@ -293,7 +294,7 @@ router.delete(
     const existing = await db
       .selectFrom("Evidence")
       .selectAll()
-      .where("id", "=", req.params.id)
+      .where("id", "=", paramSeguro(req.params.id))
       .executeTakeFirst();
 
     if (!existing) {
@@ -332,7 +333,7 @@ router.delete(
 
     await storage.remove(existing.storagePath);
 
-    await db.deleteFrom("Evidence").where("id", "=", req.params.id).execute();
+    await db.deleteFrom("Evidence").where("id", "=", paramSeguro(req.params.id)).execute();
 
     await writeAuditLog({
       actorUserId: req.user!.id,

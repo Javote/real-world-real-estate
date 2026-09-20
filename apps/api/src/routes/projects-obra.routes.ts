@@ -12,6 +12,7 @@ import { z } from "zod";
 import { reconciliarParaLectura } from "../domain/reconcile";
 import { retryStageMint } from "../domain/stage-transition";
 import { db } from "../lib/db";
+import { paramSeguro } from "../lib/params";
 import { ANY_MEMBERSHIP, authenticate, authorize, CUALQUIER_ROL } from "../middlewares/auth";
 import { paramValidator } from "../middlewares/validate-params";
 import { writeAuditLog } from "../utils/audit";
@@ -65,7 +66,7 @@ router.get(
     const result = await db
       .selectFrom("Stage")
       .selectAll()
-      .where("projectId", "=", req.params.id)
+      .where("projectId", "=", paramSeguro(req.params.id))
       .orderBy("sequenceOrder", "asc")
       .execute();
 
@@ -115,7 +116,7 @@ router.post(
       .selectFrom("Stage")
       .select("id")
       .where("id", "=", req.params.stageId)
-      .where("projectId", "=", req.params.id)
+      .where("projectId", "=", paramSeguro(req.params.id))
       .executeTakeFirst();
 
     if (!stage) {
@@ -162,7 +163,7 @@ router.get(
       .selectFrom("Stage")
       .selectAll()
       .where("id", "=", req.params.stageId)
-      .where("projectId", "=", req.params.id)
+      .where("projectId", "=", paramSeguro(req.params.id))
       .executeTakeFirst();
 
     if (!stage) return res.status(404).json({ message: "Stage not found" });

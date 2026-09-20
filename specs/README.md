@@ -176,7 +176,7 @@ mismo— sigue siendo `SPEC-305`, decisión de mainnet.
 | [`SPEC-205`](SPEC-205-dos-invariantes-que-hoy-sostiene-el-cliente.md) | Dos invariantes que hoy sostiene la buena fe del cliente | B-05·07 | **cerrada 2026-09-19** — las dos carreras reproducidas en rojo antes del fix |
 | [`SPEC-206`](SPEC-206-un-solo-anclaje-por-commitment.md) | El anclaje por commitment está escrito dos veces, y ya divergieron | B-08 | **cerrada 2026-09-18** 🟡 |
 | [`SPEC-207`](SPEC-207-audit-log-tipado.md) | El audit log se escribe con strings sueltos y se filtra con un mapeo cerrado | B-09 | **cerrada 2026-09-18** |
-| [`SPEC-208`](SPEC-208-tipos-que-dicen-la-verdad.md) | Que los tipos de `apps/api` digan la verdad | B-12·10 | abierta |
+| [`SPEC-208`](SPEC-208-tipos-que-dicen-la-verdad.md) | Que los tipos de `apps/api` digan la verdad | B-12·10 | **cerrada 2026-09-19** — de paso, un bug latente en `notary.routes.ts` (cursor comparado contra `Date` sobre columna ahora `number`) |
 | [`SPEC-209`](SPEC-209-dos-queries-que-la-base-puede-hacer.md) | Dos cosas que hoy hace el proceso y puede hacer la base | B-13·14 | **cerrada 2026-09-18** |
 | [`SPEC-210`](SPEC-210-borrar-evidencia-anclada.md) | Borrar evidencia anclada corta el vínculo y devuelve el error equivocado | B-15 | **cerrada 2026-09-18** |
 | [`SPEC-211`](SPEC-211-limite-de-tasa-en-la-ruta-publica.md) | La otra ruta sin sesión no tiene límite de tasa | B-11 | **cerrada 2026-09-18** 🟡 |

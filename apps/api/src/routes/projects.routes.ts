@@ -16,8 +16,10 @@ import { type Request, Router } from "express";
 import { z } from "zod";
 import { createId } from "../db/id";
 import { reconciliarParaLectura } from "../domain/reconcile";
+import { en } from "../lib/arrays";
 import { db } from "../lib/db";
 import { sql } from "../lib/kysely";
+import { paramSeguro } from "../lib/params";
 import {
   ANY_MEMBERSHIP,
   authenticate,
@@ -83,7 +85,14 @@ router.get(
     }
 
     if (bbox) {
-      const [minLon, minLat, maxLon, maxLat] = bbox.split(",").map(Number);
+      // SPEC-208 (B-12): el regex de `bboxSchema` ya garantiza exactamente 4
+      // números separados por coma — `en()` lo deja escrito en vez de que el
+      // destructuring lo asuma en silencio.
+      const partes = bbox.split(",").map(Number);
+      const minLon = en(partes, 0);
+      const minLat = en(partes, 1);
+      const maxLon = en(partes, 2);
+      const maxLat = en(partes, 3);
       // Un proyecto sin coordenadas no entra al mapa. No se le inventa un punto.
       query = query
         .where("longitude", ">=", minLon)
@@ -182,7 +191,7 @@ router.get(
     const project = await db
       .selectFrom("Project")
       .selectAll()
-      .where("id", "=", req.params.id)
+      .where("id", "=", paramSeguro(req.params.id))
       .executeTakeFirst();
 
     if (!project) {
@@ -246,7 +255,7 @@ router.patch("/:id", authorize({ roles: ["admin"], acceso: "soloRol" }), async (
         : undefined,
       updatedAt: new Date()
     })
-    .where("id", "=", req.params.id)
+    .where("id", "=", paramSeguro(req.params.id))
     .returningAll()
     .executeTakeFirstOrThrow();
 
@@ -264,7 +273,7 @@ router.delete(
   "/:id",
   authorize({ roles: ["admin"], acceso: "soloRol" }),
   async (req: Request<{ id: string }>, res) => {
-    await db.deleteFrom("Project").where("id", "=", req.params.id).execute();
+    await db.deleteFrom("Project").where("id", "=", paramSeguro(req.params.id)).execute();
 
     await writeAuditLog({
       actorUserId: req.user!.id,
@@ -298,7 +307,7 @@ router.get(
         "User.fullName as user_fullName",
         "User.role as user_role"
       ])
-      .where("ProjectMember.projectId", "=", req.params.id)
+      .where("ProjectMember.projectId", "=", paramSeguro(req.params.id))
       .execute();
 
     const members = memberRows.map((row) => ({
@@ -397,7 +406,7 @@ router.get(
         "OnChainEvent.txid as txid",
         "OnChainEvent.status as anchorStatus"
       ])
-      .where("Evidence.projectId", "=", req.params.id)
+      .where("Evidence.projectId", "=", paramSeguro(req.params.id))
       .orderBy("Evidence.uploadedAt", "desc")
       .execute();
 
@@ -423,7 +432,7 @@ router.get(
     const unidades = await db
       .selectFrom("Unit")
       .select(["id", "unitReference", "floor", "status"])
-      .where("projectId", "=", req.params.id)
+      .where("projectId", "=", paramSeguro(req.params.id))
       .orderBy("floor", "desc")
       .orderBy("unitReference", "asc")
       .execute();

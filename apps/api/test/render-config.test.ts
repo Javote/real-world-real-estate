@@ -4,6 +4,7 @@ import { join } from "node:path";
 import { load } from "js-yaml";
 import { afterEach, describe, expect, it } from "vitest";
 import { motivoParaNoAnclar } from "../src/lib/anchor";
+import { en } from "../src/lib/arrays";
 
 // **El contrato entre `render.yaml` y el código.**
 //
@@ -185,7 +186,7 @@ describe("render.yaml — startCommand", () => {
   it("toda ruta de --require/-r/--loader/--import empieza con ./ o /", () => {
     const comando = servicioApi().startCommand ?? "";
     const flags = /(?:--require|-r|--loader|--import)[= ]([^\s&]+)/g;
-    const rutas = [...comando.matchAll(flags)].map((m) => m[1]);
+    const rutas = [...comando.matchAll(flags)].map((m) => en(m, 1));
 
     expect(rutas.length, "no se encontró ningún --require en el startCommand").toBeGreaterThan(0);
 

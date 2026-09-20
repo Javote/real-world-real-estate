@@ -55,7 +55,10 @@ export async function authenticate(req: Request, res: Response, next: NextFuncti
   }
 
   try {
-    const token = authHeader.split(" ")[1];
+    // SPEC-208 (B-12): `.slice(7)` en vez de `.split(" ")[1]` — el `startsWith`
+    // de arriba ya garantiza el prefijo `"Bearer "` (7 caracteres), así que
+    // esto es `string` siempre, nunca `undefined`.
+    const token = authHeader.slice("Bearer ".length);
     const payload = verifyToken(token);
 
     const user = await db

@@ -2,6 +2,7 @@ import request from "supertest";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import app from "../src/app";
 import { createId } from "../src/db/id";
+import { en } from "../src/lib/arrays";
 import { db } from "../src/lib/db";
 import { FIXTURES } from "./global-setup";
 
@@ -80,7 +81,12 @@ beforeAll(async () => {
     fila("User", unUsuario),
     fila("Stage", stagePropio)
   ];
-  [deLoMio, deOtroProyecto, deUnUsuario, deUnStagePropio] = filas.map((f) => f.id);
+  [deLoMio, deOtroProyecto, deUnUsuario, deUnStagePropio] = [
+    en(filas, 0).id,
+    en(filas, 1).id,
+    en(filas, 2).id,
+    en(filas, 3).id
+  ];
 
   await db.insertInto("AuditLog").values(filas).execute();
 });

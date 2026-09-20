@@ -5,6 +5,7 @@ import {
   type ReglaDeAcceso,
   type ReglaSimple
 } from "../middlewares/auth";
+import { en } from "./arrays";
 
 // La misma introspección que sostiene `test/route-guards.test.ts` (§La matriz
 // de permisos, ver `CLAUDE.md`), extraída para que un segundo consumidor
@@ -48,7 +49,7 @@ export function describirSimple(regla: ReglaSimple): string {
 
 export function describirAcceso(acceso: ReglaDeAcceso): string {
   const partes = ramas(acceso).map(describirSimple);
-  return partes.length === 1 ? partes[0] : `alguna[${partes.join(" | ")}]`;
+  return partes.length === 1 ? en(partes, 0) : `alguna[${partes.join(" | ")}]`;
 }
 
 export function describir(guard: GuardDescriptor): string {

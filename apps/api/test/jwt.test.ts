@@ -2,6 +2,7 @@ import jwt from "jsonwebtoken";
 import request from "supertest";
 import { afterAll, afterEach, describe, expect, it, vi } from "vitest";
 import app from "../src/app";
+import { en } from "../src/lib/arrays";
 import { db } from "../src/lib/db";
 import { requireJwtSecret, signToken, verifyToken } from "../src/lib/jwt";
 import { FIXTURES } from "./global-setup";
@@ -78,7 +79,7 @@ describe("el algoritmo de firma está fijado de los dos lados", () => {
 
   it("signToken emite HS256, no lo que elija el default de la librería", () => {
     const header = JSON.parse(
-      Buffer.from(signToken(payload).split(".")[0], "base64url").toString()
+      Buffer.from(en(signToken(payload).split("."), 0), "base64url").toString()
     );
 
     expect(header.alg).toBe("HS256");

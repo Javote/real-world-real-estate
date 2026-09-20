@@ -1,6 +1,7 @@
 import "dotenv/config";
 import { mkdirSync, writeFileSync } from "node:fs";
 import path from "node:path";
+import { en } from "../src/lib/arrays";
 import { describir, leerMontaje } from "../src/lib/route-inventory";
 
 // M3 §2 — "endpoints documentados". No hay oRPC todavía (D-066 es
@@ -102,7 +103,10 @@ function agruparPorPrefijo(): Map<string, Map<string, string>> {
 }
 
 function aItemPostman(clave: string, descripcionGuards: string): PostmanRequestItem {
-  const [metodo, ruta] = clave.split(" ");
+  // "MÉTODO /ruta", siempre — es esta misma inventiva la que arma `clave`.
+  const partes = clave.split(" ");
+  const metodo = en(partes, 0);
+  const ruta = en(partes, 1);
   const segmentos = ruta.split("/").filter(Boolean);
   const ejemplo = EJEMPLOS_CAMINO_FELIZ[clave];
 

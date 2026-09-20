@@ -328,8 +328,6 @@ router.get(
           .execute()
       : [];
 
-    const ms = (fecha: Date | null) => (fecha === null ? null : new Date(fecha).getTime());
-
     return res.json(
       z.array(developerContractSchema).parse(
         contratos.map(({ investorEmail, ...contrato }) => {
@@ -345,12 +343,16 @@ router.get(
           // instante —el accept usa un único `ahora` para los dos— así que el
           // match es exacto; el criterio es lo que lo mantiene determinístico si
           // alguna vez dejan de serlo.
-          const firmado = ms(contrato.signedAt);
+          //
+          // SPEC-208 (B-10): las dos columnas ya son epoch ms de verdad — el
+          // tipo dejó de mentir, así que el `new Date(x).getTime()` que las
+          // envolvía "por las dudas" ya no hace falta.
+          const firmado = contrato.signedAt;
           const anclaje = candidatos.reduce<(typeof candidatos)[number] | null>((mejor, a) => {
             if (mejor === null) return a;
             if (firmado === null) return mejor;
             const distancia = (c: (typeof candidatos)[number]) => {
-              const respondido = ms(c.respondedAt);
+              const respondido = c.respondedAt;
               return respondido === null
                 ? Number.POSITIVE_INFINITY
                 : Math.abs(respondido - firmado);

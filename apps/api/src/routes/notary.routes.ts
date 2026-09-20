@@ -344,7 +344,10 @@ router.get(
       query = query.where("Dossier.signedById", "=", req.user!.id);
     }
     if (parsed.data.cursor) {
-      query = query.where("Dossier.signedAt", "<", new Date(parsed.data.cursor));
+      // SPEC-208 (B-10): `Dossier.signedAt` es epoch ms de verdad, no `Date`
+      // — comparar contra un objeto `Date` dependía de que el driver lo
+      // serializara igual que el entero que ya está en la columna.
+      query = query.where("Dossier.signedAt", "<", new Date(parsed.data.cursor).getTime());
     }
 
     const filas = await query.execute();

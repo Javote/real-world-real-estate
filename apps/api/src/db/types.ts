@@ -44,6 +44,20 @@ export type {
 // (columnas nullable comunes) alcanza con el tipo de SELECT.
 type SqliteBoolean = ColumnType<boolean, boolean | number, boolean | number>;
 type SqliteTimestamp = ColumnType<Date, Date | number, Date | number>;
+/**
+ * SPEC-208 (B-10) — `compiledAt`, `readAt`, `releasedAt`, `respondedAt` y
+ * `signedAt` decían `SqliteTimestamp` (`Date` al leer) sin estar en
+ * `TIMESTAMP_COLUMNS` de `sqlite-type-plugin.ts`: el runtime devuelve
+ * `number`, siempre, y el tipo afirmaba lo contrario. Agregarlas al plugin
+ * cambiaría la forma del JSON de la API (`Date` serializa a string ISO,
+ * `number` a número) y las cinco ya tienen consumidores en el front —
+ * rebanada propia, con su verificación del lado del web. Mientras tanto, el
+ * tipo dice la verdad: `number` al leer, sin perder la forma flexible al
+ * escribir. **Cero cambio de runtime ni de JSON** — cuando la rebanada
+ * llegue, estas vuelven a `SqliteTimestamp` en el mismo commit que las suma
+ * al plugin.
+ */
+type SqliteTimestampSinCoercion = ColumnType<number, Date | number, Date | number>;
 type GeneratedId = Generated<string>;
 
 export interface UserTable {
@@ -229,7 +243,7 @@ export interface InvitationTable {
   status: string;
   createdById: string | null;
   createdAt: SqliteTimestamp;
-  respondedAt: SqliteTimestamp | null;
+  respondedAt: SqliteTimestampSinCoercion | null;
 }
 
 export interface ContractTable {
@@ -238,7 +252,7 @@ export interface ContractTable {
   investorId: string;
   totalMinorUnits: number;
   currency: string;
-  signedAt: SqliteTimestamp | null;
+  signedAt: SqliteTimestampSinCoercion | null;
   createdAt: SqliteTimestamp;
 }
 
@@ -254,7 +268,7 @@ export interface PaymentAttestationTable {
   stageNumber: number;
   amountMinorUnits: number;
   releasedById: string | null;
-  releasedAt: SqliteTimestamp;
+  releasedAt: SqliteTimestampSinCoercion;
 }
 
 export interface DossierTable {
@@ -262,11 +276,11 @@ export interface DossierTable {
   unitId: string;
   /** El hash maestro que compromete el artefacto compilado (M2-D4 P8). */
   masterHash: string;
-  compiledAt: SqliteTimestamp;
+  compiledAt: SqliteTimestampSinCoercion;
   shareToken: string | null;
   status: string;
   signedById: string | null;
-  signedAt: SqliteTimestamp | null;
+  signedAt: SqliteTimestampSinCoercion | null;
   rejectionNote: string | null;
 }
 
@@ -278,7 +292,7 @@ export interface NotificationTable {
   titleKey: string;
   paramsJson: string | null;
   unitId: string | null;
-  readAt: SqliteTimestamp | null;
+  readAt: SqliteTimestampSinCoercion | null;
   createdAt: SqliteTimestamp;
 }
 

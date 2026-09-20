@@ -97,6 +97,7 @@ import {
 } from "@plataforma/shared";
 import { type ZodType, z } from "zod";
 import { createDocument } from "zod-openapi";
+import { en } from "../src/lib/arrays";
 import { describir, leerMontaje } from "../src/lib/route-inventory";
 
 // El otro consumidor de `route-inventory` (junto a `generate-api-docs.ts` y
@@ -350,7 +351,8 @@ const PARAM_SCHEMAS: Record<string, ZodType> = {
 };
 
 function parametrosDePath(ruta: string): string[] {
-  return [...ruta.matchAll(/:([A-Za-z0-9_]+)/g)].map((m) => m[1]);
+  // El grupo de captura no es opcional en el patrón — siempre matchea si `m` existe.
+  return [...ruta.matchAll(/:([A-Za-z0-9_]+)/g)].map((m) => en(m, 1));
 }
 
 function aPathOpenApi(ruta: string): string {
@@ -362,7 +364,10 @@ export function buildOpenApiDocument() {
 
   for (const { rutas, handlers } of leerMontaje()) {
     for (const [clave, guards] of rutas) {
-      const [metodo, ruta] = clave.split(" ");
+      // "MÉTODO /ruta", siempre — es esta misma inventiva la que arma `clave`.
+      const partesClave = clave.split(" ");
+      const metodo = en(partesClave, 0);
+      const ruta = en(partesClave, 1);
       const params = parametrosDePath(ruta);
       const entrada = REQUEST_SCHEMAS[clave];
       const autenticado = guards.length > 0;

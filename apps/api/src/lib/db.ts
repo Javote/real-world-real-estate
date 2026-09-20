@@ -20,9 +20,11 @@ const databaseUrl = process.env.DATABASE_URL ?? DEFAULT_DATABASE_URL;
 asegurarDirectorioLocal(databaseUrl);
 
 export const db = new Kysely<Database>({
+  // SPEC-208 (B-12): con `exactOptionalPropertyTypes`, `authToken: undefined`
+  // explícito ya no es lo mismo que omitirlo.
   dialect: new LibsqlDialect({
     url: databaseUrl,
-    authToken: process.env.DATABASE_AUTH_TOKEN
+    ...(process.env.DATABASE_AUTH_TOKEN ? { authToken: process.env.DATABASE_AUTH_TOKEN } : {})
   }),
   plugins: [new SqliteTypeCoercionPlugin()]
 });

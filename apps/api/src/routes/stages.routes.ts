@@ -12,6 +12,7 @@ import { type Request, Router } from "express";
 import { z } from "zod";
 import { cabezaDelHilo, transitionStage } from "../domain/stage-transition";
 import { db } from "../lib/db";
+import { paramSeguro } from "../lib/params";
 import { ANY_MEMBERSHIP, authenticate, authorize, CUALQUIER_ROL } from "../middlewares/auth";
 import { paramValidator } from "../middlewares/validate-params";
 import { writeAuditLog } from "../utils/audit";
@@ -43,7 +44,7 @@ router.get(
     const stage = await db
       .selectFrom("Stage")
       .selectAll()
-      .where("id", "=", req.params.id)
+      .where("id", "=", paramSeguro(req.params.id))
       .executeTakeFirst();
 
     if (!stage) {
@@ -81,7 +82,7 @@ router.patch(
     const stageExisting = await db
       .selectFrom("Stage")
       .selectAll()
-      .where("id", "=", req.params.id)
+      .where("id", "=", paramSeguro(req.params.id))
       .executeTakeFirst();
 
     if (!stageExisting) {
@@ -116,7 +117,7 @@ router.patch(
     const stage = await db
       .updateTable("Stage")
       .set({ ...parsed.data, updatedAt: new Date() })
-      .where("id", "=", req.params.id)
+      .where("id", "=", paramSeguro(req.params.id))
       .returningAll()
       .executeTakeFirstOrThrow();
 

@@ -151,9 +151,12 @@ async function main() {
   // log vacío, y el free tier no da shell para ir a mirar.
   console.log("[migrate] conectando a la base");
 
+  // SPEC-208 (B-12): con `exactOptionalPropertyTypes`, `authToken: undefined`
+  // explícito ya no es lo mismo que omitirlo — el spread condicional es la
+  // diferencia entre las dos.
   const client = createClient({
     url,
-    authToken: process.env.DATABASE_AUTH_TOKEN
+    ...(process.env.DATABASE_AUTH_TOKEN ? { authToken: process.env.DATABASE_AUTH_TOKEN } : {})
   });
 
   const aplicadas = await conTecho(applyPendingMigrations(client), "la base");

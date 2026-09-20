@@ -2,6 +2,7 @@ import { auditLogRowSchema, reservationToEscrowTelemetrySchema } from "@platafor
 import { Router } from "express";
 import { z } from "zod";
 import { reconciliarAnclajes } from "../domain/reconcile";
+import { en } from "../lib/arrays";
 import { db } from "../lib/db";
 import { authenticate, authorize } from "../middlewares/auth";
 
@@ -23,7 +24,9 @@ router.get("/", authorize({ roles: ["admin"], acceso: "soloRol" }), async (_req,
 function mediana(valores: readonly number[]): number | null {
   if (valores.length === 0) return null;
   const mitad = Math.floor(valores.length / 2);
-  return valores.length % 2 === 0 ? (valores[mitad - 1] + valores[mitad]) / 2 : valores[mitad];
+  return valores.length % 2 === 0
+    ? (en(valores, mitad - 1) + en(valores, mitad)) / 2
+    : en(valores, mitad);
 }
 
 /**

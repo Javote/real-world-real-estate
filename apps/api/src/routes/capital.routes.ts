@@ -8,6 +8,7 @@ import {
 import { Router } from "express";
 import { z } from "zod";
 import type { UserRole } from "../db/types";
+import { en } from "../lib/arrays";
 import { db } from "../lib/db";
 import { authenticate, authorize, projectScope } from "../middlewares/auth";
 
@@ -42,7 +43,7 @@ async function misProyectoIds(userId: string, role: UserRole): Promise<string[]>
 /** Una sola moneda, o `null` si conviven varias. */
 function monedaUnica(valores: (string | null)[]): string | null {
   const distintas = new Set(valores.filter((v): v is string => v !== null));
-  return distintas.size === 1 ? [...distintas][0] : null;
+  return distintas.size === 1 ? en([...distintas], 0) : null;
 }
 
 /** Contratos + releases de un conjunto de proyectos, en una sola pasada. */

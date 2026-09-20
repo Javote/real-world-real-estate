@@ -1,6 +1,7 @@
 import request from "supertest";
 import { afterAll, describe, expect, it } from "vitest";
 import app from "../src/app";
+import { en } from "../src/lib/arrays";
 import { db } from "../src/lib/db";
 import { FIXTURES } from "./global-setup";
 
@@ -17,7 +18,11 @@ async function medir(fn: () => Promise<unknown>) {
   return performance.now() - t0;
 }
 
-const mediana = (xs: number[]) => [...xs].sort((a, b) => a - b)[Math.floor(xs.length / 2)];
+const mediana = (xs: number[]) =>
+  en(
+    [...xs].sort((a, b) => a - b),
+    Math.floor(xs.length / 2)
+  );
 
 // specs/SPEC-010 §Casos borde · routes/auth.routes.ts.
 describe("POST /api/v1/auth/login · el tiempo no filtra si el email existe", () => {

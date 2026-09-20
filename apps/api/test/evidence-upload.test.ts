@@ -6,6 +6,7 @@ import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import app from "../src/app";
 import { createId } from "../src/db/id";
 import { crearBundle } from "../src/domain/stage-transition";
+import { en } from "../src/lib/arrays";
 import { db } from "../src/lib/db";
 import { FIXTURES } from "./global-setup";
 import { crearStageMinteado } from "./helpers/stages";
@@ -446,8 +447,8 @@ describe("EvidenceBundle · el acta es idempotente por contenido (regla 8)", () 
     // mismo root y ninguna escribe.
     const root1 = await crearBundle(fila, actorId);
     const root2 = await crearBundle(fila, actorId);
-    expect(root1).toBe(antes[0].commitmentHash);
-    expect(root2).toBe(antes[0].commitmentHash);
+    expect(root1).toBe(en(antes, 0).commitmentHash);
+    expect(root2).toBe(en(antes, 0).commitmentHash);
     expect(await actas(stage.id)).toHaveLength(1);
   });
 

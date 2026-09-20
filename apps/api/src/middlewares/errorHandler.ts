@@ -16,39 +16,59 @@ import { HttpError } from "../lib/http-error";
  * mapeo — Sentry ve el error antes que este archivo (ver el comentario ahí) y
  * tiene que poder clasificarlo igual, sin duplicar la tabla.
  */
-export const CONSTRAINT_ERRORS: Record<string, { status: number; code: string; message: string }> =
-  {
-    // Crear algo que ya existe: un slug repetido, dos stages con el mismo orden,
-    // dos unidades con la misma referencia. Es 409, no 500 — el servidor está
-    // perfectamente sano y el cliente puede corregirlo.
-    SQLITE_CONSTRAINT_UNIQUE: {
-      status: 409,
-      code: "RESOURCE_ALREADY_EXISTS",
-      message: "Resource already exists"
-    },
-    SQLITE_CONSTRAINT_PRIMARYKEY: {
-      status: 409,
-      code: "RESOURCE_ALREADY_EXISTS",
-      message: "Resource already exists"
-    },
-    // Referenciar algo que no existe (un `userId` inventado en el body). El
-    // cliente mandó un id que no resuelve: 400.
-    SQLITE_CONSTRAINT_FOREIGNKEY: {
-      status: 400,
-      code: "RELATED_RESOURCE_NOT_FOUND",
-      message: "A referenced resource does not exist"
-    }
-  };
+/**
+ * SPEC-208 (B-12) — literal, no `string`: con `noUncheckedIndexedAccess`,
+ * indexar un `Record<string, T>` da siempre `T | undefined`, aunque el
+ * llamador ya haya hecho el `in` que lo garantiza. Con las tres claves
+ * como unión, el `in` de `codigoDeRestriccion` sí estrecha el tipo (TS
+ * narrowing sobre `in` contra un record de claves literales), y el tipo
+ * de retorno deja de mentir sobre qué puede devolver.
+ */
+export type ConstraintCode =
+  | "SQLITE_CONSTRAINT_UNIQUE"
+  | "SQLITE_CONSTRAINT_PRIMARYKEY"
+  | "SQLITE_CONSTRAINT_FOREIGNKEY";
+
+export const CONSTRAINT_ERRORS: Record<
+  ConstraintCode,
+  { status: number; code: string; message: string }
+> = {
+  // Crear algo que ya existe: un slug repetido, dos stages con el mismo orden,
+  // dos unidades con la misma referencia. Es 409, no 500 — el servidor está
+  // perfectamente sano y el cliente puede corregirlo.
+  SQLITE_CONSTRAINT_UNIQUE: {
+    status: 409,
+    code: "RESOURCE_ALREADY_EXISTS",
+    message: "Resource already exists"
+  },
+  SQLITE_CONSTRAINT_PRIMARYKEY: {
+    status: 409,
+    code: "RESOURCE_ALREADY_EXISTS",
+    message: "Resource already exists"
+  },
+  // Referenciar algo que no existe (un `userId` inventado en el body). El
+  // cliente mandó un id que no resuelve: 400.
+  SQLITE_CONSTRAINT_FOREIGNKEY: {
+    status: 400,
+    code: "RELATED_RESOURCE_NOT_FOUND",
+    message: "A referenced resource does not exist"
+  }
+};
+
+/** `in` sobre un `string` no estrecha a la unión de claves del `Record` por su cuenta; el predicado lo hace explícito. */
+function esConstraintCode(codigo: string): codigo is ConstraintCode {
+  return codigo in CONSTRAINT_ERRORS;
+}
 
 /** El `code` de un error de restricción, mirando también la causa. Exportado por el mismo motivo que `CONSTRAINT_ERRORS`. */
-export function codigoDeRestriccion(err: unknown): string | undefined {
+export function codigoDeRestriccion(err: unknown): ConstraintCode | undefined {
   if (typeof err !== "object" || err === null) return undefined;
 
   const propio = (err as { code?: unknown }).code;
-  if (typeof propio === "string" && propio in CONSTRAINT_ERRORS) return propio;
+  if (typeof propio === "string" && esConstraintCode(propio)) return propio;
 
   const causa = (err as { cause?: { code?: unknown } }).cause?.code;
-  if (typeof causa === "string" && causa in CONSTRAINT_ERRORS) return causa;
+  if (typeof causa === "string" && esConstraintCode(causa)) return causa;
 
   return undefined;
 }
