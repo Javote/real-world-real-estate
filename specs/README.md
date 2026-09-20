@@ -200,7 +200,7 @@ mismo— sigue siendo `SPEC-305`, decisión de mainnet.
 | [`SPEC-408`](SPEC-408-lo-que-vuelve-de-la-cadena-se-valida.md) | Lo que vuelve de la cadena se valida, por las dos puertas | C-03 | abierta 🟡 · **antes de mainnet** |
 | [`SPEC-409`](SPEC-409-verify-devuelve-el-timestamp-del-bloque.md) | `verify()` devuelve el timestamp del bloque, que ya sabe leer | C-04 | **cerrada 2026-09-20** |
 | [`SPEC-410`](SPEC-410-tres-asperezas-del-adaptador.md) | Tres asperezas del adaptador: `canonical()`, un `parseInt` y un `fetch` | C-05 | **cerrada 2026-09-20** |
-| [`SPEC-411`](SPEC-411-lucid-se-carga-solo-si-hace-falta.md) | Lucid se carga solo si hace falta: 2 s y 121 MB por proceso | T-01 | abierta |
+| [`SPEC-411`](SPEC-411-lucid-se-carga-solo-si-hace-falta.md) | Lucid se carga solo si hace falta: 2 s y 121 MB por proceso | T-01 | **cerrada 2026-09-20** — 296s→119s de import en la suite de apps/api, medido |
 | [`SPEC-412`](SPEC-412-el-constructor-de-diez-parametros.md) | El constructor de diez parámetros posicionales | T-02 | abierta |
 
 **Orden sugerido, si se toman en tanda.** Cada auditoría trae el suyo y estas specs lo respetan:

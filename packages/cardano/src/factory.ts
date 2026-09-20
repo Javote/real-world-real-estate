@@ -1,8 +1,17 @@
-import { Blockfrost, Lucid, type Network } from "@lucid-evolution/lucid";
+import type { Network } from "@lucid-evolution/lucid";
 import type { LedgerStore } from "./ledger";
 import { ANCHOR_MODES, type AnchorMode, type AnchorPort } from "./port";
-import { LucidAnchorAdapter, type ReferenceScriptPublication } from "./real";
+import type { LucidAnchorAdapter, ReferenceScriptPublication } from "./real";
 import { SimulatedAnchorAdapter } from "./simulated";
+
+// **`Lucid` y `./real` se cargan perezosos, solo dentro de `crearAdaptadorReal`
+// (SPEC-411).** Medido: `@lucid-evolution/lucid` son 2s y 121MB de heap, 453
+// módulos — y hasta este cambio, un `import` estático de módulo (no de rama)
+// los cargaba en **todo** proceso que tocara este package, ancle o no: los 335
+// tests de `apps/api`, `pnpm dev` en `simulated`, y el camino `disabled` —
+// justo el que corre cuando la configuración de anclaje está rota. Los imports
+// de arriba son `import type`: se borran en la compilación, cero costo de
+// runtime, y siguen dando los tipos que este archivo necesita para anotar.
 
 /**
  * Redes permitidas. **Mainnet no está**, y no es un olvido: D-013 la deja fuera
@@ -115,10 +124,19 @@ export async function createAnchorPort(options: AnchorPortOptions): Promise<Anch
  * fingir que la tiene.
  */
 async function crearAdaptadorReal(options: AnchorPortOptions): Promise<LucidAnchorAdapter> {
+  // Las cuatro validaciones de configuración corren ANTES del import
+  // perezoso: un ANCHOR_MODE=real mal configurado (mainnet, secreto ausente)
+  // tira sin haber pagado el costo de cargar Lucid (D-042 y SPEC-411 juntas —
+  // el error sale en el mismo momento que hoy, no un paso después).
   const network = validarRed(options.network);
   const apiKey = requerida(options.blockfrostApiKey, "BLOCKFROST_API_KEY");
   const privateKey = requerida(options.privateKey, "SERVICE_WALLET_PRIVATE_KEY");
   const url = urlDeBlockfrost(options.blockfrostUrl, network);
+
+  const [{ Blockfrost, Lucid }, { LucidAnchorAdapter }] = await Promise.all([
+    import("@lucid-evolution/lucid"),
+    import("./real.js")
+  ]);
 
   const lucid = await Lucid(new Blockfrost(url, apiKey), network as Network);
   lucid.selectWallet.fromPrivateKey(privateKey);

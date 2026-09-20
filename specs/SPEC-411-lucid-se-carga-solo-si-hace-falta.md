@@ -100,3 +100,40 @@ rechazo de mainnet quedaría **después** de cargar Lucid. Es inofensivo (igual 
 revés de lo que conviene: la validación de configuración no debería depender de que una librería
 cargue. Conviene subir `validarRed` y `requerida` antes del `import()` dinámico, dentro de la misma
 spec.
+
+## Cerrada — 2026-09-20
+
+`factory.ts` importa `Lucid`/`Blockfrost` y `LucidAnchorAdapter`/`ReferenceScriptPublication` con
+`import type` (se borran en la compilación, cero costo de runtime) y los carga de verdad con un
+`import()` dinámico **dentro** de `crearAdaptadorReal`, después de las cuatro validaciones de
+configuración (`validarRed`, `requerida` × 2, `urlDeBlockfrost`) — la pregunta abierta se resolvió en
+el mismo commit: mainnet y los secretos ausentes rechazan sin haber tocado la librería.
+
+**Medido de nuevo, contra el `dist` compilado** (mismo método que midió el problema):
+
+| Qué | Antes | Después |
+|---|---:|---:|
+| `createAnchorPort({})` (`simulated`) | 2015 ms / 121,0 MB / Lucid en `require.cache` | **104 ms / 15,8 MB / Lucid ausente** |
+| `mode: "inventado"` | igual, con Lucid ya cargado | rechaza, Lucid ausente |
+| `network: "Mainnet"` | igual, con Lucid ya cargado | rechaza (D-013), Lucid ausente |
+| Sin `BLOCKFROST_API_KEY` | igual, con Lucid ya cargado | rechaza, Lucid ausente |
+
+**El detalle de módulos, verificado y no el que anticipaba la spec:** un `import()` dinámico bajo
+`module: node16` **no** se compila a `require()` — TypeScript lo deja como `import()` nativo, que
+Node soporta desde cualquier módulo CommonJS desde la 12.17. No hace falta que se convierta: el
+`require()` de `apps/api` sobre `@plataforma/cardano` entero sigue funcionando igual (invariante 4),
+y adentro, el `import()` es justamente el mecanismo recomendado para que un CJS cargue un paquete ESM
+perezoso — mismo criterio que ya usan `@libsql/client`/`kysely` en `apps/api`, con `require()` en vez
+de `import()` porque esos SÍ hace falta tenerlos al toque.
+
+**Efecto colateral medido, no buscado:** el `import` de la suite completa de `apps/api` (428 tests)
+bajó de ~296s a ~119s — son los 335+ tests que antes pagaban el costo de gusto, ahora no.
+
+**Verificado en rojo antes del fix:** `factory-lazy-load.test.ts` (nuevo, separado de
+`simulated.test.ts` a propósito — vitest aísla `require.cache` por archivo, y `real.test.ts` importa
+`./real` estático) — 4 tests, los 4 fallan contra el código viejo (Lucid en `require.cache` incluso
+en los tres rechazos de configuración), los 4 en verde después.
+
+`pnpm --filter @plataforma/cardano test` (92, 4 nuevos), `pnpm --filter @plataforma/api test` (428,
+sin cambios) y `pnpm verify` completo, verdes. No se tocó `index.ts` ni la superficie pública — ya
+estaba bien.
