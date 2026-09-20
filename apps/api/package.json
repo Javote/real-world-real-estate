@@ -45,6 +45,8 @@
     "zod-openapi": "^6.0.2"
   },
   "devDependencies": {
+    "@orpc/client": "1.15.2",
+    "@orpc/openapi-client": "1.15.2",
     "@types/bcrypt": "^5.0.2",
     "@types/express": "^5.0.6",
     "@types/js-yaml": "^4.0.9",

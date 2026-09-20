@@ -34,10 +34,8 @@ import {
   developerProjectDetailSchema,
   developerProjectListItemSchema,
   developerUnitDirectoryEntrySchema,
-  dossierRejectResultSchema,
   dossierSchema,
   dossierShareSchema,
-  dossierSignResultSchema,
   evidenceBundleSummarySchema,
   evidenceProofSchema,
   evidenceSchema,
@@ -51,8 +49,6 @@ import {
   loginRequestSchema,
   loginResponseSchema,
   meResponseSchema,
-  notaryKpisSchema,
-  notarySignatureSchema,
   notificationPrefsSchema,
   notificationQuerySchema,
   notificationSchema,
@@ -60,7 +56,6 @@ import {
   onChainEventSchema,
   paginatedResponseSchema,
   paymentReleaseResultSchema,
-  pendingDossierSchema,
   positiveIntParamSchema,
   profileSchema,
   projectDetailSchema,
@@ -72,7 +67,6 @@ import {
   projectSchema,
   publicDossierSchema,
   reconciliationResultSchema,
-  rejectDossierSchema,
   releasePaymentSchema,
   reservationToEscrowTelemetrySchema,
   stageEventSummarySchema,
@@ -98,7 +92,9 @@ import {
 import { type ZodType, z } from "zod";
 import { createDocument } from "zod-openapi";
 import { en } from "../src/lib/arrays";
+import { OpenAPIGenerator, os, ZodToJsonSchemaConverter } from "../src/lib/orpc";
 import { describir, leerMontaje } from "../src/lib/route-inventory";
+import { type NotaryContext, notaryOrpcRouter } from "../src/routes/notary.routes";
 
 // El otro consumidor de `route-inventory` (junto a `generate-api-docs.ts` y
 // `test/route-guards.test.ts`): un documento OpenAPI 3.1, leído del MISMO
@@ -181,9 +177,11 @@ const REQUEST_SCHEMAS: Record<string, SchemaEntry> = {
     bodyContentType: "multipart/form-data"
   },
   "GET /api/v1/certifier/certificates": { query: cursorPaginationSchema },
-  "POST /api/v1/certifier/stages/:id/observe": { body: observeStageSchema },
-  "GET /api/v1/notary/signatures": { query: cursorPaginationSchema },
-  "POST /api/v1/notary/dossiers/:id/reject": { body: rejectDossierSchema }
+  "POST /api/v1/certifier/stages/:id/observe": { body: observeStageSchema }
+  // Las 6 rutas de `notary` (SPEC-212 §A) ya NO están acá: su schema se
+  // declara una sola vez en el procedimiento oRPC (`notary.routes.ts`) y de
+  // ahí sale tanto la validación como el fragmento de OpenAPI — ver
+  // `ORPC_MIGRADAS` y el merge al final de `buildOpenApiDocument`.
 };
 
 /**
@@ -202,10 +200,6 @@ const RESPONSE_SCHEMAS: Record<string, ZodType> = {
   "GET /api/v1/certifier/assignments": z.array(certifierAssignmentSchema),
   "GET /api/v1/certifier/stages/:id": certifierStageViewSchema,
   "GET /api/v1/certifier/certificates": paginatedResponseSchema(certifierCertificateSchema),
-  "GET /api/v1/notary/kpis": notaryKpisSchema,
-  "GET /api/v1/notary/dossiers/pending": z.array(pendingDossierSchema),
-  "GET /api/v1/notary/dossiers/:id": dossierSchema,
-  "GET /api/v1/notary/signatures": paginatedResponseSchema(notarySignatureSchema),
   "GET /api/v1/notifications/unread-count": unreadCountSchema,
   "GET /api/v1/developer/documents": z.array(developerDocumentSchema),
   "GET /api/v1/developer/kpis": developerKpisSchema,
@@ -253,10 +247,6 @@ const RESPONSE_SCHEMAS: Record<string, ZodType> = {
   // Mismo `.extend(...)` que `PATCH /stages/:id/state` — no un schema aparte.
   "POST /api/v1/certifier/stages/:id/certify": stageSchema.extend({ anchor: onChainEventSchema }),
   "POST /api/v1/certifier/stages/:id/observe": stageSchema.extend({ anchor: onChainEventSchema }),
-  // Documenta el 201 (recién firmado); el 200 (idempotente) es el mismo schema
-  // sin `signedAt` — ver el comentario de `dossierSignResultSchema`.
-  "POST /api/v1/notary/dossiers/:id/sign": dossierSignResultSchema,
-  "POST /api/v1/notary/dossiers/:id/reject": dossierRejectResultSchema,
   "POST /api/v1/developer/projects/:id/stages/:stageId/evidence": stageEvidenceUploadResultSchema,
   "GET /api/v1/developer/projects": z.array(developerProjectListItemSchema),
   "GET /api/v1/developer/projects/:id": developerProjectDetailSchema,
@@ -359,11 +349,28 @@ function aPathOpenApi(ruta: string): string {
   return ruta.replace(/:([A-Za-z0-9_]+)/g, "{$1}");
 }
 
-export function buildOpenApiDocument() {
+/**
+ * Las 6 rutas de `notary` (SPEC-212 §A), ya migradas a oRPC — el bucle de
+ * abajo las saltea y su fragmento sale, aparte, de `notaryOrpcRouter` con
+ * `OpenAPIGenerator` (ver el final de esta función). Cuando `§B`/`§C`/`§D`
+ * migren, sus rutas se suman acá.
+ */
+const ORPC_MIGRADAS = new Set([
+  "GET /api/v1/notary/kpis",
+  "GET /api/v1/notary/dossiers/pending",
+  "GET /api/v1/notary/dossiers/:id",
+  "POST /api/v1/notary/dossiers/:id/sign",
+  "POST /api/v1/notary/dossiers/:id/reject",
+  "GET /api/v1/notary/signatures"
+]);
+
+export async function buildOpenApiDocument() {
   const paths: Record<string, Record<string, unknown>> = {};
 
   for (const { rutas, handlers } of leerMontaje()) {
     for (const [clave, guards] of rutas) {
+      if (ORPC_MIGRADAS.has(clave)) continue;
+
       // "MÉTODO /ruta", siempre — es esta misma inventiva la que arma `clave`.
       const partesClave = clave.split(" ");
       const metodo = en(partesClave, 0);
@@ -419,6 +426,24 @@ export function buildOpenApiDocument() {
     }
   }
 
+  // Las 6 rutas de `notary` (SPEC-212 §A): un router oRPC combinado, prefijado
+  // al mismo `/api/v1/notary` que `MONTAJE` usa para montarlas de verdad
+  // (`os.prefix(...).router(...)`, no un string armado a mano dos veces), y
+  // `OpenAPIGenerator` arma su fragmento desde ahí — el mismo contrato Zod que
+  // valida en runtime, no una segunda copia. `ZodToJsonSchemaConverter` tiene
+  // que ser el de `@orpc/zod/zod4`: el de Zod v3 devuelve un schema vacío en
+  // silencio contra la forma interna de Zod v4 (D-035) — ver `src/lib/orpc.ts`.
+  const generadorOrpc = new OpenAPIGenerator({
+    schemaConverters: [new ZodToJsonSchemaConverter()]
+  });
+  const documentoNotary = await generadorOrpc.generate(
+    os.$context<NotaryContext>().prefix("/api/v1/notary").router(notaryOrpcRouter),
+    {
+      info: { title: "PropNexus API — notary (oRPC)", version: "1.0.0" }
+    }
+  );
+  Object.assign(paths, documentoNotary.paths);
+
   return createDocument({
     openapi: "3.1.0",
     info: {
@@ -448,11 +473,11 @@ export function buildOpenApiDocument() {
   });
 }
 
-function main() {
+async function main() {
   const salida = path.join(__dirname, "..", "..", "..", "specs", "openapi");
   mkdirSync(salida, { recursive: true });
   const archivo = path.join(salida, "propnexus.openapi.json");
-  writeFileSync(archivo, `${JSON.stringify(buildOpenApiDocument(), null, 2)}\n`);
+  writeFileSync(archivo, `${JSON.stringify(await buildOpenApiDocument(), null, 2)}\n`);
   console.log(`[docs:openapi] escrito ${archivo}`);
 }
 

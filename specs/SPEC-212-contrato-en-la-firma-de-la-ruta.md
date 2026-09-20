@@ -12,6 +12,13 @@
 > contrato. Escribir `contrato()` ahora es trabajo que se tira apenas una vertical migra a oRPC — la
 > reescritura la cambia de "casero primero, oRPC después" a "oRPC directo", en las cuatro verticales
 > que D-066 ya nombra.
+>
+> **§A (`notary`, 6 rutas) cerrada 2026-09-20** — el piloto. Migradas las 6, `pnpm verify:all`
+> completo en verde, cliente oRPC tipado probado end-to-end contra el servidor real. Encontró y
+> corrigió cuatro trampas nuevas del diseño original (§Probado el 2026-09-20, cerrando §A, más
+> abajo) — la más importante: el `prefix` de `.handle()` tiene que ser el path absoluto, no el
+> fragmento relativo que mostraba el primer ejemplo de esta spec. Quedan §B (`certifier`), §C
+> (`investor`) y §D (`developer`).
 
 ## La mitad que está bien, y hay que no romper
 
@@ -64,7 +71,7 @@ nueva, no algo que esta spec pueda asumir.
 
 | | Vertical | Archivo(s) | Rutas | Riesgo propio |
 |---|---|---|---|---|
-| **§A** | `notary` | `notary.routes.ts` | 6 | ninguno — un solo archivo, un solo prefijo |
+| **§A** | `notary` | `notary.routes.ts` | 6 | **cerrada 2026-09-20** — ninguno, era un solo archivo, un solo prefijo |
 | **§B** | `certifier` | `certifier.routes.ts` | 6 | ninguno — un solo archivo, un solo prefijo |
 | **§C** | `investor` | `investor.routes.ts` | 14 | ninguno de composición — la pertenencia de fila (`dueño: { via, param }`) ya está plegada **adentro** de `authorize()` desde D-088, no es un middleware aparte. El único riesgo es de volumen: 9 de las 14 rutas usan esa variante, más que cualquier otro archivo |
 | **§D** | `developer` | `developer.routes.ts` + `developer-comercial.routes.ts` + `developer-evidencia.routes.ts` + `capital.routes.ts` | 20 | **cuatro archivos comparten el prefijo `/api/v1/developer`**, cada uno con su propio `router.use(authenticate)` (los cuatro idénticos hoy) — el incidente del 2026-08-24 (`CLAUDE.md` de este paquete) fue justo eso desalineándose. Con el diseño verificado (un `OpenAPIHandler` por procedimiento, montado en la ruta exacta — §El diseño), migrar una ruta **no toca** ese `router.use`, así que los cuatro archivos **no necesitan migrar juntos**: es simplemente la sub-parte con más superficie (20 rutas en 4 archivos) para revisar línea por línea, no una atomicidad real |
@@ -98,27 +105,29 @@ antes, sin cambiar de capa.
 
 **El patrón de montaje exacto importa, y está verificado (no es el primer borrador de esta spec —
 ver §Probado el 2026-09-20 más abajo).** `OpenAPIHandler` no matchea contra el path completo: el
-`prefix` que se le pasa a `.handle()` es el punto de montaje (equivalente a `app.use(prefix, …)`), y
-el `path` que declara el procedimiento matchea contra lo que **sobra** después de sacarle el prefix a
-la URL. Un handler con `prefix` igual a la ruta completa y el procedimiento con
-`path: "/documents"` **nunca matchea** — no queda nada para comparar contra `/documents`. La forma
-que sí preserva `authorize` **por ruta**, exactamente como hoy (14 rutas de `investor` con 14
+`prefix` que se le pasa a `.handle()` es el punto de montaje, y el `path` que declara el
+procedimiento matchea contra lo que **sobra** después de sacarle el prefix a la URL. La forma que sí
+preserva `authorize` **por ruta**, exactamente como hoy (14 rutas de `investor` con 14
 configuraciones de `acceso` distintas, no una regla de router):
 
 ```ts
 const anchorDocumentProcedure = os
-  .route({ method: "POST", path: "/" })     // "/" — el prefix YA es la ruta completa
+  .route({ method: "POST", path: "/documents" })
   .input(anchorDocumentSchema)
   .output(onChainEventSchema)
   .handler(async ({ input, errors }) => { /* … */ });
 
 const anchorDocumentHandler = new OpenAPIHandler({ anchorDocumentProcedure });
 
+// PREFIJO_ABSOLUTO = el prefijo completo con el que `MONTAJE` (app.ts) monta
+// ESTE router — no el fragmento relativo del `router.post` de abajo. Ver la
+// trampa del prefix, más abajo: oRPC lee `req.originalUrl`, que Express NUNCA
+// reescribe al entrar a un sub-router (solo reescribe `req.url`).
 router.post(
   "/documents",
   authorize({ roles: ["admin", "developer"], acceso: { … } }),
   async (req, res, next) => {
-    const { matched } = await anchorDocumentHandler.handle(req, res, { prefix: "/documents" });
+    const { matched } = await anchorDocumentHandler.handle(req, res, { prefix: PREFIJO_ABSOLUTO });
     if (!matched) next();
   }
 );
@@ -128,6 +137,16 @@ Un `OpenAPIHandler` por procedimiento, montado en el path exacto de esa ruta —
 vertical montado una sola vez en el prefix del router. Es más verboso que la idea original de esta
 spec, pero es lo que hace que **cada ruta siga declarando su propio `acceso`** sin tener que
 reescribir `authorize` como middleware de oRPC (que sería un cambio de capa que D-066 no pide).
+
+**Cada procedimiento de la vertical declara su PROPIO `path`, relativo al mismo `PREFIJO_ABSOLUTO`
+— nunca `"/"` para más de uno.** Si dos procedimientos de la misma vertical usan `path: "/"` (uno
+para `/kpis`, otro para `/signatures`, digamos), el runtime los distingue igual porque cada uno
+tiene su propio `OpenAPIHandler` con su propio `prefix` completo — pero el documento de OpenAPI
+(§El fragmento de OpenAPI, abajo) los arma con `os.prefix(PREFIJO_ABSOLUTO).router({ ...todos los
+procedimientos de la vertical })`, UN SOLO prefijo para los seis, y ahí dos `path: "/"` colapsan al
+mismo path del documento (`/api/v1/notary`), pisándose entre sí. Encontrado cerrando §A, antes de
+que se commiteara: cada procedimiento pasó a declarar su tramo real (`/kpis`, `/dossiers/pending`,
+`/dossiers/{id}`, `/dossiers/{id}/sign`, `/dossiers/{id}/reject`, `/signatures`).
 
 `@orpc/openapi` sigue generando el fragmento del OpenAPI desde un router **combinado** —
 `{ anchorDocumentProcedure, ...el resto de la vertical }`, pasado a `OpenAPIGenerator.generate(...)`
@@ -185,8 +204,11 @@ una.
 
 ## Lo que hay que instalar, y quién lo revisa
 
-`@orpc/server`, `@orpc/openapi`, `@orpc/zod` y `@orpc/client` son dependencias nuevas de `apps/api`
-(y `@orpc/client` también de `apps/web` cuando el front migre). Van al `package.json`
+`@orpc/server`, `@orpc/openapi` y `@orpc/zod` son dependencias nuevas de `apps/api` (runtime:
+`dependencies`). `@orpc/client` y `@orpc/openapi-client` son **`devDependencies`** de `apps/api` —
+cierran el "Cubre: generar el cliente oRPC tipado" de esta spec como prueba end-to-end en
+`test/orpc-client-notary.test.ts`, sin caller real todavía; pasan a `dependencies` (de `apps/api` y
+de `apps/web`) recién cuando el front los consuma de verdad, que es `SPEC-111`. Van al `package.json`
 correspondiente **y** se corre `pnpm install` en el mismo commit — un `package.json` editado sin
 instalar es el verde falso que ya está documentado en `CLAUDE.md` raíz §Trampas transversales. Por
 ser una dependencia nueva que toca el framework de la API, cada sub-parte se revisa línea por línea
@@ -212,6 +234,44 @@ secas es para **Zod v3** — su `ZodToJsonSchemaConverter` descarta en silencio 
 devuelve un schema vacío (`anyOf: [{}, {not: {}}]`) sin ningún error. El subpath correcto es
 **`@orpc/zod/zod4`** — mismo nombre de export (`ZodToJsonSchemaConverter`), forma distinta por
 dentro. Si el documento generado para una ruta migrada sale con un schema vacío, es este import.
+
+**Probado el 2026-09-20, cerrando §A (`notary`, 6 rutas) — cuatro trampas más, las cuatro
+confirmadas con un router real y anidado, no con el smoke test:**
+
+1. **El `prefix` de `.handle()` tiene que ser el path ABSOLUTO, no el relativo dentro del router.**
+   oRPC lee `req.originalUrl` (nunca `req.url`), y Express solo reescribe `req.url`/`req.baseUrl` al
+   entrar a un sub-router montado con `app.use(prefijo, subRouter)` — `req.originalUrl` se mantiene
+   absoluto siempre. Un `prefix` relativo como `"/kpis"` contra un router que `MONTAJE` cuelga de
+   `/api/v1/notary` da `matched: false` sobre una request real a `/api/v1/notary/kpis` — probado con
+   un router `express.Router()` anidado bajo `app.use("/api/v1/notary", ...)` de verdad, no con el
+   smoke test (que monta al top level y por eso nunca lo iba a mostrar). Con el prefix absoluto,
+   matchea. Todas las llamadas a `.handle()` de una vertical usan el MISMO `PREFIJO_ABSOLUTO`.
+2. **`outputStructure: "detailed"` (para un status de éxito que varía, como el 200/201 idempotente de
+   `firmar`) exige un schema de output que sea la UNIÓN discriminada completa, con `status` como
+   literal en cada rama — no un solo objeto con `status: z.union([...])` adentro.**
+   `z.object({ status: z.union([z.literal(200), z.literal(201)]), body: X })` falla en
+   `OpenAPIGenerator.generate()` (`"must be a literal number"`, aun siendo `const` de verdad). La
+   forma que sí pasa: `z.union([z.strictObject({status: z.literal(200), body: X}),
+   z.strictObject({status: z.literal(201), body: X})])`.
+3. **Un error de negocio (no de validación de input) que un test fija por su código exacto
+   (`body.code`) necesita `.errors({ NOMBRE: { status, message } })` en el procedimiento, no
+   `ORPCError("CONFLICT", { data: { code: "..." } })`.** El segundo anida el código de dominio en
+   `body.data.code` y deja `body.code` como el código propio de oRPC (`"CONFLICT"`, `"NOT_FOUND"`) —
+   cambiar eso sería un cambio de contrato de error, fuera de alcance. `.errors({DOSSIER_SIGNED:
+   {status: 409, message: "..."}})` + `throw errors.DOSSIER_SIGNED({message: "..."})` deja
+   `body.code === "DOSSIER_SIGNED"` al nivel que el test ya esperaba, **y conserva el orden**: la
+   validación de `.input()` sigue corriendo antes que el handler, así que un body inválido sobre un
+   recurso que además dispara ese error de negocio sigue devolviendo el 400 de input, no el error de
+   negocio — probado a propósito, es el caso donde `dossier.test.ts` fallaba en el primer intento.
+   Donde ningún test fija el código exacto (los demás 404 de esta vertical), un `ORPCError("NOT_FOUND",
+   {message})` liso alcanza: es la adaptación sin costo que ya preveía la invariante 5.
+4. **`createORPCClient<typeof miRouter>(link)` no tipa** — `typeof miRouter` es el tipo *servidor* (un
+   mapa de `DecoratedProcedure`, no de funciones invocables) y no satisface `NestedClient`. Hay que
+   pasarle `RouterClient<typeof miRouter>` (de `@orpc/server`), que sí mapea cada procedimiento a su
+   forma de función cliente. `test/orpc-client-notary.test.ts` es la prueba end-to-end: arma el
+   cliente desde el mismo `notaryOrpcRouter` que exporta `notary.routes.ts`, habla HTTP de verdad
+   contra el servidor completo (`authorize` incluido) en un puerto efímero, y verifica un 200 con
+   forma, un 404 de negocio y un 401 de `authorize` — sin mockear nada de los dos lados.
 
 ## Orden
 

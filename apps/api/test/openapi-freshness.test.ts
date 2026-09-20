@@ -8,7 +8,7 @@ import { buildOpenApiDocument } from "../scripts/generate-openapi";
 // `pnpm --filter @plataforma/api docs:openapi` y commiteá el resultado —
 // actualizarlo ES la revisión.
 describe("specs/openapi/propnexus.openapi.json", () => {
-  it("coincide con lo que generaría el router montado ahora mismo", () => {
+  it("coincide con lo que generaría el router montado ahora mismo", async () => {
     const archivo = path.join(
       __dirname,
       "..",
@@ -19,7 +19,7 @@ describe("specs/openapi/propnexus.openapi.json", () => {
       "propnexus.openapi.json"
     );
     const commiteado = readFileSync(archivo, "utf-8");
-    const fresco = `${JSON.stringify(buildOpenApiDocument(), null, 2)}\n`;
+    const fresco = `${JSON.stringify(await buildOpenApiDocument(), null, 2)}\n`;
 
     expect(commiteado).toBe(fresco);
   });

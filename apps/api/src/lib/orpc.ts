@@ -3,24 +3,15 @@
 // `import` normal falla TS1479 aunque en runtime funcione. Mismo patrón que
 // `src/lib/libsql-client.ts` — tipos con `resolution-mode: "require"`,
 // valores con `require()` (Node 24 lo resuelve síncrono aunque sea ESM puro).
-// Centralizado acá (y excluido de Biome, igual que sus tres hermanos, porque
-// el linter no acepta `with { "resolution-mode": ... }` en un import de
-// tipos) para no repetir el patrón en cada archivo que use oRPC.
+// Centralizado acá (mismo módulo que ya probó `test/helpers/orpc.ts`, SPEC-212)
+// para no repetir el patrón en cada archivo de rutas que use oRPC.
 import type { OpenAPIGenerator as OpenAPIGeneratorType } from "@orpc/openapi" with { "resolution-mode": "require" };
 import type { OpenAPIHandler as OpenAPIHandlerType } from "@orpc/openapi/node" with {
   "resolution-mode": "require"
 };
-import type { createORPCClient as createORPCClientType } from "@orpc/client" with {
+import type { ORPCError as ORPCErrorType, os as osType } from "@orpc/server" with {
   "resolution-mode": "require"
 };
-import type { OpenAPILink as OpenAPILinkType } from "@orpc/openapi-client/fetch" with {
-  "resolution-mode": "require"
-};
-import type { os as osType } from "@orpc/server" with { "resolution-mode": "require" };
-// `RouterClient<T>` es el tipo que hay que pasarle a `createORPCClient` — un
-// router de procedimientos SERVER-side (`typeof notaryOrpcRouter`) no
-// satisface `NestedClient` directo, hay que mapearlo primero.
-export type { RouterClient } from "@orpc/server" with { "resolution-mode": "require" };
 // `@orpc/zod` a secas es para Zod v3 — su `ZodToJsonSchemaConverter` descarta
 // cualquier schema con `_zod` adentro (la forma interna de Zod v4, que es la
 // que usa este repo, D-035) y `OpenAPIGenerator` devuelve un schema vacío sin
@@ -31,11 +22,9 @@ import type { ZodToJsonSchemaConverter as ZodToJsonSchemaConverterType } from "@
 
 const { OpenAPIGenerator } = require("@orpc/openapi") as { OpenAPIGenerator: typeof OpenAPIGeneratorType };
 const { OpenAPIHandler } = require("@orpc/openapi/node") as { OpenAPIHandler: typeof OpenAPIHandlerType };
-const { os } = require("@orpc/server") as { os: typeof osType };
+const { os, ORPCError } = require("@orpc/server") as { os: typeof osType; ORPCError: typeof ORPCErrorType };
 const { ZodToJsonSchemaConverter } = require("@orpc/zod/zod4") as {
   ZodToJsonSchemaConverter: typeof ZodToJsonSchemaConverterType;
 };
-const { createORPCClient } = require("@orpc/client") as { createORPCClient: typeof createORPCClientType };
-const { OpenAPILink } = require("@orpc/openapi-client/fetch") as { OpenAPILink: typeof OpenAPILinkType };
 
-export { OpenAPIGenerator, OpenAPIHandler, os, ZodToJsonSchemaConverter, createORPCClient, OpenAPILink };
+export { OpenAPIGenerator, OpenAPIHandler, ORPCError, os, ZodToJsonSchemaConverter };
