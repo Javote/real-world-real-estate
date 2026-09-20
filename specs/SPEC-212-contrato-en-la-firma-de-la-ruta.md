@@ -160,11 +160,64 @@ registro que la mención breve de arriba.
    invalida nada: las capturas son del 2026-09-11 y §A (la primera migración a oRPC) cerró recién el
    2026-09-20.
 
-**Alcance de la investigación, para que no se convierta en otra cosa:** es solo eso, investigar y
-decidir el camino — no implementar todavía. Si la conclusión es "hay un gancho genérico y sirve",
-esa implementación toca las cuatro sub-partes (`notary.routes.ts`, `certifier.routes.ts`,
-`investor.routes.ts`, `developer.routes.ts` + `developer-comercial.routes.ts` + `capital.routes.ts`)
-y probablemente amerita su propia spec — no un parche silencioso adentro de esta.
+**Investigado (no implementado) el 2026-09-20 — las 5 preguntas, respondidas:**
+
+1. **¿oRPC loguea el error antes de responder su 500? No.** Leyendo
+   `@orpc/server/dist/shared/server.CMf4nKky.mjs` (la implementación real de `StandardHandler`, no
+   los `.d.ts`) y `@orpc/server/dist/adapters/node/index.mjs`: no hay un solo `console.*` ni llamada
+   a logging en ninguno de los dos archivos. El error crudo se convierte en `StandardResponse`
+   (`this.codec.encodeError(error)`) y punto — si nadie lo intercepta, no queda rastro en ningún
+   lado, ni siquiera en stdout del proceso. Confirma el peor caso que la pregunta anticipaba.
+2. **¿`interceptors` deja ver la excepción CRUDA o ya una respuesta armada? Cruda — confirmado con
+   un smoke test descartable** (`test/zzz-interceptors-smoke.test.ts`, corrido y borrado). Leyendo
+   el mismo archivo: el `try { ... } catch (e) { ...; encodeError(error) }` que convierte cualquier
+   excepción en el 500 genérico **envuelve** al `intercept(this.interceptors, ...)`, no al revés.
+   Un interceptor de la opción `interceptors` (no `rootInterceptors`) que haga
+   `try { return await opciones.next() } catch (e) { /* ver e crudo */ throw e }` ve exactamente la
+   excepción que el `.handler()` tiró — en el smoke test, una `class ErrorSinClasificar extends
+   Error` a propósito — **antes** de que `toORPCError(e)` la convierta y antes de
+   `this.codec.encodeError()`. Volver a tirarla (`throw e`) deja que `StandardHandler` siga
+   codificando el 500 exactamente como hoy — el interceptor solo mira de paso, no reemplaza nada.
+3. **No hace falta preguntarlo — resuelto por la pregunta 2.** No hay que lograr que
+   `OpenAPIHandler` delegue a `next(err)` de Express: el interceptor de la pregunta 2 ya tiene la
+   excepción cruda en la mano, así que puede llamar a `Sentry.captureException(e)` él mismo, sin
+   pasar por Express en absoluto. Un solo interceptor, agregado una vez en la construcción de cada
+   `OpenAPIHandler` (o factorizado en un helper que envuelva `new OpenAPIHandler(router, { ...opts,
+   interceptors: [interceptorDeSentry, ...(opts.interceptors ?? [])] })`), cierra la brecha para las
+   cuatro sub-partes sin tocar `errorHandler.ts` ni `app.ts`.
+4. **Con la 2 y la 3 resueltas, esta alternativa queda descartada por innecesaria.** No hace falta
+   reportar desde `relanzarRestriccionComoOrpc`: el interceptor genérico ve TODAS las excepciones de
+   TODOS los procedimientos del handler, no solo las que ya pasan por esa función — es estrictamente
+   más amplio, y es un solo lugar en vez de uno por call site.
+5. **No invalida el criterio 14.** Las capturas de `specs/EVIDENCIA-2026-09-11-monitoring-
+   screenshots.md` son del 2026-09-11; §A (la primera sub-parte migrada a oRPC) cerró el 2026-09-20.
+   La brecha es posterior a la evidencia publicada, no la contradice.
+
+**Lo que falta para que esto sea diseño listo para implementar, no solo investigación (a propósito
+sin cerrar todavía, ver el pedido del dueño arriba):**
+
+- **Decidir el punto único de construcción.** Hoy cada uno de los ~20 `OpenAPIHandler` se instancia
+  suelto en su archivo de rutas (`new OpenAPIHandler({ kpisProcedure })`, etc. — ver
+  `notary.routes.ts`). Un interceptor por instancia es 20 ediciones idénticas; un factory
+  (`crearOpenApiHandler(router)`) que inyecte el interceptor de Sentry una sola vez es menos
+  repetición, pero es una decisión de forma que toca las cuatro sub-partes a la vez y no se tomó.
+- **Qué hace el interceptor además de `Sentry.captureException`.** El código de la trampa original
+  (`relanzarRestriccionComoOrpc`) también MAPEA la excepción a un `ORPCError` con el código de
+  negocio correcto antes de responder — un interceptor genérico no puede hacer ese mapeo por
+  procedimiento (no sabe qué restricción de qué tabla corresponde a qué 409), así que
+  `relanzarRestriccionComoOrpc` seguiría existiendo para eso. El interceptor genérico resuelve SOLO
+  la parte de observabilidad (que el error no reconocido llegue a Sentry), no reemplaza el mapeo caso
+  por caso que ya existe.
+- **No se corrió contra una versión de oRPC más nueva que 1.15.2.** El comentario del tipo
+  (`"helpful when you want catch errors"`) y el comportamiento verificado son de esa versión exacta;
+  hay que re-confirmar si se sube la dependencia antes de escribir la implementación real.
+
+**Alcance de la investigación, para que no se convierta en otra cosa:** con las 5 preguntas
+respondidas, el camino técnico ya está confirmado (un interceptor de `interceptors` + `Sentry.
+captureException`) — pero implementar sigue siendo trabajo nuevo, no de esta ronda: toca las cuatro
+sub-partes (`notary.routes.ts`, `certifier.routes.ts`, `investor.routes.ts`, `developer.routes.ts` +
+`developer-comercial.routes.ts` + `capital.routes.ts`) y el punto único de construcción sin decidir
+todavía, y probablemente amerita su propia spec — no un parche silencioso adentro de esta.
 
 ## Pendiente — investigar: Multer como fuente del multipart, oRPC solo para validar/documentar
 
