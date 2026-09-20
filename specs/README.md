@@ -169,6 +169,7 @@ mismo— sigue siendo `SPEC-305`, decisión de mainnet.
 | [`SPEC-108`](SPEC-108-higiene-de-componentes.md) | Higiene: el shell de card repetido, el hook disfrazado, la prop que se ignora | F-15·16·17 | **cerrada 2026-09-19** |
 | [`SPEC-109`](SPEC-109-tipos-de-respuesta-desde-shared.md) | `api/types.ts`: cerrar la garantía de "drift imposible" | F-13 | **cerrada 2026-09-19** 🟡 — encontró un bug real (avance 0% en `/developer/project/:id`) verificado con Claude en Chrome |
 | [`SPEC-110`](SPEC-110-estado-de-carga.md) | 30 de 42 rutas muestran el empty-state mientras cargan | F-18 | **cerrada 2026-09-19** — 24 sitios reales (20 rutas + 2 componentes compartidos no nombrados por la auditoría + 2 con isPending mal apuntado), verificado con Claude en Chrome |
+| [`SPEC-111`](SPEC-111-callsites-de-apps-web-al-cliente-orpc.md) | Migrar los call sites de `apps/web` al cliente oRPC generado, vertical por vertical | anexo (nace de `SPEC-212`) | **sin desarrollar** — registrada 2026-09-20, falta un desarrollo más explícito |
 | [`SPEC-201`](SPEC-201-aceptar-invitacion-atomico.md) | Aceptar una invitación deja de poder sacarle la unidad a quien ya la compró | B-01 | **cerrada 2026-09-18** |
 | [`SPEC-202`](SPEC-202-un-dossier-por-unidad.md) | Una unidad, un dossier: el índice único que falta | B-02 | **cerrada 2026-09-18** 🟡 |
 | [`SPEC-203`](SPEC-203-migraciones-atomicas.md) | Una migración que se corta a la mitad tiene que poder volver | B-03 | **cerrada 2026-09-18** 🟡 |
@@ -184,6 +185,7 @@ mismo— sigue siendo `SPEC-305`, decisión de mainnet.
 | [`SPEC-213`](SPEC-213-un-bundle-por-stage.md) | `EvidenceBundle` duplicado por stage: medir antes de decidir | anexo | **cerrada 2026-09-19** 🟡 — invariante corregida en el camino: no "máximo un bundle", sino `UNIQUE(stageId, commitmentHash)` + `ultimoBundlePorStage` en los 3 leftJoin |
 | [`SPEC-214`](SPEC-214-telemetria-con-blocktimestamp.md) | La telemetría del criterio 9 mide lo que tardó alguien en volver a leer | anexo | **cerrada 2026-09-18** |
 | [`SPEC-215`](SPEC-215-seed-idempotente.md) | `pnpm db:seed` revienta sobre una base ya sembrada | anexo | **cerrada 2026-09-18** |
+| [`SPEC-216`](SPEC-216-orpc-en-los-11-routers-restantes.md) | Extender oRPC a los 11 routers que D-066 no nombra | anexo (nace de `SPEC-212`) | **sin desarrollar** — registrada 2026-09-20, falta un desarrollo más explícito |
 | [`SPEC-301`](SPEC-301-unicidad-del-hilo-no-depende-de-la-base.md) | La unicidad del hilo deja de depender de la base | C-01 (1·2) | **cerrada 2026-09-18** 🟡 · no era pulido |
 | [`SPEC-302`](SPEC-302-el-burn-queda-fijado-por-un-test.md) | "No hay burn" pasa de argumento a evidencia | C-03 | **cerrada 2026-09-18** |
 | [`SPEC-303`](SPEC-303-que-sostiene-la-igualdad-de-valor.md) | Escribir qué sostiene la igualdad de valor en el `spend` | C-05 | **cerrada 2026-09-18** |
