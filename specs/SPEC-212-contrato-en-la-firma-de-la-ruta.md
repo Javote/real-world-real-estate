@@ -26,17 +26,21 @@
 > `ORPCError` liso — no hizo falta el `.errors({NOMBRE:...})` con nombre que sí necesitó el 409
 > `DOSSIER_SIGNED` de §A.
 >
-> **§C (`investor`, 13 de sus 14 rutas) cerrada el mismo día.** Dos decisiones propias, las dos
-> documentadas en `investor.routes.ts`: (1) `GET .../dossier/export.pdf` **no migra** — devuelve un
-> PDF binario y `OpenAPIHandler` solo sabe serializar JSON, probado antes de tocar código (un
-> `Buffer` en el body sale como `{"type":"Buffer","data":[...]}`, nunca como bytes reales) — sigue
-> siendo una ruta Express llana con el mismo `authorize`; (2) `accept` tenía una clase
-> `InvitationAcceptError` que existía solo para viajar por el `catch` de Express hasta el 409/404
-> con el código de negocio correcto (SPEC-201, `res.body.code` fijado por test para
-> `UNIT_NOT_AVAILABLE` e `INVITATION_NOT_PENDING`) — con oRPC esa clase se borró: `.errors({NOMBRE:
-> ...})` la reemplaza, y un `throw` dentro de `db.transaction().execute(...)` sigue revirtiendo la
-> transacción igual, porque Kysely no distingue el tipo del error al decidir si hace rollback.
-> Queda §D (`developer`).
+> **§C (`investor`, las 14 rutas) cerrada el mismo día.** Dos decisiones propias, las dos
+> documentadas en `investor.routes.ts`. La primera, revisada dos veces:
+> `GET .../dossier/export.pdf` se creyó primero que no podía migrar —`OpenAPIHandler` serializa
+> cualquier `Buffer` del body como JSON (`{"type":"Buffer","data":[...]}`), probado antes de
+> escribir código— pero el adaptador Node de oRPC (`@orpc/standard-server-node`) sí tiene un caso
+> especial para `body instanceof Blob`/`File`: manda los bytes crudos por stream, con
+> `content-type` tomado del propio Blob. Devolver un `File` en vez de un `Buffer`, con
+> `outputStructure: "detailed"` para fijar el `Content-Disposition` exacto, migra la ruta sin tocar
+> el contrato — verificado con el mismo test que ya comparaba bytes (`%PDF-`…`%%EOF`) contra el
+> servidor real. La segunda: `accept` tenía una clase `InvitationAcceptError` que existía solo para
+> viajar por el `catch` de Express hasta el 409/404 con el código de negocio correcto (SPEC-201,
+> `res.body.code` fijado por test para `UNIT_NOT_AVAILABLE` e `INVITATION_NOT_PENDING`) — con oRPC
+> esa clase se borró: `.errors({NOMBRE:...})` la reemplaza, y un `throw` dentro de
+> `db.transaction().execute(...)` sigue revirtiendo la transacción igual, porque Kysely no
+> distingue el tipo del error al decidir si hace rollback. Queda §D (`developer`).
 
 ## La mitad que está bien, y hay que no romper
 
@@ -91,7 +95,7 @@ nueva, no algo que esta spec pueda asumir.
 |---|---|---|---|---|
 | **§A** | `notary` | `notary.routes.ts` | 6 | **cerrada 2026-09-20** — ninguno, era un solo archivo, un solo prefijo |
 | **§B** | `certifier` | `certifier.routes.ts` | 6 | **cerrada 2026-09-20** — ninguno, era un solo archivo, un solo prefijo |
-| **§C** | `investor` | `investor.routes.ts` | 14 | **cerrada 2026-09-20** (13 de 14 — `export.pdf` queda fuera, PDF binario) — la pertenencia de fila (`dueño: { via, param }`) ya estaba plegada **adentro** de `authorize()` desde D-088, no era un middleware aparte |
+| **§C** | `investor` | `investor.routes.ts` | 14 | **cerrada 2026-09-20** (las 14, incluida `export.pdf` con un `File` en vez de un `Buffer` — ver §El diseño) — la pertenencia de fila (`dueño: { via, param }`) ya estaba plegada **adentro** de `authorize()` desde D-088, no era un middleware aparte |
 | **§D** | `developer` | `developer.routes.ts` + `developer-comercial.routes.ts` + `developer-evidencia.routes.ts` + `capital.routes.ts` | 20 | **cuatro archivos comparten el prefijo `/api/v1/developer`**, cada uno con su propio `router.use(authenticate)` (los cuatro idénticos hoy) — el incidente del 2026-08-24 (`CLAUDE.md` de este paquete) fue justo eso desalineándose. Con el diseño verificado (un `OpenAPIHandler` por procedimiento, montado en la ruta exacta — §El diseño), migrar una ruta **no toca** ese `router.use`, así que los cuatro archivos **no necesitan migrar juntos**: es simplemente la sub-parte con más superficie (20 rutas en 4 archivos) para revisar línea por línea, no una atomicidad real |
 
 **Orden sugerido: `§A` → `§B` → `§C` → `§D`.** Las dos primeras son el piloto — 6 rutas, un archivo,
@@ -290,6 +294,19 @@ confirmadas con un router real y anidado, no con el smoke test:**
    cliente desde el mismo `notaryOrpcRouter` que exporta `notary.routes.ts`, habla HTTP de verdad
    contra el servidor completo (`authorize` incluido) en un puerto efímero, y verifica un 200 con
    forma, un 404 de negocio y un 401 de `authorize` — sin mockear nada de los dos lados.
+
+**Probado el 2026-09-20, cerrando §C (`investor`) — una quinta trampa, sobre respuestas binarias:**
+`OpenAPIHandler` serializa el body como JSON salvo un caso especial, en el adaptador Node
+(`@orpc/standard-server-node`): **si el `body` de la respuesta es `instanceof Blob` (`File`
+incluida, que extiende `Blob`), manda los bytes crudos por stream**, con `content-type` y
+`content-length` tomados del propio `Blob`, y `content-disposition` armado del nombre del archivo si
+no se lo pisa a mano. Un `Buffer` no alcanza — sale como `{"type":"Buffer","data":[...]}` — pero
+envolverlo en un `File` (`new File([bytes], nombre, {type: "application/pdf"})`) sí. Con
+`outputStructure: "detailed"` y un `headers.content-disposition` explícito, el `Content-Disposition`
+sale `attachment` en vez del `inline` que pondría solo. **Esto cierra la única excepción que esta
+spec había dejado abierta** (`GET .../dossier/export.pdf`, ver §C arriba) — verificado contra el
+mismo test que compara bytes reales (`%PDF-`…`%%EOF`) contra el servidor real, sin mockear la
+descarga.
 
 ## Orden
 

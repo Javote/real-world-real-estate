@@ -103,10 +103,11 @@ import { type NotaryContext, notaryOrpcRouter } from "../src/routes/notary.route
 // —antes solo usado para tipar en compile-time (`satisfies`) o ni eso—; Tanda
 // 2 escribió el schema que faltaba para las ~61 restantes, archivo por
 // archivo. Las dos VALIDAN en runtime (`schema.parse(...)` antes de
-// responder) y se documentan acá en `RESPONSE_SCHEMAS`. De las 85 rutas, solo
-// quedan sin entrada las que legítimamente no tienen cuerpo JSON: `204 No
-// Content` (borrados, favoritos, decline) y las dos que devuelven un archivo
-// binario (`/evidence/:id/download`, `/dossier/export.pdf`).
+// responder) y se documentan acá en `RESPONSE_SCHEMAS`. De las rutas que no
+// migraron a oRPC, solo quedan sin entrada las que legítimamente no tienen
+// cuerpo JSON: `204 No Content` (borrados) y la que devuelve un archivo
+// binario (`/evidence/:id/download`) — `/dossier/export.pdf` migró a oRPC
+// con un `File` como body (SPEC-212 §C) y ya no pasa por acá.
 //
 // **El código de éxito se lee del handler, no se adivina por verbo HTTP.**
 // La primera versión de este generador usaba una convención (`POST → 201`,
@@ -318,11 +319,10 @@ function aPathOpenApi(ruta: string): string {
 }
 
 /**
- * Las rutas de `notary` (§A), `certifier` (§B) e `investor` (§C, salvo
- * `export.pdf`), ya migradas a oRPC — el bucle de abajo las saltea y su
- * fragmento sale, aparte, de sus routers oRPC combinados con
- * `OpenAPIGenerator` (ver el final de esta función). Cuando `§D` migre, sus
- * rutas se suman acá.
+ * Las rutas de `notary` (§A), `certifier` (§B) e `investor` (§C, las 14), ya
+ * migradas a oRPC — el bucle de abajo las saltea y su fragmento sale, aparte,
+ * de sus routers oRPC combinados con `OpenAPIGenerator` (ver el final de
+ * esta función). Cuando `§D` migre, sus rutas se suman acá.
  */
 const ORPC_MIGRADAS = new Set([
   "GET /api/v1/notary/kpis",
@@ -349,12 +349,8 @@ const ORPC_MIGRADAS = new Set([
   "GET /api/v1/investor/invitations/:id",
   "POST /api/v1/investor/invitations/:id/accept",
   "POST /api/v1/investor/invitations/:id/decline",
-  "GET /api/v1/investor/contracts/:unitId"
-  // `GET /api/v1/investor/units/:id/dossier/export.pdf` NO está acá a
-  // propósito: es la única ruta de investor que sigue documentada por el
-  // bucle manual de abajo — devuelve un PDF binario, y `OpenAPIHandler`
-  // solo sabe serializar JSON (ver el comentario grande en
-  // `investor.routes.ts`).
+  "GET /api/v1/investor/contracts/:unitId",
+  "GET /api/v1/investor/units/:id/dossier/export.pdf"
 ]);
 
 export async function buildOpenApiDocument() {

@@ -14,7 +14,7 @@ import {
   projectSchema,
   unitNewsEventSchema
 } from "@plataforma/shared";
-import { type Request, Router } from "express";
+import { Router } from "express";
 import { z } from "zod";
 import { createId } from "../db/id";
 import type { UserRole } from "../db/types";
@@ -39,15 +39,15 @@ import { avancePorProyecto } from "./_shared";
 // `OpenAPIHandler.handle()` es el path ABSOLUTO (`PREFIJO_ABSOLUTO`). Ver
 // `notary.routes.ts` y SPEC-212 para el porqué completo — acá no se repite.
 //
-// **Una sola excepción, deliberada y documentada: `GET
-// /units/:id/dossier/export.pdf` NO migra.** Devuelve un PDF binario
-// (`res.setHeader("Content-Type", "application/pdf"); res.send(pdf)`), y
-// `OpenAPIHandler` serializa toda respuesta como JSON — probado antes de
-// escribir esto: un `Buffer` en el body de un procedimiento `outputStructure:
-// "detailed"` sale como `{"type":"Buffer","data":[...]}`, no como bytes de
-// PDF, sin importar el header `content-type` declarado en `headers`. Migrar
-// esta ruta rompería la descarga real, y `SPEC-212` no cubre cambiar un
-// contrato. Sigue siendo una ruta Express llana, con el mismo `authorize`.
+// **Las 14 migran, incluida `export.pdf`.** Un `Buffer` pelado en el body de
+// un procedimiento sale serializado como JSON
+// (`{"type":"Buffer","data":[...]}`) — probado antes de escribir esto — pero
+// el adaptador Node de oRPC tiene un caso especial para `body instanceof
+// Blob`/`File`: manda los bytes crudos por stream con el `content-type` del
+// propio Blob. `dossierExportProcedure` devuelve un `File`, no un `Buffer`,
+// y usa `outputStructure: "detailed"` para fijar el `Content-Disposition`
+// exacto (`attachment`) en vez del `inline` que oRPC pondría solo. Ver el
+// comentario de esa ruta para el detalle.
 //
 // Antes vivía repartida en cinco routers agrupados por concepto de dominio
 // —favoritos, unidades, dossier, notificaciones, invitaciones—, todos montados
@@ -390,15 +390,24 @@ router.get(
  * cuenta. Un artefacto que dijera "verificado" sin traer con qué comprobarlo
  * sería exactamente lo que D-026 prohíbe.
  *
- * **No migra a oRPC** — ver el comentario grande al principio del archivo:
- * devuelve un PDF binario, y `OpenAPIHandler` solo sabe serializar JSON.
+ * **Migra con `File`, no con un `Buffer` pelado.** El adaptador Node de oRPC
+ * (`@orpc/standard-server-node`) tiene un caso especial para `body instanceof
+ * Blob`: manda los bytes crudos por stream y arma `content-type`/
+ * `content-disposition` desde el propio Blob — un `Buffer` en cambio siempre
+ * sale serializado como JSON (`{"type":"Buffer","data":[...]}`), probado
+ * antes de escribir esto. `outputStructure: "detailed"` deja fijar el
+ * `Content-Disposition` exacto (`attachment`, no el `inline` que pondría
+ * solo) en vez de dejárselo al nombre del archivo.
  */
-router.get(
-  "/units/:id/dossier/export.pdf",
-  authorize({ roles: ["admin", "buyer"], acceso: { dueño: { via: "Unit", param: "id" } } }),
-  async (req: Request<{ id: string }>, res) => {
-    const resultado = await dossierDeLaUnidad(req.params.id);
-    if (resultado.error === 404) return res.status(404).json({ message: "Unit not found" });
+const dossierExportProcedure = orpc
+  .route({ method: "GET", path: "/units/{id}/dossier/export.pdf", outputStructure: "detailed" })
+  .input(z.strictObject({ id: cuidParamSchema }))
+  .output(
+    z.object({ headers: z.record(z.string(), z.string()).optional(), body: z.instanceof(File) })
+  )
+  .handler(async ({ input, context }) => {
+    const resultado = await dossierDeLaUnidad(input.id);
+    if (resultado.error === 404) throw new ORPCError("NOT_FOUND", { message: "Unit not found" });
 
     const d = resultado.dossier;
     const pdf = renderTextPdf([
@@ -426,21 +435,35 @@ router.get(
     ]);
 
     await writeAuditLog({
-      actorUserId: req.user!.id,
+      actorUserId: context.user.id,
       action: "EXPORT_DOSSIER",
       entityType: "Dossier",
       entityId: d.id,
       metadata: { masterHash: d.masterHash }
     });
 
-    res.setHeader("Content-Type", "application/pdf");
     // El nombre lleva la ref de la unidad, que no es PII. Nunca el nombre del
     // investor.
-    res.setHeader(
-      "Content-Disposition",
-      `attachment; filename="dossier-${d.unitReference.replace(/[^\w.-]/g, "_")}.pdf"`
-    );
-    return res.send(pdf);
+    const nombreArchivo = `dossier-${d.unitReference.replace(/[^\w.-]/g, "_")}.pdf`;
+    return {
+      headers: { "content-disposition": `attachment; filename="${nombreArchivo}"` },
+      // `Buffer` tipa su `.buffer` como `ArrayBufferLike` (incluye
+      // `SharedArrayBuffer`), que `BlobPart` no acepta — `Uint8Array.from`
+      // copia a un `Uint8Array<ArrayBuffer>` limpio, sin tocar los bytes.
+      body: new File([Uint8Array.from(pdf)], nombreArchivo, { type: "application/pdf" })
+    };
+  });
+const dossierExportHandler = new OpenAPIHandler({ dossierExportProcedure });
+
+router.get(
+  "/units/:id/dossier/export.pdf",
+  authorize({ roles: ["admin", "buyer"], acceso: { dueño: { via: "Unit", param: "id" } } }),
+  async (req, res, next) => {
+    const { matched } = await dossierExportHandler.handle(req, res, {
+      prefix: PREFIJO_ABSOLUTO,
+      context: { user: req.user! }
+    });
+    if (!matched) next();
   }
 );
 
@@ -849,7 +872,7 @@ router.get(
 
 /** El router oRPC combinado de esta vertical — lo consume
  * `scripts/generate-openapi.ts` para generar el fragmento de OpenAPI de las
- * 13 rutas migradas (todas salvo `export.pdf`, ver arriba). */
+ * 14 rutas migradas. */
 export const investorOrpcRouter = {
   favoritesProcedure,
   addFavoriteProcedure,
@@ -858,6 +881,7 @@ export const investorOrpcRouter = {
   unitDetailProcedure,
   unitNewsProcedure,
   dossierProcedure,
+  dossierExportProcedure,
   shareDossierProcedure,
   notificationsProcedure,
   invitationDetailProcedure,

@@ -5365,39 +5365,6 @@
         }
       }
     },
-    "/api/v1/investor/units/{id}/dossier/export.pdf": {
-      "get": {
-        "summary": "GET /api/v1/investor/units/:id/dossier/export.pdf",
-        "description": "auth + autoriza(rol(admin|buyer) · dueño(Unit:id))",
-        "security": [
-          {
-            "bearerAuth": []
-          }
-        ],
-        "parameters": [
-          {
-            "in": "path",
-            "name": "id",
-            "schema": {
-              "type": "string",
-              "pattern": "^[a-z][a-z0-9]{23}$"
-            },
-            "required": true
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "OK"
-          },
-          "401": {
-            "description": "Sin sesión o token inválido"
-          },
-          "403": {
-            "description": "Rol o membresía insuficiente"
-          }
-        }
-      }
-    },
     "/api/v1/developer/projects": {
       "get": {
         "summary": "GET /api/v1/developer/projects",
@@ -11385,6 +11352,28 @@
                 }
               }
             }
+          }
+        }
+      }
+    },
+    "/api/v1/investor/units/{id}/dossier/export.pdf": {
+      "get": {
+        "operationId": "dossierExportProcedure",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "pattern": "^[a-z][a-z0-9]{23}$"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {}
           }
         }
       }
