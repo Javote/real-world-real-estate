@@ -43,6 +43,31 @@ describe("refToHex", () => {
   });
 });
 
+// SPEC-404 (P-05) — `hexToRef` es la vuelta, y corre con datos que no
+// controlamos: no puede devolver basura en silencio sobre hex inválido.
+describe("hexToRef", () => {
+  it("rechaza hex con caracteres que no son 0-9a-f", () => {
+    expect(() => hexToRef("zz")).toThrow();
+  });
+
+  it("rechaza un largo impar", () => {
+    expect(() => hexToRef("616")).toThrow();
+  });
+
+  it("rechaza el string vacío — igual que refToHex('')", () => {
+    expect(() => hexToRef("")).toThrow();
+  });
+
+  it("rechaza más de 32 bytes (el tope del asset name)", () => {
+    expect(() => hexToRef("aa".repeat(MAX_REF_BYTES + 1))).toThrow();
+    expect(hexToRef(refToHex("x".repeat(MAX_REF_BYTES)))).toHaveLength(MAX_REF_BYTES);
+  });
+
+  it("va y vuelve con un cuid2 real", () => {
+    expect(hexToRef(refToHex(fuente.id))).toBe(fuente.id);
+  });
+});
+
 describe("buildStageDatum", () => {
   it("produce el datum de un stage recién creado", () => {
     const datum = buildStageDatum(fuente);

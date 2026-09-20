@@ -1,5 +1,10 @@
 import { z } from "zod";
+import type { MerkleStep } from "./merkle";
 import { onChainEventSchema } from "./stage";
+
+/** `true` solo si `A` y `B` son estructuralmente idénticos, en las dos direcciones. */
+type Equal<A, B> =
+  (<T>() => T extends A ? 1 : 2) extends <T>() => T extends B ? 1 : 2 ? true : false;
 
 // La documentación de respaldo del developer (M2-D5 filas 46-47) — **M3-BE-14**.
 //
@@ -169,11 +174,17 @@ export const developerDocumentSchema = z.strictObject({
 });
 export type DeveloperDocument = z.infer<typeof developerDocumentSchema>;
 
-/** Un paso del camino de Merkle: con qué hermano combinar y de qué lado. */
+/**
+ * Un paso del camino de Merkle: con qué hermano combinar y de qué lado.
+ * Deriva de `MerkleStep` (SPEC-404, P-06) — la línea de abajo no compila si
+ * alguna de las dos declaraciones gana o pierde un campo sin la otra.
+ */
 export const merkleStepSchema = z.strictObject({
   sibling: z.string(),
   position: z.enum(["left", "right"])
 });
+const _merkleStepSchemaMatchesInterface: Equal<z.infer<typeof merkleStepSchema>, MerkleStep> = true;
+void _merkleStepSchemaMatchesInterface;
 
 /**
  * El proof object de `GET /evidence/:bundleId/proof/:fileHash` (M3 §2 —

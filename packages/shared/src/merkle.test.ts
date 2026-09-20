@@ -81,3 +81,33 @@ describe("merkleProof", () => {
     expect(merkleProof([hoja(1)], hoja(1), sha256Pair)).toEqual([]);
   });
 });
+
+// SPEC-404 (P-05) — `merkleRootFromProof` es literalmente "lo que corre el
+// verificador" (su propio docstring), y era la única de las cuatro funciones
+// sin una sola aserción: aceptaba una hoja o un hermano con cualquier forma.
+describe("merkleRootFromProof — valida lo que verifica", () => {
+  it("rechaza una hoja que no sea SHA-256 en hex", () => {
+    expect(() => merkleRootFromProof("no-es-un-hash", [], sha256Pair)).toThrow(/SHA-256/);
+  });
+
+  it("rechaza un hermano del proof que no sea SHA-256 en hex", () => {
+    expect(() =>
+      merkleRootFromProof(hoja(1), [{ sibling: "no-es-un-hash", position: "right" }], sha256Pair)
+    ).toThrow(/SHA-256/);
+  });
+
+  it("con proof vacío devuelve la hoja — sigue siendo el caso de una sola hoja", () => {
+    expect(merkleRootFromProof(hoja(1), [], sha256Pair)).toBe(hoja(1));
+  });
+
+  it("el root de un bundle de 5 hojas es idéntico al de antes de esta spec", () => {
+    // Ancla el valor: cualquier cambio a la construcción del árbol lo mueve, y
+    // eso invalidaría los 180 eventos ya anclados contra la construcción de hoy.
+    // Valor calculado con la implementación previa a SPEC-404, sin tocar la
+    // función — esta spec no cambia el árbol (Alcance / NO-alcance).
+    const hojas = [hoja(1), hoja(2), hoja(3), hoja(4), hoja(5)];
+    expect(merkleRoot(hojas, sha256Pair)).toBe(
+      "6501d4a0ed0060efc9f9370fe3738155fcff62c0f47b78d5ae2ac919ba53cdac"
+    );
+  });
+});

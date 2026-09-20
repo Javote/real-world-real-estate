@@ -74,13 +74,23 @@ export function refToHex(id: string): string {
   return hex;
 }
 
-/** La vuelta, para verificar: de hex al id legible. */
+/**
+ * La vuelta, para verificar: de hex al id legible. Es lo que corre el
+ * verificador (SPEC-404, P-05) — a diferencia de `refToHex`, que produce con
+ * datos propios, esto recibe datos de afuera y tiene que rechazar lo que
+ * `refToHex` no pudo haber producido, no devolver basura en silencio.
+ */
 export function hexToRef(hex: string): string {
+  if (!/^([0-9a-f]{2})+$/.test(hex) || hex.length > MAX_REF_BYTES * 2) {
+    throw new Error(
+      `hexToRef espera pares hex minúscula, de a lo sumo ${MAX_REF_BYTES} bytes, y llegó: ${hex}`
+    );
+  }
   let ref = "";
   for (let i = 0; i < hex.length; i += 2) {
     ref += String.fromCharCode(Number.parseInt(hex.slice(i, i + 2), 16));
   }
-  return ref;
+  return refSchema.parse(ref);
 }
 
 /** La fila de `Stage` que hace falta para producir el datum. */

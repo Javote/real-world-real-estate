@@ -70,6 +70,11 @@ export function merkleRoot(leaves: readonly string[], hashPair: PairHasher): str
  * Cada paso dice con qué hermano combinar y de qué lado va, porque el orden
  * importa: `hash(A+B)` no es `hash(B+A)`.
  */
+// `MerkleStep` se declara acá y no en `documents.ts`: `merkleStepSchema`
+// (SPEC-404, P-06) deriva su tipo de este, así que las dos no pueden divergir.
+// El import allá es `import type`, así que no le mete Zod a este archivo, que
+// se queda sin dependencias — sigue siendo lo que la firma de una función pura
+// pide.
 export interface MerkleStep {
   sibling: string;
   position: "left" | "right";
@@ -116,12 +121,20 @@ export function merkleProof(
   return camino;
 }
 
-/** Rehace la raíz desde una hoja y su camino. Es lo que corre el verificador. */
+/**
+ * Rehace la raíz desde una hoja y su camino. Es lo que corre el verificador
+ * (SPEC-404, P-05) — la única de las cuatro que no validaba nada, y la que
+ * más lejos de nuestro control llega: valida la hoja y cada hermano igual que
+ * `merkleRoot`/`merkleProof`, en vez de devolver un hash sobre basura.
+ */
 export function merkleRootFromProof(
   leaf: string,
   proof: readonly MerkleStep[],
   hashPair: PairHasher
 ): string {
+  assertLeaf(leaf);
+  for (const paso of proof) assertLeaf(paso.sibling);
+
   return proof.reduce(
     (acc, paso) =>
       paso.position === "right" ? hashPair(acc, paso.sibling) : hashPair(paso.sibling, acc),
