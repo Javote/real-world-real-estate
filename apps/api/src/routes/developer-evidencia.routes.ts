@@ -6,11 +6,13 @@ import {
   stageEvidenceUploadSchema
 } from "@plataforma/shared";
 import { type Request, Router } from "express";
+import type { z } from "zod";
 import { createId } from "../db/id";
 import { anchorCommitmentEvent } from "../domain/anchoring";
 import { notifyUnitInvestors } from "../domain/notify";
 import { crearBundle, transitionStage } from "../domain/stage-transition";
 import { db } from "../lib/db";
+import { call, ORPCError, os } from "../lib/orpc";
 import { storage } from "../lib/storage";
 import { uploadSingleEvidence } from "../lib/upload";
 import { authenticate, authorize } from "../middlewares/auth";
@@ -27,6 +29,36 @@ import { EVIDENCE_SAFE_COLUMNS } from "./_shared";
 // success with TXID/Merkle root in the same response"*— porque es lo que
 // alimenta el `AnchoringSuccessModal`, la única superficie de prueba que se
 // abre sola (M2-D4 §6.3).
+//
+// **SPEC-212 — investigación "Multer + `call()`" (2026-09-20), adoptada en
+// alcance acotado.** Esta sigue siendo la única ruta de §D que no migra a
+// `OpenAPIHandler` — la razón no cambió: bufferea el multipart entero en
+// memoria sin límite configurable (ver `CLAUDE.md` de este subárbol, §Trampas
+// verificadas). Lo que sí cambia es SOLO el paso de validación de los campos
+// de texto: `stageEvidenceUploadSchema.safeParse(req.body)` se reemplazó por
+// `call(validarCamposDeTexto, req.body)`, que corre el MISMO schema a través
+// del `.input()` de un procedimiento oRPC. El resultado, verificado con un
+// smoke test: el 400 ahora tiene el mismo shape (`ORPCError.toJSON()`,
+// `{code, status, data: {issues}}`) que las otras 45 rutas de §A-D, en vez de
+// `error.flatten()` — que es lo que hoy las 45 devuelven y esta única ruta no
+// devolvía. **A propósito no se llevó el resto del handler adentro de un
+// procedimiento oRPC** (storage, bundle, anclaje, notificaciones, audit log,
+// transición de stage): es lógica de dominio con side effects que ya
+// funciona y no es lo que esta investigación puso en duda — meterla adentro
+// del `.handler()` de un procedimiento hubiera sido un cambio mucho más
+// grande que "unificar el shape del 400", sin necesidad. Por eso
+// `borrarHuerfano()` y todo lo que sigue después de la validación no se tocó.
+// Sin `.output()`: el valor que devuelve el `.handler()` YA es la salida
+// transformada de `stageEvidenceUploadSchema` (`authoritative` a `boolean`,
+// `issuingAuthority` a `string | null`) — volver a pasarla por el mismo
+// schema como output typa contra su forma de ENTRADA (pre-transform, donde
+// `authoritative` todavía es `string`) y no compila. No hace falta: nadie
+// más consume el output de este procedimiento por HTTP, es un passthrough
+// de validación en proceso.
+const validarCamposDeTexto = os
+  .route({ method: "POST", path: "/projects/{id}/stages/{stageId}/evidence" })
+  .input(stageEvidenceUploadSchema)
+  .handler(({ input }) => input);
 
 const router = Router();
 
@@ -64,7 +96,7 @@ router.post(
   (req, res, next) => {
     uploadSingleEvidence(req, res, (err) => (err ? next(err) : next()));
   },
-  async (req: Request<{ id: string; stageId: string }>, res) => {
+  async (req: Request<{ id: string; stageId: string }>, res, next) => {
     const { id: projectId, stageId } = req.params;
 
     if (!req.file) return res.status(400).json({ message: "File is required" });
@@ -73,10 +105,26 @@ router.post(
       if (req.file && fs.existsSync(req.file.path)) fs.unlinkSync(req.file.path);
     };
 
-    const parsed = stageEvidenceUploadSchema.safeParse(req.body);
-    if (!parsed.success) {
+    // `call()` corre `stageEvidenceUploadSchema` a través de `.input()` — el
+    // MISMO schema que antes validaba con `safeParse`, ahora vía oRPC para
+    // que el 400 tenga el shape unificado de las otras 45 rutas (ver el
+    // comentario grande de arriba). Un `ORPCError` es un rechazo CLASIFICADO
+    // (acá, `BAD_REQUEST` de `.input()`) — se responde directo con su propio
+    // `status`/`toJSON()`, igual que hace `OpenAPIHandler.encodeError` para
+    // las otras 45 rutas; nunca pasa por `errorHandler`, así que tampoco por
+    // Sentry — mismo criterio que un `.errors()` con nombre en cualquier
+    // procedimiento oRPC (una validación fallida no es un fallo del
+    // servidor). Cualquier OTRA excepción (no `ORPCError`) sigue yendo a
+    // `next(err)` — esta ruta nunca dejó de ser Express llano, así que un
+    // error genuinamente no clasificado sigue llegando a `errorHandler`/
+    // Sentry como siempre, a diferencia de `OpenAPIHandler.handle()`.
+    let parsed: z.infer<typeof stageEvidenceUploadSchema>;
+    try {
+      parsed = await call(validarCamposDeTexto, req.body);
+    } catch (err) {
       borrarHuerfano();
-      return res.status(400).json(parsed.error.flatten());
+      if (err instanceof ORPCError) return res.status(err.status).json(err.toJSON());
+      return next(err);
     }
 
     const stage = await db
@@ -133,10 +181,10 @@ router.post(
         projectId,
         stageId,
         uploadedById: req.user!.id,
-        evidenceType: parsed.data.evidenceType,
-        category: parsed.data.category,
-        authoritative: parsed.data.authoritative ?? false,
-        issuingAuthority: parsed.data.issuingAuthority,
+        evidenceType: parsed.evidenceType,
+        category: parsed.category,
+        authoritative: parsed.authoritative ?? false,
+        issuingAuthority: parsed.issuingAuthority,
         originalFilename: req.file.originalname,
         storedFilename: req.file.filename,
         mimeType: req.file.mimetype,

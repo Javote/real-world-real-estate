@@ -129,16 +129,29 @@ const REQUEST_SCHEMAS: Record<string, SchemaEntry> = {
   // schema no valida — valida los demás campos del form, que Express entrega
   // como string. Documentado en `bodyContentType`, no en el schema.
   //
-  // **Se queda afuera de oRPC a propósito, la única de las 20 rutas de §D
-  // que no migró.** `OpenAPIHandler` parsea `multipart/form-data` con el
-  // `Response(stream).formData()` nativo de Node, que bufferea el archivo
-  // ENTERO en memoria sin ningún límite configurable — a diferencia de
-  // Multer, que hoy aplica `limits.fileSize` y `fileFilter` en streaming
-  // (regla 10). Migrar esta ruta empeoraría justo la deuda de RAM que
-  // `CLAUDE.md` raíz ya declara (`MAX_FILE_SIZE_MB` pesándole al proceso).
-  // Probado antes de descartarla: `test/zzz-multipart-smoke.test.ts` (borrado
-  // tras la prueba) confirmó que oRPC SÍ puede parsear un `File` + campos de
-  // texto — la razón de no usarlo acá es de recursos, no de capacidad.
+  // **Se queda afuera de `OpenAPIHandler` a propósito, la única de las 20
+  // rutas de §D que no migra así.** `OpenAPIHandler` parsea
+  // `multipart/form-data` con el `Response(stream).formData()` nativo de
+  // Node, que bufferea el archivo ENTERO en memoria sin ningún límite
+  // configurable — a diferencia de Multer, que hoy aplica `limits.fileSize` y
+  // `fileFilter` en streaming (regla 10). Migrar el PARSEO del multipart a
+  // `OpenAPIHandler` empeoraría justo la deuda de RAM que `CLAUDE.md` raíz ya
+  // declara (`MAX_FILE_SIZE_MB` pesándole al proceso). Probado antes de
+  // descartarlo: `test/zzz-multipart-smoke.test.ts` (borrado tras la prueba)
+  // confirmó que oRPC SÍ puede parsear un `File` + campos de texto — la razón
+  // de no usarlo acá es de recursos, no de capacidad.
+  //
+  // **Lo que SÍ migró (2026-09-20, investigación "Multer + `call()`" de
+  // SPEC-212): el paso de validación de los campos de texto.** Multer sigue
+  // parseando el multipart, pero `stageEvidenceUploadSchema.safeParse` se
+  // reemplazó por `call(validarCamposDeTexto, req.body)` en
+  // `developer-evidencia.routes.ts` — mismo schema, corrido a través del
+  // `.input()` de un procedimiento oRPC invocado EN PROCESO (nunca por HTTP,
+  // `OpenAPIHandler` sigue sin tocar esta ruta). El 400 resultante ya no es
+  // `error.flatten()`: tiene el mismo shape (`{code, status, data: {issues}}`)
+  // que las otras 45 rutas de §A-D. La entrada de acá no cambia porque el
+  // contrato HTTP visible (path, `multipart/form-data`, campos) es idéntico —
+  // solo cambió CÓMO se valida adentro, no qué se documenta afuera.
   "POST /api/v1/developer/projects/:id/stages/:stageId/evidence": {
     body: stageEvidenceUploadSchema,
     bodyContentType: "multipart/form-data"

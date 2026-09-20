@@ -154,6 +154,25 @@ describe("POST /developer/projects/:id/stages/:stageId/evidence — subida de ev
     expect(archivosEnDisco()).toBe(antes);
   });
 
+  it("SPEC-212: el 400 tiene el shape unificado de oRPC, no error.flatten()", async () => {
+    // La ruta migró su validación de texto a `call()` (SPEC-212, investigación
+    // "Multer + call()") justo para que este shape deje de ser el único
+    // distinto de las otras 45 rutas de §A-D — ver el comentario grande de
+    // `developer-evidencia.routes.ts`.
+    const res = await subir(
+      miembro,
+      stageId,
+      { evidenceType: "document" },
+      { buf: PDF, nombre: "sin-categoria.pdf", tipo: "application/pdf" }
+    );
+
+    expect(res.status).toBe(400);
+    expect(res.body).not.toHaveProperty("formErrors");
+    expect(res.body).not.toHaveProperty("fieldErrors");
+    expect(res.body.code).toBe("BAD_REQUEST");
+    expect(Array.isArray(res.body.data?.issues)).toBe(true);
+  });
+
   it("sin archivo devuelve 400", async () => {
     const res = await subir(miembro, stageId, { evidenceType: "document", category: "permiso" });
 

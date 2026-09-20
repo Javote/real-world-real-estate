@@ -219,9 +219,10 @@ sub-partes (`notary.routes.ts`, `certifier.routes.ts`, `investor.routes.ts`, `de
 `developer-comercial.routes.ts` + `capital.routes.ts`) y el punto único de construcción sin decidir
 todavía, y probablemente amerita su propia spec — no un parche silencioso adentro de esta.
 
-## Pendiente — investigar: Multer como fuente del multipart, oRPC solo para validar/documentar
+## Cerrado 2026-09-20 — Multer como fuente del multipart, oRPC solo para validar (alcance acotado)
 
-**También sin cerrar, pedido el mismo día.** La única de las 20 rutas de §D que no migró
+**También sin cerrar, pedido el mismo día — cerrado horas después, en alcance acotado respecto de
+lo que esta sección investigaba originalmente.** La única de las 20 rutas de §D que no migró
 (`POST /developer/projects/:id/stages/:stageId/evidence`, `developer-evidencia.routes.ts`) se quedó
 afuera porque `OpenAPIHandler.handle()` parsea el multipart él mismo con el `Response(stream).
 formData()` nativo de Node, sin límite de tamaño configurable — al revés de Multer, que hoy aplica
@@ -337,12 +338,50 @@ smoke tests descartables más, `test/zzz-shape-400-smoke.test.ts` y una reconfir
    más de lo que parecía cuando se escribió la pregunta original, porque dos de sus tres costos
    supuestos (divergencia de shape, patrón sin precedente) resultaron ser falsos o menores.
 
-**Si se retoma:** los dos smoke tests que probaron esto se borraron a propósito (política de esta
-spec) — hay que rehacerlos antes de escribir la migración real, no asumir que lo de arriba sigue
-siendo cierto sin volver a correrlo contra la versión de oRPC que esté instalada en ese momento.
-Si se decide migrar, conviene hacerlo junto con el interceptor de Sentry de la investigación
-anterior (§1) — la misma spec nueva puede cerrar las dos, ya que la ruta multipart se beneficia de
-ambas a la vez.
+**Implementado el 2026-09-20, en alcance MÁS ACOTADO que el diseño investigado arriba — y por qué.**
+El diseño de la sección "Investigado" de más arriba movía el `.handler()` entero (storage, bundle,
+anclaje, notificaciones, audit log, transición de stage) adentro del procedimiento oRPC. Eso es
+lógica de dominio con side effects que **ya funciona** y que ninguna de las tres preguntas de
+investigación puso en duda — llevarla adentro de un `.handler()` hubiera sido un refactor mucho más
+grande que lo que esta spec necesitaba cerrar. Lo que sí quedó mal, y es lo único que se tocó:
+
+- **`stageEvidenceUploadSchema.safeParse(req.body)` se reemplazó por `call(validarCamposDeTexto,
+  req.body)`** — un procedimiento oRPC de una sola línea (`.input(stageEvidenceUploadSchema)
+  .handler(({input}) => input)`) que valida el MISMO schema de siempre, ahora vía `.input()` de
+  oRPC. `call` se agregó a `src/lib/orpc.ts` (mismo patrón `resolution-mode: "require"` que el
+  resto del archivo).
+- **El 400 de un body inválido ya no es `error.flatten()`**: tiene el shape de `ORPCError.toJSON()`
+  (`{code, status, data: {issues}}`), el mismo que las otras 45 rutas de §A-D — cierra la
+  divergencia que la pregunta 2 de la investigación encontró. Se responde directo con
+  `res.status(err.status).json(err.toJSON())` cuando el error es un `ORPCError` — el mismo criterio
+  que `OpenAPIHandler.encodeError()` aplica en las otras 45: una validación fallida es un rechazo
+  CLASIFICADO, no un fallo del servidor, así que no pasa por `errorHandler`/Sentry.
+- **Cualquier excepción que NO sea un `ORPCError` sigue yendo a `next(err)`**, exactamente como
+  antes de este cambio — esta ruta nunca dejó de ser Express llano (nunca usó `OpenAPIHandler.
+  handle()`), así que nunca tuvo la trampa de la investigación anterior (§1): un error genuinamente
+  no clasificado en esta ruta siempre llegó a `errorHandler`/Sentry vía el manejo automático de
+  promesas rechazadas de Express 5, y eso no cambió.
+- **`borrarHuerfano()` sigue limpiando el archivo huérfano** en el nuevo `catch`, antes de responder
+  — mismo comportamiento que antes, verificado con el test existente ("un body inválido borra el
+  archivo que Multer ya había escrito").
+
+**Lo que NO se tocó, a propósito:** el resto del handler (`stage` lookup, `STAGE_ALREADY_COMPLETED`,
+`storage.put`, el insert de `Evidence`, `crearBundle`, `anchorCommitmentEvent`, las notificaciones,
+`writeAuditLog`, la transición `Pending → InProgress`) sigue siendo código Express/Kysely plano,
+sin ORPCError ni `call()` de por medio. La pregunta 1 de la investigación (documentación OpenAPI del
+campo del archivo) queda confirmada sin solución posible (ver arriba) — `REQUEST_SCHEMAS` en
+`generate-openapi.ts` conserva la misma entrada, sin cambios, porque el contrato HTTP visible no
+cambió en absoluto: mismo path, mismo `multipart/form-data`, misma forma de respuesta.
+
+**Test nuevo que fija el cierre:** `test/evidence-upload.test.ts` → *"SPEC-212: el 400 tiene el
+shape unificado de oRPC, no error.flatten()"* — confirma `res.body.code === "BAD_REQUEST"` y
+`Array.isArray(res.body.data.issues)`, y que `formErrors`/`fieldErrors` (el shape viejo) ya no
+están. Las 23 pruebas existentes de esa suite siguen en verde sin cambios, y `pnpm verify:all`
+completo (TS + Aiken) también.
+
+**Lo que queda genuinamente pendiente, y es la investigación §1 de arriba, no esta:** el interceptor
+de Sentry para las 45 rutas que sí usan `OpenAPIHandler.handle()`. Esta ruta nunca lo necesitó —
+nunca tuvo esa trampa — así que no hay nada que juntar acá.
 
 ## La mitad que está bien, y hay que no romper
 

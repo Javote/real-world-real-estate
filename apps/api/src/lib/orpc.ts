@@ -9,7 +9,7 @@ import type { OpenAPIGenerator as OpenAPIGeneratorType } from "@orpc/openapi" wi
 import type { OpenAPIHandler as OpenAPIHandlerType } from "@orpc/openapi/node" with {
   "resolution-mode": "require"
 };
-import type { ORPCError as ORPCErrorType, os as osType } from "@orpc/server" with {
+import type { call as callType, ORPCError as ORPCErrorType, os as osType } from "@orpc/server" with {
   "resolution-mode": "require"
 };
 // `@orpc/zod` a secas es para Zod v3 — su `ZodToJsonSchemaConverter` descarta
@@ -22,9 +22,13 @@ import type { ZodToJsonSchemaConverter as ZodToJsonSchemaConverterType } from "@
 
 const { OpenAPIGenerator } = require("@orpc/openapi") as { OpenAPIGenerator: typeof OpenAPIGeneratorType };
 const { OpenAPIHandler } = require("@orpc/openapi/node") as { OpenAPIHandler: typeof OpenAPIHandlerType };
-const { os, ORPCError } = require("@orpc/server") as { os: typeof osType; ORPCError: typeof ORPCErrorType };
+const { os, ORPCError, call } = require("@orpc/server") as {
+  os: typeof osType;
+  ORPCError: typeof ORPCErrorType;
+  call: typeof callType;
+};
 const { ZodToJsonSchemaConverter } = require("@orpc/zod/zod4") as {
   ZodToJsonSchemaConverter: typeof ZodToJsonSchemaConverterType;
 };
 
-export { OpenAPIGenerator, OpenAPIHandler, ORPCError, os, ZodToJsonSchemaConverter };
+export { call, OpenAPIGenerator, OpenAPIHandler, ORPCError, os, ZodToJsonSchemaConverter };
