@@ -74,15 +74,13 @@ lo mismo sin pasar por HTTP. Ver el detalle en `CLAUDE.md` raíz.
   envuelve el insert en un `.catch()` que lo llama. Un error que no es de restricción se re-lanza
   tal cual y sigue siendo el 500 genérico de oRPC — mismo resultado que antes de esta migración para
   cualquier fallo no clasificado, así que no hace falta capturar todo, solo lo que un test fija.
-  **Deuda declarada, no cerrada:** el problema es genérico a las cuatro sub-partes de SPEC-212, no
-  solo de la que lo encontró. Cualquier excepción no clasificada dentro de CUALQUIER handler oRPC
-  (`notary`, `certifier`, `investor` incluidos) se convierte en el 500 de oRPC en vez de llegar a
-  `errorHandler` — y por lo tanto tampoco a Sentry, que depende de
-  `Sentry.setupExpressErrorHandler`/`next(err)`. No tuvo consecuencia visible en las tres primeras
-  porque ninguna de sus rutas tiene un test que ejercite esa restricción por HTTP. Una solución
-  genérica (que `OpenAPIHandler` delegue a `errorHandler` lo que no reconoce, o que Sentry vea el
-  error de otra forma) es trabajo nuevo — candidata a spec propia el día que un 500 real de una ruta
-  oRPC necesite aparecer en el monitoreo.
+  **Cerrado el mismo día, del lado de observabilidad — `lib/orpc.ts` envuelve el export de
+  `OpenAPIHandler` con un interceptor que reporta a Sentry cualquier excepción que no sea un
+  `ORPCError` declarado (`e.defined`).** Las 45 rutas no cambiaron ni una línea — el interceptor se
+  inyecta una sola vez, en la construcción, no por call site (ver SPEC-212 §"Implementado 2026-09-20
+  — el interceptor de Sentry"). Lo que sigue siendo trabajo por ruta, y no lo reemplaza el
+  interceptor genérico: el mapeo a un código de negocio (409 `RESOURCE_ALREADY_EXISTS`, etc.), que
+  sigue siendo `relanzarRestriccionComoOrpc`.
   **La lección:** un framework que responde HTTP por su cuenta (en vez de delegar a `next()`) rompe
   en silencio cualquier invariante que dependiera de la cadena de middlewares de error — y esto no
   se ve leyendo el código del handler, solo probándolo con una excepción real.

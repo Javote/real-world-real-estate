@@ -68,16 +68,20 @@
 > restricción declara `.errors({RESOURCE_ALREADY_EXISTS, RELATED_RESOURCE_NOT_FOUND})` y envuelve
 > el insert en un `.catch()` que reusa el MISMO mapeo de `errorHandler.ts` — nunca una copia.
 >
-> **Deuda declarada, no cerrada:** el hallazgo de arriba es genérico a las cuatro sub-partes, no
-> específico de §D — cualquier excepción no clasificada dentro de un handler oRPC de `notary`,
-> `certifier` o `investor` también se convierte en el 500 genérico de oRPC en vez de pasar por
+> **Deuda declarada, cerrada del lado de observabilidad el mismo día** (ver "Implementado
+> 2026-09-20 — el interceptor de Sentry", más abajo): el hallazgo de arriba es genérico a las cuatro
+> sub-partes, no específico de §D — cualquier excepción no clasificada dentro de un handler oRPC de
+> `notary`, `certifier` o `investor` también se convertía en el 500 genérico de oRPC sin pasar por
 > `errorHandler`/Sentry (`Sentry.setupExpressErrorHandler` depende de `next(err)`, que oRPC nunca
-> llama). No tenía consecuencia observable en las tres primeras sub-partes porque ninguna de sus
-> rutas tiene un test que ejercite esa restricción por HTTP; acá sí.
+> llama). El interceptor de `lib/orpc.ts` cierra esa parte —ahora SÍ llega a Sentry— para las cuatro
+> sub-partes a la vez, sin tocar ninguna de las 45 rutas. Lo que sigue sin cerrar, y no es lo mismo:
+> el mapeo caso por caso a un código de negocio (`relanzarRestriccionComoOrpc`) sigue siendo trabajo
+> por ruta, no algo que el interceptor genérico pueda resolver.
 >
-> **Dos investigaciones quedaron pendientes, pedidas por el dueño el 2026-09-20 — ver las dos
-> secciones "Pendiente" que siguen, antes de "La mitad que está bien":** (1) si `OpenAPIHandler`
-> tiene un gancho (`interceptors`) para que un error no clasificado sí llegue a
+> **Dos investigaciones quedaron pendientes, pedidas por el dueño el 2026-09-20 — la primera ya
+> está implementada (ver "Implementado 2026-09-20 — el interceptor de Sentry", después de la
+> sección de investigación), la segunda sigue cerrada en el alcance acotado de más abajo:** (1) si
+> `OpenAPIHandler` tiene un gancho (`interceptors`) para que un error no clasificado sí llegue a
 > `errorHandler`/Sentry, y (2) si `Multer + call()` (probado con un smoke test descartable, `call()`
 > SÍ deja que el error llegue a `next(err)`) es una vía real para migrar la única ruta multipart que
 > quedó afuera.
@@ -278,6 +282,48 @@ lugar del interceptor ya resueltos, el diseño técnico está completo — pero 
 trabajo nuevo, no de esta ronda: toca `lib/orpc.ts` y (para el filtro de `e.defined`) probablemente
 `errorHandler.ts`/`lib/error-status.ts` si se quiere reusar `statusDeError`, y probablemente amerita
 su propia spec — no un parche silencioso adentro de esta.
+
+## Implementado 2026-09-20 — el interceptor de Sentry, cerrando la investigación de arriba
+
+**Se implementó en el mismo lugar que el diseño ya había decidido: `lib/orpc.ts`, envolviendo el
+export de `OpenAPIHandler`.** No hizo falta abrir una spec separada — el diseño ya estaba completo
+(las 5 preguntas, el lugar, lo que el interceptor SÍ y NO hace) y lo que faltaba era código, no
+más decisiones.
+
+- **`OpenAPIHandler` pasó a ser una subclase** de `OpenAPIHandlerBase` (el `OpenAPIHandler` real de
+  `@orpc/openapi/node`, renombrado al importar), que inyecta un interceptor en su propio
+  constructor antes de llamar a `super()`. Las 45 rutas no cambiaron ni una línea: siguen
+  escribiendo `new OpenAPIHandler({ xProcedure })` e importando de `../lib/orpc`, exactamente igual.
+- **El interceptor (`interceptorDeSentry`) hace exactamente lo que el diseño preveía y nada más:**
+  `try { return await opts.next() } catch (e) { if (!(e instanceof ORPCError && e.defined)) {
+  console.error(...); Sentry.captureException(e); } throw e; }`. No mapea ningún código de negocio
+  — `relanzarRestriccionComoOrpc` sigue existiendo para eso, sin cambios, tal como el diseño ya
+  anticipaba ("el interceptor genérico resuelve SOLO la parte de observabilidad").
+- **El filtro es `e.defined`, no la clase del error.** Un `ORPCError` lanzado por `.errors({...})`
+  (`errors.NOMBRE(...)`) tiene `defined: true` — verificado con `node -e` contra `@orpc/server`
+  real antes de escribir el filtro, no asumido de la firma del tipo. Un `ORPCError("NOT_FOUND", ...)`
+  liso (sin pasar por `.errors()`) tiene `defined: false` y SÍ se reporta — mismo criterio que
+  `statusDeError` aplica del lado de Express: lo que el procedimiento declaró a propósito no es un
+  fallo, lo que no declaró sí lo es.
+- **No hubo dependencia circular** (la tercera pregunta que quedaba por confirmar, no solo
+  suponer): `lib/orpc.ts` importa `{ Sentry } from "../instrumentation"`, el mismo patrón que ya usa
+  `app.ts`. `instrumentation.ts` no importa nada de `lib/orpc.ts` ni de ningún archivo de rutas —
+  solo `dotenv`, `@sentry/node` y, tardío, los paquetes de OTel — así que no hay ciclo. Confirmado
+  con `pnpm verify` completo en verde, no solo leyendo los imports.
+
+**Test nuevo:** `test/orpc-sentry-interceptor.test.ts`, con un router standalone (no `app.ts`, para
+no depender de `authorize` ni de ninguna ruta real) que monta dos procedimientos mínimos a mano —
+uno que tira un `Error` sin clasificar, otro que tira un `ORPCError` declarado — y mockea
+`@sentry/node` completo (`vi.mock`, con `vi.hoisted` porque el mock se referencia dentro del factory
+y el factory se hoistea). Tres casos: un error sin clasificar se reporta (1 llamada) y la respuesta
+sigue siendo el 500 genérico de oRPC sin cambios; un `ORPCError` declarado NO se reporta y responde
+su 409 normal; un `ORPCError` sin declarar (`defined: false` aunque sea la misma clase) SÍ se
+reporta — el control de que el filtro mira `defined`, no `instanceof ORPCError`.
+
+**Lo que sigue igual que antes de esto, a propósito:** ninguna de las 45 rutas cambió su
+comportamiento HTTP — mismo status, mismo body, mismos tests existentes en verde (`pnpm
+--filter @plataforma/api test`, 452 pasan + 3 skipped de antes). Lo único nuevo es que un 500 no
+clasificado ahora deja rastro en Sentry y en el log del proceso, donde antes no dejaba ninguno.
 
 ## Cerrado 2026-09-20 — Multer como fuente del multipart, oRPC solo para validar (alcance acotado)
 
