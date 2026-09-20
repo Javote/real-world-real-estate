@@ -67,6 +67,15 @@ describe("openThread contra el validador real", () => {
     expect(prueba?.datum.stageRef).toBe(buildStageDatum(fuente).stageRef);
   });
 
+  // SPEC-409 — sin Blockfrost configurado (el caso del `Emulator`, de este
+  // `describe` entero), `verify()` no puede afirmar el timestamp del bloque:
+  // antes devolvía el reloj del proceso, que no es el del bloque.
+  it("sin Blockfrost configurado, blockTimestamp es null — no el reloj del proceso", async () => {
+    const recibo = await abrirHilo();
+    const prueba = await adapter.verify(recibo.txid);
+    expect(prueba?.blockTimestamp).toBeNull();
+  });
+
   it("el script rechaza nacer fuera de Pending", async () => {
     // `mint_rejects_starting_outside_pending`, pero ejecutado de verdad: el
     // error sale de la evaluación del script, no de una regla nuestra.

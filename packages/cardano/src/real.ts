@@ -672,9 +672,10 @@ export class LucidAnchorAdapter implements AnchorPort {
     return {
       txid,
       outputRef: `${vivo.txHash}#${vivo.outputIndex}`,
-      // El timestamp autoritativo es el del bloque; leerlo necesita el indexer
-      // de la rebanada C. Hasta entonces, el momento de la confirmación.
-      blockTimestamp: this.now(),
+      // El timestamp del bloque: `confirmedAt` ya sabe leerlo (SPEC-409). Sin
+      // Blockfrost configurado (`Emulator`, devnet) devuelve `null` — honesto,
+      // no roto: sin fuente no se afirma un momento que no se puede sostener.
+      blockTimestamp: await this.confirmedAt(txid),
       datum: decodeStageDatum(vivo.datum)
     };
   }

@@ -84,3 +84,27 @@ timestamp real **de su cadena**. No pasa a `null` ahí.
 `AnchorProof.blockTimestamp` pasa a nullable: hay que revisar quién lo lee en `apps/api` antes de dar
 la spec por cerrada. Si nadie lo usa —posible, porque la promoción a `Confirmed` va por `confirmedAt`
 y no por `verify`—, el cambio es de una línea y el tipo solo deja de mentir.
+
+## Cerrada — 2026-09-20
+
+**No era una línea:** `stage-transition.ts:366` sí lee `proof.blockTimestamp` (la confirmación de
+`transitionStage`, distinta de la promoción por `confirmedAt`/reconciliación). Con el campo
+nullable, `new Date(proof.blockTimestamp)` habría hecho `new Date(null)` → `1970-01-01T00:00:00Z`
+cuando no hay Blockfrost — la misma mentira que esta spec vino a sacar, movida un archivo más allá.
+Se cerró con un spread condicional: sin timestamp, el evento queda `Confirmed` igual, pero el campo
+no se escribe (se completa la próxima vez que `verify`/`confirmedAt` sí tengan de dónde leerlo).
+
+`threadProof` (`real.ts`) delega en `this.confirmedAt(txid)` en vez de `this.now()`, y se borró el
+comentario que ya mentía ("hasta entonces"). `AnchorProof.blockTimestamp` es `number | null` en
+`port.ts`. El simulador no cambió: su `bloques`/store nunca da `null` para un txid que produjo, así
+que sigue siendo autoritativo.
+
+**Verificado en rojo antes del fix:** el nuevo test de `real.test.ts` (`blockTimestamp` contra el
+`Emulator`, que no configura Blockfrost) y el de `stage-transitions.test.ts` (proof mockeado con
+`blockTimestamp: null`) se corrieron contra el código viejo — el segundo falló con
+`1970-01-01T00:00:00.000Z` en vez de `null`, confirmando la mentira exacta que describe esta spec —
+y en verde después del fix.
+
+`pnpm --filter @plataforma/cardano test` (79, 1 nuevo), `pnpm --filter @plataforma/api test` (428, 1
+nuevo) y `pnpm verify` completo, verdes. No se tocó la doble consulta a Blockfrost de `verify()`
+(NO-alcance): se mide antes de optimizar.

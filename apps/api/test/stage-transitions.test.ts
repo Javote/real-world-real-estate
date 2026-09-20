@@ -820,3 +820,42 @@ describe("eventIndex es el log del stage, no el hilo", () => {
     expect(await cabezaDelHilo(stage.id)).toBe(cabezaDelMint);
   });
 });
+
+// SPEC-409 — `AnchorProof.blockTimestamp` puede ser `null` (sin Blockfrost,
+// el caso del `Emulator`/devnet). `new Date(null)` daría 1970-01-01: una
+// mentira con más pasos que dejar el campo sin escribir.
+describe("confirmación · blockTimestamp puede llegar null en el proof", () => {
+  it("el evento queda Confirmed igual, sin escribir un blockTimestamp inventado", async () => {
+    const stage = await crearStageConHilo();
+    const verify = vi.spyOn(anchorPort(), "verify").mockResolvedValueOnce({
+      txid: "no-importa",
+      outputRef: `${"a".repeat(64)}#0`,
+      blockTimestamp: null,
+      datum: {
+        projectRef: "00",
+        stageRef: "00",
+        sequenceOrder: 1,
+        validationCritical: false,
+        state: "InProgress",
+        evidenceRoot: "",
+        completedAt: 0
+      }
+    });
+
+    const res = await patchStateAdmin(stage.id, "InProgress");
+    expect(res.status).toBe(200);
+
+    const evento = await db
+      .selectFrom("OnChainEvent")
+      .selectAll()
+      .where("stageId", "=", stage.id)
+      .orderBy("eventIndex", "desc")
+      .limit(1)
+      .executeTakeFirstOrThrow();
+
+    expect(evento.status).toBe("Confirmed");
+    expect(evento.blockTimestamp).toBeNull();
+
+    verify.mockRestore();
+  });
+});

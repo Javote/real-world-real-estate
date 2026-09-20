@@ -61,8 +61,14 @@ export interface AnchorReceipt {
 export interface AnchorProof {
   txid: string;
   outputRef: OutputRef;
-  /** POSIX ms del bloque. En el simulador, el momento del anclaje. */
-  blockTimestamp: number;
+  /**
+   * POSIX ms del bloque, o `null` sin fuente para saberlo (SPEC-409) — contra
+   * el `Emulator`/devnet, sin Blockfrost configurado. **Nunca el reloj del
+   * proceso**: eso es el momento en que alguien preguntó, no el del bloque.
+   * En el simulador, el momento de inclusión en su propia cadena, que para
+   * él es autoritativo y por eso nunca es `null`.
+   */
+  blockTimestamp: number | null;
   datum: StageDatum;
 }
 

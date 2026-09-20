@@ -359,11 +359,18 @@ async function anchorEvent(
   try {
     const proof = await anchorPort().verify(receipt.txid);
     if (proof) {
+      // `blockTimestamp` puede ser `null` (SPEC-409): sin Blockfrost
+      // configurado (`Emulator`, devnet) no hay fuente para el momento del
+      // bloque. `new Date(null)` daría 1970-01-01 — mentir con más pasos que
+      // no escribirlo. La fila queda `Confirmed` igual; el campo se completa
+      // la próxima vez que `verify`/`confirmedAt` sí tengan de dónde leerlo.
       evento = await db
         .updateTable("OnChainEvent")
         .set({
           status: "Confirmed",
-          blockTimestamp: new Date(proof.blockTimestamp),
+          ...(proof.blockTimestamp !== null
+            ? { blockTimestamp: new Date(proof.blockTimestamp) }
+            : {}),
           updatedAt: new Date()
         })
         .where("id", "=", event.id)
