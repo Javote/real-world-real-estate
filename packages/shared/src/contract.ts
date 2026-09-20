@@ -12,6 +12,15 @@ export const releasePaymentSchema = z.strictObject({
 export type ReleasePaymentInput = z.infer<typeof releasePaymentSchema>;
 
 /**
+ * SPEC-205 (B-07) — la clave, no la copia (regla 15): la suma de los
+ * `PaymentAttestation` de un contrato nunca puede superar su
+ * `totalMinorUnits`. Vive acá, no como literal en la ruta, para que el día
+ * que este endpoint tenga un caller real el front la traduzca en vez de
+ * reinventarla.
+ */
+export const RELEASE_EXCEEDS_CONTRACT = "RELEASE_EXCEEDS_CONTRACT";
+
+/**
  * Fila 40-41 — `GET /developer/projects/:id/contracts`. `investorEmail` se
  * usa para calzar el anclaje correcto (ver el comentario de la ruta) y se
  * descarta antes de responder: no está acá porque el handler nunca lo manda.

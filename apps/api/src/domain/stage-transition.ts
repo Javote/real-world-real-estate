@@ -463,12 +463,32 @@ export async function transitionStage(input: {
     data.certifiedById = input.actorUserId;
   }
 
+  // SPEC-205 (B-05) — `canTransition` se preguntó contra `existing.state`,
+  // leído antes de esta escritura; sin condicionar el UPDATE a que ese
+  // estado siga vigente, dos `PATCH .../state` concurrentes leen los dos el
+  // mismo estado de partida, pasan los dos la tabla de transiciones, y
+  // escriben los dos — el índice único `(stageId, eventIndex)` de más abajo
+  // salva el `OnChainEvent` duplicado, pero el `UPDATE` de `Stage` ya corrió
+  // dos veces. Mismo patrón que `reconcile.ts` usa contra la misma carrera
+  // (`.where("status", "=", "Pending")`): condicionar contra el valor que se
+  // acaba de leer, no solo contra la PK.
   const stage = await db
     .updateTable("Stage")
     .set(data)
     .where("id", "=", input.stageId)
+    .where("state", "=", existing.state)
     .returningAll()
-    .executeTakeFirstOrThrow();
+    .executeTakeFirst();
+
+  if (!stage) {
+    return {
+      ok: false,
+      status: 409,
+      code: STAGE_TRANSITION_ERRORS.invalid,
+      from: existing.state,
+      to: input.to
+    };
+  }
 
   if (input.to === "Completed") {
     await crearBundle(stage, input.actorUserId);

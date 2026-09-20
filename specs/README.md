@@ -173,7 +173,7 @@ mismo— sigue siendo `SPEC-305`, decisión de mainnet.
 | [`SPEC-202`](SPEC-202-un-dossier-por-unidad.md) | Una unidad, un dossier: el índice único que falta | B-02 | **cerrada 2026-09-18** 🟡 |
 | [`SPEC-203`](SPEC-203-migraciones-atomicas.md) | Una migración que se corta a la mitad tiene que poder volver | B-03 | **cerrada 2026-09-18** 🟡 |
 | [`SPEC-204`](SPEC-204-openapi-url-y-descripcion.md) | El OpenAPI publicado apunta a una URL que no existe | B-04 | **cerrada 2026-09-18** |
-| [`SPEC-205`](SPEC-205-dos-invariantes-que-hoy-sostiene-el-cliente.md) | Dos invariantes que hoy sostiene la buena fe del cliente | B-05·07 | abierta |
+| [`SPEC-205`](SPEC-205-dos-invariantes-que-hoy-sostiene-el-cliente.md) | Dos invariantes que hoy sostiene la buena fe del cliente | B-05·07 | **cerrada 2026-09-19** — las dos carreras reproducidas en rojo antes del fix |
 | [`SPEC-206`](SPEC-206-un-solo-anclaje-por-commitment.md) | El anclaje por commitment está escrito dos veces, y ya divergieron | B-08 | **cerrada 2026-09-18** 🟡 |
 | [`SPEC-207`](SPEC-207-audit-log-tipado.md) | El audit log se escribe con strings sueltos y se filtra con un mapeo cerrado | B-09 | **cerrada 2026-09-18** |
 | [`SPEC-208`](SPEC-208-tipos-que-dicen-la-verdad.md) | Que los tipos de `apps/api` digan la verdad | B-12·10 | abierta |

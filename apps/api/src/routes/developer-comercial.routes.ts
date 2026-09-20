@@ -8,6 +8,7 @@ import {
   paymentAttestationSchema,
   paymentReleaseResultSchema,
   positiveIntParamSchema,
+  RELEASE_EXCEEDS_CONTRACT,
   releasePaymentSchema,
   unitSchema,
   updateUnitSchema
@@ -35,6 +36,16 @@ import { writeAuditLog } from "../utils/audit";
 //
 // **Nada de esto mueve valor** (D-021): "liberar" significa anclar el evento de
 // liberación, no ejecutar un pago.
+
+class ReleaseExceedsContractError extends Error {
+  constructor(
+    readonly totalMinorUnits: number,
+    readonly releasedMinorUnits: number
+  ) {
+    super("Release would exceed the contract total");
+    this.name = "ReleaseExceedsContractError";
+  }
+}
 
 const router = Router();
 
@@ -381,6 +392,7 @@ router.post(
         "Contract.id as id",
         "Contract.unitId as unitId",
         "Contract.currency as currency",
+        "Contract.totalMinorUnits as totalMinorUnits",
         "Unit.projectId as projectId"
       ])
       .where("Contract.id", "=", req.params.id)
@@ -408,30 +420,80 @@ router.post(
       });
     }
 
-    // Idempotencia (regla 8): el índice único (contrato, etapa) impide liberar
-    // dos veces la misma.
-    const yaLiberada = await db
-      .selectFrom("PaymentAttestation")
-      .selectAll()
-      .where("contractId", "=", contrato.id)
-      .where("stageNumber", "=", stageNumber)
-      .executeTakeFirst();
-
-    if (yaLiberada) return res.status(200).json(paymentAttestationSchema.parse(yaLiberada));
-
     const ahora = new Date();
-    const release = await db
-      .insertInto("PaymentAttestation")
-      .values({
-        id: createId(),
-        contractId: contrato.id,
-        stageNumber,
-        amountMinorUnits: parsed.data.amountMinorUnits,
-        releasedById: req.user!.id,
-        releasedAt: ahora
-      })
-      .returningAll()
-      .executeTakeFirstOrThrow();
+
+    // SPEC-205 (B-07) — nada comparaba la suma de `PaymentAttestation` contra
+    // `Contract.totalMinorUnits`: un release de cualquier monto entraba, se
+    // registraba y **se ancla su commitment en Cardano**. La plataforma no
+    // custodia plata (D-021), pero sí vende el registro, y un registro que
+    // admite una afirmación falsa —"se liberó más de lo contratado"— es
+    // exactamente lo que este proyecto existe para evitar.
+    //
+    // El chequeo y el INSERT van en la misma transacción (mismo patrón que
+    // SPEC-201 en `investor.routes.ts` §accept): sin esto, dos releases
+    // concurrentes sobre el mismo contrato leen las dos la suma vieja y
+    // entran las dos, aunque juntas superen el total — la idempotencia por
+    // `(contractId, stageNumber)` no alcanza porque acá el conflicto es
+    // entre DOS etapas distintas del mismo contrato, no la misma etapa dos
+    // veces.
+    let resultado: { fila: { id: string }; yaExistia: boolean };
+    try {
+      resultado = await db.transaction().execute(async (trx) => {
+        // Idempotencia (regla 8): el índice único (contrato, etapa) impide
+        // liberar dos veces la misma.
+        const previa = await trx
+          .selectFrom("PaymentAttestation")
+          .selectAll()
+          .where("contractId", "=", contrato.id)
+          .where("stageNumber", "=", stageNumber)
+          .executeTakeFirst();
+
+        if (previa) return { fila: previa, yaExistia: true as const };
+
+        const liberado = await trx
+          .selectFrom("PaymentAttestation")
+          .select((eb) => eb.fn.sum<number>("amountMinorUnits").as("total"))
+          .where("contractId", "=", contrato.id)
+          .executeTakeFirst();
+
+        const liberadoHastaAhora = Number(liberado?.total ?? 0);
+        if (liberadoHastaAhora + parsed.data.amountMinorUnits > contrato.totalMinorUnits) {
+          throw new ReleaseExceedsContractError(contrato.totalMinorUnits, liberadoHastaAhora);
+        }
+
+        const fila = await trx
+          .insertInto("PaymentAttestation")
+          .values({
+            id: createId(),
+            contractId: contrato.id,
+            stageNumber,
+            amountMinorUnits: parsed.data.amountMinorUnits,
+            releasedById: req.user!.id,
+            releasedAt: ahora
+          })
+          .returningAll()
+          .executeTakeFirstOrThrow();
+
+        return { fila, yaExistia: false as const };
+      });
+    } catch (err) {
+      if (err instanceof ReleaseExceedsContractError) {
+        return res.status(409).json({
+          message: "Release would exceed the contract total",
+          code: RELEASE_EXCEEDS_CONTRACT,
+          totalMinorUnits: err.totalMinorUnits,
+          releasedMinorUnits: err.releasedMinorUnits
+        });
+      }
+      throw err;
+    }
+
+    const { fila: release, yaExistia } = resultado;
+
+    // Ya existía (idempotencia, regla 8): se devuelve tal cual, sin volver a
+    // anclar — un segundo anclaje sobre el mismo release sería un evento
+    // fantasma.
+    if (yaExistia) return res.status(200).json(paymentAttestationSchema.parse(release));
 
     const anchor = await anchorCommitmentEvent({
       projectId: contrato.projectId,

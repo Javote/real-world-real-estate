@@ -81,3 +81,24 @@ diez líneas arriba. La clave va a `packages/shared` (regla 15: claves, no copy)
 | Release que lo supera por 1 unidad mínima | 409 `RELEASE_EXCEEDS_CONTRACT`, sin `INSERT` y sin anclaje |
 | Dos releases concurrentes que juntos superan el total | a lo sumo uno entra; el otro 409 |
 | Contrato sin releases previos | el techo es el total entero |
+
+## Cerrada 2026-09-19
+
+**B-05:** `.where("state", "=", existing.state)` sumado al `UPDATE`, cambiado a `executeTakeFirst()`
+— sin fila, mismo `STAGE_TRANSITION_INVALID` que ya existía, sin caso nuevo en `TransitionFailure`.
+Test de concurrencia real (`Promise.all` de dos `transitionStage()` sobre el mismo stage):
+**verificado en rojo primero** — sin el `.where` extra, la segunda escritura no fallaba en silencio,
+tiraba una excepción sin capturar (`UNIQUE constraint failed: OnChainEvent.stageId, eventIndex`),
+peor que lo que describe el hallazgo. Con el fix: una gana, la otra 409, un solo `UPDATE`, un solo
+`OnChainEvent`.
+
+**B-07:** `Contract.totalMinorUnits` sumado al select, y el chequeo + `INSERT` de
+`PaymentAttestation` viven en la misma `db.transaction()` (mismo patrón que SPEC-201 en
+`investor.routes.ts` §accept) — no alcanzaba con sumar lo ya liberado antes del insert sin más,
+porque dos releases concurrentes sobre **etapas distintas** del mismo contrato leen la misma suma
+vieja y las dos entrarían. El código de la transacción se probó también SIN la transacción
+(reemplazando `trx` por el `db` de módulo) para confirmar que la atomicidad la da la transacción y
+no el chequeo solo — con eso, el test de dos releases **concurrentes** que juntos superan el total
+es el que de verdad prueba la invariante 2, no solo la 3. `RELEASE_EXCEEDS_CONTRACT` vive en
+`packages/shared/src/contract.ts` (regla 15). Ningún caller real en el front todavía (D-070) — la
+clave queda lista para cuando lo haya, en vez de un literal en la ruta.
