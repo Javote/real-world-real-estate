@@ -7,12 +7,13 @@ import {
   stageSchema,
   stageWithThreadSchema
 } from "@plataforma/shared";
-import { type Request, Router } from "express";
+import { Router } from "express";
 import { z } from "zod";
+import type { UserRole } from "../db/types";
 import { reconciliarParaLectura } from "../domain/reconcile";
 import { retryStageMint } from "../domain/stage-transition";
 import { db } from "../lib/db";
-import { paramSeguro } from "../lib/params";
+import { OpenAPIHandler, ORPCError, os } from "../lib/orpc";
 import { ANY_MEMBERSHIP, authenticate, authorize, CUALQUIER_ROL } from "../middlewares/auth";
 import { paramValidator } from "../middlewares/validate-params";
 import { writeAuditLog } from "../utils/audit";
@@ -48,6 +49,16 @@ const stageDetailNestedSchema = stageSchema.extend({
 // existiera. Los tests que la usaban para tener un stage con hilo real
 // migraron a `test/helpers/stages.ts` (`crearStageMinteado`), que hace lo
 // mismo sin pasar por HTTP. Detalle completo en `CLAUDE.md` raíz.
+//
+// **SPEC-216 §E6 — migrado a oRPC (D-066)**, junto con `projects.routes.ts`
+// (mismo prefijo, ver el comentario de ese archivo).
+
+const PREFIJO_ABSOLUTO = "/api/v1/projects";
+
+/** El contexto que cada procedimiento recibe — siempre el usuario ya
+ * autenticado por `authenticate`, corrido antes de que oRPC vea la request. */
+export type ProjectsObraContext = { user: { id: string; email: string; role: UserRole } };
+const orpc = os.$context<ProjectsObraContext>();
 
 const router = Router();
 
@@ -56,17 +67,15 @@ router.param("stageId", paramValidator(cuidParamSchema));
 
 router.use(authenticate);
 
-router.get(
-  "/:id/stages",
-  authorize({
-    roles: CUALQUIER_ROL,
-    acceso: { proyecto: { param: "id" }, membresias: ANY_MEMBERSHIP }
-  }),
-  async (req, res) => {
+const stagesOfProjectProcedure = os
+  .route({ method: "GET", path: "/{id}/stages" })
+  .input(z.strictObject({ id: cuidParamSchema }))
+  .output(z.array(stageWithThreadSchema))
+  .handler(async ({ input }) => {
     const result = await db
       .selectFrom("Stage")
       .selectAll()
-      .where("projectId", "=", paramSeguro(req.params.id))
+      .where("projectId", "=", input.id)
       .orderBy("sequenceOrder", "asc")
       .execute();
 
@@ -88,11 +97,23 @@ router.get(
       ).map((r) => r.stageId)
     );
 
-    return res.json(
-      z
-        .array(stageWithThreadSchema)
-        .parse(result.map((stage) => ({ ...stage, hasOnChainThread: conHilo.has(stage.id) })))
-    );
+    return z
+      .array(stageWithThreadSchema)
+      .parse(result.map((stage) => ({ ...stage, hasOnChainThread: conHilo.has(stage.id) })));
+  });
+const stagesOfProjectHandler = new OpenAPIHandler({ stagesOfProjectProcedure });
+
+router.get(
+  "/:id/stages",
+  authorize({
+    roles: CUALQUIER_ROL,
+    acceso: { proyecto: { param: "id" }, membresias: ANY_MEMBERSHIP }
+  }),
+  async (req, res, next) => {
+    const { matched } = await stagesOfProjectHandler.handle(req, res, {
+      prefix: PREFIJO_ABSOLUTO
+    });
+    if (!matched) next();
   }
 );
 
@@ -104,43 +125,75 @@ router.get(
  * `POST /evidence/reconcile`. Admin-only y **solo mientras el stage siga en
  * `Pending`** (`domain/stage-transition.ts` explica por qué no hay reintento
  * para uno que ya avanzó sin hilo).
+ *
+ * Los cuatro códigos de `retryStageMint` que un caso legítimo puede producir
+ * son errores con nombre — el quinto (`STAGE_NOT_FOUND`) es defensivo: la
+ * ruta ya confirmó que el stage pertenece al proyecto antes de llamar a
+ * `retryStageMint`, así que en la práctica no se alcanza por esta puerta.
  */
+const retryStageAnchorProcedure = orpc
+  .errors({
+    STAGE_ALREADY_ADVANCED: {
+      status: 409,
+      message: "Stage already advanced without a thread — no honest retroactive mint"
+    },
+    THREAD_ALREADY_OPEN: { status: 409, message: "Thread already open for this stage" },
+    THREAD_ALREADY_ON_CHAIN: {
+      status: 409,
+      message: "The chain already has a live thread for this stage"
+    },
+    STAGE_CREATED_EVENT_NOT_FOUND: {
+      status: 404,
+      message: "No creation event to retry for this stage"
+    }
+  })
+  .route({ method: "POST", path: "/{id}/stages/{stageId}/retry-anchor" })
+  .input(z.strictObject({ id: cuidParamSchema, stageId: cuidParamSchema }))
+  .output(stageSchema.extend({ anchor: onChainEventSchema }))
+  .handler(async ({ input, context, errors }) => {
+    const stage = await db
+      .selectFrom("Stage")
+      .select("id")
+      .where("id", "=", input.stageId)
+      .where("projectId", "=", input.id)
+      .executeTakeFirst();
+
+    if (!stage) throw new ORPCError("NOT_FOUND", { message: "Stage does not belong to project" });
+
+    const result = await retryStageMint(input.stageId);
+    if (!result.ok) {
+      if (result.code === "STAGE_NOT_FOUND") {
+        throw new ORPCError("NOT_FOUND", { message: "Stage not found" });
+      }
+      throw errors[result.code]({ message: result.code });
+    }
+
+    await writeAuditLog({
+      actorUserId: context.user.id,
+      action: "RETRY_STAGE_ANCHOR",
+      entityType: "Stage",
+      entityId: result.stage.id
+    });
+
+    return stageSchema.extend({ anchor: onChainEventSchema }).parse({
+      ...result.stage,
+      anchor: result.anchor
+    });
+  });
+const retryStageAnchorHandler = new OpenAPIHandler({ retryStageAnchorProcedure });
+
 router.post(
   "/:id/stages/:stageId/retry-anchor",
   authorize({
     roles: ["admin"],
     acceso: { proyecto: { param: "id" }, membresias: ANY_MEMBERSHIP }
   }),
-  async (req: Request<{ id: string; stageId: string }>, res) => {
-    const stage = await db
-      .selectFrom("Stage")
-      .select("id")
-      .where("id", "=", req.params.stageId)
-      .where("projectId", "=", paramSeguro(req.params.id))
-      .executeTakeFirst();
-
-    if (!stage) {
-      return res.status(404).json({ message: "Stage does not belong to project" });
-    }
-
-    const result = await retryStageMint(req.params.stageId);
-    if (!result.ok) {
-      return res.status(result.status).json({ code: result.code });
-    }
-
-    await writeAuditLog({
-      actorUserId: req.user!.id,
-      action: "RETRY_STAGE_ANCHOR",
-      entityType: "Stage",
-      entityId: result.stage.id
+  async (req, res, next) => {
+    const { matched } = await retryStageAnchorHandler.handle(req, res, {
+      prefix: PREFIJO_ABSOLUTO,
+      context: { user: req.user! }
     });
-
-    return res.json(
-      stageSchema.extend({ anchor: onChainEventSchema }).parse({
-        ...result.stage,
-        anchor: result.anchor
-      })
-    );
+    if (!matched) next();
   }
 );
 
@@ -152,21 +205,19 @@ router.post(
  * este proyecto no, y confirmar su existencia le diría a alguien con acceso a
  * un proyecto que hay un stage con ese id en otro.
  */
-router.get(
-  "/:id/stages/:stageId",
-  authorize({
-    roles: CUALQUIER_ROL,
-    acceso: { proyecto: { param: "id" }, membresias: ANY_MEMBERSHIP }
-  }),
-  async (req: Request<{ id: string; stageId: string }>, res) => {
+const nestedStageDetailProcedure = os
+  .route({ method: "GET", path: "/{id}/stages/{stageId}" })
+  .input(z.strictObject({ id: cuidParamSchema, stageId: cuidParamSchema }))
+  .output(stageDetailNestedSchema)
+  .handler(async ({ input }) => {
     const stage = await db
       .selectFrom("Stage")
       .selectAll()
-      .where("id", "=", req.params.stageId)
-      .where("projectId", "=", paramSeguro(req.params.id))
+      .where("id", "=", input.stageId)
+      .where("projectId", "=", input.id)
       .executeTakeFirst();
 
-    if (!stage) return res.status(404).json({ message: "Stage not found" });
+    if (!stage) throw new ORPCError("NOT_FOUND", { message: "Stage not found" });
 
     // Antes de leer los eventos, no después: un anclaje `Pending` que ya está en
     // un bloque se confirma acá y la consulta de abajo lo ve `Confirmed`
@@ -206,19 +257,40 @@ router.get(
         .execute()
     ]);
 
-    return res.json(
-      stageDetailNestedSchema.parse({
-        ...stage,
-        evidences,
-        bundle: bundle ?? null,
-        // Calculado, no guardado (evita una segunda fuente de verdad): el mismo
-        // criterio que `cabezaDelHilo`, sin una query aparte porque `eventos` ya
-        // trae `outputRef`.
-        hasOnChainThread: eventos.some((e) => e.outputRef !== null),
-        events: eventos
-      })
-    );
+    return stageDetailNestedSchema.parse({
+      ...stage,
+      evidences,
+      bundle: bundle ?? null,
+      // Calculado, no guardado (evita una segunda fuente de verdad): el mismo
+      // criterio que `cabezaDelHilo`, sin una query aparte porque `eventos` ya
+      // trae `outputRef`.
+      hasOnChainThread: eventos.some((e) => e.outputRef !== null),
+      events: eventos
+    });
+  });
+const nestedStageDetailHandler = new OpenAPIHandler({ nestedStageDetailProcedure });
+
+router.get(
+  "/:id/stages/:stageId",
+  authorize({
+    roles: CUALQUIER_ROL,
+    acceso: { proyecto: { param: "id" }, membresias: ANY_MEMBERSHIP }
+  }),
+  async (req, res, next) => {
+    const { matched } = await nestedStageDetailHandler.handle(req, res, {
+      prefix: PREFIJO_ABSOLUTO
+    });
+    if (!matched) next();
   }
 );
+
+/** El router oRPC combinado de esta vertical — lo consume
+ * `scripts/generate-openapi.ts` para generar el fragmento de OpenAPI de las 3
+ * rutas migradas. */
+export const projectsObraOrpcRouter = {
+  stagesOfProjectProcedure,
+  retryStageAnchorProcedure,
+  nestedStageDetailProcedure
+};
 
 export default router;

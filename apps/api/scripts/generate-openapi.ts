@@ -2,34 +2,12 @@ import "dotenv/config";
 import { mkdirSync, writeFileSync } from "node:fs";
 import path from "node:path";
 import {
-  addProjectMemberSchema,
-  buildingSchematicFloorSchema,
-  bundleFilesSchema,
-  createProjectSchema,
   createUserSchema,
   cuidParamSchema,
-  evidenceBundleSummarySchema,
-  evidenceProofSchema,
-  evidenceSchema,
   hex64ParamSchema,
-  onChainEventSchema,
   positiveIntParamSchema,
-  projectDetailSchema,
-  projectDocumentSchema,
-  projectListItemSchema,
-  projectListQuerySchema,
-  projectMemberSchema,
-  projectMemberWithUserSchema,
-  projectSchema,
-  reconciliationResultSchema,
-  stageEventSummarySchema,
-  stageEvidenceSummarySchema,
   stageEvidenceUploadResultSchema,
   stageEvidenceUploadSchema,
-  stageSchema,
-  stageWithThreadSchema,
-  updateEvidenceSchema,
-  updateProjectSchema,
   updateUserSchema,
   userMutationResultSchema,
   userSummarySchema
@@ -46,6 +24,7 @@ import { type CertifierContext, certifierOrpcRouter } from "../src/routes/certif
 import { contractsOrpcRouter } from "../src/routes/contracts.routes";
 import { type DeveloperContext, developerOrpcRouter } from "../src/routes/developer.routes";
 import { developerComercialOrpcRouter } from "../src/routes/developer-comercial.routes";
+import { type EvidenceContext, evidenceOrpcRouter } from "../src/routes/evidence.routes";
 import { type InvestorContext, investorOrpcRouter } from "../src/routes/investor.routes";
 import { type NotaryContext, notaryOrpcRouter } from "../src/routes/notary.routes";
 import {
@@ -53,6 +32,11 @@ import {
   notificationsOrpcRouter
 } from "../src/routes/notifications.routes";
 import { type ProfileContext, profileOrpcRouter } from "../src/routes/profile.routes";
+import { type ProjectsContext, projectsOrpcRouter } from "../src/routes/projects.routes";
+import {
+  type ProjectsObraContext,
+  projectsObraOrpcRouter
+} from "../src/routes/projects-obra.routes";
 import { publicOrpcRouter } from "../src/routes/public.routes";
 import { type StagesContext, stagesOrpcRouter } from "../src/routes/stages.routes";
 
@@ -109,11 +93,6 @@ type SchemaEntry = { body?: ZodType; bodyContentType?: string; query?: ZodType }
  * `route-guards.test.ts`: se edita el mismo día que se agrega el `safeParse`.
  */
 const REQUEST_SCHEMAS: Record<string, SchemaEntry> = {
-  "GET /api/v1/projects": { query: projectListQuerySchema },
-  "POST /api/v1/projects": { body: createProjectSchema },
-  "PATCH /api/v1/projects/:id": { body: updateProjectSchema },
-  "POST /api/v1/projects/:id/members": { body: addProjectMemberSchema },
-  "PATCH /api/v1/evidence/:id": { body: updateEvidenceSchema },
   "POST /api/v1/users": { body: createUserSchema },
   "PATCH /api/v1/users/:id": { body: updateUserSchema },
   // Multipart: el archivo es un campo aparte (`req.file`, Multer) que este
@@ -162,42 +141,11 @@ const REQUEST_SCHEMAS: Record<string, SchemaEntry> = {
  * `z.array(...)`; si es la forma `{ items, nextCursor }`, `paginatedResponseSchema(...)`.
  */
 const RESPONSE_SCHEMAS: Record<string, ZodType> = {
-  "GET /api/v1/evidence/:bundleId/proof/:fileHash": evidenceProofSchema,
   "GET /api/v1/users": z.array(userSummarySchema),
   "POST /api/v1/users": userMutationResultSchema,
   "GET /api/v1/users/:id": userSummarySchema,
   "PATCH /api/v1/users/:id": userMutationResultSchema,
-  // Mismo `.extend(...)` que `evidence.routes.ts` — no un schema aparte.
-  "GET /api/v1/evidence/:id": evidenceSchema.extend({
-    project: projectSchema,
-    stage: stageSchema.nullable(),
-    uploadedBy: z.strictObject({ id: z.string(), email: z.email(), fullName: z.string() })
-  }),
-  "PATCH /api/v1/evidence/:id": evidenceSchema,
-  "POST /api/v1/evidence/reconcile": reconciliationResultSchema,
-  // Documenta el 201 (creación); el 200 (idempotente, ya anclada) es el mismo
-  // schema — ver el comentario de `codigoDeExito`.
-  "POST /api/v1/evidence/:id/anchor": onChainEventSchema,
-  "GET /api/v1/evidence/:bundleId/files": bundleFilesSchema,
-  "GET /api/v1/projects": z.array(projectListItemSchema),
-  "POST /api/v1/projects": projectSchema,
-  "GET /api/v1/projects/:id": projectDetailSchema,
-  "PATCH /api/v1/projects/:id": projectSchema,
-  "GET /api/v1/projects/:id/members": z.array(projectMemberWithUserSchema),
-  "POST /api/v1/projects/:id/members": projectMemberSchema,
-  "GET /api/v1/projects/:id/documents": z.array(projectDocumentSchema),
-  "GET /api/v1/projects/:id/building-schematic": z.array(buildingSchematicFloorSchema),
-  "POST /api/v1/developer/projects/:id/stages/:stageId/evidence": stageEvidenceUploadResultSchema,
-  "GET /api/v1/projects/:id/stages": z.array(stageWithThreadSchema),
-  "POST /api/v1/projects/:id/stages/:stageId/retry-anchor": stageSchema.extend({
-    anchor: onChainEventSchema
-  }),
-  "GET /api/v1/projects/:id/stages/:stageId": stageSchema.extend({
-    evidences: z.array(stageEvidenceSummarySchema),
-    bundle: evidenceBundleSummarySchema.nullable(),
-    hasOnChainThread: z.boolean(),
-    events: z.array(stageEventSummarySchema)
-  })
+  "POST /api/v1/developer/projects/:id/stages/:stageId/evidence": stageEvidenceUploadResultSchema
 };
 
 /** La forma exacta de `ZodError.flatten()`, que es lo que devuelve todo 400. */
@@ -267,9 +215,11 @@ function aPathOpenApi(ruta: string): string {
  * Las rutas de `notary` (§A), `certifier` (§B), `investor` (§C, las 14),
  * `developer`/`developer-comercial`/`capital` (§D, las 19 — todas salvo la
  * subida multipart) y, desde SPEC-216, `profile`/`notifications` (§E1),
- * `auth`/`public` (§E2), `audit`/`contracts` (§E3) y `stages` (§E5) — ya
- * migradas a oRPC. El bucle de abajo las saltea y su fragmento sale, aparte,
- * de sus routers oRPC combinados con `OpenAPIGenerator` (ver el final de esta
+ * `auth`/`public` (§E2), `audit`/`contracts` (§E3), `stages` (§E5),
+ * `projects`/`projects-obra` (§E6) y `evidence` (§E7, salvo
+ * `GET /:id/download`, que es `SPEC-217`) — ya migradas a oRPC. El bucle de
+ * abajo las saltea y su fragmento sale, aparte, de sus routers oRPC
+ * combinados con `OpenAPIGenerator` (ver el final de esta
  * función).
  */
 const ORPC_MIGRADAS = new Set([
@@ -287,6 +237,25 @@ const ORPC_MIGRADAS = new Set([
   "GET /api/v1/stages/:id",
   "PATCH /api/v1/stages/:id",
   "PATCH /api/v1/stages/:id/state",
+  "GET /api/v1/projects",
+  "POST /api/v1/projects",
+  "GET /api/v1/projects/:id",
+  "PATCH /api/v1/projects/:id",
+  "DELETE /api/v1/projects/:id",
+  "GET /api/v1/projects/:id/members",
+  "POST /api/v1/projects/:id/members",
+  "GET /api/v1/projects/:id/documents",
+  "GET /api/v1/projects/:id/building-schematic",
+  "GET /api/v1/projects/:id/stages",
+  "POST /api/v1/projects/:id/stages/:stageId/retry-anchor",
+  "GET /api/v1/projects/:id/stages/:stageId",
+  "GET /api/v1/evidence/:id",
+  "PATCH /api/v1/evidence/:id",
+  "POST /api/v1/evidence/reconcile",
+  "POST /api/v1/evidence/:id/anchor",
+  "DELETE /api/v1/evidence/:id",
+  "GET /api/v1/evidence/:bundleId/proof/:fileHash",
+  "GET /api/v1/evidence/:bundleId/files",
   "GET /api/v1/notary/kpis",
   "GET /api/v1/notary/dossiers/pending",
   "GET /api/v1/notary/dossiers/:id",
@@ -475,6 +444,36 @@ export async function buildOpenApiDocument() {
     }
   );
   Object.assign(paths, documentoStages.paths);
+
+  // SPEC-216 §E6 — comparten prefijo (`projects.routes.ts` +
+  // `projects-obra.routes.ts`), mismo criterio que `developer`/
+  // `developer-comercial`/`capital` (§D): dos `generate()` separados, paths
+  // disjuntos, sin choque.
+  const documentoProjects = await generadorOrpc.generate(
+    os.$context<ProjectsContext>().prefix("/api/v1/projects").router(projectsOrpcRouter),
+    {
+      info: { title: "PropNexus API — projects (oRPC)", version: "1.0.0" }
+    }
+  );
+  Object.assign(paths, documentoProjects.paths);
+
+  const documentoProjectsObra = await generadorOrpc.generate(
+    os.$context<ProjectsObraContext>().prefix("/api/v1/projects").router(projectsObraOrpcRouter),
+    {
+      info: { title: "PropNexus API — projects-obra (oRPC)", version: "1.0.0" }
+    }
+  );
+  Object.assign(paths, documentoProjectsObra.paths);
+
+  // SPEC-216 §E7 — 7 de las 8 rutas; `GET /:id/download` sigue fuera
+  // (`SPEC-217`) y por eso no tiene entrada acá ni en `ORPC_MIGRADAS`.
+  const documentoEvidence = await generadorOrpc.generate(
+    os.$context<EvidenceContext>().prefix("/api/v1/evidence").router(evidenceOrpcRouter),
+    {
+      info: { title: "PropNexus API — evidence (oRPC)", version: "1.0.0" }
+    }
+  );
+  Object.assign(paths, documentoEvidence.paths);
 
   const documentoNotary = await generadorOrpc.generate(
     os.$context<NotaryContext>().prefix("/api/v1/notary").router(notaryOrpcRouter),

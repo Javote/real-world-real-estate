@@ -58,9 +58,24 @@
 > disyuntiva. `pnpm verify` completo en verde (476 tests de `apps/api`, 3 archivos
 > `test/orpc-client-{audit,contracts,stages}.test.ts` nuevos, mismo patrón que los de §E1/§E2).
 >
-> **Quedan §E4 (`users.routes.ts`, 5 rutas, 🔴 bcrypt — aislado a propósito para su propia revisión),
-> §E6 (`projects.routes.ts` + `projects-obra.routes.ts`, 12 rutas) y §E7 (`evidence.routes.ts`, 7 de
-> las 8) — ver la tabla de sub-partes, abajo.**
+> **§E6 (`projects.routes.ts` + `projects-obra.routes.ts`, 12 rutas) y §E7 (`evidence.routes.ts`, 7
+> de las 8) cerradas 2026-09-20**, en un solo commit — el resto del lote que no toca superficie 🔴,
+> pedido explícitamente así para no romper el aislamiento de §E4. `projects.routes.ts` inserta contra
+> tres restricciones distintas (`Project.slug` en `POST`/`PATCH`, la FK `userId` y el índice
+> compuesto de `ProjectMember` en `POST /:id/members`) — las tres envueltas en
+> `relanzarRestriccionComoOrpc`, dos de ellas sin test hoy tal como preveía §Los `.errors()` que
+> hacen falta. `projects-obra.routes.ts` es la primera vez que `retryStageMint` se traduce a errores
+> con nombre (`STAGE_ALREADY_ADVANCED`, `THREAD_ALREADY_OPEN`, `THREAD_ALREADY_ON_CHAIN`,
+> `STAGE_CREATED_EVENT_NOT_FOUND`) en vez de `res.status(result.status).json({code: result.code})`
+> genérico. `evidence.routes.ts` repite el 200/201 idempotente de `POST /:id/anchor` (mismo patrón
+> que `POST /evidence/:id/anchor` — es la misma ruta — ya resuelto en `signDossierProcedure`) y
+> declara `EVIDENCE_ANCHORED` con nombre para que `test/spec-210-borrar-evidencia-anclada.test.ts`
+> siga fijando `res.body.code`; **`GET /:id/download` se queda con Express llano, es `SPEC-217`**.
+> `pnpm verify` completo en verde (494 tests de `apps/api`, 3 archivos
+> `test/orpc-client-{projects,projects-obra,evidence}.test.ts` nuevos).
+>
+> **Queda solo §E4 (`users.routes.ts`, 5 rutas, 🔴 bcrypt) — aislada a propósito para su propia
+> revisión línea por línea, sin mezclarse con ninguna de las anteriores.**
 
 ## La auditoría, ruta por ruta (2026-09-20)
 

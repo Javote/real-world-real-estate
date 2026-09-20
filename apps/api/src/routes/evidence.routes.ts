@@ -12,8 +12,9 @@ import {
   stageSchema,
   updateEvidenceSchema
 } from "@plataforma/shared";
-import { type Request, Router } from "express";
+import { Router } from "express";
 import { z } from "zod";
+import type { UserRole } from "../db/types";
 import { anchorCommitmentEvent } from "../domain/anchoring";
 import {
   hilosSospechosos,
@@ -22,7 +23,7 @@ import {
   repararHilosSospechosos
 } from "../domain/reconcile";
 import { db } from "../lib/db";
-import { paramSeguro } from "../lib/params";
+import { OpenAPIHandler, ORPCError, os } from "../lib/orpc";
 import { storage } from "../lib/storage";
 import { ANY_MEMBERSHIP, authenticate, authorize, CUALQUIER_ROL } from "../middlewares/auth";
 import { paramValidator } from "../middlewares/validate-params";
@@ -36,6 +37,26 @@ const evidenceDetailSchema = evidenceSchema.extend({
   uploadedBy: z.strictObject({ id: z.string(), email: z.email(), fullName: z.string() })
 });
 
+// **SPEC-216 §E7 — migrado a oRPC (D-066), 7 de las 8 rutas.**
+// `GET /:id/download` NO migra: es `SPEC-217`, streaming real con
+// `storage.read(...).pipe(res)`, y no tiene resuelto todavía si oRPC puede
+// servir eso sin bufferear entero en memoria — se queda con Express llano.
+//
+// **`POST /:id/anchor` repite el 200/201 idempotente que SPEC-212 §A ya
+// resolvió** (`outputStructure: "detailed"`, unión discriminada por
+// `status`, nunca un `status: z.union([...])` adentro de un solo objeto) —
+// mismo shape exacto que `signDossierProcedure` en `notary.routes.ts`.
+//
+// **`DELETE /:id` necesita `.errors({EVIDENCE_ANCHORED})`**: `res.body.code`
+// está fijado por `test/spec-210-borrar-evidencia-anclada.test.ts`.
+
+const PREFIJO_ABSOLUTO = "/api/v1/evidence";
+
+/** El contexto que cada procedimiento recibe — siempre el usuario ya
+ * autenticado por `authenticate`, corrido antes de que oRPC vea la request. */
+export type EvidenceContext = { user: { id: string; email: string; role: UserRole } };
+const orpc = os.$context<EvidenceContext>();
+
 const router = Router();
 
 router.param("id", paramValidator(cuidParamSchema));
@@ -44,22 +65,18 @@ router.param("fileHash", paramValidator(hex64ParamSchema));
 
 router.use(authenticate);
 
-router.get(
-  "/:id",
-  authorize({
-    roles: CUALQUIER_ROL,
-    acceso: { proyecto: { via: "Evidence", param: "id" }, membresias: ANY_MEMBERSHIP }
-  }),
-  async (req, res) => {
+const evidenceDetailProcedure = os
+  .route({ method: "GET", path: "/{id}" })
+  .input(z.strictObject({ id: cuidParamSchema }))
+  .output(evidenceDetailSchema)
+  .handler(async ({ input }) => {
     const evidence = await db
       .selectFrom("Evidence")
       .select(EVIDENCE_SAFE_COLUMNS)
-      .where("id", "=", paramSeguro(req.params.id))
+      .where("id", "=", input.id)
       .executeTakeFirst();
 
-    if (!evidence) {
-      return res.status(404).json({ message: "Evidence not found" });
-    }
+    if (!evidence) throw new ORPCError("NOT_FOUND", { message: "Evidence not found" });
 
     const [project, stage, uploadedBy] = await Promise.all([
       db.selectFrom("Project").selectAll().where("id", "=", evidence.projectId).executeTakeFirst(),
@@ -73,10 +90,30 @@ router.get(
         .executeTakeFirst()
     ]);
 
-    return res.json(evidenceDetailSchema.parse({ ...evidence, project, stage, uploadedBy }));
+    return evidenceDetailSchema.parse({ ...evidence, project, stage, uploadedBy });
+  });
+const evidenceDetailHandler = new OpenAPIHandler({ evidenceDetailProcedure });
+
+router.get(
+  "/:id",
+  authorize({
+    roles: CUALQUIER_ROL,
+    acceso: { proyecto: { via: "Evidence", param: "id" }, membresias: ANY_MEMBERSHIP }
+  }),
+  async (req, res, next) => {
+    const { matched } = await evidenceDetailHandler.handle(req, res, {
+      prefix: PREFIJO_ABSOLUTO
+    });
+    if (!matched) next();
   }
 );
 
+/**
+ * **NO migra a oRPC — ver `SPEC-217`.** `OpenAPIHandler` bufferea la
+ * respuesta antes de escribirla, y esta ruta streamea desde el storage
+ * (`s3`/disco) sin cargar el archivo entero en memoria — la misma clase de
+ * riesgo que ya descartó migrar el PARSEO del multipart en `SPEC-212` §D.
+ */
 router.get(
   "/:id/download",
   authorize({
@@ -87,7 +124,7 @@ router.get(
     const evidence = await db
       .selectFrom("Evidence")
       .selectAll()
-      .where("id", "=", paramSeguro(req.params.id))
+      .where("id", "=", req.params.id as string)
       .executeTakeFirst();
 
     if (!evidence) {
@@ -111,88 +148,80 @@ router.get(
   }
 );
 
+const updateEvidenceProcedure = orpc
+  .route({ method: "PATCH", path: "/{id}" })
+  .input(updateEvidenceSchema.extend({ id: cuidParamSchema }))
+  .output(evidenceSchema)
+  .handler(async ({ input, context }) => {
+    const { id, ...body } = input;
+
+    const existing = await db
+      .selectFrom("Evidence")
+      .selectAll()
+      .where("id", "=", id)
+      .executeTakeFirst();
+
+    if (!existing) throw new ORPCError("NOT_FOUND", { message: "Evidence not found" });
+
+    if (body.stageId) {
+      const stage = await db
+        .selectFrom("Stage")
+        .select("id")
+        .where("id", "=", body.stageId)
+        .where("projectId", "=", existing.projectId)
+        .executeTakeFirst();
+
+      if (!stage) {
+        throw new ORPCError("BAD_REQUEST", { message: "Stage does not belong to project" });
+      }
+    }
+
+    await db
+      .updateTable("Evidence")
+      .set({ ...body, updatedAt: new Date() })
+      .where("id", "=", id)
+      .execute();
+
+    const evidence = await db
+      .selectFrom("Evidence")
+      .select(EVIDENCE_SAFE_COLUMNS)
+      .where("id", "=", id)
+      .executeTakeFirst();
+
+    await writeAuditLog({
+      actorUserId: context.user.id,
+      action: "UPDATE_EVIDENCE",
+      entityType: "Evidence",
+      entityId: id
+    });
+
+    return evidenceSchema.parse(evidence);
+  });
+const updateEvidenceHandler = new OpenAPIHandler({ updateEvidenceProcedure });
+
 router.patch(
   "/:id",
   authorize({
     roles: ["admin", "developer"],
     acceso: { proyecto: { via: "Evidence", param: "id" }, membresias: ["developer"] }
   }),
-  async (req: Request<{ id: string }>, res) => {
-    const existing = await db
-      .selectFrom("Evidence")
-      .selectAll()
-      .where("id", "=", paramSeguro(req.params.id))
-      .executeTakeFirst();
-
-    if (!existing) {
-      return res.status(404).json({ message: "Evidence not found" });
-    }
-
-    const parsed = updateEvidenceSchema.safeParse(req.body);
-    if (!parsed.success) {
-      return res.status(400).json(parsed.error.flatten());
-    }
-
-    if (parsed.data.stageId) {
-      const stage = await db
-        .selectFrom("Stage")
-        .select("id")
-        .where("id", "=", parsed.data.stageId)
-        .where("projectId", "=", existing.projectId)
-        .executeTakeFirst();
-
-      if (!stage) {
-        return res.status(400).json({
-          message: "Stage does not belong to project"
-        });
-      }
-    }
-
-    await db
-      .updateTable("Evidence")
-      .set({ ...parsed.data, updatedAt: new Date() })
-      .where("id", "=", paramSeguro(req.params.id))
-      .execute();
-
-    const evidence = await db
-      .selectFrom("Evidence")
-      .select(EVIDENCE_SAFE_COLUMNS)
-      .where("id", "=", paramSeguro(req.params.id))
-      .executeTakeFirst();
-
-    await writeAuditLog({
-      actorUserId: req.user!.id,
-      action: "UPDATE_EVIDENCE",
-      entityType: "Evidence",
-      entityId: req.params.id
+  async (req, res, next) => {
+    const { matched } = await updateEvidenceHandler.handle(req, res, {
+      prefix: PREFIJO_ABSOLUTO,
+      context: { user: req.user! }
     });
-
-    return res.json(evidenceSchema.parse(evidence));
+    if (!matched) next();
   }
 );
 
 /**
- * **Anclar el hash de un archivo. Lo dispara el admin, nunca el upload** (D-061).
- *
- * Es el camino `Evidence Anchor Transactions` de `M1-D2/1-system-architecture`:
- * metadata suelta (label 1904, D-006), sin validador. Prueba *este archivo
- * existía a esta hora* — no que un stage avanzó, que es lo que prueba el hilo.
- *
- * Por qué manual: una vez en la cadena no se borra. Anclar en el upload
- * anclaría borradores, archivos subidos por error y versiones que todavía no
- * son la buena. Y M2-D4 §6.3 pide que toda superficie de prueba la inicie el
- * usuario.
- *
- * Idempotente (regla 8): si ese archivo ya tiene su anclaje, devuelve el mismo
- * evento en vez de gastar otra transacción.
- */
-/**
  * `POST /api/v1/evidence/reconcile` — promueve a `Confirmed` los anclajes que
  * ya entraron en un bloque (SPEC-013 §C).
  *
- * **Va antes de `/:id/anchor` a propósito:** Express matchea por orden, y
- * `"reconcile"` encajaría en `:id` si se declarara después. El síntoma sería un
- * 404 buscando una evidencia con id "reconcile".
+ * **Sigue declarada antes que `/:id/anchor`, como en el Express original**:
+ * cada procedimiento tiene su propio `OpenAPIHandler` montado en su propio
+ * `router.post(...)`, así que Express ya resuelve cuál ruta matchea antes de
+ * que oRPC entre en juego — la migración no cambia esa parte.
  *
  * Sin body y sin parámetros: revisa lo que haya pendiente. Es idempotente por
  * construcción —un evento ya confirmado no vuelve a consultarse— así que
@@ -218,29 +247,66 @@ router.patch(
  * hasta el próximo disparo. `sospechosos` se pide al final para que ya no
  * liste lo que se acaba de reparar.
  */
-router.post("/reconcile", authorize({ roles: ["admin"], acceso: "soloRol" }), async (_req, res) => {
-  const reparados = await repararHilosSospechosos();
-  const resultado = await reconciliarAnclajes();
-  const sospechosos = await hilosSospechosos();
-  res.json(reconciliationResultSchema.parse({ ...resultado, sospechosos, reparados }));
-});
+const reconcileEvidenceProcedure = os
+  .route({ method: "POST", path: "/reconcile" })
+  .output(reconciliationResultSchema)
+  .handler(async () => {
+    const reparados = await repararHilosSospechosos();
+    const resultado = await reconciliarAnclajes();
+    const sospechosos = await hilosSospechosos();
+    return reconciliationResultSchema.parse({ ...resultado, sospechosos, reparados });
+  });
+const reconcileEvidenceHandler = new OpenAPIHandler({ reconcileEvidenceProcedure });
 
 router.post(
-  "/:id/anchor",
-  authorize({
-    roles: ["admin"],
-    acceso: { proyecto: { via: "Evidence", param: "id" }, membresias: ANY_MEMBERSHIP }
-  }),
-  async (req: Request<{ id: string }>, res) => {
+  "/reconcile",
+  authorize({ roles: ["admin"], acceso: "soloRol" }),
+  async (req, res, next) => {
+    const { matched } = await reconcileEvidenceHandler.handle(req, res, {
+      prefix: PREFIJO_ABSOLUTO
+    });
+    if (!matched) next();
+  }
+);
+
+/**
+ * **Anclar el hash de un archivo. Lo dispara el admin, nunca el upload** (D-061).
+ *
+ * Es el camino `Evidence Anchor Transactions` de `M1-D2/1-system-architecture`:
+ * metadata suelta (label 1904, D-006), sin validador. Prueba *este archivo
+ * existía a esta hora* — no que un stage avanzó, que es lo que prueba el hilo.
+ *
+ * Por qué manual: una vez en la cadena no se borra. Anclar en el upload
+ * anclaría borradores, archivos subidos por error y versiones que todavía no
+ * son la buena. Y M2-D4 §6.3 pide que toda superficie de prueba la inicie el
+ * usuario.
+ *
+ * **Idempotente** (regla 8): si ese archivo ya tiene su anclaje, devuelve el
+ * mismo evento (200) en vez de gastar otra transacción (201) — mismo patrón
+ * que `signDossierProcedure` de `notary.routes.ts` (SPEC-212 §A).
+ */
+const anchorEvidenceProcedure = orpc
+  .route({
+    method: "POST",
+    path: "/{id}/anchor",
+    outputStructure: "detailed",
+    successStatus: 201
+  })
+  .input(z.strictObject({ id: cuidParamSchema }))
+  .output(
+    z.union([
+      z.strictObject({ status: z.literal(200), body: onChainEventSchema }),
+      z.strictObject({ status: z.literal(201), body: onChainEventSchema })
+    ])
+  )
+  .handler(async ({ input, context }) => {
     const evidencia = await db
       .selectFrom("Evidence")
       .select(["id", "projectId", "stageId", "sha256Hash"])
-      .where("id", "=", paramSeguro(req.params.id))
+      .where("id", "=", input.id)
       .executeTakeFirst();
 
-    if (!evidencia) {
-      return res.status(404).json({ message: "Evidence not found" });
-    }
+    if (!evidencia) throw new ORPCError("NOT_FOUND", { message: "Evidence not found" });
 
     // Si ya está anclada, la respuesta es ese evento: se confirma antes de
     // devolverlo, para no contestar "Pendiente" sobre algo que ya está en un
@@ -255,7 +321,7 @@ router.post(
       .executeTakeFirst();
 
     if (yaAnclada) {
-      return res.status(200).json(onChainEventSchema.parse(yaAnclada));
+      return { status: 200 as const, body: onChainEventSchema.parse(yaAnclada) };
     }
 
     // SPEC-206 (B-08): esto era ~60 líneas reimplementando inline lo que
@@ -276,42 +342,61 @@ router.post(
     });
 
     await writeAuditLog({
-      actorUserId: req.user!.id,
+      actorUserId: context.user.id,
       action: "ANCHOR_EVIDENCE",
       entityType: "Evidence",
       entityId: evidencia.id,
       metadata: { txid: anclado.txid, status: anclado.status }
     });
 
-    return res.status(201).json(onChainEventSchema.parse(anclado));
+    return { status: 201 as const, body: onChainEventSchema.parse(anclado) };
+  });
+const anchorEvidenceHandler = new OpenAPIHandler({ anchorEvidenceProcedure });
+
+router.post(
+  "/:id/anchor",
+  authorize({
+    roles: ["admin"],
+    acceso: { proyecto: { via: "Evidence", param: "id" }, membresias: ANY_MEMBERSHIP }
+  }),
+  async (req, res, next) => {
+    const { matched } = await anchorEvidenceHandler.handle(req, res, {
+      prefix: PREFIJO_ABSOLUTO,
+      context: { user: req.user! }
+    });
+    if (!matched) next();
   }
 );
 
-router.delete(
-  "/:id",
-  authorize({ roles: ["admin"], acceso: "soloRol" }),
-  async (req: Request<{ id: string }>, res) => {
+/**
+ * SPEC-210 (B-15): antes esto borraba el archivo y la fila sin mirar si
+ * había anclaje. `OnChainEvent.evidenceId` tiene `ON DELETE set null`, así
+ * que el TXID sobrevivía en la cadena y en la tabla mientras el vínculo
+ * con el archivo que probaba desaparecía — un evento `EVIDENCE_ANCHOR`
+ * que terminaba anclando el hash de nada. Y si la evidencia estaba dentro
+ * de un `EvidenceBundle` (`ON DELETE no action`), el borrado cortaba con
+ * `SQLITE_CONSTRAINT_FOREIGNKEY`. La validación va ANTES de tocar storage o
+ * la base: ningún archivo se borra si la fila no se iba a poder borrar.
+ *
+ * `EVIDENCE_ANCHORED` es un error con nombre — `res.body.code` está fijado
+ * por `test/spec-210-borrar-evidencia-anclada.test.ts`.
+ */
+const deleteEvidenceProcedure = orpc
+  .errors({
+    EVIDENCE_ANCHORED: { status: 409, message: "Evidence is anchored and cannot be deleted" }
+  })
+  .route({ method: "DELETE", path: "/{id}", successStatus: 204 })
+  .input(z.strictObject({ id: cuidParamSchema }))
+  .output(z.void())
+  .handler(async ({ input, context, errors }) => {
     const existing = await db
       .selectFrom("Evidence")
       .selectAll()
-      .where("id", "=", paramSeguro(req.params.id))
+      .where("id", "=", input.id)
       .executeTakeFirst();
 
-    if (!existing) {
-      return res.status(404).json({ message: "Evidence not found" });
-    }
+    if (!existing) throw new ORPCError("NOT_FOUND", { message: "Evidence not found" });
 
-    // SPEC-210 (B-15): antes esto borraba el archivo y la fila sin mirar si
-    // había anclaje. `OnChainEvent.evidenceId` tiene `ON DELETE set null`, así
-    // que el TXID sobrevivía en la cadena y en la tabla mientras el vínculo
-    // con el archivo que probaba desaparecía — un evento `EVIDENCE_ANCHOR`
-    // que terminaba anclando el hash de nada. Y si la evidencia estaba dentro
-    // de un `EvidenceBundle` (`ON DELETE no action`), el borrado cortaba con
-    // `SQLITE_CONSTRAINT_FOREIGNKEY`, que el errorHandler traduce a 400 "A
-    // referenced resource does not exist" — el mensaje describe el problema
-    // inverso al real (el recurso SÍ existe; lo que pasa es que está
-    // referenciado). La validación va ANTES de tocar storage o la base:
-    // ningún archivo se borra si la fila no se iba a poder borrar.
     const anclaje = await db
       .selectFrom("OnChainEvent")
       .select("id")
@@ -325,24 +410,31 @@ router.delete(
       .executeTakeFirst();
 
     if (anclaje || enBundle) {
-      return res.status(409).json({
-        message: "Evidence is anchored and cannot be deleted",
-        code: "EVIDENCE_ANCHORED"
-      });
+      throw errors.EVIDENCE_ANCHORED({ message: "Evidence is anchored and cannot be deleted" });
     }
 
     await storage.remove(existing.storagePath);
 
-    await db.deleteFrom("Evidence").where("id", "=", paramSeguro(req.params.id)).execute();
+    await db.deleteFrom("Evidence").where("id", "=", input.id).execute();
 
     await writeAuditLog({
-      actorUserId: req.user!.id,
+      actorUserId: context.user.id,
       action: "DELETE_EVIDENCE",
       entityType: "Evidence",
-      entityId: req.params.id
+      entityId: input.id
     });
+  });
+const deleteEvidenceHandler = new OpenAPIHandler({ deleteEvidenceProcedure });
 
-    return res.status(204).send();
+router.delete(
+  "/:id",
+  authorize({ roles: ["admin"], acceso: "soloRol" }),
+  async (req, res, next) => {
+    const { matched } = await deleteEvidenceHandler.handle(req, res, {
+      prefix: PREFIJO_ABSOLUTO,
+      context: { user: req.user! }
+    });
+    if (!matched) next();
   }
 );
 
@@ -353,29 +445,29 @@ router.delete(
  * archivo, camina el árbol con estos hermanos y compara con la raíz anclada.
  * Sin esto, tendría que bajarse todos los archivos del bundle.
  */
-router.get(
-  "/:bundleId/proof/:fileHash",
-  authorize({
-    roles: CUALQUIER_ROL,
-    acceso: { proyecto: { via: "EvidenceBundle", param: "bundleId" }, membresias: ANY_MEMBERSHIP }
-  }),
-  async (req, res) => {
+const bundleProofProcedure = os
+  .route({ method: "GET", path: "/{bundleId}/proof/{fileHash}" })
+  .input(z.strictObject({ bundleId: cuidParamSchema, fileHash: hex64ParamSchema }))
+  .output(evidenceProofSchema)
+  .handler(async ({ input }) => {
     const items = await db
       .selectFrom("EvidenceBundleItem")
       .select(["sha256Hash", "evidenceId"])
-      .where("bundleId", "=", req.params.bundleId as string)
+      .where("bundleId", "=", input.bundleId)
       .execute();
 
-    if (items.length === 0) return res.status(404).json({ message: "Bundle not found" });
+    if (items.length === 0) throw new ORPCError("NOT_FOUND", { message: "Bundle not found" });
 
     const bundle = await db
       .selectFrom("EvidenceBundle")
       .select(["commitmentHash"])
-      .where("id", "=", req.params.bundleId as string)
+      .where("id", "=", input.bundleId)
       .executeTakeFirstOrThrow();
 
-    const item = items.find((i) => i.sha256Hash === req.params.fileHash);
-    if (!item) return res.status(404).json({ message: "That hash is not part of this bundle" });
+    const item = items.find((i) => i.sha256Hash === input.fileHash);
+    if (!item) {
+      throw new ORPCError("NOT_FOUND", { message: "That hash is not part of this bundle" });
+    }
 
     await reconciliarParaLectura({ evidenceId: item.evidenceId });
 
@@ -403,14 +495,14 @@ router.get(
     try {
       const proof = merkleProof(
         items.map((i) => i.sha256Hash),
-        req.params.fileHash as string,
+        input.fileHash,
         sha256Pair
       );
       // Regla 17: sin TXID confirmado no hay timestamp que sostener.
       const confirmado = evidencia.anchorStatus === "Confirmed" && evidencia.txid !== null;
-      const body = evidenceProofSchema.parse({
+      return evidenceProofSchema.parse({
         merkleRoot: bundle.commitmentHash,
-        leaf: req.params.fileHash as string,
+        leaf: input.fileHash,
         proof,
         signerUserId: evidencia.signerUserId,
         anchorStatus: evidencia.anchorStatus,
@@ -420,28 +512,37 @@ router.get(
             ? new Date(evidencia.blockTimestamp).toISOString()
             : null
       });
-      return res.json(body);
     } catch {
-      return res.status(404).json({ message: "That hash is not part of this bundle" });
+      throw new ORPCError("NOT_FOUND", { message: "That hash is not part of this bundle" });
     }
-  }
-);
+  });
+const bundleProofHandler = new OpenAPIHandler({ bundleProofProcedure });
 
-/** Fila 25m — los archivos del bundle con sus hashes. */
 router.get(
-  "/:bundleId/files",
+  "/:bundleId/proof/:fileHash",
   authorize({
     roles: CUALQUIER_ROL,
     acceso: { proyecto: { via: "EvidenceBundle", param: "bundleId" }, membresias: ANY_MEMBERSHIP }
   }),
-  async (req, res) => {
+  async (req, res, next) => {
+    const { matched } = await bundleProofHandler.handle(req, res, { prefix: PREFIJO_ABSOLUTO });
+    if (!matched) next();
+  }
+);
+
+/** Fila 25m — los archivos del bundle con sus hashes. */
+const bundleFilesProcedure = os
+  .route({ method: "GET", path: "/{bundleId}/files" })
+  .input(z.strictObject({ bundleId: cuidParamSchema }))
+  .output(bundleFilesSchema)
+  .handler(async ({ input }) => {
     const bundle = await db
       .selectFrom("EvidenceBundle")
       .selectAll()
-      .where("id", "=", req.params.bundleId as string)
+      .where("id", "=", input.bundleId)
       .executeTakeFirst();
 
-    if (!bundle) return res.status(404).json({ message: "Bundle not found" });
+    if (!bundle) throw new ORPCError("NOT_FOUND", { message: "Bundle not found" });
 
     const items = await db
       .selectFrom("EvidenceBundleItem")
@@ -454,14 +555,38 @@ router.get(
       .where("EvidenceBundleItem.bundleId", "=", bundle.id)
       .execute();
 
-    return res.json(
-      bundleFilesSchema.parse({
-        bundleId: bundle.id,
-        merkleRoot: bundle.commitmentHash,
-        files: items
-      })
-    );
+    return bundleFilesSchema.parse({
+      bundleId: bundle.id,
+      merkleRoot: bundle.commitmentHash,
+      files: items
+    });
+  });
+const bundleFilesHandler = new OpenAPIHandler({ bundleFilesProcedure });
+
+router.get(
+  "/:bundleId/files",
+  authorize({
+    roles: CUALQUIER_ROL,
+    acceso: { proyecto: { via: "EvidenceBundle", param: "bundleId" }, membresias: ANY_MEMBERSHIP }
+  }),
+  async (req, res, next) => {
+    const { matched } = await bundleFilesHandler.handle(req, res, { prefix: PREFIJO_ABSOLUTO });
+    if (!matched) next();
   }
 );
+
+/** El router oRPC combinado de esta vertical — lo consume
+ * `scripts/generate-openapi.ts` para generar el fragmento de OpenAPI de las 7
+ * rutas migradas. `GET /:id/download` no está acá — sigue con Express llano,
+ * documentado a mano (ver `SPEC-217`). */
+export const evidenceOrpcRouter = {
+  evidenceDetailProcedure,
+  updateEvidenceProcedure,
+  reconcileEvidenceProcedure,
+  anchorEvidenceProcedure,
+  deleteEvidenceProcedure,
+  bundleProofProcedure,
+  bundleFilesProcedure
+};
 
 export default router;

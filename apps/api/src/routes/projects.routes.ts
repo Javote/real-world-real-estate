@@ -12,14 +12,15 @@ import {
   projectSchema,
   updateProjectSchema
 } from "@plataforma/shared";
-import { type Request, Router } from "express";
+import { Router } from "express";
 import { z } from "zod";
 import { createId } from "../db/id";
+import type { UserRole } from "../db/types";
 import { reconciliarParaLectura } from "../domain/reconcile";
 import { en } from "../lib/arrays";
 import { db } from "../lib/db";
 import { sql } from "../lib/kysely";
-import { paramSeguro } from "../lib/params";
+import { OpenAPIHandler, ORPCError, os } from "../lib/orpc";
 import {
   ANY_MEMBERSHIP,
   authenticate,
@@ -29,6 +30,27 @@ import {
 } from "../middlewares/auth";
 import { paramValidator } from "../middlewares/validate-params";
 import { writeAuditLog } from "../utils/audit";
+import { relanzarRestriccionComoOrpc } from "./_shared";
+
+// **SPEC-216 §E6 — migrado a oRPC (D-066)**, junto con `projects-obra.routes.ts`:
+// comparten prefijo (`MONTAJE`, `app.ts`), mismo caso que los cuatro archivos
+// de `/api/v1/developer` en `SPEC-212` §D — migrar uno no toca el
+// `router.use(authenticate)` del otro, los dos ya lo declaran y coinciden.
+//
+// **`POST /` y `POST /:id/members` insertan contra un índice único**
+// (`Project.slug`, `ProjectMember_userId_projectId_membershipRole_key`) y
+// `POST /:id/members` además contra una FK (`userId`) — los tres envueltos en
+// `relanzarRestriccionComoOrpc` (§Los `.errors()` que hacen falta de
+// SPEC-216: dos de los tres sin test hoy, el riesgo es silencioso, no
+// ausente). `PATCH /:id` también puede tocar `Project.slug` (es editable) y
+// se envuelve igual.
+
+const PREFIJO_ABSOLUTO = "/api/v1/projects";
+
+/** El contexto que cada procedimiento recibe — siempre el usuario ya
+ * autenticado por `authenticate`, corrido antes de que oRPC vea la request. */
+export type ProjectsContext = { user: { id: string; email: string; role: UserRole } };
+const orpc = os.$context<ProjectsContext>();
 
 const router = Router();
 
@@ -36,26 +58,12 @@ router.param("id", paramValidator(cuidParamSchema));
 
 router.use(authenticate);
 
-router.get(
-  "/",
-  authorize({
-    roles: CUALQUIER_ROL,
-    acceso: { scopeEnQuery: "projectScope(cualquier membresía)" }
-  }),
-  async (req, res) => {
-    // La regla 6 pide Zod en todo lo que entra, y este es el único endpoint
-    // donde lo que entra es la query y no el body — se había quedado afuera,
-    // con un `String(status) as any` que le mentía al compilador: `status`
-    // podía ser cualquier cosa y Kysely lo tomaba como un `ProjectStatus`. No
-    // era explotable (SQLite compara contra un valor que no existe y no
-    // devuelve nada), pero es exactamente el agujero que la regla 6 cierra.
-    const filtros = projectListQuerySchema.safeParse(req.query);
-
-    if (!filtros.success) {
-      return res.status(400).json(filtros.error.flatten());
-    }
-
-    const { status, city, q, sort, bbox } = filtros.data;
+const projectListProcedure = orpc
+  .route({ method: "GET", path: "/" })
+  .input(projectListQuerySchema)
+  .output(z.array(projectListItemSchema))
+  .handler(async ({ input, context }) => {
+    const { status, city, q, sort, bbox } = input;
 
     // El scope de visibilidad sale de `projectScope` y no de un query propio: es
     // la MISMA regla que aplica `canAccessProject` a un proyecto puntual (D-048,
@@ -102,7 +110,7 @@ router.get(
     }
 
     const projectRows = await query
-      .where((eb) => projectScope(eb, req.user!.role, req.user!.id, ANY_MEMBERSHIP))
+      .where((eb) => projectScope(eb, context.user.role, context.user.id, ANY_MEMBERSHIP))
       .$call((qb) => {
         if (sort === "name") return qb.orderBy("name", "asc");
         // `estimatedDelivery` nullable: las entregas sin fecha van al final en
@@ -137,66 +145,88 @@ router.get(
       stages: stagesByProject.get(project.id) ?? []
     }));
 
-    return res.json(z.array(projectListItemSchema).parse(projectList));
+    return z.array(projectListItemSchema).parse(projectList);
+  });
+const projectListHandler = new OpenAPIHandler({ projectListProcedure });
+
+router.get(
+  "/",
+  authorize({
+    roles: CUALQUIER_ROL,
+    acceso: { scopeEnQuery: "projectScope(cualquier membresía)" }
+  }),
+  async (req, res, next) => {
+    const { matched } = await projectListHandler.handle(req, res, {
+      prefix: PREFIJO_ABSOLUTO,
+      context: { user: req.user! }
+    });
+    if (!matched) next();
   }
 );
 
-router.post("/", authorize({ roles: ["admin"], acceso: "soloRol" }), async (req, res) => {
-  const parsed = createProjectSchema.safeParse(req.body);
-  if (!parsed.success) {
-    return res.status(400).json(parsed.error.flatten());
-  }
+const createProjectProcedure = orpc
+  .errors({
+    RESOURCE_ALREADY_EXISTS: { status: 409, message: "Resource already exists" },
+    RELATED_RESOURCE_NOT_FOUND: { status: 400, message: "A referenced resource does not exist" }
+  })
+  .route({ method: "POST", path: "/", successStatus: 201 })
+  .input(createProjectSchema)
+  .output(projectSchema)
+  .handler(async ({ input, context, errors }) => {
+    const now = new Date();
 
-  const now = new Date();
+    const project = await db
+      .insertInto("Project")
+      .values({
+        id: createId(),
+        name: input.name,
+        slug: input.slug,
+        address: input.address ?? null,
+        city: input.city ?? null,
+        country: input.country ?? null,
+        latitude: input.latitude ?? null,
+        longitude: input.longitude ?? null,
+        totalUnits: input.totalUnits,
+        estimatedDelivery: input.estimatedDelivery ? new Date(input.estimatedDelivery) : null,
+        status: input.status,
+        createdAt: now,
+        updatedAt: now
+      })
+      .returningAll()
+      .executeTakeFirstOrThrow()
+      .catch((err) => relanzarRestriccionComoOrpc(err, errors));
 
-  const project = await db
-    .insertInto("Project")
-    .values({
-      id: createId(),
-      name: parsed.data.name,
-      slug: parsed.data.slug,
-      address: parsed.data.address ?? null,
-      city: parsed.data.city ?? null,
-      country: parsed.data.country ?? null,
-      latitude: parsed.data.latitude ?? null,
-      longitude: parsed.data.longitude ?? null,
-      totalUnits: parsed.data.totalUnits,
-      estimatedDelivery: parsed.data.estimatedDelivery
-        ? new Date(parsed.data.estimatedDelivery)
-        : null,
-      status: parsed.data.status,
-      createdAt: now,
-      updatedAt: now
-    })
-    .returningAll()
-    .executeTakeFirstOrThrow();
+    await writeAuditLog({
+      actorUserId: context.user.id,
+      action: "CREATE_PROJECT",
+      entityType: "Project",
+      entityId: project.id
+    });
 
-  await writeAuditLog({
-    actorUserId: req.user!.id,
-    action: "CREATE_PROJECT",
-    entityType: "Project",
-    entityId: project.id
+    return projectSchema.parse(project);
   });
+const createProjectHandler = new OpenAPIHandler({ createProjectProcedure });
 
-  return res.status(201).json(projectSchema.parse(project));
+router.post("/", authorize({ roles: ["admin"], acceso: "soloRol" }), async (req, res, next) => {
+  const { matched } = await createProjectHandler.handle(req, res, {
+    prefix: PREFIJO_ABSOLUTO,
+    context: { user: req.user! }
+  });
+  if (!matched) next();
 });
 
-router.get(
-  "/:id",
-  authorize({
-    roles: CUALQUIER_ROL,
-    acceso: { proyecto: { param: "id" }, membresias: ANY_MEMBERSHIP }
-  }),
-  async (req, res) => {
+const projectByIdProcedure = os
+  .route({ method: "GET", path: "/{id}" })
+  .input(z.strictObject({ id: cuidParamSchema }))
+  .output(projectDetailSchema)
+  .handler(async ({ input }) => {
     const project = await db
       .selectFrom("Project")
       .selectAll()
-      .where("id", "=", paramSeguro(req.params.id))
+      .where("id", "=", input.id)
       .executeTakeFirst();
 
-    if (!project) {
-      return res.status(404).json({ message: "Project not found" });
-    }
+    if (!project) throw new ORPCError("NOT_FOUND", { message: "Project not found" });
 
     const stageRows = await db
       .selectFrom("Stage")
@@ -236,63 +266,97 @@ router.get(
       }
     }));
 
-    return res.json(projectDetailSchema.parse({ ...project, stages: stageRows, members }));
-  }
-);
-
-router.patch("/:id", authorize({ roles: ["admin"], acceso: "soloRol" }), async (req, res) => {
-  const parsed = updateProjectSchema.safeParse(req.body);
-  if (!parsed.success) {
-    return res.status(400).json(parsed.error.flatten());
-  }
-
-  const project = await db
-    .updateTable("Project")
-    .set({
-      ...parsed.data,
-      estimatedDelivery: parsed.data.estimatedDelivery
-        ? new Date(parsed.data.estimatedDelivery)
-        : undefined,
-      updatedAt: new Date()
-    })
-    .where("id", "=", paramSeguro(req.params.id))
-    .returningAll()
-    .executeTakeFirstOrThrow();
-
-  await writeAuditLog({
-    actorUserId: req.user!.id,
-    action: "UPDATE_PROJECT",
-    entityType: "Project",
-    entityId: project.id
+    return projectDetailSchema.parse({ ...project, stages: stageRows, members });
   });
-
-  return res.json(projectSchema.parse(project));
-});
-
-router.delete(
-  "/:id",
-  authorize({ roles: ["admin"], acceso: "soloRol" }),
-  async (req: Request<{ id: string }>, res) => {
-    await db.deleteFrom("Project").where("id", "=", paramSeguro(req.params.id)).execute();
-
-    await writeAuditLog({
-      actorUserId: req.user!.id,
-      action: "DELETE_PROJECT",
-      entityType: "Project",
-      entityId: req.params.id
-    });
-
-    return res.status(204).send();
-  }
-);
+const projectByIdHandler = new OpenAPIHandler({ projectByIdProcedure });
 
 router.get(
-  "/:id/members",
+  "/:id",
   authorize({
     roles: CUALQUIER_ROL,
     acceso: { proyecto: { param: "id" }, membresias: ANY_MEMBERSHIP }
   }),
-  async (req, res) => {
+  async (req, res, next) => {
+    const { matched } = await projectByIdHandler.handle(req, res, { prefix: PREFIJO_ABSOLUTO });
+    if (!matched) next();
+  }
+);
+
+const updateProjectProcedure = orpc
+  .errors({
+    RESOURCE_ALREADY_EXISTS: { status: 409, message: "Resource already exists" },
+    RELATED_RESOURCE_NOT_FOUND: { status: 400, message: "A referenced resource does not exist" }
+  })
+  .route({ method: "PATCH", path: "/{id}" })
+  .input(updateProjectSchema.extend({ id: cuidParamSchema }))
+  .output(projectSchema)
+  .handler(async ({ input, context, errors }) => {
+    const { id, ...body } = input;
+
+    const project = await db
+      .updateTable("Project")
+      .set({
+        ...body,
+        estimatedDelivery: body.estimatedDelivery ? new Date(body.estimatedDelivery) : undefined,
+        updatedAt: new Date()
+      })
+      .where("id", "=", id)
+      .returningAll()
+      .executeTakeFirstOrThrow()
+      .catch((err) => relanzarRestriccionComoOrpc(err, errors));
+
+    await writeAuditLog({
+      actorUserId: context.user.id,
+      action: "UPDATE_PROJECT",
+      entityType: "Project",
+      entityId: project.id
+    });
+
+    return projectSchema.parse(project);
+  });
+const updateProjectHandler = new OpenAPIHandler({ updateProjectProcedure });
+
+router.patch("/:id", authorize({ roles: ["admin"], acceso: "soloRol" }), async (req, res, next) => {
+  const { matched } = await updateProjectHandler.handle(req, res, {
+    prefix: PREFIJO_ABSOLUTO,
+    context: { user: req.user! }
+  });
+  if (!matched) next();
+});
+
+const deleteProjectProcedure = orpc
+  .route({ method: "DELETE", path: "/{id}", successStatus: 204 })
+  .input(z.strictObject({ id: cuidParamSchema }))
+  .output(z.void())
+  .handler(async ({ input, context }) => {
+    await db.deleteFrom("Project").where("id", "=", input.id).execute();
+
+    await writeAuditLog({
+      actorUserId: context.user.id,
+      action: "DELETE_PROJECT",
+      entityType: "Project",
+      entityId: input.id
+    });
+  });
+const deleteProjectHandler = new OpenAPIHandler({ deleteProjectProcedure });
+
+router.delete(
+  "/:id",
+  authorize({ roles: ["admin"], acceso: "soloRol" }),
+  async (req, res, next) => {
+    const { matched } = await deleteProjectHandler.handle(req, res, {
+      prefix: PREFIJO_ABSOLUTO,
+      context: { user: req.user! }
+    });
+    if (!matched) next();
+  }
+);
+
+const projectMembersProcedure = os
+  .route({ method: "GET", path: "/{id}/members" })
+  .input(z.strictObject({ id: cuidParamSchema }))
+  .output(z.array(projectMemberWithUserSchema))
+  .handler(async ({ input }) => {
     const memberRows = await db
       .selectFrom("ProjectMember")
       .innerJoin("User", "User.id", "ProjectMember.userId")
@@ -307,7 +371,7 @@ router.get(
         "User.fullName as user_fullName",
         "User.role as user_role"
       ])
-      .where("ProjectMember.projectId", "=", paramSeguro(req.params.id))
+      .where("ProjectMember.projectId", "=", input.id)
       .execute();
 
     const members = memberRows.map((row) => ({
@@ -324,39 +388,64 @@ router.get(
       }
     }));
 
-    return res.json(z.array(projectMemberWithUserSchema).parse(members));
+    return z.array(projectMemberWithUserSchema).parse(members);
+  });
+const projectMembersHandler = new OpenAPIHandler({ projectMembersProcedure });
+
+router.get(
+  "/:id/members",
+  authorize({
+    roles: CUALQUIER_ROL,
+    acceso: { proyecto: { param: "id" }, membresias: ANY_MEMBERSHIP }
+  }),
+  async (req, res, next) => {
+    const { matched } = await projectMembersHandler.handle(req, res, { prefix: PREFIJO_ABSOLUTO });
+    if (!matched) next();
   }
 );
 
-router.post(
-  "/:id/members",
-  authorize({ roles: ["admin"], acceso: "soloRol" }),
-  async (req: Request<{ id: string }>, res) => {
-    const parsed = addProjectMemberSchema.safeParse(req.body);
-    if (!parsed.success) {
-      return res.status(400).json(parsed.error.flatten());
-    }
-
+const addProjectMemberProcedure = orpc
+  .errors({
+    RESOURCE_ALREADY_EXISTS: { status: 409, message: "Resource already exists" },
+    RELATED_RESOURCE_NOT_FOUND: { status: 400, message: "A referenced resource does not exist" }
+  })
+  .route({ method: "POST", path: "/{id}/members", successStatus: 201 })
+  .input(addProjectMemberSchema.extend({ id: cuidParamSchema }))
+  .output(projectMemberSchema)
+  .handler(async ({ input, context, errors }) => {
     const member = await db
       .insertInto("ProjectMember")
       .values({
         id: createId(),
-        userId: parsed.data.userId,
-        projectId: req.params.id,
-        membershipRole: parsed.data.membershipRole,
+        userId: input.userId,
+        projectId: input.id,
+        membershipRole: input.membershipRole,
         createdAt: new Date()
       })
       .returningAll()
-      .executeTakeFirstOrThrow();
+      .executeTakeFirstOrThrow()
+      .catch((err) => relanzarRestriccionComoOrpc(err, errors));
 
     await writeAuditLog({
-      actorUserId: req.user!.id,
+      actorUserId: context.user.id,
       action: "ADD_PROJECT_MEMBER",
       entityType: "ProjectMember",
       entityId: member.id
     });
 
-    return res.status(201).json(projectMemberSchema.parse(member));
+    return projectMemberSchema.parse(member);
+  });
+const addProjectMemberHandler = new OpenAPIHandler({ addProjectMemberProcedure });
+
+router.post(
+  "/:id/members",
+  authorize({ roles: ["admin"], acceso: "soloRol" }),
+  async (req, res, next) => {
+    const { matched } = await addProjectMemberHandler.handle(req, res, {
+      prefix: PREFIJO_ABSOLUTO,
+      context: { user: req.user! }
+    });
+    if (!matched) next();
   }
 );
 
@@ -371,19 +460,17 @@ router.post(
  * (regla 17). Esa derivación vive acá y no en el cliente para que no haya dos
  * versiones de la misma regla.
  */
-router.get(
-  "/:id/documents",
-  authorize({
-    roles: CUALQUIER_ROL,
-    acceso: { proyecto: { param: "id" }, membresias: ANY_MEMBERSHIP }
-  }),
-  async (req: Request<{ id: string }>, res) => {
+const projectDocumentsProcedure = os
+  .route({ method: "GET", path: "/{id}/documents" })
+  .input(z.strictObject({ id: cuidParamSchema }))
+  .output(z.array(projectDocumentSchema))
+  .handler(async ({ input }) => {
     // **Reconciliar antes de consultar** (D-077): esta respuesta lleva
     // `anchorStatus`, y sin esto un anclaje que ya está en un bloque se sirve
     // como `Pending` para siempre. La regla vive en `reconcile.ts`: toda
     // lectura que devuelva el estado de un anclaje reconcilia su propio
     // alcance primero. Lo fija `test/reconcile-on-read.test.ts`.
-    await reconciliarParaLectura({ projectId: req.params.id });
+    await reconciliarParaLectura({ projectId: input.id });
 
     const filas = await db
       .selectFrom("Evidence")
@@ -406,33 +493,43 @@ router.get(
         "OnChainEvent.txid as txid",
         "OnChainEvent.status as anchorStatus"
       ])
-      .where("Evidence.projectId", "=", paramSeguro(req.params.id))
+      .where("Evidence.projectId", "=", input.id)
       .orderBy("Evidence.uploadedAt", "desc")
       .execute();
 
-    return res.json(
-      z.array(projectDocumentSchema).parse(
-        filas.map((f) => ({
-          ...f,
-          anchorStatus: f.txid ? (f.anchorStatus ?? "Confirmed") : "Pending"
-        }))
-      )
+    return z.array(projectDocumentSchema).parse(
+      filas.map((f) => ({
+        ...f,
+        anchorStatus: f.txid ? (f.anchorStatus ?? "Confirmed") : "Pending"
+      }))
     );
+  });
+const projectDocumentsHandler = new OpenAPIHandler({ projectDocumentsProcedure });
+
+router.get(
+  "/:id/documents",
+  authorize({
+    roles: CUALQUIER_ROL,
+    acceso: { proyecto: { param: "id" }, membresias: ANY_MEMBERSHIP }
+  }),
+  async (req, res, next) => {
+    const { matched } = await projectDocumentsHandler.handle(req, res, {
+      prefix: PREFIJO_ABSOLUTO
+    });
+    if (!matched) next();
   }
 );
 
 /** Fila 21 — el esquema del edificio: las unidades por piso. */
-router.get(
-  "/:id/building-schematic",
-  authorize({
-    roles: CUALQUIER_ROL,
-    acceso: { proyecto: { param: "id" }, membresias: ["developer", "buyer", "verifier"] }
-  }),
-  async (req: Request<{ id: string }>, res) => {
+const buildingSchematicProcedure = os
+  .route({ method: "GET", path: "/{id}/building-schematic" })
+  .input(z.strictObject({ id: cuidParamSchema }))
+  .output(z.array(buildingSchematicFloorSchema))
+  .handler(async ({ input }) => {
     const unidades = await db
       .selectFrom("Unit")
       .select(["id", "unitReference", "floor", "status"])
-      .where("projectId", "=", paramSeguro(req.params.id))
+      .where("projectId", "=", input.id)
       .orderBy("floor", "desc")
       .orderBy("unitReference", "asc")
       .execute();
@@ -446,12 +543,39 @@ router.get(
       pisos.set(unidad.floor, actual);
     }
 
-    return res.json(
-      z
-        .array(buildingSchematicFloorSchema)
-        .parse([...pisos.entries()].map(([floor, units]) => ({ floor, units })))
-    );
+    return z
+      .array(buildingSchematicFloorSchema)
+      .parse([...pisos.entries()].map(([floor, units]) => ({ floor, units })));
+  });
+const buildingSchematicHandler = new OpenAPIHandler({ buildingSchematicProcedure });
+
+router.get(
+  "/:id/building-schematic",
+  authorize({
+    roles: CUALQUIER_ROL,
+    acceso: { proyecto: { param: "id" }, membresias: ["developer", "buyer", "verifier"] }
+  }),
+  async (req, res, next) => {
+    const { matched } = await buildingSchematicHandler.handle(req, res, {
+      prefix: PREFIJO_ABSOLUTO
+    });
+    if (!matched) next();
   }
 );
+
+/** El router oRPC combinado de esta vertical — lo consume
+ * `scripts/generate-openapi.ts` para generar el fragmento de OpenAPI de las 9
+ * rutas migradas. */
+export const projectsOrpcRouter = {
+  projectListProcedure,
+  createProjectProcedure,
+  projectByIdProcedure,
+  updateProjectProcedure,
+  deleteProjectProcedure,
+  projectMembersProcedure,
+  addProjectMemberProcedure,
+  projectDocumentsProcedure,
+  buildingSchematicProcedure
+};
 
 export default router;
