@@ -17,8 +17,14 @@
 > completo en verde, cliente oRPC tipado probado end-to-end contra el servidor real. Encontró y
 > corrigió cuatro trampas nuevas del diseño original (§Probado el 2026-09-20, cerrando §A, más
 > abajo) — la más importante: el `prefix` de `.handle()` tiene que ser el path absoluto, no el
-> fragmento relativo que mostraba el primer ejemplo de esta spec. Quedan §B (`certifier`), §C
-> (`investor`) y §D (`developer`).
+> fragmento relativo que mostraba el primer ejemplo de esta spec.
+>
+> **§B (`certifier`, 6 rutas) cerrada el mismo día**, mismo patrón que §A ya probado, sin trampas
+> nuevas. La única decisión propia: ninguna de las 6 rutas tiene un test que ejercite `/certify` u
+> `/observe` por HTTP (las 16 transiciones de la FSM se prueban contra `PATCH /stages/:id/state`
+> con token admin, no contra esta superficie), así que los 404/409 de `transitionStage` usan
+> `ORPCError` liso — no hizo falta el `.errors({NOMBRE:...})` con nombre que sí necesitó el 409
+> `DOSSIER_SIGNED` de §A. Quedan §C (`investor`) y §D (`developer`).
 
 ## La mitad que está bien, y hay que no romper
 
@@ -72,7 +78,7 @@ nueva, no algo que esta spec pueda asumir.
 | | Vertical | Archivo(s) | Rutas | Riesgo propio |
 |---|---|---|---|---|
 | **§A** | `notary` | `notary.routes.ts` | 6 | **cerrada 2026-09-20** — ninguno, era un solo archivo, un solo prefijo |
-| **§B** | `certifier` | `certifier.routes.ts` | 6 | ninguno — un solo archivo, un solo prefijo |
+| **§B** | `certifier` | `certifier.routes.ts` | 6 | **cerrada 2026-09-20** — ninguno, era un solo archivo, un solo prefijo |
 | **§C** | `investor` | `investor.routes.ts` | 14 | ninguno de composición — la pertenencia de fila (`dueño: { via, param }`) ya está plegada **adentro** de `authorize()` desde D-088, no es un middleware aparte. El único riesgo es de volumen: 9 de las 14 rutas usan esa variante, más que cualquier otro archivo |
 | **§D** | `developer` | `developer.routes.ts` + `developer-comercial.routes.ts` + `developer-evidencia.routes.ts` + `capital.routes.ts` | 20 | **cuatro archivos comparten el prefijo `/api/v1/developer`**, cada uno con su propio `router.use(authenticate)` (los cuatro idénticos hoy) — el incidente del 2026-08-24 (`CLAUDE.md` de este paquete) fue justo eso desalineándose. Con el diseño verificado (un `OpenAPIHandler` por procedimiento, montado en la ruta exacta — §El diseño), migrar una ruta **no toca** ese `router.use`, así que los cuatro archivos **no necesitan migrar juntos**: es simplemente la sub-parte con más superficie (20 rutas en 4 archivos) para revisar línea por línea, no una atomicidad real |
 

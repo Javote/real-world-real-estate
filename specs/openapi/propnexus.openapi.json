@@ -10206,984 +10206,6 @@
         }
       }
     },
-    "/api/v1/certifier/kpis": {
-      "get": {
-        "summary": "GET /api/v1/certifier/kpis",
-        "description": "auth + autoriza(rol(admin|verifier) · scope(projectScope(cualquier membresía)))",
-        "security": [
-          {
-            "bearerAuth": []
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "OK",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "type": "object",
-                  "properties": {
-                    "assigned": {
-                      "type": "integer",
-                      "minimum": 0,
-                      "maximum": 9007199254740991
-                    },
-                    "certified": {
-                      "type": "integer",
-                      "minimum": 0,
-                      "maximum": 9007199254740991
-                    },
-                    "observed": {
-                      "type": "integer",
-                      "minimum": 0,
-                      "maximum": 9007199254740991
-                    },
-                    "totalStages": {
-                      "type": "integer",
-                      "minimum": 0,
-                      "maximum": 9007199254740991
-                    }
-                  },
-                  "required": [
-                    "assigned",
-                    "certified",
-                    "observed",
-                    "totalStages"
-                  ],
-                  "additionalProperties": false
-                }
-              }
-            }
-          },
-          "401": {
-            "description": "Sin sesión o token inválido"
-          },
-          "403": {
-            "description": "Rol o membresía insuficiente"
-          }
-        }
-      }
-    },
-    "/api/v1/certifier/assignments": {
-      "get": {
-        "summary": "GET /api/v1/certifier/assignments",
-        "description": "auth + autoriza(rol(admin|verifier) · scope(projectScope(cualquier membresía)))",
-        "security": [
-          {
-            "bearerAuth": []
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "OK",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "type": "array",
-                  "items": {
-                    "type": "object",
-                    "properties": {
-                      "stageId": {
-                        "type": "string"
-                      },
-                      "projectName": {
-                        "type": "string"
-                      },
-                      "stageName": {
-                        "type": "string"
-                      },
-                      "sequenceOrder": {
-                        "type": "integer",
-                        "exclusiveMinimum": 0,
-                        "maximum": 9007199254740991
-                      }
-                    },
-                    "required": [
-                      "stageId",
-                      "projectName",
-                      "stageName",
-                      "sequenceOrder"
-                    ],
-                    "additionalProperties": false
-                  }
-                }
-              }
-            }
-          },
-          "401": {
-            "description": "Sin sesión o token inválido"
-          },
-          "403": {
-            "description": "Rol o membresía insuficiente"
-          }
-        }
-      }
-    },
-    "/api/v1/certifier/stages/{id}": {
-      "get": {
-        "summary": "GET /api/v1/certifier/stages/:id",
-        "description": "auth + autoriza(rol(admin|verifier) · proyecto(Stage:id → verifier))",
-        "security": [
-          {
-            "bearerAuth": []
-          }
-        ],
-        "parameters": [
-          {
-            "in": "path",
-            "name": "id",
-            "schema": {
-              "type": "string",
-              "pattern": "^[a-z][a-z0-9]{23}$"
-            },
-            "required": true
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "OK",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "type": "object",
-                  "properties": {
-                    "id": {
-                      "type": "string"
-                    },
-                    "name": {
-                      "type": "string"
-                    },
-                    "sequenceOrder": {
-                      "type": "integer",
-                      "exclusiveMinimum": 0,
-                      "maximum": 9007199254740991
-                    },
-                    "state": {
-                      "type": "string",
-                      "enum": [
-                        "Pending",
-                        "InProgress",
-                        "Observed",
-                        "Completed"
-                      ]
-                    },
-                    "validationCritical": {
-                      "type": "boolean"
-                    },
-                    "projectId": {
-                      "type": "string"
-                    },
-                    "projectName": {
-                      "type": "string"
-                    },
-                    "evidence": {
-                      "type": "array",
-                      "items": {
-                        "type": "object",
-                        "properties": {
-                          "id": {
-                            "type": "string"
-                          },
-                          "originalFilename": {
-                            "type": "string"
-                          },
-                          "category": {
-                            "type": "string"
-                          },
-                          "authoritative": {
-                            "type": "boolean"
-                          },
-                          "sha256Hash": {
-                            "anyOf": [
-                              {
-                                "type": "string"
-                              },
-                              {
-                                "type": "null"
-                              }
-                            ]
-                          },
-                          "uploadedAt": {
-                            "type": "string"
-                          }
-                        },
-                        "required": [
-                          "id",
-                          "originalFilename",
-                          "category",
-                          "authoritative",
-                          "sha256Hash",
-                          "uploadedAt"
-                        ],
-                        "additionalProperties": false
-                      }
-                    }
-                  },
-                  "required": [
-                    "id",
-                    "name",
-                    "sequenceOrder",
-                    "state",
-                    "validationCritical",
-                    "projectId",
-                    "projectName",
-                    "evidence"
-                  ],
-                  "additionalProperties": false
-                }
-              }
-            }
-          },
-          "401": {
-            "description": "Sin sesión o token inválido"
-          },
-          "403": {
-            "description": "Rol o membresía insuficiente"
-          }
-        }
-      }
-    },
-    "/api/v1/certifier/stages/{id}/certify": {
-      "post": {
-        "summary": "POST /api/v1/certifier/stages/:id/certify",
-        "description": "auth + autoriza(rol(admin|verifier) · proyecto(Stage:id → verifier))",
-        "security": [
-          {
-            "bearerAuth": []
-          }
-        ],
-        "parameters": [
-          {
-            "in": "path",
-            "name": "id",
-            "schema": {
-              "type": "string",
-              "pattern": "^[a-z][a-z0-9]{23}$"
-            },
-            "required": true
-          }
-        ],
-        "responses": {
-          "201": {
-            "description": "OK",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "type": "object",
-                  "properties": {
-                    "id": {
-                      "type": "string"
-                    },
-                    "projectId": {
-                      "type": "string"
-                    },
-                    "name": {
-                      "type": "string"
-                    },
-                    "sequenceOrder": {
-                      "type": "integer",
-                      "exclusiveMinimum": 0,
-                      "maximum": 9007199254740991
-                    },
-                    "state": {
-                      "type": "string",
-                      "enum": [
-                        "Pending",
-                        "InProgress",
-                        "Observed",
-                        "Completed"
-                      ]
-                    },
-                    "validationCritical": {
-                      "type": "boolean"
-                    },
-                    "certifiedAt": {
-                      "anyOf": [
-                        {
-                          "type": "string"
-                        },
-                        {
-                          "type": "null"
-                        }
-                      ]
-                    },
-                    "certifiedById": {
-                      "anyOf": [
-                        {
-                          "type": "string"
-                        },
-                        {
-                          "type": "null"
-                        }
-                      ]
-                    },
-                    "createdAt": {
-                      "type": "string"
-                    },
-                    "updatedAt": {
-                      "type": "string"
-                    },
-                    "anchor": {
-                      "type": "object",
-                      "properties": {
-                        "id": {
-                          "type": "string"
-                        },
-                        "projectId": {
-                          "type": "string"
-                        },
-                        "stageId": {
-                          "anyOf": [
-                            {
-                              "type": "string"
-                            },
-                            {
-                              "type": "null"
-                            }
-                          ]
-                        },
-                        "evidenceId": {
-                          "anyOf": [
-                            {
-                              "type": "string"
-                            },
-                            {
-                              "type": "null"
-                            }
-                          ]
-                        },
-                        "referenceId": {
-                          "anyOf": [
-                            {
-                              "type": "string"
-                            },
-                            {
-                              "type": "null"
-                            }
-                          ]
-                        },
-                        "eventIndex": {
-                          "type": "integer",
-                          "minimum": 0,
-                          "maximum": 9007199254740991
-                        },
-                        "eventType": {
-                          "type": "string",
-                          "enum": [
-                            "STAGE_CREATED",
-                            "STAGE_TRANSITION",
-                            "EVIDENCE_ANCHOR",
-                            "INVITATION_ACCEPTED",
-                            "PAYMENT_RELEASE",
-                            "DOSSIER_SIGNATURE",
-                            "DOCUMENT_ANCHOR"
-                          ]
-                        },
-                        "fromState": {
-                          "anyOf": [
-                            {
-                              "type": "string",
-                              "enum": [
-                                "Pending",
-                                "InProgress",
-                                "Observed",
-                                "Completed"
-                              ]
-                            },
-                            {
-                              "type": "null"
-                            }
-                          ]
-                        },
-                        "toState": {
-                          "anyOf": [
-                            {
-                              "type": "string",
-                              "enum": [
-                                "Pending",
-                                "InProgress",
-                                "Observed",
-                                "Completed"
-                              ]
-                            },
-                            {
-                              "type": "null"
-                            }
-                          ]
-                        },
-                        "commitment": {
-                          "anyOf": [
-                            {
-                              "type": "string"
-                            },
-                            {
-                              "type": "null"
-                            }
-                          ]
-                        },
-                        "status": {
-                          "type": "string",
-                          "enum": [
-                            "Pending",
-                            "Confirmed",
-                            "Failed"
-                          ]
-                        },
-                        "txid": {
-                          "anyOf": [
-                            {
-                              "type": "string"
-                            },
-                            {
-                              "type": "null"
-                            }
-                          ]
-                        },
-                        "network": {
-                          "anyOf": [
-                            {
-                              "type": "string"
-                            },
-                            {
-                              "type": "null"
-                            }
-                          ]
-                        },
-                        "outputRef": {
-                          "anyOf": [
-                            {
-                              "type": "string"
-                            },
-                            {
-                              "type": "null"
-                            }
-                          ]
-                        },
-                        "blockTimestamp": {
-                          "anyOf": [
-                            {
-                              "type": "string"
-                            },
-                            {
-                              "type": "null"
-                            }
-                          ]
-                        },
-                        "createdAt": {
-                          "type": "string"
-                        },
-                        "updatedAt": {
-                          "type": "string"
-                        }
-                      },
-                      "required": [
-                        "id",
-                        "projectId",
-                        "stageId",
-                        "evidenceId",
-                        "referenceId",
-                        "eventIndex",
-                        "eventType",
-                        "fromState",
-                        "toState",
-                        "commitment",
-                        "status",
-                        "txid",
-                        "network",
-                        "outputRef",
-                        "blockTimestamp",
-                        "createdAt",
-                        "updatedAt"
-                      ],
-                      "additionalProperties": false
-                    }
-                  },
-                  "required": [
-                    "id",
-                    "projectId",
-                    "name",
-                    "sequenceOrder",
-                    "state",
-                    "validationCritical",
-                    "certifiedAt",
-                    "certifiedById",
-                    "createdAt",
-                    "updatedAt",
-                    "anchor"
-                  ],
-                  "additionalProperties": false
-                }
-              }
-            }
-          },
-          "401": {
-            "description": "Sin sesión o token inválido"
-          },
-          "403": {
-            "description": "Rol o membresía insuficiente"
-          }
-        }
-      }
-    },
-    "/api/v1/certifier/stages/{id}/observe": {
-      "post": {
-        "summary": "POST /api/v1/certifier/stages/:id/observe",
-        "description": "auth + autoriza(rol(admin|verifier) · proyecto(Stage:id → verifier))",
-        "security": [
-          {
-            "bearerAuth": []
-          }
-        ],
-        "parameters": [
-          {
-            "in": "path",
-            "name": "id",
-            "schema": {
-              "type": "string",
-              "pattern": "^[a-z][a-z0-9]{23}$"
-            },
-            "required": true
-          }
-        ],
-        "requestBody": {
-          "content": {
-            "application/json": {
-              "schema": {
-                "type": "object",
-                "properties": {
-                  "note": {
-                    "type": "string",
-                    "minLength": 1,
-                    "maxLength": 2000
-                  }
-                },
-                "required": [
-                  "note"
-                ],
-                "additionalProperties": false
-              }
-            }
-          }
-        },
-        "responses": {
-          "201": {
-            "description": "OK",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "type": "object",
-                  "properties": {
-                    "id": {
-                      "type": "string"
-                    },
-                    "projectId": {
-                      "type": "string"
-                    },
-                    "name": {
-                      "type": "string"
-                    },
-                    "sequenceOrder": {
-                      "type": "integer",
-                      "exclusiveMinimum": 0,
-                      "maximum": 9007199254740991
-                    },
-                    "state": {
-                      "type": "string",
-                      "enum": [
-                        "Pending",
-                        "InProgress",
-                        "Observed",
-                        "Completed"
-                      ]
-                    },
-                    "validationCritical": {
-                      "type": "boolean"
-                    },
-                    "certifiedAt": {
-                      "anyOf": [
-                        {
-                          "type": "string"
-                        },
-                        {
-                          "type": "null"
-                        }
-                      ]
-                    },
-                    "certifiedById": {
-                      "anyOf": [
-                        {
-                          "type": "string"
-                        },
-                        {
-                          "type": "null"
-                        }
-                      ]
-                    },
-                    "createdAt": {
-                      "type": "string"
-                    },
-                    "updatedAt": {
-                      "type": "string"
-                    },
-                    "anchor": {
-                      "type": "object",
-                      "properties": {
-                        "id": {
-                          "type": "string"
-                        },
-                        "projectId": {
-                          "type": "string"
-                        },
-                        "stageId": {
-                          "anyOf": [
-                            {
-                              "type": "string"
-                            },
-                            {
-                              "type": "null"
-                            }
-                          ]
-                        },
-                        "evidenceId": {
-                          "anyOf": [
-                            {
-                              "type": "string"
-                            },
-                            {
-                              "type": "null"
-                            }
-                          ]
-                        },
-                        "referenceId": {
-                          "anyOf": [
-                            {
-                              "type": "string"
-                            },
-                            {
-                              "type": "null"
-                            }
-                          ]
-                        },
-                        "eventIndex": {
-                          "type": "integer",
-                          "minimum": 0,
-                          "maximum": 9007199254740991
-                        },
-                        "eventType": {
-                          "type": "string",
-                          "enum": [
-                            "STAGE_CREATED",
-                            "STAGE_TRANSITION",
-                            "EVIDENCE_ANCHOR",
-                            "INVITATION_ACCEPTED",
-                            "PAYMENT_RELEASE",
-                            "DOSSIER_SIGNATURE",
-                            "DOCUMENT_ANCHOR"
-                          ]
-                        },
-                        "fromState": {
-                          "anyOf": [
-                            {
-                              "type": "string",
-                              "enum": [
-                                "Pending",
-                                "InProgress",
-                                "Observed",
-                                "Completed"
-                              ]
-                            },
-                            {
-                              "type": "null"
-                            }
-                          ]
-                        },
-                        "toState": {
-                          "anyOf": [
-                            {
-                              "type": "string",
-                              "enum": [
-                                "Pending",
-                                "InProgress",
-                                "Observed",
-                                "Completed"
-                              ]
-                            },
-                            {
-                              "type": "null"
-                            }
-                          ]
-                        },
-                        "commitment": {
-                          "anyOf": [
-                            {
-                              "type": "string"
-                            },
-                            {
-                              "type": "null"
-                            }
-                          ]
-                        },
-                        "status": {
-                          "type": "string",
-                          "enum": [
-                            "Pending",
-                            "Confirmed",
-                            "Failed"
-                          ]
-                        },
-                        "txid": {
-                          "anyOf": [
-                            {
-                              "type": "string"
-                            },
-                            {
-                              "type": "null"
-                            }
-                          ]
-                        },
-                        "network": {
-                          "anyOf": [
-                            {
-                              "type": "string"
-                            },
-                            {
-                              "type": "null"
-                            }
-                          ]
-                        },
-                        "outputRef": {
-                          "anyOf": [
-                            {
-                              "type": "string"
-                            },
-                            {
-                              "type": "null"
-                            }
-                          ]
-                        },
-                        "blockTimestamp": {
-                          "anyOf": [
-                            {
-                              "type": "string"
-                            },
-                            {
-                              "type": "null"
-                            }
-                          ]
-                        },
-                        "createdAt": {
-                          "type": "string"
-                        },
-                        "updatedAt": {
-                          "type": "string"
-                        }
-                      },
-                      "required": [
-                        "id",
-                        "projectId",
-                        "stageId",
-                        "evidenceId",
-                        "referenceId",
-                        "eventIndex",
-                        "eventType",
-                        "fromState",
-                        "toState",
-                        "commitment",
-                        "status",
-                        "txid",
-                        "network",
-                        "outputRef",
-                        "blockTimestamp",
-                        "createdAt",
-                        "updatedAt"
-                      ],
-                      "additionalProperties": false
-                    }
-                  },
-                  "required": [
-                    "id",
-                    "projectId",
-                    "name",
-                    "sequenceOrder",
-                    "state",
-                    "validationCritical",
-                    "certifiedAt",
-                    "certifiedById",
-                    "createdAt",
-                    "updatedAt",
-                    "anchor"
-                  ],
-                  "additionalProperties": false
-                }
-              }
-            }
-          },
-          "400": {
-            "description": "Body o query no pasan el schema",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ValidationError"
-                }
-              }
-            }
-          },
-          "401": {
-            "description": "Sin sesión o token inválido"
-          },
-          "403": {
-            "description": "Rol o membresía insuficiente"
-          }
-        }
-      }
-    },
-    "/api/v1/certifier/certificates": {
-      "get": {
-        "summary": "GET /api/v1/certifier/certificates",
-        "description": "auth + autoriza(rol(admin|verifier) · scope(Stage.certifiedById = usuario))",
-        "security": [
-          {
-            "bearerAuth": []
-          }
-        ],
-        "parameters": [
-          {
-            "in": "query",
-            "name": "cursor",
-            "schema": {
-              "type": "string"
-            }
-          },
-          {
-            "in": "query",
-            "name": "limit",
-            "schema": {
-              "default": 20,
-              "type": "integer",
-              "minimum": 1,
-              "maximum": 100
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "OK",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "type": "object",
-                  "properties": {
-                    "items": {
-                      "type": "array",
-                      "items": {
-                        "type": "object",
-                        "properties": {
-                          "stageId": {
-                            "type": "string"
-                          },
-                          "stageName": {
-                            "type": "string"
-                          },
-                          "projectName": {
-                            "type": "string"
-                          },
-                          "certifiedAt": {
-                            "anyOf": [
-                              {
-                                "type": "string"
-                              },
-                              {
-                                "type": "null"
-                              }
-                            ]
-                          },
-                          "commitmentHash": {
-                            "anyOf": [
-                              {
-                                "type": "string"
-                              },
-                              {
-                                "type": "null"
-                              }
-                            ]
-                          },
-                          "txid": {
-                            "anyOf": [
-                              {
-                                "type": "string"
-                              },
-                              {
-                                "type": "null"
-                              }
-                            ]
-                          },
-                          "anchorStatus": {
-                            "anyOf": [
-                              {
-                                "type": "string",
-                                "enum": [
-                                  "Pending",
-                                  "Confirmed",
-                                  "Failed"
-                                ]
-                              },
-                              {
-                                "type": "null"
-                              }
-                            ]
-                          }
-                        },
-                        "required": [
-                          "stageId",
-                          "stageName",
-                          "projectName",
-                          "certifiedAt",
-                          "commitmentHash",
-                          "txid",
-                          "anchorStatus"
-                        ],
-                        "additionalProperties": false
-                      }
-                    },
-                    "nextCursor": {
-                      "anyOf": [
-                        {
-                          "type": "string"
-                        },
-                        {
-                          "type": "null"
-                        }
-                      ]
-                    }
-                  },
-                  "required": [
-                    "items",
-                    "nextCursor"
-                  ],
-                  "additionalProperties": false
-                }
-              }
-            }
-          },
-          "400": {
-            "description": "Body o query no pasan el schema",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ValidationError"
-                }
-              }
-            }
-          },
-          "401": {
-            "description": "Sin sesión o token inválido"
-          },
-          "403": {
-            "description": "Rol o membresía insuficiente"
-          }
-        }
-      }
-    },
     "/api/v1/notary/kpis": {
       "get": {
         "operationId": "kpisProcedure",
@@ -12111,6 +11133,929 @@
                           "signatureTxid",
                           "signedAt",
                           "status"
+                        ],
+                        "additionalProperties": false
+                      }
+                    },
+                    "nextCursor": {
+                      "anyOf": [
+                        {
+                          "type": "string"
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ]
+                    }
+                  },
+                  "required": [
+                    "items",
+                    "nextCursor"
+                  ],
+                  "additionalProperties": false
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/certifier/kpis": {
+      "get": {
+        "operationId": "kpisProcedure",
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "assigned": {
+                      "type": "integer",
+                      "minimum": 0,
+                      "maximum": 9007199254740991
+                    },
+                    "certified": {
+                      "type": "integer",
+                      "minimum": 0,
+                      "maximum": 9007199254740991
+                    },
+                    "observed": {
+                      "type": "integer",
+                      "minimum": 0,
+                      "maximum": 9007199254740991
+                    },
+                    "totalStages": {
+                      "type": "integer",
+                      "minimum": 0,
+                      "maximum": 9007199254740991
+                    }
+                  },
+                  "required": [
+                    "assigned",
+                    "certified",
+                    "observed",
+                    "totalStages"
+                  ],
+                  "additionalProperties": false
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/certifier/assignments": {
+      "get": {
+        "operationId": "assignmentsProcedure",
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "properties": {
+                      "stageId": {
+                        "type": "string"
+                      },
+                      "projectName": {
+                        "type": "string"
+                      },
+                      "stageName": {
+                        "type": "string"
+                      },
+                      "sequenceOrder": {
+                        "type": "integer",
+                        "minimum": -9007199254740991,
+                        "maximum": 9007199254740991,
+                        "exclusiveMinimum": 0
+                      }
+                    },
+                    "required": [
+                      "stageId",
+                      "projectName",
+                      "stageName",
+                      "sequenceOrder"
+                    ],
+                    "additionalProperties": false
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/certifier/stages/{id}": {
+      "get": {
+        "operationId": "stageViewProcedure",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "pattern": "^[a-z][a-z0-9]{23}$"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "id": {
+                      "type": "string"
+                    },
+                    "name": {
+                      "type": "string"
+                    },
+                    "sequenceOrder": {
+                      "type": "integer",
+                      "minimum": -9007199254740991,
+                      "maximum": 9007199254740991,
+                      "exclusiveMinimum": 0
+                    },
+                    "state": {
+                      "enum": [
+                        "Pending",
+                        "InProgress",
+                        "Observed",
+                        "Completed"
+                      ],
+                      "type": "string"
+                    },
+                    "validationCritical": {
+                      "type": "boolean"
+                    },
+                    "projectId": {
+                      "type": "string"
+                    },
+                    "projectName": {
+                      "type": "string"
+                    },
+                    "evidence": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "id": {
+                            "type": "string"
+                          },
+                          "originalFilename": {
+                            "type": "string"
+                          },
+                          "category": {
+                            "type": "string"
+                          },
+                          "authoritative": {
+                            "type": "boolean"
+                          },
+                          "sha256Hash": {
+                            "anyOf": [
+                              {
+                                "type": "string"
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ]
+                          },
+                          "uploadedAt": {
+                            "type": "string",
+                            "format": "date-time",
+                            "x-native-type": "date"
+                          }
+                        },
+                        "required": [
+                          "id",
+                          "originalFilename",
+                          "category",
+                          "authoritative",
+                          "sha256Hash",
+                          "uploadedAt"
+                        ],
+                        "additionalProperties": false
+                      }
+                    }
+                  },
+                  "required": [
+                    "id",
+                    "name",
+                    "sequenceOrder",
+                    "state",
+                    "validationCritical",
+                    "projectId",
+                    "projectName",
+                    "evidence"
+                  ],
+                  "additionalProperties": false
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/certifier/stages/{id}/certify": {
+      "post": {
+        "operationId": "certifyProcedure",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "pattern": "^[a-z][a-z0-9]{23}$"
+            }
+          }
+        ],
+        "responses": {
+          "201": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "id": {
+                      "type": "string"
+                    },
+                    "projectId": {
+                      "type": "string"
+                    },
+                    "name": {
+                      "type": "string"
+                    },
+                    "sequenceOrder": {
+                      "type": "integer",
+                      "minimum": -9007199254740991,
+                      "maximum": 9007199254740991,
+                      "exclusiveMinimum": 0
+                    },
+                    "state": {
+                      "enum": [
+                        "Pending",
+                        "InProgress",
+                        "Observed",
+                        "Completed"
+                      ],
+                      "type": "string"
+                    },
+                    "validationCritical": {
+                      "type": "boolean"
+                    },
+                    "certifiedAt": {
+                      "anyOf": [
+                        {
+                          "type": "string",
+                          "format": "date-time",
+                          "x-native-type": "date"
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ]
+                    },
+                    "certifiedById": {
+                      "anyOf": [
+                        {
+                          "type": "string"
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ]
+                    },
+                    "createdAt": {
+                      "type": "string",
+                      "format": "date-time",
+                      "x-native-type": "date"
+                    },
+                    "updatedAt": {
+                      "type": "string",
+                      "format": "date-time",
+                      "x-native-type": "date"
+                    },
+                    "anchor": {
+                      "type": "object",
+                      "properties": {
+                        "id": {
+                          "type": "string"
+                        },
+                        "projectId": {
+                          "type": "string"
+                        },
+                        "stageId": {
+                          "anyOf": [
+                            {
+                              "type": "string"
+                            },
+                            {
+                              "type": "null"
+                            }
+                          ]
+                        },
+                        "evidenceId": {
+                          "anyOf": [
+                            {
+                              "type": "string"
+                            },
+                            {
+                              "type": "null"
+                            }
+                          ]
+                        },
+                        "referenceId": {
+                          "anyOf": [
+                            {
+                              "type": "string"
+                            },
+                            {
+                              "type": "null"
+                            }
+                          ]
+                        },
+                        "eventIndex": {
+                          "type": "integer",
+                          "minimum": 0,
+                          "maximum": 9007199254740991
+                        },
+                        "eventType": {
+                          "enum": [
+                            "STAGE_CREATED",
+                            "STAGE_TRANSITION",
+                            "EVIDENCE_ANCHOR",
+                            "INVITATION_ACCEPTED",
+                            "PAYMENT_RELEASE",
+                            "DOSSIER_SIGNATURE",
+                            "DOCUMENT_ANCHOR"
+                          ],
+                          "type": "string"
+                        },
+                        "fromState": {
+                          "anyOf": [
+                            {
+                              "enum": [
+                                "Pending",
+                                "InProgress",
+                                "Observed",
+                                "Completed"
+                              ],
+                              "type": "string"
+                            },
+                            {
+                              "type": "null"
+                            }
+                          ]
+                        },
+                        "toState": {
+                          "anyOf": [
+                            {
+                              "enum": [
+                                "Pending",
+                                "InProgress",
+                                "Observed",
+                                "Completed"
+                              ],
+                              "type": "string"
+                            },
+                            {
+                              "type": "null"
+                            }
+                          ]
+                        },
+                        "commitment": {
+                          "anyOf": [
+                            {
+                              "type": "string"
+                            },
+                            {
+                              "type": "null"
+                            }
+                          ]
+                        },
+                        "status": {
+                          "enum": [
+                            "Pending",
+                            "Confirmed",
+                            "Failed"
+                          ],
+                          "type": "string"
+                        },
+                        "txid": {
+                          "anyOf": [
+                            {
+                              "type": "string"
+                            },
+                            {
+                              "type": "null"
+                            }
+                          ]
+                        },
+                        "network": {
+                          "anyOf": [
+                            {
+                              "type": "string"
+                            },
+                            {
+                              "type": "null"
+                            }
+                          ]
+                        },
+                        "outputRef": {
+                          "anyOf": [
+                            {
+                              "type": "string"
+                            },
+                            {
+                              "type": "null"
+                            }
+                          ]
+                        },
+                        "blockTimestamp": {
+                          "anyOf": [
+                            {
+                              "type": "string",
+                              "format": "date-time",
+                              "x-native-type": "date"
+                            },
+                            {
+                              "type": "null"
+                            }
+                          ]
+                        },
+                        "createdAt": {
+                          "type": "string",
+                          "format": "date-time",
+                          "x-native-type": "date"
+                        },
+                        "updatedAt": {
+                          "type": "string",
+                          "format": "date-time",
+                          "x-native-type": "date"
+                        }
+                      },
+                      "required": [
+                        "id",
+                        "projectId",
+                        "stageId",
+                        "evidenceId",
+                        "referenceId",
+                        "eventIndex",
+                        "eventType",
+                        "fromState",
+                        "toState",
+                        "commitment",
+                        "status",
+                        "txid",
+                        "network",
+                        "outputRef",
+                        "blockTimestamp",
+                        "createdAt",
+                        "updatedAt"
+                      ],
+                      "additionalProperties": false
+                    }
+                  },
+                  "required": [
+                    "id",
+                    "projectId",
+                    "name",
+                    "sequenceOrder",
+                    "state",
+                    "validationCritical",
+                    "certifiedAt",
+                    "certifiedById",
+                    "createdAt",
+                    "updatedAt",
+                    "anchor"
+                  ],
+                  "additionalProperties": false
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/certifier/stages/{id}/observe": {
+      "post": {
+        "operationId": "observeProcedure",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "pattern": "^[a-z][a-z0-9]{23}$"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "note": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 2000
+                  }
+                },
+                "required": [
+                  "note"
+                ],
+                "additionalProperties": false
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "id": {
+                      "type": "string"
+                    },
+                    "projectId": {
+                      "type": "string"
+                    },
+                    "name": {
+                      "type": "string"
+                    },
+                    "sequenceOrder": {
+                      "type": "integer",
+                      "minimum": -9007199254740991,
+                      "maximum": 9007199254740991,
+                      "exclusiveMinimum": 0
+                    },
+                    "state": {
+                      "enum": [
+                        "Pending",
+                        "InProgress",
+                        "Observed",
+                        "Completed"
+                      ],
+                      "type": "string"
+                    },
+                    "validationCritical": {
+                      "type": "boolean"
+                    },
+                    "certifiedAt": {
+                      "anyOf": [
+                        {
+                          "type": "string",
+                          "format": "date-time",
+                          "x-native-type": "date"
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ]
+                    },
+                    "certifiedById": {
+                      "anyOf": [
+                        {
+                          "type": "string"
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ]
+                    },
+                    "createdAt": {
+                      "type": "string",
+                      "format": "date-time",
+                      "x-native-type": "date"
+                    },
+                    "updatedAt": {
+                      "type": "string",
+                      "format": "date-time",
+                      "x-native-type": "date"
+                    },
+                    "anchor": {
+                      "type": "object",
+                      "properties": {
+                        "id": {
+                          "type": "string"
+                        },
+                        "projectId": {
+                          "type": "string"
+                        },
+                        "stageId": {
+                          "anyOf": [
+                            {
+                              "type": "string"
+                            },
+                            {
+                              "type": "null"
+                            }
+                          ]
+                        },
+                        "evidenceId": {
+                          "anyOf": [
+                            {
+                              "type": "string"
+                            },
+                            {
+                              "type": "null"
+                            }
+                          ]
+                        },
+                        "referenceId": {
+                          "anyOf": [
+                            {
+                              "type": "string"
+                            },
+                            {
+                              "type": "null"
+                            }
+                          ]
+                        },
+                        "eventIndex": {
+                          "type": "integer",
+                          "minimum": 0,
+                          "maximum": 9007199254740991
+                        },
+                        "eventType": {
+                          "enum": [
+                            "STAGE_CREATED",
+                            "STAGE_TRANSITION",
+                            "EVIDENCE_ANCHOR",
+                            "INVITATION_ACCEPTED",
+                            "PAYMENT_RELEASE",
+                            "DOSSIER_SIGNATURE",
+                            "DOCUMENT_ANCHOR"
+                          ],
+                          "type": "string"
+                        },
+                        "fromState": {
+                          "anyOf": [
+                            {
+                              "enum": [
+                                "Pending",
+                                "InProgress",
+                                "Observed",
+                                "Completed"
+                              ],
+                              "type": "string"
+                            },
+                            {
+                              "type": "null"
+                            }
+                          ]
+                        },
+                        "toState": {
+                          "anyOf": [
+                            {
+                              "enum": [
+                                "Pending",
+                                "InProgress",
+                                "Observed",
+                                "Completed"
+                              ],
+                              "type": "string"
+                            },
+                            {
+                              "type": "null"
+                            }
+                          ]
+                        },
+                        "commitment": {
+                          "anyOf": [
+                            {
+                              "type": "string"
+                            },
+                            {
+                              "type": "null"
+                            }
+                          ]
+                        },
+                        "status": {
+                          "enum": [
+                            "Pending",
+                            "Confirmed",
+                            "Failed"
+                          ],
+                          "type": "string"
+                        },
+                        "txid": {
+                          "anyOf": [
+                            {
+                              "type": "string"
+                            },
+                            {
+                              "type": "null"
+                            }
+                          ]
+                        },
+                        "network": {
+                          "anyOf": [
+                            {
+                              "type": "string"
+                            },
+                            {
+                              "type": "null"
+                            }
+                          ]
+                        },
+                        "outputRef": {
+                          "anyOf": [
+                            {
+                              "type": "string"
+                            },
+                            {
+                              "type": "null"
+                            }
+                          ]
+                        },
+                        "blockTimestamp": {
+                          "anyOf": [
+                            {
+                              "type": "string",
+                              "format": "date-time",
+                              "x-native-type": "date"
+                            },
+                            {
+                              "type": "null"
+                            }
+                          ]
+                        },
+                        "createdAt": {
+                          "type": "string",
+                          "format": "date-time",
+                          "x-native-type": "date"
+                        },
+                        "updatedAt": {
+                          "type": "string",
+                          "format": "date-time",
+                          "x-native-type": "date"
+                        }
+                      },
+                      "required": [
+                        "id",
+                        "projectId",
+                        "stageId",
+                        "evidenceId",
+                        "referenceId",
+                        "eventIndex",
+                        "eventType",
+                        "fromState",
+                        "toState",
+                        "commitment",
+                        "status",
+                        "txid",
+                        "network",
+                        "outputRef",
+                        "blockTimestamp",
+                        "createdAt",
+                        "updatedAt"
+                      ],
+                      "additionalProperties": false
+                    }
+                  },
+                  "required": [
+                    "id",
+                    "projectId",
+                    "name",
+                    "sequenceOrder",
+                    "state",
+                    "validationCritical",
+                    "certifiedAt",
+                    "certifiedById",
+                    "createdAt",
+                    "updatedAt",
+                    "anchor"
+                  ],
+                  "additionalProperties": false
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/certifier/certificates": {
+      "get": {
+        "operationId": "certificatesProcedure",
+        "parameters": [
+          {
+            "name": "cursor",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            },
+            "allowEmptyValue": true,
+            "allowReserved": true
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 100,
+              "default": 20
+            },
+            "allowEmptyValue": true,
+            "allowReserved": true
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "items": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "stageId": {
+                            "type": "string"
+                          },
+                          "stageName": {
+                            "type": "string"
+                          },
+                          "projectName": {
+                            "type": "string"
+                          },
+                          "certifiedAt": {
+                            "anyOf": [
+                              {
+                                "type": "string",
+                                "format": "date-time",
+                                "x-native-type": "date"
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ]
+                          },
+                          "commitmentHash": {
+                            "anyOf": [
+                              {
+                                "type": "string"
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ]
+                          },
+                          "txid": {
+                            "anyOf": [
+                              {
+                                "type": "string"
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ]
+                          },
+                          "anchorStatus": {
+                            "anyOf": [
+                              {
+                                "enum": [
+                                  "Pending",
+                                  "Confirmed",
+                                  "Failed"
+                                ],
+                                "type": "string"
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ]
+                          }
+                        },
+                        "required": [
+                          "stageId",
+                          "stageName",
+                          "projectName",
+                          "certifiedAt",
+                          "commitmentHash",
+                          "txid",
+                          "anchorStatus"
                         ],
                         "additionalProperties": false
                       }

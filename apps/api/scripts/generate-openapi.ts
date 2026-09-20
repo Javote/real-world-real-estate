@@ -13,10 +13,6 @@ import {
   capitalByProjectSchema,
   capitalMonthlyPointSchema,
   capitalSummarySchema,
-  certifierAssignmentSchema,
-  certifierCertificateSchema,
-  certifierKpisSchema,
-  certifierStageViewSchema,
   contractReleaseSchema,
   createDeveloperProjectSchema,
   createInvitationSchema,
@@ -24,7 +20,6 @@ import {
   createUnitSchema,
   createUserSchema,
   cuidParamSchema,
-  cursorPaginationSchema,
   developerContractSchema,
   developerDocumentListQuerySchema,
   developerDocumentSchema,
@@ -52,7 +47,6 @@ import {
   notificationPrefsSchema,
   notificationQuerySchema,
   notificationSchema,
-  observeStageSchema,
   onChainEventSchema,
   paginatedResponseSchema,
   paymentReleaseResultSchema,
@@ -94,6 +88,7 @@ import { createDocument } from "zod-openapi";
 import { en } from "../src/lib/arrays";
 import { OpenAPIGenerator, os, ZodToJsonSchemaConverter } from "../src/lib/orpc";
 import { describir, leerMontaje } from "../src/lib/route-inventory";
+import { type CertifierContext, certifierOrpcRouter } from "../src/routes/certifier.routes";
 import { type NotaryContext, notaryOrpcRouter } from "../src/routes/notary.routes";
 
 // El otro consumidor de `route-inventory` (junto a `generate-api-docs.ts` y
@@ -175,13 +170,12 @@ const REQUEST_SCHEMAS: Record<string, SchemaEntry> = {
   "POST /api/v1/developer/projects/:id/stages/:stageId/evidence": {
     body: stageEvidenceUploadSchema,
     bodyContentType: "multipart/form-data"
-  },
-  "GET /api/v1/certifier/certificates": { query: cursorPaginationSchema },
-  "POST /api/v1/certifier/stages/:id/observe": { body: observeStageSchema }
-  // Las 6 rutas de `notary` (SPEC-212 §A) ya NO están acá: su schema se
-  // declara una sola vez en el procedimiento oRPC (`notary.routes.ts`) y de
-  // ahí sale tanto la validación como el fragmento de OpenAPI — ver
-  // `ORPC_MIGRADAS` y el merge al final de `buildOpenApiDocument`.
+  }
+  // Las 12 rutas de `notary` (§A) y `certifier` (§B) ya NO están acá: su
+  // schema se declara una sola vez en el procedimiento oRPC (`notary.routes.ts`,
+  // `certifier.routes.ts`) y de ahí sale tanto la validación como el
+  // fragmento de OpenAPI — ver `ORPC_MIGRADAS` y el merge al final de
+  // `buildOpenApiDocument`.
 };
 
 /**
@@ -196,10 +190,6 @@ const RESPONSE_SCHEMAS: Record<string, ZodType> = {
   "GET /api/v1/investor/notifications": z.array(notificationSchema),
   "POST /api/v1/investor/units/:id/dossier/share": dossierShareSchema,
   "GET /api/v1/investor/units/:id/dossier": dossierSchema,
-  "GET /api/v1/certifier/kpis": certifierKpisSchema,
-  "GET /api/v1/certifier/assignments": z.array(certifierAssignmentSchema),
-  "GET /api/v1/certifier/stages/:id": certifierStageViewSchema,
-  "GET /api/v1/certifier/certificates": paginatedResponseSchema(certifierCertificateSchema),
   "GET /api/v1/notifications/unread-count": unreadCountSchema,
   "GET /api/v1/developer/documents": z.array(developerDocumentSchema),
   "GET /api/v1/developer/kpis": developerKpisSchema,
@@ -244,9 +234,6 @@ const RESPONSE_SCHEMAS: Record<string, ZodType> = {
   "POST /api/v1/projects/:id/members": projectMemberSchema,
   "GET /api/v1/projects/:id/documents": z.array(projectDocumentSchema),
   "GET /api/v1/projects/:id/building-schematic": z.array(buildingSchematicFloorSchema),
-  // Mismo `.extend(...)` que `PATCH /stages/:id/state` — no un schema aparte.
-  "POST /api/v1/certifier/stages/:id/certify": stageSchema.extend({ anchor: onChainEventSchema }),
-  "POST /api/v1/certifier/stages/:id/observe": stageSchema.extend({ anchor: onChainEventSchema }),
   "POST /api/v1/developer/projects/:id/stages/:stageId/evidence": stageEvidenceUploadResultSchema,
   "GET /api/v1/developer/projects": z.array(developerProjectListItemSchema),
   "GET /api/v1/developer/projects/:id": developerProjectDetailSchema,
@@ -350,10 +337,10 @@ function aPathOpenApi(ruta: string): string {
 }
 
 /**
- * Las 6 rutas de `notary` (SPEC-212 §A), ya migradas a oRPC — el bucle de
- * abajo las saltea y su fragmento sale, aparte, de `notaryOrpcRouter` con
- * `OpenAPIGenerator` (ver el final de esta función). Cuando `§B`/`§C`/`§D`
- * migren, sus rutas se suman acá.
+ * Las rutas de `notary` (§A) y `certifier` (§B), ya migradas a oRPC — el
+ * bucle de abajo las saltea y su fragmento sale, aparte, de sus routers oRPC
+ * combinados con `OpenAPIGenerator` (ver el final de esta función). Cuando
+ * `§C`/`§D` migren, sus rutas se suman acá.
  */
 const ORPC_MIGRADAS = new Set([
   "GET /api/v1/notary/kpis",
@@ -361,7 +348,13 @@ const ORPC_MIGRADAS = new Set([
   "GET /api/v1/notary/dossiers/:id",
   "POST /api/v1/notary/dossiers/:id/sign",
   "POST /api/v1/notary/dossiers/:id/reject",
-  "GET /api/v1/notary/signatures"
+  "GET /api/v1/notary/signatures",
+  "GET /api/v1/certifier/kpis",
+  "GET /api/v1/certifier/assignments",
+  "GET /api/v1/certifier/stages/:id",
+  "POST /api/v1/certifier/stages/:id/certify",
+  "POST /api/v1/certifier/stages/:id/observe",
+  "GET /api/v1/certifier/certificates"
 ]);
 
 export async function buildOpenApiDocument() {
@@ -426,13 +419,14 @@ export async function buildOpenApiDocument() {
     }
   }
 
-  // Las 6 rutas de `notary` (SPEC-212 §A): un router oRPC combinado, prefijado
-  // al mismo `/api/v1/notary` que `MONTAJE` usa para montarlas de verdad
-  // (`os.prefix(...).router(...)`, no un string armado a mano dos veces), y
-  // `OpenAPIGenerator` arma su fragmento desde ahí — el mismo contrato Zod que
-  // valida en runtime, no una segunda copia. `ZodToJsonSchemaConverter` tiene
-  // que ser el de `@orpc/zod/zod4`: el de Zod v3 devuelve un schema vacío en
-  // silencio contra la forma interna de Zod v4 (D-035) — ver `src/lib/orpc.ts`.
+  // Las rutas de `notary` (§A) y `certifier` (§B): un router oRPC combinado
+  // por vertical, prefijado al mismo path absoluto que `MONTAJE` usa para
+  // montarlas de verdad (`os.prefix(...).router(...)`, no un string armado a
+  // mano dos veces), y `OpenAPIGenerator` arma su fragmento desde ahí — el
+  // mismo contrato Zod que valida en runtime, no una segunda copia.
+  // `ZodToJsonSchemaConverter` tiene que ser el de `@orpc/zod/zod4`: el de
+  // Zod v3 devuelve un schema vacío en silencio contra la forma interna de
+  // Zod v4 (D-035) — ver `src/lib/orpc.ts`.
   const generadorOrpc = new OpenAPIGenerator({
     schemaConverters: [new ZodToJsonSchemaConverter()]
   });
@@ -443,6 +437,14 @@ export async function buildOpenApiDocument() {
     }
   );
   Object.assign(paths, documentoNotary.paths);
+
+  const documentoCertifier = await generadorOrpc.generate(
+    os.$context<CertifierContext>().prefix("/api/v1/certifier").router(certifierOrpcRouter),
+    {
+      info: { title: "PropNexus API — certifier (oRPC)", version: "1.0.0" }
+    }
+  );
+  Object.assign(paths, documentoCertifier.paths);
 
   return createDocument({
     openapi: "3.1.0",
