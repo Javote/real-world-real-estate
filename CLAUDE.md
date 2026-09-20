@@ -520,6 +520,35 @@ Los comandos por frente (`db:migrate`, `db:seed`, `e2e`) están en el `CLAUDE.md
 
 ---
 
+# Worktrees
+
+Usar `git worktree` para aislar trabajo en paralelo está bien — pero cada uno es un checkout
+completo con su propio `pnpm install`, y en este repo eso pesa: **~750MB por worktree** (más si
+corre `docker compose` o baja modelos). El 2026-09-18 el disco llegó a **99% de uso, 120Mi libres**,
+con nueve worktrees viejos —todos ya mergeados y pusheados a `main`— sin borrar.
+
+- **Borrar el worktree apenas su rama está mergeada y pusheada.**
+  `git worktree remove --force .claude/worktrees/<nombre>`. No hay razón para dejarlo "por las
+  dudas": el commit ya vive en `main`, el worktree no agrega nada.
+- **Antes de crear uno nuevo, `git worktree list`** y borrar los que ya se mergearon. Un worktree
+  con una rama que sigue sin mergear puede ser trabajo en curso de otra sesión — no lo toques ni
+  asumas que es tuyo para borrar.
+- **No tocar un worktree que no reconocés** (ramas `agent-*` u otro nombre que no arrancaste vos):
+  puede ser una sesión concurrente con trabajo sin commitear.
+- **El disco se llena en silencio.** No hay alerta hasta que algo falla con `ENOSPC`. Si vas a
+  instalar dependencias, levantar `compose.dev.yml` o crear un worktree, chequeá `df -h /` antes si
+  hace un tiempo que no se limpia nada.
+- **Cachés reconstruibles no cuestan nada limpiar:** `~/.npm`, `~/Library/pnpm/store`,
+  `~/.cache/uv`, `~/.cache/puppeteer`, `~/.cache/huggingface` se vuelven a poblar solos en el
+  próximo `pnpm install` o uso. Limpialos sin preguntar si el disco aprieta.
+- **Las imágenes de Docker con nombre no son cachés: son infraestructura del repo.** `yaci-cli`,
+  `yaci-devkit`, `minio` y `postgres` son las que usan `compose.dev.yml` y `pnpm --filter
+  @plataforma/api test:s3` / `test:yaci` (§Comandos) — bajarlas de nuevo son minutos y varios GB.
+  `docker container prune` y `docker image prune` (sin `-a`, que solo se llevan contenedores
+  parados e imágenes dangling) son seguros; borrar esas cuatro imágenes con nombre no.
+
+---
+
 # Trampas transversales
 
 Sección viva: agregá acá el mismo día que te muerda una. Las de cada frente van en su `CLAUDE.md`.
