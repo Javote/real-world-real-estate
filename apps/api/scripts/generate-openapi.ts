@@ -2,7 +2,6 @@ import "dotenv/config";
 import { mkdirSync, writeFileSync } from "node:fs";
 import path from "node:path";
 import {
-  acceptInvitationResultSchema,
   addProjectMemberSchema,
   anchorDocumentSchema,
   auditLogEntrySchema,
@@ -29,24 +28,16 @@ import {
   developerProjectDetailSchema,
   developerProjectListItemSchema,
   developerUnitDirectoryEntrySchema,
-  dossierSchema,
-  dossierShareSchema,
   evidenceBundleSummarySchema,
   evidenceProofSchema,
   evidenceSchema,
   hex64ParamSchema,
-  investorContractSchema,
   investorDirectoryEntrySchema,
-  investorInvitationDetailSchema,
-  investorUnitDetailSchema,
-  investorUnitListItemSchema,
   invitationSchema,
   loginRequestSchema,
   loginResponseSchema,
   meResponseSchema,
   notificationPrefsSchema,
-  notificationQuerySchema,
-  notificationSchema,
   onChainEventSchema,
   paginatedResponseSchema,
   paymentReleaseResultSchema,
@@ -70,7 +61,6 @@ import {
   stageSchema,
   stageTransitionSchema,
   stageWithThreadSchema,
-  unitNewsEventSchema,
   unitSchema,
   unreadCountSchema,
   updateEvidenceSchema,
@@ -89,6 +79,7 @@ import { en } from "../src/lib/arrays";
 import { OpenAPIGenerator, os, ZodToJsonSchemaConverter } from "../src/lib/orpc";
 import { describir, leerMontaje } from "../src/lib/route-inventory";
 import { type CertifierContext, certifierOrpcRouter } from "../src/routes/certifier.routes";
+import { type InvestorContext, investorOrpcRouter } from "../src/routes/investor.routes";
 import { type NotaryContext, notaryOrpcRouter } from "../src/routes/notary.routes";
 
 // El otro consumidor de `route-inventory` (junto a `generate-api-docs.ts` y
@@ -155,7 +146,6 @@ const REQUEST_SCHEMAS: Record<string, SchemaEntry> = {
   "PATCH /api/v1/profile/notifications": { body: updateNotificationPrefsSchema },
   "POST /api/v1/users": { body: createUserSchema },
   "PATCH /api/v1/users/:id": { body: updateUserSchema },
-  "GET /api/v1/investor/notifications": { query: notificationQuerySchema },
   "GET /api/v1/developer/documents": { query: developerDocumentListQuerySchema },
   "GET /api/v1/developer/audit-log": { query: auditLogQuerySchema },
   "POST /api/v1/developer/documents": { body: anchorDocumentSchema },
@@ -171,9 +161,10 @@ const REQUEST_SCHEMAS: Record<string, SchemaEntry> = {
     body: stageEvidenceUploadSchema,
     bodyContentType: "multipart/form-data"
   }
-  // Las 12 rutas de `notary` (§A) y `certifier` (§B) ya NO están acá: su
-  // schema se declara una sola vez en el procedimiento oRPC (`notary.routes.ts`,
-  // `certifier.routes.ts`) y de ahí sale tanto la validación como el
+  // Las rutas de `notary` (§A), `certifier` (§B) e `investor` (§C, salvo
+  // `export.pdf`) ya NO están acá: su schema se declara una sola vez en el
+  // procedimiento oRPC (`notary.routes.ts`, `certifier.routes.ts`,
+  // `investor.routes.ts`) y de ahí sale tanto la validación como el
   // fragmento de OpenAPI — ver `ORPC_MIGRADAS` y el merge al final de
   // `buildOpenApiDocument`.
 };
@@ -187,9 +178,6 @@ const REQUEST_SCHEMAS: Record<string, SchemaEntry> = {
 const RESPONSE_SCHEMAS: Record<string, ZodType> = {
   "POST /api/v1/auth/login": loginResponseSchema,
   "GET /api/v1/auth/me": meResponseSchema,
-  "GET /api/v1/investor/notifications": z.array(notificationSchema),
-  "POST /api/v1/investor/units/:id/dossier/share": dossierShareSchema,
-  "GET /api/v1/investor/units/:id/dossier": dossierSchema,
   "GET /api/v1/notifications/unread-count": unreadCountSchema,
   "GET /api/v1/developer/documents": z.array(developerDocumentSchema),
   "GET /api/v1/developer/kpis": developerKpisSchema,
@@ -251,13 +239,6 @@ const RESPONSE_SCHEMAS: Record<string, ZodType> = {
   // Documenta el 201 (recién liberada); el 200 (idempotente) es
   // paymentAttestationSchema solo, sin `anchor`.
   "POST /api/v1/developer/contracts/:id/releases/:stageNum": paymentReleaseResultSchema,
-  "GET /api/v1/investor/favorites": z.array(projectSchema),
-  "GET /api/v1/investor/units": z.array(investorUnitListItemSchema),
-  "GET /api/v1/investor/units/:id": investorUnitDetailSchema,
-  "GET /api/v1/investor/units/:id/news": z.array(unitNewsEventSchema),
-  "GET /api/v1/investor/invitations/:id": investorInvitationDetailSchema,
-  "POST /api/v1/investor/invitations/:id/accept": acceptInvitationResultSchema,
-  "GET /api/v1/investor/contracts/:unitId": investorContractSchema,
   "GET /api/v1/projects/:id/stages": z.array(stageWithThreadSchema),
   "POST /api/v1/projects/:id/stages/:stageId/retry-anchor": stageSchema.extend({
     anchor: onChainEventSchema
@@ -337,10 +318,11 @@ function aPathOpenApi(ruta: string): string {
 }
 
 /**
- * Las rutas de `notary` (§A) y `certifier` (§B), ya migradas a oRPC — el
- * bucle de abajo las saltea y su fragmento sale, aparte, de sus routers oRPC
- * combinados con `OpenAPIGenerator` (ver el final de esta función). Cuando
- * `§C`/`§D` migren, sus rutas se suman acá.
+ * Las rutas de `notary` (§A), `certifier` (§B) e `investor` (§C, salvo
+ * `export.pdf`), ya migradas a oRPC — el bucle de abajo las saltea y su
+ * fragmento sale, aparte, de sus routers oRPC combinados con
+ * `OpenAPIGenerator` (ver el final de esta función). Cuando `§D` migre, sus
+ * rutas se suman acá.
  */
 const ORPC_MIGRADAS = new Set([
   "GET /api/v1/notary/kpis",
@@ -354,7 +336,25 @@ const ORPC_MIGRADAS = new Set([
   "GET /api/v1/certifier/stages/:id",
   "POST /api/v1/certifier/stages/:id/certify",
   "POST /api/v1/certifier/stages/:id/observe",
-  "GET /api/v1/certifier/certificates"
+  "GET /api/v1/certifier/certificates",
+  "GET /api/v1/investor/favorites",
+  "POST /api/v1/investor/favorites/:projectId",
+  "DELETE /api/v1/investor/favorites/:projectId",
+  "GET /api/v1/investor/units",
+  "GET /api/v1/investor/units/:id",
+  "GET /api/v1/investor/units/:id/news",
+  "GET /api/v1/investor/units/:id/dossier",
+  "POST /api/v1/investor/units/:id/dossier/share",
+  "GET /api/v1/investor/notifications",
+  "GET /api/v1/investor/invitations/:id",
+  "POST /api/v1/investor/invitations/:id/accept",
+  "POST /api/v1/investor/invitations/:id/decline",
+  "GET /api/v1/investor/contracts/:unitId"
+  // `GET /api/v1/investor/units/:id/dossier/export.pdf` NO está acá a
+  // propósito: es la única ruta de investor que sigue documentada por el
+  // bucle manual de abajo — devuelve un PDF binario, y `OpenAPIHandler`
+  // solo sabe serializar JSON (ver el comentario grande en
+  // `investor.routes.ts`).
 ]);
 
 export async function buildOpenApiDocument() {
@@ -445,6 +445,14 @@ export async function buildOpenApiDocument() {
     }
   );
   Object.assign(paths, documentoCertifier.paths);
+
+  const documentoInvestor = await generadorOrpc.generate(
+    os.$context<InvestorContext>().prefix("/api/v1/investor").router(investorOrpcRouter),
+    {
+      info: { title: "PropNexus API — investor (oRPC)", version: "1.0.0" }
+    }
+  );
+  Object.assign(paths, documentoInvestor.paths);
 
   return createDocument({
     openapi: "3.1.0",

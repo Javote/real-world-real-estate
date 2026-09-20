@@ -5365,827 +5365,6 @@
         }
       }
     },
-    "/api/v1/investor/favorites": {
-      "get": {
-        "summary": "GET /api/v1/investor/favorites",
-        "description": "auth + autoriza(rol(admin|buyer) · scope(Favorite.userId = usuario))",
-        "security": [
-          {
-            "bearerAuth": []
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "OK",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "type": "array",
-                  "items": {
-                    "type": "object",
-                    "properties": {
-                      "id": {
-                        "type": "string"
-                      },
-                      "name": {
-                        "type": "string"
-                      },
-                      "slug": {
-                        "type": "string"
-                      },
-                      "address": {
-                        "anyOf": [
-                          {
-                            "type": "string"
-                          },
-                          {
-                            "type": "null"
-                          }
-                        ]
-                      },
-                      "city": {
-                        "anyOf": [
-                          {
-                            "type": "string"
-                          },
-                          {
-                            "type": "null"
-                          }
-                        ]
-                      },
-                      "country": {
-                        "anyOf": [
-                          {
-                            "type": "string"
-                          },
-                          {
-                            "type": "null"
-                          }
-                        ]
-                      },
-                      "latitude": {
-                        "anyOf": [
-                          {
-                            "type": "number"
-                          },
-                          {
-                            "type": "null"
-                          }
-                        ]
-                      },
-                      "longitude": {
-                        "anyOf": [
-                          {
-                            "type": "number"
-                          },
-                          {
-                            "type": "null"
-                          }
-                        ]
-                      },
-                      "totalUnits": {
-                        "type": "integer",
-                        "minimum": 0,
-                        "maximum": 9007199254740991
-                      },
-                      "estimatedDelivery": {
-                        "anyOf": [
-                          {
-                            "type": "string"
-                          },
-                          {
-                            "type": "null"
-                          }
-                        ]
-                      },
-                      "status": {
-                        "type": "string",
-                        "enum": [
-                          "planning",
-                          "in_progress",
-                          "delayed",
-                          "completed"
-                        ]
-                      },
-                      "createdAt": {
-                        "type": "string"
-                      },
-                      "updatedAt": {
-                        "type": "string"
-                      }
-                    },
-                    "required": [
-                      "id",
-                      "name",
-                      "slug",
-                      "address",
-                      "city",
-                      "country",
-                      "latitude",
-                      "longitude",
-                      "totalUnits",
-                      "estimatedDelivery",
-                      "status",
-                      "createdAt",
-                      "updatedAt"
-                    ],
-                    "additionalProperties": false
-                  }
-                }
-              }
-            }
-          },
-          "401": {
-            "description": "Sin sesión o token inválido"
-          },
-          "403": {
-            "description": "Rol o membresía insuficiente"
-          }
-        }
-      }
-    },
-    "/api/v1/investor/favorites/{projectId}": {
-      "post": {
-        "summary": "POST /api/v1/investor/favorites/:projectId",
-        "description": "auth + autoriza(rol(admin|buyer) · soloRol)",
-        "security": [
-          {
-            "bearerAuth": []
-          }
-        ],
-        "parameters": [
-          {
-            "in": "path",
-            "name": "projectId",
-            "schema": {
-              "type": "string",
-              "pattern": "^[a-z][a-z0-9]{23}$"
-            },
-            "required": true
-          }
-        ],
-        "responses": {
-          "204": {
-            "description": "Sin contenido"
-          },
-          "401": {
-            "description": "Sin sesión o token inválido"
-          },
-          "403": {
-            "description": "Rol o membresía insuficiente"
-          }
-        }
-      },
-      "delete": {
-        "summary": "DELETE /api/v1/investor/favorites/:projectId",
-        "description": "auth + autoriza(rol(admin|buyer) · scope(Favorite.userId = usuario))",
-        "security": [
-          {
-            "bearerAuth": []
-          }
-        ],
-        "parameters": [
-          {
-            "in": "path",
-            "name": "projectId",
-            "schema": {
-              "type": "string",
-              "pattern": "^[a-z][a-z0-9]{23}$"
-            },
-            "required": true
-          }
-        ],
-        "responses": {
-          "204": {
-            "description": "Sin contenido"
-          },
-          "401": {
-            "description": "Sin sesión o token inválido"
-          },
-          "403": {
-            "description": "Rol o membresía insuficiente"
-          }
-        }
-      }
-    },
-    "/api/v1/investor/units": {
-      "get": {
-        "summary": "GET /api/v1/investor/units",
-        "description": "auth + autoriza(rol(admin|buyer) · scope(Unit.investorId = usuario))",
-        "security": [
-          {
-            "bearerAuth": []
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "OK",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "type": "array",
-                  "items": {
-                    "type": "object",
-                    "properties": {
-                      "id": {
-                        "type": "string"
-                      },
-                      "unitReference": {
-                        "type": "string"
-                      },
-                      "status": {
-                        "type": "string",
-                        "enum": [
-                          "available",
-                          "reserved",
-                          "sold",
-                          "delivered"
-                        ]
-                      },
-                      "sizeM2": {
-                        "anyOf": [
-                          {
-                            "type": "integer",
-                            "exclusiveMinimum": 0,
-                            "maximum": 9007199254740991
-                          },
-                          {
-                            "type": "null"
-                          }
-                        ]
-                      },
-                      "priceMinorUnits": {
-                        "anyOf": [
-                          {
-                            "type": "integer",
-                            "minimum": 0,
-                            "maximum": 9007199254740991
-                          },
-                          {
-                            "type": "null"
-                          }
-                        ]
-                      },
-                      "currency": {
-                        "anyOf": [
-                          {
-                            "type": "string"
-                          },
-                          {
-                            "type": "null"
-                          }
-                        ]
-                      },
-                      "projectId": {
-                        "type": "string"
-                      },
-                      "projectName": {
-                        "type": "string"
-                      },
-                      "city": {
-                        "anyOf": [
-                          {
-                            "type": "string"
-                          },
-                          {
-                            "type": "null"
-                          }
-                        ]
-                      },
-                      "progress": {
-                        "type": "integer",
-                        "minimum": 0,
-                        "maximum": 100
-                      }
-                    },
-                    "required": [
-                      "id",
-                      "unitReference",
-                      "status",
-                      "sizeM2",
-                      "priceMinorUnits",
-                      "currency",
-                      "projectId",
-                      "projectName",
-                      "city",
-                      "progress"
-                    ],
-                    "additionalProperties": false
-                  }
-                }
-              }
-            }
-          },
-          "401": {
-            "description": "Sin sesión o token inválido"
-          },
-          "403": {
-            "description": "Rol o membresía insuficiente"
-          }
-        }
-      }
-    },
-    "/api/v1/investor/units/{id}": {
-      "get": {
-        "summary": "GET /api/v1/investor/units/:id",
-        "description": "auth + autoriza(rol(admin|buyer) · dueño(Unit:id))",
-        "security": [
-          {
-            "bearerAuth": []
-          }
-        ],
-        "parameters": [
-          {
-            "in": "path",
-            "name": "id",
-            "schema": {
-              "type": "string",
-              "pattern": "^[a-z][a-z0-9]{23}$"
-            },
-            "required": true
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "OK",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "type": "object",
-                  "properties": {
-                    "id": {
-                      "type": "string"
-                    },
-                    "unitReference": {
-                      "type": "string"
-                    },
-                    "status": {
-                      "type": "string",
-                      "enum": [
-                        "available",
-                        "reserved",
-                        "sold",
-                        "delivered"
-                      ]
-                    },
-                    "sizeM2": {
-                      "anyOf": [
-                        {
-                          "type": "integer",
-                          "exclusiveMinimum": 0,
-                          "maximum": 9007199254740991
-                        },
-                        {
-                          "type": "null"
-                        }
-                      ]
-                    },
-                    "floor": {
-                      "anyOf": [
-                        {
-                          "type": "integer",
-                          "minimum": -9007199254740991,
-                          "maximum": 9007199254740991
-                        },
-                        {
-                          "type": "null"
-                        }
-                      ]
-                    },
-                    "priceMinorUnits": {
-                      "anyOf": [
-                        {
-                          "type": "integer",
-                          "minimum": 0,
-                          "maximum": 9007199254740991
-                        },
-                        {
-                          "type": "null"
-                        }
-                      ]
-                    },
-                    "currency": {
-                      "anyOf": [
-                        {
-                          "type": "string"
-                        },
-                        {
-                          "type": "null"
-                        }
-                      ]
-                    },
-                    "investorId": {
-                      "anyOf": [
-                        {
-                          "type": "string"
-                        },
-                        {
-                          "type": "null"
-                        }
-                      ]
-                    },
-                    "projectId": {
-                      "type": "string"
-                    },
-                    "projectName": {
-                      "type": "string"
-                    },
-                    "city": {
-                      "anyOf": [
-                        {
-                          "type": "string"
-                        },
-                        {
-                          "type": "null"
-                        }
-                      ]
-                    },
-                    "country": {
-                      "anyOf": [
-                        {
-                          "type": "string"
-                        },
-                        {
-                          "type": "null"
-                        }
-                      ]
-                    },
-                    "stages": {
-                      "type": "array",
-                      "items": {
-                        "type": "object",
-                        "properties": {
-                          "stageId": {
-                            "type": "string"
-                          },
-                          "name": {
-                            "type": "string"
-                          },
-                          "sequenceOrder": {
-                            "type": "integer",
-                            "exclusiveMinimum": 0,
-                            "maximum": 9007199254740991
-                          },
-                          "state": {
-                            "type": "string",
-                            "enum": [
-                              "Pending",
-                              "InProgress",
-                              "Observed",
-                              "Completed"
-                            ]
-                          },
-                          "bundleId": {
-                            "anyOf": [
-                              {
-                                "type": "string"
-                              },
-                              {
-                                "type": "null"
-                              }
-                            ]
-                          },
-                          "txid": {
-                            "anyOf": [
-                              {
-                                "type": "string"
-                              },
-                              {
-                                "type": "null"
-                              }
-                            ]
-                          }
-                        },
-                        "required": [
-                          "stageId",
-                          "name",
-                          "sequenceOrder",
-                          "state",
-                          "bundleId",
-                          "txid"
-                        ],
-                        "additionalProperties": false
-                      }
-                    }
-                  },
-                  "required": [
-                    "id",
-                    "unitReference",
-                    "status",
-                    "sizeM2",
-                    "floor",
-                    "priceMinorUnits",
-                    "currency",
-                    "investorId",
-                    "projectId",
-                    "projectName",
-                    "city",
-                    "country",
-                    "stages"
-                  ],
-                  "additionalProperties": false
-                }
-              }
-            }
-          },
-          "401": {
-            "description": "Sin sesión o token inválido"
-          },
-          "403": {
-            "description": "Rol o membresía insuficiente"
-          }
-        }
-      }
-    },
-    "/api/v1/investor/units/{id}/news": {
-      "get": {
-        "summary": "GET /api/v1/investor/units/:id/news",
-        "description": "auth + autoriza(rol(admin|buyer) · dueño(Unit:id))",
-        "security": [
-          {
-            "bearerAuth": []
-          }
-        ],
-        "parameters": [
-          {
-            "in": "path",
-            "name": "id",
-            "schema": {
-              "type": "string",
-              "pattern": "^[a-z][a-z0-9]{23}$"
-            },
-            "required": true
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "OK",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "type": "array",
-                  "items": {
-                    "type": "object",
-                    "properties": {
-                      "id": {
-                        "type": "string"
-                      },
-                      "eventType": {
-                        "type": "string",
-                        "enum": [
-                          "STAGE_CREATED",
-                          "STAGE_TRANSITION",
-                          "EVIDENCE_ANCHOR",
-                          "INVITATION_ACCEPTED",
-                          "PAYMENT_RELEASE",
-                          "DOSSIER_SIGNATURE",
-                          "DOCUMENT_ANCHOR"
-                        ]
-                      },
-                      "toState": {
-                        "anyOf": [
-                          {
-                            "type": "string",
-                            "enum": [
-                              "Pending",
-                              "InProgress",
-                              "Observed",
-                              "Completed"
-                            ]
-                          },
-                          {
-                            "type": "null"
-                          }
-                        ]
-                      },
-                      "txid": {
-                        "anyOf": [
-                          {
-                            "type": "string"
-                          },
-                          {
-                            "type": "null"
-                          }
-                        ]
-                      },
-                      "status": {
-                        "type": "string",
-                        "enum": [
-                          "Pending",
-                          "Confirmed",
-                          "Failed"
-                        ]
-                      },
-                      "createdAt": {
-                        "type": "string"
-                      },
-                      "stageName": {
-                        "anyOf": [
-                          {
-                            "type": "string"
-                          },
-                          {
-                            "type": "null"
-                          }
-                        ]
-                      }
-                    },
-                    "required": [
-                      "id",
-                      "eventType",
-                      "toState",
-                      "txid",
-                      "status",
-                      "createdAt",
-                      "stageName"
-                    ],
-                    "additionalProperties": false
-                  }
-                }
-              }
-            }
-          },
-          "401": {
-            "description": "Sin sesión o token inválido"
-          },
-          "403": {
-            "description": "Rol o membresía insuficiente"
-          }
-        }
-      }
-    },
-    "/api/v1/investor/units/{id}/dossier": {
-      "get": {
-        "summary": "GET /api/v1/investor/units/:id/dossier",
-        "description": "auth + autoriza(rol(admin|buyer) · dueño(Unit:id))",
-        "security": [
-          {
-            "bearerAuth": []
-          }
-        ],
-        "parameters": [
-          {
-            "in": "path",
-            "name": "id",
-            "schema": {
-              "type": "string",
-              "pattern": "^[a-z][a-z0-9]{23}$"
-            },
-            "required": true
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "OK",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "type": "object",
-                  "properties": {
-                    "id": {
-                      "type": "string"
-                    },
-                    "unitId": {
-                      "type": "string"
-                    },
-                    "unitReference": {
-                      "type": "string"
-                    },
-                    "projectId": {
-                      "type": "string"
-                    },
-                    "projectName": {
-                      "type": "string"
-                    },
-                    "masterHash": {
-                      "type": "string"
-                    },
-                    "compiledAt": {
-                      "type": "string"
-                    },
-                    "status": {
-                      "type": "string",
-                      "enum": [
-                        "compiled",
-                        "signed",
-                        "rejected"
-                      ]
-                    },
-                    "artifacts": {
-                      "type": "array",
-                      "items": {
-                        "type": "object",
-                        "properties": {
-                          "kind": {
-                            "type": "string",
-                            "enum": [
-                              "stage",
-                              "evidence",
-                              "release"
-                            ]
-                          },
-                          "referenceId": {
-                            "type": "string"
-                          },
-                          "label": {
-                            "type": "string"
-                          },
-                          "sha256": {
-                            "anyOf": [
-                              {
-                                "type": "string"
-                              },
-                              {
-                                "type": "null"
-                              }
-                            ]
-                          },
-                          "txid": {
-                            "anyOf": [
-                              {
-                                "type": "string"
-                              },
-                              {
-                                "type": "null"
-                              }
-                            ]
-                          }
-                        },
-                        "required": [
-                          "kind",
-                          "referenceId",
-                          "label",
-                          "sha256",
-                          "txid"
-                        ],
-                        "additionalProperties": false
-                      }
-                    },
-                    "completeness": {
-                      "type": "integer",
-                      "minimum": 0,
-                      "maximum": 100
-                    },
-                    "signatureTxid": {
-                      "anyOf": [
-                        {
-                          "type": "string"
-                        },
-                        {
-                          "type": "null"
-                        }
-                      ]
-                    },
-                    "signedAt": {
-                      "anyOf": [
-                        {
-                          "type": "string"
-                        },
-                        {
-                          "type": "null"
-                        }
-                      ]
-                    },
-                    "rejectionNote": {
-                      "anyOf": [
-                        {
-                          "type": "string"
-                        },
-                        {
-                          "type": "null"
-                        }
-                      ]
-                    }
-                  },
-                  "required": [
-                    "id",
-                    "unitId",
-                    "unitReference",
-                    "projectId",
-                    "projectName",
-                    "masterHash",
-                    "compiledAt",
-                    "status",
-                    "artifacts",
-                    "completeness",
-                    "signatureTxid",
-                    "signedAt",
-                    "rejectionNote"
-                  ],
-                  "additionalProperties": false
-                }
-              }
-            }
-          },
-          "401": {
-            "description": "Sin sesión o token inválido"
-          },
-          "403": {
-            "description": "Rol o membresía insuficiente"
-          }
-        }
-      }
-    },
     "/api/v1/investor/units/{id}/dossier/export.pdf": {
       "get": {
         "summary": "GET /api/v1/investor/units/:id/dossier/export.pdf",
@@ -6209,659 +5388,6 @@
         "responses": {
           "200": {
             "description": "OK"
-          },
-          "401": {
-            "description": "Sin sesión o token inválido"
-          },
-          "403": {
-            "description": "Rol o membresía insuficiente"
-          }
-        }
-      }
-    },
-    "/api/v1/investor/units/{id}/dossier/share": {
-      "post": {
-        "summary": "POST /api/v1/investor/units/:id/dossier/share",
-        "description": "auth + autoriza(rol(admin|buyer) · dueño(Unit:id))",
-        "security": [
-          {
-            "bearerAuth": []
-          }
-        ],
-        "parameters": [
-          {
-            "in": "path",
-            "name": "id",
-            "schema": {
-              "type": "string",
-              "pattern": "^[a-z][a-z0-9]{23}$"
-            },
-            "required": true
-          }
-        ],
-        "responses": {
-          "201": {
-            "description": "OK",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "type": "object",
-                  "properties": {
-                    "shareToken": {
-                      "type": "string"
-                    },
-                    "path": {
-                      "type": "string"
-                    },
-                    "masterHash": {
-                      "type": "string"
-                    }
-                  },
-                  "required": [
-                    "shareToken",
-                    "path",
-                    "masterHash"
-                  ],
-                  "additionalProperties": false
-                }
-              }
-            }
-          },
-          "401": {
-            "description": "Sin sesión o token inválido"
-          },
-          "403": {
-            "description": "Rol o membresía insuficiente"
-          }
-        }
-      }
-    },
-    "/api/v1/investor/notifications": {
-      "get": {
-        "summary": "GET /api/v1/investor/notifications",
-        "description": "auth + autoriza(rol(admin|buyer) · scope(Notification.userId = usuario))",
-        "security": [
-          {
-            "bearerAuth": []
-          }
-        ],
-        "parameters": [
-          {
-            "in": "query",
-            "name": "unitId",
-            "schema": {
-              "type": "string",
-              "minLength": 1
-            }
-          },
-          {
-            "in": "query",
-            "name": "category",
-            "schema": {
-              "type": "string",
-              "enum": [
-                "stage",
-                "document",
-                "release",
-                "signature",
-                "certificate"
-              ]
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "OK",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "type": "array",
-                  "items": {
-                    "type": "object",
-                    "properties": {
-                      "id": {
-                        "type": "string"
-                      },
-                      "category": {
-                        "type": "string",
-                        "enum": [
-                          "stage",
-                          "document",
-                          "release",
-                          "signature",
-                          "certificate"
-                        ]
-                      },
-                      "titleKey": {
-                        "type": "string"
-                      },
-                      "params": {
-                        "type": "object",
-                        "propertyNames": {
-                          "type": "string"
-                        },
-                        "additionalProperties": {
-                          "anyOf": [
-                            {
-                              "type": "string"
-                            },
-                            {
-                              "type": "number"
-                            }
-                          ]
-                        }
-                      },
-                      "unitId": {
-                        "anyOf": [
-                          {
-                            "type": "string"
-                          },
-                          {
-                            "type": "null"
-                          }
-                        ]
-                      },
-                      "readAt": {
-                        "anyOf": [
-                          {
-                            "type": "string"
-                          },
-                          {
-                            "type": "null"
-                          }
-                        ]
-                      },
-                      "createdAt": {
-                        "type": "string"
-                      }
-                    },
-                    "required": [
-                      "id",
-                      "category",
-                      "titleKey",
-                      "params",
-                      "unitId",
-                      "readAt",
-                      "createdAt"
-                    ],
-                    "additionalProperties": false
-                  }
-                }
-              }
-            }
-          },
-          "400": {
-            "description": "Body o query no pasan el schema",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ValidationError"
-                }
-              }
-            }
-          },
-          "401": {
-            "description": "Sin sesión o token inválido"
-          },
-          "403": {
-            "description": "Rol o membresía insuficiente"
-          }
-        }
-      }
-    },
-    "/api/v1/investor/invitations/{id}": {
-      "get": {
-        "summary": "GET /api/v1/investor/invitations/:id",
-        "description": "auth + autoriza(rol(admin|buyer) · dueño(Invitation:id))",
-        "security": [
-          {
-            "bearerAuth": []
-          }
-        ],
-        "parameters": [
-          {
-            "in": "path",
-            "name": "id",
-            "schema": {
-              "type": "string",
-              "pattern": "^[a-z][a-z0-9]{23}$"
-            },
-            "required": true
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "OK",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "type": "object",
-                  "properties": {
-                    "id": {
-                      "type": "string"
-                    },
-                    "investorEmail": {
-                      "type": "string",
-                      "format": "email",
-                      "pattern": "^(?!\\.)(?!.*\\.\\.)([A-Za-z0-9_'+\\-\\.]*)[A-Za-z0-9_+-]@([A-Za-z0-9][A-Za-z0-9\\-]*\\.)+[A-Za-z]{2,}$"
-                    },
-                    "amountMinorUnits": {
-                      "type": "integer",
-                      "exclusiveMinimum": 0,
-                      "maximum": 9007199254740991
-                    },
-                    "currency": {
-                      "type": "string"
-                    },
-                    "status": {
-                      "type": "string",
-                      "enum": [
-                        "pending",
-                        "accepted",
-                        "declined"
-                      ]
-                    },
-                    "createdAt": {
-                      "type": "string"
-                    },
-                    "unitReference": {
-                      "type": "string"
-                    },
-                    "projectName": {
-                      "type": "string"
-                    }
-                  },
-                  "required": [
-                    "id",
-                    "investorEmail",
-                    "amountMinorUnits",
-                    "currency",
-                    "status",
-                    "createdAt",
-                    "unitReference",
-                    "projectName"
-                  ],
-                  "additionalProperties": false
-                }
-              }
-            }
-          },
-          "401": {
-            "description": "Sin sesión o token inválido"
-          },
-          "403": {
-            "description": "Rol o membresía insuficiente"
-          }
-        }
-      }
-    },
-    "/api/v1/investor/invitations/{id}/accept": {
-      "post": {
-        "summary": "POST /api/v1/investor/invitations/:id/accept",
-        "description": "auth + autoriza(rol(admin|buyer) · dueño(Invitation:id))",
-        "security": [
-          {
-            "bearerAuth": []
-          }
-        ],
-        "parameters": [
-          {
-            "in": "path",
-            "name": "id",
-            "schema": {
-              "type": "string",
-              "pattern": "^[a-z][a-z0-9]{23}$"
-            },
-            "required": true
-          }
-        ],
-        "responses": {
-          "201": {
-            "description": "OK",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "type": "object",
-                  "properties": {
-                    "contract": {
-                      "type": "object",
-                      "properties": {
-                        "id": {
-                          "type": "string"
-                        },
-                        "unitId": {
-                          "type": "string"
-                        },
-                        "investorId": {
-                          "type": "string"
-                        },
-                        "totalMinorUnits": {
-                          "type": "integer",
-                          "exclusiveMinimum": 0,
-                          "maximum": 9007199254740991
-                        },
-                        "currency": {
-                          "type": "string"
-                        },
-                        "signedAt": {
-                          "anyOf": [
-                            {
-                              "type": "number"
-                            },
-                            {
-                              "type": "null"
-                            }
-                          ]
-                        },
-                        "createdAt": {
-                          "type": "string"
-                        }
-                      },
-                      "required": [
-                        "id",
-                        "unitId",
-                        "investorId",
-                        "totalMinorUnits",
-                        "currency",
-                        "signedAt",
-                        "createdAt"
-                      ],
-                      "additionalProperties": false
-                    },
-                    "anchor": {
-                      "type": "object",
-                      "properties": {
-                        "id": {
-                          "type": "string"
-                        },
-                        "projectId": {
-                          "type": "string"
-                        },
-                        "stageId": {
-                          "anyOf": [
-                            {
-                              "type": "string"
-                            },
-                            {
-                              "type": "null"
-                            }
-                          ]
-                        },
-                        "evidenceId": {
-                          "anyOf": [
-                            {
-                              "type": "string"
-                            },
-                            {
-                              "type": "null"
-                            }
-                          ]
-                        },
-                        "referenceId": {
-                          "anyOf": [
-                            {
-                              "type": "string"
-                            },
-                            {
-                              "type": "null"
-                            }
-                          ]
-                        },
-                        "eventIndex": {
-                          "type": "integer",
-                          "minimum": 0,
-                          "maximum": 9007199254740991
-                        },
-                        "eventType": {
-                          "type": "string",
-                          "enum": [
-                            "STAGE_CREATED",
-                            "STAGE_TRANSITION",
-                            "EVIDENCE_ANCHOR",
-                            "INVITATION_ACCEPTED",
-                            "PAYMENT_RELEASE",
-                            "DOSSIER_SIGNATURE",
-                            "DOCUMENT_ANCHOR"
-                          ]
-                        },
-                        "fromState": {
-                          "anyOf": [
-                            {
-                              "type": "string",
-                              "enum": [
-                                "Pending",
-                                "InProgress",
-                                "Observed",
-                                "Completed"
-                              ]
-                            },
-                            {
-                              "type": "null"
-                            }
-                          ]
-                        },
-                        "toState": {
-                          "anyOf": [
-                            {
-                              "type": "string",
-                              "enum": [
-                                "Pending",
-                                "InProgress",
-                                "Observed",
-                                "Completed"
-                              ]
-                            },
-                            {
-                              "type": "null"
-                            }
-                          ]
-                        },
-                        "commitment": {
-                          "anyOf": [
-                            {
-                              "type": "string"
-                            },
-                            {
-                              "type": "null"
-                            }
-                          ]
-                        },
-                        "status": {
-                          "type": "string",
-                          "enum": [
-                            "Pending",
-                            "Confirmed",
-                            "Failed"
-                          ]
-                        },
-                        "txid": {
-                          "anyOf": [
-                            {
-                              "type": "string"
-                            },
-                            {
-                              "type": "null"
-                            }
-                          ]
-                        },
-                        "network": {
-                          "anyOf": [
-                            {
-                              "type": "string"
-                            },
-                            {
-                              "type": "null"
-                            }
-                          ]
-                        },
-                        "outputRef": {
-                          "anyOf": [
-                            {
-                              "type": "string"
-                            },
-                            {
-                              "type": "null"
-                            }
-                          ]
-                        },
-                        "blockTimestamp": {
-                          "anyOf": [
-                            {
-                              "type": "string"
-                            },
-                            {
-                              "type": "null"
-                            }
-                          ]
-                        },
-                        "createdAt": {
-                          "type": "string"
-                        },
-                        "updatedAt": {
-                          "type": "string"
-                        }
-                      },
-                      "required": [
-                        "id",
-                        "projectId",
-                        "stageId",
-                        "evidenceId",
-                        "referenceId",
-                        "eventIndex",
-                        "eventType",
-                        "fromState",
-                        "toState",
-                        "commitment",
-                        "status",
-                        "txid",
-                        "network",
-                        "outputRef",
-                        "blockTimestamp",
-                        "createdAt",
-                        "updatedAt"
-                      ],
-                      "additionalProperties": false
-                    }
-                  },
-                  "required": [
-                    "contract",
-                    "anchor"
-                  ],
-                  "additionalProperties": false
-                }
-              }
-            }
-          },
-          "401": {
-            "description": "Sin sesión o token inválido"
-          },
-          "403": {
-            "description": "Rol o membresía insuficiente"
-          }
-        }
-      }
-    },
-    "/api/v1/investor/invitations/{id}/decline": {
-      "post": {
-        "summary": "POST /api/v1/investor/invitations/:id/decline",
-        "description": "auth + autoriza(rol(admin|buyer) · dueño(Invitation:id))",
-        "security": [
-          {
-            "bearerAuth": []
-          }
-        ],
-        "parameters": [
-          {
-            "in": "path",
-            "name": "id",
-            "schema": {
-              "type": "string",
-              "pattern": "^[a-z][a-z0-9]{23}$"
-            },
-            "required": true
-          }
-        ],
-        "responses": {
-          "204": {
-            "description": "Sin contenido"
-          },
-          "401": {
-            "description": "Sin sesión o token inválido"
-          },
-          "403": {
-            "description": "Rol o membresía insuficiente"
-          }
-        }
-      }
-    },
-    "/api/v1/investor/contracts/{unitId}": {
-      "get": {
-        "summary": "GET /api/v1/investor/contracts/:unitId",
-        "description": "auth + autoriza(rol(admin|buyer) · dueño(ContractOfUnit:unitId))",
-        "security": [
-          {
-            "bearerAuth": []
-          }
-        ],
-        "parameters": [
-          {
-            "in": "path",
-            "name": "unitId",
-            "schema": {
-              "type": "string",
-              "pattern": "^[a-z][a-z0-9]{23}$"
-            },
-            "required": true
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "OK",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "type": "object",
-                  "properties": {
-                    "id": {
-                      "type": "string"
-                    },
-                    "totalMinorUnits": {
-                      "type": "integer",
-                      "exclusiveMinimum": 0,
-                      "maximum": 9007199254740991
-                    },
-                    "currency": {
-                      "type": "string"
-                    },
-                    "signedAt": {
-                      "anyOf": [
-                        {
-                          "type": "number"
-                        },
-                        {
-                          "type": "null"
-                        }
-                      ]
-                    },
-                    "investorId": {
-                      "type": "string"
-                    },
-                    "unitReference": {
-                      "type": "string"
-                    }
-                  },
-                  "required": [
-                    "id",
-                    "totalMinorUnits",
-                    "currency",
-                    "signedAt",
-                    "investorId",
-                    "unitReference"
-                  ],
-                  "additionalProperties": false
-                }
-              }
-            }
           },
           "401": {
             "description": "Sin sesión o token inválido"
@@ -12074,6 +10600,1476 @@
                   "required": [
                     "items",
                     "nextCursor"
+                  ],
+                  "additionalProperties": false
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/investor/favorites": {
+      "get": {
+        "operationId": "favoritesProcedure",
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "properties": {
+                      "id": {
+                        "type": "string"
+                      },
+                      "name": {
+                        "type": "string"
+                      },
+                      "slug": {
+                        "type": "string"
+                      },
+                      "address": {
+                        "anyOf": [
+                          {
+                            "type": "string"
+                          },
+                          {
+                            "type": "null"
+                          }
+                        ]
+                      },
+                      "city": {
+                        "anyOf": [
+                          {
+                            "type": "string"
+                          },
+                          {
+                            "type": "null"
+                          }
+                        ]
+                      },
+                      "country": {
+                        "anyOf": [
+                          {
+                            "type": "string"
+                          },
+                          {
+                            "type": "null"
+                          }
+                        ]
+                      },
+                      "latitude": {
+                        "anyOf": [
+                          {
+                            "type": "number"
+                          },
+                          {
+                            "type": "null"
+                          }
+                        ]
+                      },
+                      "longitude": {
+                        "anyOf": [
+                          {
+                            "type": "number"
+                          },
+                          {
+                            "type": "null"
+                          }
+                        ]
+                      },
+                      "totalUnits": {
+                        "type": "integer",
+                        "minimum": 0,
+                        "maximum": 9007199254740991
+                      },
+                      "estimatedDelivery": {
+                        "anyOf": [
+                          {
+                            "type": "string",
+                            "format": "date-time",
+                            "x-native-type": "date"
+                          },
+                          {
+                            "type": "null"
+                          }
+                        ]
+                      },
+                      "status": {
+                        "enum": [
+                          "planning",
+                          "in_progress",
+                          "delayed",
+                          "completed"
+                        ],
+                        "type": "string"
+                      },
+                      "createdAt": {
+                        "type": "string",
+                        "format": "date-time",
+                        "x-native-type": "date"
+                      },
+                      "updatedAt": {
+                        "type": "string",
+                        "format": "date-time",
+                        "x-native-type": "date"
+                      }
+                    },
+                    "required": [
+                      "id",
+                      "name",
+                      "slug",
+                      "address",
+                      "city",
+                      "country",
+                      "latitude",
+                      "longitude",
+                      "totalUnits",
+                      "estimatedDelivery",
+                      "status",
+                      "createdAt",
+                      "updatedAt"
+                    ],
+                    "additionalProperties": false
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/investor/favorites/{projectId}": {
+      "post": {
+        "operationId": "addFavoriteProcedure",
+        "parameters": [
+          {
+            "name": "projectId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "pattern": "^[a-z][a-z0-9]{23}$"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "anyOf": [
+                    {
+                      "not": {}
+                    },
+                    {
+                      "not": {}
+                    }
+                  ]
+                }
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "operationId": "removeFavoriteProcedure",
+        "parameters": [
+          {
+            "name": "projectId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "pattern": "^[a-z][a-z0-9]{23}$"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "anyOf": [
+                    {
+                      "not": {}
+                    },
+                    {
+                      "not": {}
+                    }
+                  ]
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/investor/units": {
+      "get": {
+        "operationId": "unitsProcedure",
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "properties": {
+                      "id": {
+                        "type": "string"
+                      },
+                      "unitReference": {
+                        "type": "string"
+                      },
+                      "status": {
+                        "enum": [
+                          "available",
+                          "reserved",
+                          "sold",
+                          "delivered"
+                        ],
+                        "type": "string"
+                      },
+                      "sizeM2": {
+                        "anyOf": [
+                          {
+                            "type": "integer",
+                            "minimum": -9007199254740991,
+                            "maximum": 9007199254740991,
+                            "exclusiveMinimum": 0
+                          },
+                          {
+                            "type": "null"
+                          }
+                        ]
+                      },
+                      "priceMinorUnits": {
+                        "anyOf": [
+                          {
+                            "type": "integer",
+                            "minimum": 0,
+                            "maximum": 9007199254740991
+                          },
+                          {
+                            "type": "null"
+                          }
+                        ]
+                      },
+                      "currency": {
+                        "anyOf": [
+                          {
+                            "type": "string"
+                          },
+                          {
+                            "type": "null"
+                          }
+                        ]
+                      },
+                      "projectId": {
+                        "type": "string"
+                      },
+                      "projectName": {
+                        "type": "string"
+                      },
+                      "city": {
+                        "anyOf": [
+                          {
+                            "type": "string"
+                          },
+                          {
+                            "type": "null"
+                          }
+                        ]
+                      },
+                      "progress": {
+                        "type": "integer",
+                        "minimum": 0,
+                        "maximum": 100
+                      }
+                    },
+                    "required": [
+                      "id",
+                      "unitReference",
+                      "status",
+                      "sizeM2",
+                      "priceMinorUnits",
+                      "currency",
+                      "projectId",
+                      "projectName",
+                      "city",
+                      "progress"
+                    ],
+                    "additionalProperties": false
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/investor/units/{id}": {
+      "get": {
+        "operationId": "unitDetailProcedure",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "pattern": "^[a-z][a-z0-9]{23}$"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "id": {
+                      "type": "string"
+                    },
+                    "unitReference": {
+                      "type": "string"
+                    },
+                    "status": {
+                      "enum": [
+                        "available",
+                        "reserved",
+                        "sold",
+                        "delivered"
+                      ],
+                      "type": "string"
+                    },
+                    "sizeM2": {
+                      "anyOf": [
+                        {
+                          "type": "integer",
+                          "minimum": -9007199254740991,
+                          "maximum": 9007199254740991,
+                          "exclusiveMinimum": 0
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ]
+                    },
+                    "floor": {
+                      "anyOf": [
+                        {
+                          "type": "integer",
+                          "minimum": -9007199254740991,
+                          "maximum": 9007199254740991
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ]
+                    },
+                    "priceMinorUnits": {
+                      "anyOf": [
+                        {
+                          "type": "integer",
+                          "minimum": 0,
+                          "maximum": 9007199254740991
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ]
+                    },
+                    "currency": {
+                      "anyOf": [
+                        {
+                          "type": "string"
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ]
+                    },
+                    "investorId": {
+                      "anyOf": [
+                        {
+                          "type": "string"
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ]
+                    },
+                    "projectId": {
+                      "type": "string"
+                    },
+                    "projectName": {
+                      "type": "string"
+                    },
+                    "city": {
+                      "anyOf": [
+                        {
+                          "type": "string"
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ]
+                    },
+                    "country": {
+                      "anyOf": [
+                        {
+                          "type": "string"
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ]
+                    },
+                    "stages": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "stageId": {
+                            "type": "string"
+                          },
+                          "name": {
+                            "type": "string"
+                          },
+                          "sequenceOrder": {
+                            "type": "integer",
+                            "minimum": -9007199254740991,
+                            "maximum": 9007199254740991,
+                            "exclusiveMinimum": 0
+                          },
+                          "state": {
+                            "enum": [
+                              "Pending",
+                              "InProgress",
+                              "Observed",
+                              "Completed"
+                            ],
+                            "type": "string"
+                          },
+                          "bundleId": {
+                            "anyOf": [
+                              {
+                                "type": "string"
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ]
+                          },
+                          "txid": {
+                            "anyOf": [
+                              {
+                                "type": "string"
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ]
+                          }
+                        },
+                        "required": [
+                          "stageId",
+                          "name",
+                          "sequenceOrder",
+                          "state",
+                          "bundleId",
+                          "txid"
+                        ],
+                        "additionalProperties": false
+                      }
+                    }
+                  },
+                  "required": [
+                    "id",
+                    "unitReference",
+                    "status",
+                    "sizeM2",
+                    "floor",
+                    "priceMinorUnits",
+                    "currency",
+                    "investorId",
+                    "projectId",
+                    "projectName",
+                    "city",
+                    "country",
+                    "stages"
+                  ],
+                  "additionalProperties": false
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/investor/units/{id}/news": {
+      "get": {
+        "operationId": "unitNewsProcedure",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "pattern": "^[a-z][a-z0-9]{23}$"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "properties": {
+                      "id": {
+                        "type": "string"
+                      },
+                      "eventType": {
+                        "enum": [
+                          "STAGE_CREATED",
+                          "STAGE_TRANSITION",
+                          "EVIDENCE_ANCHOR",
+                          "INVITATION_ACCEPTED",
+                          "PAYMENT_RELEASE",
+                          "DOSSIER_SIGNATURE",
+                          "DOCUMENT_ANCHOR"
+                        ],
+                        "type": "string"
+                      },
+                      "toState": {
+                        "anyOf": [
+                          {
+                            "enum": [
+                              "Pending",
+                              "InProgress",
+                              "Observed",
+                              "Completed"
+                            ],
+                            "type": "string"
+                          },
+                          {
+                            "type": "null"
+                          }
+                        ]
+                      },
+                      "txid": {
+                        "anyOf": [
+                          {
+                            "type": "string"
+                          },
+                          {
+                            "type": "null"
+                          }
+                        ]
+                      },
+                      "status": {
+                        "enum": [
+                          "Pending",
+                          "Confirmed",
+                          "Failed"
+                        ],
+                        "type": "string"
+                      },
+                      "createdAt": {
+                        "type": "string",
+                        "format": "date-time",
+                        "x-native-type": "date"
+                      },
+                      "stageName": {
+                        "anyOf": [
+                          {
+                            "type": "string"
+                          },
+                          {
+                            "type": "null"
+                          }
+                        ]
+                      }
+                    },
+                    "required": [
+                      "id",
+                      "eventType",
+                      "toState",
+                      "txid",
+                      "status",
+                      "createdAt",
+                      "stageName"
+                    ],
+                    "additionalProperties": false
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/investor/units/{id}/dossier": {
+      "get": {
+        "operationId": "dossierProcedure",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "pattern": "^[a-z][a-z0-9]{23}$"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "id": {
+                      "type": "string"
+                    },
+                    "unitId": {
+                      "type": "string"
+                    },
+                    "unitReference": {
+                      "type": "string"
+                    },
+                    "projectId": {
+                      "type": "string"
+                    },
+                    "projectName": {
+                      "type": "string"
+                    },
+                    "masterHash": {
+                      "type": "string"
+                    },
+                    "compiledAt": {
+                      "type": "string",
+                      "format": "date-time",
+                      "x-native-type": "date"
+                    },
+                    "status": {
+                      "enum": [
+                        "compiled",
+                        "signed",
+                        "rejected"
+                      ],
+                      "type": "string"
+                    },
+                    "artifacts": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "kind": {
+                            "enum": [
+                              "stage",
+                              "evidence",
+                              "release"
+                            ],
+                            "type": "string"
+                          },
+                          "referenceId": {
+                            "type": "string"
+                          },
+                          "label": {
+                            "type": "string"
+                          },
+                          "sha256": {
+                            "anyOf": [
+                              {
+                                "type": "string"
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ]
+                          },
+                          "txid": {
+                            "anyOf": [
+                              {
+                                "type": "string"
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ]
+                          }
+                        },
+                        "required": [
+                          "kind",
+                          "referenceId",
+                          "label",
+                          "sha256",
+                          "txid"
+                        ],
+                        "additionalProperties": false
+                      }
+                    },
+                    "completeness": {
+                      "type": "integer",
+                      "minimum": 0,
+                      "maximum": 100
+                    },
+                    "signatureTxid": {
+                      "anyOf": [
+                        {
+                          "type": "string"
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ]
+                    },
+                    "signedAt": {
+                      "anyOf": [
+                        {
+                          "type": "string",
+                          "format": "date-time",
+                          "x-native-type": "date"
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ]
+                    },
+                    "rejectionNote": {
+                      "anyOf": [
+                        {
+                          "type": "string"
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ]
+                    }
+                  },
+                  "required": [
+                    "id",
+                    "unitId",
+                    "unitReference",
+                    "projectId",
+                    "projectName",
+                    "masterHash",
+                    "compiledAt",
+                    "status",
+                    "artifacts",
+                    "completeness",
+                    "signatureTxid",
+                    "signedAt",
+                    "rejectionNote"
+                  ],
+                  "additionalProperties": false
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/investor/units/{id}/dossier/share": {
+      "post": {
+        "operationId": "shareDossierProcedure",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "pattern": "^[a-z][a-z0-9]{23}$"
+            }
+          }
+        ],
+        "responses": {
+          "201": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "shareToken": {
+                      "type": "string"
+                    },
+                    "path": {
+                      "type": "string"
+                    },
+                    "masterHash": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "shareToken",
+                    "path",
+                    "masterHash"
+                  ],
+                  "additionalProperties": false
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/investor/notifications": {
+      "get": {
+        "operationId": "notificationsProcedure",
+        "parameters": [
+          {
+            "name": "unitId",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "minLength": 1
+            },
+            "allowEmptyValue": true,
+            "allowReserved": true
+          },
+          {
+            "name": "category",
+            "in": "query",
+            "schema": {
+              "enum": [
+                "stage",
+                "document",
+                "release",
+                "signature",
+                "certificate"
+              ],
+              "type": "string"
+            },
+            "allowEmptyValue": true,
+            "allowReserved": true
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "properties": {
+                      "id": {
+                        "type": "string"
+                      },
+                      "category": {
+                        "enum": [
+                          "stage",
+                          "document",
+                          "release",
+                          "signature",
+                          "certificate"
+                        ],
+                        "type": "string"
+                      },
+                      "titleKey": {
+                        "type": "string"
+                      },
+                      "params": {
+                        "type": "object",
+                        "propertyNames": {
+                          "type": "string"
+                        },
+                        "additionalProperties": {
+                          "anyOf": [
+                            {
+                              "type": "string"
+                            },
+                            {
+                              "type": "number"
+                            }
+                          ]
+                        }
+                      },
+                      "unitId": {
+                        "anyOf": [
+                          {
+                            "type": "string"
+                          },
+                          {
+                            "type": "null"
+                          }
+                        ]
+                      },
+                      "readAt": {
+                        "anyOf": [
+                          {
+                            "type": "string",
+                            "format": "date-time",
+                            "x-native-type": "date"
+                          },
+                          {
+                            "type": "null"
+                          }
+                        ]
+                      },
+                      "createdAt": {
+                        "type": "string",
+                        "format": "date-time",
+                        "x-native-type": "date"
+                      }
+                    },
+                    "required": [
+                      "id",
+                      "category",
+                      "titleKey",
+                      "params",
+                      "unitId",
+                      "readAt",
+                      "createdAt"
+                    ],
+                    "additionalProperties": false
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/investor/invitations/{id}": {
+      "get": {
+        "operationId": "invitationDetailProcedure",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "pattern": "^[a-z][a-z0-9]{23}$"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "id": {
+                      "type": "string"
+                    },
+                    "investorEmail": {
+                      "type": "string",
+                      "format": "email"
+                    },
+                    "amountMinorUnits": {
+                      "type": "integer",
+                      "minimum": -9007199254740991,
+                      "maximum": 9007199254740991,
+                      "exclusiveMinimum": 0
+                    },
+                    "currency": {
+                      "type": "string"
+                    },
+                    "status": {
+                      "enum": [
+                        "pending",
+                        "accepted",
+                        "declined"
+                      ],
+                      "type": "string"
+                    },
+                    "createdAt": {
+                      "type": "string",
+                      "format": "date-time",
+                      "x-native-type": "date"
+                    },
+                    "unitReference": {
+                      "type": "string"
+                    },
+                    "projectName": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "id",
+                    "investorEmail",
+                    "amountMinorUnits",
+                    "currency",
+                    "status",
+                    "createdAt",
+                    "unitReference",
+                    "projectName"
+                  ],
+                  "additionalProperties": false
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/investor/invitations/{id}/accept": {
+      "post": {
+        "operationId": "acceptInvitationProcedure",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "pattern": "^[a-z][a-z0-9]{23}$"
+            }
+          }
+        ],
+        "responses": {
+          "201": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "contract": {
+                      "type": "object",
+                      "properties": {
+                        "id": {
+                          "type": "string"
+                        },
+                        "unitId": {
+                          "type": "string"
+                        },
+                        "investorId": {
+                          "type": "string"
+                        },
+                        "totalMinorUnits": {
+                          "type": "integer",
+                          "minimum": -9007199254740991,
+                          "maximum": 9007199254740991,
+                          "exclusiveMinimum": 0
+                        },
+                        "currency": {
+                          "type": "string"
+                        },
+                        "signedAt": {
+                          "anyOf": [
+                            {
+                              "type": "number"
+                            },
+                            {
+                              "type": "null"
+                            }
+                          ]
+                        },
+                        "createdAt": {
+                          "type": "string",
+                          "format": "date-time",
+                          "x-native-type": "date"
+                        }
+                      },
+                      "required": [
+                        "id",
+                        "unitId",
+                        "investorId",
+                        "totalMinorUnits",
+                        "currency",
+                        "signedAt",
+                        "createdAt"
+                      ],
+                      "additionalProperties": false
+                    },
+                    "anchor": {
+                      "type": "object",
+                      "properties": {
+                        "id": {
+                          "type": "string"
+                        },
+                        "projectId": {
+                          "type": "string"
+                        },
+                        "stageId": {
+                          "anyOf": [
+                            {
+                              "type": "string"
+                            },
+                            {
+                              "type": "null"
+                            }
+                          ]
+                        },
+                        "evidenceId": {
+                          "anyOf": [
+                            {
+                              "type": "string"
+                            },
+                            {
+                              "type": "null"
+                            }
+                          ]
+                        },
+                        "referenceId": {
+                          "anyOf": [
+                            {
+                              "type": "string"
+                            },
+                            {
+                              "type": "null"
+                            }
+                          ]
+                        },
+                        "eventIndex": {
+                          "type": "integer",
+                          "minimum": 0,
+                          "maximum": 9007199254740991
+                        },
+                        "eventType": {
+                          "enum": [
+                            "STAGE_CREATED",
+                            "STAGE_TRANSITION",
+                            "EVIDENCE_ANCHOR",
+                            "INVITATION_ACCEPTED",
+                            "PAYMENT_RELEASE",
+                            "DOSSIER_SIGNATURE",
+                            "DOCUMENT_ANCHOR"
+                          ],
+                          "type": "string"
+                        },
+                        "fromState": {
+                          "anyOf": [
+                            {
+                              "enum": [
+                                "Pending",
+                                "InProgress",
+                                "Observed",
+                                "Completed"
+                              ],
+                              "type": "string"
+                            },
+                            {
+                              "type": "null"
+                            }
+                          ]
+                        },
+                        "toState": {
+                          "anyOf": [
+                            {
+                              "enum": [
+                                "Pending",
+                                "InProgress",
+                                "Observed",
+                                "Completed"
+                              ],
+                              "type": "string"
+                            },
+                            {
+                              "type": "null"
+                            }
+                          ]
+                        },
+                        "commitment": {
+                          "anyOf": [
+                            {
+                              "type": "string"
+                            },
+                            {
+                              "type": "null"
+                            }
+                          ]
+                        },
+                        "status": {
+                          "enum": [
+                            "Pending",
+                            "Confirmed",
+                            "Failed"
+                          ],
+                          "type": "string"
+                        },
+                        "txid": {
+                          "anyOf": [
+                            {
+                              "type": "string"
+                            },
+                            {
+                              "type": "null"
+                            }
+                          ]
+                        },
+                        "network": {
+                          "anyOf": [
+                            {
+                              "type": "string"
+                            },
+                            {
+                              "type": "null"
+                            }
+                          ]
+                        },
+                        "outputRef": {
+                          "anyOf": [
+                            {
+                              "type": "string"
+                            },
+                            {
+                              "type": "null"
+                            }
+                          ]
+                        },
+                        "blockTimestamp": {
+                          "anyOf": [
+                            {
+                              "type": "string",
+                              "format": "date-time",
+                              "x-native-type": "date"
+                            },
+                            {
+                              "type": "null"
+                            }
+                          ]
+                        },
+                        "createdAt": {
+                          "type": "string",
+                          "format": "date-time",
+                          "x-native-type": "date"
+                        },
+                        "updatedAt": {
+                          "type": "string",
+                          "format": "date-time",
+                          "x-native-type": "date"
+                        }
+                      },
+                      "required": [
+                        "id",
+                        "projectId",
+                        "stageId",
+                        "evidenceId",
+                        "referenceId",
+                        "eventIndex",
+                        "eventType",
+                        "fromState",
+                        "toState",
+                        "commitment",
+                        "status",
+                        "txid",
+                        "network",
+                        "outputRef",
+                        "blockTimestamp",
+                        "createdAt",
+                        "updatedAt"
+                      ],
+                      "additionalProperties": false
+                    }
+                  },
+                  "required": [
+                    "contract",
+                    "anchor"
+                  ],
+                  "additionalProperties": false
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "409",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "oneOf": [
+                    {
+                      "type": "object",
+                      "properties": {
+                        "defined": {
+                          "const": true
+                        },
+                        "code": {
+                          "const": "INVITATION_NOT_PENDING"
+                        },
+                        "status": {
+                          "const": 409
+                        },
+                        "message": {
+                          "type": "string",
+                          "default": "INVITATION_NOT_PENDING"
+                        },
+                        "data": {}
+                      },
+                      "required": [
+                        "defined",
+                        "code",
+                        "status",
+                        "message"
+                      ]
+                    },
+                    {
+                      "type": "object",
+                      "properties": {
+                        "defined": {
+                          "const": true
+                        },
+                        "code": {
+                          "const": "UNIT_NOT_AVAILABLE"
+                        },
+                        "status": {
+                          "const": 409
+                        },
+                        "message": {
+                          "type": "string",
+                          "default": "UNIT_NOT_AVAILABLE"
+                        },
+                        "data": {}
+                      },
+                      "required": [
+                        "defined",
+                        "code",
+                        "status",
+                        "message"
+                      ]
+                    },
+                    {
+                      "type": "object",
+                      "properties": {
+                        "defined": {
+                          "const": false
+                        },
+                        "code": {
+                          "type": "string"
+                        },
+                        "status": {
+                          "type": "number"
+                        },
+                        "message": {
+                          "type": "string"
+                        },
+                        "data": {}
+                      },
+                      "required": [
+                        "defined",
+                        "code",
+                        "status",
+                        "message"
+                      ]
+                    }
+                  ]
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/investor/invitations/{id}/decline": {
+      "post": {
+        "operationId": "declineInvitationProcedure",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "pattern": "^[a-z][a-z0-9]{23}$"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "anyOf": [
+                    {
+                      "not": {}
+                    },
+                    {
+                      "not": {}
+                    }
+                  ]
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/investor/contracts/{unitId}": {
+      "get": {
+        "operationId": "contractProcedure",
+        "parameters": [
+          {
+            "name": "unitId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "pattern": "^[a-z][a-z0-9]{23}$"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "id": {
+                      "type": "string"
+                    },
+                    "totalMinorUnits": {
+                      "type": "integer",
+                      "minimum": -9007199254740991,
+                      "maximum": 9007199254740991,
+                      "exclusiveMinimum": 0
+                    },
+                    "currency": {
+                      "type": "string"
+                    },
+                    "signedAt": {
+                      "anyOf": [
+                        {
+                          "type": "number"
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ]
+                    },
+                    "investorId": {
+                      "type": "string"
+                    },
+                    "unitReference": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "id",
+                    "totalMinorUnits",
+                    "currency",
+                    "signedAt",
+                    "investorId",
+                    "unitReference"
                   ],
                   "additionalProperties": false
                 }
