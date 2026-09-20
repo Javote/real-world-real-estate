@@ -40,7 +40,43 @@
 > `res.body.code` fijado por test para `UNIT_NOT_AVAILABLE` e `INVITATION_NOT_PENDING`) — con oRPC
 > esa clase se borró: `.errors({NOMBRE:...})` la reemplaza, y un `throw` dentro de
 > `db.transaction().execute(...)` sigue revirtiendo la transacción igual, porque Kysely no
-> distingue el tipo del error al decidir si hace rollback. Queda §D (`developer`).
+> distingue el tipo del error al decidir si hace rollback.
+>
+> **§D (`developer`) cerrada 2026-09-20 — 19 de las 20 rutas, y una excepción real.** Antes de
+> tocar código: `OpenAPIHandler` SÍ sabe parsear `multipart/form-data` (probado con un smoke test
+> que subió un `File` + campos de texto contra un procedimiento con `z.file()` en el input, borrado
+> después de confirmarlo) — pero lo hace con el `Response(stream).formData()` nativo de Node, que
+> bufferea el archivo ENTERO en memoria **sin ningún límite configurable**, a diferencia de Multer,
+> que hoy aplica `limits.fileSize` y `fileFilter` en streaming (regla 10, y la deuda de RAM que
+> `CLAUDE.md` raíz ya declara sobre `MAX_FILE_SIZE_MB`). Migrar la única ruta multipart de esta
+> sub-parte (`POST .../stages/:stageId/evidence`, `developer-evidencia.routes.ts`) empeoraría esa
+> deuda en vez de resolverla, así que **se queda afuera a propósito** — con Multer y
+> `REQUEST_SCHEMAS`/`RESPONSE_SCHEMAS` tal como estaba. Las otras 19 (`developer.routes.ts` 8,
+> `developer-comercial.routes.ts` 7, `capital.routes.ts` 4) migraron con el mismo patrón que §A/§B/§C.
+>
+> **Una trampa nueva, no vista en las sub-partes anteriores porque ninguna insertaba contra un
+> índice único sin haberlo chequeado antes en la misma transacción: `OpenAPIHandler` nunca llama a
+> `next(err)`.** Un `throw` que no sea un `ORPCError`/error con nombre lo captura oRPC mismo y
+> responde su propio 500 genérico — el `errorHandler` de Express (y con él,
+> `codigoDeRestriccion`/`CONSTRAINT_ERRORS`, que mapean un `SQLITE_CONSTRAINT_UNIQUE` a 409
+> `RESOURCE_ALREADY_EXISTS`) nunca llega a verlo. Se encontró con un smoke test dedicado, no
+> leyendo código: `POST /developer/projects` (slug repetido) y `POST /developer/projects/:id/units`
+> (unitReference repetido dentro del proyecto) SÍ insertan contra restricciones únicas, y
+> `test/constraint-errors.test.ts` fija 409 — sin capturarlo, la migración volvía a la regresión
+> exacta que esa suite existe para impedir (2026-08-24, "un duplicado es 409, no 500"). Cerrado con
+> `relanzarRestriccionComoOrpc` (`_shared.ts`): cada procedimiento que inserta contra una
+> restricción declara `.errors({RESOURCE_ALREADY_EXISTS, RELATED_RESOURCE_NOT_FOUND})` y envuelve
+> el insert en un `.catch()` que reusa el MISMO mapeo de `errorHandler.ts` — nunca una copia.
+>
+> **Deuda declarada, no cerrada:** el hallazgo de arriba es genérico a las cuatro sub-partes, no
+> específico de §D — cualquier excepción no clasificada dentro de un handler oRPC de `notary`,
+> `certifier` o `investor` también se convierte en el 500 genérico de oRPC en vez de pasar por
+> `errorHandler`/Sentry (`Sentry.setupExpressErrorHandler` depende de `next(err)`, que oRPC nunca
+> llama). No tenía consecuencia observable en las tres primeras sub-partes porque ninguna de sus
+> rutas tiene un test que ejercite esa restricción por HTTP; acá sí. Una solución genérica —que
+> `OpenAPIHandler` reporte a Sentry o delegue a `errorHandler` los errores que no reconoce— es
+> trabajo nuevo, no de esta spec, y candidata a spec propia si alguna vez un 500 real de una ruta
+> oRPC necesita aparecer en el monitoreo.
 
 ## La mitad que está bien, y hay que no romper
 
@@ -96,7 +132,7 @@ nueva, no algo que esta spec pueda asumir.
 | **§A** | `notary` | `notary.routes.ts` | 6 | **cerrada 2026-09-20** — ninguno, era un solo archivo, un solo prefijo |
 | **§B** | `certifier` | `certifier.routes.ts` | 6 | **cerrada 2026-09-20** — ninguno, era un solo archivo, un solo prefijo |
 | **§C** | `investor` | `investor.routes.ts` | 14 | **cerrada 2026-09-20** (las 14, incluida `export.pdf` con un `File` en vez de un `Buffer` — ver §El diseño) — la pertenencia de fila (`dueño: { via, param }`) ya estaba plegada **adentro** de `authorize()` desde D-088, no era un middleware aparte |
-| **§D** | `developer` | `developer.routes.ts` + `developer-comercial.routes.ts` + `developer-evidencia.routes.ts` + `capital.routes.ts` | 20 | **cuatro archivos comparten el prefijo `/api/v1/developer`**, cada uno con su propio `router.use(authenticate)` (los cuatro idénticos hoy) — el incidente del 2026-08-24 (`CLAUDE.md` de este paquete) fue justo eso desalineándose. Con el diseño verificado (un `OpenAPIHandler` por procedimiento, montado en la ruta exacta — §El diseño), migrar una ruta **no toca** ese `router.use`, así que los cuatro archivos **no necesitan migrar juntos**: es simplemente la sub-parte con más superficie (20 rutas en 4 archivos) para revisar línea por línea, no una atomicidad real |
+| **§D** | `developer` | `developer.routes.ts` + `developer-comercial.routes.ts` + `developer-evidencia.routes.ts` + `capital.routes.ts` | 20 | **cerrada 2026-09-20 — 19 de las 20** (la subida multipart de `developer-evidencia.routes.ts` se queda con Multer a propósito, ver §El diseño arriba) — **cuatro archivos comparten el prefijo `/api/v1/developer`**, cada uno con su propio `router.use(authenticate)` (los cuatro idénticos hoy). Con el diseño verificado (un `OpenAPIHandler` por procedimiento, montado en la ruta exacta), migrar una ruta no tocó ese `router.use` en ninguno de los tres archivos que sí migraron |
 
 **Orden sugerido: `§A` → `§B` → `§C` → `§D`.** Las dos primeras son el piloto — 6 rutas, un archivo,
 sin varios routers compartiendo prefijo — y es donde se descubren los errores de integración de

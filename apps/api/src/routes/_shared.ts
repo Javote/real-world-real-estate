@@ -1,12 +1,56 @@
 import type { UserRole } from "../db/types";
 import { db } from "../lib/db";
 import { projectScope } from "../middlewares/auth";
+import { codigoDeRestriccion } from "../middlewares/errorHandler";
 
 // Ayudantes que usa más de una superficie de rol.
 //
 // El guion bajo del nombre dice que **no es un router**: los `*.routes.ts` de
 // esta carpeta exportan uno, y un archivo que no lo hace entre ellos se lee
 // como un olvido.
+
+/**
+ * SPEC-212 §D — encontrado migrando `POST /developer/projects`: `OpenAPIHandler`
+ * **nunca** llama a `next(err)`. Un `throw` que no sea un `ORPCError`/error con
+ * nombre lo captura oRPC mismo y responde un 500 genérico de su propio sobre —
+ * el `errorHandler` de Express (y con él, `codigoDeRestriccion`/
+ * `CONSTRAINT_ERRORS`) nunca llega a verlo. Antes de esta spec eso no importaba
+ * porque ninguna ruta migrada insertaba contra un índice único sin haberlo
+ * chequeado antes en la misma transacción; acá sí (`Project.slug`,
+ * `Unit_projectId_unitReference_key`), y `test/constraint-errors.test.ts` fija
+ * 409 `RESOURCE_ALREADY_EXISTS` — sin este helper, la migración volvía a la
+ * regresión que esa suite existe para impedir (ver el comentario grande de
+ * `errorHandler.ts`).
+ *
+ * Cada procedimiento que inserta contra una restricción de la base declara los
+ * dos errores con nombre (`.errors({RESOURCE_ALREADY_EXISTS:{status:409},
+ * RELATED_RESOURCE_NOT_FOUND:{status:400}})`) y envuelve el insert en un
+ * `try/catch` que llama a esto — mismo mapeo, mismo mensaje, que
+ * `CONSTRAINT_ERRORS`, para que las dos rutas (Express llano y oRPC) no puedan
+ * divergir. Un error que no es de restricción se re-lanza tal cual: oRPC lo
+ * convierte en su 500 genérico, que es lo que ya pasaba antes de este cambio
+ * para cualquier fallo no clasificado.
+ */
+type ManejadoresDeRestriccion = {
+  RESOURCE_ALREADY_EXISTS: (opts: { message: string }) => unknown;
+  RELATED_RESOURCE_NOT_FOUND: (opts: { message: string }) => unknown;
+};
+
+export function relanzarRestriccionComoOrpc(err: unknown, errors: ManejadoresDeRestriccion): never {
+  const restriccion = codigoDeRestriccion(err);
+
+  if (
+    restriccion === "SQLITE_CONSTRAINT_UNIQUE" ||
+    restriccion === "SQLITE_CONSTRAINT_PRIMARYKEY"
+  ) {
+    throw errors.RESOURCE_ALREADY_EXISTS({ message: "Resource already exists" });
+  }
+  if (restriccion === "SQLITE_CONSTRAINT_FOREIGNKEY") {
+    throw errors.RELATED_RESOURCE_NOT_FOUND({ message: "A referenced resource does not exist" });
+  }
+
+  throw err;
+}
 
 /**
  * Avance de obra por proyecto, en porcentaje de stages completados.

@@ -3,44 +3,22 @@ import { mkdirSync, writeFileSync } from "node:fs";
 import path from "node:path";
 import {
   addProjectMemberSchema,
-  anchorDocumentSchema,
-  auditLogEntrySchema,
-  auditLogQuerySchema,
   auditLogRowSchema,
   buildingSchematicFloorSchema,
   bundleFilesSchema,
-  capitalByProjectSchema,
-  capitalMonthlyPointSchema,
-  capitalSummarySchema,
   contractReleaseSchema,
-  createDeveloperProjectSchema,
-  createInvitationSchema,
   createProjectSchema,
-  createUnitSchema,
   createUserSchema,
   cuidParamSchema,
-  developerContractSchema,
-  developerDocumentListQuerySchema,
-  developerDocumentSchema,
-  developerKpisSchema,
-  developerProgressItemSchema,
-  developerProjectCreateResultSchema,
-  developerProjectDetailSchema,
-  developerProjectListItemSchema,
-  developerUnitDirectoryEntrySchema,
   evidenceBundleSummarySchema,
   evidenceProofSchema,
   evidenceSchema,
   hex64ParamSchema,
-  investorDirectoryEntrySchema,
-  invitationSchema,
   loginRequestSchema,
   loginResponseSchema,
   meResponseSchema,
   notificationPrefsSchema,
   onChainEventSchema,
-  paginatedResponseSchema,
-  paymentReleaseResultSchema,
   positiveIntParamSchema,
   profileSchema,
   projectDetailSchema,
@@ -52,7 +30,6 @@ import {
   projectSchema,
   publicDossierSchema,
   reconciliationResultSchema,
-  releasePaymentSchema,
   reservationToEscrowTelemetrySchema,
   stageEventSummarySchema,
   stageEvidenceSummarySchema,
@@ -61,14 +38,12 @@ import {
   stageSchema,
   stageTransitionSchema,
   stageWithThreadSchema,
-  unitSchema,
   unreadCountSchema,
   updateEvidenceSchema,
   updateNotificationPrefsSchema,
   updateProfileSchema,
   updateProjectSchema,
   updateStageSchema,
-  updateUnitSchema,
   updateUserSchema,
   userMutationResultSchema,
   userSummarySchema
@@ -78,7 +53,10 @@ import { createDocument } from "zod-openapi";
 import { en } from "../src/lib/arrays";
 import { OpenAPIGenerator, os, ZodToJsonSchemaConverter } from "../src/lib/orpc";
 import { describir, leerMontaje } from "../src/lib/route-inventory";
+import { capitalOrpcRouter } from "../src/routes/capital.routes";
 import { type CertifierContext, certifierOrpcRouter } from "../src/routes/certifier.routes";
+import { type DeveloperContext, developerOrpcRouter } from "../src/routes/developer.routes";
+import { developerComercialOrpcRouter } from "../src/routes/developer-comercial.routes";
 import { type InvestorContext, investorOrpcRouter } from "../src/routes/investor.routes";
 import { type NotaryContext, notaryOrpcRouter } from "../src/routes/notary.routes";
 
@@ -147,26 +125,29 @@ const REQUEST_SCHEMAS: Record<string, SchemaEntry> = {
   "PATCH /api/v1/profile/notifications": { body: updateNotificationPrefsSchema },
   "POST /api/v1/users": { body: createUserSchema },
   "PATCH /api/v1/users/:id": { body: updateUserSchema },
-  "GET /api/v1/developer/documents": { query: developerDocumentListQuerySchema },
-  "GET /api/v1/developer/audit-log": { query: auditLogQuerySchema },
-  "POST /api/v1/developer/documents": { body: anchorDocumentSchema },
-  "POST /api/v1/developer/projects": { body: createDeveloperProjectSchema },
-  "POST /api/v1/developer/projects/:id/units": { body: createUnitSchema },
-  "PATCH /api/v1/developer/units/:id": { body: updateUnitSchema },
-  "POST /api/v1/developer/projects/:id/invitations": { body: createInvitationSchema },
-  "POST /api/v1/developer/contracts/:id/releases/:stageNum": { body: releasePaymentSchema },
   // Multipart: el archivo es un campo aparte (`req.file`, Multer) que este
   // schema no valida — valida los demás campos del form, que Express entrega
   // como string. Documentado en `bodyContentType`, no en el schema.
+  //
+  // **Se queda afuera de oRPC a propósito, la única de las 20 rutas de §D
+  // que no migró.** `OpenAPIHandler` parsea `multipart/form-data` con el
+  // `Response(stream).formData()` nativo de Node, que bufferea el archivo
+  // ENTERO en memoria sin ningún límite configurable — a diferencia de
+  // Multer, que hoy aplica `limits.fileSize` y `fileFilter` en streaming
+  // (regla 10). Migrar esta ruta empeoraría justo la deuda de RAM que
+  // `CLAUDE.md` raíz ya declara (`MAX_FILE_SIZE_MB` pesándole al proceso).
+  // Probado antes de descartarla: `test/zzz-multipart-smoke.test.ts` (borrado
+  // tras la prueba) confirmó que oRPC SÍ puede parsear un `File` + campos de
+  // texto — la razón de no usarlo acá es de recursos, no de capacidad.
   "POST /api/v1/developer/projects/:id/stages/:stageId/evidence": {
     body: stageEvidenceUploadSchema,
     bodyContentType: "multipart/form-data"
   }
-  // Las rutas de `notary` (§A), `certifier` (§B) e `investor` (§C, salvo
-  // `export.pdf`) ya NO están acá: su schema se declara una sola vez en el
-  // procedimiento oRPC (`notary.routes.ts`, `certifier.routes.ts`,
-  // `investor.routes.ts`) y de ahí sale tanto la validación como el
-  // fragmento de OpenAPI — ver `ORPC_MIGRADAS` y el merge al final de
+  // Las rutas de `notary` (§A), `certifier` (§B), `investor` (§C, salvo
+  // `export.pdf`) y `developer`/`developer-comercial`/`capital` (§D, salvo la
+  // subida multipart de arriba) ya NO están acá: su schema se declara una
+  // sola vez en el procedimiento oRPC y de ahí sale tanto la validación como
+  // el fragmento de OpenAPI — ver `ORPC_MIGRADAS` y el merge al final de
   // `buildOpenApiDocument`.
 };
 
@@ -180,12 +161,6 @@ const RESPONSE_SCHEMAS: Record<string, ZodType> = {
   "POST /api/v1/auth/login": loginResponseSchema,
   "GET /api/v1/auth/me": meResponseSchema,
   "GET /api/v1/notifications/unread-count": unreadCountSchema,
-  "GET /api/v1/developer/documents": z.array(developerDocumentSchema),
-  "GET /api/v1/developer/kpis": developerKpisSchema,
-  "GET /api/v1/developer/capital/summary": capitalSummarySchema,
-  "GET /api/v1/developer/capital/monthly": z.array(capitalMonthlyPointSchema),
-  "GET /api/v1/developer/capital/by-project": z.array(capitalByProjectSchema),
-  "GET /api/v1/developer/investors": z.array(investorDirectoryEntrySchema),
   "GET /api/v1/profile": profileSchema,
   "PATCH /api/v1/profile": profileSchema,
   "PATCH /api/v1/profile/notifications": notificationPrefsSchema,
@@ -224,22 +199,6 @@ const RESPONSE_SCHEMAS: Record<string, ZodType> = {
   "GET /api/v1/projects/:id/documents": z.array(projectDocumentSchema),
   "GET /api/v1/projects/:id/building-schematic": z.array(buildingSchematicFloorSchema),
   "POST /api/v1/developer/projects/:id/stages/:stageId/evidence": stageEvidenceUploadResultSchema,
-  "GET /api/v1/developer/projects": z.array(developerProjectListItemSchema),
-  "GET /api/v1/developer/projects/:id": developerProjectDetailSchema,
-  "POST /api/v1/developer/projects": developerProjectCreateResultSchema,
-  "GET /api/v1/developer/progress": z.array(developerProgressItemSchema),
-  "GET /api/v1/developer/audit-log": paginatedResponseSchema(auditLogEntrySchema),
-  // Las dos ramas (200 idempotente, 201 recién anclado) son el mismo OnChainEvent.
-  "POST /api/v1/developer/documents": onChainEventSchema,
-  "GET /api/v1/developer/projects/:id/units": z.array(unitSchema),
-  "POST /api/v1/developer/projects/:id/units": unitSchema,
-  "PATCH /api/v1/developer/units/:id": unitSchema,
-  "GET /api/v1/developer/units": z.array(developerUnitDirectoryEntrySchema),
-  "POST /api/v1/developer/projects/:id/invitations": invitationSchema,
-  "GET /api/v1/developer/projects/:id/contracts": z.array(developerContractSchema),
-  // Documenta el 201 (recién liberada); el 200 (idempotente) es
-  // paymentAttestationSchema solo, sin `anchor`.
-  "POST /api/v1/developer/contracts/:id/releases/:stageNum": paymentReleaseResultSchema,
   "GET /api/v1/projects/:id/stages": z.array(stageWithThreadSchema),
   "POST /api/v1/projects/:id/stages/:stageId/retry-anchor": stageSchema.extend({
     anchor: onChainEventSchema
@@ -319,10 +278,11 @@ function aPathOpenApi(ruta: string): string {
 }
 
 /**
- * Las rutas de `notary` (§A), `certifier` (§B) e `investor` (§C, las 14), ya
- * migradas a oRPC — el bucle de abajo las saltea y su fragmento sale, aparte,
- * de sus routers oRPC combinados con `OpenAPIGenerator` (ver el final de
- * esta función). Cuando `§D` migre, sus rutas se suman acá.
+ * Las rutas de `notary` (§A), `certifier` (§B), `investor` (§C, las 14) y
+ * `developer`/`developer-comercial`/`capital` (§D, las 19 — todas salvo la
+ * subida multipart), ya migradas a oRPC — el bucle de abajo las saltea y su
+ * fragmento sale, aparte, de sus routers oRPC combinados con
+ * `OpenAPIGenerator` (ver el final de esta función).
  */
 const ORPC_MIGRADAS = new Set([
   "GET /api/v1/notary/kpis",
@@ -350,7 +310,26 @@ const ORPC_MIGRADAS = new Set([
   "POST /api/v1/investor/invitations/:id/accept",
   "POST /api/v1/investor/invitations/:id/decline",
   "GET /api/v1/investor/contracts/:unitId",
-  "GET /api/v1/investor/units/:id/dossier/export.pdf"
+  "GET /api/v1/investor/units/:id/dossier/export.pdf",
+  "GET /api/v1/developer/projects",
+  "GET /api/v1/developer/projects/:id",
+  "POST /api/v1/developer/projects",
+  "GET /api/v1/developer/progress",
+  "GET /api/v1/developer/documents",
+  "GET /api/v1/developer/audit-log",
+  "POST /api/v1/developer/documents",
+  "GET /api/v1/developer/kpis",
+  "GET /api/v1/developer/projects/:id/units",
+  "POST /api/v1/developer/projects/:id/units",
+  "PATCH /api/v1/developer/units/:id",
+  "GET /api/v1/developer/units",
+  "POST /api/v1/developer/projects/:id/invitations",
+  "GET /api/v1/developer/projects/:id/contracts",
+  "POST /api/v1/developer/contracts/:id/releases/:stageNum",
+  "GET /api/v1/developer/capital/summary",
+  "GET /api/v1/developer/capital/monthly",
+  "GET /api/v1/developer/capital/by-project",
+  "GET /api/v1/developer/investors"
 ]);
 
 export async function buildOpenApiDocument() {
@@ -449,6 +428,38 @@ export async function buildOpenApiDocument() {
     }
   );
   Object.assign(paths, documentoInvestor.paths);
+
+  // `developer`, `developer-comercial` y `capital` (§D) comparten el MISMO
+  // prefijo absoluto (`/api/v1/developer`, `MONTAJE`) en tres archivos
+  // distintos — tres `generate()` separados, cada uno con ese prefijo, se
+  // combinan sin choque porque sus paths son disjuntos (mismo criterio que
+  // sostiene que los tres routers Express convivan sin pisarse).
+  const documentoDeveloper = await generadorOrpc.generate(
+    os.$context<DeveloperContext>().prefix("/api/v1/developer").router(developerOrpcRouter),
+    {
+      info: { title: "PropNexus API — developer (oRPC)", version: "1.0.0" }
+    }
+  );
+  Object.assign(paths, documentoDeveloper.paths);
+
+  const documentoDeveloperComercial = await generadorOrpc.generate(
+    os
+      .$context<DeveloperContext>()
+      .prefix("/api/v1/developer")
+      .router(developerComercialOrpcRouter),
+    {
+      info: { title: "PropNexus API — developer comercial (oRPC)", version: "1.0.0" }
+    }
+  );
+  Object.assign(paths, documentoDeveloperComercial.paths);
+
+  const documentoCapital = await generadorOrpc.generate(
+    os.$context<DeveloperContext>().prefix("/api/v1/developer").router(capitalOrpcRouter),
+    {
+      info: { title: "PropNexus API — capital (oRPC)", version: "1.0.0" }
+    }
+  );
+  Object.assign(paths, documentoCapital.paths);
 
   return createDocument({
     openapi: "3.1.0",

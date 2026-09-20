@@ -55,6 +55,55 @@ lo mismo sin pasar por HTTP. Ver el detalle en `CLAUDE.md` raíz.
 
 ## Trampas verificadas
 
+- **2026-09-20 · `OpenAPIHandler` (oRPC) nunca llama a `next(err)` — un error sin capturar dentro
+  de un procedimiento se vuelve el 500 genérico DE ORPC, no el de `errorHandler`.** Encontrado
+  migrando `POST /developer/projects` a oRPC (SPEC-212 §D): un slug repetido choca contra
+  `Project.slug` (`SQLITE_CONSTRAINT_UNIQUE`), y `errorHandler.ts` lo mapea a 409
+  `RESOURCE_ALREADY_EXISTS` desde el 2026-08-24 — pero solo si el error llega ahí. oRPC captura toda
+  excepción que no sea un `ORPCError`/error con nombre y escribe su propia respuesta directamente
+  sobre `res`, sin pasar por la cadena de middlewares de error de Express. Confirmado con un smoke
+  test dedicado (no leyendo código): un handler que tira un `Error` cualquiera responde
+  `{"code":"INTERNAL_SERVER_ERROR","status":500}` de oRPC, y un `errorHandler` de prueba puesto
+  después nunca corre. Ninguna de las tres sub-partes anteriores (`notary`, `certifier`, `investor`)
+  lo había pisado porque ninguna insertaba contra un índice único sin haberlo chequeado antes en la
+  misma transacción — acá sí (`Project.slug`, `Unit_projectId_unitReference_key`), y
+  `test/constraint-errors.test.ts` fija 409 desde el incidente original.
+  **Fix, solo donde hace falta:** `relanzarRestriccionComoOrpc` (`src/routes/_shared.ts`) reusa el
+  MISMO `codigoDeRestriccion`/mapeo que `errorHandler.ts` — cada procedimiento que inserta contra
+  una restricción declara `.errors({RESOURCE_ALREADY_EXISTS, RELATED_RESOURCE_NOT_FOUND})` y
+  envuelve el insert en un `.catch()` que lo llama. Un error que no es de restricción se re-lanza
+  tal cual y sigue siendo el 500 genérico de oRPC — mismo resultado que antes de esta migración para
+  cualquier fallo no clasificado, así que no hace falta capturar todo, solo lo que un test fija.
+  **Deuda declarada, no cerrada:** el problema es genérico a las cuatro sub-partes de SPEC-212, no
+  solo de la que lo encontró. Cualquier excepción no clasificada dentro de CUALQUIER handler oRPC
+  (`notary`, `certifier`, `investor` incluidos) se convierte en el 500 de oRPC en vez de llegar a
+  `errorHandler` — y por lo tanto tampoco a Sentry, que depende de
+  `Sentry.setupExpressErrorHandler`/`next(err)`. No tuvo consecuencia visible en las tres primeras
+  porque ninguna de sus rutas tiene un test que ejercite esa restricción por HTTP. Una solución
+  genérica (que `OpenAPIHandler` delegue a `errorHandler` lo que no reconoce, o que Sentry vea el
+  error de otra forma) es trabajo nuevo — candidata a spec propia el día que un 500 real de una ruta
+  oRPC necesite aparecer en el monitoreo.
+  **La lección:** un framework que responde HTTP por su cuenta (en vez de delegar a `next()`) rompe
+  en silencio cualquier invariante que dependiera de la cadena de middlewares de error — y esto no
+  se ve leyendo el código del handler, solo probándolo con una excepción real.
+
+- **2026-09-20 · `OpenAPIHandler` SÍ sabe parsear `multipart/form-data` — pero bufferea el archivo
+  entero en memoria sin ningún límite, y por eso NO se usó para la única ruta multipart de la API.**
+  Investigado antes de migrar `developer-evidencia.routes.ts` (SPEC-212 §D): un smoke test confirmó
+  que un procedimiento con `z.file()` en el input recibe el `File` + los campos de texto de un
+  `multipart/form-data` real, vía el `Response(stream).formData()` nativo de Node
+  (`@orpc/standard-server-node`). El problema no es de capacidad, es de recursos: ese parser no
+  tiene ningún `maxBodySize`/límite configurable, y bufferea el cuerpo completo antes de que el
+  handler vea nada — a diferencia de Multer, que hoy aplica `limits.fileSize` y `fileFilter` en
+  streaming (regla 10), cortando antes de terminar de recibir un archivo demasiado grande o de tipo
+  no permitido. Migrar esa ruta habría empeorado justo la deuda de RAM que `CLAUDE.md` raíz ya
+  declara §Fuera de alcance ("Upload directo del navegador a R2", sobre `MAX_FILE_SIZE_MB`). **Se
+  decidió no migrarla** — sigue con Multer y `REQUEST_SCHEMAS`/`RESPONSE_SCHEMAS` a mano, documentado
+  en `generate-openapi.ts`.
+  **La lección:** que una librería "pueda" hacer algo (parsear multipart) no dice nada sobre si lo
+  hace con las mismas garantías que lo que reemplaza — acá la garantía que se hubiera perdido en
+  silencio es justo la que regla 10 exige.
+
 - **2026-09-11 · Sentry veía el error ANTES que `errorHandler`, así que reportaba como "Unhandled"
   cosas que el cliente recibía como un 409/400 perfectamente sano** — encontrado leyendo la propia
   captura de evidencia de monitoring (`specs/evidence/monitoring/sentry-issues.jpg`): un

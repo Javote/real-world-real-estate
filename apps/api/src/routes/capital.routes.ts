@@ -10,6 +10,7 @@ import { z } from "zod";
 import type { UserRole } from "../db/types";
 import { en } from "../lib/arrays";
 import { db } from "../lib/db";
+import { OpenAPIHandler, os } from "../lib/orpc";
 import { authenticate, authorize, projectScope } from "../middlewares/auth";
 
 // Capital e investors del developer (M2-D5 filas 42-43 y 48) — **M3-BE-11** y
@@ -25,6 +26,16 @@ import { authenticate, authorize, projectScope } from "../middlewares/auth";
 // convertir con una cotización inventada sería afirmar algo que no podemos
 // sustanciar (regla 17). El cliente muestra el guión de `panel.emptyValue`
 // cuando no hay una moneda única.
+//
+// **SPEC-212 §D — migrado a oRPC (D-066), última de las cuatro sub-partes.**
+// Las cuatro son GET sin body, así que no hay error de negocio que nombrar —
+// mismo patrón de montaje que el resto del prefijo (`OpenAPIHandler` por
+// procedimiento, `authorize` sin cambios).
+
+const PREFIJO_ABSOLUTO = "/api/v1/developer";
+
+type DeveloperContext = { user: { id: string; role: UserRole } };
+const orpc = os.$context<DeveloperContext>();
 
 const router = Router();
 
@@ -90,17 +101,17 @@ function mesUtc(fecha: Date | number): string {
 }
 
 /** Fila 42-43 — los tres StatCard de la cabecera. */
-router.get(
-  "/capital/summary",
-  authorize({ roles: ["admin", "developer"], acceso: { scopeEnQuery: "projectScope(developer)" } }),
-  async (req, res) => {
-    const ids = await misProyectoIds(req.user!.id, req.user!.role);
+const summaryProcedure = orpc
+  .route({ method: "GET", path: "/capital/summary" })
+  .output(capitalSummarySchema)
+  .handler(async ({ context }) => {
+    const ids = await misProyectoIds(context.user.id, context.user.role);
     const { contratos, releases } = await movimientos(ids);
 
     const raised = contratos.reduce((acc, c) => acc + c.totalMinorUnits, 0);
     const released = releases.reduce((acc, r) => acc + r.amountMinorUnits, 0);
 
-    const resumen = capitalSummarySchema.parse({
+    return {
       raisedMinorUnits: raised,
       releasedMinorUnits: released,
       // No puede ser negativo: liberar más de lo contratado no es un estado
@@ -108,9 +119,19 @@ router.get(
       pendingMinorUnits: Math.max(raised - released, 0),
       contracts: contratos.length,
       currency: monedaUnica(contratos.map((c) => c.currency))
-    });
+    };
+  });
+const summaryHandler = new OpenAPIHandler({ summaryProcedure });
 
-    return res.json(resumen);
+router.get(
+  "/capital/summary",
+  authorize({ roles: ["admin", "developer"], acceso: { scopeEnQuery: "projectScope(developer)" } }),
+  async (req, res, next) => {
+    const { matched } = await summaryHandler.handle(req, res, {
+      prefix: PREFIJO_ABSOLUTO,
+      context: { user: req.user! }
+    });
+    if (!matched) next();
   }
 );
 
@@ -121,11 +142,11 @@ router.get(
  * una serie continua donde no hay dato, y el eje del gráfico lo decide el
  * cliente, que es quien sabe qué ventana está mostrando.
  */
-router.get(
-  "/capital/monthly",
-  authorize({ roles: ["admin", "developer"], acceso: { scopeEnQuery: "projectScope(developer)" } }),
-  async (req, res) => {
-    const ids = await misProyectoIds(req.user!.id, req.user!.role);
+const monthlyProcedure = orpc
+  .route({ method: "GET", path: "/capital/monthly" })
+  .output(z.array(capitalMonthlyPointSchema))
+  .handler(async ({ context }) => {
+    const ids = await misProyectoIds(context.user.id, context.user.role);
     const { contratos, releases } = await movimientos(ids);
 
     const porMes = new Map<string, z.infer<typeof capitalMonthlyPointSchema>>();
@@ -145,18 +166,29 @@ router.get(
       porMes.set(mes, punto);
     }
 
-    const serie = [...porMes.values()].sort((a, b) => a.month.localeCompare(b.month));
-    return res.json(z.array(capitalMonthlyPointSchema).parse(serie));
+    return [...porMes.values()].sort((a, b) => a.month.localeCompare(b.month));
+  });
+const monthlyHandler = new OpenAPIHandler({ monthlyProcedure });
+
+router.get(
+  "/capital/monthly",
+  authorize({ roles: ["admin", "developer"], acceso: { scopeEnQuery: "projectScope(developer)" } }),
+  async (req, res, next) => {
+    const { matched } = await monthlyHandler.handle(req, res, {
+      prefix: PREFIJO_ABSOLUTO,
+      context: { user: req.user! }
+    });
+    if (!matched) next();
   }
 );
 
 /** Fila 42-43 — el desglose por proyecto, con la barra de ocupación. */
-router.get(
-  "/capital/by-project",
-  authorize({ roles: ["admin", "developer"], acceso: { scopeEnQuery: "projectScope(developer)" } }),
-  async (req, res) => {
-    const ids = await misProyectoIds(req.user!.id, req.user!.role);
-    if (ids.length === 0) return res.json([]);
+const byProjectProcedure = orpc
+  .route({ method: "GET", path: "/capital/by-project" })
+  .output(z.array(capitalByProjectSchema))
+  .handler(async ({ context }) => {
+    const ids = await misProyectoIds(context.user.id, context.user.role);
+    if (ids.length === 0) return [];
 
     const [proyectos, unidades, { contratos, releases }] = await Promise.all([
       db.selectFrom("Project").select(["id", "name"]).where("id", "in", ids).execute(),
@@ -168,28 +200,36 @@ router.get(
       movimientos(ids)
     ]);
 
-    const desglose = z.array(capitalByProjectSchema).parse(
-      proyectos.map((p) => {
-        const delProyecto = contratos.filter((c) => c.projectId === p.id);
-        const unidadesDel = unidades.filter((u) => u.projectId === p.id);
+    return proyectos.map((p) => {
+      const delProyecto = contratos.filter((c) => c.projectId === p.id);
+      const unidadesDel = unidades.filter((u) => u.projectId === p.id);
 
-        return {
-          projectId: p.id,
-          projectName: p.name,
-          raisedMinorUnits: delProyecto.reduce((acc, c) => acc + c.totalMinorUnits, 0),
-          releasedMinorUnits: releases
-            .filter((r) => r.projectId === p.id)
-            .reduce((acc, r) => acc + r.amountMinorUnits, 0),
-          unitsSold: unidadesDel.filter((u) => u.investorId !== null).length,
-          totalUnits: unidadesDel.length,
-          // Distintos, no contratos: quien compra dos unidades es un investor.
-          investors: new Set(delProyecto.map((c) => c.investorId)).size,
-          currency: monedaUnica(delProyecto.map((c) => c.currency))
-        };
-      })
-    );
+      return {
+        projectId: p.id,
+        projectName: p.name,
+        raisedMinorUnits: delProyecto.reduce((acc, c) => acc + c.totalMinorUnits, 0),
+        releasedMinorUnits: releases
+          .filter((r) => r.projectId === p.id)
+          .reduce((acc, r) => acc + r.amountMinorUnits, 0),
+        unitsSold: unidadesDel.filter((u) => u.investorId !== null).length,
+        totalUnits: unidadesDel.length,
+        // Distintos, no contratos: quien compra dos unidades es un investor.
+        investors: new Set(delProyecto.map((c) => c.investorId)).size,
+        currency: monedaUnica(delProyecto.map((c) => c.currency))
+      };
+    });
+  });
+const byProjectHandler = new OpenAPIHandler({ byProjectProcedure });
 
-    return res.json(desglose);
+router.get(
+  "/capital/by-project",
+  authorize({ roles: ["admin", "developer"], acceso: { scopeEnQuery: "projectScope(developer)" } }),
+  async (req, res, next) => {
+    const { matched } = await byProjectHandler.handle(req, res, {
+      prefix: PREFIJO_ABSOLUTO,
+      context: { user: req.user! }
+    });
+    if (!matched) next();
   }
 );
 
@@ -201,12 +241,12 @@ router.get(
  * autorización acá, y sale del `in (misProyectos)` de la query — no de un
  * filtro en memoria que se pueda saltear.
  */
-router.get(
-  "/investors",
-  authorize({ roles: ["admin", "developer"], acceso: { scopeEnQuery: "projectScope(developer)" } }),
-  async (req, res) => {
-    const ids = await misProyectoIds(req.user!.id, req.user!.role);
-    if (ids.length === 0) return res.json([]);
+const investorsProcedure = orpc
+  .route({ method: "GET", path: "/investors" })
+  .output(z.array(investorDirectoryEntrySchema))
+  .handler(async ({ context }) => {
+    const ids = await misProyectoIds(context.user.id, context.user.role);
+    if (ids.length === 0) return [];
 
     const filas = await db
       .selectFrom("Contract")
@@ -246,15 +286,32 @@ router.get(
       porInvestor.set(fila.id, actual);
     }
 
-    const directorio = investorDirectoryEntrySchema.array().parse(
-      [...porInvestor.values()].map(({ monedas, ...entrada }) => ({
-        ...entrada,
-        currency: monedaUnica(monedas)
-      }))
-    );
+    return [...porInvestor.values()].map(({ monedas, ...entrada }) => ({
+      ...entrada,
+      currency: monedaUnica(monedas)
+    }));
+  });
+const investorsHandler = new OpenAPIHandler({ investorsProcedure });
 
-    return res.json(directorio);
+router.get(
+  "/investors",
+  authorize({ roles: ["admin", "developer"], acceso: { scopeEnQuery: "projectScope(developer)" } }),
+  async (req, res, next) => {
+    const { matched } = await investorsHandler.handle(req, res, {
+      prefix: PREFIJO_ABSOLUTO,
+      context: { user: req.user! }
+    });
+    if (!matched) next();
   }
 );
+
+/** El router oRPC combinado de esta vertical — ver el comentario homólogo en
+ * `developer.routes.ts`. */
+export const capitalOrpcRouter = {
+  summaryProcedure,
+  monthlyProcedure,
+  byProjectProcedure,
+  investorsProcedure
+};
 
 export default router;

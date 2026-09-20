@@ -4,23 +4,28 @@ import {
   cuidParamSchema,
   developerContractSchema,
   developerUnitDirectoryEntrySchema,
+  type InvitationStatus,
   invitationSchema,
   paymentAttestationSchema,
   paymentReleaseResultSchema,
   positiveIntParamSchema,
   RELEASE_EXCEEDS_CONTRACT,
   releasePaymentSchema,
+  type UnitStatus,
   unitSchema,
   updateUnitSchema
 } from "@plataforma/shared";
-import { type Request, Router } from "express";
+import { Router } from "express";
 import { z } from "zod";
 import { createId } from "../db/id";
+import type { UserRole } from "../db/types";
 import { anchorCommitmentEvent, commitmentOf } from "../domain/anchoring";
 import { db } from "../lib/db";
+import { OpenAPIHandler, ORPCError, os } from "../lib/orpc";
 import { authenticate, authorize, projectScope } from "../middlewares/auth";
 import { paramValidator } from "../middlewares/validate-params";
 import { writeAuditLog } from "../utils/audit";
+import { relanzarRestriccionComoOrpc } from "./_shared";
 
 // **El ciclo comercial del developer**, bajo `/api/v1/developer` (M2-D5 filas
 // 39, 40-41, 44, 44b).
@@ -36,6 +41,28 @@ import { writeAuditLog } from "../utils/audit";
 //
 // **Nada de esto mueve valor** (D-021): "liberar" significa anclar el evento de
 // liberación, no ejecutar un pago.
+//
+// **SPEC-212 §D — migrado a oRPC (D-066).** Mismo patrón que el resto del
+// prefijo: `authorize` sigue siendo middleware Express y hay un
+// `OpenAPIHandler` por procedimiento, montado en el path exacto de esa ruta.
+//
+// **`UNIT_NOT_AVAILABLE` es un error CON NOMBRE** (`.errors({...})`), mismo
+// criterio que `investor.routes.ts` §accept: `res.body.code` tiene que seguir
+// siendo `"UNIT_NOT_AVAILABLE"` al nivel que ya fija
+// `test/accept-invitation-atomic.test.ts` — un `ORPCError("CONFLICT", ...)`
+// liso lo anidaría en `data.code`.
+//
+// **`RESOURCE_ALREADY_EXISTS` en `POST /projects/:id/units` es la misma
+// trampa que ya se encontró en `developer.routes.ts`:** `OpenAPIHandler`
+// nunca llama a `next(err)`, así que un `SQLITE_CONSTRAINT_UNIQUE` sin
+// capturar (`Unit_projectId_unitReference_key`) se volvía el 500 genérico de
+// oRPC en vez del 409 que `test/constraint-errors.test.ts` fija — ver
+// `relanzarRestriccionComoOrpc` en `_shared.ts`.
+
+const PREFIJO_ABSOLUTO = "/api/v1/developer";
+
+type DeveloperContext = { user: { id: string; role: UserRole } };
+const orpc = os.$context<DeveloperContext>();
 
 class ReleaseExceedsContractError extends Error {
   constructor(
@@ -55,23 +82,73 @@ router.param("stageNum", paramValidator(positiveIntParamSchema));
 router.use(authenticate);
 
 /** Fila 44b — las unidades de un proyecto, del lado del developer. */
+const unitsOfProjectProcedure = os
+  .route({ method: "GET", path: "/projects/{id}/units" })
+  .input(z.strictObject({ id: cuidParamSchema }))
+  .output(z.array(unitSchema))
+  .handler(async ({ input }) => {
+    const unidades = await db
+      .selectFrom("Unit")
+      .selectAll()
+      .where("projectId", "=", input.id)
+      .orderBy("unitReference", "asc")
+      .execute();
+
+    return unidades.map((u) => ({ ...u, status: u.status as UnitStatus }));
+  });
+const unitsOfProjectHandler = new OpenAPIHandler({ unitsOfProjectProcedure });
+
 router.get(
   "/projects/:id/units",
   authorize({
     roles: ["admin", "developer"],
     acceso: { proyecto: { param: "id" }, membresias: ["developer"] }
   }),
-  async (req: Request<{ id: string }>, res) => {
-    const unidades = await db
-      .selectFrom("Unit")
-      .selectAll()
-      .where("projectId", "=", req.params.id)
-      .orderBy("unitReference", "asc")
-      .execute();
-
-    return res.json(z.array(unitSchema).parse(unidades));
+  async (req, res, next) => {
+    const { matched } = await unitsOfProjectHandler.handle(req, res, { prefix: PREFIJO_ABSOLUTO });
+    if (!matched) next();
   }
 );
+
+const createUnitProcedure = orpc
+  .errors({
+    RESOURCE_ALREADY_EXISTS: { status: 409, message: "Resource already exists" },
+    RELATED_RESOURCE_NOT_FOUND: { status: 400, message: "A referenced resource does not exist" }
+  })
+  .route({ method: "POST", path: "/projects/{id}/units", successStatus: 201 })
+  .input(createUnitSchema.extend({ id: cuidParamSchema }))
+  .output(unitSchema)
+  .handler(async ({ input, context, errors }) => {
+    const ahora = new Date();
+    const unidad = await db
+      .insertInto("Unit")
+      .values({
+        id: createId(),
+        projectId: input.id,
+        unitReference: input.unitReference,
+        status: "available",
+        floor: input.floor ?? null,
+        sizeM2: input.sizeM2 ?? null,
+        priceMinorUnits: input.priceMinorUnits ?? null,
+        currency: input.currency ?? null,
+        investorId: null,
+        createdAt: ahora,
+        updatedAt: ahora
+      })
+      .returningAll()
+      .executeTakeFirstOrThrow()
+      .catch((err) => relanzarRestriccionComoOrpc(err, errors));
+
+    await writeAuditLog({
+      actorUserId: context.user.id,
+      action: "CREATE_UNIT",
+      entityType: "Unit",
+      entityId: unidad.id
+    });
+
+    return { ...unidad, status: unidad.status as UnitStatus };
+  });
+const createUnitHandler = new OpenAPIHandler({ createUnitProcedure });
 
 router.post(
   "/projects/:id/units",
@@ -79,61 +156,28 @@ router.post(
     roles: ["admin", "developer"],
     acceso: { proyecto: { param: "id" }, membresias: ["developer"] }
   }),
-  async (req: Request<{ id: string }>, res) => {
-    const parsed = createUnitSchema.safeParse(req.body);
-    if (!parsed.success) return res.status(400).json(parsed.error.flatten());
-
-    const ahora = new Date();
-    const unidad = await db
-      .insertInto("Unit")
-      .values({
-        id: createId(),
-        projectId: req.params.id,
-        unitReference: parsed.data.unitReference,
-        status: "available",
-        floor: parsed.data.floor ?? null,
-        sizeM2: parsed.data.sizeM2 ?? null,
-        priceMinorUnits: parsed.data.priceMinorUnits ?? null,
-        currency: parsed.data.currency ?? null,
-        investorId: null,
-        createdAt: ahora,
-        updatedAt: ahora
-      })
-      .returningAll()
-      .executeTakeFirstOrThrow();
-
-    await writeAuditLog({
-      actorUserId: req.user!.id,
-      action: "CREATE_UNIT",
-      entityType: "Unit",
-      entityId: unidad.id
+  async (req, res, next) => {
+    const { matched } = await createUnitHandler.handle(req, res, {
+      prefix: PREFIJO_ABSOLUTO,
+      context: { user: req.user! }
     });
-
-    return res.status(201).json(unitSchema.parse(unidad));
+    if (!matched) next();
   }
 );
 
-router.patch(
-  "/units/:id",
-  authorize({
-    roles: ["admin", "developer"],
-    acceso: { proyecto: { via: "Unit", param: "id" }, membresias: ["developer"] }
-  }),
-  async (req: Request<{ id: string }>, res) => {
-    const parsed = updateUnitSchema.safeParse(req.body);
-    if (!parsed.success) return res.status(400).json(parsed.error.flatten());
+const updateUnitProcedure = orpc
+  .route({ method: "PATCH", path: "/units/{id}" })
+  .input(updateUnitSchema.extend({ id: cuidParamSchema }))
+  .output(unitSchema)
+  .handler(async ({ input, context }) => {
+    const { id, ...cambios } = input;
 
-    const unidad = await db
-      .selectFrom("Unit")
-      .selectAll()
-      .where("id", "=", req.params.id)
-      .executeTakeFirst();
-
-    if (!unidad) return res.status(404).json({ message: "Unit not found" });
+    const unidad = await db.selectFrom("Unit").selectAll().where("id", "=", id).executeTakeFirst();
+    if (!unidad) throw new ORPCError("NOT_FOUND", { message: "Unit not found" });
 
     const actualizada = await db
       .updateTable("Unit")
-      .set({ ...parsed.data, updatedAt: new Date() })
+      .set({ ...cambios, updatedAt: new Date() })
       .where("id", "=", unidad.id)
       .returningAll()
       .executeTakeFirstOrThrow();
@@ -142,29 +186,44 @@ router.patch(
     // la superficie o el estado comercial de algo que después se invita y se
     // contrata. El alta ya lo escribía; la edición se había quedado sin él.
     await writeAuditLog({
-      actorUserId: req.user!.id,
+      actorUserId: context.user.id,
       action: "UPDATE_UNIT",
       entityType: "Unit",
       entityId: unidad.id
     });
 
-    return res.json(unitSchema.parse(actualizada));
+    return { ...actualizada, status: actualizada.status as UnitStatus };
+  });
+const updateUnitHandler = new OpenAPIHandler({ updateUnitProcedure });
+
+router.patch(
+  "/units/:id",
+  authorize({
+    roles: ["admin", "developer"],
+    acceso: { proyecto: { via: "Unit", param: "id" }, membresias: ["developer"] }
+  }),
+  async (req, res, next) => {
+    const { matched } = await updateUnitHandler.handle(req, res, {
+      prefix: PREFIJO_ABSOLUTO,
+      context: { user: req.user! }
+    });
+    if (!matched) next();
   }
 );
 
 /** Fila 44 — el inventario cross-proyecto del developer. */
-router.get(
-  "/units",
-  authorize({ roles: ["admin", "developer"], acceso: { scopeEnQuery: "projectScope(developer)" } }),
-  async (req, res) => {
+const unitsProcedure = orpc
+  .route({ method: "GET", path: "/units" })
+  .output(z.array(developerUnitDirectoryEntrySchema))
+  .handler(async ({ context }) => {
     const proyectos = await db
       .selectFrom("Project")
       .select("id")
-      .where((eb) => projectScope(eb, req.user!.role, req.user!.id, ["developer"]))
+      .where((eb) => projectScope(eb, context.user.role, context.user.id, ["developer"]))
       .execute();
 
     const ids = proyectos.map((p) => p.id);
-    if (ids.length === 0) return res.json([]);
+    if (ids.length === 0) return [];
 
     const unidades = await db
       .selectFrom("Unit")
@@ -182,40 +241,48 @@ router.get(
       .where("Unit.projectId", "in", ids)
       .execute();
 
-    return res.json(z.array(developerUnitDirectoryEntrySchema).parse(unidades));
+    return unidades.map((u) => ({ ...u, status: u.status as UnitStatus }));
+  });
+const unitsHandler = new OpenAPIHandler({ unitsProcedure });
+
+router.get(
+  "/units",
+  authorize({ roles: ["admin", "developer"], acceso: { scopeEnQuery: "projectScope(developer)" } }),
+  async (req, res, next) => {
+    const { matched } = await unitsHandler.handle(req, res, {
+      prefix: PREFIJO_ABSOLUTO,
+      context: { user: req.user! }
+    });
+    if (!matched) next();
   }
 );
 
-/** Fila 39 — el developer emite la invitación. */
-router.post(
-  "/projects/:id/invitations",
-  authorize({
-    roles: ["admin", "developer"],
-    acceso: { proyecto: { param: "id" }, membresias: ["developer"] }
-  }),
-  async (req: Request<{ id: string }>, res) => {
-    const parsed = createInvitationSchema.safeParse(req.body);
-    if (!parsed.success) return res.status(400).json(parsed.error.flatten());
-
+/**
+ * Fila 39 — el developer emite la invitación.
+ *
+ * SPEC-201, invariante 1: una unidad `sold` no admite invitaciones nuevas.
+ * Antes de este chequeo se podía emitir una segunda invitación `pending`
+ * sobre una unidad que otra invitación ya había vendido, y esa segunda
+ * invitación quedaba viva esperando un `accept` que terminaba sacándole la
+ * unidad a quien ya la había comprado.
+ */
+const createInvitationProcedure = orpc
+  .errors({ UNIT_NOT_AVAILABLE: { status: 409 } })
+  .route({ method: "POST", path: "/projects/{id}/invitations", successStatus: 201 })
+  .input(createInvitationSchema.extend({ id: cuidParamSchema }))
+  .output(invitationSchema)
+  .handler(async ({ input, context, errors }) => {
     const unidad = await db
       .selectFrom("Unit")
       .selectAll()
-      .where("id", "=", parsed.data.unitId)
-      .where("projectId", "=", req.params.id)
+      .where("id", "=", input.unitId)
+      .where("projectId", "=", input.id)
       .executeTakeFirst();
 
-    if (!unidad) return res.status(400).json({ message: "Unit does not belong to project" });
+    if (!unidad) throw new ORPCError("BAD_REQUEST", { message: "Unit does not belong to project" });
 
-    // SPEC-201, invariante 1: una unidad `sold` no admite invitaciones nuevas.
-    // Antes de este chequeo se podía emitir una segunda invitación `pending`
-    // sobre una unidad que otra invitación ya había vendido, y esa segunda
-    // invitación quedaba viva esperando un `accept` que terminaba sacándole la
-    // unidad a quien ya la había comprado.
     if (unidad.status !== "available") {
-      return res.status(409).json({
-        message: `Unit is ${unidad.status}, not available`,
-        code: "UNIT_NOT_AVAILABLE"
-      });
+      throw errors.UNIT_NOT_AVAILABLE({ message: `Unit is ${unidad.status}, not available` });
     }
 
     const ahora = new Date();
@@ -223,13 +290,13 @@ router.post(
       .insertInto("Invitation")
       .values({
         id: createId(),
-        projectId: req.params.id,
+        projectId: input.id,
         unitId: unidad.id,
-        investorEmail: parsed.data.investorEmail,
-        amountMinorUnits: parsed.data.amountMinorUnits,
-        currency: parsed.data.currency,
+        investorEmail: input.investorEmail,
+        amountMinorUnits: input.amountMinorUnits,
+        currency: input.currency,
         status: "pending",
-        createdById: req.user!.id,
+        createdById: context.user.id,
         createdAt: ahora,
         respondedAt: null
       })
@@ -244,13 +311,28 @@ router.post(
       .execute();
 
     await writeAuditLog({
-      actorUserId: req.user!.id,
+      actorUserId: context.user.id,
       action: "CREATE_INVITATION",
       entityType: "Invitation",
       entityId: invitacion.id
     });
 
-    return res.status(201).json(invitationSchema.parse(invitacion));
+    return { ...invitacion, status: invitacion.status as InvitationStatus };
+  });
+const createInvitationHandler = new OpenAPIHandler({ createInvitationProcedure });
+
+router.post(
+  "/projects/:id/invitations",
+  authorize({
+    roles: ["admin", "developer"],
+    acceso: { proyecto: { param: "id" }, membresias: ["developer"] }
+  }),
+  async (req, res, next) => {
+    const { matched } = await createInvitationHandler.handle(req, res, {
+      prefix: PREFIJO_ABSOLUTO,
+      context: { user: req.user! }
+    });
+    if (!matched) next();
   }
 );
 
@@ -270,13 +352,11 @@ router.post(
  * `POST /investor/invitations/:id/accept`, y el `referenceId` del evento es la
  * invitación. Por eso el join pasa por ahí — el contrato no guarda la ref.
  */
-router.get(
-  "/projects/:id/contracts",
-  authorize({
-    roles: ["admin", "developer"],
-    acceso: { proyecto: { param: "id" }, membresias: ["developer"] }
-  }),
-  async (req: Request<{ id: string }>, res) => {
+const contractsOfProjectProcedure = os
+  .route({ method: "GET", path: "/projects/{id}/contracts" })
+  .input(z.strictObject({ id: cuidParamSchema }))
+  .output(z.array(developerContractSchema))
+  .handler(async ({ input }) => {
     // Los dos `innerJoin` son contra la clave primaria, así que esta consulta
     // devuelve exactamente un registro por contrato. El anclaje se busca aparte
     // —ver abajo— justamente para que no pueda multiplicar filas.
@@ -295,7 +375,7 @@ router.get(
         "User.fullName as investorName",
         "User.email as investorEmail"
       ])
-      .where("Unit.projectId", "=", req.params.id)
+      .where("Unit.projectId", "=", input.id)
       .execute();
 
     const unitIds = [...new Set(contratos.map((c) => c.unitId))];
@@ -328,64 +408,85 @@ router.get(
           .execute()
       : [];
 
-    return res.json(
-      z.array(developerContractSchema).parse(
-        contratos.map(({ investorEmail, ...contrato }) => {
-          // La invitación se ata al contrato por unidad **y por investor**: es el
-          // email de la invitación contra el del `User` del contrato. Sin eso,
-          // dos ventas de la misma unidad se cruzan los anclajes.
-          const candidatos = anclajes.filter(
-            (a) => a.unitId === contrato.unitId && a.investorEmail === investorEmail
-          );
+    return contratos.map(({ investorEmail, ...contrato }) => {
+      // La invitación se ata al contrato por unidad **y por investor**: es el
+      // email de la invitación contra el del `User` del contrato. Sin eso,
+      // dos ventas de la misma unidad se cruzan los anclajes.
+      const candidatos = anclajes.filter(
+        (a) => a.unitId === contrato.unitId && a.investorEmail === investorEmail
+      );
 
-          // Si el mismo investor compró la misma unidad dos veces quedan varios:
-          // gana el `respondedAt` más cercano al `signedAt`. Hoy son el MISMO
-          // instante —el accept usa un único `ahora` para los dos— así que el
-          // match es exacto; el criterio es lo que lo mantiene determinístico si
-          // alguna vez dejan de serlo.
-          //
-          // SPEC-208 (B-10): las dos columnas ya son epoch ms de verdad — el
-          // tipo dejó de mentir, así que el `new Date(x).getTime()` que las
-          // envolvía "por las dudas" ya no hace falta.
-          const firmado = contrato.signedAt;
-          const anclaje = candidatos.reduce<(typeof candidatos)[number] | null>((mejor, a) => {
-            if (mejor === null) return a;
-            if (firmado === null) return mejor;
-            const distancia = (c: (typeof candidatos)[number]) => {
-              const respondido = c.respondedAt;
-              return respondido === null
-                ? Number.POSITIVE_INFINITY
-                : Math.abs(respondido - firmado);
-            };
-            return distancia(a) < distancia(mejor) ? a : mejor;
-          }, null);
+      // Si el mismo investor compró la misma unidad dos veces quedan varios:
+      // gana el `respondedAt` más cercano al `signedAt`. Hoy son el MISMO
+      // instante —el accept usa un único `ahora` para los dos— así que el
+      // match es exacto; el criterio es lo que lo mantiene determinístico si
+      // alguna vez dejan de serlo.
+      //
+      // SPEC-208 (B-10): las dos columnas ya son epoch ms de verdad — el
+      // tipo dejó de mentir, así que el `new Date(x).getTime()` que las
+      // envolvía "por las dudas" ya no hace falta.
+      const firmado = contrato.signedAt;
+      const anclaje = candidatos.reduce<(typeof candidatos)[number] | null>((mejor, a) => {
+        if (mejor === null) return a;
+        if (firmado === null) return mejor;
+        const distancia = (c: (typeof candidatos)[number]) => {
+          const respondido = c.respondedAt;
+          return respondido === null ? Number.POSITIVE_INFINITY : Math.abs(respondido - firmado);
+        };
+        return distancia(a) < distancia(mejor) ? a : mejor;
+      }, null);
 
-          return {
-            ...contrato,
-            txid: anclaje?.txid ?? null,
-            commitment: anclaje?.commitment ?? null
-          };
-        })
-      )
-    );
+      return {
+        ...contrato,
+        unitStatus: contrato.unitStatus as UnitStatus,
+        txid: anclaje?.txid ?? null,
+        commitment: anclaje?.commitment ?? null
+      };
+    });
+  });
+const contractsOfProjectHandler = new OpenAPIHandler({ contractsOfProjectProcedure });
+
+router.get(
+  "/projects/:id/contracts",
+  authorize({
+    roles: ["admin", "developer"],
+    acceso: { proyecto: { param: "id" }, membresias: ["developer"] }
+  }),
+  async (req, res, next) => {
+    const { matched } = await contractsOfProjectHandler.handle(req, res, {
+      prefix: PREFIJO_ABSOLUTO
+    });
+    if (!matched) next();
   }
 );
 
-/** Fila 40-41 — liberar una etapa. **Ancla** (M3-SC-03). */
-router.post(
-  "/contracts/:id/releases/:stageNum",
-  authorize({
-    roles: ["admin", "developer"],
-    acceso: { proyecto: { via: "Contract", param: "id" }, membresias: ["developer"] }
-  }),
-  async (req: Request<{ id: string; stageNum: string }>, res) => {
-    const parsed = releasePaymentSchema.safeParse(req.body);
-    if (!parsed.success) return res.status(400).json(parsed.error.flatten());
-
-    // `router.param("stageNum", ...)` ya garantiza que esto es un entero
-    // positivo — con ceros a la izquierda incluidos, mismo criterio que
-    // aceptaba el `Number.parseInt` de acá que reemplazó.
-    const stageNumber = Number.parseInt(req.params.stageNum, 10);
+/**
+ * Fila 40-41 — liberar una etapa. **Ancla** (M3-SC-03).
+ *
+ * **Idempotente** (regla 8): el índice único (contrato, etapa) impide
+ * liberar dos veces la misma — por eso el status de éxito no es fijo:
+ * `outputStructure: "detailed"` deja que el handler elija 200 (ya existía) o
+ * 201 (recién se liberó), cada uno con su propio schema de cuerpo.
+ */
+const releasePaymentProcedure = orpc
+  .errors({
+    STAGE_NOT_CERTIFIED: { status: 409 },
+    [RELEASE_EXCEEDS_CONTRACT]: { status: 409 }
+  })
+  .route({
+    method: "POST",
+    path: "/contracts/{id}/releases/{stageNum}",
+    outputStructure: "detailed"
+  })
+  .input(releasePaymentSchema.extend({ id: cuidParamSchema, stageNum: positiveIntParamSchema }))
+  .output(
+    z.union([
+      z.strictObject({ status: z.literal(200), body: paymentAttestationSchema }),
+      z.strictObject({ status: z.literal(201), body: paymentReleaseResultSchema })
+    ])
+  )
+  .handler(async ({ input, context, errors }) => {
+    const stageNumber = input.stageNum;
 
     const contrato = await db
       .selectFrom("Contract")
@@ -397,10 +498,10 @@ router.post(
         "Contract.totalMinorUnits as totalMinorUnits",
         "Unit.projectId as projectId"
       ])
-      .where("Contract.id", "=", req.params.id)
+      .where("Contract.id", "=", input.id)
       .executeTakeFirst();
 
-    if (!contrato) return res.status(404).json({ message: "Contract not found" });
+    if (!contrato) throw new ORPCError("NOT_FOUND", { message: "Contract not found" });
 
     // **La liberación exige que la etapa esté certificada.** El entregable lo
     // dice: "the developer initiates [the release] after the certifier has
@@ -413,13 +514,9 @@ router.post(
       .where("sequenceOrder", "=", stageNumber)
       .executeTakeFirst();
 
-    if (!stage) return res.status(404).json({ message: "Stage not found" });
+    if (!stage) throw new ORPCError("NOT_FOUND", { message: "Stage not found" });
     if (stage.state !== "Completed") {
-      return res.status(409).json({
-        message: "Stage is not certified yet",
-        code: "STAGE_NOT_CERTIFIED",
-        state: stage.state
-      });
+      throw errors.STAGE_NOT_CERTIFIED({ message: "Stage is not certified yet" });
     }
 
     const ahora = new Date();
@@ -438,9 +535,9 @@ router.post(
     // `(contractId, stageNumber)` no alcanza porque acá el conflicto es
     // entre DOS etapas distintas del mismo contrato, no la misma etapa dos
     // veces.
-    let resultado: { fila: { id: string }; yaExistia: boolean };
-    try {
-      resultado = await db.transaction().execute(async (trx) => {
+    const resultado = await db
+      .transaction()
+      .execute(async (trx) => {
         // Idempotencia (regla 8): el índice único (contrato, etapa) impide
         // liberar dos veces la misma.
         const previa = await trx
@@ -459,7 +556,7 @@ router.post(
           .executeTakeFirst();
 
         const liberadoHastaAhora = Number(liberado?.total ?? 0);
-        if (liberadoHastaAhora + parsed.data.amountMinorUnits > contrato.totalMinorUnits) {
+        if (liberadoHastaAhora + input.amountMinorUnits > contrato.totalMinorUnits) {
           throw new ReleaseExceedsContractError(contrato.totalMinorUnits, liberadoHastaAhora);
         }
 
@@ -469,33 +566,30 @@ router.post(
             id: createId(),
             contractId: contrato.id,
             stageNumber,
-            amountMinorUnits: parsed.data.amountMinorUnits,
-            releasedById: req.user!.id,
+            amountMinorUnits: input.amountMinorUnits,
+            releasedById: context.user.id,
             releasedAt: ahora
           })
           .returningAll()
           .executeTakeFirstOrThrow();
 
         return { fila, yaExistia: false as const };
+      })
+      .catch((err) => {
+        if (err instanceof ReleaseExceedsContractError) {
+          throw errors[RELEASE_EXCEEDS_CONTRACT]({
+            message: "Release would exceed the contract total"
+          });
+        }
+        throw err;
       });
-    } catch (err) {
-      if (err instanceof ReleaseExceedsContractError) {
-        return res.status(409).json({
-          message: "Release would exceed the contract total",
-          code: RELEASE_EXCEEDS_CONTRACT,
-          totalMinorUnits: err.totalMinorUnits,
-          releasedMinorUnits: err.releasedMinorUnits
-        });
-      }
-      throw err;
-    }
 
     const { fila: release, yaExistia } = resultado;
 
     // Ya existía (idempotencia, regla 8): se devuelve tal cual, sin volver a
     // anclar — un segundo anclaje sobre el mismo release sería un evento
     // fantasma.
-    if (yaExistia) return res.status(200).json(paymentAttestationSchema.parse(release));
+    if (yaExistia) return { status: 200 as const, body: release };
 
     const anchor = await anchorCommitmentEvent({
       projectId: contrato.projectId,
@@ -503,7 +597,7 @@ router.post(
       commitment: commitmentOf({
         contractId: contrato.id,
         stageNumber,
-        amountMinorUnits: parsed.data.amountMinorUnits,
+        amountMinorUnits: input.amountMinorUnits,
         releasedAt: ahora.toISOString()
       }),
       reference: release.id,
@@ -511,15 +605,42 @@ router.post(
     });
 
     await writeAuditLog({
-      actorUserId: req.user!.id,
+      actorUserId: context.user.id,
       action: "RELEASE_PAYMENT",
       entityType: "PaymentAttestation",
       entityId: release.id,
       metadata: { stageNumber, txid: anchor.txid }
     });
 
-    return res.status(201).json(paymentReleaseResultSchema.parse({ ...release, anchor }));
+    return { status: 201 as const, body: { ...release, anchor } };
+  });
+const releasePaymentHandler = new OpenAPIHandler({ releasePaymentProcedure });
+
+router.post(
+  "/contracts/:id/releases/:stageNum",
+  authorize({
+    roles: ["admin", "developer"],
+    acceso: { proyecto: { via: "Contract", param: "id" }, membresias: ["developer"] }
+  }),
+  async (req, res, next) => {
+    const { matched } = await releasePaymentHandler.handle(req, res, {
+      prefix: PREFIJO_ABSOLUTO,
+      context: { user: req.user! }
+    });
+    if (!matched) next();
   }
 );
+
+/** El router oRPC combinado de esta vertical — ver el comentario homólogo en
+ * `developer.routes.ts`. */
+export const developerComercialOrpcRouter = {
+  unitsOfProjectProcedure,
+  createUnitProcedure,
+  updateUnitProcedure,
+  unitsProcedure,
+  createInvitationProcedure,
+  contractsOfProjectProcedure,
+  releasePaymentProcedure
+};
 
 export default router;

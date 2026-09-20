@@ -16,18 +16,19 @@ import {
   onChainEventSchema,
   paginatedResponseSchema
 } from "@plataforma/shared";
-import { type Request, Router } from "express";
+import { Router } from "express";
 import { z } from "zod";
 import { createId } from "../db/id";
-import type { OnChainEventRow } from "../db/types";
+import type { OnChainEventRow, UserRole } from "../db/types";
 import { anchorCommitmentEvent } from "../domain/anchoring";
 import { reconciliarParaLectura } from "../domain/reconcile";
 import { anchorEvent, recordOnChainEvent } from "../domain/stage-transition";
 import { db } from "../lib/db";
+import { OpenAPIHandler, ORPCError, os } from "../lib/orpc";
 import { auditScope, authenticate, authorize, projectScope } from "../middlewares/auth";
 import { paramValidator } from "../middlewares/validate-params";
 import { writeAuditLog } from "../utils/audit";
-import { proyectosVisibles } from "./_shared";
+import { proyectosVisibles, relanzarRestriccionComoOrpc } from "./_shared";
 
 // Superficie del developer (M2-D5 filas 34b-34c, 35-36, 37, 45, 46-47, 49).
 //
@@ -35,6 +36,26 @@ import { proyectosVisibles } from "./_shared";
 // path que el backlog pide.** No es duplicación: `/projects` es CRUD nuestro y
 // `/developer/projects` es una superficie del entregable, con su scope y su
 // forma. El día que el CRUD genérico no le sirva a nadie, se borra.
+//
+// **SPEC-212 §D — migrado a oRPC (D-066), última de las cuatro sub-partes.**
+// Mismo patrón que §A/§B/§C: `authorize` sigue siendo middleware Express,
+// corriendo antes de que oRPC vea la request, y hay un `OpenAPIHandler` por
+// procedimiento montado en el path exacto de esa ruta — nunca uno solo
+// compartido en el prefijo del router, para que cada ruta conserve su propio
+// `acceso`. El `prefix` de `.handle()` es el path ABSOLUTO
+// (`PREFIJO_ABSOLUTO`), no el relativo dentro de este router: oRPC lee
+// `req.originalUrl`, que Express nunca reescribe al entrar a un sub-router.
+//
+// **Este archivo comparte prefijo con otros tres** (`developer-comercial.
+// routes.ts`, `developer-evidencia.routes.ts`, `capital.routes.ts`) — los
+// cuatro montados en `/api/v1/developer` (`MONTAJE`, `app.ts`). Migrar una
+// ruta acá no toca el `router.use(authenticate)` de los otros tres archivos,
+// así que no hace falta migrarlos juntos.
+
+const PREFIJO_ABSOLUTO = "/api/v1/developer";
+
+export type DeveloperContext = { user: { id: string; role: UserRole } };
+const orpc = os.$context<DeveloperContext>();
 
 const router = Router();
 
@@ -50,11 +71,14 @@ function misProyectos(userId: string, role: "admin" | "developer") {
 }
 
 /** Fila 35-36 — el listado de proyectos del developer, con su avance. */
-router.get(
-  "/projects",
-  authorize({ roles: ["admin", "developer"], acceso: { scopeEnQuery: "projectScope(developer)" } }),
-  async (req, res) => {
-    const proyectos = await misProyectos(req.user!.id, req.user!.role as "admin" | "developer")
+const projectsProcedure = orpc
+  .route({ method: "GET", path: "/projects" })
+  .output(z.array(developerProjectListItemSchema))
+  .handler(async ({ context }) => {
+    const proyectos = await misProyectos(
+      context.user.id,
+      context.user.role as "admin" | "developer"
+    )
       .orderBy("createdAt", "desc")
       .execute();
 
@@ -84,52 +108,58 @@ router.get(
           .execute()
       : [];
 
-    return res.json(
-      z.array(developerProjectListItemSchema).parse(
-        proyectos.map((proyecto) => {
-          const suyos = stages.filter((s) => s.projectId === proyecto.id);
-          const completados = suyos.filter((s) => s.state === "Completed").length;
+    return proyectos.map((proyecto) => {
+      const suyos = stages.filter((s) => s.projectId === proyecto.id);
+      const completados = suyos.filter((s) => s.state === "Completed").length;
 
-          const conPrecio = unidades.filter((u) => u.projectId === proyecto.id);
-          const monedas = new Set(conPrecio.map((u) => u.currency));
+      const conPrecio = unidades.filter((u) => u.projectId === proyecto.id);
+      const monedas = new Set(conPrecio.map((u) => u.currency));
 
-          // **Con dos monedas en el mismo proyecto no hay "desde" que se pueda
-          // sostener**: comparar unidades mínimas de monedas distintas da un
-          // número sin significado. Antes que un mínimo falso, ningún precio
-          // (regla 17). Hoy no debería pasar; el día que pase, se ve.
-          const barata =
-            monedas.size === 1
-              ? conPrecio.reduce((min, u) => (u.priceMinorUnits! < min.priceMinorUnits! ? u : min))
-              : null;
+      // **Con dos monedas en el mismo proyecto no hay "desde" que se pueda
+      // sostener**: comparar unidades mínimas de monedas distintas da un
+      // número sin significado. Antes que un mínimo falso, ningún precio
+      // (regla 17). Hoy no debería pasar; el día que pase, se ve.
+      const barata =
+        monedas.size === 1
+          ? conPrecio.reduce((min, u) => (u.priceMinorUnits! < min.priceMinorUnits! ? u : min))
+          : null;
 
-          return {
-            ...proyecto,
-            stageCount: suyos.length,
-            progress: suyos.length ? Math.round((completados / suyos.length) * 100) : 0,
-            priceFromMinorUnits: barata?.priceMinorUnits ?? null,
-            priceCurrency: barata?.currency ?? null
-          };
-        })
-      )
-    );
+      return {
+        ...proyecto,
+        stageCount: suyos.length,
+        progress: suyos.length ? Math.round((completados / suyos.length) * 100) : 0,
+        priceFromMinorUnits: barata?.priceMinorUnits ?? null,
+        priceCurrency: barata?.currency ?? null
+      };
+    });
+  });
+const projectsHandler = new OpenAPIHandler({ projectsProcedure });
+
+router.get(
+  "/projects",
+  authorize({ roles: ["admin", "developer"], acceso: { scopeEnQuery: "projectScope(developer)" } }),
+  async (req, res, next) => {
+    const { matched } = await projectsHandler.handle(req, res, {
+      prefix: PREFIJO_ABSOLUTO,
+      context: { user: req.user! }
+    });
+    if (!matched) next();
   }
 );
 
 /** Fila 37 — el detalle, que en la captura es una grilla de acciones + 3 stats. */
-router.get(
-  "/projects/:id",
-  authorize({
-    roles: ["admin", "developer"],
-    acceso: { proyecto: { param: "id" }, membresias: ["developer"] }
-  }),
-  async (req: Request<{ id: string }>, res) => {
+const projectByIdProcedure = os
+  .route({ method: "GET", path: "/projects/{id}" })
+  .input(z.strictObject({ id: cuidParamSchema }))
+  .output(developerProjectDetailSchema)
+  .handler(async ({ input }) => {
     const proyecto = await db
       .selectFrom("Project")
       .selectAll()
-      .where("id", "=", req.params.id)
+      .where("id", "=", input.id)
       .executeTakeFirst();
 
-    if (!proyecto) return res.status(404).json({ message: "Project not found" });
+    if (!proyecto) throw new ORPCError("NOT_FOUND", { message: "Project not found" });
 
     const stages = await db
       .selectFrom("Stage")
@@ -144,24 +174,45 @@ router.get(
       .where("projectId", "=", proyecto.id)
       .executeTakeFirst();
 
-    return res.json(
-      developerProjectDetailSchema.parse({
-        ...proyecto,
-        stages,
-        evidenceCount: Number(evidencia?.total ?? 0)
-      })
-    );
+    return {
+      ...proyecto,
+      stages,
+      evidenceCount: Number(evidencia?.total ?? 0)
+    };
+  });
+const projectByIdHandler = new OpenAPIHandler({ projectByIdProcedure });
+
+router.get(
+  "/projects/:id",
+  authorize({
+    roles: ["admin", "developer"],
+    acceso: { proyecto: { param: "id" }, membresias: ["developer"] }
+  }),
+  async (req, res, next) => {
+    const { matched } = await projectByIdHandler.handle(req, res, { prefix: PREFIJO_ABSOLUTO });
+    if (!matched) next();
   }
 );
 
-/** Fila 34b-34c — crear un desarrollo. */
-router.post(
-  "/projects",
-  authorize({ roles: ["admin", "developer"], acceso: "soloRol" }),
-  async (req, res) => {
-    const parsed = createDeveloperProjectSchema.safeParse(req.body);
-    if (!parsed.success) return res.status(400).json(parsed.error.flatten());
-
+/**
+ * Fila 34b-34c — crear un desarrollo.
+ *
+ * **`RESOURCE_ALREADY_EXISTS`/`RELATED_RESOURCE_NOT_FOUND` son errores con
+ * nombre** (ver `relanzarRestriccionComoOrpc` en `_shared.ts`): un slug
+ * repetido choca contra `Project.slug` DENTRO de la transacción, y
+ * `OpenAPIHandler` nunca llama a `next(err)` — sin capturarlo acá, oRPC lo
+ * respondería como su propio 500 genérico, la regresión que
+ * `test/constraint-errors.test.ts` existe para impedir.
+ */
+const createProjectProcedure = orpc
+  .errors({
+    RESOURCE_ALREADY_EXISTS: { status: 409, message: "Resource already exists" },
+    RELATED_RESOURCE_NOT_FOUND: { status: 400, message: "A referenced resource does not exist" }
+  })
+  .route({ method: "POST", path: "/projects", successStatus: 201 })
+  .input(createDeveloperProjectSchema)
+  .output(developerProjectCreateResultSchema)
+  .handler(async ({ input, context, errors }) => {
     const ahora = new Date();
 
     // Proyecto + membresía del creador + las 10 etapas del Stage template
@@ -172,63 +223,70 @@ router.post(
     // `mint_rejects_two_threads_in_one_tx`)— y se intenta después, en loop,
     // tolerando que alguna quede `Failed` (D-059: la declaración off-chain
     // nunca depende del anclaje).
-    const { proyecto, stages } = await db.transaction().execute(async (trx) => {
-      const proyecto = await trx
-        .insertInto("Project")
-        .values({
-          id: createId(),
-          name: parsed.data.name,
-          slug: parsed.data.slug,
-          address: parsed.data.address ?? null,
-          city: parsed.data.city ?? null,
-          country: parsed.data.country ?? null,
-          totalUnits: parsed.data.totalUnits ?? 0,
-          estimatedDelivery: parsed.data.estimatedDelivery
-            ? new Date(parsed.data.estimatedDelivery)
-            : null,
-          status: "planning",
-          createdAt: ahora,
-          updatedAt: ahora
-        })
-        .returningAll()
-        .executeTakeFirstOrThrow();
-
-      // Quien crea el proyecto queda como su developer: sin esto, el creador
-      // no pasaría su propia segunda capa de autorización (regla 5).
-      await trx
-        .insertInto("ProjectMember")
-        .values({
-          id: createId(),
-          userId: req.user!.id,
-          projectId: proyecto.id,
-          membershipRole: "developer",
-          createdAt: ahora
-        })
-        .execute();
-
-      const stages = await trx
-        .insertInto("Stage")
-        .values(
-          DEFAULT_STAGE_CATALOG.map((etapa) => ({
+    //
+    // `.catch(...)` y no `try/catch`: `relanzarRestriccionComoOrpc` devuelve
+    // `never`, así que el tipo de la promesa entera sigue siendo el de la
+    // rama que sí resuelve — sin esto hay que anotar a mano el tipo de un
+    // `let` para el resultado de la transacción, y esa anotación es la que se
+    // desincroniza el día que el `return` de adentro cambie.
+    const { proyecto, stages } = await db
+      .transaction()
+      .execute(async (trx) => {
+        const proyecto = await trx
+          .insertInto("Project")
+          .values({
             id: createId(),
-            projectId: proyecto.id,
-            name: etapa.name,
-            sequenceOrder: etapa.sequenceOrder,
-            state: INITIAL_STAGE_STATE,
-            // D-061: todo stage es validation-critical por default.
-            validationCritical: true,
+            name: input.name,
+            slug: input.slug,
+            address: input.address ?? null,
+            city: input.city ?? null,
+            country: input.country ?? null,
+            totalUnits: input.totalUnits ?? 0,
+            estimatedDelivery: input.estimatedDelivery ? new Date(input.estimatedDelivery) : null,
+            status: "planning",
             createdAt: ahora,
             updatedAt: ahora
-          }))
-        )
-        .returningAll()
-        .execute();
+          })
+          .returningAll()
+          .executeTakeFirstOrThrow();
 
-      return { proyecto, stages };
-    });
+        // Quien crea el proyecto queda como su developer: sin esto, el creador
+        // no pasaría su propia segunda capa de autorización (regla 5).
+        await trx
+          .insertInto("ProjectMember")
+          .values({
+            id: createId(),
+            userId: context.user.id,
+            projectId: proyecto.id,
+            membershipRole: "developer",
+            createdAt: ahora
+          })
+          .execute();
+
+        const stages = await trx
+          .insertInto("Stage")
+          .values(
+            DEFAULT_STAGE_CATALOG.map((etapa) => ({
+              id: createId(),
+              projectId: proyecto.id,
+              name: etapa.name,
+              sequenceOrder: etapa.sequenceOrder,
+              state: INITIAL_STAGE_STATE,
+              // D-061: todo stage es validation-critical por default.
+              validationCritical: true,
+              createdAt: ahora,
+              updatedAt: ahora
+            }))
+          )
+          .returningAll()
+          .execute();
+
+        return { proyecto, stages };
+      })
+      .catch((err) => relanzarRestriccionComoOrpc(err, errors));
 
     await writeAuditLog({
-      actorUserId: req.user!.id,
+      actorUserId: context.user.id,
       action: "CREATE_PROJECT",
       entityType: "Project",
       entityId: proyecto.id
@@ -250,27 +308,40 @@ router.post(
       anclajes.push(await anchorEvent(evento, stage, null));
     }
 
-    return res.status(201).json(
-      developerProjectCreateResultSchema.parse({
-        ...proyecto,
-        stages: stages.map((stage, i) => ({ ...stage, anchor: anclajes[i] }))
-      })
-    );
+    return {
+      ...proyecto,
+      // `anclajes[i]` existe siempre: un `push` por cada `stage` del mismo
+      // `for`, en el mismo orden — `noUncheckedIndexedAccess` no puede verlo,
+      // el invariante es del loop de arriba.
+      stages: stages.map((stage, i) => ({ ...stage, anchor: anclajes[i]! }))
+    };
+  });
+const createProjectHandler = new OpenAPIHandler({ createProjectProcedure });
+
+router.post(
+  "/projects",
+  authorize({ roles: ["admin", "developer"], acceso: "soloRol" }),
+  async (req, res, next) => {
+    const { matched } = await createProjectHandler.handle(req, res, {
+      prefix: PREFIJO_ABSOLUTO,
+      context: { user: req.user! }
+    });
+    if (!matched) next();
   }
 );
 
 /** Fila 45 — el avance de obra a través de todos los proyectos. */
-router.get(
-  "/progress",
-  authorize({ roles: ["admin", "developer"], acceso: { scopeEnQuery: "projectScope(developer)" } }),
-  async (req, res) => {
+const progressProcedure = orpc
+  .route({ method: "GET", path: "/progress" })
+  .output(z.array(developerProgressItemSchema))
+  .handler(async ({ context }) => {
     const ids = (
-      await misProyectos(req.user!.id, req.user!.role as "admin" | "developer").execute()
+      await misProyectos(context.user.id, context.user.role as "admin" | "developer").execute()
     ).map((p) => p.id);
 
-    if (ids.length === 0) return res.json([]);
+    if (ids.length === 0) return [];
 
-    const stages = await db
+    return db
       .selectFrom("Stage")
       .innerJoin("Project", "Project.id", "Stage.projectId")
       .select([
@@ -287,8 +358,18 @@ router.get(
       .orderBy("Project.name", "asc")
       .orderBy("Stage.sequenceOrder", "asc")
       .execute();
+  });
+const progressHandler = new OpenAPIHandler({ progressProcedure });
 
-    return res.json(z.array(developerProgressItemSchema).parse(stages));
+router.get(
+  "/progress",
+  authorize({ roles: ["admin", "developer"], acceso: { scopeEnQuery: "projectScope(developer)" } }),
+  async (req, res, next) => {
+    const { matched } = await progressHandler.handle(req, res, {
+      prefix: PREFIJO_ABSOLUTO,
+      context: { user: req.user! }
+    });
+    if (!matched) next();
   }
 );
 
@@ -299,18 +380,16 @@ router.get(
  * de stage y documento suelto de proyecto (M3-SC-06). Cuando lo distinga, esta
  * ruta filtra; hoy devuelve todo con su estado real de prueba.
  */
-router.get(
-  "/documents",
-  authorize({ roles: ["admin", "developer"], acceso: { scopeEnQuery: "projectScope(developer)" } }),
-  async (req, res) => {
-    const parsed = developerDocumentListQuerySchema.safeParse(req.query);
-    if (!parsed.success) return res.status(400).json(parsed.error.flatten());
-
+const documentsProcedure = orpc
+  .route({ method: "GET", path: "/documents" })
+  .input(developerDocumentListQuerySchema)
+  .output(z.array(developerDocumentSchema))
+  .handler(async ({ input, context }) => {
     const ids = (
-      await misProyectos(req.user!.id, req.user!.role as "admin" | "developer").execute()
+      await misProyectos(context.user.id, context.user.role as "admin" | "developer").execute()
     ).map((p) => p.id);
 
-    if (ids.length === 0) return res.json([]);
+    if (ids.length === 0) return [];
 
     let query = db
       .selectFrom("Evidence")
@@ -333,15 +412,25 @@ router.get(
     // predicado, mismas filas: si `Evidence` tuviera más de un `OnChainEvent`
     // (el `leftJoin` los multiplicaría), este `where` cuenta lo mismo que
     // contaba el `.filter()` de antes, ni una fila más ni una menos.
-    if (parsed.data.status === "anchored") {
+    if (input.status === "anchored") {
       query = query.where("OnChainEvent.txid", "is not", null);
-    } else if (parsed.data.status === "pending") {
+    } else if (input.status === "pending") {
       query = query.where("OnChainEvent.txid", "is", null);
     }
 
-    const documentos = await query.orderBy("Evidence.uploadedAt", "desc").execute();
+    return query.orderBy("Evidence.uploadedAt", "desc").execute();
+  });
+const documentsHandler = new OpenAPIHandler({ documentsProcedure });
 
-    return res.json(z.array(developerDocumentSchema).parse(documentos));
+router.get(
+  "/documents",
+  authorize({ roles: ["admin", "developer"], acceso: { scopeEnQuery: "projectScope(developer)" } }),
+  async (req, res, next) => {
+    const { matched } = await documentsHandler.handle(req, res, {
+      prefix: PREFIJO_ABSOLUTO,
+      context: { user: req.user! }
+    });
+    if (!matched) next();
   }
 );
 
@@ -352,23 +441,18 @@ router.get(
  * stage se re-ancla tras una remediación, el evento original queda y se agrega
  * uno nuevo. Esta ruta solo lee.
  */
-router.get(
-  "/audit-log",
-  authorize({
-    roles: ["admin", "developer"],
-    acceso: { scopeEnQuery: "auditScope(developer)" }
-  }),
-  async (req, res) => {
-    const parsed = auditLogQuerySchema.safeParse(req.query);
-    if (!parsed.success) return res.status(400).json(parsed.error.flatten());
-
+const auditLogProcedure = orpc
+  .route({ method: "GET", path: "/audit-log" })
+  .input(auditLogQuerySchema)
+  .output(paginatedResponseSchema(auditLogEntrySchema))
+  .handler(async ({ input, context }) => {
     let query = db
       .selectFrom("AuditLog")
       .leftJoin("User", "User.id", "AuditLog.actorUserId")
       // **Acota a los proyectos del developer** (M2-D1 §4, M2-D4 §P6). Sin esto
       // devolvía la tabla entera, con el nombre y el rol de cada usuario del
       // sistema. El bypass de `admin` vive adentro de `auditScope`.
-      .where((eb) => auditScope(eb, req.user!.role, req.user!.id, ["developer"]))
+      .where((eb) => auditScope(eb, context.user.role, context.user.id, ["developer"]))
       .select([
         "AuditLog.id as id",
         "AuditLog.action as action",
@@ -380,24 +464,37 @@ router.get(
         "User.role as actorRole"
       ])
       .orderBy("AuditLog.createdAt", "desc")
-      .limit(parsed.data.limit);
+      .limit(input.limit);
 
-    if (parsed.data.category) {
-      query = query.where("AuditLog.entityType", "=", parsed.data.category);
+    if (input.category) {
+      query = query.where("AuditLog.entityType", "=", input.category);
     }
-    if (parsed.data.cursor) {
-      query = query.where("AuditLog.createdAt", "<", new Date(parsed.data.cursor));
+    if (input.cursor) {
+      query = query.where("AuditLog.createdAt", "<", new Date(input.cursor));
     }
 
     const items = await query.execute();
     const ultima = items.at(-1);
 
-    return res.json(
-      paginatedResponseSchema(auditLogEntrySchema).parse({
-        items,
-        nextCursor: ultima ? new Date(ultima.createdAt).toISOString() : null
-      })
-    );
+    return {
+      items,
+      nextCursor: ultima ? new Date(ultima.createdAt).toISOString() : null
+    };
+  });
+const auditLogHandler = new OpenAPIHandler({ auditLogProcedure });
+
+router.get(
+  "/audit-log",
+  authorize({
+    roles: ["admin", "developer"],
+    acceso: { scopeEnQuery: "auditScope(developer)" }
+  }),
+  async (req, res, next) => {
+    const { matched } = await auditLogHandler.handle(req, res, {
+      prefix: PREFIJO_ABSOLUTO,
+      context: { user: req.user! }
+    });
+    if (!matched) next();
   }
 );
 
@@ -417,6 +514,67 @@ router.get(
  * **Idempotente** (regla 8): si ese documento ya tiene su TXID, devuelve el
  * mismo evento con 200 en vez de gastar otra transacción.
  */
+const anchorDocumentProcedure = orpc
+  .errors({ NO_HASH: { status: 400 } })
+  .route({
+    method: "POST",
+    path: "/documents",
+    outputStructure: "detailed",
+    successStatus: 201
+  })
+  .input(anchorDocumentSchema)
+  .output(
+    z.union([
+      z.strictObject({ status: z.literal(200), body: onChainEventSchema }),
+      z.strictObject({ status: z.literal(201), body: onChainEventSchema })
+    ])
+  )
+  .handler(async ({ input, context, errors }) => {
+    const documento = await db
+      .selectFrom("Evidence")
+      .select(["id", "projectId", "stageId", "sha256Hash"])
+      .where("id", "=", input.evidenceId)
+      .executeTakeFirst();
+
+    if (!documento) throw new ORPCError("NOT_FOUND", { message: "Document not found" });
+
+    if (!documento.sha256Hash) {
+      throw errors.NO_HASH({ message: "Document has no hash" });
+    }
+
+    await reconciliarParaLectura({ evidenceId: documento.id });
+
+    const yaAnclado = await db
+      .selectFrom("OnChainEvent")
+      .selectAll()
+      .where("evidenceId", "=", documento.id)
+      .where("txid", "is not", null)
+      .executeTakeFirst();
+
+    if (yaAnclado) return { status: 200 as const, body: yaAnclado };
+
+    const anchor = await anchorCommitmentEvent({
+      projectId: documento.projectId,
+      stageId: documento.stageId,
+      evidenceId: documento.id,
+      eventType: "DOCUMENT_ANCHOR",
+      commitment: documento.sha256Hash,
+      // Ref opaca: el id del registro, jamás el nombre del archivo (regla 2).
+      reference: documento.id
+    });
+
+    await writeAuditLog({
+      actorUserId: context.user.id,
+      action: "ANCHOR_DOCUMENT",
+      entityType: "Evidence",
+      entityId: documento.id,
+      metadata: { txid: anchor.txid, status: anchor.status }
+    });
+
+    return { status: 201 as const, body: anchor };
+  });
+const anchorDocumentHandler = new OpenAPIHandler({ anchorDocumentProcedure });
+
 router.post(
   "/documents",
   authorize({
@@ -431,73 +589,31 @@ router.post(
       membresias: ["developer"]
     }
   }),
-  async (req, res) => {
-    const parsed = anchorDocumentSchema.safeParse(req.body);
-    if (!parsed.success) return res.status(400).json(parsed.error.flatten());
-
-    const documento = await db
-      .selectFrom("Evidence")
-      .select(["id", "projectId", "stageId", "sha256Hash"])
-      .where("id", "=", parsed.data.evidenceId)
-      .executeTakeFirst();
-
-    if (!documento) return res.status(404).json({ message: "Document not found" });
-
-    if (!documento.sha256Hash) {
-      return res.status(400).json({ message: "Document has no hash", code: "NO_HASH" });
-    }
-
-    await reconciliarParaLectura({ evidenceId: documento.id });
-
-    const yaAnclado = await db
-      .selectFrom("OnChainEvent")
-      .selectAll()
-      .where("evidenceId", "=", documento.id)
-      .where("txid", "is not", null)
-      .executeTakeFirst();
-
-    if (yaAnclado) return res.status(200).json(onChainEventSchema.parse(yaAnclado));
-
-    const anchor = await anchorCommitmentEvent({
-      projectId: documento.projectId,
-      stageId: documento.stageId,
-      evidenceId: documento.id,
-      eventType: "DOCUMENT_ANCHOR",
-      commitment: documento.sha256Hash,
-      // Ref opaca: el id del registro, jamás el nombre del archivo (regla 2).
-      reference: documento.id
+  async (req, res, next) => {
+    const { matched } = await anchorDocumentHandler.handle(req, res, {
+      prefix: PREFIJO_ABSOLUTO,
+      context: { user: req.user! }
     });
-
-    await writeAuditLog({
-      actorUserId: req.user!.id,
-      action: "ANCHOR_DOCUMENT",
-      entityType: "Evidence",
-      entityId: documento.id,
-      metadata: { txid: anchor.txid, status: anchor.status }
-    });
-
-    return res.status(201).json(onChainEventSchema.parse(anchor));
+    if (!matched) next();
   }
 );
 
-router.get(
-  "/kpis",
-  authorize({
-    roles: ["admin", "developer"],
-    acceso: { scopeEnQuery: "projectScope(cualquier membresía)" }
-  }),
-  async (req, res) => {
-    const ids = (await proyectosVisibles(req.user!.id, req.user!.role).execute()).map((p) => p.id);
+const kpisProcedure = orpc
+  .route({ method: "GET", path: "/kpis" })
+  .output(developerKpisSchema)
+  .handler(async ({ context }) => {
+    const ids = (await proyectosVisibles(context.user.id, context.user.role).execute()).map(
+      (p) => p.id
+    );
 
     if (ids.length === 0) {
-      const vacio = developerKpisSchema.parse({
+      return {
         activeProjects: 0,
         totalUnits: 0,
         capitalRaisedMinorUnits: 0,
         averageProgress: 0,
         verifiedDocuments: 0
-      });
-      return res.json(vacio);
+      };
     }
 
     const stages = await db
@@ -536,16 +652,44 @@ router.get(
 
     const completados = stages.filter((s) => s.state === "Completed").length;
 
-    const kpis = developerKpisSchema.parse({
+    return {
       activeProjects: ids.length,
       totalUnits: Number(unidades?.total ?? 0),
       capitalRaisedMinorUnits: Number(contratos?.total ?? 0),
       averageProgress: stages.length ? Math.round((completados / stages.length) * 100) : 0,
       verifiedDocuments: Number(anclados?.total ?? 0)
-    });
+    };
+  });
+const kpisHandler = new OpenAPIHandler({ kpisProcedure });
 
-    return res.json(kpis);
+router.get(
+  "/kpis",
+  authorize({
+    roles: ["admin", "developer"],
+    acceso: { scopeEnQuery: "projectScope(cualquier membresía)" }
+  }),
+  async (req, res, next) => {
+    const { matched } = await kpisHandler.handle(req, res, {
+      prefix: PREFIJO_ABSOLUTO,
+      context: { user: req.user! }
+    });
+    if (!matched) next();
   }
 );
+
+/** El router oRPC combinado de esta vertical — lo consume
+ * `scripts/generate-openapi.ts` para generar el fragmento de OpenAPI de las 8
+ * rutas migradas de este archivo, aparte del documento manual de la única que
+ * no migró en `§D` (la subida multipart de `developer-evidencia.routes.ts`). */
+export const developerOrpcRouter = {
+  projectsProcedure,
+  projectByIdProcedure,
+  createProjectProcedure,
+  progressProcedure,
+  documentsProcedure,
+  auditLogProcedure,
+  anchorDocumentProcedure,
+  kpisProcedure
+};
 
 export default router;
