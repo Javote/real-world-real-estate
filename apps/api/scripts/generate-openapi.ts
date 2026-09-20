@@ -14,13 +14,8 @@ import {
   evidenceProofSchema,
   evidenceSchema,
   hex64ParamSchema,
-  loginRequestSchema,
-  loginResponseSchema,
-  meResponseSchema,
-  notificationPrefsSchema,
   onChainEventSchema,
   positiveIntParamSchema,
-  profileSchema,
   projectDetailSchema,
   projectDocumentSchema,
   projectListItemSchema,
@@ -28,7 +23,6 @@ import {
   projectMemberSchema,
   projectMemberWithUserSchema,
   projectSchema,
-  publicDossierSchema,
   reconciliationResultSchema,
   reservationToEscrowTelemetrySchema,
   stageEventSummarySchema,
@@ -38,10 +32,7 @@ import {
   stageSchema,
   stageTransitionSchema,
   stageWithThreadSchema,
-  unreadCountSchema,
   updateEvidenceSchema,
-  updateNotificationPrefsSchema,
-  updateProfileSchema,
   updateProjectSchema,
   updateStageSchema,
   updateUserSchema,
@@ -53,12 +44,19 @@ import { createDocument } from "zod-openapi";
 import { en } from "../src/lib/arrays";
 import { OpenAPIGenerator, os, ZodToJsonSchemaConverter } from "../src/lib/orpc";
 import { describir, leerMontaje } from "../src/lib/route-inventory";
+import { type AuthContext, authOrpcRouter } from "../src/routes/auth.routes";
 import { capitalOrpcRouter } from "../src/routes/capital.routes";
 import { type CertifierContext, certifierOrpcRouter } from "../src/routes/certifier.routes";
 import { type DeveloperContext, developerOrpcRouter } from "../src/routes/developer.routes";
 import { developerComercialOrpcRouter } from "../src/routes/developer-comercial.routes";
 import { type InvestorContext, investorOrpcRouter } from "../src/routes/investor.routes";
 import { type NotaryContext, notaryOrpcRouter } from "../src/routes/notary.routes";
+import {
+  type NotificationsContext,
+  notificationsOrpcRouter
+} from "../src/routes/notifications.routes";
+import { type ProfileContext, profileOrpcRouter } from "../src/routes/profile.routes";
+import { publicOrpcRouter } from "../src/routes/public.routes";
 
 // El otro consumidor de `route-inventory` (junto a `generate-api-docs.ts` y
 // `test/route-guards.test.ts`): un documento OpenAPI 3.1, leído del MISMO
@@ -113,7 +111,6 @@ type SchemaEntry = { body?: ZodType; bodyContentType?: string; query?: ZodType }
  * `route-guards.test.ts`: se edita el mismo día que se agrega el `safeParse`.
  */
 const REQUEST_SCHEMAS: Record<string, SchemaEntry> = {
-  "POST /api/v1/auth/login": { body: loginRequestSchema },
   "GET /api/v1/projects": { query: projectListQuerySchema },
   "POST /api/v1/projects": { body: createProjectSchema },
   "PATCH /api/v1/projects/:id": { body: updateProjectSchema },
@@ -121,8 +118,6 @@ const REQUEST_SCHEMAS: Record<string, SchemaEntry> = {
   "PATCH /api/v1/stages/:id": { body: updateStageSchema },
   "PATCH /api/v1/stages/:id/state": { body: stageTransitionSchema },
   "PATCH /api/v1/evidence/:id": { body: updateEvidenceSchema },
-  "PATCH /api/v1/profile": { body: updateProfileSchema },
-  "PATCH /api/v1/profile/notifications": { body: updateNotificationPrefsSchema },
   "POST /api/v1/users": { body: createUserSchema },
   "PATCH /api/v1/users/:id": { body: updateUserSchema },
   // Multipart: el archivo es un campo aparte (`req.file`, Multer) que este
@@ -171,12 +166,6 @@ const REQUEST_SCHEMAS: Record<string, SchemaEntry> = {
  * `z.array(...)`; si es la forma `{ items, nextCursor }`, `paginatedResponseSchema(...)`.
  */
 const RESPONSE_SCHEMAS: Record<string, ZodType> = {
-  "POST /api/v1/auth/login": loginResponseSchema,
-  "GET /api/v1/auth/me": meResponseSchema,
-  "GET /api/v1/notifications/unread-count": unreadCountSchema,
-  "GET /api/v1/profile": profileSchema,
-  "PATCH /api/v1/profile": profileSchema,
-  "PATCH /api/v1/profile/notifications": notificationPrefsSchema,
   "GET /api/v1/evidence/:bundleId/proof/:fileHash": evidenceProofSchema,
   "GET /api/v1/audit-logs/telemetry/reservation-to-escrow": reservationToEscrowTelemetrySchema,
   "GET /api/v1/users": z.array(userSummarySchema),
@@ -223,8 +212,7 @@ const RESPONSE_SCHEMAS: Record<string, ZodType> = {
     events: z.array(stageEventSummarySchema)
   }),
   "GET /api/v1/contracts/:contractId/releases": z.array(contractReleaseSchema),
-  "GET /api/v1/audit-logs": z.array(auditLogRowSchema),
-  "GET /api/v1/public/dossier/:shareToken": publicDossierSchema
+  "GET /api/v1/audit-logs": z.array(auditLogRowSchema)
 };
 
 /** La forma exacta de `ZodError.flatten()`, que es lo que devuelve todo 400. */
@@ -291,13 +279,22 @@ function aPathOpenApi(ruta: string): string {
 }
 
 /**
- * Las rutas de `notary` (§A), `certifier` (§B), `investor` (§C, las 14) y
+ * Las rutas de `notary` (§A), `certifier` (§B), `investor` (§C, las 14),
  * `developer`/`developer-comercial`/`capital` (§D, las 19 — todas salvo la
- * subida multipart), ya migradas a oRPC — el bucle de abajo las saltea y su
- * fragmento sale, aparte, de sus routers oRPC combinados con
+ * subida multipart) y, desde SPEC-216 §E1-§E2, `profile`/`notifications`
+ * (§E1) y `auth`/`public` (§E2) — ya migradas a oRPC. El bucle de abajo las
+ * saltea y su fragmento sale, aparte, de sus routers oRPC combinados con
  * `OpenAPIGenerator` (ver el final de esta función).
  */
 const ORPC_MIGRADAS = new Set([
+  "GET /api/v1/auth/me",
+  "POST /api/v1/auth/login",
+  "GET /api/v1/public/dossier/:shareToken",
+  "GET /api/v1/profile",
+  "PATCH /api/v1/profile",
+  "PATCH /api/v1/profile/notifications",
+  "GET /api/v1/notifications/unread-count",
+  "PATCH /api/v1/notifications/:id/read",
   "GET /api/v1/notary/kpis",
   "GET /api/v1/notary/dossiers/pending",
   "GET /api/v1/notary/dossiers/:id",
@@ -418,6 +415,49 @@ export async function buildOpenApiDocument() {
   const generadorOrpc = new OpenAPIGenerator({
     schemaConverters: [new ZodToJsonSchemaConverter()]
   });
+
+  // SPEC-216 §E2 — `auth` mezcla un procedimiento sin `user` (`/login`) con
+  // uno que lo exige (`/me`): `AuthContext` lo declara opcional y es el
+  // contexto MÁS ANCHO de los dos, mismo criterio que ya documentaba
+  // `notary.routes.ts` para un router combinado de contexto mixto.
+  const documentoAuth = await generadorOrpc.generate(
+    os.$context<AuthContext>().prefix("/api/v1/auth").router(authOrpcRouter),
+    {
+      info: { title: "PropNexus API — auth (oRPC)", version: "1.0.0" }
+    }
+  );
+  Object.assign(paths, documentoAuth.paths);
+
+  // SPEC-216 §E2 — sin `authenticate` corriendo antes, así que sin `$context`:
+  // ningún procedimiento de `public` necesita `user`.
+  const documentoPublic = await generadorOrpc.generate(
+    os.prefix("/api/v1/public").router(publicOrpcRouter),
+    {
+      info: { title: "PropNexus API — public (oRPC)", version: "1.0.0" }
+    }
+  );
+  Object.assign(paths, documentoPublic.paths);
+
+  // SPEC-216 §E1 — los dos más chicos del lote, migrados juntos.
+  const documentoProfile = await generadorOrpc.generate(
+    os.$context<ProfileContext>().prefix("/api/v1/profile").router(profileOrpcRouter),
+    {
+      info: { title: "PropNexus API — profile (oRPC)", version: "1.0.0" }
+    }
+  );
+  Object.assign(paths, documentoProfile.paths);
+
+  const documentoNotifications = await generadorOrpc.generate(
+    os
+      .$context<NotificationsContext>()
+      .prefix("/api/v1/notifications")
+      .router(notificationsOrpcRouter),
+    {
+      info: { title: "PropNexus API — notifications (oRPC)", version: "1.0.0" }
+    }
+  );
+  Object.assign(paths, documentoNotifications.paths);
+
   const documentoNotary = await generadorOrpc.generate(
     os.$context<NotaryContext>().prefix("/api/v1/notary").router(notaryOrpcRouter),
     {

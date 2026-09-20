@@ -22,6 +22,31 @@
 > [`SPEC-217`](SPEC-217-el-streaming-de-download-necesita-su-propia-investigacion.md). Es el mismo
 > corte que ya usó `SPEC-212` §D: la vertical migra completa salvo la ruta con la excepción real, que
 > se separa en vez de forzarla adentro.
+>
+> **§E1 (`profile.routes.ts` + `notifications.routes.ts`, 5 rutas) y §E2 (`public.routes.ts` +
+> `auth.routes.ts`, 3 rutas) cerradas 2026-09-20** — las dos juntas, en un solo commit, el piloto de
+> menor riesgo del lote más las dos "primera vez sin sesión" resueltas de una. `pnpm verify` completo
+> en verde (465 tests de `apps/api`, incluidos los 4 archivos `test/orpc-client-{profile,
+> notifications,auth,public}.test.ts` nuevos — mismo patrón que `test/orpc-client-{notary,certifier,
+> investor,developer}.test.ts` de `SPEC-212`, cliente oRPC tipado contra el servidor real, no
+> mockeado). `REQUEST_SCHEMAS`/`RESPONSE_SCHEMAS` (`scripts/generate-openapi.ts`) ya no tienen las 8
+> entradas; `specs/openapi/propnexus.openapi.json` regenerado.
+>
+> **La pregunta de §Primera vez sin sesión, resuelta:** `AuthContext = { user?: {...} }`, un solo
+> `os.$context<AuthContext>()` para `loginProcedure` (nunca toca `context.user`) y `meProcedure`
+> (`context.user!`, la misma garantía que `req.user!` en el resto de la API — la da `authenticate`
+> corrido antes, no el tipo). No hizo falta partir el router en dos generaciones separadas.
+> `public.routes.ts` no necesitó `$context` en absoluto: ningún procedimiento ahí toca `user`.
+>
+> **Lo único que no repitió un patrón ya probado, y no era nuevo — ya estaba anticipado por
+> `SPEC-212`:** dos tests de `test/auth.test.ts` (`POST /auth/login` con body vacío / email
+> malformado) fijaban `res.body.fieldErrors`, la forma de `error.flatten()`. Con la migración el
+> sobre de error es `ORPCError.toJSON()` (`{code: "BAD_REQUEST", status: 400, data: {issues}}`) —
+> el MISMO cambio de forma que `SPEC-212` ya documentó como aceptado para las 45 rutas de §A-D. Los
+> dos tests se actualizaron para el nuevo shape, sin tocar el código del endpoint.
+>
+> **Quedan §E3-§E7** (`audit`+`contracts`, `users`, `stages`, `projects`+`projects-obra`,
+> `evidence`), 30 de las 38 rutas — ver la tabla de sub-partes, abajo.
 
 ## La auditoría, ruta por ruta (2026-09-20)
 

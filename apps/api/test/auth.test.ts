@@ -56,17 +56,21 @@ describe("POST /api/v1/auth/login", () => {
     const res = await request(app).post("/api/v1/auth/login").send({});
 
     expect(res.status).toBe(400);
-    // `error.flatten()` (regla 6): fieldErrors por campo, no un mensaje suelto.
-    expect(res.body).toHaveProperty("fieldErrors");
-    expect(res.body.fieldErrors).toHaveProperty("email");
-    expect(res.body.fieldErrors).toHaveProperty("password");
+    // SPEC-216 §E2 — migrado a oRPC: el sobre de error ya no es
+    // `error.flatten()`, es `ORPCError.toJSON()` (mismo cambio de forma que
+    // ya aceptaron las 45 rutas de SPEC-212 — ver ese spec, "el shape SÍ
+    // cambia"). El detalle de Zod sigue viajando, en `data.issues`.
+    expect(res.body.code).toBe("BAD_REQUEST");
+    expect(Array.isArray(res.body.data?.issues)).toBe(true);
+    expect(res.body.data.issues.length).toBe(2);
   });
 
   it("email malformado devuelve 400, no 401", async () => {
     const res = await login("no-soy-un-email", "dev123");
 
     expect(res.status).toBe(400);
-    expect(res.body.fieldErrors).toHaveProperty("email");
+    expect(res.body.code).toBe("BAD_REQUEST");
+    expect(Array.isArray(res.body.data?.issues)).toBe(true);
   });
 
   it("un usuario con isActive=false no puede loguearse", async () => {

@@ -12,172 +12,6 @@
     }
   ],
   "paths": {
-    "/api/v1/auth/login": {
-      "post": {
-        "summary": "POST /api/v1/auth/login",
-        "description": "Sin sesión — pública (M2-D5 §2.2)",
-        "requestBody": {
-          "content": {
-            "application/json": {
-              "schema": {
-                "type": "object",
-                "properties": {
-                  "email": {
-                    "type": "string",
-                    "format": "email",
-                    "pattern": "^(?!\\.)(?!.*\\.\\.)([A-Za-z0-9_'+\\-\\.]*)[A-Za-z0-9_+-]@([A-Za-z0-9][A-Za-z0-9\\-]*\\.)+[A-Za-z]{2,}$"
-                  },
-                  "password": {
-                    "type": "string",
-                    "minLength": 1,
-                    "maxLength": 1024
-                  }
-                },
-                "required": [
-                  "email",
-                  "password"
-                ]
-              }
-            }
-          }
-        },
-        "responses": {
-          "200": {
-            "description": "OK",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "type": "object",
-                  "properties": {
-                    "token": {
-                      "type": "string",
-                      "minLength": 1
-                    },
-                    "user": {
-                      "type": "object",
-                      "properties": {
-                        "id": {
-                          "type": "string"
-                        },
-                        "email": {
-                          "type": "string",
-                          "format": "email",
-                          "pattern": "^(?!\\.)(?!.*\\.\\.)([A-Za-z0-9_'+\\-\\.]*)[A-Za-z0-9_+-]@([A-Za-z0-9][A-Za-z0-9\\-]*\\.)+[A-Za-z]{2,}$"
-                        },
-                        "role": {
-                          "type": "string",
-                          "enum": [
-                            "admin",
-                            "developer",
-                            "buyer",
-                            "verifier",
-                            "notary"
-                          ]
-                        },
-                        "fullName": {
-                          "type": "string"
-                        }
-                      },
-                      "required": [
-                        "id",
-                        "email",
-                        "role",
-                        "fullName"
-                      ],
-                      "additionalProperties": false
-                    }
-                  },
-                  "required": [
-                    "token",
-                    "user"
-                  ],
-                  "additionalProperties": false
-                }
-              }
-            }
-          },
-          "400": {
-            "description": "Body o query no pasan el schema",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ValidationError"
-                }
-              }
-            }
-          }
-        }
-      }
-    },
-    "/api/v1/auth/me": {
-      "get": {
-        "summary": "GET /api/v1/auth/me",
-        "description": "auth + autoriza(rol(admin|developer|buyer|verifier|notary) · scope(User.id = usuario))",
-        "security": [
-          {
-            "bearerAuth": []
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "OK",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "type": "object",
-                  "properties": {
-                    "id": {
-                      "type": "string"
-                    },
-                    "email": {
-                      "type": "string",
-                      "format": "email",
-                      "pattern": "^(?!\\.)(?!.*\\.\\.)([A-Za-z0-9_'+\\-\\.]*)[A-Za-z0-9_+-]@([A-Za-z0-9][A-Za-z0-9\\-]*\\.)+[A-Za-z]{2,}$"
-                    },
-                    "role": {
-                      "type": "string",
-                      "enum": [
-                        "admin",
-                        "developer",
-                        "buyer",
-                        "verifier",
-                        "notary"
-                      ]
-                    },
-                    "fullName": {
-                      "type": "string"
-                    },
-                    "isActive": {
-                      "type": "boolean"
-                    },
-                    "createdAt": {
-                      "type": "string",
-                      "format": "date-time",
-                      "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d(?::[0-5]\\d(?:\\.\\d+)?)?(?:Z))$"
-                    }
-                  },
-                  "required": [
-                    "id",
-                    "email",
-                    "role",
-                    "fullName",
-                    "isActive",
-                    "createdAt"
-                  ],
-                  "additionalProperties": false
-                }
-              }
-            }
-          },
-          "401": {
-            "description": "Sin sesión o token inválido"
-          },
-          "403": {
-            "description": "Rol o membresía insuficiente"
-          }
-        }
-      }
-    },
     "/api/v1/users": {
       "get": {
         "summary": "GET /api/v1/users",
@@ -4723,363 +4557,6 @@
         }
       }
     },
-    "/api/v1/notifications/unread-count": {
-      "get": {
-        "summary": "GET /api/v1/notifications/unread-count",
-        "description": "auth + autoriza(rol(admin|developer|buyer|verifier|notary) · scope(Notification.userId = usuario))",
-        "security": [
-          {
-            "bearerAuth": []
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "OK",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "type": "object",
-                  "properties": {
-                    "unread": {
-                      "type": "integer",
-                      "minimum": 0,
-                      "maximum": 9007199254740991
-                    }
-                  },
-                  "required": [
-                    "unread"
-                  ],
-                  "additionalProperties": false
-                }
-              }
-            }
-          },
-          "401": {
-            "description": "Sin sesión o token inválido"
-          },
-          "403": {
-            "description": "Rol o membresía insuficiente"
-          }
-        }
-      }
-    },
-    "/api/v1/notifications/{id}/read": {
-      "patch": {
-        "summary": "PATCH /api/v1/notifications/:id/read",
-        "description": "auth + autoriza(rol(admin|developer|buyer|verifier|notary) · scope(Notification.userId = usuario))",
-        "security": [
-          {
-            "bearerAuth": []
-          }
-        ],
-        "parameters": [
-          {
-            "in": "path",
-            "name": "id",
-            "schema": {
-              "type": "string",
-              "pattern": "^[a-z][a-z0-9]{23}$"
-            },
-            "required": true
-          }
-        ],
-        "responses": {
-          "204": {
-            "description": "Sin contenido"
-          },
-          "401": {
-            "description": "Sin sesión o token inválido"
-          },
-          "403": {
-            "description": "Rol o membresía insuficiente"
-          }
-        }
-      }
-    },
-    "/api/v1/profile": {
-      "get": {
-        "summary": "GET /api/v1/profile",
-        "description": "auth + autoriza(rol(admin|developer|buyer|verifier|notary) · scope(User.id = usuario))",
-        "security": [
-          {
-            "bearerAuth": []
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "OK",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "type": "object",
-                  "properties": {
-                    "id": {
-                      "type": "string"
-                    },
-                    "email": {
-                      "type": "string"
-                    },
-                    "role": {
-                      "type": "string",
-                      "enum": [
-                        "admin",
-                        "developer",
-                        "buyer",
-                        "verifier",
-                        "notary"
-                      ]
-                    },
-                    "fullName": {
-                      "type": "string"
-                    },
-                    "isActive": {
-                      "type": "boolean"
-                    },
-                    "notificationPrefsJson": {
-                      "anyOf": [
-                        {
-                          "type": "string"
-                        },
-                        {
-                          "type": "null"
-                        }
-                      ]
-                    },
-                    "createdAt": {
-                      "type": "string"
-                    },
-                    "updatedAt": {
-                      "type": "string"
-                    }
-                  },
-                  "required": [
-                    "id",
-                    "email",
-                    "role",
-                    "fullName",
-                    "isActive",
-                    "notificationPrefsJson",
-                    "createdAt",
-                    "updatedAt"
-                  ],
-                  "additionalProperties": false
-                }
-              }
-            }
-          },
-          "401": {
-            "description": "Sin sesión o token inválido"
-          },
-          "403": {
-            "description": "Rol o membresía insuficiente"
-          }
-        }
-      },
-      "patch": {
-        "summary": "PATCH /api/v1/profile",
-        "description": "auth + autoriza(rol(admin|developer|buyer|verifier|notary) · scope(User.id = usuario))",
-        "security": [
-          {
-            "bearerAuth": []
-          }
-        ],
-        "requestBody": {
-          "content": {
-            "application/json": {
-              "schema": {
-                "type": "object",
-                "properties": {
-                  "fullName": {
-                    "type": "string",
-                    "minLength": 1,
-                    "maxLength": 120
-                  }
-                },
-                "required": [
-                  "fullName"
-                ],
-                "additionalProperties": false
-              }
-            }
-          }
-        },
-        "responses": {
-          "200": {
-            "description": "OK",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "type": "object",
-                  "properties": {
-                    "id": {
-                      "type": "string"
-                    },
-                    "email": {
-                      "type": "string"
-                    },
-                    "role": {
-                      "type": "string",
-                      "enum": [
-                        "admin",
-                        "developer",
-                        "buyer",
-                        "verifier",
-                        "notary"
-                      ]
-                    },
-                    "fullName": {
-                      "type": "string"
-                    },
-                    "isActive": {
-                      "type": "boolean"
-                    },
-                    "notificationPrefsJson": {
-                      "anyOf": [
-                        {
-                          "type": "string"
-                        },
-                        {
-                          "type": "null"
-                        }
-                      ]
-                    },
-                    "createdAt": {
-                      "type": "string"
-                    },
-                    "updatedAt": {
-                      "type": "string"
-                    }
-                  },
-                  "required": [
-                    "id",
-                    "email",
-                    "role",
-                    "fullName",
-                    "isActive",
-                    "notificationPrefsJson",
-                    "createdAt",
-                    "updatedAt"
-                  ],
-                  "additionalProperties": false
-                }
-              }
-            }
-          },
-          "400": {
-            "description": "Body o query no pasan el schema",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ValidationError"
-                }
-              }
-            }
-          },
-          "401": {
-            "description": "Sin sesión o token inválido"
-          },
-          "403": {
-            "description": "Rol o membresía insuficiente"
-          }
-        }
-      }
-    },
-    "/api/v1/profile/notifications": {
-      "patch": {
-        "summary": "PATCH /api/v1/profile/notifications",
-        "description": "auth + autoriza(rol(admin|developer|buyer|verifier|notary) · scope(User.id = usuario))",
-        "security": [
-          {
-            "bearerAuth": []
-          }
-        ],
-        "requestBody": {
-          "content": {
-            "application/json": {
-              "schema": {
-                "type": "object",
-                "properties": {
-                  "stage": {
-                    "type": "boolean"
-                  },
-                  "document": {
-                    "type": "boolean"
-                  },
-                  "release": {
-                    "type": "boolean"
-                  },
-                  "signature": {
-                    "type": "boolean"
-                  },
-                  "certificate": {
-                    "type": "boolean"
-                  }
-                },
-                "additionalProperties": false
-              }
-            }
-          }
-        },
-        "responses": {
-          "200": {
-            "description": "OK",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "type": "object",
-                  "properties": {
-                    "stage": {
-                      "default": true,
-                      "type": "boolean"
-                    },
-                    "document": {
-                      "default": true,
-                      "type": "boolean"
-                    },
-                    "release": {
-                      "default": true,
-                      "type": "boolean"
-                    },
-                    "signature": {
-                      "default": true,
-                      "type": "boolean"
-                    },
-                    "certificate": {
-                      "default": true,
-                      "type": "boolean"
-                    }
-                  },
-                  "required": [
-                    "stage",
-                    "document",
-                    "release",
-                    "signature",
-                    "certificate"
-                  ],
-                  "additionalProperties": false
-                }
-              }
-            }
-          },
-          "400": {
-            "description": "Body o query no pasan el schema",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ValidationError"
-                }
-              }
-            }
-          },
-          "401": {
-            "description": "Sin sesión o token inválido"
-          },
-          "403": {
-            "description": "Rol o membresía insuficiente"
-          }
-        }
-      }
-    },
     "/api/v1/audit-logs": {
       "get": {
         "summary": "GET /api/v1/audit-logs",
@@ -5223,144 +4700,6 @@
           },
           "403": {
             "description": "Rol o membresía insuficiente"
-          }
-        }
-      }
-    },
-    "/api/v1/public/dossier/{shareToken}": {
-      "get": {
-        "summary": "GET /api/v1/public/dossier/:shareToken",
-        "description": "Sin sesión — pública (M2-D5 §2.2)",
-        "parameters": [
-          {
-            "in": "path",
-            "name": "shareToken",
-            "schema": {
-              "type": "string",
-              "pattern": "^[a-f0-9]{64}$"
-            },
-            "required": true
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "OK",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "type": "object",
-                  "properties": {
-                    "unitReference": {
-                      "type": "string"
-                    },
-                    "projectName": {
-                      "type": "string"
-                    },
-                    "masterHash": {
-                      "type": "string"
-                    },
-                    "compiledAt": {
-                      "type": "string"
-                    },
-                    "status": {
-                      "type": "string",
-                      "enum": [
-                        "compiled",
-                        "signed",
-                        "rejected"
-                      ]
-                    },
-                    "completeness": {
-                      "type": "integer",
-                      "minimum": 0,
-                      "maximum": 100
-                    },
-                    "signatureTxid": {
-                      "anyOf": [
-                        {
-                          "type": "string"
-                        },
-                        {
-                          "type": "null"
-                        }
-                      ]
-                    },
-                    "signedAt": {
-                      "anyOf": [
-                        {
-                          "type": "string"
-                        },
-                        {
-                          "type": "null"
-                        }
-                      ]
-                    },
-                    "artifacts": {
-                      "type": "array",
-                      "items": {
-                        "type": "object",
-                        "properties": {
-                          "kind": {
-                            "type": "string",
-                            "enum": [
-                              "stage",
-                              "evidence",
-                              "release"
-                            ]
-                          },
-                          "referenceId": {
-                            "type": "string"
-                          },
-                          "label": {
-                            "type": "string"
-                          },
-                          "sha256": {
-                            "anyOf": [
-                              {
-                                "type": "string"
-                              },
-                              {
-                                "type": "null"
-                              }
-                            ]
-                          },
-                          "txid": {
-                            "anyOf": [
-                              {
-                                "type": "string"
-                              },
-                              {
-                                "type": "null"
-                              }
-                            ]
-                          }
-                        },
-                        "required": [
-                          "kind",
-                          "referenceId",
-                          "label",
-                          "sha256",
-                          "txid"
-                        ],
-                        "additionalProperties": false
-                      }
-                    }
-                  },
-                  "required": [
-                    "unitReference",
-                    "projectName",
-                    "masterHash",
-                    "compiledAt",
-                    "status",
-                    "completeness",
-                    "signatureTxid",
-                    "signedAt",
-                    "artifacts"
-                  ],
-                  "additionalProperties": false
-                }
-              }
-            }
           }
         }
       }
@@ -5729,6 +5068,581 @@
           },
           "403": {
             "description": "Rol o membresía insuficiente"
+          }
+        }
+      }
+    },
+    "/api/v1/auth/login": {
+      "post": {
+        "operationId": "loginProcedure",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "email": {
+                    "type": "string",
+                    "format": "email"
+                  },
+                  "password": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 1024
+                  }
+                },
+                "required": [
+                  "email",
+                  "password"
+                ]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "token": {
+                      "type": "string",
+                      "minLength": 1
+                    },
+                    "user": {
+                      "type": "object",
+                      "properties": {
+                        "id": {
+                          "type": "string"
+                        },
+                        "email": {
+                          "type": "string",
+                          "format": "email"
+                        },
+                        "role": {
+                          "enum": [
+                            "admin",
+                            "developer",
+                            "buyer",
+                            "verifier",
+                            "notary"
+                          ],
+                          "type": "string"
+                        },
+                        "fullName": {
+                          "type": "string"
+                        }
+                      },
+                      "required": [
+                        "id",
+                        "email",
+                        "role",
+                        "fullName"
+                      ],
+                      "additionalProperties": false
+                    }
+                  },
+                  "required": [
+                    "token",
+                    "user"
+                  ],
+                  "additionalProperties": false
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/auth/me": {
+      "get": {
+        "operationId": "meProcedure",
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "id": {
+                      "type": "string"
+                    },
+                    "email": {
+                      "type": "string",
+                      "format": "email"
+                    },
+                    "role": {
+                      "enum": [
+                        "admin",
+                        "developer",
+                        "buyer",
+                        "verifier",
+                        "notary"
+                      ],
+                      "type": "string"
+                    },
+                    "fullName": {
+                      "type": "string"
+                    },
+                    "isActive": {
+                      "type": "boolean"
+                    },
+                    "createdAt": {
+                      "type": "string",
+                      "format": "date-time"
+                    }
+                  },
+                  "required": [
+                    "id",
+                    "email",
+                    "role",
+                    "fullName",
+                    "isActive",
+                    "createdAt"
+                  ],
+                  "additionalProperties": false
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/public/dossier/{shareToken}": {
+      "get": {
+        "operationId": "publicDossierProcedure",
+        "parameters": [
+          {
+            "name": "shareToken",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "pattern": "^[a-f0-9]{64}$"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "unitReference": {
+                      "type": "string"
+                    },
+                    "projectName": {
+                      "type": "string"
+                    },
+                    "masterHash": {
+                      "type": "string"
+                    },
+                    "compiledAt": {
+                      "type": "string",
+                      "format": "date-time",
+                      "x-native-type": "date"
+                    },
+                    "status": {
+                      "enum": [
+                        "compiled",
+                        "signed",
+                        "rejected"
+                      ],
+                      "type": "string"
+                    },
+                    "completeness": {
+                      "type": "integer",
+                      "minimum": 0,
+                      "maximum": 100
+                    },
+                    "signatureTxid": {
+                      "anyOf": [
+                        {
+                          "type": "string"
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ]
+                    },
+                    "signedAt": {
+                      "anyOf": [
+                        {
+                          "type": "string",
+                          "format": "date-time",
+                          "x-native-type": "date"
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ]
+                    },
+                    "artifacts": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "kind": {
+                            "enum": [
+                              "stage",
+                              "evidence",
+                              "release"
+                            ],
+                            "type": "string"
+                          },
+                          "referenceId": {
+                            "type": "string"
+                          },
+                          "label": {
+                            "type": "string"
+                          },
+                          "sha256": {
+                            "anyOf": [
+                              {
+                                "type": "string"
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ]
+                          },
+                          "txid": {
+                            "anyOf": [
+                              {
+                                "type": "string"
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ]
+                          }
+                        },
+                        "required": [
+                          "kind",
+                          "referenceId",
+                          "label",
+                          "sha256",
+                          "txid"
+                        ],
+                        "additionalProperties": false
+                      }
+                    }
+                  },
+                  "required": [
+                    "unitReference",
+                    "projectName",
+                    "masterHash",
+                    "compiledAt",
+                    "status",
+                    "completeness",
+                    "signatureTxid",
+                    "signedAt",
+                    "artifacts"
+                  ],
+                  "additionalProperties": false
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/profile": {
+      "get": {
+        "operationId": "profileProcedure",
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "id": {
+                      "type": "string"
+                    },
+                    "email": {
+                      "type": "string"
+                    },
+                    "role": {
+                      "enum": [
+                        "admin",
+                        "developer",
+                        "buyer",
+                        "verifier",
+                        "notary"
+                      ],
+                      "type": "string"
+                    },
+                    "fullName": {
+                      "type": "string"
+                    },
+                    "isActive": {
+                      "type": "boolean"
+                    },
+                    "notificationPrefsJson": {
+                      "anyOf": [
+                        {
+                          "type": "string"
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ]
+                    },
+                    "createdAt": {
+                      "type": "string",
+                      "format": "date-time",
+                      "x-native-type": "date"
+                    },
+                    "updatedAt": {
+                      "type": "string",
+                      "format": "date-time",
+                      "x-native-type": "date"
+                    }
+                  },
+                  "required": [
+                    "id",
+                    "email",
+                    "role",
+                    "fullName",
+                    "isActive",
+                    "notificationPrefsJson",
+                    "createdAt",
+                    "updatedAt"
+                  ],
+                  "additionalProperties": false
+                }
+              }
+            }
+          }
+        }
+      },
+      "patch": {
+        "operationId": "updateProfileProcedure",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "fullName": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 120
+                  }
+                },
+                "required": [
+                  "fullName"
+                ],
+                "additionalProperties": false
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "id": {
+                      "type": "string"
+                    },
+                    "email": {
+                      "type": "string"
+                    },
+                    "role": {
+                      "enum": [
+                        "admin",
+                        "developer",
+                        "buyer",
+                        "verifier",
+                        "notary"
+                      ],
+                      "type": "string"
+                    },
+                    "fullName": {
+                      "type": "string"
+                    },
+                    "isActive": {
+                      "type": "boolean"
+                    },
+                    "notificationPrefsJson": {
+                      "anyOf": [
+                        {
+                          "type": "string"
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ]
+                    },
+                    "createdAt": {
+                      "type": "string",
+                      "format": "date-time",
+                      "x-native-type": "date"
+                    },
+                    "updatedAt": {
+                      "type": "string",
+                      "format": "date-time",
+                      "x-native-type": "date"
+                    }
+                  },
+                  "required": [
+                    "id",
+                    "email",
+                    "role",
+                    "fullName",
+                    "isActive",
+                    "notificationPrefsJson",
+                    "createdAt",
+                    "updatedAt"
+                  ],
+                  "additionalProperties": false
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/profile/notifications": {
+      "patch": {
+        "operationId": "updateNotificationPrefsProcedure",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "stage": {
+                    "type": "boolean"
+                  },
+                  "document": {
+                    "type": "boolean"
+                  },
+                  "release": {
+                    "type": "boolean"
+                  },
+                  "signature": {
+                    "type": "boolean"
+                  },
+                  "certificate": {
+                    "type": "boolean"
+                  }
+                },
+                "additionalProperties": false
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "stage": {
+                      "type": "boolean",
+                      "default": true
+                    },
+                    "document": {
+                      "type": "boolean",
+                      "default": true
+                    },
+                    "release": {
+                      "type": "boolean",
+                      "default": true
+                    },
+                    "signature": {
+                      "type": "boolean",
+                      "default": true
+                    },
+                    "certificate": {
+                      "type": "boolean",
+                      "default": true
+                    }
+                  },
+                  "additionalProperties": false
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/notifications/unread-count": {
+      "get": {
+        "operationId": "unreadCountProcedure",
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "unread": {
+                      "type": "integer",
+                      "minimum": 0,
+                      "maximum": 9007199254740991
+                    }
+                  },
+                  "required": [
+                    "unread"
+                  ],
+                  "additionalProperties": false
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/notifications/{id}/read": {
+      "patch": {
+        "operationId": "markReadProcedure",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "pattern": "^[a-z][a-z0-9]{23}$"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "anyOf": [
+                    {
+                      "not": {}
+                    },
+                    {
+                      "not": {}
+                    }
+                  ]
+                }
+              }
+            }
           }
         }
       }

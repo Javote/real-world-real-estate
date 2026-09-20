@@ -1,7 +1,9 @@
 import { hex64ParamSchema, publicDossierSchema } from "@plataforma/shared";
-import { type Request, Router } from "express";
+import { Router } from "express";
+import { z } from "zod";
 import { compileDossier } from "../domain/dossier";
 import { db } from "../lib/db";
+import { OpenAPIHandler, ORPCError, os } from "../lib/orpc";
 import { dossierRateLimiter } from "../middlewares/rateLimit";
 import { paramValidator } from "../middlewares/validate-params";
 
@@ -17,6 +19,13 @@ import { paramValidator } from "../middlewares/validate-params";
 // puede ver una request que empiece con `/public`.
 //
 // Lo que sale de acá lo lee cualquiera que tenga el link, así que va recortado.
+//
+// **SPEC-216 §E2 — migrado a oRPC (D-066), junto con `auth.routes.ts`.** Sin
+// contexto: ningún procedimiento acá necesita `req.user`, así que no hace
+// falta `$context` — plain `os`, como `pendingDossiersProcedure` en
+// `notary.routes.ts`.
+
+const PREFIJO_ABSOLUTO = "/api/v1/public";
 
 const router = Router();
 
@@ -30,35 +39,46 @@ router.param("shareToken", paramValidator(hex64ParamSchema));
  * investor más allá de su referencia. Un token que no existe es 404 sin más
  * detalle: no hay por qué distinguir "revocado" de "nunca existió".
  */
-router.get(
-  "/dossier/:shareToken",
-  dossierRateLimiter(),
-  async (req: Request<{ shareToken: string }>, res) => {
+const publicDossierProcedure = os
+  .route({ method: "GET", path: "/dossier/{shareToken}" })
+  .input(z.strictObject({ shareToken: hex64ParamSchema }))
+  .output(publicDossierSchema)
+  .handler(async ({ input }) => {
     const fila = await db
       .selectFrom("Dossier")
       .select(["unitId"])
-      .where("shareToken", "=", req.params.shareToken)
+      .where("shareToken", "=", input.shareToken)
       .executeTakeFirst();
 
-    if (!fila) return res.status(404).json({ message: "Dossier not found" });
+    if (!fila) throw new ORPCError("NOT_FOUND", { message: "Dossier not found" });
 
     const dossier = await compileDossier(fila.unitId);
-    if (!dossier) return res.status(404).json({ message: "Dossier not found" });
+    if (!dossier) throw new ORPCError("NOT_FOUND", { message: "Dossier not found" });
 
-    return res.json(
-      publicDossierSchema.parse({
-        unitReference: dossier.unitReference,
-        projectName: dossier.projectName,
-        masterHash: dossier.masterHash,
-        compiledAt: dossier.compiledAt,
-        status: dossier.status,
-        completeness: dossier.completeness,
-        signatureTxid: dossier.signatureTxid,
-        signedAt: dossier.signedAt,
-        artifacts: dossier.artifacts
-      })
-    );
-  }
-);
+    return publicDossierSchema.parse({
+      unitReference: dossier.unitReference,
+      projectName: dossier.projectName,
+      masterHash: dossier.masterHash,
+      compiledAt: dossier.compiledAt,
+      status: dossier.status,
+      completeness: dossier.completeness,
+      signatureTxid: dossier.signatureTxid,
+      signedAt: dossier.signedAt,
+      artifacts: dossier.artifacts
+    });
+  });
+const publicDossierHandler = new OpenAPIHandler({ publicDossierProcedure });
+
+router.get("/dossier/:shareToken", dossierRateLimiter(), async (req, res, next) => {
+  const { matched } = await publicDossierHandler.handle(req, res, { prefix: PREFIJO_ABSOLUTO });
+  if (!matched) next();
+});
+
+/** El router oRPC combinado de esta vertical — lo consume
+ * `scripts/generate-openapi.ts` para generar el fragmento de OpenAPI de la
+ * única ruta migrada. */
+export const publicOrpcRouter = {
+  publicDossierProcedure
+};
 
 export default router;
