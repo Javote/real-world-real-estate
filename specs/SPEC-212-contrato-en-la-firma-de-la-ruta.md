@@ -73,10 +73,194 @@
 > `certifier` o `investor` también se convierte en el 500 genérico de oRPC en vez de pasar por
 > `errorHandler`/Sentry (`Sentry.setupExpressErrorHandler` depende de `next(err)`, que oRPC nunca
 > llama). No tenía consecuencia observable en las tres primeras sub-partes porque ninguna de sus
-> rutas tiene un test que ejercite esa restricción por HTTP; acá sí. Una solución genérica —que
-> `OpenAPIHandler` reporte a Sentry o delegue a `errorHandler` los errores que no reconoce— es
-> trabajo nuevo, no de esta spec, y candidata a spec propia si alguna vez un 500 real de una ruta
-> oRPC necesita aparecer en el monitoreo.
+> rutas tiene un test que ejercite esa restricción por HTTP; acá sí.
+>
+> **Dos investigaciones quedaron pendientes, pedidas por el dueño el 2026-09-20 — ver las dos
+> secciones "Pendiente" que siguen, antes de "La mitad que está bien":** (1) si `OpenAPIHandler`
+> tiene un gancho (`interceptors`) para que un error no clasificado sí llegue a
+> `errorHandler`/Sentry, y (2) si `Multer + call()` (probado con un smoke test descartable, `call()`
+> SÍ deja que el error llegue a `next(err)`) es una vía real para migrar la única ruta multipart que
+> quedó afuera.
+
+## Pendiente — investigar más a fondo: `OpenAPIHandler` nunca llama a `next(err)`
+
+**Sin cerrar. Pedido textual del dueño, 2026-09-20, para que quede registrado tal cual:**
+
+> Si queres edita el spec para que quede pendiente investigar mas a fondo esto (con el mayor nivel
+> de detalle posible) (este ultimo mensaje textual estaria bien.)
+
+Contexto de la pregunta que lo generó: se le preguntó al dueño si quería que se arreglara la trampa
+de arriba (§D, "Deuda declarada, no cerrada") de forma genérica para las cuatro sub-partes, o si se
+dejaba como estaba. Eligió dejarla pendiente de investigar, no arreglarla ahora ni dejarla sin más
+registro que la mención breve de arriba.
+
+**El estado exacto, para que quien retome no tenga que releer todo el hilo:**
+
+- **Lo que SÍ está cerrado:** los dos únicos call sites que un test iba a agarrar —
+  `POST /developer/projects` (slug repetido) y `POST /developer/projects/:id/units` (unitReference
+  repetido) — capturan la excepción con `relanzarRestriccionComoOrpc` (`src/routes/_shared.ts`) y
+  responden el mismo 409 `RESOURCE_ALREADY_EXISTS` de siempre. `test/constraint-errors.test.ts`
+  sigue verde.
+- **Lo que NO está cerrado:** cualquier OTRA excepción sin capturar, dentro de CUALQUIER
+  procedimiento de las cuatro sub-partes (`notary`, `certifier`, `investor`, `developer`), se
+  convierte en el 500 genérico de oRPC (`{"code":"INTERNAL_SERVER_ERROR","status":500,"message":
+  "Internal server error"}`) en vez de pasar por `errorHandler.ts`. Confirmado con un smoke test
+  dedicado (no leyendo código): un handler que hace `throw new Error(...)` responde ese sobre
+  directamente, y un middleware de error puesto DESPUÉS del montaje de `OpenAPIHandler` nunca corre
+  — ni siquiera se ejecuta.
+- **La consecuencia con más superficie, no solo la de constraint:** `Sentry.setupExpressErrorHandler`
+  también depende de que Express llegue a ver el error vía `next(err)` (`app.ts`, montado junto con
+  `errorHandler`). Un 500 real disparado desde adentro de un handler oRPC — no solo un
+  `SQLITE_CONSTRAINT_*`, cualquier fallo interno no anticipado — **no llega a Sentry**. Hoy nadie lo
+  puede ver en producción salvo leyendo el log crudo del proceso (y ni eso: no se verificó todavía
+  si oRPC loguea algo a `console.error` cuando responde su 500, o si es completamente silencioso —
+  **ese es justo el tipo de pregunta que esta investigación tiene que responder**).
+
+**Lo que la investigación más a fondo tiene que responder, concretamente:**
+
+1. **¿oRPC loguea el error que captura, en algún lado, antes de responder su 500?** Si no lo hace,
+   un 500 real de una ruta oRPC no solo no llega a Sentry — no deja ningún rastro en absoluto,
+   salvo lo que el propio proceso de Render capture en stdout/stderr (y Render free no da shell,
+   D-040). Verificarlo leyendo el código fuente de `@orpc/openapi`/`@orpc/server` (no adivinando),
+   con la misma metodología que ya se usó para las trampas de esta spec (`node_modules/.pnpm/...`).
+2. **¿`OpenAPIHandler` acepta una opción `interceptors` (o `rootInterceptors`) que permita
+   engancharse antes de que el error se convierta en respuesta?** Se encontró, sin verificar a
+   fondo, que `StandardHandlerOptions<T>` (`@orpc/server`, tipo del que hereda
+   `StandardOpenAPIHandlerOptions`) declara:
+   ```ts
+   interceptors?: Interceptor<StandardHandlerInterceptorOptions<TContext>, Promise<StandardHandleResult>>[];
+   rootInterceptors?: Interceptor<StandardHandlerInterceptorOptions<TContext>, Promise<StandardHandleResult>>[];
+   ```
+   con el comentario del propio tipo: *"Interceptors at the request level, helpful when you want
+   catch errors"*. Esto sugiere que existe un mecanismo genérico — un solo lugar, en la construcción
+   de CADA `OpenAPIHandler` (o mejor, centralizado si se pudiera compartir entre los ~20
+   `OpenAPIHandler` que hoy existen, uno por procedimiento) — para interceptar el error ANTES de que
+   se escriba la respuesta, mapear restricciones de la base igual que `errorHandler.ts`, y loguear
+   a Sentry a mano (ya que `next(err)` nunca va a llegar). **No se probó todavía si el interceptor
+   ve la excepción CRUDA (para poder inspeccionar `codigoDeRestriccion`) o si para cuando el
+   interceptor corre el error ya se convirtió en `StandardHandleResult`** (una respuesta ya armada,
+   sin la excepción original) — eso decide si esta vía sirve para lo que hace falta o no.
+3. **Si `interceptors` no alcanza, ¿hay una forma de que `OpenAPIHandler.handle()` delegue a
+   `next(err)` en vez de escribir su propia respuesta, para un error que no reconoce?** Puede que
+   la respuesta sea "no, por diseño" (la librería asume que ES la última palabra sobre el error) —
+   en ese caso la alternativa realista es que cada handler capture y mapee explícitamente (como ya
+   se hizo para los dos casos de §D), y se acepte que es trabajo por ruta, no una solución de una
+   vez. Esa conclusión también es un resultado válido de la investigación, no un fracaso.
+4. **¿Vale la pena, en cambio, reportar a Sentry a mano DESDE `relanzarRestriccionComoOrpc` (o su
+   equivalente genérico) en el caso "no es una restricción conocida"?** Es decir: en vez de intentar
+   que oRPC delegue a `errorHandler`, aceptar que no lo hace y llamar a `Sentry.captureException`
+   explícitamente antes de re-lanzar. Es menos elegante que una solución a nivel de framework, pero
+   no depende de que oRPC exponga el gancho correcto — y es el tipo de compromiso que ya aparece en
+   otras partes de este código (ver `apps/api/CLAUDE.md` §Trampas, "Sentry veía el error ANTES que
+   `errorHandler`").
+5. **¿Esto afecta al criterio 14 del SOM (monitoreo)?** `specs/EVIDENCIA-2026-09-11-monitoring-
+   screenshots.md` ya se publicó y el criterio ya cerró — hay que confirmar si esta brecha existe
+   desde ANTES de esa evidencia (en cuyo caso no la invalida, las cuatro sub-partes de oRPC son
+   posteriores) o si de algún modo la evidencia ya cubría una ruta migrada. Dato a favor de que no
+   invalida nada: las capturas son del 2026-09-11 y §A (la primera migración a oRPC) cerró recién el
+   2026-09-20.
+
+**Alcance de la investigación, para que no se convierta en otra cosa:** es solo eso, investigar y
+decidir el camino — no implementar todavía. Si la conclusión es "hay un gancho genérico y sirve",
+esa implementación toca las cuatro sub-partes (`notary.routes.ts`, `certifier.routes.ts`,
+`investor.routes.ts`, `developer.routes.ts` + `developer-comercial.routes.ts` + `capital.routes.ts`)
+y probablemente amerita su propia spec — no un parche silencioso adentro de esta.
+
+## Pendiente — investigar: Multer como fuente del multipart, oRPC solo para validar/documentar
+
+**También sin cerrar, pedido el mismo día.** La única de las 20 rutas de §D que no migró
+(`POST /developer/projects/:id/stages/:stageId/evidence`, `developer-evidencia.routes.ts`) se quedó
+afuera porque `OpenAPIHandler.handle()` parsea el multipart él mismo con el `Response(stream).
+formData()` nativo de Node, sin límite de tamaño configurable — al revés de Multer, que hoy aplica
+`limits.fileSize`/`fileFilter` en streaming (regla 10). La pregunta que quedó abierta:
+**¿se puede seguir usando Multer para el parseo (conservando sus límites) y que oRPC entre recién
+después, como el punto único donde el schema valida y documenta — sin que `OpenAPIHandler` toque el
+stream de la request en absoluto?**
+
+**Investigado (no implementado) el 2026-09-20, con un smoke test descartable
+(`test/zzz-call-multer-smoke.test.ts`, borrado tras confirmar) — la respuesta es que SÍ hay una vía,
+y es mejor de lo esperado en un aspecto que ni se estaba buscando:**
+
+`@orpc/server` exporta una función `call(procedure, input, options)` que invoca un procedimiento
+oRPC **directo, en proceso, sin pasar por HTTP** — corre `.input()` (valida con Zod), las
+middlewares del procedimiento y el `.handler()`, y valida `.output()`, todo sin que
+`OpenAPIHandler` entre en escena. El diseño que esto habilita:
+
+```ts
+// Multer sigue siendo el middleware Express de siempre — streaming, límites,
+// fileFilter, disco. NADA de esto cambia.
+router.post(
+  "/projects/:id/stages/:stageId/evidence",
+  authorize({ ... }),
+  (req, res, next) => uploadSingleEvidence(req, res, (err) => (err ? next(err) : next())),
+  async (req, res, next) => {
+    try {
+      const resultado = await call(
+        uploadEvidenceProcedure,
+        { ...camposDelBody, archivo: req.file },
+        { context: { user: req.user! } }
+      );
+      res.status(201).json(resultado);
+    } catch (err) {
+      next(err); // ← acá está la diferencia real, ver abajo.
+    }
+  }
+);
+```
+
+**Lo verificado, con el smoke test:**
+
+1. **Multer parsea normal** (`multer({ dest, limits, fileFilter }).single("file")`), sin ningún
+   cambio — sus límites de tamaño y tipo siguen aplicando en streaming, exactamente como hoy. `call()`
+   nunca ve el stream de la request, solo el objeto ya armado (`req.body` + `req.file`).
+2. **`call()` valida `.input()` con Zod y RECHAZA lanzando una excepción normal de JS** (un
+   `ORPCError` con `code: "BAD_REQUEST"`, `status: 400`, y la causa (`cause`) es un
+   `ValidationError` con `issues` — forma de JSON Schema, **no** `{formErrors, fieldErrors}` como
+   `error.flatten()` de Zod). Confirmado con un campo obligatorio (`archivo`) ausente.
+3. **Un error que el propio handler tira (`throw new ORPCError("CONFLICT", ...)`) también llega
+   como excepción normal** al `catch` que lo rodea.
+4. **Y acá está el hallazgo que no se estaba buscando:** como todo esto pasa dentro de un
+   `try/catch` de un handler Express NORMAL, un `next(err)` de ese `catch` **sí llega al
+   `errorHandler` real de Express** (y por lo tanto, a Sentry). El smoke test lo comprobó con un
+   `app.use((err, req, res, next) => ...)` puesto después: corrió, y contestó su propio 409 —
+   exactamente el comportamiento que `OpenAPIHandler.handle()` NUNCA tiene (ver la sección de
+   arriba). **Migrar esta única ruta con `call()` en vez de `OpenAPIHandler.handle()` resolvería,
+   para ESTA ruta nada más, las dos trampas de §D a la vez:** ni bufferea sin límite, ni oculta sus
+   errores de Express/Sentry.
+
+**Lo que NO se investigó todavía, y por qué esto sigue siendo "documentar la posibilidad" y no un
+diseño listo para implementar:**
+
+- **La documentación de OpenAPI para el campo del archivo.** Hoy `REQUEST_SCHEMAS` declara esta
+  ruta a mano con `bodyContentType: "multipart/form-data"` — el schema (`stageEvidenceUploadSchema`)
+  documenta los campos de texto, y el archivo se explica en un comentario, no en el JSON Schema. Si
+  el procedimiento oRPC declarara un campo `archivo` con la forma que Multer entrega
+  (`{originalname, mimetype, size, path, ...}` — NO un `File`/`Blob` de verdad, porque para cuando
+  `call()` corre el archivo YA está escrito a disco), `OpenAPIGenerator.generate()` sobre ese
+  procedimiento produciría un objeto JSON con esos campos, **no** la semántica de "subida de
+  archivo" (`type: string, format: binary`) que un cliente de OpenAPI esperaría ver. Se puede seguir
+  documentando a mano como hoy (`REQUEST_SCHEMAS` + `bodyContentType`), simplemente sin la ganancia
+  de "el schema que documenta es el que valida" que sí tienen las otras 19 rutas de §D — o se puede
+  investigar si `@orpc/openapi` tiene una forma de anotar un campo del input como
+  `contentMediaType`/`format: binary` sin que dejen de ser objetos de Multer. No se miró.
+- **El shape del 400 de validación cambia** (`data.issues`, no `error.flatten()`), y aunque
+  ningún test de esta ruta fija el body exacto de un 400 (solo el status — verificado leyendo
+  `test/evidence-upload.test.ts`/`test/browse-and-documents.test.ts`), sí es una superficie de API
+  real que hoy devuelve `error.flatten()` como el resto de la API (regla 6, y el resto de rutas no
+  oRPC). Adoptar `call()` acá sin adaptar ese shape dejaría esta ÚNICA ruta con una forma de error
+  de validación distinta de las demás ~46 — hay que decidir si se adapta (mapear `ValidationError`
+  → `{formErrors, fieldErrors}` a mano en el `catch`) o si se acepta la divergencia.
+- **No se comparó contra dejar la ruta tal cual está hoy** (Express + Multer + `safeParse` manual,
+  sin oRPC en absoluto) — que es lo que quedó decidido al cerrar §D. La pregunta real que esto
+  responde es "¿vale la pena el costo de este diseño más nuevo (`call()`, un patrón que ninguna
+  otra ruta de la API usa todavía) contra el beneficio (una sola declaración de schema, más el
+  arreglo lateral del `next(err)`)" — y esa decisión no se tomó, solo se probó que es técnicamente
+  posible.
+
+**Si se retoma:** el smoke test que probó esto se borró a propósito (política de esta spec, ver
+"Probado el 2026-09-20" más abajo) — hay que rehacerlo antes de escribir la migración real, no
+asumir que lo de arriba sigue siendo cierto sin volver a correrlo contra la versión de oRPC que esté
+instalada en ese momento.
 
 ## La mitad que está bien, y hay que no romper
 
