@@ -86,9 +86,11 @@
 > SÍ deja que el error llegue a `next(err)`) es una vía real para migrar la única ruta multipart que
 > quedó afuera.
 
-## Pendiente — investigar más a fondo: `OpenAPIHandler` nunca llama a `next(err)`
+## Investigado y luego implementado 2026-09-20: `OpenAPIHandler` nunca llama a `next(err)`
 
-**Sin cerrar. Pedido textual del dueño, 2026-09-20, para que quede registrado tal cual:**
+**Cerrado — ver "Implementado 2026-09-20 — el interceptor de Sentry", después de esta sección,
+para el código real.** Lo que sigue es la investigación tal como se pidió, sin editar — pedido
+textual del dueño, 2026-09-20, para que quede registrado tal cual:
 
 > Si queres edita el spec para que quede pendiente investigar mas a fondo esto (con el mayor nivel
 > de detalle posible) (este ultimo mensaje textual estaria bien.)
@@ -197,22 +199,20 @@ registro que la mención breve de arriba.
    screenshots.md` son del 2026-09-11; §A (la primera sub-parte migrada a oRPC) cerró el 2026-09-20.
    La brecha es posterior a la evidencia publicada, no la contradice.
 
-**Lo que falta para que esto sea diseño listo para implementar, no solo investigación (a propósito
-sin cerrar todavía, ver el pedido del dueño arriba):**
+**Lo que faltaba para que esto fuera diseño listo para implementar, no solo investigación — las
+tres, resueltas al implementar (ver "Implementado 2026-09-20" más abajo):**
 
 - ~~Decidir el punto único de construcción.~~ **Resuelto el 2026-09-20 — ver la sección siguiente.**
-- **Qué hace el interceptor además de `Sentry.captureException`.** El código de la trampa original
-  (`relanzarRestriccionComoOrpc`) también MAPEA la excepción a un `ORPCError` con el código de
-  negocio correcto antes de responder — un interceptor genérico no puede hacer ese mapeo por
-  procedimiento (no sabe qué restricción de qué tabla corresponde a qué 409), así que
-  `relanzarRestriccionComoOrpc` seguiría existiendo para eso. El interceptor genérico resuelve SOLO
-  la parte de observabilidad (que el error no reconocido llegue a Sentry), no reemplaza el mapeo caso
-  por caso que ya existe.
-- **No se corrió contra una versión de oRPC más nueva que 1.15.2.** El comentario del tipo
-  (`"helpful when you want catch errors"`) y el comportamiento verificado son de esa versión exacta;
-  hay que re-confirmar si se sube la dependencia antes de escribir la implementación real.
+- ~~Qué hace el interceptor además de `Sentry.captureException`.~~ **Resuelto: nada más — el mapeo
+  a un código de negocio sigue siendo `relanzarRestriccionComoOrpc`, sin cambios, exactamente como
+  se preveía acá** (el código de la trampa original también MAPEA la excepción a un `ORPCError` con
+  el código de negocio correcto antes de responder — un interceptor genérico no puede hacer ese
+  mapeo por procedimiento, no sabe qué restricción de qué tabla corresponde a qué 409).
+- ~~No se corrió contra una versión de oRPC más nueva que 1.15.2.~~ **No hizo falta: la
+  implementación se hizo contra la misma `1.15.2` que ya estaba instalada — no hubo bump de
+  dependencia en el medio.**
 
-### El lugar del interceptor, decidido el 2026-09-20 — sin implementar todavía
+### El lugar del interceptor, decidido el 2026-09-20 — implementado el mismo día
 
 **El mejor lugar es `src/lib/orpc.ts`, envolviendo el export de `OpenAPIHandler` — no un factory con
 nombre nuevo, y no cada archivo de rutas.**
@@ -485,9 +485,9 @@ shape unificado de oRPC, no error.flatten()"* — confirma `res.body.code === "B
 están. Las 23 pruebas existentes de esa suite siguen en verde sin cambios, y `pnpm verify:all`
 completo (TS + Aiken) también.
 
-**Lo que queda genuinamente pendiente, y es la investigación §1 de arriba, no esta:** el interceptor
-de Sentry para las 45 rutas que sí usan `OpenAPIHandler.handle()`. Esta ruta nunca lo necesitó —
-nunca tuvo esa trampa — así que no hay nada que juntar acá.
+**Lo que quedaba pendiente acá era la investigación §1 de arriba, no esta — y ya está cerrada
+también** (ver "Implementado 2026-09-20 — el interceptor de Sentry"). Esta ruta nunca necesitó el
+interceptor: nunca tuvo esa trampa, así que no hay nada que juntar acá.
 
 ## La mitad que está bien, y hay que no romper
 
