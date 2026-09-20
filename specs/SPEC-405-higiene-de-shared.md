@@ -74,3 +74,16 @@ explica por qué.
 Sin tests nuevos: los dos primeros los cubre el typecheck y el tercero es prosa. El único chequeo es
 que `pnpm verify` siga verde — si `z.iso.datetime()` rechazara algo que `z.string().datetime()`
 aceptaba, lo vería el test del endpoint de proof, y eso sería un hallazgo, no un obstáculo.
+
+## Cerrada — 2026-09-19
+
+Los tres, mecánicos: `evidenceProofSchema.timestamp` pasa a `z.iso.datetime()`
+(`documents.ts`); `notificationQuerySchema` exporta `NotificationQuery`
+(`notifications.ts`) — `MerkleStep` ya lo había resuelto `SPEC-404`, no se duplicó; el comentario de
+`packages/shared/tsconfig.json` deja de afirmar que `types` apunta al fuente y explica lo que
+`CLAUDE.md` del package ya tenía bien (apunta al dist, y por eso el typecheck de la raíz compila
+`shared` antes de verificar).
+
+`z.iso.datetime()` acepta lo mismo que `z.string().datetime()` para este campo: `pnpm verify`
+completo, verde, sin tocar ningún test — como preveía la spec, si hubiera rechazado algo lo habría
+visto el test del endpoint de proof.

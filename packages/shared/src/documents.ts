@@ -205,7 +205,7 @@ export const evidenceProofSchema = z.strictObject({
   signerUserId: z.string(),
   anchorStatus: z.string().nullable(),
   txid: z.string().nullable(),
-  timestamp: z.string().datetime().nullable()
+  timestamp: z.iso.datetime().nullable()
 });
 export type EvidenceProof = z.infer<typeof evidenceProofSchema>;
 

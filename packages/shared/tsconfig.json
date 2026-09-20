@@ -3,9 +3,12 @@
   // runtime (D-016). El front no lo carga en runtime — importa solo tipos, que
   // `verbatimModuleSyntax` borra en la compilación.
   //
-  // El package.json apunta `types` al FUENTE y `main` al dist: así el typecheck
-  // de los consumidores no depende de que este package esté compilado, y solo
-  // el runtime de la API necesita el build.
+  // El package.json apunta `types` al DIST (`dist/index.d.ts`) y `main` también
+  // al dist: el typecheck de los consumidores SÍ depende de que este package
+  // esté compilado — por eso `pnpm typecheck` de la raíz arranca compilándolo.
+  // Un `.d.ts` nunca se emite, así que apuntar `types` al fuente no cae bajo el
+  // `rootDir` del consumidor. El detalle completo, con la tabla de resolución
+  // por consumidor, está en CLAUDE.md de este package.
   "compilerOptions": {
     "target": "ES2022",
     "module": "node16",

@@ -42,3 +42,4 @@ export const notificationQuerySchema = z.strictObject({
   unitId: z.string().min(1).optional(),
   category: notificationCategorySchema.optional()
 });
+export type NotificationQuery = z.infer<typeof notificationQuerySchema>;
