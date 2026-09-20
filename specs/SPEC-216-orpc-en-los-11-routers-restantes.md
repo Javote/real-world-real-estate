@@ -45,8 +45,22 @@
 > el MISMO cambio de forma que `SPEC-212` ya documentó como aceptado para las 45 rutas de §A-D. Los
 > dos tests se actualizaron para el nuevo shape, sin tocar el código del endpoint.
 >
-> **Quedan §E3-§E7** (`audit`+`contracts`, `users`, `stages`, `projects`+`projects-obra`,
-> `evidence`), 30 de las 38 rutas — ver la tabla de sub-partes, abajo.
+> **§E3 (`audit.routes.ts` + `contracts.routes.ts`, 3 rutas) y §E5 (`stages.routes.ts`, 3 rutas)
+> cerradas 2026-09-20**, en un solo commit — las dos evitan superficie 🔴, así que combinarlas no
+> rompe el aislamiento que la spec pide para §E4 (bcrypt). `stages.routes.ts` es el que más
+> `.errors()` con nombre concentra de todo el lote: `STAGE_IDENTITY_IMMUTABLE` (`PATCH /:id`) y
+> `STAGE_TRANSITION_FORBIDDEN`/`STAGE_TRANSITION_INVALID`/`STAGE_EVIDENCE_REQUIRED`/
+> `STAGE_EVIDENCE_UNATTRIBUTED` (`PATCH /:id/state`, las cuatro en el mismo procedimiento porque
+> comparten ruta) — los cinco ya resueltos en producción por SPEC-212 §A-D, sin decisión nueva acá.
+> `contracts.routes.ts` es la primera vez que se migra una ruta con la regla disyuntiva
+> `{ alguna: [...] }` delante — confirmado sin sorpresas: `authorize` la resuelve en la capa Express,
+> antes de que oRPC vea la request, así que el procedimiento no sabe ni le importa que la regla sea
+> disyuntiva. `pnpm verify` completo en verde (476 tests de `apps/api`, 3 archivos
+> `test/orpc-client-{audit,contracts,stages}.test.ts` nuevos, mismo patrón que los de §E1/§E2).
+>
+> **Quedan §E4 (`users.routes.ts`, 5 rutas, 🔴 bcrypt — aislado a propósito para su propia revisión),
+> §E6 (`projects.routes.ts` + `projects-obra.routes.ts`, 12 rutas) y §E7 (`evidence.routes.ts`, 7 de
+> las 8) — ver la tabla de sub-partes, abajo.**
 
 ## La auditoría, ruta por ruta (2026-09-20)
 

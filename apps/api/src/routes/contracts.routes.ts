@@ -1,8 +1,9 @@
 import { contractReleaseSchema, cuidParamSchema } from "@plataforma/shared";
-import { type Request, Router } from "express";
+import { Router } from "express";
 import { z } from "zod";
 import { reconciliarParaLectura } from "../domain/reconcile";
 import { db } from "../lib/db";
+import { OpenAPIHandler, ORPCError, os } from "../lib/orpc";
 import { authenticate, authorize, CUALQUIER_ROL } from "../middlewares/auth";
 import { paramValidator } from "../middlewares/validate-params";
 
@@ -12,6 +13,15 @@ import { paramValidator } from "../middlewares/validate-params";
 // una entidad lógica, el artefacto anclado es cada release. Y "release"
 // significa **anclar el evento de liberación**, no ejecutar un pago (D-021): la
 // plataforma no mueve un centavo, registra que se liberó.
+//
+// **SPEC-216 §E3 — migrado a oRPC (D-066).** `authorize` sigue evaluando la
+// única regla `{ alguna: [...] }` de toda la API ANTES de que oRPC vea la
+// request (middleware Express, sin cambiar de capa, invariante 3 de
+// SPEC-212) — para oRPC es una request que ya pasó `authorize` o una que
+// nunca llega, no tiene que saber que la regla es disyuntiva. Sin `$context`:
+// el procedimiento nunca toca `req.user`.
+
+const PREFIJO_ABSOLUTO = "/api/v1/contracts";
 
 const router = Router();
 
@@ -19,8 +29,9 @@ router.param("contractId", paramValidator(cuidParamSchema));
 
 router.use(authenticate);
 
-/** Fila 23-24 — las liberaciones del contrato, cada una con su TXID (P10). */
 /**
+ * Fila 23-24 — las liberaciones del contrato, cada una con su TXID (P10).
+ *
  * **La única regla disyuntiva de la API**, y la razón por la que `authorize`
  * tiene `alguna`: las liberaciones las ve el investor **dueño** del contrato, o
  * cualquiera con **membresía** en el proyecto. Una cadena de middlewares es un
@@ -32,29 +43,19 @@ router.use(authenticate);
  * contrato inexistente da 404 en las dos, y `evaluarRegla` devuelve ese 404;
  * si existe y ninguna rama pasa, gana el 403.
  */
-router.get(
-  "/:contractId/releases",
-  authorize({
-    roles: CUALQUIER_ROL,
-    acceso: {
-      alguna: [
-        { dueño: { via: "Contract", param: "contractId" } },
-        {
-          proyecto: { via: "Contract", param: "contractId" },
-          membresias: ["developer", "buyer", "verifier"]
-        }
-      ]
-    }
-  }),
-  async (req: Request<{ contractId: string }>, res) => {
+const releasesProcedure = os
+  .route({ method: "GET", path: "/{contractId}/releases" })
+  .input(z.strictObject({ contractId: cuidParamSchema }))
+  .output(z.array(contractReleaseSchema))
+  .handler(async ({ input }) => {
     const contrato = await db
       .selectFrom("Contract")
       .innerJoin("Unit", "Unit.id", "Contract.unitId")
       .select(["Contract.id as id", "Unit.projectId as projectId"])
-      .where("Contract.id", "=", req.params.contractId)
+      .where("Contract.id", "=", input.contractId)
       .executeTakeFirst();
 
-    if (!contrato) return res.status(404).json({ message: "Contract not found" });
+    if (!contrato) throw new ORPCError("NOT_FOUND", { message: "Contract not found" });
 
     // **Reconciliar antes de consultar** (D-077): esta respuesta lleva
     // `anchorStatus`, y sin esto un anclaje que ya está en un bloque se sirve
@@ -87,8 +88,35 @@ router.get(
       .orderBy("PaymentAttestation.stageNumber", "asc")
       .execute();
 
-    return res.json(z.array(contractReleaseSchema).parse(releases));
+    return z.array(contractReleaseSchema).parse(releases);
+  });
+const releasesHandler = new OpenAPIHandler({ releasesProcedure });
+
+router.get(
+  "/:contractId/releases",
+  authorize({
+    roles: CUALQUIER_ROL,
+    acceso: {
+      alguna: [
+        { dueño: { via: "Contract", param: "contractId" } },
+        {
+          proyecto: { via: "Contract", param: "contractId" },
+          membresias: ["developer", "buyer", "verifier"]
+        }
+      ]
+    }
+  }),
+  async (req, res, next) => {
+    const { matched } = await releasesHandler.handle(req, res, { prefix: PREFIJO_ABSOLUTO });
+    if (!matched) next();
   }
 );
+
+/** El router oRPC combinado de esta vertical — lo consume
+ * `scripts/generate-openapi.ts` para generar el fragmento de OpenAPI de la
+ * única ruta migrada. */
+export const contractsOrpcRouter = {
+  releasesProcedure
+};
 
 export default router;

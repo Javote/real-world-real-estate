@@ -4,21 +4,39 @@ import { z } from "zod";
 import { reconciliarAnclajes } from "../domain/reconcile";
 import { en } from "../lib/arrays";
 import { db } from "../lib/db";
+import { OpenAPIHandler, os } from "../lib/orpc";
 import { authenticate, authorize } from "../middlewares/auth";
+
+// **SPEC-216 §E3 — migrado a oRPC (D-066)**, junto con `contracts.routes.ts`:
+// los dos chicos que no necesitan `.errors()` con nombre (`audit`) o que ya
+// están resueltos por `authorize` sin que oRPC tenga que saber nada de la
+// regla disyuntiva (`contracts`). Ningún procedimiento acá toca `req.user`,
+// así que no hace falta `$context` — plain `os`.
+
+const PREFIJO_ABSOLUTO = "/api/v1/audit-logs";
 
 const router = Router();
 
 router.use(authenticate);
 
-router.get("/", authorize({ roles: ["admin"], acceso: "soloRol" }), async (_req, res) => {
-  const logs = await db
-    .selectFrom("AuditLog")
-    .selectAll()
-    .orderBy("createdAt", "desc")
-    .limit(200)
-    .execute();
+const auditLogsProcedure = os
+  .route({ method: "GET", path: "/" })
+  .output(z.array(auditLogRowSchema))
+  .handler(async () => {
+    const logs = await db
+      .selectFrom("AuditLog")
+      .selectAll()
+      .orderBy("createdAt", "desc")
+      .limit(200)
+      .execute();
 
-  return res.json(z.array(auditLogRowSchema).parse(logs));
+    return z.array(auditLogRowSchema).parse(logs);
+  });
+const auditLogsHandler = new OpenAPIHandler({ auditLogsProcedure });
+
+router.get("/", authorize({ roles: ["admin"], acceso: "soloRol" }), async (req, res, next) => {
+  const { matched } = await auditLogsHandler.handle(req, res, { prefix: PREFIJO_ABSOLUTO });
+  if (!matched) next();
 });
 
 function mediana(valores: readonly number[]): number | null {
@@ -58,10 +76,10 @@ function mediana(valores: readonly number[]): number | null {
  * apareciera, se descarta y se loguea — nunca se publica una duración
  * negativa.
  */
-router.get(
-  "/telemetry/reservation-to-escrow",
-  authorize({ roles: ["admin"], acceso: "soloRol" }),
-  async (_req, res) => {
+const reservationToEscrowProcedure = os
+  .route({ method: "GET", path: "/telemetry/reservation-to-escrow" })
+  .output(reservationToEscrowTelemetrySchema)
+  .handler(async () => {
     await reconciliarAnclajes();
 
     const eventos = await db
@@ -92,15 +110,32 @@ router.get(
 
     minutos.sort((a, b) => a - b);
 
-    const body = reservationToEscrowTelemetrySchema.parse({
+    return reservationToEscrowTelemetrySchema.parse({
       sampleSize: minutos.length,
       medianMinutes: mediana(minutos),
       maxMinutes: minutos.length > 0 ? minutos[minutos.length - 1] : null,
       withBlockTimestampCount
     });
+  });
+const reservationToEscrowHandler = new OpenAPIHandler({ reservationToEscrowProcedure });
 
-    return res.json(body);
+router.get(
+  "/telemetry/reservation-to-escrow",
+  authorize({ roles: ["admin"], acceso: "soloRol" }),
+  async (req, res, next) => {
+    const { matched } = await reservationToEscrowHandler.handle(req, res, {
+      prefix: PREFIJO_ABSOLUTO
+    });
+    if (!matched) next();
   }
 );
+
+/** El router oRPC combinado de esta vertical — lo consume
+ * `scripts/generate-openapi.ts` para generar el fragmento de OpenAPI de las 2
+ * rutas migradas. */
+export const auditOrpcRouter = {
+  auditLogsProcedure,
+  reservationToEscrowProcedure
+};
 
 export default router;
