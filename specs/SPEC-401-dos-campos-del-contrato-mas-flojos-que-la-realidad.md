@@ -74,3 +74,28 @@ Y la coerción no hace falta: `authoritative` está en `BOOLEAN_COLUMNS` del
 
 `pnpm verify`. Los tests de `apps/api` que ejercitan esos cuatro endpoints tienen que seguir verdes
 **sin cambiarlos**: si alguno se pone rojo, encontró un valor que la API manda y no debería.
+
+## Cerrada — 2026-09-20
+
+Las cuatro declaraciones, en `packages/shared`:
+
+- `documents.ts` · `projectDocumentSchema.anchorStatus` → `onChainEventStatusSchema` (no-nullable,
+  como ya estaba).
+- `documents.ts` · `developerDocumentSchema.anchorStatus` → `onChainEventStatusSchema.nullable()`.
+- `documents.ts` · `developerDocumentSchema.authoritative` → `z.boolean()` (era
+  `z.coerce.boolean()`).
+- `certifier.ts` · `certifierCertificateSchema.anchorStatus` → `onChainEventStatusSchema.nullable()`.
+
+**Confirmado antes de tocar `authoritative`, no asumido** (la spec lo pedía explícito): `pnpm
+--filter @plataforma/api typecheck` quedó limpio y los 428 tests de `apps/api` pasaron **sin tocar
+ninguno**, incluidos los cuatro endpoints — `developer.routes.ts:323` selecciona la columna sin
+renombrar y el `SqliteTypeCoercionPlugin` ya la matchea por nombre, así que llega `boolean` de
+verdad; la coerción no hacía nada.
+
+**Cero cambio de comportamiento, en el sentido estricto:** el único efecto visible fue
+`specs/openapi/propnexus.openapi.json` y `specs/postman/propnexus.postman_collection.json`
+—regenerados con `pnpm docs:openapi`/`docs:api`, que `openapi-freshness.test.ts` exige— pasando a
+documentar el enum en vez de `string` para `anchorStatus`. Ni un byte del JSON que la API sirve se
+movió.
+
+`pnpm verify` completo, verde.

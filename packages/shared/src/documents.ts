@@ -1,6 +1,6 @@
 import { z } from "zod";
 import type { MerkleStep } from "./merkle";
-import { onChainEventSchema } from "./stage";
+import { onChainEventSchema, onChainEventStatusSchema } from "./stage";
 
 /** `true` solo si `A` y `B` son estructuralmente idénticos, en las dos direcciones. */
 type Equal<A, B> =
@@ -152,7 +152,10 @@ export const projectDocumentSchema = z.strictObject({
   sha256Hash: z.string(),
   uploadedAt: z.coerce.date(),
   txid: z.string().nullable(),
-  anchorStatus: z.string()
+  // No-nullable a propósito (SPEC-401): el handler resuelve
+  // `f.txid ? (f.anchorStatus ?? "Confirmed") : "Pending"` — nunca manda
+  // `null`. El schema tenía razón en exigirlo; le faltaba el enum.
+  anchorStatus: onChainEventStatusSchema
 });
 export type ProjectDocument = z.infer<typeof projectDocumentSchema>;
 
@@ -164,13 +167,19 @@ export const developerDocumentSchema = z.strictObject({
   /**
    * Declara provenir de una autoridad externa (D-028). No afirma que la
    * autoridad lo haya emitido: solo que así fue declarado.
+   *
+   * `z.boolean()` y no `z.coerce.boolean()` (SPEC-401): la coerción es para lo
+   * que *entra*, no para una respuesta — `Boolean(v)` no puede fallar nunca
+   * (`"false"` → `true`), y esta columna ya llega `boolean` desde
+   * `SqliteTypeCoercionPlugin` (`developer.routes.ts` la selecciona sin
+   * renombrar, así que el plugin la matchea por nombre).
    */
-  authoritative: z.coerce.boolean(),
+  authoritative: z.boolean(),
   sha256Hash: z.string().nullable(),
   uploadedAt: z.coerce.date(),
   /** **La única fuente del estado**: `null` ⇒ "Pendiente", nunca "Verificado" (regla 17). */
   txid: z.string().nullable(),
-  anchorStatus: z.string().nullable()
+  anchorStatus: onChainEventStatusSchema.nullable()
 });
 export type DeveloperDocument = z.infer<typeof developerDocumentSchema>;
 

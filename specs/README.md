@@ -190,7 +190,7 @@ mismo— sigue siendo `SPEC-305`, decisión de mainnet.
 | [`SPEC-304`](SPEC-304-la-clave-del-admin-no-se-puede-rotar.md) | La clave del `admin` es irreemplazable por construcción | C-02 | **cerrada 2026-09-18** (D-093) · el riesgo sigue **antes de mainnet** |
 | [`SPEC-305`](SPEC-305-el-proximo-cambio-de-script-hash.md) | El próximo cambio de script hash: unicidad on-chain y el tope de `evidence_root` | C-01 (3)·C-04 | **revisada 2026-09-18, diferida a propósito** 🔴 · mainnet — ver `CLAUDE.md` raíz §Antes de mainnet, después del Milestone 3 |
 | [`SPEC-306`](SPEC-306-property-tests-sobre-la-evolucion-del-datum.md) | Una propiedad sobre `valid_datum_evolution` | C-06 | **cerrada 2026-09-18** |
-| [`SPEC-401`](SPEC-401-dos-campos-del-contrato-mas-flojos-que-la-realidad.md) | Dos campos del contrato declarados más flojos que la realidad | P-01·02 | abierta |
+| [`SPEC-401`](SPEC-401-dos-campos-del-contrato-mas-flojos-que-la-realidad.md) | Dos campos del contrato declarados más flojos que la realidad | P-01·02 | **cerrada 2026-09-20** |
 | [`SPEC-402`](SPEC-402-los-hashes-y-txid-tienen-forma.md) | Los 36 hashes y TXID del contrato tienen forma | P-03 | abierta · **antes de mainnet** |
 | [`SPEC-403`](SPEC-403-el-authoritative-del-multipart.md) | El `authoritative` del multipart solo entiende el literal `"true"` | P-04 | **cerrada 2026-09-19** |
 | [`SPEC-404`](SPEC-404-las-funciones-puras-validan-las-dos-direcciones.md) | Las funciones puras validan las dos direcciones, y `MerkleStep` se declara una vez | P-05·06 | **cerrada 2026-09-19** |

@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { stageStateSchema } from "./stage";
+import { onChainEventStatusSchema, stageStateSchema } from "./stage";
 
 // Las respuestas de la superficie del certifier (M2-D5 filas 56v y 58).
 //
@@ -48,6 +48,7 @@ export const certifierCertificateSchema = z.strictObject({
   commitmentHash: z.string().nullable(),
   /** `null` ⇒ el estado es "Pendiente", nunca "Certificado" (regla 17). */
   txid: z.string().nullable(),
-  anchorStatus: z.string().nullable()
+  // SPEC-401: el dominio real es ONCHAIN_EVENT_STATUSES, no cualquier string.
+  anchorStatus: onChainEventStatusSchema.nullable()
 });
 export type CertifierCertificate = z.infer<typeof certifierCertificateSchema>;

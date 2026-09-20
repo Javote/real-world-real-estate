@@ -1886,7 +1886,12 @@
                         ]
                       },
                       "anchorStatus": {
-                        "type": "string"
+                        "type": "string",
+                        "enum": [
+                          "Pending",
+                          "Confirmed",
+                          "Failed"
+                        ]
                       }
                     },
                     "required": [
@@ -7864,7 +7869,12 @@
                       "anchorStatus": {
                         "anyOf": [
                           {
-                            "type": "string"
+                            "type": "string",
+                            "enum": [
+                              "Pending",
+                              "Confirmed",
+                              "Failed"
+                            ]
                           },
                           {
                             "type": "null"
@@ -11870,7 +11880,12 @@
                           "anchorStatus": {
                             "anyOf": [
                               {
-                                "type": "string"
+                                "type": "string",
+                                "enum": [
+                                  "Pending",
+                                  "Confirmed",
+                                  "Failed"
+                                ]
                               },
                               {
                                 "type": "null"
