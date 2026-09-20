@@ -314,3 +314,83 @@ describe("confirmedAt", () => {
     expect(await puerto.confirmedAt(segundo.txid)).toBe(cuando);
   });
 });
+
+// SPEC-406 — `proofs` y `bloques` eran dos `Map` de la instancia, así que un
+// reinicio del proceso los perdía aunque el `LedgerStore` (SQLite en
+// apps/api) sobreviviera. `reconciliarAnclajes` pregunta exactamente
+// `confirmedAt`, así que un evento anclado antes de reiniciar quedaba
+// `Pending` para siempre. La prueba es "instancia nueva, mismo store": es
+// literalmente lo que un reinicio del proceso hace — el store persiste, la
+// instancia del adaptador no.
+describe("sobrevive a un reinicio del proceso — mismo store, instancia nueva", () => {
+  it("confirmedAt de un hilo sigue siendo el mismo número", async () => {
+    const store = new InMemoryLedgerStore();
+    const antes = new SimulatedAnchorAdapter({ store, now: () => 1_234 });
+    const { txid } = await antes.openThread({ datum: buildStageDatum(fuente) });
+
+    const despues = new SimulatedAnchorAdapter({ store });
+    expect(await despues.confirmedAt(txid)).toBe(1_234);
+  });
+
+  it("verify de un hilo sigue devolviendo el mismo AnchorProof", async () => {
+    const store = new InMemoryLedgerStore();
+    const antes = new SimulatedAnchorAdapter({ store, now: () => 5_555 });
+    const abierto = await antes.openThread({ datum: buildStageDatum(fuente) });
+
+    const despues = new SimulatedAnchorAdapter({ store });
+    expect(await despues.verify(abierto.txid)).toEqual({
+      txid: abierto.txid,
+      outputRef: abierto.outputRef,
+      blockTimestamp: 5_555,
+      datum: buildStageDatum(fuente)
+    });
+  });
+
+  it("confirmedAt de un anclaje por metadata (sin hilo) sigue siendo el mismo número", async () => {
+    const store = new InMemoryLedgerStore();
+    const antes = new SimulatedAnchorAdapter({ store, now: () => 7_777 });
+    const { txid } = await antes.anchorCommitment({ sha256: "d".repeat(64), reference: "ref" });
+
+    const despues = new SimulatedAnchorAdapter({ store });
+    expect(await despues.confirmedAt(txid)).toBe(7_777);
+  });
+
+  it("un txid que nunca se ancló sigue dando null", async () => {
+    const store = new InMemoryLedgerStore();
+    await store.registrarBloque("otro-txid", 1);
+
+    const despues = new SimulatedAnchorAdapter({ store });
+    expect(await despues.confirmedAt("f".repeat(64))).toBeNull();
+  });
+
+  it("re-anclar el mismo archivo después del reinicio da el mismo txid y el mismo timestamp", async () => {
+    const store = new InMemoryLedgerStore();
+    const entrada = { sha256: "e".repeat(64), reference: "ref-reinicio" };
+    const antes = new SimulatedAnchorAdapter({ store, now: () => 1_000 });
+    const primero = await antes.anchorCommitment(entrada);
+
+    const despues = new SimulatedAnchorAdapter({ store, now: () => 9_999 });
+    const segundo = await despues.anchorCommitment(entrada);
+
+    expect(segundo.txid).toBe(primero.txid);
+    expect(await despues.confirmedAt(segundo.txid)).toBe(1_000);
+  });
+
+  it("advanceThread sigue funcionando después del reinicio", async () => {
+    const store = new InMemoryLedgerStore();
+    const pending = buildStageDatum(fuente);
+    const inProgress = buildStageDatum({ ...fuente, state: "InProgress" });
+    const antes = new SimulatedAnchorAdapter({ store });
+    const abierto = await antes.openThread({ datum: pending });
+
+    const despues = new SimulatedAnchorAdapter({ store });
+    const avanzado = await despues.advanceThread({
+      outputRef: abierto.outputRef,
+      previous: pending,
+      next: inProgress
+    });
+
+    expect(avanzado.status).toBe("Pending");
+    expect((await despues.verify(avanzado.txid))?.datum.state).toBe("InProgress");
+  });
+});

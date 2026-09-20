@@ -195,7 +195,7 @@ mismo— sigue siendo `SPEC-305`, decisión de mainnet.
 | [`SPEC-403`](SPEC-403-el-authoritative-del-multipart.md) | El `authoritative` del multipart solo entiende el literal `"true"` | P-04 | **cerrada 2026-09-19** |
 | [`SPEC-404`](SPEC-404-las-funciones-puras-validan-las-dos-direcciones.md) | Las funciones puras validan las dos direcciones, y `MerkleStep` se declara una vez | P-05·06 | **cerrada 2026-09-19** |
 | [`SPEC-405`](SPEC-405-higiene-de-shared.md) | Higiene de `shared`: el idioma, dos tipos, y un comentario al revés | P-07 | **cerrada 2026-09-19** |
-| [`SPEC-406`](SPEC-406-el-simulador-no-olvida-lo-que-confirmo.md) | El simulador deja de olvidar lo que confirmó al reiniciarse | C-01 | abierta 🟡 |
+| [`SPEC-406`](SPEC-406-el-simulador-no-olvida-lo-que-confirmo.md) | El simulador deja de olvidar lo que confirmó al reiniciarse | C-01 | **cerrada 2026-09-20** 🟡 |
 | [`SPEC-407`](SPEC-407-el-outputref-se-busca-no-se-supone.md) | El `outputRef` del recibo se busca, no se supone | C-02 | abierta 🟡 · **antes de mainnet** |
 | [`SPEC-408`](SPEC-408-lo-que-vuelve-de-la-cadena-se-valida.md) | Lo que vuelve de la cadena se valida, por las dos puertas | C-03 | abierta 🟡 · **antes de mainnet** |
 | [`SPEC-409`](SPEC-409-verify-devuelve-el-timestamp-del-bloque.md) | `verify()` devuelve el timestamp del bloque, que ya sabe leer | C-04 | abierta |

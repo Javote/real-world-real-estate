@@ -83,18 +83,6 @@ export class SimulatedAnchorAdapter implements AnchorPort {
 
   private readonly store: LedgerStore;
   private readonly now: () => number;
-  private readonly proofs = new Map<string, AnchorProof>();
-
-  /**
-   * Los txid que este simulador **efectivamente produjo**, con el momento en que
-   * entraron a su ledger.
-   *
-   * Existe para que `confirmedAt()` pueda contestar la misma pregunta que le
-   * hace el adaptador real a la cadena —*¿conocés esta transacción?*— en vez de
-   * afirmar que sí sobre cualquier cosa. Cubre los dos caminos, incluido el de
-   * metadata, que no deja `AnchorProof`.
-   */
-  private readonly bloques = new Map<string, number>();
 
   constructor(options: SimulatedAnchorOptions = {}) {
     this.store = options.store ?? new InMemoryLedgerStore();
@@ -164,12 +152,23 @@ export class SimulatedAnchorAdapter implements AnchorPort {
     // Determinístico como el resto del simulador: anclar dos veces el mismo
     // archivo da el mismo txid, que es como se ve una doble escritura.
     const txid = txidOf("evidence", { sha256, reference });
-    this.registrar(txid);
+    await this.registrar(txid);
     return { txid, status: "Pending" };
   }
 
+  /**
+   * Rehecho desde el store (SPEC-406) en vez de un `Map` propio: el UTxO que
+   * `commit()` dejó vivo o gastado ya tiene el `datum`, y su `outputRef` es
+   * siempre `${txid}#0` — no hace falta persistir el proof aparte, solo
+   * reconstruirlo. Un anclaje por metadata no dejó UTxO nunca: sigue dando
+   * `null`, igual que antes.
+   */
   async verify(txid: string): Promise<AnchorProof | null> {
-    return this.proofs.get(txid) ?? null;
+    const utxo = await this.store.get(`${txid}#0`);
+    if (!utxo) return null;
+    const blockTimestamp = await this.store.bloqueDe(txid);
+    if (blockTimestamp === undefined) return null;
+    return { txid, outputRef: utxo.outputRef, blockTimestamp, datum: utxo.datum };
   }
 
   /** El registro (`bloques`/`proofs`) queda listo desde el `commit`, así que
@@ -195,26 +194,28 @@ export class SimulatedAnchorAdapter implements AnchorPort {
    * No se delega en `verify()`: eso devuelve un `AnchorProof`, que exige
    * `outputRef` y `datum` —cosas de un anclaje **con hilo**—, así que un anclaje
    * por metadata daría `null` aunque el simulador lo haya producido.
+   *
+   * **Pasa por el `store` (SPEC-406)**, no por un `Map` de la instancia: así
+   * sobrevive a un reinicio del proceso, igual que los UTxOs.
    */
   async confirmedAt(txid: string): Promise<number | null> {
-    return this.bloques.get(txid) ?? null;
+    return (await this.store.bloqueDe(txid)) ?? null;
   }
 
   /**
    * Anota el txid como incluido. **No pisa el timestamp si ya estaba**: el
    * simulador es determinístico, así que anclar dos veces el mismo archivo
    * devuelve el mismo txid, y el momento en que entró a la cadena no se mueve
-   * porque alguien vuelva a intentarlo.
+   * porque alguien vuelva a intentarlo. La idempotencia la garantiza el store.
    */
-  private registrar(txid: string): void {
-    if (!this.bloques.has(txid)) this.bloques.set(txid, this.now());
+  private async registrar(txid: string): Promise<void> {
+    await this.store.registrarBloque(txid, this.now());
   }
 
   private async commit(txid: string, datum: StageDatum): Promise<AnchorReceipt> {
     const outputRef: OutputRef = `${txid}#0`;
     await this.store.put({ outputRef, assetName: datum.stageRef, datum, spentByTxid: null });
-    this.registrar(txid);
-    this.proofs.set(txid, { txid, outputRef, blockTimestamp: this.now(), datum });
+    await this.registrar(txid);
     return { txid, outputRef, status: "Pending" };
   }
 }

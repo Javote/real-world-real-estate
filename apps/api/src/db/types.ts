@@ -189,6 +189,18 @@ export interface SimulatedLedgerUtxoTable {
 }
 
 /**
+ * El registro de qué txid el simulador **efectivamente produjo**, con el
+ * momento en que entró a su ledger (SPEC-406). Separada de
+ * `SimulatedLedgerUtxo` porque un anclaje por metadata no deja UTxO: esta es
+ * la única fila que existe para él.
+ */
+export interface SimulatedLedgerBlockTable {
+  txid: string;
+  /** POSIX ms — no pasa por el plugin de coerción, es el mismo `number` que usa `LedgerStore`. */
+  blockAt: number;
+}
+
+/**
  * `EvidenceBundle` de M1-D2 §2: el conjunto de evidencia que sostiene el cierre
  * de un stage, con su Merkle root. Es lo que hace anclable un stage
  * `validation_critical` (D-061).
@@ -305,6 +317,7 @@ export interface Database {
   AuditLog: AuditLogTable;
   OnChainEvent: OnChainEventTable;
   SimulatedLedgerUtxo: SimulatedLedgerUtxoTable;
+  SimulatedLedgerBlock: SimulatedLedgerBlockTable;
   Favorite: FavoriteTable;
   Unit: UnitTable;
   Invitation: InvitationTable;

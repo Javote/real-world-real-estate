@@ -97,3 +97,30 @@ opción preferida: menos estado nuevo y una sola fuente.
 El test de la auditoría, invertido: hoy pasa afirmando que se pierde, y con esta spec pasa afirmando
 que se conserva. Más `pnpm dev`, anclar algo, reiniciar la API, y ver que la pantalla sigue diciendo
 "Verificado" — que es el síntoma por el que esto se encontró.
+
+## Cerrada — 2026-09-20
+
+**`LedgerStore` gana `registrarBloque(txid, at)` y `bloqueDe(txid)`** (`packages/cardano/src/ledger.ts`),
+implementados en `InMemoryLedgerStore` con un `Map` (los tests siguen sin tocar disco) y en
+`KyselyLedgerStore` (`apps/api/src/lib/anchor.ts`) contra una tabla nueva, `SimulatedLedgerBlock`
+(migración `0008_simulated_ledger_block.sql`) — no una columna en `SimulatedLedgerUtxo`: un anclaje
+por metadata (`anchorCommitment`) nunca crea fila ahí, así que hacía falta una tabla propia indexada
+por txid, sea cual sea el camino que lo produjo. `registrarBloque` es idempotente por
+`onConflict().doNothing()` sobre la PK (regla 8), igual criterio que `crearBundle`.
+
+`SimulatedAnchorAdapter.confirmedAt` pasa a leer del store en vez de un `Map` de la instancia.
+`verify()` ya no persiste un `AnchorProof` aparte: se reconstruye buscando `store.get(`${txid}#0`)`
+—el `outputRef` de un hilo es siempre esa forma— y combinando su `datum` con `store.bloqueDe(txid)`;
+un anclaje sin hilo sigue dando `null`, igual que antes (**NO-alcance** respetado: el simulador
+sigue sin confirmar solo).
+
+**Reproducido de verdad, no deducido**: las 6 pruebas nuevas de "instancia nueva, mismo store" en
+`simulated.test.ts` se corrieron primero contra el código viejo (`git stash` de `ledger.ts` +
+`simulated.ts`) — 5 de las 6 fallan en rojo, exactamente los casos de la tabla de casos borde
+(`confirmedAt`/`verify` de un hilo, `confirmedAt` de metadata, re-anclar tras el reinicio) — y
+después restauradas contra el código nuevo, las 6 en verde. Dos tests más en `apps/api` prueban la
+otra mitad, la que `packages/cardano` no puede ver: que `KyselyLedgerStore` de verdad escribe y lee
+`SimulatedLedgerBlock` contra SQL, y que dos anclajes del mismo archivo no duplican la fila.
+
+`pnpm --filter @plataforma/cardano test` (78, 6 nuevos), `pnpm --filter @plataforma/api test` (427,
+2 nuevos) y `pnpm verify` completo, todos verdes.

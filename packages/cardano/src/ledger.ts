@@ -25,11 +25,21 @@ export interface LedgerStore {
   findLive(assetName: string): Promise<LedgerUtxo | undefined>;
   put(utxo: LedgerUtxo): Promise<void>;
   markSpent(outputRef: OutputRef, spentByTxid: string): Promise<void>;
+  /**
+   * Anota que este txid entró al ledger del simulador, en este momento.
+   * **Idempotente**: si ya estaba, no pisa el timestamp (SPEC-406) — el
+   * simulador es determinístico, así que reintentar el mismo anclaje no puede
+   * mover el momento en que "ocurrió".
+   */
+  registrarBloque(txid: string, at: number): Promise<void>;
+  /** El POSIX ms en que ese txid entró, o `undefined` si este ledger no lo conoce. */
+  bloqueDe(txid: string): Promise<number | undefined>;
 }
 
 /** Ledger de memoria: el de los tests y el de cualquier proceso efímero. */
 export class InMemoryLedgerStore implements LedgerStore {
   private readonly utxos = new Map<OutputRef, LedgerUtxo>();
+  private readonly bloques = new Map<string, number>();
 
   async get(outputRef: OutputRef): Promise<LedgerUtxo | undefined> {
     return this.utxos.get(outputRef);
@@ -49,5 +59,13 @@ export class InMemoryLedgerStore implements LedgerStore {
   async markSpent(outputRef: OutputRef, spentByTxid: string): Promise<void> {
     const utxo = this.utxos.get(outputRef);
     if (utxo) this.utxos.set(outputRef, { ...utxo, spentByTxid });
+  }
+
+  async registrarBloque(txid: string, at: number): Promise<void> {
+    if (!this.bloques.has(txid)) this.bloques.set(txid, at);
+  }
+
+  async bloqueDe(txid: string): Promise<number | undefined> {
+    return this.bloques.get(txid);
   }
 }

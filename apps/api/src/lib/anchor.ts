@@ -51,6 +51,25 @@ class KyselyLedgerStore implements LedgerStore {
       .execute();
   }
 
+  async registrarBloque(txid: string, at: number): Promise<void> {
+    // No pisa el timestamp si ya estaba (SPEC-406): `onConflict().doNothing()`
+    // es la misma idempotencia de contenido que ya usa `crearBundle` (regla 8).
+    await db
+      .insertInto("SimulatedLedgerBlock")
+      .values({ txid, blockAt: at })
+      .onConflict((oc) => oc.column("txid").doNothing())
+      .execute();
+  }
+
+  async bloqueDe(txid: string): Promise<number | undefined> {
+    const fila = await db
+      .selectFrom("SimulatedLedgerBlock")
+      .select("blockAt")
+      .where("txid", "=", txid)
+      .executeTakeFirst();
+    return fila?.blockAt;
+  }
+
   private static toUtxo(fila: {
     outputRef: string;
     assetName: string;
