@@ -1,8 +1,13 @@
 import { generateEmulatorAccount, Lucid } from "@lucid-evolution/lucid";
 import { Emulator } from "@lucid-evolution/provider";
 import { buildStageDatum } from "@plataforma/shared";
-import { beforeEach, describe, expect, it } from "vitest";
-import { LucidAnchorAdapter, PENDING_UTXO_TTL_MS, THREAD_MIN_LOVELACE } from "./real";
+import { beforeEach, describe, expect, it, vi } from "vitest";
+import {
+  BLOCKFROST_TIMEOUT_MS,
+  LucidAnchorAdapter,
+  PENDING_UTXO_TTL_MS,
+  THREAD_MIN_LOVELACE
+} from "./real";
 
 // SPEC-013 §B. **Acá el validador se ejecuta de verdad**: el `Emulator` de
 // Lucid evalúa el script Plutus compilado por Aiken, así que un rechazo de este
@@ -211,6 +216,25 @@ describe("advanceThread contra el validador real", () => {
       })
     ).rejects.toThrow(/failed script execution/);
   });
+
+  // SPEC-410 — `utxoAt()` chequeaba que las dos mitades de `outputRef`
+  // existieran y no miraba el resultado del `parseInt`: un índice no numérico
+  // pasaba el guard y salía a consultar al proveedor con `NaN`, con el error
+  // viniendo de Lucid a varios frames del dato malo.
+  it.each([
+    ["abc#xyz", "ni el hash ni el índice son válidos"],
+    [`${"a".repeat(64)}#-1`, "índice negativo"],
+    [`${"a".repeat(64)}#xyz`, "índice no numérico"],
+    ["no-es-hex64#0", "hash mal formado"]
+  ])("rechaza un outputRef mal formado (%s: %s) con BAD_OUTPUT_REF", async (outputRef) => {
+    await expect(
+      adapter.advanceThread({
+        outputRef,
+        previous: buildStageDatum(fuente),
+        next: buildStageDatum({ ...fuente, state: "InProgress" })
+      })
+    ).rejects.toMatchObject({ code: "BAD_OUTPUT_REF" });
+  });
 });
 
 describe("findLiveThread — Capa 1, contra el proveedor de verdad", () => {
@@ -276,6 +300,64 @@ describe("anchorEvidence · el camino de metadata (D-006)", () => {
     await expect(adapter.anchorCommitment({ sha256, reference: "x".repeat(65) })).rejects.toThrow(
       /no entra/
     );
+  });
+});
+
+// SPEC-410 — `confirmedAt()` es el único `fetch` del repo que sale a una red
+// que no controlamos. Sin `AbortSignal`, un Blockfrost que acepta la conexión
+// y no contesta nunca colgaba la llamada sin límite.
+describe("confirmedAt — timeout contra Blockfrost", () => {
+  // Tiempo real y no fake timers: `AbortSignal.timeout()` programa su propio
+  // temporizador nativo, que los fake timers de vitest no interceptan — un
+  // `vi.advanceTimersByTimeAsync` no lo dispara y el test cuelga hasta su
+  // propio timeout, no el de Blockfrost. `BLOCKFROST_TIMEOUT_MS` (10s) más
+  // margen para el test.
+  it(
+    "rechaza al vencer el timeout, en vez de esperar para siempre",
+    async () => {
+      const fetchQueColgado = vi.fn(
+        (_url: string, opts: { signal: AbortSignal }) =>
+          new Promise((_resolve, reject) => {
+            opts.signal.addEventListener("abort", () =>
+              reject(new DOMException("The operation was aborted", "AbortError"))
+            );
+          })
+      );
+      vi.stubGlobal("fetch", fetchQueColgado);
+
+      try {
+        const conBlockfrost = await LucidAnchorAdapter.create({
+          lucid,
+          network: "Custom",
+          now: () => emulator.now(),
+          blockfrost: { url: "https://cardano-preprod.blockfrost.io/api/v0", apiKey: "k" }
+        });
+
+        await expect(conBlockfrost.confirmedAt("a".repeat(64))).rejects.toThrow(/no contestó/);
+        expect(fetchQueColgado).toHaveBeenCalledOnce();
+      } finally {
+        vi.unstubAllGlobals();
+      }
+    },
+    BLOCKFROST_TIMEOUT_MS + 5_000
+  );
+
+  it("con 404 sigue dando null, como antes del timeout", async () => {
+    const fetchQueContesta404 = vi.fn(async () => new Response(null, { status: 404 }));
+    vi.stubGlobal("fetch", fetchQueContesta404);
+
+    try {
+      const conBlockfrost = await LucidAnchorAdapter.create({
+        lucid,
+        network: "Custom",
+        now: () => emulator.now(),
+        blockfrost: { url: "https://cardano-preprod.blockfrost.io/api/v0", apiKey: "k" }
+      });
+
+      expect(await conBlockfrost.confirmedAt("a".repeat(64))).toBeNull();
+    } finally {
+      vi.unstubAllGlobals();
+    }
   });
 });
 

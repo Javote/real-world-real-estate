@@ -3,7 +3,7 @@ import { beforeEach, describe, expect, it } from "vitest";
 import { createAnchorPort } from "./factory";
 import { InMemoryLedgerStore } from "./ledger";
 import { AnchorRejectedError } from "./port";
-import { SimulatedAnchorAdapter } from "./simulated";
+import { canonical, SimulatedAnchorAdapter } from "./simulated";
 
 // SPEC-013 §Casos borde. Cada rechazo del simulador espeja un `expect` del
 // validador: si esta suite se ablanda, el bug se muda a una transacción firmada.
@@ -59,6 +59,40 @@ describe("openThread · el mint", () => {
     const a = await port.openThread({ datum: buildStageDatum(fuente) });
     const b = await otro.openThread({ datum: buildStageDatum(fuente) });
     expect(a.txid).toBe(b.txid);
+  });
+
+  // SPEC-410 — regresión: el mismo txid que daba `openThread` antes de
+  // ordenar `canonical()` por clave. Con las claves de hoy (`StageDatum`) el
+  // orden por par y el orden por clave coinciden, así que arreglar el
+  // comparador no puede mover este valor.
+  it("el txid no se mueve por haber ordenado canonical() por clave", async () => {
+    const recibo = await port.openThread({ datum: buildStageDatum(fuente) });
+    expect(recibo.txid).toBe("0d22fc2dceaf2a6ccfb64046f07b43df10ab7932502ab791ec31467f953d1ea4");
+  });
+});
+
+describe("canonical — ordena por clave, no por el par [clave, valor]", () => {
+  it("con una clave prefijo de otra, la más corta va primero", () => {
+    // `Object.entries({...}).sort()` sin comparador ordena por
+    // `"clave,valor"`: `"a!b,1"` < `"a,2"` porque `!` (0x21) < `,` (0x2c), así
+    // que el par completo pone "a!b" antes que "a" — al revés del orden por
+    // clave, que es lo que esta función promete.
+    expect(canonical({ "a!b": 1, a: 2 })).toBe(canonical({ a: 2, "a!b": 1 }));
+    expect(canonical({ "a!b": 1, a: 2 })).toBe('{"a":2,"a!b":1}');
+  });
+
+  it("un StageDatum canonicaliza igual sea cual sea el orden de sus campos", () => {
+    const datum = buildStageDatum(fuente);
+    const reordenado = {
+      state: datum.state,
+      stageRef: datum.stageRef,
+      completedAt: datum.completedAt,
+      evidenceRoot: datum.evidenceRoot,
+      projectRef: datum.projectRef,
+      sequenceOrder: datum.sequenceOrder,
+      validationCritical: datum.validationCritical
+    };
+    expect(canonical(datum)).toBe(canonical(reordenado));
   });
 });
 

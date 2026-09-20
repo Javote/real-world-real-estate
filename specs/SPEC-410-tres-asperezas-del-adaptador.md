@@ -89,3 +89,33 @@ la espera.
 | `utxoAt("<hex64>#-1")` | `BAD_OUTPUT_REF` |
 | `confirmedAt` con el servidor colgado | rechaza al vencer el timeout, con mensaje propio |
 | `confirmedAt` con 404 | `null`, como hoy |
+
+## Cerrada — 2026-09-20
+
+Las tres, en `packages/cardano`:
+
+1. **`canonical()`** (`simulated.ts`) ordena con `ordenarPorClave`, un comparador explícito sobre la
+   clave del par — no más `.sort()` a secas sobre `[clave, valor]`. Exportada para que el test la
+   ejercite directo, sin pasar por un txid.
+2. **`utxoAt()`** (`real.ts`) valida la forma entera con `/^([0-9a-f]{64})#(\d+)$/` antes de tocar el
+   proveedor: `BAD_OUTPUT_REF` para hash mal formado, índice no numérico o negativo — antes esos tres
+   casos pasaban el guard y salían con `outputIndex: NaN`.
+3. **`confirmedAt()`** (`real.ts`) pasa `signal: AbortSignal.timeout(BLOCKFROST_TIMEOUT_MS)` (10s,
+   constante nueva junto a `PENDING_UTXO_TTL_MS`) y envuelve el `fetch` en `try/catch` para convertir
+   el abort en un error propio (`"Blockfrost no contestó en Xms..."`) en vez de dejar salir el
+   `AbortError` crudo.
+
+**Verificado en rojo antes del fix** (`git stash` de `simulated.ts`+`real.ts`): 7 tests fallan —
+2 de `canonical` (`canonical is not a function`, ni siquiera estaba exportada), 4 de `BAD_OUTPUT_REF`
+(los 4 casos daban `UNKNOWN_THREAD`, confirmando que `NaN` llegaba hasta el proveedor y volvía como
+"no existe" en vez de "está mal formado"), y el de timeout (`Cannot read properties of undefined
+(reading 'addEventListener')`, porque sin `signal` no hay nada a lo que engancharse). Las 88 vuelven
+a verde restaurando el fix.
+
+**Una aspereza nueva, encontrada escribiendo el test del timeout, no en el alcance original:** los
+fake timers de vitest no interceptan `AbortSignal.timeout()` — es un temporizador nativo, no pasa por
+`setTimeout` global. El test corre con timers reales y una ventana de `BLOCKFROST_TIMEOUT_MS + 5s`;
+documentado en el propio test para que no se "optimice" a fake timers después y quede colgado.
+
+`pnpm --filter @plataforma/cardano test` (88, 9 nuevos) y `pnpm verify` completo, verdes. El
+determinismo del TXID no se movió (test de regresión con el valor literal de antes del cambio).

@@ -113,6 +113,14 @@ export const TIP_LAG_MARGIN_MS = 2 * 60 * 1000;
  */
 export const PENDING_UTXO_TTL_MS = 3 * 60 * 1000;
 
+/**
+ * Cuánto espera `confirmedAt()` a que Blockfrost conteste (SPEC-410). Es un
+ * GET a un único endpoint, no una consulta pesada — 10s es margen generoso
+ * sobre una latencia normal y corto contra un servidor que aceptó la conexión
+ * y no va a contestar nunca.
+ */
+export const BLOCKFROST_TIMEOUT_MS = 10 * 1000;
+
 /** Lo que deja publicar el validador como reference script. */
 export interface ReferenceScriptPublication {
   /** El UTxO que lleva el validador adentro. */
@@ -489,13 +497,30 @@ export class LucidAnchorAdapter implements AnchorPort {
    * campo. Meter una dependencia para eso sería pagar superficie por nada, y el
    * provider de Lucid no expone la consulta —`awaitTx` **bloquea** hasta que
    * confirme, que es justo lo que no queremos en una lectura.
+   *
+   * **Es el único `fetch` del repo que sale a una red que no controlamos**
+   * (SPEC-410), y corre adentro de `reconciliarAnclajes`, que recorre eventos
+   * en serie: sin límite, un Blockfrost que acepta la conexión y no contesta
+   * cuelga la tanda entera — un request HTTP de la API que nunca cierra, con
+   * el disparo por lectura (D-077). El timeout rechaza en vez de dar `null`:
+   * no pudo preguntar, así que no puede decir "no confirmó" (mismo criterio
+   * que `DisabledAnchorAdapter`). Sin retry: la reconciliación ya es
+   * reintentable por diseño, vuelve a correr en la próxima lectura.
    */
   async confirmedAt(txid: string): Promise<number | null> {
     if (!this.blockfrost) return null;
 
-    const res = await fetch(`${this.blockfrost.url}/txs/${txid}`, {
-      headers: { project_id: this.blockfrost.apiKey }
-    });
+    let res: Response;
+    try {
+      res = await fetch(`${this.blockfrost.url}/txs/${txid}`, {
+        headers: { project_id: this.blockfrost.apiKey },
+        signal: AbortSignal.timeout(BLOCKFROST_TIMEOUT_MS)
+      });
+    } catch (error) {
+      throw new Error(`Blockfrost no contestó en ${BLOCKFROST_TIMEOUT_MS}ms al consultar ${txid}`, {
+        cause: error
+      });
+    }
 
     // 404 es la respuesta normal de una transacción que todavía no entró en un
     // bloque, no un error que haya que propagar.
@@ -529,10 +554,17 @@ export class LucidAnchorAdapter implements AnchorPort {
   }
 
   private async utxoAt(outputRef: OutputRef): Promise<UTxO> {
-    const [txHash, index] = outputRef.split("#");
-    if (!txHash || index === undefined) {
+    // La forma entera, no solo que las dos mitades existan (SPEC-410): sin
+    // esto, "abc#xyz" pasaba el guard y salía a consultar al proveedor con
+    // `outputIndex: NaN` — el error volvía de Lucid, varios frames lejos del
+    // dato malo que lo causó.
+    const forma = /^([0-9a-f]{64})#(\d+)$/.exec(outputRef);
+    if (!forma) {
       throw new AnchorRejectedError(`outputRef mal formado: ${outputRef}`, "BAD_OUTPUT_REF");
     }
+    // El regex ya garantiza los dos grupos: `forma[1]`/`forma[2]` no son `undefined`.
+    const txHash = forma[1] as string;
+    const index = forma[2] as string;
 
     // La vista local antes que el proveedor, y no al revés: si el hilo está
     // acá es porque esta misma instancia lo creó hace segundos y el proveedor

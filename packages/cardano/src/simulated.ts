@@ -42,10 +42,23 @@ import {
 // chequeo aparte (`anchorEvent` en la API, o un `reconcile`), nunca del
 // recibo.
 
-function canonical(value: unknown): string {
+/**
+ * `.sort()` sin comparador ordena por la representación en string del PAR
+ * `[clave, valor]`, no por la clave (SPEC-410) — con una clave prefijo de
+ * otra y el carácter siguiente por debajo de `,` en el código ASCII, la coma
+ * entra en la comparación y el orden sale distinto del orden por clave. Con
+ * los identificadores de hoy no cambia nada, pero esta es la única función
+ * que canonicaliza, y de ella dependen el TXID determinístico y `STALE_DATUM`.
+ */
+function ordenarPorClave([a]: [string, unknown], [b]: [string, unknown]): number {
+  return a < b ? -1 : a > b ? 1 : 0;
+}
+
+/** Exportada para que `simulated.test.ts` pruebe el orden directamente, sin pasar por un txid. */
+export function canonical(value: unknown): string {
   return JSON.stringify(value, (_key, v) =>
     typeof v === "object" && v !== null && !Array.isArray(v)
-      ? Object.fromEntries(Object.entries(v as Record<string, unknown>).sort())
+      ? Object.fromEntries(Object.entries(v as Record<string, unknown>).sort(ordenarPorClave))
       : v
   );
 }
