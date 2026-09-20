@@ -281,39 +281,68 @@ router.post(
    para ESTA ruta nada más, las dos trampas de §D a la vez:** ni bufferea sin límite, ni oculta sus
    errores de Express/Sentry.
 
-**Lo que NO se investigó todavía, y por qué esto sigue siendo "documentar la posibilidad" y no un
-diseño listo para implementar:**
+**Las tres preguntas que quedaron sin investigar, investigadas y respondidas el 2026-09-20 (dos
+smoke tests descartables más, `test/zzz-shape-400-smoke.test.ts` y una reconfirmación sin nombre de
+`oz.file()`/`oz.blob()` en el código fuente — los dos corridos y borrados):**
 
-- **La documentación de OpenAPI para el campo del archivo.** Hoy `REQUEST_SCHEMAS` declara esta
-  ruta a mano con `bodyContentType: "multipart/form-data"` — el schema (`stageEvidenceUploadSchema`)
-  documenta los campos de texto, y el archivo se explica en un comentario, no en el JSON Schema. Si
-  el procedimiento oRPC declarara un campo `archivo` con la forma que Multer entrega
-  (`{originalname, mimetype, size, path, ...}` — NO un `File`/`Blob` de verdad, porque para cuando
-  `call()` corre el archivo YA está escrito a disco), `OpenAPIGenerator.generate()` sobre ese
-  procedimiento produciría un objeto JSON con esos campos, **no** la semántica de "subida de
-  archivo" (`type: string, format: binary`) que un cliente de OpenAPI esperaría ver. Se puede seguir
-  documentando a mano como hoy (`REQUEST_SCHEMAS` + `bodyContentType`), simplemente sin la ganancia
-  de "el schema que documenta es el que valida" que sí tienen las otras 19 rutas de §D — o se puede
-  investigar si `@orpc/openapi` tiene una forma de anotar un campo del input como
-  `contentMediaType`/`format: binary` sin que dejen de ser objetos de Multer. No se miró.
-- **El shape del 400 de validación cambia** (`data.issues`, no `error.flatten()`), y aunque
-  ningún test de esta ruta fija el body exacto de un 400 (solo el status — verificado leyendo
-  `test/evidence-upload.test.ts`/`test/browse-and-documents.test.ts`), sí es una superficie de API
-  real que hoy devuelve `error.flatten()` como el resto de la API (regla 6, y el resto de rutas no
-  oRPC). Adoptar `call()` acá sin adaptar ese shape dejaría esta ÚNICA ruta con una forma de error
-  de validación distinta de las demás ~46 — hay que decidir si se adapta (mapear `ValidationError`
-  → `{formErrors, fieldErrors}` a mano en el `catch`) o si se acepta la divergencia.
-- **No se comparó contra dejar la ruta tal cual está hoy** (Express + Multer + `safeParse` manual,
-  sin oRPC en absoluto) — que es lo que quedó decidido al cerrar §D. La pregunta real que esto
-  responde es "¿vale la pena el costo de este diseño más nuevo (`call()`, un patrón que ninguna
-  otra ruta de la API usa todavía) contra el beneficio (una sola declaración de schema, más el
-  arreglo lateral del `next(err)`)" — y esa decisión no se tomó, solo se probó que es técnicamente
-  posible.
+1. **La documentación de OpenAPI para el campo del archivo — no hay forma, y no es un vacío de
+   investigación: es una restricción de diseño de la librería.** `@orpc/zod` sí tiene el mecanismo
+   que se sospechaba —`oz.file()`/`oz.blob()`, que producen `{type: "string", contentMediaType:
+   mimeType}` en el JSON Schema, la semántica de "subida de archivo" que un cliente de OpenAPI
+   espera (`node_modules/.../@orpc/zod/dist/index.mjs`, `#handleCustomZodDef`)— **pero los dos
+   validan con `instanceof File`/`instanceof Blob`**. El objeto que entrega Multer en `req.file`
+   (`{fieldname, originalname, encoding, mimetype, size, destination, filename, path}`) no es una
+   instancia de ninguno de los dos — es un objeto plano. Envolverlo en un `File`/`Blob` de verdad
+   para que el schema lo acepte significa leerlo de vuelta a memoria, que es exactamente el
+   problema de RAM que esta ruta evita al no dejar que `OpenAPIHandler` la parsee. **No hay
+   punto medio: o se paga la memoria para tener la documentación correcta, o se documenta a mano
+   como hoy** (`REQUEST_SCHEMAS` + `bodyContentType`) y el procedimiento oRPC solo documenta los
+   campos de texto — la ganancia de "un solo schema que valida y documenta" no llega al campo del
+   archivo bajo ningún diseño con `call()` + Multer.
+2. **El shape del 400 SÍ cambia — pero el hallazgo real es que ya cambió, para las 45 rutas de
+   §A-D, y nadie lo había verificado hasta ahora.** El smoke test pegó un body inválido a una ruta
+   YA CERRADA (`POST /notary/dossiers/:id/reject`, con un cuid válido para pasar el
+   `paramValidator` de Express y llegar al procedimiento oRPC) y el 400 real que devuelve hoy,
+   en el código que ya está en `main`, es:
+   ```json
+   {"defined":false,"code":"BAD_REQUEST","status":400,"message":"Input validation failed",
+    "data":{"issues":[{"expected":"string","code":"invalid_type","path":["note"], ...}]}}
+   ```
+   **No es `error.flatten()`.** Es el `ORPCError.toJSON()` de oRPC, con los issues de Zod en forma
+   de JSON Schema. La preocupación original —"adoptar `call()` en esta ruta la dejaría con un shape
+   de error distinto de las demás ~46"— está mal planteada: **las demás 45 ya tienen ESTE shape,
+   no `error.flatten()`.** Ninguna de las 45 conserva el `safeParse` manual (verificado: cero
+   coincidencias de `safeParse`/`error.flatten` en `notary.routes.ts` y `certifier.routes.ts`), así
+   que el 400 de cada una ya viene de `OpenAPIHandler.encodeError()`, no de código propio. La única
+   ruta que hoy sigue devolviendo `error.flatten()` para un 400 de validación es, precisamente, la
+   multipart que no migró — así que adoptar `call()` acá no crearía una nueva divergencia, **la
+   cerraría**: dejaría a las 46 con el mismo shape de error de validación. Esto no estaba en el
+   registro de SPEC-212 ni de `specs/README.md` — el criterio de cierre de §A-D (`REQUEST_SCHEMAS`/
+   `RESPONSE_SCHEMAS` sin entradas de las 45) nunca pedía fijar el shape del error, así que ningún
+   test lo iba a atrapar. No es un defecto de lo cerrado —ningún test prometía ese shape, y el
+   status sigue siendo 400 igual que siempre— pero si algún consumidor externo (el frontend, o
+   Postman/curl del dueño) llegó a fijarse en `formErrors`/`fieldErrors` de una respuesta 400 de
+   una de las 45 rutas después del 2026-09-20, ya está viendo el shape nuevo.
+3. **La comparación costo/beneficio contra dejar la ruta como está — con las dos preguntas de
+   arriba resueltas, la balanza cambia de lado.** El costo real de `call()` + Multer no es "un
+   patrón nuevo que ninguna otra ruta usa" en abstracto — es exactamente el patrón que ya define
+   Express + oRPC en las otras 45, con la única diferencia de que Multer parsea el multipart en vez
+   de `OpenAPIHandler`. Y el beneficio no es solo "un schema que valida" — con la pregunta 2
+   respondida, el beneficio real es **unificar el shape de error de las 46 rutas** (hoy 45 tienen un
+   shape y 1 tiene otro) y cerrar la trampa de Sentry de la investigación anterior (§1) para esta
+   ruta también, gratis, porque el `catch`/`next(err)` de Express sigue funcionando con `call()`.
+   El costo que sigue siendo real: el campo del archivo no se documenta con la semántica de OpenAPI
+   correcta bajo ningún diseño (pregunta 1), así que la ganancia de documentación es parcial, no
+   total. **La recomendación que deja esta investigación, sin implementar todavía:** vale la pena
+   más de lo que parecía cuando se escribió la pregunta original, porque dos de sus tres costos
+   supuestos (divergencia de shape, patrón sin precedente) resultaron ser falsos o menores.
 
-**Si se retoma:** el smoke test que probó esto se borró a propósito (política de esta spec, ver
-"Probado el 2026-09-20" más abajo) — hay que rehacerlo antes de escribir la migración real, no
-asumir que lo de arriba sigue siendo cierto sin volver a correrlo contra la versión de oRPC que esté
-instalada en ese momento.
+**Si se retoma:** los dos smoke tests que probaron esto se borraron a propósito (política de esta
+spec) — hay que rehacerlos antes de escribir la migración real, no asumir que lo de arriba sigue
+siendo cierto sin volver a correrlo contra la versión de oRPC que esté instalada en ese momento.
+Si se decide migrar, conviene hacerlo junto con el interceptor de Sentry de la investigación
+anterior (§1) — la misma spec nueva puede cerrar las dos, ya que la ruta multipart se beneficia de
+ambas a la vez.
 
 ## La mitad que está bien, y hay que no romper
 
