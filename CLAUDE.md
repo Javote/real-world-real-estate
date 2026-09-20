@@ -527,6 +527,11 @@ completo con su propio `pnpm install`, y en este repo eso pesa: **~750MB por wor
 corre `docker compose` o baja modelos). El 2026-09-18 el disco llegó a **99% de uso, 120Mi libres**,
 con nueve worktrees viejos —todos ya mergeados y pusheados a `main`— sin borrar.
 
+- **Después de todo push a `main`, revisar worktrees y ramas locales mergeadas — sin que lo pidan.**
+  `git worktree list` contra `git branch --merged main`: todo lo que aparece en las dos se borra,
+  `git worktree remove --force <path>` y después `git branch -d <rama>` (falla sola si no era
+  fast-forward, así que es segura por default). No tocar `.claude/worktrees/` con rama sin mergear
+  ni ramas que no reconocés armar (ver abajo) — pueden ser trabajo en curso de otra sesión.
 - **Borrar el worktree apenas su rama está mergeada y pusheada.**
   `git worktree remove --force .claude/worktrees/<nombre>`. No hay razón para dejarlo "por las
   dudas": el commit ya vive en `main`, el worktree no agrega nada.
