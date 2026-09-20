@@ -79,3 +79,16 @@ Mismo tratamiento para cualquier otro booleano que llegue por multipart; hoy es 
 Un test de `packages/shared` por cada fila de la tabla, y un test de `apps/api` que suba evidencia
 con `authoritative=on` sin `issuingAuthority` y exija que la transición a `Completed` se rechace.
 Ese segundo es el que prueba que el arreglo sirve para algo.
+
+## Cerrada — 2026-09-19
+
+`multipartBooleanSchema` en `packages/shared/src/documents.ts`: dos `Set` (verdadero/falso),
+comparación sin distinguir mayúsculas, y `ctx.addIssue` + `z.NEVER` para cualquier otro valor — 400,
+no un default. `stageEvidenceUploadSchema.authoritative` lo usa; `issuingAuthority` no se tocó.
+
+`packages/shared/src/documents.test.ts` (nuevo — el archivo no tenía tests) cubre las 6 filas de la
+tabla de casos borde. `apps/api/test/evidence-upload.test.ts` suma el caso end-to-end: sube evidencia
+real vía `POST .../evidence` con `authoritative: "on"` sin `issuingAuthority` sobre un stage
+`validationCritical`, y confirma que `PATCH /stages/:id/state → Completed` devuelve 409
+`STAGE_EVIDENCE_UNATTRIBUTED` — el caso que antes no llegaba nunca porque `"on"` se guardaba como
+`false`. `pnpm verify` completo, verde.

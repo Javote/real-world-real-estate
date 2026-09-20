@@ -11,6 +11,28 @@ export const EVIDENCE_TYPES = ["document", "photo", "certificate"] as const;
 export const evidenceTypeSchema = z.enum(EVIDENCE_TYPES);
 export type EvidenceType = z.infer<typeof evidenceTypeSchema>;
 
+const MULTIPART_BOOLEAN_TRUE = new Set(["true", "on", "1"]);
+const MULTIPART_BOOLEAN_FALSE = new Set(["false", "off", "0", ""]);
+
+/**
+ * Un booleano de un `<form>` HTML real, no un JSON: sin distinguir mayúsculas,
+ * y sin default silencioso ante un valor desconocido (regla 6) — un checkbox
+ * sin `value` manda `"on"`, y "true"/"on"/"1" son los tres que un formulario
+ * produce de verdad. Ausente sigue siendo `false`: no declarar nada es no
+ * declarar nada (SPEC-403).
+ */
+const multipartBooleanSchema = z
+  .string()
+  .optional()
+  .transform((v, ctx) => {
+    if (v === undefined) return false;
+    const normalizado = v.toLowerCase();
+    if (MULTIPART_BOOLEAN_TRUE.has(normalizado)) return true;
+    if (MULTIPART_BOOLEAN_FALSE.has(normalizado)) return false;
+    ctx.addIssue({ code: z.ZodIssueCode.custom, message: "Valor booleano no reconocido" });
+    return z.NEVER;
+  });
+
 /**
  * Body de `POST /developer/projects/:id/stages/:stageId/evidence` (fila 38,
  * 44c) — el multipart llega con el archivo aparte (`req.file`, Multer); esto
@@ -20,10 +42,7 @@ export const stageEvidenceUploadSchema = z.object({
   evidenceType: evidenceTypeSchema,
   category: z.string().min(1),
   description: z.string().max(2000).optional(),
-  authoritative: z
-    .string()
-    .optional()
-    .transform((v) => v === "true"),
+  authoritative: multipartBooleanSchema,
   /**
    * Declaración de origen (D-028 (a)). Va vacía salvo que se declare
    * autoritativa, y se guarda `null` en vez de "" para que el guard de la

@@ -346,6 +346,47 @@ describe("POST .../evidence · dispara Pending → InProgress", () => {
   });
 });
 
+// SPEC-403 — `authoritative` solo entendía el literal "true"; un checkbox
+// real manda "on", y con la transformación vieja esa evidencia se guardaba
+// como no-autoritativa en silencio: el guard de D-028 nunca se disparaba.
+describe("POST .../evidence · authoritative='on' (checkbox real) se guarda atribuida", () => {
+  it("sin issuingAuthority, completar el stage se rechaza con STAGE_EVIDENCE_UNATTRIBUTED", async () => {
+    const ahora = new Date();
+    const stageId = createId();
+    await db
+      .insertInto("Stage")
+      .values({
+        id: stageId,
+        projectId,
+        name: "Stage para authoritative=on",
+        sequenceOrder: Math.floor(Math.random() * 1_000_000) + 700_000,
+        state: "Pending",
+        validationCritical: true,
+        createdAt: ahora,
+        updatedAt: ahora
+      })
+      .execute();
+
+    const subida = await subir(
+      miembro,
+      stageId,
+      { evidenceType: "certificate", category: "permits", authoritative: "on" },
+      { buf: PDF, nombre: "acta.pdf", tipo: "application/pdf" }
+    );
+    expect(subida.status).toBe(201);
+    expect(subida.body.evidence.authoritative).toBe(true);
+
+    const admin = await token(FIXTURES.admin.email, FIXTURES.admin.password);
+    const res = await request(app)
+      .patch(`/api/v1/stages/${stageId}/state`)
+      .set("Authorization", `Bearer ${admin}`)
+      .send({ state: "Completed" });
+
+    expect(res.status).toBe(409);
+    expect(res.body.code).toBe("STAGE_EVIDENCE_UNATTRIBUTED");
+  });
+});
+
 describe("EvidenceBundle · el acta es idempotente por contenido (regla 8)", () => {
   // El bug que cierra: completar un stage llamaba a `crearBundle` dos veces
   // —una en el POST de evidencia, otra desde `transitionStage`— y la segunda
