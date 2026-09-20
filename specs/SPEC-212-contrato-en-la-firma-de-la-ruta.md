@@ -196,11 +196,7 @@ registro que la mención breve de arriba.
 **Lo que falta para que esto sea diseño listo para implementar, no solo investigación (a propósito
 sin cerrar todavía, ver el pedido del dueño arriba):**
 
-- **Decidir el punto único de construcción.** Hoy cada uno de los ~20 `OpenAPIHandler` se instancia
-  suelto en su archivo de rutas (`new OpenAPIHandler({ kpisProcedure })`, etc. — ver
-  `notary.routes.ts`). Un interceptor por instancia es 20 ediciones idénticas; un factory
-  (`crearOpenApiHandler(router)`) que inyecte el interceptor de Sentry una sola vez es menos
-  repetición, pero es una decisión de forma que toca las cuatro sub-partes a la vez y no se tomó.
+- ~~Decidir el punto único de construcción.~~ **Resuelto el 2026-09-20 — ver la sección siguiente.**
 - **Qué hace el interceptor además de `Sentry.captureException`.** El código de la trampa original
   (`relanzarRestriccionComoOrpc`) también MAPEA la excepción a un `ORPCError` con el código de
   negocio correcto antes de responder — un interceptor genérico no puede hacer ese mapeo por
@@ -212,12 +208,76 @@ sin cerrar todavía, ver el pedido del dueño arriba):**
   (`"helpful when you want catch errors"`) y el comportamiento verificado son de esa versión exacta;
   hay que re-confirmar si se sube la dependencia antes de escribir la implementación real.
 
-**Alcance de la investigación, para que no se convierta en otra cosa:** con las 5 preguntas
-respondidas, el camino técnico ya está confirmado (un interceptor de `interceptors` + `Sentry.
-captureException`) — pero implementar sigue siendo trabajo nuevo, no de esta ronda: toca las cuatro
-sub-partes (`notary.routes.ts`, `certifier.routes.ts`, `investor.routes.ts`, `developer.routes.ts` +
-`developer-comercial.routes.ts` + `capital.routes.ts`) y el punto único de construcción sin decidir
-todavía, y probablemente amerita su propia spec — no un parche silencioso adentro de esta.
+### El lugar del interceptor, decidido el 2026-09-20 — sin implementar todavía
+
+**El mejor lugar es `src/lib/orpc.ts`, envolviendo el export de `OpenAPIHandler` — no un factory con
+nombre nuevo, y no cada archivo de rutas.**
+
+**Por qué ahí y no call site por call site.** Contados de verdad (no estimados): son **45** llamadas
+a `new OpenAPIHandler({ xProcedure })`, una por procedimiento, repartidas en `notary.routes.ts`,
+`certifier.routes.ts`, `investor.routes.ts`, `developer.routes.ts`, `developer-comercial.routes.ts`
+y `capital.routes.ts`. Todas con la misma forma exacta, sin segundo argumento de opciones. Agregar el
+interceptor call site por call site son 45 ediciones idénticas — y la próxima ruta que se agregue
+(van a ser 46, 47…) tiene que acordarse de copiarlo. Es el mismo modo de falla que ya evitan
+`EVIDENCE_SAFE_COLUMNS`, `ANY_MEMBERSHIP` y la matriz de permisos: una regla que depende de que cada
+call site nuevo se acuerde de repetirla es una regla que se rompe en silencio.
+
+**Por qué envolver el export en vez de un factory con nombre nuevo.** Un factory
+(`crearOpenApiHandler(router)`) sigue pidiendo tocar las 45 rutas para cambiar el import y la
+llamada. La alternativa mejor: **envolver `OpenAPIHandler` mismo, adentro de `lib/orpc.ts`, sin
+cambiar su firma.** Confirmado leyendo `@orpc/openapi/dist/adapters/node/index.d.ts`: el constructor
+es `(router, options?)`, y `options` extiende `StandardOpenAPIHandlerOptions`, que a su vez extiende
+`StandardHandlerOptions` — el mismo tipo que ya trae `interceptors` (la opción que las preguntas 2 y
+3 de arriba ya probaron). Eso permite reemplazar la clase exportada por una que hereda de la real e
+inyecta el interceptor en su propio constructor:
+
+```ts
+// lib/orpc.ts
+const { OpenAPIHandler: OpenAPIHandlerBase } = require("@orpc/openapi/node") as {...};
+
+class OpenAPIHandler<T extends Context> extends OpenAPIHandlerBase<T> {
+  constructor(router: Router<any, T>, options?: OpenAPIHandlerOptionsType<T>) {
+    super(router, {
+      ...options,
+      interceptors: [interceptorDeSentry, ...(options?.interceptors ?? [])]
+    });
+  }
+}
+
+export { OpenAPIHandler, ... };
+```
+
+Con esto, **las 45 rutas no cambian ni una línea** — siguen escribiendo `new OpenAPIHandler({
+kpisProcedure })` exactamente igual, e importan de `../lib/orpc` exactamente igual (ya es el único
+punto de entrada del paquete crudo, mismo criterio que sostiene el resto del archivo). El
+interceptor queda inyectado para cualquier instancia, presente o futura, sin que nadie tenga que
+acordarse de nada.
+
+**Lo que queda por decidir, ahí adentro, antes de escribir el código real:**
+
+- **Filtrar qué SÍ va a Sentry.** Un `ORPCError` con nombre (los `.errors({...})` que ya declaran
+  los procedimientos, p.ej. `RESOURCE_ALREADY_EXISTS`) es un rechazo de negocio esperado, no un
+  fallo — no debería reportarse, mismo criterio que ya aplica `statusDeError` para el `errorHandler`
+  de Express (`shouldHandleError: err => statusDeError(err) >= 500`, ver `CLAUDE.md` de este
+  subárbol §Trampas, "Sentry veía el error ANTES que `errorHandler`"). El interceptor tendría que
+  chequear algo como `e instanceof ORPCError && e.defined` antes de reportar — si no, cada 409 de
+  negocio se reportaría como si el servidor estuviera roto, exactamente el incidente del 2026-09-11
+  que ya está documentado ahí.
+- **Loguear además de reportar a Sentry.** Con la pregunta 1 ya respondida (oRPC no deja ningún
+  rastro por su cuenta) y Render sin shell (D-040), un `console.error` al lado de
+  `Sentry.captureException` sigue el mismo criterio que ya usa `errorHandler.ts` para su 500
+  genérico — vale la pena sumarlo, no solo el reporte a Sentry.
+- **Dependencia circular a evitar.** `lib/orpc.ts` pasaría a importar el SDK de Sentry — hay que
+  confirmar que no arma un ciclo con `instrumentation.ts` (que hoy inicializa Sentry primero,
+  `node --require`). Debería ser seguro porque `Sentry.captureException` es solo una llamada a un
+  cliente ya inicializado, no una re-inicialización, pero se confirma antes de escribir el código,
+  no se asume.
+
+**Alcance de la investigación, para que no se convierta en otra cosa:** con las 5 preguntas y el
+lugar del interceptor ya resueltos, el diseño técnico está completo — pero implementar sigue siendo
+trabajo nuevo, no de esta ronda: toca `lib/orpc.ts` y (para el filtro de `e.defined`) probablemente
+`errorHandler.ts`/`lib/error-status.ts` si se quiere reusar `statusDeError`, y probablemente amerita
+su propia spec — no un parche silencioso adentro de esta.
 
 ## Cerrado 2026-09-20 — Multer como fuente del multipart, oRPC solo para validar (alcance acotado)
 
