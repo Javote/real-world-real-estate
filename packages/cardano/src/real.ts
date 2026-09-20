@@ -219,28 +219,38 @@ export class LucidAnchorAdapter implements AnchorPort {
    */
   private referenceUtxo: UTxO | null;
 
-  private constructor(
-    lucid: LucidEvolution,
-    refs: StageScriptRefs,
-    walletAddress: string,
-    network: AnchorNetwork,
-    now: () => number,
-    validityWindowMs: number,
-    tipLagMarginMs: number,
-    pendingUtxoTtlMs: number,
-    blockfrost: { url: string; apiKey: string } | undefined,
-    referenceUtxo: UTxO | null
-  ) {
-    this.lucid = lucid;
-    this.network = network;
-    this.refs = refs;
-    this.walletAddress = walletAddress;
-    this.now = now;
-    this.validityWindowMs = validityWindowMs;
-    this.tipLagMarginMs = tipLagMarginMs;
-    this.pendingUtxoTtlMs = pendingUtxoTtlMs;
-    this.blockfrost = blockfrost;
-    this.referenceUtxo = referenceUtxo;
+  /**
+   * `create()` es el único llamador, y ya recibía un objeto de opciones que
+   * desarmaba para volver a armar acá posicionalmente (SPEC-412) — diez
+   * parámetros, tres `number` seguidos de la misma unidad y del mismo orden
+   * de magnitud (`validityWindowMs`/`tipLagMarginMs`/`pendingUtxoTtlMs`).
+   * Intercambiar dos de esos tres compila, pasa los tests del `Emulator` —que
+   * inyectan un reloj fijo y no ejercitan la ventana real— y produce, contra
+   * Preprod, una ventana de validez mal calculada. Un objeto con los campos
+   * nombrados hace ese error imposible en la firma.
+   */
+  private constructor(config: {
+    lucid: LucidEvolution;
+    refs: StageScriptRefs;
+    walletAddress: string;
+    network: AnchorNetwork;
+    now: () => number;
+    validityWindowMs: number;
+    tipLagMarginMs: number;
+    pendingUtxoTtlMs: number;
+    blockfrost: { url: string; apiKey: string } | undefined;
+    referenceUtxo: UTxO | null;
+  }) {
+    this.lucid = config.lucid;
+    this.network = config.network;
+    this.refs = config.refs;
+    this.walletAddress = config.walletAddress;
+    this.now = config.now;
+    this.validityWindowMs = config.validityWindowMs;
+    this.tipLagMarginMs = config.tipLagMarginMs;
+    this.pendingUtxoTtlMs = config.pendingUtxoTtlMs;
+    this.blockfrost = config.blockfrost;
+    this.referenceUtxo = config.referenceUtxo;
   }
 
   /** La dirección del script, derivada del blueprint con el admin aplicado. */
@@ -267,18 +277,18 @@ export class LucidAnchorAdapter implements AnchorPort {
     // con la API arriba, la toma en el próximo reinicio.
     const referenceUtxo = await buscarReferenceScript(options.lucid, walletAddress, refs.policyId);
 
-    return new LucidAnchorAdapter(
-      options.lucid,
+    return new LucidAnchorAdapter({
+      lucid: options.lucid,
       refs,
       walletAddress,
-      options.network,
-      options.now ?? (() => Date.now()),
-      options.validityWindowMs ?? VALIDITY_WINDOW_MS,
-      options.tipLagMarginMs ?? TIP_LAG_MARGIN_MS,
-      options.pendingUtxoTtlMs ?? PENDING_UTXO_TTL_MS,
-      options.blockfrost,
+      network: options.network,
+      now: options.now ?? (() => Date.now()),
+      validityWindowMs: options.validityWindowMs ?? VALIDITY_WINDOW_MS,
+      tipLagMarginMs: options.tipLagMarginMs ?? TIP_LAG_MARGIN_MS,
+      pendingUtxoTtlMs: options.pendingUtxoTtlMs ?? PENDING_UTXO_TTL_MS,
+      blockfrost: options.blockfrost,
       referenceUtxo
-    );
+    });
   }
 
   /** `mint`: acuña el thread token y crea el hilo en `Pending`. */

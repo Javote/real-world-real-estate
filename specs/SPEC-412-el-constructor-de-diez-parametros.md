@@ -87,3 +87,14 @@ En concreto, **la recomendación de la auditoría es no hacerlo, al menos no aho
 ([`PROPUESTA-2026-09-09`](PROPUESTA-2026-09-09-fusionar-anclaje-evidencia-transicion.md)), que agrega
 un camino de transacción más. Ahí la separación deja de ser estética y pasa a ser lo que hace
 revisable el cambio — y conviene que venga **junto** con él, no antes.
+
+## Cerrada — 2026-09-20
+
+El constructor privado de `LucidAnchorAdapter` toma un objeto con los diez campos nombrados, y
+`create()` (su único llamador) pasa un objeto en vez de diez posicionales — mismo orden de
+resolución de defaults, mismas asignaciones, todas `readonly` donde ya lo eran. `real.ts` no se
+partió (fuera de alcance, ver arriba).
+
+**Cero cambio de comportamiento, verificado y no solo declarado:** las 92 pruebas de
+`packages/cardano` (incluidas las del `Emulator`, que ejecutan el validador de verdad) pasan sin
+tocar un solo test, y `pnpm verify` completo queda verde.
