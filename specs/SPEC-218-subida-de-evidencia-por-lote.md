@@ -281,6 +281,6 @@ subió a esta etapa"* y sin modal.
 **Cómo correr ese e2e sin pisar el entorno de desarrollo** (la base local tenía hilos minteados fuera del
 simulador y el anclaje daba `UNKNOWN_THREAD`): puertos y base propios, base recién sembrada y simulador —
 `WEB_PORT=3100 API_ORIGIN=http://localhost:8797 PORT=8797 ANCHOR_MODE=simulated DATABASE_URL=file:<base>
-npx playwright test evidence-flow`, con la base creada por `db:migrate` + `db:seed` **con
-`SEED_DEMO_PASSWORD=` y `SEED_ADMIN_PASSWORD=` vacíos** (si no, el `.env` local pisa las passwords que
-el login del front pre-llena).
+npx playwright test evidence-flow`, con la base creada por `db:migrate` + `db:seed` *(la nota original pedía sembrarla con
+`SEED_DEMO_PASSWORD=` y `SEED_ADMIN_PASSWORD=` vacíos; desde el 2026-09-21 no hace falta: los E2E leen
+la misma password que usó el seed, `apps/web/e2e/_credenciales.ts`)*.

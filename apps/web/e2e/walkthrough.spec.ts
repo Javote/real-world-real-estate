@@ -2,6 +2,8 @@ import { mkdirSync } from 'node:fs'
 import { join } from 'node:path'
 import { expect, type Page, test } from '@playwright/test'
 
+import { passwordDe } from './_credenciales.ts'
+
 // Walkthrough: recorre la app como la recorrería una persona y deja una captura
 // por pantalla. No es un test de regresión estricto — es la evidencia visual de
 // que la app corre de punta a punta, y la base de comparación contra el
@@ -25,28 +27,28 @@ const SEED_USERS = [
     role: 'buyer',
     tab: 'Investor',
     email: 'buyer@example.com',
-    password: 'buyer123',
+    password: passwordDe('buyer'),
     landing: '/investor/buy'
   },
   {
     role: 'developer',
     tab: 'Developer',
     email: 'developer@example.com',
-    password: 'developer123',
+    password: passwordDe('developer'),
     landing: '/developer'
   },
   {
     role: 'notary',
     tab: 'Notary',
     email: 'notary@example.com',
-    password: 'notary123',
+    password: passwordDe('notary'),
     landing: '/notary'
   },
   {
     role: 'verifier',
     tab: 'Certifier',
     email: 'verifier@example.com',
-    password: 'verifier123',
+    password: passwordDe('verifier'),
     landing: '/certifier'
   }
 ] as const
@@ -152,7 +154,7 @@ test.describe('Walkthrough', () => {
   }) => {
     await gotoLogin(page)
     await page.getByLabel('Usuario').fill('admin@example.com')
-    await page.getByLabel('Contraseña').fill('admin123')
+    await page.getByLabel('Contraseña').fill(passwordDe('admin'))
     await page.getByRole('button', { name: 'Ingresar' }).click()
     // ROLE_LANDING['admin'] es null: el login es válido pero no hay panel de
     // admin todavía, así que el ruteo vuelve a /login — no es un error.
@@ -170,7 +172,7 @@ test.describe('Walkthrough', () => {
       if (r.url().includes('/api/v1/auth/me')) llamadas.push(r.status())
     })
 
-    await login(page, 'Developer', 'developer@example.com', 'developer123', '/developer')
+    await login(page, 'Developer', 'developer@example.com', passwordDe('developer'), '/developer')
 
     // **Se ESPERA la llamada, no se asume que ya ocurrió.** `login` vuelve
     // apenas la URL pasa a /developer, y recién ahí monta el panel, corre el
