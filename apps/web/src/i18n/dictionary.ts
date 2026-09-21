@@ -225,7 +225,18 @@ const esAR = {
   'developer.upload.dropzone': 'Arrastrá archivos o tocá para elegir',
   'developer.upload.dropzoneHint': 'PDF, JPG o PNG',
   'developer.upload.remove': 'Quitar archivo',
-  'developer.upload.rejected': '{name} no se puede subir: revisá el tipo y el tamaño.',
+  'developer.upload.rejected.type': '{name} no es un PDF, JPG o PNG válido.',
+  'developer.upload.rejected.size': '{name} supera el tamaño máximo de {max} MB.',
+  'developer.upload.rejected.duplicate': '{name} es igual a otro archivo que ya elegiste.',
+  'developer.upload.rejected.tooMany': '{name} no entra: el máximo es {max} archivos por vez.',
+  'developer.upload.serverRejected.UNSUPPORTED_FILE_TYPE': 'No es un PDF, JPG o PNG válido.',
+  'developer.upload.serverRejected.DUPLICATE_FILE_IN_BATCH':
+    'Es igual a otro archivo de este mismo envío.',
+  'developer.upload.serverRejected.EVIDENCE_ALREADY_IN_STAGE': 'Ya se subió a esta etapa antes.',
+  'developer.upload.partial':
+    'Se anclaron los archivos aceptados. Los que no, quedan en la lista con su motivo.',
+  'developer.upload.noneAccepted':
+    'No se aceptó ningún archivo. Revisá el motivo de cada uno en la lista.',
   'developer.upload.notes': 'Notas (opcional)',
   'developer.upload.notesPlaceholder': 'Observaciones de la inspección…',
   'developer.upload.anchor': 'Anclar evidencia',
@@ -776,7 +787,19 @@ const enUS = {
   'developer.upload.dropzone': 'Drag files or tap to select',
   'developer.upload.dropzoneHint': 'PDF, JPG or PNG',
   'developer.upload.remove': 'Remove file',
-  'developer.upload.rejected': '{name} cannot be uploaded: check its type and size.',
+  'developer.upload.rejected.type': '{name} is not a valid PDF, JPG or PNG.',
+  'developer.upload.rejected.size': '{name} is over the {max} MB limit.',
+  'developer.upload.rejected.duplicate': '{name} is the same as a file you already picked.',
+  'developer.upload.rejected.tooMany': '{name} does not fit: the limit is {max} files at a time.',
+  'developer.upload.serverRejected.UNSUPPORTED_FILE_TYPE': 'Not a valid PDF, JPG or PNG.',
+  'developer.upload.serverRejected.DUPLICATE_FILE_IN_BATCH':
+    'It is the same as another file in this upload.',
+  'developer.upload.serverRejected.EVIDENCE_ALREADY_IN_STAGE':
+    'It was already uploaded to this stage.',
+  'developer.upload.partial':
+    'The accepted files were anchored. The rest stay in the list with the reason.',
+  'developer.upload.noneAccepted':
+    'No file was accepted. Check the reason for each one in the list.',
   'developer.upload.notes': 'Notes (optional)',
   'developer.upload.notesPlaceholder': 'Inspection observations…',
   'developer.upload.anchor': 'Anchor evidence',

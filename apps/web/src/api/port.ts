@@ -72,7 +72,9 @@ import type {
 export class ApiError extends Error {
   constructor(
     public status: number,
-    message: string
+    message: string,
+    /** El cuerpo JSON del error, si lo hubo. Lo necesitan las pantallas que leen un detalle (`code`, `rejected`). */
+    public body?: unknown
   ) {
     super(message)
   }
@@ -94,13 +96,15 @@ async function request<T>(path: string, init: RequestInit = {}): Promise<T> {
   if (res.status === 401) clearSession()
   if (!res.ok) {
     let message = res.statusText
+    let cuerpo: unknown
     try {
       const body = await res.json()
+      cuerpo = body
       message = body?.message ?? JSON.stringify(body)
     } catch {
       // cuerpo no-JSON: queda statusText
     }
-    throw new ApiError(res.status, message)
+    throw new ApiError(res.status, message, cuerpo)
   }
   if (res.status === 204) return undefined as T
   return res.json() as Promise<T>
@@ -187,7 +191,9 @@ export const api = {
     request<DeveloperProjectDetail>(`/api/v1/developer/projects/${id}`),
 
   /**
-   * Fila 38 — sube y **ancla en la misma request**.
+   * Fila 38 — sube y **ancla en la misma request**. **Un lote** (SPEC-218): `form`
+   * trae `file` repetido, hasta `EVIDENCE_MAX_FILES`, y produce un bundle y un
+   * anclaje; los archivos que el backend no acepta vuelven en `rejected`.
    *
    * M2-D5 §2.2 lo obliga: *"client awaits success with TXID/Merkle root in the
    * same response"*. Es lo que alimenta el `AnchoringSuccessModal`, la única

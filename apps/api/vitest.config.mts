@@ -45,9 +45,7 @@ export default defineConfig({
       NODE_ENV: "test",
       // Piso: `setup-db.ts` lo pisa con un subdirectorio propio por archivo,
       // porque hay tests que cuentan archivos en disco para detectar huérfanos.
-      // Y 1 MB para que el test del límite de tamaño no mueva 10 MB.
       UPLOAD_DIR: "./test-uploads",
-      MAX_FILE_SIZE_MB: "1",
       // Alto a propósito: las suites comparten proceso y IP, así que el límite
       // real de /login (20) las haría chocar entre archivos. El comportamiento
       // del limiter se prueba aparte, con su propio max — ver rate-limit.test.ts.

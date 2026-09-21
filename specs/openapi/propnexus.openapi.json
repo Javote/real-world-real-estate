@@ -69,11 +69,22 @@
                   "issuingAuthority": {
                     "type": "string",
                     "maxLength": 200
+                  },
+                  "file": {
+                    "minItems": 1,
+                    "maxItems": 10,
+                    "type": "array",
+                    "items": {
+                      "type": "string",
+                      "format": "binary",
+                      "contentEncoding": "binary"
+                    }
                   }
                 },
                 "required": [
                   "evidenceType",
-                  "category"
+                  "category",
+                  "file"
                 ]
               }
             }
@@ -87,87 +98,119 @@
                 "schema": {
                   "type": "object",
                   "properties": {
-                    "evidence": {
-                      "type": "object",
-                      "properties": {
-                        "id": {
-                          "type": "string"
+                    "evidences": {
+                      "minItems": 1,
+                      "maxItems": 10,
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "id": {
+                            "type": "string"
+                          },
+                          "projectId": {
+                            "type": "string"
+                          },
+                          "stageId": {
+                            "anyOf": [
+                              {
+                                "type": "string"
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ]
+                          },
+                          "uploadedById": {
+                            "type": "string"
+                          },
+                          "evidenceType": {
+                            "type": "string",
+                            "enum": [
+                              "document",
+                              "photo",
+                              "certificate"
+                            ]
+                          },
+                          "category": {
+                            "type": "string"
+                          },
+                          "authoritative": {
+                            "type": "boolean"
+                          },
+                          "originalFilename": {
+                            "type": "string"
+                          },
+                          "storedFilename": {
+                            "type": "string"
+                          },
+                          "mimeType": {
+                            "type": "string"
+                          },
+                          "sizeBytes": {
+                            "type": "integer",
+                            "minimum": 0,
+                            "maximum": 9007199254740991
+                          },
+                          "sha256Hash": {
+                            "type": "string"
+                          },
+                          "uploadedAt": {
+                            "type": "string"
+                          },
+                          "createdAt": {
+                            "type": "string"
+                          },
+                          "updatedAt": {
+                            "type": "string"
+                          }
                         },
-                        "projectId": {
-                          "type": "string"
+                        "required": [
+                          "id",
+                          "projectId",
+                          "stageId",
+                          "uploadedById",
+                          "evidenceType",
+                          "category",
+                          "authoritative",
+                          "originalFilename",
+                          "storedFilename",
+                          "mimeType",
+                          "sizeBytes",
+                          "sha256Hash",
+                          "uploadedAt",
+                          "createdAt",
+                          "updatedAt"
+                        ],
+                        "additionalProperties": false
+                      }
+                    },
+                    "rejected": {
+                      "maxItems": 10,
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "index": {
+                            "type": "integer",
+                            "minimum": 0,
+                            "maximum": 9007199254740991
+                          },
+                          "code": {
+                            "type": "string",
+                            "enum": [
+                              "UNSUPPORTED_FILE_TYPE",
+                              "DUPLICATE_FILE_IN_BATCH",
+                              "EVIDENCE_ALREADY_IN_STAGE"
+                            ]
+                          }
                         },
-                        "stageId": {
-                          "anyOf": [
-                            {
-                              "type": "string"
-                            },
-                            {
-                              "type": "null"
-                            }
-                          ]
-                        },
-                        "uploadedById": {
-                          "type": "string"
-                        },
-                        "evidenceType": {
-                          "type": "string",
-                          "enum": [
-                            "document",
-                            "photo",
-                            "certificate"
-                          ]
-                        },
-                        "category": {
-                          "type": "string"
-                        },
-                        "authoritative": {
-                          "type": "boolean"
-                        },
-                        "originalFilename": {
-                          "type": "string"
-                        },
-                        "storedFilename": {
-                          "type": "string"
-                        },
-                        "mimeType": {
-                          "type": "string"
-                        },
-                        "sizeBytes": {
-                          "type": "integer",
-                          "minimum": 0,
-                          "maximum": 9007199254740991
-                        },
-                        "sha256Hash": {
-                          "type": "string"
-                        },
-                        "uploadedAt": {
-                          "type": "string"
-                        },
-                        "createdAt": {
-                          "type": "string"
-                        },
-                        "updatedAt": {
-                          "type": "string"
-                        }
-                      },
-                      "required": [
-                        "id",
-                        "projectId",
-                        "stageId",
-                        "uploadedById",
-                        "evidenceType",
-                        "category",
-                        "authoritative",
-                        "originalFilename",
-                        "storedFilename",
-                        "mimeType",
-                        "sizeBytes",
-                        "sha256Hash",
-                        "uploadedAt",
-                        "createdAt",
-                        "updatedAt"
-                      ],
-                      "additionalProperties": false
+                        "required": [
+                          "index",
+                          "code"
+                        ],
+                        "additionalProperties": false
+                      }
                     },
                     "bundleId": {
                       "type": "string"
@@ -351,7 +394,8 @@
                     }
                   },
                   "required": [
-                    "evidence",
+                    "evidences",
+                    "rejected",
                     "bundleId",
                     "merkleRoot",
                     "anchor"

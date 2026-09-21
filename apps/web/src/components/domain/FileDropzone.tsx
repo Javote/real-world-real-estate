@@ -1,24 +1,31 @@
+import {
+  EVIDENCE_ALLOWED_MIME,
+  EVIDENCE_MAX_FILE_MB,
+  EVIDENCE_MAX_FILES
+} from '@plataforma/shared/evidence-rules'
 import { Upload, X } from 'lucide-react'
 import { useId, useRef, useState } from 'react'
 import { cn } from '#/lib/cn'
+import { clasificarEntrantes, type MotivoLocal, type RechazoLocal } from '#/lib/evidenceFiles'
 
 // M2-D3 §Forms & Controls · FileDropzone — el área de subida con la que se arma
 // un bundle de evidencia (captura 38).
 //
-// **Los tipos y el tamaño se validan acá Y en el servidor.** La regla 10 fija
-// `application/pdf`, `image/jpeg`, `image/png` y un máximo (`MAX_FILE_SIZE_MB`,
-// hoy 50); esta validación es de conveniencia —le ahorra al usuario subir un
-// archivo pesado para que lo rechacen—, no es la que protege. La que protege
-// es la del backend, que además borra el archivo huérfano si el rechazo llega
-// después de escribirlo.
+// **Los archivos se validan acá Y en el servidor, con las MISMAS reglas.** La
+// regla 10 fija `application/pdf`, `image/jpeg`, `image/png` y un máximo; el tope
+// de tamaño, el de archivos por subida y la detección del tipo real por los
+// primeros bytes viven en `packages/shared/evidence-rules` y los importan los dos
+// lados (SPEC-218) — antes eran un `50` a mano acá y una variable de entorno allá.
+// Además se rechaza un archivo repetido (mismo SHA-256) dentro de la lista.
+// Esta validación es de conveniencia —le ahorra al usuario subir un archivo pesado
+// para que lo rechacen—, no es la que protege. La que protege es la del backend,
+// que además no deja archivos huérfanos ante un rechazo. Todo lo que el navegador
+// no pueda comprobar **falla abierto** y lo decide el backend (`lib/evidenceFiles`).
 //
 // **No sube nada.** Junta archivos y avisa; quien lo usa decide cuándo y cómo
 // mandarlos. Un dropzone que dispara la request sola haría un anclaje sin que
 // el usuario lo pida, y toda superficie de prueba la inicia el usuario
 // (M2-D4 §6.3).
-
-/** Regla 10 — los únicos tipos que el backend acepta. */
-export const TIPOS_ACEPTADOS = ['application/pdf', 'image/jpeg', 'image/png'] as const
 
 interface FileDropzoneProps {
   files: readonly File[]
@@ -29,11 +36,19 @@ interface FileDropzoneProps {
     /** Línea secundaria de ayuda. */
     secondary?: string
     remove: string
-    /** Se muestra cuando un archivo no pasa el filtro de tipo o tamaño. */
-    rejected: (nombre: string) => string
+    /** Se muestra cuando un archivo no pasa el filtro, con el motivo. */
+    rejected: (nombre: string, motivo: MotivoLocal) => string
   }
-  /** Tiene que coincidir con `MAX_FILE_SIZE_MB` de apps/api (hoy 50) — el front no lee esa variable. */
+  /**
+   * Un aviso por archivo ya elegido (p. ej. el motivo por el que el BACKEND lo
+   * rechazó y quedó en la lista para que el usuario lo vea). Sin él, un archivo
+   * rechazado desaparecería sin decir por qué.
+   */
+  notes?: ReadonlyMap<File, string>
+  /** Por defecto, el tope de `packages/shared` (`EVIDENCE_MAX_FILE_MB`). Solo los tests lo bajan. */
   maxSizeMb?: number
+  /** Por defecto, el tope de `packages/shared` (`EVIDENCE_MAX_FILES`). */
+  maxFiles?: number
   disabled?: boolean
   className?: string
 }
@@ -42,29 +57,29 @@ export function FileDropzone({
   files,
   onChange,
   labels,
-  maxSizeMb = 50,
+  notes,
+  maxSizeMb = EVIDENCE_MAX_FILE_MB,
+  maxFiles = EVIDENCE_MAX_FILES,
   disabled,
   className
 }: FileDropzoneProps) {
   const inputId = useId()
   const inputRef = useRef<HTMLInputElement>(null)
   const [encima, setEncima] = useState(false)
-  const [rechazados, setRechazados] = useState<string[]>([])
+  const [rechazados, setRechazados] = useState<RechazoLocal[]>([])
 
-  const aceptar = (entrantes: FileList | null) => {
+  const aceptar = async (entrantes: FileList | null) => {
     if (!entrantes) return
-    const buenos: File[] = []
-    const malos: string[] = []
-
-    for (const f of Array.from(entrantes)) {
-      const tipoOk = (TIPOS_ACEPTADOS as readonly string[]).includes(f.type)
-      const tamanoOk = f.size <= maxSizeMb * 1024 * 1024
-      if (tipoOk && tamanoOk) buenos.push(f)
-      else malos.push(f.name)
-    }
+    // Se copia ANTES del primer `await`: el <input> se vacía apenas vuelve el
+    // handler, y un `FileList` vaciado ya no tiene los archivos.
+    const lista = Array.from(entrantes)
+    const { aceptados, rechazados: malos } = await clasificarEntrantes(lista, files, {
+      maxBytes: maxSizeMb * 1024 * 1024,
+      maxFiles
+    })
 
     setRechazados(malos)
-    if (buenos.length > 0) onChange([...files, ...buenos])
+    if (aceptados.length > 0) onChange([...files, ...aceptados])
   }
 
   return (
@@ -82,7 +97,7 @@ export function FileDropzone({
         onDrop={(e) => {
           e.preventDefault()
           setEncima(false)
-          if (!disabled) aceptar(e.dataTransfer.files)
+          if (!disabled) void aceptar(e.dataTransfer.files)
         }}
         className={cn(
           'flex flex-col items-center gap-s2 rounded-lg border-2 border-dashed px-s4 py-s6 text-center',
@@ -111,11 +126,11 @@ export function FileDropzone({
           ref={inputRef}
           type="file"
           multiple
-          accept={TIPOS_ACEPTADOS.join(',')}
+          accept={EVIDENCE_ALLOWED_MIME.join(',')}
           disabled={disabled}
           className="sr-only"
           onChange={(e) => {
-            aceptar(e.target.files)
+            void aceptar(e.target.files)
             // Se limpia para que elegir el MISMO archivo dos veces vuelva a
             // disparar `change`. Sin esto, quitar un archivo y volver a
             // elegirlo no hace nada y parece que la app se colgó.
@@ -126,9 +141,9 @@ export function FileDropzone({
 
       {rechazados.length > 0 ? (
         <ul className="flex flex-col gap-s1">
-          {rechazados.map((nombre) => (
-            <li key={nombre} className="text-caption text-danger">
-              {labels.rejected(nombre)}
+          {rechazados.map(({ file, motivo }, i) => (
+            <li key={`${file.name}-${file.size}-${i}`} className="text-caption text-danger">
+              {labels.rejected(file.name, motivo)}
             </li>
           ))}
         </ul>
@@ -138,11 +153,14 @@ export function FileDropzone({
         <ul className="flex flex-col gap-s1">
           {files.map((f, i) => (
             <li
-              key={`${f.name}-${f.size}`}
+              key={`${f.name}-${f.size}-${i}`}
               className="flex items-center justify-between gap-s2 rounded-md bg-surface-alt px-s3 py-s2"
             >
-              <span className="min-w-0 flex-1 truncate text-body-sm text-text-secondary">
-                {f.name}
+              <span className="flex min-w-0 flex-1 flex-col">
+                <span className="truncate text-body-sm text-text-secondary">{f.name}</span>
+                {notes?.get(f) ? (
+                  <span className="text-caption text-danger">{notes.get(f)}</span>
+                ) : null}
               </span>
               <button
                 type="button"

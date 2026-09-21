@@ -127,6 +127,18 @@ no la captura. No reintroducir un `hideBrand`.
 
 ## Trampas verificadas
 
+- **2026-09-20 · el front no puede importar VALORES de `@plataforma/shared` por el índice, y por qué se
+  ve tarde.** `shared` se compila a **CommonJS** (`dist/`) y el front solo había importado *tipos* de
+  ahí. El día que `SPEC-218` necesitó valores (tipos permitidos, topes, detección por magic bytes) el
+  typecheck y **los tests de vitest pasaron**, pero el navegador tiró *"The requested module
+  '…/packages/shared/dist/evidence-rules.js' does not provide an export named …"* — Vite dev sirve el
+  archivo crudo y un `exports.X =` de CJS no es un módulo ES. Lo cazó el e2e, no los unitarios. Además el
+  índice arrastraría **Zod y los 30 archivos de schemas** al bundle (CJS no se tree-shakea).
+  **La regla:** lo que el front necesite como valor va en un módulo de `shared` **sin ninguna
+  dependencia** y se importa por su propia entrada, que apunta al **fuente `.ts`** (que Vite sí
+  transforma), no a `dist`: hoy `@plataforma/shared/evidence-rules` (`packages/shared/package.json`
+  `exports`). El resto de `shared` sigue siendo solo tipos (`import type`).
+
 - **2026-09-19 · `styles.test.ts` no tiene un número de tests estable, y no es una regresión de
   ningún commit.** Corriéndolo solo (`pnpm --filter web test -- styles.test`) da un número; corriendo
   la suite completa da otro; y varía entre corridas del mismo comando sin tocar nada. Confirmado

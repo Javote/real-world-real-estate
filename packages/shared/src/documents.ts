@@ -1,4 +1,6 @@
 import { z } from "zod";
+import { evidenceRejectionSchema } from "./evidence-files";
+import { EVIDENCE_MAX_FILES } from "./evidence-rules";
 import type { MerkleStep } from "./merkle";
 import { onChainEventSchema, onChainEventStatusSchema } from "./stage";
 
@@ -235,12 +237,15 @@ export type BundleFiles = z.infer<typeof bundleFilesSchema>;
 
 /**
  * Fila 38/44c — `POST /developer/projects/:id/stages/:stageId/evidence`. Lo
- * que alimenta el `AnchoringSuccessModal`: la evidencia recién creada, el
- * bundle que la contiene y el anclaje — TXID/Merkle root en la misma
- * respuesta (M2-D5 §2.2).
+ * que alimenta el `AnchoringSuccessModal`: las evidencias recién creadas (un
+ * lote, SPEC-218), el bundle que las contiene y **un** anclaje — TXID/Merkle
+ * root en la misma respuesta (M2-D5 §2.2).
  */
 export const stageEvidenceUploadResultSchema = z.strictObject({
-  evidence: evidenceSchema,
+  /** Las evidencias ACEPTADAS del lote — al menos una (si no, la ruta responde 400). */
+  evidences: z.array(evidenceSchema).min(1).max(EVIDENCE_MAX_FILES),
+  /** Los archivos que NO se aceptaron y por qué. Vacía si el lote entró entero (SPEC-218). */
+  rejected: z.array(evidenceRejectionSchema).max(EVIDENCE_MAX_FILES),
   bundleId: z.string(),
   merkleRoot: z.string(),
   anchor: onChainEventSchema

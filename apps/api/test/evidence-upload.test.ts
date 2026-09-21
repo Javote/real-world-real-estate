@@ -1,13 +1,16 @@
 import { createHash } from "node:crypto";
 import { existsSync, readdirSync } from "node:fs";
 import { resolve } from "node:path";
+import { EVIDENCE_MAX_FILE_BYTES } from "@plataforma/shared";
 import request from "supertest";
-import { afterAll, beforeAll, describe, expect, it } from "vitest";
+import { afterAll, beforeAll, describe, expect, it, vi } from "vitest";
 import app from "../src/app";
 import { createId } from "../src/db/id";
 import { crearBundle } from "../src/domain/stage-transition";
+import { anchorPort } from "../src/lib/anchor";
 import { en } from "../src/lib/arrays";
 import { db } from "../src/lib/db";
+import { storage } from "../src/lib/storage";
 import { FIXTURES } from "./global-setup";
 import { crearStageMinteado } from "./helpers/stages";
 
@@ -20,7 +23,19 @@ import { crearStageMinteado } from "./helpers/stages";
 // la vieja lo permitía porque nadie lo pedía, no porque alguien lo usara.
 
 const UPLOAD_DIR = resolve(process.cwd(), process.env.UPLOAD_DIR ?? "./test-uploads");
-const PDF = Buffer.from("%PDF-1.4\nevidencia de prueba\n%%EOF\n");
+
+// SPEC-218: un stage no tiene dos evidencias con el mismo SHA-256, así que un
+// test que sube "un PDF cualquiera" dos veces al mismo stage ya no puede usar
+// los mismos bytes: cada llamada produce un contenido ÚNICO. Los tests que
+// necesitan el MISMO contenido dos veces lo dicen (reusan la variable).
+const pdf = () => Buffer.from(`%PDF-1.4\nevidencia ${createId()}\n%%EOF\n`);
+const png = () =>
+  Buffer.concat([
+    Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]),
+    Buffer.from(createId())
+  ]);
+const jpeg = () => Buffer.concat([Buffer.from([0xff, 0xd8, 0xff, 0xe0]), Buffer.from(createId())]);
+const PDF = pdf(); // solo para el test de 401, que no llega a guardar nada
 
 const token = async (email: string, password: string) => {
   const res = await request(app).post("/api/v1/auth/login").send({ email, password });
@@ -81,24 +96,47 @@ const subir = (
   return req;
 };
 
+type Archivo = { buf: Buffer; nombre: string; tipo: string };
+
+/** Como `subir`, pero con N archivos en el mismo pedido (SPEC-218). */
+const subirLote = (
+  tk: string,
+  sId: string,
+  campos: Record<string, string>,
+  archivos: Archivo[],
+  pId: string = projectId
+) => {
+  const req = request(app)
+    .post(`/api/v1/developer/projects/${pId}/stages/${sId}/evidence`)
+    .set("Authorization", `Bearer ${tk}`);
+  for (const [k, v] of Object.entries(campos)) req.field(k, v);
+  for (const a of archivos) req.attach("file", a.buf, { filename: a.nombre, contentType: a.tipo });
+  return req;
+};
+
 describe("POST /developer/projects/:id/stages/:stageId/evidence — subida de evidencia", () => {
   it("un developer miembro sube un PDF y el servidor calcula el SHA-256", async () => {
+    const contenido = pdf();
     const res = await subir(
       miembro,
       stageId,
       { evidenceType: "document", category: "permiso" },
       {
-        buf: PDF,
+        buf: contenido,
         nombre: "permiso.pdf",
         tipo: "application/pdf"
       }
     );
 
     expect(res.status).toBe(201);
+    expect(res.body.evidences).toHaveLength(1);
+    expect(res.body.rejected).toEqual([]);
     // El hash lo calcula el SERVIDOR (regla 3): no llega del cliente, y tiene
     // que ser el del contenido real, no el de otra cosa.
-    expect(res.body.evidence.sha256Hash).toBe(createHash("sha256").update(PDF).digest("hex"));
-    expect(res.body.evidence.sha256Hash).toMatch(/^[a-f0-9]{64}$/);
+    expect(res.body.evidences[0].sha256Hash).toBe(
+      createHash("sha256").update(contenido).digest("hex")
+    );
+    expect(res.body.evidences[0].sha256Hash).toMatch(/^[a-f0-9]{64}$/);
   });
 
   it("rechaza un tipo de archivo no permitido SIN dejar el archivo huérfano", async () => {
@@ -114,26 +152,35 @@ describe("POST /developer/projects/:id/stages/:stageId/evidence — subida de ev
       }
     );
 
-    expect(res.status).toBeGreaterThanOrEqual(400);
+    // SPEC-218: un tipo no permitido es un rechazo POR ARCHIVO; con un solo
+    // archivo y ninguno aceptado, el pedido es 400 NO_FILES_ACCEPTED.
+    expect(res.status).toBe(400);
+    expect(res.body.code).toBe("NO_FILES_ACCEPTED");
+    expect(res.body.rejected).toEqual([{ index: 0, code: "UNSUPPORTED_FILE_TYPE" }]);
     // Regla 10: si la validación falla después de que Multer escribió, se borra
     // el huérfano. Un directorio que crece con basura rechazada es una fuga.
     expect(archivosEnDisco()).toBe(antes);
   });
 
-  it("rechaza un archivo más grande que el límite", async () => {
-    const gigante = Buffer.alloc(2 * 1024 * 1024, 0x41); // 2 MB contra un límite de 1
+  it("rechaza un archivo más grande que el límite (EVIDENCE_MAX_FILE_MB, de packages/shared) sin dejar huérfanos", async () => {
+    // El tope ya no es una variable de entorno que el test baja a 1 MB: es la
+    // constante de `packages/shared`, la MISMA que usa el front — así que el test
+    // sube 50 MB + 1 de verdad (SPEC-218; un test, ~1 s).
+    const antes = archivosEnDisco();
+    const gigante = Buffer.concat([
+      Buffer.from("%PDF-1.4\n"),
+      Buffer.alloc(EVIDENCE_MAX_FILE_BYTES, 0x41)
+    ]);
     const res = await subir(
       miembro,
       stageId,
       { evidenceType: "photo", category: "obra" },
-      {
-        buf: gigante,
-        nombre: "grande.png",
-        tipo: "image/png"
-      }
+      { buf: gigante, nombre: "grande.pdf", tipo: "application/pdf" }
     );
 
-    expect(res.status).toBeGreaterThanOrEqual(400);
+    expect(res.status).toBe(400);
+    expect(res.body.code).toBe("LIMIT_FILE_SIZE");
+    expect(archivosEnDisco()).toBe(antes);
   });
 
   it("un body inválido borra el archivo que Multer ya había escrito", async () => {
@@ -144,7 +191,7 @@ describe("POST /developer/projects/:id/stages/:stageId/evidence — subida de ev
       stageId,
       { evidenceType: "document" },
       {
-        buf: PDF,
+        buf: pdf(),
         nombre: "sin-categoria.pdf",
         tipo: "application/pdf"
       }
@@ -163,7 +210,7 @@ describe("POST /developer/projects/:id/stages/:stageId/evidence — subida de ev
       miembro,
       stageId,
       { evidenceType: "document" },
-      { buf: PDF, nombre: "sin-categoria.pdf", tipo: "application/pdf" }
+      { buf: pdf(), nombre: "sin-categoria.pdf", tipo: "application/pdf" }
     );
 
     expect(res.status).toBe(400);
@@ -186,7 +233,7 @@ describe("POST /developer/projects/:id/stages/:stageId/evidence — subida de ev
       stageId,
       { evidenceType: "document", category: "permiso" },
       {
-        buf: PDF,
+        buf: pdf(),
         nombre: "ajeno.pdf",
         tipo: "application/pdf"
       }
@@ -221,12 +268,12 @@ describe("evidencia — storagePath jamás sale al cliente (D-011)", () => {
       stageId,
       { evidenceType: "document", category: "permiso" },
       {
-        buf: PDF,
+        buf: pdf(),
         nombre: "storage-path.pdf",
         tipo: "application/pdf"
       }
     );
-    evidenceId = res.body.evidence.id;
+    evidenceId = res.body.evidences[0].id;
   });
 
   it("POST .../evidence no devuelve storagePath", async () => {
@@ -235,14 +282,14 @@ describe("evidencia — storagePath jamás sale al cliente (D-011)", () => {
       stageId,
       { evidenceType: "document", category: "permiso" },
       {
-        buf: PDF,
+        buf: pdf(),
         nombre: "otro.pdf",
         tipo: "application/pdf"
       }
     );
 
     expect(res.status).toBe(201);
-    expect(res.body.evidence).not.toHaveProperty("storagePath");
+    expect(res.body.evidences[0]).not.toHaveProperty("storagePath");
   });
 
   it("GET /developer/documents (listado, cross-proyecto) no devuelve storagePath", async () => {
@@ -314,7 +361,7 @@ describe("POST .../evidence · dispara Pending → InProgress", () => {
       miembro,
       nuevo,
       { evidenceType: "photo", category: "avance" },
-      { buf: PDF, nombre: "foto.pdf", tipo: "application/pdf" }
+      { buf: pdf(), nombre: "foto.pdf", tipo: "application/pdf" }
     );
     expect(res.status).toBe(201);
 
@@ -333,7 +380,7 @@ describe("POST .../evidence · dispara Pending → InProgress", () => {
       miembro,
       nuevo,
       { evidenceType: "photo", category: "avance" },
-      { buf: PDF, nombre: "foto2.pdf", tipo: "application/pdf" }
+      { buf: pdf(), nombre: "foto2.pdf", tipo: "application/pdf" }
     );
     expect(res.status).toBe(201);
 
@@ -352,7 +399,7 @@ describe("POST .../evidence · dispara Pending → InProgress", () => {
       miembro,
       nuevo,
       { evidenceType: "photo", category: "correccion" },
-      { buf: PDF, nombre: "correccion.pdf", tipo: "application/pdf" }
+      { buf: pdf(), nombre: "correccion.pdf", tipo: "application/pdf" }
     );
     expect(res.status).toBe(201);
 
@@ -390,10 +437,10 @@ describe("POST .../evidence · authoritative='on' (checkbox real) se guarda atri
       miembro,
       stageId,
       { evidenceType: "certificate", category: "permits", authoritative: "on" },
-      { buf: PDF, nombre: "acta.pdf", tipo: "application/pdf" }
+      { buf: pdf(), nombre: "acta.pdf", tipo: "application/pdf" }
     );
     expect(subida.status).toBe(201);
-    expect(subida.body.evidence.authoritative).toBe(true);
+    expect(subida.body.evidences[0].authoritative).toBe(true);
 
     const admin = await token(FIXTURES.admin.email, FIXTURES.admin.password);
     const res = await request(app)
@@ -490,7 +537,7 @@ describe("EvidenceBundle · el acta es idempotente por contenido (regla 8)", () 
       miembro,
       stage.id,
       { evidenceType: "document", category: "avance" },
-      { buf: PDF, nombre: "unica.pdf", tipo: "application/pdf" }
+      { buf: pdf(), nombre: "unica.pdf", tipo: "application/pdf" }
     );
     expect(res.status).toBe(201);
 
@@ -565,7 +612,7 @@ describe("POST .../evidence · un stage Completed no acepta más evidencia", () 
       miembro,
       stage.id,
       { evidenceType: "document", category: "avance" },
-      { buf: PDF, nombre: "previa.pdf", tipo: "application/pdf" }
+      { buf: pdf(), nombre: "previa.pdf", tipo: "application/pdf" }
     );
     expect(subida.status).toBe(201);
 
@@ -585,7 +632,7 @@ describe("POST .../evidence · un stage Completed no acepta más evidencia", () 
       miembro,
       sId,
       { evidenceType: "document", category: "tardia" },
-      { buf: PDF, nombre: "tardia.pdf", tipo: "application/pdf" }
+      { buf: pdf(), nombre: "tardia.pdf", tipo: "application/pdf" }
     );
 
     expect(res.status).toBe(409);
@@ -600,7 +647,7 @@ describe("POST .../evidence · un stage Completed no acepta más evidencia", () 
       miembro,
       sId,
       { evidenceType: "document", category: "tardia" },
-      { buf: PDF, nombre: "tardia2.pdf", tipo: "application/pdf" }
+      { buf: pdf(), nombre: "tardia2.pdf", tipo: "application/pdf" }
     );
 
     expect(archivosEnDisco()).toBe(antes);
@@ -626,7 +673,7 @@ describe("POST .../evidence · un stage Completed no acepta más evidencia", () 
       miembro,
       sId,
       { evidenceType: "document", category: "tardia" },
-      { buf: PDF, nombre: "tardia3.pdf", tipo: "application/pdf" }
+      { buf: pdf(), nombre: "tardia3.pdf", tipo: "application/pdf" }
     );
 
     expect(await contar()).toEqual(antes);
@@ -643,7 +690,7 @@ describe("POST .../evidence · un stage Completed no acepta más evidencia", () 
       miembro,
       stage.id,
       { evidenceType: "document", category: "avance" },
-      { buf: PDF, nombre: "inicial.pdf", tipo: "application/pdf" }
+      { buf: pdf(), nombre: "inicial.pdf", tipo: "application/pdf" }
     );
     const observado = await request(app)
       .patch(`/api/v1/stages/${stage.id}/state`)
@@ -658,5 +705,407 @@ describe("POST .../evidence · un stage Completed no acepta más evidencia", () 
       { buf: Buffer.concat([PDF, Buffer.from("fix")]), nombre: "fix.pdf", tipo: "application/pdf" }
     );
     expect(res.status).toBe(201);
+  });
+});
+
+// ─────────────────────────────────────────────────────────────────────────
+// SPEC-218 — la subida por LOTE, validada en los dos lados.
+//
+// Un pedido trae hasta 10 archivos y produce UN bundle, UN anclaje y UNA
+// notificación. Un archivo que no se acepta (tipo real no permitido, repetido,
+// ya enviado al stage) se rechaza SOLO él: el resto entra, y el rechazado vuelve
+// en `rejected` con su código.
+// ─────────────────────────────────────────────────────────────────────────
+describe("SPEC-218 · subida por lote", () => {
+  let actorId: string;
+  let investorId: string;
+  let contador = 990_000;
+
+  beforeAll(async () => {
+    actorId = (
+      await db
+        .selectFrom("User")
+        .select("id")
+        .where("email", "=", FIXTURES.activo.email)
+        .executeTakeFirstOrThrow()
+    ).id;
+    investorId = (
+      await db
+        .selectFrom("User")
+        .select("id")
+        .where("email", "=", FIXTURES.investor.email)
+        .executeTakeFirstOrThrow()
+    ).id;
+  });
+
+  /** Un stage propio por test: los conteos (bundles, eventos, filas) no se pisan. */
+  const nuevoStage = async () =>
+    (
+      await crearStageMinteado({
+        projectId,
+        name: "Stage de lote",
+        sequenceOrder: ++contador,
+        actorUserId: actorId
+      })
+    ).id;
+
+  const evidenciasDe = (sId: string) =>
+    db.selectFrom("Evidence").selectAll().where("stageId", "=", sId).execute();
+  const bundlesDe = (sId: string) =>
+    db.selectFrom("EvidenceBundle").selectAll().where("stageId", "=", sId).execute();
+  const anclajesDe = (sId: string) =>
+    db
+      .selectFrom("OnChainEvent")
+      .select("id")
+      .where("stageId", "=", sId)
+      .where("eventType", "=", "EVIDENCE_ANCHOR")
+      .execute();
+  const notificacionesDeSubida = async () =>
+    (
+      await db
+        .selectFrom("Notification")
+        .select("id")
+        .where("userId", "=", investorId)
+        .where("titleKey", "=", "notifications.evidence.uploaded")
+        .execute()
+    ).length;
+
+  const campos = { evidenceType: "document", category: "avance" };
+  const archivo = (buf: Buffer, nombre: string, tipo = "application/pdf"): Archivo => ({
+    buf,
+    nombre,
+    tipo
+  });
+
+  it("3 archivos válidos → 3 evidencias, UN bundle, UN anclaje, UNA notificación y 3 entradas de audit", async () => {
+    const sId = await nuevoStage();
+    const notifAntes = await notificacionesDeSubida();
+
+    const res = await subirLote(miembro, sId, campos, [
+      archivo(pdf(), "a.pdf"),
+      archivo(png(), "b.png", "image/png"),
+      archivo(jpeg(), "c.jpg", "image/jpeg")
+    ]);
+
+    expect(res.status).toBe(201);
+    expect(res.body.evidences).toHaveLength(3);
+    expect(res.body.rejected).toEqual([]);
+    expect(await evidenciasDe(sId)).toHaveLength(3);
+
+    // Un lote es UN acta y UN anclaje, no uno por archivo (M2-D4 §P5).
+    const bundles = await bundlesDe(sId);
+    expect(bundles).toHaveLength(1);
+    expect(res.body.bundleId).toBe(bundles[0]?.id);
+    const items = await db
+      .selectFrom("EvidenceBundleItem")
+      .select("evidenceId")
+      .where("bundleId", "=", res.body.bundleId)
+      .execute();
+    expect(items).toHaveLength(3);
+    expect(await anclajesDe(sId)).toHaveLength(1);
+
+    // Una notificación por lote al investor, no tres.
+    expect((await notificacionesDeSubida()) - notifAntes).toBe(1);
+
+    // El audit log conserva la granularidad: una entrada por evidencia.
+    const auditorias = await db
+      .selectFrom("AuditLog")
+      .select("entityId")
+      .where("action", "=", "UPLOAD_STAGE_EVIDENCE")
+      .where(
+        "entityId",
+        "in",
+        res.body.evidences.map((e: { id: string }) => e.id)
+      )
+      .execute();
+    expect(auditorias).toHaveLength(3);
+  });
+
+  it("un archivo de tipo falso entre tres: se rechaza SOLO ese, y no deja rastro", async () => {
+    const sId = await nuevoStage();
+    const antes = archivosEnDisco();
+    const notifAntes = await notificacionesDeSubida();
+
+    const res = await subirLote(miembro, sId, campos, [
+      archivo(pdf(), "ok1.pdf"),
+      // Un ejecutable con el `Content-Type` de un PDF: lo que un `fileFilter`
+      // por MIME declarado deja pasar.
+      archivo(Buffer.from("MZ\x90\x00 ejecutable disfrazado"), "falso.pdf"),
+      archivo(pdf(), "ok2.pdf")
+    ]);
+
+    expect(res.status).toBe(201);
+    expect(res.body.evidences).toHaveLength(2);
+    expect(res.body.rejected).toEqual([{ index: 1, code: "UNSUPPORTED_FILE_TYPE" }]);
+    expect(await evidenciasDe(sId)).toHaveLength(2);
+    expect((await notificacionesDeSubida()) - notifAntes).toBe(1);
+    // Solo quedan en disco los dos aceptados (con `disk` el temporal ES el
+    // almacenamiento): el rechazado no dejó ni el temporal.
+    expect(archivosEnDisco() - antes).toBe(2);
+  });
+
+  it("un PNG etiquetado como JPEG también es un tipo que no coincide", async () => {
+    const sId = await nuevoStage();
+    const res = await subirLote(miembro, sId, campos, [
+      archivo(png(), "engañoso.jpg", "image/jpeg"),
+      archivo(pdf(), "ok.pdf")
+    ]);
+
+    expect(res.status).toBe(201);
+    expect(res.body.rejected).toEqual([{ index: 0, code: "UNSUPPORTED_FILE_TYPE" }]);
+    expect(res.body.evidences).toHaveLength(1);
+  });
+
+  it("ninguno aceptable → 400 NO_FILES_ACCEPTED, sin bundle, sin anclaje, sin notificación", async () => {
+    const sId = await nuevoStage();
+    const antes = archivosEnDisco();
+    const notifAntes = await notificacionesDeSubida();
+
+    const res = await subirLote(miembro, sId, campos, [
+      archivo(Buffer.from("MZ uno"), "uno.pdf"),
+      archivo(Buffer.from("MZ dos"), "dos.pdf")
+    ]);
+
+    expect(res.status).toBe(400);
+    expect(res.body.code).toBe("NO_FILES_ACCEPTED");
+    expect(res.body.rejected).toEqual([
+      { index: 0, code: "UNSUPPORTED_FILE_TYPE" },
+      { index: 1, code: "UNSUPPORTED_FILE_TYPE" }
+    ]);
+    expect(await evidenciasDe(sId)).toHaveLength(0);
+    expect(await bundlesDe(sId)).toHaveLength(0);
+    expect(await anclajesDe(sId)).toHaveLength(0);
+    expect(await notificacionesDeSubida()).toBe(notifAntes);
+    expect(archivosEnDisco()).toBe(antes);
+  });
+
+  it("más de 10 archivos → error del pedido: no se procesa ninguno ni queda nada en disco", async () => {
+    const sId = await nuevoStage();
+    const antes = archivosEnDisco();
+
+    const res = await subirLote(
+      miembro,
+      sId,
+      campos,
+      Array.from({ length: 11 }, (_, i) => archivo(pdf(), `f${i}.pdf`))
+    );
+
+    expect(res.status).toBe(400);
+    expect(await evidenciasDe(sId)).toHaveLength(0);
+    expect(await bundlesDe(sId)).toHaveLength(0);
+    expect(archivosEnDisco()).toBe(antes);
+  });
+
+  it("10 archivos (el tope) entran en un solo lote", async () => {
+    const sId = await nuevoStage();
+    const res = await subirLote(
+      miembro,
+      sId,
+      campos,
+      Array.from({ length: 10 }, (_, i) => archivo(pdf(), `f${i}.pdf`))
+    );
+
+    expect(res.status).toBe(201);
+    expect(res.body.evidences).toHaveLength(10);
+    expect(await bundlesDe(sId)).toHaveLength(1);
+  });
+
+  describe("repetidos", () => {
+    it("dos archivos nuevos e idénticos, directo al backend: el primero entra, el segundo vuelve DUPLICATE_FILE_IN_BATCH", async () => {
+      const sId = await nuevoStage();
+      const igual = pdf();
+
+      const res = await subirLote(miembro, sId, campos, [
+        archivo(igual, "original.pdf"),
+        // Mismo contenido con OTRO nombre: cuenta el contenido, no el nombre.
+        archivo(Buffer.from(igual), "copia.pdf")
+      ]);
+
+      expect(res.status).toBe(201);
+      expect(res.body.evidences).toHaveLength(1);
+      expect(res.body.rejected).toEqual([{ index: 1, code: "DUPLICATE_FILE_IN_BATCH" }]);
+      expect(await evidenciasDe(sId)).toHaveLength(1);
+    });
+
+    it("un archivo ya enviado en un lote anterior NO tumba el lote: el nuevo entra y el otro vuelve EVIDENCE_ALREADY_IN_STAGE", async () => {
+      const sId = await nuevoStage();
+      const previo = pdf();
+      const primera = await subirLote(miembro, sId, campos, [archivo(previo, "previo.pdf")]);
+      expect(primera.status).toBe(201);
+
+      const antes = archivosEnDisco();
+      const res = await subirLote(miembro, sId, campos, [
+        archivo(Buffer.from(previo), "otra-vez.pdf"),
+        archivo(pdf(), "nuevo.pdf")
+      ]);
+
+      expect(res.status).toBe(201);
+      expect(res.body.rejected).toEqual([{ index: 0, code: "EVIDENCE_ALREADY_IN_STAGE" }]);
+      expect(res.body.evidences).toHaveLength(1);
+      expect(await evidenciasDe(sId)).toHaveLength(2);
+      // Solo el nuevo dejó un archivo.
+      expect(archivosEnDisco() - antes).toBe(1);
+
+      // El root del segundo lote incluye UNA hoja nueva, no dos: 2 hojas en total.
+      const items = await db
+        .selectFrom("EvidenceBundleItem")
+        .select("evidenceId")
+        .where("bundleId", "=", res.body.bundleId)
+        .execute();
+      expect(items).toHaveLength(2);
+    });
+
+    it("dos idénticos que además ya estaban en el stage: los dos vuelven EVIDENCE_ALREADY_IN_STAGE (el motivo de fondo)", async () => {
+      const sId = await nuevoStage();
+      const previo = pdf();
+      await subirLote(miembro, sId, campos, [archivo(previo, "previo.pdf")]);
+
+      const res = await subirLote(miembro, sId, campos, [
+        archivo(Buffer.from(previo), "a.pdf"),
+        archivo(Buffer.from(previo), "b.pdf")
+      ]);
+
+      expect(res.status).toBe(400);
+      expect(res.body.code).toBe("NO_FILES_ACCEPTED");
+      expect(res.body.rejected).toEqual([
+        { index: 0, code: "EVIDENCE_ALREADY_IN_STAGE" },
+        { index: 1, code: "EVIDENCE_ALREADY_IN_STAGE" }
+      ]);
+    });
+
+    it("el mismo archivo en OTRO stage sí se acepta", async () => {
+      const uno = await nuevoStage();
+      const otro = await nuevoStage();
+      const contenido = pdf();
+
+      expect((await subirLote(miembro, uno, campos, [archivo(contenido, "x.pdf")])).status).toBe(
+        201
+      );
+      const res = await subirLote(miembro, otro, campos, [
+        archivo(Buffer.from(contenido), "x.pdf")
+      ]);
+
+      expect(res.status).toBe(201);
+      expect(res.body.rejected).toEqual([]);
+    });
+  });
+
+  describe("errores del pedido: se deciden ANTES de guardar nada", () => {
+    it("un stage Completed es 409 aun con un body grande, y la respuesta le llega al cliente", async () => {
+      const sId = await nuevoStage();
+      await db
+        .updateTable("Stage")
+        .set({ state: "Completed", updatedAt: new Date() })
+        .where("id", "=", sId)
+        .execute();
+      const antes = archivosEnDisco();
+
+      // 5 MB: si el servidor respondiera sin descartar el body, el cliente
+      // vería un corte de conexión y no el 409.
+      const grande = Buffer.concat([
+        Buffer.from("%PDF-1.4\n"),
+        Buffer.alloc(5 * 1024 * 1024, 0x42)
+      ]);
+      const res = await subirLote(miembro, sId, campos, [archivo(grande, "tarde.pdf")]);
+
+      expect(res.status).toBe(409);
+      expect(res.body.code).toBe("STAGE_ALREADY_COMPLETED");
+      expect(archivosEnDisco()).toBe(antes);
+    });
+
+    it("un stage que no es de este proyecto es 404 y no guarda nada", async () => {
+      const antes = archivosEnDisco();
+      const res = await subirLote(miembro, createId(), campos, [archivo(pdf(), "x.pdf")]);
+
+      expect(res.status).toBe(404);
+      expect(archivosEnDisco()).toBe(antes);
+    });
+  });
+
+  describe("fallas de infraestructura: nada a medias", () => {
+    it("si `put` falla en el segundo de tres, se borra el primero y no queda ninguna fila", async () => {
+      const sId = await nuevoStage();
+      const antes = archivosEnDisco();
+      const original = storage.put.bind(storage);
+      let llamada = 0;
+      const put = vi.spyOn(storage, "put").mockImplementation(async (entrada) => {
+        if (++llamada === 2) throw new Error("R2 caído");
+        return original(entrada);
+      });
+
+      const res = await subirLote(miembro, sId, campos, [
+        archivo(pdf(), "a.pdf"),
+        archivo(pdf(), "b.pdf"),
+        archivo(pdf(), "c.pdf")
+      ]);
+      put.mockRestore();
+
+      expect(res.status).toBe(500);
+      expect(await evidenciasDe(sId)).toHaveLength(0);
+      expect(await bundlesDe(sId)).toHaveLength(0);
+      expect(archivosEnDisco()).toBe(antes);
+    });
+
+    it("si el hash de lo guardado no coincide con el del temporal, el pedido falla y se limpia todo", async () => {
+      const sId = await nuevoStage();
+      const antes = archivosEnDisco();
+      const original = storage.put.bind(storage);
+      const put = vi.spyOn(storage, "put").mockImplementation(async (entrada) => {
+        const g = await original(entrada);
+        return { ...g, sha256: "0".repeat(64) };
+      });
+
+      const res = await subirLote(miembro, sId, campos, [archivo(pdf(), "a.pdf")]);
+      put.mockRestore();
+
+      expect(res.status).toBe(500);
+      expect(await evidenciasDe(sId)).toHaveLength(0);
+      expect(await anclajesDe(sId)).toHaveLength(0);
+      expect(archivosEnDisco()).toBe(antes);
+    });
+
+    it("si el anclaje falla (D-059), el lote igual entra: 201, archivos conservados y anchor Failed", async () => {
+      const sId = await nuevoStage();
+      const anclar = vi
+        .spyOn(anchorPort(), "anchorCommitment")
+        .mockRejectedValueOnce(new Error("el proveedor no contesta"));
+
+      const res = await subirLote(miembro, sId, campos, [
+        archivo(pdf(), "a.pdf"),
+        archivo(pdf(), "b.pdf")
+      ]);
+      anclar.mockRestore();
+
+      expect(res.status).toBe(201);
+      expect(res.body.evidences).toHaveLength(2);
+      expect(res.body.anchor.status).toBe("Failed");
+      expect(res.body.anchor.txid).toBeNull();
+      expect(await evidenciasDe(sId)).toHaveLength(2);
+    });
+  });
+
+  it("el nombre en disco y `storedFilename` son opacos: no llevan el nombre original (regla 2)", async () => {
+    const sId = await nuevoStage();
+    const res = await subirLote(miembro, sId, campos, [
+      archivo(pdf(), "plano-financiero-secreto.pdf")
+    ]);
+
+    expect(res.status).toBe(201);
+    const [fila] = await evidenciasDe(sId);
+    expect(fila?.originalFilename).toBe("plano-financiero-secreto.pdf"); // solo en la base
+    expect(fila?.storedFilename).not.toContain("secreto");
+    expect(fila?.storagePath).not.toContain("secreto");
+    // Y lo que guardamos como tipo es el REAL, detectado, no el declarado.
+    expect(fila?.mimeType).toBe("application/pdf");
+  });
+
+  it("un lote con un solo archivo se comporta como la subida de siempre (compatibilidad de uso)", async () => {
+    const sId = await nuevoStage();
+    const res = await subirLote(miembro, sId, campos, [archivo(pdf(), "solo.pdf")]);
+
+    expect(res.status).toBe(201);
+    expect(res.body.evidences).toHaveLength(1);
+    expect(res.body.rejected).toEqual([]);
+    expect(res.body.merkleRoot).toMatch(/^[0-9a-f]{64}$/);
   });
 });

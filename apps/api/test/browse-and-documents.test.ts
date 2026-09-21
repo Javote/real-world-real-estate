@@ -126,8 +126,8 @@ describe("POST /developer/projects/:id/stages/:stageId/evidence", () => {
     expect(res.body.anchor.eventType).toBe("EVIDENCE_ANCHOR");
     expect(res.body.anchor.commitment).toBe(res.body.merkleRoot);
     // `storagePath` NUNCA sale al cliente (D-011).
-    expect(res.body.evidence.storagePath).toBeUndefined();
-    expect(res.body.evidence.sha256Hash).toMatch(/^[0-9a-f]{64}$/);
+    expect(res.body.evidences[0].storagePath).toBeUndefined();
+    expect(res.body.evidences[0].sha256Hash).toMatch(/^[0-9a-f]{64}$/);
   });
 
   it("un stage de otro proyecto es 404, no una subida a ciegas", async () => {

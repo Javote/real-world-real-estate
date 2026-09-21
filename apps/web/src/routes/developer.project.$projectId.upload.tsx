@@ -1,8 +1,14 @@
+import {
+  EVIDENCE_MAX_FILE_MB,
+  EVIDENCE_MAX_FILES,
+  EVIDENCE_REJECTION_CODES,
+  type EvidenceRejectionCode
+} from '@plataforma/shared/evidence-rules'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { createFileRoute, useNavigate } from '@tanstack/react-router'
 import { ShieldCheck } from 'lucide-react'
 import { useState } from 'react'
-import { api } from '#/api/port'
+import { ApiError, api } from '#/api/port'
 import type { StageEvidenceAnchor } from '#/api/types'
 import { DEV_ROLES } from '#/auth/roles'
 import { useRoleGuard } from '#/auth/useRoleGuard'
@@ -27,6 +33,12 @@ import { cn } from '#/lib/cn'
 // scroll horizontal, y card de la etapa elegida con el dropzone, las notas
 // opcionales y el botón de anclar.
 //
+// **La subida es por LOTE (SPEC-218):** todos los archivos elegidos viajan en UN
+// request y producen un bundle y un anclaje. Si el backend rechaza alguno (tipo
+// real no permitido, repetido, ya subido a la etapa), el resto entra igual y el
+// rechazado **queda en la lista con su motivo**: nada desaparece sin decir por qué.
+// Antes se subía solo el primero y el resto se perdía sin aviso.
+//
 // **El modal de éxito es la ÚNICA superficie de prueba que se abre sola**
 // (M2-D4 §6.3) — y solo tras un anclaje exitoso, nunca al entrar. El TXID y el
 // Merkle root llegan en la misma respuesta del POST (M2-D5 §2.2), así que no
@@ -35,6 +47,30 @@ import { cn } from '#/lib/cn'
 export const Route = createFileRoute('/developer/project/$projectId/upload')({
   component: UploadEvidence
 })
+
+/** Un rechazo del backend tal como viaja en `rejected` (`{ index, code }`). */
+interface RechazoDelServidor {
+  index: number
+  code: EvidenceRejectionCode
+}
+
+function esRechazo(x: unknown): x is RechazoDelServidor {
+  if (typeof x !== 'object' || x === null) return false
+  const { index, code } = x as Record<string, unknown>
+  return (
+    typeof index === 'number' && (EVIDENCE_REJECTION_CODES as readonly unknown[]).includes(code)
+  )
+}
+
+/** Los rechazos de un `400 NO_FILES_ACCEPTED`, o `null` si el error es otro. */
+function rechazosDeUnError(error: unknown): RechazoDelServidor[] | null {
+  if (!(error instanceof ApiError) || typeof error.body !== 'object' || error.body === null) {
+    return null
+  }
+  const { code, rejected } = error.body as Record<string, unknown>
+  if (code !== 'NO_FILES_ACCEPTED' || !Array.isArray(rejected)) return null
+  return rejected.filter(esRechazo)
+}
 
 function UploadEvidence() {
   const { projectId } = Route.useParams()
@@ -47,6 +83,10 @@ function UploadEvidence() {
   const [archivos, setArchivos] = useState<File[]>([])
   const [notas, setNotas] = useState('')
   const [anclado, setAnclado] = useState<StageEvidenceAnchor | null>(null)
+  // El motivo por el que el BACKEND rechazó cada archivo que quedó en la lista, y
+  // si el lote entró a medias o no entró nada.
+  const [avisos, setAvisos] = useState<ReadonlyMap<File, string>>(new Map())
+  const [resumen, setResumen] = useState<'partial' | 'none' | null>(null)
 
   const { data: proyecto } = useQuery({
     queryKey: ['developer', 'project', projectId],
@@ -54,24 +94,49 @@ function UploadEvidence() {
     enabled: ready
   })
 
+  const marcarRechazados = (enviados: readonly File[], rechazos: readonly RechazoDelServidor[]) => {
+    setAvisos(
+      new Map(
+        rechazos.flatMap((r) => {
+          const archivo = enviados[r.index]
+          return archivo ? [[archivo, t(`developer.upload.serverRejected.${r.code}`)] as const] : []
+        })
+      )
+    )
+  }
+
   const subir = useMutation({
-    mutationFn: async () => {
+    mutationFn: async (enviados: File[]) => {
+      if (enviados.length === 0 || !stageId) throw new Error('sin archivo o sin etapa')
       const form = new FormData()
-      // Un archivo por request: el endpoint es `uploadSingleEvidence`. El
-      // bundle se rearma en cada subida, así que N archivos son N requests y
-      // el root final los compromete a todos.
-      const primero = archivos[0]
-      if (!primero || !stageId) throw new Error('sin archivo o sin etapa')
-      form.append('file', primero)
+      // Todos en un request: `file` repetido. El bundle es UNO, con una hoja por
+      // archivo aceptado, y el anclaje también.
+      for (const archivo of enviados) form.append('file', archivo)
       form.append('evidenceType', 'document')
       form.append('category', notas.trim() ? 'inspection' : 'document')
       return api.uploadStageEvidence(projectId, stageId, form)
     },
-    onSuccess: (resultado) => {
+    onMutate: () => {
+      setAvisos(new Map())
+      setResumen(null)
+    },
+    onSuccess: (resultado, enviados) => {
+      const rechazados = new Set(resultado.rejected.map((r) => r.index))
+      // Salen de la lista los aceptados; los rechazados se quedan, con su motivo.
+      const quedan = enviados.filter((_, i) => rechazados.has(i))
       setAnclado(resultado)
-      setArchivos([])
-      setNotas('')
+      setArchivos(quedan)
+      marcarRechazados(enviados, resultado.rejected)
+      setResumen(resultado.rejected.length > 0 ? 'partial' : null)
+      if (quedan.length === 0) setNotas('')
       void queryClient.invalidateQueries({ queryKey: ['developer'] })
+    },
+    onError: (error, enviados) => {
+      // `400 NO_FILES_ACCEPTED`: ninguno entró, y el cuerpo dice por qué cada uno.
+      const rechazos = rechazosDeUnError(error)
+      if (!rechazos) return
+      marcarRechazados(enviados, rechazos)
+      setResumen('none')
     }
   })
 
@@ -130,13 +195,17 @@ function UploadEvidence() {
               files={archivos}
               onChange={setArchivos}
               disabled={subir.isPending}
-              // Tiene que coincidir con MAX_FILE_SIZE_MB de apps/api (render.yaml / .env.example).
-              maxSizeMb={50}
+              // Sin `maxSizeMb`: el tope sale de `packages/shared`, el mismo que aplica el backend.
+              notes={avisos}
               labels={{
                 primary: t('developer.upload.dropzone'),
                 secondary: t('developer.upload.dropzoneHint'),
                 remove: t('developer.upload.remove'),
-                rejected: (nombre) => t('developer.upload.rejected', { name: nombre })
+                rejected: (nombre, motivo) =>
+                  t(`developer.upload.rejected.${motivo}`, {
+                    name: nombre,
+                    max: String(motivo === 'size' ? EVIDENCE_MAX_FILE_MB : EVIDENCE_MAX_FILES)
+                  })
               }}
             />
 
@@ -150,12 +219,20 @@ function UploadEvidence() {
               disabled={subir.isPending}
             />
 
-            <PrimaryButton onClick={() => subir.mutate()} disabled={!puedeAnclar}>
+            <PrimaryButton onClick={() => subir.mutate(archivos)} disabled={!puedeAnclar}>
               <ShieldCheck className="size-icon-inline" aria-hidden="true" />
               {subir.isPending ? t('developer.upload.anchoring') : t('developer.upload.anchor')}
             </PrimaryButton>
 
-            {subir.isError ? (
+            {resumen ? (
+              <p role="status" className="text-body-sm text-danger">
+                {t(
+                  resumen === 'none' ? 'developer.upload.noneAccepted' : 'developer.upload.partial'
+                )}
+              </p>
+            ) : null}
+
+            {subir.isError && resumen !== 'none' ? (
               <p className="text-body-sm text-danger">{t('developer.upload.error')}</p>
             ) : null}
           </article>

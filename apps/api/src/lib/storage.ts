@@ -52,6 +52,23 @@ function sha256Of(stream: Readable): Promise<string> {
   });
 }
 
+/** SHA-256 de un archivo local, en streaming (no lo carga entero en memoria). */
+export function sha256DeArchivo(localPath: string): Promise<string> {
+  return sha256Of(fs.createReadStream(localPath));
+}
+
+/** Los primeros `n` bytes de un archivo local — para reconocer su tipo real sin leerlo entero. */
+export async function leerCabecera(localPath: string, n: number): Promise<Buffer> {
+  const handle = await fs.promises.open(localPath, "r");
+  try {
+    const buf = Buffer.alloc(n);
+    const { bytesRead } = await handle.read(buf, 0, n, 0);
+    return buf.subarray(0, bytesRead);
+  } finally {
+    await handle.close();
+  }
+}
+
 /** Disco local: el archivo ya lo escribió Multer, así que `put` solo lo hashea. */
 class DiskStorage implements StoragePort {
   readonly driver = "disk" as const;

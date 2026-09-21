@@ -46,7 +46,10 @@ test.describe('Evidence flow — M2-D1 §6', () => {
     await page.getByLabel(/arrastrá archivos|drag files/i).setInputFiles({
       name: 'acta-inspeccion.pdf',
       mimeType: 'application/pdf',
-      buffer: Buffer.from('%PDF-1.4\nacta de prueba\n%%EOF\n')
+      // Contenido ÚNICO por corrida: un stage no acepta dos evidencias con el
+      // mismo SHA-256 (SPEC-218), así que repetir los bytes contra una base que
+      // ya corrió este flujo daría "ya se subió a esta etapa".
+      buffer: Buffer.from(`%PDF-1.4\nacta de prueba ${Date.now()}\n%%EOF\n`)
     })
 
     await page.getByRole('button', { name: /anclar evidencia|anchor evidence/i }).click()
@@ -56,6 +59,60 @@ test.describe('Evidence flow — M2-D1 §6', () => {
     // respuesta del POST (M2-D5 §2.2).
     await expect(page.getByTestId('DEV-ANCHOR-SUCCESS-001')).toBeVisible({ timeout: 20_000 })
     await expect(page.getByText(/merkle/i)).toBeVisible()
+  })
+
+  test('paso 2b · un lote de varios archivos: un anclaje, y lo rechazado queda en la lista con su motivo', async ({
+    page
+  }) => {
+    // SPEC-218. Antes se subía solo `archivos[0]` y el resto desaparecía sin aviso.
+    await loginConSolapa(page, 'Developer')
+    await page.goto('/developer/projects')
+    await expect(page.getByTestId('DEV-PROJECTS-LIST-001')).toBeVisible()
+    await page
+      .getByRole('button')
+      .filter({ hasText: /Torre A/ })
+      .first()
+      .click()
+    await expect(page.getByTestId('DEV-PROJECT-DETAIL-001')).toBeVisible()
+    await page.getByRole('button', { name: /subir evidencia|upload evidence/i }).click()
+    await expect(page.getByTestId('DEV-EVIDENCE-UPLOAD-001')).toBeVisible()
+    await page.getByRole('button', { name: /etapa 2|stage 2/i }).click()
+
+    const unico = Date.now()
+    const pdf = (nombre: string, texto: string) => ({
+      name: nombre,
+      mimeType: 'application/pdf',
+      buffer: Buffer.from(`%PDF-1.4\n${texto} ${unico}\n%%EOF\n`)
+    })
+    const entrada = page.getByLabel(/arrastrá archivos|drag files/i)
+
+    await entrada.setInputFiles([
+      pdf('lote-uno.pdf', 'lote uno'),
+      pdf('lote-dos.pdf', 'lote dos'),
+      // Un ejecutable con extensión y tipo de PDF: el navegador lo frena por sus bytes.
+      { name: 'falso.pdf', mimeType: 'application/pdf', buffer: Buffer.from('MZ ejecutable') }
+    ])
+    await expect(page.getByText(/falso\.pdf no es un PDF|falso\.pdf is not a valid/i)).toBeVisible()
+    await expect(page.getByText('lote-uno.pdf')).toBeVisible()
+    await expect(page.getByText('lote-dos.pdf')).toBeVisible()
+
+    await page.getByRole('button', { name: /anclar evidencia|anchor evidence/i }).click()
+    await expect(page.getByTestId('DEV-ANCHOR-SUCCESS-001')).toBeVisible({ timeout: 20_000 })
+    await page.getByRole('button', { name: /^(listo|done)$/i }).click()
+
+    // Los aceptados salen de la lista: ya están anclados.
+    await expect(page.getByText('lote-uno.pdf')).toHaveCount(0)
+    await expect(page.getByText('lote-dos.pdf')).toHaveCount(0)
+
+    // El mismo contenido otra vez, en OTRO envío: el navegador no puede saberlo,
+    // el backend lo rechaza y el archivo queda en la lista con el motivo.
+    await entrada.setInputFiles(pdf('lote-uno-de-nuevo.pdf', 'lote uno'))
+    await page.getByRole('button', { name: /anclar evidencia|anchor evidence/i }).click()
+    await expect(
+      page.getByText(/ya se subió a esta etapa|was already uploaded to this stage/i)
+    ).toBeVisible({ timeout: 20_000 })
+    await expect(page.getByText('lote-uno-de-nuevo.pdf')).toBeVisible()
+    await expect(page.getByTestId('DEV-ANCHOR-SUCCESS-001')).toHaveCount(0)
   })
 
   test('paso 3 · INV recibe la novedad del avance', async ({ page }) => {

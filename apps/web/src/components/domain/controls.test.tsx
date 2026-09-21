@@ -1,4 +1,4 @@
-import { fireEvent, render, screen } from '@testing-library/react'
+import { fireEvent, render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { describe, expect, it, vi } from 'vitest'
 import { CategoryChip, FilterPill, StageChip } from './Chips'
@@ -140,13 +140,19 @@ describe('los tres chips', () => {
 })
 
 describe('FileDropzone', () => {
+  // SPEC-218: el dropzone valida con las reglas de `packages/shared` (tipo real
+  // por magic bytes, tamaño, cupo y repetidos). Los archivos de estos tests
+  // llevan la firma real, y la validación es ASÍNCRONA (lee los bytes).
   const labels = {
     primary: 'Arrastrá archivos',
     remove: 'Quitar',
-    rejected: (n: string) => `${n} no se puede subir`
+    rejected: (n: string, motivo: string) => `${n} no se puede subir (${motivo})`
   }
+  const PDF_BYTES = [0x25, 0x50, 0x44, 0x46, 0x2d]
+  const pdfReal = (nombre: string, cola = nombre) =>
+    new File([Uint8Array.from(PDF_BYTES), cola], nombre, { type: 'application/pdf' })
 
-  it('acepta solo los tipos de la regla 10 — probado por DROP, no por el picker', () => {
+  it('acepta solo los tipos de la regla 10 — probado por DROP, no por el picker', async () => {
     // **El picker no sirve para probar esto y es interesante por qué.** El
     // atributo `accept` del input ya filtra: `userEvent.upload` lo respeta y el
     // .exe nunca llega a la validación de JS. O sea que el picker prueba el
@@ -158,14 +164,27 @@ describe('FileDropzone', () => {
     const onChange = vi.fn()
     const { container } = render(<FileDropzone files={[]} onChange={onChange} labels={labels} />)
 
-    const pdf = new File(['x'], 'plano.pdf', { type: 'application/pdf' })
+    const pdf = pdfReal('plano.pdf')
     const exe = new File(['x'], 'virus.exe', { type: 'application/x-msdownload' })
     const zona = container.querySelector('[class*="border-dashed"]')!
 
     fireEvent.drop(zona, { dataTransfer: { files: [pdf, exe] } })
 
-    expect(onChange).toHaveBeenCalledWith([pdf])
-    expect(screen.getByText('virus.exe no se puede subir')).toBeDefined()
+    await waitFor(() => expect(onChange).toHaveBeenCalledWith([pdf]))
+    expect(screen.getByText('virus.exe no se puede subir (type)')).toBeDefined()
+  })
+
+  it('rechaza un ejecutable que se hace pasar por PDF: mira los bytes, no el `type`', async () => {
+    const onChange = vi.fn()
+    const { container } = render(<FileDropzone files={[]} onChange={onChange} labels={labels} />)
+
+    const falso = new File(['MZ\x90\x00 ejecutable'], 'falso.pdf', { type: 'application/pdf' })
+    fireEvent.drop(container.querySelector('[class*="border-dashed"]')!, {
+      dataTransfer: { files: [falso] }
+    })
+
+    expect(await screen.findByText('falso.pdf no se puede subir (type)')).toBeDefined()
+    expect(onChange).not.toHaveBeenCalled()
   })
 
   it('rechaza lo que pasa el tamaño máximo', async () => {
@@ -174,23 +193,52 @@ describe('FileDropzone', () => {
     const onChange = vi.fn()
     render(<FileDropzone files={[]} onChange={onChange} labels={labels} maxSizeMb={0.000001} />)
 
-    const grande = new File(['x'.repeat(500)], 'grande.pdf', { type: 'application/pdf' })
+    const grande = pdfReal('grande.pdf', 'x'.repeat(500))
     await userEvent.upload(screen.getByLabelText('Arrastrá archivos'), grande)
 
+    expect(await screen.findByText('grande.pdf no se puede subir (size)')).toBeDefined()
     expect(onChange).not.toHaveBeenCalled()
-    expect(screen.getByText('grande.pdf no se puede subir')).toBeDefined()
+  })
+
+  it('no deja agregar dos archivos con el mismo contenido, aunque tengan otro nombre', async () => {
+    const onChange = vi.fn()
+    const { container } = render(<FileDropzone files={[]} onChange={onChange} labels={labels} />)
+
+    const original = pdfReal('original.pdf', 'igual')
+    const copia = pdfReal('copia.pdf', 'igual')
+    fireEvent.drop(container.querySelector('[class*="border-dashed"]')!, {
+      dataTransfer: { files: [original, copia] }
+    })
+
+    await waitFor(() => expect(onChange).toHaveBeenCalledWith([original]))
+    expect(screen.getByText('copia.pdf no se puede subir (duplicate)')).toBeDefined()
+  })
+
+  it('muestra el aviso que le pasa quien lo usa (el motivo del backend) debajo del archivo', () => {
+    const rechazado = pdfReal('viejo.pdf')
+    render(
+      <FileDropzone
+        files={[rechazado]}
+        onChange={vi.fn()}
+        labels={labels}
+        notes={new Map([[rechazado, 'Ya se subió a esta etapa antes.']])}
+      />
+    )
+
+    expect(screen.getByText('viejo.pdf')).toBeDefined()
+    expect(screen.getByText('Ya se subió a esta etapa antes.')).toBeDefined()
   })
 
   it('no sube nada por su cuenta', async () => {
     const onChange = vi.fn()
     render(<FileDropzone files={[]} onChange={onChange} labels={labels} />)
 
-    const pdf = new File(['x'], 'a.pdf', { type: 'application/pdf' })
+    const pdf = pdfReal('a.pdf')
     await userEvent.upload(screen.getByLabelText('Arrastrá archivos'), pdf)
 
     // Solo avisa: quien lo usa decide cuándo mandar. Un dropzone que dispara la
     // request haría un anclaje sin que el usuario lo pida (M2-D4 §6.3).
-    expect(onChange).toHaveBeenCalledWith([pdf])
+    await waitFor(() => expect(onChange).toHaveBeenCalledWith([pdf]))
   })
 })
 

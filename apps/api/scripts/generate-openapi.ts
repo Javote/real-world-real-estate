@@ -3,6 +3,7 @@ import { mkdirSync, writeFileSync } from "node:fs";
 import path from "node:path";
 import {
   cuidParamSchema,
+  EVIDENCE_MAX_FILES,
   hex64ParamSchema,
   positiveIntParamSchema,
   stageEvidenceUploadResultSchema,
@@ -90,21 +91,23 @@ type SchemaEntry = { body?: ZodType; bodyContentType?: string; query?: ZodType }
  * `route-guards.test.ts`: se edita el mismo día que se agrega el `safeParse`.
  */
 const REQUEST_SCHEMAS: Record<string, SchemaEntry> = {
-  // Multipart: el archivo es un campo aparte (`req.file`, Multer) que este
-  // schema no valida — valida los demás campos del form, que Express entrega
-  // como string. Documentado en `bodyContentType`, no en el schema.
+  // Multipart, **por lote desde SPEC-218**: `file` se repite (hasta
+  // `EVIDENCE_MAX_FILES`) y `stageEvidenceUploadSchema` valida los demás campos
+  // del form, que Express entrega como string. El archivo no lo valida un schema
+  // Zod sino Multer (tope de tamaño y de cantidad, de `packages/shared`) y, para
+  // el tipo real, `detectarTipoDeEvidencia` en el handler — se declara acá solo
+  // para que el documento diga cómo es el pedido.
   //
-  // **Se queda afuera de `OpenAPIHandler` a propósito, la única de las 20
-  // rutas de §D que no migra así.** `OpenAPIHandler` parsea
-  // `multipart/form-data` con el `Response(stream).formData()` nativo de
-  // Node, que bufferea el archivo ENTERO en memoria sin ningún límite
-  // configurable — a diferencia de Multer, que hoy aplica `limits.fileSize` y
-  // `fileFilter` en streaming (regla 10). Migrar el PARSEO del multipart a
-  // `OpenAPIHandler` empeoraría justo la deuda de RAM que `CLAUDE.md` raíz ya
-  // declara (`MAX_FILE_SIZE_MB` pesándole al proceso). Probado antes de
-  // descartarlo: `test/zzz-multipart-smoke.test.ts` (borrado tras la prueba)
-  // confirmó que oRPC SÍ puede parsear un `File` + campos de texto — la razón
-  // de no usarlo acá es de recursos, no de capacidad.
+  // **Se queda afuera de `OpenAPIHandler` a propósito, la única de las 46
+  // rutas que no migra así.** `OpenAPIHandler` parsea `multipart/form-data` con
+  // el `Response(stream).formData()` nativo de Node, que bufferea el archivo
+  // ENTERO en memoria sin ningún límite configurable — a diferencia de Multer,
+  // que aplica `limits.fileSize`/`limits.files` en streaming y escribe a disco
+  // (regla 10). Probado antes de descartarlo: `test/zzz-multipart-smoke.test.ts`
+  // (borrado tras la prueba) confirmó que oRPC SÍ puede parsear un `File` +
+  // campos de texto — la razón de no usarlo acá es de recursos, no de capacidad.
+  // (Y NO es un problema de RAM de Multer: con `diskStorage` el body no pasa por
+  // memoria — ver `SPEC-218` §Los hallazgos.)
   //
   // **Lo que SÍ migró (2026-09-20, investigación "Multer + `call()`" de
   // SPEC-212): el paso de validación de los campos de texto.** Multer sigue
@@ -114,11 +117,11 @@ const REQUEST_SCHEMAS: Record<string, SchemaEntry> = {
   // `.input()` de un procedimiento oRPC invocado EN PROCESO (nunca por HTTP,
   // `OpenAPIHandler` sigue sin tocar esta ruta). El 400 resultante ya no es
   // `error.flatten()`: tiene el mismo shape (`{code, status, data: {issues}}`)
-  // que las otras 45 rutas de §A-D. La entrada de acá no cambia porque el
-  // contrato HTTP visible (path, `multipart/form-data`, campos) es idéntico —
-  // solo cambió CÓMO se valida adentro, no qué se documenta afuera.
+  // que las otras rutas.
   "POST /api/v1/developer/projects/:id/stages/:stageId/evidence": {
-    body: stageEvidenceUploadSchema,
+    body: stageEvidenceUploadSchema.extend({
+      file: z.array(z.file()).min(1).max(EVIDENCE_MAX_FILES)
+    }),
     bodyContentType: "multipart/form-data"
   }
   // Las rutas de `notary` (§A), `certifier` (§B), `investor` (§C, salvo

@@ -80,7 +80,7 @@ capas de autocura que salieron del único hallazgo). Los criterios **6, 8, 9, 14
 | **"Contenido en `Pending`"** | Mejora de UX, ningún criterio la pide. Necesita que el listado de stages devuelva el anclaje y reconcilie |
 | **Columna `AuditLog.projectId`** | Sacaría el mapeo fail-closed de `auditScope`. Pide backfill que para filas viejas no tiene respuesta |
 | **`validationCritical` siempre `true`** | Config muerta con rama viva y testeada en el validador. No molesta |
-| **Upload directo del navegador a R2 (sin pasar por Render)** | Hoy el archivo hace escala en `UPLOAD_DIR` antes de llegar al bucket, y eso es lo que hace que `MAX_FILE_SIZE_MB` le pese a la RAM del proceso. Un presigned URL lo evitaría, pero es un cambio de forma real (CORS, flujo de 3 pasos en el front) y el hash sigue teniendo que releerse desde R2 igual (D-027). **Después de mainnet** — el diseño y el costo, en [`specs/archive/CLAUDE-argumentos-de-las-reglas-2026-09-20.md`](specs/archive/CLAUDE-argumentos-de-las-reglas-2026-09-20.md) §Anexo |
+| **Upload directo del navegador a R2 (sin pasar por Render)** | Hoy el archivo hace escala en `UPLOAD_DIR` (Multer a disco, en streaming) antes de llegar al bucket. **Ojo: el argumento de RAM que figuraba acá no aplica a Multer** — con `diskStorage` el body no pasa por memoria (`SPEC-218` §Los hallazgos); lo que pesa es disco efímero y latencia. Un presigned URL lo evitaría, pero es un cambio de forma real (CORS, flujo de 3 pasos en el front) y el hash sigue teniendo que releerse desde R2 igual (D-027). **Después de mainnet** — el diseño y el costo, en [`specs/archive/CLAUDE-argumentos-de-las-reglas-2026-09-20.md`](specs/archive/CLAUDE-argumentos-de-las-reglas-2026-09-20.md) §Anexo |
 
 ## Antes de mainnet, después del Milestone 3
 
@@ -236,8 +236,12 @@ pasó decidir contra una transcripción errónea (ver Trampas).
    efectos.
 9. **La FSM del stage es una sola** (D-020), en `packages/shared` y espejada en Aiken. Si cambia una,
    cambian las dos en el mismo commit.
-10. **Uploads:** solo `application/pdf`, `image/jpeg`, `image/png`; máximo `MAX_FILE_SIZE_MB`. Si un
-    upload falla la validación después de escribirse, **borrar el archivo huérfano**.
+10. **Uploads:** solo `application/pdf`, `image/jpeg`, `image/png` —el tipo **real**, por los primeros
+    bytes, no el `Content-Type` que declara el cliente—; máximo `EVIDENCE_MAX_FILE_MB` por archivo y
+    `EVIDENCE_MAX_FILES` por pedido, **los dos en `packages/shared/src/evidence-rules.ts`** (los importan
+    la API y el front: no hay variable de entorno ni número a mano que tenga que coincidir). Un pedido es
+    un lote (un bundle, un anclaje). Un archivo que falla la validación se rechaza **solo él** y vuelve en
+    `rejected`; ninguno deja archivo huérfano, ni en disco ni en R2 (`SPEC-218`).
 11. **`contracts/plutus.json` se commitea** tras cada `aiken build`; direcciones derivadas del
     blueprint, jamás hardcodeadas.
 12. **Secrets solo por env.** Si ves una seed o una key commiteada: frená y avisá.

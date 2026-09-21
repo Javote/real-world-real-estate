@@ -4,7 +4,8 @@
 > las 46 que quedó con Multer (`POST /developer/projects/:id/stages/:stageId/evidence`, M2-D5 filas
 > 38 y 44c) — más el análisis del 2026-09-20 sobre cómo mejorarla. Nivel 🟡: archivos/storage,
 > contrato de una fila de M2-D5 y un handler con efectos en cadena. **Se revisa línea por línea.**
-> Desarrollada 2026-09-20. Estado: **abierta** — las tres decisiones del dueño están tomadas.
+> Desarrollada 2026-09-20. Estado: **cerrada 2026-09-20** — ver §Implementado, con lo que la implementación
+> cambió respecto del diseño.
 
 ## Los hallazgos, verificados leyendo el código
 
@@ -162,8 +163,9 @@ inválido siga rechazando el lote entero, se mueve de una lista a la otra.
   **Al volver la respuesta**, el dropzone saca de la lista solo los aceptados; los rechazados **quedan**,
   marcados con el motivo (`rejected[].code` → clave del diccionario, regla 14/15). Nada desaparece sin
   decir por qué.
-- `AnchoringSuccessModal` muestra **un** root con N hojas (P5). Sigue siendo el único modal que se
-  abre solo (M2-D4 §6.3).
+- `AnchoringSuccessModal` **no cambia**: muestra el root y el TXID **del lote** (un solo anclaje), no una
+  lista de hojas — el componente no tiene esa superficie y M2-D3 no la define. Sigue siendo el único modal
+  que se abre solo (M2-D4 §6.3).
 - `port.ts`: `uploadStageEvidence` recibe el lote y devuelve `StageEvidenceUploadResult`;
   `port.contract.test.ts` sigue cubriéndolo (path, verbo, que la ruta declare cuerpo).
 - `generate-openapi.ts`: el cuerpo multipart declara `file` como arreglo (`maxItems 10`) y la
@@ -248,3 +250,37 @@ los aceptados salen.
 **Un solo commit.** El schema de respuesta en `shared` cambia de forma, así que backend y front no
 compilan por separado: el typecheck es el que obliga a que viajen juntos. Antes de escribir código:
 leer los 30 tests de `evidence-upload.test.ts` y decidir cuáles se convierten y cuáles se agregan.
+
+## Implementado 2026-09-20
+
+Tal como se diseñó, salvo cuatro cosas que la implementación obligó a cambiar y que el diseño no veía:
+
+1. **El rechazo temprano del stage NO puede responder de inmediato.** El diseño lo advertía como riesgo y
+   se probó: responder el 404/409 con el body a medio subir hace que el servidor cierre la conexión y el
+   cliente vea `ECONNRESET` (reproducido, 4 de 4 corridas) en vez del 409. HTTP/1.1 no permite cortar la
+   subida de un cliente que ya empezó. Lo que quedó (`rechazarStageAntesDeRecibir`): **descartar el body
+   (leerlo y tirarlo, con tope = lo que Multer aceptaría) y recién ahí responder**. Se ahorra escribirlo a
+   disco, hashearlo y guardarlo; **no** se ahorra el tráfico de red.
+2. **El front no puede importar valores de `@plataforma/shared` por el índice.** `shared` es CommonJS: Vite
+   dev lo sirve crudo y el navegador falla (*"does not provide an export named"*), y el índice arrastraría
+   Zod entero al bundle. Los tests unitarios **pasaron**; lo cazó el e2e. Las reglas puras se separaron en
+   `packages/shared/src/evidence-rules.ts` (**sin ninguna dependencia**) y se importan por su propia entrada
+   `@plataforma/shared/evidence-rules`, cuyo `exports` apunta al fuente `.ts`. Los schemas Zod quedaron en
+   `evidence-files.ts`. La trampa está en `apps/web/CLAUDE.md`.
+3. **`OnChainEvent.evidenceId` de un lote es el de la primera evidencia aceptada.** El evento ancla el root
+   del bundle, no un archivo; el campo es solo una referencia.
+4. **`Evidence.mimeType` guarda el tipo REAL detectado**, y `storedFilename` es un id opaco (cuid) — el
+   nombre original sigue solo en `originalFilename`, que no sale a logs ni a la cadena.
+
+**Verificación.** `pnpm verify:all` en verde; los mutantes muerden (sin el chequeo contra el stage,
+3 tests rojos; sin la comparación de hash, 2). El e2e de punta a punta (`evidence-flow`, desktop y mobile):
+un lote con dos PDF válidos y un ejecutable disfrazado — el navegador frena el falso con su motivo, los dos
+válidos se anclan con **un** modal —, y el mismo contenido en un segundo envío queda en la lista con *"ya se
+subió a esta etapa"* y sin modal.
+
+**Cómo correr ese e2e sin pisar el entorno de desarrollo** (la base local tenía hilos minteados fuera del
+simulador y el anclaje daba `UNKNOWN_THREAD`): puertos y base propios, base recién sembrada y simulador —
+`WEB_PORT=3100 API_ORIGIN=http://localhost:8797 PORT=8797 ANCHOR_MODE=simulated DATABASE_URL=file:<base>
+npx playwright test evidence-flow`, con la base creada por `db:migrate` + `db:seed` **con
+`SEED_DEMO_PASSWORD=` y `SEED_ADMIN_PASSWORD=` vacíos** (si no, el `.env` local pisa las passwords que
+el login del front pre-llena).

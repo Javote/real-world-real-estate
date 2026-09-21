@@ -11,6 +11,8 @@ export * from "./certifier";
 export * from "./contract";
 export * from "./documents";
 export * from "./dossier";
+export * from "./evidence-files";
+export * from "./evidence-rules";
 export * from "./invitation";
 export * from "./merkle";
 export * from "./notifications";

@@ -94,9 +94,9 @@ lo mismo sin pasar por HTTP. Ver el detalle en `CLAUDE.md` raíz.
   tiene ningún `maxBodySize`/límite configurable, y bufferea el cuerpo completo antes de que el
   handler vea nada — a diferencia de Multer, que hoy aplica `limits.fileSize` y `fileFilter` en
   streaming (regla 10), cortando antes de terminar de recibir un archivo demasiado grande o de tipo
-  no permitido. Migrar esa ruta habría empeorado justo la deuda de RAM que `CLAUDE.md` raíz ya
-  declara §Fuera de alcance ("Upload directo del navegador a R2", sobre `MAX_FILE_SIZE_MB`). **Se
-  decidió no migrarla** — sigue con Multer y `REQUEST_SCHEMAS`/`RESPONSE_SCHEMAS` a mano, documentado
+  no permitido. Migrar esa ruta habría empeorado el consumo de memoria (el parser de oRPC bufferea el
+  archivo entero; Multer, con `diskStorage`, no toca la RAM — `SPEC-218` §Los hallazgos corrige el
+  argumento original). **Se decidió no migrarla** — sigue con Multer y `REQUEST_SCHEMAS`/`RESPONSE_SCHEMAS` a mano, documentado
   en `generate-openapi.ts`.
   **La lección:** que una librería "pueda" hacer algo (parsear multipart) no dice nada sobre si lo
   hace con las mismas garantías que lo que reemplaza — acá la garantía que se hubiera perdido en
