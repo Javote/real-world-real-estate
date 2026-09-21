@@ -988,6 +988,32 @@ describe("SPEC-218 · subida por lote", () => {
       expect(res.status).toBe(201);
       expect(res.body.rejected).toEqual([]);
     });
+
+    it("SPEC-219: la carrera real — dos pedidos concurrentes con el mismo archivo, uno 201 y el otro 409 EVIDENCE_ALREADY_IN_STAGE, una sola fila", async () => {
+      const sId = await nuevoStage();
+      const contenido = pdf();
+
+      // El chequeo de aplicación (`existentes`) es "leer y después escribir":
+      // los dos pedidos pueden pasarlo antes de que cualquiera inserte. Acá
+      // no se neutraliza nada — se dispara la carrera de verdad, contra el
+      // índice único de la migración 0009.
+      const subida = () =>
+        subirLote(miembro, sId, campos, [archivo(Buffer.from(contenido), "concurrente.pdf")]);
+
+      const antes = archivosEnDisco();
+      const [a, b] = await Promise.all([subida(), subida()]);
+      const statuses = [a.status, b.status].sort();
+      expect(statuses).toEqual([201, 409]);
+
+      const perdedor = a.status === 409 ? a : b;
+      expect(perdedor.body.code).toBe("EVIDENCE_ALREADY_IN_STAGE");
+
+      expect(await evidenciasDe(sId)).toHaveLength(1);
+      // Solo el ganador deja un archivo — el que perdió la carrera se limpia
+      // en el `finally` del handler (`confirmado` queda `false` para ese
+      // pedido), sin objetos huérfanos.
+      expect(archivosEnDisco() - antes).toBe(1);
+    });
   });
 
   describe("errores del pedido: se deciden ANTES de guardar nada", () => {

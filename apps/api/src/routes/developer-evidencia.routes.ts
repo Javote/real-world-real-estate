@@ -22,6 +22,7 @@ import { call, ORPCError, os } from "../lib/orpc";
 import { leerCabecera, sha256DeArchivo, storage } from "../lib/storage";
 import { uploadEvidenceFiles } from "../lib/upload";
 import { authenticate, authorize } from "../middlewares/auth";
+import { codigoDeRestriccion } from "../middlewares/errorHandler";
 import { paramValidator } from "../middlewares/validate-params";
 import { writeAuditLog } from "../utils/audit";
 import { EVIDENCE_SAFE_COLUMNS } from "./_shared";
@@ -352,32 +353,61 @@ router.post(
       }
 
       const now = new Date();
-      await db.transaction().execute(async (trx) => {
-        for (const g of guardados) {
-          await trx
-            .insertInto("Evidence")
-            .values({
-              id: g.id,
-              projectId,
-              stageId,
-              uploadedById: req.user!.id,
-              evidenceType: parsed.evidenceType,
-              category: parsed.category,
-              authoritative: parsed.authoritative ?? false,
-              issuingAuthority: parsed.issuingAuthority,
-              originalFilename: g.c.file.originalname,
-              storedFilename: g.c.file.filename,
-              mimeType: g.c.mime,
-              sizeBytes: g.c.file.size,
-              storagePath: g.storageRef,
-              sha256Hash: g.sha256,
-              uploadedAt: now,
-              createdAt: now,
-              updatedAt: now
-            })
-            .execute();
+      try {
+        await db.transaction().execute(async (trx) => {
+          for (const g of guardados) {
+            await trx
+              .insertInto("Evidence")
+              .values({
+                id: g.id,
+                projectId,
+                stageId,
+                uploadedById: req.user!.id,
+                evidenceType: parsed.evidenceType,
+                category: parsed.category,
+                authoritative: parsed.authoritative ?? false,
+                issuingAuthority: parsed.issuingAuthority,
+                originalFilename: g.c.file.originalname,
+                storedFilename: g.c.file.filename,
+                mimeType: g.c.mime,
+                sizeBytes: g.c.file.size,
+                storagePath: g.storageRef,
+                sha256Hash: g.sha256,
+                uploadedAt: now,
+                createdAt: now,
+                updatedAt: now
+              })
+              .execute();
+          }
+        });
+      } catch (err) {
+        // SPEC-219: la carrera que `existentes` (arriba) no cierra — dos
+        // requests simultáneos con el mismo archivo pasan los dos ese chequeo
+        // antes de que cualquiera inserte. `Evidence_stageId_sha256Hash_key`
+        // (migración 0009) es la red de seguridad, y acá se traduce al MISMO
+        // código que el chequeo de aplicación ya usa por archivo —
+        // `EVIDENCE_ALREADY_IN_STAGE`— pero para el pedido entero: a esta
+        // altura no se sabe cuál de los archivos del lote chocó, y la
+        // transacción ya revirtió los que sí se habían insertado. No pasa por
+        // `CONSTRAINT_ERRORS` (`errorHandler.ts`): ese mapeo es por código
+        // SQLite, no por índice, y daría el genérico `RESOURCE_ALREADY_EXISTS`
+        // para TODOS los `UNIQUE` de la base — acá hace falta el código
+        // específico que el resto del handler ya usa (mismo criterio que
+        // `STAGE_ALREADY_COMPLETED`, arriba). El `message` de SQLite es
+        // específico de este índice (confirmado corriendo el insert, no
+        // adivinado): no se confunde con otro `UNIQUE` de `Evidence`.
+        if (
+          codigoDeRestriccion(err) === "SQLITE_CONSTRAINT_UNIQUE" &&
+          err instanceof Error &&
+          err.message.includes("Evidence.stageId, Evidence.sha256Hash")
+        ) {
+          return res.status(409).json({
+            message: "One of the files in this batch was already uploaded to this stage",
+            code: "EVIDENCE_ALREADY_IN_STAGE"
+          });
         }
-      });
+        throw err;
+      }
       confirmado = true;
 
       // El acta del conjunto que existe AHORA, con los archivos recién subidos
