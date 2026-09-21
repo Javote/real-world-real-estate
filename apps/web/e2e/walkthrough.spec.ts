@@ -149,16 +149,16 @@ test.describe('Walkthrough', () => {
     })
   }
 
-  test('AUTH-LOGIN-001 · admin no tiene solapa ni landing en esta rebanada (SPEC-011 §Casos borde)', async ({
+  test('AUTH-LOGIN-001 · admin no tiene solapa, pero entra tipeando su usuario y cae en /admin (D-095)', async ({
     page
   }) => {
     await gotoLogin(page)
     await page.getByLabel('Usuario').fill('admin@example.com')
     await page.getByLabel('Contraseña').fill(passwordDe('admin'))
     await page.getByRole('button', { name: 'Ingresar' }).click()
-    // ROLE_LANDING['admin'] es null: el login es válido pero no hay panel de
-    // admin todavía, así que el ruteo vuelve a /login — no es un error.
-    await expect(page).toHaveURL(/\/login/)
+    // Hasta D-095 `ROLE_LANDING['admin']` era null y el login volvía a /login.
+    await expect(page).toHaveURL(/\/admin/)
+    await expect(page.getByTestId('ADMIN-PROJECT-001')).toBeVisible()
   })
 
   test('AUTH-ME-001 · la sesión se revalida contra el servidor en cada pantalla protegida', async ({

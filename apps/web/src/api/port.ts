@@ -21,6 +21,7 @@ import type {
   Dossier,
   DossierShare,
   InvestorDirectoryEntry,
+  InviteCertifierInput,
   LoginRequest,
   NotaryKpis,
   NotarySignature,
@@ -41,6 +42,7 @@ import type {
   AuditEvent,
   BuildingSchematicFloor,
   BundleFiles,
+  CertifierInvitation,
   ContractRelease,
   DeveloperContract,
   DeveloperProfile,
@@ -67,7 +69,8 @@ import type {
   PublicDossier,
   Stage,
   StageEvidenceAnchor,
-  StageState
+  StageState,
+  UserSummary
 } from './types'
 
 export class ApiError extends Error {
@@ -398,6 +401,36 @@ export const api = {
   listCertificates: (cursor?: string) =>
     request<Paginated<CertifierCertificate>>(
       `/api/v1/certifier/certificates${cursor ? `?cursor=${encodeURIComponent(cursor)}` : ''}`
+    ),
+
+  // ── Invitaciones a certificar (SPEC-221, D-095) ──────────────────────────
+  //
+  // El admin invita a un certifier a un proyecto; el certifier acepta o
+  // rechaza desde su panel. Aceptar crea su membresía `verifier`.
+
+  listUsers: () => request<UserSummary[]>('/api/v1/users'),
+
+  listProjectCertifierInvitations: (projectId: string) =>
+    request<CertifierInvitation[]>(`/api/v1/projects/${projectId}/certifier-invitations`),
+
+  inviteCertifier: (projectId: string, certifierId: string) =>
+    request<CertifierInvitation>(
+      `/api/v1/projects/${projectId}/certifier-invitations`,
+      jsonInit<InviteCertifierInput>('POST', { certifierId })
+    ),
+
+  getMyCertifierInvitations: () => request<CertifierInvitation[]>('/api/v1/certifier/invitations'),
+
+  acceptCertifierInvitation: (id: string) =>
+    request<CertifierInvitation>(
+      `/api/v1/certifier/invitations/${id}/accept`,
+      jsonInit('POST', {})
+    ),
+
+  declineCertifierInvitation: (id: string) =>
+    request<CertifierInvitation>(
+      `/api/v1/certifier/invitations/${id}/decline`,
+      jsonInit('POST', {})
     ),
 
   // ── Superficie del notary (M2-D5 filas 52v, 52s, 52r, 53) ────────────────

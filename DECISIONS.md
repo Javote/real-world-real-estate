@@ -1190,3 +1190,38 @@ vez de quedar como un hueco que alguien "completa" más adelante sin leer esto.
 
 **Lo que sí se muestra del pill:** el conteo de compradores, como una StatCard junto a las otras
 tres métricas derivadas. Es un hecho del registro —cuánta gente compró— y no una nota de calidad.
+
+## D-095 — El admin es la salvaguarda: hace todo lo que hace cualquier rol, también desde la web
+
+**Decisión del dueño, 2026-09-21.** *"Los admin en general tienen que poder hacer todo lo que puedan
+hacer los demás roles. Y está bien que un admin pueda invitar un certifier así como invitó a un
+buyer."* El admin no es un quinto rol con superficie propia de producto: es la salvaguarda para los
+casos especiales.
+
+**El backend ya lo cumplía.** Todas las reglas de `authorize` incluyen `admin`, y `projectScope` lo
+deja ver todo (M2-D1 §4). Lo que lo frenaba era la web: cada `useRoleGuard` lo rechazaba y
+`ROLE_LANDING['admin']` era `null` (SPEC-011 §Casos borde), así que podía hacer todo por API y nada
+desde una pantalla.
+
+**Qué cambia (SPEC-221):**
+
+- **El admin pasa por cualquier guard de rol** (`useRoleGuard`) y aterriza en `/admin`. Desde su
+  barra de navegación entra a los cuatro paneles. Sigue sin solapa en `/login`: se entra tipeando
+  el usuario.
+- **`/admin` hace lo único que no tenía pantalla en ningún rol: invitar a un certifier a un
+  proyecto.** El certifier ve la invitación en su panel y la acepta o la rechaza; aceptar crea su
+  membresía `verifier`, y con ella las etapas del proyecto entran en su cola. Es el mismo modelo
+  que el buyer (invitación → aceptación → membresía).
+
+**Por qué invitación y no "el admin lo agrega".** `POST /projects/:id/members` ya existía y se usó
+por consola dos veces —la prueba de volumen y la preparación del video—. Una pantalla que lo
+llamara directo cerraba el hueco, pero dejaba al certifier sumado a certificar algo sin haberlo
+aceptado. Con la invitación, el admin propone y el certifier decide, igual que el investor con su
+unidad.
+
+**Por qué el admin y no el developer.** El developer es a quien se certifica: que elija a su propio
+certifier le resta independencia a la firma. El admin, como salvaguarda, no tiene ese conflicto.
+
+**Fuera de M2-D5.** Ningún entregable define superficie de admin ni esta invitación. No toca
+ninguno de los 16 criterios del SOM. Los test IDs son propios (`ADMIN-*`, y `CER-INVITATIONS-003`
+declarado en `FUERA_DEL_BACKLOG` de `check-testids.mjs`).

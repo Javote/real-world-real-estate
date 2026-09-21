@@ -49,6 +49,7 @@ import type {
   AuditEntityType,
   BuildingSchematicFloor as BuildingSchematicFloorShared,
   BundleFiles as BundleFilesShared,
+  CertifierInvitation as CertifierInvitationShared,
   ContractRelease as ContractReleaseShared,
   DeveloperContract as DeveloperContractShared,
   DeveloperProfile as DeveloperProfileShared,
@@ -80,7 +81,8 @@ import type {
   StageState,
   UnitNewsEvent,
   UnitResponse,
-  UserRole
+  UserRole,
+  UserSummary as UserSummaryShared
 } from '@plataforma/shared'
 
 export type { LoginResponse, MeResponse, SessionUser, UserRole } from '@plataforma/shared'
@@ -107,6 +109,14 @@ export type ProjectCreated = Serialized<DeveloperProjectCreateResult>
 export type ProjectMemberUser = Serialized<ProjectMemberWithUser>['user']
 
 export type ProjectDetail = Serialized<ProjectDetailShared>
+
+// ── Admin (SPEC-221, D-095) ──────────────────────────────────────────────────
+
+/** Un usuario de `GET /users` (admin-only): el admin elige al certifier de acá. */
+export type UserSummary = Serialized<UserSummaryShared>
+
+/** Una invitación a certificar un proyecto, como la ven el admin y el certifier. */
+export type CertifierInvitation = Serialized<CertifierInvitationShared>
 
 export type Evidence = Serialized<EvidenceResponse> & {
   stage?: Stage | null

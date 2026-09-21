@@ -1,9 +1,11 @@
 import {
   addProjectMemberSchema,
   buildingSchematicFloorSchema,
+  certifierInvitationSchema,
   createProjectSchema,
   cuidParamSchema,
   developerProfileSchema,
+  inviteCertifierSchema,
   projectDetailSchema,
   projectDocumentSchema,
   projectListItemSchema,
@@ -17,6 +19,7 @@ import { Router } from "express";
 import { z } from "zod";
 import { createId } from "../db/id";
 import type { UserRole } from "../db/types";
+import { listarInvitacionesACertificar } from "../domain/certifier-invitation";
 import { agregadosDeProyectos } from "../domain/project-aggregates";
 import { reconciliarParaLectura } from "../domain/reconcile";
 import { en } from "../lib/arrays";
@@ -452,6 +455,128 @@ router.post(
 );
 
 /**
+ * SPEC-221 · el admin invita a un certifier a un proyecto (D-095).
+ *
+ * Es el reemplazo con pantalla de `POST /:id/members` para el caso que lo hacía
+ * falta siempre: sumar el certifier a un proyecto nuevo. **No crea la
+ * membresía**: la crea el certifier al aceptar (`certifier.routes.ts`), igual
+ * que el buyer al aceptar la suya. El admin propone; el certifier decide si
+ * certifica ese proyecto.
+ *
+ * Los tres rechazos tienen nombre porque cada uno es un error distinto del
+ * admin y la pantalla los dice distinto: el usuario no es un certifier activo,
+ * ya certifica este proyecto, o ya tiene una invitación sin responder.
+ */
+const inviteCertifierProcedure = orpc
+  .errors({
+    CERTIFIER_NOT_ELIGIBLE: { status: 400 },
+    ALREADY_MEMBER: { status: 409 },
+    INVITATION_ALREADY_PENDING: { status: 409 }
+  })
+  .route({ method: "POST", path: "/{id}/certifier-invitations", successStatus: 201 })
+  .input(inviteCertifierSchema.extend({ id: cuidParamSchema }))
+  .output(certifierInvitationSchema)
+  .handler(async ({ input, context, errors }) => {
+    const proyecto = await db
+      .selectFrom("Project")
+      .select("id")
+      .where("id", "=", input.id)
+      .executeTakeFirst();
+    if (!proyecto) throw new ORPCError("NOT_FOUND", { message: "Project not found" });
+
+    const certifier = await db
+      .selectFrom("User")
+      .select(["role", "isActive"])
+      .where("id", "=", input.certifierId)
+      .executeTakeFirst();
+    if (!certifier || certifier.role !== "verifier" || !certifier.isActive) {
+      throw errors.CERTIFIER_NOT_ELIGIBLE({ message: "User is not an active certifier" });
+    }
+
+    const yaMiembro = await db
+      .selectFrom("ProjectMember")
+      .select("id")
+      .where("projectId", "=", input.id)
+      .where("userId", "=", input.certifierId)
+      .where("membershipRole", "=", "verifier")
+      .executeTakeFirst();
+    if (yaMiembro) {
+      throw errors.ALREADY_MEMBER({ message: "Certifier is already a member of this project" });
+    }
+
+    const id = createId();
+    // El índice único PARCIAL (`CertifierInvitation_pending_key`) es la guarda:
+    // dos requests concurrentes no pueden dejar dos invitaciones pendientes.
+    await db
+      .insertInto("CertifierInvitation")
+      .values({
+        id,
+        projectId: input.id,
+        certifierId: input.certifierId,
+        status: "pending",
+        createdById: context.user.id,
+        createdAt: new Date()
+      })
+      .execute()
+      .catch((err) =>
+        relanzarRestriccionComoOrpc(err, {
+          RESOURCE_ALREADY_EXISTS: () =>
+            errors.INVITATION_ALREADY_PENDING({
+              message: "Certifier already has a pending invitation for this project"
+            }),
+          RELATED_RESOURCE_NOT_FOUND: () =>
+            new ORPCError("NOT_FOUND", { message: "Project or user not found" })
+        })
+      );
+
+    await writeAuditLog({
+      actorUserId: context.user.id,
+      action: "INVITE_CERTIFIER",
+      entityType: "CertifierInvitation",
+      entityId: id,
+      metadata: { membershipRole: "verifier" }
+    });
+
+    const [invitacion] = await listarInvitacionesACertificar({ id });
+    return invitacion!;
+  });
+const inviteCertifierHandler = new OpenAPIHandler({ inviteCertifierProcedure });
+
+router.post(
+  "/:id/certifier-invitations",
+  authorize({ roles: ["admin"], acceso: "soloRol" }),
+  async (req, res, next) => {
+    const { matched } = await inviteCertifierHandler.handle(req, res, {
+      prefix: PREFIJO_ABSOLUTO,
+      context: { user: req.user! }
+    });
+    if (!matched) next();
+  }
+);
+
+/** SPEC-221 · las invitaciones a certificar de un proyecto, para la pantalla del admin. */
+const projectCertifierInvitationsProcedure = orpc
+  .route({ method: "GET", path: "/{id}/certifier-invitations" })
+  .input(z.strictObject({ id: cuidParamSchema }))
+  .output(z.array(certifierInvitationSchema))
+  .handler(async ({ input }) => listarInvitacionesACertificar({ projectId: input.id }));
+const projectCertifierInvitationsHandler = new OpenAPIHandler({
+  projectCertifierInvitationsProcedure
+});
+
+router.get(
+  "/:id/certifier-invitations",
+  authorize({ roles: ["admin"], acceso: "soloRol" }),
+  async (req, res, next) => {
+    const { matched } = await projectCertifierInvitationsHandler.handle(req, res, {
+      prefix: PREFIJO_ABSOLUTO,
+      context: { user: req.user! }
+    });
+    if (!matched) next();
+  }
+);
+
+/**
  * Fila 06-07 — los documentos del proyecto (INV-PROJECT-DOCS-002).
  *
  * Es la evidencia del proyecto con su estado de prueba, en la forma que come el
@@ -678,6 +803,8 @@ export const projectsOrpcRouter = {
   deleteProjectProcedure,
   projectMembersProcedure,
   addProjectMemberProcedure,
+  inviteCertifierProcedure,
+  projectCertifierInvitationsProcedure,
   projectDocumentsProcedure,
   buildingSchematicProcedure,
   projectDeveloperProcedure

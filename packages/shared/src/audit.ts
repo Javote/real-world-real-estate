@@ -24,6 +24,7 @@ import { z } from "zod";
  * `CHANGE_STAGE_STATE`, su default cuando no se pasa ninguno).
  */
 export const AUDIT_ACTIONS = [
+  "ACCEPT_CERTIFIER_INVITATION",
   "ACCEPT_INVITATION",
   "ADD_PROJECT_MEMBER",
   "ANCHOR_DOCUMENT",
@@ -34,11 +35,13 @@ export const AUDIT_ACTIONS = [
   "CREATE_PROJECT",
   "CREATE_UNIT",
   "CREATE_USER",
+  "DECLINE_CERTIFIER_INVITATION",
   "DECLINE_INVITATION",
   "DELETE_EVIDENCE",
   "DELETE_PROJECT",
   "DELETE_USER",
   "EXPORT_DOSSIER",
+  "INVITE_CERTIFIER",
   "LOGIN",
   "OBSERVE_STAGE",
   "REJECT_DOSSIER",
@@ -66,6 +69,7 @@ export type AuditAction = z.infer<typeof auditActionSchema>;
  * la excluye explícitamente, no por omisión (ver ese archivo).
  */
 export const AUDIT_ENTITY_TYPES = [
+  "CertifierInvitation",
   "Dossier",
   "Evidence",
   "Invitation",

@@ -281,6 +281,17 @@ export interface InvitationTable {
   respondedAt: SqliteTimestampSinCoercion | null;
 }
 
+/** SPEC-221 · el admin invita a un certifier a un proyecto (`0011`). */
+export interface CertifierInvitationTable {
+  id: GeneratedId;
+  projectId: string;
+  certifierId: string;
+  status: string;
+  createdById: string | null;
+  createdAt: SqliteTimestamp;
+  respondedAt: SqliteTimestampSinCoercion | null;
+}
+
 export interface ContractTable {
   id: GeneratedId;
   unitId: string;
@@ -345,6 +356,7 @@ export interface Database {
   Favorite: FavoriteTable;
   Unit: UnitTable;
   Invitation: InvitationTable;
+  CertifierInvitation: CertifierInvitationTable;
   Contract: ContractTable;
   PaymentAttestation: PaymentAttestationTable;
   Dossier: DossierTable;

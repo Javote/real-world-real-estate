@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { invitationStatusSchema } from "./invitation";
 import { onChainEventStatusSchema, stageStateSchema } from "./stage";
 
 // Las respuestas de la superficie del certifier (M2-D5 filas 56v y 58).
@@ -52,3 +53,29 @@ export const certifierCertificateSchema = z.strictObject({
   anchorStatus: onChainEventStatusSchema.nullable()
 });
 export type CertifierCertificate = z.infer<typeof certifierCertificateSchema>;
+
+// ── SPEC-221 · la invitación a certificar un proyecto (D-095) ─────────────
+//
+// El admin invita a un certifier a un proyecto; el certifier la acepta o la
+// rechaza desde su panel. Aceptar crea su membresía `verifier`, que es lo que
+// hace aparecer las etapas del proyecto en su cola. Mismo vocabulario de
+// estados que la invitación del buyer: no se inventa uno (regla 3 del loop).
+
+/** Body de `POST /projects/:id/certifier-invitations`. */
+export const inviteCertifierSchema = z.strictObject({
+  certifierId: z.string().min(1)
+});
+export type InviteCertifierInput = z.infer<typeof inviteCertifierSchema>;
+
+/** Una invitación a certificar, como la ven el admin y el certifier. */
+export const certifierInvitationSchema = z.strictObject({
+  id: z.string(),
+  projectId: z.string(),
+  projectName: z.string(),
+  certifierId: z.string(),
+  certifierName: z.string(),
+  status: invitationStatusSchema,
+  createdAt: z.coerce.date(),
+  respondedAt: z.coerce.date().nullable()
+});
+export type CertifierInvitation = z.infer<typeof certifierInvitationSchema>;

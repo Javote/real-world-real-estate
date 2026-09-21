@@ -48,6 +48,8 @@ const MATRIZ: Record<string, string> = {
   "GET /api/v1/projects/:id/members":
     "auth + autoriza(rol(admin|developer|buyer|verifier|notary) · proyecto(id → developer|buyer|verifier))",
   "POST /api/v1/projects/:id/members": "auth + autoriza(rol(admin) · soloRol)",
+  "POST /api/v1/projects/:id/certifier-invitations": "auth + autoriza(rol(admin) · soloRol)",
+  "GET /api/v1/projects/:id/certifier-invitations": "auth + autoriza(rol(admin) · soloRol)",
   "GET /api/v1/projects/:id/documents":
     "auth + autoriza(rol(admin|developer|buyer|verifier|notary) · proyecto(id → developer|buyer|verifier))",
   "GET /api/v1/projects/:id/building-schematic":
@@ -173,6 +175,12 @@ const MATRIZ: Record<string, string> = {
     "auth + autoriza(rol(admin|verifier) · scope(projectScope(cualquier membresía)))",
   "GET /api/v1/certifier/assignments":
     "auth + autoriza(rol(admin|verifier) · scope(projectScope(cualquier membresía)))",
+  "GET /api/v1/certifier/invitations":
+    "auth + autoriza(rol(admin|verifier) · scope(CertifierInvitation.certifierId = usuario))",
+  "POST /api/v1/certifier/invitations/:id/accept":
+    "auth + autoriza(rol(admin|verifier) · dueño(CertifierInvitation:id))",
+  "POST /api/v1/certifier/invitations/:id/decline":
+    "auth + autoriza(rol(admin|verifier) · dueño(CertifierInvitation:id))",
   "GET /api/v1/certifier/stages/:id":
     "auth + autoriza(rol(admin|verifier) · proyecto(Stage:id → verifier))",
   "POST /api/v1/certifier/stages/:id/certify":

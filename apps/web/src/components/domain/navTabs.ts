@@ -8,6 +8,7 @@ import {
   Home,
   LayoutGrid,
   Menu,
+  ShieldCheck,
   ShoppingBag,
   TrendingUp,
   User
@@ -27,7 +28,10 @@ import type { NavTab } from './BottomNav'
 
 type TabSpec = Omit<NavTab, 'label'> & { labelKey: TranslationKey }
 
-export const NAV_TABS: Record<'investor' | 'developer' | 'notary' | 'certifier', TabSpec[]> = {
+export const NAV_TABS: Record<
+  'investor' | 'developer' | 'notary' | 'certifier' | 'admin',
+  TabSpec[]
+> = {
   // INV: Menu · Favorites · Buy (FAB) · Units · User
   investor: [
     { to: '/investor/menu', labelKey: 'nav.investor.menu', icon: Menu },
@@ -57,5 +61,15 @@ export const NAV_TABS: Record<'investor' | 'developer' | 'notary' | 'certifier',
     { to: '/certifier/assigned', labelKey: 'nav.certifier.assigned', icon: ClipboardCheck },
     { to: '/certifier/issued', labelKey: 'nav.certifier.issued', icon: FileCheck2 },
     { to: '/certifier/profile', labelKey: 'nav.certifier.profile', icon: User }
+  ],
+  // ADMIN (D-095, SPEC-221 — no es de M2-D3, que define cuatro roles): su
+  // pantalla y la entrada a cada uno de los cuatro paneles, que es lo que lo
+  // hace salvaguarda — puede hacer lo mismo que cualquier rol.
+  admin: [
+    { to: '/admin', labelKey: 'nav.admin.panel', icon: ShieldCheck },
+    { to: '/investor/buy', labelKey: 'nav.admin.investor', icon: ShoppingBag },
+    { to: '/developer', labelKey: 'nav.admin.developer', icon: Building2 },
+    { to: '/certifier', labelKey: 'nav.admin.certifier', icon: ClipboardCheck },
+    { to: '/notary', labelKey: 'nav.admin.notary', icon: FileSignature }
   ]
 }

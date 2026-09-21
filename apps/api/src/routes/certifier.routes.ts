@@ -1,6 +1,7 @@
 import {
   certifierAssignmentSchema,
   certifierCertificateSchema,
+  certifierInvitationSchema,
   certifierKpisSchema,
   certifierStageViewSchema,
   cuidParamSchema,
@@ -12,13 +13,16 @@ import {
 } from "@plataforma/shared";
 import { Router } from "express";
 import { z } from "zod";
+import { createId } from "../db/id";
 import type { UserRole } from "../db/types";
+import { listarInvitacionesACertificar } from "../domain/certifier-invitation";
 import { reconciliarParaLectura } from "../domain/reconcile";
 import { transitionStage, ultimoBundlePorStage } from "../domain/stage-transition";
 import { db } from "../lib/db";
 import { OpenAPIHandler, ORPCError, os } from "../lib/orpc";
 import { authenticate, authorize } from "../middlewares/auth";
 import { paramValidator } from "../middlewares/validate-params";
+import { writeAuditLog } from "../utils/audit";
 import { proyectosVisibles } from "./_shared";
 
 // Superficie del certifier (M2-D5 filas 56v, 56c, 57, 58).
@@ -357,13 +361,147 @@ router.get(
 /** El router oRPC combinado de esta vertical — lo consume
  * `scripts/generate-openapi.ts` para generar el fragmento de OpenAPI de las 6
  * rutas migradas, aparte del documento manual de las que no migraron. */
+// ── SPEC-221 · las invitaciones a certificar un proyecto (D-095) ───────────
+//
+// El admin invita (`POST /projects/:id/certifier-invitations`); el certifier
+// las ve en su panel y decide. **Aceptar es lo que crea la membresía**
+// `verifier`, y con ella el proyecto entra en `proyectosVisibles`: sus etapas
+// aparecen en la cola y en los KPIs de arriba sin tocar esas consultas. Mismo
+// modelo que la invitación del buyer (`investor.routes.ts`), sin contrato ni
+// anclaje: sumarse a certificar no es un hecho del proyecto que haga falta
+// probar on-chain, y el audit log lo registra igual.
+
+/** Las invitaciones pendientes del certifier que pregunta. */
+const myInvitationsProcedure = orpc
+  .route({ method: "GET", path: "/invitations" })
+  .output(z.array(certifierInvitationSchema))
+  .handler(async ({ context }) =>
+    listarInvitacionesACertificar({ certifierId: context.user.id, soloPendientes: true })
+  );
+const myInvitationsHandler = new OpenAPIHandler({ myInvitationsProcedure });
+
+router.get(
+  "/invitations",
+  authorize({
+    roles: ["admin", "verifier"],
+    acceso: { scopeEnQuery: "CertifierInvitation.certifierId = usuario" }
+  }),
+  async (req, res, next) => {
+    const { matched } = await myInvitationsHandler.handle(req, res, {
+      prefix: PREFIJO_ABSOLUTO,
+      context: { user: req.user! }
+    });
+    if (!matched) next();
+  }
+);
+
+/**
+ * Responder una invitación. La guarda es atómica, como en la del buyer: el
+ * `WHERE status = 'pending'` hace que de dos respuestas concurrentes gane una
+ * sola, sin leer el estado antes. Aceptar y crear la membresía van en la misma
+ * transacción: no puede quedar una invitación aceptada sin su membresía.
+ */
+function responderInvitacion(respuesta: "accepted" | "declined") {
+  return orpc
+    .errors({ INVITATION_NOT_PENDING: { status: 409 } })
+    .input(z.strictObject({ id: cuidParamSchema }))
+    .output(certifierInvitationSchema)
+    .handler(async ({ input, context, errors }) => {
+      const ahora = new Date();
+
+      const invitacion = await db.transaction().execute(async (trx) => {
+        const fila = await trx
+          .selectFrom("CertifierInvitation")
+          .select(["id", "projectId", "certifierId", "status"])
+          .where("id", "=", input.id)
+          .executeTakeFirst();
+        if (!fila) throw new ORPCError("NOT_FOUND", { message: "Invitation not found" });
+
+        const actualizada = await trx
+          .updateTable("CertifierInvitation")
+          .set({ status: respuesta, respondedAt: ahora })
+          .where("id", "=", fila.id)
+          .where("status", "=", "pending")
+          .executeTakeFirst();
+        if (Number(actualizada.numUpdatedRows) === 0) {
+          throw errors.INVITATION_NOT_PENDING({ message: `Invitation already ${fila.status}` });
+        }
+
+        if (respuesta === "accepted") {
+          // La membresía es del CERTIFIER invitado, no de quien responde: si
+          // responde el admin (que pasa todos los guards), igual queda a nombre
+          // del certifier. `doNothing` por la regla 8.
+          await trx
+            .insertInto("ProjectMember")
+            .values({
+              id: createId(),
+              userId: fila.certifierId,
+              projectId: fila.projectId,
+              membershipRole: "verifier",
+              createdAt: ahora
+            })
+            .onConflict((oc) => oc.doNothing())
+            .execute();
+        }
+        return fila;
+      });
+
+      await writeAuditLog({
+        actorUserId: context.user.id,
+        action:
+          respuesta === "accepted" ? "ACCEPT_CERTIFIER_INVITATION" : "DECLINE_CERTIFIER_INVITATION",
+        entityType: "CertifierInvitation",
+        entityId: invitacion.id,
+        // El otorgamiento de permiso se lee en el audit log, no se deduce.
+        metadata: respuesta === "accepted" ? { membershipRole: "verifier" } : {}
+      });
+
+      const [resultado] = await listarInvitacionesACertificar({ id: invitacion.id });
+      return resultado!;
+    });
+}
+
+const acceptInvitationProcedure = responderInvitacion("accepted").route({
+  method: "POST",
+  path: "/invitations/{id}/accept"
+});
+const declineInvitationProcedure = responderInvitacion("declined").route({
+  method: "POST",
+  path: "/invitations/{id}/decline"
+});
+const acceptInvitationHandler = new OpenAPIHandler({ acceptInvitationProcedure });
+const declineInvitationHandler = new OpenAPIHandler({ declineInvitationProcedure });
+
+for (const [accion, handler] of [
+  ["accept", acceptInvitationHandler],
+  ["decline", declineInvitationHandler]
+] as const) {
+  router.post(
+    `/invitations/:id/${accion}`,
+    authorize({
+      roles: ["admin", "verifier"],
+      acceso: { dueño: { via: "CertifierInvitation", param: "id" } }
+    }),
+    async (req, res, next) => {
+      const { matched } = await handler.handle(req, res, {
+        prefix: PREFIJO_ABSOLUTO,
+        context: { user: req.user! }
+      });
+      if (!matched) next();
+    }
+  );
+}
+
 export const certifierOrpcRouter = {
   kpisProcedure,
   assignmentsProcedure,
   stageViewProcedure,
   certifyProcedure,
   observeProcedure,
-  certificatesProcedure
+  certificatesProcedure,
+  myInvitationsProcedure,
+  acceptInvitationProcedure,
+  declineInvitationProcedure
 };
 
 export default router;

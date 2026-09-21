@@ -3,6 +3,7 @@ import { useNavigate } from '@tanstack/react-router'
 import { User } from 'lucide-react'
 import type { ReactNode } from 'react'
 import { api } from '#/api/port'
+import { getSession } from '#/auth/session'
 import { BottomNav } from '#/components/domain/BottomNav'
 import { GradientHeader } from '#/components/domain/GradientHeader'
 import { LanguageToggle } from '#/components/domain/LanguageToggle'
@@ -62,7 +63,12 @@ export function PanelLayout({
     queryFn: api.getUnreadCount
   })
 
+  // D-095: el admin entra a los cuatro paneles, y el perfil y la campana lo
+  // devuelven a SU pantalla — no tiene perfil propio ni inbox.
+  const esAdmin = getSession()?.user.role === 'admin'
+
   const abrirPerfil = () => {
+    if (esAdmin) return void navigate({ to: '/admin' })
     switch (rol) {
       case 'investor':
         return void navigate({ to: '/investor/profile' })
@@ -72,10 +78,13 @@ export function PanelLayout({
         return void navigate({ to: '/notary/profile' })
       case 'certifier':
         return void navigate({ to: '/certifier/profile' })
+      case 'admin':
+        return void navigate({ to: '/admin' })
     }
   }
 
   const abrirNotificaciones = () => {
+    if (esAdmin) return void navigate({ to: '/admin' })
     switch (rol) {
       case 'investor':
         return void navigate({ to: '/investor/notifications' })
@@ -85,6 +94,8 @@ export function PanelLayout({
         return void navigate({ to: '/notary' })
       case 'certifier':
         return void navigate({ to: '/certifier' })
+      case 'admin':
+        return void navigate({ to: '/admin' })
     }
   }
 

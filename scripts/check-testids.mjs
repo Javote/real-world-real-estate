@@ -126,7 +126,12 @@ const FUERA_DEL_BACKLOG = new Map([
   ["INV-DEVELOPER-PROFILE-001", "M2-D2 capturas 59-60 · SPEC-220"],
   ["INV-DEVELOPER-PREVIOUS-002", "M2-D2 captura 59 · SPEC-220"],
   ["INV-DEVELOPER-ACTIVE-003", "M2-D2 captura 60 · SPEC-220"],
-  ["INV-DEVELOPER-LINK-004", "M2-D1:109 · la entrada desde el detalle de obra"]
+  ["INV-DEVELOPER-LINK-004", "M2-D1:109 · la entrada desde el detalle de obra"],
+  // No sale de una captura sino de una decisión del dueño (D-095): el admin
+  // invita a un certifier y el certifier responde desde su panel. Mismo trato
+  // que los de arriba — declarado, fuera del denominador. Los `ADMIN-*` de la
+  // pantalla del admin no hace falta listarlos: el patrón no los reclama.
+  ["CER-INVITATIONS-003", "D-095 · SPEC-221 · invitaciones a certificar en el panel"]
 ]);
 
 const reclamados = new Map();

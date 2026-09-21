@@ -14,6 +14,7 @@ import { Route as IndexRouteImport } from './routes/index'
 import { Route as NotaryIndexRouteImport } from './routes/notary.index'
 import { Route as DeveloperIndexRouteImport } from './routes/developer.index'
 import { Route as CertifierIndexRouteImport } from './routes/certifier.index'
+import { Route as AdminIndexRouteImport } from './routes/admin.index'
 import { Route as NotarySignedRouteImport } from './routes/notary.signed'
 import { Route as NotaryProfileRouteImport } from './routes/notary.profile'
 import { Route as NotaryDossiersRouteImport } from './routes/notary.dossiers'
@@ -75,6 +76,11 @@ const DeveloperIndexRoute = DeveloperIndexRouteImport.update({
 const CertifierIndexRoute = CertifierIndexRouteImport.update({
   id: '/certifier/',
   path: '/certifier/',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const AdminIndexRoute = AdminIndexRouteImport.update({
+  id: '/admin/',
+  path: '/admin/',
   getParentRoute: () => rootRouteImport,
 } as any)
 const NotarySignedRoute = NotarySignedRouteImport.update({
@@ -297,6 +303,7 @@ export interface FileRoutesByFullPath {
   '/notary/dossiers': typeof NotaryDossiersRoute
   '/notary/profile': typeof NotaryProfileRoute
   '/notary/signed': typeof NotarySignedRoute
+  '/admin/': typeof AdminIndexRoute
   '/certifier/': typeof CertifierIndexRoute
   '/developer/': typeof DeveloperIndexRoute
   '/notary/': typeof NotaryIndexRoute
@@ -341,6 +348,7 @@ export interface FileRoutesByTo {
   '/notary/dossiers': typeof NotaryDossiersRoute
   '/notary/profile': typeof NotaryProfileRoute
   '/notary/signed': typeof NotarySignedRoute
+  '/admin': typeof AdminIndexRoute
   '/certifier': typeof CertifierIndexRoute
   '/developer': typeof DeveloperIndexRoute
   '/notary': typeof NotaryIndexRoute
@@ -386,6 +394,7 @@ export interface FileRoutesById {
   '/notary/dossiers': typeof NotaryDossiersRoute
   '/notary/profile': typeof NotaryProfileRoute
   '/notary/signed': typeof NotarySignedRoute
+  '/admin/': typeof AdminIndexRoute
   '/certifier/': typeof CertifierIndexRoute
   '/developer/': typeof DeveloperIndexRoute
   '/notary/': typeof NotaryIndexRoute
@@ -432,6 +441,7 @@ export interface FileRouteTypes {
     | '/notary/dossiers'
     | '/notary/profile'
     | '/notary/signed'
+    | '/admin/'
     | '/certifier/'
     | '/developer/'
     | '/notary/'
@@ -476,6 +486,7 @@ export interface FileRouteTypes {
     | '/notary/dossiers'
     | '/notary/profile'
     | '/notary/signed'
+    | '/admin'
     | '/certifier'
     | '/developer'
     | '/notary'
@@ -520,6 +531,7 @@ export interface FileRouteTypes {
     | '/notary/dossiers'
     | '/notary/profile'
     | '/notary/signed'
+    | '/admin/'
     | '/certifier/'
     | '/developer/'
     | '/notary/'
@@ -565,6 +577,7 @@ export interface RootRouteChildren {
   NotaryDossiersRoute: typeof NotaryDossiersRoute
   NotaryProfileRoute: typeof NotaryProfileRoute
   NotarySignedRoute: typeof NotarySignedRoute
+  AdminIndexRoute: typeof AdminIndexRoute
   CertifierIndexRoute: typeof CertifierIndexRoute
   DeveloperIndexRoute: typeof DeveloperIndexRoute
   NotaryIndexRoute: typeof NotaryIndexRoute
@@ -622,6 +635,13 @@ declare module '@tanstack/react-router' {
       path: '/certifier'
       fullPath: '/certifier/'
       preLoaderRoute: typeof CertifierIndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/admin/': {
+      id: '/admin/'
+      path: '/admin'
+      fullPath: '/admin/'
+      preLoaderRoute: typeof AdminIndexRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/notary/signed': {
@@ -909,6 +929,7 @@ const rootRouteChildren: RootRouteChildren = {
   NotaryDossiersRoute: NotaryDossiersRoute,
   NotaryProfileRoute: NotaryProfileRoute,
   NotarySignedRoute: NotarySignedRoute,
+  AdminIndexRoute: AdminIndexRoute,
   CertifierIndexRoute: CertifierIndexRoute,
   DeveloperIndexRoute: DeveloperIndexRoute,
   NotaryIndexRoute: NotaryIndexRoute,

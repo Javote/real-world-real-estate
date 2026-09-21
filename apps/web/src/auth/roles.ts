@@ -8,13 +8,19 @@ export const INVESTOR_ROLES: readonly UserRole[] = ['buyer']
 export const DEV_ROLES: readonly UserRole[] = ['developer']
 export const NOTARY_ROLES: readonly UserRole[] = ['notary']
 export const CERTIFIER_ROLES: readonly UserRole[] = ['verifier']
+/**
+ * D-095: el admin es la salvaguarda — puede hacer todo lo que hace cualquier
+ * rol. El backend ya lo deja pasar en cada ruta; en el front, `useRoleGuard`
+ * lo deja entrar a cualquier superficie. Este grupo es el de SU pantalla.
+ */
+export const ADMIN_ROLES: readonly UserRole[] = ['admin']
 
 export const ROLE_LANDING: Record<UserRole, string | null> = {
   buyer: '/investor/buy',
   developer: '/developer',
   notary: '/notary',
   verifier: '/certifier',
-  // admin queda fuera de alcance de esta rebanada (SPEC-011 §Casos borde):
-  // no tiene solapa ni landing propio todavía.
-  admin: null
+  // D-095 · SPEC-221: el admin aterriza en su pantalla. Sigue sin solapa en
+  // /login a propósito — se entra tipeando el usuario.
+  admin: '/admin'
 }

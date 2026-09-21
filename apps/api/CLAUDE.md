@@ -19,7 +19,9 @@ van **scopeados por rol** (`/investor/`, `/developer/`, `/notary/`, `/certifier/
 M2-D5 §4-6 está **completo**: los 18 work streams `M3-BE-XX` tienen sus rutas montadas y con test.
 
 Lo que queda fuera del backlog y sigue vivo: el CRUD genérico de `/projects` (crear/editar/borrar,
-miembros) y `/users` — admin-only, ops y fixtures, sin caller en el front.
+miembros) y `/users` — admin-only, ops y fixtures. **Desde D-095 (SPEC-221) `GET /users` sí tiene
+caller**: la pantalla `/admin`, que además usa `POST|GET /projects/:id/certifier-invitations` y deja
+que el certifier responda por `/certifier/invitations/:id/accept|decline`.
 
 **Tres rutas se borraron el 2026-09-08, todas `developer`-accesibles y sin un solo caller real en
 el front** (confirmado con `grep -rn "api.uploadEvidence" apps/web/src`, cero resultados, y lo mismo
@@ -1030,6 +1032,7 @@ variables (mismo criterio que `ProjectSource`):
 | `Unit` | `Unit.investorId` por PK | `user.id` |
 | `Invitation` | `Invitation.investorEmail` por PK | **`user.email`** |
 | `ContractOfUnit` | `Contract.investorId` **por `unitId`** | `user.id` |
+| `CertifierInvitation` | `CertifierInvitation.certifierId` por PK | `user.id` — el certifier ya tiene cuenta al ser invitado (SPEC-221) |
 
 Las dos rarezas son reales y por eso están tipadas aparte. La invitación compara contra el **email**
 porque existe antes de que el investor tenga cuenta: si comparara ids, ninguna invitación sería de

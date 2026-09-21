@@ -35,8 +35,8 @@ alcanza con este documento. Pueden ser la misma persona o cuatro distintas.
 
 | Quién | Qué hace | Qué lee | Qué entrega |
 |---|---|---|---|
-| **Técnico** (quien conoce el repo) | Pasa las contraseñas **en privado**, corre los comandos del §1.4 durante el corte de T08 y está a mano durante la grabación | §1 | Las cuentas andando y el certifier sumado al proyecto nuevo |
-| **Quien graba la pantalla** | Prepara la Mac y Chrome, y graba las 31 tomas | §1.2, §1.5, §1.6, §2, §3, §4 | `T01.mov` … `T31.mov`, recortados |
+| **Técnico** (quien conoce el repo) | Pasa las contraseñas **en privado** y está a mano durante la grabación | §1 | Las cuentas andando |
+| **Quien graba la pantalla** | Prepara la Mac y Chrome, graba las 31 tomas y, en el corte de T08, invita al certifier desde la web | §1.2, §1.4, §1.5, §1.6, §2, §3, §4 | `T01.mov` … `T31.mov`, recortados |
 | **Quien graba la voz** | Lee la narración en inglés, una grabación por toma | §3.1 y §8 | `T01.m4a` … `T31.m4a` |
 | **Quien arma el final** | Instala `ffmpeg`, revisa la carpeta y corre un comando | §3.1 y §5 | `walkthrough-final.mp4` |
 
@@ -54,8 +54,8 @@ vas a ver en pantalla: sirven para encontrarlos, no hay que decirlos.
 
 ### 1.1 Cuentas
 
-Las cinco del seed. En cámara se usan cuatro (`admin` no tiene landing,
-`apps/web/src/auth/roles.ts:16`; se usa solo desde la consola, §1.4):
+Las cinco del seed. En cámara se usan cuatro; la del `admin` se usa **fuera de cámara**, en la
+pestaña 5, para invitar al certifier al proyecto nuevo (§1.4):
 
 | Rol en el video | Usuario | `User.id` | Password |
 |---|---|---|---|
@@ -63,10 +63,10 @@ Las cinco del seed. En cámara se usan cuatro (`admin` no tiene landing,
 | Developer | `developer@example.com` | `hnrykorp4aqul78oiy9bfe4h` | idem |
 | Certifier | `verifier@example.com` | `k2knwiqp66xuv6ojp7iv48ep` | idem |
 | Notary | `notary@example.com` | `vjfxjgdxgi3n6pu0a7j7z2pw` | idem |
-| (consola) | `admin@example.com` | `jn0ejo6c287l4q0n9p5amqpr` | `SEED_ADMIN_PASSWORD` |
+| Admin (fuera de cámara) | `admin@example.com` | `jn0ejo6c287l4q0n9p5amqpr` | `SEED_ADMIN_PASSWORD` |
 
 **Quien graba no necesita el `.env`:** el técnico le pasa **en privado** (no por un canal grupal ni
-en este documento) las dos contraseñas; la de los cuatro roles es la misma. Ojo: la pantalla de
+en este documento) las dos contraseñas: la de los cuatro roles, que es la misma para todos, y la del admin. Ojo: la pantalla de
 login pre-llena una contraseña que **no sirve** en producción (T01).
 
 ### 1.2 Archivos de evidencia
@@ -155,8 +155,8 @@ INSERT INTO Dossier (id, unitId, masterHash, compiledAt, shareToken, status, sig
 Los tres `User.id` que hacen falta están en el §1.1. **El rollback también quedó en
 `specs/RUNBOOK-deploy.md` §5.1.**
 
-**La base no tiene nada más pendiente para grabar.** Lo único que queda es sumar el certifier al
-proyecto nuevo (§1.4), durante el corte de T08.
+**La base no tiene nada más pendiente para grabar.** Lo único que queda es invitar al certifier al
+proyecto nuevo (§1.4), desde la web, durante el corte de T08.
 
 #### 1.3.2 La organización desarrolladora — **hecho el 2026-09-21**
 
@@ -196,44 +196,30 @@ no dibuja el link. El perfil del desarrollador se ve una vez, sobre la obra term
 | **Certifier** — KPIs e "Issued" | **30 certificadas, 30 certificados emitidos** con hash y TXID reales de la prueba de volumen | Ya está. El panel del certifier tiene historia real sin que haga falta preparar nada. |
 | **Escribano** — "Pending review" | **vacía** (`[]`) | En **T23**, cuando el investor abre el dossier de 1A y eso lo compila. |
 
-### 1.4 El certifier del proyecto nuevo — se suma **durante el corte de T08**
-
-> **Lo hace el técnico, no quien graba.** Quien graba termina T08, **le avisa** y espera la
-> confirmación (el `201`) antes de seguir. Hacen falta el repo y `apps/api/.env`; nada más —
-> todo va por la API, igual que la web.
+### 1.4 El certifier del proyecto nuevo — se invita **durante el corte de T08**, desde la web
 
 El proyecto que se crea en cámara nace con **una sola membresía, la del developer que lo crea**
-(`developer.routes.ts:222`). Sin el `verifier`, su etapa no aparece en la cola del certifier y el
-Acto 4 no existe. Y no hay pantalla para arreglarlo: `POST /projects/:id/members` es admin-only
-(`projects.routes.ts:442`).
+(`developer.routes.ts:222`). Sin el certifier, su etapa no aparece en la cola del certifier y el
+Acto 4 no existe. Lo suma el **admin**, que invita al certifier; el certifier acepta (D-095,
+SPEC-221). **Todo desde la web, sin comandos:** lo hace quien graba, fuera de cámara.
 
 **El buyer no hace falta sumarlo:** lo suma el propio flujo. El developer lo invita en T11 y, al
 aceptar en T12, la API le crea la membresía (`investor.routes.ts:705`).
 
-Como crear el proyecto bloquea ~6 minutos igual, **ese corte es exactamente donde entran estos
-comandos** — no hay que preparar nada el día antes.
+Como crear el proyecto bloquea ~6 minutos igual, **ese corte es exactamente donde entra esto**. En
+cuanto la pantalla de T08 vuelve sola (el proyecto ya existe):
 
-```bash
-set -a && . ./apps/api/.env && set +a
-API=https://propnexus-api.onrender.com/api/v1
+1. **Pestaña 5 (admin)** → `/admin`. El proyecto recién creado aparece **primero** en "Proyectos";
+   confirmá que es el nombre que tipeaste en T08.
+2. En **"Invite a certifier"**: elegí **Verifier Demo** → **Invite**. Tiene que aparecer
+   "Invitation sent" y, abajo, la invitación como **Pending**. (Para esa altura la app ya está en
+   inglés; en castellano son "Invitar a un certifier", "Invitar", "Invitación enviada",
+   "Pendiente".)
+3. **Pestaña 3 (certifier)** → recargá `/certifier` (`Cmd+R`). Arriba aparece **"Invitations to
+   certify"** con el proyecto nuevo → **Accept**. La sección desaparece.
 
-TOKEN=$(curl -s -X POST $API/auth/login -H 'content-type: application/json' \
-  -d "{\"email\":\"admin@example.com\",\"password\":\"$SEED_ADMIN_PASSWORD\"}" \
-  | sed -n 's/.*"token":"\([^"]*\)".*/\1/p')
-
-# El proyecto recién creado: el admin ve todos, y el más nuevo es el de T08.
-# Imprime su nombre — tiene que ser el que se tipeó en cámara (ej. "Torre Núñez").
-# Si dice otro, NO sigas: el proyecto todavía no terminó de crearse.
-PID=$(curl -s $API/projects -H "authorization: Bearer $TOKEN" | python3 -c \
-  "import json,sys; p=max(json.load(sys.stdin), key=lambda x: x['createdAt']); print('Proyecto:', p['name'], file=sys.stderr); print(p['id'])")
-
-# El certifier (`verifier@example.com`), como verifier del proyecto nuevo.
-curl -s -X POST $API/projects/$PID/members \
-  -H "authorization: Bearer $TOKEN" -H 'content-type: application/json' \
-  -d '{"userId":"k2knwiqp66xuv6ojp7iv48ep","membershipRole":"verifier"}' -w " %{http_code}\n"
-```
-
-- [ ] Devolvió `201`.
+- [ ] Invitación aceptada: en la pestaña 5, recargando, "Miembros" muestra a Verifier Demo como
+      certifier.
 
 ### 1.5 Las pasadas de calentamiento
 
@@ -368,7 +354,7 @@ contraseñas → "Ofrecer guardar contraseñas" apagado.
 **Para escribir una dirección en pantalla completa** (fuera de cámara): `Cmd+L` muestra la barra de
 direcciones un momento → pegás → Enter. Para cambiar de pestaña no hace falta verla (§2.3).
 
-### 2.3 Las cuatro pestañas — el truco que ahorra media grabación
+### 2.3 Las pestañas — el truco que ahorra media grabación
 
 La sesión vive en `sessionStorage` (`apps/web/src/auth/session.ts:11`), que es **por pestaña**: los
 cuatro roles pueden estar logueados a la vez y se cambia de rol con `Cmd+Opt+→`.
@@ -379,6 +365,7 @@ cuatro roles pueden estar logueados a la vez y se cambia de rol con `Cmd+Opt+→
 | 2 | Developer (`developer@`) |
 | 3 | Certifier (`verifier@`) |
 | 4 | Notary (`notary@`) |
+| 5 | Admin (`admin@`) — **fuera de cámara**, solo para el §1.4 |
 
 **Antes de T01, en este orden:**
 
@@ -386,11 +373,12 @@ cuatro roles pueden estar logueados a la vez y se cambia de rol con `Cmd+Opt+→
    pantalla completa.
 1. Pestaña **1**: `propnexus-web.onrender.com/login` **sin entrar**, y **en castellano**. Si aparece
    en inglés, tocá el toggle de idioma para volver a Español.
-2. Pestañas **2, 3 y 4**, en ese orden: `Cmd+T` → escribí `propnexus-web.onrender.com/login` → entrá
-   con su usuario (la contraseña se tipea, §1.1). Se ven en castellano: está bien.
+2. Pestañas **2, 3, 4 y 5**, en ese orden: `Cmd+T` → escribí `propnexus-web.onrender.com/login` →
+   entrá con su usuario (la contraseña se tipea, §1.1). El admin no tiene solapa: en la 5 tipeá
+   `admin@example.com` en "Usuario". Se ven en castellano: está bien.
 3. Volvé a la pestaña 1 (`Cmd+1`), entrá en pantalla completa (§2.2) y grabás **T01**: el primer
    gesto es el toggle → inglés, y recién después el login.
-4. **Después de T01, fuera de cámara:** pasá por las pestañas 2, 3 y 4 y recargá cada una (`Cmd+R`).
+4. **Después de T01, fuera de cámara:** pasá por las pestañas 2, 3, 4 y 5 y recargá cada una (`Cmd+R`).
    El idioma se lee al abrir la página: sin recargar, siguen en castellano. La sesión sobrevive a la
    recarga.
 
@@ -563,9 +551,9 @@ on-chain. Es el contraste contra el que después se entiende el proyecto que nac
       **⏸ CORTE ~6 min.** El request no vuelve hasta que los 10 mints terminaron: son secuenciales
       dentro del handler (`developer.routes.ts:266`) y cada uno es su propia transacción de Cardano
       (D-083 — el validador rechaza acuñar más de un hilo por tx).
-      **Durante este corte, avisale al técnico** para que corra los comandos del §1.4, y no
-      sigas hasta que te confirme. Sin eso no hay Acto 4. Mientras tanto no cierres la pestaña ni
-      recargues: esperá a que la pantalla vuelva sola.
+      **Esperá a que la pantalla vuelva sola** (no cierres la pestaña ni recargues) y, fuera de
+      cámara, hacé el §1.4: el admin invita al certifier y el certifier acepta. Sin eso no hay
+      Acto 4.
 
 - [ ] **T09 · El proyecto ya creado** — `/developer/projects` → `/developer/project/:id`
       Aparece primero en la lista; adentro, las 4 action cards y las 3 stat cards.
@@ -834,12 +822,9 @@ Vale tenerlo escrito antes del voice-over, para no prometer en audio algo que la
   `POST /developer/contracts/:id/releases/:stageNum` existe en el backend como deuda declarada y el
   `ApiPort` ni lo expone. Por eso T14 muestra el estado vacío de releases y T22 muestra el contrato
   como registro.
-- **El rol `admin` no tiene interfaz** (`apps/web/src/auth/roles.ts:16`). No es uno de los cuatro
-  roles del SOM, así que no falta nada, pero no lo menciones en el audio.
-- **No hay pantalla para sumar un certifier o un escribano a un proyecto.**
-  `POST /projects/:id/members` es admin-only y no tiene superficie. Es la razón del §1.4: al proyecto
-  creado en cámara hay que sumarle el certifier por consola para que el Acto 4 exista. (Al buyer lo
-  suma el flujo de invitación, T11-T12.)
+- **La pantalla del admin (`/admin`) no sale en el video.** El admin es la salvaguarda (D-095), no
+  uno de los cuatro roles del SOM; se usa fuera de cámara para invitar al certifier (§1.4). No lo
+  menciones en el audio.
 - **`torre-a` sigue en la base pero sin membresías.** No se borró porque tiene 8 eventos on-chain
   colgando. El developer todavía la ve en su listado (T07); el investor, el certifier y el escribano,
   no.

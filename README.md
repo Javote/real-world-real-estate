@@ -42,6 +42,9 @@ pnpm dev                                 # web en :3000, api en :8787
 | Notary | `notary@example.com` / `notary123` | `/notary` |
 | Investor | `buyer@example.com` / `buyer123` | `/investor/buy` |
 
+El **admin** (`admin@example.com` / `admin123`) no tiene solapa: se tipea el usuario y aterriza en
+`/admin`, desde donde entra a los cuatro paneles e invita certifiers a los proyectos (D-095).
+
 Son credenciales **de desarrollo y publicadas**: el seed solo las usa contra un SQLite local, y
 contra cualquier otra base se niega a correr sin `SEED_ADMIN_PASSWORD` (D-047).
 

@@ -373,6 +373,12 @@ export type OwnerSource =
   /** La invitación es para su email: `Invitation.investorEmail`. */
   | { via: "Invitation"; param: string }
   /**
+   * La invitación a certificar es del certifier invitado:
+   * `CertifierInvitation.certifierId` (SPEC-221). Por id, no por email: el
+   * certifier ya tiene cuenta cuando se lo invita.
+   */
+  | { via: "CertifierInvitation"; param: string }
+  /**
    * El contrato de una unidad. El path trae el **`unitId`**, no el id del
    * contrato — `GET /investor/contracts/:unitId` busca por unidad, así que la
    * fila se resuelve por esa columna y no por la clave primaria.
@@ -390,6 +396,7 @@ export type OwnerSource =
 const NOMBRE_DE_ENTIDAD: Record<OwnerSource["via"], string> = {
   Unit: "Unit",
   Invitation: "Invitation",
+  CertifierInvitation: "Invitation",
   ContractOfUnit: "Contract",
   Contract: "Contract"
 };
@@ -422,6 +429,15 @@ async function cargarDueño(
       .where("id", "=", key)
       .executeTakeFirst();
     return fila ? { dueño: fila.investorEmail, contra: "email" } : null;
+  }
+
+  if (source.via === "CertifierInvitation") {
+    const fila = await db
+      .selectFrom("CertifierInvitation")
+      .select("certifierId")
+      .where("id", "=", key)
+      .executeTakeFirst();
+    return fila ? { dueño: fila.certifierId, contra: "id" } : null;
   }
 
   const fila = await db
@@ -674,7 +690,7 @@ type AuditEntityScope = (
 
 /** El evento apunta a una fila de `tabla` que cae en uno de mis proyectos. */
 function viaProyecto(
-  tabla: "Stage" | "Evidence" | "Invitation" | "Unit" | "ProjectMember"
+  tabla: "Stage" | "Evidence" | "Invitation" | "CertifierInvitation" | "Unit" | "ProjectMember"
 ): AuditEntityScope {
   return (eb, misProyectos) =>
     eb.and([
@@ -707,6 +723,7 @@ const AUDIT_ENTITY_SCOPES = {
   Stage: viaProyecto("Stage"),
   Evidence: viaProyecto("Evidence"),
   Invitation: viaProyecto("Invitation"),
+  CertifierInvitation: viaProyecto("CertifierInvitation"),
   Unit: viaProyecto("Unit"),
   ProjectMember: viaProyecto("ProjectMember"),
   // El dossier cuelga de la unidad, no del proyecto.
