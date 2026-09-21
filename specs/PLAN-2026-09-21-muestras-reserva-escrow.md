@@ -4,6 +4,24 @@
 > plan. Cuando se corra, el resultado va a `specs/evidencia-m3/3-preprod/`: la nota de performance y
 > sus capturas.
 
+## Para retomarla
+
+Se intentó correr el 2026-09-21 y quedó sin hacer: **la extensión de Chrome no estaba conectada**.
+Antes de arrancar:
+
+1. **La extensión de Claude en Chrome conectada**, logueada con la misma cuenta que Claude Code (si
+   recién se instaló, reiniciar Chrome).
+2. **Los dos logins los hace el dueño**, no la extensión: Claude no tipea contraseñas en el
+   navegador. Claude abre dos pestañas en `/login`; el dueño entra como `developer@example.com` en
+   una y como `buyer@example.com` en la otra, y a partir de ahí Claude maneja todo.
+3. **Proyecto: Torre Volumen 3, unidades nuevas `7A`…`7E`**, con precio mayor a US$ 195.000 para no
+   cambiar el "desde" que muestran las cards. El buyer ya es miembro, así que la pantalla "Buy" del
+   video (T02) no cambia.
+
+**Al terminar:** la nota de performance **en inglés** y sus capturas van a
+`specs/evidencia-m3/3-preprod/`; se actualiza el índice (`specs/evidencia-m3/README.md`, ítem 3) y
+la toma T13 del guion del video, porque el portfolio del buyer pasa de 2 a 7 unidades.
+
 ## Por qué hace falta
 
 La evidencia del Milestone 3 pide *"screenshots of audit logs/latency confirming <12m median; short
@@ -28,17 +46,17 @@ que mide `GET /audit-logs/telemetry/reservation-to-escrow` (`blockTimestamp - cr
 (`propnexus-web.onrender.com`, Cardano Preprod). **Quién maneja:** la extensión de Claude en Chrome,
 en dos pestañas (developer y buyer), igual que el guion del video (§2.3).
 
-**Sobre qué proyecto:** el que se crea en cámara en el video (T08), **después** de grabarlo. Si el
-video todavía no se grabó, sobre `Torre Volumen 3`. En los dos casos las unidades se crean para la
-prueba, así no se toca ninguna existente.
+**Sobre qué proyecto:** `Torre Volumen 3`, con unidades creadas para la prueba (`7A`…`7E`), así no
+se toca ninguna existente.
 
 Por cada muestra, `i` de 1 a 5:
 
-1. **[DEV]** `/developer/project/:id/units` → "Add unit" → `M-i` (piso y m² cualquiera, con precio).
-2. **[DEV]** `/developer/project/:id/invite` → email `buyer@example.com`, unidad `M-i`, monto →
+1. **[DEV]** `/developer/project/:id/units` → "Add unit" → `7A`…`7E` (piso 7, m² cualquiera, precio
+   mayor a US$ 195.000).
+2. **[DEV]** `/developer/project/:id/invite` → email `buyer@example.com`, unidad de la muestra, monto →
    enviar.
-3. **[INV]** campana → `/investor/notifications` → abrir la invitación de `M-i` → **Aceptar**.
-4. Esperar a que el anclaje confirme: en `/investor/unit/<M-i>` la novedad pasa de "Pendiente" a
+3. **[INV]** campana → `/investor/notifications` → abrir la invitación de la unidad → **Aceptar**.
+4. Esperar a que el anclaje confirme: en `/investor/unit/<unidad>` la novedad pasa de "Pendiente" a
    confirmada, sola, sin recargar (la pantalla consulta cada 10 s mientras haya algo pendiente).
 5. Pasar a la siguiente. No hace falta esperar entre muestras.
 

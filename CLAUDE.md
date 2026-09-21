@@ -61,7 +61,7 @@ tampoco tiene campo de signer. El criterio 3 queda sin código pendiente.
 |---|---|---|
 | 3.12 | **Video walkthrough** | 13 ⬜ |
 | 3.13 | **3 pilotos** — recontactar; `M1-D3-PilotPlan.pdf` ya trae cartas de M1 y probablemente cubre parte | 4 ⬜ externo |
-| 3.14 | **Muestras de "reserva → escrow"** — ≥5 compras reales en Preprod, manejadas con la extensión de Chrome, + capturas + nota de performance. Hoy hay 1 sola muestra. Procedimiento en [`specs/PLAN-2026-09-21-muestras-reserva-escrow.md`](specs/PLAN-2026-09-21-muestras-reserva-escrow.md) | 9 ⚠️ |
+| 3.14 | **Muestras de "reserva → escrow"** — ≥5 compras reales en Preprod, manejadas con la extensión de Chrome, + capturas + nota de performance. Hoy hay 1 sola muestra. **Intentada el 2026-09-21, sin correr: la extensión de Chrome no estaba conectada**, y los logins los hace el dueño. Procedimiento y prerrequisitos en [`specs/PLAN-2026-09-21-muestras-reserva-escrow.md`](specs/PLAN-2026-09-21-muestras-reserva-escrow.md) | 9 ⚠️ |
 
 **La evidencia para enviar vive en [`specs/evidencia-m3/`](specs/evidencia-m3/README.md), en
 inglés y solo lo exportable**, una subcarpeta por ítem de *"Evidence of milestone completion"*. Los
