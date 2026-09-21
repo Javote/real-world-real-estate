@@ -439,7 +439,7 @@ const esAR = {
   'investor.developer.yearsInBusiness': 'Años en el rubro',
   'investor.developer.unitsSold': 'Unidades vendidas',
   'investor.developer.investors': 'Compradores',
-  'investor.developer.previousProjects': 'Obras entregadas',
+  'investor.developer.previousProjects': 'Obras previas',
   'investor.developer.activeProjects': 'Obras en curso',
   'investor.developer.emptyPrevious': 'Todavía no entregó ninguna obra.',
   'investor.developer.emptyActive': 'No tiene obras en curso.',
