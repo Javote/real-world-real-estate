@@ -115,6 +115,16 @@ export const projectSchema = z.strictObject({
   totalUnits: z.number().int().nonnegative(),
   estimatedDelivery: z.coerce.date().nullable(),
   status: projectStatusSchema,
+  /**
+   * La organización desarrolladora (migración 0010, SPEC-220). Anulable: los
+   * proyectos anteriores a esa migración no tienen una y no se les inventa.
+   *
+   * **Va acá porque `projectSchema` es `strictObject`**: las rutas que hacen
+   * `projectSchema.parse(fila)` sobre un `returningAll()` rechazarían la fila
+   * entera por una clave que el schema no declara. Una columna nueva en
+   * `Project` es, por construcción, un campo nuevo en este contrato.
+   */
+  organizationId: z.string().nullable(),
   createdAt: z.coerce.date(),
   updatedAt: z.coerce.date()
 });
@@ -177,6 +187,59 @@ export const developerProjectListItemSchema = projectSchema.extend({
   priceCurrency: z.string().nullable()
 });
 export type DeveloperProjectListItem = z.infer<typeof developerProjectListItemSchema>;
+
+/**
+ * **Capturas 59-60 de M2-D2 (`DEVELOPER-REPUTATION-A/B`) — `GET
+ * /projects/:id/developer`.** SPEC-220.
+ *
+ * Es la única superficie del producto que **no tiene fila en M2-D5**: está
+ * diseñada en M2-D2 y el backlog de M3 nunca la recogió. Por eso no hay test
+ * IDs que transcribir y los de acá son nuestros, con la misma forma que los
+ * del entregable.
+ *
+ * **Sin `rating` ni conteo de inversores en el pill** (D-094). Las capturas
+ * muestran "4.8 / 5.0 · 127 investors" junto al nombre; un rating es una
+ * afirmación sobre la calidad del desarrollador, y D-026 limita lo que la
+ * plataforma sostiene a cuatro afirmaciones sobre documentos y atestaciones.
+ * No hay reseñas ni quién las firme: el número solo podría escribirse a mano.
+ * Mismo criterio que D-070 con "Release stage N payment".
+ *
+ * El resto **sí se sostiene, porque se deriva del registro** y no de un campo
+ * que alguien mantiene: las obras entregadas son los proyectos en `completed`,
+ * las unidades vendidas son las `Unit` en `sold`, y los dos listados son esos
+ * mismos proyectos partidos por estado.
+ */
+export const developerProfileProjectSchema = developerProjectListItemSchema.extend({
+  /** `MIN`/`MAX` de `Unit.sizeM2` — el "60 m² to 150 m²" de la captura 60. */
+  sizeMinM2: z.number().int().positive().nullable(),
+  sizeMaxM2: z.number().int().positive().nullable()
+});
+export type DeveloperProfileProject = z.infer<typeof developerProfileProjectSchema>;
+
+export const developerProfileSchema = z.strictObject({
+  organization: z
+    .strictObject({
+      id: z.string(),
+      name: z.string(),
+      slug: z.string(),
+      bio: z.string().nullable(),
+      foundedYear: z.number().int().nullable()
+    })
+    .nullable(),
+  /**
+   * Todo derivado, nada almacenado. `yearsInBusiness` sale de `foundedYear`
+   * contra el año actual: `null` si el desarrollador no lo declaró, nunca 0.
+   */
+  stats: z.strictObject({
+    projectsDelivered: z.number().int().nonnegative(),
+    unitsSold: z.number().int().nonnegative(),
+    investors: z.number().int().nonnegative(),
+    yearsInBusiness: z.number().int().nonnegative().nullable()
+  }),
+  previousProjects: z.array(developerProfileProjectSchema),
+  activeProjects: z.array(developerProfileProjectSchema)
+});
+export type DeveloperProfile = z.infer<typeof developerProfileSchema>;
 
 /** Fila 37 — `GET /developer/projects/:id`. */
 export const developerProjectDetailSchema = projectSchema.extend({

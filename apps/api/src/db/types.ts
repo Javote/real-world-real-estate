@@ -73,6 +73,27 @@ export interface UserTable {
   updatedAt: SqliteTimestamp;
 }
 
+/**
+ * La organización desarrolladora (migración 0010, SPEC-220). Solo lo
+ * autodeclarado: el resto de lo que muestran las capturas 59-60 —obras
+ * entregadas, unidades vendidas, inversores— se deriva de `Project` y `Unit`
+ * en cada lectura.
+ *
+ * Sin columna `rating`: D-094. Un rating es una afirmación sobre la calidad
+ * del desarrollador y no hay de dónde calcularlo, así que la columna solo
+ * podría llenarse a mano.
+ */
+export interface OrganizationTable {
+  id: GeneratedId;
+  name: string;
+  slug: string;
+  bio: string | null;
+  /** Año de fundación. Los "20+ years in business" de la captura se derivan. */
+  foundedYear: number | null;
+  createdAt: SqliteTimestamp;
+  updatedAt: SqliteTimestamp;
+}
+
 export interface ProjectTable {
   id: GeneratedId;
   name: string;
@@ -85,6 +106,8 @@ export interface ProjectTable {
   totalUnits: number;
   estimatedDelivery: SqliteTimestamp | null;
   status: ProjectStatus;
+  /** Anulable: los proyectos anteriores a 0010 no tienen organización. */
+  organizationId: string | null;
   createdAt: SqliteTimestamp;
   updatedAt: SqliteTimestamp;
 }
@@ -310,6 +333,7 @@ export interface NotificationTable {
 
 export interface Database {
   User: UserTable;
+  Organization: OrganizationTable;
   Project: ProjectTable;
   ProjectMember: ProjectMemberTable;
   Stage: StageTable;

@@ -20,11 +20,21 @@
 // **No falla** por un ID todavía sin implementar: eso es backlog pendiente, no
 // una regresión. Los lista para que se vea qué falta.
 //
-// Un tercer caso no es ni falla ni backlog: un ID que el entregable declara
-// pero que la plataforma **decidió no construir nunca** (D-070). Ese no
-// cuenta ni como pendiente ni como cubierto — se excluye del denominador en
-// `NO_SE_CONSTRUYE`, más abajo, en vez de dejarlo flotando como un 74/75
-// permanente que nunca cierra.
+// Un tercer caso es un ID que el entregable declara pero que la plataforma
+// **decidió no construir nunca**: `DEV-RELEASE-EXECUTE-002`, el botón de
+// liberar pagos que D-070 descartó porque este producto no administra fondos.
+// **Cuenta como no cubierto, a propósito**, y por eso el número es 74/75 y no
+// 74/74.
+//
+// Hasta el 2026-09-21 se excluía del denominador, con el argumento de no dejar
+// flotando un 74/75 que nunca cierra. Se revirtió: un 100% redondo invita a
+// dejar de mirar, y mirando se encontró que **las capturas 59 y 60 de M2-D2
+// —el perfil de reputación del developer— están diseñadas, no tienen fila en
+// este entregable y no están construidas**. Esta métrica no podía verlo,
+// porque mide contra el backlog y no contra el catálogo de capturas. Un 98.7%
+// con una excepción nombrada es más difícil de confundir con "no falta nada".
+//
+// El ID no se borra del entregable: `docs/` es inmutable (D-022).
 
 import { readdirSync, readFileSync, statSync } from "node:fs";
 import path from "node:path";
@@ -92,18 +102,32 @@ function archivosDe(dir) {
   return salida;
 }
 
-// IDs que el entregable declara pero que D-070 retira de alcance: no es
-// deuda, es la decisión permanente de que la plataforma no administra fondos.
-// Se excluyen acá, no se borran del entregable — docs/ es inmutable (D-022).
-const NO_SE_CONSTRUYE = new Set([
-  "DEV-RELEASE-EXECUTE-002" // "Release stage N payment" — D-070
-]);
+const declarados = new Set(readFileSync(path.join(RAIZ, ENTREGABLE), "utf8").match(PATRON) ?? []);
 
-const declarados = new Set(
-  (readFileSync(path.join(RAIZ, ENTREGABLE), "utf8").match(PATRON) ?? []).filter(
-    (id) => !NO_SE_CONSTRUYE.has(id)
-  )
-);
+/**
+ * **Superficies diseñadas en M2-D2 que M2-D5 nunca recogió.**
+ *
+ * Un ID reclamado que el entregable no declara es, casi siempre, un typo — y
+ * por eso este script falla ante uno. Pero hay un caso que no lo es y que
+ * apareció el 2026-09-21: el **catálogo de capturas** (M2-D2) tiene pantallas
+ * que el **backlog de implementación** (M2-D5) no lista. Las capturas 59 y 60,
+ * `DEVELOPER-REPUTATION-A/B`, son el perfil de la organización desarrolladora:
+ * diseñadas, sin fila, sin test IDs que transcribir.
+ *
+ * Construirlas es cumplir `docs/`, no desviarse de él. Pero sus IDs no pueden
+ * salir de un entregable que no las menciona, así que son nuestros y se
+ * declaran acá — con su captura al lado, que es lo que los hace auditables.
+ *
+ * **No entran al denominador**: la cobertura mide el backlog de M3 contra sí
+ * mismo, y meter IDs que el backlog no pidió la inflaría hasta volverla
+ * incomparable con la vara del ≥95% que fija M2-D5 §8.
+ */
+const FUERA_DEL_BACKLOG = new Map([
+  ["INV-DEVELOPER-PROFILE-001", "M2-D2 capturas 59-60 · SPEC-220"],
+  ["INV-DEVELOPER-PREVIOUS-002", "M2-D2 captura 59 · SPEC-220"],
+  ["INV-DEVELOPER-ACTIVE-003", "M2-D2 captura 60 · SPEC-220"],
+  ["INV-DEVELOPER-LINK-004", "M2-D1:109 · la entrada desde el detalle de obra"]
+]);
 
 const reclamados = new Map();
 for (const dir of DONDE_SE_RECLAMA) {
@@ -115,7 +139,13 @@ for (const dir of DONDE_SE_RECLAMA) {
   }
 }
 
-const desconocidos = [...reclamados.keys()].filter((id) => !declarados.has(id));
+const desconocidos = [...reclamados.keys()].filter(
+  (id) => !declarados.has(id) && !FUERA_DEL_BACKLOG.has(id)
+);
+
+// Un ID declarado acá que nadie reclama es basura acumulándose: la lista
+// describe lo que SÍ se construyó fuera del backlog, no una lista de deseos.
+const fueraSinUsar = [...FUERA_DEL_BACKLOG.keys()].filter((id) => !reclamados.has(id));
 const cubiertos = [...declarados].filter((id) => reclamados.has(id));
 const faltantes = [...declarados].filter((id) => !reclamados.has(id)).sort();
 
@@ -132,6 +162,21 @@ if (desconocidos.length > 0) {
   falla = true;
   console.error("\nERROR · IDs reclamados que el entregable NO declara (¿typo?):");
   for (const id of desconocidos.sort()) console.error(`  ${id}  ← ${reclamados.get(id)}`);
+}
+
+if (fueraSinUsar.length > 0) {
+  falla = true;
+  console.error("\nERROR · declarados fuera del backlog pero que nadie reclama:");
+  for (const id of fueraSinUsar.sort()) console.error(`  ${id}  (${FUERA_DEL_BACKLOG.get(id)})`);
+}
+
+if (FUERA_DEL_BACKLOG.size > 0) {
+  console.log(
+    `\nFuera del backlog (${FUERA_DEL_BACKLOG.size}) — M2-D2 las diseña, M2-D5 no las lista:`
+  );
+  for (const [id, origen] of [...FUERA_DEL_BACKLOG.entries()].sort()) {
+    console.log(`  ${id}  ← ${origen}`);
+  }
 }
 
 if (cubiertos.length < COBERTURA_MINIMA) {

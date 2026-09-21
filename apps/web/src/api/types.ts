@@ -51,6 +51,7 @@ import type {
   BundleFiles as BundleFilesShared,
   ContractRelease as ContractReleaseShared,
   DeveloperContract as DeveloperContractShared,
+  DeveloperProfile as DeveloperProfileShared,
   DeveloperProgressItem,
   DeveloperProjectCreateResult,
   DeveloperProjectDetail as DeveloperProjectDetailShared,
@@ -117,6 +118,13 @@ export type Evidence = Serialized<EvidenceResponse> & {
 export type DeveloperProject = Serialized<DeveloperProjectListItem>
 
 export type DeveloperProjectDetail = Serialized<DeveloperProjectDetailShared>
+
+/**
+ * Capturas 59-60 · el perfil de la organización desarrolladora (SPEC-220).
+ * Sin `rating`: D-094 — la plataforma no sostiene afirmaciones sobre la
+ * calidad de un desarrollador, solo sobre documentos y atestaciones (D-026).
+ */
+export type DeveloperProfile = Serialized<DeveloperProfileShared>
 
 /** Lo que devuelve la subida anclada: la prueba llega con la respuesta. */
 export type StageEvidenceAnchor = Serialized<StageEvidenceUploadResult>

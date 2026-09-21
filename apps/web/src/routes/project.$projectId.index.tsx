@@ -10,7 +10,7 @@ import { DocumentViewerModal } from '#/components/domain/DocumentViewerModal'
 import { ImageGalleryModal } from '#/components/domain/ImageGalleryModal'
 import { Loading } from '#/components/domain/Loading'
 import { LocationMapModal } from '#/components/domain/LocationMapModal'
-import { PrimaryButton } from '#/components/domain/PrimaryButton'
+import { PrimaryButton, SecondaryButton } from '#/components/domain/PrimaryButton'
 import { ProgressTimeline } from '#/components/domain/ProgressTimeline'
 import { PanelLayout } from '#/components/PanelLayout'
 import { formatDate, formatMonthYear } from '#/i18n/format'
@@ -246,6 +246,22 @@ function InvestorProjectDetail() {
             <p className="text-body-sm text-text-muted">{t('investor.project.docsEmpty')}</p>
           )}
         </section>
+
+        {/* SPEC-220 · la entrada al perfil del desarrollador, que es como
+            M2-D1 §Screen tree la describe: *"linked from project"*. Solo se
+            dibuja si la obra tiene organización — los proyectos anteriores a
+            la migración 0010 no la tienen, y un link a una pantalla vacía es
+            peor que no ofrecerlo. */}
+        {proyecto?.organizationId ? (
+          <SecondaryButton
+            testId="INV-DEVELOPER-LINK-004"
+            onClick={() =>
+              void navigate({ to: '/project/$projectId/developer', params: { projectId } })
+            }
+          >
+            {t('investor.developer.link')}
+          </SecondaryButton>
+        ) : null}
 
         <article className={cn('flex flex-col gap-s3', CARD_SHELL)}>
           <h2 className="text-h2 font-bold text-text-primary">{t('investor.project.progress')}</h2>

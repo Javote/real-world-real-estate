@@ -21,6 +21,7 @@ import { z } from "zod";
 import { createId } from "../db/id";
 import type { OnChainEventRow, UserRole } from "../db/types";
 import { anchorCommitmentEvent } from "../domain/anchoring";
+import { agregadosDeProyectos } from "../domain/project-aggregates";
 import { reconciliarParaLectura } from "../domain/reconcile";
 import { anchorEvent, recordOnChainEvent } from "../domain/stage-transition";
 import { db } from "../lib/db";
@@ -83,54 +84,19 @@ const projectsProcedure = orpc
       .execute();
 
     const ids = proyectos.map((p) => p.id);
-    const stages = ids.length
-      ? await db
-          .selectFrom("Stage")
-          .select(["projectId", "state"])
-          .where("projectId", "in", ids)
-          .execute()
-      : [];
-
-    // **El "Price from" de la captura 35-36 es una agregación, no un campo.**
-    // El precio vive en la unidad (`Unit.priceMinorUnits`) y no hay precio a
-    // nivel proyecto: el "desde" es el mínimo de las unidades del proyecto.
-    //
-    // Sobre TODAS las unidades y no solo las disponibles, porque la captura lo
-    // decide: Belgrano Park está "Delivered" —o sea, sin nada disponible— y aun
-    // así muestra su precio. Filtrar por disponibilidad dejaría sin precio a
-    // todo proyecto vendido.
-    const unidades = ids.length
-      ? await db
-          .selectFrom("Unit")
-          .select(["projectId", "priceMinorUnits", "currency"])
-          .where("projectId", "in", ids)
-          .where("priceMinorUnits", "is not", null)
-          .execute()
-      : [];
+    // **El "Price from" de la captura 35-36 es una agregación, no un campo**, y
+    // el progreso también. Los dos los calcula `agregadosDeProyectos`
+    // (`domain/project-aggregates.ts`), compartido con el perfil del
+    // desarrollador: la regla de las dos monedas estaba escrita acá y hacía
+    // falta igual allá.
+    const agregados = await agregadosDeProyectos(ids);
 
     return proyectos.map((proyecto) => {
-      const suyos = stages.filter((s) => s.projectId === proyecto.id);
-      const completados = suyos.filter((s) => s.state === "Completed").length;
-
-      const conPrecio = unidades.filter((u) => u.projectId === proyecto.id);
-      const monedas = new Set(conPrecio.map((u) => u.currency));
-
-      // **Con dos monedas en el mismo proyecto no hay "desde" que se pueda
-      // sostener**: comparar unidades mínimas de monedas distintas da un
-      // número sin significado. Antes que un mínimo falso, ningún precio
-      // (regla 17). Hoy no debería pasar; el día que pase, se ve.
-      const barata =
-        monedas.size === 1
-          ? conPrecio.reduce((min, u) => (u.priceMinorUnits! < min.priceMinorUnits! ? u : min))
-          : null;
-
-      return {
-        ...proyecto,
-        stageCount: suyos.length,
-        progress: suyos.length ? Math.round((completados / suyos.length) * 100) : 0,
-        priceFromMinorUnits: barata?.priceMinorUnits ?? null,
-        priceCurrency: barata?.currency ?? null
-      };
+      // `sizeMinM2`/`sizeMaxM2` se descartan a propósito: son de la captura 60
+      // y `developerProjectListItemSchema` es estricto, así que una clave de
+      // más rechaza la fila entera.
+      const { sizeMinM2: _min, sizeMaxM2: _max, ...resto } = agregados.get(proyecto.id)!;
+      return { ...proyecto, ...resto };
     });
   });
 const projectsHandler = new OpenAPIHandler({ projectsProcedure });

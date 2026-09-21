@@ -12,6 +12,521 @@
     }
   ],
   "paths": {
+    "/api/v1/projects/{id}/developer": {
+      "get": {
+        "operationId": "projectDeveloperProcedure",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "pattern": "^[a-z][a-z0-9]{23}$"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "organization": {
+                      "anyOf": [
+                        {
+                          "type": "object",
+                          "properties": {
+                            "id": {
+                              "type": "string"
+                            },
+                            "name": {
+                              "type": "string"
+                            },
+                            "slug": {
+                              "type": "string"
+                            },
+                            "bio": {
+                              "anyOf": [
+                                {
+                                  "type": "string"
+                                },
+                                {
+                                  "type": "null"
+                                }
+                              ]
+                            },
+                            "foundedYear": {
+                              "anyOf": [
+                                {
+                                  "type": "integer",
+                                  "minimum": -9007199254740991,
+                                  "maximum": 9007199254740991
+                                },
+                                {
+                                  "type": "null"
+                                }
+                              ]
+                            }
+                          },
+                          "required": [
+                            "id",
+                            "name",
+                            "slug",
+                            "bio",
+                            "foundedYear"
+                          ],
+                          "additionalProperties": false
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ]
+                    },
+                    "stats": {
+                      "type": "object",
+                      "properties": {
+                        "projectsDelivered": {
+                          "type": "integer",
+                          "minimum": 0,
+                          "maximum": 9007199254740991
+                        },
+                        "unitsSold": {
+                          "type": "integer",
+                          "minimum": 0,
+                          "maximum": 9007199254740991
+                        },
+                        "investors": {
+                          "type": "integer",
+                          "minimum": 0,
+                          "maximum": 9007199254740991
+                        },
+                        "yearsInBusiness": {
+                          "anyOf": [
+                            {
+                              "type": "integer",
+                              "minimum": 0,
+                              "maximum": 9007199254740991
+                            },
+                            {
+                              "type": "null"
+                            }
+                          ]
+                        }
+                      },
+                      "required": [
+                        "projectsDelivered",
+                        "unitsSold",
+                        "investors",
+                        "yearsInBusiness"
+                      ],
+                      "additionalProperties": false
+                    },
+                    "previousProjects": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "id": {
+                            "type": "string"
+                          },
+                          "name": {
+                            "type": "string"
+                          },
+                          "slug": {
+                            "type": "string"
+                          },
+                          "address": {
+                            "anyOf": [
+                              {
+                                "type": "string"
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ]
+                          },
+                          "city": {
+                            "anyOf": [
+                              {
+                                "type": "string"
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ]
+                          },
+                          "country": {
+                            "anyOf": [
+                              {
+                                "type": "string"
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ]
+                          },
+                          "latitude": {
+                            "anyOf": [
+                              {
+                                "type": "number"
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ]
+                          },
+                          "longitude": {
+                            "anyOf": [
+                              {
+                                "type": "number"
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ]
+                          },
+                          "totalUnits": {
+                            "type": "integer",
+                            "minimum": 0,
+                            "maximum": 9007199254740991
+                          },
+                          "estimatedDelivery": {
+                            "anyOf": [
+                              {
+                                "type": "string",
+                                "format": "date-time",
+                                "x-native-type": "date"
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ]
+                          },
+                          "status": {
+                            "enum": [
+                              "planning",
+                              "in_progress",
+                              "delayed",
+                              "completed"
+                            ],
+                            "type": "string"
+                          },
+                          "organizationId": {
+                            "anyOf": [
+                              {
+                                "type": "string"
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ]
+                          },
+                          "createdAt": {
+                            "type": "string",
+                            "format": "date-time",
+                            "x-native-type": "date"
+                          },
+                          "updatedAt": {
+                            "type": "string",
+                            "format": "date-time",
+                            "x-native-type": "date"
+                          },
+                          "stageCount": {
+                            "type": "integer",
+                            "minimum": 0,
+                            "maximum": 9007199254740991
+                          },
+                          "progress": {
+                            "type": "integer",
+                            "minimum": 0,
+                            "maximum": 100
+                          },
+                          "priceFromMinorUnits": {
+                            "anyOf": [
+                              {
+                                "type": "integer",
+                                "minimum": 0,
+                                "maximum": 9007199254740991
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ]
+                          },
+                          "priceCurrency": {
+                            "anyOf": [
+                              {
+                                "type": "string"
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ]
+                          },
+                          "sizeMinM2": {
+                            "anyOf": [
+                              {
+                                "type": "integer",
+                                "minimum": -9007199254740991,
+                                "maximum": 9007199254740991,
+                                "exclusiveMinimum": 0
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ]
+                          },
+                          "sizeMaxM2": {
+                            "anyOf": [
+                              {
+                                "type": "integer",
+                                "minimum": -9007199254740991,
+                                "maximum": 9007199254740991,
+                                "exclusiveMinimum": 0
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ]
+                          }
+                        },
+                        "required": [
+                          "id",
+                          "name",
+                          "slug",
+                          "address",
+                          "city",
+                          "country",
+                          "latitude",
+                          "longitude",
+                          "totalUnits",
+                          "estimatedDelivery",
+                          "status",
+                          "organizationId",
+                          "createdAt",
+                          "updatedAt",
+                          "stageCount",
+                          "progress",
+                          "priceFromMinorUnits",
+                          "priceCurrency",
+                          "sizeMinM2",
+                          "sizeMaxM2"
+                        ],
+                        "additionalProperties": false
+                      }
+                    },
+                    "activeProjects": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "id": {
+                            "type": "string"
+                          },
+                          "name": {
+                            "type": "string"
+                          },
+                          "slug": {
+                            "type": "string"
+                          },
+                          "address": {
+                            "anyOf": [
+                              {
+                                "type": "string"
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ]
+                          },
+                          "city": {
+                            "anyOf": [
+                              {
+                                "type": "string"
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ]
+                          },
+                          "country": {
+                            "anyOf": [
+                              {
+                                "type": "string"
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ]
+                          },
+                          "latitude": {
+                            "anyOf": [
+                              {
+                                "type": "number"
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ]
+                          },
+                          "longitude": {
+                            "anyOf": [
+                              {
+                                "type": "number"
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ]
+                          },
+                          "totalUnits": {
+                            "type": "integer",
+                            "minimum": 0,
+                            "maximum": 9007199254740991
+                          },
+                          "estimatedDelivery": {
+                            "anyOf": [
+                              {
+                                "type": "string",
+                                "format": "date-time",
+                                "x-native-type": "date"
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ]
+                          },
+                          "status": {
+                            "enum": [
+                              "planning",
+                              "in_progress",
+                              "delayed",
+                              "completed"
+                            ],
+                            "type": "string"
+                          },
+                          "organizationId": {
+                            "anyOf": [
+                              {
+                                "type": "string"
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ]
+                          },
+                          "createdAt": {
+                            "type": "string",
+                            "format": "date-time",
+                            "x-native-type": "date"
+                          },
+                          "updatedAt": {
+                            "type": "string",
+                            "format": "date-time",
+                            "x-native-type": "date"
+                          },
+                          "stageCount": {
+                            "type": "integer",
+                            "minimum": 0,
+                            "maximum": 9007199254740991
+                          },
+                          "progress": {
+                            "type": "integer",
+                            "minimum": 0,
+                            "maximum": 100
+                          },
+                          "priceFromMinorUnits": {
+                            "anyOf": [
+                              {
+                                "type": "integer",
+                                "minimum": 0,
+                                "maximum": 9007199254740991
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ]
+                          },
+                          "priceCurrency": {
+                            "anyOf": [
+                              {
+                                "type": "string"
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ]
+                          },
+                          "sizeMinM2": {
+                            "anyOf": [
+                              {
+                                "type": "integer",
+                                "minimum": -9007199254740991,
+                                "maximum": 9007199254740991,
+                                "exclusiveMinimum": 0
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ]
+                          },
+                          "sizeMaxM2": {
+                            "anyOf": [
+                              {
+                                "type": "integer",
+                                "minimum": -9007199254740991,
+                                "maximum": 9007199254740991,
+                                "exclusiveMinimum": 0
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ]
+                          }
+                        },
+                        "required": [
+                          "id",
+                          "name",
+                          "slug",
+                          "address",
+                          "city",
+                          "country",
+                          "latitude",
+                          "longitude",
+                          "totalUnits",
+                          "estimatedDelivery",
+                          "status",
+                          "organizationId",
+                          "createdAt",
+                          "updatedAt",
+                          "stageCount",
+                          "progress",
+                          "priceFromMinorUnits",
+                          "priceCurrency",
+                          "sizeMinM2",
+                          "sizeMaxM2"
+                        ],
+                        "additionalProperties": false
+                      }
+                    }
+                  },
+                  "required": [
+                    "organization",
+                    "stats",
+                    "previousProjects",
+                    "activeProjects"
+                  ],
+                  "additionalProperties": false
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/v1/developer/projects/{id}/stages/{stageId}/evidence": {
       "post": {
         "summary": "POST /api/v1/developer/projects/:id/stages/:stageId/evidence",
@@ -1480,6 +1995,16 @@
                           ],
                           "type": "string"
                         },
+                        "organizationId": {
+                          "anyOf": [
+                            {
+                              "type": "string"
+                            },
+                            {
+                              "type": "null"
+                            }
+                          ]
+                        },
                         "createdAt": {
                           "type": "string",
                           "format": "date-time",
@@ -1503,6 +2028,7 @@
                         "totalUnits",
                         "estimatedDelivery",
                         "status",
+                        "organizationId",
                         "createdAt",
                         "updatedAt"
                       ],
@@ -2358,6 +2884,16 @@
                         ],
                         "type": "string"
                       },
+                      "organizationId": {
+                        "anyOf": [
+                          {
+                            "type": "string"
+                          },
+                          {
+                            "type": "null"
+                          }
+                        ]
+                      },
                       "createdAt": {
                         "type": "string",
                         "format": "date-time",
@@ -2461,6 +2997,7 @@
                       "totalUnits",
                       "estimatedDelivery",
                       "status",
+                      "organizationId",
                       "createdAt",
                       "updatedAt",
                       "stages"
@@ -2627,6 +3164,16 @@
                       ],
                       "type": "string"
                     },
+                    "organizationId": {
+                      "anyOf": [
+                        {
+                          "type": "string"
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ]
+                    },
                     "createdAt": {
                       "type": "string",
                       "format": "date-time",
@@ -2650,6 +3197,7 @@
                     "totalUnits",
                     "estimatedDelivery",
                     "status",
+                    "organizationId",
                     "createdAt",
                     "updatedAt"
                   ],
@@ -2888,6 +3436,16 @@
                       ],
                       "type": "string"
                     },
+                    "organizationId": {
+                      "anyOf": [
+                        {
+                          "type": "string"
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ]
+                    },
                     "createdAt": {
                       "type": "string",
                       "format": "date-time",
@@ -3062,6 +3620,7 @@
                     "totalUnits",
                     "estimatedDelivery",
                     "status",
+                    "organizationId",
                     "createdAt",
                     "updatedAt",
                     "stages",
@@ -3233,6 +3792,16 @@
                       ],
                       "type": "string"
                     },
+                    "organizationId": {
+                      "anyOf": [
+                        {
+                          "type": "string"
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ]
+                    },
                     "createdAt": {
                       "type": "string",
                       "format": "date-time",
@@ -3256,6 +3825,7 @@
                     "totalUnits",
                     "estimatedDelivery",
                     "status",
+                    "organizationId",
                     "createdAt",
                     "updatedAt"
                   ],
@@ -4964,6 +5534,16 @@
                           ],
                           "type": "string"
                         },
+                        "organizationId": {
+                          "anyOf": [
+                            {
+                              "type": "string"
+                            },
+                            {
+                              "type": "null"
+                            }
+                          ]
+                        },
                         "createdAt": {
                           "type": "string",
                           "format": "date-time",
@@ -4987,6 +5567,7 @@
                         "totalUnits",
                         "estimatedDelivery",
                         "status",
+                        "organizationId",
                         "createdAt",
                         "updatedAt"
                       ],
@@ -8661,6 +9242,16 @@
                         ],
                         "type": "string"
                       },
+                      "organizationId": {
+                        "anyOf": [
+                          {
+                            "type": "string"
+                          },
+                          {
+                            "type": "null"
+                          }
+                        ]
+                      },
                       "createdAt": {
                         "type": "string",
                         "format": "date-time",
@@ -8684,6 +9275,7 @@
                       "totalUnits",
                       "estimatedDelivery",
                       "status",
+                      "organizationId",
                       "createdAt",
                       "updatedAt"
                     ],
@@ -10153,6 +10745,16 @@
                         ],
                         "type": "string"
                       },
+                      "organizationId": {
+                        "anyOf": [
+                          {
+                            "type": "string"
+                          },
+                          {
+                            "type": "null"
+                          }
+                        ]
+                      },
                       "createdAt": {
                         "type": "string",
                         "format": "date-time",
@@ -10208,6 +10810,7 @@
                       "totalUnits",
                       "estimatedDelivery",
                       "status",
+                      "organizationId",
                       "createdAt",
                       "updatedAt",
                       "stageCount",
@@ -10359,6 +10962,16 @@
                         "completed"
                       ],
                       "type": "string"
+                    },
+                    "organizationId": {
+                      "anyOf": [
+                        {
+                          "type": "string"
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ]
                     },
                     "createdAt": {
                       "type": "string",
@@ -10644,6 +11257,7 @@
                     "totalUnits",
                     "estimatedDelivery",
                     "status",
+                    "organizationId",
                     "createdAt",
                     "updatedAt",
                     "stages"
@@ -10883,6 +11497,16 @@
                       ],
                       "type": "string"
                     },
+                    "organizationId": {
+                      "anyOf": [
+                        {
+                          "type": "string"
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ]
+                    },
                     "createdAt": {
                       "type": "string",
                       "format": "date-time",
@@ -10991,6 +11615,7 @@
                     "totalUnits",
                     "estimatedDelivery",
                     "status",
+                    "organizationId",
                     "createdAt",
                     "updatedAt",
                     "stages",

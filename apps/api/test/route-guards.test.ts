@@ -52,6 +52,11 @@ const MATRIZ: Record<string, string> = {
     "auth + autoriza(rol(admin|developer|buyer|verifier|notary) · proyecto(id → developer|buyer|verifier))",
   "GET /api/v1/projects/:id/building-schematic":
     "auth + autoriza(rol(admin|developer|buyer|verifier|notary) · proyecto(id → developer|buyer|verifier))",
+  // SPEC-220 · el perfil de la organización desarrolladora (capturas 59-60).
+  // Cualquier miembro del proyecto lo ve: es información del desarrollador de
+  // una obra en la que ya participa, no un directorio público.
+  "GET /api/v1/projects/:id/developer":
+    "auth + autoriza(rol(admin|developer|buyer|verifier|notary) · proyecto(id → developer|buyer|verifier))",
   "GET /api/v1/projects/:id/stages":
     "auth + autoriza(rol(admin|developer|buyer|verifier|notary) · proyecto(id → developer|buyer|verifier))",
   "POST /api/v1/projects/:id/stages/:stageId/retry-anchor":

@@ -3,6 +3,7 @@ import {
   buildingSchematicFloorSchema,
   createProjectSchema,
   cuidParamSchema,
+  developerProfileSchema,
   projectDetailSchema,
   projectDocumentSchema,
   projectListItemSchema,
@@ -16,6 +17,7 @@ import { Router } from "express";
 import { z } from "zod";
 import { createId } from "../db/id";
 import type { UserRole } from "../db/types";
+import { agregadosDeProyectos } from "../domain/project-aggregates";
 import { reconciliarParaLectura } from "../domain/reconcile";
 import { en } from "../lib/arrays";
 import { db } from "../lib/db";
@@ -563,8 +565,110 @@ router.get(
   }
 );
 
+/**
+ * **Capturas 59-60 · el perfil de la organización desarrolladora** (SPEC-220).
+ *
+ * Cuelga de `/projects/:id` y no de `/developer/:orgId` por tres razones, y la
+ * tercera es la que decide: M2-D1 la describe como *"linked from project"*;
+ * `/developer/*` ya es el área autenticada del developer y meter ahí una
+ * pantalla que mira un investor se presta a confusión; y **la autorización ya
+ * está resuelta** — el investor ve al desarrollador de una obra de la que es
+ * miembro, sin inventar una regla de permisos nueva para una entidad nueva.
+ *
+ * 404 cuando el proyecto no tiene organización: los 7 proyectos anteriores a
+ * la migración 0010 no la tienen, y una pantalla de perfil vacía diría menos
+ * que no ofrecerla. El front solo dibuja el link cuando hay `organizationId`.
+ */
+const projectDeveloperProcedure = os
+  .route({ method: "GET", path: "/{id}/developer" })
+  .input(z.strictObject({ id: cuidParamSchema }))
+  .output(developerProfileSchema)
+  .handler(async ({ input }) => {
+    const proyecto = await db
+      .selectFrom("Project")
+      .select("organizationId")
+      .where("id", "=", input.id)
+      .executeTakeFirst();
+
+    if (!proyecto) throw new ORPCError("NOT_FOUND", { message: "Project not found" });
+    if (!proyecto.organizationId) {
+      throw new ORPCError("NOT_FOUND", { message: "Project has no developer organization" });
+    }
+
+    const organizacion = await db
+      .selectFrom("Organization")
+      .select(["id", "name", "slug", "bio", "foundedYear"])
+      .where("id", "=", proyecto.organizationId)
+      .executeTakeFirst();
+
+    if (!organizacion) throw new ORPCError("NOT_FOUND", { message: "Organization not found" });
+
+    // Todas las obras de la organización, no solo la que se está mirando: la
+    // captura 59 lista "Previous Projects" y la 60 sigue con "Active Projects".
+    const proyectos = await db
+      .selectFrom("Project")
+      .selectAll()
+      .where("organizationId", "=", proyecto.organizationId)
+      .orderBy("createdAt", "desc")
+      .execute();
+
+    const ids = proyectos.map((p) => p.id);
+    const agregados = await agregadosDeProyectos(ids);
+
+    // Unidades de TODAS sus obras: "Units sold" e "investors" son del
+    // desarrollador, no de una obra.
+    const unidades = ids.length
+      ? await db
+          .selectFrom("Unit")
+          .select(["status", "investorId"])
+          .where("projectId", "in", ids)
+          .execute()
+      : [];
+
+    const vendidas = unidades.filter((u) => u.status === "sold");
+    const inversores = new Set(
+      vendidas.map((u) => u.investorId).filter((id): id is string => id !== null)
+    );
+
+    const conAgregados = proyectos.map((p) => ({ ...p, ...agregados.get(p.id)! }));
+    const anioActual = new Date().getUTCFullYear();
+
+    return developerProfileSchema.parse({
+      organization: organizacion,
+      stats: {
+        projectsDelivered: proyectos.filter((p) => p.status === "completed").length,
+        unitsSold: vendidas.length,
+        investors: inversores.size,
+        // `null` y no 0 cuando no lo declaró: "0 años en el rubro" es una
+        // afirmación, "no lo dijo" no lo es.
+        yearsInBusiness: organizacion.foundedYear
+          ? Math.max(0, anioActual - organizacion.foundedYear)
+          : null
+      },
+      // Entregado es pasado; todo lo demás sigue en curso. `delayed` es una
+      // obra activa con problemas, no una obra previa.
+      previousProjects: conAgregados.filter((p) => p.status === "completed"),
+      activeProjects: conAgregados.filter((p) => p.status !== "completed")
+    });
+  });
+const projectDeveloperHandler = new OpenAPIHandler({ projectDeveloperProcedure });
+
+router.get(
+  "/:id/developer",
+  authorize({
+    roles: CUALQUIER_ROL,
+    acceso: { proyecto: { param: "id" }, membresias: ANY_MEMBERSHIP }
+  }),
+  async (req, res, next) => {
+    const { matched } = await projectDeveloperHandler.handle(req, res, {
+      prefix: PREFIJO_ABSOLUTO
+    });
+    if (!matched) next();
+  }
+);
+
 /** El router oRPC combinado de esta vertical — lo consume
- * `scripts/generate-openapi.ts` para generar el fragmento de OpenAPI de las 9
+ * `scripts/generate-openapi.ts` para generar el fragmento de OpenAPI de las
  * rutas migradas. */
 export const projectsOrpcRouter = {
   projectListProcedure,
@@ -575,7 +679,8 @@ export const projectsOrpcRouter = {
   projectMembersProcedure,
   addProjectMemberProcedure,
   projectDocumentsProcedure,
-  buildingSchematicProcedure
+  buildingSchematicProcedure,
+  projectDeveloperProcedure
 };
 
 export default router;

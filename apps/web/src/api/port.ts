@@ -43,6 +43,7 @@ import type {
   BundleFiles,
   ContractRelease,
   DeveloperContract,
+  DeveloperProfile,
   DeveloperProject,
   DeveloperProjectDetail,
   DeveloperProjectUnit,
@@ -176,6 +177,10 @@ export const api = {
   getNotaryPendingDossiers: () => request<PendingDossier[]>('/api/v1/notary/dossiers/pending'),
 
   getProject: (id: string) => request<ProjectDetail>(`/api/v1/projects/${id}`),
+
+  /** Capturas 59-60 · el desarrollador de una obra. 404 si no tiene organización. */
+  getProjectDeveloper: (id: string) =>
+    request<DeveloperProfile>(`/api/v1/projects/${id}/developer`),
 
   setMilestoneState: (stageId: string, state: StageState) =>
     request<Stage>(

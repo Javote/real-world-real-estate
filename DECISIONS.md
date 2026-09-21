@@ -1155,3 +1155,38 @@ problema no se arregla mejor cambiando la forma de lo verificado.**
 ## D-033 · D-034 — `docs/` contiene solo entregables · el inventario del stack vive en `specs/stack.md`
 
 ## D-001 — Monorepo pnpm con `contracts/` adentro
+
+## D-094 — El perfil del desarrollador se construye sin rating
+
+**El hecho.** Las capturas 59 y 60 de M2-D2 (`DEVELOPER-REPUTATION-A/B`) diseñan el perfil de la
+organización desarrolladora, y M2-D1:109 lo enlaza desde el detalle de obra. **No tienen fila en
+M2-D5**, así que el backlog de M3 nunca las pidió y nadie las construyó — se encontró el 2026-09-21
+cruzando el catálogo de capturas contra las rutas, no el backlog contra las rutas, que es lo que
+`pnpm testids` mide y por eso no podía verlo.
+
+**Qué se construye (SPEC-220).** La pantalla, con todo lo que se puede **derivar del registro**:
+obras entregadas (`Project.status = 'completed'`), unidades vendidas (`Unit.status = 'sold'`),
+compradores distintos, los dos listados de obras partidos por estado, y el "desde" y el rango de
+metros de cada card. Se **guarda** solo lo autodeclarado: nombre, bio y año de fundación, en una
+tabla `Organization` nueva (migración 0010).
+
+**Qué NO se construye: el rating.** La captura muestra "4.8 / 5.0 · 127 investors" junto al nombre.
+Un rating es una **afirmación sobre la calidad de un tercero**, y D-026 fija que la plataforma solo
+puede sostener cuatro afirmaciones —*este archivo tiene este hash · se registró en este momento ·
+declara provenir de esta autoridad · esta persona atestiguó haberlo revisado*—, todas sobre
+documentos y atestaciones. No hay reseñas, no hay quién las firme y no hay de dónde recalcularlo:
+una columna `rating` solo podría llenarse a mano, que es exactamente la señal fabricada que la
+regla 17 prohíbe.
+
+**Por qué no se construye el mecanismo tampoco.** Un rating real es una rebanada entera —tabla de
+reseñas, quién puede dejarlas, si se editan, si se anclan— y ninguna de esas preguntas está
+contestada en ningún entregable. Construir el almacenamiento sin el mecanismo sería peor: un campo
+listo para que alguien lo llene a dedo.
+
+**Es el mismo caso que D-070**, y se resuelve igual: la captura muestra una capacidad que este
+producto no tiene, se construye todo lo demás, y la ausencia queda escrita —acá, en el schema
+(`developerProfileSchema` no declara el campo), en la migración, y en un test que la asienta— en
+vez de quedar como un hueco que alguien "completa" más adelante sin leer esto.
+
+**Lo que sí se muestra del pill:** el conteo de compradores, como una StatCard junto a las otras
+tres métricas derivadas. Es un hecho del registro —cuánta gente compró— y no una nota de calidad.

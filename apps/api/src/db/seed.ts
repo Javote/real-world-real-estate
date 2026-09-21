@@ -6,6 +6,7 @@ import { paraMostrar, passwordDeDemo } from "./credentials";
 import {
   type Personaje,
   sembrarMembresias,
+  sembrarOrganizacion,
   sembrarProyecto,
   sembrarStages,
   sembrarUnidadVendida,
@@ -85,7 +86,18 @@ async function main() {
   const ids = await sembrarUsuarios(db, personajes);
   const id = (email: string) => ids.get(email) as string;
 
+  // La organización desarrolladora (SPEC-220, capturas 59-60). Sin ella, el
+  // link "ver al desarrollador" del detalle de proyecto no se dibuja y la
+  // pantalla de perfil no tiene de dónde colgar.
+  const organizationId = await sembrarOrganizacion(db, {
+    slug: "grupo-alpine",
+    name: "Grupo Alpine",
+    bio: "Grupo Alpine desarrolla vivienda en pozo en Buenos Aires, con obra propia y entrega documentada etapa por etapa.",
+    foundedYear: 2005
+  });
+
   const projectId = await sembrarProyecto(db, {
+    organizationId,
     slug: "torre-a",
     name: "Torre A",
     address: "Av. Santa Fe 3200",

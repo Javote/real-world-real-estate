@@ -84,6 +84,45 @@ export interface ProyectoSemilla {
   status: ProjectStatus;
   /** Desfase en ms sobre el `createdAt`, para fijar el orden del listado. */
   offsetMs?: number;
+  /** La organización desarrolladora (SPEC-220). Sin ella el proyecto es válido. */
+  organizationId?: string;
+}
+
+export interface OrganizacionSemilla {
+  slug: string;
+  name: string;
+  bio?: string;
+  foundedYear?: number;
+}
+
+/** Inserta la organización si no existe y devuelve su id. */
+export async function sembrarOrganizacion(
+  db: KyselyDb<Database>,
+  organizacion: OrganizacionSemilla
+): Promise<string> {
+  const ahora = new Date();
+
+  await db
+    .insertInto("Organization")
+    .values({
+      id: createId(),
+      name: organizacion.name,
+      slug: organizacion.slug,
+      bio: organizacion.bio ?? null,
+      foundedYear: organizacion.foundedYear ?? null,
+      createdAt: ahora,
+      updatedAt: ahora
+    })
+    .onConflict((oc) => oc.column("slug").doNothing())
+    .execute();
+
+  const fila = await db
+    .selectFrom("Organization")
+    .select("id")
+    .where("slug", "=", organizacion.slug)
+    .executeTakeFirstOrThrow();
+
+  return fila.id;
 }
 
 /** Inserta el proyecto si no existe y devuelve su id. */
@@ -103,6 +142,7 @@ export async function sembrarProyecto(
       city: proyecto.city ?? null,
       country: proyecto.country ?? null,
       totalUnits: proyecto.totalUnits,
+      organizationId: proyecto.organizationId ?? null,
       status: proyecto.status,
       createdAt: ahora,
       updatedAt: ahora

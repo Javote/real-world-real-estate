@@ -106,6 +106,7 @@ const CASOS: Record<keyof Api, Caso> = {
   getNotaryKpis: [() => api.getNotaryKpis()],
   getNotaryPendingDossiers: [() => api.getNotaryPendingDossiers()],
   getProject: [() => api.getProject('p1')],
+  getProjectDeveloper: [() => api.getProjectDeveloper('p1')],
   setMilestoneState: [() => api.setMilestoneState('s1', 'InProgress')],
   listDeveloperProjects: [() => api.listDeveloperProjects()],
   getDeveloperProject: [() => api.getDeveloperProject('p1')],
