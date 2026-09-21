@@ -21,7 +21,7 @@ sostiene nada. La prueba de volumen no aporta muestras: recorrió etapas, no com
 
 | Lectura | Desde | Hasta |
 |---|---|---|
-| **A — la oficial** (`specs/archive/DECISIONS-hasta-2026-08-23.md:319`) | el investor acepta la invitación | el TXID del contrato entra en un bloque |
+| **A — la oficial** (`specs/archive/DECISIONS-hasta-2026-08-23.md:319`, **confirmada por el dueño el 2026-09-21**) | el investor acepta la invitación | el TXID del contrato entra en un bloque |
 | **B — la conservadora** | el developer invita (la unidad queda **reservada**) | el mismo punto |
 
 A es la que mide `GET /audit-logs/telemetry/reservation-to-escrow` (`blockTimestamp - createdAt` del
