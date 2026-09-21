@@ -11,8 +11,9 @@
 ## Qué se mide
 
 **Cobertura de líneas** (`v8`, la que ya usa la API): qué porcentaje de las líneas del código fuente
-ejecuta al menos un test automático (unit o integración, ver abajo). No es la proporción de tests en verde, que ya es 100% en las cinco
-partes (1.845 pasan, 3 omitidos a propósito, 0 fallan — `specs/evidencia-m3/1-repo-ci-tests/`).
+ejecuta al menos un test automático (unit o integración, ver abajo). No es la proporción de tests
+en verde, que ya es 100% en las cinco partes (1.845 pasan, 3 omitidos a propósito, 0 fallan —
+`specs/evidencia-m3/1-repo-ci-tests/`).
 
 **La vara: ≥95% de líneas en cada una de las cinco partes, medida sobre todo su código fuente.** Una
 parte al 99% no compensa otra al 60%.
