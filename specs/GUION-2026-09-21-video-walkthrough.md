@@ -35,7 +35,7 @@ alcanza con este documento. Pueden ser la misma persona o cuatro distintas.
 
 | Quién | Qué hace | Qué lee | Qué entrega |
 |---|---|---|---|
-| **Técnico** (quien conoce el repo) | Pasa las contraseñas **en privado**, corre los comandos del §1.4 durante el corte de T08 y está a mano durante la grabación | §1 | Las cuentas andando y el proyecto nuevo con sus membresías |
+| **Técnico** (quien conoce el repo) | Pasa las contraseñas **en privado**, corre los comandos del §1.4 durante el corte de T08 y está a mano durante la grabación | §1 | Las cuentas andando y el certifier sumado al proyecto nuevo |
 | **Quien graba la pantalla** | Prepara la Mac y Chrome, y graba las 31 tomas | §1.2, §1.5, §1.6, §2, §3, §4 | `T01.mov` … `T31.mov`, recortados |
 | **Quien graba la voz** | Lee la narración en inglés, una grabación por toma | §3.1 y §8 | `T01.m4a` … `T31.m4a` |
 | **Quien arma el final** | Instala `ffmpeg`, revisa la carpeta y corre un comando | §3.1 y §5 | `walkthrough-final.mp4` |
@@ -155,8 +155,8 @@ INSERT INTO Dossier (id, unitId, masterHash, compiledAt, shareToken, status, sig
 Los tres `User.id` que hacen falta están en el §1.1. **El rollback también quedó en
 `specs/RUNBOOK-deploy.md` §5.1.**
 
-**La base no tiene nada más pendiente para grabar.** Lo único que queda son las dos membresías del
-proyecto nuevo (§1.4), que se corren durante el corte de T08.
+**La base no tiene nada más pendiente para grabar.** Lo único que queda es sumar el certifier al
+proyecto nuevo (§1.4), durante el corte de T08.
 
 #### 1.3.2 La organización desarrolladora — **hecho el 2026-09-21**
 
@@ -196,16 +196,19 @@ no dibuja el link. El perfil del desarrollador se ve una vez, sobre la obra term
 | **Certifier** — KPIs e "Issued" | **30 certificadas, 30 certificados emitidos** con hash y TXID reales de la prueba de volumen | Ya está. El panel del certifier tiene historia real sin que haga falta preparar nada. |
 | **Escribano** — "Pending review" | **vacía** (`[]`) | En **T23**, cuando el investor abre el dossier de 1A y eso lo compila. |
 
-### 1.4 Las dos membresías del proyecto nuevo — se corren **durante el corte de T08**
+### 1.4 El certifier del proyecto nuevo — se suma **durante el corte de T08**
 
 > **Lo hace el técnico, no quien graba.** Quien graba termina T08, **le avisa** y espera la
-> confirmación (los dos `201`) antes de seguir. Hacen falta el repo y `apps/api/.env`; nada más —
+> confirmación (el `201`) antes de seguir. Hacen falta el repo y `apps/api/.env`; nada más —
 > todo va por la API, igual que la web.
 
 El proyecto que se crea en cámara nace con **una sola membresía, la del developer que lo crea**
 (`developer.routes.ts:222`). Sin el `verifier`, su etapa no aparece en la cola del certifier y el
 Acto 4 no existe. Y no hay pantalla para arreglarlo: `POST /projects/:id/members` es admin-only
 (`projects.routes.ts:442`).
+
+**El buyer no hace falta sumarlo:** lo suma el propio flujo. El developer lo invita en T11 y, al
+aceptar en T12, la API le crea la membresía (`investor.routes.ts:705`).
 
 Como crear el proyecto bloquea ~6 minutos igual, **ese corte es exactamente donde entran estos
 comandos** — no hay que preparar nada el día antes.
@@ -224,14 +227,13 @@ TOKEN=$(curl -s -X POST $API/auth/login -H 'content-type: application/json' \
 PID=$(curl -s $API/projects -H "authorization: Bearer $TOKEN" | python3 -c \
   "import json,sys; p=max(json.load(sys.stdin), key=lambda x: x['createdAt']); print('Proyecto:', p['name'], file=sys.stderr); print(p['id'])")
 
-for U in k2knwiqp66xuv6ojp7iv48ep:verifier ng0gh91de5alybr5ihupbd11:buyer; do
-  curl -s -X POST $API/projects/$PID/members \
-    -H "authorization: Bearer $TOKEN" -H 'content-type: application/json' \
-    -d "{\"userId\":\"${U%%:*}\",\"membershipRole\":\"${U##*:}\"}" -w " %{http_code}\n"
-done
+# El certifier (`verifier@example.com`), como verifier del proyecto nuevo.
+curl -s -X POST $API/projects/$PID/members \
+  -H "authorization: Bearer $TOKEN" -H 'content-type: application/json' \
+  -d '{"userId":"k2knwiqp66xuv6ojp7iv48ep","membershipRole":"verifier"}' -w " %{http_code}\n"
 ```
 
-- [ ] Los dos devolvieron `201`.
+- [ ] Devolvió `201`.
 
 ### 1.5 Las pasadas de calentamiento
 
@@ -835,8 +837,9 @@ Vale tenerlo escrito antes del voice-over, para no prometer en audio algo que la
 - **El rol `admin` no tiene interfaz** (`apps/web/src/auth/roles.ts:16`). No es uno de los cuatro
   roles del SOM, así que no falta nada, pero no lo menciones en el audio.
 - **No hay pantalla para sumar un certifier o un escribano a un proyecto.**
-  `POST /projects/:id/members` es admin-only y no tiene superficie. Es la razón del §1.4: el proyecto
-  creado en cámara necesita dos comandos de consola para que el Acto 4 exista.
+  `POST /projects/:id/members` es admin-only y no tiene superficie. Es la razón del §1.4: al proyecto
+  creado en cámara hay que sumarle el certifier por consola para que el Acto 4 exista. (Al buyer lo
+  suma el flujo de invitación, T11-T12.)
 - **`torre-a` sigue en la base pero sin membresías.** No se borró porque tiene 8 eventos on-chain
   colgando. El developer todavía la ve en su listado (T07); el investor, el certifier y el escribano,
   no.
