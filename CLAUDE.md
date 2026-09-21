@@ -4,66 +4,24 @@
 > — el cruce contra los 5 Outputs oficiales del Milestone 3 tal como los publica Catalyst, con lo
 > que falta consolidado en una tabla. Es el punto de partida de la próxima sesión.
 >
-> **Auditoría del backend:** [`specs/AUDITORIA-2026-09-11-calidad-del-backend.md`](specs/AUDITORIA-2026-09-11-calidad-del-backend.md)
-> — 15 hallazgos sobre `apps/api`, leyendo los 51 archivos de `src` completos. **Va antes que la del
-> frente porque dos de ellos no son pulido: son bugs de corrupción de datos, reproducidos
-> ejecutándolos** — B-01 (dos invitaciones sobre la misma unidad le sacan la unidad a quien ya la
-> compró) y B-02 (una unidad puede terminar con dos dossiers, y la firma del escribano queda en el
-> que la pantalla no lee). Los dos salen del mismo lugar: **hay una sola `db.transaction()` en todo
-> `src`**. Ninguno toca los 16 criterios del SOM, pero los dos primeros valen antes de mainnet —
-> repararlos después es SQL a mano contra producción, como las migraciones 0004 y 0005. El resto sí
-> es deuda de pulido, y no propone endpoint, tabla ni superficie nueva.
-> **Ya está transcrita a specs implementables: la serie `SPEC-201`…`SPEC-215`**, una por hallazgo
-> salvo donde partirlas habría sido artificial, cada una independiente — registro y orden en
-> [`specs/README.md` §Las tres series de pulido](specs/README.md).
->
-> **Deuda de pulido del frente:** [`specs/AUDITORIA-2026-09-11-calidad-del-frente.md`](specs/AUDITORIA-2026-09-11-calidad-del-frente.md)
-> — 18 hallazgos de accesibilidad, responsive y mantenibilidad, medidos en el navegador contra las
-> 42 rutas, cada uno con su evidencia y su archivo. **No es un criterio del SOM y no bloquea la
-> entrega**; ninguno propone pantalla, ruta ni componente nuevo. Es para cuando el milestone deje
-> aire. El primero de la lista (`--size-icon-sm/md/lg` no existen: 52 clases muertas) explica por
-> qué la lista existe — la regla estaba escrita y no tenía guardia.
-> **Ya está transcrita a specs implementables: la serie `SPEC-101`…`SPEC-110`**, mismo criterio que
-> la serie 2xx. Con una corrección sobre la auditoría, en `SPEC-101`: los tres tokens **no se
-> agregan** —M2-D3 nombra la escala de íconos por contexto y `sm`/`md`/`lg` no están en el
-> entregable—, los 52 usos se mueven a los cinco nombres normativos.
->
-> **Calidad de `contracts/`:** [`specs/AUDITORIA-2026-09-11-calidad-de-contracts.md`](specs/AUDITORIA-2026-09-11-calidad-de-contracts.md)
-> — 6 hallazgos sobre los dos archivos Aiken, leídos completos y con todo verificado ejecutándolo.
-> **El veredicto general es bueno y conviene decirlo: es la parte mejor organizada del repo** — el
-> corte de D-008 aplicado de verdad, 82 tests contra cada punto de rechazo, 0 warnings, blueprint
-> reproducible byte por byte, y dos órdenes de magnitud de aire en el presupuesto de ejecución.
-> **Pero uno no es pulido: `contracts/CLAUDE.md` afirma que `mint` acuña "exactamente uno por
-> stage" y el validador solo garantiza uno por transacción** — el handler no mira `tx.inputs`, así
-> que el mismo `stage_ref` se re-acuña (reproducido), y `retryStageMint` tiene el camino construido
-> porque su guarda es una consulta a la base que nunca toca la cadena. Es el estado que ya dejó la
-> prueba de volumen. El segundo que vale antes de mainnet es que **la clave del `admin` es un
-> parámetro del script**, así que no se puede rotar: perderla congela los hilos vivos para siempre.
-> Ninguno toca los 16 criterios del SOM.
-> **Ya está transcrita a specs implementables: la serie `SPEC-301`…`SPEC-306`, y ya está toda
-> revisada.** `301`, `302`, `303`, `304` y `306` están **cerradas** (2026-09-18) — incluida la
-> afirmación falsa de `contracts/CLAUDE.md`, corregida por `SPEC-301`, y la clave del `admin`,
-> registrada como decisión en D-093 por `SPEC-304`. Queda abierta solo `305`, que sí cambia el
-> script hash y es decisión de mainnet — ver `CLAUDE.md` raíz §Antes de mainnet, después del
-> Milestone 3.
->
-> **Calidad de `packages/`:** [`specs/AUDITORIA-2026-09-11-calidad-de-packages.md`](specs/AUDITORIA-2026-09-11-calidad-de-packages.md)
-> — 14 hallazgos sobre los dos packages compartidos, leídos completos (28 archivos, ~5.900 líneas) y
-> todo reproducido ejecutándolo. **El veredicto general es bueno y conviene decirlo: es el código
-> mejor tipado del repo** — cero `any`, cero `@ts-ignore`, `noUncheckedIndexedAccess` y
-> `exactOptionalPropertyTypes` en los dos (`apps/api` tiene solo `strict`), y ningún import que cruce
-> el límite de D-014. **No es spaghetti y no está cerca de serlo.** Ninguno de los 14 toca los 16
-> criterios del SOM. Tres valen antes de mainnet, y los tres son la misma clase de cosa: suposiciones
-> no declaradas donde equivocarse no se deshace — los 36 hashes y TXID que viajan como `z.string()`
-> pelado (`SPEC-402`), el `outputRef` que supone la salida `#0` teniendo la respuesta buena calculada
-> al lado (`SPEC-407`), y el datum que vuelve de la cadena sin validarse (`SPEC-408`). Un cuarto está
-> reproducido con un test en verde: **el simulador olvida todo lo que confirmó en cada reinicio**
-> aunque el ledger sobreviva en SQLite, así que en dev un evento anclado antes de reiniciar queda
-> `Pending` para siempre (`SPEC-406`).
-> **Ya está transcrita a specs implementables: la serie `SPEC-401`…`SPEC-412`.** El hallazgo más
-> grande de `packages/shared` **no** abrió spec nueva porque ya tenía una: `SPEC-109` — esta
-> auditoría lo confirma desde el otro lado del límite con el número que faltaba, **63 de los 107
-> tipos inferidos que el package exporta no tienen ningún consumidor**.
+> **Las cuatro auditorías del 2026-09-11** (frente, backend, `contracts/`, `packages/`) están
+> transcritas a specs implementables, una por hallazgo, y **el estado de cada una lo lleva
+> [`specs/README.md` §Las cuatro series de pulido](specs/README.md)** — no esta tabla, que solo
+> dice dónde buscar. **Ninguno de los 53 hallazgos toca los 16 criterios del SOM.** Lo que sí hay
+> que decidir antes de mainnet está abajo, en §Antes de mainnet.
+
+| Auditoría | Qué audita | Hallazgos | Serie |
+|---|---|---|---|
+| [`…-calidad-del-frente`](specs/AUDITORIA-2026-09-11-calidad-del-frente.md) | accesibilidad, responsive y mantenibilidad, medidas en el navegador contra las 42 rutas | 18 | `SPEC-101`…`110` |
+| [`…-calidad-del-backend`](specs/AUDITORIA-2026-09-11-calidad-del-backend.md) | los 51 archivos de `apps/api/src`, leídos completos | 15 | `SPEC-201`…`215` |
+| [`…-calidad-de-contracts`](specs/AUDITORIA-2026-09-11-calidad-de-contracts.md) | los dos archivos Aiken — **la parte mejor organizada del repo** | 6 | `SPEC-301`…`306` |
+| [`…-calidad-de-packages`](specs/AUDITORIA-2026-09-11-calidad-de-packages.md) | los dos packages compartidos — **el código mejor tipado del repo** | 14 | `SPEC-401`…`412` |
+
+**Las cuatro dejaron bugs reales, no solo pulido, y los reproducidos ya están cerrados:** `SPEC-201`
+y `SPEC-202` eran corrupción de datos (dos invitaciones sobre la misma unidad; dos dossiers para una
+unidad, con la firma del escribano en el que la pantalla no lee), y `SPEC-301`, una garantía que
+`contracts/CLAUDE.md` afirmaba y el validador no daba. Lo que queda abierto de las cuatro series es
+pulido sin fecha, salvo los seis ítems de §Antes de mainnet.
 
 Lo transversal. Lo de cada frente vive en `apps/web/CLAUDE.md`, `apps/api/CLAUDE.md`,
 `packages/cardano/CLAUDE.md` y `contracts/CLAUDE.md`, y se carga solo cuando tocás ese subárbol.
@@ -94,87 +52,22 @@ mismo caso que `progressPercentage`, y con la regla de precedencia del dueño (*
 sobre el SOM**, 2026-09-09) se resuelve igual: **no se construye, se explica.** La captura 34C
 tampoco tiene campo de signer. El criterio 3 queda sin código pendiente.
 
-## Tanda 1 — esquema 🟡 · ✔ cerrada 2026-09-10
+## Lo que queda del plan
 
-| | Qué |
-|---|---|
-| 1.1 | ✔ `migrations/0003_drop_stage_progress.sql` + sacarlo de `db/types.ts`, `stageSchema`, el insert de `developer.routes.ts`, `fixtures.ts` y `test/helpers/stages.ts` — commit `7130c94` |
-
-Es todo. **Ningún call site cambia**: al no existir la columna, `selectAll()` deja de devolverla y
-los ~9 `stageSchema.parse` siguen andando. Sin la migración habría que pasar esos 9 a listas
-explícitas de columnas — la migración es el camino con *menos* código tocado, no más.
-
-## Tanda 2 — código
-
-**Alineación con las capturas**
+**Todo el plan está cerrado salvo dos ítems, y ninguno de los dos es código:**
 
 | | Qué | Criterio |
 |---|---|---|
-| 2.1 | ✔ `developerProgressItemSchema` suma `certifiedAt` y `estimatedDelivery`; el handler los selecciona — commit `111f1f6` | 8 |
-| 2.2 | ✔ `/developer/progress`: barra + "Overall Progress: N%" (dibujada por la pantalla, no por `ProgressTimeline`), `finalizationLabel` al timeline, bloque "Stage Detail" sin miniatura — commit `a4743fa`, verificado con Claude en Chrome contra `pnpm dev` local | 8 |
-
-**Cierres de criterios**
-
-| | Qué | Criterio |
-|---|---|---|
-| 2.3 | ✔ **Auditar los 10 patrones P1–P10 test por test.** Los 10 ya tenían test cubriendo "sin TXID no hay señal de prueba" — 8 en tests dedicados (`VerificationBadge.test.tsx`, `HashChip.test.tsx`, `patterns.test.tsx` ×6, `AuditEventCard` en `cards.test.tsx`), P8 (Dossier) por composición de P1+P2, verificado leyendo el código de las dos rutas de dossier. No hizo falta código nuevo, solo cerrar el `◐` con la evidencia — `specs/README.md` criterio 6 | 6 ✅ |
-| 2.4 | ✔ Las 20 claves i18n de `AuditLog` que faltaban — verificado con Claude en Chrome (`CREATE_UNIT` real, vía `pnpm dev`): antes mostraba el literal, ahora "Creó una unidad" | 10 |
-
-**Saneamiento de la demo** (no es un criterio, pero se demuestra sobre esto)
-
-| | Qué |
-|---|---|
-| 2.5 | ✔ `Cimentación` de `torre-a` ya no está fabricada — `UPDATE Stage SET state='InProgress'` corrido a mano contra Turso producción (autorizado y verificado con `turso db shell`, 0 evidencia/0 eventos confirmados antes de tocarla), y `seed.ts` ya no pre-marca ninguna etapa nueva `Completed`. Destapó un bug real de UI, cerrado en el mismo commit: "Etapa N/total" usaba `sequenceOrder` crudo en vez de la posición en la lista — con huecos (como los de `torre-a`) el numerador podía superar al total. Afectaba `developer.progress.tsx` (2.2) y `project.$projectId.progress.tsx` (investor); las dos verificadas con Claude en Chrome reproduciendo el hueco a propósito en local |
-
-## Tanda 3 — documentación, decisiones y evidencia
-
-**Decisiones nuevas**
-
-| | Qué |
-|---|---|
-| 3.1 | ✔ `DECISIONS.md`: el techo de precedencia — **entregables M2/M3 sobre el SOM** (D-090), con `progressPercentage` como el caso que lo estableció |
-| 3.2 | ✔ `DECISIONS.md`: el avance es **derivado por proyecto** (`completadas/total`, D-091), según captura 45. No hay peso por etapa |
-| 3.3 | ✔ `DECISIONS.md`: **"signers configurables" no existe en el diseño** (D-092) — misma resolución que 3.1, y cierra el criterio 3 |
-
-**Saneamiento de `specs/README.md`** — hoy tiene cinco afirmaciones falsas
-
-| | Qué |
-|---|---|
-| 3.4 | ✔ Criterio 3 reescrito con D-090/D-091/D-092: catálogo real de 10 (no 8), sin ruta que acepte el campo, "signers" resuelto por la tabla fija de D-020 |
-| 3.5 | ✔ Números corregidos: **335 tests** de API (eran "235"), **82** de Aiken (eran "73"), superficies **53/53** (eran "46") |
-| 3.6 | ✔ `SPEC-013 §C` — gana "hecho" (D-077 lo sostiene); corregido el registro de specs para que diga lo mismo que el orden de trabajo |
-
-**Documentación de frente**
-
-| | Qué |
-|---|---|
-| 3.7 | ✔ Ficha de `DEFAULT_STAGE_CATALOG`: motivo del "sin `progressPercentage`" ahora cita D-090/D-091 |
-| 3.8 | ✔ `apps/web/CLAUDE.md`: deuda declarada de la miniatura de "Stage Detail" en la tabla de "Lo que la captura pide y el contrato no da" |
-| 3.9 | ✔ `CLAUDE.md` raíz: tabla de pendientes de §Estado reescrita — solo quedan la prueba de volumen y mainnet (fuera de alcance) |
-
-**Evidencia de entrega** (no es código ni prosa nuestra)
-
-| | Qué | Criterio |
-|---|---|---|
-| 3.10 | ✔ Publicar la **lista formal de TXIDs** resolubles en explorador — `specs/EVIDENCIA-2026-09-11-lista-formal-de-txids.md` + CSV, las 180 re-verificadas contra Koios el mismo día | 15 ✅ |
-| 3.11 | ✔ **Screenshot de monitoring** — `specs/EVIDENCIA-2026-09-11-monitoring-screenshots.md` + capturas de Sentry, Grafana/Tempo y PostHog, tomadas en vivo contra producción | 14 ✅ |
 | 3.12 | **Video walkthrough** | 13 ⬜ |
 | 3.13 | **3 pilotos** — recontactar; `M1-D3-PilotPlan.pdf` ya trae cartas de M1 y probablemente cubre parte | 4 ⬜ externo |
 
-## La prueba de volumen (ex-pendiente #0) — ✔ cerrada 2026-09-10
-
-Tres criterios dependían de ella, y ya corrió: `specs/REPORTE-2026-09-10-prueba-de-volumen.md`
-(30/30 etapas `Completed`, 180/180 eventos on-chain `Confirmed`, en 3 proyectos nuevos).
-
-| Criterio | Qué le dio la prueba |
-|---|---|
-| **8** ✅ | *"Flujos de UI end-to-end en pre-prod"* — la prueba **es** la evidencia |
-| **9** ✅ | Cerrado el 2026-09-11, aparte: es un flujo distinto (compra del investor), la prueba ejercitó la FSM del stage. Mediana real 2.76 min, ver `specs/README.md` |
-| **15** ✅ | Cerrado el 2026-09-11: **lista formal** publicada (3.10), las 180 TXIDs re-verificadas contra Koios el mismo día |
-
-Costo real medido: **~99.8 ADA total** (39.83 de fees + 60 bloqueadas, D-057), levemente por debajo
-de lo presupuestado (~105 ADA). Con esto cerrado, 3.10 se cerró el 2026-09-11; 3.12/3.13 siguen
-abiertos — ver `specs/ESTADO-2026-09-10-catalyst-milestone-3.md` para el detalle.
+Lo cerrado —las tres Tandas de esquema, código y documentación, y la prueba de volumen que dio los
+criterios 8 y 15— está ítem por ítem en
+[`specs/ESTADO-2026-09-10-catalyst-milestone-3.md`](specs/ESTADO-2026-09-10-catalyst-milestone-3.md),
+con el detalle de la prueba en
+[`specs/REPORTE-2026-09-10-prueba-de-volumen.md`](specs/REPORTE-2026-09-10-prueba-de-volumen.md)
+(30/30 etapas `Completed`, 180/180 eventos `Confirmed`, **~99.8 ADA** de costo real medido, y las 3
+capas de autocura que salieron del único hallazgo). Los criterios **6, 8, 9, 14 y 15** quedaron ✅.
 
 ## Fuera de alcance de este milestone
 
@@ -186,7 +79,7 @@ abiertos — ver `specs/ESTADO-2026-09-10-catalyst-milestone-3.md` para el detal
 | **"Contenido en `Pending`"** | Mejora de UX, ningún criterio la pide. Necesita que el listado de stages devuelva el anclaje y reconcilie |
 | **Columna `AuditLog.projectId`** | Sacaría el mapeo fail-closed de `auditScope`. Pide backfill que para filas viejas no tiene respuesta |
 | **`validationCritical` siempre `true`** | Config muerta con rama viva y testeada en el validador. No molesta |
-| **Upload directo del navegador a R2 (sin pasar por Render)** | Hoy el archivo hace escala en `UPLOAD_DIR` (Multer disco → `storage.put()` → R2 → se borra, `apps/api/src/lib/storage.ts`) antes de llegar al bucket — es lo que hace que `MAX_FILE_SIZE_MB` (2026-09-10: 10→50) le pese a la RAM del proceso, no solo al límite de R2 (5 GiB por PUT simple). Un presigned URL lo evitaría, pero es un cambio de forma real: CORS nuevo en el bucket, el front pasa de un POST a un flujo de 3 pasos, y el hash sigue teniendo que calcularse releyendo el objeto desde R2 después (D-027) — no se simplifica esa parte. **Después de mainnet**, cuando el volumen de uploads reales lo justifique frente al costo de tocar `storage.ts` (🟡) y el único endpoint que hoy usa `uploadSingleEvidence` |
+| **Upload directo del navegador a R2 (sin pasar por Render)** | Hoy el archivo hace escala en `UPLOAD_DIR` antes de llegar al bucket, y eso es lo que hace que `MAX_FILE_SIZE_MB` le pese a la RAM del proceso. Un presigned URL lo evitaría, pero es un cambio de forma real (CORS, flujo de 3 pasos en el front) y el hash sigue teniendo que releerse desde R2 igual (D-027). **Después de mainnet** — el diseño y el costo, en [`specs/archive/CLAUDE-argumentos-de-las-reglas-2026-09-20.md`](specs/archive/CLAUDE-argumentos-de-las-reglas-2026-09-20.md) §Anexo |
 
 ## Antes de mainnet, después del Milestone 3
 
@@ -217,7 +110,7 @@ lo que no está en esta tabla de `SPEC-401`…`SPEC-412`) ya está resuelto o es
 
 ## Cerrado, pendiente de aceptación por Catalyst
 
-1. **El criterio 3 se cierra por documentación** (3.1–3.4), sin construir signers ni percentages. Es
+1. **El criterio 3 se cierra por documentación** (D-090, D-091 y D-092), sin construir signers ni percentages. Es
    la consecuencia directa de la regla de precedencia del dueño (entregables M2/M3 sobre el SOM,
    2026-09-09), aplicada de forma consistente con `progressPercentage`. No hay más trabajo posible
    de este lado — lo único que falta es que Catalyst lo acepte en la entrega, y eso no se sabe hasta
@@ -246,19 +139,17 @@ validador que afirme algo más, está mal (D-026).
 
 # Estado, y lo próximo
 
-> **La lista completa de lo que falta está en §El plan de entrega, arriba, y en
+> **Lo que falta está en §Lo que queda del plan, arriba, y en
 > [`specs/ESTADO-2026-09-10-catalyst-milestone-3.md`](specs/ESTADO-2026-09-10-catalyst-milestone-3.md)**
-> (el cruce contra los 5 Outputs oficiales de Catalyst). Esta tabla es solo el resumen de los dos
-> ítems que no encajaban en ninguna Tanda. **El historial completo de lo ya cerrado —narración
-> día a día hasta el 2026-09-08— se movió a
-> [`specs/archive/CLAUDE-historial-hasta-2026-09-10.md`](specs/archive/CLAUDE-historial-hasta-2026-09-10.md)
-> el 2026-09-10**, para que esta raíz vuelva a cargar solo lo vigente. Sigue siendo válido tal cual,
-> solo que ya no es "lo próximo".
+> (el cruce contra los 5 Outputs oficiales de Catalyst). Acá queda el único ítem que no encaja en
+> ninguna Tanda. **El historial de lo ya cerrado —narración día a día hasta el 2026-09-08— vive en
+> [`specs/archive/CLAUDE-historial-hasta-2026-09-10.md`](specs/archive/CLAUDE-historial-hasta-2026-09-10.md)**:
+> sigue siendo válido tal cual, solo que ya no es "lo próximo".
 
-| # | Qué | Estado |
-|---|---|---|
-| 0 | ~~Prueba end-to-end de volumen, en preprod, antes de mainnet~~ | **Cerrada el 2026-09-10** — 30/30 etapas `Completed` en 3 proyectos nuevos, 180/180 eventos on-chain `Confirmed`, las 4 aristas de la FSM ejercitadas por click real en el navegador. Detalle completo, el hallazgo real que dejó (dos etapas con anclaje perdido, causa raíz confirmada) y las 3 capas de autocura que salieron de ahí: `specs/REPORTE-2026-09-10-prueba-de-volumen.md`. Alimentó los criterios 8 y 15 del SOM; el 9 (reserva→escrow) se cerró aparte el 2026-09-11, es un flujo distinto — ver `specs/ESTADO-2026-09-10-catalyst-milestone-3.md` |
-| 1 | **Mainnet** — runbook, habilitar la red, custodia de la clave. **Fuera de alcance de este milestone** (decisión del dueño, 2026-09-09 — ver §El plan de entrega) | D-013 la hace **imposible por configuración**: es código, no solo procedimiento. 🔴 El checklist completo de lo que hay que decidir antes de encenderla —incluida la clave del `admin`— vive en §Antes de mainnet, después del Milestone 3 |
+**Mainnet** — runbook, habilitar la red, custodia de la clave. **Fuera de alcance de este milestone**
+(decisión del dueño, 2026-09-09). D-013 la hace **imposible por configuración**: es código, no solo
+procedimiento. 🔴 El checklist completo de lo que hay que decidir antes de encenderla —incluida la
+clave del `admin`— vive en §Antes de mainnet, después del Milestone 3.
 
 **El diseño ya está decidido. El trabajo es transcribirlo, no inventarlo.**
 
@@ -449,12 +340,6 @@ de API o esquema on-chain. **`main` es la rama de integración y no hay PRs** (D
 `git commit` → `git push`, siempre juntos y en ese orden. No se junta trabajo local "para pushear al
 final", y no se commitea sin el verde.
 
-**Por qué es regla y no gusto:** un commit local no existe para nadie más, y el remoto queda
-afirmando un estado que no es el real — el mismo modo de falla que el push contra un servicio
-suspendido y que el TXID simulado en producción. **No falla: miente.** Si pushear tiene una
-consecuencia que el dueño debería saber —acá el deploy automático de Render, que el `buildFilter`
-no filtra—, se pushea igual y se avisa; no se retiene el push por eso.
-
 **La única excepción: un commit donde TODO archivo termina en `.md`, y la decide `git`, no vos.**
 
 ```bash
@@ -462,40 +347,19 @@ no filtra—, se pushea igual y se avisa; no se retiene el push por eso.
 ```
 
 Si aparece un solo archivo que no sea `.md`, corre todo. Si no, no corre nada. **La regla es
-mecánica a propósito:** "esto es solo documentación" clasificado a ojo es el mismo verde falso que
-editar un `package.json` sin `pnpm install` (ver Trampas), y el día que el commit arrastre un `.ts`
-chico se saltea igual. El pathspec no tiene ese problema.
-
-**Y es `git` solo, sin `grep`, por una razón medida.** La primera versión era
-`... | grep -qv '\.md$'`, y es correcta con el `grep` del sistema. Pero **bajo `ugrep` —el `grep`
-que shimea Claude Code en su shell— contesta al revés: un commit con `.md` + un `.ts` da
-"saltea"**, que es exactamente la dirección peligrosa. Comprobado en los dos binarios, no supuesto.
-El pathspec de `git` no depende de qué `grep` haya en el PATH. Verificado en seis casos: solo `.md`,
-mixto, solo `.ts`, nada staged, `.md` anidado, y `.MD` en mayúscula — este último manda a correr
-todo, que es el lado seguro del error.
-
-Lo que la sostiene, medido el 2026-09-11 y no estimado:
-
-- **Nada del pipeline lee los `.md` que editamos.** Biome no parsea Markdown, y `typecheck`, `test`
-  y `build` tampoco los miran. El único check que abre un `.md` es `pnpm testids`
-  (`scripts/check-testids.mjs`), y lee `docs/milestone-3-implementacion/UI-implementation-plan.md`
-  — que es **inmutable** por D-022. **Si algún día se tocara algo dentro de `docs/`, el skip no
-  aplica**: ahí sí hay un check que lee.
-- **La red sigue puesta.** `ci.yml` dispara en `push: [main]` sin filtro de paths, así que corre
-  igual en CI. Saltearlo local no saca la verificación: la mueve 98s más tarde a otra máquina.
-- **Son 98s.** Ese es el ahorro completo, y por eso la excepción es una línea de `grep` y no un
-  `verify:docs` en el `package.json` ni un flag: infraestructura nueva para 98s es el patrón que ya
-  se revirtió una vez con el cron.
+mecánica a propósito, y es `git` y no `grep` por una razón medida** — bajo el `grep` que shimea
+Claude Code, la versión con `grep` contestaba al revés justo en el caso peligroso. Y **si algún día
+se tocara algo dentro de `docs/`, el skip no aplica**: `pnpm testids` sí lee un `.md` de ahí. El
+argumento completo y las mediciones, en
+[`specs/archive/CLAUDE-argumentos-de-las-reglas-2026-09-20.md`](specs/archive/CLAUDE-argumentos-de-las-reglas-2026-09-20.md).
 
 **La documentación viaja con el código que la causa, en el mismo commit.** Un cambio que altera cómo
 se opera, se configura o se despliega algo llega con su documentación adentro — no en un `docs(...)`
 posterior. Un `docs(...)` suelto es legítimo solo cuando el cambio **es** documentación: sanear algo
 desactualizado, cerrar una decisión, escribir una trampa recién aprendida.
 
-**Por qué es regla y no gusto:** el 2026-08-27 el commit de R2 salió sin cerrar D-051, y durante tres
-commits `DECISIONS.md` afirmó que la evidencia era efímera mientras la evidencia ya vivía en R2. La
-ventana entre el código y su documentación es una ventana en la que el repo miente, y quien lea en
-el medio no tiene forma de saberlo.
+El porqué —el commit de R2 que dejó a `DECISIONS.md` mintiendo durante tres commits— está en
+[`specs/archive/CLAUDE-argumentos-de-las-reglas-2026-09-20.md`](specs/archive/CLAUDE-argumentos-de-las-reglas-2026-09-20.md).
 
 # Comandos
 
