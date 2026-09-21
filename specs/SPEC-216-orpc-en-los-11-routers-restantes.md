@@ -74,8 +74,29 @@
 > `pnpm verify` completo en verde (494 tests de `apps/api`, 3 archivos
 > `test/orpc-client-{projects,projects-obra,evidence}.test.ts` nuevos).
 >
-> **Queda solo §E4 (`users.routes.ts`, 5 rutas, 🔴 bcrypt) — aislada a propósito para su propia
-> revisión línea por línea, sin mezclarse con ninguna de las anteriores.**
+> **§E4 (`users.routes.ts`, 5 rutas, 🔴 bcrypt) cerrada 2026-09-20, en su propio commit — con
+> esto la spec queda completa: las 38 rutas migradas.** Aislada como pedía la spec, sin mezclarse con
+> ninguna de las anteriores. **La auditoría acertó: solo cambió el transporte.** `bcrypt.hash(password,
+> 10)` es el mismo código en el mismo lugar del handler, en las dos rutas que lo llaman (`POST /` y el
+> `password` opcional de `PATCH /{id}`), y `passwordHash` sigue sin poder salir por dos razones
+> independientes — la lista de columnas del `select`/`returning` y los dos `.output()`, que son
+> `z.strictObject`. `test/auth-timing.test.ts` (la comparación de tiempo constante de `/login`, que no
+> se tocó) y la fila de `routes/users.routes.ts` en `apps/api/CLAUDE.md` §Superficie 🔴 siguen
+> valiendo tal cual.
+>
+> **Lo único que cambió de forma, y ya estaba aceptado:** los tres `expect(res.body.fieldErrors)` de
+> `test/password-policy.test.ts` pasaron a `ORPCError.toJSON()` (`code: "BAD_REQUEST"`, el detalle de
+> Zod en `data.issues`) — el mismo cambio que ya habían aceptado las 45 rutas de `SPEC-212` y los dos
+> tests de `auth.test.ts` en §E2. **La política de passwords no se tocó**: el test sigue fijando que
+> una password corta y una de más de `PASSWORD_MAX_BYTES` se rechazan con 400, ahora leyendo el
+> `issue` de `password` en el sobre nuevo. `POST /` envuelve `User.email` en
+> `relanzarRestriccionComoOrpc` (`test/constraint-errors.test.ts` en verde sin cambios), y `PATCH
+> /{id}` también aunque hoy no toque ninguna columna única — el día que `User` gane una, no depende de
+> que alguien se acuerde. `pnpm verify:all` completo en verde (**499 tests de `apps/api`**, con
+> `test/orpc-client-users.test.ts` nuevo: 5 casos, incluido que `passwordHash` no aparece en la
+> respuesta del cliente tipado y que un no-admin corta en `authorize` con 403 antes de que oRPC vea la
+> request). `REQUEST_SCHEMAS`/`RESPONSE_SCHEMAS` ya no tienen las 6 entradas de `users`;
+> `specs/openapi/propnexus.openapi.json` regenerado.
 
 ## La auditoría, ruta por ruta (2026-09-20)
 

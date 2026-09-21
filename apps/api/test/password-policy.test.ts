@@ -32,7 +32,14 @@ describe("POST /api/v1/users aplica la política de passwords", () => {
     const res = await crearUsuario("corta12", "corta@test.local");
 
     expect(res.status).toBe(400);
-    expect(res.body.fieldErrors).toHaveProperty("password");
+    // SPEC-216 §E4 — migrado a oRPC: el sobre de error ya no es
+    // `error.flatten()`, es `ORPCError.toJSON()` (mismo cambio de forma que
+    // ya aceptaron las 45 rutas de SPEC-212 y `auth.test.ts` en §E2). El
+    // detalle de Zod sigue viajando, en `data.issues`.
+    expect(res.body.code).toBe("BAD_REQUEST");
+    expect(res.body.data.issues.some((i: { path: string[] }) => i.path.includes("password"))).toBe(
+      true
+    );
   });
 
   it(`rechaza por encima de ${PASSWORD_MAX_BYTES} bytes en vez de truncar`, async () => {
@@ -41,7 +48,10 @@ describe("POST /api/v1/users aplica la política de passwords", () => {
     const res = await crearUsuario("a".repeat(PASSWORD_MAX_BYTES + 1), "larga@test.local");
 
     expect(res.status).toBe(400);
-    expect(res.body.fieldErrors).toHaveProperty("password");
+    expect(res.body.code).toBe("BAD_REQUEST");
+    expect(res.body.data.issues.some((i: { path: string[] }) => i.path.includes("password"))).toBe(
+      true
+    );
   });
 
   it("acepta una password que cumple, y el usuario puede loguearse", async () => {
@@ -74,6 +84,9 @@ describe("PATCH /api/v1/users/:id aplica la misma política", () => {
       .send({ password: "corta12" });
 
     expect(res.status).toBe(400);
-    expect(res.body.fieldErrors).toHaveProperty("password");
+    expect(res.body.code).toBe("BAD_REQUEST");
+    expect(res.body.data.issues.some((i: { path: string[] }) => i.path.includes("password"))).toBe(
+      true
+    );
   });
 });

@@ -2,15 +2,11 @@ import "dotenv/config";
 import { mkdirSync, writeFileSync } from "node:fs";
 import path from "node:path";
 import {
-  createUserSchema,
   cuidParamSchema,
   hex64ParamSchema,
   positiveIntParamSchema,
   stageEvidenceUploadResultSchema,
-  stageEvidenceUploadSchema,
-  updateUserSchema,
-  userMutationResultSchema,
-  userSummarySchema
+  stageEvidenceUploadSchema
 } from "@plataforma/shared";
 import { type ZodType, z } from "zod";
 import { createDocument } from "zod-openapi";
@@ -39,6 +35,7 @@ import {
 } from "../src/routes/projects-obra.routes";
 import { publicOrpcRouter } from "../src/routes/public.routes";
 import { type StagesContext, stagesOrpcRouter } from "../src/routes/stages.routes";
+import { type UsersContext, usersOrpcRouter } from "../src/routes/users.routes";
 
 // El otro consumidor de `route-inventory` (junto a `generate-api-docs.ts` y
 // `test/route-guards.test.ts`): un documento OpenAPI 3.1, leído del MISMO
@@ -93,8 +90,6 @@ type SchemaEntry = { body?: ZodType; bodyContentType?: string; query?: ZodType }
  * `route-guards.test.ts`: se edita el mismo día que se agrega el `safeParse`.
  */
 const REQUEST_SCHEMAS: Record<string, SchemaEntry> = {
-  "POST /api/v1/users": { body: createUserSchema },
-  "PATCH /api/v1/users/:id": { body: updateUserSchema },
   // Multipart: el archivo es un campo aparte (`req.file`, Multer) que este
   // schema no valida — valida los demás campos del form, que Express entrega
   // como string. Documentado en `bodyContentType`, no en el schema.
@@ -141,10 +136,6 @@ const REQUEST_SCHEMAS: Record<string, SchemaEntry> = {
  * `z.array(...)`; si es la forma `{ items, nextCursor }`, `paginatedResponseSchema(...)`.
  */
 const RESPONSE_SCHEMAS: Record<string, ZodType> = {
-  "GET /api/v1/users": z.array(userSummarySchema),
-  "POST /api/v1/users": userMutationResultSchema,
-  "GET /api/v1/users/:id": userSummarySchema,
-  "PATCH /api/v1/users/:id": userMutationResultSchema,
   "POST /api/v1/developer/projects/:id/stages/:stageId/evidence": stageEvidenceUploadResultSchema
 };
 
@@ -216,10 +207,10 @@ function aPathOpenApi(ruta: string): string {
  * `developer`/`developer-comercial`/`capital` (§D, las 19 — todas salvo la
  * subida multipart) y, desde SPEC-216, `profile`/`notifications` (§E1),
  * `auth`/`public` (§E2), `audit`/`contracts` (§E3), `stages` (§E5),
- * `projects`/`projects-obra` (§E6) y `evidence` (§E7, salvo
- * `GET /:id/download`, que es `SPEC-217`) — ya migradas a oRPC. El bucle de
- * abajo las saltea y su fragmento sale, aparte, de sus routers oRPC
- * combinados con `OpenAPIGenerator` (ver el final de esta
+ * `projects`/`projects-obra` (§E6), `evidence` (§E7, salvo
+ * `GET /:id/download`, que es `SPEC-217`) y `users` (§E4) — ya migradas a
+ * oRPC. El bucle de abajo las saltea y su fragmento sale, aparte, de sus
+ * routers oRPC combinados con `OpenAPIGenerator` (ver el final de esta
  * función).
  */
 const ORPC_MIGRADAS = new Set([
@@ -256,6 +247,11 @@ const ORPC_MIGRADAS = new Set([
   "DELETE /api/v1/evidence/:id",
   "GET /api/v1/evidence/:bundleId/proof/:fileHash",
   "GET /api/v1/evidence/:bundleId/files",
+  "GET /api/v1/users",
+  "POST /api/v1/users",
+  "GET /api/v1/users/:id",
+  "PATCH /api/v1/users/:id",
+  "DELETE /api/v1/users/:id",
   "GET /api/v1/notary/kpis",
   "GET /api/v1/notary/dossiers/pending",
   "GET /api/v1/notary/dossiers/:id",
@@ -474,6 +470,16 @@ export async function buildOpenApiDocument() {
     }
   );
   Object.assign(paths, documentoEvidence.paths);
+
+  // SPEC-216 §E4 — aislado en su propio commit por tocar superficie 🔴
+  // (bcrypt), pero el fragmento de OpenAPI sale igual que cualquier otro.
+  const documentoUsers = await generadorOrpc.generate(
+    os.$context<UsersContext>().prefix("/api/v1/users").router(usersOrpcRouter),
+    {
+      info: { title: "PropNexus API — users (oRPC)", version: "1.0.0" }
+    }
+  );
+  Object.assign(paths, documentoUsers.paths);
 
   const documentoNotary = await generadorOrpc.generate(
     os.$context<NotaryContext>().prefix("/api/v1/notary").router(notaryOrpcRouter),
