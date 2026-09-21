@@ -28,8 +28,8 @@
   [run 35650018189](https://github.com/Javote/real-world-real-estate/actions/runs/35650018189), and
   its **full copy** in [`ci-run-35650018189.log`](1-repo-ci-tests/ci-run-35650018189.log) (GitHub
   deletes Actions logs after 90 days).
-- **Public vs. private folders**: the repository [`README.md`](../../README.md), section "Este
-  repositorio es público" ("This repository is public"): no folder contains secrets, credentials,
+- **Public vs. private folders**: the repository [`README.md`](../../README.md), section "This
+  repository is public": no folder contains secrets, credentials,
   wallet keys or personal data; secrets travel only through environment variables.
 - ⏳ **Pilot participant letters of confirmation** (≥3).
 

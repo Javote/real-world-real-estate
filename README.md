@@ -1,88 +1,165 @@
-# PropNexus — Anclaje de Evidencia Inmobiliaria sobre Cardano
+# PropNexus — Real estate pre-sale evidence, anchored on Cardano
 
-> Catalyst Fund Project **1400106** — *Real-World Real Estate Pre-Sale with Proof & Release*.
+> Project Catalyst **1400106** — *Real-World Real Estate Pre-Sale with Proof & Release*.
+>
+> Pre-production: <https://propnexus-web.onrender.com> (web app) ·
+> <https://propnexus-api.onrender.com> (API) · Cardano **Preprod**.
 
-Ventas inmobiliarias en pozo: estructura el ciclo de obra en **stages**, organiza la **evidencia**
-(planos, fotos, permisos, certificados) y ancla **huellas criptográficas** (SHA-256 / Merkle) en
-Cardano con timestamps verificables. Cuatro roles con superficie propia: **investor**, **developer**,
-**notary**, **certifier**.
+Buying a unit off-plan means handing over capital years before the unit legally exists. In the
+meantime, the project piles up plans, permits, inspections, certificates and approvals, and they
+live in informal channels: email threads, chat groups, paper folders. Buyers can't check where the
+project really stands, "finished" becomes something to argue about, and nothing guarantees that what
+is shown today is what existed yesterday. That opacity has already caused real economic harm to
+buyers.
 
-**El problema.** Hoy es imposible verificar el estado de los trámites de una obra en pozo: la
-evidencia está dispersa en canales informales y nada garantiza que lo que se muestra hoy sea lo que
-existía ayer. Esa opacidad ya causó daño económico real a compradores.
+PropNexus turns that scattered trail into an **ordered, auditable history per project and per
+unit**, structured in the **stages** of the construction lifecycle. Documents and personal data
+stay **off-chain**. Only their **cryptographic fingerprints** (SHA-256 per file, a Merkle root per
+evidence bundle) go on-chain, together with the stage events, in Cardano transactions whose
+timestamps nobody can rewrite. The goal is to move buyers **from belief to verification**.
 
-**Lo que la plataforma NO hace.** No certifica, no valida y no decide nada. No custodia ni transfiere
-dinero, en ninguna fase (D-021). No sustituye registros públicos, procesos notariales ni
-autorizaciones estatales. Solo puede sostener cuatro afirmaciones: *este archivo tiene este hash* ·
-*se registró en este momento* · *declara provenir de esta autoridad externa* · *esta persona
-atestiguó haberlo revisado* (D-026).
+## What it does — and what it doesn't
 
-**Stack.** pnpm monorepo: TanStack Router + Vite (web, SPA) · Express 5 + Kysely (api) · Aiken /
-Plutus V3 (contratos) · SQLite en dev, Turso en prod · Cardano **Preprod siempre** (D-013).
+The platform can back exactly four statements, and nothing more:
 
-## Arranque rápido
+1. *this file has this hash*;
+2. *it was registered at this moment*;
+3. *it declares it comes from this external authority*;
+4. *this person attested to having reviewed it*.
 
-Node ≥ 22.12 y pnpm ≥ 9 (`corepack enable`). Para los contratos, Aiken v1.1.21
-(`curl --proto '=https' --tlsv1.2 -LsSf https://install.aiken-lang.org | sh && aikup install v1.1.21`).
+**It does not certify, validate or decide anything.** It never holds or moves money, in any phase.
+It does not replace public property registries, notarial processes or deeds, government permits or
+inspections, or legal advice. It is a coordination and integrity layer, with no legal authority of
+its own (see the whitepaper's non-substitution statement).
+
+## How it works
+
+- **Stages.** Each project declares its stages up front, in order. That declaration is anchored
+  on-chain, so a stage can't be quietly backdated later. A stage moves through four states:
+  **Pending → In Progress → Completed** (shown to buyers as *certified*), with **Observed** as the
+  exception path when a certifier flags a problem and asks for corrections. A stage can't be marked
+  complete while its evidence is missing.
+- **Evidence.** The developer uploads documents (PDF, JPEG, PNG), after the competent authority has
+  already issued the ones that need official validation ("authority first"). Each file is hashed.
+  Each upload becomes a bundle with its Merkle root, and the root is anchored on Cardano.
+- **On-chain state.** An [Aiken](https://aiken-lang.org) validator (Plutus V3,
+  [`contracts/validators/stage.ak`](contracts/validators/stage.ak)) mirrors the same stage state
+  machine the backend enforces. Every stage has an on-chain thread, and every declaration, evidence
+  anchor and state transition is a Preprod transaction. The validator never holds or releases
+  value.
+- **Independent verification.** Anyone holding a file can recompute its SHA-256 and compare it
+  with the transaction on a public explorer, without trusting this platform.
+
+### Roles
+
+| Role | What they do | Lands on |
+|---|---|---|
+| **Investor** (buyer) | Follows the project and their unit, and verifies its evidence | `/investor/buy` |
+| **Developer** | Sets up projects, stages and units, uploads evidence, invites buyers | `/developer` |
+| **Certifier** | Reviews each stage's evidence and completes or observes it | `/certifier` |
+| **Notary** | Reviews and signs the final dossier before the deed | `/notary` |
+| **Admin** | The platform operator: can do anything the other roles do, and invites certifiers to projects | `/admin` |
+
+Access is enforced twice on every request: by global role, and by membership in the specific
+project.
+
+## Repository layout
+
+```
+apps/api          Express 5 + Kysely — the API (Render web service)
+apps/web          TanStack Router + Vite + React 19 — the web app (static site on Render, PWA)
+packages/shared   Zod schemas: the single API ↔ web contract
+packages/cardano  Anchoring port: a simulated adapter and a real one (Lucid Evolution)
+contracts/        Aiken smart contracts (Plutus V3) — separate toolchain, outside the pnpm workspace
+docs/             The approved Catalyst deliverables of Milestones 1–3 (read-only)
+specs/            Specs, audits, reports and the Milestone 3 evidence
+```
+
+The database is SQLite locally and [Turso](https://turso.tech) in production. Evidence files are
+stored in Cloudflare R2. The UI is bilingual: Spanish (`es-AR`, the default) and English.
+
+## Milestone 3 evidence
+
+Everything submitted for Milestone 3 lives in [`specs/evidencia-m3/`](specs/evidencia-m3/README.md),
+in English, with one folder per item of Catalyst's *"Evidence of milestone completion"*: CI and test
+reports, API docs (OpenAPI and Postman), the pre-production volume test and its 180 transaction IDs,
+the security review, and the ops runbook with monitoring screenshots.
+
+The Milestone 1 documents (whitepaper, architecture and data models, pilot plan) are hashed and
+anchored on Cardano mainnet. Their TXIDs are listed in
+[`docs/milestone-1-fundamentos/M1-D4-Blockchain-Anchoring-Index.md`](docs/milestone-1-fundamentos/M1-D4-Blockchain-Anchoring-Index.md).
+
+## Quick start
+
+Requires Node ≥ 22.12 and pnpm 9 (`corepack enable`). The contracts also need Aiken v1.1.21:
+
+```bash
+curl --proto '=https' --tlsv1.2 -LsSf https://install.aiken-lang.org | sh && aikup install v1.1.21
+```
 
 ```bash
 pnpm install
-cp apps/api/.env.example apps/api/.env   # completar JWT_SECRET: openssl rand -hex 32
-pnpm db:migrate                          # crea la SQLite de dev
-pnpm db:seed                             # usuarios y proyecto demo
-pnpm dev                                 # web en :3000, api en :8787
+cp apps/api/.env.example apps/api/.env   # set JWT_SECRET: openssl rand -hex 32
+pnpm db:migrate                          # creates the local SQLite database
+pnpm db:seed                             # demo users and a demo project
+pnpm dev                                 # web on :3000, API on :8787
 ```
 
-**En `/login` tocar la solapa del rol prefilla el usuario;** la contraseña se tipea (la de abajo en
-local, la de `SEED_DEMO_PASSWORD` en cualquier otro entorno).
+On `/login`, picking a role tab fills in that role's username; you type the password. Locally, the
+seeded accounts are:
 
-| Solapa | Usuario | Aterriza en |
-|---|---|---|
-| Desarrollador | `developer@example.com` / `developer123` | `/developer` |
-| Certificador | `verifier@example.com` / `verifier123` | `/certifier` |
-| Escribano | `notary@example.com` / `notary123` | `/notary` |
-| Inversor | `buyer@example.com` / `buyer123` | `/investor/buy` |
+| Role tab | Username / password |
+|---|---|
+| Investor | `buyer@example.com` / `buyer123` |
+| Developer | `developer@example.com` / `developer123` |
+| Notary | `notary@example.com` / `notary123` |
+| Certifier | `verifier@example.com` / `verifier123` |
+| *(no tab)* Admin | `admin@example.com` / `admin123` |
 
-El **admin** (`admin@example.com` / `admin123`) no tiene solapa: se tipea el usuario y aterriza en
-`/admin`, desde donde entra a los cuatro paneles e invita certifiers a los proyectos (D-095).
+These are **public, development-only** credentials. The seed uses them only against a local SQLite
+file, and against any other database it refuses to run unless `SEED_ADMIN_PASSWORD` and
+`SEED_DEMO_PASSWORD` are set. Pre-production uses different passwords.
 
-Son credenciales **de desarrollo y publicadas**: el seed solo las usa contra un SQLite local, y
-contra cualquier otra base se niega a correr sin `SEED_ADMIN_PASSWORD` (D-047).
+Environment variables are documented in [`apps/api/.env.example`](apps/api/.env.example) and
+[`apps/web/.env.example`](apps/web/.env.example).
 
-## Verificación
+## Verification
 
 ```bash
-pnpm verify        # lint + typecheck + trazabilidad de test IDs + tests + build
-pnpm verify:all    # lo anterior, encadenado con la suite de Aiken
+pnpm verify        # lint + typecheck + test-ID traceability + tests + build
+pnpm verify:all    # the above, plus the Aiken suite (fmt + check + build)
 ```
 
-Es lo mismo que corre el CI, y nada se commitea sin que dé verde. `pnpm --filter @plataforma/api
-test:s3` y `test:yaci` corren contra infraestructura real y **no** están incluidos: van a mano. Cada
-uno levanta el contenedor que necesita y lo baja al terminar, así que alcanza con tener Docker
-corriendo. Si ya lo tenías levantado, lo usan y lo dejan como estaba.
-
-## Dónde vive todo
-
-Deliberadamente **tres archivos en la raíz y nada más** —este, `CLAUDE.md` y `DECISIONS.md`—; el
-resto vive indexado en una carpeta. **El mapa completo de qué vive dónde está en `CLAUDE.md`
-§Estructura**, y no se copia acá: una copia diverge del original en silencio.
-
-Lo mismo con las variables de entorno. La referencia es
-[`apps/api/.env.example`](apps/api/.env.example) y [`apps/web/.env.example`](apps/web/.env.example).
+This is what CI runs on every push, and nothing is committed unless it passes. Two suites run
+against real infrastructure and are run by hand instead:
+`pnpm --filter @plataforma/api test:s3` (storage against MinIO) and
+`pnpm --filter @plataforma/cardano test:yaci` (anchoring against a local Cardano node). Each one
+starts the container it needs and stops it afterwards, so Docker running is enough.
 
 ## Deploy
 
-Free tier, **$0/mes**, y eso es una restricción de arquitectura y no de presupuesto (D-040). El
-artefacto es `render.yaml`: dos servicios en Render contra Turso, evidencia en Cloudflare R2.
-Procedimiento completo en [`specs/RUNBOOK-deploy.md`](specs/RUNBOOK-deploy.md).
+Free tier, **$0/month**, and that is an architectural constraint, not a budget one. The deploy is
+declared in [`render.yaml`](render.yaml): two Render services (API and static web app) backed by
+Turso and Cloudflare R2. A daily GitHub Actions job reconciles anchors that may have been lost.
+The full procedure (deploy, rollback, incidents) is in the
+[runbook](specs/evidencia-m3/5-ops/runbook.md).
 
-## Este repositorio es público
+The network is **always Cardano Preprod**. Mainnet is out of scope for this milestone and is
+blocked by configuration, not just by procedure.
 
-No contiene, en ninguna carpeta, secretos, credenciales, claves de wallet ni datos personales: los
-secretos viajan **solo por variables de entorno** y nunca se versionan (regla 12 de `CLAUDE.md`).
+## This repository is public
 
-Nunca versionado: `apps/api/.env`, `apps/web/.env`, `apps/api/.data/` (bases SQLite locales),
-`apps/api/uploads/` (evidencia de runtime) y `apps/web/e2e/.artifacts/`.
+No folder contains secrets, credentials, wallet keys or personal data. Secrets travel **only
+through environment variables** and are never committed.
 
-La clave de la wallet de servicio y la API key de Blockfrost se configuran por entorno en el
-proveedor de deploy y **no existen en el repositorio**.
+Never committed: `apps/api/.env`, `apps/web/.env`, `apps/api/.data/` (local SQLite databases),
+`apps/api/uploads/` (runtime evidence) and `apps/web/e2e/.artifacts/`. The service wallet key and
+the Blockfrost API key are set as environment variables at the deploy provider and do not exist in
+the repository.
+
+## Working documents
+
+The team's working language is Spanish. [`CLAUDE.md`](CLAUDE.md) (the working guide),
+[`DECISIONS.md`](DECISIONS.md) (the constraints in force and the reasons behind them) and
+[`specs/`](specs/README.md) are written in Spanish. Everything prepared for reviewers, meaning this
+README and [`specs/evidencia-m3/`](specs/evidencia-m3/README.md), is in English.
