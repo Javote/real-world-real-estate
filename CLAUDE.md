@@ -20,8 +20,9 @@
 **Las cuatro dejaron bugs reales, no solo pulido, y los reproducidos ya están cerrados:** `SPEC-201`
 y `SPEC-202` eran corrupción de datos (dos invitaciones sobre la misma unidad; dos dossiers para una
 unidad, con la firma del escribano en el que la pantalla no lee), y `SPEC-301`, una garantía que
-`contracts/CLAUDE.md` afirmaba y el validador no daba. Lo que queda abierto de las cuatro series es
-pulido sin fecha, salvo los seis ítems de §Antes de mainnet.
+`contracts/CLAUDE.md` afirmaba y el validador no daba. De las cuatro series no queda nada abierto:
+lo que falta está **postergado** a propósito (los ítems de §Antes de mainnet y la pasada manual con
+VoiceOver de `SPEC-104`) — `specs/README.md` lleva la razón de cada una.
 
 Lo transversal. Lo de cada frente vive en `apps/web/CLAUDE.md`, `apps/api/CLAUDE.md`,
 `packages/cardano/CLAUDE.md` y `contracts/CLAUDE.md`, y se carga solo cuando tocás ese subárbol.

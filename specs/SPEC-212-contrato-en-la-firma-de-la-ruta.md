@@ -13,6 +13,13 @@
 > reescritura la cambia de "casero primero, oRPC después" a "oRPC directo", en las cuatro verticales
 > que D-066 ya nombra.
 >
+> **CERRADA 2026-09-20.** Las 45 rutas migradas, el interceptor de Sentry implementado y las dos
+> investigaciones resueltas. **La ruta 46 —`POST /developer/projects/:id/stages/:stageId/evidence`,
+> multipart— no es una deuda de esta spec:** queda con Multer a propósito y su endurecimiento (validación
+> en los dos lados, subida por lote, limpieza de huérfanos) es [`SPEC-218`](SPEC-218-subida-de-evidencia-por-lote.md).
+> **Corrección:** el argumento de RAM que se da más abajo contra migrar el multipart vale para el parser de
+> **oRPC**, no para Multer (que escribe a disco en streaming) — ver `SPEC-218` §Los hallazgos.
+>
 > **§A (`notary`, 6 rutas) cerrada 2026-09-20** — el piloto. Migradas las 6, `pnpm verify:all`
 > completo en verde, cliente oRPC tipado probado end-to-end contra el servidor real. Encontró y
 > corrigió cuatro trampas nuevas del diseño original (§Probado el 2026-09-20, cerrando §A, más
