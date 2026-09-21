@@ -9,6 +9,9 @@
 >
 > The documents here are English versions prepared for this submission. The project's working
 > language is Spanish; each document names the working document it comes from.
+>
+> Every document is available as Markdown and as a PDF with the same name, side by side. The PDFs
+> are generated from the Markdown (`bash scripts/evidencia-pdf/generar.sh`).
 
 ## Status
 

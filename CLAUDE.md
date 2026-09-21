@@ -67,7 +67,8 @@ tampoco tiene campo de signer. El criterio 3 queda sin código pendiente.
 inglés y solo lo exportable**, una subcarpeta por ítem de *"Evidence of milestone completion"*. Los
 documentos de trabajo en castellano de los que salen (prueba de volumen, TXIDs, security review,
 runbook, monitoreo, reporte de tests) siguen en `specs/` y son los que se mantienen: **si cambia uno,
-se actualiza su versión en inglés en el mismo commit**.
+se actualiza su versión en inglés en el mismo commit**, y su PDF con `bash scripts/evidencia-pdf/generar.sh`
+(cada `.md` de la carpeta tiene un `.pdf` hermano generado desde él).
 
 Lo cerrado —las tres Tandas de esquema, código y documentación, y la prueba de volumen que dio los
 criterios 8 y 15— está ítem por ítem en
