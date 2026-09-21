@@ -70,7 +70,7 @@ describe('PanelLayout (D-074)', () => {
     expect(header.textContent).toContain('Prop')
     expect(screen.getByRole('button', { name: 'Notificaciones' })).toBeDefined()
     expect(screen.getByRole('button', { name: 'Mi perfil' })).toBeDefined()
-    expect(screen.getByRole('button', { name: 'Idioma' })).toBeDefined()
+    expect(screen.getByRole('group', { name: 'Idioma' })).toBeDefined()
   })
 
   it('con back la flecha queda y el logo no se va', async () => {

@@ -238,8 +238,8 @@ describe('LoginScreen', () => {
     fireEvent.change(screen.getByLabelText('Usuario'), { target: { value: 'alguien@example.com' } })
     fireEvent.change(screen.getByLabelText('Contraseña'), { target: { value: 'un-secreto' } })
 
-    fireEvent.click(screen.getByText('ES'))
-    await screen.findByText('EN')
+    fireEvent.click(screen.getByRole('button', { name: 'English' }))
+    await screen.findByLabelText('Username')
 
     expect((screen.getByLabelText('Username') as HTMLInputElement).value).toBe(
       'alguien@example.com'

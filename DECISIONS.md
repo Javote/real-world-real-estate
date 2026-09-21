@@ -38,6 +38,7 @@ Todos se comunican en la entrega.
 | M3 SOM: "reserva → **escrow**" | La plataforma nunca custodia ni transfiere valor. El "escrow" es el contrato anclado, nunca fondos retenidos | (c) verdad del producto | D-021 |
 | M3 SOM: "**percentages** configurables" (un `%` de avance por stage) | Ningún entregable de M2/M3 lo define (ni M2-D1, ni M2-D3, ni la captura 34C) — nació de leer el SOM en vez de los entregables. El avance es **derivado**, `completadas/total` por proyecto, sin peso por etapa | (c) verdad del producto + techo de precedencia | D-090, D-091 |
 | M3 SOM: "**signers** configurables" (rol configurable por stage) | Lo que el SOM pide ya existe, con otra forma: D-020 fija **qué rol autoriza cada transición**, construido y testeado — "configurable por proyecto" no aparece en ningún entregable. No se agrega una UI para reasignarlo | (c) verdad del producto + techo de precedencia | D-090, D-092 |
+| M2-D3 §LanguageToggle: "icon plus the **active** locale code" (captura 1: "文A EN") | Se muestran **los dos** códigos, ES y EN, con el activo resaltado y `aria-pressed`. Con uno solo no se sabía qué hacía el botón ni cuál era la alternativa, y el lector de pantalla anunciaba solo "Idioma" | (c) verdad del producto: accesibilidad, pedida por el dueño | D-096 |
 | M1 §README lista los estados como "…**Certified**…"; el `.puml` dice `Completed` | Gana `Completed`: precedencia interna de M1, y `Certified` implicaría que la plataforma certifica | (a) contradicción interna | D-020, D-026 |
 | M1 §README promete que la taxonomía indica "authoritative" y "anchored on-chain" | El CSV entregado no tiene esas columnas. El hueco lo llenan D-027 y D-028 | (a) contradicción interna | D-027, D-028 |
 | M2-D5 §2.1 usa notación de rutas Wouter | Las rutas se leen como **paths**, no como elección de router | (b) redacción | D-022 |
@@ -1225,3 +1226,23 @@ certifier le resta independencia a la firma. El admin, como salvaguarda, no tien
 **Fuera de M2-D5.** Ningún entregable define superficie de admin ni esta invitación. No toca
 ninguno de los 16 criterios del SOM. Los test IDs son propios (`ADMIN-*`, y `CER-INVITATIONS-003`
 declarado en `FUERA_DEL_BACKLOG` de `check-testids.mjs`).
+
+## D-096 — El LanguageToggle muestra ES y EN, con el activo resaltado
+
+**Decisión del dueño, 2026-09-21.** El toggle de M2-D3 (ícono + código del idioma activo, como en la
+captura 1) no dejaba claro qué hacía: un "ES" solo no dice que el otro idioma es inglés ni que el
+botón cambia de idioma, y como su `aria-label` era "Idioma", el lector de pantalla no anunciaba ni
+el estado ni la acción.
+
+**Qué se construye.** El mismo componente, en el mismo lugar del header: ícono + dos botones, ES y
+EN. El activo va resaltado (fondo blanco, texto `primary`) y con `aria-pressed="true"`; cada botón se
+anuncia con el nombre del idioma en su propia lengua ("Español", "English") y su `lang`. Persistencia
+y default no cambian (`propnexus.lang`, `es-AR`).
+
+**Por qué es un desvío legítimo y chico.** Todo lo que M2-D3 obliga sigue estando —el ícono, el
+código activo visible, el header, la persistencia—; se agrega el código inactivo. No es un
+componente nuevo ni un estado nuevo.
+
+**Junto con esto, el cursor.** Tailwind v4 dejó de poner `cursor: pointer` en `<button>`, así que
+ningún botón de la app mostraba la mano al pasar el mouse (el toggle, las solapas de rol del login,
+todos). `styles.css` lo restituye en `@layer base` para todo botón habilitado.
