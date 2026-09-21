@@ -1,7 +1,7 @@
 {
   "info": {
     "name": "PropNexus API",
-    "description": "Generado desde el router montado (`pnpm --filter @plataforma/api docs:api`), no mantenido a mano — ver apps/api/scripts/generate-api-docs.ts. La descripción de cada request es la cadena de guards que `authorize()` declara: rol(es) y regla de acceso por proyecto.",
+    "description": "Generated from the mounted router (`pnpm --filter @plataforma/api docs:api`), not maintained by hand — see apps/api/scripts/generate-api-docs.ts. Each request's description is the guard chain `authorize()` declares: allowed role(s) and the per-project access rule. \"—\" means a public endpoint.",
     "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
   },
   "variable": [
@@ -43,7 +43,7 @@
                 "audit-logs"
               ]
             },
-            "description": "auth + autoriza(rol(admin) · soloRol)"
+            "description": "authenticated + authorize(role(admin) · role only)"
           }
         },
         {
@@ -69,7 +69,7 @@
                 "reservation-to-escrow"
               ]
             },
-            "description": "auth + autoriza(rol(admin) · soloRol)"
+            "description": "authenticated + authorize(role(admin) · role only)"
           }
         }
       ]
@@ -99,7 +99,7 @@
                 "me"
               ]
             },
-            "description": "auth + autoriza(rol(admin|developer|buyer|verifier|notary) · scope(User.id = usuario))"
+            "description": "authenticated + authorize(role(admin|developer|buyer|verifier|notary) · scope(User.id = current user))"
           }
         },
         {
@@ -158,7 +158,7 @@
                 "assignments"
               ]
             },
-            "description": "auth + autoriza(rol(admin|verifier) · scope(projectScope(cualquier membresía)))"
+            "description": "authenticated + authorize(role(admin|verifier) · scope(projectScope(any membership)))"
           }
         },
         {
@@ -183,7 +183,7 @@
                 "certificates"
               ]
             },
-            "description": "auth + autoriza(rol(admin|verifier) · scope(Stage.certifiedById = usuario))"
+            "description": "authenticated + authorize(role(admin|verifier) · scope(Stage.certifiedById = current user))"
           }
         },
         {
@@ -208,7 +208,7 @@
                 "invitations"
               ]
             },
-            "description": "auth + autoriza(rol(admin|verifier) · scope(CertifierInvitation.certifierId = usuario))"
+            "description": "authenticated + authorize(role(admin|verifier) · scope(CertifierInvitation.certifierId = current user))"
           }
         },
         {
@@ -233,7 +233,7 @@
                 "kpis"
               ]
             },
-            "description": "auth + autoriza(rol(admin|verifier) · scope(projectScope(cualquier membresía)))"
+            "description": "authenticated + authorize(role(admin|verifier) · scope(projectScope(any membership)))"
           }
         },
         {
@@ -259,7 +259,7 @@
                 ":id"
               ]
             },
-            "description": "auth + autoriza(rol(admin|verifier) · proyecto(Stage:id → verifier))"
+            "description": "authenticated + authorize(role(admin|verifier) · project(Stage:id → verifier))"
           }
         },
         {
@@ -286,7 +286,7 @@
                 "accept"
               ]
             },
-            "description": "auth + autoriza(rol(admin|verifier) · dueño(CertifierInvitation:id))"
+            "description": "authenticated + authorize(role(admin|verifier) · owner(CertifierInvitation:id))"
           }
         },
         {
@@ -313,7 +313,7 @@
                 "decline"
               ]
             },
-            "description": "auth + autoriza(rol(admin|verifier) · dueño(CertifierInvitation:id))"
+            "description": "authenticated + authorize(role(admin|verifier) · owner(CertifierInvitation:id))"
           }
         },
         {
@@ -340,7 +340,7 @@
                 "certify"
               ]
             },
-            "description": "auth + autoriza(rol(admin|verifier) · proyecto(Stage:id → verifier))"
+            "description": "authenticated + authorize(role(admin|verifier) · project(Stage:id → verifier))"
           }
         },
         {
@@ -367,7 +367,7 @@
                 "observe"
               ]
             },
-            "description": "auth + autoriza(rol(admin|verifier) · proyecto(Stage:id → verifier))"
+            "description": "authenticated + authorize(role(admin|verifier) · project(Stage:id → verifier))"
           }
         }
       ]
@@ -398,7 +398,7 @@
                 "releases"
               ]
             },
-            "description": "auth + autoriza(rol(admin|developer|buyer|verifier|notary) · alguna[dueño(Contract:contractId) | proyecto(Contract:contractId → developer|buyer|verifier)])"
+            "description": "authenticated + authorize(role(admin|developer|buyer|verifier|notary) · any of[owner(Contract:contractId) | project(Contract:contractId → developer|buyer|verifier)])"
           }
         }
       ]
@@ -428,7 +428,7 @@
                 "audit-log"
               ]
             },
-            "description": "auth + autoriza(rol(admin|developer) · scope(auditScope(developer)))"
+            "description": "authenticated + authorize(role(admin|developer) · scope(auditScope(developer)))"
           }
         },
         {
@@ -454,7 +454,7 @@
                 "by-project"
               ]
             },
-            "description": "auth + autoriza(rol(admin|developer) · scope(projectScope(developer)))"
+            "description": "authenticated + authorize(role(admin|developer) · scope(projectScope(developer)))"
           }
         },
         {
@@ -480,7 +480,7 @@
                 "monthly"
               ]
             },
-            "description": "auth + autoriza(rol(admin|developer) · scope(projectScope(developer)))"
+            "description": "authenticated + authorize(role(admin|developer) · scope(projectScope(developer)))"
           }
         },
         {
@@ -506,7 +506,7 @@
                 "summary"
               ]
             },
-            "description": "auth + autoriza(rol(admin|developer) · scope(projectScope(developer)))"
+            "description": "authenticated + authorize(role(admin|developer) · scope(projectScope(developer)))"
           }
         },
         {
@@ -531,7 +531,7 @@
                 "documents"
               ]
             },
-            "description": "auth + autoriza(rol(admin|developer) · scope(projectScope(developer)))"
+            "description": "authenticated + authorize(role(admin|developer) · scope(projectScope(developer)))"
           }
         },
         {
@@ -556,7 +556,7 @@
                 "investors"
               ]
             },
-            "description": "auth + autoriza(rol(admin|developer) · scope(projectScope(developer)))"
+            "description": "authenticated + authorize(role(admin|developer) · scope(projectScope(developer)))"
           }
         },
         {
@@ -581,7 +581,7 @@
                 "kpis"
               ]
             },
-            "description": "auth + autoriza(rol(admin|developer) · scope(projectScope(cualquier membresía)))"
+            "description": "authenticated + authorize(role(admin|developer) · scope(projectScope(any membership)))"
           }
         },
         {
@@ -606,7 +606,7 @@
                 "progress"
               ]
             },
-            "description": "auth + autoriza(rol(admin|developer) · scope(projectScope(developer)))"
+            "description": "authenticated + authorize(role(admin|developer) · scope(projectScope(developer)))"
           }
         },
         {
@@ -631,7 +631,7 @@
                 "projects"
               ]
             },
-            "description": "auth + autoriza(rol(admin|developer) · scope(projectScope(developer)))"
+            "description": "authenticated + authorize(role(admin|developer) · scope(projectScope(developer)))"
           }
         },
         {
@@ -657,7 +657,7 @@
                 ":id"
               ]
             },
-            "description": "auth + autoriza(rol(admin|developer) · proyecto(id → developer))"
+            "description": "authenticated + authorize(role(admin|developer) · project(id → developer))"
           }
         },
         {
@@ -684,7 +684,7 @@
                 "contracts"
               ]
             },
-            "description": "auth + autoriza(rol(admin|developer) · proyecto(id → developer))"
+            "description": "authenticated + authorize(role(admin|developer) · project(id → developer))"
           }
         },
         {
@@ -711,7 +711,7 @@
                 "units"
               ]
             },
-            "description": "auth + autoriza(rol(admin|developer) · proyecto(id → developer))"
+            "description": "authenticated + authorize(role(admin|developer) · project(id → developer))"
           }
         },
         {
@@ -736,7 +736,7 @@
                 "units"
               ]
             },
-            "description": "auth + autoriza(rol(admin|developer) · scope(projectScope(developer)))"
+            "description": "authenticated + authorize(role(admin|developer) · scope(projectScope(developer)))"
           }
         },
         {
@@ -762,7 +762,7 @@
                 ":id"
               ]
             },
-            "description": "auth + autoriza(rol(admin|developer) · proyecto(Unit:id → developer))"
+            "description": "authenticated + authorize(role(admin|developer) · project(Unit:id → developer))"
           }
         },
         {
@@ -790,7 +790,7 @@
                 ":stageNum"
               ]
             },
-            "description": "auth + autoriza(rol(admin|developer) · proyecto(Contract:id → developer))",
+            "description": "authenticated + authorize(role(admin|developer) · project(Contract:id → developer))",
             "body": {
               "mode": "raw",
               "raw": "{\n  \"amountMinorUnits\": 1000000\n}",
@@ -824,7 +824,7 @@
                 "documents"
               ]
             },
-            "description": "auth + autoriza(rol(admin|developer) · proyecto(Evidence:evidenceId@body → developer))"
+            "description": "authenticated + authorize(role(admin|developer) · project(Evidence:evidenceId@body → developer))"
           }
         },
         {
@@ -849,7 +849,7 @@
                 "projects"
               ]
             },
-            "description": "auth + autoriza(rol(admin|developer) · soloRol)"
+            "description": "authenticated + authorize(role(admin|developer) · role only)"
           }
         },
         {
@@ -876,7 +876,7 @@
                 "invitations"
               ]
             },
-            "description": "auth + autoriza(rol(admin|developer) · proyecto(id → developer))"
+            "description": "authenticated + authorize(role(admin|developer) · project(id → developer))"
           }
         },
         {
@@ -905,7 +905,7 @@
                 "evidence"
               ]
             },
-            "description": "auth + autoriza(rol(admin|developer) · proyecto(id → developer))"
+            "description": "authenticated + authorize(role(admin|developer) · project(id → developer))"
           }
         },
         {
@@ -932,7 +932,7 @@
                 "units"
               ]
             },
-            "description": "auth + autoriza(rol(admin|developer) · proyecto(id → developer))"
+            "description": "authenticated + authorize(role(admin|developer) · project(id → developer))"
           }
         }
       ]
@@ -962,7 +962,7 @@
                 ":id"
               ]
             },
-            "description": "auth + autoriza(rol(admin) · soloRol)"
+            "description": "authenticated + authorize(role(admin) · role only)"
           }
         },
         {
@@ -988,7 +988,7 @@
                 "files"
               ]
             },
-            "description": "auth + autoriza(rol(admin|developer|buyer|verifier|notary) · proyecto(EvidenceBundle:bundleId → developer|buyer|verifier))"
+            "description": "authenticated + authorize(role(admin|developer|buyer|verifier|notary) · project(EvidenceBundle:bundleId → developer|buyer|verifier))"
           }
         },
         {
@@ -1015,7 +1015,7 @@
                 ":fileHash"
               ]
             },
-            "description": "auth + autoriza(rol(admin|developer|buyer|verifier|notary) · proyecto(EvidenceBundle:bundleId → developer|buyer|verifier))"
+            "description": "authenticated + authorize(role(admin|developer|buyer|verifier|notary) · project(EvidenceBundle:bundleId → developer|buyer|verifier))"
           }
         },
         {
@@ -1040,7 +1040,7 @@
                 ":id"
               ]
             },
-            "description": "auth + autoriza(rol(admin|developer|buyer|verifier|notary) · proyecto(Evidence:id → developer|buyer|verifier))"
+            "description": "authenticated + authorize(role(admin|developer|buyer|verifier|notary) · project(Evidence:id → developer|buyer|verifier))"
           }
         },
         {
@@ -1066,7 +1066,7 @@
                 "download"
               ]
             },
-            "description": "auth + autoriza(rol(admin|developer|buyer|verifier|notary) · proyecto(Evidence:id → developer|buyer|verifier))"
+            "description": "authenticated + authorize(role(admin|developer|buyer|verifier|notary) · project(Evidence:id → developer|buyer|verifier))"
           }
         },
         {
@@ -1091,7 +1091,7 @@
                 ":id"
               ]
             },
-            "description": "auth + autoriza(rol(admin|developer) · proyecto(Evidence:id → developer))"
+            "description": "authenticated + authorize(role(admin|developer) · project(Evidence:id → developer))"
           }
         },
         {
@@ -1117,7 +1117,7 @@
                 "anchor"
               ]
             },
-            "description": "auth + autoriza(rol(admin) · proyecto(Evidence:id → developer|buyer|verifier))"
+            "description": "authenticated + authorize(role(admin) · project(Evidence:id → developer|buyer|verifier))"
           }
         },
         {
@@ -1142,7 +1142,7 @@
                 "reconcile"
               ]
             },
-            "description": "auth + autoriza(rol(admin) · soloRol)"
+            "description": "authenticated + authorize(role(admin) · role only)"
           }
         }
       ]
@@ -1173,7 +1173,7 @@
                 ":projectId"
               ]
             },
-            "description": "auth + autoriza(rol(admin|buyer) · scope(Favorite.userId = usuario))"
+            "description": "authenticated + authorize(role(admin|buyer) · scope(Favorite.userId = current user))"
           }
         },
         {
@@ -1199,7 +1199,7 @@
                 ":unitId"
               ]
             },
-            "description": "auth + autoriza(rol(admin|buyer) · dueño(ContractOfUnit:unitId))"
+            "description": "authenticated + authorize(role(admin|buyer) · owner(ContractOfUnit:unitId))"
           }
         },
         {
@@ -1224,7 +1224,7 @@
                 "favorites"
               ]
             },
-            "description": "auth + autoriza(rol(admin|buyer) · scope(Favorite.userId = usuario))"
+            "description": "authenticated + authorize(role(admin|buyer) · scope(Favorite.userId = current user))"
           }
         },
         {
@@ -1250,7 +1250,7 @@
                 ":id"
               ]
             },
-            "description": "auth + autoriza(rol(admin|buyer) · dueño(Invitation:id))"
+            "description": "authenticated + authorize(role(admin|buyer) · owner(Invitation:id))"
           }
         },
         {
@@ -1275,7 +1275,7 @@
                 "notifications"
               ]
             },
-            "description": "auth + autoriza(rol(admin|buyer) · scope(Notification.userId = usuario))"
+            "description": "authenticated + authorize(role(admin|buyer) · scope(Notification.userId = current user))"
           }
         },
         {
@@ -1300,7 +1300,7 @@
                 "units"
               ]
             },
-            "description": "auth + autoriza(rol(admin|buyer) · scope(Unit.investorId = usuario))"
+            "description": "authenticated + authorize(role(admin|buyer) · scope(Unit.investorId = current user))"
           }
         },
         {
@@ -1326,7 +1326,7 @@
                 ":id"
               ]
             },
-            "description": "auth + autoriza(rol(admin|buyer) · dueño(Unit:id))"
+            "description": "authenticated + authorize(role(admin|buyer) · owner(Unit:id))"
           }
         },
         {
@@ -1353,7 +1353,7 @@
                 "dossier"
               ]
             },
-            "description": "auth + autoriza(rol(admin|buyer) · dueño(Unit:id))"
+            "description": "authenticated + authorize(role(admin|buyer) · owner(Unit:id))"
           }
         },
         {
@@ -1381,7 +1381,7 @@
                 "export.pdf"
               ]
             },
-            "description": "auth + autoriza(rol(admin|buyer) · dueño(Unit:id))"
+            "description": "authenticated + authorize(role(admin|buyer) · owner(Unit:id))"
           }
         },
         {
@@ -1408,7 +1408,7 @@
                 "news"
               ]
             },
-            "description": "auth + autoriza(rol(admin|buyer) · dueño(Unit:id))"
+            "description": "authenticated + authorize(role(admin|buyer) · owner(Unit:id))"
           }
         },
         {
@@ -1434,7 +1434,7 @@
                 ":projectId"
               ]
             },
-            "description": "auth + autoriza(rol(admin|buyer) · soloRol)"
+            "description": "authenticated + authorize(role(admin|buyer) · role only)"
           }
         },
         {
@@ -1461,7 +1461,7 @@
                 "accept"
               ]
             },
-            "description": "auth + autoriza(rol(admin|buyer) · dueño(Invitation:id))",
+            "description": "authenticated + authorize(role(admin|buyer) · owner(Invitation:id))",
             "body": {
               "mode": "raw",
               "raw": "{}",
@@ -1497,7 +1497,7 @@
                 "decline"
               ]
             },
-            "description": "auth + autoriza(rol(admin|buyer) · dueño(Invitation:id))"
+            "description": "authenticated + authorize(role(admin|buyer) · owner(Invitation:id))"
           }
         },
         {
@@ -1525,7 +1525,7 @@
                 "share"
               ]
             },
-            "description": "auth + autoriza(rol(admin|buyer) · dueño(Unit:id))"
+            "description": "authenticated + authorize(role(admin|buyer) · owner(Unit:id))"
           }
         }
       ]
@@ -1556,7 +1556,7 @@
                 ":id"
               ]
             },
-            "description": "auth + autoriza(rol(admin|notary) · soloRol)"
+            "description": "authenticated + authorize(role(admin|notary) · role only)"
           }
         },
         {
@@ -1582,7 +1582,7 @@
                 "pending"
               ]
             },
-            "description": "auth + autoriza(rol(admin|notary) · soloRol)"
+            "description": "authenticated + authorize(role(admin|notary) · role only)"
           }
         },
         {
@@ -1607,7 +1607,7 @@
                 "kpis"
               ]
             },
-            "description": "auth + autoriza(rol(admin|notary) · scope(Dossier.signedById = usuario))"
+            "description": "authenticated + authorize(role(admin|notary) · scope(Dossier.signedById = current user))"
           }
         },
         {
@@ -1632,7 +1632,7 @@
                 "signatures"
               ]
             },
-            "description": "auth + autoriza(rol(admin|notary) · scope(Dossier.signedById = usuario))"
+            "description": "authenticated + authorize(role(admin|notary) · scope(Dossier.signedById = current user))"
           }
         },
         {
@@ -1659,7 +1659,7 @@
                 "reject"
               ]
             },
-            "description": "auth + autoriza(rol(admin|notary) · soloRol)"
+            "description": "authenticated + authorize(role(admin|notary) · role only)"
           }
         },
         {
@@ -1686,7 +1686,7 @@
                 "sign"
               ]
             },
-            "description": "auth + autoriza(rol(admin|notary) · soloRol)"
+            "description": "authenticated + authorize(role(admin|notary) · role only)"
           }
         }
       ]
@@ -1716,7 +1716,7 @@
                 "unread-count"
               ]
             },
-            "description": "auth + autoriza(rol(admin|developer|buyer|verifier|notary) · scope(Notification.userId = usuario))"
+            "description": "authenticated + authorize(role(admin|developer|buyer|verifier|notary) · scope(Notification.userId = current user))"
           }
         },
         {
@@ -1742,7 +1742,7 @@
                 "read"
               ]
             },
-            "description": "auth + autoriza(rol(admin|developer|buyer|verifier|notary) · scope(Notification.userId = usuario))"
+            "description": "authenticated + authorize(role(admin|developer|buyer|verifier|notary) · scope(Notification.userId = current user))"
           }
         }
       ]
@@ -1771,7 +1771,7 @@
                 "profile"
               ]
             },
-            "description": "auth + autoriza(rol(admin|developer|buyer|verifier|notary) · scope(User.id = usuario))"
+            "description": "authenticated + authorize(role(admin|developer|buyer|verifier|notary) · scope(User.id = current user))"
           }
         },
         {
@@ -1795,7 +1795,7 @@
                 "profile"
               ]
             },
-            "description": "auth + autoriza(rol(admin|developer|buyer|verifier|notary) · scope(User.id = usuario))"
+            "description": "authenticated + authorize(role(admin|developer|buyer|verifier|notary) · scope(User.id = current user))"
           }
         },
         {
@@ -1820,7 +1820,7 @@
                 "notifications"
               ]
             },
-            "description": "auth + autoriza(rol(admin|developer|buyer|verifier|notary) · scope(User.id = usuario))"
+            "description": "authenticated + authorize(role(admin|developer|buyer|verifier|notary) · scope(User.id = current user))"
           }
         }
       ]
@@ -1850,7 +1850,7 @@
                 ":id"
               ]
             },
-            "description": "auth + autoriza(rol(admin) · soloRol)"
+            "description": "authenticated + authorize(role(admin) · role only)"
           }
         },
         {
@@ -1874,7 +1874,7 @@
                 "projects"
               ]
             },
-            "description": "auth + autoriza(rol(admin|developer|buyer|verifier|notary) · scope(projectScope(cualquier membresía)))"
+            "description": "authenticated + authorize(role(admin|developer|buyer|verifier|notary) · scope(projectScope(any membership)))"
           }
         },
         {
@@ -1899,7 +1899,7 @@
                 ":id"
               ]
             },
-            "description": "auth + autoriza(rol(admin|developer|buyer|verifier|notary) · proyecto(id → developer|buyer|verifier))"
+            "description": "authenticated + authorize(role(admin|developer|buyer|verifier|notary) · project(id → developer|buyer|verifier))"
           }
         },
         {
@@ -1925,7 +1925,7 @@
                 "building-schematic"
               ]
             },
-            "description": "auth + autoriza(rol(admin|developer|buyer|verifier|notary) · proyecto(id → developer|buyer|verifier))"
+            "description": "authenticated + authorize(role(admin|developer|buyer|verifier|notary) · project(id → developer|buyer|verifier))"
           }
         },
         {
@@ -1951,7 +1951,7 @@
                 "certifier-invitations"
               ]
             },
-            "description": "auth + autoriza(rol(admin) · soloRol)"
+            "description": "authenticated + authorize(role(admin) · role only)"
           }
         },
         {
@@ -1977,7 +1977,7 @@
                 "developer"
               ]
             },
-            "description": "auth + autoriza(rol(admin|developer|buyer|verifier|notary) · proyecto(id → developer|buyer|verifier))"
+            "description": "authenticated + authorize(role(admin|developer|buyer|verifier|notary) · project(id → developer|buyer|verifier))"
           }
         },
         {
@@ -2003,7 +2003,7 @@
                 "documents"
               ]
             },
-            "description": "auth + autoriza(rol(admin|developer|buyer|verifier|notary) · proyecto(id → developer|buyer|verifier))"
+            "description": "authenticated + authorize(role(admin|developer|buyer|verifier|notary) · project(id → developer|buyer|verifier))"
           }
         },
         {
@@ -2029,7 +2029,7 @@
                 "members"
               ]
             },
-            "description": "auth + autoriza(rol(admin|developer|buyer|verifier|notary) · proyecto(id → developer|buyer|verifier))"
+            "description": "authenticated + authorize(role(admin|developer|buyer|verifier|notary) · project(id → developer|buyer|verifier))"
           }
         },
         {
@@ -2055,7 +2055,7 @@
                 "stages"
               ]
             },
-            "description": "auth + autoriza(rol(admin|developer|buyer|verifier|notary) · proyecto(id → developer|buyer|verifier))"
+            "description": "authenticated + authorize(role(admin|developer|buyer|verifier|notary) · project(id → developer|buyer|verifier))"
           }
         },
         {
@@ -2082,7 +2082,7 @@
                 ":stageId"
               ]
             },
-            "description": "auth + autoriza(rol(admin|developer|buyer|verifier|notary) · proyecto(id → developer|buyer|verifier))"
+            "description": "authenticated + authorize(role(admin|developer|buyer|verifier|notary) · project(id → developer|buyer|verifier))"
           }
         },
         {
@@ -2107,7 +2107,7 @@
                 ":id"
               ]
             },
-            "description": "auth + autoriza(rol(admin) · soloRol)"
+            "description": "authenticated + authorize(role(admin) · role only)"
           }
         },
         {
@@ -2131,7 +2131,7 @@
                 "projects"
               ]
             },
-            "description": "auth + autoriza(rol(admin) · soloRol)",
+            "description": "authenticated + authorize(role(admin) · role only)",
             "body": {
               "mode": "raw",
               "raw": "{\n  \"name\": \"Torre Ejemplo\",\n  \"slug\": \"torre-ejemplo\",\n  \"city\": \"Buenos Aires\",\n  \"country\": \"Argentina\",\n  \"totalUnits\": 24,\n  \"status\": \"planning\"\n}",
@@ -2166,7 +2166,7 @@
                 "certifier-invitations"
               ]
             },
-            "description": "auth + autoriza(rol(admin) · soloRol)"
+            "description": "authenticated + authorize(role(admin) · role only)"
           }
         },
         {
@@ -2192,7 +2192,7 @@
                 "members"
               ]
             },
-            "description": "auth + autoriza(rol(admin) · soloRol)"
+            "description": "authenticated + authorize(role(admin) · role only)"
           }
         },
         {
@@ -2220,7 +2220,7 @@
                 "retry-anchor"
               ]
             },
-            "description": "auth + autoriza(rol(admin) · proyecto(id → developer|buyer|verifier))"
+            "description": "authenticated + authorize(role(admin) · project(id → developer|buyer|verifier))"
           }
         }
       ]
@@ -2276,7 +2276,7 @@
                 ":id"
               ]
             },
-            "description": "auth + autoriza(rol(admin|developer|buyer|verifier|notary) · proyecto(Stage:id → developer|buyer|verifier))"
+            "description": "authenticated + authorize(role(admin|developer|buyer|verifier|notary) · project(Stage:id → developer|buyer|verifier))"
           }
         },
         {
@@ -2301,7 +2301,7 @@
                 ":id"
               ]
             },
-            "description": "auth + autoriza(rol(admin|developer) · proyecto(Stage:id → developer))"
+            "description": "authenticated + authorize(role(admin|developer) · project(Stage:id → developer))"
           }
         },
         {
@@ -2327,7 +2327,7 @@
                 "state"
               ]
             },
-            "description": "auth + autoriza(rol(admin|developer) · proyecto(Stage:id → developer))",
+            "description": "authenticated + authorize(role(admin|developer) · project(Stage:id → developer))",
             "body": {
               "mode": "raw",
               "raw": "{\n  \"state\": \"InProgress\"\n}",
@@ -2366,7 +2366,7 @@
                 ":id"
               ]
             },
-            "description": "auth + autoriza(rol(admin) · soloRol)"
+            "description": "authenticated + authorize(role(admin) · role only)"
           }
         },
         {
@@ -2390,7 +2390,7 @@
                 "users"
               ]
             },
-            "description": "auth + autoriza(rol(admin) · soloRol)"
+            "description": "authenticated + authorize(role(admin) · role only)"
           }
         },
         {
@@ -2415,7 +2415,7 @@
                 ":id"
               ]
             },
-            "description": "auth + autoriza(rol(admin) · soloRol)"
+            "description": "authenticated + authorize(role(admin) · role only)"
           }
         },
         {
@@ -2440,7 +2440,7 @@
                 ":id"
               ]
             },
-            "description": "auth + autoriza(rol(admin) · soloRol)"
+            "description": "authenticated + authorize(role(admin) · role only)"
           }
         },
         {
@@ -2464,7 +2464,7 @@
                 "users"
               ]
             },
-            "description": "auth + autoriza(rol(admin) · soloRol)"
+            "description": "authenticated + authorize(role(admin) · role only)"
           }
         }
       ]

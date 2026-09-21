@@ -2,7 +2,7 @@ import "dotenv/config";
 import { mkdirSync, writeFileSync } from "node:fs";
 import path from "node:path";
 import { en } from "../src/lib/arrays";
-import { describir, leerMontaje } from "../src/lib/route-inventory";
+import { describeGuardEn, leerMontaje } from "../src/lib/route-inventory";
 
 // M3 §2 — "endpoints documentados". No hay oRPC todavía (D-066 es
 // aspiracional, ver `packages/shared/CLAUDE.md`) y escribir un Postman a mano
@@ -94,7 +94,7 @@ function agruparPorPrefijo(): Map<string, Map<string, string>> {
   for (const { prefijo, rutas } of leerMontaje()) {
     const existente = porPrefijo.get(prefijo) ?? new Map<string, string>();
     for (const [clave, guards] of rutas) {
-      existente.set(clave, guards.map(describir).join(" + ") || "—");
+      existente.set(clave, guards.map(describeGuardEn).join(" + ") || "—");
     }
     porPrefijo.set(prefijo, existente);
   }
@@ -150,10 +150,10 @@ export function buildPostmanCollection(): object {
     info: {
       name: "PropNexus API",
       description:
-        "Generado desde el router montado (`pnpm --filter @plataforma/api docs:api`), " +
-        "no mantenido a mano — ver apps/api/scripts/generate-api-docs.ts. " +
-        "La descripción de cada request es la cadena de guards que " +
-        "`authorize()` declara: rol(es) y regla de acceso por proyecto.",
+        "Generated from the mounted router (`pnpm --filter @plataforma/api docs:api`), " +
+        "not maintained by hand — see apps/api/scripts/generate-api-docs.ts. " +
+        "Each request's description is the guard chain `authorize()` declares: " +
+        'allowed role(s) and the per-project access rule. "—" means a public endpoint.',
       schema: "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
     },
     variable: [

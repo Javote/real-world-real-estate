@@ -57,6 +57,35 @@ export function describir(guard: GuardDescriptor): string {
   return `autoriza(rol(${guard.roles.join("|")}) · ${describirAcceso(guard.acceso)})`;
 }
 
+// La misma cadena de guards, en inglés, para los documentos que se entregan
+// (OpenAPI y Postman en `specs/evidencia-m3/2-api/`, cuyo idioma es el
+// inglés). `describir` queda en castellano porque es la firma que fija
+// `test/route-guards.test.ts`.
+
+function scopeEnIngles(scope: string): string {
+  return scope
+    .replace("cualquier membresía", "any membership")
+    .replace(/= usuario\b/, "= current user");
+}
+
+function describeRuleEn(regla: ReglaSimple): string {
+  if (regla === "soloRol") return "role only";
+  if ("proyecto" in regla) {
+    const s = regla.proyecto;
+    const origen = "via" in s ? `${s.via}:${s.param}${s.en === "body" ? "@body" : ""}` : s.param;
+    return `project(${origen} → ${regla.membresias.join("|")})`;
+  }
+  if ("scopeEnQuery" in regla) return `scope(${scopeEnIngles(regla.scopeEnQuery)})`;
+  return `owner(${regla.dueño.via}:${regla.dueño.param})`;
+}
+
+export function describeGuardEn(guard: GuardDescriptor): string {
+  if (guard.kind === "authenticate") return "authenticated";
+  const partes = ramas(guard.acceso).map(describeRuleEn);
+  const acceso = partes.length === 1 ? en(partes, 0) : `any of[${partes.join(" | ")}]`;
+  return `authorize(role(${guard.roles.join("|")}) · ${acceso})`;
+}
+
 /** Reconstruye, leyendo los routers ya montados, la matriz completa. */
 export function leerMontaje(): Montaje[] {
   return MONTAJE.map(({ prefijo, router }) => {

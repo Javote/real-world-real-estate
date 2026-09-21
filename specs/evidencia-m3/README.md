@@ -48,7 +48,7 @@
 - **Volume test** (end-to-end UI flows on pre-production: 30 stages, 180 on-chain transactions):
   [`volume-test-report.md`](3-preprod/volume-test-report.md).
 - **Transaction IDs**: [`transaction-ids.md`](3-preprod/transaction-ids.md) and the
-  [`.csv`](3-preprod/txids-prueba-de-volumen-2026-09-10.csv), each TXID re-verified against the
+  [`.csv`](3-preprod/txids-volume-test-2026-09-10.csv), each TXID re-verified against the
   chain.
 - ⏳ **Median reservation → escrow < 12 min**, with audit-log and latency screenshots and a short
   performance note.

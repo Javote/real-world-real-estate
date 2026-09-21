@@ -13,7 +13,7 @@ import { type ZodType, z } from "zod";
 import { createDocument } from "zod-openapi";
 import { en } from "../src/lib/arrays";
 import { OpenAPIGenerator, os, ZodToJsonSchemaConverter } from "../src/lib/orpc";
-import { describir, leerMontaje } from "../src/lib/route-inventory";
+import { describeGuardEn, leerMontaje } from "../src/lib/route-inventory";
 import { auditOrpcRouter } from "../src/routes/audit.routes";
 import { type AuthContext, authOrpcRouter } from "../src/routes/auth.routes";
 import { capitalOrpcRouter } from "../src/routes/capital.routes";
@@ -335,7 +335,8 @@ export async function buildOpenApiDocument() {
       paths[pathOpenApi] ??= {};
       paths[pathOpenApi][metodo.toLowerCase()] = {
         summary: clave,
-        description: guards.map(describir).join(" + ") || "Sin sesión — pública (M2-D5 §2.2)",
+        description:
+          guards.map(describeGuardEn).join(" + ") || "No session required — public (M2-D5 §2.2)",
         ...(requestParams && { requestParams }),
         ...(entrada?.body && {
           requestBody: {
@@ -345,20 +346,20 @@ export async function buildOpenApiDocument() {
         ...(autenticado && { security: [{ bearerAuth: [] }] }),
         responses: {
           [exito]: {
-            description: exito === "204" ? "Sin contenido" : "OK",
+            description: exito === "204" ? "No Content" : "OK",
             ...(RESPONSE_SCHEMAS[clave] && {
               content: { "application/json": { schema: RESPONSE_SCHEMAS[clave] } }
             })
           },
           ...(entrada && {
             "400": {
-              description: "Body o query no pasan el schema",
+              description: "Body or query failed schema validation",
               content: { "application/json": { schema: zodErrorSchema } }
             }
           }),
           ...(autenticado && {
-            "401": { description: "Sin sesión o token inválido" },
-            "403": { description: "Rol o membresía insuficiente" }
+            "401": { description: "No session or invalid token" },
+            "403": { description: "Insufficient role or project membership" }
           })
         }
       };
@@ -546,12 +547,12 @@ export async function buildOpenApiDocument() {
       title: "PropNexus API",
       version: "1.0.0",
       description:
-        "Generado desde el router montado (`pnpm --filter @plataforma/api docs:openapi`), " +
-        "no mantenido a mano — ver apps/api/scripts/generate-openapi.ts. El código de éxito " +
-        "se lee del `res.status(2xx)` real del handler (con el de creación si el handler " +
-        "tiene más de uno, caso idempotente). Body, query y 76 de las 85 respuestas de éxito " +
-        "son el schema Zod real, validado en runtime antes de responder — las 9 restantes " +
-        "legítimamente no tienen cuerpo JSON (`204 No Content` o un archivo binario)."
+        "Generated from the mounted router (`pnpm --filter @plataforma/api docs:openapi`), " +
+        "not maintained by hand — see apps/api/scripts/generate-openapi.ts. The success code " +
+        "is read from the handler's actual `res.status(2xx)` (the creation code when the " +
+        "handler has more than one, the idempotent case). Bodies, queries and 76 of the 85 " +
+        "success responses are the real Zod schema, validated at runtime before responding — " +
+        "the remaining 9 legitimately have no JSON body (`204 No Content` or a binary file)."
     },
     // Sin `/api/v1`: los 70 paths ya lo traen (sale de `MONTAJE`, el prefijo es
     // parte de la clave). Con el prefijo acá TAMBIÉN, un cliente generado o el

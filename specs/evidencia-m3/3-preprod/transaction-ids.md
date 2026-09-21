@@ -16,23 +16,21 @@ from unrelated runs.
 
 ## The data file
 
-[`txids-prueba-de-volumen-2026-09-10.csv`](txids-prueba-de-volumen-2026-09-10.csv)
-— 180 rows, one per transaction. Its column headers and stage/transition labels are in Spanish
-(the project's working language — see the repository's `CLAUDE.md`), reproduced verbatim from the
-source report rather than re-labelled for this document, so the CSV stays a faithful, traceable
-copy of the original data. For an English-speaking reviewer, here is what each column means:
+[`txids-volume-test-2026-09-10.csv`](txids-volume-test-2026-09-10.csv)
+— 180 rows, one per transaction. Columns:
 
-| Column (as written in the CSV) | Meaning |
+| Column | Meaning |
 |---|---|
-| `proyecto` | The project name (Torre Volumen 1 / 2 / 3) |
-| `etapa_numero` | Stage sequence number (1–10) |
-| `etapa_nombre` | Stage name, in Spanish (the product's default locale, `es-AR`) |
-| `transicion` | Which on-chain action this row records: mint (initial declaration), evidence anchor, or one of the four stage-FSM transitions (auto-advance, observe, resume, certify) |
-| `evento` | The underlying event type as stored in `OnChainEvent`: `STAGE_CREATED`, `EVIDENCE_ANCHOR`, or `STAGE_TRANSITION` |
+| `project` | The project name (Torre Volumen 1 / 2 / 3) |
+| `stage_number` | Stage sequence number (1–10) |
+| `stage_name_en` | Stage name, in English |
+| `stage_name_es` | Stage name as it is stored and shown in the product (default locale `es-AR`) |
+| `transition` | Which on-chain action this row records: mint (initial declaration), evidence anchor, or one of the four stage-FSM transitions (auto-advance, observe, resume, certify) |
+| `event` | The underlying event type as stored in `OnChainEvent`: `STAGE_CREATED`, `EVIDENCE_ANCHOR`, or `STAGE_TRANSITION` |
 | `txid` | The Cardano transaction hash, verbatim, case-sensitive |
 | `network` | Always `Preprod` — mainnet is out of scope for this milestone by owner decision (D-013) |
 | `explorer_preprod` | Direct, clickable Cardanoscan Preprod link for that transaction |
-| `confirmaciones_koios_2026-09-11` | Confirmation depth measured against Koios on the day this document was published (see below) |
+| `koios_confirmations_2026-09-11` | Confirmation depth measured against Koios on the day this document was published (see below) |
 
 ## Methodology
 
