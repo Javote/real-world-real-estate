@@ -16,19 +16,11 @@ sostiene nada. La prueba de volumen no aporta muestras: recorrió etapas, no com
 > *"UI flows function end-to-end in pre-prod; median time from reservation to escrow creation <12
 > minutes; audit logs persisted."* — `docs/milestone-3-implementacion/Milestone-3-info.md`
 
-"Escrow" está resuelto desde agosto: es el contrato creado y anclado, nunca fondos retenidos (D-021).
-**"Reservation" admite dos lecturas**, y la prueba registra los datos de las dos:
-
-| Lectura | Desde | Hasta |
-|---|---|---|
-| **A — la oficial** (`specs/archive/DECISIONS-hasta-2026-08-23.md:319`, **confirmada por el dueño el 2026-09-21**) | el investor acepta la invitación | el TXID del contrato entra en un bloque |
-| **B — la conservadora** | el developer invita (la unidad queda **reservada**) | el mismo punto |
-
-A es la que mide `GET /audit-logs/telemetry/reservation-to-escrow` (`blockTimestamp - createdAt` del
-`INVITATION_ACCEPTED`, SPEC-214). B suma la demora humana del investor en aceptar, que no es una
-propiedad de la plataforma. La nota reporta **las dos medianas** y dice cuál es la oficial y por qué.
-Correrla con la extensión, que es más lenta que una persona, hace que B dé un número peor que el
-real: si pasa así, pasa con margen.
+"Escrow" es el contrato creado y anclado, nunca fondos retenidos (D-021). **La medición va desde
+que el investor acepta la invitación hasta que el TXID del contrato entra en un bloque**
+(`specs/archive/DECISIONS-hasta-2026-08-23.md:319`, confirmada por el dueño el 2026-09-21). Es lo
+que mide `GET /audit-logs/telemetry/reservation-to-escrow` (`blockTimestamp - createdAt` del
+`INVITATION_ACCEPTED`, SPEC-214).
 
 ## El procedimiento
 
@@ -44,7 +36,7 @@ Por cada muestra, `i` de 1 a 5:
 
 1. **[DEV]** `/developer/project/:id/units` → "Add unit" → `M-i` (piso y m² cualquiera, con precio).
 2. **[DEV]** `/developer/project/:id/invite` → email `buyer@example.com`, unidad `M-i`, monto →
-   enviar. **Anotar la hora.** (La base igual la guarda en `Invitation.createdAt`.)
+   enviar.
 3. **[INV]** campana → `/investor/notifications` → abrir la invitación de `M-i` → **Aceptar**.
 4. Esperar a que el anclaje confirme: en `/investor/unit/<M-i>` la novedad pasa de "Pendiente" a
    confirmada, sola, sin recargar (la pantalla consulta cada 10 s mientras haya algo pendiente).
@@ -60,10 +52,10 @@ Por cada muestra, `i` de 1 a 5:
 3. **La telemetría** — `GET /audit-logs/telemetry/reservation-to-escrow` (admin; no tiene pantalla).
    Se guarda la respuesta JSON como archivo, con `sampleSize`, `medianMinutes` y
    `withBlockTimestampCount`.
-4. **Los tres instantes por muestra**, para calcular las dos lecturas. Solo lectura contra Turso:
+4. **Los dos instantes por muestra**, para la tabla de la nota. Solo lectura contra Turso:
 
 ```sql
-SELECT i.id, i.createdAt AS invitada, e.createdAt AS aceptada, e.blockTimestamp AS en_bloque, e.txid
+SELECT i.id, e.createdAt AS aceptada, e.blockTimestamp AS en_bloque, e.txid
 FROM Invitation i
 JOIN OnChainEvent e ON e.referenceId = i.id AND e.eventType = 'INVITATION_ACCEPTED'
 WHERE e.status = 'Confirmed'

@@ -49,7 +49,7 @@
   [`REPORTE-2026-09-10-prueba-de-volumen.md`](3-preprod/REPORTE-2026-09-10-prueba-de-volumen.md).
 - ⬜ **Mediana reserva → escrow < 12 min, con capturas y nota de performance.** Hoy hay una sola
   muestra real. Agendado: [`PLAN-muestras-reserva-escrow.md`](3-preprod/PLAN-muestras-reserva-escrow.md),
-  que también explica la ambigüedad de la frase del criterio y cómo se reportan las dos lecturas.
+  que también fija qué se mide: desde que el investor acepta hasta que el TXID entra en un bloque.
 - ⬜ **Video walkthrough**: el guion está en
   [`GUION-2026-09-21-video-walkthrough.md`](../GUION-2026-09-21-video-walkthrough.md). El video, una
   vez montado, se sube (YouTube no listado u otro) y el link va acá.
