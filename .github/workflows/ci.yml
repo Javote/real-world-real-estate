@@ -53,6 +53,13 @@ jobs:
       - name: Tests + coverage
         run: pnpm test:coverage
 
+      # `test:coverage` es solo de la API. Hasta el 2026-09-21 este era el único
+      # paso de tests del job, así que los unitarios de web, shared y cardano
+      # (más de mil) corrían en `pnpm verify` local y nunca en CI — se vio
+      # armando el reporte de tests para Catalyst, que cita estos logs.
+      - name: Tests del resto del workspace (web, shared, cardano)
+        run: pnpm -r --filter '!@plataforma/api' test
+
       # M3 §4 pide "dependency scans" además de static analysis, y hasta acá
       # `pnpm audit` era una corrida puntual (`specs/SECURITY-REVIEW-2026-09.md`,
       # 2026-09-07), no un paso de CI — quedaba desactualizado apenas se
