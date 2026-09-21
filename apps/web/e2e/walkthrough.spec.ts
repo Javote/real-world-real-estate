@@ -123,7 +123,18 @@ test.describe('Walkthrough', () => {
     await page.getByLabel('Contraseña').fill('contraseña-incorrecta')
     await page.getByRole('button', { name: 'Ingresar' }).click()
 
-    await expect(page.getByText('Credenciales inválidas')).toBeVisible()
+    // **El mensaje está DOS veces en el DOM, y es correcto que lo esté.**
+    // `SPEC-104` montó live regions (`lib/announce.tsx`): el error se pinta en
+    // el `<p>` visible y además se anuncia en un `div.sr-only`
+    // `aria-live="assertive"`. Un `getByText` pelado matchea los dos y
+    // Playwright falla por strict mode — no es un bug de la app, es una
+    // aserción ambigua que quedó vieja cuando llegó la accesibilidad.
+    //
+    // Se separan a propósito en vez de usar `.first()`: así el test fija las
+    // dos mitades —que se ve y que se anuncia— y la segunda no se puede perder
+    // en silencio.
+    await expect(page.locator('p').filter({ hasText: 'Credenciales inválidas' })).toBeVisible()
+    await expect(page.locator('[aria-live="assertive"]')).toHaveText('Credenciales inválidas')
     await expect(page).toHaveURL(/\/login/)
     await shot(page, '02-login-error')
   })
