@@ -11,6 +11,26 @@
 unedited — real traffic and real errors from the production instance
 (`propnexus-api.onrender.com` / `propnexus-web.onrender.com`), not a mock or a seeded demo state.
 
+## How this also covers Output 4's telemetry
+
+Output 4 (*Testing & Security*) asks for *"telemetry for coverage/latency/error budgets"*. The
+same instrumentation shown on this page provides two of the three, and the test report provides
+the third:
+
+| Telemetry | Where it comes from | Evidence |
+|---|---|---|
+| **Coverage** | Vitest coverage on every CI run; the API has minimum thresholds that fail the build | The coverage table in the [test report](evidencia-m3/1-repo-ci-tests/test-report.md) (API: 89.3% of lines) |
+| **Latency** | OpenTelemetry traces of every API request, exported to Grafana Cloud (Tempo), with per-middleware timing | `grafana-tempo-trace-detail.jpg` below |
+| **Error budgets** | Sentry captures every unhandled error in the API and the web app | `sentry-issues.jpg` below |
+
+The reservation → escrow latency that acceptance criterion 3 measures (median under 12 minutes)
+is a separate, product-level metric, served by the API at
+`GET /api/v1/audit-logs/telemetry/reservation-to-escrow` and reported under evidence item 3.
+
+**What is not in place yet:** no formal error-budget target (an SLO such as "99% of requests
+without a 5xx over 30 days") has been set. Sentry records the errors a budget would be computed
+from; setting the target itself is left for before mainnet.
+
 ## Files
 
 All under [`specs/evidencia-m3/5-ops/monitoring/`](evidencia-m3/5-ops/monitoring).
