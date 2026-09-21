@@ -291,24 +291,33 @@ limpia y una que arranca con un esqueleto de carga. Hacelo sí o sí:
 
 ### 1.6 Espacio en disco
 
-~150-250 MB por minuto en pantalla Retina; el crudo de este guion son ~20-25 minutos. **Contar con 6 GB.**
+Grabando la pantalla completa (2880×1800) son **~200-300 MB por minuto**; el crudo de este guion
+son ~20-25 minutos, y el montaje suma ~3 GB más (`unidas/` y el archivo final). **Contar con 15 GB
+libres.** El 2026-09-21 esta Mac tenía **11 GB**: hay que liberar antes de grabar.
 
 ```bash
 df -h /
 ```
 
-El disco llegó a 99% el 2026-09-18 (`CLAUDE.md` §Worktrees). Si aprieta: `~/.npm`,
-`~/Library/pnpm/store`, `~/.cache/puppeteer` se repueblan solos.
+El disco llegó a 99% el 2026-09-18 (`CLAUDE.md` §Worktrees). Lo primero que se puede borrar sin
+perder nada, porque se vuelve a llenar solo, son ~2,8 GB (medido el 2026-09-21):
+
+```bash
+rm -rf ~/.npm ~/Library/pnpm/store ~/.cache/uv ~/.cache/puppeteer
+```
+
+El resto hay que buscarlo a mano (Configuración del Sistema → General → Almacenamiento). **No
+borres** `~/Library/Caches/ms-playwright` (el navegador de los tests) ni las imágenes de Docker del
+repo (`CLAUDE.md` §Worktrees).
 
 ---
 
 ## 2. Setup de la máquina
 
-### 2.1 macOS — MacBook Pro Intel 2017
+### 2.1 macOS — esta Mac: MacBook Pro 15" Intel (2018), macOS Sequoia 15.7
 
-Esta máquina llega como mucho a **macOS Ventura (13)**. Para saber cuál tiene: menú  → **Acerca de
-esta Mac**. En Ventura la app de ajustes se llama **Configuración del Sistema**; en Monterey (12) o
-anteriores, **Preferencias del Sistema** — las opciones son las mismas.
+Pantalla Retina de 2880×1800; en "Predeterminada" se ve como 1440×900. La app de ajustes se llama
+**Configuración del Sistema**.
 
 Pegá esto en la Terminal (Cmd+Espacio → "Terminal" → Enter). Esconde los íconos del escritorio; se
 revierte en el §7:
@@ -320,14 +329,13 @@ defaults write com.apple.finder CreateDesktop false && killall Finder
 - [ ] **No molestar ON** (Centro de control, arriba a la derecha → Concentración → No molestar). Un
       banner arruina la toma.
 - [ ] Mail, Mensajes, WhatsApp, Slack y todo lo que no sea Chrome y QuickTime, **cerrado** (`Cmd+Q`
-      en cada uno). No molestar no silencia todo, y en una 2017 cada app abierta le saca aire a la
-      grabación. Docker Desktop sobre todo.
+      en cada uno). No molestar no silencia todo, y cada app abierta le saca aire a la grabación. Docker Desktop sobre todo.
 - [ ] **Cargador enchufado.** Esta máquina baja la velocidad con el grabador activo y la batería a
       medias, y el video sale a los saltos.
 - [ ] Resolución en **"Predeterminada"** (Configuración del Sistema → Pantallas). Si está en "Más
       espacio", el texto sale chico en el video.
 - [ ] **Wi-Fi estable, sin VPN.** Cada acción en cadena espera a la red.
-- [ ] **Espacio libre** (§1.6): 6 GB. Las 2017 suelen venir con discos de 128 o 256 GB.
+- [ ] **Espacio libre** (§1.6): 15 GB. El disco es de 250 GB y suele andar justo.
 
 ### 2.2 Chrome
 
@@ -395,7 +403,7 @@ Cuando el guion dice "[DEV]" o "pestaña 2", solo cambiás de pestaña (`Cmd+Opt
 ### 2.4 El grabador
 
 **`Shift+Cmd+5`, el capturador que trae macOS.** Cero instalación, encoder por hardware de Intel, no
-funde la CPU de una 2017. OBS solo haría falta para webcam o audio del sistema, y no hay ninguno.
+funde la CPU. OBS solo haría falta para webcam o audio del sistema, y no hay ninguno.
 
 `Shift+Cmd+5` → **Opciones**:
 
@@ -706,9 +714,11 @@ Abrí **Terminal** (Cmd+Espacio → escribí "Terminal" → Enter) y pegá:
 ffmpeg -version
 ```
 
-Si responde con texto que empieza por `ffmpeg version`, ya está: pasá al §5.2. Si dice
-`command not found`, pegá esto entero (baja ffmpeg ya compilado para Mac Intel desde evermeet.cx, sin
-Homebrew — que en la 2017 puede no estar soportado y tardar horas compilando):
+Si responde con texto que empieza por `ffmpeg version`, ya está: pasá al §5.2. **En esta Mac ya está
+instalado** (ffmpeg 8.0.1, por Homebrew), y el comando del §5.4 se probó acá el 2026-09-21.
+
+**Solo si el montaje se hace en otra Mac** y dice `command not found`: pegá esto entero. Baja ffmpeg
+ya compilado desde evermeet.cx, sin Homebrew; sirve para Mac Intel y, vía Rosetta, para Apple Silicon.
 
 ```bash
 mkdir -p ~/bin && cd ~/bin \
@@ -719,8 +729,7 @@ mkdir -p ~/bin && cd ~/bin \
   && export PATH="$HOME/bin:$PATH" && ffmpeg -version | head -1
 ```
 
-Tiene que terminar mostrando `ffmpeg version …`. El montaje también se puede hacer en cualquier otra
-Mac: se copia la carpeta entera y se sigue desde el §5.3.
+Tiene que terminar mostrando `ffmpeg version …`.
 
 ### 5.2 Recortar cada video, en QuickTime
 
@@ -779,8 +788,7 @@ ffmpeg -y -loglevel error -f concat -safe 0 -i unidas/lista.txt -c copy walkthro
 ```
 
 Va a mostrar una línea por toma (`T01: video 24 s, audio 16 s -> queda en 24 s`) y al final
-**`LISTO: …/walkthrough-final.mp4`**. En la 2017 son entre 10 y 20 minutos: re-encodea cada toma una
-vez, para que todas queden del mismo tamaño (1920×1200) antes de pegarlas. Dejá la Mac enchufada.
+**`LISTO: …/walkthrough-final.mp4`**. En esta Mac son unos minutos: re-encodea cada toma una vez, para que todas queden del mismo tamaño (1920×1200) antes de pegarlas. Dejá la Mac enchufada.
 
 **Qué hace, para que sepas qué esperar:**
 - Une el video y el audio de cada toma. Dura **lo que dure el más largo de los dos**: si la voz es
@@ -801,8 +809,8 @@ de la Terminal a quien te pasó el guion.
 Abrí `walkthrough-final.mp4` y miralo entero una vez: que las tomas estén en orden, que la voz
 corresponda a la pantalla, y que ninguna muestre una contraseña o una pantalla de error.
 
-**iMovie solo si hace falta agregar títulos o transiciones**, y al final: re-renderiza todo y en la
-2017 son ~20 minutos por pasada.
+**iMovie solo si hace falta agregar títulos o transiciones**, y al final: re-renderiza todo y tarda bastante
+más que el comando de arriba.
 
 ---
 
