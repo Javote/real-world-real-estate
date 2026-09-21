@@ -55,13 +55,14 @@ tampoco tiene campo de signer. El criterio 3 queda sin código pendiente.
 
 ## Lo que queda del plan
 
-**Todo el plan está cerrado salvo tres ítems, y ninguno es código:**
+**Todo el plan está cerrado salvo cuatro ítems. Tres no son código; el cuarto (3.15) sí:**
 
 | | Qué | Criterio |
 |---|---|---|
 | 3.12 | **Video walkthrough** | 13 ⬜ |
 | 3.13 | **3 pilotos** — recontactar; `M1-D3-PilotPlan.pdf` ya trae cartas de M1 y probablemente cubre parte | 4 ⬜ externo |
 | 3.14 | **Muestras de "reserva → escrow"** — ≥5 compras reales en Preprod, manejadas con la extensión de Chrome, + capturas + nota de performance. Hoy hay 1 sola muestra. **Intentada el 2026-09-21, sin correr: la extensión de Chrome no estaba conectada**, y los logins los hace el dueño. Procedimiento y prerrequisitos en [`specs/PLAN-2026-09-21-muestras-reserva-escrow.md`](specs/PLAN-2026-09-21-muestras-reserva-escrow.md) | 9 ⚠️ |
+| 3.15 | **Cobertura ≥95% con unit tests en toda la app** — el dueño releyó el criterio el 2026-09-21: es de toda la app, no solo de los contratos. Hoy API 89,4%, cardano 90,1%, shared 61,2%, web 29,1%. Pasos y tabla de lo que falta por parte en [`specs/SPEC-017-cobertura-95-en-toda-la-app.md`](specs/SPEC-017-cobertura-95-en-toda-la-app.md) | 2 ⚠️ |
 
 **La evidencia para enviar vive en [`specs/evidencia-m3/`](specs/evidencia-m3/README.md), en
 inglés y solo lo exportable**, una subcarpeta por ítem de *"Evidence of milestone completion"*. Los

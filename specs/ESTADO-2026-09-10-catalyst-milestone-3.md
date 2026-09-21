@@ -29,14 +29,19 @@
 > documento no tenía: la mediana reserva → escrow se sostiene con **una sola muestra**, y hay que
 > juntar más (`CLAUDE.md` §Lo que queda del plan, ítem 3.14).
 
-Ninguno de estos ítems es código pendiente de escribir — son evidencia por juntar o un flujo por
-ejercitar una vez contra Preprod.
+> **2026-09-21, más tarde:** el dueño releyó el criterio *"unit tests ≥95% coverage"* como de toda
+> la app, no solo de los contratos. Eso sí es código: tests por escribir, en
+> [`SPEC-017`](SPEC-017-cobertura-95-en-toda-la-app.md) (`CLAUDE.md` ítem 3.15).
+
+Salvo la cobertura (SPEC-017), ninguno de estos ítems es código pendiente de escribir — son
+evidencia por juntar o un flujo por ejercitar una vez contra Preprod.
 
 | Pendiente | Tipo | Depende de |
 |---|---|---|
 | ~~Hacer el repo de GitHub público~~ | **Hecho** — verificado `PUBLIC` el 2026-09-21 | — |
 | 3 pilotos confirmando (criterio 4 del SOM) | Externo | Recontactar developers/notary socios — `M1-D3-PilotPlan.pdf` |
 | Video walkthrough (criterio 13) | Falta grabar | Se graba sobre lo que ya existe y funciona |
+| Cobertura ≥95% con unit tests en toda la app (criterio 2) | Código — tests | [`SPEC-017`](SPEC-017-cobertura-95-en-toda-la-app.md): ~1.370 líneas por cubrir, ~1.160 en la web |
 
 ## Próxima sesión
 
