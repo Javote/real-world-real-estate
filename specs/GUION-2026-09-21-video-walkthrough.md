@@ -1,8 +1,9 @@
 # Guion — Video walkthrough (2026-09-21)
 
 > Cubre el ítem **3.12** de `CLAUDE.md` §Lo que queda del plan y el **criterio 13** del SOM
-> (`specs/README.md`). Es el guion de una grabación **manual**, no automatizada: el voice-over se
-> agrega después, sobre el video ya montado.
+> (`specs/README.md`). Es el guion de una grabación **manual**, no automatizada, pensada para repartirla entre
+> quien graba la pantalla, quien graba la voz y quien arma el archivo final (§0.1). Video y voz se
+> graban por separado, toma por toma, y se unen al final con un solo comando (§5).
 >
 > Los tiempos de espera salen de
 > [`REPORTE-2026-09-10-prueba-de-volumen.md`](REPORTE-2026-09-10-prueba-de-volumen.md) §Cronología
@@ -25,7 +26,27 @@
 | **Idioma** | Abre en `es-AR` (default) y **se cambia a `en-US` en la pantalla de login, antes de entrar**. | Catalyst revisa en inglés, y el cambio en cámara muestra la localización como feature en vez de tener que explicarla. Los dos diccionarios están completos y la paridad la fuerza el compilador (`dictionary.ts:1155`). |
 | **Entorno** | Producción: `propnexus-web.onrender.com`. Nunca local. | El video tiene que mostrar TXIDs reales en Preprod y la URL pública viva — parte de lo que sostiene el criterio 5. |
 | **La FSM** | **Las cuatro aristas, sobre la misma etapa**, en cámara: subir evidencia → observar → reanudar → certificar. | Es la máquina de estados entera contada sobre un solo objeto: se entiende sin repetirla diez veces. Son ~3 min de cortes. |
-| **Formato** | 31 tomas cortas, cortadas donde hay espera. Se unen al final sin re-encodear. | Cada acción on-chain tarda ~45 s y crear un proyecto bloquea ~6 min. Una toma continua es imposible. |
+| **Formato** | 31 tomas cortas, cortadas donde hay espera. Cada toma tiene su video y su audio por separado: se unen de a pares y después se pegan en orden (§5). | Cada acción on-chain tarda ~45 s y crear un proyecto bloquea ~6 min. Una toma continua es imposible. |
+
+### 0.1 Quién hace qué — pensado para delegar
+
+Cuatro trabajos. Los tres últimos **no necesitan saber nada del proyecto ni de programación**:
+alcanza con este documento. Pueden ser la misma persona o cuatro distintas.
+
+| Quién | Qué hace | Qué lee | Qué entrega |
+|---|---|---|---|
+| **Técnico** (quien conoce el repo) | Pasa las contraseñas **en privado**, corre los comandos del §1.4 durante el corte de T08 y está a mano durante la grabación | §1 | Las cuentas andando y el proyecto nuevo con sus membresías |
+| **Quien graba la pantalla** | Prepara la Mac y Chrome, y graba las 31 tomas | §1.2, §1.5, §1.6, §2, §3, §4 | `T01.mov` … `T31.mov`, recortados |
+| **Quien graba la voz** | Lee la narración en inglés, una grabación por toma | §3.1 y §8 | `T01.m4a` … `T31.m4a` |
+| **Quien arma el final** | Instala `ffmpeg`, revisa la carpeta y corre un comando | §3.1 y §5 | `walkthrough-final.mp4` |
+
+**Los datos que se ven no tienen que coincidir exacto con este documento.** Los números, nombres y
+fechas del §1.3 y del §4 son una referencia de lo que había el 2026-09-21. Lo que el video tiene que
+mostrar es que **cada rol entra a sus pantallas** y que **una etapa recorre los estados de la FSM**
+(Pending → InProgress → Observed → InProgress → Completed). Si un número es otro, se sigue grabando.
+
+**Los textos en inglés entre comillas del §4** ("Anchor evidence", "Observe"…) son los botones que
+vas a ver en pantalla: sirven para encontrarlos, no hay que decirlos.
 
 ---
 
@@ -44,6 +65,10 @@ Las cinco del seed. En cámara se usan cuatro (`admin` no tiene landing,
 | Notary | `notary@example.com` | `vjfxjgdxgi3n6pu0a7j7z2pw` | idem |
 | (consola) | `admin@example.com` | `jn0ejo6c287l4q0n9p5amqpr` | `SEED_ADMIN_PASSWORD` |
 
+**Quien graba no necesita el `.env`:** el técnico le pasa **en privado** (no por un canal grupal ni
+en este documento) las dos contraseñas; la de los cuatro roles es la misma. Ojo: la pantalla de
+login pre-llena una contraseña que **no sirve** en producción (T01).
+
 ### 1.2 Archivos de evidencia
 
 Tres archivos en una carpeta al alcance del selector, con nombres presentables (se ven en cámara):
@@ -55,6 +80,9 @@ Los límites los fija `packages/shared/src/evidence-rules.ts` (tipo real por los
 por `Content-Type`). Archivos chicos: el upload viaja a R2 pasando por Render.
 
 ### 1.3 El estado de la base — medido y **ya preparado** el 2026-09-21
+
+> **Para el técnico.** Quien graba puede saltar al §1.4. Y los números son referencia (§0.1): no hace
+> falta que coincidan.
 
 | Proyecto | Etapas | Estados | Membresías | Unidades | Eventos |
 |---|---|---|---|---|---|
@@ -170,6 +198,10 @@ no dibuja el link. El perfil del desarrollador se ve una vez, sobre la obra term
 
 ### 1.4 Las dos membresías del proyecto nuevo — se corren **durante el corte de T08**
 
+> **Lo hace el técnico, no quien graba.** Quien graba termina T08, **le avisa** y espera la
+> confirmación (los dos `201`) antes de seguir. Hacen falta el repo, `apps/api/.env` y la CLI de
+> `turso` logueada.
+
 El proyecto que se crea en cámara nace con **una sola membresía, la del developer que lo crea**
 (`developer.routes.ts:222`). Sin el `verifier`, su etapa no aparece en la cola del certifier y el
 Acto 4 no existe. Y no hay pantalla para arreglarlo: `POST /projects/:id/members` es admin-only
@@ -256,7 +288,7 @@ limpia y una que arranca con un esqueleto de carga. Hacelo sí o sí:
 
 ### 1.6 Espacio en disco
 
-~150-250 MB por minuto a 2560×1440; el crudo de este guion son ~20-25 minutos. **Contar con 6 GB.**
+~150-250 MB por minuto en pantalla Retina; el crudo de este guion son ~20-25 minutos. **Contar con 6 GB.**
 
 ```bash
 df -h /
@@ -279,16 +311,29 @@ defaults write com.apple.finder CreateDesktop false && killall Finder
 - [ ] **No molestar ON** (Centro de control → Concentración). Un banner arruina la toma.
 - [ ] Dock en auto-ocultar (`Cmd+Opt+D`).
 - [ ] **Cargador enchufado.** Esta máquina throttlea con el encoder activo y la batería a medias.
+- [ ] Resolución de pantalla en **"Predeterminada"** (Configuración del Sistema → Pantallas). Si
+      está en "Más espacio", el texto sale chico en el video.
+- [ ] **Wi-Fi estable, sin VPN.** Cada acción en cadena espera a la red.
+- [ ] Mail, Mensajes, WhatsApp y Slack **cerrados** (No molestar no silencia todo).
 - [ ] Cerrar todo lo demás, Docker Desktop sobre todo.
 
 ### 2.2 Chrome
+
+**Cómo crear el perfil:** clic en el círculo de la cuenta, arriba a la derecha → **Agregar** →
+**Continuar sin una cuenta** → nombre `PropNexus Demo` → Listo. Se abre una ventana nueva: todo lo de
+abajo se hace **en esa ventana**. Contraseñas: Configuración → Autocompletar → Administrador de
+contraseñas → "Ofrecer guardar contraseñas" apagado.
 
 - [ ] **Perfil nuevo** `PropNexus Demo`: sin extensiones, sin historial, sin autofill.
 - [ ] Barra de favoritos oculta (`Cmd+Shift+B`).
 - [ ] Guardado de contraseñas **desactivado** (si no, el bubble "¿Guardar contraseña?" aparece en
       cuatro tomas distintas).
-- [ ] Zoom de página al **110%** (`Cmd+`+).
-- [ ] Ventana de tamaño fijo, para que las 31 tomas encuadren igual:
+- [ ] **Traductor de Google desactivado:** Configuración → Idiomas → "Usar el Traductor de Google"
+      apagado. Si no, cuando la app pasa a inglés Chrome ofrece "¿Traducir esta página?" en medio de
+      la toma.
+- [ ] Zoom de página al **110%** (`Cmd` + `+`). Se aplica por sitio: hacelo una vez dentro de la app.
+- [ ] Ventana de tamaño fijo, para que las 31 tomas encuadren igual. Pegá esto en la Terminal con
+      Chrome abierto (lo deja en 1280×800, arriba a la izquierda):
 
 ```bash
 osascript -e 'tell application "Google Chrome" to set bounds of front window to {0, 25, 1280, 825}'
@@ -305,6 +350,10 @@ cuatro roles pueden estar logueados a la vez y se cambia de rol con `Cmd+Opt+→
 | 2 | Developer (`developer@`) |
 | 3 | Certifier (`verifier@`) |
 | 4 | Notary (`notary@`) |
+
+**Antes de la primera toma**, entrá en cada pestaña con su usuario (la contraseña se tipea, §1.1):
+la 1 se loguea en cámara en T01, las otras tres fuera de cámara. Así, cuando el guion dice "[CER]"
+o "pestaña 3", solo cambiás de pestaña.
 
 **Dos reglas que no se pueden romper:**
 
@@ -329,6 +378,9 @@ funde la CPU de una 2017. OBS solo haría falta para webcam o audio del sistema,
 - [ ] **Recordar última selección: SÍ** ← lo que garantiza que las 31 tomas encuadren idéntico
 - [ ] Modo: **Grabar porción seleccionada**, arrastrada sobre la ventana de Chrome
 
+**Para grabar una toma:** `Shift+Cmd+5` → botón **Grabar** → hacés la toma → para cortar, el botón
+de stop (■) en la barra de menú de arriba. El archivo aparece en la carpeta: renombralo ya (§3).
+
 ---
 
 ## 3. Cómo se corta: actos vs. tomas
@@ -342,10 +394,62 @@ Una toma termina cuando pasa lo primero de estas tres:
 2. **Pasás de los ~90 segundos.** Más que eso y un error tipeando te hace repetir mucho.
 3. **Cambiás de rol.** El corte en el cambio de pestaña es invisible en el montaje.
 
-Nombrá los archivos `T01-...`, `T02-...`: el montaje del §5 depende del orden alfabético.
+**Cada archivo se renombra apenas termina la toma**, con el nombre exacto: `T01.mov`, `T02.mov`…
+`T31.mov`. El capturador de macOS guarda como "Grabación de pantalla 2026-…": clic en el archivo →
+Enter → escribir `T01` → Enter. Dos dígitos, T mayúscula, nada más: el montaje del §5 empareja video
+y audio por ese nombre y los ordena por él. **Si repetís una toma, el archivo nuevo reemplaza al
+viejo con el mismo nombre** — no dejes `T05 copia.mov` dando vueltas.
 
 **Ritmo:** pausá 1-2 segundos quieto sobre cada hash, TXID o badge. Si grabás al ritmo natural de
 uso, después no vas a tener dónde meter la frase que lo explica.
+
+### 3.1 El mapa de tomas — la tabla que comparten los tres
+
+**Una toma = un archivo de video + un archivo de audio, con el mismo nombre.** `T07.mov` y `T07.m4a`
+van juntos; el script del §5 los une de a pares y después pega las 31 en orden. Por eso cada quien
+puede trabajar por separado.
+
+- **Video (s)** es lo que tiene que durar la toma **ya recortada**. Es una guía, no un cronómetro:
+  ±10 s está bien. Lo que importa es no pasar rápido por los hashes y los TXID.
+- **Voz (s)** es lo que dura la narración leída a ritmo tranquilo. **Siempre es menor o igual que el
+  video**: la voz entra sobre la imagen y el resto de la toma queda con la imagen sola.
+- Si igual la voz sale más larga que el video, no se rompe nada: el script congela el último cuadro
+  hasta que termine la voz. Si el video es más largo, completa con silencio.
+
+| Toma | Pestaña | Qué | Pantalla | Video (s) | Voz (s) |
+|---|---|---|---|---|---|
+| T01 | 1 · Investor | Login, y el cambio de idioma | `/login` | 25 | 17 |
+| T02 | 1 · Investor | Buy | `/investor/buy` | 35 | 18 |
+| T03 | 1 · Investor | El proyecto por dentro | `/project/<torre-volumen-3>` | 45 | 15 |
+| T04 | 1 · Investor | Quién construye | `/project/<torre-volumen-3>/developer` | 40 | 33 |
+| T05 | 1 · Investor | Hasta la prueba | `…/progress` → `…/stage/:stageId` | 40 | 18 |
+| T06 | 1 · Investor | Favoritos | `/investor/favorites` | 10 | 5 |
+| T07 | 2 · Developer | El panel | `/developer` → `/developer/projects` | 30 | 11 |
+| T08 | 2 · Developer | Proyecto nuevo | `/developer/project/new` | 35 | 25 |
+| T09 | 2 · Developer | El proyecto ya creado | `/developer/projects` → `/developer/project/:id` | 25 | 12 |
+| T10 | 2 · Developer | Unidades | `/developer/project/:id/units` | 40 | 11 |
+| T11 | 2 · Developer | La invitación | `/developer/project/:id/invite` | 25 | 9 |
+| T12 | 1 · Investor | Aceptar | campana → `/investor/notifications` | 35 | 15 |
+| T13 | 1 · Investor | El portfolio | `/investor/units` → `/investor/unit/<5A>` | 35 | 15 |
+| T14 | 1 · Investor | El contrato como registro | `/investor/unit/<5A>/contract` | 25 | 15 |
+| T15 | 2 · Developer | Subir evidencia | `/developer/project/:id/upload` | 40 | 17 |
+| T16 | 2 · Developer | La prueba, y afuera de la app | AnchoringSuccessModal → cardanoscan | 25 | 12 |
+| T17 | 1 · Investor | El mismo anclaje, del otro lado | `/investor/unit/<5A>/notifications` | 25 | 17 |
+| T18 | 3 · Certifier | Observar | `/certifier` → `/certifier/assigned` → `/certifier/stage/:id` | 40 | 15 |
+| T19 | 2 · Developer | Reanudar | `/developer/progress` | 20 | 11 |
+| T20 | 3 · Certifier | Certificar | `/certifier/stage/:id` | 15 | 5 |
+| T21 | 3 · Certifier | El certificado | `/certifier/issued` | 15 | 7 |
+| T22 | 2 · Developer | El contrato del lado del developer | `/developer/project/:id/contracts` | 25 | 15 |
+| T23 | 1 · Investor | El dossier | `/investor/unit/<1A>/dossier` | 40 | 15 |
+| T24 | 1 · Investor | Compartir | "Share" → modal | 15 | 5 |
+| T25 | incógnito | Verificado sin cuenta | `/public/dossier/:shareToken` | 25 | 16 |
+| T26 | 4 · Notary | La firma | `/notary` → `/notary/dossiers` → `/notary/dossier/:id` | 35 | 18 |
+| T27 | 4 · Notary | El historial | `/notary/signed` | 15 | 6 |
+| T28 | 2 · Developer | El círculo se cierra | `/developer/audit-log` | 45 | 20 |
+| T29 | 2 · Developer | El resto del developer | documentation → capital → units → progress → investors | 75 | 16 |
+| T30 | las cuatro | Perfiles y menú | los cuatro `/…/profile` + `/investor/menu` | 60 | 15 |
+| T31 | 2 · Developer | Responsive | DevTools → Device Toolbar | 30 | 12 |
+| | | **Total** | | **990 s ≈ 16 min** | |
 
 ---
 
@@ -353,7 +457,7 @@ uso, después no vas a tener dónde meter la frase que lo explica.
 
 Los textos entre comillas son los literales en inglés que vas a ver en pantalla.
 
-### Acto 1 · El problema y la promesa — Investor (T01-T06, ≈4 min)
+### Acto 1 · El problema y la promesa — Investor (T01-T06, ≈3 min)
 
 Abre por el final del producto: **`torre-volumen-3`**, con sus 10 etapas certificadas y 61 eventos
 on-chain. Es el contraste contra el que después se entiende el proyecto que nace vacío.
@@ -413,7 +517,9 @@ on-chain. Es el contraste contra el que después se entiende el proyecto que nac
       **⏸ CORTE ~6 min.** El request no vuelve hasta que los 10 mints terminaron: son secuenciales
       dentro del handler (`developer.routes.ts:266`) y cada uno es su propia transacción de Cardano
       (D-083 — el validador rechaza acuñar más de un hilo por tx).
-      **Durante este corte corré los comandos del §1.4.** Sin eso no hay Acto 4.
+      **Durante este corte, avisale al técnico** para que corra los comandos del §1.4, y no
+      sigas hasta que te confirme. Sin eso no hay Acto 4. Mientras tanto no cierres la pestaña ni
+      recargues: esperá a que la pantalla vuelva sola.
 
 - [ ] **T09 · El proyecto ya creado** — `/developer/projects` → `/developer/project/:id`
       Aparece primero en la lista; adentro, las 4 action cards y las 3 stat cards.
@@ -447,7 +553,7 @@ on-chain. Es el contraste contra el que después se entiende el proyecto que nac
       **La sección de releases por etapa muestra su estado vacío** ("No releases recorded yet.").
       Es correcto, no es un bug — §6.
 
-### Acto 4 · El ciclo de prueba: las cuatro aristas de la FSM (T15-T22, ≈5 min) ← el núcleo
+### Acto 4 · El ciclo de prueba: las cuatro aristas de la FSM (T15-T22, ≈3½ min) ← el núcleo
 
 **Todo sobre la misma etapa** —la 1 o la 2 del proyecto nuevo, las dos nacen en `Pending`— para que
 se lea como un solo objeto recorriendo una máquina de estados y no como cuatro cosas sueltas.
@@ -463,6 +569,8 @@ se lea como un solo objeto recorriendo una máquina de estados y no como cuatro 
 - [ ] **T16 · La prueba, y afuera de la app** — AnchoringSuccessModal
       **"Merkle root"** + TXID + "View on explorer" → cardanoscan preprod en otra pestaña.
       **El plano más importante del video: el hash existe fuera de PropNexus.**
+      Quedate 3-4 segundos sobre el TXID en cardanoscan, cortá la toma, **cerrá esa pestaña**
+      (`Cmd+W`) y volvé a la pestaña 2 antes de la toma siguiente.
 
 - [ ] **T17 · El mismo anclaje, del otro lado** — [INV] `/investor/unit/<5A>/notifications` → el
       modal de la etapa
@@ -492,7 +600,7 @@ se lea como un solo objeto recorriendo una máquina de estados y no como cuatro 
       chain"**. Los tres StatCard son hechos del registro (cuántos contratos, cuánto suman, cuántos
       anclados), no un flujo de pagos — D-070.
 
-### Acto 5 · El cierre: dossier y escribano (T23-T27, ≈3 min)
+### Acto 5 · El cierre: dossier y escribano (T23-T27, ≈2 min)
 
 **Volvemos a `torre-volumen-3`, unidad 1A** — la entregada. Un dossier final solo significa algo
 sobre una obra terminada, y es la única unidad de la base que lo está.
@@ -513,7 +621,9 @@ sobre una obra terminada, y es la única unidad de la base que lo está.
 - [ ] **T25 · Verificado sin cuenta** — **ventana de incógnito** → `/public/dossier/:shareToken`
       Un banco o un escribano abre el dossier **sin tener usuario en la plataforma**.
       **Es el plano más fuerte del producto entero.** Incógnito y no una pestaña más: tiene que
-      verse que no hay sesión.
+      verse que no hay sesión. `Cmd+Shift+N` abre la ventana; antes de grabar, pegá el link, poné el
+      zoom en 110% y corré el mismo comando de tamaño del §2.2 para que encuadre igual. Al terminar,
+      cerrá la ventana de incógnito entera.
 
 - [ ] **T26 · La firma** — [NOT] `/notary` → `/notary/dossiers` → `/notary/dossier/:id`
       El panel con sus KPIs y la cola ("Pending review and signing"); adentro, "Dossier review" con
@@ -523,7 +633,7 @@ sobre una obra terminada, y es la única unidad de la base que lo está.
 - [ ] **T27 · El historial** — [NOT] `/notary/signed`
       "Signed dossiers": el hash del dossier y el **"Signature TXID"**.
 
-### Acto 6 · La auditoría y el resto de las superficies (T28-T31, ≈3 min)
+### Acto 6 · La auditoría y el resto de las superficies (T28-T31, ≈3½ min)
 
 - [ ] **T28 · El círculo se cierra** — [DEV] `/developer/audit-log`
       Filtros (All / stage / document / signature / certifier), y ahí están **todos los eventos de
@@ -549,25 +659,106 @@ sobre una obra terminada, y es la única unidad de la base que lo está.
 
 ---
 
-## 5. Montaje
+## 5. Montaje — para quien arma el archivo final
 
-1. **Recortar el tiempo muerto de cada toma, en QuickTime.** Abrís el `.mov`, `Cmd+T` (Trim),
-   arrastrás las puntas, `Cmd+S`. Instantáneo: no re-encodea.
-2. **Unir, sin re-encodear.** Todas las tomas comparten tamaño y códec (por eso el §2.4 fija
-   "Recordar última selección"), así que se concatenan por copia:
+**No hace falta saber editar video.** Son tres pasos: recortar, revisar que estén todos los archivos,
+y pegar un comando en la Terminal.
+
+### 5.1 Una sola vez: instalar `ffmpeg`
+
+Abrí **Terminal** (Cmd+Espacio → escribí "Terminal" → Enter) y pegá:
 
 ```bash
-cd ~/Movies/propnexus-walkthrough
-printf "file '%s'\n" "$PWD"/T*.mov > lista.txt
-ffmpeg -f concat -safe 0 -i lista.txt -c copy walkthrough.mov
+ffmpeg -version
 ```
 
-   En esta máquina son segundos. Si no tenés `ffmpeg`: `brew install ffmpeg`.
-3. **iMovie solo al final y solo si querés títulos o transiciones.** Re-renderiza todo y en una Intel
-   2017 son ~20 minutos por pasada.
+Si responde con texto que empieza por `ffmpeg version`, ya está instalado: pasá al §5.2. Si dice
+`command not found`, instalalo con Homebrew:
 
-**No agregues el voice-over hasta que el corte esté aprobado.** Si el orden cambia después de
-grabado el audio, hay que regrabar el audio entero.
+```bash
+/bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
+brew install ffmpeg
+```
+
+(El primero pide la contraseña del Mac —no se ve mientras la tipeás, es normal— y tarda unos minutos.
+Al terminar puede pedirte que pegues dos líneas que empiezan con `echo` o `eval`: pegalas.)
+
+### 5.2 Recortar cada video, en QuickTime
+
+Por cada `Txx.mov`: abrirlo con doble clic → **Cmd+T** (Recortar) → arrastrar las puntas amarillas
+para sacar lo que sobra al principio y al final (el clic en "detener grabación", esperas, spinners)
+→ **Recortar** → **Cmd+S**. No re-encodea: es instantáneo.
+
+**Dónde cortar:** el video de cada toma debería quedar cerca de su **Video (s)** del §3.1. Si quedó
+mucho más largo, casi siempre es una espera que se puede sacar.
+
+### 5.3 Revisar la carpeta antes de unir
+
+En `~/Movies/propnexus-walkthrough/` tiene que haber, **con estos nombres exactos**:
+
+- `T01.mov` … `T31.mov` — los 31 videos (los hace quien graba la pantalla)
+- `T01.m4a` … `T31.m4a` — los 31 audios (los hace quien graba la voz)
+
+Dos ceros a la izquierda (`T01`, no `T1`), T mayúscula, sin espacios ni texto extra. Si un audio
+falta, el script no se frena: esa toma sale muda y te avisa.
+
+### 5.4 Unir todo — un solo comando
+
+Pegá esto entero en la Terminal y Enter:
+
+```bash
+CARPETA="${CARPETA:-$HOME/Movies/propnexus-walkthrough}"
+cd "$CARPETA" || { echo "No existe la carpeta $CARPETA"; exit 1; }
+mkdir -p unidas
+for video in T[0-9][0-9].mov; do
+  toma="${video%.mov}"
+  dv=$(ffprobe -v error -show_entries format=duration -of csv=p=0 "$video")
+  if [ -f "$toma.m4a" ]; then
+    da=$(ffprobe -v error -show_entries format=duration -of csv=p=0 "$toma.m4a")
+    audio=(-i "$toma.m4a")
+  else
+    echo "  (aviso) $toma no tiene audio: va en silencio"
+    da=0
+    audio=(-f lavfi -i anullsrc=r=48000:cl=stereo)
+  fi
+  dur=$(awk -v a="$dv" -v b="$da" 'BEGIN { m = (a > b ? a : b); printf "%.2f", m + 0.5 }')
+  echo "$toma: video ${dv%.*} s, audio ${da%.*} s -> queda en ${dur%.*} s"
+  ffmpeg -y -loglevel error -i "$video" "${audio[@]}" -filter_complex \
+    "[0:v]scale=1920:1200:force_original_aspect_ratio=decrease,pad=1920:1200:(ow-iw)/2:(oh-ih)/2:color=white,fps=30,format=yuv420p,tpad=stop_mode=clone:stop_duration=600[v];[1:a]aresample=48000,aformat=channel_layouts=stereo,apad[a]" \
+    -map "[v]" -map "[a]" -t "$dur" \
+    -c:v h264_videotoolbox -b:v 10M -c:a aac -b:a 192k "unidas/$toma.mp4" \
+    || { echo "FALLÓ $toma — mandale este mensaje a quien te pasó el guion"; exit 1; }
+done
+printf "file '%s'\n" "$PWD"/unidas/T[0-9][0-9].mp4 > unidas/lista.txt
+ffmpeg -y -loglevel error -f concat -safe 0 -i unidas/lista.txt -c copy walkthrough-final.mp4 \
+  && echo "LISTO: $PWD/walkthrough-final.mp4"
+```
+
+Va a mostrar una línea por toma (`T01: video 24 s, audio 16 s -> queda en 24 s`) y al final
+**`LISTO: …/walkthrough-final.mp4`**. En esta Mac son unos minutos: re-encodea cada toma una vez,
+para que todas queden del mismo tamaño (1920×1200) antes de pegarlas.
+
+**Qué hace, para que sepas qué esperar:**
+- Une el video y el audio de cada toma. Dura **lo que dure el más largo de los dos**: si la voz es
+  más larga, la imagen se queda quieta en el último cuadro hasta que termina; si es más corta, el
+  resto va en silencio.
+- Deja cada toma unida en la subcarpeta `unidas/` (útil para revisar una sola).
+- Pega las 31 **en el orden de los nombres** y deja `walkthrough-final.mp4` en la carpeta.
+
+**Si rehacés una toma** (video o audio), reemplazá el archivo y volvé a pegar el mismo comando: rehace
+todo desde cero.
+
+**Si aparece `FALLÓ Txx`**, lo más probable es que ese `.mov` o `.m4a` esté dañado o a medio
+guardar: abrilo en QuickTime para ver si reproduce. Si reproduce y sigue fallando, mandá la salida
+de la Terminal a quien te pasó el guion.
+
+### 5.5 Revisar el resultado
+
+Abrí `walkthrough-final.mp4` y miralo entero una vez: que las tomas estén en orden, que la voz
+corresponda a la pantalla, y que ninguna muestre una contraseña o una pantalla de error.
+
+**iMovie solo si hace falta agregar títulos o transiciones**, y al final: re-renderiza todo y en esta
+Mac son ~20 minutos por pasada.
 
 ---
 
@@ -614,116 +805,176 @@ defaults write com.apple.finder CreateDesktop true && killall Finder
 ```
 
 - [ ] Desactivar No molestar.
-- [ ] Mover el crudo fuera del disco principal o borrarlo (son varios GB).
+- [ ] Mover el crudo fuera del disco principal o borrarlo (son varios GB). **Antes, guardar
+      `walkthrough-final.mp4`**, y la carpeta `unidas/` si puede hacer falta rehacer una toma.
+- [ ] Parar el keep-alive (§1.5.2) con `Ctrl-C`.
 - [ ] Marcar 3.12 en `CLAUDE.md` §Lo que queda del plan y el criterio 13 en `specs/README.md`, en el
       mismo commit que publique el video.
 
 ---
 
-## 8. Voice-over script (English)
+## 8. Voice-over script (English) — para quien graba la voz
 
-> Se graba **aparte**, después del corte, y se monta encima. Numerado por toma.
+> **Una grabación por toma, con el nombre de la toma:** `T01.m4a`, `T02.m4a`… hasta `T31.m4a`. No
+> importa en qué orden las grabes: el montaje las ordena por el nombre.
 >
 > **El registro es técnico y de UX, no de producto.** Quien lo va a escuchar ya conoce el proyecto:
-> esto existe para mostrar que la implementación existe, así que cada línea describe qué hace la
-> pantalla, qué escribe y qué se ancla — no qué problema resuelve la plataforma.
->
-> **Dos reglas al editarlo.** No afirmar nada fuera de D-026: la plataforma no certifica, no valida y
-> no decide. Y **"stage", nunca "milestone"** para una etapa de obra (D-067).
->
-> **Al grabarlo:** un archivo por acto, 1 segundo de silencio al principio y al final, y leelo lento
-> — el video pausa 1-2 segundos sobre cada hash para que la voz entre ahí.
+> cada línea describe qué hace la pantalla, qué escribe y qué se ancla — no qué problema resuelve la
+> plataforma. **Dos reglas al editarlo:** no afirmar nada fuera de D-026 (la plataforma no
+> certifica, no valida y no decide), y **"stage", nunca "milestone"** para una etapa de obra (D-067).
 
-### Act 1 (T01–T06)
+### 8.0 Cómo grabar la voz, paso a paso
 
-**T01.** The language toggle sits on the login screen itself. Both dictionaries are complete and the
-locale persists client-side, so this is a full switch, not a partial one.
+1. **Lugar:** una habitación chica y con muebles (el eco de un ambiente vacío se nota). Ventanas
+   cerradas, aire y ventilador apagados.
+2. **Micrófono:** unos auriculares con micrófono (los de celular sirven) suenan mejor que el
+   micrófono de la notebook. Enchufalos antes de abrir QuickTime.
+3. Abrí **QuickTime Player** → menú **Archivo → Nueva grabación de audio**.
+4. Al lado del botón rojo hay una flechita **⌄**: elegí ahí el micrófono de los auriculares y
+   **Calidad: Máxima**.
+5. Por cada toma: botón rojo → **esperá 1 segundo en silencio** → leé el texto → **1 segundo en
+   silencio** → botón de stop.
+6. **Archivo → Guardar…** → nombre **exacto** `T01` (QuickTime agrega `.m4a` solo) → en la carpeta
+   `~/Movies/propnexus-walkthrough/` → Guardar.
+7. Si te equivocás, grabá la toma entera otra vez y guardala con el mismo nombre, reemplazando la
+   anterior. No hace falta editar nada.
 
-**T02.** The listing is scoped by project membership — each role only ever queries what it belongs
-to. Search, status filters and the map view run over that same scoped set.
+**Ritmo:** leé más lento de lo que te parece natural. Los segundos de cada toma están calculados a
+ese ritmo; si terminás muy antes, está bien. Si mirar el video mientras grabás te ayuda, abrí la
+toma en otra ventana de QuickTime **con el volumen en cero**.
 
-**T03.** Project detail: gallery, estimated handover, location, the documentation section — every
-file with its own hash — and the progress timeline.
+### Acto 1 · Investor (T01–T06, ≈195 s de video)
 
-**T04.** The developer behind it. None of these four numbers is a stored column: projects delivered,
-units sold and buyers are counted from the records themselves, and years in business is derived from
-the founding year. Only the name, the bio and that year are declared — everything else is the
-registry counting itself. Below, their delivered and active projects, each card aggregating its own
-units for the price and the size range.
+#### T01 · Login, y el cambio de idioma — voz ≈17 s · video ≈25 s
 
-**T05.** Ten stages. Inside one, every file carries its own SHA-256 and the Merkle root of the bundle
-it was anchored in. Photographs carry their coordinates and their capture time.
+PropNexus opens in Spanish, the default locale. The language toggle sits on the login screen itself: both dictionaries are complete, so this is a full switch, not a partial one. We sign in as the investor.
 
-**T06.** Favourites.
+#### T02 · Buy — voz ≈18 s · video ≈35 s
 
-### Act 2 (T07–T11)
+The listing is scoped by project membership — each role only ever queries the projects it belongs to. Search by area, filter by status, and switch to the map view: every view runs over that same scoped set.
 
-**T07.** The developer surface. These counters are aggregates over the same membership-scoped
-queries.
+#### T03 · El proyecto por dentro — voz ≈15 s · video ≈45 s
 
-**T08.** New project: name, location, unit count, delivery date, ten-stage template. Creating it
-writes the ten stages in a single database transaction, then mints one on-chain thread per stage,
-one at a time — the validator rejects more than one thread per transaction, so they can't be
-batched. That's why this takes a few minutes.
+Project detail: gallery, estimated handover, location, and the documentation section, where every file shows its own SHA-256 hash. Below, the progress timeline, and a link to the developer behind the project.
 
-**T09.** Ten stages declared and anchored before any work exists.
+#### T04 · Quién construye — voz ≈33 s · video ≈40 s
 
-**T10.** Unit inventory: add, edit, status per unit.
+The developer behind it. None of these four numbers is a stored column: projects delivered, units sold and buyers are counted from the records themselves, and years in business is derived from the founding year. Only the name, the bio and that year are declared — everything else is the registry counting itself. Below, their delivered and active projects, each card aggregating its own units for the price and the size range.
 
-**T11.** The invitation form — email, assigned unit, amount.
+#### T05 · Hasta la prueba — voz ≈18 s · video ≈40 s
 
-### Act 3 (T12–T14)
+Ten stages, all ten completed, each with its own on-chain record. Inside one, every file carries its own SHA-256 and the Merkle root of the bundle it was anchored in. Photographs carry their coordinates and their capture time.
 
-**T12.** The invitation arrives as a pinned notification. Accepting it is what writes the contract.
+#### T06 · Favoritos — voz ≈5 s · video ≈10 s
 
-**T13.** The portfolio. Gallery, full-screen map, and the building schematic that highlights this
-unit's position in the grid.
+Favourites: the projects this investor saved, one tap away.
 
-**T14.** The contract screen is a record, not an action surface: there's no release button here, by
-design.
+### Acto 2 · Developer (T07–T11, ≈155 s de video)
 
-### Act 4 (T15–T22)
+#### T07 · El panel — voz ≈11 s · video ≈30 s
 
-**T15.** Evidence upload against a Pending stage. File type is checked by reading the first bytes,
-not the content type the client declares. And uploading the first evidence *is* the transition —
-there's no separate button for it.
+Now the developer. The dashboard counters — projects, units, anchored on-chain events — are aggregates over the same membership-scoped queries. Below, the developer's projects.
 
-**T16.** The files are hashed, combined into a Merkle root, and that root goes into a Cardano
-transaction. Here's the transaction id on a public explorer.
+#### T08 · Proyecto nuevo — voz ≈25 s · video ≈35 s
 
-**T17.** The same Merkle root, read from the investor's side.
+New project: name, location, unit count, delivery date, ten-stage template. Creating it writes the ten stages in a single database transaction, then mints one on-chain thread per stage, one at a time — the validator rejects more than one thread per transaction, so they can't be batched. That's why this takes a few minutes.
 
-**T18.** The certifier's queue lists stages in progress or observed. Observing returns it with a
-note.
+#### T09 · El proyecto ya creado — voz ≈12 s · video ≈25 s
 
-**T19.** Resuming is a deliberate developer action — this edge is the one that isn't automatic.
+The new project. Ten stages declared and anchored before any work exists: their order and the time they were declared are on-chain from day one.
 
-**T20.** And certifying closes the stage. Four transitions, each one recorded on-chain.
+#### T10 · Unidades — voz ≈11 s · video ≈40 s
 
-**T21.** The certificate, with its hash and transaction id.
+Unit inventory. It starts empty. We add unit 5A with its floor and size, and it appears in the list with its status.
 
-**T22.** The contract from the developer's side.
+#### T11 · La invitación — voz ≈9 s · video ≈25 s
 
-### Act 5 (T23–T27)
+The invitation: the buyer's email, the assigned unit and the amount. Sending it reserves the unit for that buyer.
 
-**T23.** The dossier is compiled on read, not stored. The hash is computed at fetch time over the
-anchored artefacts, so if what it commits to changes, the hash changes with it.
+### Acto 3 · Investor (T12–T14, ≈95 s de video)
 
-**T24.** Sharing mints a token.
+#### T12 · Aceptar — voz ≈15 s · video ≈35 s
 
-**T25.** The public route takes that token and no session — private window, no account.
+Back to the investor. The invitation arrives as a pinned notification. The modal shows the project, the unit, the total amount and the schedule. Accepting it is what writes the contract.
 
-**T26.** Notary review, and the signature. Once signed the hash is frozen: recomputing it would leave
-the signature pointing at something that no longer exists.
+#### T13 · El portfolio — voz ≈15 s · video ≈35 s
 
-**T27.** Dossier hash and signature transaction id.
+The portfolio now holds two units: one delivered, one just bought off-plan. Inside the new one: gallery, full-screen map, and the building schematic that highlights this unit's position in the grid.
 
-### Act 6 (T28–T31)
+#### T14 · El contrato como registro — voz ≈15 s · video ≈25 s
 
-**T28.** The audit log — actor, role, category, timestamp and transaction id per row, filterable.
+The contract screen is a record, not an action surface: the contract hash, the registered schedule, and no release button, by design. Payments happen outside the platform; it doesn't hold funds.
 
-**T29.** Documentation, capital, inventory, progress, investors.
+### Acto 4 · La FSM (T15–T22, ≈205 s de video)
 
-**T30.** A profile surface per role.
+#### T15 · Subir evidencia — voz ≈17 s · video ≈40 s
 
-**T31.** Mobile-first: at the breakpoint the sidebar becomes a bottom navigation bar.
+Evidence upload against a Pending stage. File type is checked by reading the first bytes, not the content type the client declares. And uploading the first evidence is the transition — there's no separate button for it.
+
+#### T16 · La prueba, y afuera de la app — voz ≈12 s · video ≈25 s
+
+The files are hashed, combined into a Merkle root, and that root goes into a Cardano transaction. Here's the transaction id on a public explorer.
+
+#### T17 · El mismo anclaje, del otro lado — voz ≈17 s · video ≈25 s
+
+The same upload, seen by the investor: the progress notification, the hash of every file, and the package Merkle root — the same number the developer just saw. One role produces it; another can check it.
+
+#### T18 · Observar — voz ≈15 s · video ≈40 s
+
+The certifier. The queue lists stages in progress or observed, including the one that just started. Inside, the evidence uploaded by the developer. Observing sends the stage back with a note.
+
+#### T19 · Reanudar — voz ≈11 s · video ≈20 s
+
+The developer sees the observation and the certifier's note. Resuming is a deliberate developer action — this edge is the one that isn't automatic.
+
+#### T20 · Certificar — voz ≈5 s · video ≈15 s
+
+And certifying closes the stage. Four transitions, each one recorded on-chain.
+
+#### T21 · El certificado — voz ≈7 s · video ≈15 s
+
+Issued certificates: each one with its hash and the transaction id that anchors it.
+
+#### T22 · El contrato del lado del developer — voz ≈15 s · video ≈25 s
+
+The same contract from the developer's side: who, which unit, how much, when it was signed, and its on-chain record. These counters are facts from the registry, not a payment flow.
+
+### Acto 5 · Dossier y escribano (T23–T27, ≈130 s de video)
+
+#### T23 · El dossier — voz ≈15 s · video ≈40 s
+
+The dossier is compiled on read, not stored. The hash is computed at fetch time over the anchored artefacts, so if what it commits to changes, the hash changes with it.
+
+#### T24 · Compartir — voz ≈5 s · video ≈15 s
+
+Sharing generates a read-only link with its own token.
+
+#### T25 · Verificado sin cuenta — voz ≈16 s · video ≈25 s
+
+The public route takes that token and no session — a private window, no account. Anyone with the link, a bank or a notary, can open it without being a user of the platform.
+
+#### T26 · La firma — voz ≈18 s · video ≈35 s
+
+The notary. The dossier arrives in the review queue: its hash, its artefacts and the disclaimer. Then the signature. Once signed, the hash is frozen: recomputing it would leave the signature pointing at something that no longer exists.
+
+#### T27 · El historial — voz ≈6 s · video ≈15 s
+
+Signed dossiers: the dossier hash and the transaction id of the signature.
+
+### Acto 6 · Auditoría y resto (T28–T31, ≈210 s de video)
+
+#### T28 · El círculo se cierra — voz ≈20 s · video ≈45 s
+
+The audit log. Every step of this video is here — the project, the invitation, the evidence, the observation, the certification, the signature — each with its actor, role, category, timestamp and transaction id. It's filterable, and each transaction opens on a public explorer.
+
+#### T29 · El resto del developer — voz ≈16 s · video ≈75 s
+
+The rest of the developer surface. Supporting documentation, each file with its anchoring status. Capital raised, as recorded in the contracts. The unit inventory. Stage progress. And the investors directory, with their access per project.
+
+#### T30 · Perfiles y menú — voz ≈15 s · video ≈60 s
+
+Each role has its own profile: the developer, the certifier and the notary with their credentials, and the investor with notification preferences by category and a menu that gathers everything in one place.
+
+#### T31 · Responsive — voz ≈12 s · video ≈30 s
+
+The design is mobile-first. At phone width the sidebar becomes a bottom navigation bar, and every screen in this video works in a single column.
