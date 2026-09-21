@@ -106,7 +106,7 @@ lo mismo sin pasar por HTTP. Ver el detalle en `CLAUDE.md` raíz.
 
 - **2026-09-11 · Sentry veía el error ANTES que `errorHandler`, así que reportaba como "Unhandled"
   cosas que el cliente recibía como un 409/400 perfectamente sano** — encontrado leyendo la propia
-  captura de evidencia de monitoring (`specs/evidence/monitoring/sentry-issues.jpg`): un
+  captura de evidencia de monitoring (`specs/evidencia-m3/5-ops/monitoring/sentry-issues.jpg`): un
   `SQLITE_CONSTRAINT_UNIQUE` real (mandar el mismo `unitReference` dos veces, generado sin querer
   ejercitando el criterio 9) aparecía en el feed de issues indistinguible de un fallo de servidor.
   `Sentry.setupExpressErrorHandler(app)` va montado antes que `errorHandler` a propósito —Sentry
@@ -1104,8 +1104,8 @@ pnpm --filter @plataforma/api dev            # solo la API
 pnpm --filter @plataforma/api db:migrate     # aplica las migraciones pendientes
 pnpm --filter @plataforma/api db:seed        # datos demo
 pnpm --filter @plataforma/api test:s3        # storage contra el MinIO de compose.dev.yml — NO corre en CI
-pnpm --filter @plataforma/api docs:api       # regenera specs/postman/*.json desde el router montado
-pnpm --filter @plataforma/api docs:openapi   # regenera specs/openapi/*.json, mismo router, formato OpenAPI 3.1
+pnpm --filter @plataforma/api docs:api       # regenera specs/evidencia-m3/2-api/postman/*.json desde el router montado
+pnpm --filter @plataforma/api docs:openapi   # regenera specs/evidencia-m3/2-api/openapi/*.json, mismo router, formato OpenAPI 3.1
 ```
 
 **`docs:openapi` existía como pendiente hasta el 2026-09-08: 23 de los 26 endpoints que validan
@@ -1120,8 +1120,8 @@ literal de la matriz de permisos. El código de éxito se lee del `res.status(2x
 no se adivina por verbo HTTP — la primera versión sí adivinaba y mentía en `POST /auth/login`
 (200, no 201), `POST /evidence/reconcile` (200) y `POST /invitations/:id/decline` (204). Las
 respuestas quedan sin schema a propósito: la mayoría de los handlers devuelve un tipo TS inferido
-de Kysely, no un schema Zod en runtime, y documentarlas pediría inventar uno. `specs/openapi/` está
-excluido del formatter de Biome (`biome.json`), mismo motivo que `specs/postman`: Biome colapsa
+de Kysely, no un schema Zod en runtime, y documentarlas pediría inventar uno. `specs/evidencia-m3/2-api/openapi/` está
+excluido del formatter de Biome (`biome.json`), mismo motivo que `specs/evidencia-m3/2-api/postman`: Biome colapsa
 arrays cortos a una línea y eso rompe el test de frescura, que compara contra el
 `JSON.stringify(doc, null, 2)` crudo.
 

@@ -9,7 +9,7 @@ import {
 } from "@plataforma/shared";
 import { db } from "../src/lib/db";
 
-// Capa 2 de specs/REPORTE-2026-09-10-prueba-de-volumen.md §Reparación del hilo
+// Capa 2 de specs/evidencia-m3/3-preprod/REPORTE-2026-09-10-prueba-de-volumen.md §Reparación del hilo
 // huérfano de la etapa 3 — la herramienta que esa sesión hizo a mano, ahora
 // general y guardada en el repo.
 //

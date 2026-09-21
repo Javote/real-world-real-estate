@@ -93,7 +93,7 @@ renombrar y el `SqliteTypeCoercionPlugin` ya la matchea por nombre, así que lle
 verdad; la coerción no hacía nada.
 
 **Cero cambio de comportamiento, en el sentido estricto:** el único efecto visible fue
-`specs/openapi/propnexus.openapi.json` y `specs/postman/propnexus.postman_collection.json`
+`specs/evidencia-m3/2-api/openapi/propnexus.openapi.json` y `specs/evidencia-m3/2-api/postman/propnexus.postman_collection.json`
 —regenerados con `pnpm docs:openapi`/`docs:api`, que `openapi-freshness.test.ts` exige— pasando a
 documentar el enum en vez de `string` para `anchorStatus`. Ni un byte del JSON que la API sirve se
 movió.

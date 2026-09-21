@@ -331,7 +331,7 @@ describe("OnChainEvent · el aterrizaje del anclaje", () => {
 
   it("guarda el TXID real aunque la confirmación falle después — Pending, nunca Failed", async () => {
     // El escenario real de la prueba de volumen del 2026-09-10
-    // (specs/REPORTE-2026-09-10-prueba-de-volumen.md §Cómo hacerlo más
+    // (specs/evidencia-m3/3-preprod/REPORTE-2026-09-10-prueba-de-volumen.md §Cómo hacerlo más
     // robusto): la transacción sale a la cadena — hay `receipt`, con `txid` y
     // `outputRef` reales — pero algo falla DESPUÉS. Antes había un solo
     // `UPDATE`, corrido recién después de `verify()`: un error acá perdía el

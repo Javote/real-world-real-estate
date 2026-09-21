@@ -7,7 +7,7 @@ import { buildOpenApiDocument } from "../scripts/generate-openapi";
 // el router montado. Si este test se pone rojo, corré
 // `pnpm --filter @plataforma/api docs:openapi` y commiteá el resultado —
 // actualizarlo ES la revisión.
-describe("specs/openapi/propnexus.openapi.json", () => {
+describe("specs/evidencia-m3/2-api/openapi/propnexus.openapi.json", () => {
   it("coincide con lo que generaría el router montado ahora mismo", async () => {
     const archivo = path.join(
       __dirname,
@@ -15,6 +15,8 @@ describe("specs/openapi/propnexus.openapi.json", () => {
       "..",
       "..",
       "specs",
+      "evidencia-m3",
+      "2-api",
       "openapi",
       "propnexus.openapi.json"
     );

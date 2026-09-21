@@ -83,5 +83,5 @@ pip install semgrep && semgrep scan --config=p/security-audit --config=p/owasp-t
   --exclude-rule package_managers.pnpm.pnpm-missing-minimum-release-age.pnpm-minimum-release-age \
   --exclude-rule package_managers.pnpm.pnpm-trust-policy.pnpm-trust-policy \
   --exclude-rule package_managers.npm.npm-missing-minimum-release-age.npm-missing-minimum-release-age \
-  --exclude contracts/build --exclude specs/postman --error
+  --exclude contracts/build --exclude specs/evidencia-m3/2-api/postman --error
 ```

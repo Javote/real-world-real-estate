@@ -55,18 +55,23 @@ tampoco tiene campo de signer. El criterio 3 queda sin código pendiente.
 
 ## Lo que queda del plan
 
-**Todo el plan está cerrado salvo dos ítems, y ninguno de los dos es código:**
+**Todo el plan está cerrado salvo tres ítems, y ninguno es código:**
 
 | | Qué | Criterio |
 |---|---|---|
 | 3.12 | **Video walkthrough** | 13 ⬜ |
 | 3.13 | **3 pilotos** — recontactar; `M1-D3-PilotPlan.pdf` ya trae cartas de M1 y probablemente cubre parte | 4 ⬜ externo |
+| 3.14 | **Muestras de "reserva → escrow"** — ≥5 compras reales en Preprod, manejadas con la extensión de Chrome, + capturas + nota de performance. Hoy hay 1 sola muestra. Procedimiento en [`specs/evidencia-m3/3-preprod/PLAN-muestras-reserva-escrow.md`](specs/evidencia-m3/3-preprod/PLAN-muestras-reserva-escrow.md) | 9 ⚠️ |
+
+**Toda la evidencia de la entrega vive en [`specs/evidencia-m3/`](specs/evidencia-m3/README.md)**,
+una subcarpeta por ítem de *"Evidence of milestone completion"*. Lo que se produzca para M3 va ahí,
+no suelto en `specs/`.
 
 Lo cerrado —las tres Tandas de esquema, código y documentación, y la prueba de volumen que dio los
 criterios 8 y 15— está ítem por ítem en
 [`specs/ESTADO-2026-09-10-catalyst-milestone-3.md`](specs/ESTADO-2026-09-10-catalyst-milestone-3.md),
 con el detalle de la prueba en
-[`specs/REPORTE-2026-09-10-prueba-de-volumen.md`](specs/REPORTE-2026-09-10-prueba-de-volumen.md)
+[`specs/evidencia-m3/3-preprod/REPORTE-2026-09-10-prueba-de-volumen.md`](specs/evidencia-m3/3-preprod/REPORTE-2026-09-10-prueba-de-volumen.md)
 (30/30 etapas `Completed`, 180/180 eventos `Confirmed`, **~99.8 ADA** de costo real medido, y las 3
 capas de autocura que salieron del único hallazgo). Los criterios **6, 8, 9, 14 y 15** quedaron ✅.
 
@@ -99,7 +104,7 @@ del 2026-09-11 de nuevo.
 | 4 | Los 36 hashes y TXID que `packages/shared` declara como `z.string()` pelado | Sin forma validada, cualquier string pasa el schema y el error solo se descubre en la cadena | `specs/SPEC-402-los-hashes-y-txid-tienen-forma.md` |
 | 5 | El `outputRef` del recibo se supone `#0` en vez de buscarse | Tiene la respuesta correcta calculada al lado y no la usa — asume una posición de output que puede no serlo | `specs/SPEC-407-el-outputref-se-busca-no-se-supone.md` |
 | 6 | El datum que vuelve de la cadena no se valida, por las dos puertas de lectura | Se confía en la forma sin chequearla — un datum corrupto o de otra versión del contrato se lee como bueno | `specs/SPEC-408-lo-que-vuelve-de-la-cadena-se-valida.md` |
-| 7 | Las 2 ADA bloqueadas por etapa (20 por proyecto de 10 etapas) | Sin burn (D-057) son permanentes — no es un bug, es el número real con el que hay que decidir si el costo por proyecto es aceptable en mainnet | D-057, `specs/REPORTE-2026-09-10-prueba-de-volumen.md` |
+| 7 | Las 2 ADA bloqueadas por etapa (20 por proyecto de 10 etapas) | Sin burn (D-057) son permanentes — no es un bug, es el número real con el que hay que decidir si el costo por proyecto es aceptable en mainnet | D-057, `specs/evidencia-m3/3-preprod/REPORTE-2026-09-10-prueba-de-volumen.md` |
 
 **Por qué junta specs de auditorías distintas.** Los ítems 2 y 3 salen de
 `AUDITORIA-2026-09-11-calidad-de-contracts.md`; los ítems 4, 5 y 6, de
@@ -301,7 +306,8 @@ en `specs/entregables.md`.
 | Reglas y trampas de un frente | `<frente>/CLAUDE.md` |
 | Invariantes de una rebanada | `specs/SPEC-NNN` |
 | Stack, versiones e infraestructura | `specs/stack.md` |
-| Deploy, rollback e incidentes | `specs/RUNBOOK-deploy.md` |
+| Deploy, rollback e incidentes | `specs/evidencia-m3/5-ops/RUNBOOK-deploy.md` |
+| La evidencia de la entrega de M3, por ítem de Catalyst | `specs/evidencia-m3/` |
 
 # Stack
 

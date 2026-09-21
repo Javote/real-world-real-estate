@@ -6,7 +6,7 @@
 
 ## El problema, en dos renglones
 
-`specs/openapi/propnexus.openapi.json` declara:
+`specs/evidencia-m3/2-api/openapi/propnexus.openapi.json` declara:
 
 ```json
 "servers": [{ "url": "http://localhost:3001/api/v1", "description": "Local (pnpm dev)" }]
@@ -42,7 +42,7 @@ textos viven en el mismo archivo y se contradicen.
 |---|---|
 | `apps/api/scripts/generate-openapi.ts:430` | `url: "http://localhost:8787"` **a secas** — sin `/api/v1`, que ya viene en cada path |
 | mismo archivo, `info.description` | reescribir: 76/85 con schema de respuesta, las 9 sin cuerpo JSON explicadas, sin la referencia a una tanda cerrada |
-| `specs/openapi/propnexus.openapi.json` | regenerar con `pnpm --filter @plataforma/api docs:openapi` y commitear |
+| `specs/evidencia-m3/2-api/openapi/propnexus.openapi.json` | regenerar con `pnpm --filter @plataforma/api docs:openapi` y commitear |
 
 `test/openapi-freshness.test.ts` hace el resto: prueba que el JSON commiteado sea el que el generador
 produce hoy.

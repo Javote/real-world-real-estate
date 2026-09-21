@@ -1,0 +1,76 @@
+# Plan — muestras de "reserva → escrow" en Preprod, desde la extensión de Chrome
+
+> **Estado: agendado, sin correr** (2026-09-21). Es el ítem 3.14 de `CLAUDE.md` §Lo que queda del
+> plan. Cuando se corra, el resultado va a `NOTA-performance-reserva-escrow.md` en esta misma
+> carpeta, con sus capturas en `capturas/`.
+
+## Por qué hace falta
+
+La evidencia del Milestone 3 pide *"screenshots of audit logs/latency confirming <12m median; short
+performance note"*. Hoy hay **una sola muestra** en producción (la del 2026-09-11): un solo
+`INVITATION_ACCEPTED` en toda la base, verificado con SELECT el 2026-09-21. Una mediana de n=1 no
+sostiene nada. La prueba de volumen no aporta muestras: recorrió etapas, no compras.
+
+## Qué dice exactamente el criterio, y cómo se va a reportar
+
+> *"UI flows function end-to-end in pre-prod; median time from reservation to escrow creation <12
+> minutes; audit logs persisted."* — `docs/milestone-3-implementacion/Milestone-3-info.md`
+
+"Escrow" está resuelto desde agosto: es el contrato creado y anclado, nunca fondos retenidos (D-021).
+**"Reservation" admite dos lecturas**, y la prueba registra los datos de las dos:
+
+| Lectura | Desde | Hasta |
+|---|---|---|
+| **A — la oficial** (`specs/archive/DECISIONS-hasta-2026-08-23.md:319`) | el investor acepta la invitación | el TXID del contrato entra en un bloque |
+| **B — la conservadora** | el developer invita (la unidad queda **reservada**) | el mismo punto |
+
+A es la que mide `GET /audit-logs/telemetry/reservation-to-escrow` (`blockTimestamp - createdAt` del
+`INVITATION_ACCEPTED`, SPEC-214). B suma la demora humana del investor en aceptar, que no es una
+propiedad de la plataforma. La nota reporta **las dos medianas** y dice cuál es la oficial y por qué.
+Correrla con la extensión, que es más lenta que una persona, hace que B dé un número peor que el
+real: si pasa así, pasa con margen.
+
+## El procedimiento
+
+**Cuántas:** 5 muestras como mínimo. **Dónde:** producción
+(`propnexus-web.onrender.com`, Cardano Preprod). **Quién maneja:** la extensión de Claude en Chrome,
+en dos pestañas (developer y buyer), igual que el guion del video (§2.3).
+
+**Sobre qué proyecto:** el que se crea en cámara en el video (T08), **después** de grabarlo. Si el
+video todavía no se grabó, sobre `Torre Volumen 3`. En los dos casos las unidades se crean para la
+prueba, así no se toca ninguna existente.
+
+Por cada muestra, `i` de 1 a 5:
+
+1. **[DEV]** `/developer/project/:id/units` → "Add unit" → `M-i` (piso y m² cualquiera, con precio).
+2. **[DEV]** `/developer/project/:id/invite` → email `buyer@example.com`, unidad `M-i`, monto →
+   enviar. **Anotar la hora.** (La base igual la guarda en `Invitation.createdAt`.)
+3. **[INV]** campana → `/investor/notifications` → abrir la invitación de `M-i` → **Aceptar**.
+4. Esperar a que el anclaje confirme: en `/investor/unit/<M-i>` la novedad pasa de "Pendiente" a
+   confirmada, sola, sin recargar (la pantalla consulta cada 10 s mientras haya algo pendiente).
+5. Pasar a la siguiente. No hace falta esperar entre muestras.
+
+## Qué se captura
+
+1. **El audit log** — `/developer/audit-log` del developer, filtrado para que se vean los
+   `CREATE_INVITATION` y `ACCEPT_INVITATION` de las 5 muestras con sus TXID. Es el *"screenshots of
+   audit logs"* del criterio, y de paso muestra que los logs persisten.
+2. **Un TXID en el explorador** — el TxidModal → "View in explorer", con la hora del bloque visible
+   en cardanoscan (preprod).
+3. **La telemetría** — `GET /audit-logs/telemetry/reservation-to-escrow` (admin; no tiene pantalla).
+   Se guarda la respuesta JSON como archivo, con `sampleSize`, `medianMinutes` y
+   `withBlockTimestampCount`.
+4. **Los tres instantes por muestra**, para calcular las dos lecturas. Solo lectura contra Turso:
+
+```sql
+SELECT i.id, i.createdAt AS invitada, e.createdAt AS aceptada, e.blockTimestamp AS en_bloque, e.txid
+FROM Invitation i
+JOIN OnChainEvent e ON e.referenceId = i.id AND e.eventType = 'INVITATION_ACCEPTED'
+WHERE e.status = 'Confirmed'
+ORDER BY i.createdAt;
+```
+
+## Qué deja en producción
+
+5 unidades vendidas, 5 contratos y 5 transacciones en Preprod (ADA de testnet, sin valor real).
+Todo queda en el audit log. No se borra nada después: es la evidencia.

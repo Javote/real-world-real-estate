@@ -166,7 +166,7 @@ registro que la mención breve de arriba.
    no depende de que oRPC exponga el gancho correcto — y es el tipo de compromiso que ya aparece en
    otras partes de este código (ver `apps/api/CLAUDE.md` §Trampas, "Sentry veía el error ANTES que
    `errorHandler`").
-5. **¿Esto afecta al criterio 14 del SOM (monitoreo)?** `specs/EVIDENCIA-2026-09-11-monitoring-
+5. **¿Esto afecta al criterio 14 del SOM (monitoreo)?** `specs/evidencia-m3/5-ops/EVIDENCIA-2026-09-11-monitoring-
    screenshots.md` ya se publicó y el criterio ya cerró — hay que confirmar si esta brecha existe
    desde ANTES de esa evidencia (en cuyo caso no la invalida, las cuatro sub-partes de oRPC son
    posteriores) o si de algún modo la evidencia ya cubría una ruta migrada. Dato a favor de que no
@@ -202,7 +202,7 @@ registro que la mención breve de arriba.
    reportar desde `relanzarRestriccionComoOrpc`: el interceptor genérico ve TODAS las excepciones de
    TODOS los procedimientos del handler, no solo las que ya pasan por esa función — es estrictamente
    más amplio, y es un solo lugar en vez de uno por call site.
-5. **No invalida el criterio 14.** Las capturas de `specs/EVIDENCIA-2026-09-11-monitoring-
+5. **No invalida el criterio 14.** Las capturas de `specs/evidencia-m3/5-ops/EVIDENCIA-2026-09-11-monitoring-
    screenshots.md` son del 2026-09-11; §A (la primera sub-parte migrada a oRPC) cerró el 2026-09-20.
    La brecha es posterior a la evidencia publicada, no la contradice.
 

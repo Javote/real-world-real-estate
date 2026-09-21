@@ -235,7 +235,7 @@ export type HiloSospechosoResponse = z.infer<typeof hiloSospechosoSchema>;
 
 /**
  * Un hilo sospechoso que se reparó solo — Capa 1 de
- * `specs/REPORTE-2026-09-10-prueba-de-volumen.md`: el `AnchorPort` encontró un
+ * `specs/evidencia-m3/3-preprod/REPORTE-2026-09-10-prueba-de-volumen.md`: el `AnchorPort` encontró un
  * UTxO vivo para el `stageRef` del evento y su datum coincidía con el
  * `toState` declarado, así que el bookkeeping (`txid`/`outputRef`) se
  * completó **sin firmar nada nuevo** — el hilo ya estaba en la cadena, solo

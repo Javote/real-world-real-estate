@@ -32,7 +32,7 @@ el mismo `stage_ref` y distinto input de semilla, exigiendo que las dos den `Tru
    **nunca toca la cadena**.
 4. El estado "`outputRef` en `null` con el hilo vivo on-chain" está documentado en el propio archivo
    (`:231-236`) y **ya ocurrió**: son las dos etapas con anclaje perdido del
-   [`REPORTE-2026-09-10-prueba-de-volumen.md`](REPORTE-2026-09-10-prueba-de-volumen.md).
+   [`evidencia-m3/3-preprod/REPORTE-2026-09-10-prueba-de-volumen.md`](evidencia-m3/3-preprod/REPORTE-2026-09-10-prueba-de-volumen.md).
 
 En ese estado la guarda pasa, se mintea de nuevo y quedan **dos hilos vivos con el mismo asset
 name**, cada uno capaz de avanzar por su cuenta a estados distintos. Después `findLiveThread`

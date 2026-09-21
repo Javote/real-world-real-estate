@@ -192,7 +192,7 @@ antes que el `NodeSDK` propio dejaba los traces cayendo en silencio pese a que e
 `live` — el bug no se hubiera visto sin agregar `diag.setLogger` primero. Los tres fixes, el smoke
 test de CI que ahora corre el `startCommand` real contra el build compilado, y el detalle completo
 de por qué el asistente de Grafana genera el header OTLP incompleto, están en `apps/api/CLAUDE.md`
-§Trampas verificadas y `specs/RUNBOOK-deploy.md` §4. De yapa: un warning de Vite por un chunk de
+§Trampas verificadas y `specs/evidencia-m3/5-ops/RUNBOOK-deploy.md` §4. De yapa: un warning de Vite por un chunk de
 619kB en el build del web (React + TanStack + Sentry/PostHog + Radix todo junto) se resolvió
 separando vendor chunks — sin relación con lo anterior, encontrado en el mismo log que se estaba
 revisando.
@@ -457,4 +457,4 @@ crear un proyecto nuevo deja las 10 etapas minteadas y seleccionables en "Subir 
 archivo a una de ellas la mueve a `InProgress`, visible en `/developer/progress`. Tests nuevos en
 `project-stage-template.test.ts` (transaccionalidad, 10 hilos independientes, membresía del creador)
 y `browse-and-documents.test.ts` (el auto-avance contra la ruta real). `pnpm verify` completo en
-verde, colección Postman (`specs/postman/`) regenerada.
+verde, colección Postman (`specs/evidencia-m3/2-api/postman/`) regenerada.

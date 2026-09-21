@@ -7,7 +7,7 @@ import { buildPostmanCollection } from "../scripts/generate-api-docs";
 // HOY contra el router montado, no una foto vieja. Si este test se pone rojo,
 // corré `pnpm --filter @plataforma/api docs:api` y commiteá el resultado —
 // igual que la matriz de permisos, actualizarlo ES la revisión.
-describe("specs/postman/propnexus.postman_collection.json", () => {
+describe("specs/evidencia-m3/2-api/postman/propnexus.postman_collection.json", () => {
   it("coincide con lo que generaría el router montado ahora mismo", () => {
     const archivo = path.join(
       __dirname,
@@ -15,6 +15,8 @@ describe("specs/postman/propnexus.postman_collection.json", () => {
       "..",
       "..",
       "specs",
+      "evidencia-m3",
+      "2-api",
       "postman",
       "propnexus.postman_collection.json"
     );

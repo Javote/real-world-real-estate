@@ -30,7 +30,7 @@
 > notifications,auth,public}.test.ts` nuevos — mismo patrón que `test/orpc-client-{notary,certifier,
 > investor,developer}.test.ts` de `SPEC-212`, cliente oRPC tipado contra el servidor real, no
 > mockeado). `REQUEST_SCHEMAS`/`RESPONSE_SCHEMAS` (`scripts/generate-openapi.ts`) ya no tienen las 8
-> entradas; `specs/openapi/propnexus.openapi.json` regenerado.
+> entradas; `specs/evidencia-m3/2-api/openapi/propnexus.openapi.json` regenerado.
 >
 > **La pregunta de §Primera vez sin sesión, resuelta:** `AuthContext = { user?: {...} }`, un solo
 > `os.$context<AuthContext>()` para `loginProcedure` (nunca toca `context.user`) y `meProcedure`
@@ -96,7 +96,7 @@
 > `test/orpc-client-users.test.ts` nuevo: 5 casos, incluido que `passwordHash` no aparece en la
 > respuesta del cliente tipado y que un no-admin corta en `authorize` con 403 antes de que oRPC vea la
 > request). `REQUEST_SCHEMAS`/`RESPONSE_SCHEMAS` ya no tienen las 6 entradas de `users`;
-> `specs/openapi/propnexus.openapi.json` regenerado.
+> `specs/evidencia-m3/2-api/openapi/propnexus.openapi.json` regenerado.
 
 ## La auditoría, ruta por ruta (2026-09-20)
 

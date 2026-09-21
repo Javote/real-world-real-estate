@@ -169,7 +169,16 @@ export function buildPostmanCollection(): object {
 }
 
 function main() {
-  const salida = path.join(__dirname, "..", "..", "..", "specs", "postman");
+  const salida = path.join(
+    __dirname,
+    "..",
+    "..",
+    "..",
+    "specs",
+    "evidencia-m3",
+    "2-api",
+    "postman"
+  );
   mkdirSync(salida, { recursive: true });
   const archivo = path.join(salida, "propnexus.postman_collection.json");
   writeFileSync(archivo, `${JSON.stringify(buildPostmanCollection(), null, 2)}\n`);

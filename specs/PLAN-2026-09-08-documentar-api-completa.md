@@ -1,7 +1,7 @@
 # PLAN 2026-09-08 — cerrar "API endpoints documented" de verdad: path params + las 85 respuestas
 
 Acordado con el dueño el 2026-09-08, en la conversación que siguió al generador de OpenAPI
-(`specs/openapi/propnexus.openapi.json`, 85 operaciones, 26 con su schema Zod real de body/query).
+(`specs/evidencia-m3/2-api/openapi/propnexus.openapi.json`, 85 operaciones, 26 con su schema Zod real de body/query).
 El dueño señaló que documentar completo las 85 request/response **es un requerimiento literal del
 milestone**, no una mejora nice-to-have, y pidió sumar la validación de path params.
 

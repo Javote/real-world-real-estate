@@ -176,7 +176,7 @@ describe("POST /evidence/reconcile", () => {
 // ── hilosSospechosos · detecta, no repara ───────────────────────────────────
 //
 // El hallazgo real de la prueba de volumen del 2026-09-10
-// (specs/REPORTE-2026-09-10-prueba-de-volumen.md §Hallazgo): una
+// (specs/evidencia-m3/3-preprod/REPORTE-2026-09-10-prueba-de-volumen.md §Hallazgo): una
 // STAGE_TRANSITION sin `txid` cuyo stage ya avanzó a un evento más nuevo.
 
 /** Un stage real, con `sequenceOrder` al azar para no chocar entre corridas. */

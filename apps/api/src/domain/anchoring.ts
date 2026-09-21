@@ -102,7 +102,7 @@ export async function anchorCommitmentEvent(input: {
 
   // El recibo se guarda apenas existe, no cuando termina de confirmar — mismo
   // fix que `anchorEvent` en `stage-transition.ts` (2026-09-10, ver
-  // `specs/REPORTE-2026-09-10-prueba-de-volumen.md` §Cómo hacerlo más
+  // `specs/evidencia-m3/3-preprod/REPORTE-2026-09-10-prueba-de-volumen.md` §Cómo hacerlo más
   // robusto): si el proceso muere entre acá y el `confirmedAt()` de abajo, el
   // TXID real ya quedó escrito.
   let anclado = await db

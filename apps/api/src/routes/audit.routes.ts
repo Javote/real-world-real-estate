@@ -52,7 +52,7 @@ function mediana(valores: readonly number[]): number | null {
  * reserva es `POST /investor/invitations/:id/accept`; el evento nace
  * `Pending` en esa misma request y `reconciliarAnclajes` lo pasa a
  * `Confirmed` cuando ve el TXID en la cadena — no hay poll en background
- * (a propósito, ver `specs/SECURITY-REVIEW-2026-09.md`/`CLAUDE.md`).
+ * (a propósito, ver `specs/evidencia-m3/4-seguridad/SECURITY-REVIEW-2026-09.md`/`CLAUDE.md`).
  *
  * Por eso este endpoint reconcilia antes de leer: sin esto, un
  * `INVITATION_ACCEPTED` que ya confirmó en la cadena real podía seguir

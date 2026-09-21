@@ -85,7 +85,7 @@ export interface AdvanceThreadInput {
 /**
  * El UTxO vivo del hilo de un stage, leído **directo de la cadena** — no del
  * registro de eventos, que es justo lo que puede estar desincronizado
- * (Capa 1 de `specs/REPORTE-2026-09-10-prueba-de-volumen.md`, el caso real
+ * (Capa 1 de `specs/evidencia-m3/3-preprod/REPORTE-2026-09-10-prueba-de-volumen.md`, el caso real
  * que la motivó: un `OnChainEvent` sin `txid` mientras el UTxO seguía vivo).
  */
 export interface LiveThread {

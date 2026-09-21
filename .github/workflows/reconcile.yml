@@ -1,6 +1,6 @@
 name: Reconciliación de anclajes
 
-# Capa 0 de specs/REPORTE-2026-09-10-prueba-de-volumen.md §Cómo hacerlo más
+# Capa 0 de specs/evidencia-m3/3-preprod/REPORTE-2026-09-10-prueba-de-volumen.md §Cómo hacerlo más
 # robusto: que alguien se entere de un anclaje perdido sin tener que acordarse
 # de mirar. `apps/api/src/routes/evidence.routes.ts` ya declaraba esto como
 # pendiente ("hoy a mano, mañana un cron de GitHub Actions") — este archivo es
@@ -71,7 +71,7 @@ jobs:
           sospechosos=$(echo "$respuesta" | python3 -c "import json,sys; print(len(json.load(sys.stdin)['sospechosos']))")
 
           if [ "$sospechosos" -gt 0 ]; then
-            echo "::error::hilosSospechosos() encontró $sospechosos evento(s) — ver el detalle arriba. Revisar con specs/REPORTE-2026-09-10-prueba-de-volumen.md como guía forense."
+            echo "::error::hilosSospechosos() encontró $sospechosos evento(s) — ver el detalle arriba. Revisar con specs/evidencia-m3/3-preprod/REPORTE-2026-09-10-prueba-de-volumen.md como guía forense."
             exit 1
           fi
 

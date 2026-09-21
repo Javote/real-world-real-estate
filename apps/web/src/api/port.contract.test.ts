@@ -8,7 +8,7 @@
 // fallando en runtime con un 404 o un 400.
 //
 // Este test ejecuta CADA método de `api` con un `fetch` falso, captura el
-// request que arma y lo cruza contra `specs/openapi/propnexus.openapi.json` —
+// request que arma y lo cruza contra `specs/evidencia-m3/2-api/openapi/propnexus.openapi.json` —
 // el mismo documento que la API genera desde sus procedimientos y cuya
 // frescura ya fija `apps/api/test/openapi-freshness.test.ts`. Así el drift se
 // vuelve un test rojo y no un 4xx en producción.
@@ -38,7 +38,10 @@ interface EsquemaJson {
 const DOC = JSON.parse(
   // jsdom hace que `import.meta.url` sea http: el path sale del cwd, que vitest
   // fija en `apps/web` (donde vive `vitest.config.ts`).
-  readFileSync(resolve(process.cwd(), '../../specs/openapi/propnexus.openapi.json'), 'utf8')
+  readFileSync(
+    resolve(process.cwd(), '../../specs/evidencia-m3/2-api/openapi/propnexus.openapi.json'),
+    'utf8'
+  )
 ) as { paths: Record<string, Record<string, Operacion>> }
 
 // Un path de OpenAPI (`/x/{id}`) como regex. Ante dos plantillas que matchean

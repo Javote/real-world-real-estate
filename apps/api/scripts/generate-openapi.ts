@@ -570,7 +570,16 @@ export async function buildOpenApiDocument() {
 }
 
 async function main() {
-  const salida = path.join(__dirname, "..", "..", "..", "specs", "openapi");
+  const salida = path.join(
+    __dirname,
+    "..",
+    "..",
+    "..",
+    "specs",
+    "evidencia-m3",
+    "2-api",
+    "openapi"
+  );
   mkdirSync(salida, { recursive: true });
   const archivo = path.join(salida, "propnexus.openapi.json");
   writeFileSync(archivo, `${JSON.stringify(await buildOpenApiDocument(), null, 2)}\n`);

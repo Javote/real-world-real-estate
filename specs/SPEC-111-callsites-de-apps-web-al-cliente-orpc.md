@@ -23,7 +23,7 @@ detecta.**
 ## Lo que se hizo
 
 - **`src/api/port.contract.test.ts` (nuevo, 71 tests).** Ejecuta cada método de `api` con un `fetch`
-  falso, captura el request y lo cruza contra `specs/openapi/propnexus.openapi.json` (el documento
+  falso, captura el request y lo cruza contra `specs/evidencia-m3/2-api/openapi/propnexus.openapi.json` (el documento
   que la API genera de sus procedimientos y cuya frescura fija `apps/api/test/openapi-freshness`).
   Verifica: que el origen sea `VITE_API_ORIGIN`; que verbo + path existan (gana la plantilla más
   literal: `/dossiers/pending` antes que `/dossiers/{id}`); que cada filtro esté declarado; que el

@@ -26,7 +26,7 @@ intención, y la afirmación siempre se verificó contra el código (memoria del
 - **Medición de la config de tipos**: se compiló `apps/api/src` con `noUncheckedIndexedAccess`
   prendido en un `tsconfig` temporal y se revisaron los 21 errores uno por uno (B-12).
 - **Introspección del documento publicado**: los 70 paths y las 85 operaciones de
-  `specs/openapi/propnexus.openapi.json` se contaron sobre el JSON commiteado, no sobre el
+  `specs/evidencia-m3/2-api/openapi/propnexus.openapi.json` se contaron sobre el JSON commiteado, no sobre el
   generador. Es lo que destapó B-04.
 
 Baseline al momento de la auditoría, medido en la máquina:
@@ -215,7 +215,7 @@ SQLite soporta DDL transaccional, y reemplaza el `for` por una línea. Las migra
 
 ## B-04 · El OpenAPI publicado apunta a una URL que no existe
 
-`specs/openapi/propnexus.openapi.json` declara:
+`specs/evidencia-m3/2-api/openapi/propnexus.openapi.json` declara:
 
 ```json
 "servers": [{ "url": "http://localhost:3001/api/v1", "description": "Local (pnpm dev)" }]
@@ -378,7 +378,7 @@ reconciliable por `reconciliarParaLectura({ referenceId })`; una anclada por
 
 Y el recibo de la duplicación está en los comentarios: **los tres sitios llevan la misma nota con la
 misma fecha** —*"mismo fix que `anchorEvent`/`anchorCommitmentEvent` (2026-09-10, ver
-`specs/REPORTE-2026-09-10-prueba-de-volumen.md`)"*—. El bug que encontró la prueba de volumen hubo
+`specs/evidencia-m3/3-preprod/REPORTE-2026-09-10-prueba-de-volumen.md`)"*—. El bug que encontró la prueba de volumen hubo
 que arreglarlo tres veces. Esa nota repetida es el síntoma, escrito por quien lo arregló.
 
 **El arreglo.** Que la ruta llame a `anchorCommitmentEvent({ …, reference: evidencia.id })`. Un

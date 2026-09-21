@@ -19,8 +19,8 @@
       "!apps/api/src/lib/libsql-client.ts",
       "!apps/api/src/lib/orpc.ts",
       "!apps/api/test/helpers/orpc.ts",
-      "!specs/postman",
-      "!specs/openapi"
+      "!specs/evidencia-m3/2-api/postman",
+      "!specs/evidencia-m3/2-api/openapi"
     ]
   },
   "css": {

@@ -14,7 +14,7 @@ raíz) — no lo copies acá, se desactualiza. Lo que sí es estable y no rota c
 
 | Existe | Qué es |
 |---|---|
-| `api/port.ts` | Único lugar que hace `fetch`. Cuerpos y filtros se tipan con los `*Input`/`*Query` de `packages/shared`, y `api/port.contract.test.ts` cruza cada método contra `specs/openapi/propnexus.openapi.json` (`SPEC-111`). **Agregar un método a `api` exige su caso en ese test** |
+| `api/port.ts` | Único lugar que hace `fetch`. Cuerpos y filtros se tipan con los `*Input`/`*Query` de `packages/shared`, y `api/port.contract.test.ts` cruza cada método contra `specs/evidencia-m3/2-api/openapi/propnexus.openapi.json` (`SPEC-111`). **Agregar un método a `api` exige su caso en ese test** |
 | `auth/*` | `useRoleGuard` implementa los AuthGuard role groups de M2-D1 §7.2 |
 | `i18n/*` | Diccionario propio, sin librería. Crece con cada pantalla |
 | `routes/` | Rutas reales por rol (`investor.*`, `developer.*`, `notary.*`, `certifier.*`), no stubs — el backlog de `SPEC-014` se cierra vertical por vertical, en el orden `evidencia → certificar → liberar` |
@@ -123,7 +123,7 @@ no la captura. No reintroducir un `hideBrand`.
 - **En dev, `/api` va por el proxy de Vite** a `API_ORIGIN`. En producción el web es estático y vive
   en otro origen: la URL absoluta sale de `VITE_API_ORIGIN` y la API la acepta por su lista blanca
   de CORS (D-065). Si en producción no responde nada y la consola dice CORS, falta `WEB_ORIGIN` del
-  otro lado — ver `specs/RUNBOOK-deploy.md`.
+  otro lado — ver `specs/evidencia-m3/5-ops/RUNBOOK-deploy.md`.
 
 ## Trampas verificadas
 
