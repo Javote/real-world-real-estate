@@ -248,6 +248,6 @@ pnpm --filter web e2e:report      # reporte HTML de la última corrida
 
 **Los E2E entran con la password del seed, no con la del prefill.** `e2e/_credenciales.ts` la resuelve
 igual que `passwordDeDemo` del seed: `SEED_DEMO_PASSWORD` / `SEED_ADMIN_PASSWORD` del entorno o de
-`apps/api/.env`, y si no están, los defaults locales. Con un `.env` que las define, el prefill de
-`/login` (`ROLE_PRESETS`) no coincide con la base local, así que nunca escribas una password literal en
-un spec.
+`apps/api/.env`, y si no están, los defaults locales. La solapa de `/login` (`ROLE_PRESETS`) precarga
+solo el usuario —nunca la contraseña, que depende del entorno—, así que nunca escribas una password
+literal en un spec ni en el front.

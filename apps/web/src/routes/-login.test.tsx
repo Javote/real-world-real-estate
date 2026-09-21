@@ -101,6 +101,7 @@ describe('LoginScreen', () => {
     vi.stubGlobal('fetch', fetchMock)
 
     await renderLogin()
+    fireEvent.change(screen.getByLabelText('Contraseña'), { target: { value: 'la-del-seed' } })
     fireEvent.click(screen.getByText('Ingresar'))
 
     // DEMO_USER.role === 'developer' → /developer (invariante 2: el ruteo
@@ -114,7 +115,7 @@ describe('LoginScreen', () => {
     const body = JSON.parse(String(fetchMock.mock.calls[0]?.[1]?.body))
     expect(body).toEqual({
       email: ROLE_PRESETS[0].email,
-      password: ROLE_PRESETS[0].password
+      password: 'la-del-seed'
     })
 
     const stored = JSON.parse(window.sessionStorage.getItem('proptrust.session') ?? 'null')
@@ -122,20 +123,30 @@ describe('LoginScreen', () => {
     expect(stored?.user.email).toBe(DEMO_USER.email)
   })
 
-  it('elegir otro rol precarga las credenciales de ese perfil del seed', async () => {
+  it('elegir otro rol precarga solo el usuario: la contraseña queda vacía', async () => {
     const fetchMock = vi.fn<typeof fetch>(
       async () => new Response(JSON.stringify({ token: 't', user: DEMO_USER }), { status: 200 })
     )
     vi.stubGlobal('fetch', fetchMock)
 
     await renderLogin()
+    expect((screen.getByLabelText('Contraseña') as HTMLInputElement).value).toBe('')
+
+    // Lo tipeado bajo una solapa no se arrastra a otra.
+    fireEvent.change(screen.getByLabelText('Contraseña'), { target: { value: 'otra' } })
     fireEvent.click(screen.getByText('Certifier'))
+    expect((screen.getByLabelText('Usuario') as HTMLInputElement).value).toBe(
+      'verifier@example.com'
+    )
+    expect((screen.getByLabelText('Contraseña') as HTMLInputElement).value).toBe('')
+
+    fireEvent.change(screen.getByLabelText('Contraseña'), { target: { value: 'la-del-seed' } })
     fireEvent.click(screen.getByText('Ingresar'))
 
     await waitFor(() => expect(fetchMock).toHaveBeenCalled())
     const body = JSON.parse(String(fetchMock.mock.calls[0]?.[1]?.body))
     expect(body.email).toBe('verifier@example.com')
-    expect(body.password).toBe('verifier123')
+    expect(body.password).toBe('la-del-seed')
   })
 
   it('invariante 2: rutea por el rol que devuelve la API, no por la solapa tocada', async () => {

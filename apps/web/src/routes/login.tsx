@@ -16,31 +16,20 @@ export const Route = createFileRoute('/login')({ component: LoginScreen })
 // Perfiles del seed (apps/api/src/db/seed.ts). El rol "certifier" y
 // "investor" de la maqueta corresponden a los roles globales `verifier` y
 // `buyer` del backend — ver SPEC-011 §Preguntas abiertas.
+//
+// La solapa precarga solo el usuario, nunca la contraseña: la del seed depende
+// de `SEED_DEMO_PASSWORD` en cada entorno, y un default local escrito acá
+// autocompletaba una password que en producción no existe (y la publicaba en
+// el bundle).
 export const ROLE_PRESETS = [
-  { key: 'buyer', tabKey: 'login.tabs.investor', email: 'buyer@example.com', password: 'buyer123' },
-  {
-    key: 'developer',
-    tabKey: 'login.tabs.developer',
-    email: 'developer@example.com',
-    password: 'developer123'
-  },
-  {
-    key: 'notary',
-    tabKey: 'login.tabs.notary',
-    email: 'notary@example.com',
-    password: 'notary123'
-  },
-  {
-    key: 'verifier',
-    tabKey: 'login.tabs.certifier',
-    email: 'verifier@example.com',
-    password: 'verifier123'
-  }
+  { key: 'buyer', tabKey: 'login.tabs.investor', email: 'buyer@example.com' },
+  { key: 'developer', tabKey: 'login.tabs.developer', email: 'developer@example.com' },
+  { key: 'notary', tabKey: 'login.tabs.notary', email: 'notary@example.com' },
+  { key: 'verifier', tabKey: 'login.tabs.certifier', email: 'verifier@example.com' }
 ] as const satisfies ReadonlyArray<{
   key: string
   tabKey: TranslationKey
   email: string
-  password: string
 }>
 
 function errorKeyFor(err: unknown): TranslationKey {
@@ -55,7 +44,7 @@ export function LoginScreen() {
   const announce = useAnnounce()
   const [preset, setPreset] = useState(0)
   const [email, setEmail] = useState<string>(ROLE_PRESETS[0].email)
-  const [password, setPassword] = useState<string>(ROLE_PRESETS[0].password)
+  const [password, setPassword] = useState('')
   const [errorKey, setErrorKey] = useState<TranslationKey | null>(null)
   const [busy, setBusy] = useState(false)
 
@@ -64,7 +53,7 @@ export function LoginScreen() {
     const p = ROLE_PRESETS[i]
     if (p) {
       setEmail(p.email)
-      setPassword(p.password)
+      setPassword('')
     }
     setErrorKey(null)
   }

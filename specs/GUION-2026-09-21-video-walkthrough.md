@@ -500,12 +500,10 @@ on-chain. Es el contraste contra el que después se entiende el proyecto que nac
       lea. **Primer gesto del video: el toggle de idioma** del header (está en la pantalla de login
       misma, `login.tsx:99`) → inglés; otros 2 segundos quieto. Recién ahí, login con `buyer@`.
       Cae solo en "Buy".
-      **⚠ La password que la pantalla pre-llena NO sirve contra producción.** `ROLE_PRESETS`
-      (`login.tsx:20`) trae `buyer123`, que es el default local; producción usa
-      `SEED_DEMO_PASSWORD` de `apps/api/.env`, que es otra. Verificado el 2026-09-21: apretar
-      "Ingresar" con el preset da **"Credenciales inválidas"**. Borrá el campo y tipeá la password
-      buena — y ensayalo antes de grabar, porque un error de credenciales en la primera toma del
-      video es la peor apertura posible.
+      **La solapa precarga solo el usuario; la contraseña se tipea** — la de `SEED_DEMO_PASSWORD`
+      de `apps/api/.env`. Hasta el 2026-09-21 la pantalla también pre-llenaba `buyer123` (el
+      default local), que contra producción daba "Credenciales inválidas"; ya no. Ensayalo antes de
+      grabar igual: un error de credenciales en la primera toma es la peor apertura posible.
 
 - [ ] **T02 · Buy** — `/investor/buy`
       Los 3 proyectos, buscador por zona, filtros por estado, modo mapa con los popovers.

@@ -33,7 +33,8 @@ pnpm db:seed                             # usuarios y proyecto demo
 pnpm dev                                 # web en :3000, api en :8787
 ```
 
-**En `/login` no hace falta tipear nada:** tocar la solapa del rol prefilla usuario y contraseña.
+**En `/login` tocar la solapa del rol prefilla el usuario;** la contraseña se tipea (la de abajo en
+local, la de `SEED_DEMO_PASSWORD` en cualquier otro entorno).
 
 | Solapa | Usuario | Aterriza en |
 |---|---|---|

@@ -29,9 +29,8 @@ export async function waitForHydration(page: Page) {
 /**
  * Entra con el usuario que prefilla la solapa del rol y la password del seed.
  *
- * La password del prefill (`ROLE_PRESETS`, `login.tsx`) es el default local y
- * no sirve si el seed se corrió con `SEED_DEMO_PASSWORD`: se pisa con la que
- * resuelve `passwordDe` (`_credenciales.ts`).
+ * La solapa (`ROLE_PRESETS`, `login.tsx`) precarga solo el usuario; la password
+ * se tipea con la que resuelve `passwordDe` (`_credenciales.ts`).
  *
  * **Verifica que el prefill haya ocurrido antes de mandar el formulario.** Sin
  * eso el click en "Ingresar" puede salir con los campos vacíos: la solapa
@@ -46,7 +45,6 @@ export async function loginConSolapa(page: Page, rol: string) {
 
   await page.getByRole('tab', { name: rol }).click()
   await expect(page.getByLabel('Usuario')).not.toHaveValue('')
-  await expect(page.getByLabel('Contraseña')).not.toHaveValue('')
   const rolSembrado = ROL_DE_SOLAPA[rol]
   if (!rolSembrado) throw new Error(`Solapa sin rol del seed: ${rol}`)
   await page.getByLabel('Contraseña').fill(passwordDe(rolSembrado))
