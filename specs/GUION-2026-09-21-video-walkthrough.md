@@ -199,8 +199,8 @@ no dibuja el link. El perfil del desarrollador se ve una vez, sobre la obra term
 ### 1.4 Las dos membresías del proyecto nuevo — se corren **durante el corte de T08**
 
 > **Lo hace el técnico, no quien graba.** Quien graba termina T08, **le avisa** y espera la
-> confirmación (los dos `201`) antes de seguir. Hacen falta el repo, `apps/api/.env` y la CLI de
-> `turso` logueada.
+> confirmación (los dos `201`) antes de seguir. Hacen falta el repo y `apps/api/.env`; nada más —
+> todo va por la API, igual que la web.
 
 El proyecto que se crea en cámara nace con **una sola membresía, la del developer que lo crea**
 (`developer.routes.ts:222`). Sin el `verifier`, su etapa no aparece en la cola del certifier y el
@@ -218,9 +218,11 @@ TOKEN=$(curl -s -X POST $API/auth/login -H 'content-type: application/json' \
   -d "{\"email\":\"admin@example.com\",\"password\":\"$SEED_ADMIN_PASSWORD\"}" \
   | sed -n 's/.*"token":"\([^"]*\)".*/\1/p')
 
-# El proyecto recién creado (o miralo en la URL de su pantalla de detalle)
-PID=$(turso db shell propnexus \
-  "SELECT id FROM Project ORDER BY createdAt DESC LIMIT 1" | tail -1 | tr -d ' ')
+# El proyecto recién creado: el admin ve todos, y el más nuevo es el de T08.
+# Imprime su nombre — tiene que ser el que se tipeó en cámara (ej. "Torre Núñez").
+# Si dice otro, NO sigas: el proyecto todavía no terminó de crearse.
+PID=$(curl -s $API/projects -H "authorization: Bearer $TOKEN" | python3 -c \
+  "import json,sys; p=max(json.load(sys.stdin), key=lambda x: x['createdAt']); print('Proyecto:', p['name'], file=sys.stderr); print(p['id'])")
 
 for U in k2knwiqp66xuv6ojp7iv48ep:verifier ng0gh91de5alybr5ihupbd11:buyer; do
   curl -s -X POST $API/projects/$PID/members \
