@@ -41,6 +41,17 @@ export function passwordDe(rol: RolSembrado): string {
   return delEntorno(variable) ?? DEFAULTS[rol]
 }
 
+/**
+ * Los specs nombran la solapa por su etiqueta en inglés (estable); la pantalla
+ * arranca en es-AR y la muestra en castellano. Esto traduce una a la otra.
+ */
+export const SOLAPA_ES: Record<string, string> = {
+  Investor: 'Inversor',
+  Developer: 'Desarrollador',
+  Notary: 'Escribano',
+  Certifier: 'Certificador'
+}
+
 /** La solapa del login → el rol del seed que prefilla. */
 export const ROL_DE_SOLAPA: Record<string, RolSembrado> = {
   Investor: 'buyer',

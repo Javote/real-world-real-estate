@@ -2,7 +2,7 @@ import { mkdirSync } from 'node:fs'
 import { join } from 'node:path'
 import { expect, type Page, test } from '@playwright/test'
 
-import { passwordDe } from './_credenciales.ts'
+import { passwordDe, SOLAPA_ES } from './_credenciales.ts'
 
 // Walkthrough: recorre la app como la recorrería una persona y deja una captura
 // por pantalla. No es un test de regresión estricto — es la evidencia visual de
@@ -81,7 +81,7 @@ async function waitForHydration(page: Page) {
   const username = page.getByLabel('Usuario')
   await expect(username).toBeVisible()
   await expect(async () => {
-    await page.getByRole('tab', { name: 'Investor' }).click()
+    await page.getByRole('tab', { name: 'Inversor' }).click()
     await expect(username).toHaveValue('buyer@example.com')
   }).toPass({ timeout: 20_000, intervals: [250, 500, 1000] })
 }
@@ -93,7 +93,7 @@ async function gotoLogin(page: Page) {
 
 async function login(page: Page, tab: string, email: string, password: string, landing: string) {
   await gotoLogin(page)
-  await page.getByRole('tab', { name: tab }).click()
+  await page.getByRole('tab', { name: SOLAPA_ES[tab] ?? tab }).click()
   await page.getByLabel('Usuario').fill(email)
   await page.getByLabel('Contraseña').fill(password)
   await page.getByRole('button', { name: 'Ingresar' }).click()

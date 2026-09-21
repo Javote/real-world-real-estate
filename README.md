@@ -38,10 +38,10 @@ local, la de `SEED_DEMO_PASSWORD` en cualquier otro entorno).
 
 | Solapa | Usuario | Aterriza en |
 |---|---|---|
-| Developer | `developer@example.com` / `developer123` | `/developer` |
-| Certifier | `verifier@example.com` / `verifier123` | `/certifier` |
-| Notary | `notary@example.com` / `notary123` | `/notary` |
-| Investor | `buyer@example.com` / `buyer123` | `/investor/buy` |
+| Desarrollador | `developer@example.com` / `developer123` | `/developer` |
+| Certificador | `verifier@example.com` / `verifier123` | `/certifier` |
+| Escribano | `notary@example.com` / `notary123` | `/notary` |
+| Inversor | `buyer@example.com` / `buyer123` | `/investor/buy` |
 
 El **admin** (`admin@example.com` / `admin123`) no tiene solapa: se tipea el usuario y aterriza en
 `/admin`, desde donde entra a los cuatro paneles e invita certifiers a los proyectos (D-095).

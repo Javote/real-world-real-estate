@@ -1,6 +1,6 @@
 import { expect, type Page } from '@playwright/test'
 
-import { passwordDe, ROL_DE_SOLAPA } from './_credenciales.ts'
+import { passwordDe, ROL_DE_SOLAPA, SOLAPA_ES } from './_credenciales.ts'
 
 // Ayudantes compartidos por los specs. El guion bajo lo mantiene fuera del
 // `testDir` como archivo de test: Playwright levanta `*.spec.ts`, no esto.
@@ -21,7 +21,7 @@ export async function waitForHydration(page: Page) {
   const username = page.getByLabel('Usuario')
   await expect(username).toBeVisible()
   await expect(async () => {
-    await page.getByRole('tab', { name: 'Investor' }).click()
+    await page.getByRole('tab', { name: 'Inversor' }).click()
     await expect(username).toHaveValue('buyer@example.com')
   }).toPass({ timeout: 20_000, intervals: [250, 500, 1000] })
 }
@@ -43,7 +43,7 @@ export async function loginConSolapa(page: Page, rol: string) {
   await page.goto('/login')
   await waitForHydration(page)
 
-  await page.getByRole('tab', { name: rol }).click()
+  await page.getByRole('tab', { name: SOLAPA_ES[rol] ?? rol }).click()
   await expect(page.getByLabel('Usuario')).not.toHaveValue('')
   const rolSembrado = ROL_DE_SOLAPA[rol]
   if (!rolSembrado) throw new Error(`Solapa sin rol del seed: ${rol}`)

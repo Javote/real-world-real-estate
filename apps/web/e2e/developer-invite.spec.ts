@@ -47,7 +47,7 @@ test.describe('Fila 39 — invitar a un inversor', () => {
     await page.getByRole('button', { name: /invitar inversor|invite investor/i }).click()
     await expect(page.getByTestId('DEV-INVITE-CREATE-001')).toBeVisible()
 
-    await page.getByLabel(/^email$/i).fill('buyer@example.com')
+    await page.getByLabel(/^(correo electrónico|email)$/i).fill('buyer@example.com')
     await page.getByLabel(/unidad asignada|assigned unit/i).selectOption({ label: referencia })
     await page.getByRole('spinbutton', { name: /monto|amount/i }).fill('285000')
     await page.getByRole('button', { name: /enviar invitación|send invitation/i }).click()

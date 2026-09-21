@@ -134,7 +134,7 @@ describe('LoginScreen', () => {
 
     // Lo tipeado bajo una solapa no se arrastra a otra.
     fireEvent.change(screen.getByLabelText('Contraseña'), { target: { value: 'otra' } })
-    fireEvent.click(screen.getByText('Certifier'))
+    fireEvent.click(screen.getByText('Certificador'))
     expect((screen.getByLabelText('Usuario') as HTMLInputElement).value).toBe(
       'verifier@example.com'
     )
@@ -159,7 +159,7 @@ describe('LoginScreen', () => {
     vi.stubGlobal('fetch', fetchMock)
 
     await renderLogin()
-    fireEvent.click(screen.getByText('Certifier'))
+    fireEvent.click(screen.getByText('Certificador'))
     fireEvent.click(screen.getByText('Ingresar'))
 
     await screen.findByText('DEVELOPER-STUB')
@@ -179,7 +179,7 @@ describe('LoginScreen', () => {
     vi.stubGlobal('fetch', fetchMock)
 
     await renderLogin()
-    fireEvent.click(screen.getByText('Notary'))
+    fireEvent.click(screen.getByText('Escribano'))
     fireEvent.click(screen.getByText('Ingresar'))
 
     await screen.findByText('NOTARY-STUB')

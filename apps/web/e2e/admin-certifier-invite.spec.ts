@@ -40,7 +40,7 @@ test('ADMIN-CERTIFIER-INVITE-003 · el admin invita a un certifier y el certifie
   await page.getByLabel(/^proyecto$|^project$/i).selectOption({ label: nombre })
 
   const form = page.getByTestId('ADMIN-CERTIFIER-INVITE-003')
-  await form.getByLabel(/^certifier$/i).selectOption({ label: 'Verifier Demo' })
+  await form.getByLabel(/^(certificador|certifier)$/i).selectOption({ label: 'Verifier Demo' })
   await form.getByRole('button', { name: /invitar|invite/i }).click()
   await expect(form.getByRole('status')).toBeVisible()
   await expect(page.getByTestId('ADMIN-CERTIFIER-INVITATIONS-004')).toContainText('Verifier Demo')
