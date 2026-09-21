@@ -445,7 +445,51 @@ curl -s -o /dev/null https://propnexus-web.onrender.com/
 **No automatices esto con un cron.** Un keep-warm periódico mantiene los dos servicios despiertos
 24/7 (~1460 h contra las 750 del plan) y los suspende cerca del día 15 — o sea que el truco para
 evitar un cold start de un minuto termina causando una caída de dos semanas. Está prohibido por
-D-040, no olvidado.
+D-040, no olvidado. Un loop a mano y atendido, que dure lo que dura una grabación y se corte al
+terminar, es otra cosa y está bien.
+
+### 5.1 · Revertir la preparación de datos del 2026-09-21
+
+El 2026-09-21 se preparó la base para grabar el video walkthrough (criterio 13 del SOM). Tres
+cambios, todos sobre datos de demo y ninguno sobre esquema:
+
+1. **`buyer@example.com` sumado como miembro** de `torre-volumen-1` y `torre-volumen-2`, para que su
+   listado deje de mostrar dos proyectos solos.
+2. **Los tres `torre-volumen-*` pasados de `planning` a `completed`**, que es lo que corresponde a
+   sus 10 etapas certificadas.
+3. **`torre-a` vuelto inaccesible desde el front, sin salir de la base.** Tiene 3 etapas con nombres
+   anteriores al `DEFAULT_STAGE_CATALOG` de 10 y el único `OnChainEvent` en `Failed` de toda la base,
+   así que confundía en cámara. **No se borró: tiene 8 eventos on-chain colgando.** Se le quitaron
+   las 3 membresías —que es el mecanismo real de visibilidad, porque el listado del investor, el del
+   developer, la cola del certifier y el panel de capital están todos scopeados por membresía—, se
+   desvinculó su unidad `4B` (`My units` se lista por `Unit.investorId`, no por membresía) y se borró
+   su fila `Dossier`, que si no seguía apareciendo en la cola del escribano.
+
+**El rollback del punto 3**, que es el único con pérdida de información si no queda escrito:
+
+```sql
+INSERT INTO ProjectMember (id, userId, projectId, membershipRole, createdAt) VALUES
+  ('d703n50ggfir59g0wnl2hf8a','hnrykorp4aqul78oiy9bfe4h','m99yzb4h5poi0078rcqpbj6d','developer',1788447379597),
+  ('s6iuiow6lsyi6h57itt7m8k3','ng0gh91de5alybr5ihupbd11','m99yzb4h5poi0078rcqpbj6d','buyer',1788447379598),
+  ('ejsq8ei1ufnuz1uk0ura1564','k2knwiqp66xuv6ojp7iv48ep','m99yzb4h5poi0078rcqpbj6d','verifier',1788447379599);
+
+UPDATE Unit SET investorId = 'ng0gh91de5alybr5ihupbd11', status = 'sold'
+  WHERE id = 'f3qugedzwjnzhkwth5kqwf3n';
+
+-- `compileDossier` regenera esta fila sola en la próxima lectura, pero con otro id.
+-- Este INSERT conserva el id y el masterHash originales.
+INSERT INTO Dossier (id, unitId, masterHash, compiledAt, shareToken, status, signedById, signedAt, rejectionNote) VALUES
+  ('wjji7ls3xm5nro9ehxxur7tp','f3qugedzwjnzhkwth5kqwf3n',
+   '8426e9e08fae94ce5de2c38fd0cf8c95ee1f0c181db77f48447dab09de5f8a3e',
+   1788447381415, NULL, 'compiled', NULL, NULL, NULL);
+```
+
+Se aplica con `turso db shell propnexus < archivo.sql`. **Esto no es una migración y no va en
+`apps/api/migrations/`**: ahí se aplicaría solo, en cada arranque, contra cualquier base.
+
+Los puntos 1 y 2 se revierten por API como admin — `DELETE` de las dos membresías nuevas no tiene
+endpoint (se hace por `turso db shell`), y el estado vuelve con
+`PATCH /api/v1/projects/:id {"status":"planning"}`.
 
 ## Limitaciones aceptadas (leer antes de prometer algo)
 
