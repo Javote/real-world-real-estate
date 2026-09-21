@@ -251,6 +251,9 @@ Recorré a mano, sin grabar, todas las pantallas del guion. Hace tres cosas:
    de que T26 la necesite— pero no dejes que dependa de eso.)*
 
 - [ ] Recorrida completa hecha, dossier de 1A compilado.
+- [ ] **Al terminar la recorrida, dejá la app en castellano** (toggle de idioma → Español). El idioma
+      queda guardado en el navegador: si la recorrida terminó en inglés, T01 arrancaría en inglés y
+      se pierde el primer gesto del video.
 
 #### 1.5.2 El keep-alive — **solo durante la sesión de grabación**
 
@@ -301,21 +304,30 @@ El disco llegó a 99% el 2026-09-18 (`CLAUDE.md` §Worktrees). Si aprieta: `~/.n
 
 ## 2. Setup de la máquina
 
-### 2.1 macOS
+### 2.1 macOS — MacBook Pro Intel 2017
+
+Esta máquina llega como mucho a **macOS Ventura (13)**. Para saber cuál tiene: menú  → **Acerca de
+esta Mac**. En Ventura la app de ajustes se llama **Configuración del Sistema**; en Monterey (12) o
+anteriores, **Preferencias del Sistema** — las opciones son las mismas.
+
+Pegá esto en la Terminal (Cmd+Espacio → "Terminal" → Enter). Esconde los íconos del escritorio; se
+revierte en el §7:
 
 ```bash
-# Escritorio sin iconos (se revierte con `true` al terminar)
 defaults write com.apple.finder CreateDesktop false && killall Finder
 ```
 
-- [ ] **No molestar ON** (Centro de control → Concentración). Un banner arruina la toma.
-- [ ] Dock en auto-ocultar (`Cmd+Opt+D`).
-- [ ] **Cargador enchufado.** Esta máquina throttlea con el encoder activo y la batería a medias.
-- [ ] Resolución de pantalla en **"Predeterminada"** (Configuración del Sistema → Pantallas). Si
-      está en "Más espacio", el texto sale chico en el video.
+- [ ] **No molestar ON** (Centro de control, arriba a la derecha → Concentración → No molestar). Un
+      banner arruina la toma.
+- [ ] Mail, Mensajes, WhatsApp, Slack y todo lo que no sea Chrome y QuickTime, **cerrado** (`Cmd+Q`
+      en cada uno). No molestar no silencia todo, y en una 2017 cada app abierta le saca aire a la
+      grabación. Docker Desktop sobre todo.
+- [ ] **Cargador enchufado.** Esta máquina baja la velocidad con el grabador activo y la batería a
+      medias, y el video sale a los saltos.
+- [ ] Resolución en **"Predeterminada"** (Configuración del Sistema → Pantallas). Si está en "Más
+      espacio", el texto sale chico en el video.
 - [ ] **Wi-Fi estable, sin VPN.** Cada acción en cadena espera a la red.
-- [ ] Mail, Mensajes, WhatsApp y Slack **cerrados** (No molestar no silencia todo).
-- [ ] Cerrar todo lo demás, Docker Desktop sobre todo.
+- [ ] **Espacio libre** (§1.6): 6 GB. Las 2017 suelen venir con discos de 128 o 256 GB.
 
 ### 2.2 Chrome
 
@@ -325,19 +337,23 @@ abajo se hace **en esa ventana**. Contraseñas: Configuración → Autocompletar
 contraseñas → "Ofrecer guardar contraseñas" apagado.
 
 - [ ] **Perfil nuevo** `PropNexus Demo`: sin extensiones, sin historial, sin autofill.
-- [ ] Barra de favoritos oculta (`Cmd+Shift+B`).
 - [ ] Guardado de contraseñas **desactivado** (si no, el bubble "¿Guardar contraseña?" aparece en
       cuatro tomas distintas).
 - [ ] **Traductor de Google desactivado:** Configuración → Idiomas → "Usar el Traductor de Google"
       apagado. Si no, cuando la app pasa a inglés Chrome ofrece "¿Traducir esta página?" en medio de
       la toma.
 - [ ] Zoom de página al **110%** (`Cmd` + `+`). Se aplica por sitio: hacelo una vez dentro de la app.
-- [ ] Ventana de tamaño fijo, para que las 31 tomas encuadren igual. Pegá esto en la Terminal con
-      Chrome abierto (lo deja en 1280×800, arriba a la izquierda):
+- [ ] **Pantalla completa y sin barra de herramientas — lo que deja el video limpio.** En la ventana
+      del perfil: menú **Ver** → **destildá "Mostrar siempre la barra de herramientas…"** (el
+      nombre exacto cambia un poco según la versión de Chrome) → después `Cmd+Ctrl+F`. Chrome
+      ocupa toda la pantalla y no se ven pestañas, ni la barra de direcciones, ni la barra de menú,
+      ni el Dock: solo la app. **Se entra a pantalla completa al final**, con las pestañas del §2.3 ya
+      armadas.
+- [ ] **El mouse lejos del borde de arriba.** Si toca el borde, baja la barra de menú y la de
+      Chrome. Si pasa en medio de una toma, se recorta en el montaje.
 
-```bash
-osascript -e 'tell application "Google Chrome" to set bounds of front window to {0, 25, 1280, 825}'
-```
+**Para escribir una dirección en pantalla completa** (fuera de cámara): `Cmd+L` muestra la barra de
+direcciones un momento → pegás → Enter. Para cambiar de pestaña no hace falta verla (§2.3).
 
 ### 2.3 Las cuatro pestañas — el truco que ahorra media grabación
 
@@ -351,18 +367,30 @@ cuatro roles pueden estar logueados a la vez y se cambia de rol con `Cmd+Opt+→
 | 3 | Certifier (`verifier@`) |
 | 4 | Notary (`notary@`) |
 
-**Antes de la primera toma**, entrá en cada pestaña con su usuario (la contraseña se tipea, §1.1):
-la 1 se loguea en cámara en T01, las otras tres fuera de cámara. Así, cuando el guion dice "[CER]"
-o "pestaña 3", solo cambiás de pestaña.
+**Antes de T01, en este orden:**
+
+0. Cerrá todas las pestañas que hayan quedado de la recorrida del §1.5.1, y todavía **sin**
+   pantalla completa.
+1. Pestaña **1**: `propnexus-web.onrender.com/login` **sin entrar**, y **en castellano**. Si aparece
+   en inglés, tocá el toggle de idioma para volver a Español.
+2. Pestañas **2, 3 y 4**, en ese orden: `Cmd+T` → escribí `propnexus-web.onrender.com/login` → entrá
+   con su usuario (la contraseña se tipea, §1.1). Se ven en castellano: está bien.
+3. Volvé a la pestaña 1 (`Cmd+1`), entrá en pantalla completa (§2.2) y grabás **T01**: el primer
+   gesto es el toggle → inglés, y recién después el login.
+4. **Después de T01, fuera de cámara:** pasá por las pestañas 2, 3 y 4 y recargá cada una (`Cmd+R`).
+   El idioma se lee al abrir la página: sin recargar, siguen en castellano. La sesión sobrevive a la
+   recarga.
+
+Cuando el guion dice "[DEV]" o "pestaña 2", solo cambiás de pestaña (`Cmd+Opt+→` / `Cmd+Opt+←`).
 
 **Dos reglas que no se pueden romper:**
 
 1. **Cada pestaña se abre con `Cmd+T` en blanco.** Una abierta haciendo clic en un link desde otra
    **hereda una copia de la sesión de esa otra**, y vas a estar grabando al certifier con la sesión
    del developer sin enterarte.
-2. **Poné el idioma en inglés en la pestaña 1 antes de abrir las otras tres.** El locale vive en
-   `localStorage['propnexus.lang']` (`apps/web/src/i18n/locale.ts:5`), compartido por el origen pero
-   leído al montar: las pestañas ya abiertas necesitan reload.
+2. **El idioma se cambia una sola vez, en cámara, en T01.** Vive en
+   `localStorage['propnexus.lang']` (`apps/web/src/i18n/locale.ts:5`): compartido por todas las
+   pestañas pero leído al montar — por eso el paso 4 de arriba.
 
 ### 2.4 El grabador
 
@@ -371,15 +399,19 @@ funde la CPU de una 2017. OBS solo haría falta para webcam o audio del sistema,
 
 `Shift+Cmd+5` → **Opciones**:
 
-- [ ] Guardar en `~/Movies/propnexus-walkthrough/`
+- [ ] Guardar en `~/Movies/propnexus-walkthrough/`. La carpeta se crea una vez, pegando en la
+      Terminal `mkdir -p ~/Movies/propnexus-walkthrough`; después, en Opciones → **Otra
+      ubicación…** → Películas → `propnexus-walkthrough`.
 - [ ] Temporizador: **ninguno**
 - [ ] Micrófono: **ninguno**
-- [ ] **Mostrar clics del mouse: SÍ** ← sin narración, los clics son lo que hace seguible el video
-- [ ] **Recordar última selección: SÍ** ← lo que garantiza que las 31 tomas encuadren idéntico
-- [ ] Modo: **Grabar porción seleccionada**, arrastrada sobre la ventana de Chrome
+- [ ] **Mostrar clics del mouse: SÍ** ← los clics son lo que hace seguible el video
+- [ ] Modo: **Grabar toda la pantalla** (el ícono de pantalla con un círculo). Con Chrome en pantalla
+      completa, toda la pantalla es la app: las 31 tomas encuadran idénticas sin seleccionar nada.
 
-**Para grabar una toma:** `Shift+Cmd+5` → botón **Grabar** → hacés la toma → para cortar, el botón
-de stop (■) en la barra de menú de arriba. El archivo aparece en la carpeta: renombralo ya (§3).
+**Para grabar una toma:** `Shift+Cmd+5` → **Grabar** → hacés la toma → para cortar,
+**`Cmd+Ctrl+Esc`** (en pantalla completa el botón de stop queda escondido en la barra de menú). El
+archivo aparece en la carpeta: renombralo ya (§3). Los primeros y últimos segundos, con el atajo, se
+recortan en el montaje.
 
 ---
 
@@ -463,9 +495,10 @@ Abre por el final del producto: **`torre-volumen-3`**, con sus 10 etapas certifi
 on-chain. Es el contraste contra el que después se entiende el proyecto que nace vacío.
 
 - [ ] **T01 · Login, y el cambio de idioma** — `/login`
-      Abrís en castellano. Primer gesto del video: el toggle de idioma del header (está en la
-      pantalla de login misma, `login.tsx:99`) → inglés. Recién ahí, login con `buyer@`. Cae solo
-      en "Buy".
+      **Abrís en castellano** (§2.3 deja la pestaña 1 así). Quedate 2 segundos quieto para que se
+      lea. **Primer gesto del video: el toggle de idioma** del header (está en la pantalla de login
+      misma, `login.tsx:99`) → inglés; otros 2 segundos quieto. Recién ahí, login con `buyer@`.
+      Cae solo en "Buy".
       **⚠ La password que la pantalla pre-llena NO sirve contra producción.** `ROLE_PRESETS`
       (`login.tsx:20`) trae `buyer123`, que es el default local; producción usa
       `SEED_DEMO_PASSWORD` de `apps/api/.env`, que es otra. Verificado el 2026-09-21: apretar
@@ -622,7 +655,7 @@ sobre una obra terminada, y es la única unidad de la base que lo está.
       Un banco o un escribano abre el dossier **sin tener usuario en la plataforma**.
       **Es el plano más fuerte del producto entero.** Incógnito y no una pestaña más: tiene que
       verse que no hay sesión. `Cmd+Shift+N` abre la ventana; antes de grabar, pegá el link, poné el
-      zoom en 110% y corré el mismo comando de tamaño del §2.2 para que encuadre igual. Al terminar,
+      zoom en 110% y `Cmd+Ctrl+F` para pantalla completa, igual que la otra. Al terminar,
       cerrá la ventana de incógnito entera.
 
 - [ ] **T26 · La firma** — [NOT] `/notary` → `/notary/dossiers` → `/notary/dossier/:id`
@@ -652,8 +685,9 @@ sobre una obra terminada, y es la única unidad de la base que lo está.
 
 - [ ] **T31 · Responsive** — DevTools → Device Toolbar (`Cmd+Shift+M`) → preset iPhone o Pixel
       El diseño es mobile-first (M2-D3): en móvil aparece la **BottomNav de 5 solapas** que en
-      desktop es sidebar. **Encuadre:** grabá solo la región del viewport emulado, si no entra todo
-      el chrome de DevTools alrededor.
+      desktop es sidebar. **Encuadre — la única toma que no es pantalla completa:** en
+      `Shift+Cmd+5` elegí **Grabar porción seleccionada** y arrastrá el recuadro justo sobre el
+      teléfono emulado, sin el panel de DevTools. El montaje la centra sola sobre fondo blanco.
 
 **Cobertura:** las 31 tomas recorren **las 43 rutas** de `apps/web/src/routes` — 42 más la que se sumó el 2026-09-21 (`SPEC-220`).
 
@@ -672,16 +706,21 @@ Abrí **Terminal** (Cmd+Espacio → escribí "Terminal" → Enter) y pegá:
 ffmpeg -version
 ```
 
-Si responde con texto que empieza por `ffmpeg version`, ya está instalado: pasá al §5.2. Si dice
-`command not found`, instalalo con Homebrew:
+Si responde con texto que empieza por `ffmpeg version`, ya está: pasá al §5.2. Si dice
+`command not found`, pegá esto entero (baja ffmpeg ya compilado para Mac Intel desde evermeet.cx, sin
+Homebrew — que en la 2017 puede no estar soportado y tardar horas compilando):
 
 ```bash
-/bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
-brew install ffmpeg
+mkdir -p ~/bin && cd ~/bin \
+  && curl -L -o ffmpeg.zip https://evermeet.cx/ffmpeg/getrelease/zip \
+  && curl -L -o ffprobe.zip https://evermeet.cx/ffmpeg/getrelease/ffprobe/zip \
+  && unzip -o ffmpeg.zip && unzip -o ffprobe.zip && rm ffmpeg.zip ffprobe.zip \
+  && echo 'export PATH="$HOME/bin:$PATH"' >> ~/.zprofile \
+  && export PATH="$HOME/bin:$PATH" && ffmpeg -version | head -1
 ```
 
-(El primero pide la contraseña del Mac —no se ve mientras la tipeás, es normal— y tarda unos minutos.
-Al terminar puede pedirte que pegues dos líneas que empiezan con `echo` o `eval`: pegalas.)
+Tiene que terminar mostrando `ffmpeg version …`. El montaje también se puede hacer en cualquier otra
+Mac: se copia la carpeta entera y se sigue desde el §5.3.
 
 ### 5.2 Recortar cada video, en QuickTime
 
@@ -710,6 +749,11 @@ Pegá esto entero en la Terminal y Enter:
 CARPETA="${CARPETA:-$HOME/Movies/propnexus-walkthrough}"
 cd "$CARPETA" || { echo "No existe la carpeta $CARPETA"; exit 1; }
 mkdir -p unidas
+if ffmpeg -hide_banner -encoders 2>/dev/null | grep -q h264_videotoolbox; then
+  codec=(-c:v h264_videotoolbox -b:v 10M)
+else
+  codec=(-c:v libx264 -preset veryfast -crf 20)
+fi
 for video in T[0-9][0-9].mov; do
   toma="${video%.mov}"
   dv=$(ffprobe -v error -show_entries format=duration -of csv=p=0 "$video")
@@ -726,7 +770,7 @@ for video in T[0-9][0-9].mov; do
   ffmpeg -y -loglevel error -i "$video" "${audio[@]}" -filter_complex \
     "[0:v]scale=1920:1200:force_original_aspect_ratio=decrease,pad=1920:1200:(ow-iw)/2:(oh-ih)/2:color=white,fps=30,format=yuv420p,tpad=stop_mode=clone:stop_duration=600[v];[1:a]aresample=48000,aformat=channel_layouts=stereo,apad[a]" \
     -map "[v]" -map "[a]" -t "$dur" \
-    -c:v h264_videotoolbox -b:v 10M -c:a aac -b:a 192k "unidas/$toma.mp4" \
+    "${codec[@]}" -c:a aac -b:a 192k "unidas/$toma.mp4" \
     || { echo "FALLÓ $toma — mandale este mensaje a quien te pasó el guion"; exit 1; }
 done
 printf "file '%s'\n" "$PWD"/unidas/T[0-9][0-9].mp4 > unidas/lista.txt
@@ -735,8 +779,8 @@ ffmpeg -y -loglevel error -f concat -safe 0 -i unidas/lista.txt -c copy walkthro
 ```
 
 Va a mostrar una línea por toma (`T01: video 24 s, audio 16 s -> queda en 24 s`) y al final
-**`LISTO: …/walkthrough-final.mp4`**. En esta Mac son unos minutos: re-encodea cada toma una vez,
-para que todas queden del mismo tamaño (1920×1200) antes de pegarlas.
+**`LISTO: …/walkthrough-final.mp4`**. En la 2017 son entre 10 y 20 minutos: re-encodea cada toma una
+vez, para que todas queden del mismo tamaño (1920×1200) antes de pegarlas. Dejá la Mac enchufada.
 
 **Qué hace, para que sepas qué esperar:**
 - Une el video y el audio de cada toma. Dura **lo que dure el más largo de los dos**: si la voz es
@@ -757,8 +801,8 @@ de la Terminal a quien te pasó el guion.
 Abrí `walkthrough-final.mp4` y miralo entero una vez: que las tomas estén en orden, que la voz
 corresponda a la pantalla, y que ninguna muestre una contraseña o una pantalla de error.
 
-**iMovie solo si hace falta agregar títulos o transiciones**, y al final: re-renderiza todo y en esta
-Mac son ~20 minutos por pasada.
+**iMovie solo si hace falta agregar títulos o transiciones**, y al final: re-renderiza todo y en la
+2017 son ~20 minutos por pasada.
 
 ---
 
@@ -805,6 +849,8 @@ defaults write com.apple.finder CreateDesktop true && killall Finder
 ```
 
 - [ ] Desactivar No molestar.
+- [ ] Salir de pantalla completa (`Cmd+Ctrl+F`) y volver a tildar Ver → "Mostrar siempre la barra de
+      herramientas…", si la usabas.
 - [ ] Mover el crudo fuera del disco principal o borrarlo (son varios GB). **Antes, guardar
       `walkthrough-final.mp4`**, y la carpeta `unidas/` si puede hacer falta rehacer una toma.
 - [ ] Parar el keep-alive (§1.5.2) con `Ctrl-C`.
