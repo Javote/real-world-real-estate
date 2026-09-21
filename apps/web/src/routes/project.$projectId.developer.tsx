@@ -200,9 +200,15 @@ function InvestorProjectDeveloper() {
               // El "From 310.000 US$" y el "60 m² to 150 m²" de la captura 60.
               // Los dos son agregaciones sobre las unidades: sin unidades con
               // precio o sin metros declarados, la línea no va.
+              //
+              // **`formatCurrency` recibe unidades mínimas y divide él** — no
+              // se le pasa el monto ya dividido. La primera versión hacía
+              // `/100` acá y mostraba "US$ 1.950" donde iban US$ 195.000:
+              // typechequea igual (los dos son `number`) y solo se ve
+              // renderizado. Mismo call site que `developer.projects.tsx:99`.
               priceLabel={
                 obra.priceFromMinorUnits !== null && obra.priceCurrency
-                  ? formatCurrency(obra.priceFromMinorUnits / 100, obra.priceCurrency, locale)
+                  ? formatCurrency(obra.priceFromMinorUnits, obra.priceCurrency, locale)
                   : null
               }
               sizeLabel={
