@@ -192,7 +192,7 @@ antes que el `NodeSDK` propio dejaba los traces cayendo en silencio pese a que e
 `live` — el bug no se hubiera visto sin agregar `diag.setLogger` primero. Los tres fixes, el smoke
 test de CI que ahora corre el `startCommand` real contra el build compilado, y el detalle completo
 de por qué el asistente de Grafana genera el header OTLP incompleto, están en `apps/api/CLAUDE.md`
-§Trampas verificadas y `specs/evidencia-m3/5-ops/RUNBOOK-deploy.md` §4. De yapa: un warning de Vite por un chunk de
+§Trampas verificadas y `specs/RUNBOOK-deploy.md` §4. De yapa: un warning de Vite por un chunk de
 619kB en el build del web (React + TanStack + Sentry/PostHog + Radix todo junto) se resolvió
 separando vendor chunks — sin relación con lo anterior, encontrado en el mismo log que se estaba
 revisando.

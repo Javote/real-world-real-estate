@@ -13,7 +13,7 @@ unedited — real traffic and real errors from the production instance
 
 ## Files
 
-All under [`specs/evidencia-m3/5-ops/monitoring/`](monitoring/).
+All under [`specs/evidencia-m3/5-ops/monitoring/`](evidencia-m3/5-ops/monitoring).
 
 ### `sentry-issues.jpg`
 

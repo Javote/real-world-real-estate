@@ -6,7 +6,7 @@
 > graban por separado, toma por toma, y se unen al final con un solo comando (§5).
 >
 > Los tiempos de espera salen de
-> [`evidencia-m3/3-preprod/REPORTE-2026-09-10-prueba-de-volumen.md`](evidencia-m3/3-preprod/REPORTE-2026-09-10-prueba-de-volumen.md) §Cronología
+> [`REPORTE-2026-09-10-prueba-de-volumen.md`](REPORTE-2026-09-10-prueba-de-volumen.md) §Cronología
 > (180 anclajes reales contra Preprod). **El estado de los datos del §1.3 está medido contra la base
 > de producción el 2026-09-21**, y la base ya quedó preparada para esta grabación (§1.3.1).
 
@@ -153,7 +153,7 @@ INSERT INTO Dossier (id, unitId, masterHash, compiledAt, shareToken, status, sig
 | membresía verifier de `torre-a` | `ProjectMember` | `ejsq8ei1ufnuz1uk0ura1564` |
 
 Los tres `User.id` que hacen falta están en el §1.1. **El rollback también quedó en
-`specs/evidencia-m3/5-ops/RUNBOOK-deploy.md` §5.1.**
+`specs/RUNBOOK-deploy.md` §5.1.**
 
 **La base no tiene nada más pendiente para grabar.** Lo único que queda es invitar al certifier al
 proyecto nuevo (§1.4), desde la web, durante el corte de T08.
@@ -250,7 +250,7 @@ Recorré a mano, sin grabar, todas las pantallas del guion. Hace tres cosas:
 > **Esto NO es el keep-warm que prohíbe D-040.** Lo prohibido es un cron: mantiene los dos servicios
 > despiertos 24/7 (~1460 h contra las 750 del plan Free) y los suspende cerca del día 15 — el truco
 > para evitar un cold start de un minuto termina causando una caída de dos semanas
-> (`evidencia-m3/5-ops/RUNBOOK-deploy.md` §5). Esto es un loop a mano, atendido, que dura las dos o tres horas de la
+> (`RUNBOOK-deploy.md` §5). Esto es un loop a mano, atendido, que dura las dos o tres horas de la
 > grabación y se apaga cuando terminás. **Si alguna vez te tienta pasarlo a `crontab` o a un workflow
 > de GitHub Actions, no: eso es exactamente lo que D-040 prohíbe.**
 

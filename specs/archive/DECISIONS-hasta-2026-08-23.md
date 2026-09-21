@@ -1584,7 +1584,7 @@ en el object storage, no un temporal).
 
 **Lo que se acepta a cambio, explícito.** Subir evidencia a la instancia desplegada y esperar
 encontrarla después **no funciona**, y eso hay que decirlo antes de cualquier demo. Está anotado en
-el `render.yaml`, en `specs/evidencia-m3/5-ops/RUNBOOK-deploy.md` §Limitaciones y en `specs/stack.md` §6.
+el `render.yaml`, en `specs/RUNBOOK-deploy.md` §Limitaciones y en `specs/stack.md` §6.
 
 **Trigger de revisión.** Se vuelve bloqueante con el primero de: (a) el primer anclaje real (D-014),
 (b) un piloto o reviewer subiendo evidencia que espere conservar, (c) cualquier pantalla que muestre

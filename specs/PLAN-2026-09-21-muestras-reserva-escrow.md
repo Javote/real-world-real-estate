@@ -1,8 +1,8 @@
 # Plan — muestras de "reserva → escrow" en Preprod, desde la extensión de Chrome
 
 > **Estado: agendado, sin correr** (2026-09-21). Es el ítem 3.14 de `CLAUDE.md` §Lo que queda del
-> plan. Cuando se corra, el resultado va a `NOTA-performance-reserva-escrow.md` en esta misma
-> carpeta, con sus capturas en `capturas/`.
+> plan. Cuando se corra, el resultado va a `specs/evidencia-m3/3-preprod/`: la nota de performance y
+> sus capturas.
 
 ## Por qué hace falta
 

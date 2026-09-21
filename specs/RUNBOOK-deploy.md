@@ -276,7 +276,9 @@ hay nada que consultar—.
 
 **Hay que dispararlo desde afuera, y no es pereza:** un `setInterval` dentro de la API deja de contar
 cuando Render duerme el servicio a los 15 minutos, y el free tier no tiene workers (D-003 · D-040).
-Hoy se corre a mano; el paso natural es un cron de GitHub Actions contra ese mismo endpoint.
+Lo dispara un cron de GitHub Actions contra ese mismo endpoint (`.github/workflows/reconcile.yml`,
+todos los días a las 06:00 UTC), que además falla si encuentra hilos sospechosos. También se puede
+correr a mano, y cada pantalla que muestra un anclaje reconcilia lo suyo al leer (D-077).
 
 En Preprod un bloque tarda ~20 s, así que reconciliar inmediatamente después de anclar suele devolver
 `confirmados: 0`. No es un error: es que todavía no confirmó. Volvé a correrlo.
@@ -501,14 +503,14 @@ endpoint (se hace por `turso db shell`), y el estado vuelve con
    Lo que sí hay que vigilar es el techo de **10 GB** del free tier.
 3. **750 instance-hours/mes compartidas** entre los dos servicios. Con spin-down normal sobra
    (~1500 visitas frías); con keep-warm no alcanza.
-4. **Sin worker de confirmaciones.** Los background workers de Render no tienen free tier: cuando
-   exista el pipeline de anclaje, se dispara desde un cron de GitHub Actions contra un endpoint
-   autenticado — **nunca un `setInterval` dentro de la API**, que deja de contar cuando el servicio
-   duerme (D-003, D-040).
-5. **Monitoreo: código listo, cuentas pendientes.** Sentry (errores, back+front) y
-   OpenTelemetry→Grafana Cloud (traces/métricas del backend) están instrumentados
-   (`apps/api/src/instrumentation.ts`, `apps/web/src/lib/observability.ts`) pero quedan apagados
-   sin `SENTRY_DSN`/`OTEL_EXPORTER_OTLP_ENDPOINT` — nadie creó esas cuentas todavía. Sin ellas, los
-   logs de Render siguen siendo lo único que hay. Render Metrics Stream (infra nativa: CPU/RAM del
+4. **Sin worker de confirmaciones.** Los background workers de Render no tienen free tier: la
+   reconciliación se dispara desde un cron de GitHub Actions contra un endpoint autenticado
+   (`reconcile.yml`, diario) y al leer — **nunca un `setInterval` dentro de la API**, que deja de
+   contar cuando el servicio duerme (D-003, D-040).
+5. **Monitoreo: encendido desde el 2026-09-08.** Sentry (errores, back+front),
+   OpenTelemetry→Grafana Cloud (traces del backend) y PostHog (analítica web, sin PII) están
+   instrumentados (`apps/api/src/instrumentation.ts`, `apps/web/src/lib/observability.ts`) y
+   verificados con datos reales en producción (capturas en `specs/EVIDENCIA-2026-09-11-monitoring-screenshots.md`).
+   Sin `SENTRY_DSN`/`OTEL_EXPORTER_OTLP_ENDPOINT` quedan apagados sin romper nada. Render Metrics Stream (infra nativa: CPU/RAM del
    contenedor) es de plan Pro+, no está en free — el dashboard gratis de Render alcanza para
    mirarlo, solo no se puede exportar a Grafana Cloud sin subir de plan.

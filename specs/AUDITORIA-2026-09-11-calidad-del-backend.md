@@ -378,7 +378,7 @@ reconciliable por `reconciliarParaLectura({ referenceId })`; una anclada por
 
 Y el recibo de la duplicación está en los comentarios: **los tres sitios llevan la misma nota con la
 misma fecha** —*"mismo fix que `anchorEvent`/`anchorCommitmentEvent` (2026-09-10, ver
-`specs/evidencia-m3/3-preprod/REPORTE-2026-09-10-prueba-de-volumen.md`)"*—. El bug que encontró la prueba de volumen hubo
+`specs/REPORTE-2026-09-10-prueba-de-volumen.md`)"*—. El bug que encontró la prueba de volumen hubo
 que arreglarlo tres veces. Esa nota repetida es el síntoma, escrito por quien lo arregló.
 
 **El arreglo.** Que la ruta llame a `anchorCommitmentEvent({ …, reference: evidencia.id })`. Un

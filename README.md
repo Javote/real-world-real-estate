@@ -73,7 +73,7 @@ Lo mismo con las variables de entorno. La referencia es
 
 Free tier, **$0/mes**, y eso es una restricción de arquitectura y no de presupuesto (D-040). El
 artefacto es `render.yaml`: dos servicios en Render contra Turso, evidencia en Cloudflare R2.
-Procedimiento completo en [`specs/evidencia-m3/5-ops/RUNBOOK-deploy.md`](specs/evidencia-m3/5-ops/RUNBOOK-deploy.md).
+Procedimiento completo en [`specs/RUNBOOK-deploy.md`](specs/RUNBOOK-deploy.md).
 
 ## Este repositorio es público
 

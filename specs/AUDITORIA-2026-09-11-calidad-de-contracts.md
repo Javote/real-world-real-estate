@@ -129,7 +129,7 @@ distintos. Exactamente el escenario que el párrafo citado dice que el token eli
    `OnChainEvent.outputRef`. **Nunca toca la cadena.**
 4. El modo de falla que deja `outputRef` en `null` con el hilo **vivo on-chain** está documentado en
    el propio archivo (`:231-236`) y **ya ocurrió**: son las *"dos etapas con anclaje perdido"* del
-   `evidencia-m3/3-preprod/REPORTE-2026-09-10-prueba-de-volumen.md`.
+   `REPORTE-2026-09-10-prueba-de-volumen.md`.
 
 En ese estado, la guarda pasa, `retryStageMint` mintea de nuevo y quedan dos hilos. Después
 `findLiveThread` resuelve la ambigüedad con `utxos.find(...)` (`packages/cardano/src/real.ts:313`),

@@ -123,7 +123,7 @@ no la captura. No reintroducir un `hideBrand`.
 - **En dev, `/api` va por el proxy de Vite** a `API_ORIGIN`. En producción el web es estático y vive
   en otro origen: la URL absoluta sale de `VITE_API_ORIGIN` y la API la acepta por su lista blanca
   de CORS (D-065). Si en producción no responde nada y la consola dice CORS, falta `WEB_ORIGIN` del
-  otro lado — ver `specs/evidencia-m3/5-ops/RUNBOOK-deploy.md`.
+  otro lado — ver `specs/RUNBOOK-deploy.md`.
 
 ## Trampas verificadas
 

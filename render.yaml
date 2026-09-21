@@ -16,7 +16,7 @@
 #     migraciones van en el startCommand, la base es Turso y la evidencia vive
 #     en Cloudflare R2 — nada que importe se guarda en el filesystem.
 #
-# Lo que NO está acá y hay que crear a mano una vez (ver specs/evidencia-m3/5-ops/RUNBOOK-deploy.md):
+# Lo que NO está acá y hay que crear a mano una vez (ver specs/RUNBOOK-deploy.md):
 #   · La base Turso y su token.
 #   · El bucket de R2 y su par de claves S3 (§1.4).
 #   · El seed de las cuentas demo (se corre desde tu máquina contra Turso: en

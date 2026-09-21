@@ -132,7 +132,7 @@ Ningún validador custodia ni transfiere valor, en ninguna fase (D-021).
 ## 8 · Infraestructura y despliegue
 
 > **Del 0% al deploy configurado (2026-08-23).** Existe `render.yaml` en la raíz y
-> `specs/evidencia-m3/5-ops/RUNBOOK-deploy.md`. Lo que falta ya no es código ni configuración: son **tres altas de
+> `specs/RUNBOOK-deploy.md`. Lo que falta ya no es código ni configuración: son **tres altas de
 > cuenta** (Render, Turso) y pegar cuatro variables. El procedimiento exacto está en el runbook y
 > **no se repite acá**.
 >
@@ -158,7 +158,7 @@ Ningún validador custodia ni transfiere valor, en ninguna fase (D-021).
 | Cold start ~1 min tras 15 min de inactividad | ● — se calienta a mano antes de demo/grabación | D-040 |
 | Evidencia en **R2**; `UPLOAD_DIR` es solo staging de Multer | ● — la ruta borra el temporal apenas R2 confirma | D-011 |
 | Seed de las cuentas demo: desde tu máquina contra Turso (free no da shell) | ● — procedimiento en el runbook §1.3 | D-047 |
-| **Runbook** (deploy / rollback / incidente) | ● — `specs/evidencia-m3/5-ops/RUNBOOK-deploy.md` | criterio 14 |
+| **Runbook** (deploy / rollback / incidente) | ● — `specs/RUNBOOK-deploy.md` | criterio 14 |
 | Worker de confirmaciones: **cron de GHA**, no background worker | ○ — nada que disparar todavía (`packages/cardano` vacío) | D-040 · D-003 |
 | Entorno de **pre-producción con URL pública** | ◐ — a un `render login` de distancia | criterio 12 |
 | Telemetría / métrica *reserva → escrow < 12 min* | ○ | criterio 9 · D-021 |

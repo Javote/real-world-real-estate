@@ -262,7 +262,7 @@ router.patch(
  * **Desde el 2026-09-10 también devuelve `sospechosos`** (`hilosSospechosos`):
  * transiciones sin TXID que el stage ya dejó atrás — la señal del patrón que
  * la prueba de volumen de ese día encontró a mano. Ver `domain/reconcile.ts`
- * y `specs/evidencia-m3/3-preprod/REPORTE-2026-09-10-prueba-de-volumen.md`.
+ * y `specs/REPORTE-2026-09-10-prueba-de-volumen.md`.
  *
  * **Y desde la misma fecha, antes de mirar nada, intenta repararlos solo**
  * (`repararHilosSospechosos`, Capa 1): busca el UTxO vivo de cada sospechoso

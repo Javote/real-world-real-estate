@@ -61,7 +61,7 @@ jobs:
         run: pnpm -r --filter '!@plataforma/api' test
 
       # M3 §4 pide "dependency scans" además de static analysis, y hasta acá
-      # `pnpm audit` era una corrida puntual (`specs/evidencia-m3/4-seguridad/SECURITY-REVIEW-2026-09.md`,
+      # `pnpm audit` era una corrida puntual (`specs/SECURITY-REVIEW-2026-09.md`,
       # 2026-09-07), no un paso de CI — quedaba desactualizado apenas se
       # sumaba una dependencia nueva.
       #

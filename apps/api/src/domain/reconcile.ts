@@ -175,7 +175,7 @@ const TOPE_SOSPECHOSOS = 20;
 
 /**
  * Detección, no reparación, del patrón que la prueba de volumen del
- * 2026-09-10 encontró a mano (`specs/evidencia-m3/3-preprod/REPORTE-2026-09-10-prueba-de-volumen.md`
+ * 2026-09-10 encontró a mano (`specs/REPORTE-2026-09-10-prueba-de-volumen.md`
  * §Hallazgo): una `STAGE_TRANSITION` sin `txid` que el stage ya dejó atrás —
  * existe un evento con `eventIndex` mayor en el mismo hilo, así que el
  * anclaje de este no se va a reintentar solo.

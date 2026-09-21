@@ -17,7 +17,7 @@
 ## Por qué el script hash es la restricción
 
 `plutus.json` tiene hoy el hash `0a2571c121481939…`, y **bajo ese hash hay 180 eventos anclados en
-Preprod** ([`evidencia-m3/3-preprod/EVIDENCIA-2026-09-11-lista-formal-de-txids.md`](evidencia-m3/3-preprod/EVIDENCIA-2026-09-11-lista-formal-de-txids.md)).
+Preprod** ([`EVIDENCIA-2026-09-11-lista-formal-de-txids.md`](EVIDENCIA-2026-09-11-lista-formal-de-txids.md)).
 Cualquier cambio al código compilado —una línea en `fsm.ak` alcanza— produce otro hash, y con él:
 
 - **otra dirección de script** y **otro policy id** (los dos derivan del hash, ver

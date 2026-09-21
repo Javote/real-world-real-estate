@@ -1,7 +1,7 @@
-# Formal TXID List — Evidence for SOM Criterion 15
+# Formal TXID list — the volume test on Cardano Preprod
 
-> Closes item 3.10 of `CLAUDE.md` §El plan de entrega. This is delivery evidence, not narrative:
-> the 180 TXIDs already existed in the appendix of `specs/evidencia-m3/3-preprod/REPORTE-2026-09-10-prueba-de-volumen.md`.
+> Milestone 3 evidence: *"List of transaction identifiers associated milestone test anchors"*.
+> The 180 TXIDs also appear in the appendix of the [volume test report](volume-test-report.md).
 > This document is the formal publication, in a location intended for that purpose, with every
 > single TXID re-verified against the live chain — not merely against what the application's own
 > database reports — on the day of publication.
@@ -12,9 +12,11 @@ them in would have produced a longer, less legible list. These 180 are a clean, 
 new projects, 10 stages each, all 6 on-chain transactions per stage, with no gaps and no padding
 from unrelated runs.
 
+*Source: the working document `specs/EVIDENCIA-2026-09-11-lista-formal-de-txids.md`, as of 2026-09-21.*
+
 ## The data file
 
-[`specs/evidencia-m3/3-preprod/txids-prueba-de-volumen-2026-09-10.csv`](txids-prueba-de-volumen-2026-09-10.csv)
+[`txids-prueba-de-volumen-2026-09-10.csv`](txids-prueba-de-volumen-2026-09-10.csv)
 — 180 rows, one per transaction. Its column headers and stage/transition labels are in Spanish
 (the project's working language — see the repository's `CLAUDE.md`), reproduced verbatim from the
 source report rather than re-labelled for this document, so the CSV stays a faithful, traceable
@@ -34,7 +36,7 @@ copy of the original data. For an English-speaking reviewer, here is what each c
 
 ## Methodology
 
-1. **Source.** The appendix of `specs/evidencia-m3/3-preprod/REPORTE-2026-09-10-prueba-de-volumen.md`, parsed with a
+1. **Source.** The appendix of the [volume test report](volume-test-report.md), parsed with a
    script rather than transcribed by hand, to avoid repeating a copy error across 180 rows.
 2. **Independent re-verification on 2026-09-11**, against Koios (`preprod.koios.rest`, a public,
    read-only API — not the project's own node and not the application's database), the same method

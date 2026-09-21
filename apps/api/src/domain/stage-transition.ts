@@ -268,7 +268,7 @@ export async function cabezaDelHilo(stageId: string): Promise<string | null> {
  * lo que falta es la prueba, y la UI la muestra como tal (regla 17).
  *
  * **El recibo se guarda apenas existe, no cuando termina de confirmar**
- * (cerrado el 2026-09-10, ver `specs/evidencia-m3/3-preprod/REPORTE-2026-09-10-prueba-de-volumen.md`
+ * (cerrado el 2026-09-10, ver `specs/REPORTE-2026-09-10-prueba-de-volumen.md`
  * §Cómo hacerlo más robusto). Antes había un solo `UPDATE`, después de
  * `verify()`: si el proceso moría entre que `openThread`/`advanceThread`
  * devolvía el `txid` y que ese `UPDATE` corría, la transacción quedaba
