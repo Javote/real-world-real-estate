@@ -2,7 +2,9 @@
 // Adaptador `real` contra apps/api. El adaptador `mock` está pendiente.
 
 import type {
+  AnchorDocumentInput,
   Notification as AppNotification,
+  AuditLogQuery,
   CapitalByProject,
   CapitalMonthlyPoint,
   CapitalSummary,
@@ -10,16 +12,29 @@ import type {
   CertifierCertificate,
   CertifierKpis,
   CertifierStageView,
+  CreateDeveloperProjectInput,
+  CreateInvitationInput,
+  CreateUnitInput,
   DeveloperDocument,
+  DeveloperDocumentListQuery,
   DeveloperKpis,
   Dossier,
   DossierShare,
   InvestorDirectoryEntry,
+  LoginRequest,
   NotaryKpis,
   NotarySignature,
+  NotificationQuery,
+  ObserveStageInput,
   PendingDossier,
   Profile,
-  UnreadCount
+  ProjectListQuery,
+  RejectDossierInput,
+  StageTransitionInput,
+  UnreadCount,
+  UpdateNotificationPrefsInput,
+  UpdateProfileInput,
+  UpdateUnitInput
 } from '@plataforma/shared'
 import { clearSession, getSession } from '../auth/session'
 import type {
@@ -91,6 +106,23 @@ async function request<T>(path: string, init: RequestInit = {}): Promise<T> {
   return res.json() as Promise<T>
 }
 
+/**
+ * GET de un archivo. Es el único camino binario y NO pasa por `request()`
+ * (`request()` parsea JSON), pero tiene que hacer lo mismo que él: usar
+ * `API_BASE` —en producción el web vive en otro origen— y limpiar la sesión
+ * ante un 401. `downloadEvidence` hacía las dos mal: pegaba contra una URL
+ * relativa (el sitio estático, no la API) y no limpiaba la sesión.
+ */
+async function requestBlob(path: string): Promise<Blob> {
+  const session = getSession()
+  const res = await fetch(`${API_BASE}${path}`, {
+    headers: session ? { Authorization: `Bearer ${session.token}` } : {}
+  })
+  if (res.status === 401) clearSession()
+  if (!res.ok) throw new ApiError(res.status, res.statusText)
+  return res.blob()
+}
+
 /** Envoltorio de las listas paginadas por cursor de la API. */
 export interface Paginated<T> {
   items: T[]
@@ -98,7 +130,12 @@ export interface Paginated<T> {
   nextCursor: string | null
 }
 
-function jsonInit(method: string, body: unknown): RequestInit {
+// El cuerpo se declara con el tipo de `packages/shared` en cada call site
+// (`jsonInit<CreateInvitationInput>(…)`): si la API agrega un campo obligatorio
+// o renombra uno, el schema cambia y esto deja de compilar — en vez de un 400
+// en runtime. `port.contract.test.ts` cruza además lo que realmente sale
+// contra el OpenAPI.
+function jsonInit<B>(method: string, body: B): RequestInit {
   return {
     method,
     headers: { 'Content-Type': 'application/json' },
@@ -108,17 +145,14 @@ function jsonInit(method: string, body: unknown): RequestInit {
 
 export const api = {
   login: (email: string, password: string) =>
-    request<LoginResponse>('/api/v1/auth/login', jsonInit('POST', { email, password })),
+    request<LoginResponse>(
+      '/api/v1/auth/login',
+      jsonInit<LoginRequest>('POST', { email, password })
+    ),
 
   me: () => request<MeResponse>('/api/v1/auth/me'),
 
-  listProjects: (params?: {
-    status?: 'planning' | 'in_progress' | 'delayed' | 'completed'
-    q?: string
-    bbox?: string
-    sort?: 'recent' | 'name' | 'delivery'
-    city?: string
-  }) => {
+  listProjects: (params?: ProjectListQuery) => {
     const q = new URLSearchParams()
     if (params?.status) q.set('status', params.status)
     if (params?.q) q.set('q', params.q)
@@ -140,7 +174,10 @@ export const api = {
   getProject: (id: string) => request<ProjectDetail>(`/api/v1/projects/${id}`),
 
   setMilestoneState: (stageId: string, state: StageState) =>
-    request<Stage>(`/api/v1/stages/${stageId}/state`, jsonInit('PATCH', { state })),
+    request<Stage>(
+      `/api/v1/stages/${stageId}/state`,
+      jsonInit<StageTransitionInput>('PATCH', { state })
+    ),
 
   // ── Superficie del developer (M2-D5 filas 35-36, 37, 38/44c, 49, 62) ─────
 
@@ -162,7 +199,8 @@ export const api = {
       { method: 'POST', body: form }
     ),
 
-  listAuditLog: (params?: { category?: string; cursor?: string }) => {
+  // `limit` no entra: la API le pone su default y el front no pagina por tamaño.
+  listAuditLog: (params?: Pick<AuditLogQuery, 'category' | 'cursor'>) => {
     const q = new URLSearchParams()
     if (params?.category) q.set('category', params.category)
     if (params?.cursor) q.set('cursor', params.cursor)
@@ -181,17 +219,17 @@ export const api = {
   listProjectUnits: (projectId: string) =>
     request<DeveloperProjectUnit[]>(`/api/v1/developer/projects/${projectId}/units`),
 
-  createProjectUnit: (
-    projectId: string,
-    unidad: { unitReference: string; floor?: number; sizeM2?: number }
-  ) =>
+  createProjectUnit: (projectId: string, unidad: CreateUnitInput) =>
     request<DeveloperProjectUnit>(
       `/api/v1/developer/projects/${projectId}/units`,
-      jsonInit('POST', unidad)
+      jsonInit<CreateUnitInput>('POST', unidad)
     ),
 
-  updateUnit: (unitId: string, cambios: { floor?: number; sizeM2?: number }) =>
-    request<DeveloperProjectUnit>(`/api/v1/developer/units/${unitId}`, jsonInit('PATCH', cambios)),
+  updateUnit: (unitId: string, cambios: UpdateUnitInput) =>
+    request<DeveloperProjectUnit>(
+      `/api/v1/developer/units/${unitId}`,
+      jsonInit<UpdateUnitInput>('PATCH', cambios)
+    ),
 
   /**
    * Fila 39 — emite la invitación y deja la unidad reservada.
@@ -211,18 +249,10 @@ export const api = {
   listProjectContracts: (projectId: string) =>
     request<DeveloperContract[]>(`/api/v1/developer/projects/${projectId}/contracts`),
 
-  createInvitation: (
-    projectId: string,
-    invitacion: {
-      unitId: string
-      investorEmail: string
-      amountMinorUnits: number
-      currency: string
-    }
-  ) =>
+  createInvitation: (projectId: string, invitacion: CreateInvitationInput) =>
     request<Invitation>(
       `/api/v1/developer/projects/${projectId}/invitations`,
-      jsonInit('POST', invitacion)
+      jsonInit<CreateInvitationInput>('POST', invitacion)
     ),
 
   getDeveloperProgress: () => request<ProgressRow[]>('/api/v1/developer/progress'),
@@ -240,22 +270,23 @@ export const api = {
 
   getCapitalByProject: () => request<CapitalByProject[]>('/api/v1/developer/capital/by-project'),
 
-  createProject: (proyecto: {
-    name: string
-    slug: string
-    address?: string
-    totalUnits?: number
-    estimatedDelivery?: string
-  }) => request<ProjectCreated>('/api/v1/developer/projects', jsonInit('POST', proyecto)),
+  createProject: (proyecto: CreateDeveloperProjectInput) =>
+    request<ProjectCreated>(
+      '/api/v1/developer/projects',
+      jsonInit<CreateDeveloperProjectInput>('POST', proyecto)
+    ),
 
-  listDeveloperDocuments: (status?: 'anchored' | 'pending') => {
+  listDeveloperDocuments: (status?: DeveloperDocumentListQuery['status']) => {
     const qs = status ? `?status=${status}` : ''
     return request<DeveloperDocument[]>(`/api/v1/developer/documents${qs}`)
   },
 
   /** Ancla un documento pendiente. Es idempotente: re-anclar devuelve el evento existente. */
   anchorDocument: (evidenceId: string) =>
-    request<StageEvidenceAnchor>('/api/v1/developer/documents', jsonInit('POST', { evidenceId })),
+    request<StageEvidenceAnchor>(
+      '/api/v1/developer/documents',
+      jsonInit<AnchorDocumentInput>('POST', { evidenceId })
+    ),
 
   listInvestorUnits: () => request<InvestorUnit[]>('/api/v1/investor/units'),
 
@@ -293,15 +324,8 @@ export const api = {
 
   getUnitDossier: (id: string) => request<Dossier>(`/api/v1/investor/units/${id}/dossier`),
 
-  exportUnitDossier: async (id: string): Promise<Blob> => {
-    const session = getSession()
-    const res = await fetch(`${API_BASE}/api/v1/investor/units/${id}/dossier/export.pdf`, {
-      headers: session ? { Authorization: `Bearer ${session.token}` } : {}
-    })
-    if (res.status === 401) clearSession()
-    if (!res.ok) throw new ApiError(res.status, res.statusText)
-    return res.blob()
-  },
+  exportUnitDossier: (id: string): Promise<Blob> =>
+    requestBlob(`/api/v1/investor/units/${id}/dossier/export.pdf`),
 
   shareUnitDossier: (id: string) =>
     request<DossierShare>(`/api/v1/investor/units/${id}/dossier/share`, jsonInit('POST', {})),
@@ -327,7 +351,7 @@ export const api = {
 
   // ── Notificaciones (M2-D5 filas 22 y 62) ─────────────────────────────────
 
-  listNotifications: (params?: { unitId?: string; category?: string }) => {
+  listNotifications: (params?: NotificationQuery) => {
     const q = new URLSearchParams()
     if (params?.unitId) q.set('unitId', params.unitId)
     if (params?.category) q.set('category', params.category)
@@ -357,7 +381,7 @@ export const api = {
   observeStage: (stageId: string, note: string) =>
     request<{ anchor: { txid: string | null; status: string } }>(
       `/api/v1/certifier/stages/${stageId}/observe`,
-      jsonInit('POST', { note })
+      jsonInit<ObserveStageInput>('POST', { note })
     ),
 
   listCertificates: (cursor?: string) =>
@@ -378,7 +402,7 @@ export const api = {
   rejectDossier: (dossierId: string, note: string) =>
     request<{ dossierId: string; status: string }>(
       `/api/v1/notary/dossiers/${dossierId}/reject`,
-      jsonInit('POST', { note })
+      jsonInit<RejectDossierInput>('POST', { note })
     ),
 
   listSignatures: (cursor?: string) =>
@@ -391,17 +415,14 @@ export const api = {
   getProfile: () => request<Profile>('/api/v1/profile'),
 
   updateProfile: (fullName: string) =>
-    request<Profile>('/api/v1/profile', jsonInit('PATCH', { fullName })),
+    request<Profile>('/api/v1/profile', jsonInit<UpdateProfileInput>('PATCH', { fullName })),
 
-  updateNotificationPrefs: (prefs: Record<string, boolean>) =>
-    request<Profile>('/api/v1/profile/notifications', jsonInit('PATCH', prefs)),
+  updateNotificationPrefs: (prefs: UpdateNotificationPrefsInput) =>
+    request<Profile>(
+      '/api/v1/profile/notifications',
+      jsonInit<UpdateNotificationPrefsInput>('PATCH', prefs)
+    ),
 
-  downloadEvidence: async (evidenceId: string): Promise<Blob> => {
-    const session = getSession()
-    const res = await fetch(`/api/v1/evidence/${evidenceId}/download`, {
-      headers: session ? { Authorization: `Bearer ${session.token}` } : {}
-    })
-    if (!res.ok) throw new ApiError(res.status, res.statusText)
-    return res.blob()
-  }
+  downloadEvidence: (evidenceId: string): Promise<Blob> =>
+    requestBlob(`/api/v1/evidence/${evidenceId}/download`)
 }
