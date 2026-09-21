@@ -58,9 +58,9 @@ por `Content-Type`). Archivos chicos: el upload viaja a R2 pasando por Render.
 
 | Proyecto | Etapas | Estados | Membresías | Unidades | Eventos |
 |---|---|---|---|---|---|
-| `torre-volumen-1` | 10 | 10 Completed | dev · verifier · **buyer** | 24, con precio y m² | 60 |
-| `torre-volumen-2` | 10 | 10 Completed | dev · verifier · **buyer** | 18, con precio y m² | 60 |
-| `torre-volumen-3` | 10 | 10 Completed | dev · verifier · buyer | 30, con precio y m²; **1A** sold → buyer, contrato USD 100.000 firmado | 61 |
+| `torre-volumen-1` | 10 | 10 Completed | dev · verifier · **buyer** | 4 vendidas (de 24 declaradas) | 60 |
+| `torre-volumen-2` | 10 | 10 Completed | dev · verifier · **buyer** | 4 vendidas (de 18 declaradas) | 60 |
+| `torre-volumen-3` | 10 | 10 Completed | dev · verifier · buyer | 4 vendidas (de 30 declaradas); la **1A** → buyer, contrato USD 100.000 firmado | 61 |
 | `torre-a` | 3 | 1 Completed, 2 InProgress | **ninguna** | — | 8, 1 `Failed` |
 | `torre-pending-test` | 10 | 9 Pending, 1 InProgress | dev | — | 12 |
 | `torre-belgrano` / `torre-demo-e2e` | 0 | — | dev | — | 0 |
@@ -149,10 +149,12 @@ El commit `b0fbbc2` agregó el perfil del desarrollador (`SPEC-220`) con su migr
   el listado "Buy" de T02**, que arma la línea con `city, country`.
 
 - **Las tres obras tienen unidades con precio y metros.** La prueba de volumen había dejado solo la
-  1A, sin `priceMinorUnits` ni `sizeM2`, y las cards salían sin "From ..." ni rango de metros. Ya
-  cargadas, re-medido contra producción el 2026-09-21: Volumen 1 — 24 unidades, desde US$ 185.000,
-  62–140 m²; Volumen 2 — 18, desde US$ 165.000, 55–120 m²; Volumen 3 — 30, desde US$ 195.000,
-  68–150 m². Mirar esto renderizado es lo que destapó el bug del "desde" dividido dos veces
+  1A, sin `priceMinorUnits` ni `sizeM2`, y las cards salían sin "From ..." ni rango de metros.
+  Verificado en Turso el 2026-09-21: 4 filas de `Unit` por obra, las 12 `sold` y con precio y m²
+  (solo la 1A tiene `investorId`, por eso el perfil dice 1 comprador). Volumen 1 — desde
+  US$ 185.000, 62–140 m²; Volumen 2 — desde US$ 165.000, 55–120 m²; Volumen 3 — desde
+  US$ 195.000, 68–150 m². Los 24 / 18 / 30 que muestran las cards son `Project.totalUnits`, las
+  unidades declaradas, no filas cargadas. Mirar esto renderizado es lo que destapó el bug del "desde" dividido dos veces
   (`dc85535`). **El portfolio del buyer sigue siendo solo la 1A**, que es lo que necesita T13.
 
 *(El proyecto que se crea en cámara en T08 **no** va a tener organización, y está bien: su detalle
