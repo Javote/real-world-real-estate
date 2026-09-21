@@ -107,7 +107,22 @@ que el producto viene a eliminar.
 
 `aiken check` **no mide coverage de líneas** —solo tiene `--property-coverage`, que es la
 distribución de labels en property tests—, así que el ≥95% del criterio 2 del SOM se demuestra con
-esta tabla. **85 tests, 0 fallando** (dos de ellos, property tests, corren 100 casos generados
+esta tabla.
+
+**La tabla se mide, no solo se afirma** (`SPEC-017` paso 6). Dos scripts en `contracts/scripts/`,
+que se corren a mano desde la raíz del repo:
+
+```bash
+node contracts/scripts/rechazos-mutantes.mjs --listar   # qué chequeos se van a mutar, sin correr aiken
+node contracts/scripts/rechazos-mutantes.mjs            # saca cada chequeo de a uno: algún test tiene que ponerse rojo (~4 s por mutante)
+node contracts/scripts/rechazos-trazas.mjs              # cada `expect` contra el test de rechazo que aborta exactamente ahí
+```
+
+`rechazos-mutantes.mjs` cubre las conjunciones de `and`, los `expect` booleanos, los patrones de
+lista, las puntas de la ventana de validez, las ramas de la tabla de transiciones y el `fail` del
+`else` (51 mutantes). Los `expect` que desarman o castean (`Some(x) = …`, `x: StageDatum = …`, 7) no
+se pueden mutar sin romper los tipos: los cubre `rechazos-trazas.mjs` con la traza que devuelve
+`aiken check`. Los dos salen con código ≠ 0 si queda un chequeo sin test. **85 tests, 0 fallando** (dos de ellos, property tests, corren 100 casos generados
 cada uno — ver la fila de abajo).
 
 `lib/propnexus/fsm.ak` — 45:

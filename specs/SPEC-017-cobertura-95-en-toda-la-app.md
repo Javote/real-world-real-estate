@@ -37,7 +37,7 @@ Medido el 2026-09-21 contra `main` (`1882a0a`), con `include` sobre todo `src/`.
 
 | Parte | Hoy | Líneas cubiertas / total | Faltan para 95% | Dónde está el hueco | Cómo agregarlo |
 |---|---|---|---|---|---|
-| **Contratos** (`contracts/`, Aiken) | sin métrica de líneas | — | **0** | Aiken no mide cobertura de líneas (`aiken check` solo tiene `--property-coverage`) | La evidencia es la tabla *punto de rechazo → test* de `contracts/CLAUDE.md` §Coverage: 85 tests, los 31 puntos de rechazo de `stage.ak` y la tabla de transiciones exhaustiva. **Trabajo: verificarla mecánicamente** — que cada `fail`, `expect` y rama `else` de `validators/stage.ak` y `lib/propnexus/fsm.ak` tenga su fila, y declararlo así en el reporte. No se escriben tests nuevos salvo que aparezca un punto sin fila |
+| **Contratos** (`contracts/`, Aiken) | sin métrica de líneas | — | **0 esperado — a medir** | Aiken no mide cobertura de líneas (`aiken check` solo tiene `--property-coverage`) | La tabla *punto de rechazo → test* de `contracts/CLAUDE.md` §Coverage (85 tests) se **mide** con dos scripts ya escritos (2026-09-21), pendientes de correr: `contracts/scripts/rechazos-mutantes.mjs` saca cada uno de los **51 chequeos** mutables de a uno y exige que algún test se ponga rojo; `contracts/scripts/rechazos-trazas.mjs` verifica que cada `expect` —incluidos los **7** que desarman o castean y no se pueden mutar— tenga un test de rechazo que aborte exactamente ahí. Con los dos en verde, el 100% queda medido. Si algún chequeo queda sin test, se escribe el test |
 | **API** (`apps/api`) | **89,4%** | 1.860 / 2.081 | **~116** | `routes/certifier.routes.ts` (22), `routes/investor.routes.ts` (20), `routes/developer-comercial.routes.ts` (19): ramas de error y de permisos sin test · `lib/storage.ts` (22): el driver S3, que solo se prueba contra MinIO en `test:s3` · scripts de arranque: `db/fixtures.ts` (26), `db/seed.ts` (19), `instrumentation.ts` (16), `db/migrate.ts` (13) | Tests de integración con supertest para las ramas de error de las tres rutas (401/403/404/409 que hoy nadie pide). `storage.ts`: unit tests del driver S3 con el cliente mockeado (`@aws-sdk/client-s3`), además del test contra MinIO que ya existe. Scripts: exportar su lógica como funciones y testearlas contra la SQLite de test — `seed` con passwords de entorno y sin ellas, `migrate` idempotente, `instrumentation` con y sin DSN |
 | **cardano** (`packages/cardano`) | **90,1%** | 247 / 274 | **~14** | `factory.ts` (10): la selección de adaptador y sus errores de configuración · `real.ts` (11): ramas de error de Blockfrost | `factory.ts`: un test por combinación de `ANCHOR_MODE`/variables faltantes (el comportamiento lo fija D-075). `real.ts`: las respuestas de error del proveedor, con el mismo mock que usan los tests existentes |
 | **shared** (`packages/shared`) | **61,2%** | 142 / 232 | **~79** | Módulos de schemas Zod que ningún test importa: `project.ts` (19), `unit.ts` (10), `dossier.ts` (10), `contract.ts` (9), y 12 más de 4–6 líneas | Un test por módulo que parsee un caso válido y uno inválido de cada schema exportado (el que rechaza es el que importa: es el contrato que la API aplica). Es trabajo chico y mecánico |
@@ -70,7 +70,13 @@ Cada paso es un commit (o varios, en la web) con `pnpm verify:all` en verde.
 4. **API** → 95%: primero las tres rutas, después `storage.ts`, después los scripts de arranque.
 5. **Web** → 95%, por tandas: investor → developer → certifier → notary → admin y compartidas →
    `components/` y `lib/`. Cada tanda sube el umbral de la web a lo que midió.
-6. **Contratos**: la verificación mecánica de la tabla de `contracts/CLAUDE.md`.
+6. **Contratos** — **los scripts ya están escritos** (2026-09-21), falta correrlos:
+   `node contracts/scripts/rechazos-mutantes.mjs --salida <archivo>` y
+   `node contracts/scripts/rechazos-trazas.mjs --salida <archivo>`. Los dos reportes (en inglés, o
+   traducidos) van a `specs/evidencia-m3/1-repo-ci-tests/` como evidencia del 100% de los contratos,
+   y `contracts/CLAUDE.md` §Coverage cita el resultado. Un mutante vivo o un `expect` sin test se
+   cierra escribiendo el test que falta. Se puede hacer antes que los pasos 2–5: no depende de
+   ellos.
 7. **CI** (🟡): el job `app` corre `test:coverage` de las cuatro partes TypeScript con umbral 95%
    (hoy solo corre el de la API).
 8. **La evidencia**: una corrida nueva de CI, y con ella se actualizan

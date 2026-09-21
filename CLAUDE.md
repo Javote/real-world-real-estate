@@ -388,12 +388,15 @@ pnpm lint:fix                     # Biome arregla lo mecánico
 
 pnpm --filter @plataforma/api test:s3         # storage contra MinIO real
 pnpm --filter @plataforma/cardano test:yaci   # anclaje contra un nodo Cardano real
+node contracts/scripts/rechazos-mutantes.mjs  # cada chequeo del validador tiene un test que lo defiende (SPEC-017)
+node contracts/scripts/rechazos-trazas.mjs    # cada `expect` del validador, contra el test que aborta en él
 docker compose -f compose.dev.yml up -d       # solo si querés la infra levantada aparte
 ```
 
 **TypeScript y Aiken no se mezclan:** distinto toolchain, distintos artefactos, distintos modos de
-falla. El CI los corre como dos jobs en paralelo. Los dos últimos comandos **no corren en CI** (no
-levanta infraestructura): se corren a mano.
+falla. El CI los corre como dos jobs en paralelo. `test:s3`, `test:yaci` y los dos scripts de
+`contracts/scripts/` **no corren en CI**: los dos primeros levantan infraestructura, y los scripts
+corren `aiken check` una vez por mutante (varios minutos). Se corren a mano.
 
 Los comandos por frente (`db:migrate`, `db:seed`, `e2e`) están en el `CLAUDE.md` de cada uno.
 
