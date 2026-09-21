@@ -293,7 +293,8 @@ limpia y una que arranca con un esqueleto de carga. Hacelo sí o sí:
 
 Grabando la pantalla completa (2880×1800) son **~200-300 MB por minuto**; el crudo de este guion
 son ~20-25 minutos, y el montaje suma ~3 GB más (`unidas/` y el archivo final). **Contar con 15 GB
-libres.** El 2026-09-21 esta Mac tenía **11 GB**: hay que liberar antes de grabar.
+libres.** El 2026-09-21, después de limpiar, esta Mac quedó con **33 GB** libres: alcanza. Chequealo
+igual el día de la grabación.
 
 ```bash
 df -h /
