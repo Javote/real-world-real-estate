@@ -1,4 +1,5 @@
 import { createHash } from "node:crypto";
+import { Readable } from "node:stream";
 import {
   bundleFilesSchema,
   cuidParamSchema,
@@ -37,10 +38,9 @@ const evidenceDetailSchema = evidenceSchema.extend({
   uploadedBy: z.strictObject({ id: z.string(), email: z.email(), fullName: z.string() })
 });
 
-// **SPEC-216 §E7 — migrado a oRPC (D-066), 7 de las 8 rutas.**
-// `GET /:id/download` NO migra: es `SPEC-217`, streaming real con
-// `storage.read(...).pipe(res)`, y no tiene resuelto todavía si oRPC puede
-// servir eso sin bufferear entero en memoria — se queda con Express llano.
+// **SPEC-216 §E7 — migrado a oRPC (D-066), las 8 rutas.**
+// `GET /:id/download` cierra con `SPEC-217`: oRPC SÍ sirve un stream real sin
+// bufferearlo (ver `downloadEvidenceProcedure`).
 //
 // **`POST /:id/anchor` repite el 200/201 idempotente que SPEC-212 §A ya
 // resolvió** (`outputStructure: "detailed"`, unión discriminada por
@@ -109,42 +109,70 @@ router.get(
 );
 
 /**
- * **NO migra a oRPC — ver `SPEC-217`.** `OpenAPIHandler` bufferea la
- * respuesta antes de escribirla, y esta ruta streamea desde el storage
- * (`s3`/disco) sin cargar el archivo entero en memoria — la misma clase de
- * riesgo que ya descartó migrar el PARSEO del multipart en `SPEC-212` §D.
+ * **SPEC-217 — streaming real con oRPC, verificado leyendo el código de
+ * `@orpc/openapi` y `@orpc/standard-server-node`.** Con `outputStructure:
+ * "detailed"` y un `body` que sea un `ReadableStream` WEB, `encode()` lo deja
+ * pasar sin serializar y `sendStandardResponse()` lo pipea al socket
+ * (`Readable.fromWeb(body).pipe(res)`): ningún `Buffer.concat` ni límite de
+ * tamaño en el camino. Por eso `storage.read()` (un `Readable` de Node) se
+ * envuelve con `Readable.toWeb()` — devolver el `Readable` crudo no matchea
+ * ninguna rama y saldría serializado como JSON.
+ *
+ * Los dos 404 se resuelven ANTES de armar el stream: ningún header se escribe
+ * si no hay nada que servir. `Content-Type` y `Content-Disposition` salen del
+ * registro, nunca de lo que la librería infiera. Además, `sendStandardResponse`
+ * engancha `'error'` del stream y hace `res.destroy(error)`: un storage que
+ * falla a mitad de la descarga corta la respuesta en vez de tirar una
+ * excepción sin capturar (el código anterior no tenía manejador).
+ *
+ * **No agregar `CompressionPlugin` a `OpenAPIHandler` sin excluir esta ruta**:
+ * comprimir cambia el perfil de memoria que esta ruta existe para proteger.
  */
+const downloadEvidenceProcedure = os
+  .route({ method: "GET", path: "/{id}/download", outputStructure: "detailed" })
+  .input(z.strictObject({ id: cuidParamSchema }))
+  .output(
+    z.object({
+      headers: z.record(z.string(), z.string()).optional(),
+      body: z.instanceof(ReadableStream)
+    })
+  )
+  .handler(async ({ input }) => {
+    const evidence = await db
+      .selectFrom("Evidence")
+      .selectAll()
+      .where("id", "=", input.id)
+      .executeTakeFirst();
+
+    if (!evidence) throw new ORPCError("NOT_FOUND", { message: "Evidence not found" });
+
+    if (!(await storage.exists(evidence.storagePath))) {
+      throw new ORPCError("NOT_FOUND", { message: "Stored file not found" });
+    }
+
+    // El nombre visible sale del registro, no del objeto guardado.
+    const contenido = await storage.read(evidence.storagePath);
+    return {
+      headers: {
+        "content-type": evidence.mimeType,
+        "content-disposition": `attachment; filename="${encodeURIComponent(evidence.originalFilename)}"`
+      },
+      body: Readable.toWeb(contenido) as ReadableStream
+    };
+  });
+const downloadEvidenceHandler = new OpenAPIHandler({ downloadEvidenceProcedure });
+
 router.get(
   "/:id/download",
   authorize({
     roles: CUALQUIER_ROL,
     acceso: { proyecto: { via: "Evidence", param: "id" }, membresias: ANY_MEMBERSHIP }
   }),
-  async (req, res) => {
-    const evidence = await db
-      .selectFrom("Evidence")
-      .selectAll()
-      .where("id", "=", req.params.id as string)
-      .executeTakeFirst();
-
-    if (!evidence) {
-      return res.status(404).json({ message: "Evidence not found" });
-    }
-
-    if (!(await storage.exists(evidence.storagePath))) {
-      return res.status(404).json({ message: "Stored file not found" });
-    }
-
-    // Se streamea desde el storage en vez de `res.download`: con `s3` no hay
-    // ruta local que pasarle, y el nombre visible sale del registro, no del
-    // objeto guardado.
-    res.setHeader("Content-Type", evidence.mimeType);
-    res.setHeader(
-      "Content-Disposition",
-      `attachment; filename="${encodeURIComponent(evidence.originalFilename)}"`
-    );
-    const contenido = await storage.read(evidence.storagePath);
-    return contenido.pipe(res);
+  async (req, res, next) => {
+    const { matched } = await downloadEvidenceHandler.handle(req, res, {
+      prefix: PREFIJO_ABSOLUTO
+    });
+    if (!matched) next();
   }
 );
 
@@ -576,11 +604,11 @@ router.get(
 );
 
 /** El router oRPC combinado de esta vertical — lo consume
- * `scripts/generate-openapi.ts` para generar el fragmento de OpenAPI de las 7
- * rutas migradas. `GET /:id/download` no está acá — sigue con Express llano,
- * documentado a mano (ver `SPEC-217`). */
+ * `scripts/generate-openapi.ts` para generar el fragmento de OpenAPI de las 8
+ * rutas migradas. */
 export const evidenceOrpcRouter = {
   evidenceDetailProcedure,
+  downloadEvidenceProcedure,
   updateEvidenceProcedure,
   reconcileEvidenceProcedure,
   anchorEvidenceProcedure,

@@ -60,9 +60,9 @@ import { type UsersContext, usersOrpcRouter } from "../src/routes/users.routes";
 // archivo. Las dos VALIDAN en runtime (`schema.parse(...)` antes de
 // responder) y se documentan acá en `RESPONSE_SCHEMAS`. De las rutas que no
 // migraron a oRPC, solo quedan sin entrada las que legítimamente no tienen
-// cuerpo JSON: `204 No Content` (borrados) y la que devuelve un archivo
-// binario (`/evidence/:id/download`) — `/dossier/export.pdf` migró a oRPC
-// con un `File` como body (SPEC-212 §C) y ya no pasa por acá.
+// cuerpo JSON: `204 No Content` (borrados) — las que devuelven un archivo
+// binario (`/dossier/export.pdf`, SPEC-212 §C, y `/evidence/:id/download`,
+// SPEC-217) migraron a oRPC y ya no pasan por acá.
 //
 // **El código de éxito se lee del handler, no se adivina por verbo HTTP.**
 // La primera versión de este generador usaba una convención (`POST → 201`,
@@ -207,8 +207,8 @@ function aPathOpenApi(ruta: string): string {
  * `developer`/`developer-comercial`/`capital` (§D, las 19 — todas salvo la
  * subida multipart) y, desde SPEC-216, `profile`/`notifications` (§E1),
  * `auth`/`public` (§E2), `audit`/`contracts` (§E3), `stages` (§E5),
- * `projects`/`projects-obra` (§E6), `evidence` (§E7, salvo
- * `GET /:id/download`, que es `SPEC-217`) y `users` (§E4) — ya migradas a
+ * `projects`/`projects-obra` (§E6), `evidence` (§E7, las 8, incluida
+ * `GET /:id/download` de `SPEC-217`) y `users` (§E4) — ya migradas a
  * oRPC. El bucle de abajo las saltea y su fragmento sale, aparte, de sus
  * routers oRPC combinados con `OpenAPIGenerator` (ver el final de esta
  * función).
@@ -241,6 +241,7 @@ const ORPC_MIGRADAS = new Set([
   "POST /api/v1/projects/:id/stages/:stageId/retry-anchor",
   "GET /api/v1/projects/:id/stages/:stageId",
   "GET /api/v1/evidence/:id",
+  "GET /api/v1/evidence/:id/download",
   "PATCH /api/v1/evidence/:id",
   "POST /api/v1/evidence/reconcile",
   "POST /api/v1/evidence/:id/anchor",
@@ -461,8 +462,7 @@ export async function buildOpenApiDocument() {
   );
   Object.assign(paths, documentoProjectsObra.paths);
 
-  // SPEC-216 §E7 — 7 de las 8 rutas; `GET /:id/download` sigue fuera
-  // (`SPEC-217`) y por eso no tiene entrada acá ni en `ORPC_MIGRADAS`.
+  // SPEC-216 §E7 + SPEC-217 — las 8 rutas de evidence.
   const documentoEvidence = await generadorOrpc.generate(
     os.$context<EvidenceContext>().prefix("/api/v1/evidence").router(evidenceOrpcRouter),
     {

@@ -1,5 +1,7 @@
 # SPEC-217 — `GET /evidence/:id/download`: streaming real con oRPC, investigado y verificado
 
+> **Cerrada 2026-09-20 — implementada** (`downloadEvidenceProcedure`, `test/spec-217-download-streaming.test.ts`).
+
 > **Origen:** desprendida de [`SPEC-216`](SPEC-216-orpc-en-los-11-routers-restantes.md) el
 > 2026-09-20, en la misma auditoría ruta por ruta que esa spec — es la única de las 39 rutas de los
 > 11 routers cross-cutting/admin que no repite un patrón ya probado en `SPEC-212`. Nivel 🟡, mismo

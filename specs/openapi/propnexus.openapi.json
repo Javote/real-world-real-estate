@@ -12,39 +12,6 @@
     }
   ],
   "paths": {
-    "/api/v1/evidence/{id}/download": {
-      "get": {
-        "summary": "GET /api/v1/evidence/:id/download",
-        "description": "auth + autoriza(rol(admin|developer|buyer|verifier|notary) · proyecto(Evidence:id → developer|buyer|verifier))",
-        "security": [
-          {
-            "bearerAuth": []
-          }
-        ],
-        "parameters": [
-          {
-            "in": "path",
-            "name": "id",
-            "schema": {
-              "type": "string",
-              "pattern": "^[a-z][a-z0-9]{23}$"
-            },
-            "required": true
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "OK"
-          },
-          "401": {
-            "description": "Sin sesión o token inválido"
-          },
-          "403": {
-            "description": "Rol o membresía insuficiente"
-          }
-        }
-      }
-    },
     "/api/v1/developer/projects/{id}/stages/{stageId}/evidence": {
       "post": {
         "summary": "POST /api/v1/developer/projects/:id/stages/:stageId/evidence",
@@ -5352,6 +5319,28 @@
                 }
               }
             }
+          }
+        }
+      }
+    },
+    "/api/v1/evidence/{id}/download": {
+      "get": {
+        "operationId": "downloadEvidenceProcedure",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "pattern": "^[a-z][a-z0-9]{23}$"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {}
           }
         }
       }

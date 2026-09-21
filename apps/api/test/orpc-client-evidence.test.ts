@@ -14,8 +14,8 @@ function crearCliente(link: InstanceType<typeof OpenAPILink>) {
   return createORPCClient<RouterClient<typeof evidenceOrpcRouter>>(link);
 }
 
-// SPEC-216 §E7 — mismo patrón que `orpc-client-profile.test.ts`. Cubre las 7
-// rutas migradas (`GET /:id/download` sigue en Express, es `SPEC-217`).
+// SPEC-216 §E7 — mismo patrón que `orpc-client-profile.test.ts`. Cubre las 8
+// rutas migradas (`GET /:id/download` cierra con `SPEC-217`).
 let servidor: http.Server;
 let baseUrl: string;
 let tokenAdmin: string;
