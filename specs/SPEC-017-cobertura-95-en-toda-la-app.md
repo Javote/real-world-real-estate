@@ -11,11 +11,43 @@
 ## Qué se mide
 
 **Cobertura de líneas** (`v8`, la que ya usa la API): qué porcentaje de las líneas del código fuente
-ejecuta al menos un unit test. No es la proporción de tests en verde, que ya es 100% en las cinco
+ejecuta al menos un test automático (unit o integración, ver abajo). No es la proporción de tests en verde, que ya es 100% en las cinco
 partes (1.845 pasan, 3 omitidos a propósito, 0 fallan — `specs/evidencia-m3/1-repo-ci-tests/`).
 
 **La vara: ≥95% de líneas en cada una de las cinco partes, medida sobre todo su código fuente.** Una
 parte al 99% no compensa otra al 60%.
+
+## Las tres clases de test, y cuáles suman
+
+Con un mismo ejemplo, **"el certificador completa una etapa"**:
+
+**1. Unit (unitario): prueba una pieza sola.** La función de `packages/shared` que decide si
+`InProgress → Completed` es una transición válida: se le pasan dos estados y se verifica que
+devuelva sí o no. Sin base de datos, sin servidor, sin pantalla. Es probar un engranaje suelto.
+*Dónde hay:* shared, cardano, contratos (los 85 de Aiken) y la web (los tests de componentes, como
+`HashChip`).
+
+**2. Integración: prueba varias piezas conectadas, sin navegador.** Se levanta la API dentro del
+propio test, con una base de datos de prueba, y se le manda `PATCH /stages/:id/state` como lo haría
+un cliente. Se verifica el recorrido entero: que chequee el rol, que aplique la regla de transición,
+que guarde en la base y que escriba el audit log. Es probar la máquina armada, sin nadie usándola.
+*Dónde hay:* casi todos los 544 de la API.
+
+**3. E2E (end-to-end, punta a punta): prueba la app como la usa una persona.** Playwright abre un
+navegador de verdad, entra con el usuario certificador, hace clic en la etapa y en "Completar", y
+verifica que la pantalla muestre el cambio. Recorre web + API + base, todo junto. Es poner a alguien
+a usar la máquina. *Dónde hay:* los 90 de `apps/web/e2e/`.
+
+| Clase | ¿Suma al %? | Por qué |
+|---|---|---|
+| Unit | ✅ Sí | Corre dentro de Vitest, que va marcando cada línea que se ejecuta |
+| Integración | ✅ Sí | También corre dentro de Vitest: la API se levanta en el mismo proceso del test, así que sus líneas quedan marcadas |
+| E2E | ❌ No | Playwright maneja un navegador que le habla a un servidor aparte. Vitest no ve ese proceso, así que no puede marcar nada |
+
+Por eso la web da 29% aunque sus pantallas estén bien probadas: las prueban los e2e, que no suman.
+Y por eso la API da 89%: sus tests de integración sí suman.
+
+**La cobertura se mide con unit + integración (todo lo que corre en Vitest); los e2e no suman.**
 
 ## El hallazgo que cambia la medición
 
