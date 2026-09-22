@@ -424,27 +424,47 @@ esta tanda, no baja. Quedan abiertas las tandas admin, developer, investor, `pro
 (`admin.index.tsx`, 44 líneas, un solo archivo) — con la salvedad de que la spec la agrupa con
 "compartidas", así que conviene mirar de cerca qué entra en esa tanda antes de arrancarla.
 
-## Branches, además de líneas — 2026-09-22
+## Statements y branches, además de líneas — 2026-09-22, ampliado 2026-09-23
 
 **No es el paso 5 ni un paso nuevo: es una vara más estricta que el dueño pidió sumar sobre lo que
 esta spec ya mide.** §Qué se mide fija líneas como el criterio de cierre, y con eso las cuatro
-partes TypeScript están cerradas o encaminadas. Pero **branches** (v8 mide las cuatro métricas
-igual: statements, branches, functions, lines) es más exigente — para cubrir una rama hay que
-ejercitar **cada** salida de cada `if`/`? :`/`??`/`&&`/`switch`, no solo pasar una vez por la línea
-que la contiene. Un archivo con 100% de líneas puede tener la mitad de sus branches sin tocar. Esta
-sección registra el trabajo sobre esa métrica, en paralelo al paso 5 — no lo reemplaza ni lo
-bloquea, y no es parte del criterio de cierre de §Criterio de cierre.
+partes TypeScript están cerradas o encaminadas. Pero v8 mide **cuatro** métricas, no una —
+statements, branches, functions, lines— y las otras tres son más exigentes que líneas:
 
-Medido el 2026-09-22, las tres métricas por parte (`lines` ya es la que mide §Qué se mide; se repite
-acá al lado de las otras dos para tener las tres juntas):
+- **Branches:** para cubrir una rama hay que ejercitar **cada** salida de cada
+  `if`/`? :`/`??`/`&&`/`switch`, no solo pasar una vez por la línea que la contiene. Un archivo con
+  100% de líneas puede tener la mitad de sus branches sin tocar.
+- **Statements:** una línea puede contener más de un statement (`a(); b();`, o un operador corto que
+  no cuenta como branch pero sí como statement aparte); 100% de líneas no implica 100% de
+  statements, y por eso el número de statements de la API (90,81%) queda seis puntos por debajo del
+  de líneas (96,92%) aun con las tandas ya cerradas.
 
-| Parte | Branches | Functions | Lines |
-|---|---|---|---|
-| `packages/cardano` | **96,81%** (152/157) — cerrado hoy | 100% (90/90) | 99,63% (273/274) |
-| `packages/shared` | 96,55% (56/58) — ya venía así del cierre del paso 2 | 100% (19/19) | 100% (232/232) |
-| `apps/api` | **78,25%** (878/1.122) — trabajado hoy, falta la mayoría | 95,92% (494/515) | 96,63% (2.013/2.083) |
-| `apps/web` | ~29% — sin tocar esta sesión | ~37% | ~37% |
-| `contracts/` (Aiken) | 100% por la vara del repo — 51/51 mutantes muertos, 18/18 `expect` con test (§El triage del paso 6, cerrado) | — | sin métrica de líneas (Aiken no la mide) |
+**2026-09-23 — se suma statements al mismo trato que branches.** Mismo argumento que ya valía para
+branches: si igual vamos a perseguir tres de las cuatro métricas de v8 con la misma vara (95%), no
+hay razón para dejar afuera la cuarta. Ni branches ni statements ni functions reemplazan ni bloquean
+el criterio de cierre de §Criterio de cierre, que sigue siendo líneas — pero las tres se persiguen
+en paralelo al paso 5, con el mismo trinquete que ya usa `vitest.config` (sube con cada tanda, no
+baja).
+
+Medido el 2026-09-23 (con `packages/shared` y `packages/cardano` reinstalados tras un `axe-core`
+que estaba en el lockfile pero no en `node_modules` — `pnpm install --frozen-lockfile` lo resolvió;
+no es un bug del repo, fue un `node_modules` desincronizado en esta sesión):
+
+| Parte | Statements | Branches | Functions | Lines | Estado |
+|---|---|---|---|---|---|
+| `packages/shared` | **100%** (248/248) | 96,55% (56/58) | 100% (19/19) | 100% (232/232) | ✅ Cerrado — las 4 métricas ≥95% |
+| `packages/cardano` | **99,66%** (295/296) | 96,81% (152/157) | 100% (90/90) | 99,63% (273/274) | ✅ Cerrado — las 4 métricas ≥95% |
+| `apps/api` | **90,81%** (2.156/2.374) | 79,59% (893/1.122) | 96,50% (497/515) | 96,92% (2.019/2.083) | ⬜ Statements y branches por debajo de 95% |
+| `apps/web` | **36,20%** (724/2.000) | 29,23% (573/1.960) | 37,22% (284/763) | 37,18% (660/1.775) | ⬜ Las 4 métricas por debajo — es el paso 5 |
+| `contracts/` (Aiken) | — | 100% por la vara del repo — 51/51 mutantes muertos, 18/18 `expect` con test (§El triage del paso 6, cerrado) | — | sin métrica de líneas/statements (Aiken no las mide) | ✅ Cerrado, con su propia vara |
+
+**`packages/shared` y `packages/cardano` quedan cerrados en las cuatro métricas** — no hace falta
+volver a tocarlos para esta sección. Lo que queda es `apps/api` (statements y branches; functions y
+lines ya están ≥95%) y `apps/web` (las cuatro, es literalmente el paso 5 con una vara más estricta:
+cuando un archivo de `apps/web` llegue a 95% de líneas por el trabajo del paso 5, sus statements y
+functions van a estar cerca o ya arriba de 95% también, porque en un archivo sin ninguna rama
+compleja las cuatro métricas suben juntas — branches es la que se despega cuando el archivo sí tiene
+lógica condicional, por eso las tablas de abajo la muestran aparte).
 
 ### `packages/cardano` — cerrado, 96,81% (commit `c2a59f2`)
 
@@ -468,140 +488,187 @@ no puede existir en la cadena, solo para "pintar verde" sin probar nada real. Mi
 documentan los dos casos irreductibles del paso 3 (`ordenarPorClave`, la guarda de
 `publishReferenceScript` original).
 
-### `apps/api` — empezado, 78,25% (commit `7bbf971`), falta la mayor parte
+### `apps/api` — en curso, 79,59% de branches / 90,81% de statements (medido 2026-09-23)
 
-De 873/1.124 (77,67%) a 878/1.122. Dos piezas:
-
-**`lib/params.ts` se borró en vez de testearse.** `paramSeguro()` no lo importaba nada en `src/` ni
-en `test/` — código muerto, confirmado con grep antes de tocarlo. La garantía que decía centralizar
-ya está duplicada a mano en `leerParam()` de `middlewares/auth.ts`. Sus 2 branches sin cobertura
-eran del tipo correcto de hallazgo: no "falta un test", sino "esto no debería existir".
-
-**`arrays.ts`, `upload.ts`, `pdf.ts` y `db.ts` a 100%.** Cuatro tests unitarios chicos y aislados
+**Historia de las tandas ya cerradas**, cada una con su commit: `lib/params.ts` se borró en vez de
+testearse (código muerto — `paramSeguro()` no lo importaba nadie, confirmado con grep; la garantía
+que decía centralizar ya está duplicada a mano en `leerParam()` de `middlewares/auth.ts`);
+`arrays.ts`, `upload.ts`, `pdf.ts` y `db.ts` llegaron a 100% con cuatro tests chicos y aislados
 (`test/lib-arrays.test.ts`, `test/lib-upload.test.ts`, `test/utils-pdf.test.ts`,
-`test/lib-db.test.ts`): el out-of-bounds de `en()`, el fallback de `UPLOAD_DIR` sin la env var
-(aislado con `vi.resetModules()`, mismo patrón para los dos defaults de `lib/db.ts` sin
-`DATABASE_URL`/con `DATABASE_AUTH_TOKEN`), y el wrap de una línea más larga que `ANCHO_LINEA` en el
-PDF del dossier.
+`test/lib-db.test.ts`); `contracts.routes.ts` (50%→50% de branches, pero con la rama disyuntiva de
+`GET /contracts/:contractId/releases` probada: dueño, miembro del proyecto, 403 y 404 — el `if
+(!contrato)` del handler quedó documentado como inalcanzable, ver abajo), `users.routes.ts`
+(50%→75%: `GET /users/:id` 404, `PATCH` con `fullName`/`isActive`/password real) y
+`notary.routes.ts` (48,83%→72,09%: la disyunción de `kpis`, los 404 de firmar/rechazar, `signatures`
+con la rama admin y paginación por cursor, el caso sin firmas, la cola de revisión con el nombre del
+investor).
 
-**Lo que falta es el grueso: ~190 branches, casi todo en las rutas grandes.** A diferencia de los
-archivos de arriba, no es mecánico — cada uno tiene su propia lógica de permisos, rechazos y casos
-borde que hay que leer para saber qué test falta, no solo "llamar la función con otro input". Las
-tres métricas por archivo, ordenado por peor % de branches (`functions` y `lines` ya están cerca o
-en 100% en casi todos — es branches lo que arrastra):
+**Lo que sigue siendo el grueso: ~230 branches y ~220 statements, casi todo en las rutas grandes.**
+No es mecánico — cada archivo tiene su propia lógica de permisos, rechazos y casos borde que hay que
+leer para saber qué test falta, no solo "llamar la función con otro input". Las cuatro métricas por
+archivo, ordenado por peor % de branches (medido 2026-09-23, después de las tandas de arriba):
 
-| Archivo | Branches | Functions | Lines |
-|---|---|---|---|
-| `notary.routes.ts` | 48,83% (21/43) | 78,94% (15/19) | 93,10% (81/87) |
-| `contracts.routes.ts` | 50,00% (2/4) | 100% (3/3) | 100% (16/16) |
-| `users.routes.ts` | 50,00% (10/20) | 92,30% (12/13) | 96,42% (54/56) |
-| `profile.routes.ts` | 62,50% (5/8) | 100% (6/6) | 100% (31/31) |
-| `developer.routes.ts` | 63,33% (38/60) | 96,96% (32/33) | 96,69% (117/121) |
-| `investor.routes.ts` | 65,27% (47/72) | 100% (37/37) | 100% (157/157) |
-| `public.routes.ts` | 66,66% (4/6) | 100% (2/2) | 100% (14/14) |
-| `evidence.routes.ts` | 66,66% (36/54) | 95,00% (19/20) | 94,69% (107/113) |
-| `certifier.routes.ts` | 68,18% (30/44) | 100% (27/27) | 100% (98/98) |
-| `projects-obra.routes.ts` | 68,75% (11/16) | 100% (10/10) | 97,72% (43/44) |
-| `projects.routes.ts` | 69,87% (58/83) | 95,83% (46/48) | 97,05% (165/170) |
-| `_shared.ts` | 70,00% (7/10) | 100% (6/6) | 94,11% (16/17) |
-| `migrate.ts` | 70,58% (12/17) | 91,66% (11/12) | 90,00% (36/40) |
-| `capital.routes.ts` | 70,83% (17/24) | 86,66% (26/30) | 92,77% (77/83) |
-| `developer-comercial.routes.ts` | 70,96% (44/62) | 96,55% (28/29) | 94,82% (110/116) |
-| resto de `src/lib`, `src/domain`, `src/middlewares` | 82–94% | ya cerca | ya cerca |
-
-**La brecha es casi toda de branches, no de functions/lines.** La mayoría de estos archivos ya está
-en 90-100% de `lines` y `functions` — el trabajo pendiente es la segunda pasada que ya describe
-§Por qué son métricas distintas de la conversación: ejercitar el `else`/la rama de rechazo, no una
-función nueva sin llamar. Las tres excepciones donde `functions` también queda bajo son
-`notary.routes.ts` (78,94%, 4 funciones sin llamar) y `capital.routes.ts` (86,66%, 4 sin llamar) —
-ahí hace falta además cubrir un handler entero, no solo una rama suya.
-
-**Siguiente, cuando se retome: `notary.routes.ts`** (peor %), después bajando por la tabla. Mismo
-patrón que `cardano`: leer el archivo, identificar la rama de error/permiso sin ejercitar, un test
-por rama, `pnpm verify:all`, commit y push por archivo (o por tanda chica), no todo junto.
-
-**`packages/shared` no se tocó esta sesión para branches** — ya está en 96,55% desde el cierre del
-paso 2 (dos ramas de `auth.ts:36-37` sin cubrir juntas en el mismo test, documentadas ahí como fuera
-de alcance de la spec).
-
-### `apps/web` — sin empezar, detalle por archivo (medido 2026-09-22, no trabajado esta sesión)
-
-A diferencia de `api`, acá **branches y líneas son casi el mismo número** todavía: las tandas de
-paso 5 que faltan (`developer`, `investor`, `project.$projectId.*`, `admin`) están en **0% en las
-tres métricas a la vez** — no hay ninguna rama parcialmente cubierta que perseguir ahí, porque
-ningún test toca esos archivos todavía. Por eso el detalle útil hoy es agregado por tanda, no
-archivo por archivo — archivo por archivo ya lo da la tabla de §El paso 5 (líneas), y branches ahí
-va a subir junto con líneas cuando se escriban esos tests, con el patrón de `-test-mount.tsx` que ya
-usan `notary`/`certifier`.
-
-| Grupo | Archivos | Lines | Branches | Functions |
+| Archivo | Branches | Statements | Functions | Lines |
 |---|---|---|---|---|
-| `developer.*` | 15 | 0,8% (3/365) | 0,0% (0/383) | 0,7% (1/138) |
-| `investor.*` | 10 | 0,0% (0/309) | 0,0% (0/357) | 0,0% (0/149) |
-| `project.$projectId.*` (compartidas) | 4 | 0,0% (0/185) | 0,0% (0/275) | 0,0% (0/91) |
-| `admin.index.tsx` | 1 | 0,0% (0/44) | 0,0% (0/44) | 0,0% (0/19) |
-| `components/` | 48 | 60,7% (207/341) | 54,1% (296/547) | 65,2% (105/161) |
-| `lib/` | 11 | 69,0% (87/126) | 67,3% (72/107) | 69,2% (27/39) |
-| `auth/` + `i18n/` + `api/` | 10 | 92,6% (199/215) | 82,3% (79/96) | 95,2% (99/104) |
-| otras rutas (`login`, `public.dossier`, `index`, `__root`) | 5 | 76,8% (53/69) | 57,6% (19/33) | 66,7% (14/21) |
-| `certifier.*` (tanda cerrada) | 5 | 98,4% (62/63) | 92,2% (59/64) | 95,7% (22/23) |
-| `notary.*` (tanda cerrada) | 5 | 98,0% (49/50) | 92,3% (48/52) | 94,1% (16/17) |
+| `contracts.routes.ts` | 50,00% (2/4) | 88,88% (16/18) | 100% (3/3) | 100% (16/16) |
+| `profile.routes.ts` | 62,50% (5/8) | 91,17% (31/34) | 100% (6/6) | 100% (31/31) |
+| `developer.routes.ts` | 63,33% (38/60) | 87,50% (119/136) | 96,96% (32/33) | 96,69% (117/121) |
+| `investor.routes.ts` | 65,27% (47/72) | 87,63% (163/186) | 100% (37/37) | 100% (157/157) |
+| `evidence.routes.ts` | 66,66% (36/54) | 84,49% (109/129) | 95,00% (19/20) | 94,69% (107/113) |
+| `public.routes.ts` | 66,66% (4/6) | 88,23% (15/17) | 100% (2/2) | 100% (14/14) |
+| `certifier.routes.ts` | 68,18% (30/44) | 89,38% (101/113) | 100% (27/27) | 100% (98/98) |
+| `projects-obra.routes.ts` | 68,75% (11/16) | 89,79% (44/49) | 100% (10/10) | 97,72% (43/44) |
+| `projects.routes.ts` | 69,87% (58/83) | 88,32% (174/197) | 95,83% (46/48) | 97,05% (165/170) |
+| `_shared.ts` | 70,00% (7/10) | 90,00% (18/20) | 100% (6/6) | 94,11% (16/17) |
+| `capital.routes.ts` | 70,83% (17/24) | 86,86% (86/99) | 86,66% (26/30) | 92,77% (77/83) |
+| `developer-comercial.routes.ts` | 70,96% (44/62) | 88,23% (120/136) | 96,55% (28/29) | 94,82% (110/116) |
+| `notary.routes.ts` | 72,09% (31/43) | 91,00% (91/100) | 94,73% (18/19) | 98,85% (86/87) |
+| `auth.routes.ts` | 75,00% (9/12) | 89,28% (25/28) | 100% (4/4) | 96,15% (25/26) |
+| `notifications.routes.ts` | 75,00% (6/8) | 92,30% (24/26) | 100% (5/5) | 100% (23/23) |
+| `users.routes.ts` | 75,00% (15/20) | 90,90% (60/66) | 92,30% (12/13) | 98,21% (55/56) |
+| `stages.routes.ts` | 78,57% (22/28) | 88,46% (46/52) | 100% (6/6) | 97,87% (46/47) |
+| `audit.routes.ts` | 81,25% (13/16) | 94,73% (36/38) | 100% (6/6) | 100% (33/33) |
+| `developer-evidencia.routes.ts` | 87,03% (47/54) | 94,16% (113/120) | 94,73% (18/19) | 97,14% (102/105) |
+| resto de `src/lib`, `src/domain`, `src/middlewares`, `src/db` | 70–98% | 80–98% | ya cerca | ya cerca |
 
-**`components/` y `lib/` sí tienen cobertura parcial hoy, y ahí branches sí vale la pena archivo por
-archivo** — son componentes compartidos que ya usan varias pantallas, así que cerrarlos ahora no
-espera a ninguna tanda de rutas:
+**`contracts.routes.ts` no bajó de 50% de branches aunque se le sumaron tests** (commit de esta
+sesión) — es el ejemplo a tener presente antes de perseguir un número sin leer el archivo: sus dos
+branches sin cubrir (`if (!contrato)` en el handler y el `if (!matched) next()` de todo router
+montado sobre oRPC) son **inalcanzables por HTTP**, documentado en el propio `vitest.config.mts` —
+`evaluarDueño`/`evaluarProyecto` (`middlewares/auth.ts`) ya resuelven la existencia del contrato en
+el `authorize({ alguna: [...] })` antes de que la request llegue al handler. Mismo patrón en
+`public.routes.ts` (66,66%, el `if (!dossier)` post-`compileDossier` — la FK `Dossier.unitId →
+Unit.id` es `ON DELETE CASCADE`, verificado insertando un huérfano a mano: la base lo rechaza) y en
+`profile.routes.ts` (62,50%, las tres son `if (!matched) next()`). **Antes de escribir un test para
+subir un número, confirmar que la rama es alcanzable** — un archivo puede quedar bajo el 95% para
+siempre sin que sea un hueco real.
 
-| Archivo | Branches | Lines | Functions |
+**La brecha es sobre todo de branches y statements, no de functions/lines.** La mayoría de estos
+archivos ya está en 90–100% de `lines` y `functions` — el trabajo pendiente es la segunda pasada que
+ya describe §Por qué son métricas distintas de la conversación: ejercitar el `else`/la rama de
+rechazo, no una función nueva sin llamar. La excepción donde `functions` también queda bajo es
+`capital.routes.ts` (86,66%, 4 sin llamar) — ahí hace falta además cubrir un handler entero, no solo
+una rama suya.
+
+**Siguiente, cuando se retome: `developer.routes.ts`, `investor.routes.ts` y `evidence.routes.ts`**
+(los tres con más branches en juego — 60, 72 y 54 respectivamente, y sin el patrón de rama
+inalcanzable que ya se agotó en `contracts`/`public`/`profile`). Mismo patrón que ya usaron
+`contracts`/`users`/`notary`: leer el archivo, identificar la rama de error/permiso sin ejercitar,
+un test por rama, verificar con `coverage-final.json` que la rama de verdad se movió (no asumir por
+el nombre del test), `pnpm verify:all`, commit y push por archivo (o por tanda chica), no todo
+junto.
+
+**`packages/shared` y `packages/cardano` no se tocaron en esta tanda** — ya están cerrados en las
+cuatro métricas, ver la tabla de arriba.
+
+### `apps/web` — detalle completo por archivo (medido 2026-09-23)
+
+**117 archivos con código propio en `src/`; 27 ya están al 100% en las cuatro métricas** (sobre todo
+`routes/notary.*`/`certifier.*` de las tandas cerradas, y utilidades chicas). Los otros **90** están
+acá, para que la próxima sesión implemente tests directo desde esta tabla sin tener que remedir
+nada. Dos grupos, porque el trabajo que piden es distinto.
+
+**Grupo A — 40 archivos en 0% en las cuatro métricas: ningún test los toca todavía.** Son las
+tandas del paso 5 que faltan (`developer.*`, `investor.*`, `project.$projectId.*`, `admin.index.tsx`)
+más un puñado de archivos de infraestructura (`main.tsx`, `router.tsx`, `useSession.ts`, `__root.tsx`,
+`blobUrls.ts`, `observability.ts`, `ProjectCard.tsx`, `ActionCard.tsx`) que **no** son parte de
+ninguna tanda por rol y conviene tratar aparte. Ordenados por tamaño (statements totales, la mejor
+proxy de esfuerzo — más statements no siempre es más branches, pero correlaciona):
+
+| Archivo | Statements | Archivo | Statements |
 |---|---|---|---|
-| `components/domain/ActionCard.tsx` | 0% (0/16) | 0% (0/1) | 0% (0/1) |
-| `components/domain/LocationMapModal.tsx` | 0% (0/48) | 0% (0/73) | 0% (0/16) |
-| `components/domain/ProjectCard.tsx` | 0% (0/39) | 0% (0/6) | 0% (0/3) |
-| `components/domain/ShareDossierModal.tsx` | 0% (0/2) | 33,3% (1/3) | 33,3% (1/3) |
-| `components/domain/TxidModal.tsx` | 0% (0/2) | 33,3% (1/3) | 33,3% (1/3) |
-| `lib/observability.ts` | 0% (0/6) | 0% (0/6) | 0% (0/1) |
-| `lib/investor.ts` | 35,3% (12/34) | 44,0% (11/25) | 61,5% (8/13) |
-| `components/PanelLayout.tsx` | 37,5% (9/24) | 36,4% (8/22) | 50,0% (2/4) |
-| `components/domain/StatCard.tsx` | 47,4% (9/19) | 100% (3/3) | 100% (1/1) |
-| `components/ProfileScreen.tsx` | 50,0% (13/26) | 48,0% (12/25) | 20,0% (2/10) |
-| `components/domain/AnchoringSuccessModal.tsx` | 50,0% (4/8) | 80,0% (8/10) | 50,0% (2/4) |
-| `components/domain/InvestorCard.tsx` | 50,0% (5/10) | 100% (4/4) | 100% (3/3) |
-| `components/domain/InvitationAcceptModal.tsx` | 50,0% (9/18) | 60,0% (3/5) | 50,0% (2/4) |
-| `components/ui/dialog.tsx` | 50,0% (3/6) | 66,7% (8/12) | 70,0% (7/10) |
-| `components/domain/TextInput.tsx` | 53,8% (7/13) | 100% (4/4) | 100% (2/2) |
-| `components/domain/ProgressTimeline.tsx` | 55,5% (10/18) | 75,0% (3/4) | 66,7% (2/3) |
-| `components/domain/UnitCard.tsx` | 57,1% (8/14) | 100% (5/5) | 100% (1/1) |
-| `components/domain/DocumentViewerModal.tsx` | 58,3% (7/12) | 66,7% (2/3) | 50,0% (1/2) |
-| `components/domain/MerkleRootProof.tsx` | 58,3% (7/12) | 66,7% (2/3) | 66,7% (2/3) |
-| `components/domain/SelectDropdown.tsx` | 58,3% (7/12) | 66,7% (2/3) | 66,7% (2/3) |
-| `components/domain/Chips.tsx` | 61,5% (8/13) | 100% (6/6) | 100% (3/3) |
-| `components/domain/FileDropzone.tsx` | 61,5% (16/26) | 81,8% (18/22) | 60,0% (6/10) |
-| `components/domain/ImageGalleryModal.tsx` | 63,6% (7/11) | 81,8% (9/11) | 71,4% (5/7) |
-| `components/domain/BottomNav.tsx` | 66,7% (4/6) | 100% (3/3) | 100% (4/4) |
-| `components/domain/NumberInput.tsx` | 70,0% (21/30) | 90,0% (9/10) | 83,3% (5/6) |
-| `components/domain/NotificationCard.tsx` | 71,4% (10/14) | 100% (3/3) | 100% (1/1) |
-| `components/domain/ObserveStageModal.tsx` | 71,4% (5/7) | 62,5% (5/8) | 50,0% (2/4) |
-| `components/domain/BuildingSchematic.tsx` | 75,0% (6/8) | 100% (10/10) | 100% (9/9) |
-| `components/domain/LanguageToggle.tsx` | 75,0% (3/4) | 100% (6/6) | 100% (3/3) |
-| `components/domain/ReleaseProofList.tsx` | 75,0% (3/4) | 66,7% (2/3) | 66,7% (2/3) |
-| `components/domain/ToggleSwitch.tsx` | 75,0% (6/8) | 100% (2/2) | 100% (2/2) |
-| `components/domain/DocumentCard.tsx` | 80,0% (16/20) | 100% (2/2) | 100% (1/1) |
-| `lib/evidenceFiles.ts` | 81,8% (27/33) | 97,7% (42/43) | 100% (4/4) |
-| `components/domain/GradientHeader.tsx` | 87,5% (14/16) | 100% (4/4) | 100% (2/2) |
-| `lib/money.ts` | 92,8% (13/14) | 100% (8/8) | 100% (2/2) |
-| `components/domain/HashChip.tsx` | 94,4% (17/18) | 100% (12/12) | 75,0% (3/4) |
+| `routes/investor.unit.$unitId.index.tsx` | 87 | `routes/investor.unit.$unitId.notifications.tsx` | 29 |
+| `routes/project.$projectId.stage.$stageId.tsx` | 83 | `routes/investor.unit.$unitId.dossier.tsx` | 30 |
+| `routes/investor.buy.tsx` | 78 | `routes/developer.units.tsx` | 32 |
+| `components/domain/LocationMapModal.tsx` | 82 | `routes/developer.progress.tsx` | 43 |
+| `routes/project.$projectId.index.tsx` | 68 | `routes/investor.notifications.tsx` | 44 |
+| `routes/developer.project.$projectId.upload.tsx` | 67 | `routes/admin.index.tsx` | 49 |
+| `routes/developer.project.$projectId.units.tsx` | 55 | `routes/developer.audit-log.tsx` | 40 |
+| `routes/developer.capital.tsx` | 21 | `routes/developer.project.$projectId.invite.tsx` | 36 |
+| `routes/developer.documentation.tsx` | 22 | `routes/project.$projectId.progress.tsx` | 34 |
+| `routes/developer.project.$projectId.contracts.tsx` | 21 | `routes/investor.unit.$unitId.contract.tsx` | 28 |
+| `routes/developer.project.$projectId.index.tsx` | 20 | `routes/project.$projectId.developer.tsx` | 24 |
+| `routes/investor.favorites.tsx` | 17 | `routes/developer.projects.tsx` | 15 |
+| `auth/useSession.ts` | 10 | `routes/developer.index.tsx` | 13 |
+| `routes/investor.units.tsx` | 11 | `routes/developer.investors.tsx` | 10 |
+| `routes/investor.menu.tsx` | 10 | `lib/blobUrls.ts` | 10 |
+| `routes/developer.profile.tsx` | 8 | `routes/index.tsx` | 7 |
+| `routes/public.dossier.$shareToken.tsx` | 7 | `main.tsx` | 7 |
+| `components/domain/ProjectCard.tsx` | 6 | `lib/observability.ts` | 6 |
+| `routes/investor.profile.tsx` | 5 | `router.tsx` | 2 |
+| `components/domain/ActionCard.tsx` | 1 | `routes/__root.tsx` | 2 |
 
-**`lib/stageProgress.ts` es un caso raro, a propósito: 100% de branches con solo 43,8% de líneas
+**Grupo B — 50 archivos con cobertura parcial: ya tienen algún test, falta terminarlos.** Acá sí
+vale la pena ir archivo por archivo (branches suele ser la métrica que arrastra, no líneas), sin
+esperar a ninguna tanda:
+
+| Archivo | Statements | Branches | Functions | Lines |
+|---|---|---|---|---|
+| `routes/developer.project.new.tsx` | 13,63% (3/22) | 0% (0/14) | 12,5% (1/8) | 15% (3/20) |
+| `components/domain/ShareDossierModal.tsx` | 33,33% (1/3) | 0% (0/2) | 33,33% (1/3) | 33,33% (1/3) |
+| `components/domain/TxidModal.tsx` | 33,33% (1/3) | 0% (0/2) | 33,33% (1/3) | 33,33% (1/3) |
+| `components/PanelLayout.tsx` | 36% (9/25) | 37,5% (9/24) | 50% (2/4) | 36,36% (8/22) |
+| `lib/investor.ts` | 48,57% (17/35) | 35,29% (12/34) | 61,53% (8/13) | 44% (11/25) |
+| `components/ProfileScreen.tsx` | 46,15% (12/26) | 50% (13/26) | 20% (2/10) | 48% (12/25) |
+| `lib/explorer.ts` | 50% (1/2) | 100% (2/2) | 0% (0/1) | 50% (1/2) |
+| `lib/stageProgress.ts` | 54,54% (12/22) | **100%** (10/10) | 75% (6/8) | 43,75% (7/16) |
+| `components/domain/InvitationAcceptModal.tsx` | 60% (3/5) | 50% (9/18) | 50% (2/4) | 60% (3/5) |
+| `components/domain/ObserveStageModal.tsx` | 62,5% (5/8) | 71,42% (5/7) | 50% (2/4) | 62,5% (5/8) |
+| `components/domain/DocumentViewerModal.tsx` | 66,66% (2/3) | 58,33% (7/12) | 50% (1/2) | 66,66% (2/3) |
+| `components/domain/MerkleRootProof.tsx` | 66,66% (2/3) | 58,33% (7/12) | 66,66% (2/3) | 66,66% (2/3) |
+| `components/domain/ReleaseProofList.tsx` | 66,66% (2/3) | 75% (3/4) | 66,66% (2/3) | 66,66% (2/3) |
+| `components/domain/SelectDropdown.tsx` | 66,66% (2/3) | 58,33% (7/12) | 66,66% (2/3) | 66,66% (2/3) |
+| `components/ui/dialog.tsx` | 66,66% (8/12) | 50% (3/6) | 70% (7/10) | 66,66% (8/12) |
+| `components/domain/AnchoringSuccessModal.tsx` | 72,72% (8/11) | 50% (4/8) | 50% (2/4) | 80% (8/10) |
+| `auth/session.ts` | 72,72% (8/11) | 66,66% (4/6) | 100% (3/3) | 88,88% (8/9) |
+| `components/domain/ProgressTimeline.tsx` | 75% (3/4) | 55,55% (10/18) | 66,66% (2/3) | 75% (3/4) |
+| `components/domain/FileDropzone.tsx` | 75% (21/28) | 61,53% (16/26) | 60% (6/10) | 81,81% (18/22) |
+| `i18n/locale.ts` | 76,92% (10/13) | 75% (6/8) | 100% (3/3) | 90,9% (10/11) |
+| `components/domain/NumberInput.tsx` | 76,92% (10/13) | 70% (21/30) | 83,33% (5/6) | 90% (9/10) |
+| `i18n/format.ts` | 77,77% (14/18) | 100% (7/7) | 62,5% (5/8) | 75% (12/16) |
+| `components/domain/ImageGalleryModal.tsx` | 81,25% (13/16) | 63,63% (7/11) | 71,42% (5/7) | 81,81% (9/11) |
+| `lib/money.ts` | 90,9% (10/11) | 92,85% (13/14) | 100% (2/2) | 100% (8/8) |
+| `lib/evidenceFiles.ts` | 91,83% (45/49) | 81,81% (27/33) | 100% (4/4) | 97,67% (42/43) |
+| `components/domain/HashChip.tsx` | 92,85% (13/14) | 94,44% (17/18) | 75% (3/4) | 100% (12/12) |
+| `routes/-test-mount.tsx` | 95% (19/20) | 100% (3/3) | 88,88% (8/9) | 95% (19/20) |
+| `i18n/useTranslation.tsx` | 96% (24/25) | 75% (6/8) | 100% (9/9) | 100% (22/22) |
+| `auth/useRoleGuard.ts` | 96,42% (27/28) | 75% (12/16) | 100% (4/4) | 100% (26/26) |
+| `routes/notary.dossier.$dossierId.tsx` | 96,29% (26/27) | 90,9% (20/22) | 90,9% (10/11) | 96,15% (25/26) |
+| `routes/certifier.stage.$stageId.tsx` | 96,42% (27/28) | 95,83% (23/24) | 90,9% (10/11) | 96,29% (26/27) |
+| `api/port.ts` | 97,61% (123/126) | 89,79% (44/49) | 100% (75/75) | 100% (112/112) |
+| `routes/login.tsx` | 100% (36/36) | 88,88% (16/18) | 100% (6/6) | 100% (34/34) |
+| `routes/certifier.index.tsx` | 100% (20/20) | 95% (19/20) | 100% (7/7) | 100% (18/18) |
+| `routes/certifier.issued.tsx` | 100% (10/10) | 81,25% (13/16) | 100% (3/3) | 100% (9/9) |
+| `routes/notary.index.tsx` | 100% (8/8) | 91,66% (11/12) | 100% (1/1) | 100% (7/7) |
+| `routes/notary.signed.tsx` | 100% (9/9) | 92,85% (13/14) | 100% (3/3) | 100% (8/8) |
+| `components/domain/BottomNav.tsx` | 100% (4/4) | 66,66% (4/6) | 100% (4/4) | 100% (3/3) |
+| `components/domain/BuildingSchematic.tsx` | 100% (13/13) | 75% (6/8) | 100% (9/9) | 100% (10/10) |
+| `components/domain/Chips.tsx` | 100% (6/6) | 61,53% (8/13) | 100% (3/3) | 100% (6/6) |
+| `components/domain/DocumentCard.tsx` | 100% (2/2) | 80% (16/20) | 100% (1/1) | 100% (2/2) |
+| `components/domain/GradientHeader.tsx` | 100% (4/4) | 87,5% (14/16) | 100% (2/2) | 100% (4/4) |
+| `components/domain/InvestorCard.tsx` | 100% (4/4) | 50% (5/10) | 100% (3/3) | 100% (4/4) |
+| `components/domain/LanguageToggle.tsx` | 100% (7/7) | 75% (3/4) | 100% (3/3) | 100% (6/6) |
+| `components/domain/NotificationCard.tsx` | 100% (3/3) | 71,42% (10/14) | 100% (1/1) | 100% (3/3) |
+| `components/domain/ProgressBar.tsx` | 100% (2/2) | 50% (1/2) | 100% (1/1) | 100% (2/2) |
+| `components/domain/StatCard.tsx` | 100% (3/3) | 47,36% (9/19) | 100% (1/1) | 100% (3/3) |
+| `components/domain/TextInput.tsx` | 100% (4/4) | 53,84% (7/13) | 100% (2/2) | 100% (4/4) |
+| `components/domain/ToggleSwitch.tsx` | 100% (2/2) | 75% (6/8) | 100% (2/2) | 100% (2/2) |
+| `components/domain/UnitCard.tsx` | 100% (5/5) | 57,14% (8/14) | 100% (1/1) | 100% (5/5) |
+
+**`lib/stageProgress.ts` es un caso raro, a propósito: 100% de branches con solo 43,75% de líneas
 (7/16).** No es un error de medición — el archivo tiene ramas cortas (`? :`, `??`) que un único
 camino ya ejercita en las dos direcciones, pero le sobran líneas (funciones enteras) que nadie
 llama. Ahí lo que falta no es una rama, es un test que invoque la función completa — mismo patrón
-que `notary.routes.ts`/`capital.routes.ts` en `api`.
+que `capital.routes.ts` en `api` (§`apps/api`, arriba).
 
-**`developer.project.new.tsx` (15,0% líneas, 20 líneas) es la única ruta con algo de cobertura
-fuera de las tandas cerradas** — no está en 0% como sus 14 hermanas de `developer.*`, así que si se
+**`routes/developer.project.new.tsx` es la única ruta con algo de cobertura fuera de las tandas
+cerradas** (Grupo B) — no está en 0% como sus 14 hermanas de `developer.*` (Grupo A), así que si se
 arranca la tanda `developer` conviene empezar por ahí.
 
 **Siguiente, cuando se retome `apps/web` (paso 5):** seguir el orden que la spec ya fija —
-`developer` → `investor` → `project.$projectId.*` → `admin` — con el mismo patrón
-`-test-mount.tsx`/`montarRuta`/`autenticarComo` que cerró `notary` y `certifier`. Branches sube solo
-con eso, sin trabajo aparte, salvo en `components/`/`lib/` (arriba), que se puede adelantar en
-paralelo porque no depende de ninguna tanda de rutas.
+`developer` → `investor` → `project.$projectId.*` → `admin` (Grupo A, 0%, con el patrón
+`-test-mount.tsx`/`montarRuta`/`autenticarComo` que cerró `notary` y `certifier`) — y en paralelo,
+sin depender de esas tandas, terminar el Grupo B: son componentes y utilidades ya usadas por varias
+pantallas, así que cerrarlos ahora no se repite después. Las cuatro métricas de un archivo del Grupo
+A van a subir juntas cuando se le escriba su primer test — es branches lo que se despega recién en
+un archivo con lógica condicional real (ver Grupo B).
