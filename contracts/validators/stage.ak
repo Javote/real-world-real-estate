@@ -364,6 +364,37 @@ test spend_accepts_an_unrelated_output_elsewhere() {
   )
 }
 
+// Mismo problema que arriba pero del lado de los inputs (línea 60): ningún
+// test mezcla el input del script con un input de wallet (el que en la red
+// real paga el fee). Sin el filtro por dirección, `inputs_at_address`
+// contaría los dos y el camino feliz dejaría de aceptar.
+test spend_accepts_an_extra_wallet_input() {
+  let old = datum_at(Pending, True)
+  let new = StageDatum { ..old, state: InProgress }
+  let fee_input =
+    Input {
+      output_reference: OutputReference { ..own_ref, output_index: 9 },
+      output: Output {
+        address: wallet_address(),
+        value: assets.from_lovelace(3_000_000),
+        datum: NoDatum,
+        reference_script: None,
+      },
+    }
+  stage.spend(
+    admin_key,
+    Some(old),
+    Advance { to: InProgress, completion: None },
+    own_ref,
+    tx(
+      [script_input(old), fee_input],
+      [script_output_with(InlineDatum(new), locked_value())],
+      [admin_key],
+      100,
+    ),
+  )
+}
+
 test spend_rejects_missing_datum() fail {
   let old = datum_at(Pending, True)
   let new = StageDatum { ..old, state: InProgress }
