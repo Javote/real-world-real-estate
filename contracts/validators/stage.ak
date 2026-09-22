@@ -335,6 +335,35 @@ test spend_completes_a_non_critical_stage_without_evidence() {
 
 // ── Puntos de rechazo ────────────────────────────────────────────────────
 
+// El mutation testing de SPEC-017 encontró que ningún test ejercita el filtro
+// de `at_address` (línea 37) con un output *extra* en otra dirección: todos
+// los tests de arriba usan exactamente un output. Si el filtro se neutraliza
+// (acepta cualquier dirección), este output sin relación infla la lista a 2
+// elementos y el camino feliz dejaría de aceptar.
+test spend_accepts_an_unrelated_output_elsewhere() {
+  let old = datum_at(Pending, True)
+  let new = StageDatum { ..old, state: InProgress }
+  let elsewhere =
+    Output {
+      address: wallet_address(),
+      value: assets.from_lovelace(500_000),
+      datum: NoDatum,
+      reference_script: None,
+    }
+  stage.spend(
+    admin_key,
+    Some(old),
+    Advance { to: InProgress, completion: None },
+    own_ref,
+    tx(
+      [script_input(old)],
+      [script_output_with(InlineDatum(new), locked_value()), elsewhere],
+      [admin_key],
+      100,
+    ),
+  )
+}
+
 test spend_rejects_missing_datum() fail {
   let old = datum_at(Pending, True)
   let new = StageDatum { ..old, state: InProgress }
