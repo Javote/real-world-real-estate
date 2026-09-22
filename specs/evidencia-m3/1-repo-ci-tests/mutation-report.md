@@ -1,31 +1,31 @@
 # Mutantes de los puntos de rechazo del validador
 
-Corrida: 2026-09-22T01:24:07.896Z · aiken aiken v1.1.21+42babe5
+Corrida: 2026-09-22T02:12:19.529Z · aiken aiken v1.1.21+42babe5
 
-**51 mutantes: 37 muertos, 14 vivos, 0 inválidos.**
+**51 mutantes: 50 muertos, 1 vivos, 0 inválidos.**
 
 | Archivo:línea | Qué se sacó | Chequeo original | Resultado | Tests que lo detectaron |
 |---|---|---|---|---|
-| `validators/stage.ak:37` | condición de filtro | `list.filter(outputs, fn(output) { output.address == address })` | VIVO |  |
+| `validators/stage.ak:37` | condición de filtro | `list.filter(outputs, fn(output) { output.address == address })` | muerto | `spend_accepts_an_unrelated_output_elsewhere` |
 | `validators/stage.ak:51` | conjunción de and | `output.address.payment_credential == Script(policy),` | muerto | `mint_rejects_token_not_locked_in_the_script` |
-| `validators/stage.ak:52` | conjunción de and | `assets.quantity_of(output.value, policy, stage_ref) == 1,` | VIVO |  |
-| `validators/stage.ak:60` | condición de filtro | `\|> list.filter(fn(input) { input.output.address == address })` | VIVO |  |
-| `validators/stage.ak:69` | punta infinita aceptada | `expect Finite(lower) = range.lower_bound.bound_type` | VIVO |  |
-| `validators/stage.ak:70` | punta infinita aceptada | `expect Finite(upper) = range.upper_bound.bound_type` | VIVO |  |
+| `validators/stage.ak:52` | conjunción de and | `assets.quantity_of(output.value, policy, stage_ref) == 1,` | muerto | `mint_rejects_output_holding_extra_units_of_the_token` |
+| `validators/stage.ak:60` | condición de filtro | `\|> list.filter(fn(input) { input.output.address == address })` | muerto | `spend_accepts_an_extra_wallet_input` |
+| `validators/stage.ak:69` | punta infinita aceptada | `expect Finite(lower) = range.lower_bound.bound_type` | muerto | `spend_rejects_missing_lower_bound` |
+| `validators/stage.ak:70` | punta infinita aceptada | `expect Finite(upper) = range.upper_bound.bound_type` | muerto | `spend_rejects_missing_upper_bound` |
 | `validators/stage.ak:72` | conjunción de and | `now >= lower,` | muerto | `spend_rejects_timestamp_one_below_lower_bound` |
 | `validators/stage.ak:73` | conjunción de and | `now <= upper,` | muerto | `spend_rejects_timestamp_outside_validity_range`, `spend_rejects_timestamp_one_above_upper_bound` |
 | `validators/stage.ak:91` | expect booleano | `expect assets.quantity_of( own_input.output.value, own_policy, old_datum.stage_ref, ) == 1` | VIVO |  |
 | `validators/stage.ak:100` | expect booleano | `expect inputs_at_address(tx.inputs, own_address) == 1` | muerto | `spend_rejects_two_script_inputs` |
-| `validators/stage.ak:101` | patrón de lista: elementos de más | `expect [continuing_output] = at_address(tx.outputs, own_address)` | VIVO |  |
-| `validators/stage.ak:104` | patrón de lista: elementos de más | `expect [_] = carrying_thread(tx.outputs, own_policy, old_datum.stage_ref)` | VIVO |  |
+| `validators/stage.ak:101` | patrón de lista: elementos de más | `expect [continuing_output] = at_address(tx.outputs, own_address)` | muerto | `spend_rejects_a_second_output_at_the_exact_script_address` |
+| `validators/stage.ak:104` | patrón de lista: elementos de más | `expect [_] = carrying_thread(tx.outputs, own_policy, old_datum.stage_ref)` | muerto | `spend_rejects_thread_split_across_a_staking_variant_of_the_script_address` |
 | `validators/stage.ak:107` | expect booleano | `expect list.has(tx.extra_signatories, admin)` | muerto | `spend_rejects_missing_admin_signature` |
-| `validators/stage.ak:125` | expect booleano | `expect continuing_output.value == own_input.output.value` | VIVO |  |
-| `validators/stage.ak:136` | conjunción de and | `valid_datum_evolution(old_datum, new_datum, to, completion),` | muerto | `spend_rejects_invalid_transition`, `spend_rejects_leaving_completed`, `spend_rejects_identity_rewrite` y 3 más |
-| `validators/stage.ak:137` | conjunción de and | `time_ok,` | muerto | `spend_rejects_timestamp_outside_validity_range`, `spend_rejects_open_ended_validity_range`, `spend_rejects_timestamp_one_below_lower_bound` y 1 más |
+| `validators/stage.ak:125` | expect booleano | `expect continuing_output.value == own_input.output.value` | muerto | `spend_rejects_ada_drain_while_keeping_the_token` |
+| `validators/stage.ak:136` | conjunción de and | `valid_datum_evolution(old_datum, new_datum, to, completion),` | muerto | `spend_rejects_new_datum_of_the_wrong_type`, `spend_rejects_invalid_transition`, `spend_rejects_leaving_completed` y 4 más |
+| `validators/stage.ak:137` | conjunción de and | `time_ok,` | muerto | `spend_rejects_timestamp_outside_validity_range`, `spend_rejects_open_ended_validity_range`, `spend_rejects_timestamp_one_below_lower_bound` y 3 más |
 | `validators/stage.ak:144` | expect booleano | `expect list.has(tx.extra_signatories, admin)` | muerto | `mint_rejects_missing_admin_signature` |
-| `validators/stage.ak:150` | patrón de lista: elementos de más | `expect [Pair(asset_name, 1)] = dict.to_pairs(assets.tokens(tx.mint, policy_id))` | VIVO |  |
+| `validators/stage.ak:150` | patrón de lista: elementos de más | `expect [Pair(asset_name, 1)] = dict.to_pairs(assets.tokens(tx.mint, policy_id))` | muerto | `mint_rejects_two_asset_names_when_both_are_present_in_the_output` |
 | `validators/stage.ak:150` | patrón de lista: cualquier cantidad | `expect [Pair(asset_name, 1)] = dict.to_pairs(assets.tokens(tx.mint, policy_id))` | muerto | `mint_rejects_a_burn` |
-| `validators/stage.ak:153` | patrón de lista: elementos de más | `expect [thread_output] = carrying_thread(tx.outputs, policy_id, asset_name)` | VIVO |  |
+| `validators/stage.ak:153` | patrón de lista: elementos de más | `expect [thread_output] = carrying_thread(tx.outputs, policy_id, asset_name)` | muerto | `mint_rejects_two_outputs_each_carrying_one_unit` |
 | `validators/stage.ak:158` | conjunción de and | `initial_datum.stage_ref == asset_name,` | muerto | `mint_rejects_asset_name_not_matching_stage_ref` |
 | `validators/stage.ak:159` | conjunción de and | `valid_initial_datum(initial_datum),` | muerto | `mint_rejects_starting_outside_pending`, `mint_rejects_preloaded_evidence` |
 | `validators/stage.ak:164` | fail | `fail` | muerto | `else_rejects_other_script_purposes` |
@@ -41,9 +41,9 @@ Corrida: 2026-09-22T01:24:07.896Z · aiken aiken v1.1.21+42babe5
 | `lib/propnexus/fsm.ak:136` | conjunción de and | `new.state == to,` | muerto | `t_evolution_rejects_datum_state_mismatch` |
 | `lib/propnexus/fsm.ak:137` | conjunción de and | `valid_transition(old.state, to),` | muerto | `t_evolution_rejects_leaving_terminal`, `spend_rejects_leaving_completed` |
 | `lib/propnexus/fsm.ak:138` | conjunción de and | `identity_preserved(old, new),` | muerto | `spend_rejects_identity_rewrite` |
-| `lib/propnexus/fsm.ak:143` | conjunción de and | `to == Completed,` | VIVO |  |
-| `lib/propnexus/fsm.ak:144` | conjunción de and | `new.evidence_root == evidence_root,` | VIVO |  |
-| `lib/propnexus/fsm.ak:145` | conjunción de and | `new.completed_at == now,` | VIVO |  |
+| `lib/propnexus/fsm.ak:143` | conjunción de and | `to == Completed,` | muerto | `t_evolution_rejects_completion_payload_matching_a_non_completing_transition` |
+| `lib/propnexus/fsm.ak:144` | conjunción de and | `new.evidence_root == evidence_root,` | muerto | `t_evolution_rejects_evidence_root_mismatch_between_redeemer_and_datum` |
+| `lib/propnexus/fsm.ak:145` | conjunción de and | `new.completed_at == now,` | muerto | `t_evolution_rejects_completed_at_mismatch_between_redeemer_and_now` |
 | `lib/propnexus/fsm.ak:146` | conjunción de and | `now > 0,` | muerto | `t_evolution_rejects_zero_timestamp` |
 | `lib/propnexus/fsm.ak:147` | conjunción de and | `completion_evidence_ok(old.validation_critical, evidence_root),` | muerto | `t_evolution_rejects_critical_without_evidence`, `spend_rejects_completing_critical_without_evidence` |
 | `lib/propnexus/fsm.ak:151` | conjunción de and | `to != Completed,` | muerto | `t_evolution_rejects_completion_without_payload` |

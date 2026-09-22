@@ -122,10 +122,19 @@ node contracts/scripts/rechazos-trazas.mjs              # cada `expect` contra e
 lista, las puntas de la ventana de validez, las ramas de la tabla de transiciones y el `fail` del
 `else` (51 mutantes). Los `expect` que desarman o castean (`Some(x) = …`, `x: StageDatum = …`, 7) no
 se pueden mutar sin romper los tipos: los cubre `rechazos-trazas.mjs` con la traza que devuelve
-`aiken check`. Los dos salen con código ≠ 0 si queda un chequeo sin test. **85 tests, 0 fallando** (dos de ellos, property tests, corren 100 casos generados
+`aiken check`. Los dos salen con código ≠ 0 si queda un chequeo sin test. **101 tests, 0 fallando** (dos de ellos, property tests, corren 100 casos generados
 cada uno — ver la fila de abajo).
 
-`lib/propnexus/fsm.ak` — 45:
+**Medida de verdad, no solo argumentada (`SPEC-017`, cerrado 2026-09-22).** La corrida vigente —
+`specs/evidencia-m3/1-repo-ci-tests/mutation-report.md` y `expect-trace-report.md`— da **51
+mutantes: 50 muertos, 1 vivo** y **18 `expect`: 18 con test**. El único vivo, `stage.ak:91`
+(`own_input` lleva exactamente 1 unidad del token), es equivalencia genuina y no gap: `carrying_
+thread` sobre el output de continuación (línea 104) ya exige esa misma cardinalidad, y la igualdad
+de valor (línea 125) fuerza que lo que traía el input sea lo que queda en el output — cualquier
+cantidad mal formada en 91 se transmite igual a 104. El triage completo, caso por caso, está en
+`specs/SPEC-017-cobertura-95-en-toda-la-app.md` §El triage del paso 6.
+
+`lib/propnexus/fsm.ak` — 48:
 
 | Qué prueba | Tests |
 |---|---|
@@ -133,24 +142,33 @@ cada uno — ver la fila de abajo).
 | `Completed` es terminal (las 4 salidas fallan) | `t_completed_is_terminal_to_*` (4, incluidas arriba) |
 | La identidad no se reescribe (proyecto, stage, orden, criticidad) | `t_identity_*` (5) |
 | Un stage crítico exige commitment de 32 bytes; uno no crítico no | `t_critical_needs_a_full_commitment`, `t_non_critical_completes_without_evidence` |
-| Evolución del datum: completar, no completar, y los cruces inválidos | `t_evolution_*` (9) |
+| Evolución del datum: completar, no completar, y los cruces inválidos | `t_evolution_*` (12, de los cuales 3 son `SPEC-017`: una transición no-terminal con `Completion` adjunto, un `evidence_root` de redeemer y datum que difieren, y un `completed_at` de redeemer y datum que difieren — las tres evaden en sustancia la garantía anti-backdating y de evidencia obligatoria si no se prueban) |
 | **Property tests sobre `valid_datum_evolution`** — el único lugar del subárbol con espacio de entrada ancho de verdad; la tabla de transiciones de arriba ya está probada exhaustivamente y ahí un property test no agregaría nada (`SPEC-306`). Generador de `StageDatum` con refs/roots de largo variado, incluidos 0 y 32 | `prop_non_completing_evolution_preserves_evidence`, `prop_evolution_never_bypasses_the_transition_table` (2, 100 casos c/u) |
 | Nacimiento del hilo: estado inicial, evidencia y fecha en cero, orden positivo, refs no vacías y ≤32 bytes | `t_initial_*` (7) |
 | El datum codifica al mismo CBOR que el códec de `packages/cardano` espera — el "valor dorado" (ver `packages/cardano/CLAUDE.md`) | `t_golden_datum_encoding` (1) |
 | El redeemer (`StageRedeemer`/`MintAction`) codifica al mismo CBOR que `encodeAdvanceRedeemer`/`encodeInitRedeemer` de `packages/cardano` — mismo boundary que el datum, cerrado el 2026-09-08 (`specs/PLAN-2026-09-08-tests-aiken-robustez.md`) | `t_golden_redeemer_*` (3) |
 
-`validators/stage.ak` — 40 (8 caminos felices + 31 puntos de rechazo + 1 sobre el `else` genérico):
+`validators/stage.ak` — 53 (10 caminos felices + 42 puntos de rechazo + 1 sobre el `else`
+genérico). Los 13 que suma `SPEC-017` (cerrado 2026-09-22) aíslan un punto de rechazo que otro test
+ya tocaba de rebote, y quedan marcados abajo:
 
 | Punto de rechazo | Test |
 |---|---|
+| el camino feliz tolera un output ajeno en otra dirección (`SPEC-017`) | `spend_accepts_an_unrelated_output_elsewhere` |
+| el camino feliz tolera un input de wallet extra, además del del script (`SPEC-017`) | `spend_accepts_an_extra_wallet_input` |
 | datum ausente | `spend_rejects_missing_datum` |
 | el `own_ref` no está entre los inputs | `spend_rejects_unknown_own_ref` |
+| `own_input` en una dirección de wallet, no de script (`SPEC-017`) | `spend_rejects_own_input_not_locked_by_a_script` |
+| un segundo output parado en la dirección exacta del script, sin el token (aísla la cardinalidad de `at_address`, no la de `carrying_thread` — `SPEC-017`) | `spend_rejects_a_second_output_at_the_exact_script_address` |
 | dos inputs del script en la misma tx | `spend_rejects_two_script_inputs` |
 | dos outputs al script | `spend_rejects_two_script_outputs` |
+| el hilo partido en dos outputs con el mismo payment credential y distinto staking credential — el ataque real que argumenta el comentario de SPEC-303 (`SPEC-017`) | `spend_rejects_thread_split_across_a_staking_variant_of_the_script_address` |
 | ningún output de continuación | `spend_rejects_no_continuing_output` |
 | falta la firma del operador | `spend_rejects_missing_admin_signature` |
 | datum de salida no inline | `spend_rejects_non_inline_datum` |
+| el cast a `StageDatum` del datum de continuación, con `Init` como forma estructural distinta (`SPEC-017`) | `spend_rejects_new_datum_of_the_wrong_type` |
 | el valor bloqueado cambia (D-021) | `spend_rejects_value_drain` |
+| solo el ADA se drena, con la unidad del thread token intacta — aísla D-021 de la cardinalidad de `carrying_thread` (`SPEC-017`) | `spend_rejects_ada_drain_while_keeping_the_token` |
 | transición fuera de la tabla | `spend_rejects_invalid_transition` |
 | salir del estado terminal | `spend_rejects_leaving_completed` |
 | identidad del stage reescrita | `spend_rejects_identity_rewrite` |
@@ -161,6 +179,8 @@ cada uno — ver la fila de abajo).
 | ventana de validez abierta (sin punta finita) | `spend_rejects_open_ended_validity_range` |
 | `completed_at` un instante antes del borde inferior de la ventana (el borde exacto acepta — caminos felices) | `spend_rejects_timestamp_one_below_lower_bound` |
 | `completed_at` un instante después del borde superior de la ventana | `spend_rejects_timestamp_one_above_upper_bound` |
+| ventana semiabierta: inferior infinito, superior finito — aísla la punta inferior (`SPEC-017`) | `spend_rejects_missing_lower_bound` |
+| ventana semiabierta: superior infinito, inferior finito — aísla la punta superior (`SPEC-017`) | `spend_rejects_missing_upper_bound` |
 | el UTxO gastado no lleva thread token | `spend_rejects_utxo_without_thread_token` |
 | el token es el de otro stage | `spend_rejects_thread_token_of_another_stage` |
 | el UTxO gastado lleva 2 unidades del propio thread token, no 1 (análogo al de `mint`) | `spend_rejects_utxo_with_two_units_of_own_token` |
@@ -172,7 +192,11 @@ cada uno — ver la fila de abajo).
 | el asset name no coincide con el `stage_ref` del datum | `mint_rejects_asset_name_not_matching_stage_ref` |
 | nacer fuera de `Pending` | `mint_rejects_starting_outside_pending` |
 | nacer con evidencia o fecha ya puestas | `mint_rejects_preloaded_evidence` |
+| el output ya carga 2 unidades del token (el token "donado" por un input externo) | `mint_rejects_output_holding_extra_units_of_the_token` |
+| dos asset names distintos, los dos presentes en el output — aísla la cardinalidad pura de `dict.to_pairs`, no el mismatch con `stage_ref` (`SPEC-017`) | `mint_rejects_two_asset_names_when_both_are_present_in_the_output` |
+| dos outputs en la dirección del script, cada uno con 1 unidad del mismo asset — el mismo truco del token "donado", análogo al de `spend` (`SPEC-017`) | `mint_rejects_two_outputs_each_carrying_one_unit` |
 | datum inicial no inline | `mint_rejects_non_inline_datum` |
+| el cast a `StageDatum` del datum inicial, con `Init` como forma estructural distinta (`SPEC-017`) | `mint_rejects_initial_datum_of_the_wrong_type` |
 | quemar el thread token (D-008: "no hay burn" era un argumento, ahora es un test — `SPEC-302`) | `mint_rejects_a_burn` |
 | purpose que no es spend ni mint (withdraw, publish, vote, propose) — cerrado el 2026-09-08, antes solo se sostenía por lectura de código | `else_rejects_other_script_purposes` |
 

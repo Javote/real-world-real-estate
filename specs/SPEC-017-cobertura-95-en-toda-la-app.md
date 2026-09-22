@@ -167,3 +167,9 @@ promesas centrales del producto (D-026). Los de `stage.ak` van después, uno por
 `specs/evidencia-m3/1-repo-ci-tests/mutation-report.md` y `expect-trace-report.md` con la corrida
 que da 51/51 y 18/18 — recién ahí la tabla de `contracts/CLAUDE.md` §Coverage queda verificada de
 verdad, no solo argumentada.
+
+**Cerrado 2026-09-22.** Los 15 tests del triage están escritos, uno por commit. La corrida nueva da
+**51 mutantes: 50 muertos, 1 vivo** (`stage.ak:91`, la equivalencia genuina de la tabla de arriba,
+documentada y no forzada) y **18 `expect`: 18 con test**. `contracts/CLAUDE.md` §Coverage cita el
+resultado. El paso 6 de esta spec queda cerrado; los pasos 1-5 y 7 (las cuatro partes TypeScript y
+CI) siguen abiertos.
