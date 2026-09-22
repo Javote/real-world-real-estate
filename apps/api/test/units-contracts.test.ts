@@ -169,6 +169,36 @@ describe("el ciclo unidad → invitación → contrato → release", () => {
     expect(uno.commitment).toMatch(/^[0-9a-f]{64}$/);
   });
 
+  // La única regla disyuntiva de la API (`contracts.routes.ts` §Fila 23-24):
+  // dueño del contrato, o miembro del proyecto sin serlo. `tokenDev` no es
+  // `Contract.investorId` — es la segunda rama la que tiene que salvarlo.
+  it("un miembro del proyecto que no es el dueño también ve las releases", async () => {
+    const res = await request(app)
+      .get(`/api/v1/contracts/${contractId}/releases`)
+      .set("Authorization", `Bearer ${tokenDev}`);
+
+    expect(res.status).toBe(200);
+    expect(res.body.some((r: { stageNumber: number }) => r.stageNumber === ETAPA)).toBe(true);
+  });
+
+  it("ni dueño ni miembro del proyecto: 403", async () => {
+    const tokenAjeno = (await login(FIXTURES.ajeno)).body.token;
+
+    const res = await request(app)
+      .get(`/api/v1/contracts/${contractId}/releases`)
+      .set("Authorization", `Bearer ${tokenAjeno}`);
+
+    expect(res.status).toBe(403);
+  });
+
+  it("un contrato inexistente da 404 en las dos ramas", async () => {
+    const res = await request(app)
+      .get(`/api/v1/contracts/${createId()}/releases`)
+      .set("Authorization", `Bearer ${tokenInvestor}`);
+
+    expect(res.status).toBe(404);
+  });
+
   it("el investor ve su contrato; otro no", async () => {
     const mio = await request(app)
       .get(`/api/v1/investor/contracts/${unitId}`)

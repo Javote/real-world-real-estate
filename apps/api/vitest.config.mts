@@ -83,6 +83,18 @@ export default defineConfig({
     // (89,94%) y branches (77,66%) quedan por debajo — la spec mide líneas,
     // no las cuatro métricas, así que no bloquean el cierre; el umbral de acá
     // sí las sube igual, al piso medido, para que no bajen sin querer.
+    //
+    // Subida de branches, fuera de la spec (2026-09-22): `contracts.routes.ts`,
+    // `users.routes.ts` — tests nuevos para la rama disyuntiva de
+    // `GET /contracts/:contractId/releases` (dueño vs. miembro del proyecto,
+    // más el 403 y el 404), y para `GET /users/:id` 404 y
+    // `PATCH /users/:id` (fullName, isActive, password). El 404 que el
+    // handler de `contracts.routes.ts` declara (`if (!contrato)`) quedó sin
+    // ejercitar a propósito: `evaluarDueño`/`evaluarProyecto` (auth.ts) ya
+    // resuelven la existencia del contrato en el middleware — las dos ramas
+    // de `authorize({ alguna: [...] })` cargan la fila antes de que el
+    // handler la vuelva a buscar, así que ese `if` (y el `if (!matched)` de
+    // todo router montado sobre oRPC) es defensivo, no alcanzable por HTTP.
     coverage: {
       provider: "v8",
       reporter: ["text-summary", "html"],
@@ -95,8 +107,8 @@ export default defineConfig({
         "src/db/types.ts"
       ],
       thresholds: {
-        statements: 89,
-        branches: 77,
+        statements: 90,
+        branches: 78,
         functions: 95,
         lines: 95
       }

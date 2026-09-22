@@ -90,3 +90,30 @@ describe("PATCH /api/v1/users/:id aplica la misma política", () => {
     );
   });
 });
+
+describe("PATCH /api/v1/users/:id con password válida", () => {
+  it("hashea la password nueva y permite loguearse con ella", async () => {
+    const email = "cambia-password@test.local";
+    const nuevaPassword = "una password larga y valida para cambiar";
+
+    const creado = await request(app)
+      .post("/api/v1/users")
+      .set("Authorization", `Bearer ${adminToken}`)
+      .send({ email, password: "una password original valida", role: "buyer", fullName: "Cambia" });
+    expect(creado.status).toBe(201);
+
+    const res = await request(app)
+      .patch(`/api/v1/users/${creado.body.id}`)
+      .set("Authorization", `Bearer ${adminToken}`)
+      .send({ password: nuevaPassword });
+
+    expect(res.status).toBe(200);
+    expect(res.body.id).toBe(creado.body.id);
+
+    const login = await request(app)
+      .post("/api/v1/auth/login")
+      .send({ email, password: nuevaPassword });
+    expect(login.status).toBe(200);
+    expect(login.body.token).toBeTruthy();
+  });
+});
