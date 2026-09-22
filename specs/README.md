@@ -129,7 +129,14 @@ de corte de una rebanada es que la app quede corriendo y demostrable.**
 | [`SPEC-014`](SPEC-014-reconstruccion-del-front.md) | Reconstrucción del front desde los entregables | **cerrada 2026-09-11** |
 | [`SPEC-015`](SPEC-015-saneamiento-de-la-instrumentacion.md) | Saneamiento de la instrumentación: tests, fixtures, coverage, CI | **cerrada 2026-09-11** — los 7 cambios. El 6 cerró **reformulado**: se parte por concern, no por conteo de líneas (§El ítem 6) |
 | [`SPEC-016`](SPEC-016-superficie-del-investor.md) | Superficie del investor (M2-D5 §4) | **cerrada 2026-08-28** |
-| [`SPEC-017`](SPEC-017-cobertura-95-en-toda-la-app.md) | 95% de cobertura con unit tests, en toda la app (criterio 2) | **abierta 2026-09-21** — la única abierta del repo. Faltan ~1.370 líneas, ~1.160 de ellas en la web |
+| [`SPEC-017`](SPEC-017-cobertura-95-en-toda-la-app.md) | 95% de cobertura con unit tests, en toda la app (criterio 2) | **abierta 2026-09-21** — la única abierta de las que pertenecen al mandato de M3. Faltan ~1.370 líneas, ~1.160 de ellas en la web |
+
+**Las specs de Milestone 4 se numeran aparte, en `5xx`, y no cuentan en el "única abierta" de
+arriba porque todavía no son mandato — M3 no está entregado.** Nacen de leer el SOM de M4 contra el
+código (`ESTADO-2026-09-22-catalyst-milestone-4.md`), no de una auditoría del código existente:
+`SPEC-501` (panel de métricas del piloto), `SPEC-502` (registro de disputas), `SPEC-503` (encuesta
+NPS) y `SPEC-504` (completitud de documentación) — las cuatro **sin empezar**, escritas para tener
+el terreno mapeado antes de que M4 se vuelva el mandato activo.
 
 Los planes fechados no llevan número: [`PLAN-2026-08-31-anclaje-real.md`](PLAN-2026-08-31-anclaje-real.md)
 fue la secuencia operativa para pasar la instancia desplegada a `ANCHOR_MODE=real` (cerrada el
