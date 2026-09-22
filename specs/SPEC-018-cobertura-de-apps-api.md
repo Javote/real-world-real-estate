@@ -126,6 +126,177 @@ se terminaron los tests que la sesión anterior dejó a medio hacer y se sumó u
 no que el stage le pertenezca, así que un stage real pedido bajo otro proyecto sí llega al handler
 (`stage-transitions.test.ts`, *"404 si el stage existe pero es de otro proyecto — sin mint"*).
 
+## Análisis rama por rama — 2026-09-22, antes de escribir un solo test
+
+Las 75 branches y las 13 funciones sin cubrir, leídas una por una contra el código, el esquema y
+`authorize`. **Cada lote arranca de acá: la receta ya está, y lo que no se alcanza ya está
+justificado.** Dos cosas se verificaron corriendo código, no leyéndolo: los dos bugs de abajo, con
+un test descartable contra la API real.
+
+Leyenda: **HTTP** = test por supertest · **unit** = llamar la función o el middleware directo, con
+`req`/`res` falsos o el entorno pisado · **mock** = hace falta `vi.mock`/`vi.spyOn` para forzar la
+condición · **❌** = no se alcanza: marcar con `/* v8 ignore … -- @preserve: <motivo> */` ·
+**🐞** = bug: se arregla y el test lo fija.
+
+### 🐞 Dos bugs: un id inexistente da 500 en vez de 404
+
+`PATCH /users/:id` y `PATCH /projects/:id` con un id que no existe responden **500**, y el
+interceptor de `lib/orpc.ts` lo reporta a Sentry como error no clasificado. Las dos rutas son
+`authorize({ acceso: "soloRol" })`: nada carga la fila antes del handler. El handler hace
+`updateTable(...).executeTakeFirstOrThrow()`, Kysely tira `NoResultError`, y el `.catch` →
+`relanzarRestriccionComoOrpc` lo relanza tal cual porque no es una restricción. `GET /users/:id`
+sí contesta 404 (tiene su `if`), así que es un olvido, no una decisión.
+
+Se probaron las 13 rutas `soloRol` con un id en el path, con un id inexistente. Estas dos son las
+únicas con 500. Tres respuestas más que **no son bugs pero conviene decidir**: `DELETE /users/:id` y
+`DELETE /projects/:id` dan 204 aunque no exista nada (idempotente, defendible), y
+`POST /projects/:id/members` sobre un proyecto inexistente da 400 `RELATED_RESOURCE_NOT_FOUND` (la FK
+contesta antes que un 404).
+
+**Arreglo:** `executeTakeFirst()` + `if (!fila) throw new ORPCError("NOT_FOUND", …)`, como hace
+`GET /users/:id`. Cierra `users.routes.ts:179` (función) y el equivalente de `projects.routes.ts`.
+Van en A4 y A5.
+
+### 🐞 Otro, chico, del front (va en SPEC-019)
+
+El `TONO` de `investor.units.tsx` no tiene `delivered`, así que una unidad entregada se muestra en
+tono neutro. En las pantallas del developer, esa misma unidad sale `verified`.
+
+### A1 — `developer-comercial.routes.ts` (11 branches, 1 función)
+
+| Línea | Rama | Veredicto | Receta o motivo |
+|---|---|---|---|
+| 167 | `if (!unidad) throw NOT_FOUND` | ❌ | `authorize({ proyecto: { via: "Unit" } })` en `PATCH /units/:id` ya cargó la unidad |
+| 382 | `unitIds.length ? … : []` | HTTP | `GET /projects/:id/contracts` de un proyecto sin contratos |
+| 403 | `if (mejor === null)`, lado falso | HTTP | **Se alcanza por el flujo real**, no solo con inserts a mano como decía SPEC-017: vender la unidad, `PATCH /units/:id` a `available`, re-invitar al mismo investor y aceptar. Quedan dos invitaciones aceptadas, y dos candidatos por contrato |
+| 404 | `if (firmado === null)`, lado verdadero | ❌ | el accept escribe `Contract.signedAt` con el mismo `ahora` que el resto: nunca es `null` |
+| 404 | `if (firmado === null)`, lado falso | HTTP | el mismo flujo de la 403 |
+| 405 | función `distancia` | HTTP | el mismo flujo |
+| 407 | `respondido === null ? ∞ : …`, lado `∞` | ❌ | una invitación `accepted` siempre tiene `respondedAt` (el accept lo escribe) |
+| 407 | lado `Math.abs(…)` | HTTP | el mismo flujo |
+| 409 | `distancia(a) < distancia(mejor)`, los dos lados | HTTP | el mismo flujo, con los `respondedAt` a distinta distancia del `signedAt`. En el flujo real son el mismo instante, así que uno de los dos lados puede necesitar un `UPDATE` de `respondedAt` en el test |
+| 472 | `if (!contrato) throw NOT_FOUND` | ❌ | `authorize({ proyecto: { via: "Contract" } })` en `POST /contracts/:id/releases/:stageNum` ya lo cargó |
+| 547 | `catch`: error que no es `ReleaseExceedsContractError` | mock | `vi.spyOn(db, "transaction")` que rechace con un `Error` cualquiera → 500. Prueba que el `catch` no se traga errores ajenos |
+
+**A1: 7 alcanzables (más la función), 4 ❌.**
+
+### A2 — `developer-evidencia.routes.ts`, `evidence.routes.ts` (7 branches, 2 funciones)
+
+| Línea | Rama | Veredicto | Receta o motivo |
+|---|---|---|---|
+| dev-evid 180 | `if (req.readableEnded) return responder()` | unit | llamar `rechazarStageAntesDeRecibir` con una `req` falsa `{ readableEnded: true }` y un stage `Completed` |
+| dev-evid 185 | `if (leidos > TOPE_DE_DRENAJE) req.destroy()` | HTTP | subir a un stage `Completed` un cuerpo más grande que `TOPE_DE_DRENAJE` |
+| dev-evid 230 | `req.files ?? []` | HTTP | mandar el `POST` como JSON y no como multipart: Multer no toca `req.files` |
+| dev-evid 254 | `catch` de `call(validarCamposDeTexto)` que no es `ORPCError` | ❌ | un procedure de solo validación solo tira `ORPCError` (`BAD_REQUEST`) |
+| dev-evid 260 | el stage se cerró mientras subían los bytes | mock | el segundo `stageQueAceptaSubida` tiene que rechazar: completar el stage desde un `storage.put` espiado (o desde el `fileFilter`) antes de que el handler vuelva a mirar. Es la carrera que el comentario de la línea 258 describe |
+| dev-evid 368 | `parsed.authoritative ?? false` | ❌ | `stageEvidenceUploadSchema` ya lo defaultea a `false` (`documents.test.ts` lo fija) |
+| dev-evid 399 | error del insert que no es el `UNIQUE` de `(stageId, sha256Hash)` | mock | `insertInto("Evidence")` que tire otro error → se relanza y limpia los archivos |
+| dev-evid 518 | función: `storage.remove(ref).catch(...)` | mock | driver S3 (mismo mock de `storage-mocked.test.ts`) con `remove` que rechaza, en un pedido que no llega a confirmar |
+| evidence 490 | función `sha256Pair` | HTTP | `GET /evidence/:bundleId/proof/:fileHash` sobre un bundle con **dos o más** archivos (con uno solo, el camino Merkle es vacío) |
+
+**A2: 5 alcanzables (más las 2 funciones), 2 ❌.**
+
+### A3 — `capital.routes.ts` (3 branches, 4 funciones)
+
+| Línea | Rama | Veredicto | Receta |
+|---|---|---|---|
+| 81 | `contratos.length === 0 ? []` | HTTP | developer con un proyecto **sin** contratos → `GET /developer/capital/summary` |
+| 112 | función: `releases.reduce` | HTTP | proyecto con contrato **y** una liberación real (`POST /contracts/:id/releases/:stageNum` sobre un stage certificado) |
+| 163 | función: el `sort` por mes | HTTP | movimientos en **dos meses distintos**: un contrato con `signedAt` de otro mes, por `UPDATE` |
+| 179 | `if (ids.length === 0) return []` | HTTP | developer sin proyectos → `GET /developer/capital/by-project` |
+| 200-201 | funciones `filter`/`reduce` de releases por proyecto | HTTP | el mismo proyecto con liberación, pedido por `by-project` |
+| 266 | `if (!actual.projects.includes(...))`, lado falso | HTTP | un investor con **dos unidades del mismo proyecto** → `GET /developer/investors` |
+
+**A3: todo alcanzable.** Un solo `beforeAll` (proyecto + dos contratos del mismo investor + una
+liberación + un segundo mes) cubre las 7.
+
+### A4 — middlewares, `auth.routes.ts`, `users.routes.ts` (11 branches, 1 función)
+
+| Línea | Rama | Veredicto | Receta o motivo |
+|---|---|---|---|
+| auth 46 | `leerGuard` con algo que no es función | unit | `leerGuard("x")` → `null` |
+| auth 298 | `leerParam`: el param no está en `req.params` | unit | `authorize({ acceso: { proyecto: { param: "id" } } })` con `req.params = {}` → 500 (ruta mal declarada) |
+| auth 440 | `CertifierInvitation` inexistente | HTTP | `POST /certifier/invitations/<cuid nuevo>/accept` → 404 |
+| auth 457 | `evaluarDueño` con el param faltante | unit | lo mismo que la 298, con `{ dueño: … }` |
+| auth 578 | `alguna` donde una rama da 500 | unit | `alguna` con una rama cuyo param no existe → 500 gana sobre el OK de la otra |
+| auth 585 | `?? PROHIBIDO` | ❌ | el tipo de `alguna` exige dos ramas como mínimo: `veredictos[0]` siempre existe |
+| auth 599 | `authorize` sin `req.user` | unit | llamar el middleware sin pasar por `authenticate` → 401 |
+| errorHandler 98 | `res.headersSent` | unit | `res` falso con `headersSent: true` → llama `next(err)` |
+| errorHandler 120 | error de restricción SQLite | unit | un error con `code: "SQLITE_CONSTRAINT_UNIQUE"` → 409. Desde oRPC ninguna ruta llega acá (lo resuelve `relanzarRestriccionComoOrpc`), pero `errorHandler` sigue siendo la red de las rutas Express llanas |
+| rateLimit 68 | `DOSSIER_RATE_LIMIT_MAX` válido | unit | `dossierRateLimitMax({ DOSSIER_RATE_LIMIT_MAX: "5" })` → 5 |
+| auth.routes 130 | `/auth/me` con el usuario borrado entre `authenticate` y el handler | ❌ | solo por una carrera: `authenticate` acaba de consultar la misma fila |
+| users 179 | función: el `.catch` del `PATCH` | 🐞 | es el bug de arriba. Arreglado, la rama se va con él |
+
+**A4: 9 alcanzables, 2 ❌, 1 bug.**
+
+### A5 — `domain/*`, `stages`, `audit`, `_shared`, `notary`, `projects` (27 branches, 2 funciones)
+
+| Línea | Rama | Veredicto | Receta o motivo |
+|---|---|---|---|
+| dossier 54 | `compileDossier` de una unidad inexistente | unit | `compileDossier(createId())` → `null` |
+| dossier 198 | recompilar un dossier no firmado cuyo hash cambió | HTTP | compilar el dossier, completar un stage más y volver a pedirlo |
+| notify 34 | `unitId ?? null` | unit | la función de notificar sin `unitId` |
+| notify 63 | unidad sin investor | unit | notificar sobre una unidad `available` → no inserta nada |
+| notify 104 | `params` ausente | unit | la notificación por proyecto sin `params` |
+| project-aggregates 33 | `ids` vacío | unit | `agregadosDeProyectos([])` |
+| project-aggregates 57 | una sola moneda → precio "desde" | HTTP | proyecto con dos unidades con precio en la **misma** moneda → `GET /developer/projects` o `/projects` |
+| reconcile 126 | `if (!evento.txid) continue` | ❌ | la query ya filtra `txid is not null` |
+| reconcile 265 | puerto `disabled` | mock | `anchorPort().mode` → `"disabled"` → `repararHilosSospechosos()` devuelve `[]` |
+| reconcile 271 | sospechoso sin `stageId`/`toState` | ❌ | la query filtra `stageId is not null`, y toda `STAGE_TRANSITION` se escribe con `toState` (`transitionStage`, línea ~509) |
+| reconcile 287 | `outputRef` sin txid | ❌ | el adaptador arma `outputRef` como `` `${txHash}#${índice}` ``: nunca empieza con `#` |
+| reconcile 294 | `network ?? "Preprod"` | ❌ | `disabled` ya salió en la 265, y `simulated`/`real` siempre traen `network` |
+| reconcile 302 | la actualización no escribió nada (otro proceso ganó) | mock | `findLiveThread` espiado que, antes de devolver, escriba el `txid` del evento: simula la carrera que el `where txid is null` existe para ganar |
+| stage-transition 288 | `if (event.txid) return event` | ❌ | los tres llamadores de `anchorEvent` le pasan un evento recién insertado, sin `txid` |
+| stage-transition 306 | `previous.state === "Completed" ? root : ""`, lado `root` | ❌ | `Completed` es terminal (D-020): nunca hay transición desde ahí |
+| stage-transition 361 | `verify()` devuelve `null` | mock | `vi.spyOn(anchorPort(), "verify").mockResolvedValue(null)` → el evento queda `Pending` |
+| stage-transition 423 | `transitionStage` de un stage inexistente | unit | llamada directa con un id nuevo → `STAGE_NOT_FOUND` |
+| stage-transition 572 | `retryStageMint` de un stage inexistente | unit | lo mismo |
+| stage-transition 582 | puerto `disabled` en el retry | mock | `mode: "disabled"` → no le pregunta a la cadena |
+| stages 67, 128, 211 | tres 404 de stage | ❌ | `authorize({ proyecto: { via: "Stage" } })` ya cargó el stage (`GET`, `PATCH`, `PATCH …/state`) |
+| _shared 48 | error que no es de restricción | unit | `relanzarRestriccionComoOrpc(new Error("x"), …)` → lo relanza tal cual |
+| _shared 68 | `avancePorProyecto([])` | unit | directo |
+| _shared 79 | proyecto sin stages → 0 | HTTP/unit | un proyecto recién insertado sin stages |
+| audit 46 | mediana con cantidad **par** de muestras | HTTP | `GET /audit-logs/telemetry/reservation-to-escrow` con 2 o 4 muestras |
+| notary 294 | re-firmar un dossier firmado sin su evento de firma | mock | `anchorCommitmentEvent` que falle después del `update` a `signed`, y repetir la firma: devuelve 200 sin `anchor` |
+| notary 149 | función: el `map` de pendientes en `kpis` | HTTP | `GET /notary/kpis` con un dossier `compiled` |
+| projects 501 | función: FK en la invitación de certifier | ❌ | el handler ya confirmó que el proyecto y el certifier existen antes del insert |
+
+**A5: 18 alcanzables, 10 ❌** (9 branches + 1 función), **más el bug de `PATCH /projects/:id`**.
+
+### A6 — `lib/*`, `db/*`, `instrumentation`, `utils/audit`, `app` (16 branches, 3 funciones)
+
+| Línea | Rama | Veredicto | Receta o motivo |
+|---|---|---|---|
+| anchor 127 | `DATABASE_URL` ausente | unit | `vi.stubEnv("DATABASE_URL", undefined)` → `motivoParaNoAnclar()` |
+| anchor 185 | el factory tira algo que no es `Error` | mock | factory que tira un string → el puerto queda inhabilitado con ese texto |
+| anchor 197 | `anchorPort()` antes de `initAnchorPort()` | unit | `vi.resetModules()` + import fresco → tira |
+| storage 114 | S3 sin `endpoint` | unit | `new S3Storage({ …sin endpoint })` (AWS puro) |
+| storage 177 | `bucketReady` ya en `true` | unit | dos `put` seguidos: el segundo no vuelve a llamar `HeadBucket` |
+| storage 212 | `S3_CREATE_BUCKET` ausente | unit | `createStorage()` con esa variable sin setear |
+| route-inventory 99 | middleware de router sin guard | unit | un `Router` sintético con `router.use(fn)` sin marcar (en la app real, hasta `authenticate` está marcado) |
+| route-inventory 106 | path vacío → `"/"` | unit | router sintético con una ruta `"/"` y prefijo `""` |
+| migrate 30 | no hay directorio de migraciones | mock | `vi.mock("node:fs")` con `existsSync` → `false` |
+| migrate 139 | `if (reloj)`, lado falso | ❌ | el executor de la `Promise` corre sincrónico: `reloj` siempre está asignado al llegar al `finally` |
+| migrate 156 | `DATABASE_URL` ausente → default | mock | **no correrla de verdad** (migraría `.data/dev.db`): `vi.mock` de `lib/libsql-client` que capture la URL y verifique que es `DEFAULT_DATABASE_URL` |
+| migrate 172 | con `DATABASE_AUTH_TOKEN` | mock | el mismo mock, verificando que viaja el `authToken` |
+| fixtures 169 | `sembrarMembresias(db, id, [])` | unit | directo |
+| local-db 26 | URL que no es `file:` | unit | `asegurarDirectorioLocal("libsql://x")` → no crea nada |
+| instrumentation 34 | `SENTRY_DSN` sin `NODE_ENV` | unit | `initSentry()` con el env pisado → `environment: "development"` |
+| instrumentation 162 | función: el `catch` del `shutdown` en `SIGTERM` | unit | capturar el listener con `vi.spyOn(process, "on")` y llamarlo con un `sdk.shutdown` que rechaza |
+| utils/audit 23 | `actorUserId` ausente | unit | `writeAuditLog` sin actor (evento de sistema) → `null` |
+| app 106, 205 | funciones: `/health` y el 404 final | HTTP | `GET /health` → 200; `GET /api/v1/no-existe` → `{ message: "Not found" }`. Sumar el `catch` de `/health` con `sql` espiado para que falle → 503 |
+
+**A6: 15 alcanzables (más las 3 funciones), 1 ❌.**
+
+### El resultado, si se hace todo
+
+| | Hoy | Tras marcar las 18 ❌ | Tras los tests de las 57 |
+|---|---|---|---|
+| Branches | 791/866 (91,33%) | 791/848 (93,28%) | **848/848 (100%)** |
+
+**Para el 95% alcanza con 15 de las 57.** Marcar las 18 lo hace cada lote en sus propios archivos
+(§Paralelismo). Las 13 funciones: 11 alcanzables, 1 ❌ (`projects.routes.ts:501`) y 1 bug (`users.routes.ts:179`).
+
 ## Paralelismo — qué se puede hacer a la vez, medido contra el código
 
 **Con el paso 0 cerrado, los seis lotes pueden correr los seis a la vez.** Se verificó, no se
