@@ -117,6 +117,22 @@ export default defineConfig({
     // `if (!dossier)` de `public.routes.ts` (línea 56) es la misma garantía:
     // se probó a propósito insertando un `Dossier` con un `unitId`
     // inexistente y la base lo rechazó.
+    //
+    // Tercera tanda (2026-09-24): `certifier.routes.ts`, 68,18%→75% de
+    // branches. Tres ramas reales, las tres cerradas: un verifier sin ningún
+    // proyecto visible en `kpis` (el `ids.length ? ... : []` nunca corría con
+    // `ids` vacío) y en `certificates` (el `if (visibles.length)` que evita
+    // reconciliar sin alcance), y `observe` sobre un stage que no está en
+    // `InProgress` (409, mismo patrón que ya tenía `certify` — a esa rama de
+    // `observeProcedure` le faltaba su propio test de rechazo). El resto son
+    // el mismo patrón ya documentado arriba: `if (!matched) next()` de cada
+    // wrapper oRPC, y tres 404 que `authorize({ proyecto: { via: "Stage" } })`
+    // / `authorize({ dueño: { via: "CertifierInvitation" } })` ya resuelven en
+    // el middleware antes de que el handler los vuelva a preguntar
+    // (`stageViewProcedure`, el `if (resultado.status === 404)` compartido de
+    // `certify`/`observe`, y el `if (!fila)` de `responderInvitacion`) —
+    // confirmado leyendo `evaluarProyecto`/`evaluarDueño` en `auth.ts`, no
+    // supuesto.
     coverage: {
       provider: "v8",
       reporter: ["text-summary", "html"],
@@ -130,7 +146,7 @@ export default defineConfig({
       ],
       thresholds: {
         statements: 91,
-        branches: 80,
+        branches: 81,
         functions: 96,
         lines: 97
       }

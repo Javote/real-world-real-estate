@@ -85,6 +85,22 @@ describe("GET /certifier/kpis", () => {
     expect(res.body.certified).toBeGreaterThanOrEqual(1);
     expect(res.body.observed).toBeGreaterThanOrEqual(1);
   });
+
+  it("un verifier sin ningún proyecto visible da los cuatro contadores en 0, sin consultar Stage", async () => {
+    const email = `verifier-sin-proyecto-kpis-${createId()}@test.local`;
+    await request(app)
+      .post("/api/v1/users")
+      .set("Authorization", `Bearer ${tokenAdmin}`)
+      .send({ email, password: "sinproyecto123", role: "verifier", fullName: "Sin Proyecto" });
+    const tokenNuevo = (await login({ email, password: "sinproyecto123" })).body.token;
+
+    const res = await request(app)
+      .get("/api/v1/certifier/kpis")
+      .set("Authorization", `Bearer ${tokenNuevo}`);
+
+    expect(res.status).toBe(200);
+    expect(res.body).toEqual({ assigned: 0, certified: 0, observed: 0, totalStages: 0 });
+  });
 });
 
 describe("GET /certifier/assignments", () => {
@@ -156,6 +172,17 @@ describe("POST /certifier/stages/:id/observe", () => {
     expect(res.status).toBe(201);
     expect(res.body.state).toBe("Observed");
   });
+
+  it("observar un stage que no está en InProgress da 409, no 404", async () => {
+    const stageId = await crearStage({ state: "Pending" });
+
+    const res = await request(app)
+      .post(`/api/v1/certifier/stages/${stageId}/observe`)
+      .set("Authorization", `Bearer ${tokenCertificador}`)
+      .send({ note: "Falta el acta de replanteo" });
+
+    expect(res.status).toBe(409);
+  });
 });
 
 describe("GET /certifier/certificates", () => {
@@ -177,5 +204,22 @@ describe("GET /certifier/certificates", () => {
         .set("Authorization", `Bearer ${tokenCertificador}`);
       expect(segunda.status).toBe(200);
     }
+  });
+
+  it("un verifier sin ningún proyecto visible recibe la lista vacía, sin reconciliar nada", async () => {
+    const email = `verifier-sin-proyecto-certs-${createId()}@test.local`;
+    await request(app)
+      .post("/api/v1/users")
+      .set("Authorization", `Bearer ${tokenAdmin}`)
+      .send({ email, password: "sinproyecto123", role: "verifier", fullName: "Sin Proyecto" });
+    const tokenNuevo = (await login({ email, password: "sinproyecto123" })).body.token;
+
+    const res = await request(app)
+      .get("/api/v1/certifier/certificates")
+      .set("Authorization", `Bearer ${tokenNuevo}`);
+
+    expect(res.status).toBe(200);
+    expect(res.body.items).toEqual([]);
+    expect(res.body.nextCursor).toBeNull();
   });
 });
