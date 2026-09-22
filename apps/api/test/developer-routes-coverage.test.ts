@@ -106,7 +106,11 @@ describe("GET /developer/kpis con proyectos reales", () => {
     expect(nuevo.status).toBe(201);
 
     const primeraEtapa = nuevo.body.stages[0].id as string;
-    await db.updateTable("Stage").set({ state: "Completed" }).where("id", "=", primeraEtapa).execute();
+    await db
+      .updateTable("Stage")
+      .set({ state: "Completed" })
+      .where("id", "=", primeraEtapa)
+      .execute();
 
     const res = await request(app)
       .get("/api/v1/developer/kpis")
