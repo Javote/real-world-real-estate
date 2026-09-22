@@ -372,6 +372,23 @@ test t_evolution_rejects_zero_timestamp() {
   )
 }
 
+// El mutation testing de SPEC-017 encontró que `t_evolution_rejects_payload_on_non_completion`
+// (arriba) no aísla `to == Completed` en el `and` del completion: ahí el `new.evidence_root`
+// difiere del que declara el redeemer, así que lo agarra esa línea, no esta. Acá el resto del
+// payload coincide exactamente con lo que declara el `Completion`, para que solo `to == Completed`
+// pueda estar frenando la transición.
+test t_evolution_rejects_completion_payload_matching_a_non_completing_transition() {
+  let old = sample(InProgress, False)
+  let new =
+    StageDatum { ..old, state: Observed, evidence_root: root, completed_at: 5 }
+  !valid_datum_evolution(
+    old,
+    new,
+    Observed,
+    Some(Completion { evidence_root: root, now: 5 }),
+  )
+}
+
 test t_evolution_rejects_leaving_terminal() {
   let old =
     StageDatum {
