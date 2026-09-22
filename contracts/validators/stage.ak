@@ -395,6 +395,37 @@ test spend_accepts_an_extra_wallet_input() {
   )
 }
 
+// Ningún test arma un `own_input` en una dirección que no sea de script — en
+// la red real el ledger solo invoca `spend` para gastar un UTxO ya bloqueado
+// por este script, pero el test arma la llamada directo y puede pasar
+// cualquier cosa.
+test spend_rejects_own_input_not_locked_by_a_script() fail {
+  let old = datum_at(Pending, True)
+  let new = StageDatum { ..old, state: InProgress }
+  let input =
+    Input {
+      output_reference: own_ref,
+      output: Output {
+        address: wallet_address(),
+        value: locked_value(),
+        datum: InlineDatum(old),
+        reference_script: None,
+      },
+    }
+  stage.spend(
+    admin_key,
+    Some(old),
+    Advance { to: InProgress, completion: None },
+    own_ref,
+    tx(
+      [input],
+      [script_output_with(InlineDatum(new), locked_value())],
+      [admin_key],
+      100,
+    ),
+  )
+}
+
 test spend_rejects_missing_datum() fail {
   let old = datum_at(Pending, True)
   let new = StageDatum { ..old, state: InProgress }
