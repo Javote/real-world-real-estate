@@ -28,6 +28,9 @@ let tokenDev: string;
 let tokenAjeno: string;
 /** El proyecto compartido de la suite, que NO tiene organización. */
 let proyectoSinOrg: string;
+/** Organización sin `foundedYear` — para el caso "no lo dijo" (`null`, no 0). */
+let organizacionSinFundacion: string;
+let proyectoSinFundacion: string;
 
 beforeAll(async () => {
   tokenDev = (await login(FIXTURES.activo)).body.token;
@@ -136,6 +139,51 @@ beforeAll(async () => {
       .where("slug", "=", FIXTURES.proyecto.slug)
       .executeTakeFirstOrThrow()
   ).id;
+
+  organizacionSinFundacion = createId();
+  await db
+    .insertInto("Organization")
+    .values({
+      id: organizacionSinFundacion,
+      name: "Grupo Sin Fundación",
+      slug: `grupo-sin-fundacion-${organizacionSinFundacion}`,
+      bio: null,
+      foundedYear: null,
+      createdAt: ahora,
+      updatedAt: ahora
+    })
+    .execute();
+
+  proyectoSinFundacion = createId();
+  await db
+    .insertInto("Project")
+    .values({
+      id: proyectoSinFundacion,
+      name: "sin-fundacion",
+      slug: `perfil-sin-fundacion-${organizacionSinFundacion}`,
+      address: null,
+      city: null,
+      country: null,
+      latitude: null,
+      longitude: null,
+      totalUnits: 1,
+      estimatedDelivery: null,
+      status: "planning",
+      organizationId: organizacionSinFundacion,
+      createdAt: ahora,
+      updatedAt: ahora
+    })
+    .execute();
+  await db
+    .insertInto("ProjectMember")
+    .values({
+      id: createId(),
+      userId: developer.id,
+      projectId: proyectoSinFundacion,
+      membershipRole: "developer",
+      createdAt: ahora
+    })
+    .execute();
 });
 
 afterAll(async () => {
@@ -145,10 +193,12 @@ afterAll(async () => {
     .execute();
   await db
     .deleteFrom("ProjectMember")
-    .where("projectId", "in", [proyectoEntregado, proyectoActivo])
+    .where("projectId", "in", [proyectoEntregado, proyectoActivo, proyectoSinFundacion])
     .execute();
   await db.deleteFrom("Project").where("organizationId", "=", organizacion).execute();
   await db.deleteFrom("Organization").where("id", "=", organizacion).execute();
+  await db.deleteFrom("Project").where("organizationId", "=", organizacionSinFundacion).execute();
+  await db.deleteFrom("Organization").where("id", "=", organizacionSinFundacion).execute();
 });
 
 describe("GET /projects/:id/developer", () => {
@@ -202,6 +252,15 @@ describe("GET /projects/:id/developer", () => {
     // motivo quede escrito al lado, no solo en una migración.
     expect(res.body.organization).not.toHaveProperty("rating");
     expect(res.body.stats).not.toHaveProperty("rating");
+  });
+
+  it("yearsInBusiness es null, no 0, cuando la organización no declaró foundedYear", async () => {
+    const res = await request(app)
+      .get(`/api/v1/projects/${proyectoSinFundacion}/developer`)
+      .set("Authorization", `Bearer ${tokenDev}`);
+
+    expect(res.status).toBe(200);
+    expect(res.body.stats.yearsInBusiness).toBeNull();
   });
 
   it("404 si el proyecto no tiene organización", async () => {

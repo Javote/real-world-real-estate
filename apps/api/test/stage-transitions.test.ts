@@ -527,6 +527,44 @@ describe("POST /projects/:id/stages/:stageId/retry-anchor", () => {
     expect(res.body.code).toBe("STAGE_CREATED_EVENT_NOT_FOUND");
   });
 
+  it("404 si el stage existe pero es de otro proyecto — sin mint", async () => {
+    // `authorize` mira el proyecto de la URL, no el stage: un stage real
+    // pedido bajo un proyecto ajeno llega al handler, y el handler es el que
+    // exige que los dos coincidan.
+    const ahora = new Date();
+    const otroProyecto = createId();
+    await db
+      .insertInto("Project")
+      .values({
+        id: otroProyecto,
+        name: "Otro proyecto",
+        slug: `otro-proyecto-${otroProyecto}`,
+        address: null,
+        city: null,
+        country: null,
+        latitude: null,
+        longitude: null,
+        totalUnits: 1,
+        estimatedDelivery: null,
+        status: "planning",
+        organizationId: null,
+        createdAt: ahora,
+        updatedAt: ahora
+      })
+      .execute();
+    const id = await crearStage({ state: "Pending" });
+    const openThread = vi.spyOn(anchorPort(), "openThread");
+
+    const res = await request(app)
+      .post(`/api/v1/projects/${otroProyecto}/stages/${id}/retry-anchor`)
+      .set("Authorization", `Bearer ${adminToken}`);
+
+    expect(res.status).toBe(404);
+    expect(res.body.message).toBe("Stage does not belong to project");
+    expect(openThread).not.toHaveBeenCalled();
+    openThread.mockRestore();
+  });
+
   // SPEC-301: el validador solo garantiza un token por transacción, no uno por
   // stage. `THREAD_ALREADY_OPEN` únicamente sabe lo que dice `OnChainEvent`, y
   // esa fila puede tener `outputRef` en `null` con el hilo vivo igual — es

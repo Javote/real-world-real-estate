@@ -118,7 +118,7 @@ export default defineConfig({
     // se probó a propósito insertando un `Dossier` con un `unitId`
     // inexistente y la base lo rechazó.
     //
-    // Tercera tanda (2026-09-24): `certifier.routes.ts`, 68,18%→75% de
+    // Tercera tanda (2026-09-22): `certifier.routes.ts`, 68,18%→75% de
     // branches. Tres ramas reales, las tres cerradas: un verifier sin ningún
     // proyecto visible en `kpis` (el `ids.length ? ... : []` nunca corría con
     // `ids` vacío) y en `certificates` (el `if (visibles.length)` que evita

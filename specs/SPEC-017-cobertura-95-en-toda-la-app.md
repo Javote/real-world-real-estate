@@ -5,8 +5,25 @@
 > puntos de rechazo de Aiken. **El dueño lo releyó el 2026-09-21: el 95% es de toda la app, y separar
 > una parte es artificial.** Esta spec cierra esa distancia.
 >
-> Nivel 🟢 (tests). Toca configuración de CI (🟡) solo en el paso 7. **Es la única spec abierta del
-> repo**: las demás están cerradas o postergadas a propósito (ver `specs/README.md`).
+> Nivel 🟢 (tests). Toca configuración de CI (🟡) solo en el paso 7.
+
+> **Cerrada el 2026-09-22 y partida en dos.** La spec quedó demasiado grande para releerla antes de
+> cada tanda, y lo que falta ya no es uniforme: la API tiene un techo estructural y la web no. Estado
+> de cada paso al cerrar:
+>
+> | Paso | Estado |
+> |---|---|
+> | 1. Medir honesto (`coverage.include`) | ✅ en las cuatro partes TypeScript |
+> | 2. shared | ✅ las cuatro métricas ≥95% |
+> | 3. cardano | ✅ las cuatro métricas ≥95% |
+> | 4. API | ✅ en líneas (el criterio de esta spec): 97,45%. **La vara más estricta que pidió el dueño —branches ≥95%, el resto ≥98%— sigue en [`SPEC-018`](SPEC-018-cobertura-de-apps-api.md)** |
+> | 5. Web | ➡️ [`SPEC-019`](SPEC-019-cobertura-de-apps-web.md) — cerradas acá solo las tandas notary y certifier |
+> | 6. Contratos | ✅ 51/51 mutantes muertos, 18/18 `expect` con test |
+> | 7. CI | ➡️ SPEC-019 §Consolidación (la mitad de shared y cardano se puede adelantar) |
+> | 8. Evidencia | ➡️ SPEC-019 §Consolidación |
+>
+> Lo que sigue es el historial tal como se escribió. **Las tablas por archivo de abajo quedaron
+> reemplazadas** por las de SPEC-018 y SPEC-019, que se regeneraron del último reporte de cobertura.
 
 ## Qué se mide
 
@@ -424,7 +441,7 @@ esta tanda, no baja. Quedan abiertas las tandas admin, developer, investor, `pro
 (`admin.index.tsx`, 44 líneas, un solo archivo) — con la salvedad de que la spec la agrupa con
 "compartidas", así que conviene mirar de cerca qué entra en esa tanda antes de arrancarla.
 
-## Statements y branches, además de líneas — 2026-09-22, ampliado 2026-09-23
+## Statements y branches, además de líneas — 2026-09-22
 
 **No es el paso 5 ni un paso nuevo: es una vara más estricta que el dueño pidió sumar sobre lo que
 esta spec ya mide.** §Qué se mide fija líneas como el criterio de cierre, y con eso las cuatro
@@ -439,14 +456,14 @@ statements, branches, functions, lines— y las otras tres son más exigentes qu
   statements, y por eso el número de statements de la API (90,81%) queda seis puntos por debajo del
   de líneas (96,92%) aun con las tandas ya cerradas.
 
-**2026-09-23 — se suma statements al mismo trato que branches.** Mismo argumento que ya valía para
+**2026-09-22 — se suma statements al mismo trato que branches.** Mismo argumento que ya valía para
 branches: si igual vamos a perseguir tres de las cuatro métricas de v8 con la misma vara (95%), no
 hay razón para dejar afuera la cuarta. Ni branches ni statements ni functions reemplazan ni bloquean
 el criterio de cierre de §Criterio de cierre, que sigue siendo líneas — pero las tres se persiguen
 en paralelo al paso 5, con el mismo trinquete que ya usa `vitest.config` (sube con cada tanda, no
 baja).
 
-Medido el 2026-09-23 (con `packages/shared` y `packages/cardano` reinstalados tras un `axe-core`
+Medido el 2026-09-22 (con `packages/shared` y `packages/cardano` reinstalados tras un `axe-core`
 que estaba en el lockfile pero no en `node_modules` — `pnpm install --frozen-lockfile` lo resolvió;
 no es un bug del repo, fue un `node_modules` desincronizado en esta sesión):
 
@@ -488,7 +505,7 @@ no puede existir en la cadena, solo para "pintar verde" sin probar nada real. Mi
 documentan los dos casos irreductibles del paso 3 (`ordenarPorClave`, la guarda de
 `publishReferenceScript` original).
 
-### `apps/api` — en curso, 79,59% de branches / 90,81% de statements (medido 2026-09-23)
+### `apps/api` — en curso, 79,59% de branches / 90,81% de statements (medido 2026-09-22)
 
 **Historia de las tandas ya cerradas**, cada una con su commit: `lib/params.ts` se borró en vez de
 testearse (código muerto — `paramSeguro()` no lo importaba nadie, confirmado con grep; la garantía
@@ -506,7 +523,7 @@ investor).
 **Lo que sigue siendo el grueso: ~230 branches y ~220 statements, casi todo en las rutas grandes.**
 No es mecánico — cada archivo tiene su propia lógica de permisos, rechazos y casos borde que hay que
 leer para saber qué test falta, no solo "llamar la función con otro input". Las cuatro métricas por
-archivo, ordenado por peor % de branches (medido 2026-09-23, después de las tandas de arriba):
+archivo, ordenado por peor % de branches (medido 2026-09-22, después de las tandas de arriba):
 
 | Archivo | Branches | Statements | Functions | Lines |
 |---|---|---|---|---|
@@ -550,7 +567,7 @@ rechazo, no una función nueva sin llamar. La excepción donde `functions` tambi
 `capital.routes.ts` (86,66%, 4 sin llamar) — ahí hace falta además cubrir un handler entero, no solo
 una rama suya.
 
-### `developer.routes.ts` — cerrado el trabajo alcanzable, 76,67% (2026-09-23)
+### `developer.routes.ts` — cerrado el trabajo alcanzable, 76,67% (2026-09-22)
 
 De 38/60 a 46/60. Reachable, y ya cerrado: `estimatedDelivery` al crear un proyecto (nunca se probó
 con la fecha puesta), el atajo de "sin proyectos visibles" en `progress`/`documents`/`kpis` (un
@@ -564,7 +581,7 @@ antes del handler (`GET /projects/:id`, `POST /documents` × 2 —`!documento` y
 último además imposible porque la columna es `NOT NULL`—, y los tres `COUNT(*) ?? 0`, que nunca dan
 `NULL` a diferencia del `SUM`). **76,67% es el techo real de este archivo.**
 
-### `investor.routes.ts` — sin trabajo posible, 65,27% ya es el techo (2026-09-23)
+### `investor.routes.ts` — sin trabajo posible, 65,27% ya es el techo (2026-09-22)
 
 **Hallazgo, no una tanda:** las 36 ramas se leyeron una por una y las 25 sin cubrir están **todas**
 justificadas — no hay ningún test legítimo que sumar acá. Catorce son el `if (!matched) next()` de
@@ -577,7 +594,7 @@ comparten, con 12 llamadas acumuladas y 0 en la rama "no existe"); y la última 
 `avancePorProyecto` (`_shared.ts`), que por loop **siempre** setea un valor para cada id que recibe —
 nunca puede faltar uno. No se tocó el archivo. **65,27% es el techo real.**
 
-### `evidence.routes.ts` — cerrado el trabajo alcanzable, 75,93% (2026-09-23)
+### `evidence.routes.ts` — cerrado el trabajo alcanzable, 75,93% (2026-09-22)
 
 De 36/54 a 41/54. Cuatro ramas reales, las cuatro cerradas:
 
@@ -598,7 +615,7 @@ Quedan 13 sin cubrir, documentadas: 10 son `if (!matched) next()`; las otras 3 s
 (`GET /:id`, `GET /:id/download`, `PATCH /:id`, `POST /:id/anchor`, `GET /:bundleId/files` — cinco
 rutas, tres branches porque algunas comparten la misma verificación). **75,93% es el techo real.**
 
-### El total, tras las tres — 2026-09-23
+### El total, tras las tres — 2026-09-22
 
 De 78,69%/90,81% a **80,74% de branches (906/1.122) y 91,28% de statements (2.167/2.374)**. Lines
 subió a 97,26% y functions a 96,69% de arrastre (regla del apartado de arriba: cerrar una rama
@@ -609,7 +626,7 @@ verde (87 archivos, 614 tests).
 **`packages/shared` y `packages/cardano` no se tocaron en esta tanda** — ya están cerrados en las
 cuatro métricas, ver la tabla de arriba.
 
-### `certifier.routes.ts` — cerrado el trabajo alcanzable, 75% (2026-09-24)
+### `certifier.routes.ts` — cerrado el trabajo alcanzable, 75% (2026-09-22)
 
 De 30/44 a 33/44 (68,18%→75%). Tres ramas reales, las tres cerradas: un verifier sin ningún proyecto
 visible en `kpis` (el `ids.length ? ... : []` nunca corría con `ids` vacío — los cuatro contadores
@@ -642,7 +659,7 @@ nueva: **primero confirmar que `authorize()` no la resuelve ya en el middleware*
 vació `investor.routes.ts` y `certifier.routes.ts` de trabajo posible) — leer `middlewares/auth.ts`
 §`evaluarProyecto`/`evaluarDueño` si hay dudas, no asumir por la forma del `if`.
 
-### Statements sube con branches, no aparte — 2026-09-23
+### Statements sube con branches, no aparte — 2026-09-22
 
 **No hace falta perseguir statements como un trabajo propio: en la API sube casi 1:1 con branches.**
 Cruzando los 218 statements sin cubrir contra sus líneas exactas (`coverage-final.json`, campo `s`)
@@ -679,7 +696,7 @@ prometido. `packages/shared` ya está en 100% de statements/lines/functions; sus
 cubrir (`auth.ts:36-37`) no arrastran ningún statement propio porque son las dos ramas de un mismo
 `.refine()` de una sola línea.
 
-### ¿Se puede llegar a 100% literal en lines/functions/statements? — 2026-09-23
+### ¿Se puede llegar a 100% literal en lines/functions/statements? — 2026-09-22
 
 **Casi, pero no del todo, y no conviene forzarlo.** Con branches aparte (esa sí tiene huecos reales
 y grandes, ver la tabla de `apps/api` arriba), lo que falta en lines/functions/statements se separa
@@ -712,7 +729,7 @@ debilitar una protección para que un test la cruce). El techo práctico de cada
 | `apps/api` | ~99,8-99,9% tras cerrar el grupo 1 | 4 statements (los dos guardias `require.main`) |
 | `apps/web` | 100% es plausible una vez cerrado el paso 5 | sin guardias de este tipo detectados hoy — a confirmar cuando se llegue ahí |
 
-### `apps/web` — detalle completo por archivo (medido 2026-09-23)
+### `apps/web` — detalle completo por archivo (medido 2026-09-22)
 
 **117 archivos con código propio en `src/`; 27 ya están al 100% en las cuatro métricas** (sobre todo
 `routes/notary.*`/`certifier.*` de las tandas cerradas, y utilidades chicas). Los otros **90** están

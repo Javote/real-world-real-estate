@@ -133,8 +133,8 @@ mismo hueco a mayor escala:
 - **3.14 — Muestras de "reserva → escrow"** (≥5 compras reales en Preprod): es el ensayo general de
   lo que M4 pide en mainnet a escala de ≥15 releases. Cerrar esto en Preprod primero, no directo en
   mainnet con plata/reputación real de un piloto.
-- **3.15 — Cobertura ≥95%** (`SPEC-017`): el dominio nuevo de M4 (disputas, NPS, completitud) suma
-  código nuevo sobre una base que hoy no llega al piso que el propio SOM pide. Cerrar `SPEC-017`
+- **3.15 — Cobertura ≥95%** (`SPEC-017`, partida el 2026-09-22 en `SPEC-018` y `SPEC-019`): el dominio nuevo de M4 (disputas, NPS, completitud) suma
+  código nuevo sobre una base que hoy no llega al piso que el propio SOM pide. Cerrar `SPEC-019` (y `SPEC-018`)
   antes de sumar más superficie sin cubrir, no después.
 - **3.13 — Recontacto de los 3 pilotos**: es el mismo contacto que M4 output 1 necesita para
   arrancar. No hay dos gestiones separadas.
