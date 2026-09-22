@@ -606,16 +606,41 @@ cierra su statement al mismo tiempo). Umbral del `vitest.config` subido a 80/91/
 (branches/statements/functions/lines) — sube con esta tanda, no baja. `pnpm verify:all` completo en
 verde (87 archivos, 614 tests).
 
-**Siguiente, cuando se retome:** de las rutas grandes que quedan, las candidatas reales —no
-agotadas como `investor.routes.ts`— son `certifier.routes.ts` (68,18%, 44 branches),
-`projects.routes.ts` (69,87%, 83 branches) y `developer-comercial.routes.ts` (70,96%, 62 branches;
-sus dos ramas de bajo valor ya están documentadas, ver §El paso 4 (API) arriba). Antes de escribir un
-test para cualquier rama nueva: **primero confirmar que `authorize()` no la resuelve ya en el
-middleware** (el patrón que vació `investor.routes.ts` de trabajo posible) — leer `middlewares/
-auth.ts` §`evaluarProyecto`/`evaluarDueño` si hay dudas, no asumir por la forma del `if`.
-
 **`packages/shared` y `packages/cardano` no se tocaron en esta tanda** — ya están cerrados en las
 cuatro métricas, ver la tabla de arriba.
+
+### `certifier.routes.ts` — cerrado el trabajo alcanzable, 75% (2026-09-24)
+
+De 30/44 a 33/44 (68,18%→75%). Tres ramas reales, las tres cerradas: un verifier sin ningún proyecto
+visible en `kpis` (el `ids.length ? ... : []` nunca corría con `ids` vacío — los cuatro contadores
+dan 0 sin tocar `Stage`) y en `certificates` (el `if (visibles.length)` que evita reconciliar sin
+alcance — `items: []`, sin llamar a `reconciliarParaLectura`), y `observe` sobre un stage que no está
+en `InProgress` (409 — `certify` ya tenía su test de rechazo con el mismo patrón, `observe` no lo
+tenía).
+
+Las 11 ramas restantes son inalcanzables por HTTP, mismo patrón que ya cerraron
+`contracts.routes.ts`/`public.routes.ts`/`profile.routes.ts`: 8 son el `if (!matched) next()` de
+cada wrapper oRPC (una por ruta migrada), y 3 son 404 que `authorize()` ya resuelve en el middleware
+antes de que el handler los vuelva a preguntar — `stageViewProcedure` (`authorize({ proyecto: { via:
+"Stage" } })` ya carga el stage para chequear pertenencia), el `if (resultado.status === 404)`
+compartido de `certify`/`observe` (la única forma en que `transitionStage` da 404 es
+`STAGE_NOT_FOUND`, y ese stage ya pasó por el mismo chequeo antes de llegar al handler), y el
+`if (!fila)` de `responderInvitacion` (`authorize({ dueño: { via: "CertifierInvitation" } })` ya
+carga la invitación). Confirmado leyendo `evaluarProyecto`/`evaluarDueño` en `middlewares/auth.ts`,
+no supuesto. **75% es el techo real de este archivo.**
+
+**El total, con esta tanda:** de 80,74%/91,28% a **81,01% de branches (909/1.122) y 91,32% de
+statements (2.168/2.374)**. Umbral del `vitest.config` subido a 81/91/96/97
+(branches/statements/functions/lines) — sube con esta tanda, no baja. `pnpm verify:all` completo en
+verde (87 archivos, 617 tests).
+
+**Siguiente, cuando se retome:** de las rutas grandes que quedan, las candidatas reales —no
+agotadas como `investor.routes.ts`/`certifier.routes.ts`— son `projects.routes.ts` (69,87%, 83
+branches) y `developer-comercial.routes.ts` (70,96%, 62 branches; sus dos ramas de bajo valor ya
+están documentadas, ver §El paso 4 (API) arriba). Antes de escribir un test para cualquier rama
+nueva: **primero confirmar que `authorize()` no la resuelve ya en el middleware** (el patrón que
+vació `investor.routes.ts` y `certifier.routes.ts` de trabajo posible) — leer `middlewares/auth.ts`
+§`evaluarProyecto`/`evaluarDueño` si hay dudas, no asumir por la forma del `if`.
 
 ### Statements sube con branches, no aparte — 2026-09-23
 
