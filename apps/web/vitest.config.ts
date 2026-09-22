@@ -15,6 +15,29 @@ export default defineConfig({
     environment: 'jsdom',
     // e2e/ es de Playwright, no de vitest: sin esto vitest levanta los .spec.ts
     // de ahí (su `include` por defecto matchea test Y spec) y explota.
-    exclude: ['**/node_modules/**', '**/dist/**', 'e2e/**']
+    exclude: ['**/node_modules/**', '**/dist/**', 'e2e/**'],
+
+    // Coverage — SPEC-017.
+    //
+    // **Sin `include`, vitest solo cuenta los archivos que algún test
+    // importa** — medido: 84,8% de 601 líneas (falso) contra 29,1% de 1.755
+    // (honesto, con `include`). `**/*.{ts,tsx}` y no `**` a secas: `src/**`
+    // pelado intenta parsear `styles.css` como JS al generar el reporte de
+    // archivos sin cubrir, y revienta.
+    coverage: {
+      provider: 'v8',
+      reporter: ['text-summary', 'html'],
+      include: ['src/**/*.{ts,tsx}'],
+      exclude: [
+        // Lo genera TanStack Router (`tsr generate`); no es código propio.
+        'src/routeTree.gen.ts'
+      ],
+      thresholds: {
+        statements: 28,
+        branches: 21,
+        functions: 30,
+        lines: 29
+      }
+    }
   }
 })
