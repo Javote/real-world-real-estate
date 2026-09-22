@@ -520,7 +520,88 @@ ahí hace falta además cubrir un handler entero, no solo una rama suya.
 patrón que `cardano`: leer el archivo, identificar la rama de error/permiso sin ejercitar, un test
 por rama, `pnpm verify:all`, commit y push por archivo (o por tanda chica), no todo junto.
 
-**`apps/web` y `packages/shared` no se tocaron esta sesión para branches** — `shared` ya está en
-96,55% desde el cierre del paso 2 (dos ramas de `auth.ts:36-37` sin cubrir juntas en el mismo test,
-documentadas ahí como fuera de alcance de la spec). `web` sigue en ~29%, atado al paso 5, que ya
-mide líneas y va a necesitar la misma segunda pasada de branches cuando esté más avanzado.
+**`packages/shared` no se tocó esta sesión para branches** — ya está en 96,55% desde el cierre del
+paso 2 (dos ramas de `auth.ts:36-37` sin cubrir juntas en el mismo test, documentadas ahí como fuera
+de alcance de la spec).
+
+### `apps/web` — sin empezar, detalle por archivo (medido 2026-09-22, no trabajado esta sesión)
+
+A diferencia de `api`, acá **branches y líneas son casi el mismo número** todavía: las tandas de
+paso 5 que faltan (`developer`, `investor`, `project.$projectId.*`, `admin`) están en **0% en las
+tres métricas a la vez** — no hay ninguna rama parcialmente cubierta que perseguir ahí, porque
+ningún test toca esos archivos todavía. Por eso el detalle útil hoy es agregado por tanda, no
+archivo por archivo — archivo por archivo ya lo da la tabla de §El paso 5 (líneas), y branches ahí
+va a subir junto con líneas cuando se escriban esos tests, con el patrón de `-test-mount.tsx` que ya
+usan `notary`/`certifier`.
+
+| Grupo | Archivos | Lines | Branches | Functions |
+|---|---|---|---|---|
+| `developer.*` | 15 | 0,8% (3/365) | 0,0% (0/383) | 0,7% (1/138) |
+| `investor.*` | 10 | 0,0% (0/309) | 0,0% (0/357) | 0,0% (0/149) |
+| `project.$projectId.*` (compartidas) | 4 | 0,0% (0/185) | 0,0% (0/275) | 0,0% (0/91) |
+| `admin.index.tsx` | 1 | 0,0% (0/44) | 0,0% (0/44) | 0,0% (0/19) |
+| `components/` | 48 | 60,7% (207/341) | 54,1% (296/547) | 65,2% (105/161) |
+| `lib/` | 11 | 69,0% (87/126) | 67,3% (72/107) | 69,2% (27/39) |
+| `auth/` + `i18n/` + `api/` | 10 | 92,6% (199/215) | 82,3% (79/96) | 95,2% (99/104) |
+| otras rutas (`login`, `public.dossier`, `index`, `__root`) | 5 | 76,8% (53/69) | 57,6% (19/33) | 66,7% (14/21) |
+| `certifier.*` (tanda cerrada) | 5 | 98,4% (62/63) | 92,2% (59/64) | 95,7% (22/23) |
+| `notary.*` (tanda cerrada) | 5 | 98,0% (49/50) | 92,3% (48/52) | 94,1% (16/17) |
+
+**`components/` y `lib/` sí tienen cobertura parcial hoy, y ahí branches sí vale la pena archivo por
+archivo** — son componentes compartidos que ya usan varias pantallas, así que cerrarlos ahora no
+espera a ninguna tanda de rutas:
+
+| Archivo | Branches | Lines | Functions |
+|---|---|---|---|
+| `components/domain/ActionCard.tsx` | 0% (0/16) | 0% (0/1) | 0% (0/1) |
+| `components/domain/LocationMapModal.tsx` | 0% (0/48) | 0% (0/73) | 0% (0/16) |
+| `components/domain/ProjectCard.tsx` | 0% (0/39) | 0% (0/6) | 0% (0/3) |
+| `components/domain/ShareDossierModal.tsx` | 0% (0/2) | 33,3% (1/3) | 33,3% (1/3) |
+| `components/domain/TxidModal.tsx` | 0% (0/2) | 33,3% (1/3) | 33,3% (1/3) |
+| `lib/observability.ts` | 0% (0/6) | 0% (0/6) | 0% (0/1) |
+| `lib/investor.ts` | 35,3% (12/34) | 44,0% (11/25) | 61,5% (8/13) |
+| `components/PanelLayout.tsx` | 37,5% (9/24) | 36,4% (8/22) | 50,0% (2/4) |
+| `components/domain/StatCard.tsx` | 47,4% (9/19) | 100% (3/3) | 100% (1/1) |
+| `components/ProfileScreen.tsx` | 50,0% (13/26) | 48,0% (12/25) | 20,0% (2/10) |
+| `components/domain/AnchoringSuccessModal.tsx` | 50,0% (4/8) | 80,0% (8/10) | 50,0% (2/4) |
+| `components/domain/InvestorCard.tsx` | 50,0% (5/10) | 100% (4/4) | 100% (3/3) |
+| `components/domain/InvitationAcceptModal.tsx` | 50,0% (9/18) | 60,0% (3/5) | 50,0% (2/4) |
+| `components/ui/dialog.tsx` | 50,0% (3/6) | 66,7% (8/12) | 70,0% (7/10) |
+| `components/domain/TextInput.tsx` | 53,8% (7/13) | 100% (4/4) | 100% (2/2) |
+| `components/domain/ProgressTimeline.tsx` | 55,5% (10/18) | 75,0% (3/4) | 66,7% (2/3) |
+| `components/domain/UnitCard.tsx` | 57,1% (8/14) | 100% (5/5) | 100% (1/1) |
+| `components/domain/DocumentViewerModal.tsx` | 58,3% (7/12) | 66,7% (2/3) | 50,0% (1/2) |
+| `components/domain/MerkleRootProof.tsx` | 58,3% (7/12) | 66,7% (2/3) | 66,7% (2/3) |
+| `components/domain/SelectDropdown.tsx` | 58,3% (7/12) | 66,7% (2/3) | 66,7% (2/3) |
+| `components/domain/Chips.tsx` | 61,5% (8/13) | 100% (6/6) | 100% (3/3) |
+| `components/domain/FileDropzone.tsx` | 61,5% (16/26) | 81,8% (18/22) | 60,0% (6/10) |
+| `components/domain/ImageGalleryModal.tsx` | 63,6% (7/11) | 81,8% (9/11) | 71,4% (5/7) |
+| `components/domain/BottomNav.tsx` | 66,7% (4/6) | 100% (3/3) | 100% (4/4) |
+| `components/domain/NumberInput.tsx` | 70,0% (21/30) | 90,0% (9/10) | 83,3% (5/6) |
+| `components/domain/NotificationCard.tsx` | 71,4% (10/14) | 100% (3/3) | 100% (1/1) |
+| `components/domain/ObserveStageModal.tsx` | 71,4% (5/7) | 62,5% (5/8) | 50,0% (2/4) |
+| `components/domain/BuildingSchematic.tsx` | 75,0% (6/8) | 100% (10/10) | 100% (9/9) |
+| `components/domain/LanguageToggle.tsx` | 75,0% (3/4) | 100% (6/6) | 100% (3/3) |
+| `components/domain/ReleaseProofList.tsx` | 75,0% (3/4) | 66,7% (2/3) | 66,7% (2/3) |
+| `components/domain/ToggleSwitch.tsx` | 75,0% (6/8) | 100% (2/2) | 100% (2/2) |
+| `components/domain/DocumentCard.tsx` | 80,0% (16/20) | 100% (2/2) | 100% (1/1) |
+| `lib/evidenceFiles.ts` | 81,8% (27/33) | 97,7% (42/43) | 100% (4/4) |
+| `components/domain/GradientHeader.tsx` | 87,5% (14/16) | 100% (4/4) | 100% (2/2) |
+| `lib/money.ts` | 92,8% (13/14) | 100% (8/8) | 100% (2/2) |
+| `components/domain/HashChip.tsx` | 94,4% (17/18) | 100% (12/12) | 75,0% (3/4) |
+
+**`lib/stageProgress.ts` es un caso raro, a propósito: 100% de branches con solo 43,8% de líneas
+(7/16).** No es un error de medición — el archivo tiene ramas cortas (`? :`, `??`) que un único
+camino ya ejercita en las dos direcciones, pero le sobran líneas (funciones enteras) que nadie
+llama. Ahí lo que falta no es una rama, es un test que invoque la función completa — mismo patrón
+que `notary.routes.ts`/`capital.routes.ts` en `api`.
+
+**`developer.project.new.tsx` (15,0% líneas, 20 líneas) es la única ruta con algo de cobertura
+fuera de las tandas cerradas** — no está en 0% como sus 14 hermanas de `developer.*`, así que si se
+arranca la tanda `developer` conviene empezar por ahí.
+
+**Siguiente, cuando se retome `apps/web` (paso 5):** seguir el orden que la spec ya fija —
+`developer` → `investor` → `project.$projectId.*` → `admin` — con el mismo patrón
+`-test-mount.tsx`/`montarRuta`/`autenticarComo` que cerró `notary` y `certifier`. Branches sube solo
+con eso, sin trabajo aparte, salvo en `components/`/`lib/` (arriba), que se puede adelantar en
+paralelo porque no depende de ninguna tanda de rutas.
