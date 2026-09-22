@@ -123,3 +123,47 @@ Cada paso es un commit (o varios, en la web) con `pnpm verify:all` en verde.
   que rompe si alguna baja de 95%.
 - La tabla de los contratos verificada contra el código, sin puntos de rechazo sin test.
 - El reporte de tests de la evidencia de M3 actualizado con la corrida nueva.
+
+## El triage del paso 6 — 2026-09-22
+
+Los dos scripts corrieron (`specs/evidencia-m3/1-repo-ci-tests/mutation-report.md` y
+`expect-trace-report.md`): **51 mutantes → 37 muertos, 14 vivos**; **18 `expect` → 13 con test, 5
+sin test**. No es el 100% que la tabla de `contracts/CLAUDE.md` §Coverage da a entender. El triage
+caso por caso —leyendo `stage.ak` y `fsm.ak` completos contra cada punto vivo— separó lo que es
+redundancia genuina (otro chequeo ya lo garantiza, con la cadena lógica completa) de lo que es un
+gap real.
+
+**Equivalente — se documenta, no se fuerza un test:**
+
+| Línea | Por qué es equivalente |
+|---|---|
+| `stage.ak:91` (`own_input` tiene qty==1 del token) | `carrying_thread` sobre el output (línea 104, con el `stage_ref` viejo) ya exige que el único output en la dirección del script tenga exactamente 1 unidad, y la igualdad de valor (línea 125) fuerza `own_input.value == continuing_output.value`. Cualquier cantidad mal formada en el input se transmite idéntica al output vía 125, y ahí la agarra 104 |
+
+**Gap real — necesita test nuevo:**
+
+| Línea | Qué expone | Test propuesto | Orden sugerido |
+|---|---|---|---|
+| `fsm.ak:143` | Nada impide `Advance{to: InProgress, completion: Some(...)}` — una transición que no completa pero trae payload de evidencia igual | transición no-terminal con `Completion` adjunto → debe rechazar | 1 |
+| `fsm.ak:144` | El redeemer podría declarar un `evidence_root` de 32 bytes (pasa el chequeo de longitud si el stage es crítico) mientras el datum en verdad guarda uno distinto — evade en sustancia la regla de evidencia obligatoria | `evidence_root` del redeemer ≠ el escrito en `new.evidence_root` → debe rechazar | 1 |
+| `fsm.ak:145` | El validador de ventana de tiempo en `stage.ak` chequea el `now` del redeemer, no `completed_at`. Sin esta línea, el datum podría persistir una fecha distinta a la verificada contra la ventana — rompe la garantía anti-backdating que es la razón de ser del anclaje | `completed_at` escrito ≠ `now` del redeemer → debe rechazar | 1 |
+| `stage.ak:37` | Filtro de outputs por dirección nunca se ejercita con un output extra en otra dirección | tx con `continuing_output` legítimo + un output decoy en `wallet_address()`, camino feliz debe seguir aceptando | 2 |
+| `stage.ak:60` | Mismo problema con inputs — ningún test mezcla el input del script con un input de wallet (fee) | tx con `script_input` + un input extra en `wallet_address()`, debe seguir aceptando | 2 |
+| `stage.ak:52` | `carrying_thread` en `mint` no tiene la red de seguridad que sí tiene `spend` (ahí no hay "own_input" con qué comparar) | mint donde el output ya trae 2 unidades del token (una "donada" por un input externo) mientras `tx.mint` solo declara +1 → debe rechazar | 2 |
+| `stage.ak:69` | Único test con ambas puntas infinitas — nunca aísla la punta inferior | rango semiabierto: inferior infinito, superior finito | 2 |
+| `stage.ak:70` | Mismo, nunca aísla la punta superior (coincide con el `expect` sin test) | rango semiabierto: superior infinito, inferior finito | 2 |
+| `stage.ak:87` | Ningún test arma un `own_input` en una dirección de wallet | `own_input` con `payment_credential` de tipo `VerificationKey` en vez de `Script` | 2 |
+| `stage.ak:101` + `stage.ak:104` | Comparten la falla que ya señala el comentario de SPEC-303: `carrying_thread` filtra por *payment credential*, no por dirección completa. El ataque real: dos outputs con el mismo payment credential del script pero distinto staking credential, cada uno con una unidad del mismo token (asumiendo la reutilización de `stage_ref` que ya documenta el gap conocido de C-01/SPEC-301) | un solo test que arma ese split y confirma rechazo — cierra las dos líneas y deja probado en código lo que hoy solo argumenta el comentario | 2 |
+| `stage.ak:110` | Cast de tipo del datum nuevo nunca falla en ningún test | `continuing_output.datum` = `InlineDatum(Init)` (otro tipo, mismo mecanismo `Data`) en vez de un `StageDatum` | 2 |
+| `stage.ak:125` | El único test que toca esta línea (`spend_rejects_value_drain`) además rompe la cantidad de token, así que en realidad lo agarra la línea 104, no esta | drenar solo el ADA (2M→1M) manteniendo la unidad del thread token intacta — la única forma de aislar esta garantía de D-021 | 2 |
+| `stage.ak:150` (arity, no cantidad) | `mint_rejects_two_threads_in_one_tx` de hecho no mata esta mutación — el mismatch entre `asset_name` extraído y `stage_ref` del datum lo salva por otro lado | mint con 2 asset names distintos donde ambos están también en el output y el datum coincide con el que gana el orden lexicográfico — aísla el chequeo de cardinalidad puro | 2 |
+| `stage.ak:153` | Análogo a 104 pero en `mint`, sin la red de `own_input`/125 | dos outputs en la dirección del script, cada uno con 1 unidad del mismo asset (mismo truco del token "donado") → debe rechazar por encontrar 2, no 1 | 2 |
+| `stage.ak:155` | Igual que 110, en `mint` | `thread_output.datum` = `InlineDatum(Init)` en vez de `StageDatum` | 2 |
+
+Los tres de `fsm.ak` van primero: son función pura (sin armar transacción completa), más baratos de
+escribir, y son los de mayor impacto real — anti-backdating y evidencia obligatoria son las dos
+promesas centrales del producto (D-026). Los de `stage.ak` van después, uno por commit.
+
+**Al cerrar los 15, correr los dos scripts de nuevo** y actualizar
+`specs/evidencia-m3/1-repo-ci-tests/mutation-report.md` y `expect-trace-report.md` con la corrida
+que da 51/51 y 18/18 — recién ahí la tabla de `contracts/CLAUDE.md` §Coverage queda verificada de
+verdad, no solo argumentada.
