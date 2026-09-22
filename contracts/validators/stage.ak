@@ -748,6 +748,26 @@ test spend_rejects_missing_lower_bound() fail {
   )
 }
 
+// Mismo argumento que el de arriba, ahora para la punta superior: la deja
+// infinita con la inferior finita.
+test spend_rejects_missing_upper_bound() fail {
+  let old = datum_at(InProgress, False)
+  let new = StageDatum { ..old, state: Completed, completed_at: 100 }
+  stage.spend(
+    admin_key,
+    Some(old),
+    Advance {
+      to: Completed,
+      completion: Some(Completion { evidence_root: "", now: 100 }),
+    },
+    own_ref,
+    Transaction {
+      ..transition_tx(old, new, 100),
+      validity_range: interval.after(90),
+    },
+  )
+}
+
 // ── Tests: thread token en las transiciones ──────────────────────────────
 
 test spend_rejects_utxo_without_thread_token() fail {
