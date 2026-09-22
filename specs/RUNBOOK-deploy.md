@@ -285,14 +285,66 @@ En Preprod un bloque tarda ~20 s, así que reconciliar inmediatamente después d
 
 ## 2 · Deploy de todos los días
 
-Push a `main`. Render reconstruye **los dos servicios en cada push**, toque lo que toque.
+Push a `main`. Hasta el 2026-09-22, Render reconstruía **los dos servicios en cada push**, tocara lo
+que tocara.
 
-**Los `buildFilter` están declarados y no filtran.** Medido el 2026-08-27: el commit `ee357df` tocó
-solo tres `.md` —sin `render.yaml` de por medio— y disparó deploys nuevos en los dos servicios, con
-`trigger = new_commit`, que es justo el caso donde deberían aplicar. Los filtros están bien
-registrados del lado de Render (`render services --output json` los muestra) y ninguna de las tres
-excepciones que documenta Render —cambios al blueprint, deploys manuales, cambios de
-configuración— corresponde. **Causa sin determinar.**
+**Los `buildFilter` estaban declarados y no filtraban.** Medido el 2026-08-27: el commit `ee357df`
+tocó solo tres `.md` —sin `render.yaml` de por medio— y disparó deploys nuevos en los dos servicios,
+con `trigger = new_commit`, que es justo el caso donde deberían aplicar. Medido otra vez el
+2026-09-22, sobre los últimos 100 deploys de la API: **57 eran de commits que el filtro excluye**
+(38 de solo `.md`, 17 de solo `apps/web`).
+
+**La hipótesis, aplicada el 2026-09-22: el `rootDir: .`** que tenían los dos servicios. La doc de
+Render dice que con un root directory *"Render only triggers an autodeploy if your changes affect
+files anywhere under that directory"*, y con `.` todo el repo cae adentro. No dice explícitamente
+si eso se combina con el `buildFilter` por "y" o por "o". Se sacó el `rootDir` y se sumaron
+`ignoredPaths` (`.md`, tests, configs de test). **Cómo se sabe si funcionó:** el próximo commit de
+solo `.md` no tiene que aparecer en `render deploys list`. Si aparece, la hipótesis cae. Ojo: un
+campo que se borra del Blueprint puede no borrarse del servicio (ya pasó con `NODE_ENV`, ver
+`render.yaml`); verificar con la API de Render que `rootDir` haya quedado vacío.
+
+### El deploy que coincide con el apagado por inactividad — 2026-09-22
+
+**Todo deploy fallido de la API de las últimas semanas tiene la misma causa, y no es el código.** En
+el plan free, Render duerme el servicio cuando pasan **15 minutos sin ningún request HTTP**, y al
+dormirlo manda `SIGTERM` a **todas** sus instancias, incluida la que se está deployando. Si un deploy
+arranca 13-15 minutos después del último request, el apagado le cae en medio del arranque: la
+instancia nueva muere, Render sigue escaneando un puerto que ya no existe hasta el timeout de 15
+minutos, el deploy termina `update_failed`, y **la API queda caída ~18 minutos**.
+
+Verificado en tres de los cinco `update_failed` de los últimos 100 deploys, leyendo los logs con
+instancia y tipo (`render logs … --output json`): entre el `Your service is live` anterior y el
+`SIGTERM` hay **cero requests y exactamente 15:00 minutos**, las tres veces (`b10afdf`: 19:45:51 →
+20:00:51; `d69d059`: 16:57:45 → 17:12:45; `9054681`: 17:34:50 → 17:49:50). Los deploys "lentos"
+(>400 s) no son otro problema: son los que quedaron en cola detrás de uno de estos.
+
+**No depende del tipo de commit.** Que fallaran más los de solo `.md` era una coincidencia de
+horario: el commit de documentación suele llegar un rato después del de código, justo en la
+ventana de los 13-15 minutos. De los cinco fallidos, uno era de código de la API.
+
+**Cómo evitarlo, en orden de costo:**
+
+1. **Antes de pushear, un request a la API** (`curl -s https://propnexus-api.onrender.com/health`):
+   reinicia el contador de 15 minutos, y el deploy (~2,5 min) termina con margen.
+2. **Deployar menos**: el `buildFilter` de arriba.
+3. **Un ping periódico** (cada <15 min) que no deje dormir el servicio. También sacaría el
+   arranque en frío de la primera visita. **Decisión del dueño:** el plan free da 750 horas por mes
+   **por workspace**, y en el mismo workspace hay otro servicio free (`agente-chat-alumni-api`).
+   Uno solo despierto todo el mes son ~720 h: si el otro también consume, se pasan y Render
+   suspende los dos hasta fin de mes.
+
+**Esto corrige dos diagnósticos anteriores de este repo**, que atribuían el mismo síntoma a otra
+cosa: el incidente del 2026-09-04 (`ef8e55e`, "arrancó bien catorce minutos antes") y el del
+2026-09-22 (`f3296ed`, atribuido a "un Blockfrost lento"). Los dos son este patrón. Detalle en
+`apps/api/CLAUDE.md` §Trampas verificadas.
+
+### "No open HTTP ports detected on 0.0.0.0, continuing to scan…"
+
+Aparece en **todos** los deploys, ~10 s después de `API listening`, y no es un error. La API abre el
+puerto antes de inicializar el `AnchorPort` (a propósito, desde el 2026-09-22). Pero inicializarlo
+en modo `real` importa Lucid, que **bloquea el event loop**: medido en local, 2,1 s de un solo bloque
+en una máquina de 12 núcleos, y en el 0,1 CPU del plan free son ~38 s. Mientras dura, el proceso no
+contesta. Render declara `live` en el mismo segundo en que aparece `AnchorPort listo`.
 
 Lo que cuesta: minutos de build y un reinicio en frío por commit. Ya **no** cuesta evidencia — desde
 R2, un redeploy no se lleva nada (§1.4). Antes de asumir que un commit de documentación es gratis,
@@ -414,7 +466,9 @@ la última, el problema es del servidor, no de la migración.
 **Esto existe por el incidente del 2026-09-04**, cuando ninguna de las líneas se imprimía: un arranque
 colgado en la migración y uno colgado en el servidor se veían exactamente igual —un log vacío— y la
 API estuvo ~18 minutos caída por un commit de solo documentación. Detalle en `apps/api/CLAUDE.md`
-§Trampas verificadas.
+§Trampas verificadas. **Corregido el 2026-09-22:** ese arranque no se colgó, lo apagó Render por
+inactividad (§2, "El deploy que coincide con el apagado por inactividad"). Los logs de arranque
+siguen valiendo por lo que dicen: sin ellos no se habría podido ver.
 
 Logs: **Dashboard → el servicio → Logs** (o `render logs -r <service>`). No hay shell: lo que no se
 loguee no se puede ir a mirar. Es la razón por la que D-042 hace que la API **reviente al arrancar**

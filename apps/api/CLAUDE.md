@@ -57,6 +57,18 @@ lo mismo sin pasar por HTTP. Ver el detalle en `CLAUDE.md` raíz.
 
 ## Trampas verificadas
 
+- **2026-09-22, más tarde · Los deploys que fallan con "Timed Out" los tumba el apagado por
+  inactividad del plan free, no el código.** Render duerme el servicio a los **15 minutos sin
+  requests** y manda `SIGTERM` a todas las instancias, incluida la que se está deployando. Si el
+  deploy arranca 13-15 minutos después del último request, la instancia nueva muere a mitad del
+  arranque, Render escanea un puerto que ya no existe hasta el timeout, y la API queda ~18 minutos
+  caída. Verificado en tres deploys fallidos (cero requests y 15:00 minutos exactos entre el
+  `live` anterior y el `SIGTERM`, las tres veces). **Corrige dos entradas de abajo**: la del
+  2026-09-22 ("un Blockfrost lento") y la del 2026-09-04 (`ef8e55e`, "arrancó bien catorce minutos
+  antes"): las dos son este patrón. Los cambios que dejaron siguen valiendo por sí mismos (escuchar
+  antes de inicializar el `AnchorPort`, los logs de arranque), pero no eran la causa. Cómo evitarlo,
+  y la decisión pendiente del ping periódico: `specs/RUNBOOK-deploy.md` §2.
+
 - **2026-09-22 · `server.ts` esperaba a `initAnchorPort()` ANTES de escuchar, y un Blockfrost lento
   tumbó un deploy de Render por timeout de port-scan — con `ANCHOR_MODE=real`, la wallet de servicio
   se derivó bien, el puerto abrió bien, pero después de que Render ya había mandado `SIGTERM` por
@@ -66,7 +78,8 @@ lo mismo sin pasar por HTTP. Ver el detalle en `CLAUDE.md` raíz.
   (`f3296ed`) era **solo `.md`** y ni tocaba `apps/api/**` — lo redeployó el bug ya documentado de
   `buildFilter` (ver el comentario en `render.yaml`, con precedente del 2026-08-24), y el commit
   siguiente, con el mismo código de arranque, deployó bien: confirma que era latencia de Blockfrost,
-  no una regresión.
+  no una regresión. **⚠ Diagnóstico corregido el mismo día** (entrada de arriba): no era Blockfrost, era
+  el apagado por inactividad.
   **Por qué el orden viejo ya no tenía sentido.** El comentario original justificaba esperar con
   "una config de anclaje rota tiene que impedir que la API levante, visible en los logs" — cierto
   hasta D-075, falso desde entonces: `initAnchorPort()` ya no tira, atrapa todo lo esperable y deja
@@ -419,6 +432,8 @@ lo mismo sin pasar por HTTP. Ver el detalle en `CLAUDE.md` raíz.
   minutos**, hasta que Render lo mató por *port scan timeout*. La API estuvo caída ~18 minutos; el
   deploy siguiente, con más código encima, levantó en 5 segundos. **No fue una regresión**: el código
   de `ef8e55e` es idéntico al de `ae782be`, que había arrancado bien catorce minutos antes.
+  **⚠ Corregido el 2026-09-22:** esos "catorce minutos" son la pista. Fue el apagado por inactividad
+  del plan free (primera entrada de esta lista), no un arranque colgado.
   **Lo que no se pudo determinar, y por qué importa:** `migrate` solo imprimía al *aplicar* una
   migración (`Applied ${file}`), así que en el caso normal —sin pendientes— no decía nada. Un
   arranque colgado adentro de `migrate` y uno colgado adentro de `server.js` antes de su primer log

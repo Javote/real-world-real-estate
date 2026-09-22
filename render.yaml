@@ -35,16 +35,20 @@ services:
     plan: free
     region: oregon
     branch: main
-    rootDir: .
-    # Declarado para que solo redeploye si cambió algo que la API compila.
-    # ⚠ MEDIDO 2026-08-27 y otra vez el 2026-09-04: NO filtra. Un commit de solo
-    # `.md` reconstruye los dos servicios igual, con `trigger = new_commit`.
-    # El 2026-09-04 se confirmó que el filtro SÍ llega a Render —leído de la API
-    # con `render services --output json`, los dos servicios traen su
-    # `buildFilter.paths` completo—, así que el problema no es que no se aplique
-    # el blueprint: es que Render no lo respeta. Causa sin determinar.
-    # **No es gratis**: ese día un commit de solo documentación (`ef8e55e`)
-    # disparó el redeploy que dejó la API caída ~18 minutos. RUNBOOK §2.
+    # **Sin `rootDir`, a propósito (2026-09-22).** Estaba en `.` y el
+    # `buildFilter` no filtraba nada: de los últimos 100 deploys de este
+    # servicio, 57 fueron de commits que el filtro excluye (38 de solo `.md`,
+    # 17 de solo `apps/web`). La doc de Render: con un root directory, "Render
+    # only triggers an autodeploy if your changes affect files anywhere under
+    # that directory" — y con `.`, todo el repo cae adentro. Es la hipótesis
+    # más fuerte, no está probada: la prueba es que el próximo commit de solo
+    # `.md` NO deploye. Sin `rootDir`, los comandos corren igual desde la raíz
+    # del repo. RUNBOOK §2.
+    #
+    # Que no deploye de más **no es solo tiempo**: en el plan free, un deploy
+    # que arranca 13-15 minutos después del último request cae justo cuando
+    # Render duerme el servicio por inactividad, y falla con la API caída
+    # ~18 minutos. RUNBOOK §2, "El deploy que coincide con el apagado".
     buildFilter:
       paths:
         - apps/api/**
@@ -54,6 +58,17 @@ services:
         - pnpm-workspace.yaml
         - package.json
         - render.yaml
+      # Ganan sobre `paths` ("Ignored paths will not trigger an autodeploy,
+      # even if those files also match an included path"). Nada de esto se
+      # compila ni se lee en runtime: los `.md` solo aparecen en comentarios,
+      # y los tests y su config no entran al `tsc` de la API.
+      ignoredPaths:
+        - "**/*.md"
+        - apps/api/test/**
+        - apps/api/vitest.config.mts
+        - packages/shared/src/**/*.test.ts
+        - packages/cardano/src/**/*.test.ts
+        - packages/*/vitest.config.mts
     # `NODE_ENV=development` INLINE, solo en el `install`: sacar `NODE_ENV` de
     # `envVars` (commit anterior) no alcanzó — Render lo sigue mandando
     # `production` en el entorno del build igual (probablemente un valor que
@@ -63,11 +78,16 @@ services:
     # traiga: fuerza `development` para el único paso que le importa
     # (`pnpm install`, que con `NODE_ENV=production` saltea devDependencies —
     # `@types/node` incluido, y `packages/cardano` no compila sin eso).
+    #
+    # `--filter "@plataforma/api..."`: la API y sus dependencias del workspace
+    # (`shared`, `cardano`), no los cinco proyectos — sin vite, React ni
+    # Playwright: 490 MB contra 689 MB de `node_modules`, medido en un clon
+    # limpio. El `prepare` de `shared` y `cardano` ya los compila al
+    # instalar, así que no se vuelven a buildear aparte (antes compilaban
+    # dos veces). Probado de punta a punta con el `startCommand` real.
     buildCommand: >-
       corepack enable &&
-      NODE_ENV=development pnpm install --frozen-lockfile &&
-      pnpm --filter @plataforma/shared build &&
-      pnpm --filter @plataforma/cardano build &&
+      NODE_ENV=development pnpm install --frozen-lockfile --filter "@plataforma/api..." &&
       pnpm --filter @plataforma/api build
     # Las migraciones corren ANTES de escuchar, en cada arranque. Son
     # idempotentes (tabla `_migrations`, D-049) y no hay alternativa: el free
@@ -225,7 +245,7 @@ services:
     name: propnexus-web
     runtime: static
     branch: main
-    rootDir: .
+    # Sin `rootDir`: mismo motivo que en `propnexus-api`.
     buildFilter:
       paths:
         - apps/web/**
@@ -234,14 +254,27 @@ services:
         - pnpm-workspace.yaml
         - package.json
         - render.yaml
+      # Tests, e2e y su config: nada de eso entra al `vite build`.
+      ignoredPaths:
+        - "**/*.md"
+        - apps/web/e2e/**
+        - apps/web/src/**/*.test.ts
+        - apps/web/src/**/*.test.tsx
+        - apps/web/src/routes/-test-mount.tsx
+        - apps/web/src/test/**
+        - apps/web/vitest.config.ts
+        - apps/web/playwright.config.ts
+        - packages/shared/src/**/*.test.ts
+        - packages/*/vitest.config.mts
     # Mismo motivo que en `propnexus-api`: si el entorno del build trae
     # NODE_ENV=production (Render lo manda igual, sin que este Blueprint lo
     # declare), `pnpm install` saltea devDependencies —vite, typescript—
     # y este build también se cae sin ellas.
+    # Solo la web y `shared` (402 MB contra 689 MB, sin Lucid): mismo criterio
+    # que en `propnexus-api`, y el `prepare` de `shared` ya lo compila.
     buildCommand: >-
       corepack enable &&
-      NODE_ENV=development pnpm install --frozen-lockfile &&
-      pnpm --filter @plataforma/shared build &&
+      NODE_ENV=development pnpm install --frozen-lockfile --filter "@plataforma/web..." &&
       pnpm --filter @plataforma/web build
     staticPublishPath: apps/web/dist
     # SPA: cualquier path lo resuelve el router del cliente.
