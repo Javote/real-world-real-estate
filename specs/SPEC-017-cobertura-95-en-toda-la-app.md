@@ -225,3 +225,48 @@ solo se podría forzar mockeando internals de la librería de firma. Umbral del 
 
 El paso 3 queda cerrado. Quedan abiertos: paso 1 para `apps/web`, el paso 4 (API), el paso 5 (web)
 y el paso 7 (CI).
+
+## El paso 4 (API) — parcial, tandas 1-2, 2026-09-22
+
+La spec ordena el paso 4 en tres tandas: las tres rutas con ramas de error sin test, `lib/storage.ts`,
+y los scripts de arranque. Este cierre es de las dos primeras — la tercera (`db/fixtures.ts`,
+`db/seed.ts`, `db/migrate.ts`, `instrumentation.ts`) queda para otra sesión, a propósito.
+
+`apps/api` ya tenía `coverage.include: ["src/**/*.ts"]` desde SPEC-015 §3, así que no hizo falta el
+paso 1 acá — medido: 89,4% de líneas (1.860/2.081).
+
+**`certifier.routes.ts` (68,14%→100%) y `investor.routes.ts` (75,8%→100%).** El hallazgo que explica
+la mayoría del hueco en las dos: `authorize({ acceso: { dueño: ... } })` y `{ proyecto: { via: ... } }`
+ya resuelven la entidad para chequear pertenencia, y devuelven 404 **antes** de que la request llegue
+al handler — así que el `if (!x) throw NOT_FOUND` que el propio handler repite por las dudas es, en
+varios casos, código inalcanzable por HTTP (confirmado leyendo `middlewares/auth.ts`, no supuesto).
+El hueco real no eran esos `throw`: eran rutas y ramas que **nadie llamaba nunca** —
+`certifier.routes.ts` documentaba en su propio comentario que ningún test llamaba a
+`/stages/:id/certify` ni `/observe` por HTTP, y `investor.routes.ts` no tenía ningún test para
+favoritos, para el detalle de unidad, ni para el flujo completo de `decline` de una invitación.
+
+**`developer-comercial.routes.ts` (74,26%→94,82%).** Mismo patrón: el listado de unidades de un
+proyecto nunca se había llamado por HTTP, y de la liberación de pagos faltaban la etapa inexistente,
+la etapa sin certificar y la idempotencia (repetir la misma liberación da 200, no un segundo
+anclaje) — `spec-205-tope-de-liberacion.test.ts` solo cubría el tope del monto. Quedan dos ramas sin
+cubrir, documentadas como de bajo valor en el `vitest.config`: el desempate de
+`contractsOfProjectProcedure` para un investor que compró la misma unidad dos veces (necesita dos
+`OnChainEvent` de `INVITATION_ACCEPTED` sobre el mismo par unidad+investor, un estado que solo se
+arma con inserts directos a mano, no con el flujo real), y un `catch` puramente defensivo que
+relanza cualquier error que no sea el de negocio esperado.
+
+**`lib/storage.ts` (53,7%→100%).** El driver S3 (`S3Storage`) solo se probaba contra un MinIO real
+en `test:s3` (necesita Docker, no corre en CI) — la clase entera quedaba sin ejercitar en la
+medición normal. `storage-mocked.test.ts` mockea `@aws-sdk/client-s3` (con `vi.hoisted`, porque
+`vi.mock` se hoistea por encima de cualquier `class` declarada más abajo) y cubre `put`, `read`,
+`exists`, `remove` y las dos ramas de `ensureBucket`, sin tocar `storage-s3.test.ts` ni el driver.
+`DiskStorage.remove` tampoco tenía ningún test — se sumó uno chico.
+
+**Resultado total de la API: 93,08% de líneas (1.937/2.081), 87,01% de statements, 75,24% de
+branches, 92,39% de funciones** — medido con las tandas 1-2 solas, sin el trabajo de la tanda 3.
+Umbral del `vitest.config` subido de 70/67/56/65 a 92/86/74/92 (líneas/statements/branches/
+funciones) — sube con esta tanda, no llega a 95% porque la tercera queda pendiente.
+
+El paso 4 queda parcial: falta la tanda 3 (scripts de arranque). Quedan abiertos también: paso 5
+(web) y paso 7 (CI). El paso 1 de `apps/web` ya se había cerrado por separado (medición honesta con
+`coverage.include`, commit `b606dc1`).
