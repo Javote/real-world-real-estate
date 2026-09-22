@@ -426,6 +426,36 @@ test spend_rejects_own_input_not_locked_by_a_script() fail {
   )
 }
 
+// `spend_rejects_two_script_outputs` (más abajo) usa dos outputs idénticos,
+// los dos con el token — y por eso lo agarra `carrying_thread` (línea 104),
+// no la cardinalidad de `at_address` (línea 101). Este deja un segundo
+// output en la dirección EXACTA del script pero sin el token: `carrying_
+// thread` lo ignora (no matchea la cantidad), así que solo la cardinalidad
+// de `at_address` puede estar rechazando la basura parada ahí.
+test spend_rejects_a_second_output_at_the_exact_script_address() fail {
+  let old = datum_at(Pending, True)
+  let new = StageDatum { ..old, state: InProgress }
+  let junk =
+    Output {
+      address: script_address(),
+      value: assets.from_lovelace(1_000_000),
+      datum: NoDatum,
+      reference_script: None,
+    }
+  stage.spend(
+    admin_key,
+    Some(old),
+    Advance { to: InProgress, completion: None },
+    own_ref,
+    tx(
+      [script_input(old)],
+      [script_output_with(InlineDatum(new), locked_value()), junk],
+      [admin_key],
+      100,
+    ),
+  )
+}
+
 test spend_rejects_missing_datum() fail {
   let old = datum_at(Pending, True)
   let new = StageDatum { ..old, state: InProgress }
