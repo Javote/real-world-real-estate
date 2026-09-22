@@ -428,3 +428,93 @@ describe("GET /evidence/:bundleId/proof/:fileHash — proof object (hash + times
     expect(typeof res.body.timestamp).toBe("string");
   });
 });
+
+describe("PATCH /evidence/:id con stageId", () => {
+  it("mueve la evidencia a otro stage DEL MISMO proyecto", async () => {
+    const origen = await crearStage(998_060);
+    const destino = await crearStage(998_061);
+    const evidenciaId = await subirEvidencia(origen, "para-mover");
+
+    const res = await request(app)
+      .patch(`/api/v1/evidence/${evidenciaId}`)
+      .set("Authorization", `Bearer ${tokenDev}`)
+      .send({ stageId: destino });
+
+    expect(res.status).toBe(200);
+    expect(res.body.stageId).toBe(destino);
+  });
+
+  it("un stageId de OTRO proyecto (o inexistente) da 400, no mueve nada", async () => {
+    const origen = await crearStage(998_062);
+    const evidenciaId = await subirEvidencia(origen, "no-se-mueve");
+
+    const res = await request(app)
+      .patch(`/api/v1/evidence/${evidenciaId}`)
+      .set("Authorization", `Bearer ${tokenDev}`)
+      .send({ stageId: createId() });
+
+    expect(res.status).toBe(400);
+    expect(res.body.message).toMatch(/Stage does not belong to project/);
+
+    const fila = await db
+      .selectFrom("Evidence")
+      .select("stageId")
+      .where("id", "=", evidenciaId)
+      .executeTakeFirstOrThrow();
+    expect(fila.stageId).toBe(origen);
+  });
+});
+
+describe("GET /evidence/:bundleId/proof/:fileHash — ramas del hash y del bundle vacío", () => {
+  it("un fileHash que no pertenece al bundle da 404", async () => {
+    const stage = await crearStage(998_050);
+    await subirEvidencia(stage, "plano-del-bundle");
+
+    await request(app)
+      .patch(`/api/v1/stages/${stage}/state`)
+      .set("Authorization", `Bearer ${tokenAdmin}`)
+      .send({ state: "Completed" });
+
+    const bundle = await db
+      .selectFrom("EvidenceBundle")
+      .selectAll()
+      .where("stageId", "=", stage)
+      .executeTakeFirstOrThrow();
+
+    const res = await request(app)
+      .get(`/api/v1/evidence/${bundle.id}/proof/${"f".repeat(64)}`)
+      .set("Authorization", `Bearer ${tokenDev}`);
+
+    expect(res.status).toBe(404);
+    expect(res.body.message).toMatch(/not part of this bundle/);
+  });
+
+  it("un bundle sin ningún item (fila plantada a mano) da 404 antes de calcular nada", async () => {
+    // El único camino real (`crearBundle`) siempre inserta el bundle CON sus
+    // items en la misma operación — no hay forma de llegar a esto por HTTP.
+    // Se planta la fila directo para ejercitar la guarda igual: `authorize`
+    // ya confirmó que el `EvidenceBundle` existe (mira esa tabla), y el 404
+    // de acá depende de una tabla distinta (`EvidenceBundleItem`, vacía).
+    const stage = await crearStage(998_051);
+    const ahora = new Date();
+    const bundleId = createId();
+    await db
+      .insertInto("EvidenceBundle")
+      .values({
+        id: bundleId,
+        projectId: proyecto,
+        stageId: stage,
+        commitmentHash: "e".repeat(64),
+        createdById: usuario,
+        createdAt: ahora
+      })
+      .execute();
+
+    const res = await request(app)
+      .get(`/api/v1/evidence/${bundleId}/proof/${"e".repeat(64)}`)
+      .set("Authorization", `Bearer ${tokenDev}`);
+
+    expect(res.status).toBe(404);
+    expect(res.body.message).toBe("Bundle not found");
+  });
+});

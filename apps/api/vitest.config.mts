@@ -129,10 +129,10 @@ export default defineConfig({
         "src/db/types.ts"
       ],
       thresholds: {
-        statements: 90,
-        branches: 79,
+        statements: 91,
+        branches: 80,
         functions: 96,
-        lines: 96
+        lines: 97
       }
     }
   }

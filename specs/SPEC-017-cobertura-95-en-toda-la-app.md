@@ -550,13 +550,69 @@ rechazo, no una función nueva sin llamar. La excepción donde `functions` tambi
 `capital.routes.ts` (86,66%, 4 sin llamar) — ahí hace falta además cubrir un handler entero, no solo
 una rama suya.
 
-**Siguiente, cuando se retome: `developer.routes.ts`, `investor.routes.ts` y `evidence.routes.ts`**
-(los tres con más branches en juego — 60, 72 y 54 respectivamente, y sin el patrón de rama
-inalcanzable que ya se agotó en `contracts`/`public`/`profile`). Mismo patrón que ya usaron
-`contracts`/`users`/`notary`: leer el archivo, identificar la rama de error/permiso sin ejercitar,
-un test por rama, verificar con `coverage-final.json` que la rama de verdad se movió (no asumir por
-el nombre del test), `pnpm verify:all`, commit y push por archivo (o por tanda chica), no todo
-junto.
+### `developer.routes.ts` — cerrado el trabajo alcanzable, 76,67% (2026-09-23)
+
+De 38/60 a 46/60. Reachable, y ya cerrado: `estimatedDelivery` al crear un proyecto (nunca se probó
+con la fecha puesta), el atajo de "sin proyectos visibles" en `progress`/`documents`/`kpis` (un
+developer sin ninguna membresía, `FIXTURES.ajeno`), `category`/`cursor` del audit log, y el `?? 0`
+sobre `SUM(Contract.totalMinorUnits)` — que a diferencia de los `COUNT` del mismo archivo, si no hay
+ningún contrato **da `NULL` de verdad**, y necesitó un developer nuevo sin ninguna otra membresía
+(`FIXTURES.activo` ya es miembro de `torre-test`, que trae un contrato de 12.000.000 — sin aislar al
+usuario, el `SUM` nunca da `NULL`). Quedan 14 sin cubrir, las 14 documentadas: 8 son `if (!matched)
+next()` de cada wrapper oRPC, y 6 son 404/`?? 0` que `authorize`/la unicidad de fila ya resuelven
+antes del handler (`GET /projects/:id`, `POST /documents` × 2 —`!documento` y `!sha256Hash`, este
+último además imposible porque la columna es `NOT NULL`—, y los tres `COUNT(*) ?? 0`, que nunca dan
+`NULL` a diferencia del `SUM`). **76,67% es el techo real de este archivo.**
+
+### `investor.routes.ts` — sin trabajo posible, 65,27% ya es el techo (2026-09-23)
+
+**Hallazgo, no una tanda:** las 36 ramas se leyeron una por una y las 25 sin cubrir están **todas**
+justificadas — no hay ningún test legítimo que sumar acá. Catorce son el `if (!matched) next()` de
+cada wrapper; nueve son un 404 que `authorize({ dueño: { via: "Unit"|"Invitation"|"ContractOfUnit" }
+})` ya resuelve en el middleware antes de que el handler vuelva a preguntar (`unitDetail`,
+`unitNews`, `dossier`, `export.pdf`, `share`, `invitationDetail`, `accept`, `decline`, `contract` —
+los nueve usan `dueño`, que carga la fila para chequear pertenencia y por eso ya sabe si existe); una
+es la misma garantía vista desde `dossierDeLaUnidad` (la función que las tres rutas de dossier
+comparten, con 12 llamadas acumuladas y 0 en la rama "no existe"); y la última es el `?? 0` de
+`avancePorProyecto` (`_shared.ts`), que por loop **siempre** setea un valor para cada id que recibe —
+nunca puede faltar uno. No se tocó el archivo. **65,27% es el techo real.**
+
+### `evidence.routes.ts` — cerrado el trabajo alcanzable, 75,93% (2026-09-23)
+
+De 36/54 a 41/54. Cuatro ramas reales, las cuatro cerradas:
+
+- **`PATCH /evidence/:id` con `stageId`** (nunca se probó): mover la evidencia a otro stage del
+  MISMO proyecto (200), y un `stageId` de otro proyecto o inexistente (400 `"Stage does not belong
+  to project"`, y la evidencia no se mueve).
+- **`GET /:bundleId/proof/:fileHash` con un hash que no es del bundle** (404 `"That hash is not part
+  of this bundle"`) — el bundle sí existe (pasa `authorize`), pero ese hash no está entre sus items.
+- **Un bundle sin ningún `EvidenceBundleItem`** — el único camino real (`crearBundle`) inserta el
+  bundle CON sus items en la misma operación, así que esto no se puede producir por HTTP. Se plantó
+  la fila directo (`EvidenceBundle` sin ningún `EvidenceBundleItem`) para ejercitar la guarda igual:
+  `authorize` ya confirmó que el `EvidenceBundle` existe —mira esa tabla—, y el 404 de acá depende de
+  otra (`EvidenceBundleItem`, vacía) — dos preguntas distintas, y por eso no es el mismo caso
+  inalcanzable que ya cerraron `contracts`/`public`/`profile`.
+
+Quedan 13 sin cubrir, documentadas: 10 son `if (!matched) next()`; las otras 3 son 404 que
+`authorize({ proyecto: { via: "Evidence"|"EvidenceBundle" } })` ya resuelve antes del handler
+(`GET /:id`, `GET /:id/download`, `PATCH /:id`, `POST /:id/anchor`, `GET /:bundleId/files` — cinco
+rutas, tres branches porque algunas comparten la misma verificación). **75,93% es el techo real.**
+
+### El total, tras las tres — 2026-09-23
+
+De 78,69%/90,81% a **80,74% de branches (906/1.122) y 91,28% de statements (2.167/2.374)**. Lines
+subió a 97,26% y functions a 96,69% de arrastre (regla del apartado de arriba: cerrar una rama
+cierra su statement al mismo tiempo). Umbral del `vitest.config` subido a 80/91/96/97
+(branches/statements/functions/lines) — sube con esta tanda, no baja. `pnpm verify:all` completo en
+verde (87 archivos, 614 tests).
+
+**Siguiente, cuando se retome:** de las rutas grandes que quedan, las candidatas reales —no
+agotadas como `investor.routes.ts`— son `certifier.routes.ts` (68,18%, 44 branches),
+`projects.routes.ts` (69,87%, 83 branches) y `developer-comercial.routes.ts` (70,96%, 62 branches;
+sus dos ramas de bajo valor ya están documentadas, ver §El paso 4 (API) arriba). Antes de escribir un
+test para cualquier rama nueva: **primero confirmar que `authorize()` no la resuelve ya en el
+middleware** (el patrón que vació `investor.routes.ts` de trabajo posible) — leer `middlewares/
+auth.ts` §`evaluarProyecto`/`evaluarDueño` si hay dudas, no asumir por la forma del `if`.
 
 **`packages/shared` y `packages/cardano` no se tocaron en esta tanda** — ya están cerrados en las
 cuatro métricas, ver la tabla de arriba.
