@@ -16,9 +16,9 @@
 | **Dominio nuevo de M4** | Panel de métricas, disputas, NPS, completitud | `SPEC-501`–`SPEC-504` |
 | **Legal** | Greenlight de mainnet por counsel/notary (criterio 2 del SOM) — **es una firma humana, no un paso de este runbook** | Externo — bloqueante, se pide en paralelo a todo lo de arriba, no al final |
 
-Si falta cualquiera de estos, **no seguir**: los ítems 3 y 4 de "antes de mainnet" cambian el script
-hash y la forma del datum — hacerlo dos veces (una vez sin ellos, corregir después en mainnet) es
-mucho más caro que esperar.
+Si falta cualquiera de estos, **no seguir**: el ítem 3 (`SPEC-305`) y la decisión de custodia del
+ítem 2 (`D-093`) cambian juntos el script hash — hacerlo en dos pasadas (compilar, publicar,
+descubrir que la custodia obliga a recompilar) es mucho más caro que decidir antes de compilar.
 
 ## 1 · Infraestructura nueva (una sola vez, antes de tocar código)
 
@@ -40,32 +40,46 @@ Mainnet no reutiliza nada de Preprod — ni wallet, ni proyecto Blockfrost, ni b
 
 ## 2 · Los 7 ítems de "antes de mainnet", en el orden que importa
 
-**Los ítems 3 y 4 cambian forma on-chain — van primero, y juntos, porque los dos tocan el mismo
-redeploy del validador:**
+**No los 7 tienen spec de código: 5 sí (`SPEC-304`, `SPEC-305`, `SPEC-402`, `SPEC-407`, `SPEC-408`)
+y 2 son decisión + config, sin `SPEC-NNN` propia (ítem 1: habilitar la red, `D-013`; ítem 7: las 2
+ADA bloqueadas, `D-057`).** El orden no es el numérico de la tabla de `CLAUDE.md` — es por qué
+depende de qué:
 
-1. **`SPEC-305`** — unicidad del hilo + tope de `evidence_root` en el validador mismo (hoy solo lo
-   garantiza el backend). Recompilar Aiken, commitear `plutus.json` nuevo (regla 11).
-2. **`SPEC-402`** — los 36 hashes/TXID de `packages/shared` dejan de ser `z.string()` pelado. Este
-   cambio de schema **no** rompe compatibilidad con Preprod (es más estricto, no más laxo) — se
-   puede mergear a `main` y desplegar en Preprod primero, sin esperar al cutover.
-3. **`SPEC-407`** — el `outputRef` del recibo se busca, no se supone `#0`. Igual que arriba: se
-   puede cerrar y desplegar en Preprod antes del cutover, no depende de mainnet.
-4. **`SPEC-408`** — el datum que vuelve de la cadena se valida en las dos puertas de lectura. Mismo
-   caso: no depende de mainnet, cerrar antes.
+**Primero, los tres que son off-chain puro y no tocan el script hash — sin riesgo, sin decisión del
+dueño pendiente, se cierran y despliegan en Preprod ya, sin esperar al cutover:**
 
-**Después del redeploy del validador (los ítems 3 y 4 arriba ya resueltos):**
+1. **`SPEC-402`** — los 36 hashes/TXID de `packages/shared` dejan de ser `z.string()` pelado. Más
+   estricto, no más laxo: no rompe nada que ya funcione en Preprod.
+2. **`SPEC-407`** — el `outputRef` del recibo se busca, no se supone `#0`. Un fix en
+   `packages/cardano`, no en el validador.
+3. **`SPEC-408`** — el datum que vuelve de la cadena se valida en las dos puertas de lectura.
+   Se apoya en la forma que fija `402`, por eso va después.
 
-5. **Custodia de la clave admin** (`D-093`, `SPEC-304`) — la decisión (multisig/recuperación/dejarlo
-   como está) tiene que estar tomada **antes** del paso 1.2 de arriba, porque determina el script
-   hash con el que se compila para mainnet. Si ya se decidió "dejarlo como está", este ítem es solo
-   documentar el riesgo aceptado, no código.
-6. **Runbook de habilitar la red** (ítem 1 de la tabla) — es este mismo documento, más
-   `CARDANO_NETWORK=Mainnet` en el `render.yaml` de los servicios nuevos del paso 1.4. D-013 se
-   revierte con un commit explícito que el dueño apruebe — no es un flag que se cambia de paso.
-7. **Las 2 ADA bloqueadas por etapa** (ítem 7, D-057) — es una decisión de costo aceptado, no de
-   código: confirmar que el dueño la revisó con el número real de la prueba de volumen
-   (`~99.8 ADA` por proyecto de 10 etapas, `REPORTE-2026-09-10-prueba-de-volumen.md`) antes de medir
-   30+ proyectos reales de golpe en mainnet.
+**Segundo, los dos que SÍ comparten el mismo redeploy del validador — decidir y compilar juntos, una
+sola vez, porque la custodia puede cambiar el parámetro que el script Aiken toma como VKH del
+admin, y `SPEC-305` toca el mismo archivo:**
+
+4. **Ítem 2 — custodia de la clave admin** (`D-093`, `SPEC-304`). Es la decisión primero: dejarlo
+   como está, multisig M-de-N, o un segundo VKH de recuperación. Si sale "dejarlo como está", este
+   ítem es documentar el riesgo aceptado, no código — pero **la decisión tiene que estar tomada**
+   antes del punto 5.
+5. **`SPEC-305`** — unicidad del hilo + tope de `evidence_root`, implementado en la **misma**
+   recompilación de Aiken que ya incorporó (o no) el cambio de custodia del punto 4. Un solo
+   `plutus.json` nuevo, commiteado una vez (regla 11), no dos.
+
+**En paralelo a todo lo anterior, una firma del dueño que no bloquea código de nadie — pero tiene
+que estar cerrada antes de escalar pilotos:**
+
+6. **Ítem 7 — las 2 ADA bloqueadas por etapa** (`D-057`). Confirmar que el dueño la revisó con el
+   número real de la prueba de volumen (`~99.8 ADA` por proyecto de 10 etapas,
+   `REPORTE-2026-09-10-prueba-de-volumen.md`) antes de medir 30+ proyectos reales de golpe en
+   mainnet. No bloquea empezar a trabajar en 1-5; bloquea abrir pilotos a escala.
+
+**Al final, el switch real, después de todo lo anterior y del legal greenlight firmado:**
+
+7. **Ítem 1 — habilitar la red.** Este mismo runbook, más `CARDANO_NETWORK=Mainnet` en el
+   `render.yaml` de los servicios nuevos del paso 1.4. D-013 se revierte con un commit explícito que
+   el dueño apruebe — no es un flag que se cambia de paso, es el último.
 
 ## 3 · Encender el anclaje real en mainnet
 
