@@ -56,7 +56,7 @@ export default defineConfig({
     // archivo (SPEC-015 §1) esa razón desapareció.
     fileParallelism: true,
 
-    // Coverage — SPEC-015 §3.
+    // Coverage — SPEC-015 §3 y SPEC-017 §paso 4.
     //
     // **Los umbrales arrancan en el piso MEDIDO, no en el 95% que pide la
     // aceptación de M3.** Poner el número final antes de tenerlo deja el CI
@@ -66,6 +66,15 @@ export default defineConfig({
     // El 95% de M3 se mide contra los **test IDs** del backlog, no contra
     // líneas (M2-D5 §8) — eso lo cuenta `scripts/check-testids.mjs`. Esto de
     // acá es la otra mitad: que el código que existe esté ejercitado.
+    //
+    // SPEC-017 §paso 4, tandas 1-2 (2026-09-22): `certifier.routes.ts`,
+    // `investor.routes.ts` y `lib/storage.ts` llegaron a 100% de líneas;
+    // `developer-comercial.routes.ts` a 94,82% (quedan dos ramas documentadas
+    // como de bajo valor — el desempate de `contractsOfProjectProcedure`
+    // cuando el mismo investor compró la misma unidad dos veces, y un
+    // `catch` puramente defensivo). La tanda 3 (scripts de arranque:
+    // `db/fixtures.ts`, `db/seed.ts`, `db/migrate.ts`, `instrumentation.ts`)
+    // queda para otra sesión — por eso el piso general sube, pero no a 95%.
     coverage: {
       provider: "v8",
       reporter: ["text-summary", "html"],
@@ -78,10 +87,10 @@ export default defineConfig({
         "src/db/types.ts"
       ],
       thresholds: {
-        statements: 67,
-        branches: 56,
-        functions: 65,
-        lines: 70
+        statements: 86,
+        branches: 74,
+        functions: 92,
+        lines: 92
       }
     }
   }
