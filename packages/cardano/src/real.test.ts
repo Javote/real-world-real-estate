@@ -266,6 +266,15 @@ describe("findLiveThread — Capa 1, contra el proveedor de verdad", () => {
   it("da null para un stage que nunca minteó", async () => {
     expect(await adapter.findLiveThread("stage-que-no-existe")).toBeNull();
   });
+
+  it("un UTxO de otro stage en la misma dirección no lo confunde: no lleva el unit buscado", async () => {
+    // Deja un UTxO real en `adapter.address`, pero con el unit de "fuente" —
+    // ningún asset ahí tiene el unit del stageRef que se busca a continuación,
+    // así que `u.assets[unit]` da `undefined` y el `?? 0n` es lo que evita que
+    // la comparación siguiente reviente contra `undefined > 0n`.
+    await abrirHilo();
+    expect(await adapter.findLiveThread("stage-que-tampoco-existe")).toBeNull();
+  });
 });
 
 describe("la dirección y la policy", () => {
@@ -397,6 +406,27 @@ describe("confirmedAt — timeout contra Blockfrost", () => {
     }
   });
 
+  it("con 200 pero sin block_time numérico, da null en vez de NaN", async () => {
+    // El campo es opcional en el tipo de respuesta (`block_time?: number`) — un
+    // 200 sin él es el caso que separa el `typeof … === "number"` del `?? null`
+    // de la rama de éxito.
+    const fetchSinBlockTime = vi.fn(async () => new Response(JSON.stringify({}), { status: 200 }));
+    vi.stubGlobal("fetch", fetchSinBlockTime);
+
+    try {
+      const conBlockfrost = await LucidAnchorAdapter.create({
+        lucid,
+        network: "Custom",
+        now: () => emulator.now(),
+        blockfrost: { url: "https://cardano-preprod.blockfrost.io/api/v0", apiKey: "k" }
+      });
+
+      expect(await conBlockfrost.confirmedAt("a".repeat(64))).toBeNull();
+    } finally {
+      vi.unstubAllGlobals();
+    }
+  });
+
   it("un error de verdad de Blockfrost (no 404) se propaga, no se confunde con 'no confirmó'", async () => {
     const fetchQueContesta500 = vi.fn(async () => new Response(null, { status: 500 }));
     vi.stubGlobal("fetch", fetchQueContesta500);
@@ -422,6 +452,18 @@ describe("awaitConfirmation", () => {
   it("devuelve el AnchorProof cuando el hilo confirmó", async () => {
     const recibo = await abrirHilo();
     expect(await adapter.awaitConfirmation(recibo.txid)).toMatchObject({ txid: recibo.txid });
+  });
+
+  it("verify() da null sin construir el proof, si el proveedor todavía no confirmó", async () => {
+    // `awaitTx` puede resolver `false` sin tirar — es el único otro contrato
+    // que documenta Lucid, además de rechazar. `!confirmado` es lo que evita
+    // seguir a `threadProof` sobre una transacción que no entró.
+    const noConfirmo = vi.spyOn(lucid, "awaitTx").mockResolvedValue(false);
+    try {
+      expect(await adapter.verify("f".repeat(64))).toBeNull();
+    } finally {
+      noConfirmo.mockRestore();
+    }
   });
 
   it("rechaza si verify() no encuentra un AnchorProof", async () => {
