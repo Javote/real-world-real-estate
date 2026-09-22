@@ -5,61 +5,60 @@ import { db } from "./lib/db";
 
 const port = Number(process.env.PORT || 8787);
 
-// `let` y no `const`: ahora el servidor nace dentro de `arrancar()`, después de
-// que el `AnchorPort` esté listo. Hasta entonces no hay nada que cerrar, y por
-// eso `cerrar()` lo contempla.
-let server: Server | undefined;
+// El otro extremo del par que abre `migrate`: si el log muestra
+// `[migrate] sin migraciones pendientes` y NO muestra esta línea, el proceso
+// murió entre los dos pasos del `startCommand`. Sin esto, los dos casos se ven
+// igual desde afuera — que es lo que costó catorce minutos el 2026-09-04.
+console.log("[arranque] migraciones listas, levantando la API");
 
 /**
- * El arranque, en orden y explícito.
+ * El puerto abre PRIMERO. Antes esperaba a `initAnchorPort()` — mismo orden
+ * que las migraciones, con el mismo argumento: que un anclaje mal configurado
+ * quede visible en los logs de Render (el free tier no da shell) en vez de
+ * fallar en silencio en la primera evidencia subida.
  *
- * **El `AnchorPort` se construye ANTES de escuchar**, igual que las migraciones.
- * Con `ANCHOR_MODE=real` eso levanta Lucid contra Blockfrost y deriva el admin
- * desde la wallet de servicio, y el resultado queda en los logs de Render —lo
- * único que hay, porque el free tier no da shell—.
+ * **Ese argumento seguía siendo válido para el LOG, pero no para el ORDEN.**
+ * Desde D-075 una configuración de anclaje rota ya no mata el proceso —
+ * `initAnchorPort()` atrapa todo lo esperable y deja el puerto inhabilitado,
+ * el resto de la API funciona igual. Con `ANCHOR_MODE=real`, construir el
+ * puerto es un round-trip real a Blockfrost, y **tanto el camino que falla
+ * como el que funciona tardan lo mismo en avisar** — lo único que hacía
+ * esperar antes de escuchar era retrasar el puerto, no evitar nada. El
+ * 2026-09-22 un Blockfrost lento hizo que ese round-trip tardara más que la
+ * ventana de port-scan de Render: el puerto SÍ abrió, después de que Render ya
+ * había mandado `SIGTERM` por "Timed Out" — un commit sin ningún cambio de
+ * código, redeployado solo por el bug de `buildFilter` documentado en
+ * `render.yaml`, tumbó el deploy por la latencia de un servicio externo.
  *
- * **Pero una configuración de anclaje rota ya no mata el proceso** (D-075). Si
- * falta la key, si la seed es inválida o si Blockfrost no responde, el puerto
- * queda inhabilitado y la API levanta igual: anclar falla, el resto del
- * producto funciona. Matar el proceso castigaba a las otras cincuenta
- * funciones por el problema de una, y hacía que un push con una variable mal
- * puesta dejara todo abajo.
- *
- * La línea a mirar en los logs sigue siendo la misma, y ahora tiene un tercer
- * valor posible: `"disabled"`.
- *
- * Es CommonJS, así que no hay top-level await: de ahí esta función.
+ * `anchorPort()` (`lib/anchor.ts`) sigue tirando si algo la usa antes de que
+ * esta promesa resuelva, así que la ventana real es chica y explícita: quien
+ * pida anclar en los primeros segundos de un arranque en frío recibe un 500
+ * claro en vez de que el resto de la API — login, listados, subir evidencia,
+ * nada de lo cual toca Cardano — espere sin motivo.
  */
-async function arrancar() {
-  // El otro extremo del par que abre `migrate`: si el log muestra
-  // `[migrate] sin migraciones pendientes` y NO muestra esta línea, el proceso
-  // murió entre los dos pasos del `startCommand`. Sin esto, los dos casos se ven
-  // igual desde afuera — que es lo que costó catorce minutos el 2026-09-04.
-  console.log("[arranque] migraciones listas, levantando la API");
-
-  const puerto = await initAnchorPort();
-  console.log(`AnchorPort listo en modo "${puerto.mode}"`);
-
-  // **Qué dirección hay que fondear.** Sin esta línea, "el anclaje falla" y "la
-  // wallet está vacía" son el mismo síntoma en los logs, y distinguirlos obliga
-  // a derivar la dirección a mano desde la clave. La dirección es pública; la
-  // clave no se imprime nunca.
-  if ("walletAddress" in puerto) {
-    console.log(`Wallet de servicio: ${(puerto as { walletAddress: string }).walletAddress}`);
-  }
-
-  server = app.listen(port, () => {
-    console.log(`API listening on http://localhost:${port}`);
-  });
-}
-
-arrancar().catch((error) => {
-  // Sin `listen`. Queda para lo que de verdad no tiene modo degradado —una
-  // migración que no corre, la base inalcanzable—; el anclaje ya no llega acá
-  // (D-075), porque para él sí existe un modo seguro de seguir vivo.
-  console.error("[arranque] la API no pudo levantar", error);
-  process.exit(1);
+const server: Server = app.listen(port, () => {
+  console.log(`API listening on http://localhost:${port}`);
 });
+
+initAnchorPort()
+  .then((puerto) => {
+    console.log(`AnchorPort listo en modo "${puerto.mode}"`);
+
+    // **Qué dirección hay que fondear.** Sin esta línea, "el anclaje falla" y
+    // "la wallet está vacía" son el mismo síntoma en los logs, y distinguirlos
+    // obliga a derivar la dirección a mano desde la clave. La dirección es
+    // pública; la clave no se imprime nunca.
+    if ("walletAddress" in puerto) {
+      console.log(`Wallet de servicio: ${(puerto as { walletAddress: string }).walletAddress}`);
+    }
+  })
+  .catch((error) => {
+    // Este `catch` debería ser inalcanzable — `initAnchorPort()` atrapa todo
+    // lo esperable y nunca rechaza (D-075) — pero si algo se escapa, se
+    // loguea y la API sigue viva igual: para esto ya no hay `process.exit`,
+    // el puerto lleva minutos abierto y aceptando requests.
+    console.error("[arranque] el AnchorPort no pudo inicializarse", error);
+  });
 
 /**
  * Cierre ordenado. **Render manda `SIGTERM` en cada deploy** y espera un rato
@@ -89,13 +88,9 @@ function cerrar(senal: NodeJS.Signals) {
     process.exit(0);
   };
 
-  // La señal puede llegar mientras el `AnchorPort` todavía se está armando: ahí
-  // no hay servidor que cerrar, pero sí una base que soltar.
-  if (!server) {
-    void cerrarBase();
-    return;
-  }
-
+  // El servidor ya existe apenas arranca el proceso (`app.listen` corre
+  // sincrónico, antes de que el `AnchorPort` termine de armarse) — a
+  // diferencia de antes, acá ya no hay ventana sin servidor que cerrar.
   server.close(cerrarBase);
 }
 

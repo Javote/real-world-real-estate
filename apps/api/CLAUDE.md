@@ -57,6 +57,37 @@ lo mismo sin pasar por HTTP. Ver el detalle en `CLAUDE.md` raíz.
 
 ## Trampas verificadas
 
+- **2026-09-22 · `server.ts` esperaba a `initAnchorPort()` ANTES de escuchar, y un Blockfrost lento
+  tumbó un deploy de Render por timeout de port-scan — con `ANCHOR_MODE=real`, la wallet de servicio
+  se derivó bien, el puerto abrió bien, pero después de que Render ya había mandado `SIGTERM` por
+  "Timed Out".** El log del deploy fallido mostraba la secuencia completa y sana —migraciones,
+  instrumentación, `AnchorPort listo en modo "real"`, wallet, `API listening`— y recién ahí
+  `[SIGTERM] cerrando`: no fue un error de código, fue el orden. El commit que disparó ese deploy
+  (`f3296ed`) era **solo `.md`** y ni tocaba `apps/api/**` — lo redeployó el bug ya documentado de
+  `buildFilter` (ver el comentario en `render.yaml`, con precedente del 2026-08-24), y el commit
+  siguiente, con el mismo código de arranque, deployó bien: confirma que era latencia de Blockfrost,
+  no una regresión.
+  **Por qué el orden viejo ya no tenía sentido.** El comentario original justificaba esperar con
+  "una config de anclaje rota tiene que impedir que la API levante, visible en los logs" — cierto
+  hasta D-075, falso desde entonces: `initAnchorPort()` ya no tira, atrapa todo lo esperable y deja
+  el puerto inhabilitado sin matar el proceso. Con eso, esperar antes de escuchar no evitaba nada —
+  solo retrasaba el puerto tanto si Blockfrost respondía bien como si tardaba o fallaba.
+  **Fix:** `app.listen()` corre primero, sincrónico; `initAnchorPort()` corre después, sin bloquear
+  el puerto — `.then()` loguea el modo y la wallet, `.catch()` loguea sin matar el proceso (debería
+  ser inalcanzable: D-075 ya no deja que rechace). `anchorPort()` (mismo archivo) sigue tirando si
+  algo la usa antes de que esa promesa resuelva, así que la ventana real es chica: solo una request
+  de anclaje en los primeros segundos de un arranque en frío ve un 500 en vez de esperar — login,
+  listados y subir evidencia no tocan Cardano y no esperan nada.
+  **Verificado contra el binario compilado, no solo los tests** (mismo criterio que el incidente del
+  2026-09-07): `node --require dist/src/instrumentation.js dist/src/server.js` en modo `simulated`
+  — `API listening` sale antes que `AnchorPort listo`, `/health` contesta 200 de inmediato, y
+  `SIGTERM` sigue cerrando limpio (`[cierre] listo`).
+  **Lo que sigue sin resolverse, y no es de este repo:** por qué `buildFilter` no filtra —
+  `render.yaml` ya lo documenta como "causa sin determinar", confirmado con `render services
+  --output json` mostrando el filtro completo del lado de la API. Este fix no lo arregla; lo que
+  arregla es que el redeploy innecesario ya no pueda tumbar el servicio por una carrera con
+  Blockfrost, venga o no venga disparado por ese bug.
+
 - **2026-09-20 · `OpenAPIHandler` (oRPC) nunca llama a `next(err)` — un error sin capturar dentro
   de un procedimiento se vuelve el 500 genérico DE ORPC, no el de `errorHandler`.** Encontrado
   migrando `POST /developer/projects` a oRPC (SPEC-212 §D): un slug repetido choca contra
