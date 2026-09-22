@@ -1181,6 +1181,46 @@ test mint_rejects_two_asset_names_when_both_are_present_in_the_output() fail {
   )
 }
 
+// Análogo a `spend_rejects_a_second_output_at_the_exact_script_address`
+// (línea 101), pero en `mint`, que no tiene la red de `own_input`/125 con qué
+// comparar. Dos outputs en la dirección del script, cada uno con 1 unidad del
+// mismo asset (el mismo truco del token "donado" que `mint_rejects_output_
+// holding_extra_units_of_the_token` no ejercita: ahí es un solo output con 2
+// unidades, que `carrying_thread` descarta por cantidad, no por cardinalidad).
+// Acá cada output pasa el filtro de cantidad individualmente, así que solo la
+// cardinalidad —esperar exactamente uno— puede estar rechazando los dos.
+test mint_rejects_two_outputs_each_carrying_one_unit() fail {
+  let initial = datum_at(Pending, True)
+  stage.mint(
+    admin_key,
+    Init,
+    script_hash,
+    mint_tx(
+      one_token(),
+      [
+        script_output_with(InlineDatum(initial), locked_value()),
+        script_output_with(InlineDatum(initial), locked_value()),
+      ],
+    ),
+  )
+}
+
+// El cast a `StageDatum` del datum inicial (línea 155) nunca fallaba en
+// ningún test — análogo a `spend_rejects_new_datum_of_the_wrong_type` (línea
+// 110), con `Init` como el mismo mecanismo `Data`, forma estructural
+// distinta.
+test mint_rejects_initial_datum_of_the_wrong_type() fail {
+  stage.mint(
+    admin_key,
+    Init,
+    script_hash,
+    mint_tx(
+      one_token(),
+      [script_output_with(InlineDatum(Init), locked_value())],
+    ),
+  )
+}
+
 test mint_rejects_non_inline_datum() fail {
   stage.mint(
     admin_key,
