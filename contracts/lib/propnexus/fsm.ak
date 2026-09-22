@@ -389,6 +389,21 @@ test t_evolution_rejects_completion_payload_matching_a_non_completing_transition
   )
 }
 
+// El `evidence_root` que declara el `Completion` del redeemer tiene que ser el
+// mismo que efectivamente queda escrito en el datum nuevo — si no, un stage
+// crítico podría completar con un root de 32 bytes plausible en el redeemer
+// (pasa `completion_evidence_ok`) mientras el datum persistido queda vacío.
+test t_evolution_rejects_evidence_root_mismatch_between_redeemer_and_datum() {
+  let old = sample(InProgress, False)
+  let new = StageDatum { ..old, state: Completed, completed_at: 5 }
+  !valid_datum_evolution(
+    old,
+    new,
+    Completed,
+    Some(Completion { evidence_root: root, now: 5 }),
+  )
+}
+
 test t_evolution_rejects_leaving_terminal() {
   let old =
     StageDatum {
