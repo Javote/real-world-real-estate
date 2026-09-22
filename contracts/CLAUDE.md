@@ -122,17 +122,22 @@ node contracts/scripts/rechazos-trazas.mjs              # cada `expect` contra e
 lista, las puntas de la ventana de validez, las ramas de la tabla de transiciones y el `fail` del
 `else` (51 mutantes). Los `expect` que desarman o castean (`Some(x) = …`, `x: StageDatum = …`, 7) no
 se pueden mutar sin romper los tipos: los cubre `rechazos-trazas.mjs` con la traza que devuelve
-`aiken check`. Los dos salen con código ≠ 0 si queda un chequeo sin test. **101 tests, 0 fallando** (dos de ellos, property tests, corren 100 casos generados
+`aiken check`. Los dos salen con código ≠ 0 si queda un chequeo sin test. **102 tests, 0 fallando** (dos de ellos, property tests, corren 100 casos generados
 cada uno — ver la fila de abajo).
 
 **Medida de verdad, no solo argumentada (`SPEC-017`, cerrado 2026-09-22).** La corrida vigente —
 `specs/evidencia-m3/1-repo-ci-tests/mutation-report.md` y `expect-trace-report.md`— da **51
-mutantes: 50 muertos, 1 vivo** y **18 `expect`: 18 con test**. El único vivo, `stage.ak:91`
-(`own_input` lleva exactamente 1 unidad del token), es equivalencia genuina y no gap: `carrying_
-thread` sobre el output de continuación (línea 104) ya exige esa misma cardinalidad, y la igualdad
-de valor (línea 125) fuerza que lo que traía el input sea lo que queda en el output — cualquier
-cantidad mal formada en 91 se transmite igual a 104. El triage completo, caso por caso, está en
-`specs/SPEC-017-cobertura-95-en-toda-la-app.md` §El triage del paso 6.
+mutantes: 51 muertos** y **18 `expect`: 18 con test**: el 100% que la tabla de abajo venía
+afirmando queda medido, no solo argumentado. El triage del paso 6 había marcado `stage.ak:91`
+(`own_input` lleva exactamente 1 unidad del token) como equivalencia genuina —`carrying_thread`
+sobre el output de continuación (línea 104) más la igualdad de valor (línea 125) parecían forzar la
+misma cardinalidad por otro camino—, pero esa lectura asumía que `carrying_thread` termina mirando
+al output de continuación. No tiene por qué: filtra **todos** los outputs por payment credential,
+así que un decoy en una dirección con el mismo payment credential pero otro staking credential
+(el mismo hueco de C-01/SPEC-301) puede absorber el único match en su lugar, sin que la cantidad
+mal formada de `own_input` importe. `spend_rejects_own_input_with_two_units_when_a_decoy_absorbs_
+carrying_thread` arma exactamente ese ataque y mata el mutante — no era equivalencia, era un test
+que faltaba.
 
 `lib/propnexus/fsm.ak` — 48:
 
@@ -148,8 +153,8 @@ cantidad mal formada en 91 se transmite igual a 104. El triage completo, caso po
 | El datum codifica al mismo CBOR que el códec de `packages/cardano` espera — el "valor dorado" (ver `packages/cardano/CLAUDE.md`) | `t_golden_datum_encoding` (1) |
 | El redeemer (`StageRedeemer`/`MintAction`) codifica al mismo CBOR que `encodeAdvanceRedeemer`/`encodeInitRedeemer` de `packages/cardano` — mismo boundary que el datum, cerrado el 2026-09-08 (`specs/PLAN-2026-09-08-tests-aiken-robustez.md`) | `t_golden_redeemer_*` (3) |
 
-`validators/stage.ak` — 53 (10 caminos felices + 42 puntos de rechazo + 1 sobre el `else`
-genérico). Los 13 que suma `SPEC-017` (cerrado 2026-09-22) aíslan un punto de rechazo que otro test
+`validators/stage.ak` — 54 (10 caminos felices + 43 puntos de rechazo + 1 sobre el `else`
+genérico). Los 14 que suma `SPEC-017` (cerrado 2026-09-22) aíslan un punto de rechazo que otro test
 ya tocaba de rebote, y quedan marcados abajo:
 
 | Punto de rechazo | Test |
@@ -184,6 +189,7 @@ ya tocaba de rebote, y quedan marcados abajo:
 | el UTxO gastado no lleva thread token | `spend_rejects_utxo_without_thread_token` |
 | el token es el de otro stage | `spend_rejects_thread_token_of_another_stage` |
 | el UTxO gastado lleva 2 unidades del propio thread token, no 1 (análogo al de `mint`) | `spend_rejects_utxo_with_two_units_of_own_token` |
+| lo mismo, pero con un decoy en una dirección de mismo payment credential absorbiendo el único match de `carrying_thread` — la única forma de aislar la línea 91 de la red de 104+125 (`SPEC-017`) | `spend_rejects_own_input_with_two_units_when_a_decoy_absorbs_carrying_thread` |
 | la transición se queda con el token | `spend_rejects_dropping_the_thread_token` |
 | acuñar sin firma del operador | `mint_rejects_missing_admin_signature` |
 | acuñar 2 unidades del mismo token | `mint_rejects_two_units_of_the_thread` |

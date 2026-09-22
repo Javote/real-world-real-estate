@@ -168,8 +168,13 @@ promesas centrales del producto (D-026). Los de `stage.ak` van después, uno por
 que da 51/51 y 18/18 — recién ahí la tabla de `contracts/CLAUDE.md` §Coverage queda verificada de
 verdad, no solo argumentada.
 
-**Cerrado 2026-09-22.** Los 15 tests del triage están escritos, uno por commit. La corrida nueva da
-**51 mutantes: 50 muertos, 1 vivo** (`stage.ak:91`, la equivalencia genuina de la tabla de arriba,
-documentada y no forzada) y **18 `expect`: 18 con test**. `contracts/CLAUDE.md` §Coverage cita el
-resultado. El paso 6 de esta spec queda cerrado; los pasos 1-5 y 7 (las cuatro partes TypeScript y
-CI) siguen abiertos.
+**Cerrado 2026-09-22.** Los 15 tests del triage están escritos, uno por commit, y dan **51
+mutantes: 50 muertos, 1 vivo** (`stage.ak:91`) y **18 `expect`: 18 con test**. La equivalencia que
+la tabla de arriba proponía para `stage.ak:91` resultó incompleta: asumía que `carrying_thread`
+(línea 104) termina mirando al output de continuación, pero filtra por payment credential sobre
+**todos** los outputs, así que un decoy en una dirección con el mismo payment credential y otro
+staking credential (el mismo hueco de C-01/SPEC-301 que ya explota el test de la línea 104) puede
+absorber ese match en su lugar. Un test más —`spend_rejects_own_input_with_two_units_when_a_decoy_
+absorbs_carrying_thread`— cierra el gap real: **51 mutantes: 51 muertos, 18/18 `expect` con test**.
+`contracts/CLAUDE.md` §Coverage cita el resultado final. El paso 6 de esta spec queda cerrado; los
+pasos 1-5 y 7 (las cuatro partes TypeScript y CI) siguen abiertos.

@@ -1,8 +1,8 @@
 # Mutantes de los puntos de rechazo del validador
 
-Corrida: 2026-09-22T02:12:19.529Z · aiken aiken v1.1.21+42babe5
+Corrida: 2026-09-22T02:22:24.103Z · aiken aiken v1.1.21+42babe5
 
-**51 mutantes: 50 muertos, 1 vivos, 0 inválidos.**
+**51 mutantes: 51 muertos, 0 vivos, 0 inválidos.**
 
 | Archivo:línea | Qué se sacó | Chequeo original | Resultado | Tests que lo detectaron |
 |---|---|---|---|---|
@@ -14,7 +14,7 @@ Corrida: 2026-09-22T02:12:19.529Z · aiken aiken v1.1.21+42babe5
 | `validators/stage.ak:70` | punta infinita aceptada | `expect Finite(upper) = range.upper_bound.bound_type` | muerto | `spend_rejects_missing_upper_bound` |
 | `validators/stage.ak:72` | conjunción de and | `now >= lower,` | muerto | `spend_rejects_timestamp_one_below_lower_bound` |
 | `validators/stage.ak:73` | conjunción de and | `now <= upper,` | muerto | `spend_rejects_timestamp_outside_validity_range`, `spend_rejects_timestamp_one_above_upper_bound` |
-| `validators/stage.ak:91` | expect booleano | `expect assets.quantity_of( own_input.output.value, own_policy, old_datum.stage_ref, ) == 1` | VIVO |  |
+| `validators/stage.ak:91` | expect booleano | `expect assets.quantity_of( own_input.output.value, own_policy, old_datum.stage_ref, ) == 1` | muerto | `spend_rejects_own_input_with_two_units_when_a_decoy_absorbs_carrying_thread` |
 | `validators/stage.ak:100` | expect booleano | `expect inputs_at_address(tx.inputs, own_address) == 1` | muerto | `spend_rejects_two_script_inputs` |
 | `validators/stage.ak:101` | patrón de lista: elementos de más | `expect [continuing_output] = at_address(tx.outputs, own_address)` | muerto | `spend_rejects_a_second_output_at_the_exact_script_address` |
 | `validators/stage.ak:104` | patrón de lista: elementos de más | `expect [_] = carrying_thread(tx.outputs, own_policy, old_datum.stage_ref)` | muerto | `spend_rejects_thread_split_across_a_staking_variant_of_the_script_address` |
@@ -48,7 +48,7 @@ Corrida: 2026-09-22T02:12:19.529Z · aiken aiken v1.1.21+42babe5
 | `lib/propnexus/fsm.ak:147` | conjunción de and | `completion_evidence_ok(old.validation_critical, evidence_root),` | muerto | `t_evolution_rejects_critical_without_evidence`, `spend_rejects_completing_critical_without_evidence` |
 | `lib/propnexus/fsm.ak:151` | conjunción de and | `to != Completed,` | muerto | `t_evolution_rejects_completion_without_payload` |
 | `lib/propnexus/fsm.ak:152` | conjunción de and | `new.evidence_root == old.evidence_root,` | muerto | `t_evolution_rejects_evidence_rewrite_on_flag`, `prop_non_completing_evolution_preserves_evidence` |
-| `lib/propnexus/fsm.ak:153` | conjunción de and | `new.completed_at == old.completed_at,` | muerto | `t_evolution_rejects_completed_at_rewrite_on_flag`, `prop_non_completing_evolution_preserves_evidence` |
+| `lib/propnexus/fsm.ak:153` | conjunción de and | `new.completed_at == old.completed_at,` | muerto | `t_evolution_rejects_completed_at_rewrite_on_flag` |
 | `lib/propnexus/fsm.ak:162` | conjunción de and | `len > 0,` | muerto | `t_initial_rejects_empty_refs` |
 | `lib/propnexus/fsm.ak:163` | conjunción de and | `len <= max_ref_length,` | muerto | `t_initial_rejects_ref_longer_than_an_asset_name` |
 | `lib/propnexus/fsm.ak:173` | conjunción de and | `d.state == Pending,` | muerto | `t_initial_rejects_non_pending_state`, `mint_rejects_starting_outside_pending` |

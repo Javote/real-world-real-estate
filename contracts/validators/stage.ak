@@ -993,6 +993,58 @@ test spend_rejects_utxo_with_two_units_of_own_token() fail {
   )
 }
 
+// `spend_rejects_utxo_with_two_units_of_own_token` (arriba) no aísla la
+// línea 91: la cantidad mal formada de `own_input` se transmite igual al
+// `continuing_output` vía la igualdad de valor (línea 125), y ahí la agarra
+// `carrying_thread` (línea 104) — el mutation testing de SPEC-017 lo
+// confirmó como VIVO. Pero esa equivalencia solo vale si `carrying_thread`
+// termina mirando al `continuing_output`, y no tiene por qué: filtra TODOS
+// los outputs por payment credential + cantidad==1, sin importar cuál. Un
+// decoy en una dirección con el mismo payment credential (mismo hueco de
+// C-01/SPEC-301 que ya explota `spend_rejects_thread_split_across_a_
+// staking_variant_of_the_script_address`) puede absorber ese único match en
+// lugar del `continuing_output`, sin que la cantidad mal formada de
+// `own_input` importe. Sin la línea 91, este ataque validaría.
+test spend_rejects_own_input_with_two_units_when_a_decoy_absorbs_carrying_thread() fail {
+  let old = datum_at(Pending, True)
+  let new = StageDatum { ..old, state: InProgress }
+  let doubled =
+    assets.from_lovelace(2_000_000)
+      |> assets.add(script_hash, stage_ref, 2)
+  let input =
+    Input {
+      ..script_input(old),
+      output: Output {
+        address: script_address(),
+        value: doubled,
+        datum: InlineDatum(old),
+        reference_script: None,
+      },
+    }
+  let variant_address =
+    address.from_script(script_hash) |> address.with_delegation_key(other_key)
+  let decoy =
+    Output {
+      address: variant_address,
+      value: assets.from_lovelace(2_000_000)
+        |> assets.add(script_hash, stage_ref, 1),
+      datum: NoDatum,
+      reference_script: None,
+    }
+  stage.spend(
+    admin_key,
+    Some(old),
+    Advance { to: InProgress, completion: None },
+    own_ref,
+    tx(
+      [input],
+      [script_output_with(InlineDatum(new), doubled), decoy],
+      [admin_key],
+      100,
+    ),
+  )
+}
+
 test spend_rejects_dropping_the_thread_token() fail {
   let old = datum_at(Pending, True)
   let new = StageDatum { ..old, state: InProgress }

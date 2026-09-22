@@ -1,6 +1,6 @@
 # Cada `expect` del validador contra el test que aborta en él
 
-Corrida: 2026-09-22T02:12:33.635Z · aiken aiken v1.1.21+42babe5 · 101 tests, 101 en verde
+Corrida: 2026-09-22T02:22:37.552Z · aiken aiken v1.1.21+42babe5 · 102 tests, 102 en verde
 
 **18 `expect`: 18 con test, 0 sin test.**
 
@@ -11,7 +11,7 @@ Corrida: 2026-09-22T02:12:33.635Z · aiken aiken v1.1.21+42babe5 · 101 tests, 1
 | `validators/stage.ak:84` | `expect Some(old_datum) = datum` | `spend_rejects_missing_datum` |
 | `validators/stage.ak:85` | `expect Some(own_input) = find_input(tx.inputs, own_ref)` | `spend_rejects_unknown_own_ref` |
 | `validators/stage.ak:87` | `expect Script(own_policy) = own_address.payment_credential` | `spend_rejects_own_input_not_locked_by_a_script` |
-| `validators/stage.ak:91` | `expect assets.quantity_of( own_input.output.value, own_policy, old_datum.stage_ref, ) == 1` | `spend_rejects_utxo_without_thread_token`, `spend_rejects_thread_token_of_another_stage`, `spend_rejects_utxo_with_two_units_of_own_token` |
+| `validators/stage.ak:91` | `expect assets.quantity_of( own_input.output.value, own_policy, old_datum.stage_ref, ) == 1` | `spend_rejects_utxo_without_thread_token`, `spend_rejects_thread_token_of_another_stage`, `spend_rejects_utxo_with_two_units_of_own_token`, `spend_rejects_own_input_with_two_units_when_a_decoy_absorbs_carrying_thread` |
 | `validators/stage.ak:100` | `expect inputs_at_address(tx.inputs, own_address) == 1` | `spend_rejects_two_script_inputs` |
 | `validators/stage.ak:101` | `expect [continuing_output] = at_address(tx.outputs, own_address)` | `spend_rejects_a_second_output_at_the_exact_script_address`, `spend_rejects_two_script_outputs`, `spend_rejects_no_continuing_output` |
 | `validators/stage.ak:104` | `expect [_] = carrying_thread(tx.outputs, own_policy, old_datum.stage_ref)` | `spend_rejects_thread_split_across_a_staking_variant_of_the_script_address`, `spend_rejects_value_drain`, `spend_rejects_dropping_the_thread_token` |
