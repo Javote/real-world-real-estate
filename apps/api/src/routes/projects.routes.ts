@@ -25,7 +25,7 @@ import { reconciliarParaLectura } from "../domain/reconcile";
 import { en } from "../lib/arrays";
 import { db } from "../lib/db";
 import { sql } from "../lib/kysely";
-import { OpenAPIHandler, ORPCError, os } from "../lib/orpc";
+import { conUsuario, delegarAOrpc, OpenAPIHandler, ORPCError, os } from "../lib/orpc";
 import {
   ANY_MEMBERSHIP,
   authenticate,
@@ -160,13 +160,7 @@ router.get(
     roles: CUALQUIER_ROL,
     acceso: { scopeEnQuery: "projectScope(cualquier membresía)" }
   }),
-  async (req, res, next) => {
-    const { matched } = await projectListHandler.handle(req, res, {
-      prefix: PREFIJO_ABSOLUTO,
-      context: { user: req.user! }
-    });
-    if (!matched) next();
-  }
+  delegarAOrpc(projectListHandler, PREFIJO_ABSOLUTO, conUsuario)
 );
 
 const createProjectProcedure = orpc
@@ -212,13 +206,11 @@ const createProjectProcedure = orpc
   });
 const createProjectHandler = new OpenAPIHandler({ createProjectProcedure });
 
-router.post("/", authorize({ roles: ["admin"], acceso: "soloRol" }), async (req, res, next) => {
-  const { matched } = await createProjectHandler.handle(req, res, {
-    prefix: PREFIJO_ABSOLUTO,
-    context: { user: req.user! }
-  });
-  if (!matched) next();
-});
+router.post(
+  "/",
+  authorize({ roles: ["admin"], acceso: "soloRol" }),
+  delegarAOrpc(createProjectHandler, PREFIJO_ABSOLUTO, conUsuario)
+);
 
 const projectByIdProcedure = os
   .route({ method: "GET", path: "/{id}" })
@@ -231,6 +223,7 @@ const projectByIdProcedure = os
       .where("id", "=", input.id)
       .executeTakeFirst();
 
+    /* v8 ignore if -- @preserve: authorize({ proyecto }) ya confirmó que existe (SPEC-018) */
     if (!project) throw new ORPCError("NOT_FOUND", { message: "Project not found" });
 
     const stageRows = await db
@@ -281,10 +274,7 @@ router.get(
     roles: CUALQUIER_ROL,
     acceso: { proyecto: { param: "id" }, membresias: ANY_MEMBERSHIP }
   }),
-  async (req, res, next) => {
-    const { matched } = await projectByIdHandler.handle(req, res, { prefix: PREFIJO_ABSOLUTO });
-    if (!matched) next();
-  }
+  delegarAOrpc(projectByIdHandler, PREFIJO_ABSOLUTO)
 );
 
 const updateProjectProcedure = orpc
@@ -321,13 +311,11 @@ const updateProjectProcedure = orpc
   });
 const updateProjectHandler = new OpenAPIHandler({ updateProjectProcedure });
 
-router.patch("/:id", authorize({ roles: ["admin"], acceso: "soloRol" }), async (req, res, next) => {
-  const { matched } = await updateProjectHandler.handle(req, res, {
-    prefix: PREFIJO_ABSOLUTO,
-    context: { user: req.user! }
-  });
-  if (!matched) next();
-});
+router.patch(
+  "/:id",
+  authorize({ roles: ["admin"], acceso: "soloRol" }),
+  delegarAOrpc(updateProjectHandler, PREFIJO_ABSOLUTO, conUsuario)
+);
 
 const deleteProjectProcedure = orpc
   .route({ method: "DELETE", path: "/{id}", successStatus: 204 })
@@ -348,13 +336,7 @@ const deleteProjectHandler = new OpenAPIHandler({ deleteProjectProcedure });
 router.delete(
   "/:id",
   authorize({ roles: ["admin"], acceso: "soloRol" }),
-  async (req, res, next) => {
-    const { matched } = await deleteProjectHandler.handle(req, res, {
-      prefix: PREFIJO_ABSOLUTO,
-      context: { user: req.user! }
-    });
-    if (!matched) next();
-  }
+  delegarAOrpc(deleteProjectHandler, PREFIJO_ABSOLUTO, conUsuario)
 );
 
 const projectMembersProcedure = os
@@ -403,10 +385,7 @@ router.get(
     roles: CUALQUIER_ROL,
     acceso: { proyecto: { param: "id" }, membresias: ANY_MEMBERSHIP }
   }),
-  async (req, res, next) => {
-    const { matched } = await projectMembersHandler.handle(req, res, { prefix: PREFIJO_ABSOLUTO });
-    if (!matched) next();
-  }
+  delegarAOrpc(projectMembersHandler, PREFIJO_ABSOLUTO)
 );
 
 const addProjectMemberProcedure = orpc
@@ -445,13 +424,7 @@ const addProjectMemberHandler = new OpenAPIHandler({ addProjectMemberProcedure }
 router.post(
   "/:id/members",
   authorize({ roles: ["admin"], acceso: "soloRol" }),
-  async (req, res, next) => {
-    const { matched } = await addProjectMemberHandler.handle(req, res, {
-      prefix: PREFIJO_ABSOLUTO,
-      context: { user: req.user! }
-    });
-    if (!matched) next();
-  }
+  delegarAOrpc(addProjectMemberHandler, PREFIJO_ABSOLUTO, conUsuario)
 );
 
 /**
@@ -545,13 +518,7 @@ const inviteCertifierHandler = new OpenAPIHandler({ inviteCertifierProcedure });
 router.post(
   "/:id/certifier-invitations",
   authorize({ roles: ["admin"], acceso: "soloRol" }),
-  async (req, res, next) => {
-    const { matched } = await inviteCertifierHandler.handle(req, res, {
-      prefix: PREFIJO_ABSOLUTO,
-      context: { user: req.user! }
-    });
-    if (!matched) next();
-  }
+  delegarAOrpc(inviteCertifierHandler, PREFIJO_ABSOLUTO, conUsuario)
 );
 
 /** SPEC-221 · las invitaciones a certificar de un proyecto, para la pantalla del admin. */
@@ -567,13 +534,7 @@ const projectCertifierInvitationsHandler = new OpenAPIHandler({
 router.get(
   "/:id/certifier-invitations",
   authorize({ roles: ["admin"], acceso: "soloRol" }),
-  async (req, res, next) => {
-    const { matched } = await projectCertifierInvitationsHandler.handle(req, res, {
-      prefix: PREFIJO_ABSOLUTO,
-      context: { user: req.user! }
-    });
-    if (!matched) next();
-  }
+  delegarAOrpc(projectCertifierInvitationsHandler, PREFIJO_ABSOLUTO, conUsuario)
 );
 
 /**
@@ -627,7 +588,9 @@ const projectDocumentsProcedure = os
     return z.array(projectDocumentSchema).parse(
       filas.map((f) => ({
         ...f,
+        /* v8 ignore start -- @preserve: OnChainEvent.status es NOT NULL: si el LEFT JOIN trajo txid, trajo status (SPEC-018) */
         anchorStatus: f.txid ? (f.anchorStatus ?? "Confirmed") : "Pending"
+        /* v8 ignore stop -- @preserve */
       }))
     );
   });
@@ -639,12 +602,7 @@ router.get(
     roles: CUALQUIER_ROL,
     acceso: { proyecto: { param: "id" }, membresias: ANY_MEMBERSHIP }
   }),
-  async (req, res, next) => {
-    const { matched } = await projectDocumentsHandler.handle(req, res, {
-      prefix: PREFIJO_ABSOLUTO
-    });
-    if (!matched) next();
-  }
+  delegarAOrpc(projectDocumentsHandler, PREFIJO_ABSOLUTO)
 );
 
 /** Fila 21 — el esquema del edificio: las unidades por piso. */
@@ -682,12 +640,7 @@ router.get(
     roles: CUALQUIER_ROL,
     acceso: { proyecto: { param: "id" }, membresias: ["developer", "buyer", "verifier"] }
   }),
-  async (req, res, next) => {
-    const { matched } = await buildingSchematicHandler.handle(req, res, {
-      prefix: PREFIJO_ABSOLUTO
-    });
-    if (!matched) next();
-  }
+  delegarAOrpc(buildingSchematicHandler, PREFIJO_ABSOLUTO)
 );
 
 /**
@@ -715,6 +668,7 @@ const projectDeveloperProcedure = os
       .where("id", "=", input.id)
       .executeTakeFirst();
 
+    /* v8 ignore if -- @preserve: authorize({ proyecto }) ya confirmó que existe (SPEC-018) */
     if (!proyecto) throw new ORPCError("NOT_FOUND", { message: "Project not found" });
     if (!proyecto.organizationId) {
       throw new ORPCError("NOT_FOUND", { message: "Project has no developer organization" });
@@ -726,6 +680,7 @@ const projectDeveloperProcedure = os
       .where("id", "=", proyecto.organizationId)
       .executeTakeFirst();
 
+    /* v8 ignore if -- @preserve: FK Project.organizationId → Organization (SPEC-018) */
     if (!organizacion) throw new ORPCError("NOT_FOUND", { message: "Organization not found" });
 
     // Todas las obras de la organización, no solo la que se está mirando: la
@@ -743,12 +698,14 @@ const projectDeveloperProcedure = os
     // Unidades de TODAS sus obras: "Units sold" e "investors" son del
     // desarrollador, no de una obra.
     const unidades = ids.length
-      ? await db
+      ? /* v8 ignore start -- @preserve: ids siempre incluye al proyecto que se está mirando (SPEC-018) */
+        await db
           .selectFrom("Unit")
           .select(["status", "investorId"])
           .where("projectId", "in", ids)
           .execute()
       : [];
+    /* v8 ignore stop -- @preserve */
 
     const vendidas = unidades.filter((u) => u.status === "sold");
     const inversores = new Set(
@@ -784,12 +741,7 @@ router.get(
     roles: CUALQUIER_ROL,
     acceso: { proyecto: { param: "id" }, membresias: ANY_MEMBERSHIP }
   }),
-  async (req, res, next) => {
-    const { matched } = await projectDeveloperHandler.handle(req, res, {
-      prefix: PREFIJO_ABSOLUTO
-    });
-    if (!matched) next();
-  }
+  delegarAOrpc(projectDeveloperHandler, PREFIJO_ABSOLUTO)
 );
 
 /** El router oRPC combinado de esta vertical — lo consume

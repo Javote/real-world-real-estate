@@ -130,7 +130,7 @@ de corte de una rebanada es que la app quede corriendo y demostrable.**
 | [`SPEC-015`](SPEC-015-saneamiento-de-la-instrumentacion.md) | Saneamiento de la instrumentación: tests, fixtures, coverage, CI | **cerrada 2026-09-11** — los 7 cambios. El 6 cerró **reformulado**: se parte por concern, no por conteo de líneas (§El ítem 6) |
 | [`SPEC-016`](SPEC-016-superficie-del-investor.md) | Superficie del investor (M2-D5 §4) | **cerrada 2026-08-28** |
 | [`SPEC-017`](SPEC-017-cobertura-95-en-toda-la-app.md) | 95% de cobertura con unit tests, en toda la app (criterio 2) | **cerrada 2026-09-22, partida en SPEC-018 y SPEC-019** — shared, cardano y contratos cerrados; la API, sobre el 95% de líneas |
-| [`SPEC-018`](SPEC-018-cobertura-de-apps-api.md) | Cobertura de `apps/api`: branches ≥95%, el resto ≥98% | **abierta 2026-09-22** — vara más estricta que el criterio 2, pedida por el dueño. Con el código de hoy el techo de branches es ~88%: el paso 0 es una decisión del dueño. Seis lotes paralelizables |
+| [`SPEC-018`](SPEC-018-cobertura-de-apps-api.md) | Cobertura de `apps/api`: branches ≥95%, el resto ≥98% | **abierta 2026-09-22** — vara más estricta que el criterio 2, pedida por el dueño. Paso 0 cerrado el mismo día (helper `delegarAOrpc` + 40 ramas inalcanzables marcadas en su línea): branches 81,8% → 91,3%. Quedan seis lotes paralelizables |
 | [`SPEC-019`](SPEC-019-cobertura-de-apps-web.md) | Cobertura de `apps/web`: las cuatro métricas ≥95%, más CI y evidencia | **abierta 2026-09-22** — lo único que separa al criterio 2 de ✅. Web en 37% de líneas; un paso 0 serial y nueve lotes paralelizables |
 
 **Las specs de Milestone 4 se numeran aparte, en `5xx`, y no cuentan entre las abiertas de

@@ -21,7 +21,7 @@ import { createId } from "../db/id";
 import type { UserRole } from "../db/types";
 import { anchorCommitmentEvent, commitmentOf } from "../domain/anchoring";
 import { db } from "../lib/db";
-import { OpenAPIHandler, ORPCError, os } from "../lib/orpc";
+import { conUsuario, delegarAOrpc, OpenAPIHandler, ORPCError, os } from "../lib/orpc";
 import { authenticate, authorize, projectScope } from "../middlewares/auth";
 import { paramValidator } from "../middlewares/validate-params";
 import { writeAuditLog } from "../utils/audit";
@@ -104,10 +104,7 @@ router.get(
     roles: ["admin", "developer"],
     acceso: { proyecto: { param: "id" }, membresias: ["developer"] }
   }),
-  async (req, res, next) => {
-    const { matched } = await unitsOfProjectHandler.handle(req, res, { prefix: PREFIJO_ABSOLUTO });
-    if (!matched) next();
-  }
+  delegarAOrpc(unitsOfProjectHandler, PREFIJO_ABSOLUTO)
 );
 
 const createUnitProcedure = orpc
@@ -156,13 +153,7 @@ router.post(
     roles: ["admin", "developer"],
     acceso: { proyecto: { param: "id" }, membresias: ["developer"] }
   }),
-  async (req, res, next) => {
-    const { matched } = await createUnitHandler.handle(req, res, {
-      prefix: PREFIJO_ABSOLUTO,
-      context: { user: req.user! }
-    });
-    if (!matched) next();
-  }
+  delegarAOrpc(createUnitHandler, PREFIJO_ABSOLUTO, conUsuario)
 );
 
 const updateUnitProcedure = orpc
@@ -202,13 +193,7 @@ router.patch(
     roles: ["admin", "developer"],
     acceso: { proyecto: { via: "Unit", param: "id" }, membresias: ["developer"] }
   }),
-  async (req, res, next) => {
-    const { matched } = await updateUnitHandler.handle(req, res, {
-      prefix: PREFIJO_ABSOLUTO,
-      context: { user: req.user! }
-    });
-    if (!matched) next();
-  }
+  delegarAOrpc(updateUnitHandler, PREFIJO_ABSOLUTO, conUsuario)
 );
 
 /** Fila 44 — el inventario cross-proyecto del developer. */
@@ -248,13 +233,7 @@ const unitsHandler = new OpenAPIHandler({ unitsProcedure });
 router.get(
   "/units",
   authorize({ roles: ["admin", "developer"], acceso: { scopeEnQuery: "projectScope(developer)" } }),
-  async (req, res, next) => {
-    const { matched } = await unitsHandler.handle(req, res, {
-      prefix: PREFIJO_ABSOLUTO,
-      context: { user: req.user! }
-    });
-    if (!matched) next();
-  }
+  delegarAOrpc(unitsHandler, PREFIJO_ABSOLUTO, conUsuario)
 );
 
 /**
@@ -327,13 +306,7 @@ router.post(
     roles: ["admin", "developer"],
     acceso: { proyecto: { param: "id" }, membresias: ["developer"] }
   }),
-  async (req, res, next) => {
-    const { matched } = await createInvitationHandler.handle(req, res, {
-      prefix: PREFIJO_ABSOLUTO,
-      context: { user: req.user! }
-    });
-    if (!matched) next();
-  }
+  delegarAOrpc(createInvitationHandler, PREFIJO_ABSOLUTO, conUsuario)
 );
 
 /**
@@ -452,12 +425,7 @@ router.get(
     roles: ["admin", "developer"],
     acceso: { proyecto: { param: "id" }, membresias: ["developer"] }
   }),
-  async (req, res, next) => {
-    const { matched } = await contractsOfProjectHandler.handle(req, res, {
-      prefix: PREFIJO_ABSOLUTO
-    });
-    if (!matched) next();
-  }
+  delegarAOrpc(contractsOfProjectHandler, PREFIJO_ABSOLUTO)
 );
 
 /**
@@ -622,13 +590,7 @@ router.post(
     roles: ["admin", "developer"],
     acceso: { proyecto: { via: "Contract", param: "id" }, membresias: ["developer"] }
   }),
-  async (req, res, next) => {
-    const { matched } = await releasePaymentHandler.handle(req, res, {
-      prefix: PREFIJO_ABSOLUTO,
-      context: { user: req.user! }
-    });
-    if (!matched) next();
-  }
+  delegarAOrpc(releasePaymentHandler, PREFIJO_ABSOLUTO, conUsuario)
 );
 
 /** El router oRPC combinado de esta vertical — ver el comentario homólogo en

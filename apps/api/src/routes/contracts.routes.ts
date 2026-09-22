@@ -3,7 +3,7 @@ import { Router } from "express";
 import { z } from "zod";
 import { reconciliarParaLectura } from "../domain/reconcile";
 import { db } from "../lib/db";
-import { OpenAPIHandler, ORPCError, os } from "../lib/orpc";
+import { delegarAOrpc, OpenAPIHandler, ORPCError, os } from "../lib/orpc";
 import { authenticate, authorize, CUALQUIER_ROL } from "../middlewares/auth";
 import { paramValidator } from "../middlewares/validate-params";
 
@@ -55,6 +55,7 @@ const releasesProcedure = os
       .where("Contract.id", "=", input.contractId)
       .executeTakeFirst();
 
+    /* v8 ignore if -- @preserve: las dos ramas de authorize({ alguna }) ya cargaron el contrato (SPEC-018) */
     if (!contrato) throw new ORPCError("NOT_FOUND", { message: "Contract not found" });
 
     // **Reconciliar antes de consultar** (D-077): esta respuesta lleva
@@ -106,10 +107,7 @@ router.get(
       ]
     }
   }),
-  async (req, res, next) => {
-    const { matched } = await releasesHandler.handle(req, res, { prefix: PREFIJO_ABSOLUTO });
-    if (!matched) next();
-  }
+  delegarAOrpc(releasesHandler, PREFIJO_ABSOLUTO)
 );
 
 /** El router oRPC combinado de esta vertical — lo consume

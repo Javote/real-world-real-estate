@@ -24,7 +24,7 @@ import {
   repararHilosSospechosos
 } from "../domain/reconcile";
 import { db } from "../lib/db";
-import { OpenAPIHandler, ORPCError, os } from "../lib/orpc";
+import { conUsuario, delegarAOrpc, OpenAPIHandler, ORPCError, os } from "../lib/orpc";
 import { storage } from "../lib/storage";
 import { ANY_MEMBERSHIP, authenticate, authorize, CUALQUIER_ROL } from "../middlewares/auth";
 import { paramValidator } from "../middlewares/validate-params";
@@ -76,6 +76,7 @@ const evidenceDetailProcedure = os
       .where("id", "=", input.id)
       .executeTakeFirst();
 
+    /* v8 ignore if -- @preserve: authorize({ proyecto }) ya confirmó que existe (Evidence) (SPEC-018) */
     if (!evidence) throw new ORPCError("NOT_FOUND", { message: "Evidence not found" });
 
     const [project, stage, uploadedBy] = await Promise.all([
@@ -100,12 +101,7 @@ router.get(
     roles: CUALQUIER_ROL,
     acceso: { proyecto: { via: "Evidence", param: "id" }, membresias: ANY_MEMBERSHIP }
   }),
-  async (req, res, next) => {
-    const { matched } = await evidenceDetailHandler.handle(req, res, {
-      prefix: PREFIJO_ABSOLUTO
-    });
-    if (!matched) next();
-  }
+  delegarAOrpc(evidenceDetailHandler, PREFIJO_ABSOLUTO)
 );
 
 /**
@@ -144,6 +140,7 @@ const downloadEvidenceProcedure = os
       .where("id", "=", input.id)
       .executeTakeFirst();
 
+    /* v8 ignore if -- @preserve: authorize({ proyecto }) ya confirmó que existe (Evidence) (SPEC-018) */
     if (!evidence) throw new ORPCError("NOT_FOUND", { message: "Evidence not found" });
 
     if (!(await storage.exists(evidence.storagePath))) {
@@ -168,12 +165,7 @@ router.get(
     roles: CUALQUIER_ROL,
     acceso: { proyecto: { via: "Evidence", param: "id" }, membresias: ANY_MEMBERSHIP }
   }),
-  async (req, res, next) => {
-    const { matched } = await downloadEvidenceHandler.handle(req, res, {
-      prefix: PREFIJO_ABSOLUTO
-    });
-    if (!matched) next();
-  }
+  delegarAOrpc(downloadEvidenceHandler, PREFIJO_ABSOLUTO)
 );
 
 const updateEvidenceProcedure = orpc
@@ -189,6 +181,7 @@ const updateEvidenceProcedure = orpc
       .where("id", "=", id)
       .executeTakeFirst();
 
+    /* v8 ignore if -- @preserve: authorize({ proyecto }) ya confirmó que existe (Evidence) (SPEC-018) */
     if (!existing) throw new ORPCError("NOT_FOUND", { message: "Evidence not found" });
 
     if (body.stageId) {
@@ -233,13 +226,7 @@ router.patch(
     roles: ["admin", "developer"],
     acceso: { proyecto: { via: "Evidence", param: "id" }, membresias: ["developer"] }
   }),
-  async (req, res, next) => {
-    const { matched } = await updateEvidenceHandler.handle(req, res, {
-      prefix: PREFIJO_ABSOLUTO,
-      context: { user: req.user! }
-    });
-    if (!matched) next();
-  }
+  delegarAOrpc(updateEvidenceHandler, PREFIJO_ABSOLUTO, conUsuario)
 );
 
 /**
@@ -289,12 +276,7 @@ const reconcileEvidenceHandler = new OpenAPIHandler({ reconcileEvidenceProcedure
 router.post(
   "/reconcile",
   authorize({ roles: ["admin"], acceso: "soloRol" }),
-  async (req, res, next) => {
-    const { matched } = await reconcileEvidenceHandler.handle(req, res, {
-      prefix: PREFIJO_ABSOLUTO
-    });
-    if (!matched) next();
-  }
+  delegarAOrpc(reconcileEvidenceHandler, PREFIJO_ABSOLUTO)
 );
 
 /**
@@ -334,6 +316,7 @@ const anchorEvidenceProcedure = orpc
       .where("id", "=", input.id)
       .executeTakeFirst();
 
+    /* v8 ignore if -- @preserve: authorize({ proyecto }) ya confirmó que existe (Evidence) (SPEC-018) */
     if (!evidencia) throw new ORPCError("NOT_FOUND", { message: "Evidence not found" });
 
     // Si ya está anclada, la respuesta es ese evento: se confirma antes de
@@ -387,13 +370,7 @@ router.post(
     roles: ["admin"],
     acceso: { proyecto: { via: "Evidence", param: "id" }, membresias: ANY_MEMBERSHIP }
   }),
-  async (req, res, next) => {
-    const { matched } = await anchorEvidenceHandler.handle(req, res, {
-      prefix: PREFIJO_ABSOLUTO,
-      context: { user: req.user! }
-    });
-    if (!matched) next();
-  }
+  delegarAOrpc(anchorEvidenceHandler, PREFIJO_ABSOLUTO, conUsuario)
 );
 
 /**
@@ -457,13 +434,7 @@ const deleteEvidenceHandler = new OpenAPIHandler({ deleteEvidenceProcedure });
 router.delete(
   "/:id",
   authorize({ roles: ["admin"], acceso: "soloRol" }),
-  async (req, res, next) => {
-    const { matched } = await deleteEvidenceHandler.handle(req, res, {
-      prefix: PREFIJO_ABSOLUTO,
-      context: { user: req.user! }
-    });
-    if (!matched) next();
-  }
+  delegarAOrpc(deleteEvidenceHandler, PREFIJO_ABSOLUTO, conUsuario)
 );
 
 /**
@@ -552,10 +523,7 @@ router.get(
     roles: CUALQUIER_ROL,
     acceso: { proyecto: { via: "EvidenceBundle", param: "bundleId" }, membresias: ANY_MEMBERSHIP }
   }),
-  async (req, res, next) => {
-    const { matched } = await bundleProofHandler.handle(req, res, { prefix: PREFIJO_ABSOLUTO });
-    if (!matched) next();
-  }
+  delegarAOrpc(bundleProofHandler, PREFIJO_ABSOLUTO)
 );
 
 /** Fila 25m — los archivos del bundle con sus hashes. */
@@ -570,6 +538,7 @@ const bundleFilesProcedure = os
       .where("id", "=", input.bundleId)
       .executeTakeFirst();
 
+    /* v8 ignore if -- @preserve: authorize({ proyecto }) ya confirmó que existe (EvidenceBundle) (SPEC-018) */
     if (!bundle) throw new ORPCError("NOT_FOUND", { message: "Bundle not found" });
 
     const items = await db
@@ -597,10 +566,7 @@ router.get(
     roles: CUALQUIER_ROL,
     acceso: { proyecto: { via: "EvidenceBundle", param: "bundleId" }, membresias: ANY_MEMBERSHIP }
   }),
-  async (req, res, next) => {
-    const { matched } = await bundleFilesHandler.handle(req, res, { prefix: PREFIJO_ABSOLUTO });
-    if (!matched) next();
-  }
+  delegarAOrpc(bundleFilesHandler, PREFIJO_ABSOLUTO)
 );
 
 /** El router oRPC combinado de esta vertical — lo consume

@@ -18,7 +18,7 @@ import { compileDossier } from "../domain/dossier";
 import { notifyUnitInvestor } from "../domain/notify";
 import { reconciliarParaLectura } from "../domain/reconcile";
 import { db } from "../lib/db";
-import { OpenAPIHandler, ORPCError, os } from "../lib/orpc";
+import { conUsuario, delegarAOrpc, OpenAPIHandler, ORPCError, os } from "../lib/orpc";
 import { authenticate, authorize } from "../middlewares/auth";
 import { paramValidator } from "../middlewares/validate-params";
 import { writeAuditLog } from "../utils/audit";
@@ -158,13 +158,7 @@ router.get(
     roles: ["admin", "notary"],
     acceso: { scopeEnQuery: "Dossier.signedById = usuario" }
   }),
-  async (req, res, next) => {
-    const { matched } = await kpisHandler.handle(req, res, {
-      prefix: PREFIJO_ABSOLUTO,
-      context: { user: req.user! }
-    });
-    if (!matched) next();
-  }
+  delegarAOrpc(kpisHandler, PREFIJO_ABSOLUTO, conUsuario)
 );
 
 /**
@@ -201,8 +195,12 @@ const pendingDossiersProcedure = os
         unitLabel: fila.unitReference,
         // Sin investor asignado la unidad no se vendió todavía; el panel muestra
         // la referencia de la unidad y no un nombre inventado.
+        /* v8 ignore start -- @preserve: un Dossier solo se compila para una unidad con investor (SPEC-018) */
         investorName: fila.investorName ?? fila.unitReference,
+        /* v8 ignore stop -- @preserve */
+        /* v8 ignore start -- @preserve: un Dossier solo se compila para una unidad con investor (SPEC-018) */
         completeness: dossier?.completeness ?? 0
+        /* v8 ignore stop -- @preserve */
       });
     }
 
@@ -213,10 +211,7 @@ const pendingDossiersHandler = new OpenAPIHandler({ pendingDossiersProcedure });
 router.get(
   "/dossiers/pending",
   authorize({ roles: ["admin", "notary"], acceso: "soloRol" }),
-  async (req, res, next) => {
-    const { matched } = await pendingDossiersHandler.handle(req, res, { prefix: PREFIJO_ABSOLUTO });
-    if (!matched) next();
-  }
+  delegarAOrpc(pendingDossiersHandler, PREFIJO_ABSOLUTO)
 );
 
 /** Fila 52v — el dossier a revisar, completo, con la huella de cada pieza. */
@@ -234,6 +229,7 @@ const dossierByIdProcedure = os
     if (!fila) throw new ORPCError("NOT_FOUND", { message: "Dossier not found" });
 
     const dossier = await compileDossier(fila.unitId);
+    /* v8 ignore if -- @preserve: FK Dossier.unitId → Unit.id es ON DELETE CASCADE (SPEC-018) */
     if (!dossier) throw new ORPCError("NOT_FOUND", { message: "Dossier not found" });
 
     const { investorId: _investorId, ...publico } = dossier;
@@ -244,10 +240,7 @@ const dossierByIdHandler = new OpenAPIHandler({ dossierByIdProcedure });
 router.get(
   "/dossiers/:id",
   authorize({ roles: ["admin", "notary"], acceso: "soloRol" }),
-  async (req, res, next) => {
-    const { matched } = await dossierByIdHandler.handle(req, res, { prefix: PREFIJO_ABSOLUTO });
-    if (!matched) next();
-  }
+  delegarAOrpc(dossierByIdHandler, PREFIJO_ABSOLUTO)
 );
 
 /**
@@ -305,6 +298,7 @@ const signDossierProcedure = orpc
     // Se firma el estado ACTUAL, recompilado ahora: firmar el hash guardado
     // sería atestiguar sobre una foto vieja.
     const dossier = await compileDossier(fila.unitId);
+    /* v8 ignore if -- @preserve: FK Dossier.unitId → Unit.id es ON DELETE CASCADE (SPEC-018) */
     if (!dossier) throw new ORPCError("NOT_FOUND", { message: "Dossier not found" });
 
     const ahora = new Date();
@@ -357,13 +351,7 @@ const signDossierHandler = new OpenAPIHandler({ signDossierProcedure });
 router.post(
   "/dossiers/:id/sign",
   authorize({ roles: ["admin", "notary"], acceso: "soloRol" }),
-  async (req, res, next) => {
-    const { matched } = await signDossierHandler.handle(req, res, {
-      prefix: PREFIJO_ABSOLUTO,
-      context: { user: req.user! }
-    });
-    if (!matched) next();
-  }
+  delegarAOrpc(signDossierHandler, PREFIJO_ABSOLUTO, conUsuario)
 );
 
 /**
@@ -424,13 +412,7 @@ const rejectDossierHandler = new OpenAPIHandler({ rejectDossierProcedure });
 router.post(
   "/dossiers/:id/reject",
   authorize({ roles: ["admin", "notary"], acceso: "soloRol" }),
-  async (req, res, next) => {
-    const { matched } = await rejectDossierHandler.handle(req, res, {
-      prefix: PREFIJO_ABSOLUTO,
-      context: { user: req.user! }
-    });
-    if (!matched) next();
-  }
+  delegarAOrpc(rejectDossierHandler, PREFIJO_ABSOLUTO, conUsuario)
 );
 
 /** Fila 53 — el historial de lo firmado, paginado por cursor. */
@@ -479,7 +461,9 @@ const signaturesProcedure = orpc
       projectName: f.projectName,
       masterHash: f.masterHash,
       signatureTxid: f.signatureTxid,
+      /* v8 ignore start -- @preserve: la query filtra status = "signed", y firmar siempre escribe signedAt (SPEC-018) */
       signedAt: f.signedAt ? new Date(f.signedAt) : null,
+      /* v8 ignore stop -- @preserve */
       // La query filtra `Dossier.status = "signed"`: la columna es `string` en
       // Kysely (D-016, sin enum nativo en SQLite), pero acá solo puede valer eso.
       status: "signed" as const
@@ -500,13 +484,7 @@ router.get(
     roles: ["admin", "notary"],
     acceso: { scopeEnQuery: "Dossier.signedById = usuario" }
   }),
-  async (req, res, next) => {
-    const { matched } = await signaturesHandler.handle(req, res, {
-      prefix: PREFIJO_ABSOLUTO,
-      context: { user: req.user! }
-    });
-    if (!matched) next();
-  }
+  delegarAOrpc(signaturesHandler, PREFIJO_ABSOLUTO, conUsuario)
 );
 
 /** El router oRPC combinado de esta vertical — lo consume

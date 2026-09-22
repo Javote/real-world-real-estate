@@ -133,6 +133,12 @@ export default defineConfig({
     // `certify`/`observe`, y el `if (!fila)` de `responderInvitacion`) —
     // confirmado leyendo `evaluarProyecto`/`evaluarDueño` en `auth.ts`, no
     // supuesto.
+    // SPEC-018 §Paso 0 (2026-09-22): las 89 copias de `if (!matched) next()`
+    // pasaron a un solo helper (`delegarAOrpc`, `lib/orpc.ts`), y las 40 ramas
+    // inalcanzables que los párrafos de arriba justifican llevan ahora un
+    // `/* v8 ignore … -- @preserve: <motivo> */` en la línea exacta. Desde acá
+    // la razón de cada rama no cubierta vive en el código, no en este
+    // comentario — el estado por archivo está en `specs/SPEC-018`.
     coverage: {
       provider: "v8",
       reporter: ["text-summary", "html"],
@@ -145,8 +151,8 @@ export default defineConfig({
         "src/db/types.ts"
       ],
       thresholds: {
-        statements: 91,
-        branches: 81,
+        statements: 96,
+        branches: 91,
         functions: 96,
         lines: 97
       }

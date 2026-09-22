@@ -5,7 +5,7 @@ import { Router } from "express";
 import type { UserRole } from "../db/types";
 import { db } from "../lib/db";
 import { signToken } from "../lib/jwt";
-import { OpenAPIHandler, ORPCError, os } from "../lib/orpc";
+import { conUsuario, delegarAOrpc, OpenAPIHandler, ORPCError, os } from "../lib/orpc";
 import { authenticate, authorize, CUALQUIER_ROL } from "../middlewares/auth";
 import { loginRateLimiter } from "../middlewares/rateLimit";
 import { writeAuditLog } from "../utils/audit";
@@ -112,10 +112,7 @@ const loginProcedure = orpc
   });
 const loginHandler = new OpenAPIHandler({ loginProcedure });
 
-router.post("/login", loginRateLimiter(), async (req, res, next) => {
-  const { matched } = await loginHandler.handle(req, res, { prefix: PREFIJO_ABSOLUTO });
-  if (!matched) next();
-});
+router.post("/login", loginRateLimiter(), delegarAOrpc(loginHandler, PREFIJO_ABSOLUTO));
 
 const meProcedure = orpc
   .route({ method: "GET", path: "/me" })
@@ -145,13 +142,7 @@ router.get(
   "/me",
   authenticate,
   authorize({ roles: CUALQUIER_ROL, acceso: { scopeEnQuery: "User.id = usuario" } }),
-  async (req, res, next) => {
-    const { matched } = await meHandler.handle(req, res, {
-      prefix: PREFIJO_ABSOLUTO,
-      context: { user: req.user! }
-    });
-    if (!matched) next();
-  }
+  delegarAOrpc(meHandler, PREFIJO_ABSOLUTO, conUsuario)
 );
 
 /** El router oRPC combinado de esta vertical — lo consume

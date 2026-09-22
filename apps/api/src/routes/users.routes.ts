@@ -11,7 +11,7 @@ import { z } from "zod";
 import { createId } from "../db/id";
 import type { UserRole } from "../db/types";
 import { db } from "../lib/db";
-import { OpenAPIHandler, ORPCError, os } from "../lib/orpc";
+import { conUsuario, delegarAOrpc, OpenAPIHandler, ORPCError, os } from "../lib/orpc";
 import { authenticate, authorize } from "../middlewares/auth";
 import { paramValidator } from "../middlewares/validate-params";
 import { writeAuditLog } from "../utils/audit";
@@ -70,10 +70,11 @@ const userListProcedure = os
   });
 const userListHandler = new OpenAPIHandler({ userListProcedure });
 
-router.get("/", authorize({ roles: ["admin"], acceso: "soloRol" }), async (req, res, next) => {
-  const { matched } = await userListHandler.handle(req, res, { prefix: PREFIJO_ABSOLUTO });
-  if (!matched) next();
-});
+router.get(
+  "/",
+  authorize({ roles: ["admin"], acceso: "soloRol" }),
+  delegarAOrpc(userListHandler, PREFIJO_ABSOLUTO)
+);
 
 const createUserProcedure = orpc
   .errors({
@@ -114,13 +115,11 @@ const createUserProcedure = orpc
   });
 const createUserHandler = new OpenAPIHandler({ createUserProcedure });
 
-router.post("/", authorize({ roles: ["admin"], acceso: "soloRol" }), async (req, res, next) => {
-  const { matched } = await createUserHandler.handle(req, res, {
-    prefix: PREFIJO_ABSOLUTO,
-    context: { user: req.user! }
-  });
-  if (!matched) next();
-});
+router.post(
+  "/",
+  authorize({ roles: ["admin"], acceso: "soloRol" }),
+  delegarAOrpc(createUserHandler, PREFIJO_ABSOLUTO, conUsuario)
+);
 
 const userByIdProcedure = os
   .route({ method: "GET", path: "/{id}" })
@@ -139,10 +138,11 @@ const userByIdProcedure = os
   });
 const userByIdHandler = new OpenAPIHandler({ userByIdProcedure });
 
-router.get("/:id", authorize({ roles: ["admin"], acceso: "soloRol" }), async (req, res, next) => {
-  const { matched } = await userByIdHandler.handle(req, res, { prefix: PREFIJO_ABSOLUTO });
-  if (!matched) next();
-});
+router.get(
+  "/:id",
+  authorize({ roles: ["admin"], acceso: "soloRol" }),
+  delegarAOrpc(userByIdHandler, PREFIJO_ABSOLUTO)
+);
 
 const updateUserProcedure = orpc
   .errors({
@@ -189,13 +189,11 @@ const updateUserProcedure = orpc
   });
 const updateUserHandler = new OpenAPIHandler({ updateUserProcedure });
 
-router.patch("/:id", authorize({ roles: ["admin"], acceso: "soloRol" }), async (req, res, next) => {
-  const { matched } = await updateUserHandler.handle(req, res, {
-    prefix: PREFIJO_ABSOLUTO,
-    context: { user: req.user! }
-  });
-  if (!matched) next();
-});
+router.patch(
+  "/:id",
+  authorize({ roles: ["admin"], acceso: "soloRol" }),
+  delegarAOrpc(updateUserHandler, PREFIJO_ABSOLUTO, conUsuario)
+);
 
 const deleteUserProcedure = orpc
   .route({ method: "DELETE", path: "/{id}", successStatus: 204 })
@@ -216,13 +214,7 @@ const deleteUserHandler = new OpenAPIHandler({ deleteUserProcedure });
 router.delete(
   "/:id",
   authorize({ roles: ["admin"], acceso: "soloRol" }),
-  async (req, res, next) => {
-    const { matched } = await deleteUserHandler.handle(req, res, {
-      prefix: PREFIJO_ABSOLUTO,
-      context: { user: req.user! }
-    });
-    if (!matched) next();
-  }
+  delegarAOrpc(deleteUserHandler, PREFIJO_ABSOLUTO, conUsuario)
 );
 
 /** El router oRPC combinado de esta vertical — lo consume

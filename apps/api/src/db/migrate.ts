@@ -191,6 +191,7 @@ export async function migrar(
 
 // Solo corre como script. Sin este guardia, importarlo desde la suite de tests
 // dispararía una migración contra la base local como efecto secundario del import.
+/* v8 ignore if -- @preserve: guardia para que importar el módulo no migre; solo corre como CLI (SPEC-018) */
 if (require.main === module) {
   migrar().catch((e) => {
     console.error(e);

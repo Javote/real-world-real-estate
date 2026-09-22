@@ -10,7 +10,7 @@ import { z } from "zod";
 import type { UserRole } from "../db/types";
 import { en } from "../lib/arrays";
 import { db } from "../lib/db";
-import { OpenAPIHandler, os } from "../lib/orpc";
+import { conUsuario, delegarAOrpc, OpenAPIHandler, os } from "../lib/orpc";
 import { authenticate, authorize, projectScope } from "../middlewares/auth";
 
 // Capital e investors del developer (M2-D5 filas 42-43 y 48) — **M3-BE-11** y
@@ -126,13 +126,7 @@ const summaryHandler = new OpenAPIHandler({ summaryProcedure });
 router.get(
   "/capital/summary",
   authorize({ roles: ["admin", "developer"], acceso: { scopeEnQuery: "projectScope(developer)" } }),
-  async (req, res, next) => {
-    const { matched } = await summaryHandler.handle(req, res, {
-      prefix: PREFIJO_ABSOLUTO,
-      context: { user: req.user! }
-    });
-    if (!matched) next();
-  }
+  delegarAOrpc(summaryHandler, PREFIJO_ABSOLUTO, conUsuario)
 );
 
 /**
@@ -173,13 +167,7 @@ const monthlyHandler = new OpenAPIHandler({ monthlyProcedure });
 router.get(
   "/capital/monthly",
   authorize({ roles: ["admin", "developer"], acceso: { scopeEnQuery: "projectScope(developer)" } }),
-  async (req, res, next) => {
-    const { matched } = await monthlyHandler.handle(req, res, {
-      prefix: PREFIJO_ABSOLUTO,
-      context: { user: req.user! }
-    });
-    if (!matched) next();
-  }
+  delegarAOrpc(monthlyHandler, PREFIJO_ABSOLUTO, conUsuario)
 );
 
 /** Fila 42-43 — el desglose por proyecto, con la barra de ocupación. */
@@ -224,13 +212,7 @@ const byProjectHandler = new OpenAPIHandler({ byProjectProcedure });
 router.get(
   "/capital/by-project",
   authorize({ roles: ["admin", "developer"], acceso: { scopeEnQuery: "projectScope(developer)" } }),
-  async (req, res, next) => {
-    const { matched } = await byProjectHandler.handle(req, res, {
-      prefix: PREFIJO_ABSOLUTO,
-      context: { user: req.user! }
-    });
-    if (!matched) next();
-  }
+  delegarAOrpc(byProjectHandler, PREFIJO_ABSOLUTO, conUsuario)
 );
 
 /**
@@ -296,13 +278,7 @@ const investorsHandler = new OpenAPIHandler({ investorsProcedure });
 router.get(
   "/investors",
   authorize({ roles: ["admin", "developer"], acceso: { scopeEnQuery: "projectScope(developer)" } }),
-  async (req, res, next) => {
-    const { matched } = await investorsHandler.handle(req, res, {
-      prefix: PREFIJO_ABSOLUTO,
-      context: { user: req.user! }
-    });
-    if (!matched) next();
-  }
+  delegarAOrpc(investorsHandler, PREFIJO_ABSOLUTO, conUsuario)
 );
 
 /** El router oRPC combinado de esta vertical — ver el comentario homólogo en

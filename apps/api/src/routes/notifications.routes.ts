@@ -3,7 +3,7 @@ import { Router } from "express";
 import { z } from "zod";
 import type { UserRole } from "../db/types";
 import { db } from "../lib/db";
-import { OpenAPIHandler, ORPCError, os } from "../lib/orpc";
+import { conUsuario, delegarAOrpc, OpenAPIHandler, ORPCError, os } from "../lib/orpc";
 import { authenticate, authorize, CUALQUIER_ROL } from "../middlewares/auth";
 import { paramValidator } from "../middlewares/validate-params";
 
@@ -58,13 +58,7 @@ const unreadCountHandler = new OpenAPIHandler({ unreadCountProcedure });
 router.get(
   "/unread-count",
   authorize({ roles: CUALQUIER_ROL, acceso: { scopeEnQuery: "Notification.userId = usuario" } }),
-  async (req, res, next) => {
-    const { matched } = await unreadCountHandler.handle(req, res, {
-      prefix: PREFIJO_ABSOLUTO,
-      context: { user: req.user! }
-    });
-    if (!matched) next();
-  }
+  delegarAOrpc(unreadCountHandler, PREFIJO_ABSOLUTO, conUsuario)
 );
 
 /**
@@ -104,13 +98,7 @@ const markReadHandler = new OpenAPIHandler({ markReadProcedure });
 router.patch(
   "/:id/read",
   authorize({ roles: CUALQUIER_ROL, acceso: { scopeEnQuery: "Notification.userId = usuario" } }),
-  async (req, res, next) => {
-    const { matched } = await markReadHandler.handle(req, res, {
-      prefix: PREFIJO_ABSOLUTO,
-      context: { user: req.user! }
-    });
-    if (!matched) next();
-  }
+  delegarAOrpc(markReadHandler, PREFIJO_ABSOLUTO, conUsuario)
 );
 
 /** El router oRPC combinado de esta vertical — lo consume

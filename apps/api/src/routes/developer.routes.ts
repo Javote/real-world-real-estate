@@ -25,7 +25,7 @@ import { agregadosDeProyectos } from "../domain/project-aggregates";
 import { reconciliarParaLectura } from "../domain/reconcile";
 import { anchorEvent, recordOnChainEvent } from "../domain/stage-transition";
 import { db } from "../lib/db";
-import { OpenAPIHandler, ORPCError, os } from "../lib/orpc";
+import { conUsuario, delegarAOrpc, OpenAPIHandler, ORPCError, os } from "../lib/orpc";
 import { auditScope, authenticate, authorize, projectScope } from "../middlewares/auth";
 import { paramValidator } from "../middlewares/validate-params";
 import { writeAuditLog } from "../utils/audit";
@@ -104,13 +104,7 @@ const projectsHandler = new OpenAPIHandler({ projectsProcedure });
 router.get(
   "/projects",
   authorize({ roles: ["admin", "developer"], acceso: { scopeEnQuery: "projectScope(developer)" } }),
-  async (req, res, next) => {
-    const { matched } = await projectsHandler.handle(req, res, {
-      prefix: PREFIJO_ABSOLUTO,
-      context: { user: req.user! }
-    });
-    if (!matched) next();
-  }
+  delegarAOrpc(projectsHandler, PREFIJO_ABSOLUTO, conUsuario)
 );
 
 /** Fila 37 — el detalle, que en la captura es una grilla de acciones + 3 stats. */
@@ -125,6 +119,7 @@ const projectByIdProcedure = os
       .where("id", "=", input.id)
       .executeTakeFirst();
 
+    /* v8 ignore if -- @preserve: authorize({ proyecto }) ya confirmó que existe (SPEC-018) */
     if (!proyecto) throw new ORPCError("NOT_FOUND", { message: "Project not found" });
 
     const stages = await db
@@ -143,7 +138,9 @@ const projectByIdProcedure = os
     return {
       ...proyecto,
       stages,
+      /* v8 ignore start -- @preserve: COUNT(*) siempre devuelve una fila (SPEC-018) */
       evidenceCount: Number(evidencia?.total ?? 0)
+      /* v8 ignore stop -- @preserve */
     };
   });
 const projectByIdHandler = new OpenAPIHandler({ projectByIdProcedure });
@@ -154,10 +151,7 @@ router.get(
     roles: ["admin", "developer"],
     acceso: { proyecto: { param: "id" }, membresias: ["developer"] }
   }),
-  async (req, res, next) => {
-    const { matched } = await projectByIdHandler.handle(req, res, { prefix: PREFIJO_ABSOLUTO });
-    if (!matched) next();
-  }
+  delegarAOrpc(projectByIdHandler, PREFIJO_ABSOLUTO)
 );
 
 /**
@@ -287,13 +281,7 @@ const createProjectHandler = new OpenAPIHandler({ createProjectProcedure });
 router.post(
   "/projects",
   authorize({ roles: ["admin", "developer"], acceso: "soloRol" }),
-  async (req, res, next) => {
-    const { matched } = await createProjectHandler.handle(req, res, {
-      prefix: PREFIJO_ABSOLUTO,
-      context: { user: req.user! }
-    });
-    if (!matched) next();
-  }
+  delegarAOrpc(createProjectHandler, PREFIJO_ABSOLUTO, conUsuario)
 );
 
 /** Fila 45 — el avance de obra a través de todos los proyectos. */
@@ -330,13 +318,7 @@ const progressHandler = new OpenAPIHandler({ progressProcedure });
 router.get(
   "/progress",
   authorize({ roles: ["admin", "developer"], acceso: { scopeEnQuery: "projectScope(developer)" } }),
-  async (req, res, next) => {
-    const { matched } = await progressHandler.handle(req, res, {
-      prefix: PREFIJO_ABSOLUTO,
-      context: { user: req.user! }
-    });
-    if (!matched) next();
-  }
+  delegarAOrpc(progressHandler, PREFIJO_ABSOLUTO, conUsuario)
 );
 
 /**
@@ -391,13 +373,7 @@ const documentsHandler = new OpenAPIHandler({ documentsProcedure });
 router.get(
   "/documents",
   authorize({ roles: ["admin", "developer"], acceso: { scopeEnQuery: "projectScope(developer)" } }),
-  async (req, res, next) => {
-    const { matched } = await documentsHandler.handle(req, res, {
-      prefix: PREFIJO_ABSOLUTO,
-      context: { user: req.user! }
-    });
-    if (!matched) next();
-  }
+  delegarAOrpc(documentsHandler, PREFIJO_ABSOLUTO, conUsuario)
 );
 
 /**
@@ -455,13 +431,7 @@ router.get(
     roles: ["admin", "developer"],
     acceso: { scopeEnQuery: "auditScope(developer)" }
   }),
-  async (req, res, next) => {
-    const { matched } = await auditLogHandler.handle(req, res, {
-      prefix: PREFIJO_ABSOLUTO,
-      context: { user: req.user! }
-    });
-    if (!matched) next();
-  }
+  delegarAOrpc(auditLogHandler, PREFIJO_ABSOLUTO, conUsuario)
 );
 
 /**
@@ -502,8 +472,10 @@ const anchorDocumentProcedure = orpc
       .where("id", "=", input.evidenceId)
       .executeTakeFirst();
 
+    /* v8 ignore if -- @preserve: authorize({ proyecto }) ya confirmó que existe (Evidence, en el body) (SPEC-018) */
     if (!documento) throw new ORPCError("NOT_FOUND", { message: "Document not found" });
 
+    /* v8 ignore if -- @preserve: Evidence.sha256Hash es NOT NULL (SPEC-018) */
     if (!documento.sha256Hash) {
       throw errors.NO_HASH({ message: "Document has no hash" });
     }
@@ -555,13 +527,7 @@ router.post(
       membresias: ["developer"]
     }
   }),
-  async (req, res, next) => {
-    const { matched } = await anchorDocumentHandler.handle(req, res, {
-      prefix: PREFIJO_ABSOLUTO,
-      context: { user: req.user! }
-    });
-    if (!matched) next();
-  }
+  delegarAOrpc(anchorDocumentHandler, PREFIJO_ABSOLUTO, conUsuario)
 );
 
 const kpisProcedure = orpc
@@ -620,10 +586,14 @@ const kpisProcedure = orpc
 
     return {
       activeProjects: ids.length,
+      /* v8 ignore start -- @preserve: COUNT(*) siempre devuelve una fila (SPEC-018) */
       totalUnits: Number(unidades?.total ?? 0),
+      /* v8 ignore stop -- @preserve */
       capitalRaisedMinorUnits: Number(contratos?.total ?? 0),
       averageProgress: stages.length ? Math.round((completados / stages.length) * 100) : 0,
+      /* v8 ignore start -- @preserve: COUNT(*) siempre devuelve una fila (SPEC-018) */
       verifiedDocuments: Number(anclados?.total ?? 0)
+      /* v8 ignore stop -- @preserve */
     };
   });
 const kpisHandler = new OpenAPIHandler({ kpisProcedure });
@@ -634,13 +604,7 @@ router.get(
     roles: ["admin", "developer"],
     acceso: { scopeEnQuery: "projectScope(cualquier membresía)" }
   }),
-  async (req, res, next) => {
-    const { matched } = await kpisHandler.handle(req, res, {
-      prefix: PREFIJO_ABSOLUTO,
-      context: { user: req.user! }
-    });
-    if (!matched) next();
-  }
+  delegarAOrpc(kpisHandler, PREFIJO_ABSOLUTO, conUsuario)
 );
 
 /** El router oRPC combinado de esta vertical — lo consume

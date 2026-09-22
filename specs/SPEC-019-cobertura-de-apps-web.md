@@ -20,9 +20,27 @@ certifier de SPEC-017), con `coverage.include` sobre todo `src/`:
 | Functions | **37,22%** (284/763) | ≥95% | ~441 |
 | Lines | **37,18%** (660/1.775) | ≥95% | ~1.027 |
 
-**117 archivos con código; 27 ya están al 100% en las cuatro; 90 no.** A diferencia de la API, acá
-no se encontró ningún techo estructural: las pantallas no tienen el wrapper `matched` ni guardias
-`require.main`, así que el 95% (y probablemente el 100%) es alcanzable con tests solos.
+**117 archivos con código; 27 ya están al 100% en las cuatro; 90 no.**
+
+## ¿Hay ramas inalcanzables en la web, como en la API?
+
+**Casi ninguna, y ninguna en masa.** En la API el techo lo ponían dos patrones repetidos (el
+wrapper `matched` en 89 rutas y los 404 que `authorize` ya resolvió). En la web no hay nada
+equivalente: ni wrapper por ruta ni una capa que responda antes que la pantalla.
+
+Se revisaron, rama por rama (2026-09-22), las que quedan sin cubrir en los ~20 archivos que **ya
+tienen tests completos** (`notary.*`, `certifier.*`, `login`, `api/port.ts`, `auth/*`, `i18n/*`,
+`lib/money`, `lib/evidenceFiles`, `HashChip`, `GradientHeader`). Son ~35, y casi todas se pueden
+alcanzar: el estado vacío de un listado, el texto "firmando…" mientras la mutación está pendiente,
+un `204`, un `401` que borra la sesión, un `titleAction` que ninguna pantalla probada pasa. **La
+única familia inalcanzable son 4 guardias `typeof window === 'undefined'`** (`auth/session.ts` ×2,
+`i18n/locale.ts` ×2): quedaron de cuando la web tenía SSR, y desde D-065 es una SPA, así que en el
+navegador `window` siempre existe. Van a W0 para borrarse, no para marcarse: son código muerto, no
+una defensa.
+
+Los ~70 archivos restantes no se pudieron revisar así, y 40 de ellos están en 0%: sin tests,
+toda rama figura como no cubierta. Algún `??` defensivo va a aparecer, pero el 95% sigue siendo
+alcanzable con tests.
 
 ## Cómo se testea una pantalla
 
@@ -51,7 +69,16 @@ toque nadie:
 4. **`routes/-test-mount.tsx` fuera del denominador.** Es soporte de test que vive en `src/` por la
    convención del prefijo `-` de TanStack Router, y hoy cuenta como código de la app (95%, un
    statement sin cubrir). Sacarlo del `include` no esconde código de producción.
-5. **`main.tsx`: tratarlo como `server.ts` de la API.** Es el bootstrap (`createRoot(...).render`),
+5. **Los dos tests que fallan con la cobertura activada.** Con `--coverage`, la suite web tuvo dos
+   corridas rojas seguidas, cada una por un test distinto: `PanelLayout.test.tsx` (*"unread > 9
+   dibuja 9+"*) y `-certifier.stage.detail.test.tsx` (`CER-OBSERVE-001`). La tercera salió verde, y
+   los dos pasan solos y en `pnpm verify`. Tienen el síntoma de un `findBy*` que se queda sin tiempo
+   (espera 1 s por defecto) cuando la suite instrumentada carga la máquina. Hoy no molesta porque
+   CI no corre la cobertura de la web, pero el paso final de esta spec la agrega: **hay que
+   estabilizarlos antes**, o CI va a quedar rojo de vez en cuando por nada.
+6. **Los 4 guardias `typeof window === 'undefined'`** de `auth/session.ts` e `i18n/locale.ts`, que se
+   borran (ver §¿Hay ramas inalcanzables…?).
+7. **`main.tsx`: tratarlo como `server.ts` de la API.** Es el bootstrap (`createRoot(...).render`),
    el equivalente exacto de `apps/api/src/server.ts`, que la API excluye. SPEC-017 decía que
    `server.ts` "vuelve a contar" y **nunca se hizo** (`apps/api/vitest.config.mts` lo sigue
    excluyendo). Decisión del dueño: o se excluyen los dos, o los dos cuentan con su lógica

@@ -3,7 +3,7 @@ import { Router } from "express";
 import { z } from "zod";
 import { compileDossier } from "../domain/dossier";
 import { db } from "../lib/db";
-import { OpenAPIHandler, ORPCError, os } from "../lib/orpc";
+import { delegarAOrpc, OpenAPIHandler, ORPCError, os } from "../lib/orpc";
 import { dossierRateLimiter } from "../middlewares/rateLimit";
 import { paramValidator } from "../middlewares/validate-params";
 
@@ -53,6 +53,7 @@ const publicDossierProcedure = os
     if (!fila) throw new ORPCError("NOT_FOUND", { message: "Dossier not found" });
 
     const dossier = await compileDossier(fila.unitId);
+    /* v8 ignore if -- @preserve: FK Dossier.unitId → Unit.id es ON DELETE CASCADE (SPEC-018) */
     if (!dossier) throw new ORPCError("NOT_FOUND", { message: "Dossier not found" });
 
     return publicDossierSchema.parse({
@@ -69,10 +70,11 @@ const publicDossierProcedure = os
   });
 const publicDossierHandler = new OpenAPIHandler({ publicDossierProcedure });
 
-router.get("/dossier/:shareToken", dossierRateLimiter(), async (req, res, next) => {
-  const { matched } = await publicDossierHandler.handle(req, res, { prefix: PREFIJO_ABSOLUTO });
-  if (!matched) next();
-});
+router.get(
+  "/dossier/:shareToken",
+  dossierRateLimiter(),
+  delegarAOrpc(publicDossierHandler, PREFIJO_ABSOLUTO)
+);
 
 /** El router oRPC combinado de esta vertical — lo consume
  * `scripts/generate-openapi.ts` para generar el fragmento de OpenAPI de la

@@ -23,7 +23,7 @@ import { compileDossier } from "../domain/dossier";
 import { reconciliarParaLectura } from "../domain/reconcile";
 import { ultimoBundlePorStage } from "../domain/stage-transition";
 import { db } from "../lib/db";
-import { OpenAPIHandler, ORPCError, os } from "../lib/orpc";
+import { conUsuario, delegarAOrpc, OpenAPIHandler, ORPCError, os } from "../lib/orpc";
 import { authenticate, authorize } from "../middlewares/auth";
 import { paramValidator } from "../middlewares/validate-params";
 import { writeAuditLog } from "../utils/audit";
@@ -106,7 +106,9 @@ const router = Router();
  */
 async function dossierDeLaUnidad(unitId: string) {
   const dossier = await compileDossier(unitId);
+  /* v8 ignore start -- @preserve: authorize({ dueño }) ya cargó la fila (Unit) en las tres rutas que la llaman (SPEC-018) */
   return dossier ? { dossier } : { error: 404 as const };
+  /* v8 ignore stop -- @preserve */
 }
 
 router.param("id", paramValidator(cuidParamSchema));
@@ -132,13 +134,7 @@ const favoritesHandler = new OpenAPIHandler({ favoritesProcedure });
 router.get(
   "/favorites",
   authorize({ roles: ["admin", "buyer"], acceso: { scopeEnQuery: "Favorite.userId = usuario" } }),
-  async (req, res, next) => {
-    const { matched } = await favoritesHandler.handle(req, res, {
-      prefix: PREFIJO_ABSOLUTO,
-      context: { user: req.user! }
-    });
-    if (!matched) next();
-  }
+  delegarAOrpc(favoritesHandler, PREFIJO_ABSOLUTO, conUsuario)
 );
 
 const addFavoriteProcedure = orpc
@@ -166,13 +162,7 @@ const addFavoriteHandler = new OpenAPIHandler({ addFavoriteProcedure });
 router.post(
   "/favorites/:projectId",
   authorize({ roles: ["admin", "buyer"], acceso: "soloRol" }),
-  async (req, res, next) => {
-    const { matched } = await addFavoriteHandler.handle(req, res, {
-      prefix: PREFIJO_ABSOLUTO,
-      context: { user: req.user! }
-    });
-    if (!matched) next();
-  }
+  delegarAOrpc(addFavoriteHandler, PREFIJO_ABSOLUTO, conUsuario)
 );
 
 const removeFavoriteProcedure = orpc
@@ -193,13 +183,7 @@ const removeFavoriteHandler = new OpenAPIHandler({ removeFavoriteProcedure });
 router.delete(
   "/favorites/:projectId",
   authorize({ roles: ["admin", "buyer"], acceso: { scopeEnQuery: "Favorite.userId = usuario" } }),
-  async (req, res, next) => {
-    const { matched } = await removeFavoriteHandler.handle(req, res, {
-      prefix: PREFIJO_ABSOLUTO,
-      context: { user: req.user! }
-    });
-    if (!matched) next();
-  }
+  delegarAOrpc(removeFavoriteHandler, PREFIJO_ABSOLUTO, conUsuario)
 );
 
 /** Fila 14 — My Units: las del investor autenticado. */
@@ -229,7 +213,9 @@ const unitsProcedure = orpc
     return unidades.map((u) => ({
       ...u,
       status: u.status as UnitStatus,
+      /* v8 ignore start -- @preserve: avancePorProyecto setea un valor para cada id que recibe (SPEC-018) */
       progress: avance.get(u.projectId) ?? 0
+      /* v8 ignore stop -- @preserve */
     }));
   });
 const unitsHandler = new OpenAPIHandler({ unitsProcedure });
@@ -237,13 +223,7 @@ const unitsHandler = new OpenAPIHandler({ unitsProcedure });
 router.get(
   "/units",
   authorize({ roles: ["admin", "buyer"], acceso: { scopeEnQuery: "Unit.investorId = usuario" } }),
-  async (req, res, next) => {
-    const { matched } = await unitsHandler.handle(req, res, {
-      prefix: PREFIJO_ABSOLUTO,
-      context: { user: req.user! }
-    });
-    if (!matched) next();
-  }
+  delegarAOrpc(unitsHandler, PREFIJO_ABSOLUTO, conUsuario)
 );
 
 /** Fila 15-18 — el detalle de la unidad, con los stages del proyecto y su anclaje. */
@@ -272,6 +252,7 @@ const unitDetailProcedure = os
       .where("Unit.id", "=", input.id)
       .executeTakeFirst();
 
+    /* v8 ignore if -- @preserve: authorize({ dueño }) ya cargó la fila (Unit) (SPEC-018) */
     if (!unidad) throw new ORPCError("NOT_FOUND", { message: "Unit not found" });
 
     // Los stages son del proyecto, con su estado de anclaje: esto alimenta los
@@ -308,10 +289,7 @@ const unitDetailHandler = new OpenAPIHandler({ unitDetailProcedure });
 router.get(
   "/units/:id",
   authorize({ roles: ["admin", "buyer"], acceso: { dueño: { via: "Unit", param: "id" } } }),
-  async (req, res, next) => {
-    const { matched } = await unitDetailHandler.handle(req, res, { prefix: PREFIJO_ABSOLUTO });
-    if (!matched) next();
-  }
+  delegarAOrpc(unitDetailHandler, PREFIJO_ABSOLUTO)
 );
 
 /** Fila 15-18 — las novedades de la unidad: los eventos de sus stages. */
@@ -326,6 +304,7 @@ const unitNewsProcedure = os
       .where("id", "=", input.id)
       .executeTakeFirst();
 
+    /* v8 ignore if -- @preserve: authorize({ dueño }) ya cargó la fila (Unit) (SPEC-018) */
     if (!unidad) throw new ORPCError("NOT_FOUND", { message: "Unit not found" });
 
     // El anclaje `Pending` que ya está en la cadena se confirma acá, en el
@@ -354,10 +333,7 @@ const unitNewsHandler = new OpenAPIHandler({ unitNewsProcedure });
 router.get(
   "/units/:id/news",
   authorize({ roles: ["admin", "buyer"], acceso: { dueño: { via: "Unit", param: "id" } } }),
-  async (req, res, next) => {
-    const { matched } = await unitNewsHandler.handle(req, res, { prefix: PREFIJO_ABSOLUTO });
-    if (!matched) next();
-  }
+  delegarAOrpc(unitNewsHandler, PREFIJO_ABSOLUTO)
 );
 
 /** Fila 26-29 — el dossier compilado, con su hash maestro. */
@@ -367,6 +343,7 @@ const dossierProcedure = os
   .output(dossierSchema)
   .handler(async ({ input }) => {
     const resultado = await dossierDeLaUnidad(input.id);
+    /* v8 ignore if -- @preserve: authorize({ dueño }) ya cargó la fila (Unit) (SPEC-018) */
     if (resultado.error === 404) throw new ORPCError("NOT_FOUND", { message: "Unit not found" });
 
     const { investorId: _investorId, ...dossier } = resultado.dossier;
@@ -377,10 +354,7 @@ const dossierHandler = new OpenAPIHandler({ dossierProcedure });
 router.get(
   "/units/:id/dossier",
   authorize({ roles: ["admin", "buyer"], acceso: { dueño: { via: "Unit", param: "id" } } }),
-  async (req, res, next) => {
-    const { matched } = await dossierHandler.handle(req, res, { prefix: PREFIJO_ABSOLUTO });
-    if (!matched) next();
-  }
+  delegarAOrpc(dossierHandler, PREFIJO_ABSOLUTO)
 );
 
 /**
@@ -407,6 +381,7 @@ const dossierExportProcedure = orpc
   )
   .handler(async ({ input, context }) => {
     const resultado = await dossierDeLaUnidad(input.id);
+    /* v8 ignore if -- @preserve: authorize({ dueño }) ya cargó la fila (Unit) (SPEC-018) */
     if (resultado.error === 404) throw new ORPCError("NOT_FOUND", { message: "Unit not found" });
 
     const d = resultado.dossier;
@@ -458,13 +433,7 @@ const dossierExportHandler = new OpenAPIHandler({ dossierExportProcedure });
 router.get(
   "/units/:id/dossier/export.pdf",
   authorize({ roles: ["admin", "buyer"], acceso: { dueño: { via: "Unit", param: "id" } } }),
-  async (req, res, next) => {
-    const { matched } = await dossierExportHandler.handle(req, res, {
-      prefix: PREFIJO_ABSOLUTO,
-      context: { user: req.user! }
-    });
-    if (!matched) next();
-  }
+  delegarAOrpc(dossierExportHandler, PREFIJO_ABSOLUTO, conUsuario)
 );
 
 /**
@@ -481,6 +450,7 @@ const shareDossierProcedure = orpc
   .output(dossierShareSchema)
   .handler(async ({ input, context }) => {
     const resultado = await dossierDeLaUnidad(input.id);
+    /* v8 ignore if -- @preserve: authorize({ dueño }) ya cargó la fila (Unit) (SPEC-018) */
     if (resultado.error === 404) throw new ORPCError("NOT_FOUND", { message: "Unit not found" });
 
     const d = resultado.dossier;
@@ -517,13 +487,7 @@ const shareDossierHandler = new OpenAPIHandler({ shareDossierProcedure });
 router.post(
   "/units/:id/dossier/share",
   authorize({ roles: ["admin", "buyer"], acceso: { dueño: { via: "Unit", param: "id" } } }),
-  async (req, res, next) => {
-    const { matched } = await shareDossierHandler.handle(req, res, {
-      prefix: PREFIJO_ABSOLUTO,
-      context: { user: req.user! }
-    });
-    if (!matched) next();
-  }
+  delegarAOrpc(shareDossierHandler, PREFIJO_ABSOLUTO, conUsuario)
 );
 
 /**
@@ -566,13 +530,7 @@ router.get(
     roles: ["admin", "buyer"],
     acceso: { scopeEnQuery: "Notification.userId = usuario" }
   }),
-  async (req, res, next) => {
-    const { matched } = await notificationsHandler.handle(req, res, {
-      prefix: PREFIJO_ABSOLUTO,
-      context: { user: req.user! }
-    });
-    if (!matched) next();
-  }
+  delegarAOrpc(notificationsHandler, PREFIJO_ABSOLUTO, conUsuario)
 );
 
 /** Fila 63 — el investor ve la invitación que le llegó. */
@@ -598,6 +556,7 @@ const invitationDetailProcedure = os
       .where("Invitation.id", "=", input.id)
       .executeTakeFirst();
 
+    /* v8 ignore if -- @preserve: authorize({ dueño }) ya cargó la fila (Invitation) (SPEC-018) */
     if (!invitacion) throw new ORPCError("NOT_FOUND", { message: "Invitation not found" });
 
     return { ...invitacion, status: invitacion.status as InvitationStatus };
@@ -607,12 +566,7 @@ const invitationDetailHandler = new OpenAPIHandler({ invitationDetailProcedure }
 router.get(
   "/invitations/:id",
   authorize({ roles: ["admin", "buyer"], acceso: { dueño: { via: "Invitation", param: "id" } } }),
-  async (req, res, next) => {
-    const { matched } = await invitationDetailHandler.handle(req, res, {
-      prefix: PREFIJO_ABSOLUTO
-    });
-    if (!matched) next();
-  }
+  delegarAOrpc(invitationDetailHandler, PREFIJO_ABSOLUTO)
 );
 
 /**
@@ -646,6 +600,7 @@ const acceptInvitationProcedure = orpc
         .where("id", "=", input.id)
         .executeTakeFirst();
 
+      /* v8 ignore if -- @preserve: authorize({ dueño }) ya cargó la fila (Invitation) (SPEC-018) */
       if (!invitacion) throw new ORPCError("NOT_FOUND", { message: "Invitation not found" });
 
       // Guarda atómica (punto 2): el `WHERE status = 'pending'` hace que solo
@@ -764,13 +719,7 @@ const acceptInvitationHandler = new OpenAPIHandler({ acceptInvitationProcedure }
 router.post(
   "/invitations/:id/accept",
   authorize({ roles: ["admin", "buyer"], acceso: { dueño: { via: "Invitation", param: "id" } } }),
-  async (req, res, next) => {
-    const { matched } = await acceptInvitationHandler.handle(req, res, {
-      prefix: PREFIJO_ABSOLUTO,
-      context: { user: req.user! }
-    });
-    if (!matched) next();
-  }
+  delegarAOrpc(acceptInvitationHandler, PREFIJO_ABSOLUTO, conUsuario)
 );
 
 /**
@@ -792,6 +741,7 @@ const declineInvitationProcedure = orpc
       .where("id", "=", input.id)
       .executeTakeFirst();
 
+    /* v8 ignore if -- @preserve: authorize({ dueño }) ya cargó la fila (Invitation) (SPEC-018) */
     if (!invitacion) throw new ORPCError("NOT_FOUND", { message: "Invitation not found" });
     if (invitacion.status !== "pending") {
       throw new ORPCError("CONFLICT", { message: `Invitation already ${invitacion.status}` });
@@ -823,13 +773,7 @@ const declineInvitationHandler = new OpenAPIHandler({ declineInvitationProcedure
 router.post(
   "/invitations/:id/decline",
   authorize({ roles: ["admin", "buyer"], acceso: { dueño: { via: "Invitation", param: "id" } } }),
-  async (req, res, next) => {
-    const { matched } = await declineInvitationHandler.handle(req, res, {
-      prefix: PREFIJO_ABSOLUTO,
-      context: { user: req.user! }
-    });
-    if (!matched) next();
-  }
+  delegarAOrpc(declineInvitationHandler, PREFIJO_ABSOLUTO, conUsuario)
 );
 
 /** Fila 23-24 — el contrato de la unidad del investor. */
@@ -852,6 +796,7 @@ const contractProcedure = os
       .where("Contract.unitId", "=", input.unitId)
       .executeTakeFirst();
 
+    /* v8 ignore if -- @preserve: authorize({ dueño }) ya cargó la fila (ContractOfUnit) (SPEC-018) */
     if (!contrato) throw new ORPCError("NOT_FOUND", { message: "Contract not found" });
 
     return contrato;
@@ -864,10 +809,7 @@ router.get(
     roles: ["admin", "buyer"],
     acceso: { dueño: { via: "ContractOfUnit", param: "unitId" } }
   }),
-  async (req, res, next) => {
-    const { matched } = await contractHandler.handle(req, res, { prefix: PREFIJO_ABSOLUTO });
-    if (!matched) next();
-  }
+  delegarAOrpc(contractHandler, PREFIJO_ABSOLUTO)
 );
 
 /** El router oRPC combinado de esta vertical — lo consume

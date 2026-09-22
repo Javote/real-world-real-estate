@@ -7,7 +7,7 @@ import {
 import { Router } from "express";
 import type { UserRole } from "../db/types";
 import { db } from "../lib/db";
-import { OpenAPIHandler, os } from "../lib/orpc";
+import { conUsuario, delegarAOrpc, OpenAPIHandler, os } from "../lib/orpc";
 import { authenticate, authorize, CUALQUIER_ROL } from "../middlewares/auth";
 import { writeAuditLog } from "../utils/audit";
 
@@ -66,13 +66,7 @@ const profileHandler = new OpenAPIHandler({ profileProcedure });
 router.get(
   "/",
   authorize({ roles: CUALQUIER_ROL, acceso: { scopeEnQuery: "User.id = usuario" } }),
-  async (req, res, next) => {
-    const { matched } = await profileHandler.handle(req, res, {
-      prefix: PREFIJO_ABSOLUTO,
-      context: { user: req.user! }
-    });
-    if (!matched) next();
-  }
+  delegarAOrpc(profileHandler, PREFIJO_ABSOLUTO, conUsuario)
 );
 
 /**
@@ -105,13 +99,7 @@ const updateProfileHandler = new OpenAPIHandler({ updateProfileProcedure });
 router.patch(
   "/",
   authorize({ roles: CUALQUIER_ROL, acceso: { scopeEnQuery: "User.id = usuario" } }),
-  async (req, res, next) => {
-    const { matched } = await updateProfileHandler.handle(req, res, {
-      prefix: PREFIJO_ABSOLUTO,
-      context: { user: req.user! }
-    });
-    if (!matched) next();
-  }
+  delegarAOrpc(updateProfileHandler, PREFIJO_ABSOLUTO, conUsuario)
 );
 
 /**
@@ -153,13 +141,7 @@ const updateNotificationPrefsHandler = new OpenAPIHandler({ updateNotificationPr
 router.patch(
   "/notifications",
   authorize({ roles: CUALQUIER_ROL, acceso: { scopeEnQuery: "User.id = usuario" } }),
-  async (req, res, next) => {
-    const { matched } = await updateNotificationPrefsHandler.handle(req, res, {
-      prefix: PREFIJO_ABSOLUTO,
-      context: { user: req.user! }
-    });
-    if (!matched) next();
-  }
+  delegarAOrpc(updateNotificationPrefsHandler, PREFIJO_ABSOLUTO, conUsuario)
 );
 
 /** El router oRPC combinado de esta vertical — lo consume

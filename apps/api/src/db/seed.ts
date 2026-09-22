@@ -167,6 +167,7 @@ export async function sembrarDemo() {
 // test dispararía el seed completo (bcrypt de 9 usuarios, proyecto, stages,
 // unidad vendida, compilar el dossier) como efecto secundario del import —
 // mismo patrón que el guardia de `db/migrate.ts`.
+/* v8 ignore if -- @preserve: guardia para que importar el módulo no siembre; solo corre como CLI (SPEC-018) */
 if (require.main === module) {
   sembrarDemo()
     .catch((e) => {

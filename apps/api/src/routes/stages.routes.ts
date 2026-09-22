@@ -12,7 +12,7 @@ import { z } from "zod";
 import type { UserRole } from "../db/types";
 import { cabezaDelHilo, transitionStage } from "../domain/stage-transition";
 import { db } from "../lib/db";
-import { OpenAPIHandler, ORPCError, os } from "../lib/orpc";
+import { conUsuario, delegarAOrpc, OpenAPIHandler, ORPCError, os } from "../lib/orpc";
 import { ANY_MEMBERSHIP, authenticate, authorize, CUALQUIER_ROL } from "../middlewares/auth";
 import { paramValidator } from "../middlewares/validate-params";
 import { writeAuditLog } from "../utils/audit";
@@ -94,10 +94,7 @@ router.get(
     roles: CUALQUIER_ROL,
     acceso: { proyecto: { via: "Stage", param: "id" }, membresias: ANY_MEMBERSHIP }
   }),
-  async (req, res, next) => {
-    const { matched } = await stageDetailHandler.handle(req, res, { prefix: PREFIJO_ABSOLUTO });
-    if (!matched) next();
-  }
+  delegarAOrpc(stageDetailHandler, PREFIJO_ABSOLUTO)
 );
 
 /**
@@ -162,13 +159,7 @@ router.patch(
     roles: ["admin", "developer"],
     acceso: { proyecto: { via: "Stage", param: "id" }, membresias: ["developer"] }
   }),
-  async (req, res, next) => {
-    const { matched } = await updateStageHandler.handle(req, res, {
-      prefix: PREFIJO_ABSOLUTO,
-      context: { user: req.user! }
-    });
-    if (!matched) next();
-  }
+  delegarAOrpc(updateStageHandler, PREFIJO_ABSOLUTO, conUsuario)
 );
 
 /**
@@ -247,13 +238,7 @@ router.patch(
     roles: ["admin", "developer"],
     acceso: { proyecto: { via: "Stage", param: "id" }, membresias: ["developer"] }
   }),
-  async (req, res, next) => {
-    const { matched } = await transitionStageHandler.handle(req, res, {
-      prefix: PREFIJO_ABSOLUTO,
-      context: { user: req.user! }
-    });
-    if (!matched) next();
-  }
+  delegarAOrpc(transitionStageHandler, PREFIJO_ABSOLUTO, conUsuario)
 );
 
 /** El router oRPC combinado de esta vertical — lo consume

@@ -13,7 +13,7 @@ import type { UserRole } from "../db/types";
 import { reconciliarParaLectura } from "../domain/reconcile";
 import { retryStageMint } from "../domain/stage-transition";
 import { db } from "../lib/db";
-import { OpenAPIHandler, ORPCError, os } from "../lib/orpc";
+import { conUsuario, delegarAOrpc, OpenAPIHandler, ORPCError, os } from "../lib/orpc";
 import { ANY_MEMBERSHIP, authenticate, authorize, CUALQUIER_ROL } from "../middlewares/auth";
 import { paramValidator } from "../middlewares/validate-params";
 import { writeAuditLog } from "../utils/audit";
@@ -109,12 +109,7 @@ router.get(
     roles: CUALQUIER_ROL,
     acceso: { proyecto: { param: "id" }, membresias: ANY_MEMBERSHIP }
   }),
-  async (req, res, next) => {
-    const { matched } = await stagesOfProjectHandler.handle(req, res, {
-      prefix: PREFIJO_ABSOLUTO
-    });
-    if (!matched) next();
-  }
+  delegarAOrpc(stagesOfProjectHandler, PREFIJO_ABSOLUTO)
 );
 
 /**
@@ -162,6 +157,7 @@ const retryStageAnchorProcedure = orpc
 
     const result = await retryStageMint(input.stageId);
     if (!result.ok) {
+      /* v8 ignore if -- @preserve: el handler confirmó el stage tres líneas antes (SPEC-018) */
       if (result.code === "STAGE_NOT_FOUND") {
         throw new ORPCError("NOT_FOUND", { message: "Stage not found" });
       }
@@ -188,13 +184,7 @@ router.post(
     roles: ["admin"],
     acceso: { proyecto: { param: "id" }, membresias: ANY_MEMBERSHIP }
   }),
-  async (req, res, next) => {
-    const { matched } = await retryStageAnchorHandler.handle(req, res, {
-      prefix: PREFIJO_ABSOLUTO,
-      context: { user: req.user! }
-    });
-    if (!matched) next();
-  }
+  delegarAOrpc(retryStageAnchorHandler, PREFIJO_ABSOLUTO, conUsuario)
 );
 
 /**
@@ -276,12 +266,7 @@ router.get(
     roles: CUALQUIER_ROL,
     acceso: { proyecto: { param: "id" }, membresias: ANY_MEMBERSHIP }
   }),
-  async (req, res, next) => {
-    const { matched } = await nestedStageDetailHandler.handle(req, res, {
-      prefix: PREFIJO_ABSOLUTO
-    });
-    if (!matched) next();
-  }
+  delegarAOrpc(nestedStageDetailHandler, PREFIJO_ABSOLUTO)
 );
 
 /** El router oRPC combinado de esta vertical — lo consume

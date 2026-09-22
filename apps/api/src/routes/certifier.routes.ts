@@ -19,7 +19,7 @@ import { listarInvitacionesACertificar } from "../domain/certifier-invitation";
 import { reconciliarParaLectura } from "../domain/reconcile";
 import { transitionStage, ultimoBundlePorStage } from "../domain/stage-transition";
 import { db } from "../lib/db";
-import { OpenAPIHandler, ORPCError, os } from "../lib/orpc";
+import { conUsuario, delegarAOrpc, OpenAPIHandler, ORPCError, os } from "../lib/orpc";
 import { authenticate, authorize } from "../middlewares/auth";
 import { paramValidator } from "../middlewares/validate-params";
 import { writeAuditLog } from "../utils/audit";
@@ -97,13 +97,7 @@ router.get(
     roles: ["admin", "verifier"],
     acceso: { scopeEnQuery: "projectScope(cualquier membresía)" }
   }),
-  async (req, res, next) => {
-    const { matched } = await kpisHandler.handle(req, res, {
-      prefix: PREFIJO_ABSOLUTO,
-      context: { user: req.user! }
-    });
-    if (!matched) next();
-  }
+  delegarAOrpc(kpisHandler, PREFIJO_ABSOLUTO, conUsuario)
 );
 
 const assignmentsProcedure = orpc
@@ -138,13 +132,7 @@ router.get(
     roles: ["admin", "verifier"],
     acceso: { scopeEnQuery: "projectScope(cualquier membresía)" }
   }),
-  async (req, res, next) => {
-    const { matched } = await assignmentsHandler.handle(req, res, {
-      prefix: PREFIJO_ABSOLUTO,
-      context: { user: req.user! }
-    });
-    if (!matched) next();
-  }
+  delegarAOrpc(assignmentsHandler, PREFIJO_ABSOLUTO, conUsuario)
 );
 
 /** Fila 56v — la vista de certificación: el stage con su evidencia. */
@@ -168,6 +156,7 @@ const stageViewProcedure = os
       .where("Stage.id", "=", input.id)
       .executeTakeFirst();
 
+    /* v8 ignore if -- @preserve: authorize({ proyecto }) ya confirmó que existe (Stage) (SPEC-018) */
     if (!stage) throw new ORPCError("NOT_FOUND", { message: "Stage not found" });
 
     const evidencia = await db
@@ -190,10 +179,7 @@ router.get(
     roles: ["admin", "verifier"],
     acceso: { proyecto: { via: "Stage", param: "id" }, membresias: ["verifier"] }
   }),
-  async (req, res, next) => {
-    const { matched } = await stageViewHandler.handle(req, res, { prefix: PREFIJO_ABSOLUTO });
-    if (!matched) next();
-  }
+  delegarAOrpc(stageViewHandler, PREFIJO_ABSOLUTO)
 );
 
 /**
@@ -205,6 +191,7 @@ router.get(
 function lanzarFalloDeTransicion(
   resultado: Extract<Awaited<ReturnType<typeof transitionStage>>, { ok: false }>
 ): never {
+  /* v8 ignore if -- @preserve: el único 404 de transitionStage es un stage que authorize ya cargó (SPEC-018) */
   if (resultado.status === 404) throw new ORPCError("NOT_FOUND", { message: "Stage not found" });
   throw new ORPCError("CONFLICT", { message: resultado.code, data: resultado });
 }
@@ -234,13 +221,7 @@ router.post(
     roles: ["admin", "verifier"],
     acceso: { proyecto: { via: "Stage", param: "id" }, membresias: ["verifier"] }
   }),
-  async (req, res, next) => {
-    const { matched } = await certifyHandler.handle(req, res, {
-      prefix: PREFIJO_ABSOLUTO,
-      context: { user: req.user! }
-    });
-    if (!matched) next();
-  }
+  delegarAOrpc(certifyHandler, PREFIJO_ABSOLUTO, conUsuario)
 );
 
 /** Fila 57 — observar: devuelve el stage al developer con una nota. */
@@ -272,13 +253,7 @@ router.post(
     roles: ["admin", "verifier"],
     acceso: { proyecto: { via: "Stage", param: "id" }, membresias: ["verifier"] }
   }),
-  async (req, res, next) => {
-    const { matched } = await observeHandler.handle(req, res, {
-      prefix: PREFIJO_ABSOLUTO,
-      context: { user: req.user! }
-    });
-    if (!matched) next();
-  }
+  delegarAOrpc(observeHandler, PREFIJO_ABSOLUTO, conUsuario)
 );
 
 /** Fila 58 — historial de lo emitido, con su hash y su TXID. */
@@ -349,13 +324,7 @@ router.get(
     roles: ["admin", "verifier"],
     acceso: { scopeEnQuery: "Stage.certifiedById = usuario" }
   }),
-  async (req, res, next) => {
-    const { matched } = await certificatesHandler.handle(req, res, {
-      prefix: PREFIJO_ABSOLUTO,
-      context: { user: req.user! }
-    });
-    if (!matched) next();
-  }
+  delegarAOrpc(certificatesHandler, PREFIJO_ABSOLUTO, conUsuario)
 );
 
 /** El router oRPC combinado de esta vertical — lo consume
@@ -386,13 +355,7 @@ router.get(
     roles: ["admin", "verifier"],
     acceso: { scopeEnQuery: "CertifierInvitation.certifierId = usuario" }
   }),
-  async (req, res, next) => {
-    const { matched } = await myInvitationsHandler.handle(req, res, {
-      prefix: PREFIJO_ABSOLUTO,
-      context: { user: req.user! }
-    });
-    if (!matched) next();
-  }
+  delegarAOrpc(myInvitationsHandler, PREFIJO_ABSOLUTO, conUsuario)
 );
 
 /**
@@ -415,6 +378,7 @@ function responderInvitacion(respuesta: "accepted" | "declined") {
           .select(["id", "projectId", "certifierId", "status"])
           .where("id", "=", input.id)
           .executeTakeFirst();
+        /* v8 ignore if -- @preserve: authorize({ dueño }) ya cargó la fila (CertifierInvitation) (SPEC-018) */
         if (!fila) throw new ORPCError("NOT_FOUND", { message: "Invitation not found" });
 
         const actualizada = await trx
@@ -482,13 +446,7 @@ for (const [accion, handler] of [
       roles: ["admin", "verifier"],
       acceso: { dueño: { via: "CertifierInvitation", param: "id" } }
     }),
-    async (req, res, next) => {
-      const { matched } = await handler.handle(req, res, {
-        prefix: PREFIJO_ABSOLUTO,
-        context: { user: req.user! }
-      });
-      if (!matched) next();
-    }
+    delegarAOrpc(handler, PREFIJO_ABSOLUTO, conUsuario)
   );
 }
 

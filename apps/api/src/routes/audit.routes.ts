@@ -4,7 +4,7 @@ import { z } from "zod";
 import { reconciliarAnclajes } from "../domain/reconcile";
 import { en } from "../lib/arrays";
 import { db } from "../lib/db";
-import { OpenAPIHandler, os } from "../lib/orpc";
+import { delegarAOrpc, OpenAPIHandler, os } from "../lib/orpc";
 import { authenticate, authorize } from "../middlewares/auth";
 
 // **SPEC-216 §E3 — migrado a oRPC (D-066)**, junto con `contracts.routes.ts`:
@@ -34,10 +34,11 @@ const auditLogsProcedure = os
   });
 const auditLogsHandler = new OpenAPIHandler({ auditLogsProcedure });
 
-router.get("/", authorize({ roles: ["admin"], acceso: "soloRol" }), async (req, res, next) => {
-  const { matched } = await auditLogsHandler.handle(req, res, { prefix: PREFIJO_ABSOLUTO });
-  if (!matched) next();
-});
+router.get(
+  "/",
+  authorize({ roles: ["admin"], acceso: "soloRol" }),
+  delegarAOrpc(auditLogsHandler, PREFIJO_ABSOLUTO)
+);
 
 function mediana(valores: readonly number[]): number | null {
   if (valores.length === 0) return null;
@@ -122,12 +123,7 @@ const reservationToEscrowHandler = new OpenAPIHandler({ reservationToEscrowProce
 router.get(
   "/telemetry/reservation-to-escrow",
   authorize({ roles: ["admin"], acceso: "soloRol" }),
-  async (req, res, next) => {
-    const { matched } = await reservationToEscrowHandler.handle(req, res, {
-      prefix: PREFIJO_ABSOLUTO
-    });
-    if (!matched) next();
-  }
+  delegarAOrpc(reservationToEscrowHandler, PREFIJO_ABSOLUTO)
 );
 
 /** El router oRPC combinado de esta vertical — lo consume

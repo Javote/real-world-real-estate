@@ -5,6 +5,7 @@
 // valores con `require()` (Node 24 lo resuelve síncrono aunque sea ESM puro).
 // Centralizado acá (mismo módulo que ya probó `test/helpers/orpc.ts`, SPEC-212)
 // para no repetir el patrón en cada archivo de rutas que use oRPC.
+import type { Request, RequestHandler } from "express";
 import { Sentry } from "../instrumentation";
 
 import type { OpenAPIGenerator as OpenAPIGeneratorType } from "@orpc/openapi" with { "resolution-mode": "require" };
@@ -101,4 +102,51 @@ class OpenAPIHandler<T extends ContextType> extends OpenAPIHandlerBase<T> {
   }
 }
 
-export { call, OpenAPIGenerator, OpenAPIHandler, ORPCError, os, ZodToJsonSchemaConverter };
+// SPEC-018 §Paso 0 — el puente Express → oRPC de cada ruta migrada.
+//
+// Cada ruta montada sobre oRPC terminaba en las mismas tres líneas:
+// `handle(req, res, { prefix, context })` y `if (!matched) next()`. Eran 89
+// copias en 17 archivos, y cada una dejaba una rama sin cubrir: `matched` es
+// siempre `true`, porque Express ya matcheó el mismo path antes de delegar.
+// La rama existe una vez, acá, y se prueba una vez (`test/lib-orpc.test.ts`).
+//
+// **El tercer argumento es obligatorio si y solo si el contexto lo exige** —
+// la misma técnica que `MaybeOptionalOptions` de oRPC para `handle()`. Un
+// procedimiento cuyo contexto pide `user` no compila sin `conUsuario`, que es
+// el chequeo que antes hacía cada call site. (Con dos overloads no alcanzaba:
+// `OpenAPIHandler<{ user }>` es asignable a `OpenAPIHandler<{}>` y el chequeo
+// se perdía en silencio — verificado sacándole `conUsuario` a una ruta.)
+type Prefijo = `/${string}`;
+type ArgContexto<T extends ContextType> = Record<never, never> extends T
+  ? [contexto?: (req: Request) => T]
+  : [contexto: (req: Request) => T];
+
+function delegarAOrpc<T extends ContextType>(
+  handler: OpenAPIHandler<T>,
+  prefix: Prefijo,
+  ...[contexto]: ArgContexto<T>
+): RequestHandler {
+  return async (req, res, next) => {
+    // Sin `contexto`, `{}`: lo mismo que oRPC haría solo (`options.context ?? {}`).
+    const { matched } = await (handler as OpenAPIHandler<ContextType>).handle(req, res, {
+      prefix,
+      context: contexto ? contexto(req) : {}
+    });
+    if (!matched) next();
+  };
+}
+
+/** El contexto de casi toda ruta: el usuario que `authenticate` ya dejó en la
+ * request, corrido antes de que oRPC la vea. */
+const conUsuario = (req: Request) => ({ user: req.user! });
+
+export {
+  call,
+  conUsuario,
+  delegarAOrpc,
+  OpenAPIGenerator,
+  OpenAPIHandler,
+  ORPCError,
+  os,
+  ZodToJsonSchemaConverter
+};
