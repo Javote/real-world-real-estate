@@ -323,3 +323,63 @@ así que no bloquean el cierre. Umbral del `vitest.config` subido a 95/95 en lí
 piso medido (89/77) en statements/branches — sube con esta tanda, no baja.
 
 **El paso 4 (API) queda cerrado.** Quedan abiertos: paso 5 (web) y paso 7 (CI).
+
+## El paso 5 (web) — plan de tandas, 2026-09-22
+
+El paso 5 es el grueso de la spec (~1.158 líneas, contra ~14–116 de las partes ya cerradas), así
+que necesita su propio orden dentro del orden. La spec ya fija la secuencia por rol —investor →
+developer → certifier → notary → admin y compartidas → `components/` → `lib/`— pero no el tamaño de
+cada tanda. Medido el 2026-09-22 con `coverage.reporter=json-summary`, líneas sin cubrir por rol
+(`src/routes/`, sin contar `components/`/`lib/`):
+
+| Tanda | Archivos | Líneas sin cubrir |
+|---|---|---|
+| **notary** | 5 | 50 |
+| certifier | 5 | 63 |
+| admin (solo `admin.index.tsx`; "y compartidas" es más) | 1 | 44 |
+| developer | 14 | ~330 |
+| investor | 10 | ~330 |
+| `project.$projectId.*` (compartidas entre developer/investor) | 4 | ~185 |
+| `components/` | — | 151 |
+| `lib/` | — | 42 |
+
+El patrón que ya usa `-login.test.tsx` y `queues.test.tsx` alcanza: router de memoria +
+`QueryClientProvider` + `LocaleProvider`, `api` mockeado con `vi.spyOn`, sesión puesta con
+`setSession`. Se extrajo a `-test-mount.tsx` (prefijo `-`: TanStack Router lo ignora por convención,
+igual que `-login.test.tsx`) para no repetir el armado en cada archivo — `autenticarComo(user)` deja
+`api.me()` y `api.getUnreadCount()` resueltos (lo que piden `useRoleGuard` y `PanelLayout` en toda
+pantalla protegida) y `montarRuta(Componente, path, rutasExtra?, entrada?)` arma router + render. El
+componente de cada ruta no está exportado — solo `Route` —, así que el test lo saca con
+`Route.options.component as () => React.ReactElement` en vez de tocar producción para exportarlo.
+
+**Empezada por la tanda más chica y autocontenida: notary** (50 líneas, 5 archivos, sin las
+dependencias cruzadas de `project.$projectId.*` que investor/developer comparten). Certifier es la
+siguiente candidata por tamaño; admin es más chica en su único archivo pero la spec la agrupa con
+"compartidas", que es un alcance mayor y ambiguo hasta no mirarlo de cerca.
+
+### Tanda notary — cerrada, 2026-09-22
+
+Los 5 archivos, con `montarRuta`/`autenticarComo` y `api` mockeado método por método:
+
+- **`notary.profile.tsx`** (100%): renderiza `ProfileScreen` con `api.getProfile` mockeado — cubre
+  la ruta y, de paso, buena parte de `ProfileScreen.tsx` (compartida, de la tanda `components/`).
+- **`notary.dossiers.tsx`** (100%): la cola de pendientes con un ítem.
+- **`notary.index.tsx`** (100%): dos casos — KPIs en `null` (día 1, ningún guión debe leerse como
+  `"null"` literal) y KPIs con datos, verificando los cuatro valores en el DOM.
+- **`notary.signed.tsx`** (100%): vacío, firmado (dos `HashChip`: `masterHash` + `signatureTxid`,
+  regla del comentario del archivo) y sin firmar (`signatureTxid: null`, un solo chip).
+- **`notary.dossier.$dossierId.tsx`** (96,15%, 25/26): vista con evidencia, estado firmado (las
+  acciones desaparecen, D-026), `signDossier`/`rejectDossier` invocados con los argumentos correctos
+  y navegación de vuelta, y el estado sin artifacts. La línea que falta no se persiguió — no cambia
+  el resultado de la tanda.
+
+**Encontrado en el camino, no en el código:** `montarRuta` inicialmente reusaba el mismo `path` para
+definir la ruta dinámica (`/notary/dossier/$dossierId`) y para la entrada de la historia — así el
+router matcheaba `$dossierId` como el valor **literal** del parámetro, y los mocks se llamaban con
+`'$dossierId'` en vez de un id real. Se agregó un cuarto argumento opcional (`entrada`) para separar
+el patrón de ruta de la URL con la que arranca el test.
+
+**Resultado del front tras la tanda: 33,59% de líneas (596/1.774)**, contra 29,05% antes. Umbral del
+`vitest.config` subido de 28/21/30/29 a 32/25/34/33 (statements/branches/functions/lines) — sube con
+esta tanda, no baja. Quedan abiertas las tandas certifier, admin, developer, investor,
+`project.$projectId.*`, `components/` y `lib/`, y con ellas el paso 5.
