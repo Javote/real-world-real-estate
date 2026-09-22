@@ -7,7 +7,8 @@
 > queda desactualizada y hay que releerla.
 >
 > M4 **no se planifica todavía en `specs/README.md`** — esa tabla sigue siendo el mandato de M3, que
-> no está cerrado (faltan 3.12, 3.13, 3.14, 3.15 — ver `CLAUDE.md` raíz §Lo que queda del plan). Este
+> no está cerrado (faltan 3.12, 3.14, 3.15 — `3.13`, recontacto de pilotos, se cerró el 2026-09-22 —
+> ver `CLAUDE.md` raíz §Lo que queda del plan). Este
 > documento es el punto de partida para cuando M3 se entregue y M4 se convierta en el mandato activo,
 > y el inventario de specs nuevas que hace falta escribir antes de eso.
 

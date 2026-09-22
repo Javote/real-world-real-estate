@@ -20,9 +20,11 @@
 **Las cuatro dejaron bugs reales, no solo pulido, y los reproducidos ya están cerrados:** `SPEC-201`
 y `SPEC-202` eran corrupción de datos (dos invitaciones sobre la misma unidad; dos dossiers para una
 unidad, con la firma del escribano en el que la pantalla no lee), y `SPEC-301`, una garantía que
-`contracts/CLAUDE.md` afirmaba y el validador no daba. De las cuatro series no queda nada abierto:
-lo que falta está **postergado** a propósito (los ítems de §Antes de mainnet y la pasada manual con
-VoiceOver de `SPEC-104`) — `specs/README.md` lleva la razón de cada una.
+`contracts/CLAUDE.md` afirmaba y el validador no daba. De las cuatro series no queda nada abierto
+salvo lo **postergado** a propósito (los ítems de §Antes de mainnet) — `specs/README.md` lleva la
+razón de cada una. `SPEC-104` cerró el 2026-09-22 (código y tests hechos desde el 2026-09-19); la
+pasada manual con VoiceOver que le quedaba se separó a `SPEC-112`, ampliada a accesibilidad en
+general, sin fecha y sin bloquear nada del SOM.
 
 Lo transversal. Lo de cada frente vive en `apps/web/CLAUDE.md`, `apps/api/CLAUDE.md`,
 `packages/cardano/CLAUDE.md` y `contracts/CLAUDE.md`, y se carga solo cuando tocás ese subárbol.
@@ -55,12 +57,12 @@ tampoco tiene campo de signer. El criterio 3 queda sin código pendiente.
 
 ## Lo que queda del plan
 
-**Todo el plan está cerrado salvo cuatro ítems. Tres no son código; el cuarto (3.15) sí:**
+**Todo el plan está cerrado salvo tres ítems. Dos no son código; el tercero (3.15) sí.** (`3.13` —
+recontacto de los 3 pilotos, criterio 4 — se cerró: confirmado por el dueño el 2026-09-22.)
 
 | | Qué | Criterio |
 |---|---|---|
-| 3.12 | **Video walkthrough** | 13 ⬜ |
-| 3.13 | **3 pilotos** — recontactar; `M1-D3-PilotPlan.pdf` ya trae cartas de M1 y probablemente cubre parte | 4 ⬜ externo |
+| 3.12 | **Video walkthrough** — guion completo y listo para grabar en [`specs/GUION-2026-09-21-video-walkthrough.md`](specs/GUION-2026-09-21-video-walkthrough.md) (31 tomas). **No es lo mismo que `SPEC-104`/`SPEC-112`**: esas son accesibilidad (`aria-live`, verificada con el lector de pantalla VoiceOver de macOS), no narración de video — coinciden en la palabra "voice" y nada más. `SPEC-104` ya cerró; `SPEC-112` (la pasada de accesibilidad) sigue abierta, pero por su cuenta, sin relación con este ítem | 13 ⬜ |
 | 3.14 | **Muestras de "reserva → escrow"** — ≥5 compras reales en Preprod, manejadas con la extensión de Chrome, + capturas + nota de performance. Hoy hay 1 sola muestra. **Intentada el 2026-09-21, sin correr: la extensión de Chrome no estaba conectada**, y los logins los hace el dueño. Procedimiento y prerrequisitos en [`specs/PLAN-2026-09-21-muestras-reserva-escrow.md`](specs/PLAN-2026-09-21-muestras-reserva-escrow.md) | 9 ⚠️ |
 | 3.15 | **Cobertura ≥95% con unit tests en toda la app** — el dueño releyó el criterio el 2026-09-21: es de toda la app, no solo de los contratos. Hoy API 89,4%, cardano 90,1%, shared 61,2%, web 29,1%. Pasos y tabla de lo que falta por parte en [`specs/SPEC-017-cobertura-95-en-toda-la-app.md`](specs/SPEC-017-cobertura-95-en-toda-la-app.md) | 2 ⚠️ |
 
