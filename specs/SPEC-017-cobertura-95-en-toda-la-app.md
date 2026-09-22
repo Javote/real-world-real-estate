@@ -561,6 +561,76 @@ junto.
 **`packages/shared` y `packages/cardano` no se tocaron en esta tanda** — ya están cerrados en las
 cuatro métricas, ver la tabla de arriba.
 
+### Statements sube con branches, no aparte — 2026-09-23
+
+**No hace falta perseguir statements como un trabajo propio: en la API sube casi 1:1 con branches.**
+Cruzando los 218 statements sin cubrir contra sus líneas exactas (`coverage-final.json`, campo `s`)
+contra la tabla de branches de arriba, casi todos coinciden — son el **cuerpo** de una rama que ya
+está en la tabla: el `if (!matched) next()` de cada router montado sobre oRPC, los `if (!x) throw
+NOT_FOUND` que `contracts.routes.ts`/`public.routes.ts` ya documentan como inalcanzables, y las
+ramas de error/permiso que van cayendo archivo por archivo. Branches cuenta la *decisión*; statements
+cuenta el *statement de adentro* — dos contadores sobre la misma falla, no dos huecos distintos.
+
+**Las excepciones, y son pocas — vale la pena mirarlas aparte cuando se llegue a esos archivos:**
+
+- **`app.ts` (6 statements, líneas 107-112 y 206) no está en ninguna tabla de branches** porque
+  nunca se llamó por HTTP: `GET /health` (con su `try/catch` contra la base) y el fallback 404 al
+  final del middleware chain. Dos tests chicos y directos —`GET /health` en verde, y una ruta
+  inexistente devolviendo `{message:"Not found"}`— cierran las cuatro métricas del archivo entero.
+- **`db/migrate.ts:195` y `db/seed.ts:171-177`** son el cuerpo de `if (require.main === module)` —
+  el guardia que existe **a propósito** para que importar el módulo desde un test no dispare una
+  migración/seed completa como efecto secundario (documentado en el propio comentario del archivo,
+  ver §El paso 4, tanda 3). Correrlos de verdad exigiría invocar el script como proceso hijo
+  (`node dist/db/migrate.js`), y ahí la cobertura de V8 no cuenta nada: el instrumentado vive en el
+  proceso de Vitest, no en el hijo. Quedan sin cubrir **por diseño**, no por falta de test.
+- **El resto de la lista** (`notary.routes.ts:149`, `users.routes.ts:179`, `capital.routes.ts`
+  ×4, `developer.routes.ts:619`, `evidence.routes.ts:518`, `developer-evidencia.routes.ts:518`,
+  `developer-comercial.routes.ts:432`, `projects.routes.ts:311,527`, `instrumentation.ts:162`) sí son
+  alcanzables — son callbacks (`.reduce`/`.sort`/`.filter`) que ningún test llegó a ejercitar porque
+  la data de prueba nunca tuvo el caso que los dispara (p. ej. `capital.routes.ts` necesita un
+  proyecto con contratos y releases reales, no un array vacío). Se cierran solos cuando se ataque la
+  rama de branches del mismo archivo — no hace falta una pasada aparte.
+
+**La misma relación vale para `packages/cardano`: su único statement sin cubrir (`real.ts:468`) es
+el mismo que su única branch documentada como irreducible** (§El paso 3, arriba) — la guarda de
+`publishReferenceScript` contra una transacción que Lucid reporta exitosa sin dejar el output
+prometido. `packages/shared` ya está en 100% de statements/lines/functions; sus dos branches sin
+cubrir (`auth.ts:36-37`) no arrastran ningún statement propio porque son las dos ramas de un mismo
+`.refine()` de una sola línea.
+
+### ¿Se puede llegar a 100% literal en lines/functions/statements? — 2026-09-23
+
+**Casi, pero no del todo, y no conviene forzarlo.** Con branches aparte (esa sí tiene huecos reales
+y grandes, ver la tabla de `apps/api` arriba), lo que falta en lines/functions/statements se separa
+en dos grupos:
+
+1. **Alcanzable, y vale la pena cerrarlo** — el `GET /health`/404 de `app.ts` de arriba, y los
+   callbacks de `capital.routes.ts` y compañía que solo necesitan datos de prueba más completos. Es
+   trabajo chico, y cae solo al hacer el paso de branches archivo por archivo.
+2. **Genuinamente inalcanzable dentro del proceso de test, por diseño:** los guardias
+   `if (require.main === module)` de `migrate.ts`/`seed.ts` (existen **para impedir** que el import
+   dispare el efecto secundario — la garantía que los sostiene es exactamente la misma razón por la
+   que un test no puede cruzarlos) y la guarda irreducible de `real.ts:468` en `cardano` (documentada
+   desde el paso 3, requiere mockear internals de la librería de firma para simular algo que Lucid no
+   puede reportar de verdad). Ninguno se cierra escribiendo un test mejor — se cierra debilitando la
+   protección que el propio código pone a propósito, que es peor que dejarlo sin cubrir.
+
+**Por eso el techo realista no es 100,00% sino algo como 99,7-99,9%** una vez que el grupo 1 esté
+cerrado — y eso es correcto, no una deuda. La spec ya tiene el criterio para esto, aplicado antes a
+branches (`contracts.routes.ts`, `public.routes.ts`, `profile.routes.ts`): un archivo con una rama
+inalcanzable **documentada** cuenta como cerrado igual, porque el 95% (o el 100% que este apartado
+discute) es una vara para encontrar huecos reales, no un número a perseguir a cualquier costo — regla
+que ya fija §Qué no se hace: *"no se escriben tests que ejecuten código sin afirmar nada"*. Forzar
+estos tres puntos específicos (los dos guardias + la guarda de Lucid) violaría esa regla o D-042 (no
+debilitar una protección para que un test la cruce). El techo práctico de cada parte, con eso:
+
+| Parte | Techo realista (statements/lines/functions) | Por qué no es 100% |
+|---|---|---|
+| `packages/shared` | **100%** — ya está | — |
+| `packages/cardano` | ~99,7% | 1 statement (`real.ts:468`, guarda irreducible) |
+| `apps/api` | ~99,8-99,9% tras cerrar el grupo 1 | 4 statements (los dos guardias `require.main`) |
+| `apps/web` | 100% es plausible una vez cerrado el paso 5 | sin guardias de este tipo detectados hoy — a confirmar cuando se llegue ahí |
+
 ### `apps/web` — detalle completo por archivo (medido 2026-09-23)
 
 **117 archivos con código propio en `src/`; 27 ya están al 100% en las cuatro métricas** (sobre todo
