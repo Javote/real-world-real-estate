@@ -33,10 +33,10 @@ export default defineConfig({
         'src/routeTree.gen.ts'
       ],
       thresholds: {
-        statements: 32,
-        branches: 25,
-        functions: 34,
-        lines: 33
+        statements: 36,
+        branches: 29,
+        functions: 37,
+        lines: 37
       }
     }
   }

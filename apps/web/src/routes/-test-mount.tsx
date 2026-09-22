@@ -25,6 +25,13 @@ export const NOTARY_USER: Session['user'] = {
   fullName: 'Notary Demo'
 }
 
+export const CERTIFIER_USER: Session['user'] = {
+  id: 'u-cer',
+  email: 'verifier@example.com',
+  role: 'verifier',
+  fullName: 'Certifier Demo'
+}
+
 /**
  * Deja la sesión puesta y `api.me()`/`api.getUnreadCount()` resueltos: lo que
  * `useRoleGuard` y `PanelLayout`/`NotificationBell` piden en cada pantalla

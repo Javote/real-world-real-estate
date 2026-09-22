@@ -383,3 +383,43 @@ el patrón de ruta de la URL con la que arranca el test.
 `vitest.config` subido de 28/21/30/29 a 32/25/34/33 (statements/branches/functions/lines) — sube con
 esta tanda, no baja. Quedan abiertas las tandas certifier, admin, developer, investor,
 `project.$projectId.*`, `components/` y `lib/`, y con ellas el paso 5.
+
+### Tanda certifier — cerrada, 2026-09-22
+
+Mismo patrón que notary, con `CERTIFIER_USER` agregado a `-test-mount.tsx` (rol interno `verifier`,
+`CERTIFIER_ROLES`). Los 5 archivos:
+
+- **`certifier.profile.tsx`** (100%): igual que `notary.profile.tsx`, `ProfileScreen` con
+  `api.getProfile` mockeado.
+- **`certifier.assigned.tsx`** (100%): la cola de asignados (`AssignedStagesQueue`) con un ítem —
+  mismo componente que ya prueba `queues.test.tsx`, acá solo la ruta que lo monta.
+- **`certifier.issued.tsx`** (100%): vacío, con TXID (dos `HashChip`: `commitmentHash` + `txid`,
+  `StatusPill` "Certified") y sin TXID — **el caso que el comentario del archivo señala**: el estado
+  sale del TXID, no de `certifiedAt`, así que un certificado con fecha pero sin TXID sigue
+  "Pendiente" (regla 17).
+- **`certifier.index.tsx`** (100%): el panel tiene una superficie más que el de notary —
+  `InvitacionesACertificar` (SPEC-221, D-095), una mutación con dos acciones sobre la misma
+  invitación. Cuatro casos: KPIs con datos y sin invitaciones pendientes (`CER-INVITATIONS-003` no
+  se dibuja — el componente devuelve `null` si la lista viene vacía), aceptar invocando
+  `api.acceptCertifierInvitation`, rechazar invocando `api.declineCertifierInvitation`, y el error de
+  cualquiera de las dos mostrando el `role="alert"` de la pantalla.
+- **`certifier.stage.$stageId.tsx`** (96,29%, 26/27): la pantalla más grande de la tanda — vista con
+  evidencia (`DocumentCard`), vista sin evidencia (`Certify` deshabilitado por `disabled`, no
+  escondido — el comentario del archivo lo pide así a propósito), stage ya `Completed` (la barra de
+  acciones entera desaparece), certificar (llama a `api.certifyStage` con el id y navega), el error
+  de certificar, y observar (abre `ObserveStageModal`, escribe la nota, llama a `api.observeStage`
+  con `(stageId, note)`). La línea que falta no se persiguió.
+
+**No hizo falta ningún ajuste a `-test-mount.tsx` ni al patrón `montarRuta`/`autenticarComo` de la
+tanda notary** — el helper compartido escaló sin cambios a una pantalla con una mutación de dos
+acciones (`InvitacionesACertificar`) y a los estados `disabled`/ausente de una barra de acciones.
+Único detalle nuevo: sin `@testing-library/jest-dom` instalado, `toBeDisabled()` no existe —
+se verifica `.disabled` del elemento castndo a `HTMLButtonElement`, como ya hacía el resto de la
+suite con `.className`/`.textContent`.
+
+**Resultado del front tras la tanda: 37,18% de líneas (660/1.775)**, contra 33,59% antes. Umbral del
+`vitest.config` subido de 32/25/34/33 a 36/29/37/37 (statements/branches/functions/lines) — sube con
+esta tanda, no baja. Quedan abiertas las tandas admin, developer, investor, `project.$projectId.*`,
+`components/` y `lib/`, y con ellas el paso 5. Siguiente candidata por tamaño: **admin**
+(`admin.index.tsx`, 44 líneas, un solo archivo) — con la salvedad de que la spec la agrupa con
+"compartidas", así que conviene mirar de cerca qué entra en esa tanda antes de arrancarla.
