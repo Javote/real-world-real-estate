@@ -638,6 +638,21 @@ const acceptInvitationProcedure = orpc
         throw errors.UNIT_NOT_AVAILABLE({ message: "Unit is no longer available" });
       }
 
+      // El `status` solo no alcanza: `PATCH /developer/units/:id` puede
+      // devolver a `available` una unidad que ya tiene contrato, y
+      // `Contract_unitId_key` admite uno por unidad. Sin este chequeo, aceptar
+      // la re-invitación chocaba en el `INSERT Contract` y salía como un 500
+      // no clasificado (SPEC-018, A1) — la misma invariante 4 de arriba.
+      const contratoPrevio = await trx
+        .selectFrom("Contract")
+        .select("id")
+        .where("unitId", "=", invitacion.unitId)
+        .executeTakeFirst();
+
+      if (contratoPrevio) {
+        throw errors.UNIT_NOT_AVAILABLE({ message: "Unit is no longer available" });
+      }
+
       await trx
         .updateTable("Unit")
         .set({ status: "sold", investorId: context.user.id, updatedAt: ahora })

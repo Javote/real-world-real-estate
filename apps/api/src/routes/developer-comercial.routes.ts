@@ -164,6 +164,7 @@ const updateUnitProcedure = orpc
     const { id, ...cambios } = input;
 
     const unidad = await db.selectFrom("Unit").selectAll().where("id", "=", id).executeTakeFirst();
+    /* v8 ignore if -- @preserve: authorize({ proyecto: { via: "Unit" } }) ya cargó la unidad (SPEC-018) */
     if (!unidad) throw new ORPCError("NOT_FOUND", { message: "Unit not found" });
 
     const actualizada = await db
@@ -354,8 +355,9 @@ const contractsOfProjectProcedure = os
     const unitIds = [...new Set(contratos.map((c) => c.unitId))];
 
     // **Segunda consulta y no un `leftJoin`, y no es estilo: un join acá
-    // MULTIPLICA.** Una unidad puede acumular más de una invitación aceptada
-    // —el PATCH de unidad la devuelve a `available` y se re-invita—, y
+    // MULTIPLICA.** Una unidad puede tener más de una invitación aceptada en
+    // la base —el esquema no lo impide, y antes de SPEC-201 un accept que
+    // chocaba en `Contract_unitId_key` la dejaba `accepted` igual—, y
     // `OnChainEvent` no tiene índice único por `referenceId`: el único que hay
     // es `(stageId, eventIndex)`, y en un evento de invitación `stageId` es
     // NULL, que en SQLite no restringe nada. Cada par de más devolvía el mismo
@@ -389,8 +391,9 @@ const contractsOfProjectProcedure = os
         (a) => a.unitId === contrato.unitId && a.investorEmail === investorEmail
       );
 
-      // Si el mismo investor compró la misma unidad dos veces quedan varios:
-      // gana el `respondedAt` más cercano al `signedAt`. Hoy son el MISMO
+      // Si quedan varios (filas heredadas, ver arriba: por la API de hoy un
+      // re-accept sobre una unidad con contrato da 409, SPEC-018) gana el
+      // `respondedAt` más cercano al `signedAt`. Hoy son el MISMO
       // instante —el accept usa un único `ahora` para los dos— así que el
       // match es exacto; el criterio es lo que lo mantiene determinístico si
       // alguna vez dejan de serlo.
@@ -469,6 +472,7 @@ const releasePaymentProcedure = orpc
       .where("Contract.id", "=", input.id)
       .executeTakeFirst();
 
+    /* v8 ignore if -- @preserve: authorize({ proyecto: { via: "Contract" } }) ya cargó el contrato, con el mismo join a Unit (SPEC-018) */
     if (!contrato) throw new ORPCError("NOT_FOUND", { message: "Contract not found" });
 
     // **La liberación exige que la etapa esté certificada.** El entregable lo

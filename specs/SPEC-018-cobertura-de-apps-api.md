@@ -297,6 +297,31 @@ liberación + un segundo mes) cubre las 7.
 **Para el 95% alcanza con 15 de las 57.** Marcar las 18 lo hace cada lote en sus propios archivos
 (§Paralelismo). Las 13 funciones: 11 alcanzables, 1 ❌ (`projects.routes.ts:501`) y 1 bug (`users.routes.ts:179`).
 
+## Resultados por lote
+
+### A1 — cerrado 2026-09-22
+
+`developer-comercial.routes.ts` al **100% en las cuatro métricas**: de las 11 branches, **9 con
+test y 2 marcadas** (las 167 y 472: `proyectoDeLaEntidad` hace la misma consulta —con el mismo
+join a `Unit` para `Contract`— y contesta 404 antes del handler). Branches totales de la API:
+91,33% → 92,59%.
+
+**La receta de la tabla A1 para 403-409 era falsa.** No se puede "vender, reabrir y re-vender":
+`Contract_unitId_key` admite un contrato por unidad y el accept es atómico (SPEC-201), así que por
+la API una unidad tiene como mucho una invitación aceptada. Pero el esquema no impide varias ni
+`respondedAt`/`signedAt` nulos, y antes de SPEC-201 un accept que chocaba dejaba la invitación
+`accepted` igual: el desempate existe para esas filas heredadas. Por eso **no se marcaron** — se
+cubren con filas insertadas a mano (`developer-comercial-routes-coverage.test.ts`), incluidas las
+404 y 407 que la tabla daba por ❌. El comentario del handler que describía el flujo imposible se
+corrigió.
+
+**🐞 Tercer bug, encontrado al probar esa receta:** vender → `PATCH /developer/units/:id` a
+`available` → re-invitar → aceptar daba **500 no clasificado** (`SQLITE_CONSTRAINT_UNIQUE` sobre
+`Contract.unitId`, reportado a Sentry). Arreglo en `investor.routes.ts`: dentro de la misma
+transacción, si la unidad ya tiene contrato, `UNIT_NOT_AVAILABLE` (409) — el error con nombre que
+ya existía para la unidad `sold`. Queda **una decisión del dueño, fuera de esta spec**: el `PATCH`
+sigue dejando poner en `available` una unidad con contrato, que después no se puede volver a vender.
+
 ## Paralelismo — qué se puede hacer a la vez, medido contra el código
 
 **Con el paso 0 cerrado, los seis lotes pueden correr los seis a la vez.** Se verificó, no se

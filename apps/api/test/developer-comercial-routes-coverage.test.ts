@@ -1,5 +1,5 @@
 import request from "supertest";
-import { afterAll, beforeAll, describe, expect, it } from "vitest";
+import { afterAll, beforeAll, describe, expect, it, vi } from "vitest";
 import app from "../src/app";
 import { createId } from "../src/db/id";
 import { db } from "../src/lib/db";
@@ -229,5 +229,264 @@ describe("POST /developer/contracts/:id/releases/:stageNum — ramas sin cubrir"
     // Un solo anclaje, no dos: el segundo `POST` no volvió a llamar a
     // `anchorCommitmentEvent`.
     expect(eventos).toHaveLength(1);
+  });
+
+  // SPEC-018 A1 — el `catch` de la transacción relanza lo que no es
+  // `ReleaseExceedsContractError`. Sin este test, un `catch` que se tragara
+  // cualquier error y devolviera un 409 seguiría pasando toda la suite.
+  it("un error ajeno al tope dentro de la transacción no se disfraza de 409: es 500", async () => {
+    const sequenceOrder = 900_801;
+    const { contractId, stageId } = await crearContratoConEtapa(sequenceOrder);
+
+    for (const [estado, actor] of [
+      ["InProgress", tokenDev],
+      ["Completed", tokenAdmin]
+    ] as const) {
+      await request(app)
+        .patch(`/api/v1/stages/${stageId}/state`)
+        .set("Authorization", `Bearer ${actor}`)
+        .send({ state: estado });
+    }
+
+    const espia = vi.spyOn(db, "transaction").mockReturnValueOnce({
+      execute: () => Promise.reject(new Error("la base se cayó a mitad de la transacción"))
+    } as unknown as ReturnType<typeof db.transaction>);
+
+    try {
+      const res = await request(app)
+        .post(`/api/v1/developer/contracts/${contractId}/releases/${sequenceOrder}`)
+        .set("Authorization", `Bearer ${tokenDev}`)
+        .send({ amountMinorUnits: 1_000_000 });
+
+      expect(res.status).toBe(500);
+      expect(res.body.code).not.toBe("RELEASE_EXCEEDS_CONTRACT");
+    } finally {
+      espia.mockRestore();
+    }
+
+    const liberaciones = await db
+      .selectFrom("PaymentAttestation")
+      .select("id")
+      .where("contractId", "=", contractId)
+      .execute();
+    expect(liberaciones).toHaveLength(0);
+  });
+});
+
+describe("GET /developer/projects/:id/contracts", () => {
+  it("un proyecto sin contratos devuelve la lista vacía, sin buscar anclajes", async () => {
+    const id = createId();
+    const ahora = new Date();
+    await db
+      .insertInto("Project")
+      .values({
+        id,
+        name: "Sin contratos",
+        slug: `sin-contratos-${id}`,
+        totalUnits: 0,
+        status: "planning",
+        createdAt: ahora,
+        updatedAt: ahora
+      })
+      .execute();
+
+    const res = await request(app)
+      .get(`/api/v1/developer/projects/${id}/contracts`)
+      .set("Authorization", `Bearer ${tokenAdmin}`);
+
+    expect(res.status).toBe(200);
+    expect(res.body).toEqual([]);
+  });
+
+  // El desempate de anclajes (`contractsOfProjectProcedure`, el `reduce` sobre
+  // `candidatos`). Por la API hoy una unidad tiene como mucho UNA invitación
+  // aceptada: `Contract_unitId_key` admite un contrato por unidad y el accept
+  // es atómico (SPEC-201), así que una segunda aceptación se rechaza entera.
+  // Pero el esquema no lo impide —ni la unicidad de invitaciones aceptadas ni
+  // `respondedAt`/`signedAt` no nulos—, y antes de SPEC-201 un accept que
+  // chocaba en el `INSERT Contract` dejaba la invitación `accepted` igual.
+  // Esas filas heredadas se arman a mano: son las que el desempate existe
+  // para no confundir con la venta real.
+  const COMMITMENT_HEREDADO = "b".repeat(64);
+
+  async function venderUnidad(unitReference: string) {
+    return aceptarVentaDe(await crearUnidad(unitReference));
+  }
+
+  async function aceptarVentaDe(unitId: string) {
+    const tokenInvestor = (await login(FIXTURES.investor)).body.token;
+    const invitacion = await request(app)
+      .post(`/api/v1/developer/projects/${proyecto}/invitations`)
+      .set("Authorization", `Bearer ${tokenDev}`)
+      .send({
+        unitId,
+        investorEmail: FIXTURES.investor.email,
+        amountMinorUnits: 3_000_000,
+        currency: "USD"
+      });
+
+    const aceptada = await request(app)
+      .post(`/api/v1/investor/invitations/${invitacion.body.id}/accept`)
+      .set("Authorization", `Bearer ${tokenInvestor}`);
+    expect(aceptada.status).toBe(201);
+
+    return {
+      unitId,
+      contractId: aceptada.body.contract.id as string,
+      commitment: aceptada.body.anchor.commitment as string
+    };
+  }
+
+  async function crearUnidad(unitReference: string) {
+    const unidad = await request(app)
+      .post(`/api/v1/developer/projects/${proyecto}/units`)
+      .set("Authorization", `Bearer ${tokenDev}`)
+      .send({ unitReference, priceMinorUnits: 3_000_000, currency: "USD" });
+    return unidad.body.id as string;
+  }
+
+  /** Una invitación `accepted` con su evento, como las dejaba el accept pre-SPEC-201. */
+  async function aceptacionHeredada(unitId: string, respondedAt: Date | null) {
+    const invitacionId = createId();
+    const ahora = new Date();
+    await db
+      .insertInto("Invitation")
+      .values({
+        id: invitacionId,
+        projectId: proyecto,
+        unitId,
+        investorEmail: FIXTURES.investor.email,
+        amountMinorUnits: 3_000_000,
+        currency: "USD",
+        status: "accepted",
+        createdById: null,
+        createdAt: ahora,
+        respondedAt
+      })
+      .execute();
+    await db
+      .insertInto("OnChainEvent")
+      .values({
+        id: createId(),
+        projectId: proyecto,
+        stageId: null,
+        evidenceId: null,
+        referenceId: invitacionId,
+        eventIndex: 0,
+        eventType: "INVITATION_ACCEPTED",
+        fromState: null,
+        toState: null,
+        commitment: COMMITMENT_HEREDADO,
+        status: "Pending",
+        txid: null,
+        network: null,
+        outputRef: null,
+        blockTimestamp: null,
+        createdAt: ahora,
+        updatedAt: ahora
+      })
+      .execute();
+  }
+
+  async function contratoDe(unitId: string) {
+    const res = await request(app)
+      .get(`/api/v1/developer/projects/${proyecto}/contracts`)
+      .set("Authorization", `Bearer ${tokenDev}`);
+    expect(res.status).toBe(200);
+    const deLaUnidad = res.body.filter((c: { unitId: string }) => c.unitId === unitId);
+    expect(deLaUnidad).toHaveLength(1);
+    return deLaUnidad[0] as { commitment: string | null };
+  }
+
+  it("una aceptación heredada ANTERIOR a la venta no le roba el anclaje al contrato", async () => {
+    const unitId = await crearUnidad("DS1");
+    await aceptacionHeredada(unitId, new Date(Date.now() - 86_400_000));
+    const venta = await aceptarVentaDe(unitId);
+
+    const contrato = await contratoDe(unitId);
+    expect(contrato.commitment).toBe(venta.commitment);
+    expect(contrato.commitment).not.toBe(COMMITMENT_HEREDADO);
+  });
+
+  it("una aceptación heredada POSTERIOR y sin respondedAt tampoco: queda a distancia infinita", async () => {
+    const venta = await venderUnidad("DS2");
+    await aceptacionHeredada(venta.unitId, null);
+
+    const contrato = await contratoDe(venta.unitId);
+    expect(contrato.commitment).toBe(venta.commitment);
+  });
+
+  it("un contrato sin signedAt no tiene contra qué medir: se queda con un anclaje, no con ninguno", async () => {
+    const venta = await venderUnidad("DS3");
+    await aceptacionHeredada(venta.unitId, new Date());
+    await db
+      .updateTable("Contract")
+      .set({ signedAt: null })
+      .where("id", "=", venta.contractId)
+      .execute();
+
+    const contrato = await contratoDe(venta.unitId);
+    expect([venta.commitment, COMMITMENT_HEREDADO]).toContain(contrato.commitment);
+  });
+});
+
+describe("POST /investor/invitations/:id/accept — una unidad que ya tiene contrato", () => {
+  // Vender, devolver la unidad a `available` con el PATCH del developer y
+  // re-invitar: la unidad parece libre, pero `Contract_unitId_key` admite un
+  // solo contrato. Antes de SPEC-018 este accept chocaba en el INSERT y
+  // salía como un 500 no clasificado.
+  it("aceptar la re-invitación da 409 UNIT_NOT_AVAILABLE y no toca nada", async () => {
+    const tokenInvestor = (await login(FIXTURES.investor)).body.token;
+    const unidad = await request(app)
+      .post(`/api/v1/developer/projects/${proyecto}/units`)
+      .set("Authorization", `Bearer ${tokenDev}`)
+      .send({ unitReference: "RV1", priceMinorUnits: 3_000_000, currency: "USD" });
+
+    const invitar = () =>
+      request(app)
+        .post(`/api/v1/developer/projects/${proyecto}/invitations`)
+        .set("Authorization", `Bearer ${tokenDev}`)
+        .send({
+          unitId: unidad.body.id,
+          investorEmail: FIXTURES.investor.email,
+          amountMinorUnits: 3_000_000,
+          currency: "USD"
+        });
+
+    const primera = await invitar();
+    const vendida = await request(app)
+      .post(`/api/v1/investor/invitations/${primera.body.id}/accept`)
+      .set("Authorization", `Bearer ${tokenInvestor}`);
+    expect(vendida.status).toBe(201);
+
+    const reabierta = await request(app)
+      .patch(`/api/v1/developer/units/${unidad.body.id}`)
+      .set("Authorization", `Bearer ${tokenDev}`)
+      .send({ status: "available" });
+    expect(reabierta.status).toBe(200);
+
+    const segunda = await invitar();
+    expect(segunda.status).toBe(201);
+
+    const res = await request(app)
+      .post(`/api/v1/investor/invitations/${segunda.body.id}/accept`)
+      .set("Authorization", `Bearer ${tokenInvestor}`);
+    expect(res.status).toBe(409);
+    expect(res.body.code).toBe("UNIT_NOT_AVAILABLE");
+
+    // Rechazada entera (SPEC-201): la invitación sigue `pending` y la unidad
+    // no volvió a `sold`.
+    const invitacion = await db
+      .selectFrom("Invitation")
+      .select("status")
+      .where("id", "=", segunda.body.id)
+      .executeTakeFirstOrThrow();
+    expect(invitacion.status).toBe("pending");
+    const fila = await db
+      .selectFrom("Unit")
+      .select("status")
+      .where("id", "=", unidad.body.id)
+      .executeTakeFirstOrThrow();
+    expect(fila.status).not.toBe("sold");
   });
 });
