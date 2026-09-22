@@ -18,6 +18,7 @@ const login = (f: { email: string; password: string }) =>
 let tokenInvestor: string;
 let tokenNotario: string;
 let tokenDev: string;
+let tokenAdmin: string;
 let unitId: string;
 let dossierId: string;
 let projectId: string;
@@ -27,6 +28,7 @@ beforeAll(async () => {
   tokenInvestor = (await login(FIXTURES.investor)).body.token;
   tokenNotario = (await login(FIXTURES.notario)).body.token;
   tokenDev = (await login(FIXTURES.activo)).body.token;
+  tokenAdmin = (await login(FIXTURES.admin)).body.token;
 
   const unidad = await db
     .selectFrom("Unit")
@@ -152,6 +154,23 @@ describe("POST /investor/units/:id/dossier/share", () => {
   });
 });
 
+describe("los 404 de dossier inexistente en firmar y rechazar", () => {
+  it("firmar un dossier inexistente da 404", async () => {
+    const res = await request(app)
+      .post(`/api/v1/notary/dossiers/${createId()}/sign`)
+      .set("Authorization", `Bearer ${tokenNotario}`);
+    expect(res.status).toBe(404);
+  });
+
+  it("rechazar un dossier inexistente da 404", async () => {
+    const res = await request(app)
+      .post(`/api/v1/notary/dossiers/${createId()}/reject`)
+      .set("Authorization", `Bearer ${tokenNotario}`)
+      .send({ note: "no existe" });
+    expect(res.status).toBe(404);
+  });
+});
+
 describe("el flujo del notario", () => {
   it("ve el dossier a revisar", async () => {
     const res = await request(app)
@@ -160,6 +179,19 @@ describe("el flujo del notario", () => {
 
     expect(res.status).toBe(200);
     expect(res.body.id).toBe(dossierId);
+  });
+
+  it("aparece en la cola de revisión con el nombre del investor, no su referencia", async () => {
+    const res = await request(app)
+      .get("/api/v1/notary/dossiers/pending")
+      .set("Authorization", `Bearer ${tokenNotario}`);
+
+    expect(res.status).toBe(200);
+    const propio = res.body.find((d: { dossierId: string }) => d.dossierId === dossierId);
+    expect(propio).toBeTruthy();
+    // La unidad ya tiene investor (es la del fixture): el fallback a la
+    // referencia de la unidad no aplica.
+    expect(propio.investorName).toBe(FIXTURES.investor.fullName);
   });
 
   it("un developer no entra a la superficie del notario", async () => {
@@ -290,5 +322,75 @@ describe("el flujo del notario", () => {
     const firma = res.body.items.find((f: { dossierId: string }) => f.dossierId === dossierId);
     expect(firma.masterHash).toMatch(/^[0-9a-f]{64}$/);
     expect(firma.status).toBe("signed");
+  });
+
+  // Un segundo dossier, firmado por el ADMIN (no por `tokenNotario`): sin
+  // esto, `Dossier.signedById` de todo lo firmado en este archivo apunta
+  // siempre al mismo notario, y `kpis`/`signatures` nunca ejercitan la rama
+  // "firmado, pero por otro" — la mitad disyuntiva de "un admin ve el total;
+  // un notario, lo que firmó él más la cola común" nunca se ponía a prueba.
+  let dossierAjenoId: string;
+  it("un segundo dossier, firmado por el admin", async () => {
+    const unidad = await db
+      .insertInto("Unit")
+      .values({
+        id: createId(),
+        projectId,
+        unitReference: "AJENO",
+        status: "sold",
+        floor: 2,
+        sizeM2: 45,
+        priceMinorUnits: 6_000_000,
+        currency: "USD",
+        investorId,
+        createdAt: new Date(),
+        updatedAt: new Date()
+      })
+      .returningAll()
+      .executeTakeFirstOrThrow();
+
+    const compilado = await request(app)
+      .get(`/api/v1/investor/units/${unidad.id}/dossier`)
+      .set("Authorization", `Bearer ${tokenInvestor}`);
+    expect(compilado.status).toBe(200);
+    dossierAjenoId = compilado.body.id;
+
+    const firma = await request(app)
+      .post(`/api/v1/notary/dossiers/${dossierAjenoId}/sign`)
+      .set("Authorization", `Bearer ${tokenAdmin}`);
+    expect(firma.status).toBe(201);
+  });
+
+  it("kpis: el notario cuenta lo suyo; el admin, todo", async () => {
+    const notario = await request(app)
+      .get("/api/v1/notary/kpis")
+      .set("Authorization", `Bearer ${tokenNotario}`);
+    expect(notario.status).toBe(200);
+    // `dossierId` es suyo; `dossierAjenoId` lo firmó el admin.
+    expect(notario.body.signed).toBe(1);
+
+    const admin = await request(app)
+      .get("/api/v1/notary/kpis")
+      .set("Authorization", `Bearer ${tokenAdmin}`);
+    expect(admin.status).toBe(200);
+    expect(admin.body.signed).toBe(2);
+  });
+
+  it("signatures: el admin ve los dos; paginado por cursor", async () => {
+    const admin = await request(app)
+      .get("/api/v1/notary/signatures?limit=1")
+      .set("Authorization", `Bearer ${tokenAdmin}`);
+
+    expect(admin.status).toBe(200);
+    expect(admin.body.items).toHaveLength(1);
+    expect(admin.body.nextCursor).toBeTruthy();
+
+    const siguientePagina = await request(app)
+      .get(`/api/v1/notary/signatures?limit=1&cursor=${encodeURIComponent(admin.body.nextCursor)}`)
+      .set("Authorization", `Bearer ${tokenAdmin}`);
+
+    expect(siguientePagina.status).toBe(200);
+    expect(siguientePagina.body.items).toHaveLength(1);
+    expect(siguientePagina.body.items[0].dossierId).not.toBe(admin.body.items[0].dossierId);
   });
 });

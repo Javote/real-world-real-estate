@@ -95,6 +95,28 @@ export default defineConfig({
     // de `authorize({ alguna: [...] })` cargan la fila antes de que el
     // handler la vuelva a buscar, así que ese `if` (y el `if (!matched)` de
     // todo router montado sobre oRPC) es defensivo, no alcanzable por HTTP.
+    //
+    // Segunda tanda de branches (2026-09-22): `notary.routes.ts` — el
+    // filtro disyuntivo de `kpis` ("un admin ve el total; un notario, lo que
+    // firmó él más la cola común"), los 404 de firmar/rechazar un dossier
+    // inexistente, `signatures` con la rama de admin y la paginación por
+    // cursor (`nextCursor` no nulo y su siguiente página), el caso sin
+    // firmas (`nextCursor: null`), y la cola de revisión mostrando el nombre
+    // del investor. Quedaron sin ejercitar, y documentados como no
+    // alcanzables con el esquema actual: el `??`/`?.` de `investorName` y
+    // `completeness` en `pendingDossiersProcedure` (un `Dossier` solo se
+    // compila desde `GET /investor/units/:id/dossier`, que exige que la
+    // unidad ya tenga `investorId` — el investor siempre existe), el
+    // `if (!dossier)` post-`compileDossier` en `dossierByIdProcedure` y
+    // `signDossierProcedure` (la FK `Dossier.unitId → Unit.id` es
+    // `ON DELETE CASCADE`, así que un `Dossier` no puede sobrevivir a su
+    // unidad — verificado insertando un huérfano a mano: rechaza con
+    // `SQLITE_CONSTRAINT_FOREIGNKEY`), y `signedAt ? ... : null` en
+    // `signaturesProcedure` (la query ya filtra `status = "signed"`, y firmar
+    // siempre escribe `signedAt` en el mismo `update`). El mismo
+    // `if (!dossier)` de `public.routes.ts` (línea 56) es la misma garantía:
+    // se probó a propósito insertando un `Dossier` con un `unitId`
+    // inexistente y la base lo rechazó.
     coverage: {
       provider: "v8",
       reporter: ["text-summary", "html"],
@@ -108,9 +130,9 @@ export default defineConfig({
       ],
       thresholds: {
         statements: 90,
-        branches: 78,
-        functions: 95,
-        lines: 95
+        branches: 79,
+        functions: 96,
+        lines: 96
       }
     }
   }

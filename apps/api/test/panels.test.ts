@@ -116,4 +116,14 @@ describe("GET /notary/*", () => {
     expect(res.status).toBe(200);
     expect(res.body).toEqual([]);
   });
+
+  it("sin firmas, el historial da nextCursor null y no un ISO inventado", async () => {
+    const res = await request(app)
+      .get("/api/v1/notary/signatures")
+      .set("Authorization", `Bearer ${tokenAdmin}`);
+
+    expect(res.status).toBe(200);
+    expect(res.body.items).toEqual([]);
+    expect(res.body.nextCursor).toBeNull();
+  });
 });
