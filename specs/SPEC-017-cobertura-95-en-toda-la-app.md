@@ -423,3 +423,104 @@ esta tanda, no baja. Quedan abiertas las tandas admin, developer, investor, `pro
 `components/` y `lib/`, y con ellas el paso 5. Siguiente candidata por tamaño: **admin**
 (`admin.index.tsx`, 44 líneas, un solo archivo) — con la salvedad de que la spec la agrupa con
 "compartidas", así que conviene mirar de cerca qué entra en esa tanda antes de arrancarla.
+
+## Branches, además de líneas — 2026-09-22
+
+**No es el paso 5 ni un paso nuevo: es una vara más estricta que el dueño pidió sumar sobre lo que
+esta spec ya mide.** §Qué se mide fija líneas como el criterio de cierre, y con eso las cuatro
+partes TypeScript están cerradas o encaminadas. Pero **branches** (v8 mide las cuatro métricas
+igual: statements, branches, functions, lines) es más exigente — para cubrir una rama hay que
+ejercitar **cada** salida de cada `if`/`? :`/`??`/`&&`/`switch`, no solo pasar una vez por la línea
+que la contiene. Un archivo con 100% de líneas puede tener la mitad de sus branches sin tocar. Esta
+sección registra el trabajo sobre esa métrica, en paralelo al paso 5 — no lo reemplaza ni lo
+bloquea, y no es parte del criterio de cierre de §Criterio de cierre.
+
+Medido el 2026-09-22, las tres métricas por parte (`lines` ya es la que mide §Qué se mide; se repite
+acá al lado de las otras dos para tener las tres juntas):
+
+| Parte | Branches | Functions | Lines |
+|---|---|---|---|
+| `packages/cardano` | **96,81%** (152/157) — cerrado hoy | 100% (90/90) | 99,63% (273/274) |
+| `packages/shared` | 96,55% (56/58) — ya venía así del cierre del paso 2 | 100% (19/19) | 100% (232/232) |
+| `apps/api` | **78,25%** (878/1.122) — trabajado hoy, falta la mayoría | 95,92% (494/515) | 96,63% (2.013/2.083) |
+| `apps/web` | ~29% — sin tocar esta sesión | ~37% | ~37% |
+| `contracts/` (Aiken) | 100% por la vara del repo — 51/51 mutantes muertos, 18/18 `expect` con test (§El triage del paso 6, cerrado) | — | sin métrica de líneas (Aiken no la mide) |
+
+### `packages/cardano` — cerrado, 96,81% (commit `c2a59f2`)
+
+De 149/157 (94,90%) a 152/157. Tres branches reales de `real.ts` sin ejercitar, las tres cubiertas
+con tests nuevos en `real.test.ts`:
+
+- **`findLiveThread`** (línea 331): `u.assets[unit] ?? 0n` nunca veía el lado `undefined` — ningún
+  test tenía dos stages minteados en la misma dirección con unicidades distintas. Test nuevo: abrir
+  un hilo y buscar un `stageRef` que no es el suyo, así el UTxO existe pero no lleva ese unit.
+- **`verify()`** (línea 498): `if (!confirmado) return null` nunca corría con `awaitTx` devolviendo
+  `false` sin tirar — solo se probaba el camino donde confirma. Test nuevo con
+  `vi.spyOn(lucid, "awaitTx").mockResolvedValue(false)`.
+- **`confirmedAt()`** (línea 543): el `: null` del `typeof cuerpo.block_time === "number" ? … :
+  null` nunca corría con un 200 de Blockfrost sin el campo. Test nuevo con un `fetch` mockeado que
+  responde `200` y body `{}`.
+
+**Quedan 2 branches sin cubrir, y se dejan así a propósito:** los dos `assets.lovelace ?? 0n` de
+`publishReferenceScript` (líneas 450 y 477). Son defensivos y genuinamente inalcanzables — un UTxO
+real en Cardano siempre lleva `lovelace`, así que forzar ese camino exigiría mockear un estado que
+no puede existir en la cadena, solo para "pintar verde" sin probar nada real. Mismo criterio que ya
+documentan los dos casos irreductibles del paso 3 (`ordenarPorClave`, la guarda de
+`publishReferenceScript` original).
+
+### `apps/api` — empezado, 78,25% (commit `7bbf971`), falta la mayor parte
+
+De 873/1.124 (77,67%) a 878/1.122. Dos piezas:
+
+**`lib/params.ts` se borró en vez de testearse.** `paramSeguro()` no lo importaba nada en `src/` ni
+en `test/` — código muerto, confirmado con grep antes de tocarlo. La garantía que decía centralizar
+ya está duplicada a mano en `leerParam()` de `middlewares/auth.ts`. Sus 2 branches sin cobertura
+eran del tipo correcto de hallazgo: no "falta un test", sino "esto no debería existir".
+
+**`arrays.ts`, `upload.ts`, `pdf.ts` y `db.ts` a 100%.** Cuatro tests unitarios chicos y aislados
+(`test/lib-arrays.test.ts`, `test/lib-upload.test.ts`, `test/utils-pdf.test.ts`,
+`test/lib-db.test.ts`): el out-of-bounds de `en()`, el fallback de `UPLOAD_DIR` sin la env var
+(aislado con `vi.resetModules()`, mismo patrón para los dos defaults de `lib/db.ts` sin
+`DATABASE_URL`/con `DATABASE_AUTH_TOKEN`), y el wrap de una línea más larga que `ANCHO_LINEA` en el
+PDF del dossier.
+
+**Lo que falta es el grueso: ~190 branches, casi todo en las rutas grandes.** A diferencia de los
+archivos de arriba, no es mecánico — cada uno tiene su propia lógica de permisos, rechazos y casos
+borde que hay que leer para saber qué test falta, no solo "llamar la función con otro input". Las
+tres métricas por archivo, ordenado por peor % de branches (`functions` y `lines` ya están cerca o
+en 100% en casi todos — es branches lo que arrastra):
+
+| Archivo | Branches | Functions | Lines |
+|---|---|---|---|
+| `notary.routes.ts` | 48,83% (21/43) | 78,94% (15/19) | 93,10% (81/87) |
+| `contracts.routes.ts` | 50,00% (2/4) | 100% (3/3) | 100% (16/16) |
+| `users.routes.ts` | 50,00% (10/20) | 92,30% (12/13) | 96,42% (54/56) |
+| `profile.routes.ts` | 62,50% (5/8) | 100% (6/6) | 100% (31/31) |
+| `developer.routes.ts` | 63,33% (38/60) | 96,96% (32/33) | 96,69% (117/121) |
+| `investor.routes.ts` | 65,27% (47/72) | 100% (37/37) | 100% (157/157) |
+| `public.routes.ts` | 66,66% (4/6) | 100% (2/2) | 100% (14/14) |
+| `evidence.routes.ts` | 66,66% (36/54) | 95,00% (19/20) | 94,69% (107/113) |
+| `certifier.routes.ts` | 68,18% (30/44) | 100% (27/27) | 100% (98/98) |
+| `projects-obra.routes.ts` | 68,75% (11/16) | 100% (10/10) | 97,72% (43/44) |
+| `projects.routes.ts` | 69,87% (58/83) | 95,83% (46/48) | 97,05% (165/170) |
+| `_shared.ts` | 70,00% (7/10) | 100% (6/6) | 94,11% (16/17) |
+| `migrate.ts` | 70,58% (12/17) | 91,66% (11/12) | 90,00% (36/40) |
+| `capital.routes.ts` | 70,83% (17/24) | 86,66% (26/30) | 92,77% (77/83) |
+| `developer-comercial.routes.ts` | 70,96% (44/62) | 96,55% (28/29) | 94,82% (110/116) |
+| resto de `src/lib`, `src/domain`, `src/middlewares` | 82–94% | ya cerca | ya cerca |
+
+**La brecha es casi toda de branches, no de functions/lines.** La mayoría de estos archivos ya está
+en 90-100% de `lines` y `functions` — el trabajo pendiente es la segunda pasada que ya describe
+§Por qué son métricas distintas de la conversación: ejercitar el `else`/la rama de rechazo, no una
+función nueva sin llamar. Las tres excepciones donde `functions` también queda bajo son
+`notary.routes.ts` (78,94%, 4 funciones sin llamar) y `capital.routes.ts` (86,66%, 4 sin llamar) —
+ahí hace falta además cubrir un handler entero, no solo una rama suya.
+
+**Siguiente, cuando se retome: `notary.routes.ts`** (peor %), después bajando por la tabla. Mismo
+patrón que `cardano`: leer el archivo, identificar la rama de error/permiso sin ejercitar, un test
+por rama, `pnpm verify:all`, commit y push por archivo (o por tanda chica), no todo junto.
+
+**`apps/web` y `packages/shared` no se tocaron esta sesión para branches** — `shared` ya está en
+96,55% desde el cierre del paso 2 (dos ramas de `auth.ts:36-37` sin cubrir juntas en el mismo test,
+documentadas ahí como fuera de alcance de la spec). `web` sigue en ~29%, atado al paso 5, que ya
+mide líneas y va a necesitar la misma segunda pasada de branches cuando esté más avanzado.
