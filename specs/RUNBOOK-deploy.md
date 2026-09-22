@@ -303,6 +303,12 @@ solo `.md` no tiene que aparecer en `render deploys list`. Si aparece, la hipót
 campo que se borra del Blueprint puede no borrarse del servicio (ya pasó con `NODE_ENV`, ver
 `render.yaml`); verificar con la API de Render que `rootDir` haya quedado vacío.
 
+**La web instalaba dos veces.** En un static site, Render corre su propio `pnpm install` de todo el
+workspace antes del `buildCommand` (12,8 s de los ~33 s del deploy), así que el `--filter` no
+ahorraba nada y la caché se volvía a llenar con las dependencias de la API. Desde el 2026-09-22 la
+web declara `SKIP_INSTALL_DEPS=true` y la única instalación es la del `buildCommand`. La API no lo
+necesita: en un web service Render no instala por su cuenta.
+
 ### El deploy que coincide con el apagado por inactividad — 2026-09-22
 
 **Todo deploy fallido de la API de las últimas semanas tiene la misma causa, y no es el código.** En

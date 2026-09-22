@@ -283,6 +283,18 @@ services:
         source: /*
         destination: /index.html
     envVars:
+      # **Sin la instalación automática de Render (2026-09-22).** En un static
+      # site, Render corre su propio `pnpm install` de los 5 proyectos ANTES
+      # del `buildCommand` (medido: 12,8 s, `Scope: all 5 workspace
+      # projects`), con su Node del `.nvmrc` y sin nuestro
+      # `NODE_ENV=development`. Así el `--filter "@plataforma/web..."` de
+      # arriba no ahorraba nada, y la caché se volvía a llenar con Lucid y
+      # las dependencias de la API. La doc de Render: "If you prefer to
+      # install dependencies manually, add a `SKIP_INSTALL_DEPS` environment
+      # variable to your site and set it to `true`". La API no lo necesita:
+      # en un web service Render no instala por su cuenta.
+      - key: SKIP_INSTALL_DEPS
+        value: "true"
       # De BUILD TIME: cambiarla exige redeploy del web, no un restart.
       # `sync: false` y no `fromService` porque hace falta la URL **con
       # esquema** (`https://propnexus-api.onrender.com`) y `fromService` solo
