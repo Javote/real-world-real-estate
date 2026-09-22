@@ -275,6 +275,23 @@ describe("la dirección y la policy", () => {
   });
 });
 
+describe("create — defaults", () => {
+  it("sin `now` explícito, usa Date.now() del proceso", async () => {
+    // Todo el resto de la suite pasa `now: () => emulator.now()` para atar el
+    // reloj del adaptador al del Emulator. Acá se deja el default a propósito
+    // y se ejercita con `anchorCommitment` —el único camino que llama a
+    // `this.now()` sin construir `validFrom`/`validTo` (eso es solo de
+    // `advanceThread`), así que el reloj real del proceso no choca contra el
+    // del Emulator.
+    const sinNow = await LucidAnchorAdapter.create({ lucid, network: "Custom" });
+    const recibo = await sinNow.anchorCommitment({
+      sha256: "d".repeat(64),
+      reference: "ev_default_now"
+    });
+    expect(recibo.txid).toMatch(/^[0-9a-f]{64}$/);
+  });
+});
+
 describe("anchorEvidence · el camino de metadata (D-006)", () => {
   const sha256 = "b".repeat(64);
 
@@ -357,6 +374,65 @@ describe("confirmedAt — timeout contra Blockfrost", () => {
       expect(await conBlockfrost.confirmedAt("a".repeat(64))).toBeNull();
     } finally {
       vi.unstubAllGlobals();
+    }
+  });
+
+  it("con 200 y block_time, confirmedAt lo pasa a milisegundos", async () => {
+    const fetchQueContesta200 = vi.fn(
+      async () => new Response(JSON.stringify({ block_time: 1_700_000_000 }), { status: 200 })
+    );
+    vi.stubGlobal("fetch", fetchQueContesta200);
+
+    try {
+      const conBlockfrost = await LucidAnchorAdapter.create({
+        lucid,
+        network: "Custom",
+        now: () => emulator.now(),
+        blockfrost: { url: "https://cardano-preprod.blockfrost.io/api/v0", apiKey: "k" }
+      });
+
+      expect(await conBlockfrost.confirmedAt("a".repeat(64))).toBe(1_700_000_000_000);
+    } finally {
+      vi.unstubAllGlobals();
+    }
+  });
+
+  it("un error de verdad de Blockfrost (no 404) se propaga, no se confunde con 'no confirmó'", async () => {
+    const fetchQueContesta500 = vi.fn(async () => new Response(null, { status: 500 }));
+    vi.stubGlobal("fetch", fetchQueContesta500);
+
+    try {
+      const conBlockfrost = await LucidAnchorAdapter.create({
+        lucid,
+        network: "Custom",
+        now: () => emulator.now(),
+        blockfrost: { url: "https://cardano-preprod.blockfrost.io/api/v0", apiKey: "k" }
+      });
+
+      await expect(conBlockfrost.confirmedAt("a".repeat(64))).rejects.toThrow(
+        /Blockfrost respondió 500/
+      );
+    } finally {
+      vi.unstubAllGlobals();
+    }
+  });
+});
+
+describe("awaitConfirmation", () => {
+  it("devuelve el AnchorProof cuando el hilo confirmó", async () => {
+    const recibo = await abrirHilo();
+    expect(await adapter.awaitConfirmation(recibo.txid)).toMatchObject({ txid: recibo.txid });
+  });
+
+  it("rechaza si verify() no encuentra un AnchorProof", async () => {
+    // El Emulator no deja simular "esperar y nunca confirmar" —su `awaitTx`
+    // no bloquea de verdad— así que se aísla el contrato de awaitConfirmation
+    // directamente: sin proof que devolver, no puede fingir éxito.
+    const sinProof = vi.spyOn(adapter, "verify").mockResolvedValue(null);
+    try {
+      await expect(adapter.awaitConfirmation("f".repeat(64))).rejects.toThrow(/no confirmó/);
+    } finally {
+      sinProof.mockRestore();
     }
   });
 });
@@ -447,6 +523,28 @@ describe("dos anclajes dentro del mismo bloque", () => {
         next: enCurso
       })
     ).rejects.toThrow(/No existe el UTxO/);
+  });
+
+  it("un adaptador nuevo encuentra un UTxO que él nunca envió, vía el proveedor", async () => {
+    // La vista local solo tiene lo que ESTE adaptador armó (D-082). Uno recién
+    // creado sobre la misma wallet no tiene nada en `salidasPendientes`, así
+    // que `utxoAt` va directo al proveedor — y, ya confirmado en el bloque, lo
+    // encuentra igual.
+    const abierto = await adapter.openThread({ datum: buildStageDatum(fuente) });
+    emulator.awaitBlock(1);
+
+    const otroAdaptador = await LucidAnchorAdapter.create({
+      lucid,
+      network: "Custom",
+      now: () => emulator.now()
+    });
+
+    const avance = await otroAdaptador.advanceThread({
+      outputRef: abierto.outputRef,
+      previous: buildStageDatum(fuente),
+      next: buildStageDatum({ ...fuente, state: "InProgress" })
+    });
+    expect(avance.txid).toMatch(/^[0-9a-f]{64}$/);
   });
 });
 

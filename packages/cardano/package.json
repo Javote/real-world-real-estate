@@ -10,6 +10,7 @@
     "prepare": "tsc -p tsconfig.json",
     "typecheck": "tsc -p tsconfig.json --noEmit",
     "test": "vitest run --exclude 'src/yaci.test.ts'",
+    "test:coverage": "vitest run --exclude 'src/yaci.test.ts' --coverage",
     "test:yaci": "YACI_TEST=1 vitest run src/yaci.test.ts",
     "wallet:new": "node scripts/wallet-preprod.mjs",
     "ref:publish": "pnpm build && node scripts/publish-reference-script.mjs"
@@ -24,6 +25,7 @@
   "devDependencies": {
     "@lucid-evolution/provider": "^0.2.1",
     "@types/node": "^22.13.14",
+    "@vitest/coverage-v8": "4.1.10",
     "typescript": "^6.0.2",
     "vitest": "^4.1.5"
   }

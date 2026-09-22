@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { loadBlueprint, stageScriptRefs } from "./blueprint";
+import { findBlueprintPath, loadBlueprint, stageScript, stageScriptRefs } from "./blueprint";
 
 // El blueprint que se lee es el commiteado: si alguien corre `aiken build` y no
 // commitea, o toca el validador sin rebuildear, esto lo ve.
@@ -34,5 +34,22 @@ describe("stageScriptRefs", () => {
     expect(mainnet.address.startsWith("addr1")).toBe(true);
     // Mismo script, distinta red: el hash NO cambia.
     expect(preprod.policyId).toBe(mainnet.policyId);
+  });
+});
+
+describe("findBlueprintPath", () => {
+  it("rechaza si no encuentra contracts/plutus.json buscando hacia arriba", () => {
+    // Desde /tmp no hay ningún contracts/plutus.json en los 8 niveles que
+    // busca — a diferencia de correr desde dentro del repo, donde sí lo
+    // encuentra subiendo desde packages/cardano/src.
+    expect(() => findBlueprintPath("/tmp")).toThrow(/No encuentro contracts\/plutus\.json/);
+  });
+});
+
+describe("stageScript", () => {
+  it("rechaza un blueprint que no trae el validador de spend", () => {
+    expect(() => stageScript(admin, { validators: [] })).toThrow(
+      /no trae el validador "stage.stage.spend"/
+    );
   });
 });

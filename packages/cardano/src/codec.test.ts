@@ -1,10 +1,12 @@
+import { Constr, Data } from "@lucid-evolution/lucid";
 import { buildStageDatum } from "@plataforma/shared";
 import { describe, expect, it } from "vitest";
 import {
   decodeStageDatum,
   encodeAdvanceRedeemer,
   encodeInitRedeemer,
-  encodeStageDatum
+  encodeStageDatum,
+  stageDatumToData
 } from "./codec";
 
 // **El valor dorado.** Este mismo hex está fijado en Aiken
@@ -54,6 +56,22 @@ describe("encodeStageDatum", () => {
       decodeStageDatum(encodeStageDatum({ ...datum, validationCritical: false })).validationCritical
     ).toBe(false);
     expect(encodeStageDatum({ ...datum, validationCritical: false })).toContain("d87980");
+  });
+
+  it("rechaza un índice de estado que no es ninguno de los cuatro conocidos", () => {
+    // No puede salir de encodeStageDatum — es defensivo contra un datum ajeno
+    // (otra versión del contrato, o corrupto) que decodeStageDatum lee de la
+    // cadena sin confiar en que respete nuestro tipo.
+    const constr = stageDatumToData(datum);
+    const conEstadoInvalido = new Constr(constr.index, [
+      ...constr.fields.slice(0, 4),
+      new Constr(9, []),
+      ...constr.fields.slice(5)
+    ]);
+
+    expect(() => decodeStageDatum(Data.to(conEstadoInvalido))).toThrow(
+      /Índice de estado desconocido/
+    );
   });
 });
 

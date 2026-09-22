@@ -237,6 +237,16 @@ describe("createAnchorPort", () => {
     expect((await createAnchorPort({})).mode).toBe("simulated");
   });
 
+  it("modo simulated con un store explícito lo usa en vez del default en memoria", async () => {
+    const store = new InMemoryLedgerStore();
+    const puerto = (await createAnchorPort({ store })) as SimulatedAnchorAdapter;
+    const recibo = await puerto.openThread({ datum: buildStageDatum(fuente) });
+
+    // Si el puerto ignorara el store pasado, esto no vería nada — es SU store,
+    // no uno interno del adaptador.
+    expect(await store.get(recibo.outputRef)).not.toBeUndefined();
+  });
+
   it("revienta con un modo inventado", async () => {
     await expect(createAnchorPort({ mode: "mainnet" })).rejects.toThrow(/ANCHOR_MODE inválido/);
   });
@@ -297,6 +307,25 @@ describe("anchorEvidence · el camino de metadata", () => {
   });
 });
 
+describe("verify — condición defensiva", () => {
+  it("da null si el UTxO está en el store pero su bloque nunca se registró", async () => {
+    // No hay camino de producción que deje el ledger así — `commit()` siempre
+    // hace `put` y `registrarBloque` juntos — pero `verify()` no confía en esa
+    // invariante y la chequea igual.
+    const store = new InMemoryLedgerStore();
+    const puerto = new SimulatedAnchorAdapter({ store });
+    const txid = "e".repeat(64);
+    await store.put({
+      outputRef: `${txid}#0`,
+      assetName: "asset1",
+      datum: buildStageDatum(fuente),
+      spentByTxid: null
+    });
+
+    expect(await puerto.verify(txid)).toBeNull();
+  });
+});
+
 // ── `confirmedAt` deja de afirmar sobre lo que no conoce ───────────────────
 //
 // El simulador es su propia cadena: su ledger es el único lugar donde una
@@ -309,6 +338,21 @@ describe("confirmedAt", () => {
     const puerto = new SimulatedAnchorAdapter();
 
     expect(await puerto.confirmedAt("f".repeat(64))).toBeNull();
+  });
+
+  it("awaitConfirmation rechaza para un txid que no produjo, en vez de devolver null", async () => {
+    // Mismo criterio que el adaptador real: sin AnchorProof que devolver,
+    // awaitConfirmation() no puede fingir éxito.
+    const puerto = new SimulatedAnchorAdapter();
+
+    await expect(puerto.awaitConfirmation("f".repeat(64))).rejects.toThrow(AnchorRejectedError);
+  });
+
+  it("awaitConfirmation devuelve el AnchorProof cuando el hilo existe", async () => {
+    const puerto = new SimulatedAnchorAdapter();
+    const { txid } = await puerto.openThread({ datum: buildStageDatum(fuente) });
+
+    expect(await puerto.awaitConfirmation(txid)).toMatchObject({ txid });
   });
 
   it("confirma un anclaje por metadata, que no deja AnchorProof", async () => {
