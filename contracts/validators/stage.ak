@@ -492,6 +492,26 @@ test spend_rejects_thread_split_across_a_staking_variant_of_the_script_address()
   )
 }
 
+// El cast a `StageDatum` del datum de continuación (línea 110) nunca fallaba
+// en ningún test. `Init` es otro tipo definido en el mismo módulo —misma
+// mecánica de `Data`, forma estructural distinta— y sirve para forzar el
+// mismatch sin salir del código ya importado.
+test spend_rejects_new_datum_of_the_wrong_type() fail {
+  let old = datum_at(Pending, True)
+  stage.spend(
+    admin_key,
+    Some(old),
+    Advance { to: InProgress, completion: None },
+    own_ref,
+    tx(
+      [script_input(old)],
+      [script_output_with(InlineDatum(Init), locked_value())],
+      [admin_key],
+      100,
+    ),
+  )
+}
+
 test spend_rejects_missing_datum() fail {
   let old = datum_at(Pending, True)
   let new = StageDatum { ..old, state: InProgress }
