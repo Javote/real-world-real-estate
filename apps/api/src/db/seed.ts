@@ -75,7 +75,13 @@ const ELENCO_DEMO = [
   defaultLocal: string;
 })[];
 
-async function main() {
+/**
+ * Todo el mundo demostrable, de punta a punta. Exportada (SPEC-017 paso 4,
+ * tanda 3) para que un test la invoque contra su propia base — antes vivía
+ * como `main()` sin exportar, así que el único lugar donde corría de verdad
+ * era `pnpm db:seed` a mano.
+ */
+export async function sembrarDemo() {
   const personajes: Personaje[] = ELENCO_DEMO.map((p) => ({
     email: p.email,
     fullName: p.fullName,
@@ -157,11 +163,17 @@ async function main() {
   console.log("Project slug: torre-a");
 }
 
-main()
-  .catch((e) => {
-    console.error(e);
-    process.exit(1);
-  })
-  .finally(() => {
-    db.destroy();
-  });
+// Solo corre como script. Sin este guardia, importar `sembrarDemo` desde un
+// test dispararía el seed completo (bcrypt de 9 usuarios, proyecto, stages,
+// unidad vendida, compilar el dossier) como efecto secundario del import —
+// mismo patrón que el guardia de `db/migrate.ts`.
+if (require.main === module) {
+  sembrarDemo()
+    .catch((e) => {
+      console.error(e);
+      process.exit(1);
+    })
+    .finally(() => {
+      db.destroy();
+    });
+}

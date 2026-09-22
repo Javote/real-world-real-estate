@@ -285,3 +285,41 @@ Los cuatro scripts, con qué falta en cada uno y por qué:
 **Con `migrate.ts` y `fixtures.ts` cerrados, quedan `seed.ts` (~19 líneas) e `instrumentation.ts`
 (~16 líneas) para terminar la tanda 3** y con ella el paso 4 completo — el número exacto de líneas
 restantes hay que remedirlo, porque cambió con el trabajo del fork en la tanda 1-2.
+
+## El paso 4, tanda 3 (scripts de arranque) — cerrado, 2026-09-22
+
+Los dos que quedaban:
+
+**`db/seed.ts`.** `main()` no tenía guardia — importarlo desde un test habría disparado el seed
+completo como efecto secundario del import. Se agregó `if (require.main === module)` (mismo patrón
+que `migrate.ts`) y se exportó `sembrarDemo()` (antes `main()` sin exportar). `test/seed-demo.test.ts`
+la invoca contra la base de test dos veces: una sin `SEED_ADMIN_PASSWORD`/`SEED_DEMO_PASSWORD` (usa
+los defaults locales) y otra con las dos seteadas, corrida dos veces para confirmar que el segundo
+seed no duplica al admin (upsert por email, D-046). `passwordDeDemo` ya tenía su propia suite
+completa (`seed-credentials.test.ts`); lo que faltaba cubrir era lo que `sembrarDemo` arma encima —
+el elenco completo, la organización, el proyecto, el template de stages (primera etapa `InProgress`,
+el resto `Pending`, M3 §2.5), la unidad vendida y el dossier compilado.
+
+**`instrumentation.ts`.** Los dos bloques (Sentry, OpenTelemetry) vivían como código de nivel de
+módulo, sin ninguna función exportada. Se envolvieron en `initSentry()`/`initOpenTelemetry()`, que
+el archivo sigue llamando incondicionalmente al final (mismo comportamiento de producción,
+automático al `--require`, D-042/D-075). `initSentry` se prueba mockeando `@sentry/node` con
+`vi.mock` — es un `import` estático, así que el mock lo intercepta sin problema.
+**`initOpenTelemetry` no**: sus `require()` de los ocho paquetes `@opentelemetry/*` son tardíos y
+literales a propósito (para no pagar el costo si `OTEL_EXPORTER_OTLP_ENDPOINT` no está seteado), y
+un `require()` corre por el `require` real de Node, no por el grafo de módulos que Vitest
+intercepta — se probó primero con `vi.mock` y el resultado fue `NodeSDK.start()` corriendo de
+verdad, registrando globals reales de `@opentelemetry/api` (`Attempted duplicate registration of
+API`). La solución fue inyección de dependencias: `initOpenTelemetry(deps?)` recibe un objeto
+opcional con los ocho símbolos, y solo si falta llama a `cargarDependenciasOtel()` (los requires
+reales) — así la laziness no cambia (nada se importa hasta que hace falta) y un test le pasa un
+objeto armado a mano (`vi.fn()` por cada constructor/función) sin tocar una red ni un proceso real.
+`test/instrumentation.test.ts` cubre las cuatro combinaciones: con/sin `SENTRY_DSN`, con/sin
+`OTEL_EXPORTER_OTLP_ENDPOINT` (incluido que el flush de `sdk.shutdown()` se registra en `SIGTERM`).
+
+**Resultado: la API queda en 96,26% de líneas (2008/2086) — sobre el 95% que pide la aceptación de
+M3.** Statements (89,94%) y branches (77,66%) quedan por debajo; la spec mide líneas (§Qué se mide),
+así que no bloquean el cierre. Umbral del `vitest.config` subido a 95/95 en líneas/funciones y al
+piso medido (89/77) en statements/branches — sube con esta tanda, no baja.
+
+**El paso 4 (API) queda cerrado.** Quedan abiertos: paso 5 (web) y paso 7 (CI).

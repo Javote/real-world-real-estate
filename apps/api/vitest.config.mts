@@ -72,9 +72,17 @@ export default defineConfig({
     // `developer-comercial.routes.ts` a 94,82% (quedan dos ramas documentadas
     // como de bajo valor — el desempate de `contractsOfProjectProcedure`
     // cuando el mismo investor compró la misma unidad dos veces, y un
-    // `catch` puramente defensivo). La tanda 3 (scripts de arranque:
-    // `db/fixtures.ts`, `db/seed.ts`, `db/migrate.ts`, `instrumentation.ts`)
-    // queda para otra sesión — por eso el piso general sube, pero no a 95%.
+    // `catch` puramente defensivo).
+    //
+    // Tanda 3 cerrada (2026-09-22): `db/migrate.ts` y `db/fixtures.ts`
+    // (commit `8bcfacb`) y `db/seed.ts`/`instrumentation.ts` (esta sesión) —
+    // los cuatro scripts de arranque tenían su lógica real detrás de un
+    // `require.main === module`/nivel de módulo, sin ninguna función
+    // invocable desde un test. **El paso 4 (API) queda cerrado: 96,26% de
+    // líneas, sobre el 95% que pide la aceptación de M3.** Statements
+    // (89,94%) y branches (77,66%) quedan por debajo — la spec mide líneas,
+    // no las cuatro métricas, así que no bloquean el cierre; el umbral de acá
+    // sí las sube igual, al piso medido, para que no bajen sin querer.
     coverage: {
       provider: "v8",
       reporter: ["text-summary", "html"],
@@ -87,10 +95,10 @@ export default defineConfig({
         "src/db/types.ts"
       ],
       thresholds: {
-        statements: 86,
-        branches: 74,
-        functions: 92,
-        lines: 92
+        statements: 89,
+        branches: 77,
+        functions: 95,
+        lines: 95
       }
     }
   }
