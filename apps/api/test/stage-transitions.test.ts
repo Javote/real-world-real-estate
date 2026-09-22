@@ -24,6 +24,17 @@ let token: string;
 let tokenAdmin: string;
 let actorId: string;
 
+/** `sequenceOrder` es único por proyecto, y este archivo crea decenas de
+ * stages sobre el MISMO proyecto fixture (`FIXTURES.proyecto`, compartido
+ * con otras suites). Dos llamadas a `Math.random()` pueden coincidir —lo
+ * hicieron, `SQLITE_CONSTRAINT_UNIQUE: Stage.projectId, Stage.sequenceOrder`—
+ * así que el valor sale de un contador, no de un sorteo: garantiza que
+ * ninguna llamada de ESTE archivo choque con otra. Arranca en un offset
+ * aleatorio para no repetirse con lo que sembró un run anterior u otra suite
+ * que también use el mismo proyecto. */
+let siguienteSequenceOrder = Math.floor(Math.random() * 1_000_000) + 100;
+const proximoSequenceOrder = () => siguienteSequenceOrder++;
+
 const login = (f: { email: string; password: string }) =>
   request(app).post("/api/v1/auth/login").send({ email: f.email, password: f.password });
 
@@ -36,8 +47,7 @@ async function crearStage(opts: { state?: StageState; validationCritical?: boole
       id,
       projectId: proyecto,
       name: "Stage de transiciones",
-      // `sequenceOrder` es único por proyecto: uno distinto por stage creado.
-      sequenceOrder: Math.floor(Math.random() * 1_000_000) + 100,
+      sequenceOrder: proximoSequenceOrder(),
       state: opts.state ?? "Pending",
       validationCritical: opts.validationCritical ?? false,
       createdAt: ahora,
@@ -125,13 +135,13 @@ beforeAll(async () => {
 });
 
 /** Etapa con hilo real (mint), sin pasar por la ruta HTTP que se borró — ver
- * `helpers/stages.ts`. `sequenceOrder` random para no chocar con las fijas de
- * este archivo. */
+ * `helpers/stages.ts`. Mismo contador que `crearStage`, para que las dos
+ * familias de stages de este archivo nunca choquen entre sí. */
 const crearStageConHilo = (opts: { validationCritical?: boolean } = {}) =>
   crearStageMinteado({
     projectId: proyecto,
     name: "Stage con hilo",
-    sequenceOrder: Math.floor(Math.random() * 1_000_000) + 200_000,
+    sequenceOrder: proximoSequenceOrder(),
     actorUserId: actorId,
     ...opts
   });
