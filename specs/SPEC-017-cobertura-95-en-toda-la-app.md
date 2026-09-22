@@ -198,5 +198,30 @@ mismo test no importan para esta spec, que mide líneas). Umbral del `vitest.con
 en las cuatro métricas — sube con cada parte, no baja. `pnpm --filter @plataforma/shared
 test:coverage` lo corre a mano; el paso 7 lo suma a CI junto con las otras tres partes TypeScript.
 
-El paso 2 queda cerrado. Quedan abiertos: paso 1 para `apps/web` y `packages/cardano` (medir
-honesto ahí también), pasos 3-5 (cardano, API, web) y paso 7 (CI).
+El paso 2 queda cerrado. Quedan abiertos: paso 1 para `apps/web` (medir honesto ahí también), el
+paso 4 (API), el paso 5 (web) y el paso 7 (CI).
+
+## El paso 3 (cardano) — cerrado 2026-09-22
+
+`packages/cardano` ya tenía `vitest.config.mts` (por el `resolve.alias` de `@plataforma/shared`),
+pero sin `coverage.include`. Con `["src/**"]`, la medición honesta era 90,14% de 274 líneas —27
+líneas de las 95% que pide la spec, casi todas en `factory.ts` (la selección del adaptador real y
+sus errores de configuración) y `real.ts` (ramas de error de Blockfrost, `awaitConfirmation`, y el
+default de `now`).
+
+`factory.ts` necesitó mockear Lucid por primera vez en el package (`factory-real.test.ts`): el
+camino feliz de `crearAdaptadorReal` antes solo se probaba contra un nodo real en `yaci.test.ts`
+(manual, no en CI). El resto —`real.ts`, `simulated.ts`, `blueprint.ts`, `codec.ts`— eran casos
+borde que el `Emulator` ya deja probar contra el validador de verdad, más un archivo nuevo
+(`ledger.test.ts`) para `InMemoryLedgerStore`, que no tenía ninguno.
+
+**Resultado: 99,63% de líneas (273/274), 94,9% de branches.** Quedan dos líneas sin cubrir, y las
+dos documentadas en el propio código como irreductibles: el caso de igualdad de
+`ordenarPorClave` (`simulated.ts`) —las claves de un objeto JS son siempre únicas, así que el
+`a === b` del comparador no tiene forma de ocurrir— y la guarda de `publishReferenceScript`
+(`real.ts:468`) contra una transacción que Lucid reporta exitosa sin dejar el output prometido, que
+solo se podría forzar mockeando internals de la librería de firma. Umbral del `vitest.config` en
+95% en las cuatro métricas.
+
+El paso 3 queda cerrado. Quedan abiertos: paso 1 para `apps/web`, el paso 4 (API), el paso 5 (web)
+y el paso 7 (CI).
