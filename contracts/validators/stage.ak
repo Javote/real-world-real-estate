@@ -1156,6 +1156,31 @@ test mint_rejects_output_holding_extra_units_of_the_token() fail {
   )
 }
 
+// `mint_rejects_two_threads_in_one_tx` (arriba) en realidad no mata esta
+// mutación: el asset_name que `dict.to_pairs` extrae de dos pares no coincide
+// con `initial_datum.stage_ref`, así que lo agarra la línea 158 (el mismatch),
+// no la cardinalidad de línea 150. Este pone el mismo asset_name que gana el
+// orden del dict en el datum, y lo deja también presente en el output, para
+// que solo la cardinalidad —no encontrar 2 asset names, no la cantidad de
+// cada uno— pueda estar rechazando.
+test mint_rejects_two_asset_names_when_both_are_present_in_the_output() fail {
+  let leading = #"6f74726f"
+  let initial = StageDatum { ..datum_at(Pending, True), stage_ref: leading }
+  let both =
+    assets.from_lovelace(2_000_000)
+      |> assets.add(script_hash, leading, 1)
+      |> assets.add(script_hash, stage_ref, 1)
+  let minted =
+    assets.from_asset(script_hash, leading, 1)
+      |> assets.add(script_hash, stage_ref, 1)
+  stage.mint(
+    admin_key,
+    Init,
+    script_hash,
+    mint_tx(minted, [script_output_with(InlineDatum(initial), both)]),
+  )
+}
+
 test mint_rejects_non_inline_datum() fail {
   stage.mint(
     admin_key,
