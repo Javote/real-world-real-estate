@@ -725,6 +725,29 @@ test spend_rejects_timestamp_one_above_upper_bound() fail {
   )
 }
 
+// `spend_rejects_open_ended_validity_range` usa las dos puntas infinitas a la
+// vez, así que nunca aísla cuál de las dos frena la transacción: si una
+// mutación acepta la punta inferior infinita, la superior (también infinita
+// ahí) sigue abortando igual, y el test no lo nota. Este test deja la punta
+// superior finita para que solo la inferior pueda estar rechazando.
+test spend_rejects_missing_lower_bound() fail {
+  let old = datum_at(InProgress, False)
+  let new = StageDatum { ..old, state: Completed, completed_at: 100 }
+  stage.spend(
+    admin_key,
+    Some(old),
+    Advance {
+      to: Completed,
+      completion: Some(Completion { evidence_root: "", now: 100 }),
+    },
+    own_ref,
+    Transaction {
+      ..transition_tx(old, new, 100),
+      validity_range: interval.before(110),
+    },
+  )
+}
+
 // ── Tests: thread token en las transiciones ──────────────────────────────
 
 test spend_rejects_utxo_without_thread_token() fail {
