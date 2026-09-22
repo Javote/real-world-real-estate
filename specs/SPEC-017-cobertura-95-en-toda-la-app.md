@@ -178,3 +178,25 @@ absorber ese match en su lugar. Un test más —`spend_rejects_own_input_with_tw
 absorbs_carrying_thread`— cierra el gap real: **51 mutantes: 51 muertos, 18/18 `expect` con test**.
 `contracts/CLAUDE.md` §Coverage cita el resultado final. El paso 6 de esta spec queda cerrado; los
 pasos 1-5 y 7 (las cuatro partes TypeScript y CI) siguen abiertos.
+
+## El paso 2 (shared) — cerrado 2026-09-22
+
+`packages/shared` no tenía `vitest.config`, así que su 100% medido era falso — solo contaba las 142
+líneas que algún test tocaba. Con `coverage.include: ["src/**"]` (`packages/shared/vitest.config.mts`,
+nuevo), la medición honesta era 61,2% de 232 líneas, como decía la tabla de arriba.
+
+Los 14 módulos sin ningún test eran todos schemas Zod puros (`audit.ts`, `capital.ts`,
+`certifier.ts`, `contract.ts`, `dossier.ts`, `invitation.ts`, `notifications.ts`, `pagination.ts`,
+`panels.ts`, `params.ts`, `project.ts`, `telemetry.ts`, `unit.ts`, `user.ts`) — sin lógica propia
+que ramificar, así que un test por schema que parsea un caso válido y uno inválido (el que rechaza
+es el que importa: es el contrato que la API aplica) alcanzó el objetivo en un solo commit, sin
+tocar producción.
+
+**Resultado: 100% de líneas (232/232), 100% de statements y funciones, 96,55% de branches** (las
+dos ramas de `auth.ts:36-37` que el `.refine()` de `passwordSchema` deja sin ejercitar juntas en un
+mismo test no importan para esta spec, que mide líneas). Umbral del `vitest.config` puesto en 95%
+en las cuatro métricas — sube con cada parte, no baja. `pnpm --filter @plataforma/shared
+test:coverage` lo corre a mano; el paso 7 lo suma a CI junto con las otras tres partes TypeScript.
+
+El paso 2 queda cerrado. Quedan abiertos: paso 1 para `apps/web` y `packages/cardano` (medir
+honesto ahí también), pasos 3-5 (cardano, API, web) y paso 7 (CI).
