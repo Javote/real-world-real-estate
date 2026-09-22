@@ -956,6 +956,23 @@ test mint_rejects_preloaded_evidence() fail {
   )
 }
 
+// En `spend`, la cantidad del token en `carrying_thread` (línea 52) está
+// respaldada por la igualdad de valor con `own_input` — pero `mint` no tiene
+// un `own_input` con qué comparar. Este es el gap real: un output que ya
+// carga 2 unidades del token (una "donada" desde otra fuente, el mismo hueco
+// de unicidad que documentan C-01/SPEC-301) mientras `tx.mint` solo declara
+// +1 tiene que rechazarse igual.
+test mint_rejects_output_holding_extra_units_of_the_token() fail {
+  let initial = datum_at(Pending, True)
+  let inflated = locked_value() |> assets.add(script_hash, stage_ref, 1)
+  stage.mint(
+    admin_key,
+    Init,
+    script_hash,
+    mint_tx(one_token(), [script_output_with(InlineDatum(initial), inflated)]),
+  )
+}
+
 test mint_rejects_non_inline_datum() fail {
   stage.mint(
     admin_key,
