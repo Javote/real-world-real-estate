@@ -140,8 +140,21 @@ export async function conTecho<T>(
   }
 }
 
-async function main() {
-  const url = process.env.DATABASE_URL ?? DEFAULT_DATABASE_URL;
+/**
+ * Lo que corre `pnpm db:migrate` y el `startCommand` de Render: conecta,
+ * aplica lo pendiente con el techo de `conTecho`, loguea y cierra.
+ *
+ * Exportada (SPEC-017 paso 4, tanda 3) para que un test la invoque contra una
+ * base propia, en vez de solo probar `applyPendingMigrations`/`conTecho` por
+ * separado — lo que este archivo agrega encima de esas dos (conectar con la
+ * URL correcta, cerrar el cliente, los mensajes de log) no tenía ningún test.
+ * `url` es parámetro y no siempre `process.env.DATABASE_URL` por la misma
+ * razón que `migrationsDir` es parámetro de `applyPendingMigrations`: un test
+ * necesita apuntar a su propia base sin pisar la variable de entorno global.
+ */
+export async function migrar(
+  url: string = process.env.DATABASE_URL ?? DEFAULT_DATABASE_URL
+): Promise<string[]> {
   asegurarDirectorioLocal(url);
 
   // **Estas dos líneas existen para que el silencio se pueda leer.** El
@@ -172,12 +185,14 @@ async function main() {
   );
 
   client.close();
+
+  return aplicadas;
 }
 
 // Solo corre como script. Sin este guardia, importarlo desde la suite de tests
 // dispararía una migración contra la base local como efecto secundario del import.
 if (require.main === module) {
-  main().catch((e) => {
+  migrar().catch((e) => {
     console.error(e);
     process.exit(1);
   });
