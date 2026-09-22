@@ -31,7 +31,13 @@ export default defineConfig({
       include: ['src/**/*.{ts,tsx}'],
       exclude: [
         // Lo genera TanStack Router (`tsr generate`); no es código propio.
-        'src/routeTree.gen.ts'
+        'src/routeTree.gen.ts',
+        // Bootstrap del proceso — el mismo criterio que `src/server.ts` en
+        // `apps/api/vitest.config.mts` (SPEC-019 §Paso 0, punto 7, decisión
+        // del dueño 2026-09-22): monta la app sobre `#root` y no decide nada.
+        // Su único `if` (`#root` ausente) no se alcanza, y extraerlo para
+        // testear un `createRoot().render()` no probaría ningún comportamiento.
+        'src/main.tsx'
       ],
       thresholds: {
         statements: 36,

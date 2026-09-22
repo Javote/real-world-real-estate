@@ -145,7 +145,10 @@ export default defineConfig({
       include: ["src/**/*.ts"],
       exclude: [
         // Bootstrap del proceso: no tiene lógica que testear, y arrancarlo en
-        // un test levantaría un puerto.
+        // un test levantaría un puerto. Mismo criterio que `src/main.tsx` en
+        // `apps/web/vitest.config.ts` (SPEC-019 §Paso 0, punto 7, decisión del
+        // dueño 2026-09-22) — SPEC-017 decía que este archivo "volvía a
+        // contar" y nunca se hizo; queda excluido a propósito.
         "src/server.ts",
         // Solo tipos: no emite runtime, así que contarlo distorsiona.
         "src/db/types.ts"

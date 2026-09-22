@@ -146,15 +146,15 @@ cualquier lote.
    **Toca archivos de W1–W9, y por eso W0 va antes que todos.** El bug de `delivered` en
    `investor.units.tsx` **no** entra acá: cambia lo que se ve, y es de W3 con su test.
 
-### La decisión del dueño
+### La decisión del dueño — tomada 2026-09-22
 
-7. **`main.tsx`: tratarlo como `server.ts` de la API.** Es el bootstrap (`createRoot(...).render`),
-   el equivalente exacto de `apps/api/src/server.ts`, que la API excluye. SPEC-017 decía que
-   `server.ts` "vuelve a contar" y **nunca se hizo** (`apps/api/vitest.config.mts` lo sigue
-   excluyendo). O se excluyen los dos, o los dos cuentan con su lógica extraída. Lo que no puede
-   quedar es un criterio distinto para cada lado. **Recomendación: excluir los dos**, con la misma
-   razón escrita en los dos `vitest.config`. El único `if` de `main.tsx` (`#root` ausente) no se
-   alcanza, y extraer la lógica para testear un `createRoot().render()` no prueba nada.
+7. **`main.tsx` y `server.ts`: excluidos los dos, con la misma razón.** `main.tsx` es el bootstrap
+   del front (`createRoot(...).render`), el equivalente exacto de `apps/api/src/server.ts`, que la
+   API ya excluía. SPEC-017 decía que `server.ts` "volvía a contar" y nunca se hizo. **El dueño
+   decidió excluir los dos**, y quedó aplicado: `apps/web/vitest.config.ts` excluye `src/main.tsx`,
+   y los comentarios de los dos `vitest.config` se citan entre sí. El único `if` de `main.tsx`
+   (`#root` ausente) no se alcanza, y extraer la lógica para testear un `createRoot().render()` no
+   prueba nada.
 
 ## Los lotes — archivo por archivo
 
@@ -163,7 +163,7 @@ lo que les falta (statements + branches sin cubrir).
 
 | Lote | Qué | Archivos | Statements sin cubrir | Branches sin cubrir | Depende de |
 |---|---|---|---|---|---|
-| **W0** | La preparación compartida (arriba): W0a infraestructura de test, W0b limpieza de producción en ~20 archivos | — | ~20 (lo que borra) | ~29 (salen del denominador) | la decisión del punto 7 |
+| **W0** | La preparación compartida (arriba): W0a infraestructura de test, W0b limpieza de producción en ~20 archivos | — | ~20 (lo que borra) | ~29 (salen del denominador) | — |
 | **W1** | Pantallas del developer, panel (`developer.*` sin `$projectId`) | 10 | 223 | 201 | W0 |
 | **W2** | Pantallas del developer, por proyecto (`developer.project.$projectId.*`) | 5 | 199 | 182 | W0 |
 | **W3** | Pantallas del investor, panel (`investor.*` sin `unit`) | 6 | 165 | 158 | W0 (puntos 2 y 9) |
@@ -303,7 +303,7 @@ se **borran** en vez de marcarse, porque son código muerto o un tipo que miente
 | `default:` de `claveEstadoStage` | 1 | `lib/investor.ts` 46 | Un `switch` sobre los cuatro `StageState` | Cambiarlo por el chequeo `never` de exhaustividad, o marcar (W0) |
 | `session ? t('panel.welcome', …) : undefined` | 3 | `developer.index` 56 · `notary.index` 48 · `certifier.index` 49 | `useRoleGuard` hace `setSession(local)` y `setReady(true)` juntos, y la pantalla ya salió en `if (!ready) return null` | **Marcar**, o que `useRoleGuard` devuelva una unión discriminada (`{ ready: true, session }`) y el ternario sobre |
 | `case 'admin'` de `PanelLayout` | 2 | `PanelLayout.tsx` 81, 97 | Solo un admin ve el panel `admin`, y a ese `esAdmin` ya lo desvió dos líneas antes | Marcar (mantiene visible la exhaustividad del `switch`) |
-| `if (!contenedor) throw` | 1 | `main.tsx` 25 | `index.html` siempre trae `#root` | Se va con la decisión sobre `main.tsx` (W0 punto 7) |
+| `if (!contenedor) throw` | 1 | `main.tsx` 25 | `index.html` siempre trae `#root` | **Excluido**: `main.tsx` salió del denominador (punto 7, decidido) |
 
 **Después de W0 el denominador baja ~29 branches, y todo lo que queda se alcanza.** Hay una sola zona
 que **se verifica al escribir el test y no antes**: las guardas de efecto de `LocationMapModal.tsx`
@@ -406,7 +406,7 @@ Columna **Recetas**: las familias de arriba. Columna **Qué más**: lo propio de
 | `public.dossier.$shareToken.tsx` | 8 | `getPublicDossier` | R2 R4 | 404 (token vencido o inválido), con datos, con y sin firma. Sin sesión: **no** usa `autenticarComo` |
 | `index.tsx` | 4 | — | — | Sin sesión → `/login`; con sesión → el landing del rol. **13, el `??` → se borra** |
 | `__root.tsx`, `router.tsx` | 0 (4 statements) | — | — | Montar el router real (`getRouter()`) en un test: cubre los dos |
-| `main.tsx` | 2 | — | — | Decisión del dueño (W0 punto 7) |
+| `main.tsx` | 2 | — | — | **Excluido** del denominador (punto 7, decidido) |
 | `auth/useSession.ts` | 2 | — | — | Se borra (W0) |
 | `lib/observability.ts` | 6 | — | R12 | Con y sin DSN, con y sin PostHog key, con y sin host |
 
