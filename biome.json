@@ -37,6 +37,7 @@
   "linter": {
     "enabled": true,
     "rules": {
+      "a11y": { "recommended": true },
       "style": {
         "noNonNullAssertion": "off"
       }

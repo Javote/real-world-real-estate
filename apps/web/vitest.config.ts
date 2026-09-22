@@ -13,6 +13,7 @@ export default defineConfig({
     // encuentra los dos árboles — se ve como un componente que duplica nodos.
     globals: true,
     environment: 'jsdom',
+    setupFiles: ['./src/test/a11y.ts'],
     // e2e/ es de Playwright, no de vitest: sin esto vitest levanta los .spec.ts
     // de ahí (su `include` por defecto matchea test Y spec) y explota.
     exclude: ['**/node_modules/**', '**/dist/**', 'e2e/**'],
