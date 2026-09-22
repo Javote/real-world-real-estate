@@ -331,6 +331,23 @@ etapa certificada de verdad y la liberación se corre a otro mes; más un develo
 propio sin contratos. `capital.test.ts` no se tocó: sigue fijando los totales exactos de la
 plantilla.
 
+### A2 — cerrado 2026-09-22 (en worktree, en paralelo con A1 y A3)
+
+`developer-evidencia.routes.ts` y `evidence.routes.ts` al **100% en las cuatro métricas**: 7 ramas y
+las 2 funciones con test (`developer-evidencia-coverage.test.ts`, `evidence-coverage.test.ts`), y
+las 2 ❌ marcadas (254: `validarCamposDeTexto` solo tiene `.input()`, así que `call()` solo rechaza
+con el `BAD_REQUEST` de la validación; 368: `multipartBooleanSchema` ya devuelve boolean). Tres
+desvíos de la receta:
+
+- **180 y 185 salieron por HTTP, no por unit**: un `POST` JSON a un stage `Completed` llega con el
+  body ya consumido (`readableEnded`), y el tope de drenaje se pasa achicando
+  `EVIDENCE_MAX_FILE_BYTES` con `vi.mock` en ese archivo (501 MB reales no son un test).
+- **La receta de la 260 no alcanzaba la rama**: `storage.put` corre *después* del segundo
+  `stageQueAceptaSubida` y la ruta no tiene `fileFilter`. Se cierra envolviendo el Multer real
+  (`vi.mock("../src/lib/upload")`) con un gancho que completa el stage antes de volver al handler.
+- **`ignore next` sí funciona delante de una sentencia** (el `throw err` muerto de la 254 lo usa);
+  lo que no funciona, como dice el paso 0, es delante de un operando de `??`.
+
 ## Paralelismo — qué se puede hacer a la vez, medido contra el código
 
 **Con el paso 0 cerrado, los seis lotes pueden correr los seis a la vez.** Se verificó, no se

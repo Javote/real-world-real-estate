@@ -251,7 +251,9 @@ router.post(
       try {
         parsed = await call(validarCamposDeTexto, req.body);
       } catch (err) {
+        /* v8 ignore if -- @preserve: el procedure solo tiene .input(); su handler devuelve el input y no tira, así que call() solo rechaza con el ORPCError BAD_REQUEST de la validación (SPEC-018) */
         if (err instanceof ORPCError) return res.status(err.status).json(err.toJSON());
+        /* v8 ignore next -- @preserve: inalcanzable por lo mismo que el if de arriba, call() solo rechaza con ORPCError (SPEC-018) */
         throw err;
       }
 
@@ -365,7 +367,9 @@ router.post(
                 uploadedById: req.user!.id,
                 evidenceType: parsed.evidenceType,
                 category: parsed.category,
+                /* v8 ignore start -- @preserve: multipartBooleanSchema ya transforma undefined a false; el output es boolean, nunca nullish (SPEC-018) */
                 authoritative: parsed.authoritative ?? false,
+                /* v8 ignore stop -- @preserve */
                 issuingAuthority: parsed.issuingAuthority,
                 originalFilename: g.c.file.originalname,
                 storedFilename: g.c.file.filename,
