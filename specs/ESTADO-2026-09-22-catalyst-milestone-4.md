@@ -93,6 +93,36 @@ completitud, agregación de métricas de piloto):
 operativa que asume que estas cuatro specs y los 7 ítems de "antes de mainnet" ya están cerrados.
 Ver [`RUNBOOK-mainnet-cutover.md`](RUNBOOK-mainnet-cutover.md).
 
+### Orden de ataque, y por qué
+
+**`504 → 502 → 503 → 501`, no el orden numérico.** El criterio de corte es "¿qué bloquea a los
+pilotos reales del runbook §5?", no facilidad de implementación:
+
+1. **`SPEC-504` primero.** Cero schema nuevo — lee `Stage`/`validationCritical`, que ya existen.
+   Es el más rápido de cerrar y no tiene preguntas abiertas de producto (la única, el promedio
+   simple vs. ponderado, no bloquea empezar). Se cierra en días, no en una decisión del dueño.
+2. **`SPEC-502` segundo, y es el que manda la fecha del resto.** El output 1 de M4 exige
+   *ejercitar a propósito* el drill de fallback (inspección fallida → re-inspección/reembolso) — sin
+   `Dispute` no hay forma de demostrarlo, y el runbook de cutover (§Riesgos) ya dice explícito que
+   los pilotos reales no arrancan hasta que esta spec tenga sus tests de rechazo en verde. Además
+   define el `outcome` que `disputeRate` necesita — sin esto, `SPEC-501` no tiene qué mostrar en esa
+   columna.
+3. **`SPEC-503` tercero.** No bloquea el arranque del piloto — un investor recién puede tener una
+   opinión después de su primera liberación (§Preguntas abiertas), así que puede construirse **en
+   paralelo** a que corran los primeros contratos, mientras se resuelve la decisión pendiente de
+   *qué evento la dispara*. Tiene que estar lista antes de la primera liberación real, no antes de
+   abrir el piloto.
+4. **`SPEC-501` último, y a propósito.** Es la que menos importa cuándo se escribe: agrega datos que
+   las otras tres ya definen, y escribirla antes obligaría a retocarla cuando `SPEC-502`/`SPEC-503`
+   asienten su forma final (el `outcome` de una disputa, el shape de una respuesta NPS). Antes de
+   empezarla, además, conviene resolver la pregunta abierta de `uniqueWalletsCount` (si hace falta
+   sumarle una columna a `OnChainEvent` o aproximar con `User.id`) — es la única de las cuatro con
+   una decisión de schema pendiente que puede cambiar el resto de la spec.
+
+**Lo que no cambia el orden:** los 7 ítems de "antes de mainnet" (`CLAUDE.md` raíz) y el resto del
+runbook de cutover no dependen de estas cuatro specs — pueden avanzar en paralelo, los está
+bloqueando M3 (3.12-3.15), no esto.
+
 ## Lo que sigue postergado de M3 y M4 hereda
 
 Estos tres ítems de `CLAUDE.md` raíz §Lo que queda del plan **no son de M4**, son deuda de M3 que
