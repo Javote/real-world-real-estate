@@ -512,6 +512,29 @@ test spend_rejects_new_datum_of_the_wrong_type() fail {
   )
 }
 
+// `spend_rejects_value_drain` (más abajo) drena el ADA soltando también el
+// token, así que lo agarra `carrying_thread` (línea 104), no la igualdad de
+// valor (línea 125). Este mantiene la unidad del token intacta y solo baja
+// el ADA — la única forma de aislar la garantía de D-021 en esta línea.
+test spend_rejects_ada_drain_while_keeping_the_token() fail {
+  let old = datum_at(Pending, True)
+  let new = StageDatum { ..old, state: InProgress }
+  let drained =
+    assets.from_lovelace(1_000_000) |> assets.add(script_hash, stage_ref, 1)
+  stage.spend(
+    admin_key,
+    Some(old),
+    Advance { to: InProgress, completion: None },
+    own_ref,
+    tx(
+      [script_input(old)],
+      [script_output_with(InlineDatum(new), drained)],
+      [admin_key],
+      100,
+    ),
+  )
+}
+
 test spend_rejects_missing_datum() fail {
   let old = datum_at(Pending, True)
   let new = StageDatum { ..old, state: InProgress }
