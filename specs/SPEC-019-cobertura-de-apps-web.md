@@ -41,44 +41,120 @@ grep), así que montar solo el componente alcanza en todas.
 
 ## Paso 0 — la preparación compartida (serial, antes de W1–W9)
 
-Todo lo que varios lotes necesitarían tocar a la vez va acá, en un commit, para que después no lo
-toque nadie:
+Todo lo que varios lotes necesitarían tocar a la vez va acá, para que después no lo toque nadie.
+**Revisado contra el código el 2026-09-22**: cada punto dice qué se verificó.
+
+**Son tres cosas de naturaleza distinta, y van en commits distintos** (un commit = un cambio
+lógico):
+
+- **W0a — infraestructura de test** (puntos 1, 2, 4, 5 y 9): no toca código de producción.
+- **W0b — limpieza de producción** (puntos 3, 6 y 8): borra y tipa en ~20 archivos de `src/`, sin
+  cambiar comportamiento. Es la parte que pide revisión.
+- **Una decisión del dueño** (punto 7).
+
+W0a y W0b no dependen una de la otra. Las dos tienen que estar en `main` antes de que arranque
+cualquier lote.
+
+### W0a — infraestructura de test
 
 1. **`-test-mount.tsx`: `DEVELOPER_USER`, `INVESTOR_USER` y `ADMIN_USER`**, con los roles de
-   `auth/roles.ts` (`developer`, `buyer`, `admin`). Hoy solo están `NOTARY_USER` y `CERTIFIER_USER`:
-   si W1–W6 los agregan cada uno por su lado, los seis editan el mismo archivo.
-2. **`montarRuta` con `validateSearch` opcional.** `investor.buy.tsx` e `investor.notifications.tsx`
-   leen `Route.useSearch()` sobre un `validateSearch` propio (`parseBuySearch`, `parseSearch`). La
-   ruta que arma el helper no lo declara, así que la pantalla recibiría el search crudo, sin los
-   defaults del parser. Es probable que haga falta pasarlo; se confirma al escribirlo.
+   `auth/roles.ts` (`developer`, `buyer`, `admin`). Hoy solo existen `NOTARY_USER` y
+   `CERTIFIER_USER`: si W1–W6 los agregan cada uno por su lado, los seis editan el mismo archivo.
+   `ADMIN_USER` entra a cualquier pantalla por el bypass de `useRoleGuard` (D-095).
+
+2. **`montarRuta` tiene que aceptar el `validateSearch` de la ruta: no es "probable", hace falta.**
+   `parseBuySearch` (`investor.buy.tsx` 43-52) y `parseSearch` (`investor.notifications.tsx`
+   49-51) son funciones internas que **solo corren como `validateSearch` de su ruta**. La ruta que
+   arma el helper no lo declara, así que esas ~30 ramas no se ejecutarían nunca, y un parámetro
+   inválido (`?view=otra`) llegaría crudo a la pantalla en vez de descartarse.
+   **La forma sugerida:** que el helper reciba el `Route` real (`montarRuta(Route, path, …)`) y
+   saque de `Route.options` el `component` **y** el `validateSearch`. Así desaparecen también los
+   19 casts `Route.options.component as () => React.ReactElement` que repiten los tests de notary y
+   certifier. Esos 10 archivos son de W9: migrarlos en W0a, o dejar la firma vieja como overload
+   para no tocarlos.
+
+4. **`routes/-test-mount.tsx` fuera del denominador.** Es soporte de test que vive en `src/` por la
+   convención del prefijo `-` de TanStack Router, y hoy cuenta como código de la app (19/20
+   statements). **Verificado que es el único caso:** `src/test/a11y.ts` no aparece en la cobertura
+   porque Vitest ya excluye los `setupFiles`, y `vitest-matchers.d.ts` cuenta 0/0.
+
+5. **La suite web con cobertura falla bajo carga, y no son dos tests: son dos timeouts de la
+   suite.** Reproducido el 2026-09-22:
+   - **Sin carga**, tres corridas seguidas de `vitest run --coverage`: las tres verdes.
+   - **Con carga** (la cobertura web corriendo a la vez que la suite de la API, lo más parecido a
+     un runner de CI de 2 núcleos): **tres de tres corridas rojas**, con entre 1 y 6 fallos cada
+     una, y dos causas distintas:
+     - **`Test timed out in 5000ms`** en los tests que tipean una nota larga con `userEvent.type`
+       (`CER-OBSERVE-001`, `NOT-DOSSIER-REJECT-001`). `userEvent` tipea tecla por tecla, y 30
+       caracteres bajo carga pasan los 5 s del `testTimeout` por defecto.
+     - **`Unable to find an element with the text: …`** en pantallas que esperan datos del mock
+       (`Torre A`, `Ana Torres`, `notary@example.com`, `verifier@example.com`): `findBy*` espera
+       **1 s** por defecto (`asyncUtilTimeout` de Testing Library), y bajo carga el render tarda
+       más.
+
+   **Por qué es de W0 y no de un lote:** cada test de W1–W9 usa `findBy*`. Sin este arreglo, los
+   lotes van a sumar flakies. El paso final de la spec suma la cobertura web a CI.
+   **Arreglo:** `configure({ asyncUtilTimeout: … })` en un `setupFile` y un `testTimeout` más alto
+   en `vitest.config.ts`, más `userEvent.setup({ delay: null })` (o `fireEvent.change`) para los
+   textos largos. **Criterio de cerrado:** tres corridas seguidas verdes **con la misma carga** que
+   las puso rojas.
+
+9. **Un Leaflet falso compartido.** `LocationMapModal` carga Leaflet con `import()` dinámico, y en
+   jsdom no hay mapa: hace falta `vi.mock('leaflet')` con un `L` falso (`map`, `tileLayer`,
+   `featureGroup`, `marker`, `divIcon`) que guarde el callback de `moveend` para dispararlo a mano.
+   **Lo necesitan cuatro lotes** (W3 `investor.buy`, W4 `investor.unit.$unitId.index`, W5
+   `project.$projectId.index`, W7 `LocationMapModal`). Si no se hace acá, van a quedar cuatro copias
+   de un mock no trivial. Va en un archivo propio de soporte (p. ej. `src/test/leaflet-falso.ts`,
+   importado por `vi.mock('leaflet', () => import(…))`).
+
+   *Lo que no va en W0, a propósito:* el stub de `URL.createObjectURL` (R9) es una línea
+   (`vi.stubGlobal`), y las fixtures "completa y mínima" (R4) son distintas por pantalla. Cada lote
+   las arma en su archivo sin chocar con nadie.
+
+### W0b — limpieza de producción
+
 3. **Código muerto, se borra en vez de testearse** (el mismo criterio que `lib/params.ts` en la API,
    SPEC-017 §`apps/api`): `auth/useSession.ts` (`useRequireSession`, 10 statements) no lo importa
-   nadie, solo lo menciona un comentario de `i18n/useTranslation.tsx`; y `formatCompact` de
-   `i18n/format.ts` no tiene ningún uso. Confirmar con grep antes de borrar.
-4. **`routes/-test-mount.tsx` fuera del denominador.** Es soporte de test que vive en `src/` por la
-   convención del prefijo `-` de TanStack Router, y hoy cuenta como código de la app (95%, un
-   statement sin cubrir). Sacarlo del `include` no esconde código de producción.
-5. **Los dos tests que fallan con la cobertura activada.** Con `--coverage`, la suite web tuvo dos
-   corridas rojas seguidas, cada una por un test distinto: `PanelLayout.test.tsx` (*"unread > 9
-   dibuja 9+"*) y `-certifier.stage.detail.test.tsx` (`CER-OBSERVE-001`). La tercera salió verde, y
-   los dos pasan solos y en `pnpm verify`. Tienen el síntoma de un `findBy*` que se queda sin tiempo
-   (espera 1 s por defecto) cuando la suite instrumentada carga la máquina. Hoy no molesta porque
-   CI no corre la cobertura de la web, pero el paso final de esta spec la agrega: **hay que
-   estabilizarlos antes**, o CI va a quedar rojo de vez en cuando por nada.
-6. **Los 4 guardias `typeof window === 'undefined'`** de `auth/session.ts` e `i18n/locale.ts`, que se
-   borran (ver §¿Hay ramas inalcanzables…?).
+   nadie, y `formatCompact` de `i18n/format.ts` no tiene ningún uso. Verificado con grep. **Al
+   borrar `useSession.ts`, actualizar el comentario de `i18n/useTranslation.tsx` que lo nombra**,
+   porque si no queda apuntando a un archivo que no existe.
+
+6. **Los 4 guardias `typeof window === 'undefined'`** de `auth/session.ts` (14, 28) e
+   `i18n/locale.ts` (13, 23) se borran. Son los únicos del front (grep). Quedaron de antes de D-065:
+   `setSession` al lado ya no tiene guardia, y todos los tests corren en jsdom. Los e2e leen
+   `sessionStorage` desde el navegador, no importan el módulo.
+
+8. **Los mapas y fallbacks que no se alcanzan** (§Análisis, primera tabla). **Verificado el
+   supuesto del que depende todo el punto**: cada mapa se indexa con un campo que en
+   `packages/shared` es un `z.enum`, y **las ocho rutas que lo mandan validan la respuesta con
+   `.output`** (`GET /projects`, `/projects/:id`, `/projects/:id/developer`, `/investor/favorites`,
+   `/investor/units`, `/developer/projects`, `/developer/projects/:id/contracts`, `/notifications`).
+   Los tipos del front se **derivan** de esos schemas (SPEC-109). Y el `tsconfig` de la web no tiene
+   `noUncheckedIndexedAccess`, así que indexar un `Record<Enum, …>` compila sin el `??`. Entonces:
+   - `ROLE_LANDING` pasa a `Record<UserRole, string>`, y se borran sus tres `??`.
+   - Los mapas de estado se tipan con su enum (`ProjectStatus`, `UnitStatus`, `MembershipRole`).
+     **Se borran las dos copias de `TONO_POR_ESTADO`** (`developer.projects`,
+     `developer.project.$projectId.index`), que son idénticas a `TONO_PROYECTO`, y se borran los
+     `??` que el tipo vuelve imposibles.
+   - Se borran los `as NotifCategory` de las dos pantallas de notificaciones: el tipo derivado ya es
+     el enum.
+   - `ProjectStatus` está escrito a mano en `api/types.ts` y duplica el de `packages/shared`: se
+     importa en vez de redeclararlo.
+   - El chequeo `never` en `claveEstadoStage` (`lib/investor.ts`).
+   - Se marcan las cinco que quedan: `session ?` ×3 y `case 'admin'` ×2.
+
+   **Toca archivos de W1–W9, y por eso W0 va antes que todos.** El bug de `delivered` en
+   `investor.units.tsx` **no** entra acá: cambia lo que se ve, y es de W3 con su test.
+
+### La decisión del dueño
+
 7. **`main.tsx`: tratarlo como `server.ts` de la API.** Es el bootstrap (`createRoot(...).render`),
    el equivalente exacto de `apps/api/src/server.ts`, que la API excluye. SPEC-017 decía que
    `server.ts` "vuelve a contar" y **nunca se hizo** (`apps/api/vitest.config.mts` lo sigue
-   excluyendo). Decisión del dueño: o se excluyen los dos, o los dos cuentan con su lógica
-   extraída. Lo que no puede quedar es un criterio distinto para cada lado.
-
-8. **Los mapas y fallbacks que no se alcanzan** (§Análisis, primera tabla): tipar
-   `ROLE_LANDING` como `Record<UserRole, string>`, tipar los mapas de estado con su enum
-   (`ProjectStatus`, `UnitStatus`, `MembershipRole`), **borrar las dos copias de
-   `TONO_POR_ESTADO`** (son iguales a `TONO_PROYECTO`), borrar los `??` que el tipo ya vuelve
-   imposibles, y el chequeo `never` en `claveEstadoStage`. Marcar las cinco que quedan (`session ?`
-   ×3, `case 'admin'` ×2). **Toca archivos de W1–W9: por eso W0 va antes que todos.**
+   excluyendo). O se excluyen los dos, o los dos cuentan con su lógica extraída. Lo que no puede
+   quedar es un criterio distinto para cada lado. **Recomendación: excluir los dos**, con la misma
+   razón escrita en los dos `vitest.config`. El único `if` de `main.tsx` (`#root` ausente) no se
+   alcanza, y extraer la lógica para testear un `createRoot().render()` no prueba nada.
 
 ## Los lotes — archivo por archivo
 
@@ -87,14 +163,14 @@ lo que les falta (statements + branches sin cubrir).
 
 | Lote | Qué | Archivos | Statements sin cubrir | Branches sin cubrir | Depende de |
 |---|---|---|---|---|---|
-| **W0** | La preparación compartida (arriba) | 1 | 1 | 0 | — |
+| **W0** | La preparación compartida (arriba): W0a infraestructura de test, W0b limpieza de producción en ~20 archivos | — | ~20 (lo que borra) | ~29 (salen del denominador) | la decisión del punto 7 |
 | **W1** | Pantallas del developer, panel (`developer.*` sin `$projectId`) | 10 | 223 | 201 | W0 |
 | **W2** | Pantallas del developer, por proyecto (`developer.project.$projectId.*`) | 5 | 199 | 182 | W0 |
-| **W3** | Pantallas del investor, panel (`investor.*` sin `unit`) | 6 | 165 | 158 | W0 (`validateSearch`) |
-| **W4** | Pantallas del investor, por unidad (`investor.unit.$unitId.*`) | 4 | 174 | 199 | W0 |
-| **W5** | `project.$projectId.*` — **son del investor** (`INVESTOR_ROLES`, verificado), no "compartidas" como decía SPEC-017 | 4 | 209 | 275 | W0 |
+| **W3** | Pantallas del investor, panel (`investor.*` sin `unit`) | 6 | 165 | 158 | W0 (puntos 2 y 9) |
+| **W4** | Pantallas del investor, por unidad (`investor.unit.$unitId.*`) | 4 | 174 | 199 | W0 (puntos 1 y 9) |
+| **W5** | `project.$projectId.*` — **son del investor** (`INVESTOR_ROLES`, verificado), no "compartidas" como decía SPEC-017 | 4 | 209 | 275 | W0 (puntos 1 y 9) |
 | **W6** | Admin, públicas e infraestructura: `admin.index`, `public.dossier.$shareToken`, `index`, `__root`, `main`, `router`, `useSession`, `lib/observability` | 8 | 90 | 66 | W0 (puntos 3 y 7) |
-| **W7** | Modales y `components/ui/dialog.tsx` | 9 | 102 | 79 | W0 |
+| **W7** | Modales y `components/ui/dialog.tsx` | 9 | 102 | 79 | W0 (punto 9: el Leaflet falso) |
 | **W8** | El resto de `components/` (cards, controles, `PanelLayout`, `ProfileScreen`, `ProjectCard`, `ActionCard`) | 24 | 52 | 172 | W0 (punto 8: `PanelLayout`) |
 | **W9** | `lib/`, `auth/`, `i18n/`, `api/port.ts`, y las ramas sueltas de `notary.*`/`certifier.*`/`login` | 19 | 61 | 55 | W0 (puntos 3, 6 y 8) |
 
@@ -405,7 +481,7 @@ Por qué alcanza con eso:
 
 | Archivo | Por qué chocaría | Regla |
 |---|---|---|
-| `routes/-test-mount.tsx` | Cada rol nuevo necesita su usuario, y W3 necesita `validateSearch` | Solo W0. Si un lote descubre que le falta algo más, lo pide; no lo edita |
+| `routes/-test-mount.tsx` y el Leaflet falso | Cada rol nuevo necesita su usuario, W3 necesita `validateSearch`, y cuatro lotes necesitan el mapa | Solo W0. Si un lote descubre que le falta algo más, lo pide; no lo edita |
 | `apps/web/vitest.config.ts` | Cada tanda de SPEC-017 subía los umbrales | Solo W0 (exclusiones) y §Consolidación (umbrales) |
 | `specs/SPEC-019-…` (esta) | Cada tanda escribía su sección | Ningún lote la edita: cada agente devuelve su resultado y lo transcribe quien consolida |
 | `components/domain/modals.test.tsx` | W7 es su dueño natural | Solo W7 |
