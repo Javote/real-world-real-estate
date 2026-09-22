@@ -322,6 +322,15 @@ transacción, si la unidad ya tiene contrato, `UNIT_NOT_AVAILABLE` (409) — el 
 ya existía para la unidad `sold`. Queda **una decisión del dueño, fuera de esta spec**: el `PATCH`
 sigue dejando poner en `available` una unidad con contrato, que después no se puede volver a vender.
 
+### A3 — cerrado 2026-09-22
+
+`capital.routes.ts` al **100% en las cuatro métricas**, con las 3 branches y las 4 funciones por
+test y **ninguna marca**, tal como decía la receta. Archivo nuevo `capital-coverage.test.ts`, con un
+solo `beforeAll`: el investor de la plantilla compra una segunda unidad de Torre Test, se libera una
+etapa certificada de verdad y la liberación se corre a otro mes; más un developer con un proyecto
+propio sin contratos. `capital.test.ts` no se tocó: sigue fijando los totales exactos de la
+plantilla.
+
 ## Paralelismo — qué se puede hacer a la vez, medido contra el código
 
 **Con el paso 0 cerrado, los seis lotes pueden correr los seis a la vez.** Se verificó, no se
