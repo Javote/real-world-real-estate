@@ -456,6 +456,42 @@ test spend_rejects_a_second_output_at_the_exact_script_address() fail {
   )
 }
 
+// El comentario de SPEC-303 en el `spend` (arriba) argumenta por qué
+// `carrying_thread` filtrando solo por payment credential no alcanza a
+// romper la garantía del hilo — pero lo argumenta, no lo prueba. Este test
+// arma exactamente el ataque que describe: un segundo output con el MISMO
+// payment credential del script pero un staking credential distinto,
+// cargando otra unidad del mismo token (la unidad "donada" del mismo hueco
+// de unicidad que documentan C-01/SPEC-301). `at_address` (línea 101) no lo
+// ve —la dirección completa difiere— así que solo `carrying_thread` puede
+// estar rechazándolo.
+test spend_rejects_thread_split_across_a_staking_variant_of_the_script_address() fail {
+  let old = datum_at(Pending, True)
+  let new = StageDatum { ..old, state: InProgress }
+  let variant_address =
+    address.from_script(script_hash) |> address.with_delegation_key(other_key)
+  let decoy =
+    Output {
+      address: variant_address,
+      value: assets.from_lovelace(2_000_000)
+        |> assets.add(script_hash, stage_ref, 1),
+      datum: NoDatum,
+      reference_script: None,
+    }
+  stage.spend(
+    admin_key,
+    Some(old),
+    Advance { to: InProgress, completion: None },
+    own_ref,
+    tx(
+      [script_input(old)],
+      [script_output_with(InlineDatum(new), locked_value()), decoy],
+      [admin_key],
+      100,
+    ),
+  )
+}
+
 test spend_rejects_missing_datum() fail {
   let old = datum_at(Pending, True)
   let new = StageDatum { ..old, state: InProgress }
