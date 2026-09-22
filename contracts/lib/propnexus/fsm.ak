@@ -404,6 +404,22 @@ test t_evolution_rejects_evidence_root_mismatch_between_redeemer_and_datum() {
   )
 }
 
+// El `completed_at` que queda en el datum tiene que ser el `now` que declara
+// el redeemer — el chequeo de ventana de validez en stage.ak valida ese `now`,
+// no `completed_at` directamente. Sin esta regla, el datum podría persistir
+// una fecha nunca verificada contra la ventana: exactamente lo que la
+// garantía anti-backdating del archivo dice sostener.
+test t_evolution_rejects_completed_at_mismatch_between_redeemer_and_now() {
+  let old = sample(InProgress, False)
+  let new = StageDatum { ..old, state: Completed, completed_at: 999 }
+  !valid_datum_evolution(
+    old,
+    new,
+    Completed,
+    Some(Completion { evidence_root: "", now: 5 }),
+  )
+}
+
 test t_evolution_rejects_leaving_terminal() {
   let old =
     StageDatum {
