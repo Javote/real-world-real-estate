@@ -288,6 +288,17 @@ const updateProjectProcedure = orpc
   .handler(async ({ input, context, errors }) => {
     const { id, ...body } = input;
 
+    // Un id inexistente daba 500: `executeTakeFirstOrThrow()` tira un error
+    // que `relanzarRestriccionComoOrpc` no clasifica (no es una restricción
+    // violada). `GET /projects/:id` ya da 404 para lo mismo — esto lo alinea
+    // (SPEC-018 §A5, mismo bug que `users.routes.ts` cerró en A4).
+    const existe = await db
+      .selectFrom("Project")
+      .select("id")
+      .where("id", "=", id)
+      .executeTakeFirst();
+    if (!existe) throw new ORPCError("NOT_FOUND", { message: "Project not found" });
+
     const project = await db
       .updateTable("Project")
       .set({
@@ -497,8 +508,10 @@ const inviteCertifierProcedure = orpc
             errors.INVITATION_ALREADY_PENDING({
               message: "Certifier already has a pending invitation for this project"
             }),
+          /* v8 ignore start -- @preserve: el handler ya confirmó que el proyecto y el certifier existen antes del insert (SPEC-018) */
           RELATED_RESOURCE_NOT_FOUND: () =>
             new ORPCError("NOT_FOUND", { message: "Project or user not found" })
+          /* v8 ignore stop -- @preserve */
         })
       );
 

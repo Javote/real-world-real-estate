@@ -285,6 +285,7 @@ async function anchorEvent(
   previous: StageRow | null
 ): Promise<OnChainEventRow> {
   // Idempotencia (regla 8): un evento ya anclado no se vuelve a anclar.
+  /* v8 ignore if -- @preserve: los tres llamadores le pasan un evento recién insertado, sin txid (SPEC-018) */
   if (event.txid) return event;
 
   // El root que va al datum sale del bundle del stage. Antes de que existiera
@@ -303,6 +304,7 @@ async function anchorEvent(
             // El datum previo se reconstruye con el root que ya tenía: si el
             // bundle se creó recién, el UTxO viejo NO lo lleva.
             previous: buildStageDatum(
+              /* v8 ignore next -- @preserve: `Completed` es terminal (D-020, packages/shared STAGE_TRANSITIONS): nunca hay una transición CON ESE stage de origen, así que `previous.state` nunca es "Completed" (SPEC-018) */
               toDatumSource(previous, previous.state === "Completed" ? root : "")
             ),
             next: buildStageDatum(toDatumSource(stage, stage.state === "Completed" ? root : ""))

@@ -123,6 +123,7 @@ async function reconciliar(
   let confirmados = 0;
 
   for (const evento of pendientes) {
+    /* v8 ignore if -- @preserve: la query de arriba ya filtra `txid is not null` (SPEC-018) */
     if (!evento.txid) continue;
 
     // Uno por uno y sin `Promise.all`: son llamadas a un proveedor externo con
@@ -268,6 +269,7 @@ export async function repararHilosSospechosos(limite = TOPE_SOSPECHOSOS): Promis
   const reparados: HiloReparado[] = [];
 
   for (const sospechoso of sospechosos) {
+    /* v8 ignore if -- @preserve: `hilosSospechosos()` ya filtra `eventType = "STAGE_TRANSITION"` (siempre trae `toState`) y `stageId is not null` (SPEC-018) */
     if (!sospechoso.stageId || !sospechoso.toState) continue;
 
     let vivo: LiveThread | null;
@@ -284,6 +286,7 @@ export async function repararHilosSospechosos(limite = TOPE_SOSPECHOSOS): Promis
     if (!vivo || vivo.datum.state !== sospechoso.toState) continue;
 
     const [txid] = vivo.outputRef.split("#");
+    /* v8 ignore if -- @preserve: el adaptador arma `outputRef` como `${txHash}#${índice}`: la parte antes de `#` nunca es vacía (SPEC-018) */
     if (!txid) continue;
 
     const escrito = await db
@@ -291,6 +294,7 @@ export async function repararHilosSospechosos(limite = TOPE_SOSPECHOSOS): Promis
       .set({
         txid,
         outputRef: vivo.outputRef,
+        /* v8 ignore next -- @preserve: `disabled` ya salió en el `if` de arriba, y los adaptadores `simulated`/`real` siempre traen `network` (SPEC-018) */
         network: anchorPort().network ?? "Preprod",
         status: "Pending",
         updatedAt: new Date()

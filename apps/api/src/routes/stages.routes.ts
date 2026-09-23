@@ -64,6 +64,7 @@ const stageDetailProcedure = os
       .where("id", "=", input.id)
       .executeTakeFirst();
 
+    /* v8 ignore if -- @preserve: authorize({ proyecto: { via: "Stage" } }) ya cargó el stage (SPEC-018) */
     if (!stage) throw new ORPCError("NOT_FOUND", { message: "Stage not found" });
 
     // EVIDENCE_SAFE_COLUMNS, no selectAll(): esta ruta devolvía storagePath
@@ -125,6 +126,7 @@ const updateStageProcedure = orpc
       .where("id", "=", id)
       .executeTakeFirst();
 
+    /* v8 ignore if -- @preserve: authorize({ proyecto: { via: "Stage" } }) ya cargó el stage (SPEC-018) */
     if (!stageExisting) throw new ORPCError("NOT_FOUND", { message: "Stage not found" });
 
     const tocaIdentidad = body.sequenceOrder !== undefined || body.validationCritical !== undefined;
@@ -208,6 +210,7 @@ const transitionStageProcedure = orpc
     });
 
     if (!resultado.ok) {
+      /* v8 ignore if -- @preserve: authorize({ proyecto: { via: "Stage" } }) ya cargó el stage (SPEC-018) */
       if (resultado.status === 404)
         throw new ORPCError("NOT_FOUND", { message: "Stage not found" });
       if (resultado.code === "STAGE_TRANSITION_INVALID") {
