@@ -185,7 +185,7 @@ function AdminPanel() {
               <p className="text-body text-text-muted">{t('admin.noInvitations')}</p>
             ) : (
               <ul className="flex flex-col gap-s2">
-                {(invitaciones ?? []).map((i) => (
+                {invitaciones?.map((i) => (
                   <li key={i.id} className="flex items-center justify-between gap-s3">
                     <span className="text-body text-text-primary">{i.certifierName}</span>
                     <StatusPill tone={ESTADO[i.status].tone}>{t(ESTADO[i.status].key)}</StatusPill>

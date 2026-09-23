@@ -5,11 +5,13 @@
 
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import {
+  type AnyValidator,
   createMemoryHistory,
   createRootRoute,
   createRoute,
   createRouter,
   Outlet,
+  type RouteComponent,
   RouterProvider
 } from '@tanstack/react-router'
 import { render } from '@testing-library/react'
@@ -72,8 +74,8 @@ export function autenticarComo(user: Session['user']) {
 /** Lo mínimo que `montarRuta` necesita de una `Route` real de TanStack Router. */
 interface RutaMontable {
   options: {
-    component?: () => React.ReactElement
-    validateSearch?: (raw: Record<string, unknown>) => unknown
+    component?: RouteComponent
+    validateSearch?: AnyValidator
   }
 }
 
@@ -87,7 +89,7 @@ interface RutaMontable {
  * esto esas ~30 ramas no se ejecutan nunca).
  */
 export function montarRuta(
-  componente: (() => React.ReactElement) | RutaMontable,
+  componente: RouteComponent | RutaMontable,
   path: string,
   rutasExtra: string[] = [],
   entrada?: string

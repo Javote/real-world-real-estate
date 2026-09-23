@@ -93,6 +93,13 @@ Ya no bloquean a ningún lote.
    **Hecho:** `montarRuta` ahora acepta el componente pelado (forma vieja) **o** la `Route` real, por
    overload — no migró los 19 casts existentes de notary/certifier (quedan para quien toque esos
    archivos), pero W3–W5 ya pueden pasar `Route` directo y no necesitan el cast.
+   **Corrección (2026-09-23, tras W6):** la primera versión **no compilaba** con una `Route` real:
+   `RutaMontable` tipaba `component` como `() => ReactElement` (TanStack lo tipa `RouteComponent`,
+   que recibe `props`) y `validateSearch` como función (TanStack admite también un objeto). Ahora
+   usa `RouteComponent` y `AnyValidator`, verificado con `tsc` contra `investor.buy`,
+   `investor.notifications` y `admin.index` y con el componente pelado. W6 se escribió con el cast
+   viejo (`Route.options.component as …`) porque ninguna de sus rutas necesita `validateSearch`;
+   sigue válido, y no hace falta migrarlo.
 
 4. **`routes/-test-mount.tsx` fuera del denominador.** Es soporte de test que vive en `src/` por la
    convención del prefijo `-` de TanStack Router, y hoy cuenta como código de la app (19/20
@@ -440,6 +447,7 @@ Columna **Recetas**: las familias de arriba. Columna **Qué más**: lo propio de
 | Archivo | Br | api | Recetas | Qué más |
 |---|---|---|---|---|
 | `admin.index.tsx` | 44 | `listProjects`, `getProject`, `listProjectCertifierInvitations`, `listUsers`, `inviteCertifier` | R1 R2 R5 | Sin proyectos (`projectId = ''`, las queries no corren). Elegir otro proyecto en el select. Proyecto sin miembros y con miembros. Usuarios: un verifier invitable, uno inactivo, uno que ya certifica, uno con invitación pendiente (el filtro de 87-88 tiene cuatro condiciones). El error de invitar **con** un código conocido (`ERRORES_CON_NOMBRE`) y con uno desconocido (genérico). **139: ya se borró** (W0b) |
+| ↳ **W6 ✅ 2026-09-23** (`e352585`) | 0 | — | — | **`admin.index.tsx:188`, el segundo `(invitaciones ?? [])`, era inalcanzable y se borró** (`invitaciones?.map`): la línea 184 ya tomó la otra rama con `invitaciones === undefined`. Con eso `admin.index.tsx` queda en 40/40 branches (100% en las cuatro métricas) y el lote entero al 100% |
 | `public.dossier.$shareToken.tsx` | 8 | `getPublicDossier` | R2 R4 | 404 (token vencido o inválido), con datos, con y sin firma. Sin sesión: **no** usa `autenticarComo` |
 | `index.tsx` | 4 | — | — | Sin sesión → `/login`; con sesión → el landing del rol. **13, el `??`: ya se borró** (W0b) |
 | `__root.tsx`, `router.tsx` | 0 (4 statements) | — | — | Montar el router real (`getRouter()`) en un test: cubre los dos |
