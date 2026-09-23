@@ -1,8 +1,14 @@
 import { describe, expect, it } from 'vitest'
+import { ApiError } from '#/api/port'
 import {
   anclajeVigenteDelStage,
+  claveEstadoStage,
+  claveNovedad,
   confirmacionesNuevas,
+  esFoto,
+  formatoArchivo,
   intervaloDeNovedades,
+  reintentarSiNoEsAusencia,
   unicosPorStageId
 } from './investor'
 
@@ -107,5 +113,51 @@ describe('confirmacionesNuevas', () => {
   it('no cuenta un evento que sigue Pending', () => {
     const previo = [{ id: 'a', status: 'Pending' }]
     expect(confirmacionesNuevas(previo, previo)).toBe(0)
+  })
+})
+
+describe('reintentarSiNoEsAusencia', () => {
+  it('no reintenta un 403 ni un 404: son la respuesta', () => {
+    expect(reintentarSiNoEsAusencia(0, new ApiError(403, 'x'))).toBe(false)
+    expect(reintentarSiNoEsAusencia(0, new ApiError(404, 'x'))).toBe(false)
+  })
+
+  it('reintenta hasta dos veces otro error de la API y cualquier error que no sea de la API', () => {
+    expect(reintentarSiNoEsAusencia(0, new ApiError(500, 'x'))).toBe(true)
+    expect(reintentarSiNoEsAusencia(2, new ApiError(500, 'x'))).toBe(false)
+    expect(reintentarSiNoEsAusencia(1, new Error('red'))).toBe(true)
+  })
+})
+
+describe('esFoto', () => {
+  it('es foto por tipo de evidencia o por MIME de imagen', () => {
+    expect(esFoto('photo', 'application/pdf')).toBe(true)
+    expect(esFoto('document', 'image/png')).toBe(true)
+    expect(esFoto('document', 'application/pdf')).toBe(false)
+  })
+})
+
+describe('formatoArchivo', () => {
+  it.each([
+    ['application/pdf', 'PDF'],
+    ['image/jpeg', 'JPEG'],
+    ['image/jpg', 'JPEG'],
+    ['image/png', 'PNG'],
+    ['application/zip', 'inspection']
+  ])('%s → %s', (mime, esperado) => {
+    expect(formatoArchivo(mime, 'inspection')).toBe(esperado)
+  })
+})
+
+describe('claveNovedad', () => {
+  it('traduce un tipo conocido y cae a la genérica con uno desconocido', () => {
+    expect(claveNovedad('STAGE_TRANSITION')).toBe('investor.news.STAGE_TRANSITION')
+    expect(claveNovedad('TIPO_NUEVO')).toBe('investor.news.generic')
+  })
+})
+
+describe('claveEstadoStage', () => {
+  it.each(['Pending', 'InProgress', 'Observed', 'Completed'] as const)('%s', (estado) => {
+    expect(claveEstadoStage(estado)).toBe(`stage.state.${estado}`)
   })
 })

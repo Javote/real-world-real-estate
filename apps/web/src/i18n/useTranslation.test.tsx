@@ -1,5 +1,5 @@
 import { cleanup, fireEvent, render, screen } from '@testing-library/react'
-import { afterEach, beforeEach, describe, expect, it } from 'vitest'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { LocaleProvider, useTranslation } from './useTranslation'
 
 function Probe() {
@@ -123,5 +123,26 @@ describe('LocaleProvider / useTranslation', () => {
       </LocaleProvider>
     )
     await screen.findByText('texto de respaldo')
+  })
+})
+
+describe('useTranslation, bordes', () => {
+  it('fuera del LocaleProvider tira', () => {
+    const spy = vi.spyOn(console, 'error').mockImplementation(() => {})
+    expect(() => render(<Probe />)).toThrow('LocaleProvider')
+    spy.mockRestore()
+  })
+
+  it('un {param} que no se pasa queda literal en la frase', async () => {
+    function ProbeParams() {
+      const { t } = useTranslation()
+      return <p>{t('panel.welcome', { otro: 'x' })}</p>
+    }
+    render(
+      <LocaleProvider>
+        <ProbeParams />
+      </LocaleProvider>
+    )
+    expect((await screen.findByText(/\{name\}/)).textContent).toContain('{name}')
   })
 })

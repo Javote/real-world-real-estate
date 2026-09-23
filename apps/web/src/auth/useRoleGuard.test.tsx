@@ -6,7 +6,7 @@ import {
   Outlet,
   RouterProvider
 } from '@tanstack/react-router'
-import { cleanup, render, screen } from '@testing-library/react'
+import { cleanup, render, screen, waitFor } from '@testing-library/react'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { CERTIFIER_ROLES } from './roles'
 import { type Session, setSession } from './session'
@@ -108,5 +108,63 @@ describe('useRoleGuard', () => {
 
     await screen.findByText('LOGIN-STUB')
     expect(window.sessionStorage.getItem('proptrust.session')).toBeNull()
+  })
+  it('un error de red en /auth/me no desloguea: deja pasar con la sesión local', async () => {
+    setSession({ token: 't', user: CERTIFIER_USER })
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(async () => {
+        throw new TypeError('Failed to fetch')
+      })
+    )
+
+    render(<RouterProvider router={makeRouter('/certifier')} />)
+
+    await screen.findByText('CERTIFIER-READY')
+  })
+
+  it('desmontar con /auth/me pendiente no navega ni marca listo (éxito)', async () => {
+    setSession({ token: 't', user: CERTIFIER_USER })
+    let resolver: (r: Response) => void = () => {}
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(
+        () =>
+          new Promise<Response>((r) => {
+            resolver = r
+          })
+      )
+    )
+
+    const { unmount } = render(<RouterProvider router={makeRouter('/certifier')} />)
+    await waitFor(() => expect(fetch).toHaveBeenCalled())
+    unmount()
+    resolver(new Response(JSON.stringify(CERTIFIER_USER), { status: 200 }))
+    await new Promise((r) => setTimeout(r, 20))
+
+    expect(screen.queryByText('CERTIFIER-READY')).toBeNull()
+  })
+
+  it('desmontar con /auth/me pendiente no navega si después llega un 401', async () => {
+    setSession({ token: 't', user: CERTIFIER_USER })
+    let resolver: (r: Response) => void = () => {}
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(
+        () =>
+          new Promise<Response>((r) => {
+            resolver = r
+          })
+      )
+    )
+
+    const { unmount } = render(<RouterProvider router={makeRouter('/certifier')} />)
+    await waitFor(() => expect(fetch).toHaveBeenCalled())
+    unmount()
+    resolver(new Response('{}', { status: 401 }))
+    await new Promise((r) => setTimeout(r, 20))
+
+    expect(window.sessionStorage.getItem('proptrust.session')).toBeNull()
+    expect(screen.queryByText('LOGIN-STUB')).toBeNull()
   })
 })

@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from 'vitest'
-import { clasificarEntrantes } from './evidenceFiles'
+import { clasificarEntrantes, sha256DeArchivo } from './evidenceFiles'
 
 // SPEC-218 — lo que el front comprueba ANTES de mandar. Es experiencia de
 // usuario, no una barrera: el backend decide con las mismas reglas.
@@ -129,5 +129,77 @@ describe('clasificarEntrantes', () => {
     const r = await clasificarEntrantes([f], [])
 
     expect(r.aceptados).toEqual([f])
+  })
+})
+
+describe('sha256DeArchivo', () => {
+  it('calcula el SHA-256 hex y lo cachea por archivo', async () => {
+    const f = archivo(PDF, 'h.pdf', 'application/pdf')
+    const spy = vi.spyOn(f, 'arrayBuffer')
+    const a = await sha256DeArchivo(f)
+    const b = await sha256DeArchivo(f)
+    expect(a).toMatch(/^[0-9a-f]{64}$/)
+    expect(b).toBe(a)
+    expect(spy).toHaveBeenCalledTimes(1)
+  })
+
+  it('cachea también el "no se pudo": un archivo sin arrayBuffer da null una sola vez', async () => {
+    const f = archivo(PDF, 'v.pdf', 'application/pdf')
+    Object.defineProperty(f, 'arrayBuffer', { value: undefined })
+    expect(await sha256DeArchivo(f)).toBeNull()
+    expect(await sha256DeArchivo(f)).toBeNull()
+  })
+
+  it('sin crypto.subtle (contexto no seguro) da null', async () => {
+    vi.stubGlobal('crypto', {})
+    expect(await sha256DeArchivo(archivo(PDF, 's.pdf', 'application/pdf'))).toBeNull()
+  })
+
+  it('si el digest falla da null', async () => {
+    vi.stubGlobal('crypto', {
+      subtle: {
+        digest: async () => {
+          throw new Error('boom')
+        }
+      }
+    })
+    expect(await sha256DeArchivo(archivo(PDF, 'd.pdf', 'application/pdf'))).toBeNull()
+  })
+})
+
+describe('clasificarEntrantes en navegadores viejos', () => {
+  it('un archivo sin `slice` no se puede leer por bytes: se acepta por su tipo declarado', async () => {
+    const f = archivo(PDF, 'viejo.pdf', 'application/pdf')
+    Object.defineProperty(f, 'slice', { value: undefined })
+    const r = await clasificarEntrantes([f], [])
+    expect(r.aceptados).toEqual([f])
+  })
+
+  it('un slice sin `arrayBuffer` tampoco', async () => {
+    const f = archivo(PDF, 'viejo2.pdf', 'application/pdf')
+    Object.defineProperty(f, 'slice', { value: () => ({}) })
+    const r = await clasificarEntrantes([f], [])
+    expect(r.aceptados).toEqual([f])
+  })
+
+  it('un slice que tira tampoco', async () => {
+    const f = archivo(PDF, 'viejo3.pdf', 'application/pdf')
+    Object.defineProperty(f, 'slice', {
+      value: () => {
+        throw new Error('boom')
+      }
+    })
+    const r = await clasificarEntrantes([f], [])
+    expect(r.aceptados).toEqual([f])
+  })
+
+  it('un archivo ya elegido cuyo hash no se pudo calcular no cuenta para los repetidos', async () => {
+    vi.stubGlobal('crypto', {})
+    const elegido = archivo(PDF, 'elegido.pdf', 'application/pdf', 'igual')
+    const nuevo = archivo(PDF, 'nuevo.pdf', 'application/pdf', 'igual')
+
+    const r = await clasificarEntrantes([nuevo], [elegido])
+
+    expect(r.aceptados).toEqual([nuevo])
   })
 })

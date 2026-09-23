@@ -48,13 +48,10 @@ export function LoginScreen() {
   const [errorKey, setErrorKey] = useState<TranslationKey | null>(null)
   const [busy, setBusy] = useState(false)
 
-  function selectPreset(i: number) {
+  function selectPreset(i: number, p: (typeof ROLE_PRESETS)[number]) {
     setPreset(i)
-    const p = ROLE_PRESETS[i]
-    if (p) {
-      setEmail(p.email)
-      setPassword('')
-    }
+    setEmail(p.email)
+    setPassword('')
     setErrorKey(null)
   }
 
@@ -100,7 +97,7 @@ export function LoginScreen() {
               key={p.key}
               role="tab"
               aria-selected={i === preset}
-              onClick={() => selectPreset(i)}
+              onClick={() => selectPreset(i, p)}
               className="rounded-xl border px-3 py-2 text-sm font-medium"
               style={
                 i === preset

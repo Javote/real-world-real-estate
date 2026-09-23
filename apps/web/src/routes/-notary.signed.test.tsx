@@ -1,4 +1,4 @@
-import { screen } from '@testing-library/react'
+import { screen, within } from '@testing-library/react'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import { api } from '#/api/port'
 import { autenticarComo, montarRuta, NOTARY_USER } from './-test-mount'
@@ -64,5 +64,15 @@ describe('/notary/signed', () => {
     const seccion = await screen.findByTestId('NOT-SIGNED-LIST-001')
     await vi.waitFor(() => expect(seccion.textContent).toContain('5C'))
     expect(seccion.textContent).toContain('cccc')
+  })
+  it('si la lista falla, muestra el estado vacío (no hay datos)', async () => {
+    autenticarComo(NOTARY_USER)
+    vi.spyOn(api, 'listSignatures').mockRejectedValue(new Error('caído'))
+
+    montarRuta(Route.options.component as () => React.ReactElement, '/notary/signed')
+
+    const seccion = await screen.findByTestId('NOT-SIGNED-LIST-001')
+    await within(seccion).findByText('Todavía no firmaste ningún dossier.')
+    expect(seccion.querySelector('ul')).toBeNull()
   })
 })

@@ -9,8 +9,8 @@
 > Nivel 🟢 (tests). El paso final toca CI (🟡).
 >
 > **Paso 0 cerrado 2026-09-23** — W0a en `a7dac17`, W0b en `8be5830`, los dos en `main`. `pnpm
-> verify:all` verde después del merge. **W1 y W2 ✅ 2026-09-23**, junto con W3–W6 (ver más abajo).
-> Lo que sigue abierto son W7–W9.
+> verify:all` verde después del merge. **W1, W2 y W9 ✅ 2026-09-23**, junto con W3–W6 (ver más abajo).
+> Lo que sigue abierto son W7 y W8.
 
 ## Dónde está hoy
 
@@ -520,6 +520,10 @@ ausente, y guardar el nombre (pendiente, vacío que no guarda). `FileDropzone` n
 | `notary.*`, `certifier.*`, `login` | 11 | El estado vacío de `certifier.issued`/`notary.signed`, el "firmando…"/"certificando…" (R5), las dos ramas `null` de `notary.dossier` y `certifier.issued`. **`certifier.index` 49, `notary.index` 48 → marcar (siguen); `login` 70: ya se borró** (W0b) |
 | `auth/session.ts`, `i18n/locale.ts` | 4 | Los 4 `typeof window` ya se borraron (W0b) |
 
+> **W9 ✅ 2026-09-23, al 100% en las cuatro métricas** (los 19 archivos: `lib/`, `auth/`, `i18n/`, `api/port.ts` y las ramas sueltas de notary, certifier y login). Tests nuevos: `api/port.errors.test.ts`, `auth/session.test.ts`, `i18n/locale.test.ts`, `lib/explorer.test.ts`, y casos agregados a los existentes de `investor`, `money`, `evidenceFiles`, `useRoleGuard`, `useTranslation` y las cinco pantallas. `pnpm verify:all` en verde, web 1407/1407.
+>
+> **Código borrado** (comportamiento visible igual): `login.tsx` — el `if (p)` de `selectPreset` (el preset sale de `ROLE_PRESETS.map`, siempre existe; ahora se pasa por parámetro). `lib/investor.ts` — el `default: never` de `claveEstadoStage`, cambiado por un `Record<StageState, TranslationKey>` que da la misma exhaustividad por tipos. **Dos ramas marcadas** (`v8 ignore`): el `session ? …` de `certifier.index.tsx` y `notary.index.tsx`, el mismo caso de `developer.index`.
+>
 ### El resultado, si se hace todo
 
 | | Hoy | Tras W0 (borrar o tipar 23, marcar 5, `main.tsx` 1) | Tras W1-W9 |

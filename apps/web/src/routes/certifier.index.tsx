@@ -46,6 +46,7 @@ function CertifierPanel() {
     <PanelLayout
       rol="certifier"
       title={t('panel.certifier.title')}
+      /* v8 ignore next -- @preserve: `useRoleGuard` hace `setSession` y `setReady(true)` juntos y la pantalla ya salió en `if (!ready) return null`, así que `session` nunca es `null` acá (SPEC-019) */
       context={session ? t('panel.welcome', { name: session.user.fullName }) : undefined}
     >
       <InvitacionesACertificar />

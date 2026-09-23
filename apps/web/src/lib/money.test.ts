@@ -47,3 +47,11 @@ describe('minorToMajor', () => {
     }
   })
 })
+
+describe('majorToMinor con notación científica', () => {
+  // `toString()` pasa a notación científica por encima de 1e21 y por debajo de 1e-6:
+  // ahí no hay decimal que contar, y se rechaza en vez de interpretar mal el exponente.
+  it.each([1e21, 1e-7, 1.5e-7])('rechaza %s', (valor) => {
+    expect(majorToMinor(valor)).toBeNull()
+  })
+})

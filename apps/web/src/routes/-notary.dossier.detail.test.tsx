@@ -129,4 +129,61 @@ describe('/notary/dossier/$dossierId', () => {
     await screen.findByText('Torre A · 4B')
     expect(screen.queryByText('Cimentación')).toBeNull()
   })
+  it('cancelar el modal de rechazo lo cierra sin rechazar', async () => {
+    autenticarComo(NOTARY_USER)
+    vi.spyOn(api, 'getDossier').mockResolvedValue(unDossier())
+    const rechazar = vi.spyOn(api, 'rejectDossier')
+
+    montarRuta(
+      Route.options.component as () => React.ReactElement,
+      '/notary/dossier/$dossierId',
+      ['/notary'],
+      '/notary/dossier/d1'
+    )
+
+    await screen.findByText('Torre A · 4B')
+    await userEvent.click(screen.getByTestId('NOT-DOSSIER-REJECT-001'))
+    await screen.findByLabelText(/observaciones/i)
+    await userEvent.click(screen.getByRole('button', { name: /cancelar/i }))
+
+    await vi.waitFor(() => expect(screen.queryByLabelText(/observaciones/i)).toBeNull())
+    expect(rechazar).not.toHaveBeenCalled()
+  })
+
+  it('mientras firma, el botón dice "Firmando…"', async () => {
+    autenticarComo(NOTARY_USER)
+    vi.spyOn(api, 'getDossier').mockResolvedValue(unDossier())
+    vi.spyOn(api, 'signDossier').mockReturnValue(new Promise(() => {}))
+
+    montarRuta(
+      Route.options.component as () => React.ReactElement,
+      '/notary/dossier/$dossierId',
+      ['/notary'],
+      '/notary/dossier/d1'
+    )
+
+    await screen.findByText('Torre A · 4B')
+    await userEvent.click(screen.getByTestId('NOT-DOSSIER-SIGN-001'))
+
+    await screen.findByText('Firmando…')
+  })
+
+  it('un artifact sin sha256 se lista sin HashChip', async () => {
+    autenticarComo(NOTARY_USER)
+    const base = unDossier()
+    vi.spyOn(api, 'getDossier').mockResolvedValue({
+      ...base,
+      artifacts: [{ ...base.artifacts[0], sha256: null }]
+    })
+
+    montarRuta(
+      Route.options.component as () => React.ReactElement,
+      '/notary/dossier/$dossierId',
+      ['/notary'],
+      '/notary/dossier/d1'
+    )
+
+    await screen.findByText('Cimentación')
+    expect(screen.queryByText(/dddd/)).toBeNull()
+  })
 })

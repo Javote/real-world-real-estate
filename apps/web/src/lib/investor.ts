@@ -34,21 +34,16 @@ export function claveNovedad(eventType: string): TranslationKey {
   return CLAVE_NOVEDAD[eventType] ?? 'investor.news.generic'
 }
 
+// `Record<StageState, …>`: agregar un estado a la FSM sin traducirlo acá no compila.
+const CLAVE_ESTADO_STAGE: Record<StageState, TranslationKey> = {
+  Pending: 'stage.state.Pending',
+  InProgress: 'stage.state.InProgress',
+  Observed: 'stage.state.Observed',
+  Completed: 'stage.state.Completed'
+}
+
 export function claveEstadoStage(state: StageState): TranslationKey {
-  switch (state) {
-    case 'Pending':
-      return 'stage.state.Pending'
-    case 'InProgress':
-      return 'stage.state.InProgress'
-    case 'Observed':
-      return 'stage.state.Observed'
-    case 'Completed':
-      return 'stage.state.Completed'
-    default: {
-      const _exhaustivo: never = state
-      return _exhaustivo
-    }
-  }
+  return CLAVE_ESTADO_STAGE[state]
 }
 
 /**

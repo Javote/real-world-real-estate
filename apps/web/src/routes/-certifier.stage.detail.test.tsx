@@ -121,4 +121,32 @@ describe('/certifier/stage/$stageId', () => {
     expect(observar).toHaveBeenCalledWith('s1', 'Falta la certificación de obra')
     await screen.findByText('/certifier')
   })
+  it('cancelar el modal de observación lo cierra sin observar', async () => {
+    autenticarComo(CERTIFIER_USER)
+    vi.spyOn(api, 'getCertifierStage').mockResolvedValue(unStage())
+    const observar = vi.spyOn(api, 'observeStage')
+
+    montarStage()
+
+    await screen.findByText('plano.pdf')
+    await userEvent.click(screen.getByRole('button', { name: 'Observar' }))
+    await screen.findByLabelText(/observaciones/i)
+    await userEvent.click(screen.getByRole('button', { name: /cancelar/i }))
+
+    await vi.waitFor(() => expect(screen.queryByLabelText(/observaciones/i)).toBeNull())
+    expect(observar).not.toHaveBeenCalled()
+  })
+
+  it('mientras certifica, el botón dice "Certificando…"', async () => {
+    autenticarComo(CERTIFIER_USER)
+    vi.spyOn(api, 'getCertifierStage').mockResolvedValue(unStage())
+    vi.spyOn(api, 'certifyStage').mockReturnValue(new Promise(() => {}))
+
+    montarStage()
+
+    await screen.findByText('plano.pdf')
+    await userEvent.click(screen.getByTestId('CER-CERTIFY-001'))
+
+    await screen.findByText('Certificando…')
+  })
 })
