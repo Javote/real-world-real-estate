@@ -1,10 +1,11 @@
-import { render as renderRTL, screen } from '@testing-library/react'
+import { act, fireEvent, render as renderRTL, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import type { ReactElement } from 'react'
-import { describe, expect, it, vi } from 'vitest'
+import { afterEach, describe, expect, it, vi } from 'vitest'
 import { LocaleProvider } from '#/i18n/useTranslation'
 import { AnnounceProvider } from '#/lib/announce'
 import { AnchoringSuccessModal } from './AnchoringSuccessModal'
+import { HashChip } from './HashChip'
 import { MerkleRootProof } from './MerkleRootProof'
 import { ReleaseProofList } from './ReleaseProofList'
 import { StageChips } from './StageChips'
@@ -253,5 +254,177 @@ describe('P10 · ReleaseProofList', () => {
     // on-chain es por release, no por contrato.
     expect(screen.getAllByLabelText('Copiar')).toHaveLength(1)
     expect(screen.getByText('Pendiente')).toBeDefined()
+  })
+})
+
+// R11 — SPEC-019 W8: variantes de los patrones de prueba.
+
+describe('P5 · MerkleRootProof · variantes', () => {
+  const labels = {
+    rootLabel: 'Merkle root',
+    txidLabel: 'TXID',
+    filesLabel: 'Archivos',
+    pending: 'Pendiente',
+    pendingRoot: 'Sin raíz todavía',
+    copy: 'Copiar',
+    copied: 'Copiado'
+  }
+
+  it('sin raíz no afirma el paquete: dice su propio pendiente y no dibuja chip de raíz', () => {
+    render(<MerkleRootProof merkleRoot="" txid={null} labels={labels} />)
+
+    expect(screen.getByText('Sin raíz todavía')).toBeDefined()
+    expect(screen.getByText('Pendiente')).toBeDefined()
+    expect(screen.queryByLabelText('Copiar')).toBeNull()
+  })
+
+  it('sin raíz ni pendingRoot usa el pendiente común', () => {
+    const { pendingRoot: _omitido, ...sinPendingRoot } = labels
+    render(<MerkleRootProof merkleRoot="" txid={TXID} labels={sinPendingRoot} />)
+
+    expect(screen.getByText('Pendiente')).toBeDefined()
+  })
+
+  it('el TXID abre su detalle solo si quien lo usa pasa el handler', async () => {
+    const abrir = vi.fn()
+    const { rerender } = render(
+      <MerkleRootProof merkleRoot={ROOT} txid={TXID} labels={labels} testId="merkle" />
+    )
+    // Raíz + TXID, cada uno con su botón de copia y ninguno cliqueable.
+    expect(screen.getAllByRole('button')).toHaveLength(2)
+    expect(screen.getByTestId('merkle')).toBeDefined()
+
+    rerender(<MerkleRootProof merkleRoot={ROOT} txid={TXID} onOpenTxid={abrir} labels={labels} />)
+    await userEvent.click(screen.getByText('bbbbbb...bbbb'))
+    expect(abrir).toHaveBeenCalledOnce()
+  })
+
+  it('un archivo del bundle abre su camino de Merkle si hay handler', async () => {
+    const abrir = vi.fn()
+    const archivo = { id: '1', nombre: 'acta.pdf', sha256: 'c'.repeat(64) }
+    const { rerender } = render(
+      <MerkleRootProof merkleRoot={ROOT} txid={TXID} archivos={[archivo]} labels={labels} />
+    )
+    expect(screen.getByText('cccccc...cccc').closest('button')).toBeNull()
+
+    rerender(
+      <MerkleRootProof
+        merkleRoot={ROOT}
+        txid={TXID}
+        archivos={[archivo]}
+        onOpenArchivo={abrir}
+        labels={labels}
+      />
+    )
+    await userEvent.click(screen.getByText('cccccc...cccc'))
+    expect(abrir).toHaveBeenCalledWith(archivo)
+  })
+
+  it('una lista de archivos vacía no dibuja la sección', () => {
+    render(<MerkleRootProof merkleRoot={ROOT} txid={TXID} archivos={[]} labels={labels} />)
+    expect(screen.queryByText('Archivos')).toBeNull()
+  })
+})
+
+describe('P10 · ReleaseProofList · variantes', () => {
+  const labels = { stage: 'Etapa', pending: 'Pendiente', copy: 'Copiar', copied: 'Copiado' }
+  const release = {
+    stageNumber: 1,
+    amountMinorUnits: 400000,
+    currency: 'USD',
+    releasedAt: '2026-03-09T12:00:00.000Z',
+    txid: TXID
+  }
+
+  it('formatea monto y fecha con lo que le pasan, y sin handler el TXID no abre nada', () => {
+    render(
+      <ReleaseProofList
+        releases={[release]}
+        formatCurrency={(m, c) => `${c} ${m / 100}`}
+        formatDate={(iso) => iso.slice(0, 10)}
+        labels={labels}
+      />
+    )
+
+    expect(screen.getByText('USD 4000')).toBeDefined()
+    expect(screen.getByText('2026-03-09')).toBeDefined()
+    expect(screen.getAllByRole('button')).toHaveLength(1)
+  })
+
+  it('con onOpenTxid, tocar el TXID entrega la liberación', async () => {
+    const abrir = vi.fn()
+    render(
+      <ReleaseProofList
+        releases={[release]}
+        onOpenTxid={abrir}
+        formatCurrency={(m, c) => `${c} ${m / 100}`}
+        formatDate={(iso) => iso.slice(0, 10)}
+        labels={labels}
+      />
+    )
+
+    await userEvent.click(screen.getByText('bbbbbb...bbbb'))
+    expect(abrir).toHaveBeenCalledWith(release)
+  })
+})
+
+describe('P2 · HashChip · variantes', () => {
+  const HASH = 'd'.repeat(64)
+
+  afterEach(() => {
+    vi.useRealTimers()
+  })
+
+  it('con etiqueta la muestra dentro del chip, en las dos formas', () => {
+    const { rerender } = render(
+      <HashChip hash={HASH} label="txid" copyLabel="Copiar" copiedLabel="Copiado" />
+    )
+    expect(screen.getByText('txid')).toBeDefined()
+
+    rerender(
+      <HashChip
+        hash={HASH}
+        label="hash"
+        onOpenDetail={vi.fn()}
+        copyLabel="Copiar"
+        copiedLabel="Copiado"
+      />
+    )
+    expect(screen.getByText('hash')).toBeDefined()
+  })
+
+  it.each([
+    ['sin detalle', undefined],
+    ['con detalle', vi.fn()]
+  ])('copiar %s cambia el nombre a "Copiado" y vuelve solo', async (_caso, onOpenDetail) => {
+    vi.useFakeTimers()
+    Object.assign(navigator, { clipboard: { writeText: vi.fn().mockResolvedValue(undefined) } })
+    render(
+      <HashChip
+        hash={HASH}
+        {...(onOpenDetail ? { onOpenDetail } : {})}
+        copyLabel="Copiar"
+        copiedLabel="Copiado"
+      />
+    )
+
+    await act(async () => {
+      fireEvent.click(screen.getByLabelText('Copiar'))
+    })
+    expect(screen.getByLabelText('Copiado')).toBeDefined()
+
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(1600)
+    })
+    expect(screen.getByLabelText('Copiar')).toBeDefined()
+  })
+
+  it('sin API de portapapeles igual marca copiado y no rompe', async () => {
+    Object.assign(navigator, { clipboard: undefined })
+    render(<HashChip hash={HASH} copyLabel="Copiar" copiedLabel="Copiado" />)
+
+    fireEvent.click(screen.getByLabelText('Copiar'))
+
+    expect(await screen.findByLabelText('Copiado')).toBeDefined()
   })
 })

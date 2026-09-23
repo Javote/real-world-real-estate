@@ -7,9 +7,12 @@ import {
   Outlet,
   RouterProvider
 } from '@tanstack/react-router'
-import { render, screen } from '@testing-library/react'
-import { describe, expect, it, vi } from 'vitest'
+import { render, screen, waitFor } from '@testing-library/react'
+import userEvent from '@testing-library/user-event'
+import type { ReactNode } from 'react'
+import { afterEach, describe, expect, it, vi } from 'vitest'
 import { api } from '#/api/port'
+import { clearSession, setSession } from '#/auth/session'
 import { LocaleProvider } from '#/i18n/useTranslation'
 import { PanelLayout } from './PanelLayout'
 
@@ -17,7 +20,27 @@ vi.mock('#/api/port', () => ({
   api: { getUnreadCount: vi.fn(async () => ({ unread: 0 })) }
 }))
 
-function renderLayout(back?: { label: string; onClick: () => void }) {
+type Rol = 'investor' | 'developer' | 'notary' | 'certifier' | 'admin'
+
+// Las pantallas a las que la campana y el perfil pueden llevar: el test lee
+// dónde terminó el router, no un mock de `navigate`.
+const DESTINOS = [
+  '/admin',
+  '/investor/profile',
+  '/investor/notifications',
+  '/developer',
+  '/developer/profile',
+  '/notary',
+  '/notary/profile',
+  '/certifier',
+  '/certifier/profile'
+]
+
+function renderLayout(
+  back?: { label: string; onClick: () => void },
+  opciones: { rol?: Rol; headerAction?: ReactNode; context?: string } = {}
+) {
+  const { rol = 'developer', headerAction, context } = opciones
   const rootRoute = createRootRoute({
     component: () => (
       <QueryClientProvider
@@ -34,7 +57,13 @@ function renderLayout(back?: { label: string; onClick: () => void }) {
     getParentRoute: () => rootRoute,
     path: '/developer/',
     component: () => (
-      <PanelLayout rol="developer" title="Inversores" {...(back ? { back } : {})}>
+      <PanelLayout
+        rol={rol}
+        title="Inversores"
+        {...(back ? { back } : {})}
+        {...(headerAction ? { headerAction } : {})}
+        {...(context ? { context } : {})}
+      >
         <p>contenido</p>
       </PanelLayout>
     )
@@ -45,7 +74,7 @@ function renderLayout(back?: { label: string; onClick: () => void }) {
     '/developer/capital',
     '/developer/units',
     '/developer/progress',
-    '/developer/profile'
+    ...DESTINOS.filter((d) => d !== '/developer')
   ].map((path) =>
     createRoute({
       getParentRoute: () => rootRoute,
@@ -59,8 +88,11 @@ function renderLayout(back?: { label: string; onClick: () => void }) {
     history: createMemoryHistory({ initialEntries: ['/developer/'] })
   })
 
-  return render(<RouterProvider router={router} />)
+  render(<RouterProvider router={router} />)
+  return router
 }
+
+afterEach(() => clearSession())
 
 describe('PanelLayout (D-074)', () => {
   it('siempre muestra logo, campana, perfil e idioma', async () => {
@@ -100,5 +132,69 @@ describe('PanelLayout (D-074)', () => {
       const campana = await screen.findByRole('button', { name: 'Notificaciones, 42 sin leer' })
       expect(campana.textContent).toContain('9+')
     })
+  })
+})
+
+describe('PanelLayout · campana y perfil, por rol', () => {
+  const casos: Array<[Exclude<Rol, 'admin'>, string, string]> = [
+    ['investor', '/investor/notifications', '/investor/profile'],
+    ['developer', '/developer', '/developer/profile'],
+    ['notary', '/notary', '/notary/profile'],
+    ['certifier', '/certifier', '/certifier/profile']
+  ]
+
+  it.each(casos)('%s: la campana va a %s y el perfil a %s', async (rol, campana, perfil) => {
+    const router = renderLayout(undefined, { rol })
+
+    await userEvent.click(await screen.findByRole('button', { name: 'Notificaciones' }))
+    await waitFor(() => expect(router.state.location.pathname.replace(/\/$/, '')).toBe(campana))
+
+    router.history.push('/developer/')
+    await userEvent.click(await screen.findByRole('button', { name: 'Mi perfil' }))
+    await waitFor(() => expect(router.state.location.pathname).toBe(perfil))
+  })
+
+  it('el panel del admin (rol admin, sin sesión de admin) manda las dos cosas a /admin', async () => {
+    const router = renderLayout(undefined, { rol: 'admin' })
+
+    await userEvent.click(await screen.findByRole('button', { name: 'Notificaciones' }))
+    await waitFor(() => expect(router.state.location.pathname).toBe('/admin'))
+
+    router.history.push('/developer/')
+    await userEvent.click(await screen.findByRole('button', { name: 'Mi perfil' }))
+    await waitFor(() => expect(router.state.location.pathname).toBe('/admin'))
+  })
+
+  it('un admin dentro del panel de otro rol vuelve a SU pantalla (D-095)', async () => {
+    setSession({
+      token: 't',
+      user: { id: 'u-adm', email: 'a@example.com', role: 'admin', fullName: 'Admin' }
+    })
+    const router = renderLayout(undefined, { rol: 'investor' })
+
+    await userEvent.click(await screen.findByRole('button', { name: 'Notificaciones' }))
+    await waitFor(() => expect(router.state.location.pathname).toBe('/admin'))
+
+    router.history.push('/developer/')
+    await userEvent.click(await screen.findByRole('button', { name: 'Mi perfil' }))
+    await waitFor(() => expect(router.state.location.pathname).toBe('/admin'))
+  })
+})
+
+describe('PanelLayout · slots opcionales', () => {
+  it('con headerAction y context los pinta; sin ellos no', async () => {
+    renderLayout(undefined, {
+      headerAction: <button type="button">Nuevo</button>,
+      context: 'Bienvenido, Ana'
+    })
+
+    expect(await screen.findByRole('button', { name: 'Nuevo' })).toBeDefined()
+    expect(screen.getByText('Bienvenido, Ana')).toBeDefined()
+  })
+
+  it('sin headerAction no hay botón de acción', async () => {
+    renderLayout()
+    await screen.findByRole('banner')
+    expect(screen.queryByRole('button', { name: 'Nuevo' })).toBeNull()
   })
 })
