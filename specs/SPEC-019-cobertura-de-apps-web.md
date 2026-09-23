@@ -619,6 +619,13 @@ se reintenta. Está fijado como `it.fails` en `modals-mapa.test.tsx`. Hay que co
 (lo usan `investor.unit.$unitId.index` y `project.$projectId.index`); si se arregla, el `it.fails`
 pasa a `it`.
 
+**⚠️ Sin verificar en el navegador real.** El diagnóstico sale de tests con el Leaflet falso
+(`test/leaflet-falso.ts`) y de un `console.log` temporal, no de una pantalla real: **no se sabe todavía
+si el mapa se ve roto en producción.** Pendiente: abrir esas dos pantallas en el navegador (extensión de
+Chrome o a mano), pulsar el botón que abre el mapa modal y mirar si el mapa aparece. Si aparece, el
+`it.fails` describe un artefacto del test y hay que corregir el test, no el componente; si no aparece,
+es un bug real y pide su propio spec. Ver también `apps/web/CLAUDE.md` §Trampas verificadas.
+
 ## Criterio de cierre
 
 - `apps/web` con las cuatro métricas ≥95%, medidas con `include` sobre todo `src/`.

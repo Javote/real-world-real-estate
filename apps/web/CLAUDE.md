@@ -127,6 +127,14 @@ no la captura. No reintroducir un `hideBrand`.
 
 ## Trampas verificadas
 
+- **2026-09-23 · posible bug, sin verificar en el navegador: `LocationMapModal` (variante `modal`) con
+  `open` a secas podría no crear el mapa.** El efecto que llama a `L.map` corre antes de que el portal
+  de Radix monte el contenedor (`contenedor.current === null`) y sus dependencias no cambian después,
+  así que no se reintenta. Salió de SPEC-019 W7, con el Leaflet falso: hay un
+  `it.fails('BUG: con open=true a secas…')` en `modals-mapa.test.tsx` que lo fija. **Falta reproducirlo
+  en el navegador real** (`investor.unit.$unitId.index`, `project.$projectId.index`) antes de arreglar
+  nada: si el mapa se ve bien ahí, el test es el que está mal. Detalle en
+  `specs/SPEC-019-cobertura-de-apps-web.md` §Resultado final.
 - **2026-09-20 · el front no puede importar VALORES de `@plataforma/shared` por el índice, y por qué se
   ve tarde.** `shared` se compila a **CommonJS** (`dist/`) y el front solo había importado *tipos* de
   ahí. El día que `SPEC-218` necesitó valores (tipos permitidos, topes, detección por magic bytes) el
