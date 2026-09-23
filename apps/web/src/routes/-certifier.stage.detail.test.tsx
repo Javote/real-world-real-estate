@@ -113,7 +113,9 @@ describe('/certifier/stage/$stageId', () => {
     await userEvent.click(screen.getByRole('button', { name: 'Observar' }))
 
     const nota = await screen.findByLabelText(/observaciones/i)
-    await userEvent.type(nota, 'Falta la certificación de obra')
+    // `delay: null` — SPEC-019 §Paso 0, punto 5: bajo carga, 30 caracteres
+    // tecla por tecla pasan el `testTimeout`.
+    await userEvent.type(nota, 'Falta la certificación de obra', { delay: null })
     await userEvent.click(screen.getByRole('button', { name: /enviar/i }))
 
     expect(observar).toHaveBeenCalledWith('s1', 'Falta la certificación de obra')

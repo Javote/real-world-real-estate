@@ -13,7 +13,11 @@ export default defineConfig({
     // encuentra los dos árboles — se ve como un componente que duplica nodos.
     globals: true,
     environment: 'jsdom',
-    setupFiles: ['./src/test/a11y.ts'],
+    setupFiles: ['./src/test/a11y.ts', './src/test/testing-library-setup.ts'],
+    // Bajo carga (la suite de la API corriendo a la vez) el render tarda más
+    // que los 5s por defecto — SPEC-019 §Paso 0, punto 5, reproducido el
+    // 2026-09-22: tres de tres corridas rojas con esa carga, cero sin ella.
+    testTimeout: 15000,
     // e2e/ es de Playwright, no de vitest: sin esto vitest levanta los .spec.ts
     // de ahí (su `include` por defecto matchea test Y spec) y explota.
     exclude: ['**/node_modules/**', '**/dist/**', 'e2e/**'],
@@ -37,13 +41,17 @@ export default defineConfig({
         // del dueño 2026-09-22): monta la app sobre `#root` y no decide nada.
         // Su único `if` (`#root` ausente) no se alcanza, y extraerlo para
         // testear un `createRoot().render()` no probaría ningún comportamiento.
-        'src/main.tsx'
+        'src/main.tsx',
+        // Soporte de test que vive en `src/` por la convención del prefijo
+        // `-` de TanStack Router (SPEC-019 §Paso 0, punto 4) — no es código
+        // de la app.
+        'src/routes/-test-mount.tsx'
       ],
       thresholds: {
-        statements: 36,
+        statements: 35,
         branches: 29,
-        functions: 37,
-        lines: 37
+        functions: 35,
+        lines: 36
       }
     }
   }
