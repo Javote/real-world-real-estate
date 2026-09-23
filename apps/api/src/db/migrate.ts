@@ -136,6 +136,7 @@ export async function conTecho<T>(
       })
     ]);
   } finally {
+    /* v8 ignore if -- @preserve: el executor de `new Promise(...)` corre sincrónico, así que `reloj` ya está asignado en cualquier camino que llegue a este `finally` (SPEC-018) */
     if (reloj) clearTimeout(reloj);
   }
 }
