@@ -1,5 +1,10 @@
 # SPEC-018 — Cobertura de `apps/api`: branches ≥95%, el resto ≥98%
 
+> **Cerrada el 2026-09-23.** Las cuatro métricas quedaron en **100%**
+> (2070/2070 statements, 839/839 branches, 424/424 functions, 1900/1900 lines) — ver
+> §Cierre, al final. Lo de abajo es el historial de cómo se llegó hasta ahí y queda tal cual, no se
+> reescribe.
+>
 > Nace el 2026-09-22 de partir [`SPEC-017`](SPEC-017-cobertura-95-en-toda-la-app.md), que quedó
 > demasiado grande para leerla antes de cada tanda. SPEC-017 cerró con la API en **96,26% de
 > líneas** (el criterio 2 del SOM, cumplido); esta spec persigue la vara más estricta que el dueño
@@ -398,3 +403,40 @@ cada uno). El 2026-09-22 hay 33 GB libres — alcanza, pero se borran apenas se 
   inalcanzable justificada en su propia línea.
 - Umbrales de `vitest.config.mts` en el valor final. La API ya corre `test:coverage` en CI con esos
   umbrales, así que no hay paso de CI propio.
+
+## Cierre — 2026-09-23
+
+Los seis lotes (A1–A6) ya estaban en `main`. Consolidación:
+
+| Métrica | Medido | Vara |
+|---|---|---|
+| Statements | **100%** (2070/2070) | ≥98% |
+| Branches | **100%** (839/839) | ≥95% |
+| Functions | **100%** (424/424) | ≥98% |
+| Lines | **100%** (1900/1900) | ≥98% |
+
+**Lo que faltaba después de los seis lotes no estaba en ninguna tabla de lote**: tres `catch` de
+logging (`console.error`) que ningún test disparaba —`domain/anchoring.ts` (confirmar un commitment
+que falla), `domain/notify.ts` (el `INSERT` de una notificación que viola una FK, en `notify` y en
+`notifyUnitInvestors`), y `domain/reconcile.ts` (el catch **externo** de `reconciliarParaLectura`,
+que envuelve a `reconciliar()` entero y es distinto del catch interno por-evento que
+`reconcile.test.ts` ya cubría, más el `findLiveThread` que falla para UN sospechoso de
+`repararHilosSospechosos` sin tumbar a los demás). Los cuatro son alcanzables de verdad —no
+inalcanzables a marcar— y quedaron cerrados en un solo archivo nuevo,
+`test/spec-018-cierre-coverage.test.ts`, con el mismo patrón que ya usaban los lotes: monkey-patchear
+el método del `AnchorPort` real (`confirmedAt`, `findLiveThread`, o el getter de `mode`) en vez de
+mockear el módulo entero, y un `userId`/`investorId` inexistente para la violación de FK real de
+`notify.ts` (confirmado que `foreign_keys` está en `ON`: un insert con una FK que no resuelve
+efectivamente rechaza).
+
+**Umbrales de `vitest.config.mts`**: 99/99/99/99 — un punto por debajo de lo medido, mismo criterio
+que ya usan `packages/shared` y `packages/cardano` (que también cierran con margen, no al filo del
+número exacto): margen para que una rama chica sin marcar en un archivo nuevo no vuelva rojo el CI
+por una fracción de punto. El comentario largo del archivo (que documentaba tanda por tanda cómo se
+llegó de 81,8% a 91,3% de branches) se recortó: la razón de cada rama vive en su propio
+`/* v8 ignore … -- @preserve: <motivo> (SPEC-018) */`, no en un comentario que hay que mantener
+sincronizado a mano.
+
+**Deuda que NO se cerró acá, a propósito**: el resto de las notas de `vitest.config.mts` que hablaban
+del criterio 2 del SOM contra test IDs (`scripts/check-testids.mjs`) no se tocan — es una vara
+distinta, medida distinto, y sigue viva en `CLAUDE.md` raíz.

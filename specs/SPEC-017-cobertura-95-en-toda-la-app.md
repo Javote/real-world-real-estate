@@ -16,7 +16,7 @@
 > | 1. Medir honesto (`coverage.include`) | ✅ en las cuatro partes TypeScript |
 > | 2. shared | ✅ las cuatro métricas ≥95% |
 > | 3. cardano | ✅ las cuatro métricas ≥95% |
-> | 4. API | ✅ en líneas (el criterio de esta spec): 97,45%. **La vara más estricta que pidió el dueño —branches ≥95%, el resto ≥98%— sigue en [`SPEC-018`](SPEC-018-cobertura-de-apps-api.md)** |
+> | 4. API | ✅ en líneas (el criterio de esta spec): 97,45%. **La vara más estricta que pidió el dueño —branches ≥95%, el resto ≥98%— cerró en [`SPEC-018`](SPEC-018-cobertura-de-apps-api.md) el 2026-09-23, con las cuatro métricas en 100%** |
 > | 5. Web | ➡️ [`SPEC-019`](SPEC-019-cobertura-de-apps-web.md) — cerradas acá solo las tandas notary y certifier |
 > | 6. Contratos | ✅ 51/51 mutantes muertos, 18/18 `expect` con test |
 > | 7. CI | ➡️ SPEC-019 §Consolidación (la mitad de shared y cardano se puede adelantar) |
