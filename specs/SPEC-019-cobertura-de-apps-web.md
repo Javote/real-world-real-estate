@@ -442,6 +442,17 @@ Columna **Recetas**: las familias de arriba. Columna **Qué más**: lo propio de
 | `project.$projectId.progress.tsx` | 37 | `getProject`, `listProjectStages`, `listProjectDocuments` | R1 R2 R4 | 403 del proyecto **o** de los stages (64-66, dos fuentes). Fotos contadas por stage (82-83: `evidenceType: 'photo'` y `mimeType: image/*`, más un documento sin `stageId`) |
 | `project.$projectId.developer.tsx` | 41 | `getProjectDeveloper` | R1 R2 R4 | Organización ausente → pantalla de error (60). Bio corta y bio larga (el "ver más/ver menos" de 157-167). Obras con y sin precio y medidas, lista vacía. **197: ya se borró** (W0b) |
 
+> **W3, W4 y W5 ✅ 2026-09-23** (`568bf20`, `522fc7d`, `65cb958`; mergeados en `84c845d`), los tres en paralelo, `pnpm verify:all` en verde (web: 1207 tests + 1 `it.fails` esperado).
+> Cobertura local de sus archivos (branches): W3 97.97% · W4 `index` 96.77%, `contract` 96.42%, `dossier` y `notifications` 100% · W5 `stage` 94.49%, `index` 95.45%, `progress` 97.29%, `developer` 97.43%.
+>
+> **Ramas inalcanzables que quedan sin cubrir (no se marcaron ni se borraron — decisión pendiente, mismo criterio que `admin.index:188` de W6):**
+> - W3: `investor.buy` 150 y `investor.favorites` 63 (`proyecto.stages ?? []`, `stages` no es opcional en el schema) · `investor.buy` 293 (`onClose` de `LocationMapModal` en `browse`, que no tiene botón de cierre).
+> - W4: `index` 451, 470, 483, 503 · `contract` 86 (`contrato?.currency ?? 'USD'`).
+> - W5: `stage` 319, 342, 350, 387-392 · `index` 283, 345 · `progress` 115 · `developer` 219. `stage.$stageId` queda en 94.49%, **bajo el 95%**: hay que borrar esas ramas o marcarlas para cerrar el lote.
+>
+> **🐞 Hallazgo de W3 (`it.fails` en `-investor.buy.test.tsx`):** con `/investor/buy?status=otro&sort=otro`, `parseBuySearch` los descarta, pero la pantalla igual recibe `status: 'otro'` y `sort: 'otro'` (`match.search` mezcla el search crudo del padre; `__root` no valida) y `listProjects` se llama con ellos. Seguro en el harness, probable en producción (no verificado fuera de test). Arreglo posible: `strict: true` en el `useSearch` o validar en la raíz; al arreglarlo el `it.fails` se pone rojo y pasa a `it`.
+> **Nota para otros lotes (W4):** el "Volver" de `PanelLayout` existe también mientras carga (esperar el mensaje antes de clicar), y con un `Dialog` de Radix abierto el resto queda `aria-hidden` (no se consulta por rol).
+
 #### W6 — admin, públicas e infraestructura (6 archivos, no 8 — `useSession.ts` se borró y `main.tsx` salió del denominador en W0, 62 branches)
 
 | Archivo | Br | api | Recetas | Qué más |
