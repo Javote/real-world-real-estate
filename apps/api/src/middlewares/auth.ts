@@ -582,6 +582,7 @@ async function evaluarRegla(
   // Ninguna rama pasó. Se prefiere 403 sobre 404: si una rama dice "no es tuyo"
   // y la otra "no existe", contestar 404 filtraría que el recurso no existe para
   // quien tampoco tenía permiso de saberlo.
+  /* v8 ignore next -- @preserve: `alguna` exige dos ramas como mínimo (el tipo lo obliga), así que `veredictos[0]` siempre existe y el `?? PROHIBIDO` nunca corre (SPEC-018) */
   return veredictos.find((v) => !v.ok && v.status === 403) ?? veredictos[0] ?? PROHIBIDO;
 }
 

@@ -155,6 +155,13 @@ const updateUserProcedure = orpc
   .handler(async ({ input, context, errors }) => {
     const { id, ...body } = input;
 
+    // Un id inexistente daba 500: `executeTakeFirstOrThrow()` tira un error que
+    // `relanzarRestriccionComoOrpc` no clasifica (no es una restricción violada),
+    // así que quedaba como el 500 genérico de oRPC. `GET /users/:id` ya da 404
+    // para lo mismo — esto lo alinea (SPEC-018 §A4).
+    const existe = await db.selectFrom("User").select("id").where("id", "=", id).executeTakeFirst();
+    if (!existe) throw new ORPCError("NOT_FOUND", { message: "User not found" });
+
     const data: {
       fullName?: string;
       role?: (typeof body)["role"];
@@ -176,7 +183,9 @@ const updateUserProcedure = orpc
       .where("id", "=", id)
       .returning(["id", "email", "role", "fullName", "isActive"])
       .executeTakeFirstOrThrow()
+      /* v8 ignore start -- @preserve: inalcanzable salvo por una carrera con el chequeo de arriba (la fila ya se confirmó que existe) — ninguno de estos campos toca una columna única de User hoy, pero el `.catch()` queda por si mañana una sí (SPEC-018) */
       .catch((err) => relanzarRestriccionComoOrpc(err, errors));
+    /* v8 ignore stop -- @preserve */
 
     await writeAuditLog({
       actorUserId: context.user.id,

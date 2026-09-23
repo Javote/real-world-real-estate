@@ -127,6 +127,7 @@ const meProcedure = orpc
     // `authenticate` ya validó que existe y está activo, así que esto solo pasa
     // si lo borraron entre una consulta y la otra. 401 es la misma postura que
     // `authenticate`.
+    /* v8 ignore if -- @preserve: solo alcanzable por una carrera entre `authenticate` y este handler — `authenticate` acaba de consultar la misma fila (SPEC-018) */
     if (!user) {
       throw new ORPCError("UNAUTHORIZED", { message: "User not active" });
     }
