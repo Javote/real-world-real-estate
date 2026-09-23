@@ -80,13 +80,16 @@ function InvestorContract() {
     )
   }
 
-  const filas: ReleaseRecord[] = (releases ?? []).map((r) => ({
-    stageNumber: r.stageNumber,
-    amountMinorUnits: r.amountMinorUnits,
-    currency: contrato?.currency ?? 'USD',
-    releasedAt: String(r.releasedAt),
-    txid: r.txid
-  }))
+  // Los releases solo se piden con el contrato cargado: sin contrato no hay filas.
+  const filas: ReleaseRecord[] = contrato
+    ? (releases ?? []).map((r) => ({
+        stageNumber: r.stageNumber,
+        amountMinorUnits: r.amountMinorUnits,
+        currency: contrato.currency,
+        releasedAt: String(r.releasedAt),
+        txid: r.txid
+      }))
+    : []
 
   return (
     <PanelLayout

@@ -175,6 +175,13 @@ function InvestorUnitDetail() {
                   : ('occupied' as const)
           }))
   )
+  // El esquema solo se abre desde el botón "edificio", que exige la unidad cargada
+  // y con piso (`tienePisos`, con el esquema aún sin pedir). Se agrupan para que el
+  // tipo lo garantice.
+  const esquema =
+    unidad && unidad.floor != null && unidadesEsquema.length
+      ? { unidad, floor: unidad.floor, unidades: unidadesEsquema }
+      : null
 
   return (
     <PanelLayout
@@ -446,10 +453,10 @@ function InvestorUnitDetail() {
           <DialogTitle className="text-h2 font-bold text-text-primary">
             {t('schematic.title')}
           </DialogTitle>
-          {unidadesEsquema.length ? (
+          {esquema ? (
             <BuildingSchematic
-              projectName={unidad?.projectName ?? ''}
-              units={unidadesEsquema}
+              projectName={esquema.unidad.projectName}
+              units={esquema.unidades}
               labels={{
                 title: t('schematic.title'),
                 available: t('schematic.available'),
@@ -457,17 +464,14 @@ function InvestorUnitDetail() {
                 mine: t('schematic.mine'),
                 access: t('schematic.access'),
                 floorPrefix: t('schematic.floorPrefix'),
-                callout:
-                  unidad?.floor != null
-                    ? t('schematic.callout', {
-                        floor: String(unidad.floor),
-                        unit: unidad.unitReference,
-                        size:
-                          unidad.sizeM2 != null
-                            ? t('investor.unit.m2', { size: String(unidad.sizeM2) })
-                            : ''
-                      })
-                    : undefined,
+                callout: t('schematic.callout', {
+                  floor: String(esquema.floor),
+                  unit: esquema.unidad.unitReference,
+                  size:
+                    esquema.unidad.sizeM2 != null
+                      ? t('investor.unit.m2', { size: String(esquema.unidad.sizeM2) })
+                      : ''
+                }),
                 disclaimer: t('schematic.disclaimer')
               }}
             />
@@ -479,11 +483,10 @@ function InvestorUnitDetail() {
 
       <Dialog
         open={Boolean(bundleId)}
-        onOpenChange={(abierto) => {
-          if (!abierto) {
-            setBundleId(null)
-            setPrueba(null)
-          }
+        // Sin trigger, el único cambio posible es el cierre.
+        onOpenChange={() => {
+          setBundleId(null)
+          setPrueba(null)
         }}
       >
         <DialogContent data-testid="INV-STAGE-MILESTONE-001">
@@ -499,10 +502,13 @@ function InvestorUnitDetail() {
               nombre: f.filename ?? f.sha256Hash,
               sha256: f.sha256Hash
             }))}
-            onOpenArchivo={(archivo) => {
-              if (!bundleId) return
-              void api.getMerkleProof(bundleId, archivo.sha256).then(setPrueba)
-            }}
+            {...(bundleFiles
+              ? {
+                  onOpenArchivo: (archivo) => {
+                    void api.getMerkleProof(bundleFiles.bundleId, archivo.sha256).then(setPrueba)
+                  }
+                }
+              : {})}
             labels={{
               rootLabel: t('merkle.root'),
               txidLabel: t('hash.txidLabel'),
