@@ -171,12 +171,9 @@ describe('/investor/buy', () => {
       })
     })
 
-    // BUG (reproducido con el router real de TanStack): el parser descarta
-    // `status=otro`, pero `match.search` mezcla `{...searchCrudoDelPadre,
-    // ...validado}` y la raíz no valida nada, así que el valor inválido
-    // reaparece en `Route.useSearch()`. Llega a `listProjects({ status: 'otro' })`
-    // y al chip de filtro activo. Reproducción: `/investor/buy?status=otro`.
-    it.fails('un estado inválido en la URL no llega al pedido de proyectos', async () => {
+    // El router mezcla `{...searchCrudoDelPadre, ...validado}` y la raíz no valida:
+    // el parser devuelve cada clave (`undefined` si es inválida) para pisar el crudo.
+    it('un estado inválido en la URL no llega al pedido de proyectos', async () => {
       const listar = preparar()
       montar(`${RUTA}?status=otro&sort=otro`)
 
@@ -391,6 +388,9 @@ describe('/investor/buy', () => {
       expect(within(zona).queryByRole('button')).toBeNull()
 
       await userEvent.type(within(zona).getByLabelText(t('buy.searchLabel')), 'T')
+      // El debounce del campo navega a `?q=T`: esperarlo antes de elegir evita que,
+      // bajo carga (cobertura), pise la navegación al proyecto y la deje en /investor/buy.
+      await waitFor(() => expect(busqueda(router)).toEqual({ view: 'search', q: 'T' }))
       await userEvent.click(await within(zona).findByRole('button', { name: 'Torre B' }))
 
       await waitFor(() => expect(router.state.location.pathname).toBe('/project/p2'))

@@ -35,21 +35,25 @@ export type BuySearch = {
   city?: string
 }
 
+// Cada clave se devuelve SIEMPRE, con `undefined` si el valor es inválido: el
+// router mezcla `{...searchCrudoDelPadre, ...validado}` y la raíz no valida, así
+// que una clave ausente dejaría pasar el valor crudo (`?status=otro`).
 function parseBuySearch(raw: Record<string, unknown>): BuySearch {
   const view = raw.view
   const status = raw.status
   const sort = raw.sort
   return {
-    ...(view === 'map' || view === 'search' || view === 'filter' ? { view } : {}),
-    ...(typeof raw.q === 'string' && raw.q.length > 0 ? { q: raw.q } : {}),
-    ...(status === 'planning' ||
-    status === 'in_progress' ||
-    status === 'delayed' ||
-    status === 'completed'
-      ? { status }
-      : {}),
-    ...(sort === 'recent' || sort === 'name' || sort === 'delivery' ? { sort } : {}),
-    ...(typeof raw.city === 'string' && raw.city.length > 0 ? { city: raw.city } : {})
+    view: view === 'map' || view === 'search' || view === 'filter' ? view : undefined,
+    q: typeof raw.q === 'string' && raw.q.length > 0 ? raw.q : undefined,
+    status:
+      status === 'planning' ||
+      status === 'in_progress' ||
+      status === 'delayed' ||
+      status === 'completed'
+        ? status
+        : undefined,
+    sort: sort === 'recent' || sort === 'name' || sort === 'delivery' ? sort : undefined,
+    city: typeof raw.city === 'string' && raw.city.length > 0 ? raw.city : undefined
   }
 }
 
@@ -147,7 +151,7 @@ function InvestorBuy() {
           label: t(`project.status.${proyecto.status}`),
           tone: TONO_PROYECTO[proyecto.status]
         }}
-        progress={avanceDeStages(proyecto.stages ?? [])}
+        progress={avanceDeStages(proyecto.stages)}
         onOpen={() =>
           void navigate({
             to: '/project/$projectId',
@@ -290,7 +294,9 @@ function InvestorBuy() {
           <LocationMapModal
             open
             variant="browse"
-            onClose={() => setView(undefined)}
+            // La variante `browse` no dibuja el botón de cierre: `onClose` es obligatorio
+            // por el contrato del modal, pero acá nunca se dispara.
+            onClose={setView.bind(null, undefined)}
             markers={pines}
             onSelectMarker={setPinSeleccionado}
             onBoundsChange={setBbox}
@@ -320,9 +326,9 @@ function InvestorBuy() {
 
       <Dialog
         open={search.view === 'filter'}
-        onOpenChange={(abierto) => {
-          if (!abierto) setView(undefined)
-        }}
+        // Sin `DialogTrigger`: el diálogo solo se abre por la URL, así que
+        // `onOpenChange` únicamente se dispara para cerrarlo.
+        onOpenChange={() => setView(undefined)}
       >
         <DialogContent data-testid="INV-BUY-FILTER-001">
           <div className="flex items-center justify-between">

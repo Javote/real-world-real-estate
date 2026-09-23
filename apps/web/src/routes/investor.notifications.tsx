@@ -46,9 +46,11 @@ const BORDE: Record<NotifCategory, AuditCategory> = {
 type NotifSearch = { invitation?: string }
 
 function parseSearch(raw: Record<string, unknown>): NotifSearch {
-  return typeof raw.invitation === 'string' && raw.invitation.length > 0
-    ? { invitation: raw.invitation }
-    : {}
+  // `invitation` explícito (aun `undefined`): el router mezcla el search crudo del padre.
+  return {
+    invitation:
+      typeof raw.invitation === 'string' && raw.invitation.length > 0 ? raw.invitation : undefined
+  }
 }
 
 export const Route = createFileRoute('/investor/notifications')({

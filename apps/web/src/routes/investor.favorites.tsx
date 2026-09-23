@@ -60,7 +60,7 @@ function InvestorFavorites() {
                   label: t(`project.status.${proyecto.status}`),
                   tone: TONO_PROYECTO[proyecto.status]
                 }}
-                progress={avanceDeStages(proyecto.stages ?? [])}
+                progress={avanceDeStages(proyecto.stages)}
                 onOpen={() =>
                   void navigate({
                     to: '/project/$projectId',
