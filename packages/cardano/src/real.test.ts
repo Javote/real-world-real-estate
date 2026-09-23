@@ -645,6 +645,10 @@ async function feeDeAbrirHilo(a: LucidAnchorAdapter, emu: Emulator): Promise<big
 }
 
 describe("el reference script", () => {
+  it("referenceScriptOutputRef es null antes de publicar nada", () => {
+    expect(adapter.referenceScriptOutputRef).toBeNull();
+  });
+
   it("se publica, se descubre solo y no se publica dos veces", async () => {
     const publicacion = await adapter.publishReferenceScript();
     emulator.awaitBlock(1);
@@ -666,6 +670,30 @@ describe("el reference script", () => {
     const otraVez = await otro.publishReferenceScript();
     expect(otraVez.txid).toBeNull();
     expect(otraVez.outputRef).toBe(publicacion.outputRef);
+  });
+
+  it("tira si el proveedor no dejó ninguna salida con el script adentro", async () => {
+    // Forzado, no leído: `enviar()` es privado a nivel de TypeScript, pero en
+    // runtime es un método más — se lo espía para simular la transacción que
+    // se envió (hay txid) pero cuyas salidas no traen el `scriptRef` que
+    // `publishReferenceScript()` busca. El modo de falla real sería un
+    // proveedor que reordena o filtra salidas de forma inesperada.
+    const espia = vi
+      .spyOn(adapter as unknown as { enviar: (tx: unknown) => Promise<unknown> }, "enviar")
+      .mockResolvedValueOnce({
+        txid: "f".repeat(64),
+        outputRef: `${"f".repeat(64)}#0`,
+        status: "Pending",
+        salidas: []
+      });
+
+    try {
+      await expect(adapter.publishReferenceScript()).rejects.toThrow(
+        /no dejó ninguna salida con el validador adentro/
+      );
+    } finally {
+      espia.mockRestore();
+    }
   });
 
   it("el validador se sigue ejecutando, referenciado en vez de adjunto", async () => {

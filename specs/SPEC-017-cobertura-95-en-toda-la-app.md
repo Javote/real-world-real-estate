@@ -483,6 +483,20 @@ functions van a estar cerca o ya arriba de 95% también, porque en un archivo si
 compleja las cuatro métricas suben juntas — branches es la que se despega cuando el archivo sí tiene
 lógica condicional, por eso las tablas de abajo la muestran aparte).
 
+**Actualizado el 2026-09-23, al cerrar SPEC-018**: se llevaron las dos ramas que quedaban colgadas a
+100% en vez de dejarlas en el 96-97% de arriba — ya que se estaba tocando `vitest.config.mts` de
+`apps/api` para el mismo cierre. `packages/shared` (`auth.ts` — el `for...of` sobre un string
+itera code points completos, así que `codePointAt(0) ?? 0` nunca cae al default; se sumaron además
+los casos de 2 y 3 bytes que faltaban de `byteLength`) y `packages/cardano` (`real.ts` — `Assets` de
+`@lucid-evolution/core-types` tipa `lovelace` sin opcional, así que los dos `?? 0n` son
+inalcanzables; `simulated.ts` — `ordenarPorClave` nunca ve `a === b` porque `Object.entries` no
+repite claves) quedaron con las cuatro métricas en **100%**, cada rama marcada en su línea con
+`/* v8 ignore … -- @preserve */`. El umbral de `packages/shared` subió a 100/100/100/100 (nada que
+dejar de margen: no queda ninguna rama sin marcar). El de `packages/cardano` se dejó a propósito en
+**95/95/95/95** y no al valor medido: habla con un proveedor externo (Blockfrost/Lucid) y su
+superficie 🟡 cambia más rápido que `shared` — 95 da margen real para una rama nueva sin marcar
+todavía, no solo cosmético.
+
 ### `packages/cardano` — cerrado, 96,81% (commit `c2a59f2`)
 
 De 149/157 (94,90%) a 152/157. Tres branches reales de `real.ts` sin ejercitar, las tres cubiertas

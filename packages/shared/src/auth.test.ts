@@ -104,9 +104,21 @@ describe("passwordSchema — la política de passwords", () => {
   });
 
   it("mide el máximo en BYTES, no en caracteres", () => {
-    // 18 emoji = 18 code points pero 72 bytes UTF-8: justo en el límite.
+    // 18 emoji son 4 bytes UTF-8 cada uno: 18 code points pero 72 bytes,
+    // justo en el límite.
     expect(ok("🔐".repeat(18))).toBe(true);
     expect(ok("🔐".repeat(19))).toBe(false);
+  });
+
+  it("cuenta bien los de 2 y 3 bytes, no solo el ASCII y el emoji", () => {
+    // `byteLength` es un ternario de cuatro ramas (1/2/3/4 bytes) y las otras
+    // políticas solo ejercitan ASCII (1 byte) y emoji (4 bytes) — acá van los
+    // dos tamaños de en medio. "ñ" es 2 bytes (U+00F1, < 0x800); "€" es 3
+    // (U+20AC, entre 0x800 y 0xFFFF).
+    expect(ok("ñ".repeat(36))).toBe(true); // 36 × 2 = 72 bytes, el límite justo.
+    expect(ok("ñ".repeat(37))).toBe(false);
+    expect(ok("€".repeat(24))).toBe(true); // 24 × 3 = 72 bytes, el límite justo.
+    expect(ok("€".repeat(25))).toBe(false);
   });
 
   it("no impone reglas de composición", () => {

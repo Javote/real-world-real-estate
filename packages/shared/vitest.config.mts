@@ -13,11 +13,15 @@ export default defineConfig({
       provider: "v8",
       reporter: ["text-summary", "html"],
       include: ["src/**"],
+      // Las cuatro métricas llegaron al 100% (SPEC-017, cierre 2026-09-23):
+      // la única rama que faltaba (`byteLength`, `auth.ts`) era inalcanzable
+      // y quedó marcada en su línea. Trinquete: al 100% no hay margen que
+      // dejar — cualquier baja futura sí tiene que ponerse rojo.
       thresholds: {
-        statements: 95,
-        branches: 95,
-        functions: 95,
-        lines: 95
+        statements: 100,
+        branches: 100,
+        functions: 100,
+        lines: 100
       }
     }
   }

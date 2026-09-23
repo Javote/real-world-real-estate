@@ -51,6 +51,7 @@ import {
  * que canonicaliza, y de ella dependen el TXID determinístico y `STALE_DATUM`.
  */
 function ordenarPorClave([a]: [string, unknown], [b]: [string, unknown]): number {
+  /* v8 ignore next -- @preserve: el único llamador es `Object.entries(...).sort(...)`, y las claves de un objeto son siempre distintas — `a === b` no puede pasar (SPEC-017) */
   return a < b ? -1 : a > b ? 1 : 0;
 }
 

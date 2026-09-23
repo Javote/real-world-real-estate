@@ -447,6 +447,7 @@ export class LucidAnchorAdapter implements AnchorPort {
         return {
           outputRef: `${yaEsta.txHash}#${yaEsta.outputIndex}`,
           txid: null,
+          /* v8 ignore next -- @preserve: `Assets = Record<Unit | "lovelace", bigint>` (@lucid-evolution/core-types) — `lovelace` no es opcional, nunca es `undefined` (SPEC-017) */
           lovelace: yaEsta.assets.lovelace ?? 0n
         };
       }
@@ -474,6 +475,7 @@ export class LucidAnchorAdapter implements AnchorPort {
       return {
         outputRef: `${publicado.txHash}#${publicado.outputIndex}`,
         txid,
+        /* v8 ignore next -- @preserve: mismo motivo que arriba — `lovelace` no es opcional en `Assets` (SPEC-017) */
         lovelace: publicado.assets.lovelace ?? 0n
       };
     });

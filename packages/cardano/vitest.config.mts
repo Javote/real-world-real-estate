@@ -22,9 +22,18 @@ export default defineConfig({
         "src/yaci.test.ts",
         "src/vitest.devnet.mts"
       ],
+      // Las cuatro métricas llegaron al 100% (SPEC-017, cierre 2026-09-23):
+      // el `?? 0n` de `lovelace` en `real.ts` (`Assets` no lo deja opcional,
+      // @lucid-evolution/core-types) y la rama `a === b` de `ordenarPorClave`
+      // en `simulated.ts` (las claves de un objeto son siempre distintas)
+      // eran inalcanzables y quedaron marcadas en su línea; el resto, con
+      // test nuevo. El umbral se deja en 95 a propósito, no al valor medido:
+      // este package habla con un proveedor externo (Blockfrost/Lucid) y su
+      // superficie 🟡 cambia más rápido que `shared` — 95 da margen real para
+      // una rama nueva sin marcar todavía, no solo cosmético.
       thresholds: {
         statements: 95,
-        branches: 94,
+        branches: 95,
         functions: 95,
         lines: 95
       }

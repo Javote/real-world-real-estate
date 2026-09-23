@@ -33,6 +33,7 @@ export const PASSWORD_MAX_BYTES = 72;
 function byteLength(value: string): number {
   let bytes = 0;
   for (const char of value) {
+    /* v8 ignore next -- @preserve: cada `char` de un `for...of` sobre un string es un code point completo y no vacío; `codePointAt(0)` nunca da `undefined` acá (SPEC-017) */
     const cp = char.codePointAt(0) ?? 0;
     bytes += cp < 0x80 ? 1 : cp < 0x800 ? 2 : cp < 0x10000 ? 3 : 4;
   }
