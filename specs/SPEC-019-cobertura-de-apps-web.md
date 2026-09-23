@@ -9,8 +9,8 @@
 > Nivel 🟢 (tests). El paso final toca CI (🟡).
 >
 > **Paso 0 cerrado 2026-09-23** — W0a en `a7dac17`, W0b en `8be5830`, los dos en `main`. `pnpm
-> verify:all` verde después del merge. Lo que sigue abierto son los lotes W1–W9: ninguno arrancó
-> todavía (sin `*.test.tsx` nuevos más allá de los que ya existían de SPEC-017).
+> verify:all` verde después del merge. **W1 y W2 ✅ 2026-09-23**, junto con W3–W6 (ver más abajo).
+> Lo que sigue abierto son W7–W9.
 
 ## Dónde está hoy
 
@@ -51,6 +51,12 @@ equivalente. La mayoría de las 29 **se borra** en vez de marcarse: guardias de 
 antes de D-065, mapas de enums tipados como `Record<string, …>` que ya cubren todos los valores, un
 archivo sin uso. Todo eso lo hace W0. La lista completa, con qué hacer con cada una, está en
 §Análisis archivo por archivo.
+
+**Regla, fijada 2026-09-23 al cerrar W1 y W2:** una rama inalcanzable **se borra**, no se marca —
+pero **solo después de leer el archivo entero y de cubrir con tests todo lo demás**. Se borra solo
+cuando el tipo o el flujo del componente ya garantiza lo que la guarda fingía chequear (comportamiento
+visible igual); `v8 ignore` queda para lo que el tipo no puede expresar (el `session ?` que
+`useRoleGuard` deja siempre lleno). Nunca se borra una rama para no escribir su test.
 
 ## Cómo se testea una pantalla
 
@@ -412,6 +418,14 @@ Columna **Recetas**: las familias de arriba. Columna **Qué más**: lo propio de
 | `…$projectId.invite.tsx` | 27 | `listProjectUnits`, `createInvitation` | R1 R5 | La condición `puedeInvitar` (líneas 126-130) tiene cinco partes: un caso por cada una que falla (email vacío, sin unidad, sin monto, monto ≤ 0, en vuelo). Una unidad con precio que precarga el monto (107) y otra sin precio. Monto inválido (`amountInvalid`). El error de `createInvitation` |
 | `…$projectId.units.tsx` | 63 | `getDeveloperProject`, `listProjectUnits`, `createProjectUnit`, `updateUnit` | R1 R2 R4 R5 | **El archivo más ramificado del lote**: el formulario tiene dos modos (crear o editar la unidad elegida). Crear con y sin piso/superficie, editar solo el piso o solo la superficie (`puedeGuardar`, 140-142), cancelar la edición, los errores de las dos mutaciones. Unidades con y sin investor y con y sin precio. **255, 256: ya se borraron** (W0b) |
 | `…$projectId.upload.tsx` | 54 | `getDeveloperProject`, `uploadStageEvidence` | R1 R5 | `rechazosDelServidor` (58-71) es una función de parseo: un `ApiError` con `NO_FILES_ACCEPTED` y `rejected`, con otro `code`, sin body y un error que no es `ApiError`. Resultado **parcial** (algunos rechazados) y **total**. Con y sin notas (`category`). Un rechazo del cliente por tamaño y otro por cantidad. El anclaje que vuelve sin `txid` (aviso pendiente, 269) y con él (`AnchoringSuccessModal`). Los archivos se agregan por `FileDropzone` (`fireEvent.change` del input) |
+
+> **W1 y W2 ✅ 2026-09-23, los dos al 100% en las cuatro métricas** (W1: 10 archivos, 72 tests, `8a41522` + `5428f39`; W2: 5 archivos, 73 tests, `2a26143` + `f1f50ba`). `pnpm verify:all` en verde, web 1353/1353.
+>
+> **Código borrado** (comportamiento visible igual): W1, `developer.units.tsx` — el `total > 0 ? … : 0` de `ocupacion`, porque `agrupar()` solo crea un grupo al ver una unidad y `total` es siempre ≥ 1 (el caso "proyecto sin unidades" que listaba la tabla no existe en esa pantalla). W2, `…$projectId.upload.tsx` — el `throw 'sin archivo o sin etapa'` del `mutationFn`; `stageId` pasa como parámetro de `mutate` (`{ enviados, stageId }`), como el monto en `invite`, y el botón solo existe con una etapa elegida.
+>
+> **Una rama marcada** (`v8 ignore`): `developer.index.tsx:56`, el `session ? … : undefined` (ya listado arriba: `useRoleGuard` hace `setSession` y `setReady(true)` juntos).
+>
+> **Notas para otros lotes:** las monedas de `Intl` traen espacio no cortante y el matcher de testing-library normaliza el DOM pero no el string buscado (`.replace(/\s/g, ' ')` en `-developer.capital` e `-developer.investors`). `developer.audit-log` usa `t(`audit.action.${e.action}`) ?? e.action`: el `??` solo se alcanza con un cast fuera de `AuditAction` (R10); es defensivo.
 
 #### W3 — investor, panel (6 archivos, 158 branches)
 
