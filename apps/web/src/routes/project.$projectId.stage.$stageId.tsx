@@ -106,13 +106,9 @@ function InvestorStageDetail() {
     enabled: ready && fotos.length > 0
   })
 
-  const docAbierto = docs.find((d) => d.id === docId) ?? fotos.find((d) => d.id === docId)
-  const { data: docUrl } = useQuery({
-    queryKey: ['evidence-blob', docId],
-    queryFn: async () => objectUrl(await api.downloadEvidence(docId!)),
-    gcTime: 0,
-    enabled: Boolean(docId)
-  })
+  // Solo los documentos abren el visor (las fotos abren la galería), y un
+  // documento no es una imagen: el visor no tiene página que renderizar.
+  const docAbierto = docs.find((d) => d.id === docId)
 
   if (!ready) return null
 
@@ -148,6 +144,11 @@ function InvestorStageDetail() {
     (documentosDelProyecto ?? []).map((d) => [d.id, d.txid] as const)
   )
   const txidDe = (evidenceId: string) => txidPorEvidencia.get(evidenceId) ?? null
+
+  // El hito solo existe si la etapa tiene bundle: este objeto lo garantiza por tipo.
+  const hitoDelStage = stage?.bundle
+    ? { name: stage.name, bundleId: stage.bundle.id, raiz: stage.bundle.commitmentHash }
+    : null
 
   const total = stages?.length ?? 0
   const visibles = fotos.slice(0, 5)
@@ -315,9 +316,7 @@ function InvestorStageDetail() {
         testId="INV-STAGE-DOCVIEW-002"
         title={docAbierto?.category ?? t('investor.stage.docs')}
         filename={docAbierto?.originalFilename ?? ''}
-        pageUrl={
-          docAbierto && esFoto(docAbierto.evidenceType, docAbierto.mimeType) ? (docUrl ?? '') : ''
-        }
+        pageUrl=""
         dateLabel={docAbierto ? formatDate(String(docAbierto.uploadedAt), locale) : ''}
         txid={docAbierto ? txidDe(docAbierto.id) : null}
         onDownload={
@@ -336,89 +335,91 @@ function InvestorStageDetail() {
         }}
       />
 
-      <Dialog
-        open={hito}
-        onOpenChange={(abierto) => {
-          if (!abierto) {
+      {hitoDelStage ? (
+        <Dialog
+          open={hito}
+          onOpenChange={() => {
             setHito(false)
             setPrueba(null)
-          }
-        }}
-      >
-        <DialogContent data-testid="INV-STAGE-MILESTONE-001">
-          <DialogTitle className="text-h2 font-bold text-text-primary">
-            {stage?.name ?? t('investor.stage.milestone')}
-          </DialogTitle>
-          <p className="text-body-sm text-text-muted">{t('investor.stage.verifiedDocs')}</p>
-          {(bundleFiles?.files ?? []).map((f) => (
-            <div key={f.sha256Hash} className="flex flex-col gap-s1 rounded-lg bg-surface-alt p-s3">
-              <span className="truncate text-body font-medium text-text-primary">
-                {f.filename ?? f.sha256Hash}
-              </span>
-              {/* El archivo está dentro del bundle que se ancló: lo que el
+          }}
+        >
+          <DialogContent data-testid="INV-STAGE-MILESTONE-001">
+            <DialogTitle className="text-h2 font-bold text-text-primary">
+              {hitoDelStage.name}
+            </DialogTitle>
+            <p className="text-body-sm text-text-muted">{t('investor.stage.verifiedDocs')}</p>
+            {(bundleFiles?.files ?? []).map((f) => (
+              <div
+                key={f.sha256Hash}
+                className="flex flex-col gap-s1 rounded-lg bg-surface-alt p-s3"
+              >
+                <span className="truncate text-body font-medium text-text-primary">
+                  {f.filename ?? f.sha256Hash}
+                </span>
+                {/* El archivo está dentro del bundle que se ancló: lo que el
                   TXID sustancia es la raíz, y la raíz compromete este hash. */}
-              <VerificationBadge
-                txid={txidDelBundle}
-                verifiedLabel={t('status.verified')}
-                pendingLabel={t('status.pending')}
-              />
-              <HashChip
-                hash={f.sha256Hash}
-                copyLabel={t('hash.copy')}
-                copiedLabel={t('hash.copied')}
-              />
-            </div>
-          ))}
-          <MerkleRootProof
-            testId="INV-MERKLE-PROOF-002"
-            merkleRoot={bundleFiles?.merkleRoot ?? raizDelBundle ?? ''}
-            txid={txidDelBundle}
-            archivos={(bundleFiles?.files ?? []).map((f) => ({
-              id: f.sha256Hash,
-              nombre: f.filename ?? f.sha256Hash,
-              sha256: f.sha256Hash
-            }))}
-            onOpenTxid={
-              txidDelBundle && anclajeDelBundle
-                ? () =>
-                    setTxidModal({
-                      txid: txidDelBundle,
-                      at: String(anclajeDelBundle.createdAt),
-                      label: stage?.name ?? ''
-                    })
-                : undefined
-            }
-            onOpenArchivo={(archivo) => {
-              if (!stage?.bundle?.id) return
-              void api.getMerkleProof(stage.bundle.id, archivo.sha256).then(setPrueba)
-            }}
-            labels={{
-              rootLabel: t('merkle.root'),
-              txidLabel: t('hash.txidLabel'),
-              filesLabel: t('merkle.files'),
-              pending: t('status.pending'),
-              pendingRoot: t('merkle.pendingRoot'),
-              copy: t('hash.copy'),
-              copied: t('hash.copied')
-            }}
-          />
-          {prueba?.proof.length ? (
-            <div className="flex flex-col gap-s2">
-              <span className="text-label font-bold uppercase text-text-muted">
-                {t('merkle.proofPath')}
-              </span>
-              {prueba.proof.map((paso, i) => (
+                <VerificationBadge
+                  txid={txidDelBundle}
+                  verifiedLabel={t('status.verified')}
+                  pendingLabel={t('status.pending')}
+                />
                 <HashChip
-                  key={`${paso.sibling}-${i}`}
-                  hash={paso.sibling}
+                  hash={f.sha256Hash}
                   copyLabel={t('hash.copy')}
                   copiedLabel={t('hash.copied')}
                 />
-              ))}
-            </div>
-          ) : null}
-        </DialogContent>
-      </Dialog>
+              </div>
+            ))}
+            <MerkleRootProof
+              testId="INV-MERKLE-PROOF-002"
+              merkleRoot={bundleFiles?.merkleRoot ?? hitoDelStage.raiz}
+              txid={txidDelBundle}
+              archivos={(bundleFiles?.files ?? []).map((f) => ({
+                id: f.sha256Hash,
+                nombre: f.filename ?? f.sha256Hash,
+                sha256: f.sha256Hash
+              }))}
+              onOpenTxid={
+                txidDelBundle && anclajeDelBundle
+                  ? () =>
+                      setTxidModal({
+                        txid: txidDelBundle,
+                        at: String(anclajeDelBundle.createdAt),
+                        label: hitoDelStage.name
+                      })
+                  : undefined
+              }
+              onOpenArchivo={(archivo) => {
+                void api.getMerkleProof(hitoDelStage.bundleId, archivo.sha256).then(setPrueba)
+              }}
+              labels={{
+                rootLabel: t('merkle.root'),
+                txidLabel: t('hash.txidLabel'),
+                filesLabel: t('merkle.files'),
+                pending: t('status.pending'),
+                pendingRoot: t('merkle.pendingRoot'),
+                copy: t('hash.copy'),
+                copied: t('hash.copied')
+              }}
+            />
+            {prueba?.proof.length ? (
+              <div className="flex flex-col gap-s2">
+                <span className="text-label font-bold uppercase text-text-muted">
+                  {t('merkle.proofPath')}
+                </span>
+                {prueba.proof.map((paso, i) => (
+                  <HashChip
+                    key={`${paso.sibling}-${i}`}
+                    hash={paso.sibling}
+                    copyLabel={t('hash.copy')}
+                    copiedLabel={t('hash.copied')}
+                  />
+                ))}
+              </div>
+            ) : null}
+          </DialogContent>
+        </Dialog>
+      ) : null}
 
       {/* Sin `testId`: INV-TXID-MODAL-001 es de la fila 25v, que vive dentro
           del contrato (23-24). Repetirlo acá duplica el ID en la suite. */}
