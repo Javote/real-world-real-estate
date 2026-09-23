@@ -106,21 +106,22 @@ function UploadEvidence() {
   }
 
   const subir = useMutation({
-    mutationFn: async (enviados: File[]) => {
-      if (enviados.length === 0 || !stageId) throw new Error('sin archivo o sin etapa')
+    // La etapa entra por parámetro, como el monto en `invite`: el único que llama a
+    // `mutate` es el botón, y solo existe con una etapa elegida — el tipo lo garantiza.
+    mutationFn: async ({ enviados, stageId: etapaId }: { enviados: File[]; stageId: string }) => {
       const form = new FormData()
       // Todos en un request: `file` repetido. El bundle es UNO, con una hoja por
       // archivo aceptado, y el anclaje también.
       for (const archivo of enviados) form.append('file', archivo)
       form.append('evidenceType', 'document')
       form.append('category', notas.trim() ? 'inspection' : 'document')
-      return api.uploadStageEvidence(projectId, stageId, form)
+      return api.uploadStageEvidence(projectId, etapaId, form)
     },
     onMutate: () => {
       setAvisos(new Map())
       setResumen(null)
     },
-    onSuccess: (resultado, enviados) => {
+    onSuccess: (resultado, { enviados }) => {
       const rechazados = new Set(resultado.rejected.map((r) => r.index))
       // Salen de la lista los aceptados; los rechazados se quedan, con su motivo.
       const quedan = enviados.filter((_, i) => rechazados.has(i))
@@ -131,7 +132,7 @@ function UploadEvidence() {
       if (quedan.length === 0) setNotas('')
       void queryClient.invalidateQueries({ queryKey: ['developer'] })
     },
-    onError: (error, enviados) => {
+    onError: (error, { enviados }) => {
       // `400 NO_FILES_ACCEPTED`: ninguno entró, y el cuerpo dice por qué cada uno.
       const rechazos = rechazosDeUnError(error)
       if (!rechazos) return
@@ -219,7 +220,10 @@ function UploadEvidence() {
               disabled={subir.isPending}
             />
 
-            <PrimaryButton onClick={() => subir.mutate(archivos)} disabled={!puedeAnclar}>
+            <PrimaryButton
+              onClick={() => subir.mutate({ enviados: archivos, stageId: etapaElegida.id })}
+              disabled={!puedeAnclar}
+            >
               <ShieldCheck className="size-icon-inline" aria-hidden="true" />
               {subir.isPending ? t('developer.upload.anchoring') : t('developer.upload.anchor')}
             </PrimaryButton>
