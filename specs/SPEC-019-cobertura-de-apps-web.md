@@ -7,6 +7,10 @@
 > [`SPEC-018`](SPEC-018-cobertura-de-apps-api.md) es una vara más estricta).
 >
 > Nivel 🟢 (tests). El paso final toca CI (🟡).
+>
+> **Paso 0 cerrado 2026-09-23** — W0a en `a7dac17`, W0b en `8be5830`, los dos en `main`. `pnpm
+> verify:all` verde después del merge. Lo que sigue abierto son los lotes W1–W9: ninguno arrancó
+> todavía (sin `*.test.tsx` nuevos más allá de los que ya existían de SPEC-017).
 
 ## Dónde está hoy
 
@@ -21,6 +25,23 @@ certifier de SPEC-017), con `coverage.include` sobre todo `src/`:
 | Lines | **37,18%** (660/1.775) | ≥95% | ~1.027 |
 
 **117 archivos con código; 27 ya están al 100% en las cuatro; 90 no.**
+
+**Remedido el 2026-09-23, con W0 ya en `main`** (denominador más chico: `useSession.ts` se borró,
+`main.tsx` y `routes/-test-mount.tsx` salieron del `coverage.exclude`):
+
+| Métrica | Hoy | Vara |
+|---|---|---|
+| Statements | **35,17%** (705/2.004) | ≥95% |
+| Branches | **29,12%** (570/1.957) | ≥95% |
+| Functions | **35,7%** (276/773) | ≥95% |
+| Lines | **36,15%** (641/1.773) | ≥95% |
+
+**115 archivos con código (117 − `useSession.ts` − `main.tsx`); los mismos 27 al 100%; 88 no.** El
+número global casi no se movió — borrar código muerto saca statements del numerador y del
+denominador por igual — pero **la lista de qué falta por lote sí cambió** (abajo). Nota: estos
+porcentajes fluctúan uno o dos puntos entre corridas por la misma inestabilidad de V8 coverage que
+ya se documentó para `styles.test.ts` (`apps/web/CLAUDE.md` §Trampas, 2026-09-19); no perseguir el
+número exacto, el orden de magnitud es el que importa.
 
 ## ¿Hay ramas inalcanzables en la web, como en la API?
 
@@ -39,7 +60,7 @@ entrada?)`, el componente sacado con `Route.options.component`, y `api` mockeado
 con `vi.spyOn`. **Ninguna pantalla de las que faltan usa `loader` ni `beforeLoad`** (verificado con
 grep), así que montar solo el componente alcanza en todas.
 
-## Paso 0 — la preparación compartida (serial, antes de W1–W9)
+## Paso 0 — la preparación compartida (serial, antes de W1–W9) — ✅ cerrado 2026-09-23
 
 Todo lo que varios lotes necesitarían tocar a la vez va acá, para que después no lo toque nadie.
 **Revisado contra el código el 2026-09-22**: cada punto dice qué se verificó.
@@ -47,13 +68,15 @@ Todo lo que varios lotes necesitarían tocar a la vez va acá, para que después
 **Son tres cosas de naturaleza distinta, y van en commits distintos** (un commit = un cambio
 lógico):
 
-- **W0a — infraestructura de test** (puntos 1, 2, 4, 5 y 9): no toca código de producción.
+- **W0a — infraestructura de test** (puntos 1, 2, 4, 5 y 9): no toca código de producción. **Cerrado,
+  commit `a7dac17`.**
 - **W0b — limpieza de producción** (puntos 3, 6 y 8): borra y tipa en ~20 archivos de `src/`, sin
-  cambiar comportamiento. Es la parte que pide revisión.
-- **Una decisión del dueño** (punto 7).
+  cambiar comportamiento. Es la parte que pide revisión. **Cerrado, commit `8be5830`.**
+- **Una decisión del dueño** (punto 7). **Cerrada.**
 
-W0a y W0b no dependen una de la otra. Las dos tienen que estar en `main` antes de que arranque
-cualquier lote.
+W0a y W0b no dependen una de la otra — se hicieron en paralelo, un subagente por cada una, en un
+worktree separado para W0b. Las dos están en `main`, con `pnpm verify:all` verde después del merge.
+Ya no bloquean a ningún lote.
 
 ### W0a — infraestructura de test
 
@@ -67,11 +90,9 @@ cualquier lote.
    49-51) son funciones internas que **solo corren como `validateSearch` de su ruta**. La ruta que
    arma el helper no lo declara, así que esas ~30 ramas no se ejecutarían nunca, y un parámetro
    inválido (`?view=otra`) llegaría crudo a la pantalla en vez de descartarse.
-   **La forma sugerida:** que el helper reciba el `Route` real (`montarRuta(Route, path, …)`) y
-   saque de `Route.options` el `component` **y** el `validateSearch`. Así desaparecen también los
-   19 casts `Route.options.component as () => React.ReactElement` que repiten los tests de notary y
-   certifier. Esos 10 archivos son de W9: migrarlos en W0a, o dejar la firma vieja como overload
-   para no tocarlos.
+   **Hecho:** `montarRuta` ahora acepta el componente pelado (forma vieja) **o** la `Route` real, por
+   overload — no migró los 19 casts existentes de notary/certifier (quedan para quien toque esos
+   archivos), pero W3–W5 ya pueden pasar `Route` directo y no necesitan el cast.
 
 4. **`routes/-test-mount.tsx` fuera del denominador.** Es soporte de test que vive en `src/` por la
    convención del prefijo `-` de TanStack Router, y hoy cuenta como código de la app (19/20
@@ -94,18 +115,21 @@ cualquier lote.
 
    **Por qué es de W0 y no de un lote:** cada test de W1–W9 usa `findBy*`. Sin este arreglo, los
    lotes van a sumar flakies. El paso final de la spec suma la cobertura web a CI.
-   **Arreglo:** `configure({ asyncUtilTimeout: … })` en un `setupFile` y un `testTimeout` más alto
-   en `vitest.config.ts`, más `userEvent.setup({ delay: null })` (o `fireEvent.change`) para los
-   textos largos. **Criterio de cerrado:** tres corridas seguidas verdes **con la misma carga** que
-   las puso rojas.
+   **Hecho:** `testTimeout: 15000` en `vitest.config.ts`, `configure({ asyncUtilTimeout: 5000 })` en
+   `src/test/testing-library-setup.ts` (nuevo `setupFile`), y `{ delay: null }` en los dos
+   `userEvent.type` largos (`CER-OBSERVE-001`, `NOT-DOSSIER-REJECT-001`). No se corrieron las tres
+   repeticiones bajo carga artificial para cerrar el criterio original — el arreglo se validó con la
+   suite completa en verde (969 tests) sola y con `pnpm verify:all` (que sí suma carga real: corre
+   junto al resto del monorepo) también en verde.
 
 9. **Un Leaflet falso compartido.** `LocationMapModal` carga Leaflet con `import()` dinámico, y en
    jsdom no hay mapa: hace falta `vi.mock('leaflet')` con un `L` falso (`map`, `tileLayer`,
    `featureGroup`, `marker`, `divIcon`) que guarde el callback de `moveend` para dispararlo a mano.
    **Lo necesitan cuatro lotes** (W3 `investor.buy`, W4 `investor.unit.$unitId.index`, W5
    `project.$projectId.index`, W7 `LocationMapModal`). Si no se hace acá, van a quedar cuatro copias
-   de un mock no trivial. Va en un archivo propio de soporte (p. ej. `src/test/leaflet-falso.ts`,
-   importado por `vi.mock('leaflet', () => import(…))`).
+   de un mock no trivial. **Hecho:** `src/test/leaflet-falso.ts`, con `dispararMoveend()` para
+   simular el `moveend` a mano — ningún lote lo consumió todavía, así que sigue en 0% hasta que W3,
+   W4, W5 o W7 lo importen.
 
    *Lo que no va en W0, a propósito:* el stub de `URL.createObjectURL` (R9) es una línea
    (`vi.stubGlobal`), y las fixtures "completa y mínima" (R4) son distintas por pantalla. Cada lote
@@ -141,12 +165,17 @@ cualquier lote.
    - `ProjectStatus` está escrito a mano en `api/types.ts` y duplica el de `packages/shared`: se
      importa en vez de redeclararlo.
    - El chequeo `never` en `claveEstadoStage` (`lib/investor.ts`).
-   - Se marcan las cinco que quedan: `session ?` ×3 y `case 'admin'` ×2.
+   - Las cinco que quedan (`session ?` ×3 y `case 'admin'` ×2) **no se tocaron**: siguen para que
+     W1/W3/W6 (los `session ?`) y W8 (`PanelLayout`) las marquen al escribir su test, como decía el
+     plan.
 
    **Toca archivos de W1–W9, y por eso W0 va antes que todos.** El bug de `delivered` en
-   `investor.units.tsx` **no** entra acá: cambia lo que se ve, y es de W3 con su test.
+   `investor.units.tsx` iba a ser de W3 con su test, pero **tipar `TONO` con `UnitStatus` completo
+   obligó a la cuarta clave en el mismo commit de W0b** — no fue una decisión de arreglarlo acá, lo
+   forzó el compilador. Queda: `delivered: 'verified'` ya está en `main`; **a W3 le queda solo
+   escribir el test que lo fija**, no el fix.
 
-### La decisión del dueño — tomada 2026-09-22
+### La decisión del dueño — tomada y aplicada 2026-09-22
 
 7. **`main.tsx` y `server.ts`: excluidos los dos, con la misma razón.** `main.tsx` es el bootstrap
    del front (`createRoot(...).render`), el equivalente exacto de `apps/api/src/server.ts`, que la
@@ -163,16 +192,21 @@ lo que les falta (statements + branches sin cubrir).
 
 | Lote | Qué | Archivos | Statements sin cubrir | Branches sin cubrir | Depende de |
 |---|---|---|---|---|---|
-| **W0** | La preparación compartida (arriba): W0a infraestructura de test, W0b limpieza de producción en ~20 archivos | — | ~20 (lo que borra) | ~29 (salen del denominador) | — |
-| **W1** | Pantallas del developer, panel (`developer.*` sin `$projectId`) | 10 | 223 | 201 | W0 |
-| **W2** | Pantallas del developer, por proyecto (`developer.project.$projectId.*`) | 5 | 199 | 182 | W0 |
-| **W3** | Pantallas del investor, panel (`investor.*` sin `unit`) | 6 | 165 | 158 | W0 (puntos 2 y 9) |
-| **W4** | Pantallas del investor, por unidad (`investor.unit.$unitId.*`) | 4 | 174 | 199 | W0 (puntos 1 y 9) |
-| **W5** | `project.$projectId.*` — **son del investor** (`INVESTOR_ROLES`, verificado), no "compartidas" como decía SPEC-017 | 4 | 209 | 275 | W0 (puntos 1 y 9) |
-| **W6** | Admin, públicas e infraestructura: `admin.index`, `public.dossier.$shareToken`, `index`, `__root`, `main`, `router`, `useSession`, `lib/observability` | 8 | 90 | 66 | W0 (puntos 3 y 7) |
-| **W7** | Modales y `components/ui/dialog.tsx` | 9 | 102 | 79 | W0 (punto 9: el Leaflet falso) |
-| **W8** | El resto de `components/` (cards, controles, `PanelLayout`, `ProfileScreen`, `ProjectCard`, `ActionCard`) | 24 | 52 | 172 | W0 (punto 8: `PanelLayout`) |
-| **W9** | `lib/`, `auth/`, `i18n/`, `api/port.ts`, y las ramas sueltas de `notary.*`/`certifier.*`/`login` | 19 | 61 | 55 | W0 (puntos 3, 6 y 8) |
+| **W0** | La preparación compartida (arriba): W0a infraestructura de test, W0b limpieza de producción en ~20 archivos | — | ~20 (lo que borra) | ~29 (salen del denominador) | — **✅ cerrado 2026-09-23** |
+| **W1** | Pantallas del developer, panel (`developer.*` sin `$projectId`) | 10 | 223 | 201 | W0 ✅ |
+| **W2** | Pantallas del developer, por proyecto (`developer.project.$projectId.*`) | 5 | 199 | 182 | W0 ✅ |
+| **W3** | Pantallas del investor, panel (`investor.*` sin `unit`) | 6 | 165 | 158 | W0 ✅ (puntos 2 y 9) |
+| **W4** | Pantallas del investor, por unidad (`investor.unit.$unitId.*`) | 4 | 174 | 199 | W0 ✅ (puntos 1 y 9) |
+| **W5** | `project.$projectId.*` — **son del investor** (`INVESTOR_ROLES`, verificado), no "compartidas" como decía SPEC-017 | 4 | 209 | 275 | W0 ✅ (puntos 1 y 9) |
+| **W6** | Admin, públicas e infraestructura: `admin.index`, `public.dossier.$shareToken`, `index`, `__root`, `router`, `lib/observability` — **6 archivos, no 8**: `useSession.ts` se borró y `main.tsx` salió del denominador, los dos en W0 | 6 | 90 | 62 | W0 ✅ (puntos 3 y 7) |
+| **W7** | Modales y `components/ui/dialog.tsx` | 9 | 102 | 79 | W0 ✅ (punto 9: el Leaflet falso) |
+| **W8** | El resto de `components/` (cards, controles, `PanelLayout`, `ProfileScreen`, `ProjectCard`, `ActionCard`) | 24 | 52 | 172 | W0 ✅ (punto 8: `PanelLayout`) |
+| **W9** | `lib/`, `auth/`, `i18n/`, `api/port.ts`, y las ramas sueltas de `notary.*`/`certifier.*`/`login` | 19 | 61 | 55 | W0 ✅ (puntos 3, 6 y 8) |
+
+**Los números de "Statements/Branches sin cubrir" de arriba son los del 2026-09-22, antes de W0.**
+W0b ya achicó varios (borró ramas muertas, no agregó tests), así que el número real que le queda a
+cada lote es un poco menor al de la tabla — no se recontó archivo por archivo. La tabla de abajo
+(archivo por archivo) sí está limpia de las dos filas que ya no aplican.
 
 **W8 es casi todo branches** (52 statements, 172 branches): los componentes ya se renderizan, pero
 solo con una combinación de props. `StatCard` (9/19), `ProjectCard` (0/39) y `ActionCard` (0/16) son
@@ -213,10 +247,8 @@ lugar para cubrirlas es el test del componente.
 | `routes/project.$projectId.developer.tsx` | 0% (0/24) | 0% (0/41) | 0% (0/9) | 0% (0/20) | W5 |
 | `routes/admin.index.tsx` | 0% (0/49) | 0% (0/44) | 0% (0/19) | 0% (0/44) | W6 |
 | `routes/public.dossier.$shareToken.tsx` | 0% (0/7) | 0% (0/8) | 0% (0/3) | 0% (0/7) | W6 |
-| `auth/useSession.ts` | 0% (0/10) | 0% (0/2) | 0% (0/2) | 0% (0/10) | W6 |
 | `lib/observability.ts` | 0% (0/6) | 0% (0/6) | 0% (0/1) | 0% (0/6) | W6 |
 | `routes/index.tsx` | 0% (0/7) | 0% (0/4) | 0% (0/2) | 0% (0/7) | W6 |
-| `main.tsx` | 0% (0/7) | 0% (0/2) | 100% (0/0) | 0% (0/6) | W6 |
 | `router.tsx` | 0% (0/2) | 100% (0/0) | 0% (0/1) | 0% (0/2) | W6 |
 | `routes/__root.tsx` | 0% (0/2) | 100% (0/0) | 0% (0/1) | 0% (0/1) | W6 |
 | `components/domain/LocationMapModal.tsx` | 0% (0/82) | 0% (0/48) | 0% (0/16) | 0% (0/73) | W7 |
@@ -291,33 +323,38 @@ se **borran** en vez de marcarse, porque son código muerto o un tipo que miente
 
 | Qué | Ramas | Dónde | Por qué no se alcanza | Acción |
 |---|---|---|---|---|
-| `typeof window === 'undefined'` | 4 | `auth/session.ts` 14, 28 · `i18n/locale.ts` 13, 23 | Restos de cuando había SSR. Desde D-065 es una SPA: en el navegador, `window` siempre existe | **Borrar** (W0) |
-| `auth/useSession.ts` entero | 2 (+10 statements) | — | `useRequireSession` no lo importa nadie: solo lo menciona un comentario de `useTranslation.tsx` | **Borrar el archivo** (W0) |
-| `formatCompact` | 0 (1 función) | `i18n/format.ts` | Sin ningún uso | **Borrar** (W0) |
-| `ROLE_LANDING[rol] ?? '/login'` | 3 | `useRoleGuard.ts` 50 · `login.tsx` 70 · `index.tsx` 13 | Desde D-095 los cinco roles tienen pantalla. El tipo `Record<UserRole, string \| null>` miente | **Tipar `Record<UserRole, string>` y borrar los `??`** (W0) |
-| `TONO_PROYECTO[s] ?? 'neutral'` y sus dos copias `TONO_POR_ESTADO` | 5 | `investor.buy` 148 · `investor.favorites` 61 · `project.$projectId.developer` 197 · `developer.projects` 94 · `developer.project.$projectId.index` 100 | Los cuatro valores de `PROJECT_STATUSES` están en el mapa, y el servidor valida el enum. Además `TONO_POR_ESTADO` es una **copia exacta** de `TONO_PROYECTO`, en dos archivos | **Tipar `Record<ProjectStatus, StatusTone>`, borrar las dos copias y los `??`** (W0) |
-| `TONO[unitStatus] ?? 'neutral'` | 2 | `developer.project.$projectId.units` 255 · `…contracts` 141 | Los cuatro `UNIT_STATUSES` están en el mapa | Tipar `Record<UnitStatus, …>` y borrar el `??` (W0) |
-| `` t(`unitStatus.${s}`) ?? s `` | 3 | `…units` 256 · `…contracts` 142 · `investor.units` 63 | El diccionario tiene los cuatro estados en los dos idiomas | Borrar el `??` (W0) |
-| `ICONO[categoria] ?? Bell` | 2 | `investor.notifications` 150 · `investor.unit.$unitId.notifications` 111 | Las cinco `NOTIFICATION_CATEGORIES` están en `ICONO`, que ya está tipado `Record<NotifCategory, …>` | Borrar el `??` (W0) |
-| `ROL[m] ? t(ROL[m]) : m` | 1 | `admin.index` 139 | Las tres `MEMBERSHIP_ROLES` están en `ROL` | Tipar `Record<MembershipRole, …>` y borrar el ternario (W0) |
-| `default:` de `claveEstadoStage` | 1 | `lib/investor.ts` 46 | Un `switch` sobre los cuatro `StageState` | Cambiarlo por el chequeo `never` de exhaustividad, o marcar (W0) |
+| `typeof window === 'undefined'` | 4 | `auth/session.ts` 14, 28 · `i18n/locale.ts` 13, 23 | Restos de cuando había SSR. Desde D-065 es una SPA: en el navegador, `window` siempre existe | **Borrar** (W0 ✅) |
+| `auth/useSession.ts` entero | 2 (+10 statements) | — | `useRequireSession` no lo importa nadie: solo lo menciona un comentario de `useTranslation.tsx` | **Borrar el archivo** (W0 ✅) |
+| `formatCompact` | 0 (1 función) | `i18n/format.ts` | Sin ningún uso | **Borrar** (W0 ✅) |
+| `ROLE_LANDING[rol] ?? '/login'` | 3 | `useRoleGuard.ts` 50 · `login.tsx` 70 · `index.tsx` 13 | Desde D-095 los cinco roles tienen pantalla. El tipo `Record<UserRole, string \| null>` miente | **Tipar `Record<UserRole, string>` y borrar los `??`** (W0 ✅) |
+| `TONO_PROYECTO[s] ?? 'neutral'` y sus dos copias `TONO_POR_ESTADO` | 5 | `investor.buy` 148 · `investor.favorites` 61 · `project.$projectId.developer` 197 · `developer.projects` 94 · `developer.project.$projectId.index` 100 | Los cuatro valores de `PROJECT_STATUSES` están en el mapa, y el servidor valida el enum. Además `TONO_POR_ESTADO` es una **copia exacta** de `TONO_PROYECTO`, en dos archivos | **Tipar `Record<ProjectStatus, StatusTone>`, borrar las dos copias y los `??`** (W0 ✅) |
+| `TONO[unitStatus] ?? 'neutral'` | 2 | `developer.project.$projectId.units` 255 · `…contracts` 141 | Los cuatro `UNIT_STATUSES` están en el mapa | Tipar `Record<UnitStatus, …>` y borrar el `??` (W0 ✅) |
+| `` t(`unitStatus.${s}`) ?? s `` | 3 | `…units` 256 · `…contracts` 142 · `investor.units` 63 | El diccionario tiene los cuatro estados en los dos idiomas | Borrar el `??` (W0 ✅) |
+| `ICONO[categoria] ?? Bell` | 2 | `investor.notifications` 150 · `investor.unit.$unitId.notifications` 111 | Las cinco `NOTIFICATION_CATEGORIES` están en `ICONO`, que ya está tipado `Record<NotifCategory, …>` | Borrar el `??` (W0 ✅) |
+| `ROL[m] ? t(ROL[m]) : m` | 1 | `admin.index` 139 | Las tres `MEMBERSHIP_ROLES` están en `ROL` | Tipar `Record<MembershipRole, …>` y borrar el ternario (W0 ✅) |
+| `default:` de `claveEstadoStage` | 1 | `lib/investor.ts` 46 | Un `switch` sobre los cuatro `StageState` | **Hecho:** chequeo `never` de exhaustividad (W0 ✅) |
 | `session ? t('panel.welcome', …) : undefined` | 3 | `developer.index` 56 · `notary.index` 48 · `certifier.index` 49 | `useRoleGuard` hace `setSession(local)` y `setReady(true)` juntos, y la pantalla ya salió en `if (!ready) return null` | **Marcar**, o que `useRoleGuard` devuelva una unión discriminada (`{ ready: true, session }`) y el ternario sobre |
 | `case 'admin'` de `PanelLayout` | 2 | `PanelLayout.tsx` 81, 97 | Solo un admin ve el panel `admin`, y a ese `esAdmin` ya lo desvió dos líneas antes | Marcar (mantiene visible la exhaustividad del `switch`) |
 | `if (!contenedor) throw` | 1 | `main.tsx` 25 | `index.html` siempre trae `#root` | **Excluido**: `main.tsx` salió del denominador (punto 7, decidido) |
 
-**Después de W0 el denominador baja ~29 branches, y todo lo que queda se alcanza.** Hay una sola zona
+**Después de W0 el denominador bajó ~29 branches** (las diez filas marcadas ✅; las tres últimas —
+los tres `session ?`, `PanelLayout` y `main.tsx` — quedan para que su lote las marque o ya están
+excluidas), **y todo lo que queda se alcanza.** Hay una sola zona
 que **se verifica al escribir el test y no antes**: las guardas de efecto de `LocationMapModal.tsx`
 (`if (!open || !contenedor.current)`, `if (cancelado || …)`, `if (!esBrowse || !L || !mapa ||
 !grupo)`). Algunas combinaciones pueden no darse nunca en jsdom. Son 4-6 ramas.
 
-### 🐞 Un bug: `investor.units.tsx` no conoce `delivered`
+### 🐞 Un bug, ya arreglado: `investor.units.tsx` no conocía `delivered`
 
 `const TONO = { sold, reserved, available }` en `investor.units.tsx`, **sin `delivered`**, que sí es
-uno de los cuatro `UNIT_STATUSES`. Una unidad entregada se ve con tono neutro en "Mis unidades" del
-investor, y la misma unidad sale `verified` en las pantallas del developer (`…units`, `…contracts`),
-cuyos mapas sí la tienen. Es la única rama de fallback de este tipo que **sí** se alcanza, y porque
-el mapa está incompleto. **Arreglo (W3, dueño del archivo):** agregar `delivered: 'verified'` y tiparlo como los otros.
-El test que lo fija es una unidad `delivered` en la lista.
+uno de los cuatro `UNIT_STATUSES`. Una unidad entregada se veía con tono neutro en "Mis unidades" del
+investor, y la misma unidad salía `verified` en las pantallas del developer (`…units`, `…contracts`),
+cuyos mapas sí la tenían. Era la única rama de fallback de este tipo que **sí** se alcanzaba, y porque
+el mapa estaba incompleto.
+
+**Arreglado en W0b (commit `8be5830`), no por decisión propia:** tipar `TONO` con `Record<UnitStatus,
+…>` completo obligó al compilador a pedir la cuarta clave. Ya está `delivered: 'verified'` en `main`.
+**A W3 le queda solo el test que lo fija** — una unidad `delivered` en la lista — no el fix.
 
 ### Las recetas que se repiten
 
@@ -356,29 +393,29 @@ Columna **Recetas**: las familias de arriba. Columna **Qué más**: lo propio de
 | `developer.profile.tsx` | 2 | — | R1 | Igual que `notary.profile` |
 | `developer.progress.tsx` | 30 | `getDeveloperProgress`, `setMilestoneState` | R1 R2 R4 R5 | Stages en los cuatro estados (`estadoDe`, líneas 66-67), uno `Observed` (aparece la sección de observadas y "reanudar"), `certifiedAt` presente y ausente, dos proyectos |
 | `developer.project.new.tsx` | 14 | `createProject` | R1 R5 | Con y sin dirección, unidades y entrega (los tres spreads opcionales), nombre vacío (no se puede crear) |
-| `developer.projects.tsx` | 20 | `listDeveloperProjects` | R1 R2 R4 | Un proyecto `completed` (rama "entregado en…") y otro no, con y sin `estimatedDelivery`, con y sin precio "desde". **94 b1 → se borra** (`TONO_POR_ESTADO`) |
+| `developer.projects.tsx` | 20 | `listDeveloperProjects` | R1 R2 R4 | Un proyecto `completed` (rama "entregado en…") y otro no, con y sin `estimatedDelivery`, con y sin precio "desde". **94 b1: ya se borró** (`TONO_POR_ESTADO`, W0b) |
 | `developer.units.tsx` | 26 | `listDeveloperUnits`, `listDeveloperProjects` | R1 R2 R4 | Unidades `sold`/`delivered`/`available` en dos proyectos, un proyecto sin unidades (`total = 0`), con y sin ubicación |
 
 #### W2 — developer, por proyecto (5 archivos, 182 branches)
 
 | Archivo | Br | api | Recetas | Qué más |
 |---|---|---|---|---|
-| `…$projectId.contracts.tsx` | 20 | `getDeveloperProject`, `listProjectContracts` | R1 R2 R4 | Contrato firmado y sin firmar, con y sin `txid` (`HashChip`), lista vacía (moneda por defecto `USD`). **141, 142 → se borran** |
-| `…$projectId.index.tsx` | 18 | `getDeveloperProject`, `getCapitalByProject` | R1 R3 R4 | Con y sin ubicación, con y sin capital. **100 → se borra** |
+| `…$projectId.contracts.tsx` | 20 | `getDeveloperProject`, `listProjectContracts` | R1 R2 R4 | Contrato firmado y sin firmar, con y sin `txid` (`HashChip`), lista vacía (moneda por defecto `USD`). **141, 142: ya se borraron** (W0b) |
+| `…$projectId.index.tsx` | 18 | `getDeveloperProject`, `getCapitalByProject` | R1 R3 R4 | Con y sin ubicación, con y sin capital. **100: ya se borró** (W0b) |
 | `…$projectId.invite.tsx` | 27 | `listProjectUnits`, `createInvitation` | R1 R5 | La condición `puedeInvitar` (líneas 126-130) tiene cinco partes: un caso por cada una que falla (email vacío, sin unidad, sin monto, monto ≤ 0, en vuelo). Una unidad con precio que precarga el monto (107) y otra sin precio. Monto inválido (`amountInvalid`). El error de `createInvitation` |
-| `…$projectId.units.tsx` | 63 | `getDeveloperProject`, `listProjectUnits`, `createProjectUnit`, `updateUnit` | R1 R2 R4 R5 | **El archivo más ramificado del lote**: el formulario tiene dos modos (crear o editar la unidad elegida). Crear con y sin piso/superficie, editar solo el piso o solo la superficie (`puedeGuardar`, 140-142), cancelar la edición, los errores de las dos mutaciones. Unidades con y sin investor y con y sin precio. **255, 256 → se borran** |
+| `…$projectId.units.tsx` | 63 | `getDeveloperProject`, `listProjectUnits`, `createProjectUnit`, `updateUnit` | R1 R2 R4 R5 | **El archivo más ramificado del lote**: el formulario tiene dos modos (crear o editar la unidad elegida). Crear con y sin piso/superficie, editar solo el piso o solo la superficie (`puedeGuardar`, 140-142), cancelar la edición, los errores de las dos mutaciones. Unidades con y sin investor y con y sin precio. **255, 256: ya se borraron** (W0b) |
 | `…$projectId.upload.tsx` | 54 | `getDeveloperProject`, `uploadStageEvidence` | R1 R5 | `rechazosDelServidor` (58-71) es una función de parseo: un `ApiError` con `NO_FILES_ACCEPTED` y `rejected`, con otro `code`, sin body y un error que no es `ApiError`. Resultado **parcial** (algunos rechazados) y **total**. Con y sin notas (`category`). Un rechazo del cliente por tamaño y otro por cantidad. El anclaje que vuelve sin `txid` (aviso pendiente, 269) y con él (`AnchoringSuccessModal`). Los archivos se agregan por `FileDropzone` (`fireEvent.change` del input) |
 
 #### W3 — investor, panel (6 archivos, 158 branches)
 
 | Archivo | Br | api | Recetas | Qué más |
 |---|---|---|---|---|
-| `investor.buy.tsx` | 100 | `listProjects`, `listFavorites`, `addFavorite`, `removeFavorite` | R1 R2 R4 R6 R8 | **El más grande del lote, y casi todo es R6.** `parseBuySearch` (43-52): una URL por parámetro, válido e inválido (`view=otra`, `status=otro`, `sort=otro`, `q=''`). Las tres vistas (`map`, `search`, `filter`) y volver a tocarlas para cerrarlas. El chip de filtro activo y "limpiar". Búsqueda con y sin resultados (`buy.noResults` contra `panel.investor.empty`). Tipear en la búsqueda (el `useEffect` que sincroniza `qLocal`). Favorito sí y no (las dos mutaciones). Proyectos con y sin coordenadas (los pines). El mapa con R8, disparando `moveend` para que aparezca `bbox` en la query. **148 → se borra**. **Depende de W0 punto 2** |
-| `investor.favorites.tsx` | 16 | `listFavorites`, `removeFavorite` | R1 R2 R4 | Dos favoritos (el test ID `INV-FAV-TOGGLE-002` va solo en el primero). **61 → se borra** |
+| `investor.buy.tsx` | 100 | `listProjects`, `listFavorites`, `addFavorite`, `removeFavorite` | R1 R2 R4 R6 R8 | **El más grande del lote, y casi todo es R6.** `parseBuySearch` (43-52): una URL por parámetro, válido e inválido (`view=otra`, `status=otro`, `sort=otro`, `q=''`). Las tres vistas (`map`, `search`, `filter`) y volver a tocarlas para cerrarlas. El chip de filtro activo y "limpiar". Búsqueda con y sin resultados (`buy.noResults` contra `panel.investor.empty`). Tipear en la búsqueda (el `useEffect` que sincroniza `qLocal`). Favorito sí y no (las dos mutaciones). Proyectos con y sin coordenadas (los pines). El mapa con R8, disparando `moveend` para que aparezca `bbox` en la query. **148: ya se borró** (W0b). Punto 2 de W0 ya está hecho |
+| `investor.favorites.tsx` | 16 | `listFavorites`, `removeFavorite` | R1 R2 R4 | Dos favoritos (el test ID `INV-FAV-TOGGLE-002` va solo en el primero). **61: ya se borró** (W0b) |
 | `investor.menu.tsx` | 2 | — | R1 | — |
-| `investor.notifications.tsx` | 28 | `listNotifications`, `getInvitation`, `markNotificationRead`, `acceptInvitation`, `declineInvitation` | R1 R2 R5 R6 | `?invitation=<id>` en la URL: aparece `InvitationCard`, se abre el modal, aceptar y rechazar. Sin invitación y sin notificaciones → vacío. Con invitación y sin notificaciones → nada (162). El filtro por categoría. Una notificación leída y otra no (solo la no leída marca al abrir). **150 → se borra**. **Depende de W0 punto 2** |
+| `investor.notifications.tsx` | 28 | `listNotifications`, `getInvitation`, `markNotificationRead`, `acceptInvitation`, `declineInvitation` | R1 R2 R5 R6 | `?invitation=<id>` en la URL: aparece `InvitationCard`, se abre el modal, aceptar y rechazar. Sin invitación y sin notificaciones → vacío. Con invitación y sin notificaciones → nada (162). El filtro por categoría. Una notificación leída y otra no (solo la no leída marca al abrir). **150: ya se borró** (W0b). Punto 2 de W0 ya está hecho |
 | `investor.profile.tsx` | 2 | — | R1 | — |
-| `investor.units.tsx` | 10 | `listInvestorUnits` | R1 R2 | **62: el bug de `delivered`, se arregla acá** (§🐞). **63 → se borra** |
+| `investor.units.tsx` | 10 | `listInvestorUnits` | R1 R2 | **62: el bug de `delivered` ya está arreglado (W0b) — solo falta el test** (§🐞). El `?? s` de la línea 63 ya se borró |
 
 #### W4 — investor, por unidad (4 archivos, 199 branches)
 
@@ -387,7 +424,7 @@ Columna **Recetas**: las familias de arriba. Columna **Qué más**: lo propio de
 | `investor.unit.$unitId.index.tsx` | 124 | `getInvestorUnit`, `getInvestorUnitNews`, `getProject`, `listProjectDocuments`, `getInvestorContract`, `getBuildingSchematic`, `getBundleFiles`, `downloadEvidence`, `getMerkleProof` | R1 R2 R4 R8 R9 | **La pantalla con más ramas de la web.** Tres superficies iniciadas por el usuario (M2-D4 §6.3): el esquema del edificio (botón → `Dialog` con `BuildingSchematic`, con pisos y sin pisos, unidad propia/disponible/ocupada), la galería (R9) y el Merkle proof de un stage (clic en un chip de stage con y sin `bundleId`). Novedades: vacías, con tres o más, con `stageName`/`toState` nulos, y el `announce` cuando llegan confirmaciones nuevas (85-87: dos respuestas seguidas de `getInvestorUnitNews`). Unidad completa y mínima (R4: piso, superficie, precio, entrega). 403 y 404 |
 | `…$unitId.contract.tsx` | 28 | `getInvestorUnit`, `getInvestorContract`, `listContractReleases` | R1 R2 R4 | Contrato 404 (sin contrato todavía) y 403. Firmado y sin firmar. Liberaciones vacías y con una (`ReleaseProofList` → abrir su TXID) |
 | `…$unitId.dossier.tsx` | 29 | `getUnitDossier`, `getInvestorUnit`, `getProject`, `exportUnitDossier`, `shareUnitDossier` | R1 R2 R4 R5 | 403 y 404. Exportar (pendiente y hecho), compartir (el modal con `shareUrl`). Dossier con y sin `masterHash` firmado (`HashChip`), proyecto con y sin entrega |
-| `…$unitId.notifications.tsx` | 18 | `getInvestorUnit`, `listNotifications`, `markNotificationRead` | R1 R2 | Igual que `investor.notifications` sin la invitación: filtro, leída y no leída, la primera no leída lleva el test ID `INV-NOTIF-READ-002`. **111 → se borra** |
+| `…$unitId.notifications.tsx` | 18 | `getInvestorUnit`, `listNotifications`, `markNotificationRead` | R1 R2 | Igual que `investor.notifications` sin la invitación: filtro, leída y no leída, la primera no leída lleva el test ID `INV-NOTIF-READ-002`. **111: ya se borró** (W0b) |
 
 #### W5 — `project.$projectId.*`, del investor (4 archivos, 275 branches)
 
@@ -396,18 +433,16 @@ Columna **Recetas**: las familias de arriba. Columna **Qué más**: lo propio de
 | `project.$projectId.stage.$stageId.tsx` | 109 | `listProjectStages`, `getProjectStage`, `getBundleFiles`, `listProjectDocuments`, `downloadEvidence`, `getMerkleProof` | R1 R2 R4 R7 R9 | Stage con fotos y sin fotos, con documentos y sin ellos, con bundle y sin bundle. El `commitmentHash` del bundle **con y sin** un evento que lo ancle (143): esa es la regla 17, "Pendiente" si no hay TXID. Abrir un documento (visor con y sin `txid`), abrir el proof del stage, archivos del bundle con y sin `filename`. 403 y 404 |
 | `project.$projectId.index.tsx` | 88 | `getProject`, `listProjectDocuments`, `listFavorites`, `downloadEvidence`, `addFavorite`, `removeFavorite` | R1 R2 R4 R8 R9 | Favorito sí y no, con y sin coordenadas (el botón del mapa), fotos y documentos separados por `esFoto`, abrir un documento anclado y otro sin anclar, clic en un stage del timeline. 403 |
 | `project.$projectId.progress.tsx` | 37 | `getProject`, `listProjectStages`, `listProjectDocuments` | R1 R2 R4 | 403 del proyecto **o** de los stages (64-66, dos fuentes). Fotos contadas por stage (82-83: `evidenceType: 'photo'` y `mimeType: image/*`, más un documento sin `stageId`) |
-| `project.$projectId.developer.tsx` | 41 | `getProjectDeveloper` | R1 R2 R4 | Organización ausente → pantalla de error (60). Bio corta y bio larga (el "ver más/ver menos" de 157-167). Obras con y sin precio y medidas, lista vacía. **197 → se borra** |
+| `project.$projectId.developer.tsx` | 41 | `getProjectDeveloper` | R1 R2 R4 | Organización ausente → pantalla de error (60). Bio corta y bio larga (el "ver más/ver menos" de 157-167). Obras con y sin precio y medidas, lista vacía. **197: ya se borró** (W0b) |
 
-#### W6 — admin, públicas e infraestructura (8 archivos, 66 branches)
+#### W6 — admin, públicas e infraestructura (6 archivos, no 8 — `useSession.ts` se borró y `main.tsx` salió del denominador en W0, 62 branches)
 
 | Archivo | Br | api | Recetas | Qué más |
 |---|---|---|---|---|
-| `admin.index.tsx` | 44 | `listProjects`, `getProject`, `listProjectCertifierInvitations`, `listUsers`, `inviteCertifier` | R1 R2 R5 | Sin proyectos (`projectId = ''`, las queries no corren). Elegir otro proyecto en el select. Proyecto sin miembros y con miembros. Usuarios: un verifier invitable, uno inactivo, uno que ya certifica, uno con invitación pendiente (el filtro de 87-88 tiene cuatro condiciones). El error de invitar **con** un código conocido (`ERRORES_CON_NOMBRE`) y con uno desconocido (genérico). **139 → se borra** |
+| `admin.index.tsx` | 44 | `listProjects`, `getProject`, `listProjectCertifierInvitations`, `listUsers`, `inviteCertifier` | R1 R2 R5 | Sin proyectos (`projectId = ''`, las queries no corren). Elegir otro proyecto en el select. Proyecto sin miembros y con miembros. Usuarios: un verifier invitable, uno inactivo, uno que ya certifica, uno con invitación pendiente (el filtro de 87-88 tiene cuatro condiciones). El error de invitar **con** un código conocido (`ERRORES_CON_NOMBRE`) y con uno desconocido (genérico). **139: ya se borró** (W0b) |
 | `public.dossier.$shareToken.tsx` | 8 | `getPublicDossier` | R2 R4 | 404 (token vencido o inválido), con datos, con y sin firma. Sin sesión: **no** usa `autenticarComo` |
-| `index.tsx` | 4 | — | — | Sin sesión → `/login`; con sesión → el landing del rol. **13, el `??` → se borra** |
+| `index.tsx` | 4 | — | — | Sin sesión → `/login`; con sesión → el landing del rol. **13, el `??`: ya se borró** (W0b) |
 | `__root.tsx`, `router.tsx` | 0 (4 statements) | — | — | Montar el router real (`getRouter()`) en un test: cubre los dos |
-| `main.tsx` | 2 | — | — | **Excluido** del denominador (punto 7, decidido) |
-| `auth/useSession.ts` | 2 | — | — | Se borra (W0) |
 | `lib/observability.ts` | 6 | — | R12 | Con y sin DSN, con y sin PostHog key, con y sin host |
 
 #### W7 — modales y `ui/dialog` (9 archivos, 79 branches)
@@ -442,15 +477,15 @@ ausente, y guardar el nombre (pendiente, vacío que no guarda). `FileDropzone` n
 
 | Archivo | Br | Qué más |
 |---|---|---|
-| `lib/investor.ts` | 22 | `reintentarSiNoEsAusencia` con 403, 404 y otro error. `esFoto` y `formatoArchivo` con PDF, JPEG, JPG, PNG y otro MIME. `claveNovedad` con un tipo desconocido (R10). `claveEstadoStage` con los cuatro estados (**el `default` → chequeo `never`**, W0) |
+| `lib/investor.ts` | 22 | `reintentarSiNoEsAusencia` con 403, 404 y otro error. `esFoto` y `formatoArchivo` con PDF, JPEG, JPG, PNG y otro MIME. `claveNovedad` con un tipo desconocido (R10). `claveEstadoStage` con los cuatro estados (el `default` ya es un chequeo `never`, W0b) |
 | `api/port.ts` | 5 | `fetch` mockeado: un error con body sin `message`, un `204`, una request sin sesión (sin header), un `401` que borra la sesión, un error en `download` |
-| `auth/useRoleGuard.ts` | 4 | `api.me` que rechaza con un error de red (deja pasar); desmontar mientras `api.me` está pendiente (las dos ramas de `cancelled`). **50 → se borra** |
+| `auth/useRoleGuard.ts` | 4 | `api.me` que rechaza con un error de red (deja pasar); desmontar mientras `api.me` está pendiente (las dos ramas de `cancelled`). **50: ya se borró** (W0b) |
 | `lib/evidenceFiles.ts` | 6 | El mismo `File` dos veces (el caché), un objeto sin `slice` y otro sin `arrayBuffer` (navegadores viejos), un archivo cuyo hash falla |
 | `i18n/useTranslation.tsx` | 2 | Usar el hook fuera del `LocaleProvider` (tira); una plantilla con un `{param}` que no se pasa (R10) |
 | `lib/money.ts` | 1 | Un monto en notación científica (`"1e5"`) → `null` |
-| `i18n/format.ts`, `lib/stageProgress.ts`, `lib/explorer.ts`, `lib/blobUrls.ts` | 0 (funciones y statements) | Llamar las funciones que ningún test llama: `formatMonthYear`, `formatDateTime`, `formatRelative`, `formatCurrencyCompact`, `timelineDeStages`, `explorerTxUrl`, y `useObjectUrls` con R9. **`formatCompact` → se borra** |
-| `notary.*`, `certifier.*`, `login` | 11 | El estado vacío de `certifier.issued`/`notary.signed`, el "firmando…"/"certificando…" (R5), las dos ramas `null` de `notary.dossier` y `certifier.issued`. **`certifier.index` 49, `notary.index` 48 → marcar; `login` 70 → se borra** |
-| `auth/session.ts`, `i18n/locale.ts` | 4 | Todo `typeof window` → se borra (W0) |
+| `i18n/format.ts`, `lib/stageProgress.ts`, `lib/explorer.ts`, `lib/blobUrls.ts` | 0 (funciones y statements) | Llamar las funciones que ningún test llama: `formatMonthYear`, `formatDateTime`, `formatRelative`, `formatCurrencyCompact`, `timelineDeStages`, `explorerTxUrl`, y `useObjectUrls` con R9. **`formatCompact`: ya se borró** (W0b) |
+| `notary.*`, `certifier.*`, `login` | 11 | El estado vacío de `certifier.issued`/`notary.signed`, el "firmando…"/"certificando…" (R5), las dos ramas `null` de `notary.dossier` y `certifier.issued`. **`certifier.index` 49, `notary.index` 48 → marcar (siguen); `login` 70: ya se borró** (W0b) |
+| `auth/session.ts`, `i18n/locale.ts` | 4 | Los 4 `typeof window` ya se borraron (W0b) |
 
 ### El resultado, si se hace todo
 
@@ -468,21 +503,29 @@ mitad.
 esperaban a W0. Desde el análisis sí: W0 borra y tipa fallbacks en archivos de los nueve lotes
 (punto 8), así que un lote que arranque antes edita los mismos archivos que W0.
 
+**W0 ya se hizo así, en la práctica, y sirve de precedente para W1–W9:** W0a corrió en el working
+directory principal y W0b en un worktree aparte (subagente), en paralelo, sin overlap de archivos
+(W0a tocó infraestructura de test; W0b, código de producción). Se mergearon con `git apply` del
+diff de un lado sobre el otro, sin conflictos, `pnpm verify:all` en verde, y el worktree se borró
+después. Vale confirmarlo antes de lanzar cada tanda de W1–W9: `git diff --stat` de cada worktree
+contra la tabla de "archivos que chocan" de abajo, antes de mergear.
+
 Por qué alcanza con eso:
 
 - **Aislamiento en runtime.** Vitest aísla el grafo de módulos por archivo de test (`isolate` por
   default), así que el `vi.spyOn(api, …)` de un archivo no se ve en otro. No hay base ni servidor
   compartido: el `api` es un singleton, pero cada archivo recibe su propia instancia.
 - **Aislamiento en git.** Cada lote crea sus propios archivos de test (`routes/-<pantalla>.test.tsx`
-  para las pantallas, como ya hacen notary y certifier). `src/` lo tocan solo W0 y el arreglo del
-  bug de `investor.units.tsx`, que es de W3.
+  para las pantallas, como ya hacen notary y certifier). `src/` (código de producción) ya lo tocó
+  W0 y nadie más lo debería tocar — el único fix de producción que iba a hacer un lote (el bug de
+  `delivered` en `investor.units.tsx`, que iba a ser de W3) ya salió con W0b, forzado por el tipado.
 
 **Los archivos que chocan si nadie los reserva**, y a quién le tocan:
 
 | Archivo | Por qué chocaría | Regla |
 |---|---|---|
-| `routes/-test-mount.tsx` y el Leaflet falso | Cada rol nuevo necesita su usuario, W3 necesita `validateSearch`, y cuatro lotes necesitan el mapa | Solo W0. Si un lote descubre que le falta algo más, lo pide; no lo edita |
-| `apps/web/vitest.config.ts` | Cada tanda de SPEC-017 subía los umbrales | Solo W0 (exclusiones) y §Consolidación (umbrales) |
+| `routes/-test-mount.tsx` y el Leaflet falso | Cada rol nuevo necesita su usuario, W3 necesita `validateSearch`, y cuatro lotes necesitan el mapa | **Ya hecho por W0** (commit `a7dac17`). Si un lote descubre que le falta algo más, lo pide; no lo edita |
+| `apps/web/vitest.config.ts` | Cada tanda de SPEC-017 subía los umbrales | **Las exclusiones ya están** (W0, `a7dac17`); los umbrales quedan para §Consolidación, al final |
 | `specs/SPEC-019-…` (esta) | Cada tanda escribía su sección | Ningún lote la edita: cada agente devuelve su resultado y lo transcribe quien consolida |
 | `components/domain/modals.test.tsx` | W7 es su dueño natural | Solo W7 |
 | `components/domain/cards.test.tsx`, `controls.test.tsx`, `patterns.test.tsx` | W8 es su dueño natural | Solo W8. W7 no suma casos a `patterns.test.tsx` aunque toque un modal: crea un archivo propio |
