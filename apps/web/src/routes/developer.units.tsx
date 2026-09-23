@@ -89,7 +89,7 @@ function DeveloperUnits() {
               (u) => u.status === 'sold' || u.status === 'delivered'
             ).length
             const available = grupo.units.filter((u) => u.status === 'available').length
-            const ocupacion = total > 0 ? Math.round((sold / total) * 100) : 0
+            const ocupacion = Math.round((sold / total) * 100)
 
             return (
               <article key={grupo.projectId} className={cn('flex flex-col gap-s3', CARD_SHELL)}>
