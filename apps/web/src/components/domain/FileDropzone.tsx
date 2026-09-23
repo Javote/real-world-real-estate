@@ -4,7 +4,7 @@ import {
   EVIDENCE_MAX_FILES
 } from '@plataforma/shared/evidence-rules'
 import { Upload, X } from 'lucide-react'
-import { useId, useRef, useState } from 'react'
+import { useId, useState } from 'react'
 import { cn } from '#/lib/cn'
 import { clasificarEntrantes, type MotivoLocal, type RechazoLocal } from '#/lib/evidenceFiles'
 
@@ -64,7 +64,6 @@ export function FileDropzone({
   className
 }: FileDropzoneProps) {
   const inputId = useId()
-  const inputRef = useRef<HTMLInputElement>(null)
   const [encima, setEncima] = useState(false)
   const [rechazados, setRechazados] = useState<RechazoLocal[]>([])
 
@@ -123,7 +122,6 @@ export function FileDropzone({
 
         <input
           id={inputId}
-          ref={inputRef}
           type="file"
           multiple
           accept={EVIDENCE_ALLOWED_MIME.join(',')}
@@ -134,7 +132,7 @@ export function FileDropzone({
             // Se limpia para que elegir el MISMO archivo dos veces vuelva a
             // disparar `change`. Sin esto, quitar un archivo y volver a
             // elegirlo no hace nada y parece que la app se colgó.
-            if (inputRef.current) inputRef.current.value = ''
+            e.currentTarget.value = ''
           }}
         />
       </div>

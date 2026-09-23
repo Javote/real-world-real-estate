@@ -750,6 +750,17 @@ describe('FileDropzone · variantes', () => {
     await waitFor(() => expect(onChange).toHaveBeenCalledWith([previo, nuevo]))
   })
 
+  it('vacía el input al elegir, para poder elegir el mismo archivo otra vez', async () => {
+    const onChange = vi.fn()
+    render(<FileDropzone files={[]} onChange={onChange} labels={labels} />)
+    const input = screen.getByLabelText('Arrastrá archivos') as HTMLInputElement
+
+    await userEvent.upload(input, pdf('a.pdf'))
+
+    await waitFor(() => expect(onChange).toHaveBeenCalled())
+    expect(input.files).toHaveLength(0)
+  })
+
   it('un cupo de archivos lleno rechaza el que sobra con su motivo', async () => {
     const onChange = vi.fn()
     const { container } = render(
