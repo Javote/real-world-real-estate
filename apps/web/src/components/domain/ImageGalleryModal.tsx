@@ -53,8 +53,7 @@ export function ImageGalleryModal({
     if (open) setIndice(initialIndex)
   }, [open, initialIndex])
 
-  if (images.length === 0) return null
-
+  // Sin fotos el índice da `undefined`: una sola guarda cubre eso y el tipo.
   const actual = images[Math.min(indice, images.length - 1)]
   if (!actual) return null
 

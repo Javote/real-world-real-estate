@@ -27,6 +27,7 @@ beforeEach(() => {
 })
 
 const mapaCreado = () => waitFor(() => expect(L.map).toHaveBeenCalled())
+const argsDeMarker = (i: number) => (L.marker.mock.calls[i] ?? []) as unknown[]
 const ultimoMapa = () => L.map.mock.results.at(-1)?.value as ReturnType<typeof L.map>
 
 type Props = Parameters<typeof LocationMapModal>[0]
@@ -200,8 +201,8 @@ describe('LocationMapModal — variante browse', () => {
     expect(L.divIcon).toHaveBeenCalledTimes(1)
     const opts = L.divIcon.mock.calls[0]?.[0] as { html: HTMLElement }
     expect(opts.html.textContent).toBe('desde US$ 1')
-    expect(L.marker.mock.calls[0]?.[1]).toEqual({ icon: opts })
-    expect(L.marker.mock.calls[1]?.[1]).toBeUndefined()
+    expect(argsDeMarker(0)[1]).toEqual({ icon: opts })
+    expect(argsDeMarker(1)[1]).toBeUndefined()
 
     const alClic = L.marker.mock.results[1]?.value.on.mock.calls[0]?.[1] as () => void
     alClic()
