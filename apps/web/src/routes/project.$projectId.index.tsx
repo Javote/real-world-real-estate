@@ -88,13 +88,9 @@ function InvestorProjectDetail() {
     return url ? [{ url, alt: t('investor.unit.gallery') }] : []
   })
 
+  // Solo los documentos abren el visor, y un documento no es una imagen: el
+  // visor no tiene página que renderizar.
   const docAbierto = docs.find((d) => d.id === docId)
-  const { data: docUrl } = useQuery({
-    queryKey: ['evidence-blob', docId],
-    queryFn: async () => objectUrl(await api.downloadEvidence(docId!)),
-    gcTime: 0,
-    enabled: Boolean(docId)
-  })
 
   const idsFavoritos = new Set((favoritos ?? []).map((p) => p.id))
   const esFavorito = idsFavoritos.has(projectId)
@@ -119,6 +115,10 @@ function InvestorProjectDetail() {
   const ubicacion = [proyecto?.city, proyecto?.country].filter(Boolean).join(', ')
   const stages = proyecto?.stages ?? []
   const timeline = timelineDeStages(stages)
+  // El timeline sale de `stages` uno a uno: todo nodo tiene su etapa.
+  const idPorOrden: Record<number, string> = Object.fromEntries(
+    stages.map((s) => [s.sequenceOrder, s.id])
+  )
   const actual = timeline.find((s) => s.state === 'current')
   const portada = imagenes[0]?.url
 
@@ -279,11 +279,9 @@ function InvestorProjectDetail() {
                 : undefined
             }
             onSelectStage={(s) => {
-              const stage = stages.find((x) => s.sequenceOrder === x.sequenceOrder)
-              if (!stage) return
               void navigate({
                 to: '/project/$projectId/stage/$stageId',
-                params: { projectId, stageId: stage.id }
+                params: { projectId, stageId: idPorOrden[s.sequenceOrder] }
               })
             }}
           />
@@ -341,9 +339,7 @@ function InvestorProjectDetail() {
         onClose={() => setDocId(null)}
         title={docAbierto?.category ?? t('investor.project.docs')}
         filename={docAbierto?.originalFilename ?? ''}
-        pageUrl={
-          esFoto(docAbierto?.evidenceType ?? '', docAbierto?.mimeType ?? '') ? (docUrl ?? '') : ''
-        }
+        pageUrl=""
         dateLabel={docAbierto ? formatDate(String(docAbierto.uploadedAt), locale) : ''}
         txid={docAbierto?.txid ?? null}
         onDownload={

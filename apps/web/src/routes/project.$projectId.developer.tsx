@@ -128,12 +128,14 @@ function InvestorProjectDeveloper() {
             vacio={t('investor.developer.emptyPrevious')}
             obras={data.previousProjects}
             testId="INV-DEVELOPER-PREVIOUS-002"
+            developerName={data.organization?.name}
           />
           <Obras
             titulo={t('investor.developer.activeProjects')}
             vacio={t('investor.developer.emptyActive')}
             obras={data.activeProjects}
             testId="INV-DEVELOPER-ACTIVE-003"
+            developerName={data.organization?.name}
           />
         </section>
       )}
@@ -174,12 +176,14 @@ function InvestorProjectDeveloper() {
     titulo,
     vacio,
     obras,
-    testId
+    testId,
+    developerName
   }: {
     titulo: string
     vacio: string
     obras: DeveloperProfile['previousProjects']
     testId: string
+    developerName: string | undefined
   }) {
     return (
       <section className="flex flex-col gap-s3" data-testid={testId}>
@@ -216,7 +220,7 @@ function InvestorProjectDeveloper() {
                   ? `${obra.sizeMinM2} m² – ${obra.sizeMaxM2} m²`
                   : null
               }
-              developerName={data?.organization?.name ?? null}
+              developerName={developerName}
               onOpen={() =>
                 void navigate({ to: '/project/$projectId', params: { projectId: obra.id } })
               }

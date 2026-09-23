@@ -74,6 +74,10 @@ function InvestorProjectProgress() {
 
   const lista = stages ?? []
   const timeline = timelineDeStages(lista)
+  // El timeline sale de `lista` uno a uno: todo nodo tiene su etapa.
+  const idPorOrden: Record<number, string> = Object.fromEntries(
+    lista.map((s) => [s.sequenceOrder, s.id])
+  )
   const actual = timeline.find((s) => s.state === 'current')
   const total = lista.length
 
@@ -111,11 +115,9 @@ function InvestorProjectProgress() {
                 : undefined
             }
             onSelectStage={(s) => {
-              const stage = lista.find((x) => x.sequenceOrder === s.sequenceOrder)
-              if (!stage) return
               void navigate({
                 to: '/project/$projectId/stage/$stageId',
-                params: { projectId, stageId: stage.id }
+                params: { projectId, stageId: idPorOrden[s.sequenceOrder] }
               })
             }}
           />
