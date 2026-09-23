@@ -15,7 +15,7 @@ export const CERTIFIER_ROLES: readonly UserRole[] = ['verifier']
  */
 export const ADMIN_ROLES: readonly UserRole[] = ['admin']
 
-export const ROLE_LANDING: Record<UserRole, string | null> = {
+export const ROLE_LANDING: Record<UserRole, string> = {
   buyer: '/investor/buy',
   developer: '/developer',
   notary: '/notary',

@@ -11,7 +11,6 @@ export interface Session {
 const KEY = 'proptrust.session'
 
 export function getSession(): Session | null {
-  if (typeof window === 'undefined') return null
   try {
     const raw = window.sessionStorage.getItem(KEY)
     return raw ? (JSON.parse(raw) as Session) : null
@@ -25,6 +24,5 @@ export function setSession(session: Session): void {
 }
 
 export function clearSession(): void {
-  if (typeof window === 'undefined') return
   window.sessionStorage.removeItem(KEY)
 }

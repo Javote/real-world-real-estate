@@ -6,13 +6,13 @@ import { DEV_ROLES } from '#/auth/roles'
 import { useRoleGuard } from '#/auth/useRoleGuard'
 import { ActionCard } from '#/components/domain/ActionCard'
 import { StatCard } from '#/components/domain/StatCard'
-import { StatusPill, type StatusTone } from '#/components/domain/StatusPill'
+import { StatusPill } from '#/components/domain/StatusPill'
 import { PanelLayout } from '#/components/PanelLayout'
 import { formatCurrencyCompact } from '#/i18n/format'
 import { useTranslation } from '#/i18n/useTranslation'
 import { CARD_SHELL } from '#/lib/cardShell'
 import { cn } from '#/lib/cn'
-import { avanceDeStages } from '#/lib/stageProgress'
+import { avanceDeStages, TONO_PROYECTO } from '#/lib/stageProgress'
 
 // **M2-D5 fila 37 · `/developer/project/:projectId`** — captura 37.
 // Componentes: ActionCard (grilla de 4), StatCard (3).
@@ -47,13 +47,6 @@ import { avanceDeStages } from '#/lib/stageProgress'
 export const Route = createFileRoute('/developer/project/$projectId/')({
   component: DeveloperProjectDetail
 })
-
-const TONO_POR_ESTADO: Record<string, StatusTone> = {
-  planning: 'info',
-  in_progress: 'pending',
-  delayed: 'pending',
-  completed: 'verified'
-}
 
 function DeveloperProjectDetail() {
   const { projectId } = Route.useParams()
@@ -97,7 +90,7 @@ function DeveloperProjectDetail() {
                 <p className="truncate text-body-sm text-text-muted">{ubicacion}</p>
               ) : null}
             </div>
-            <StatusPill tone={TONO_POR_ESTADO[proyecto.status] ?? 'neutral'}>
+            <StatusPill tone={TONO_PROYECTO[proyecto.status]}>
               {t(`project.status.${proyecto.status}`)}
             </StatusPill>
           </article>

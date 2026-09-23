@@ -47,13 +47,6 @@ export function formatCurrencyCompact(
   }).format(minorUnits / 100)
 }
 
-/** Números grandes en la forma compacta de las StatCards: "4,0 M". */
-export function formatCompact(value: number, locale: Locale): string {
-  return new Intl.NumberFormat(locale, { notation: 'compact', maximumFractionDigits: 1 }).format(
-    value
-  )
-}
-
 /**
  * El plugin de SQLite no convierte todas las columnas timestamp: `signedAt` y
  * `releasedAt` viajan como epoch ms. `new Date("1787…")` es Invalid; el número

@@ -72,6 +72,7 @@ import type {
   ProjectDocument as ProjectDocumentShared,
   ProjectListItem,
   ProjectMemberWithUser,
+  ProjectStatus as ProjectStatusShared,
   PublicDossier as PublicDossierShared,
   Serialized,
   StageEventSummary,
@@ -91,7 +92,7 @@ export type { LoginResponse, MeResponse, SessionUser, UserRole } from '@platafor
 // validador Aiken. El front solo necesita el tipo — `canTransition` es del
 // lado que decide.
 export type { StageState }
-export type ProjectStatus = 'planning' | 'in_progress' | 'delayed' | 'completed'
+export type ProjectStatus = ProjectStatusShared
 export type EvidenceType = EvidenceTypeShared
 
 export type Stage = Serialized<StageResponse>

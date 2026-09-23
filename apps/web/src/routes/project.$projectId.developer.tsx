@@ -194,7 +194,7 @@ function InvestorProjectDeveloper() {
               location={obra.city}
               status={{
                 label: t(`project.status.${obra.status}`),
-                tone: TONO_PROYECTO[obra.status] ?? 'neutral'
+                tone: TONO_PROYECTO[obra.status]
               }}
               progress={obra.progress}
               // El "From 310.000 US$" y el "60 m² to 150 m²" de la captura 60.

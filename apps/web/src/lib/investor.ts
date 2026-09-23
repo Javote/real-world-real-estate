@@ -1,3 +1,4 @@
+import type { StageState } from '@plataforma/shared'
 import { ApiError } from '#/api/port'
 import type { TranslationKey } from '#/i18n/dictionary'
 
@@ -33,7 +34,7 @@ export function claveNovedad(eventType: string): TranslationKey {
   return CLAVE_NOVEDAD[eventType] ?? 'investor.news.generic'
 }
 
-export function claveEstadoStage(state: string): TranslationKey {
+export function claveEstadoStage(state: StageState): TranslationKey {
   switch (state) {
     case 'Pending':
       return 'stage.state.Pending'
@@ -43,8 +44,10 @@ export function claveEstadoStage(state: string): TranslationKey {
       return 'stage.state.Observed'
     case 'Completed':
       return 'stage.state.Completed'
-    default:
-      return 'status.pending'
+    default: {
+      const _exhaustivo: never = state
+      return _exhaustivo
+    }
   }
 }
 

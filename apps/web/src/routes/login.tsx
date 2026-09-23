@@ -67,7 +67,7 @@ export function LoginScreen() {
       setSession({ token: res.token, user: res.user })
       // Invariante 2: el ruteo usa el rol que devolvió la API, nunca la
       // solapa que el usuario tocó antes de enviar el formulario.
-      const landing = ROLE_LANDING[res.user.role] ?? '/login'
+      const landing = ROLE_LANDING[res.user.role]
       void navigate({ to: landing })
     } catch (err) {
       const key = errorKeyFor(err)

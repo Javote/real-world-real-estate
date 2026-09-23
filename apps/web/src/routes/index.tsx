@@ -10,7 +10,7 @@ function Home() {
 
   useEffect(() => {
     const session = getSession()
-    const landing = session ? (ROLE_LANDING[session.user.role] ?? '/login') : '/login'
+    const landing = session ? ROLE_LANDING[session.user.role] : '/login'
     void navigate({ to: landing })
   }, [navigate])
 

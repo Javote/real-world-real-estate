@@ -10,7 +10,6 @@ function isLocale(value: unknown): value is Locale {
 }
 
 export function getStoredLocale(): Locale {
-  if (typeof window === 'undefined') return DEFAULT_LOCALE
   try {
     const raw = window.localStorage.getItem(STORAGE_KEY)
     return isLocale(raw) ? raw : DEFAULT_LOCALE
@@ -20,7 +19,6 @@ export function getStoredLocale(): Locale {
 }
 
 export function setStoredLocale(locale: Locale): void {
-  if (typeof window === 'undefined') return
   try {
     window.localStorage.setItem(STORAGE_KEY, locale)
   } catch {

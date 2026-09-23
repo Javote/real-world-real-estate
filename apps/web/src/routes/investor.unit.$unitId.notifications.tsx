@@ -1,7 +1,7 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { createFileRoute, useNavigate } from '@tanstack/react-router'
 import type { LucideIcon } from 'lucide-react'
-import { Bell, FileCheck2, FileText, ShieldCheck, Signature } from 'lucide-react'
+import { FileCheck2, FileText, ShieldCheck, Signature } from 'lucide-react'
 import { useState } from 'react'
 import { api } from '#/api/port'
 import { INVESTOR_ROLES } from '#/auth/roles'
@@ -104,11 +104,11 @@ function InvestorUnitNotifications() {
           <Loading />
         ) : notificaciones?.length ? (
           notificaciones.map((n) => {
-            const categoria = n.category as NotifCategory
+            const categoria = n.category
             return (
               <NotificationCard
                 key={n.id}
-                icon={ICONO[categoria] ?? Bell}
+                icon={ICONO[categoria]}
                 title={tDinamico(n.titleKey, n.titleKey)}
                 timestampLabel={formatRelative(String(n.createdAt), locale)}
                 read={n.readAt !== null}

@@ -13,9 +13,9 @@ interface LocaleContextValue {
 const LocaleContext = createContext<LocaleContextValue | null>(null)
 
 export function LocaleProvider({ children }: { children: React.ReactNode }) {
-  // Arranca en el default (SSR-safe) y se sincroniza con localStorage al
-  // montar, igual que useRequireSession con la sesión: localStorage solo
-  // existe en el cliente.
+  // Arranca en el default y se sincroniza con localStorage al montar, igual
+  // que useRoleGuard con la sesión: evita leer localStorage antes del primer
+  // render.
   const [locale, setLocaleState] = useState<Locale>(DEFAULT_LOCALE)
 
   useEffect(() => {

@@ -1,3 +1,4 @@
+import type { UnitStatus } from '@plataforma/shared'
 import { useQuery } from '@tanstack/react-query'
 import { createFileRoute, useNavigate } from '@tanstack/react-router'
 import { FileSignature, ShieldCheck, Wallet } from 'lucide-react'
@@ -53,7 +54,7 @@ export const Route = createFileRoute('/developer/project/$projectId/contracts')(
   component: ProjectContracts
 })
 
-const TONO: Record<string, StatusTone> = {
+const TONO: Record<UnitStatus, StatusTone> = {
   sold: 'verified',
   delivered: 'verified',
   reserved: 'pending',
@@ -138,9 +139,7 @@ function ProjectContracts() {
                     })}
                   </p>
                 </div>
-                <StatusPill tone={TONO[c.unitStatus] ?? 'neutral'}>
-                  {t(`unitStatus.${c.unitStatus}`) ?? c.unitStatus}
-                </StatusPill>
+                <StatusPill tone={TONO[c.unitStatus]}>{t(`unitStatus.${c.unitStatus}`)}</StatusPill>
               </div>
 
               <p className="text-caption text-text-muted">

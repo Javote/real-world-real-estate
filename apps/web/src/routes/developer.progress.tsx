@@ -1,3 +1,4 @@
+import type { StageState } from '@plataforma/shared'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { createFileRoute, useNavigate } from '@tanstack/react-router'
 import { AlertCircle } from 'lucide-react'
@@ -72,7 +73,7 @@ function nodoDe(state: string): TimelineStage['state'] {
 interface DetalleStage {
   stageId: string
   name: string
-  state: string
+  state: StageState
   certifiedAt: string | null
 }
 

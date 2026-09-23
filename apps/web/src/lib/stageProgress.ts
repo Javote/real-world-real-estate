@@ -1,8 +1,9 @@
+import type { ProjectStatus } from '@plataforma/shared'
 import type { TimelineStage } from '#/components/domain/ProgressTimeline'
 import type { StatusTone } from '#/components/domain/StatusPill'
 
 /** El estado del proyecto contra la matriz de M2-D3, sin inventar estados. */
-export const TONO_PROYECTO: Record<string, StatusTone> = {
+export const TONO_PROYECTO: Record<ProjectStatus, StatusTone> = {
   planning: 'info',
   in_progress: 'pending',
   delayed: 'pending',

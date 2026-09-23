@@ -46,8 +46,7 @@ export function useRoleGuard(allowedRoles: readonly UserRole[]) {
       // del backend —que lo deja pasar en cada ruta— llevada a la web: sin
       // esto podía hacer todo por API y nada desde una pantalla.
       if (local.user.role !== 'admin' && !allowedRoles.includes(local.user.role)) {
-        const ownLanding = ROLE_LANDING[local.user.role]
-        void navigate({ to: ownLanding ?? '/login' })
+        void navigate({ to: ROLE_LANDING[local.user.role] })
         return
       }
 

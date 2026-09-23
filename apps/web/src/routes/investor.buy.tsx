@@ -145,7 +145,7 @@ function InvestorBuy() {
         location={ubicacion || null}
         status={{
           label: t(`project.status.${proyecto.status}`),
-          tone: TONO_PROYECTO[proyecto.status] ?? 'neutral'
+          tone: TONO_PROYECTO[proyecto.status]
         }}
         progress={avanceDeStages(proyecto.stages ?? [])}
         onOpen={() =>

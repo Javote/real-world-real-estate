@@ -1,9 +1,11 @@
+import type { UnitStatus } from '@plataforma/shared'
 import { useQuery } from '@tanstack/react-query'
 import { createFileRoute, useNavigate } from '@tanstack/react-router'
 import { api } from '#/api/port'
 import { INVESTOR_ROLES } from '#/auth/roles'
 import { useRoleGuard } from '#/auth/useRoleGuard'
 import { Loading } from '#/components/domain/Loading'
+import type { StatusTone } from '#/components/domain/StatusPill'
 import { UnitCard } from '#/components/domain/UnitCard'
 import { PanelLayout } from '#/components/PanelLayout'
 import { useTranslation } from '#/i18n/useTranslation'
@@ -22,11 +24,12 @@ import { CARD_SHELL_EMPTY } from '#/lib/cardShell'
 
 export const Route = createFileRoute('/investor/units')({ component: InvestorUnits })
 
-const TONO = {
+const TONO: Record<UnitStatus, StatusTone> = {
   sold: 'verified',
+  delivered: 'verified',
   reserved: 'pending',
   available: 'neutral'
-} as const
+}
 
 function InvestorUnits() {
   const { ready } = useRoleGuard(INVESTOR_ROLES)
@@ -59,8 +62,8 @@ function InvestorUnits() {
               projectName={[u.projectName, u.city].filter(Boolean).join(' · ')}
               progress={u.progress}
               status={{
-                tone: TONO[u.status as keyof typeof TONO] ?? 'neutral',
-                label: t(`unitStatus.${u.status}`) ?? u.status
+                tone: TONO[u.status],
+                label: t(`unitStatus.${u.status}`)
               }}
               onOpen={() =>
                 void navigate({

@@ -1,3 +1,4 @@
+import type { MembershipRole } from '@plataforma/shared'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { createFileRoute } from '@tanstack/react-router'
 import { useState } from 'react'
@@ -36,7 +37,7 @@ const ESTADO: Record<CertifierInvitation['status'], { tone: StatusTone; key: Tra
   declined: { tone: 'neutral', key: 'admin.invitation.declined' }
 }
 
-const ROL: Record<string, TranslationKey> = {
+const ROL: Record<MembershipRole, TranslationKey> = {
   developer: 'admin.role.developer',
   buyer: 'admin.role.buyer',
   verifier: 'admin.role.verifier'
@@ -135,9 +136,7 @@ function AdminPanel() {
                 {miembros.map((m) => (
                   <li key={m.id} className="flex items-center justify-between gap-s3">
                     <span className="text-body text-text-primary">{m.user.fullName}</span>
-                    <StatusPill tone="info">
-                      {ROL[m.membershipRole] ? t(ROL[m.membershipRole]!) : m.membershipRole}
-                    </StatusPill>
+                    <StatusPill tone="info">{t(ROL[m.membershipRole])}</StatusPill>
                   </li>
                 ))}
               </ul>

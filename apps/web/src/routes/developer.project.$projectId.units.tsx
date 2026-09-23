@@ -1,3 +1,4 @@
+import type { UnitStatus } from '@plataforma/shared'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { createFileRoute, useNavigate } from '@tanstack/react-router'
 import { Plus } from 'lucide-react'
@@ -10,6 +11,7 @@ import { Loading } from '#/components/domain/Loading'
 import { NumberInput } from '#/components/domain/NumberInput'
 import { PrimaryButton, SecondaryButton } from '#/components/domain/PrimaryButton'
 import { StatCard } from '#/components/domain/StatCard'
+import type { StatusTone } from '#/components/domain/StatusPill'
 import { TextInput } from '#/components/domain/TextInput'
 import { UnitCard } from '#/components/domain/UnitCard'
 import { PanelLayout } from '#/components/PanelLayout'
@@ -61,12 +63,12 @@ export const Route = createFileRoute('/developer/project/$projectId/units')({
   component: ProjectUnits
 })
 
-const TONO = {
+const TONO: Record<UnitStatus, StatusTone> = {
   sold: 'verified',
   delivered: 'verified',
   reserved: 'pending',
   available: 'neutral'
-} as const
+}
 
 function ProjectUnits() {
   const { projectId } = Route.useParams()
@@ -252,8 +254,8 @@ function ProjectUnits() {
                 ? { priceLabel: formatCurrency(u.priceMinorUnits, u.currency, locale) }
                 : {})}
               status={{
-                tone: TONO[u.status as keyof typeof TONO] ?? 'neutral',
-                label: t(`unitStatus.${u.status}`) ?? u.status
+                tone: TONO[u.status],
+                label: t(`unitStatus.${u.status}`)
               }}
               onOpen={() => editar(u)}
             />

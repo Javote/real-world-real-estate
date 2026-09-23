@@ -7,11 +7,11 @@ import { useRoleGuard } from '#/auth/useRoleGuard'
 import { Loading } from '#/components/domain/Loading'
 import { SecondaryButton } from '#/components/domain/PrimaryButton'
 import { ProjectCard } from '#/components/domain/ProjectCard'
-import type { StatusTone } from '#/components/domain/StatusPill'
 import { PanelLayout } from '#/components/PanelLayout'
 import { formatCurrency, formatMonthYear } from '#/i18n/format'
 import { useTranslation } from '#/i18n/useTranslation'
 import { CARD_SHELL_EMPTY } from '#/lib/cardShell'
+import { TONO_PROYECTO } from '#/lib/stageProgress'
 
 // **M2-D5 fila 35-36 · `/developer/projects`** — captura 35/36.
 // Componentes: ProjectCard, StatusPill, ProgressTimeline (inline).
@@ -31,14 +31,6 @@ import { CARD_SHELL_EMPTY } from '#/lib/cardShell'
 // unidades del proyecto.
 
 export const Route = createFileRoute('/developer/projects')({ component: DeveloperProjects })
-
-/** El estado del proyecto contra la matriz de M2-D3, sin inventar estados. */
-const TONO_POR_ESTADO: Record<string, StatusTone> = {
-  planning: 'info',
-  in_progress: 'pending',
-  delayed: 'pending',
-  completed: 'verified'
-}
 
 function DeveloperProjects() {
   const { ready } = useRoleGuard(DEV_ROLES)
@@ -91,7 +83,7 @@ function DeveloperProjects() {
                 location={[p.city, p.country].filter(Boolean).join(', ')}
                 progress={entregado ? null : p.progress}
                 status={{
-                  tone: TONO_POR_ESTADO[p.status] ?? 'neutral',
+                  tone: TONO_PROYECTO[p.status],
                   label: t(`projectStatus.${p.status}`)
                 }}
                 priceLabel={
