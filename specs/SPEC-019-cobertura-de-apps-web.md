@@ -10,7 +10,8 @@
 >
 > **Paso 0 cerrado 2026-09-23** — W0a en `a7dac17`, W0b en `8be5830`, los dos en `main`. `pnpm
 > verify:all` verde después del merge. **W1, W2 y W9 ✅ 2026-09-23**, junto con W3–W6 (ver más abajo).
-> Lo que sigue abierto son W7 y W8.
+> **W7 y W8 ✅ 2026-09-23: los lotes W1–W9 están cerrados y `apps/web` mide 100% en las cuatro
+> métricas** (§Resultado final). Queda solo §Consolidación (umbrales, CI, evidencia).
 
 ## Dónde está hoy
 
@@ -595,6 +596,28 @@ Absorbe los pasos 7 y 8 de SPEC-017, que esperaban a la web:
    su versión en inglés `specs/evidencia-m3/1-repo-ci-tests/test-report.md`, el log de CI y el PDF
    (`bash scripts/evidencia-pdf/generar.sh`). El criterio 2 de `specs/README.md` pasa a ✅ y el ítem
    3.15 de `CLAUDE.md` se cierra.
+
+## Resultado final — 2026-09-23
+
+`pnpm --filter @plataforma/web test:coverage` sobre `main` con W1–W9 mergeados, `include` sobre todo
+`src/`: 82 archivos de test, 1.592 tests pasan (+1 `it.fails`, ver abajo).
+
+| Métrica | Medido | Vara |
+|---|---|---|
+| Statements | **100%** (1955/1955) | ≥95% ✅ |
+| Branches | **100%** (1854/1854) | ≥95% ✅ |
+| Functions | **100%** (766/766) | ≥95% ✅ |
+| Lines | **100%** (1740/1740) | ≥95% ✅ |
+
+Ramas inalcanzables borradas en W7/W8: la guarda `images.length === 0` de `ImageGalleryModal` (la de
+`!actual` ya la cubre) y el `if (inputRef.current)` de `FileDropzone` (ahora `e.currentTarget`). Sin
+`v8 ignore` nuevos.
+
+**🐞 Abierto, sin arreglar: `LocationMapModal` variante `modal` con `open` a secas.** El efecto que crea
+el mapa corre antes de que el portal de Radix monte el contenedor (`contenedor.current === null`) y no
+se reintenta. Está fijado como `it.fails` en `modals-mapa.test.tsx`. Hay que confirmarlo en el navegador
+(lo usan `investor.unit.$unitId.index` y `project.$projectId.index`); si se arregla, el `it.fails`
+pasa a `it`.
 
 ## Criterio de cierre
 
