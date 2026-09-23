@@ -27,7 +27,7 @@ export default defineConfig({
       output: {
         // Separa vendors pesados del bundle de la app: cachean aparte y no
         // se re-descargan en cada deploy que solo cambia código propio.
-        advancedChunks: {
+        codeSplitting: {
           groups: [
             { name: 'vendor-react', test: /node_modules\/(react|react-dom|scheduler)\// },
             { name: 'vendor-tanstack', test: /node_modules\/@tanstack\// },

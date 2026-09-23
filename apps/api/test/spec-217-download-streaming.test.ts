@@ -223,8 +223,10 @@ describe("GET /evidence/:id/download (SPEC-217)", () => {
     vi.spyOn(storage, "read").mockResolvedValue(
       new Readable({
         read() {
-          if (n < 3) this.push(Buffer.alloc(1024, 1)), n++;
-          else this.destroy(new Error("conexión a R2 cortada"));
+          if (n < 3) {
+            this.push(Buffer.alloc(1024, 1));
+            n++;
+          } else this.destroy(new Error("conexión a R2 cortada"));
         }
       })
     );

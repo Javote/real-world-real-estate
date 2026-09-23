@@ -22,7 +22,7 @@ const create = vi.fn().mockResolvedValue({
   walletAddress: "addr_test1vwallet",
   address: "addr_test1vscript",
   publishReferenceScript: vi.fn().mockResolvedValue({
-    outputRef: "a".repeat(64) + "#0",
+    outputRef: `${"a".repeat(64)}#0`,
     txid: null,
     lovelace: 2_000_000n
   })

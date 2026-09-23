@@ -1,7 +1,7 @@
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { RouterProvider } from '@tanstack/react-router'
 import { render, screen } from '@testing-library/react'
-import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
+import { afterEach, describe, expect, it, vi } from 'vitest'
 import { clearSession } from '#/auth/session'
 import { LocaleProvider } from '#/i18n/useTranslation'
 import { getRouter } from './router'
@@ -10,11 +10,6 @@ import { getRouter } from './router'
 // (`__root.tsx`, un `<Outlet />`). Los providers viven en `main.tsx` (D-065), así
 // que el test los pone por fuera del router, como hace el bootstrap.
 describe('getRouter (el router real)', () => {
-  // jsdom no implementa scrollTo y `scrollRestoration` lo llama en cada navegación.
-  beforeEach(() => {
-    vi.spyOn(window, 'scrollTo').mockImplementation(() => {})
-  })
-
   afterEach(() => {
     vi.restoreAllMocks()
     clearSession()

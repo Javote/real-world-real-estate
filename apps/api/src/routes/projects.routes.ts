@@ -473,7 +473,7 @@ const inviteCertifierProcedure = orpc
       .select(["role", "isActive"])
       .where("id", "=", input.certifierId)
       .executeTakeFirst();
-    if (!certifier || certifier.role !== "verifier" || !certifier.isActive) {
+    if (certifier?.role !== "verifier" || !certifier.isActive) {
       throw errors.CERTIFIER_NOT_ELIGIBLE({ message: "User is not an active certifier" });
     }
 
