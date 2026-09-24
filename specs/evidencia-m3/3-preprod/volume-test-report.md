@@ -2,10 +2,7 @@
 
 > Milestone 3 evidence: *"UI flows function end-to-end in pre-prod"* and the *"List of transaction
 > identifiers associated milestone test anchors"* (the 180 TXIDs are in the appendix and, formally,
-> in [`transaction-ids.md`](transaction-ids.md)).
->
-> *English translation of the working document `specs/REPORTE-2026-09-10-prueba-de-volumen.md`, as
-> of 2026-09-21. `D-NNN` references point to decisions in `DECISIONS.md`.*
+> in [`transaction-ids.pdf`](transaction-ids.pdf)).
 
 ## Executive summary
 
@@ -47,8 +44,8 @@ transactions. **All 30 stages of the 3 projects are `Completed`, and the 180 on-
 the test triggers have a real, `Confirmed` TXID.** The same session built, at the owner's request, a
 self-healing layer so this failure mode no longer needs manual forensics — §Making it self-healing
 — Layers 0, 1 and 2. The service wallet's real balance was measured: **~99.8 ADA total cost** for the
-test (39.83 ADA in fees + 60 ADA locked permanently, D-057), slightly below the plan's estimate
-(~105 ADA).
+test (39.83 ADA in fees + 60 ADA locked permanently, by design — there is no burn), slightly below
+the plan's estimate (~105 ADA).
 
 ## Scope and goal
 
@@ -62,7 +59,7 @@ Repeat, at volume, what until 2026-09-08 had only been tested edge by edge:
 | `InProgress → Completed` | certifier, exclusive | "Certify" button (`/certifier/stage/:stageId`) |
 
 Budget estimated in the plan: **~35 ADA per project** (≈15 in fees + 20 locked by the 10 stages × 2
-ADA, D-057 — no burn, permanent).
+ADA — no burn, permanent).
 
 ## Method
 
@@ -76,7 +73,7 @@ ADA, D-057 — no burn, permanent).
   (`membershipRole: "verifier"`) of the 3 new projects via `POST /projects/:id/members` (admin-only),
   because the certifier's queue only lists stages of projects where the certifier is a member —
   without that, the 30 new stages were invisible to the certifier. *(Since 2026-09-21 this is done
-  from the admin screen: the admin invites the certifier and the certifier accepts — decision D-095.)*
+  from the admin screen: the admin invites the certifier and the certifier accepts.)*
 - **Real evidence:** 10 PDFs generated with `pandoc` (`acta-1.pdf` … `acta-10.pdf`), reused across
   the 3 projects, uploaded through `/developer/project/:id/upload`.
 - **"Don't trust the spinner" verification:** after each transition click (especially
@@ -135,14 +132,14 @@ at the start of each phase because of Render free-tier cold starts).
 | Torre Volumen 3 | 10/10 | 60/60 |
 
 **All 30 stages ended declared `Completed` in the database**, including the 2 with failed anchoring
-— consistent with D-059 (the declaration is written even if anchoring fails) and with the permission
-matrix: no transition was rejected for authorization, all 30 went through the correct role
-(developer for the automatic and manual edges that belong to it, certifier exclusively for
-Observe/Certify). The 4 missing transactions were closed afterwards — see below.
+— consistent with the design principle that the declaration is written even if anchoring fails, and
+with the permission matrix: no transition was rejected for authorization, all 30 went through the
+correct role (developer for the automatic and manual edges that belong to it, certifier exclusively
+for Observe/Certify). The 4 missing transactions were closed afterwards — see below.
 
 ### A note on `Pending` vs `Confirmed`
 
-By design (D-077, reconciliation on read), `OnChainEvent.status` only moves from `Pending` to
+By design (reconciliation on read), `OnChainEvent.status` only moves from `Pending` to
 `Confirmed` when a route that reads it triggers reconciliation — not automatically. Right after the
 test, most events showed `Pending` with a real TXID: that is **not the same as "not confirmed on
 Preprod"**, it means "written and with a TXID, but nobody has opened the screen that reconciles that
@@ -240,7 +237,7 @@ transaction.
 
 That is **stage 4**: here it did find a UTxO (the only one, `270cfea4…#0`, still `Observed`
 on-chain), but built the transaction assuming the previous datum was `InProgress` — because that is
-what `Stage.state` said in the database (D-059 had already written the declaration) — and that
+what `Stage.state` said in the database, which had already written the declaration — and that
 rebuilt datum **did not match** the real datum on-chain. The Aiken validator rejected the transaction
 because the declared previous state was not the real previous state. The validator worked exactly as
 designed — the problem was that the database and the chain no longer agreed on the previous state.
@@ -248,7 +245,7 @@ designed — the problem was that the database and the chain no longer agreed on
 ### Real impact
 
 Because the 4 phases of the test ran over all 30 stages equally, stage 4's `Stage.state` also ended
-`Completed` — terminal in the state machine (D-020) — so no UI action could repair either stage.
+`Completed` — terminal in the state machine — so no UI action could repair either stage.
 Both required the same thing: writing the real `outputRef` into `OnChainEvent` and building by hand
 the missing anchoring transaction. That was done in the same day's second session (below).
 
@@ -278,7 +275,7 @@ the missing anchoring transaction. That was done in the same day's second sessio
    `addr_test1vp3vy56p6lrghhntg8ytydnuugnqh7ctkyxn3rm35g4q2ggtqvncw`: **9,870.97 ADA**. No "before"
    balance was captured, so the most honest measure is the one rebuilt from the transactions
    themselves: summing the real `fee` of the test's 176 transactions gives **39.83 ADA in fees**,
-   plus **60 ADA locked permanently** (30 live threads × 2 ADA, D-057, no burn) — **≈99.8 ADA total
+   plus **60 ADA locked permanently** (30 live threads × 2 ADA, no burn) — **≈99.8 ADA total
    real cost, ≈33.3 ADA per project**, against the plan's estimate of ~35 ADA/project (≈105 ADA for
    the 3). **It came in slightly under budget.**
 
@@ -395,17 +392,17 @@ against production. If the response contains a suspicious thread that Layer 1 co
 its own, the job **fails on purpose**: a red run in Actions triggers GitHub's default notification,
 with no new alerting channel for a problem that is rare today.
 
-**Why GitHub Actions and not a cron inside the API:** decisions D-003 · D-040 · D-077 forbid it — an
-internal timer stops counting as soon as Render puts the service to sleep after 15 minutes of
-inactivity (free plan, no workers). The cron fires from **outside** the process.
+**Why GitHub Actions and not a cron inside the API:** an internal timer stops counting as soon as
+Render puts the service to sleep after 15 minutes of inactivity (free plan, no workers). The cron
+fires from **outside** the process.
 
 ### Layer 1 — repair the bookkeeping automatically, signing nothing
 
 Stage 3's case — a transaction that **did** go out and confirm, with the database simply unaware of
 it — can be repaired with no risk: nothing new needs to be built or signed, only the real UTxO found
 and the lost `txid`/`outputRef` filled in. The anchoring port gained `findLiveThread(stageRef)`,
-which locates a stage's live thread by the asset of its thread token (D-058), implemented in the
-real, simulated and disabled adapters. `repararHilosSospechosos()` ("repair suspicious threads")
+which locates a stage's live thread by the asset of its thread token, implemented in the real,
+simulated and disabled adapters. `repararHilosSospechosos()` ("repair suspicious threads")
 uses it: for each suspicious thread it finds the live one and, **only if the state in the datum it
 finds matches the state the event already declared**, fills in `txid`/`outputRef` — leaving the
 status `Pending` for regular reconciliation to confirm. If the datum does not match — stage 4's case,

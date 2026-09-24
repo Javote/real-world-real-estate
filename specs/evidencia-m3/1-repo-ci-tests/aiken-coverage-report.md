@@ -1,23 +1,20 @@
 # Aiken validator coverage — rejection points and mutation testing
 
 > Run: 2026-09-22T02:22:24.103Z–02:22:37.552Z · `aiken v1.1.21+42babe5` · 102 tests, 102 green.
->
-> *Consolidates two working documents that were previously published separately —
-> `mutation-report.md` and `expect-trace-report.md` — into a single file.*
 
 ## Why this is a separate report
 
 **Aiken does not measure line coverage the way the TypeScript stack does.** The four TypeScript
 parts (`apps/api`, `apps/web`, `packages/shared`, `packages/cardano`) use `vitest`'s `v8` provider,
 which instruments every line, branch, statement and function and reports a percentage — that is what
-[`test-report.md`](test-report.md) covers. Aiken's toolchain has no equivalent: `aiken check` runs
+[`test-report.pdf`](test-report.pdf) covers. Aiken's toolchain has no equivalent: `aiken check` runs
 the test suite and, separately, a `--property-coverage` flag exists but does not produce a line
 percentage.
 
 So the validator's coverage evidence is built with two purpose-written scripts
-(`contracts/scripts/rechazos-mutantes.mjs` and `contracts/scripts/rechazos-trazas.mjs`, documented in
-`contracts/CLAUDE.md`) that answer the same question — *"is every rejection path actually exercised
-by a test?"* — with methods that fit how a Plutus validator fails:
+(`contracts/scripts/rechazos-mutantes.mjs` and `contracts/scripts/rechazos-trazas.mjs`) that answer
+the same question — *"is every rejection path actually exercised by a test?"* — with methods that
+fit how a Plutus validator fails:
 
 1. **Rejection point → test.** Every `expect` in the validator is a point where a malformed or
    invalid transaction aborts. For each one, the table below names the test(s) that trigger it.

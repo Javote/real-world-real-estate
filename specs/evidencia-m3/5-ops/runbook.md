@@ -7,9 +7,6 @@
 >
 > **Everything runs at $0/month.** That imposes non-negotiable constraints — see §Accepted
 > limitations.
->
-> *English translation of the working document `specs/RUNBOOK-deploy.md`, as of 2026-09-21. The
-> `D-NNN` references point to decisions in `DECISIONS.md`.*
 
 ## 0 · What gets deployed
 
@@ -116,7 +113,7 @@ pnpm --filter @plataforma/api db:seed
 **additive**: creating a new one does not invalidate the one already in Render. What does break the
 deployed API is `turso db tokens invalidate`, which kills **all of them** at once — do not run it.
 
-**The passwords are mandatory against Turso and the seed fails without them** (D-047): the local
+**The passwords are mandatory against Turso and the seed fails without them:** the local
 seed credentials are published in the repository, and seeding them into a deployed instance would
 leave an admin account with known credentials. The ones you stored in the first step are the ones
 you hand to a reviewer.
@@ -169,7 +166,7 @@ The last two variables **are not redundant**: the code defaults target MinIO (`u
 path-style) and R2 wants `auto` and virtual-hosted style.
 
 **⚠ The order is mandatory, not a recommendation.** `STORAGE_DRIVER=s3` without the `S3_*`
-variables makes the API **refuse to start** — on purpose (D-042): it fails at startup rather than on
+variables makes the API **refuse to start** — on purpose: it fails at startup rather than on
 the first upload, with a user waiting. So the credentials go into the Render dashboard **before**
 the `render.yaml` with `STORAGE_DRIVER=s3` reaches `main`. If the order is reversed, the API stays
 down until they are loaded.
@@ -193,7 +190,7 @@ for real on Cardano Preprod.
    **does not print it**; it prints the address and the admin, which are public. It refuses to
    overwrite an existing file.
 
-   It is a payment key and not a seed phrase (D-078): **one key, once**. The address is derived from
+   It is a payment key and not a seed phrase: **one key, once**. The address is derived from
    it, so there is no second variable that could fall out of sync.
 
    ⚠ **It is not rotated.** The validator's admin is the hash of this key: replacing it leaves the
@@ -225,16 +222,16 @@ for real on Cardano Preprod.
 
    The line to look for is `AnchorPort listo en modo "real"` ("AnchorPort ready in real mode"). If
    it says `simulated`, the variable did not arrive; if the process died, the error says what is
-   missing (D-042).
+   missing.
 5. **On Render**, on `propnexus-api`: `BLOCKFROST_API_KEY` and `SERVICE_WALLET_PRIVATE_KEY`. They are
    runtime and take effect with a restart. `ANCHOR_MODE` **is no longer set by hand**: the Blueprint
    declares it with `value: real`, so a dashboard change would be overwritten by the next re-sync.
 
-   **If either one is missing, the API still starts** with anchoring disabled (D-075). The startup
+   **If either one is missing, the API still starts** with anchoring disabled. The startup
    says so — `AnchorPort listo en modo "disabled"`, with the reason on the line above — and every
    anchor is rejected, so it never writes a TXID that does not exist. It is the safe state, not the
    good state: until they are loaded, the platform records but does not prove.
-6. **Publish the validator as a reference script** (D-083). Done **once per network**, as soon as the
+6. **Publish the validator as a reference script.** Done **once per network**, as soon as the
    wallet is funded, independent of the previous steps:
 
    ```bash
@@ -247,8 +244,8 @@ for real on Cardano Preprod.
    transaction **references** it instead of carrying it: from 2,890 to 599 bytes, from 0.2976 to
    0.2317 tADA. **It is idempotent**: running it twice does not publish twice or spend again.
 
-   It locks ~11 tADA — the minimum Cardano requires for a UTxO holding a script, not value
-   (D-021). It stays in the wallet and can be recovered with a deliberate transaction.
+   It locks ~11 tADA — the minimum Cardano requires for a UTxO holding a script, not value.
+   It stays in the wallet and can be recovered with a deliberate transaction.
 
    ⚠ **Restart the API afterwards.** The reference script is discovered when the process starts: an
    instance already running keeps attaching the validator until the next deploy or restart. It
@@ -278,10 +275,10 @@ in a block. It is idempotent: triggering it too often costs nothing, and an even
 left alone — there is nothing to query.
 
 **It has to be triggered from outside:** a `setInterval` inside the API stops counting when Render
-puts the service to sleep after 15 minutes, and the free tier has no workers (D-003 · D-040). A
+puts the service to sleep after 15 minutes, and the free tier has no workers. A
 GitHub Actions cron calls that same endpoint (`.github/workflows/reconcile.yml`, every day at 06:00
 UTC) and fails if it finds suspicious threads. It can also be run by hand, and every screen that
-shows an anchor reconciles its own scope on read (D-077).
+shows an anchor reconciles its own scope on read.
 
 On Preprod a block takes ~20 s, so reconciling right after anchoring usually returns
 `confirmados: 0`. It is not an error: it has not confirmed yet. Run it again.
@@ -291,7 +288,7 @@ On Preprod a block takes ~20 s, so reconciling right after anchoring usually ret
 Push to `main`. Render rebuilds **both services on every push**, whatever it touches.
 
 **The `buildFilter`s are declared and do not filter.** Measured on 2026-08-27: commit `ee357df`
-touched only three `.md` files — no `render.yaml` involved — and triggered new deploys of both
+touched only three documentation files — no `render.yaml` involved — and triggered new deploys of both
 services, with `trigger = new_commit`, exactly the case where they should apply. The filters are
 correctly registered on Render's side, and none of the three exceptions Render documents applies.
 **Cause undetermined.**
@@ -351,7 +348,7 @@ curl -s -o /dev/null -w '%{http_code}\n' -X POST \
 ```
 
 **That last one is the canary and it is not optional.** A `502` there means the app's most common
-error path is broken (D-050).
+error path is broken.
 
 ## 3 · Rollback
 
@@ -359,7 +356,7 @@ Render keeps previous deploys: **Dashboard → the service → Deploys → Rollb
 one. It is instant and does not touch the database.
 
 **The database does not roll back with the service.** If the problem was a migration, rolling back
-the code leaves the schema ahead. That is why migrations between deploys must be **additive** (D-012):
+the code leaves the schema ahead. That is why migrations between deploys must be **additive**:
 a migration that only adds is compatible with the old code. If a migration ever has to be reverted,
 it is a new migration that undoes it — never editing the one already applied.
 
@@ -377,14 +374,14 @@ overwritten until you are sure.
 
 | Symptom | Most likely cause | What to do |
 |---|---|---|
-| First request takes ~1 min | Spin-down after 15 min. **Expected** (D-040) | Nothing. Before a demo, warm it up by hand (§5) |
-| The API does not start, the log mentions `JWT_SECRET` | The variable ended up empty | By design (D-042). Regenerate it in the dashboard and redeploy |
-| Every login returns 429 | `TRUST_PROXY_HOPS` other than 1 | With 0 behind the proxy, every client shares one bucket (D-045). Set it to 1 and restart |
-| Login `POST` returns **502** | The app's error path is broken | D-050. Check `apps/web/vite.config.ts` and **rebuild the web app** (it is build time) |
+| First request takes ~1 min | Spin-down after 15 min. **Expected** | Nothing. Before a demo, warm it up by hand (§5) |
+| The API does not start, the log mentions `JWT_SECRET` | The variable ended up empty | By design. Regenerate it in the dashboard and redeploy |
+| Every login returns 429 | `TRUST_PROXY_HOPS` other than 1 | With 0 behind the proxy, every client shares one bucket. Set it to 1 and restart |
+| Login `POST` returns **502** | The app's error path is broken | Check `apps/web/vite.config.ts` and **rebuild the web app** (it is build time) |
 | The web app loads but every call fails | `VITE_API_ORIGIN` wrong or pointing to an old URL | Build time: fix the variable and **Clear build cache & deploy** |
 | The web app loads and the console says CORS | The web app's origin is missing from the API's `WEB_ORIGIN` | Runtime: fix the variable and **restart** the API |
 | Uploaded evidence disappeared | With R2 this should no longer happen | It is an incident. Check that `STORAGE_DRIVER=s3` is set: with `disk` it goes back to the ephemeral filesystem and is lost |
-| The API does not start, the log says `STORAGE_DRIVER=s3 exige …` | An `S3_*` variable is missing | D-042, on purpose. Load the variable in the dashboard and restart (§1.4) |
+| The API does not start, the log says `STORAGE_DRIVER=s3 exige …` | An `S3_*` variable is missing | On purpose. Load the variable in the dashboard and restart (§1.4) |
 | Service suspended mid-month | The 750 hours ran out | Someone set up a keep-warm. Remove it (§Accepted limitations) |
 | A service stuck on an old commit, both `live` and no errors | The push arrived while the service was suspended | Resuming does not recover it. `render deploys create <srv-id>` (§2) |
 | Screens that used to work start failing to parse | Front end and API on different commits | Same case as above. The `z.strictObject` schemas in `packages/shared` make it strict: a missing field breaks the whole parse |
@@ -416,7 +413,7 @@ API was down for ~18 minutes over a documentation-only commit.
 
 Logs: **Dashboard → the service → Logs** (or `render logs -r <service>`). There is no shell: what is
 not logged cannot be inspected. That is why the API **fails at startup** instead of failing on a
-request (D-042).
+request.
 
 **Incident of 2026-09-07, two failures in a row on the same push.** When instrumenting
 Sentry/OpenTelemetry (`instrumentation.ts`, preloaded with `node --require`), two consecutive
@@ -442,7 +439,7 @@ curl -s -o /dev/null https://propnexus-web.onrender.com/
 
 **Do not automate this with a cron.** A periodic keep-warm keeps both services awake 24/7 (~1,460 h
 against the plan's 750) and suspends them around day 15 — so the trick to avoid a one-minute cold
-start ends up causing a two-week outage. It is forbidden by D-040, not forgotten. A manual,
+start ends up causing a two-week outage. It is deliberately avoided, not forgotten. A manual,
 attended loop that lasts as long as a recording and is stopped at the end is a different thing and
 is fine.
 
@@ -489,7 +486,7 @@ Points 1 and 2 are reverted as admin: the two new memberships have no delete end
 
 ## Accepted limitations (read before promising anything)
 
-1. **~1 min cold start** after 15 min of inactivity. Accepted in exchange for $0 (D-040).
+1. **~1 min cold start** after 15 min of inactivity. Accepted in exchange for $0.
 2. **Evidence persists on R2** (§1.4), not on the filesystem: an anchored hash always has a file
    behind it. The filesystem is still ephemeral, and that is fine — `UPLOAD_DIR` is only the upload
    staging area and the route deletes the temporary file as soon as R2 confirms. What needs watching
@@ -498,12 +495,11 @@ Points 1 and 2 are reverted as admin: the two new memberships have no delete end
    cold visits); with a keep-warm it is not.
 4. **No confirmation worker.** Render background workers have no free tier: reconciliation is
    triggered by a GitHub Actions cron against an authenticated endpoint (`reconcile.yml`, daily) and
-   on read — **never a `setInterval` inside the API**, which stops counting when the service sleeps
-   (D-003, D-040).
+   on read — **never a `setInterval` inside the API**, which stops counting when the service sleeps.
 5. **Monitoring: live since 2026-09-08.** Sentry (errors, back end and front end),
    OpenTelemetry → Grafana Cloud (back-end traces) and PostHog (web analytics, no personal data) are
    instrumented (`apps/api/src/instrumentation.ts`, `apps/web/src/lib/observability.ts`) and verified
-   with real production data ([screenshots](monitoring-screenshots.md)). Without
+   with real production data ([screenshots](monitoring-screenshots.pdf)). Without
    `SENTRY_DSN`/`OTEL_EXPORTER_OTLP_ENDPOINT` they stay off without breaking anything. Render Metrics
    Stream (native infrastructure metrics: container CPU/RAM) is a Pro+ feature, not free — Render's
    free dashboard is enough to look at them, they just cannot be exported to Grafana Cloud without

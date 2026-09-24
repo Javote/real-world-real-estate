@@ -20,7 +20,7 @@ To use the Postman collection, import it and set the `baseUrl` variable (for exa
 ## Covered elsewhere
 
 - **Test reports with coverage and outcomes:** the same report as item 1,
-  [`../1-repo-ci-tests/test-report.md`](../1-repo-ci-tests/test-report.md). The web app's
+  [`../1-repo-ci-tests/test-report.pdf`](../1-repo-ci-tests/test-report.pdf). The web app's
   `ApiPort` is also tested against this OpenAPI document.
 
 ## Status

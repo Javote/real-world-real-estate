@@ -6,12 +6,6 @@
 > Repository: <https://github.com/Javote/real-world-real-estate> (public) · Pre-production:
 > <https://propnexus-web.onrender.com> (web app) and <https://propnexus-api.onrender.com> (API), on
 > Cardano **Preprod**.
->
-> The documents here are English versions prepared for this submission. The project's working
-> language is Spanish; each document names the working document it comes from.
->
-> Every document is available as Markdown and as a PDF with the same name, side by side. The PDFs
-> are generated from the Markdown (`bash scripts/evidencia-pdf/generar.sh`).
 
 ## Status
 
@@ -25,17 +19,20 @@
 
 ## 1 · Repository, CI and tests
 
-- **Test and coverage report**: [`test-report.md`](1-repo-ci-tests/test-report.md) — 2,732
-  unit/integration tests (contracts, API, packages, web app), 0 failed, plus a separate
-  non-blocking E2E job; 100% coverage on all four metrics for all four TypeScript parts, all
-  measured in CI.
+- **Test and coverage report**: [`test-report.pdf`](1-repo-ci-tests/test-report.pdf) — tests and
+  coverage for the four TypeScript parts (contracts excluded: see next bullet), plus a separate
+  non-blocking E2E job.
+- **Validator coverage report**: [`aiken-coverage-report.pdf`](1-repo-ci-tests/aiken-coverage-report.pdf)
+  — Aiken has no line-coverage percentage, so the validator's evidence is a rejection-point → test
+  table plus mutation testing, kept as its own document.
 - **CI logs**: the run on GitHub Actions,
   [run 36004503722](https://github.com/Javote/real-world-real-estate/actions/runs/36004503722), and
   its **full copy** in [`ci-run-36004503722.log`](1-repo-ci-tests/ci-run-36004503722.log) (GitHub
   deletes Actions logs after 90 days).
-- **Public vs. private folders**: the repository [`README.md`](../../README.md), section "This
-  repository is public": no folder contains secrets, credentials,
-  wallet keys or personal data; secrets travel only through environment variables.
+- **Public vs. private folders**: the
+  [repository's README](https://github.com/Javote/real-world-real-estate#readme), section "This
+  repository is public": no folder contains secrets, credentials, wallet keys or personal data;
+  secrets travel only through environment variables.
 - ⏳ **Pilot participant letters of confirmation** (≥3).
 
 ## 2 · API
@@ -51,8 +48,8 @@
 
 - **URL**: <https://propnexus-web.onrender.com>.
 - **Volume test** (end-to-end UI flows on pre-production: 30 stages, 180 on-chain transactions):
-  [`volume-test-report.md`](3-preprod/volume-test-report.md).
-- **Transaction IDs**: [`transaction-ids.md`](3-preprod/transaction-ids.md) and the
+  [`volume-test-report.pdf`](3-preprod/volume-test-report.pdf).
+- **Transaction IDs**: [`transaction-ids.pdf`](3-preprod/transaction-ids.pdf) and the
   [`.csv`](3-preprod/txids-volume-test-2026-09-10.csv), each TXID re-verified against the
   chain.
 - ⏳ **Median reservation → escrow < 12 min**, with audit-log and latency screenshots and a short
@@ -61,12 +58,12 @@
 
 ## 4 · Security
 
-- **Security review**: [`security-review.md`](4-security/security-review.md) — 3 P1 findings found
-  and closed, 0 open; static analysis and dependency scans on every CI run.
+- **Security review**: [`security-review.pdf`](4-security/security-review.pdf) — 3 P1 findings
+  found and closed, 0 open; static analysis and dependency scans on every CI run.
 
 ## 5 · Operations
 
-- **Runbook** for deploy, rollback and incident response: [`runbook.md`](5-ops/runbook.md).
+- **Runbook** for deploy, rollback and incident response: [`runbook.pdf`](5-ops/runbook.pdf).
 - **Monitoring screenshots** (Sentry, Grafana Cloud, PostHog, Render):
-  [`monitoring-screenshots.md`](5-ops/monitoring-screenshots.md), images in
+  [`monitoring-screenshots.pdf`](5-ops/monitoring-screenshots.pdf), images in
   [`monitoring/`](5-ops/monitoring/).

@@ -1,7 +1,7 @@
 # Formal TXID list — the volume test on Cardano Preprod
 
 > Milestone 3 evidence: *"List of transaction identifiers associated milestone test anchors"*.
-> The 180 TXIDs also appear in the appendix of the [volume test report](volume-test-report.md).
+> The 180 TXIDs also appear in the appendix of the [volume test report](volume-test-report.pdf).
 > This document is the formal publication, in a location intended for that purpose, with every
 > single TXID re-verified against the live chain — not merely against what the application's own
 > database reports — on the day of publication.
@@ -11,8 +11,6 @@
 them in would have produced a longer, less legible list. These 180 are a clean, complete set: 3
 new projects, 10 stages each, all 6 on-chain transactions per stage, with no gaps and no padding
 from unrelated runs.
-
-*Source: the working document `specs/EVIDENCIA-2026-09-11-lista-formal-de-txids.md`, as of 2026-09-21.*
 
 ## The data file
 
@@ -28,13 +26,13 @@ from unrelated runs.
 | `transition` | Which on-chain action this row records: mint (initial declaration), evidence anchor, or one of the four stage-FSM transitions (auto-advance, observe, resume, certify) |
 | `event` | The underlying event type as stored in `OnChainEvent`: `STAGE_CREATED`, `EVIDENCE_ANCHOR`, or `STAGE_TRANSITION` |
 | `txid` | The Cardano transaction hash, verbatim, case-sensitive |
-| `network` | Always `Preprod` — mainnet is out of scope for this milestone by owner decision (D-013) |
+| `network` | Always `Preprod` — mainnet is out of scope for this milestone |
 | `explorer_preprod` | Direct, clickable Cardanoscan Preprod link for that transaction |
 | `koios_confirmations_2026-09-11` | Confirmation depth measured against Koios on the day this document was published (see below) |
 
 ## Methodology
 
-1. **Source.** The appendix of the [volume test report](volume-test-report.md), parsed with a
+1. **Source.** The appendix of the [volume test report](volume-test-report.pdf), parsed with a
    script rather than transcribed by hand, to avoid repeating a copy error across 180 rows.
 2. **Independent re-verification on 2026-09-11**, against Koios (`preprod.koios.rest`, a public,
    read-only API — not the project's own node and not the application's database), the same method
@@ -43,8 +41,8 @@ from unrelated runs.
    180 returned a real, confirmed transaction**, with between **3,065 and 3,761 confirmations**
    each at the time of the run — months of margin over any reasonable Preprod reorg depth.
 3. **Zero "not found," zero "still pending."** Had any transaction come back unconfirmed, it would
-   not have shipped in this list — the same rule 17 that governs the product's UI ("never display a
-   proof signal that cannot be substantiated"), applied here to a document instead of a screen.
+   not have shipped in this list: the product never displays a proof signal it cannot substantiate,
+   and the same standard applies here, to a document instead of a screen.
 
 ## Summary
 

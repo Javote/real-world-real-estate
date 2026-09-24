@@ -6,9 +6,6 @@
 > instrumented in code (`apps/api/src/instrumentation.ts`, `apps/web/src/lib/observability.ts`) and
 > verified live in production on 2026-09-08. The screenshots were captured on 2026-09-11, directly
 > against the live dashboards.
->
-> *Source: the working document `specs/EVIDENCIA-2026-09-11-monitoring-screenshots.md`, as of
-> 2026-09-21.*
 
 **No staged data.** Every screenshot below shows what each service reported at capture time,
 unedited — real traffic and real errors from the production instance
@@ -22,7 +19,7 @@ the third:
 
 | Telemetry | Where it comes from | Evidence |
 |---|---|---|
-| **Coverage** | Vitest coverage on every CI run; the API has minimum thresholds that fail the build | The coverage table in the [test report](../1-repo-ci-tests/test-report.md) (API: 89.3% of lines) |
+| **Coverage** | Vitest coverage on every CI run; all four TypeScript parts have minimum thresholds that fail the build | The coverage table in the [test report](../1-repo-ci-tests/test-report.pdf) (100% of lines) |
 | **Latency** | OpenTelemetry traces of every API request, exported to Grafana Cloud (Tempo), with per-middleware timing | `grafana-tempo-trace-detail.jpg` below |
 | **Error budgets** | Sentry captures every unhandled error in the API and the web app | `sentry-issues.jpg` below |
 
@@ -51,9 +48,8 @@ unhandled errors are visible:
   form twice against the same reference. Left in the screenshot on purpose, as further proof the
   pipeline captures real errors as they happen, not synthetic ones.
 - `Error — Cannot find module '@opentelemetry/api'`, 3 days old — a historical, already-fixed
-  incident (see `apps/api/CLAUDE.md`, 2026-09-08 entry) whose issue entry is still open in
-  Sentry because nobody has manually resolved it there; the underlying bug has been fixed in code
-  since.
+  incident whose issue entry is still open in Sentry because nobody has manually resolved it there;
+  the underlying bug has been fixed in code since.
 
 ### `grafana-tempo-trace-detail.jpg`
 

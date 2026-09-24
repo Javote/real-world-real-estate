@@ -3,10 +3,7 @@
 > Milestone 3 evidence: *"Security review report (findings + applied fixes)"*, for the acceptance
 > criterion *"No open P1 security findings after remediation"*. It compiles findings already closed
 > in code, each with its date, the file that fixes it and the test that proves the fix, plus a
-> dependency scan and static analysis.
->
-> *English translation of the working document `specs/SECURITY-REVIEW-2026-09.md` (review run on
-> 2026-09-07, updated through 2026-09-21).*
+> dependency scan and static analysis. Review run on 2026-09-07, updated through 2026-09-21.
 
 ## Scope
 
@@ -26,9 +23,8 @@ controls; social engineering; the Cardano client (Lucid Evolution) as a library 
    literal. It was verified by breaking it (three deliberate mutations, all three red, reverted),
    not just by seeing it green.
 2. **Manual audit of the third pattern** — routes that authorized inside the handler instead of in
-   the route signature. Now declared in the signature (`authorize({ roles, acceso })`, decision
-   D-088). Verified by neutralizing the guard: 7 of 13 rejection tests in
-   `test/require-ownership.test.ts` turn red.
+   the route signature. Now declared in the signature (`authorize({ roles, acceso })`). Verified by
+   neutralizing the guard: 7 of 13 rejection tests in `test/require-ownership.test.ts` turn red.
 3. **Dependency scan** — `pnpm audit` run on 2026-09-07 against the 750 dependencies of the
    workspace, with every finding traced to its real chain (`paths`) to tell runtime dependencies
    apart from install-time or build/test ones. **Since 2026-09-11 it runs on every CI run**
@@ -48,9 +44,9 @@ controls; social engineering; the Cardano client (Lucid Evolution) as a library 
 |---|---|---|---|---|---|
 | 1 | `JWT_SECRET` fell back to a public literal (`"dev-secret"`) if the environment variable was missing or empty — anyone could forge an admin token | **P1** | Closed | 2026-08-20 | `requireJwtSecret()` throws at import time if there is no secret; `test/jwt.test.ts` |
 | 2 | `GET /evidence/:bundleId/proof/:fileHash` and `/:bundleId/files` lacked the second authorization layer — any authenticated user could read the Merkle root and file names of someone else's bundle by knowing its id | **P1** | Closed | 2026-09-03 | project-membership check via the bundle; `test/evidence-anchor.test.ts` → "a developer without membership … gets 403" |
-| 3 | `GET /developer/audit-log` returned the **entire** `AuditLog`, not scoped to the developer's projects, with `actorName`/`actorRole` of every user | **P1** | Closed | 2026-09-04 | `auditScope`, fail-closed; see `apps/api/CLAUDE.md`, "La matriz de permisos" |
+| 3 | `GET /developer/audit-log` returned the **entire** `AuditLog`, not scoped to the developer's projects, with `actorName`/`actorRole` of every user | **P1** | Closed | 2026-09-04 | `auditScope`, fail-closed, applied consistently with the rest of the permission matrix |
 | 4 | Timing oracle on `/auth/login`: a non-existent email answered ~81 ms faster than a valid one (reveals whether an account exists) | P2 | Closed | 2026-08-20 | always compares against `HASH_DUMMY`; measured in `test/auth-timing.test.ts` (difference from ~81 ms down to ~0.7 ms) |
-| 5 | 9 investor routes authorized ownership (`unitId`/`investorId`) with an `if` copied inside the handler, with no shape in the signature and no compiler protection | P2 | Closed | 2026-09-04 | ownership rule in the route signature (D-088); `test/require-ownership.test.ts` |
+| 5 | 9 investor routes authorized ownership (`unitId`/`investorId`) with an `if` copied inside the handler, with no shape in the signature and no compiler protection | P2 | Closed | 2026-09-04 | ownership rule declared in the route signature; `test/require-ownership.test.ts` |
 | 6 | `POST/PATCH /users` used a local `z.enum` without `notary`, breaking the shared-schema rule — an admin could not create or promote a notary through the API | P3 | Closed | 2026-09-03 | `userRoleSchema` from `@plataforma/shared`; `test/users-roles.test.ts` |
 | 7 | `signToken`/`verifyToken` did not pin `algorithm`/`algorithms` explicitly — they relied on the `jsonwebtoken` default to restrict to HS*. No real hole (the default already did it with a string secret), but an implicit dependency | P3 | Closed | 2026-09-04 | explicit HS256 on both sides; `test/jwt.test.ts` → "the signing algorithm is pinned" |
 | 8 | `qs@6.15.3` (a real dependency of `express`/`body-parser`, on every request's path) vulnerable to DoS via array-limit bypass and `isBuffer` | P3 (moderate, CVSS 5.3) | Closed | 2026-09-07 | override to `qs@6.16.0` in `package.json`; `pnpm audit` went from 10 to 8 moderate |

@@ -14,8 +14,8 @@
 
 | File | What it is |
 |---|---|
-| [`volume-test-report.md`](volume-test-report.md) · [PDF](volume-test-report.pdf) | The volume test of 2026-09-10: 3 projects of 10 stages each, driven end-to-end through the real web app against pre-production — 30/30 stages completed, 180/180 on-chain transactions confirmed, the measured cost, and the one incident found and how it was fixed |
-| [`transaction-ids.md`](transaction-ids.md) · [PDF](transaction-ids.pdf) | The formal list of the 180 transaction IDs from the volume test, each one re-verified against the chain (Koios) independently of the application's own database |
+| [`volume-test-report.pdf`](volume-test-report.pdf) | The volume test of 2026-09-10: 3 projects of 10 stages each, driven end-to-end through the real web app against pre-production — 30/30 stages completed, 180/180 on-chain transactions confirmed, the measured cost, and the one incident found and how it was fixed |
+| [`transaction-ids.pdf`](transaction-ids.pdf) | The formal list of the 180 transaction IDs from the volume test, each one re-verified against the chain (Koios) independently of the application's own database |
 | [`txids-volume-test-2026-09-10.csv`](txids-volume-test-2026-09-10.csv) | The same 180 transactions as a data file, one row each, with a direct Cardanoscan Preprod link |
 
 ## Status

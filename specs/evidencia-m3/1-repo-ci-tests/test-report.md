@@ -1,16 +1,7 @@
-# Test report — 2026-09-21 (updated 2026-09-24)
+# Test report
 
 > Milestone 3 evidence for Catalyst: *"Public GitHub repo(s) … with **CI logs, coverage report**
 > …"* and *"API docs + **test reports with coverage/outcomes**"*.
->
-> Coverage results come from the CI run of commit
-> [`831d9d8`](https://github.com/Javote/real-world-real-estate/commit/831d9d85042ad83d4fe277d477c619b3b47f5359),
-> which closed [`SPEC-019`](../../SPEC-019-cobertura-de-apps-web.md): **from this commit on, CI
-> measures coverage with a threshold on all four TypeScript parts** (api, web, shared, cardano),
-> not only the API as it did until 2026-09-21.
->
-> *English translation of the working document `specs/EVIDENCIA-2026-09-21-reporte-de-tests.md`,
-> as of 2026-09-24.*
 
 ## The CI run
 
@@ -24,7 +15,7 @@ CI test values (`JWT_SECRET: ci-secret-jamas-en-produccion`, "never in productio
 
 | Job | What it runs | Result |
 |---|---|---|
-| App TS | lint (Biome) · typecheck · test ID traceability · **tests + coverage on all four TypeScript parts** (api, web, shared, cardano) · dependency scan · build · smoke test of the compiled start command | ✅ |
+| App TS | lint (Biome) · typecheck · test ID traceability · tests + coverage on all four TypeScript parts (api, web, shared, cardano) · dependency scan · build · smoke test of the compiled start command | ✅ |
 | Aiken contracts | `aiken fmt --check` · `aiken check` · `aiken build`, and that the committed `plutus.json` is up to date | ✅ |
 | Static analysis | Semgrep, rulesets `p/security-audit` + `p/owasp-top-ten` | ✅ 128 rules, 536 files, **0 findings** |
 | E2E Playwright | the whole app against a migrated and seeded database, on mobile (390 px) and desktop (1440 px) — **non-blocking** job (`continue-on-error`) | ⚠️ flaky, see below |
@@ -47,16 +38,10 @@ against a local Cardano node and is excluded by that package's test script. CI d
 infrastructure; both are run by hand with `pnpm --filter @plataforma/api test:s3` and
 `pnpm --filter @plataforma/cardano test:yaci`.
 
-**The 1 `it.fails` is intentional, not a regression:** it pins a known, unfixed bug in
-`LocationMapModal` (`modals-mapa.test.tsx`), documented in
-[`SPEC-019`](../../SPEC-019-cobertura-de-apps-web.md) §Resultado final and in
-[`apps/web/CLAUDE.md`](../../../apps/web/CLAUDE.md) §Trampas verificadas — it still needs to be
-reproduced in a real browser before deciding whether to fix the component or the test.
-
-**From this report on, CI measures coverage with a threshold on all four TypeScript parts.** Until
-2026-09-21 it only covered the API; web, shared and cardano ran bare `test`, with no coverage and no
-gate — closed in [`SPEC-019`](../../SPEC-019-cobertura-de-apps-web.md) §Consolidación, in the same
-commit this run verifies (`831d9d8`).
+**The 1 `it.fails` is intentional:** it pins a known, unfixed bug in `LocationMapModal`
+(`modals-mapa.test.tsx`) — the map may fail to render when the modal opens with `open` set directly
+rather than through user interaction. It still needs to be reproduced in a real browser before
+deciding whether to fix the component or the test.
 
 ## Coverage
 
@@ -67,18 +52,13 @@ commit this run verifies (`831d9d8`).
 | `packages/shared` | **100%** (247/247) | **100%** (56/56) | **100%** (19/19) | **100%** (231/231) | 100/100/100/100 | CI (`pnpm test:coverage`) |
 | `packages/cardano` | **100%** (295/295) | **100%** (149/149) | **100%** (90/90) | **100%** (273/273) | 95/95/95/95 | CI (`pnpm test:coverage`) |
 
-**All four TypeScript parts measure 100% on all four metrics, all measured in CI** (previously three
-of the four were measured locally, with no threshold to fail the build on). The SOM's criterion 2 —
-*"unit tests ≥95% coverage"*, reread by the owner on 2026-09-21 as covering the whole app — closes
-✅. How that number was reached, file by file, is in
-[`SPEC-017`](../../SPEC-017-cobertura-95-en-toda-la-app.md) (shared, cardano),
-[`SPEC-018`](../../SPEC-018-cobertura-de-apps-api.md) (api) and
-[`SPEC-019`](../../SPEC-019-cobertura-de-apps-web.md) (web + this consolidation).
+**All four TypeScript parts measure 100% on all four metrics, all measured in CI.** The SOM's
+criterion 2 — *"unit tests ≥95% coverage"*, read as covering the whole app — is met.
 
 **The contracts (`contracts/`) have no line coverage percentage**: Aiken does not measure line
-coverage. The coverage evidence for the validator is the *rejection point → test that exercises it*
-table in [`contracts/CLAUDE.md`](../../../contracts/CLAUDE.md): every condition under which the
-validator rejects a transaction has at least one test that triggers it.
+coverage. The coverage evidence for the validator is
+[`aiken-coverage-report.pdf`](aiken-coverage-report.pdf): every condition under which the validator
+rejects a transaction has at least one test that triggers it.
 
 ## Security in the same run
 
@@ -87,25 +67,22 @@ validator rejects a transaction has at least one test that triggers it.
   full report lists 12 (4 high, 8 moderate), **all in build and test tooling**, none in what runs in
   production: `vitest` and its dependencies (`undici`, `nanoid`, `postcss`, `@vitest/mocker`) and
   the `@tanstack/router-plugin` chain (`browserslist`, `baseline-browser-mapping`). The triage is in
-  the [security review](../4-security/security-review.md).
+  the [security review](../4-security/security-review.pdf).
 
 ## The E2E job, flaky under CI load (non-blocking)
 
-A separate job, explicitly **non-blocking** (`continue-on-error: true` in `ci.yml`) since before
-this closure — when to make it blocking is `SPEC-015` §5's open question, not this item's. Running
-this same suite twice against the same commit
-(`831d9d8`): the first run failed 4 of 90 (86 passed), the second failed 5 of 90 (85 passed), with
-**different tests** failing each time (`admin-certifier-invite`, `panels-DEV-INVESTORS-LIST`, and on
-the second run also `walkthrough-Walkthrough`) — all Playwright timeouts (`Test timeout of 30000ms
-exceeded` / `expect(locator).toBeVisible() failed`), not a wrong business assertion. It is resource
-contention on GitHub Actions' shared runner (two browsers, mobile and desktop, driving the whole
-app), not a regression from this commit: none of `SPEC-019`'s changes touch `e2e/` or the code those
-specs exercise. **Locally, against the same code, the suite runs clean** (`SPEC-019`'s closing
-criteria were verified with `pnpm verify:all` green before this push).
+A separate job, explicitly **non-blocking** (`continue-on-error: true` in `ci.yml`). Running this
+same suite twice against the same commit: the first run failed 4 of 90 (86 passed), the second
+failed 5 of 90 (85 passed), with **different tests** failing each time
+(`admin-certifier-invite`, `panels-DEV-INVESTORS-LIST`, and on the second run also
+`walkthrough-Walkthrough`) — all Playwright timeouts (`Test timeout of 30000ms exceeded` /
+`expect(locator).toBeVisible() failed`), not a wrong business assertion. It is resource contention
+on GitHub Actions' shared runner (two browsers, mobile and desktop, driving the whole app), not a
+code defect: **locally, against the same code, the suite runs clean.**
 
 ## A flaky test, disclosed
 
-While preparing the 2026-09-21 report, one of three local runs of `pnpm test:coverage` failed in
+One of three local runs of `pnpm test:coverage` failed in
 `apps/api/test/spec-213-un-bundle-por-stage.test.ts` with `SQLITE_BUSY: database is locked`. The
 other two passed completely, and so did the CI run. It is contention on the test's SQLite database
 when coverage instrumentation slows execution down, not a failure of what the test verifies.
