@@ -126,9 +126,11 @@ se pueden mutar sin romper los tipos: los cubre `rechazos-trazas.mjs` con la tra
 cada uno — ver la fila de abajo).
 
 **Medida de verdad, no solo argumentada (`SPEC-017`, cerrado 2026-09-22).** La corrida vigente —
-`specs/evidencia-m3/1-repo-ci-tests/mutation-report.md` y `expect-trace-report.md`— da **51
-mutantes: 51 muertos** y **18 `expect`: 18 con test**: el 100% que la tabla de abajo venía
-afirmando queda medido, no solo argumentado. El triage del paso 6 había marcado `stage.ak:91`
+[`specs/evidencia-m3/1-repo-ci-tests/aiken-coverage-report.md`](../specs/evidencia-m3/1-repo-ci-tests/aiken-coverage-report.md)
+(en inglés; consolida los dos reportes que hasta el 2026-09-24 vivían en archivos separados,
+`mutation-report.md` y `expect-trace-report.md`)— da **51 mutantes: 51 muertos** y **18 `expect`: 18
+con test**: el 100% que la tabla de abajo venía afirmando queda medido, no solo argumentado. El
+triage del paso 6 había marcado `stage.ak:91`
 (`own_input` lleva exactamente 1 unidad del token) como equivalencia genuina —`carrying_thread`
 sobre el output de continuación (línea 104) más la igualdad de valor (línea 125) parecían forzar la
 misma cardinalidad por otro camino—, pero esa lectura asumía que `carrying_thread` termina mirando
