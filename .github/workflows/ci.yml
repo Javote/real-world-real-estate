@@ -50,15 +50,13 @@ jobs:
       - name: Trazabilidad de los test IDs del backlog
         run: pnpm testids
 
-      - name: Tests + coverage
+      # `test:coverage` corre `pnpm -r test:coverage`: las cuatro partes
+      # TypeScript (api, web, shared, cardano), cada una contra su propio
+      # umbral (`vitest.config.ts`/`.mts`). Hasta el 2026-09-24 esto solo
+      # cubría la API con umbral, y web/shared/cardano corrían `test` pelado
+      # sin coverage ni gate — se cerró en SPEC-019 §Consolidación.
+      - name: Tests + coverage (api, web, shared, cardano)
         run: pnpm test:coverage
-
-      # `test:coverage` es solo de la API. Hasta el 2026-09-21 este era el único
-      # paso de tests del job, así que los unitarios de web, shared y cardano
-      # (más de mil) corrían en `pnpm verify` local y nunca en CI — se vio
-      # armando el reporte de tests para Catalyst, que cita estos logs.
-      - name: Tests del resto del workspace (web, shared, cardano)
-        run: pnpm -r --filter '!@plataforma/api' test
 
       # M3 §4 pide "dependency scans" además de static analysis, y hasta acá
       # `pnpm audit` era una corrida puntual (`specs/SECURITY-REVIEW-2026-09.md`,

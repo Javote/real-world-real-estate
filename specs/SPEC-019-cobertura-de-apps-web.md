@@ -11,7 +11,10 @@
 > **Paso 0 cerrado 2026-09-23** — W0a en `a7dac17`, W0b en `8be5830`, los dos en `main`. `pnpm
 > verify:all` verde después del merge. **W1, W2 y W9 ✅ 2026-09-23**, junto con W3–W6 (ver más abajo).
 > **W7 y W8 ✅ 2026-09-23: los lotes W1–W9 están cerrados y `apps/web` mide 100% en las cuatro
-> métricas** (§Resultado final). Queda solo §Consolidación (umbrales, CI, evidencia).
+> métricas** (§Resultado final). **Cerrada 2026-09-24** — §Consolidación resuelta: umbrales de
+> `apps/web/vitest.config.ts` en 100/100/100/100, `test:coverage` de la raíz corre las cuatro partes
+> TypeScript (`pnpm -r test:coverage`) y CI las corre a las cuatro con umbral. El criterio 2 del SOM
+> pasa a ✅.
 
 ## Dónde está hoy
 
@@ -581,20 +584,23 @@ uno); con 33 GB libres el 2026-09-22 alcanza, pero conviene de a cuatro o cinco 
 worktree apenas su rama está en `main`. Una tanda razonable: W0 → (W3, W4, W5, que son la mitad
 del trabajo, en paralelo) → W1, W2 y W6–W9 en los huecos.
 
-## Consolidación, CI y evidencia (serial, al final)
+## Consolidación, CI y evidencia (serial, al final) — ✅ cerrada 2026-09-24
 
 Absorbe los pasos 7 y 8 de SPEC-017, que esperaban a la web:
 
-1. Con los diez lotes en `main`: `pnpm --filter @plataforma/web test:coverage` y la tabla de arriba
-   regenerada. Lo que quede bajo 95%, con su razón.
-2. Umbrales de `apps/web/vitest.config.ts` al valor medido.
-3. **CI (🟡):** hoy `.github/workflows/ci.yml` corre `test:coverage` **solo de la API**; web, shared
-   y cardano corren `test` pelado, sin umbral. Pasa a correr `test:coverage` de las cuatro partes
-   TypeScript. Shared y cardano ya están ≥95% en las cuatro métricas desde SPEC-017, así que esa
-   mitad **se puede adelantar en cualquier momento**, sin esperar a la web.
-4. **Evidencia:** una corrida nueva de CI, y con ella `specs/EVIDENCIA-2026-09-21-reporte-de-tests.md`,
-   su versión en inglés `specs/evidencia-m3/1-repo-ci-tests/test-report.md`, el log de CI y el PDF
-   (`bash scripts/evidencia-pdf/generar.sh`). El criterio 2 de `specs/README.md` pasa a ✅ y el ítem
+1. ✅ Con los nueve lotes en `main`: `pnpm --filter @plataforma/web test:coverage` mide 100% en las
+   cuatro métricas (§Resultado final).
+2. ✅ Umbrales de `apps/web/vitest.config.ts` en 100/100/100/100 (el valor medido, trinquete igual
+   que `packages/shared`).
+3. ✅ **CI (🟡):** `.github/workflows/ci.yml` corría `test:coverage` solo de la API y `test` pelado
+   (sin umbral) para web, shared y cardano. El script `test:coverage` de la raíz pasó de apuntar solo
+   a `@plataforma/api` a `pnpm -r test:coverage`, que corre las cuatro partes TypeScript con su
+   propio umbral cada una; el paso separado de `pnpm -r --filter '!@plataforma/api' test` se borró
+   de `ci.yml` por redundante.
+4. ✅ **Evidencia:** corrida nueva de CI y con ella `specs/EVIDENCIA-2026-09-21-reporte-de-tests.md`
+   (se mantiene el nombre de archivo, con el contenido al día), su versión en inglés
+   `specs/evidencia-m3/1-repo-ci-tests/test-report.md`, el log de CI y el PDF regenerado con
+   `bash scripts/evidencia-pdf/generar.sh`. El criterio 2 de `specs/README.md` pasa a ✅ y el ítem
    3.15 de `CLAUDE.md` se cierra.
 
 ## Resultado final — 2026-09-23
@@ -626,8 +632,8 @@ Chrome o a mano), pulsar el botón que abre el mapa modal y mirar si el mapa apa
 `it.fails` describe un artefacto del test y hay que corregir el test, no el componente; si no aparece,
 es un bug real y pide su propio spec. Ver también `apps/web/CLAUDE.md` §Trampas verificadas.
 
-## Criterio de cierre
+## Criterio de cierre — ✅ 2026-09-24
 
-- `apps/web` con las cuatro métricas ≥95%, medidas con `include` sobre todo `src/`.
-- CI corriendo `test:coverage` con umbral en las cuatro partes TypeScript.
-- El reporte de tests de la evidencia de M3 actualizado con esa corrida.
+- ✅ `apps/web` con las cuatro métricas ≥95%, medidas con `include` sobre todo `src/` (100% medido).
+- ✅ CI corriendo `test:coverage` con umbral en las cuatro partes TypeScript.
+- ✅ El reporte de tests de la evidencia de M3 actualizado con esa corrida.

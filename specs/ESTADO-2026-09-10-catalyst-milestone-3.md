@@ -33,15 +33,16 @@
 > la app, no solo de los contratos. Eso sí es código: tests por escribir, en
 > [`SPEC-017`](SPEC-017-cobertura-95-en-toda-la-app.md) (`CLAUDE.md` ítem 3.15).
 
-Salvo la cobertura (SPEC-017, hoy SPEC-018 y SPEC-019), ninguno de estos ítems es código pendiente de escribir — son
-evidencia por juntar o un flujo por ejercitar una vez contra Preprod.
+La cobertura (SPEC-017, SPEC-018, SPEC-019) cerró el 2026-09-24. Ninguno de los ítems que quedan es
+código pendiente de escribir — son evidencia por juntar o un flujo por ejercitar una vez contra
+Preprod.
 
 | Pendiente | Tipo | Depende de |
 |---|---|---|
 | ~~Hacer el repo de GitHub público~~ | **Hecho** — verificado `PUBLIC` el 2026-09-21 | — |
 | 3 pilotos confirmando (criterio 4 del SOM) | Externo | Recontactar developers/notary socios — `M1-D3-PilotPlan.pdf` |
 | Video walkthrough (criterio 13) | Falta grabar | Se graba sobre lo que ya existe y funciona |
-| Cobertura ≥95% con unit tests en toda la app (criterio 2) | Código — tests | [`SPEC-017`](SPEC-017-cobertura-95-en-toda-la-app.md) cerró shared, cardano, contratos y la API en líneas (2026-09-22); **falta la web**, en [`SPEC-019`](SPEC-019-cobertura-de-apps-web.md). La vara más estricta de la API, en [`SPEC-018`](SPEC-018-cobertura-de-apps-api.md), cerró el 2026-09-23 con las cuatro métricas en 100% |
+| ~~Cobertura ≥95% con unit tests en toda la app (criterio 2)~~ | **Hecho** — cerrado 2026-09-24 | [`SPEC-017`](SPEC-017-cobertura-95-en-toda-la-app.md) (shared, cardano, contratos), [`SPEC-018`](SPEC-018-cobertura-de-apps-api.md) (API, cerrada 2026-09-23) y [`SPEC-019`](SPEC-019-cobertura-de-apps-web.md) (web + CI + evidencia, cerrada 2026-09-24) — las cuatro partes TypeScript en 100% en las cuatro métricas, CI corriendo `test:coverage` con umbral en las cuatro |
 
 ## Próxima sesión
 

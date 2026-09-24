@@ -47,11 +47,14 @@ export default defineConfig({
         // de la app.
         'src/routes/-test-mount.tsx'
       ],
+      // Las cuatro métricas llegaron al 100% (SPEC-019, cierre 2026-09-24, lotes
+      // W1–W9). Trinquete, mismo criterio que `packages/shared`: al 100% no hay
+      // margen que dejar — cualquier baja futura tiene que ponerse roja.
       thresholds: {
-        statements: 35,
-        branches: 29,
-        functions: 35,
-        lines: 36
+        statements: 100,
+        branches: 100,
+        functions: 100,
+        lines: 100
       }
     }
   }
