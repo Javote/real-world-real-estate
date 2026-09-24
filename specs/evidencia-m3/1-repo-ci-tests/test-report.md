@@ -1,6 +1,6 @@
 # Test report
 
-> Milestone 3 evidence for Catalyst: *"Public GitHub repo(s) … with **CI logs, coverage report**
+> Milestone 3 evidence: *"Public GitHub repo(s) … with **CI logs, coverage report**
 > …"* and *"API docs + **test reports with coverage/outcomes**"*.
 
 ## The CI run

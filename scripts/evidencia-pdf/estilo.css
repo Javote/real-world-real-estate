@@ -39,14 +39,14 @@ code {
   background: #f4f1ed;
   padding: 0 2pt;
   border-radius: 2pt;
-  word-break: break-all;
+  overflow-wrap: break-word;
 }
 pre {
   background: #f4f1ed;
   padding: 8pt;
   border-radius: 4pt;
   white-space: pre-wrap;
-  word-break: break-all;
+  overflow-wrap: break-word;
   font-size: 8.5pt;
   break-inside: avoid;
 }

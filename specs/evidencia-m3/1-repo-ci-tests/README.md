@@ -1,8 +1,7 @@
 # 1 · Repository, CI and tests
 
 > Milestone 3 evidence, item 1: *"Public GitHub repo(s) for contracts/services/frontend with CI
-> logs, coverage report, and pilot participant letter of confirmation; README marks public vs
-> private folders."*
+> logs, coverage report; README marks public vs private folders."*
 
 ## What is in this folder
 
@@ -27,4 +26,3 @@
 | CI logs | ✅ |
 | Coverage report | ✅ |
 | README marks public vs. private folders | ✅ |
-| Pilot participant letters of confirmation (≥3) | ⏳ pending |
