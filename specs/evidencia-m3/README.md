@@ -25,11 +25,13 @@
 
 ## 1 · Repository, CI and tests
 
-- **Test and coverage report**: [`test-report.md`](1-repo-ci-tests/test-report.md) — 1,848 tests
-  (contracts, API, packages, web app and end-to-end), 0 failed; coverage per package.
+- **Test and coverage report**: [`test-report.md`](1-repo-ci-tests/test-report.md) — 2,732
+  unit/integration tests (contracts, API, packages, web app), 0 failed, plus a separate
+  non-blocking E2E job; 100% coverage on all four metrics for all four TypeScript parts, all
+  measured in CI.
 - **CI logs**: the run on GitHub Actions,
-  [run 35650018189](https://github.com/Javote/real-world-real-estate/actions/runs/35650018189), and
-  its **full copy** in [`ci-run-35650018189.log`](1-repo-ci-tests/ci-run-35650018189.log) (GitHub
+  [run 36004503722](https://github.com/Javote/real-world-real-estate/actions/runs/36004503722), and
+  its **full copy** in [`ci-run-36004503722.log`](1-repo-ci-tests/ci-run-36004503722.log) (GitHub
   deletes Actions logs after 90 days).
 - **Public vs. private folders**: the repository [`README.md`](../../README.md), section "This
   repository is public": no folder contains secrets, credentials,

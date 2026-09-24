@@ -8,8 +8,8 @@
 
 | File | What it is |
 |---|---|
-| [`test-report.md`](test-report.md) · [PDF](test-report.pdf) | The test and coverage report: 1,848 tests across contracts, API, packages, web app and end-to-end — 1,845 passed, 3 skipped on purpose, 0 failed — plus coverage per package |
-| [`ci-run-35650018189.log`](ci-run-35650018189.log) | Full copy of the CI run the report is based on ([run 35650018189](https://github.com/Javote/real-world-real-estate/actions/runs/35650018189) on GitHub Actions), kept here because GitHub deletes Actions logs after 90 days. Test names in it are in Spanish, the team's working language; the log is kept verbatim |
+| [`test-report.md`](test-report.md) · [PDF](test-report.pdf) | The test and coverage report: 2,732 unit/integration tests across contracts, API, packages and web app (plus a separate, non-blocking E2E job) — 2,728 passed, 3 skipped on purpose, 1 expected fail, 0 failed — plus 100% coverage on all four metrics for all four TypeScript parts, all measured in CI |
+| [`ci-run-36004503722.log`](ci-run-36004503722.log) | Full copy of the CI run the report is based on ([run 36004503722](https://github.com/Javote/real-world-real-estate/actions/runs/36004503722) on GitHub Actions), kept here because GitHub deletes Actions logs after 90 days. Test names in it are in Spanish, the team's working language; the log is kept verbatim |
 
 ## Covered elsewhere
 

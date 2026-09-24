@@ -1,44 +1,45 @@
-# Test report — 2026-09-21
+# Test report — 2026-09-21 (updated 2026-09-24)
 
 > Milestone 3 evidence for Catalyst: *"Public GitHub repo(s) … with **CI logs, coverage report**
 > …"* and *"API docs + **test reports with coverage/outcomes**"*.
 >
-> Every result comes from the CI run of commit
-> [`31fc854`](https://github.com/Javote/real-world-real-estate/commit/31fc854198bbf9de3b751d6edd27a3b8b716574e).
-> The only exception is the coverage of three packages, marked **measured locally**, because CI
-> only measures coverage for the API.
+> Coverage results come from the CI run of commit
+> [`831d9d8`](https://github.com/Javote/real-world-real-estate/commit/831d9d85042ad83d4fe277d477c619b3b47f5359),
+> which closed [`SPEC-019`](../../SPEC-019-cobertura-de-apps-web.md): **from this commit on, CI
+> measures coverage with a threshold on all four TypeScript parts** (api, web, shared, cardano),
+> not only the API as it did until 2026-09-21.
 >
 > *English translation of the working document `specs/EVIDENCIA-2026-09-21-reporte-de-tests.md`,
-> as of 2026-09-21.*
+> as of 2026-09-24.*
 
 ## The CI run
 
-**[Run 35650018189](https://github.com/Javote/real-world-real-estate/actions/runs/35650018189)**,
-2026-09-21 20:16 UTC, all four jobs green.
+**[Run 36004503722](https://github.com/Javote/real-world-real-estate/actions/runs/36004503722)**,
+2026-09-24 13:16 UTC.
 
 GitHub deletes Actions logs after 90 days, so a **full copy lives in the repository**:
-[`ci-run-35650018189.log`](ci-run-35650018189.log). It is the raw output of
-`gh run view 35650018189 --log`, with color codes stripped. The only secrets that appear in it are
+[`ci-run-36004503722.log`](ci-run-36004503722.log). It is the raw output of
+`gh run view 36004503722 --log`, with color codes stripped. The only secrets that appear in it are
 CI test values (`JWT_SECRET: ci-secret-jamas-en-produccion`, "never in production").
 
 | Job | What it runs | Result |
 |---|---|---|
-| App TS | lint (Biome) · typecheck · test ID traceability · API tests with coverage · web, shared and cardano tests · dependency scan · build · smoke test of the compiled start command | ✅ |
+| App TS | lint (Biome) · typecheck · test ID traceability · **tests + coverage on all four TypeScript parts** (api, web, shared, cardano) · dependency scan · build · smoke test of the compiled start command | ✅ |
 | Aiken contracts | `aiken fmt --check` · `aiken check` · `aiken build`, and that the committed `plutus.json` is up to date | ✅ |
-| Static analysis | Semgrep, rulesets `p/security-audit` + `p/owasp-top-ten` | ✅ 127 rules, 434 files, **0 findings** |
-| E2E Playwright | the whole app against a migrated and seeded database, on mobile (390 px) and desktop (1440 px) | ✅ **90 passed** |
+| Static analysis | Semgrep, rulesets `p/security-audit` + `p/owasp-top-ten` | ✅ 128 rules, 536 files, **0 findings** |
+| E2E Playwright | the whole app against a migrated and seeded database, on mobile (390 px) and desktop (1440 px) — **non-blocking** job (`continue-on-error`) | ⚠️ flaky, see below |
 
 ## Results per package
 
 | Package | What it covers | Tests | Result |
 |---|---|---|---|
-| `contracts/` (Aiken) | the on-chain validator: stage state machine, thread token, evidence rules | 85 (83 unit + 2 property) | ✅ 85/85 |
-| `apps/api` | the API: routes, authorization, anchoring, state machine, migrations | 544 | ✅ 541 passed · 3 skipped |
-| `packages/cardano` | the anchoring port (simulated and real) | 92 | ✅ 92/92 |
-| `packages/shared` | the shared Zod contract, the state machine, Merkle trees | 101 | ✅ 101/101 |
-| `apps/web` (unit) | components, i18n, `ApiPort` checked against the OpenAPI document | 936 | ✅ 936/936 |
-| `apps/web` (E2E) | the flows of the four roles plus admin, on two viewports | 90 | ✅ 90/90 |
-| **Total** | | **1,848** | **1,845 passed · 3 skipped · 0 failed** |
+| `contracts/` (Aiken) | the on-chain validator: stage state machine, thread token, evidence rules | 102 (100 unit + 2 property) | ✅ 102/102 |
+| `apps/api` | the API: routes, authorization, anchoring, state machine, migrations | 712 | ✅ 709 passed · 3 skipped |
+| `packages/cardano` | the anchoring port (simulated and real) | 115 | ✅ 115/115 |
+| `packages/shared` | the shared Zod contract, the state machine, Merkle trees | 210 | ✅ 210/210 |
+| `apps/web` (unit) | components, i18n, `ApiPort` checked against the OpenAPI document | 1,593 | ✅ 1,592 passed · 1 expected `it.fails` (see below) |
+| `apps/web` (E2E) | the flows of the four roles plus admin, on two viewports | 90 | ⚠️ flaky, see below |
+| **Total (excl. E2E)** | | **2,732** | **2,728 passed · 3 skipped · 1 expected fail · 0 failed** |
 
 **The 3 skipped tests are intentional:** they are `apps/api/test/storage-s3.test.ts`, which runs
 against a real S3 (MinIO). The same applies to `packages/cardano/src/yaci.test.ts`, which runs
@@ -46,27 +47,33 @@ against a local Cardano node and is excluded by that package's test script. CI d
 infrastructure; both are run by hand with `pnpm --filter @plataforma/api test:s3` and
 `pnpm --filter @plataforma/cardano test:yaci`.
 
-**Until this report, CI only ran the API tests.** The web, shared and cardano tests ran locally in
-`pnpm verify` and never in CI. This was found while preparing this report and fixed in the same
-commit this run verifies (`31fc854`).
+**The 1 `it.fails` is intentional, not a regression:** it pins a known, unfixed bug in
+`LocationMapModal` (`modals-mapa.test.tsx`), documented in
+[`SPEC-019`](../../SPEC-019-cobertura-de-apps-web.md) §Resultado final and in
+[`apps/web/CLAUDE.md`](../../../apps/web/CLAUDE.md) §Trampas verificadas — it still needs to be
+reproduced in a real browser before deciding whether to fix the component or the test.
+
+**From this report on, CI measures coverage with a threshold on all four TypeScript parts.** Until
+2026-09-21 it only covered the API; web, shared and cardano ran bare `test`, with no coverage and no
+gate — closed in [`SPEC-019`](../../SPEC-019-cobertura-de-apps-web.md) §Consolidación, in the same
+commit this run verifies (`831d9d8`).
 
 ## Coverage
 
-| Package | Lines | Statements | Branches | Functions | Source |
-|---|---|---|---|---|---|
-| `apps/api` | **89.3%** | 83.2% | 71.1% | 86.7% | CI (`pnpm test:coverage`), with minimum thresholds that fail the build |
-| `packages/cardano` | **90.1%** | 89.5% | 82.2% | 94.4% | measured locally |
-| `packages/shared` | 61.2% | 63.7% | 96.6% | 94.7% | measured locally |
-| `apps/web` (unit) | 27.6% | 27.1% | 22.0% | 29.1% | measured locally |
+| Package | Statements | Branches | Functions | Lines | Threshold | Source |
+|---|---|---|---|---|---|---|
+| `apps/api` | **100%** (2070/2070) | **100%** (838/838) | **100%** (424/424) | **100%** (1900/1900) | 99/99/99/99 | CI (`pnpm test:coverage`) |
+| `apps/web` | **100%** (1955/1955) | **100%** (1854/1854) | **100%** (766/766) | **100%** (1740/1740) | 100/100/100/100 | CI (`pnpm test:coverage`) |
+| `packages/shared` | **100%** (247/247) | **100%** (56/56) | **100%** (19/19) | **100%** (231/231) | 100/100/100/100 | CI (`pnpm test:coverage`) |
+| `packages/cardano` | **100%** (295/295) | **100%** (149/149) | **100%** (90/90) | **100%** (273/273) | 95/95/95/95 | CI (`pnpm test:coverage`) |
 
-How to read the two lowest:
-
-- **`packages/shared`** is mostly Zod schema declarations. Branches and functions, which is where
-  the logic lives (the state machine, Merkle trees, evidence rules), are above 94%.
-- **`apps/web`** has low unit coverage because screens are not unit-tested: they are covered by the
-  E2E suite (90 tests: the flows of the four roles and the admin, on two viewports). Unit tests
-  cover the shared components, the i18n dictionary and the `ApiPort` contract against the published
-  OpenAPI document.
+**All four TypeScript parts measure 100% on all four metrics, all measured in CI** (previously three
+of the four were measured locally, with no threshold to fail the build on). The SOM's criterion 2 —
+*"unit tests ≥95% coverage"*, reread by the owner on 2026-09-21 as covering the whole app — closes
+✅. How that number was reached, file by file, is in
+[`SPEC-017`](../../SPEC-017-cobertura-95-en-toda-la-app.md) (shared, cardano),
+[`SPEC-018`](../../SPEC-018-cobertura-de-apps-api.md) (api) and
+[`SPEC-019`](../../SPEC-019-cobertura-de-apps-web.md) (web + this consolidation).
 
 **The contracts (`contracts/`) have no line coverage percentage**: Aiken does not measure line
 coverage. The coverage evidence for the validator is the *rejection point → test that exercises it*
@@ -82,9 +89,23 @@ validator rejects a transaction has at least one test that triggers it.
   the `@tanstack/router-plugin` chain (`browserslist`, `baseline-browser-mapping`). The triage is in
   the [security review](../4-security/security-review.md).
 
+## The E2E job, flaky under CI load (non-blocking)
+
+A separate job, explicitly **non-blocking** (`continue-on-error: true` in `ci.yml`) since before
+this closure — when to make it blocking is `SPEC-015` §5's open question, not this item's. Running
+this same suite twice against the same commit
+(`831d9d8`): the first run failed 4 of 90 (86 passed), the second failed 5 of 90 (85 passed), with
+**different tests** failing each time (`admin-certifier-invite`, `panels-DEV-INVESTORS-LIST`, and on
+the second run also `walkthrough-Walkthrough`) — all Playwright timeouts (`Test timeout of 30000ms
+exceeded` / `expect(locator).toBeVisible() failed`), not a wrong business assertion. It is resource
+contention on GitHub Actions' shared runner (two browsers, mobile and desktop, driving the whole
+app), not a regression from this commit: none of `SPEC-019`'s changes touch `e2e/` or the code those
+specs exercise. **Locally, against the same code, the suite runs clean** (`SPEC-019`'s closing
+criteria were verified with `pnpm verify:all` green before this push).
+
 ## A flaky test, disclosed
 
-While preparing this report, one of three local runs of `pnpm test:coverage` failed in
+While preparing the 2026-09-21 report, one of three local runs of `pnpm test:coverage` failed in
 `apps/api/test/spec-213-un-bundle-por-stage.test.ts` with `SQLITE_BUSY: database is locked`. The
 other two passed completely, and so did the CI run. It is contention on the test's SQLite database
 when coverage instrumentation slows execution down, not a failure of what the test verifies.
@@ -94,6 +115,6 @@ when coverage instrumentation slows execution down, not a failure of what the te
 ```bash
 pnpm install
 pnpm verify:all                 # lint + typecheck + tests + build + Aiken
-pnpm test:coverage              # API coverage, with its thresholds
+pnpm test:coverage              # coverage of the four TS parts, with their thresholds
 pnpm --filter web e2e           # the E2E suite (starts web + api)
 ```
