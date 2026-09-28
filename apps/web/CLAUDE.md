@@ -127,6 +127,11 @@ no la captura. No reintroducir un `hideBrand`.
 
 ## Trampas verificadas
 
+- **2026-09-28 · el pin de Leaflet salía como imagen rota en producción.** El `L.Icon.Default` arma la
+  URL de `marker-icon.png` desde la ruta de su propio CSS, y Vite no publica esa carpeta: se veía un
+  recuadrito con el texto "Marker". Los tests no lo ven (el Leaflet falso no carga imágenes); se vio
+  en una captura contra producción. **Fix:** `usarIconoPublicado` en `LocationMapModal` importa las
+  tres imágenes como assets (Vite las publica con hash) y se las pasa con `mergeOptions`.
 - **2026-09-28 · dos `import()` concurrentes de un módulo con `vi.mock` dan dos instancias
   distintas.** Con `vi.mock('leaflet', () => import('#/test/leaflet-falso'))`, si `LocationMapModal`
   cambia de props mientras la primera importación dinámica sigue pendiente, la segunda resuelve a

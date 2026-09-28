@@ -70,6 +70,16 @@ describe('LocationMapModal — variante modal', () => {
     expect(L.marker.mock.results[0]?.value.bindPopup).toHaveBeenCalledWith('Ubicación')
   })
 
+  it('le pasa a Leaflet las imágenes del pin publicadas por Vite (sin eso el pin sale roto)', async () => {
+    montarModal({ latitude: -34.5, longitude: -58.4 })
+    await mapaCreado()
+    const opciones = L.Icon.Default.mergeOptions.mock.calls.at(-1)?.[0] as Record<string, string>
+    expect(opciones.iconUrl).toMatch(/marker-icon.*\.png/)
+    expect(opciones.iconRetinaUrl).toMatch(/marker-icon-2x.*\.png/)
+    expect(opciones.shadowUrl).toMatch(/marker-shadow.*\.png/)
+    expect('_getIconUrl' in L.Icon.Default.prototype).toBe(false)
+  })
+
   it('sin coordenadas ni pines centra en Buenos Aires y no pone marcador ni domicilio', async () => {
     montarModal()
     await mapaCreado()

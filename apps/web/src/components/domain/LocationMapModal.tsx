@@ -1,3 +1,6 @@
+import iconoRetina from 'leaflet/dist/images/marker-icon-2x.png'
+import icono from 'leaflet/dist/images/marker-icon.png'
+import sombra from 'leaflet/dist/images/marker-shadow.png'
 import { X } from 'lucide-react'
 import { useEffect, useRef, useState } from 'react'
 import { Dialog, DialogContent, DialogTitle } from '#/components/ui/dialog'
@@ -37,6 +40,17 @@ type Leaflet = typeof import('leaflet')
 type LeafletMap = import('leaflet').Map
 type LeafletFeatureGroup = import('leaflet').FeatureGroup
 type LeafletMarker = import('leaflet').Marker
+
+/**
+ * El pin por defecto de Leaflet arma la URL de su imagen a partir de la ruta
+ * de su propio CSS, que Vite no publica: en producción el pin salía como una
+ * imagen rota (visto el 2026-09-28). Se le pasan las imágenes importadas como
+ * assets, que Vite sí publica con su hash.
+ */
+function usarIconoPublicado(L: Leaflet) {
+  delete (L.Icon.Default.prototype as { _getIconUrl?: unknown })._getIconUrl
+  L.Icon.Default.mergeOptions({ iconUrl: icono, iconRetinaUrl: iconoRetina, shadowUrl: sombra })
+}
 
 /** Centro de CABA: el punto de partida cuando todavía no hay nada que mostrar. */
 const CENTRO_CABA: [number, number] = [-34.6037, -58.3816]
@@ -165,6 +179,7 @@ export function LocationMapModal({
       await import('leaflet/dist/leaflet.css')
 
       if (cancelado) return
+      usarIconoPublicado(L)
 
       const primerPin = pinesRef.current[0]
       const punto = puntoRef.current
