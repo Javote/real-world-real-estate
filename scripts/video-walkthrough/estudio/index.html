@@ -1,0 +1,315 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Estudio de voz</title>
+<style>
+  :root { --fondo: #111418; --panel: #1b2027; --borde: #2c333d; --texto: #e9edf2; --tenue: #8b95a3;
+          --acento: #4f8cff; --rojo: #ef4444; --verde: #22c55e; --amarillo: #f5b93a; }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--fondo); color: var(--texto); font: 15px/1.45 -apple-system, "Helvetica Neue", sans-serif;
+         display: grid; grid-template-columns: 290px 1fr; height: 100vh; overflow: hidden; }
+  aside { border-right: 1px solid var(--borde); overflow-y: auto; padding: 14px 10px; }
+  aside h1 { font-size: 15px; margin: 0 6px 4px; }
+  aside p { color: var(--tenue); font-size: 12.5px; margin: 0 6px 12px; word-break: break-all; }
+  .toma { display: grid; grid-template-columns: 36px 1fr auto; gap: 6px; align-items: center; width: 100%;
+          padding: 6px 8px; border: 0; border-radius: 8px; background: none; color: inherit; text-align: left; cursor: pointer; font: inherit; }
+  .toma:hover { background: var(--panel); }
+  .toma[aria-current="true"] { background: #243049; }
+  .toma b { font-variant-numeric: tabular-nums; }
+  .toma span { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; font-size: 13.5px; }
+  .toma i { font-style: normal; font-size: 12px; color: var(--tenue); }
+  .toma i.lista { color: var(--verde); }
+  .toma i.falta { color: var(--amarillo); }
+  main { display: grid; grid-template-rows: auto 1fr auto auto; gap: 12px; padding: 16px 20px; overflow: hidden; }
+  header { display: flex; gap: 12px; align-items: baseline; flex-wrap: wrap; }
+  header h2 { margin: 0; font-size: 20px; }
+  header small { color: var(--tenue); }
+  .pantalla { position: relative; background: #000; border-radius: 10px; overflow: hidden; min-height: 0; display: flex; }
+  video { width: 100%; height: 100%; object-fit: contain; }
+  .cuenta { position: absolute; inset: 0; display: none; place-items: center; font-size: 120px; font-weight: 700; background: rgba(0,0,0,.55); }
+  .reloj { position: absolute; top: 10px; right: 12px; background: rgba(0,0,0,.7); padding: 3px 10px; border-radius: 6px;
+           font: 600 20px ui-monospace, Menlo, monospace; }
+  .grabando .reloj { background: var(--rojo); }
+  .prompter { background: var(--panel); border: 1px solid var(--borde); border-radius: 10px; padding: 14px 18px; min-height: 150px; }
+  .ahora { font-size: 26px; line-height: 1.35; font-weight: 600; }
+  .ahora.espera { color: var(--tenue); font-weight: 500; }
+  .proxima { margin-top: 10px; color: var(--tenue); font-size: 17px; }
+  .proxima b { color: var(--amarillo); font-variant-numeric: tabular-nums; }
+  .ver { font-size: 12.5px; color: var(--tenue); margin-top: 2px; }
+  .controles { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }
+  button.b { border: 1px solid var(--borde); background: var(--panel); color: var(--texto); padding: 9px 16px; border-radius: 8px;
+             font: 600 14px inherit; cursor: pointer; }
+  button.b:disabled { opacity: .4; cursor: default; }
+  button.grabar { background: var(--rojo); border-color: var(--rojo); }
+  button.b kbd { font: 11px ui-monospace, Menlo, monospace; opacity: .7; margin-left: 6px; }
+  select { background: var(--panel); color: var(--texto); border: 1px solid var(--borde); border-radius: 8px; padding: 8px; max-width: 260px; }
+  .nivel { width: 110px; height: 8px; background: var(--borde); border-radius: 4px; overflow: hidden; }
+  .nivel div { height: 100%; width: 0; background: var(--verde); transition: width .05s; }
+  .msg { color: var(--tenue); font-size: 13px; margin-left: auto; }
+  .montaje { border-top: 1px solid var(--borde); margin-top: 14px; padding: 12px 6px 4px; font-size: 13px; color: var(--tenue); }
+  .montaje button { margin-top: 8px; width: 100%; }
+  canvas { display: none; }
+</style>
+</head>
+<body>
+<aside>
+  <h1>Estudio de voz</h1>
+  <p id="carpeta"></p>
+  <div id="lista"></div>
+  <div class="montaje">
+    <b style="color:var(--texto)">Montaje sin ffmpeg</b><br>
+    Arma el video final acá mismo, en tiempo real (~17 min). No cambies de pestaña ni minimices mientras corre.
+    <button type="button" class="b" id="montar">Armar el video final</button>
+    <div id="montajeMsg"></div>
+  </div>
+</aside>
+<main>
+  <header><h2 id="titulo">—</h2><small id="sub"></small></header>
+  <div class="pantalla" id="pantalla">
+    <video id="video" muted playsinline preload="auto"></video>
+    <div class="reloj" id="reloj">0:00</div>
+    <div class="cuenta" id="cuenta"></div>
+  </div>
+  <div class="prompter" aria-live="off">
+    <div class="ahora espera" id="ahora">Elegí una toma y apretá Grabar.</div>
+    <div class="ver" id="ver"></div>
+    <div class="proxima" id="proxima"></div>
+  </div>
+  <div class="controles">
+    <button type="button" class="b grabar" id="grabar">● Grabar<kbd>espacio</kbd></button>
+    <button type="button" class="b" id="escuchar">▶ Escuchar<kbd>E</kbd></button>
+    <button type="button" class="b" id="siguiente">Siguiente →<kbd>S</kbd></button>
+    <select id="mic" title="Micrófono"></select>
+    <div class="nivel" title="Nivel del micrófono"><div id="nivel"></div></div>
+    <span class="msg" id="msg"></span>
+  </div>
+</main>
+<canvas id="lienzo" width="1920" height="1200"></canvas>
+<script>
+const $ = (id) => document.getElementById(id)
+let tomas = [], actual = null, estado = 'quieto', grabador = null, pedazos = [], audioPrueba = null
+let micStream = null, analizador = null
+
+const mmss = (s) => `${Math.floor(s / 60)}:${String(Math.floor(s % 60)).padStart(2, '0')}`
+
+async function cargar(elegir) {
+  const r = await fetch('/tomas.json').then((x) => x.json())
+  tomas = r.tomas
+  $('carpeta').textContent = r.carpeta
+  $('lista').replaceChildren(...tomas.map((t) => {
+    const b = document.createElement('button')
+    b.className = 'toma'
+    b.dataset.toma = t.toma
+    b.innerHTML = `<b>${t.toma}</b><span></span><i></i>`
+    b.querySelector('span').textContent = t.titulo
+    const i = b.querySelector('i')
+    if (!t.mov) { i.textContent = 'sin video'; }
+    else if (t.voz) { i.textContent = '✓ voz'; i.className = 'lista' }
+    else { i.textContent = 'falta voz'; i.className = 'falta' }
+    b.onclick = () => elegirToma(t.toma)
+    return b
+  }))
+  const destino = elegir ?? actual?.toma ?? (tomas.find((t) => t.mov && !t.voz) ?? tomas[0]).toma
+  elegirToma(destino)
+}
+
+function elegirToma(id) {
+  if (estado !== 'quieto') return
+  actual = tomas.find((t) => t.toma === id)
+  for (const b of document.querySelectorAll('.toma')) b.setAttribute('aria-current', b.dataset.toma === id)
+  $('titulo').textContent = `${actual.toma} · ${actual.titulo}`
+  $('sub').textContent = `${actual.rol} · video ${actual.video} s · ${actual.frases.length} frase(s)` +
+    (actual.voz ? ` · voz grabada (${actual.voz})` : '')
+  const v = $('video')
+  if (actual.mov) { v.src = `/media/${actual.toma}.mov`; v.currentTime = 0 } else { v.removeAttribute('src'); v.load() }
+  $('grabar').disabled = !actual.mov
+  $('escuchar').disabled = !actual.mov || !actual.voz
+  $('msg').textContent = actual.mov ? '' : `Falta ${actual.toma}.mov en la carpeta (recortado).`
+  pintar(0)
+}
+
+function pintar(t) {
+  $('reloj').textContent = mmss(t)
+  if (!actual) return
+  const f = actual.frases
+  const i = f.findLastIndex((x) => x.t <= t + 0.05)
+  const proxima = f[i + 1]
+  if (i < 0) {
+    $('ahora').textContent = f[0].texto; $('ahora').className = 'ahora espera'
+    $('ver').textContent = `entra en ${mmss(f[0].t)} — cuando ves: ${f[0].ver}`
+  } else {
+    $('ahora').textContent = f[i].texto; $('ahora').className = 'ahora'
+    $('ver').textContent = `desde ${mmss(f[i].t)} — ${f[i].ver}`
+  }
+  $('proxima').innerHTML = ''
+  if (proxima && i >= 0) {
+    const falta = Math.ceil(proxima.t - t)
+    $('proxima').innerHTML = `Próxima en <b>${falta} s</b>: `
+    $('proxima').append(proxima.texto)
+  }
+}
+
+function bucle() {
+  pintar($('video').currentTime || 0)
+  if (estado !== 'quieto') requestAnimationFrame(bucle)
+}
+
+async function abrirMic() {
+  if (micStream) return micStream
+  const id = $('mic').value
+  micStream = await navigator.mediaDevices.getUserMedia({
+    audio: { deviceId: id ? { exact: id } : undefined, echoCancellation: false, noiseSuppression: true, autoGainControl: false }
+  })
+  const dispositivos = (await navigator.mediaDevices.enumerateDevices()).filter((d) => d.kind === 'audioinput')
+  const elegido = micStream.getAudioTracks()[0].getSettings().deviceId
+  $('mic').replaceChildren(...dispositivos.map((d) => new Option(d.label || 'Micrófono', d.deviceId, false, d.deviceId === elegido)))
+  const ctx = new AudioContext()
+  analizador = ctx.createAnalyser(); analizador.fftSize = 512
+  ctx.createMediaStreamSource(micStream).connect(analizador)
+  const datos = new Uint8Array(analizador.fftSize)
+  const medir = () => {
+    analizador.getByteTimeDomainData(datos)
+    let pico = 0; for (const d of datos) pico = Math.max(pico, Math.abs(d - 128))
+    $('nivel').style.width = `${Math.min(100, (pico / 128) * 140)}%`
+    requestAnimationFrame(medir)
+  }
+  medir()
+  return micStream
+}
+
+async function grabar() {
+  if (estado === 'grabando') return parar()
+  if (estado !== 'quieto' || !actual?.mov) return
+  try { await abrirMic() } catch (e) { $('msg').textContent = `Sin micrófono: ${e.message}`; return }
+  estado = 'cuenta'
+  const v = $('video'); v.pause(); v.currentTime = 0
+  for (const n of [3, 2, 1]) {
+    $('cuenta').style.display = 'grid'; $('cuenta').textContent = n
+    await new Promise((r) => setTimeout(r, 800))
+  }
+  $('cuenta').style.display = 'none'
+  pedazos = []
+  grabador = new MediaRecorder(micStream, { mimeType: 'audio/webm;codecs=opus', audioBitsPerSecond: 160000 })
+  grabador.ondataavailable = (e) => e.data.size && pedazos.push(e.data)
+  grabador.start(250)
+  await v.play()
+  estado = 'grabando'
+  $('pantalla').classList.add('grabando')
+  $('grabar').textContent = '■ Parar'
+  $('msg').textContent = 'Grabando… el video termina solo, o espacio para parar.'
+  v.onended = () => estado === 'grabando' && setTimeout(parar, 400)
+  bucle()
+}
+
+async function parar() {
+  if (estado !== 'grabando') return
+  estado = 'guardando'
+  $('video').pause()
+  const listo = new Promise((r) => (grabador.onstop = r))
+  grabador.stop(); await listo
+  $('pantalla').classList.remove('grabando')
+  $('grabar').innerHTML = '● Grabar<kbd>espacio</kbd>'
+  const blob = new Blob(pedazos, { type: 'audio/webm' })
+  $('msg').textContent = 'Guardando…'
+  const r = await fetch(`/voz/${actual.toma}`, { method: 'POST', body: blob })
+  estado = 'quieto'
+  await cargar(actual.toma)
+  $('msg').textContent = r.ok ? `✓ Guardado ${actual.toma}.webm. E para escucharla, S para la siguiente.` : 'No se pudo guardar.'
+}
+
+async function escuchar() {
+  if (estado === 'escuchando') { cortarEscucha(); return }
+  if (estado !== 'quieto' || !actual?.voz) return
+  estado = 'escuchando'
+  const v = $('video'); v.pause(); v.currentTime = 0
+  audioPrueba = new Audio(`/media/${actual.voz}?${Date.now()}`)
+  await Promise.all([v.play(), audioPrueba.play()])
+  $('msg').textContent = 'Escuchando… E para cortar.'
+  v.onended = () => setTimeout(cortarEscucha, 1500)
+  bucle()
+}
+function cortarEscucha() {
+  audioPrueba?.pause(); $('video').pause(); estado = 'quieto'; $('msg').textContent = ''
+}
+
+function siguiente() {
+  if (estado !== 'quieto') return
+  const i = tomas.findIndex((t) => t.toma === actual.toma)
+  const s = tomas.slice(i + 1).find((t) => t.mov) ?? tomas.find((t) => t.mov && !t.voz)
+  if (s) elegirToma(s.toma)
+}
+
+// ---- Montaje sin ffmpeg: dibuja cada toma en un canvas y graba canvas + voz.
+async function montar() {
+  if (estado !== 'quieto') return
+  await cargar()
+  const faltan = tomas.filter((t) => !t.mov).map((t) => t.toma)
+  if (faltan.length && !confirm(`Faltan videos: ${faltan.join(', ')}. ¿Armar igual sin esas tomas?`)) return
+  estado = 'montando'
+  const lienzo = $('lienzo'), g = lienzo.getContext('2d')
+  const ctx = new AudioContext()
+  const salida = ctx.createMediaStreamDestination()
+  const flujo = new MediaStream([...lienzo.captureStream(30).getVideoTracks(), ...salida.stream.getAudioTracks()])
+  const tipo = ['video/mp4;codecs=avc1.640028,mp4a.40.2', 'video/mp4', 'video/webm;codecs=vp9,opus', 'video/webm']
+    .find((t) => MediaRecorder.isTypeSupported(t))
+  const rec = new MediaRecorder(flujo, { mimeType: tipo, videoBitsPerSecond: 8_000_000, audioBitsPerSecond: 192_000 })
+  const trozos = []; rec.ondataavailable = (e) => e.data.size && trozos.push(e.data)
+  const v = document.createElement('video'); v.muted = true; v.playsInline = true
+  g.fillStyle = '#fff'; g.fillRect(0, 0, 1920, 1200)
+  let dibujando = true
+  const dibujar = () => {
+    if (v.readyState >= 2) {
+      const e = Math.min(1920 / v.videoWidth, 1200 / v.videoHeight)
+      const w = v.videoWidth * e, h = v.videoHeight * e
+      g.fillStyle = '#fff'; g.fillRect(0, 0, 1920, 1200)
+      g.drawImage(v, (1920 - w) / 2, (1200 - h) / 2, w, h)
+    }
+    if (dibujando) requestAnimationFrame(dibujar)
+  }
+  const inicios = {}
+  rec.start(1000); const t0 = performance.now(); dibujar()
+  for (const t of tomas.filter((x) => x.mov)) {
+    $('montajeMsg').textContent = `Armando ${t.toma}…`
+    v.src = `/media/${t.toma}.mov`
+    await new Promise((r) => (v.onloadeddata = r))
+    let voz = null, durVoz = 0
+    if (t.voz) {
+      voz = new Audio(`/media/${t.voz}`); voz.preload = 'auto'
+      await new Promise((r) => { voz.oncanplaythrough = r; voz.onerror = r })
+      ctx.createMediaElementSource(voz).connect(salida)
+      durVoz = Number.isFinite(voz.duration) ? voz.duration : 0
+    }
+    inicios[t.toma] = (performance.now() - t0) / 1000
+    const dur = Math.max(v.duration, durVoz) + 0.5
+    await Promise.all([v.play(), voz?.play()])
+    await new Promise((r) => setTimeout(r, dur * 1000))
+    voz?.pause()
+  }
+  dibujando = false
+  const listo = new Promise((r) => (rec.onstop = r)); rec.stop(); await listo
+  const ext = tipo.startsWith('video/mp4') ? 'mp4' : 'webm'
+  $('montajeMsg').textContent = 'Guardando el video final…'
+  await fetch(`/final?ext=${ext}`, { method: 'POST', body: new Blob(trozos, { type: tipo }) })
+  await fetch('/final-srt', { method: 'POST', body: JSON.stringify(inicios) })
+  $('montajeMsg').textContent = `✓ Listo: walkthrough-final.${ext} y walkthrough-final.srt en la carpeta.`
+  estado = 'quieto'
+}
+
+$('grabar').onclick = grabar
+$('escuchar').onclick = escuchar
+$('siguiente').onclick = siguiente
+$('montar').onclick = montar
+$('mic').onchange = () => { for (const t of micStream?.getTracks() ?? []) t.stop(); micStream = null; abrirMic() }
+document.addEventListener('keydown', (e) => {
+  if (e.target.tagName === 'SELECT') return
+  if (e.code === 'Space') { e.preventDefault(); grabar() }
+  else if (e.key === 'e' || e.key === 'E') escuchar()
+  else if (e.key === 's' || e.key === 'S') siguiente()
+})
+$('video').addEventListener('seeked', () => estado === 'quieto' && pintar($('video').currentTime))
+cargar()
+</script>
+</body>
+</html>

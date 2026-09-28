@@ -5,7 +5,9 @@
 > une todo. **Se sigue de arriba hacia abajo, sin saltear pasos.** Cada casilla `[ ]` es algo que se
 > hace y se tilda.
 >
-> Las tomas y la narración están verificadas contra el código de cada pantalla (2026-09-28). El
+> Las tomas y la narración están verificadas contra el código de cada pantalla, y el estado de
+> producción con `verificar-produccion.mjs` (2026-09-28). Las herramientas que hacen el trabajo
+> repetitivo están en `scripts/video-walkthrough/`. El
 > porqué de cada decisión, el estado de la base y lo que el video no muestra están en los
 > **Anexos**, al final: **no hace falta leerlos para grabar.**
 
@@ -13,22 +15,29 @@
 
 ## El plan en una pantalla
 
-| Paso | Qué | Quién | Cuánto |
+| Paso | Qué | Con qué | Cuánto |
 |---|---|---|---|
-| **0** | Preparar la Mac, Chrome y los archivos. **Una sola vez**, cualquier día antes | Técnico + quien graba | ~30 min |
-| **1** | Checklist del día, **antes de cada sesión** | Quien graba | ~20 min (+ ensayo la primera vez) |
-| **2A** | Grabar la **sesión A**: el comprador mirando una obra terminada (T01–T06) | Quien graba | ~15 min |
-| **2B** | Grabar la **sesión B**: nace un proyecto y recorre la FSM, hasta la firma (T07–T27). **De corrido, sin cortar la sesión** | Quien graba | ~60 min |
-| **2C** | Grabar la **sesión C**: auditoría y el resto de las pantallas (T28–T31) | Quien graba | ~15 min |
-| **3** | Recortar los 31 videos en QuickTime | Quien graba | ~30 min |
-| **4** | Grabar la voz, mirando cada video recortado | Quien graba la voz | ~45 min |
-| **5** | Unir todo con un comando | Cualquiera | ~10 min |
-| **6** | Mirar el resultado y cerrar | Cualquiera | ~25 min |
+| **0** | Preparar la Mac, los archivos y chequear producción. **Una sola vez** | `preparar.sh` — **ya corrido en esta Mac el 2026-09-28** | ~5 min |
+| **1** | Antes de cada sesión: la Mac, Render despierto, Chrome con las 5 pestañas | `sesion.sh` + `chrome.sh` | ~10 min (+ ensayo la primera vez) |
+| **2A** | Grabar la **sesión A**: el comprador mirando una obra terminada (T01–T06) | el grabador de macOS; al final, `renombrar.sh A` | ~15 min |
+| **2B** | Grabar la **sesión B**: nace un proyecto y recorre la FSM, hasta la firma (T07–T27). **De corrido, sin cortar la sesión** | ídem; al final, `renombrar.sh B` | ~60 min |
+| **2C** | Grabar la **sesión C**: auditoría y el resto de las pantallas (T28–T31) | ídem; al final, `renombrar.sh C` | ~15 min |
+| **3** | Recortar los 31 videos | QuickTime | ~30 min |
+| **4** | Grabar la voz mirando cada video, con la frase en pantalla en su segundo | el **estudio** (una página local) | ~35 min |
+| **5** | Unir todo, con subtítulos | `unir.sh` (o el estudio, si no hay ffmpeg) | ~10 min |
+| **6** | Mirar el resultado y cerrar | — | ~25 min |
+
+**Todas las herramientas están en [`scripts/video-walkthrough/`](../scripts/video-walkthrough/README.md)**
+y se corren desde la raíz del repo, en la Terminal (Cmd+Espacio → "Terminal" → Enter):
+
+```bash
+cd ~/Documents/real-estate/real-world-real-estate
+```
 
 **Cuatro reglas que valen para todo el runbook:**
 
-1. **La unidad es la toma, no el acto.** Son 31 tomas; cada una es un video `Txx.mov` y un audio
-   `Txx.m4a` con el mismo nombre. Todos los tiempos se cuentan desde el **0:00 de la toma ya
+1. **La unidad es la toma, no el acto.** Son 31 tomas; cada una es un video `Txx.mov` y una voz
+   `Txx.webm` con el mismo nombre. Todos los tiempos se cuentan desde el **0:00 de la toma ya
    recortada**, así que rehacer una no corre nada del resto.
 2. **La sesión B va de corrido y en orden.** Cada toma deja la base en el estado que necesita la
    siguiente. Las sesiones A y C se pueden grabar otro día (C, siempre después de B).
@@ -40,7 +49,7 @@
 
 ---
 
-## Paso 0 · Una sola vez, cualquier día antes
+## Paso 0 · Una sola vez
 
 ### 0.1 Las contraseñas — lo hace el técnico
 
@@ -58,160 +67,78 @@
 
 La pantalla de login precarga el usuario de cada solapa pero **nunca la contraseña**: se tipea.
 
-### 0.2 La carpeta y los archivos de evidencia
+### 0.2 `preparar.sh` — ya corrido en esta Mac el 2026-09-28
 
-- [ ] Crear la carpeta donde va a caer todo. Pegá en la Terminal (Cmd+Espacio → "Terminal" → Enter):
+```bash
+bash scripts/video-walkthrough/preparar.sh
+```
 
-  ```bash
-  mkdir -p ~/Movies/propnexus-walkthrough ~/Movies/propnexus-evidencia
-  ```
+Crea `~/Movies/propnexus-walkthrough/` (donde cae todo) y `~/Movies/propnexus-evidencia/` con **los
+tres archivos que se suben en T15** — `land-title-deed.pdf`, `site-survey-plan.jpg` y
+`lot-location-map.png`, ficticios y marcados como tales, generados desde
+`scripts/video-walkthrough/evidencia/`. Chequea 15 GB libres, Chrome, Node y ffmpeg, y corre el
+verificador de producción (solo lectura: las cinco cuentas, lo que ve cada rol, el saldo de tADA).
+Se puede volver a correr cuando quieras.
 
-- [ ] Dejar en `~/Movies/propnexus-evidencia/` **tres archivos con nombres presentables** (se ven en
-      cámara en T15): un PDF (ej. `municipal-permit.pdf`) y dos JPG o PNG (ej. `foundation-01.jpg`,
-      `foundation-02.jpg`). Archivos chicos: el tipo se chequea por los primeros bytes, así que
-      tienen que ser PDF/JPG/PNG de verdad, no renombrados.
+**Lo que dejó el 2026-09-28:** todo en verde, con dos avisos.
 
-### 0.3 Espacio en disco
+- **Las tres Torre Volumen no tienen coordenadas.** El modo mapa de T02 sale sin pines, y los mapas
+  de T03 y T13 no se dibujan (regla 17: sin dato, no se dibuja). Las tomas de abajo ya tienen la
+  variante sin mapa. **Para tener el mapa**, hay que cargar latitud y longitud en producción
+  (`PATCH /api/v1/projects/:id` como admin): es una decisión del dueño y no está hecha.
+- La cola del escribano está vacía: se llena en la pasada de calentamiento de la sesión B (1.3). Es
+  lo esperado.
 
-- [ ] **15 GB libres.** Grabando la pantalla completa son ~200-300 MB por minuto; el crudo son
-      ~20-25 minutos y el montaje suma ~3 GB. Chequealo:
-
-  ```bash
-  df -h /
-  ```
-
-  Si falta, lo primero que se puede borrar sin perder nada (se vuelve a llenar solo) son ~2,8 GB:
-
-  ```bash
-  rm -rf ~/.npm ~/Library/pnpm/store ~/.cache/uv ~/.cache/puppeteer
-  ```
-
-  El resto, a mano (Configuración del Sistema → General → Almacenamiento). **No borres**
-  `~/Library/Caches/ms-playwright` ni las imágenes de Docker del repo (`CLAUDE.md` §Worktrees).
-
-### 0.4 `ffmpeg`, para el Paso 5
-
-- [ ] Pegá en la Terminal:
-
-  ```bash
-  ffmpeg -version
-  ```
-
-  Si responde con texto que empieza por `ffmpeg version`, listo. **En esta Mac ya está** (ffmpeg
-  8.0.1, por Homebrew). **Solo si el montaje se hace en otra Mac** y dice `command not found`,
-  pegá esto entero (baja ffmpeg ya compilado desde evermeet.cx; sirve para Intel y, vía Rosetta,
-  para Apple Silicon) y tiene que terminar mostrando `ffmpeg version …`:
-
-  ```bash
-  mkdir -p ~/bin && cd ~/bin \
-    && curl -L -o ffmpeg.zip https://evermeet.cx/ffmpeg/getrelease/zip \
-    && curl -L -o ffprobe.zip https://evermeet.cx/ffmpeg/getrelease/ffprobe/zip \
-    && unzip -o ffmpeg.zip && unzip -o ffprobe.zip && rm ffmpeg.zip ffprobe.zip \
-    && echo 'export PATH="$HOME/bin:$PATH"' >> ~/.zprofile \
-    && export PATH="$HOME/bin:$PATH" && ffmpeg -version | head -1
-  ```
-
-### 0.5 Un perfil de Chrome solo para esto
-
-- [ ] **Crearlo:** clic en el círculo de la cuenta, arriba a la derecha → **Agregar** → **Continuar
-      sin una cuenta** → nombre `PropNexus Demo` → Listo. Se abre una ventana nueva: todo lo que
-      sigue, y toda la grabación, **en esa ventana**. Sin extensiones.
-- [ ] **Guardado de contraseñas apagado:** Configuración → Autocompletar → Administrador de
-      contraseñas → "Ofrecer guardar contraseñas" apagado. Si no, el cartel "¿Guardar contraseña?"
-      aparece en cuatro tomas.
-- [ ] **Traductor apagado:** Configuración → Idiomas → "Usar el Traductor de Google" apagado. Si no,
-      cuando la app pasa a inglés Chrome ofrece traducirla en medio de la toma.
-- [ ] **Zoom al 110%:** abrí `propnexus-web.onrender.com` y apretá `Cmd` + `+` una vez. Se guarda
-      por sitio.
-- [ ] **Sin barra de herramientas en pantalla completa:** menú **Ver** → destildá **"Mostrar siempre
-      la barra de herramientas en pantalla completa"** (el nombre exacto cambia un poco según la
-      versión).
-
-### 0.6 El grabador de macOS
-
-**`Shift+Cmd+5`, el que trae macOS.** Cero instalación y no funde la CPU de esta Mac.
+### 0.3 El grabador de macOS — una vez, a mano
 
 - [ ] `Shift+Cmd+5` → **Opciones**:
-  - [ ] **Guardar en:** Otra ubicación… → Películas → `propnexus-walkthrough`.
   - [ ] **Temporizador:** ninguno.
   - [ ] **Micrófono:** ninguno.
   - [ ] **Mostrar clics del mouse: SÍ** ← los clics son lo que hace seguible el video.
 - [ ] Modo: **Grabar toda la pantalla** (el ícono de pantalla con un círculo). Con Chrome en
-      pantalla completa, toda la pantalla es la app: las tomas encuadran idénticas sin seleccionar
-      nada. (La única excepción es T31, que lo explica ahí.)
+      pantalla completa, toda la pantalla es la app. (La única excepción es T31, que lo explica ahí.)
 
-Estas opciones quedan guardadas: no hay que repetirlas cada día.
+Dónde se guarda no hace falta elegirlo: `sesion.sh` lo pone en la carpeta durante la sesión.
 
 ---
 
-## Paso 1 · El día: checklist antes de cada sesión
+## Paso 1 · Antes de cada sesión
 
-Se hace **entero antes de la sesión A, antes de la B y antes de la C** (si las grabás en días o
-momentos distintos). Si grabás las tres seguidas, una sola vez alcanza.
+Se hace antes de la sesión A, antes de la B y antes de la C. Si grabás las tres seguidas, una vez.
 
-### 1.1 La Mac
+### 1.1 `sesion.sh`, en una Terminal aparte, que queda abierta
 
-- [ ] **Esconder los íconos del escritorio** (se revierte en el Paso 6):
-
-  ```bash
-  defaults write com.apple.finder CreateDesktop false && killall Finder
-  ```
-
-- [ ] **No molestar ON** (Centro de control, arriba a la derecha → Concentración → No molestar). Un
-      banner arruina la toma.
-- [ ] **Todo cerrado menos Chrome, QuickTime y la Terminal:** Mail, Mensajes, WhatsApp, Slack,
-      Docker Desktop (`Cmd+Q` en cada una). No molestar no silencia todo, y cada app abierta le saca
-      aire a la grabación.
-- [ ] **Cargador enchufado.** Con la batería a medias esta Mac baja la velocidad y el video sale a
-      los saltos.
-- [ ] **Resolución en "Predeterminada"** (Configuración del Sistema → Pantallas). En "Más espacio"
-      el texto sale chico.
-- [ ] **Wi-Fi estable, sin VPN.** Cada acción en cadena espera a la red.
-- [ ] **15 GB libres** (`df -h /`, Paso 0.3).
-
-### 1.2 El keep-alive — que Render no se duerma entre tomas
-
-Render Free duerme el servicio a los 15 minutos sin uso, y el primer pedido después tarda ~50 s: la
-toma siguiente abriría con un spinner de casi un minuto.
-
-- [ ] Abrí **una Terminal aparte** (`Cmd+N` en la Terminal), pegá esto y dejala corriendo toda la
-      sesión:
+- [ ] Abrí **una Terminal nueva** (`Cmd+N` en la Terminal) y corré:
 
   ```bash
-  while true; do
-    curl -s -o /dev/null https://propnexus-api.onrender.com/health
-    curl -s -o /dev/null https://propnexus-web.onrender.com/
-    sleep 600
-  done
+  cd ~/Documents/real-estate/real-world-real-estate && bash scripts/video-walkthrough/sesion.sh
   ```
 
-> **Esto NO es el keep-warm que prohíbe D-040.** Lo prohibido es un cron: mantiene los servicios
-> despiertos 24/7 (~1460 h contra las 750 del plan Free) y los suspende cerca del día 15. Esto es un
-> loop a mano, atendido, que dura la sesión y se apaga en el Paso 6 con `Ctrl-C`. **Nunca lo pases a
-> `crontab` ni a GitHub Actions.**
+  Esconde los íconos del escritorio, hace que las grabaciones caigan en
+  `~/Movies/propnexus-walkthrough/`, ofrece cerrar Mail, Mensajes, WhatsApp, Slack y compañía
+  (contestá `s`), chequea cargador y disco, **despierta Render** (en frío tarda más de un minuto) y
+  queda haciendo un ping cada 10 minutos para que no se vuelva a dormir entre tomas. **`Ctrl-C` al
+  terminar la sesión** devuelve todo a como estaba.
 
-### 1.3 La pasada de calentamiento (y ensayo) — menos de 15 min antes de la primera toma
+  > **No es el keep-warm que prohíbe D-040.** Lo prohibido es un cron: mantiene los servicios
+  > despiertos 24/7 (~1460 h contra las 750 del plan Free) y los suspende cerca del día 15. Esto es
+  > un loop atendido que dura la sesión. **Nunca lo pases a `crontab` ni a GitHub Actions.**
 
-- [ ] **Recorré a mano, sin grabar, las pantallas de las tomas de esta sesión**, con sus tablas del
-      Paso 2 al lado. Hace cuatro cosas:
-  1. Despierta los dos servicios.
-  2. Pone al día la reconciliación de lectura (D-077): sin esto, pantallas con TXID ya confirmado
-     muestran "Pending".
-  3. **Antes de la sesión B:** compila el dossier de la 1A. Abrí `Units` → 1A → **"Dossier"** una
-     vez. Si no, la cola del escribano sale vacía en T25.
-  4. Es el ensayo: sabés dónde está cada botón antes de que corra el grabador. **No hagas las
-     acciones marcadas ⚠ irrepetible** (Paso 1.8): solo mirá dónde están.
-- [ ] **La primera vez, un ensayo completo de la sesión B con las acciones** sobre un proyecto de
-      prueba es la mejor inversión del día (cuesta ~20 min y tADA de Preprod, que no es plata). Deja
-      un proyecto más en el listado del developer; en T07 se tapa con el encuadre.
-- [ ] **Al terminar el recorrido, dejá la app en castellano** (toggle de idioma → ES). El idioma
-      queda guardado en el navegador: si quedó en inglés, T01 arranca en inglés y se pierde el
-      primer gesto del video. *(Solo importa antes de la sesión A.)*
+- [ ] A mano, lo que ningún script puede hacer:
+  - [ ] **No molestar ON** (Centro de control → Concentración → No molestar).
+  - [ ] **Resolución "Predeterminada"** (Configuración del Sistema → Pantallas). En "Más espacio" el
+        texto sale chico.
+  - [ ] **Wi-Fi estable, sin VPN.**
 
-### 1.4 Las pestañas — un rol por pestaña
+### 1.2 `chrome.sh` — el Chrome de la grabación, con las 5 pestañas
 
-La sesión vive en cada pestaña por separado (`sessionStorage`), así que los cuatro roles pueden
-estar logueados a la vez y se cambia de rol cambiando de pestaña.
+```bash
+bash scripts/video-walkthrough/chrome.sh
+```
+
+Abre un Chrome **aparte del de todos los días** (perfil "PropNexus Demo", sin extensiones, con el
+guardado de contraseñas y el traductor apagados) y **cinco pestañas en `/login`**, cada una con su
+propia sesión:
 
 | Pestaña | Rol | Atajo |
 |---|---|---|
@@ -221,91 +148,109 @@ estar logueados a la vez y se cambia de rol cambiando de pestaña.
 | 4 | Notary | `Cmd+4` |
 | 5 | Admin — **fuera de cámara** | `Cmd+5` |
 
-**Armado, en este orden, todavía sin pantalla completa:**
-
-- [ ] Cerrá todas las pestañas que hayan quedado del Paso 1.3.
-- [ ] **Pestaña 1:** `propnexus-web.onrender.com/login`. **Antes de la sesión A: no entres**, y
-      tiene que verse en castellano (si no, toggle → ES). Antes de B o C: entrá con `buyer@`.
-- [ ] **Pestañas 2, 3, 4 y 5**, en ese orden: `Cmd+T` → `propnexus-web.onrender.com/login` → elegí la
-      solapa del rol → tipeá la contraseña → "Sign in"/"Ingresar". En la 5 no hay solapa: tipeá
-      `admin@example.com` en el usuario.
-- [ ] **Antes de la sesión B o C:** si alguna pestaña se ve en castellano, recargala (`Cmd+R`). El
-      idioma se lee al abrir la página; la sesión sobrevive a la recarga.
+- [ ] **Pestañas 2 a 5:** entrá con cada rol (elegí la solapa, tipeá la contraseña, "Ingresar" /
+      "Sign in"). En la 5 no hay solapa: tipeá `admin@example.com`.
+- [ ] **La primera vez:** `Cmd` + `+` una vez, para el zoom al 110% (queda guardado).
+- [ ] **Pestaña 1:** antes de la sesión A, **sin entrar y en castellano** (si se ve en inglés, toggle
+      → ES). Antes de B o C: entrá con `buyer@`.
+- [ ] **Antes de B o C**, si alguna pestaña se ve en castellano: recargala (`Cmd+R`). La sesión
+      sobrevive a la recarga.
 
 **Dos reglas que no se rompen:**
 
-1. **Cada pestaña se abre con `Cmd+T` en blanco.** Una abierta con un clic desde otra **hereda la
-   sesión de esa otra**, y vas a estar grabando al certifier con la sesión del developer sin
-   enterarte.
-2. **El idioma se cambia una sola vez, en cámara, en T01.** Después de T01, fuera de cámara,
-   recargá las pestañas 2 a 5 (`Cmd+2`, `Cmd+R`… hasta la 5) para que pasen a inglés.
+1. **Nunca abras una pestaña con un clic desde otra**: hereda la sesión de esa otra, y vas a estar
+   grabando al certifier con la sesión del developer sin enterarte. Si hace falta una, `Cmd+T`.
+2. **El idioma se cambia una sola vez, en cámara, en T01.** Después de T01, recargá las pestañas 2 a
+   5 para que pasen a inglés (lo dice T01).
 
-### 1.5 Pantalla completa
+### 1.3 La pasada de calentamiento — menos de 15 min antes de la primera toma
 
-- [ ] Volvé a la pestaña donde arranca la sesión (A: `Cmd+1`; B: `Cmd+2`; C: `Cmd+2`).
-- [ ] `Cmd+Ctrl+F`. Chrome ocupa toda la pantalla: sin pestañas, sin barra de direcciones, sin Dock.
-- [ ] **El mouse lejos del borde de arriba**: si lo toca, baja la barra de Chrome. Si pasa en medio
-      de una toma, se recorta después.
+- [ ] **Recorré a mano, sin grabar, las pantallas de las tomas de esta sesión**, con sus tablas del
+      Paso 2 al lado. Despierta las pantallas, pone al día la reconciliación de lectura (D-077: sin
+      esto, un TXID ya confirmado se ve "Pending") y es el ensayo de dónde está cada botón. **No
+      hagas las acciones marcadas ⚠ irrepetible.**
+- [ ] **Antes de la sesión B:** abrí una vez el dossier de la 1A (pestaña 1: `Units` → 1A →
+      **"Dossier"**). Esa lectura lo compila y lo pone en la cola del escribano; sin eso, T25 no
+      tiene qué firmar. Y corré otra vez el verificador:
+
+  ```bash
+  node scripts/video-walkthrough/verificar-produccion.mjs
+  ```
+
+- [ ] **La primera vez, un ensayo con las acciones** — la mejor inversión del día (~20 min y tADA de
+      Preprod, que no es plata). **Solo T07–T10 y T15–T21**, sobre un proyecto llamado **`Ensayo`**:
+  - crealo como en T08 e invitá al certifier como en su corte;
+  - cargá una unidad, subí evidencia, observá, reanudá y certificá.
+  - **No invites al investor (T11–T14) ni abras o firmes dossiers (T23–T27).** Una invitación
+    aceptada le suma la unidad y el proyecto al investor para siempre (se verían en T02 y T13), y
+    firmar el dossier de la 1A deja a T25 sin nada que firmar.
+  - Queda un proyecto más en el listado del developer (T07) y una certificación más en el panel del
+    certifier: no molestan.
+- [ ] **Al terminar el recorrido, dejá la app en castellano** (toggle → ES). *(Solo antes de la
+      sesión A: si quedó en inglés, T01 arranca en inglés y se pierde el primer gesto del video.)*
+
+### 1.4 Pantalla completa
+
+- [ ] Pestaña donde arranca la sesión (A: `Cmd+1`; B y C: `Cmd+2`) → `Cmd+Ctrl+F`. Chrome ocupa
+      toda la pantalla: sin pestañas, sin barra de direcciones, sin Dock.
+- [ ] **El mouse lejos del borde de arriba**: si lo toca, baja la barra de Chrome.
 
 **Para escribir una dirección en pantalla completa** (siempre fuera de cámara): `Cmd+L` muestra la
 barra un momento → pegás → Enter.
 
-### 1.6 El ciclo de cada toma — los mismos seis pasos, 31 veces
+### 1.5 El ciclo de cada toma — cinco pasos, 31 veces
 
 1. **Dejá la pantalla como dice "Antes de grabar"** de la toma. Si pasó más de un minuto desde la
-   última acción en esa pestaña, **recargala** (`Cmd+R`) y esperá que cargue: es la diferencia entre
-   una toma limpia y una que arranca con un esqueleto de carga.
+   última acción en esa pestaña, **recargala** (`Cmd+R`) y esperá que cargue.
 2. **`Shift+Cmd+5` → Grabar.**
 3. **Hacé la tabla de la toma**, fila por fila. Los tiempos son el objetivo, no un cronómetro: ±2 s
    está bien.
 4. **Parar: `Cmd+Ctrl+Esc`** (en pantalla completa el botón de stop queda escondido).
-5. **Renombrá el archivo ya**, con el nombre exacto: en Finder, clic en "Grabación de pantalla
-   2026-…" → Enter → `T05` → Enter. Dos dígitos, T mayúscula, nada más. Si repetís una toma,
-   **reemplazá** el archivo viejo: nada de `T05 copia.mov`.
-6. **Hacé lo que dice "Después"** de la toma, y tildala.
+5. **Hacé lo que dice "Después"** de la toma, y tildala.
 
-*(Para renombrar sin salir de pantalla completa: `Cmd+Tab` a Finder y volvé con `Cmd+Tab`. Se ve en
-el video solo si estás grabando, y no lo estás.)*
+**No renombres nada durante la sesión.** Al terminarla, `renombrar.sh` les pone `T01`, `T02`… a
+todas de una vez, en el orden en que se grabaron. **Si repetiste una toma, no borres nada**: el
+script ve que sobran grabaciones, te las lista con hora y duración, y vos le decís cuáles
+descartar (van a `descartadas/`, no se borran).
 
-### 1.7 Cómo moverse adentro de una toma
+### 1.6 Cómo moverse adentro de una toma
 
 - **Los "quieto" no se negocian.** Son el lugar donde después entra la frase que explica lo que se
-  ve. Contá en voz baja ("mil uno, mil dos…"): el micrófono está apagado. Si grabás al ritmo natural
-  de uso, la voz no tiene dónde caer.
+  ve. Contá en voz baja ("mil uno, mil dos…"): el micrófono está apagado.
 - **Navegá con la app, no con la barra de direcciones.** En desktop cada rol tiene una **barra
   lateral** a la izquierda (Investor: Menu · Favorites · Buy · Units · User; Developer: Panel ·
   Projects · Capital · Units · Progress; Certifier y Notary: Panel · … · Profile) y el header tiene
-  la campana y el ícono de perfil. Los clics se ven en el video; un `Cmd+L`, no.
+  la campana y el ícono de perfil.
 - **Una toma termina** cuando empieza una espera (**⏸ CORTE**), cuando pasás de ~90 s, o cuando
   cambiás de rol. Por eso son 31.
 
-### 1.8 Las tomas irrepetibles, y qué hacer si una sale mal
+### 1.7 Las tomas irrepetibles, y qué hacer si una sale mal
 
 **T08, T11, T12, T15, T18, T19, T20 y T25** mandan algo a la cadena y dejan la base en otro estado:
 no hay "otra toma" de esas.
 
 - **Un error de tipeo o un clic de más:** seguí. Se arregla recortando o la voz lo tapa.
 - **Un error que se ve en pantalla** (mensaje rojo, pantalla equivocada): pará la grabación,
-  resolvé fuera de cámara y grabá **la acción siguiente** como otra toma con el mismo nombre (`T15b`,
-  por ejemplo). En el Paso 3 las unís en QuickTime: abrí `T15.mov` recortado hasta antes del
-  error → Edición → **Agregar clip al final…** → `T15b.mov` recortado desde la acción siguiente →
-  `Cmd+S` como `T15`. Borrá `T15b.mov` (el comando del Paso 5 solo toma nombres de dos dígitos).
+  resolvé fuera de cámara, y grabá **la acción siguiente** como una toma aparte. **Renombrá esa
+  segunda mitad enseguida** en Finder como `T15b.mov` (con la toma que corresponda), así
+  `renombrar.sh` no la cuenta. En el Paso 3 las unís.
 - **Algo que rompe la historia** (certificaste antes de observar, aceptaste en otra unidad): la
-  única salida limpia es **un proyecto nuevo desde T08** — otros ~6 min de mints y ~15 min de tomas.
+  única salida limpia es **un proyecto nuevo desde T08**, con otro nombre — otros ~6 min de mints y
+  ~15 min de tomas.
 
 ---
 
 ## Paso 2 · Grabar la pantalla
 
-**Cada toma:** "Antes de grabar", la tabla, y "Después". El ciclo del Paso 1.6 envuelve a todas.
+**Cada toma:** "Antes de grabar", la tabla, y "Después". El ciclo del Paso 1.5 envuelve a todas.
 
 **El mapa completo**, para ubicarse. *Empieza en* es dónde cae la toma en el video final (±15 s).
 
 | Toma | Empieza en | Pestaña | Qué | Pantalla | Video | Voz | |
 |---|---|---|---|---|---|---|---|
 | T01 | 0:00 | 1 · Investor | Login, y el cambio de idioma | `/login` → `/investor/buy` | 22 s | 13 s | |
-| T02 | 0:22 | 1 · Investor | Buy | `/investor/buy` | 35 s | 17 s | |
-| T03 | 0:57 | 1 · Investor | El proyecto por dentro | `/project/<torre-volumen-3>` | 45 s | 16 s | |
+| T02 | 0:22 | 1 · Investor | Buy | `/investor/buy` | 35 s | 15 s | |
+| T03 | 0:57 | 1 · Investor | El proyecto por dentro | `/project/<torre-volumen-3>` | 45 s | 13 s | |
 | T04 | 1:42 | 1 · Investor | Quién construye | `/project/<torre-volumen-3>/developer` | 40 s | 25 s | |
 | T05 | 2:22 | 1 · Investor | Hasta la prueba | `…/progress` → `…/stage/:stageId` | 45 s | 27 s | |
 | T06 | 3:07 | 1 · Investor | Favoritos | `/investor/favorites` | 10 s | 4 s | |
@@ -315,7 +260,7 @@ no hay "otra toma" de esas.
 | T10 | 4:53 | 2 · Developer | Unidades | `/developer/project/:id/units` | 32 s | 10 s | |
 | T11 | 5:25 | 2 · Developer | La invitación | `/developer/project/:id/invite` | 25 s | 8 s | ⚠ irrepetible |
 | T12 | 5:50 | 1 · Investor | Aceptar | campana → `/investor/notifications` | 35 s | 15 s | ⚠ irrepetible |
-| T13 | 6:25 | 1 · Investor | El portfolio | `/investor/units` → `/investor/unit/<5A>` | 35 s | 22 s | |
+| T13 | 6:25 | 1 · Investor | El portfolio | `/investor/units` → `/investor/unit/<5A>` | 35 s | 20 s | |
 | T14 | 7:00 | 1 · Investor | El contrato como registro | `/investor/unit/<5A>/contract` | 25 s | 13 s | |
 | T15 | 7:25 | 2 · Developer | Subir evidencia | `/developer/project/:id/upload` | 40 s | 20 s | ⚠ irrepetible |
 | T16 | 8:05 | 2 · Developer | La prueba, y afuera de la app | AnchoringSuccessModal → cardanoscan | 26 s | 11 s | |
@@ -345,7 +290,7 @@ contraste contra el que después se entiende el proyecto que nace vacío.
 
 #### T01 · Login, y el cambio de idioma — 22 s
 
-**Antes de grabar:** pestaña 1, `/login`, **en castellano** (Paso 1.4), sin entrar. La solapa "Inversor"
+**Antes de grabar:** pestaña 1, `/login`, **en castellano** (Paso 1.2), sin entrar. La solapa "Inversor"
 viene seleccionada y el usuario `buyer@example.com` ya precargado.
 
 | Tiempo | Acción | Lo que tiene que verse |
@@ -376,7 +321,7 @@ no hace falta: se abren ya en inglés.)*
 | 0:13–0:16 | Tipeá `Buenos Aires`. | Las tres siguen (las tres están en Buenos Aires). |
 | 0:17 | Borrá lo tipeado y clic en la pill **"Filters"**. | El diálogo "Filters": "Project status" y "Sort by". |
 | 0:18–0:20 | Clic en **"Delivered"**, después cerrá el diálogo. | La lista filtrada. |
-| 0:21 | Clic en la pill **"Map"**. | El mapa con los pines de las obras. |
+| 0:21 | Clic en la pill **"Map"**. *Sin coordenadas (Paso 0.2): salteá el mapa — quedate quieto sobre la lista hasta 0:29 y en 0:30 hacé clic en la card de **Torre Volumen 3**.* | El mapa con los pines de las obras. |
 | 0:22–0:27 | **Quieto.** Si los pines se tapan entre sí, hacé zoom con la rueda. | Los pines. |
 | 0:28 | Clic en el pin de **Torre Volumen 3**. | Su popover. |
 | 0:30 | Clic en **"View project"**. | — |
@@ -392,7 +337,7 @@ no hace falta: se abren ya en inglés.)*
 | 0:03 | Clic en la portada (**"Open gallery"**), pasá una foto con la flecha y cerrá (`Esc`). *Si la obra no tiene fotos, quedate quieto hasta 0:08.* | La galería a pantalla completa. |
 | 0:09 | Clic en el **corazón** ("Save to favorites"). | El corazón se llena. |
 | 0:10–0:12 | **Quieto.** | "Completion: …" y "Location". |
-| 0:13 | Clic en **"Location"**. | El mapa a pantalla completa. |
+| 0:13 | Clic en **"Location"**. *Sin coordenadas no aparece: quedate quieto hasta 0:16.* | El mapa a pantalla completa. |
 | 0:14–0:16 | **Quieto**, y cerrá (`Esc`). | El pin de la obra. |
 | 0:17 | Scroll hasta **"Verified documentation"**. | — |
 | 0:18–0:26 | **Quieto**, el mouse sobre el hash de un documento. | Cada documento con su hash y su badge "Verified". |
@@ -451,14 +396,17 @@ terminó T04, bajando fuera de cámara).
 | 0:00 | Clic en **"Favorites"** en la barra lateral. | — |
 | 0:01–0:10 | **Quieto.** | "My favorites · 1 saved projects" con Torre Volumen 3, la que guardaste en T03. |
 
-**Fin de la sesión A.** Si la sesión B no sigue ya, cerrá como en el Paso 6.1 (keep-alive incluido).
+**Fin de la sesión A.**
+
+- [ ] `bash scripts/video-walkthrough/renombrar.sh A` → confirmá con `s`. Quedan `T01.mov` … `T06.mov`.
+- [ ] Si la sesión B no sigue ya: `Ctrl-C` en la Terminal de `sesion.sh` (Paso 6.1).
 
 ### Sesión B · Nace un proyecto, recorre la FSM y se firma el dossier (T07–T27)
 
 **De corrido, en orden, sin cortar la sesión.** Son ~60 minutos, de los cuales ~15 son esperas.
 
-- [ ] Paso 1 hecho, **incluido el dossier de la 1A compilado** (1.3, punto 3).
-- [ ] Las cinco pestañas logueadas y en inglés (1.4). Pestaña 2 al frente, en `/developer`.
+- [ ] Paso 1 hecho, **incluido el dossier de la 1A compilado** y el verificador en verde (1.3).
+- [ ] Las cinco pestañas logueadas y en inglés (1.2). Pestaña 2 al frente, en `/developer`.
 - [ ] Una nota abierta (Notas o TextEdit) para pegar el link de T24.
 
 #### Acto 2 · Developer
@@ -472,8 +420,8 @@ terminó T04, bajando fuera de cámara).
 | 0:00–0:03 | **Quieto.** | "Developer panel", "Welcome, …". |
 | 0:04–0:15 | El mouse pasa lento por los KPIs. | "Active projects", "Capital raised", "Total units", "Average progress", "Verified documents · anchored on chain". |
 | 0:16–0:19 | **Quieto.** | "Development management": "Investors", "Documentation", "Audit log". |
-| 0:20 | Clic en **"Projects"** en la barra lateral. | "My projects · 7 projects". |
-| 0:21–0:30 | Scroll lento. | Las cards. Si `Torre A`, `Torre Demo E2E` o `Torre Pending Test` molestan, quedate sobre las de arriba — **no los borres**, tienen eventos on-chain colgando. |
+| 0:20 | Clic en **"Projects"** en la barra lateral. | "My projects · 6 projects" (7 si hiciste el ensayo). |
+| 0:21–0:30 | Scroll lento. | Las tres Torre Volumen arriba; abajo `Torre Pending Test`, `Torre Demo E2E` y `Torre Belgrano`. Si molestan, quedate sobre las de arriba — **no los borres**. |
 
 ##### T08 · Proyecto nuevo — 36 s · ⚠ irrepetible
 
@@ -585,9 +533,7 @@ fue recién). Antes de grabar, recargá
 | 0:00 | Clic en **"Units"** en la barra lateral. | "My units · What you bought". |
 | 0:01–0:09 | Scroll lento. | Siete unidades: seis de Torre Volumen 3 (1A y 7A…7E) y la 5A de Torre Núñez. |
 | 0:10 | Clic en la **5A**. | El detalle de la unidad. |
-| 0:11–0:13 | **Quieto.** | — |
-| 0:14 | Clic en **"Open map"**. | El mapa a pantalla completa. |
-| 0:15–0:18 | **Quieto**, y cerrá (`Esc`). | — |
+| 0:11–0:18 | **Quieto**, el mouse sobre la portada y los datos. | El detalle de la 5A. (El botón "Open map" queda deshabilitado: el proyecto nuevo no tiene coordenadas.) |
 | 0:19 | Clic en **"View my unit in the building"**. | La grilla del edificio con **"Your unit"** resaltada y "Floor 5 · 5A · 85 m²". |
 | 0:20–0:31 | **Quieto.** | Abajo, "Schematic view for reference. Final plans are in the dossier." |
 | 0:32 | Cerrá (`Esc`) y scroll hasta **"Unit details"**. | Project, Unit, Floor, Surface, Total investment, Status. |
@@ -812,6 +758,8 @@ Al terminar, **cerrá la ventana de incógnito entera**.
 
 **Fin de la sesión B.**
 
+- [ ] `bash scripts/video-walkthrough/renombrar.sh B` → confirmá con `s`. Quedan `T07.mov` … `T27.mov`.
+
 ### Sesión C · Auditoría y el resto de las pantallas (T28–T31)
 
 Siempre **después** de la sesión B: el audit log de T28 muestra lo que pasó en ella.
@@ -892,8 +840,8 @@ blanco.
 
 **Fin de la grabación de pantalla.**
 
-- [ ] En `~/Movies/propnexus-walkthrough/` están `T01.mov` … `T31.mov`, 31 archivos, nombres exactos.
-- [ ] Salí de pantalla completa (`Cmd+Ctrl+F`) y cerrá la ventana de incógnito si quedó abierta.
+- [ ] `bash scripts/video-walkthrough/renombrar.sh C` → confirmá con `s`. Quedan `T28.mov` … `T31.mov`.
+- [ ] Cerrá la sesión (Paso 6.1).
 
 ---
 
@@ -912,54 +860,66 @@ blanco.
 5. **Recortar** → **`Cmd+S`**. No re-encodea: es instantáneo.
 6. Mirá la duración: tiene que quedar cerca de la columna **Video** del mapa (±10 s).
 
+**Si una toma quedó partida** (`T15.mov` y `T15b.mov`, Paso 1.7): recortá `T15` hasta antes del
+error y `T15b` desde la acción siguiente; abrí `T15.mov` → Edición → **Agregar clip al final…** →
+`T15b.mov` → `Cmd+S`. Después borrá `T15b.mov`.
+
 - [ ] T01–T06
 - [ ] T07–T11
 - [ ] T12–T14
 - [ ] T15–T22
 - [ ] T23–T27
 - [ ] T28–T31
-- [ ] Si quedaron tomas partidas (`T15b`), están unidas en `T15.mov` y el `T15b.mov` borrado (Paso 1.8).
 
 ---
 
-## Paso 4 · Grabar la voz
+## Paso 4 · Grabar la voz, en el estudio
+
+**El estudio** es una página que corre en esta Mac: reproduce cada toma sin sonido, muestra **la
+frase que toca, en su segundo, con la cuenta regresiva de la siguiente**, graba el micrófono y
+guarda `Txx.webm` directo en la carpeta. La voz queda sincronizada con el video por construcción:
+no hay que arrancar nada a la vez ni guardar a mano.
 
 ### 4.1 Preparar
 
 1. **Lugar:** una habitación chica y con muebles (el eco de un ambiente vacío se nota). Ventanas
    cerradas, aire y ventilador apagados.
 2. **Micrófono:** unos auriculares con micrófono (los de celular sirven) suenan mejor que el de la
-   notebook. Enchufalos **antes** de abrir QuickTime.
-3. **QuickTime Player** → **Archivo → Nueva grabación de audio**. Al lado del botón rojo, la
-   flechita **⌄**: elegí el micrófono de los auriculares y **Calidad: Máxima**.
-4. Una grabación de prueba de 5 segundos y escuchala. Si se oye bien, seguí.
+   notebook. Enchufalos **antes** de abrir el estudio.
+3. En la Terminal:
+
+   ```bash
+   node scripts/video-walkthrough/estudio/servidor.mjs
+   ```
+
+   Abre Chrome en `http://127.0.0.1:8765`. **Dejá la Terminal abierta**; `Ctrl-C` lo apaga.
+4. La primera vez Chrome pide permiso para el micrófono: **Permitir**. Elegí los auriculares en el
+   selector de abajo y hablá: la barrita verde tiene que moverse.
 
 ### 4.2 El ciclo de cada toma de voz
 
-1. Abrí la toma **ya recortada** (`T05.mov`) en otra ventana de QuickTime, **con el volumen en
-   cero**, en 0:00. Las dos ventanas una al lado de la otra.
-2. **Botón rojo** de la grabación de audio.
-3. **Play** en el video (clic en la ventana del video → barra espaciadora).
-4. Cuando el contador del video marca **0:01**, leé la primera frase.
-5. Cada frase siguiente, cuando el contador llega a su **Tiempo** (o cuando ves lo que dice **"Entra
-   cuando ves"**, que es lo mismo y a veces más fácil de seguir).
-6. Cuando termina el video, **stop** en el audio.
-7. **Archivo → Guardar…** → nombre **exacto** `T05` (QuickTime agrega `.m4a`) → carpeta
-   `~/Movies/propnexus-walkthrough/` → Guardar.
-8. ¿Te equivocaste? Grabá la toma entera otra vez y guardala con el mismo nombre, reemplazando. No
-   hace falta editar nada.
-
-**No hace falta sincronizar el arranque.** El montaje recorta el silencio del principio y hace
-entrar la primera frase en 0:01, así que no importa cuánto tardaste en empezar a hablar. Lo que sí
-importa es **la distancia entre frases**, y esa sale bien si leés mirando el video.
+1. A la izquierda, las 31 tomas: **"falta voz"** en amarillo, **"✓ voz"** en verde. Arranca sola en
+   la primera que falta.
+2. **Espacio** → cuenta 3, 2, 1 → el video arranca y graba.
+3. **Leé la frase grande cuando aparece.** Debajo, en gris, la próxima con su cuenta regresiva
+   ("Próxima en 4 s"). Entre frase y frase, silencio: es a propósito.
+4. Al terminar el video, para y guarda solo.
+5. **E** para escucharla sobre el video. ¿Mal? **Espacio** otra vez: la nueva reemplaza a la
+   anterior.
+6. **S** para la siguiente.
 
 **Ritmo:** más lento de lo que te parece natural. Cada frase tiene lugar de sobra hasta la
-siguiente (está medido a 2,3 palabras por segundo). **No respires fuerte ni hagas ruido antes de la
-primera frase:** el recorte del silencio lo tomaría como el comienzo.
+siguiente (está medido a 2,3 palabras por segundo).
 
-**El registro es técnico y de UX, no de producto:** cada línea describe qué hace la pantalla, qué
-escribe y qué se ancla. Si alguien edita el texto: nada que la pantalla no muestre, nada fuera de
-D-026 (la plataforma no certifica, no valida y no decide), y **"stage", nunca "milestone"** (D-067).
+**El texto sale de este runbook** (4.3, abajo): si alguien corrige una frase acá, el estudio la
+muestra corregida al recargar la página. Si alguien lo edita: nada que la pantalla no muestre, nada
+fuera de D-026 (la plataforma no certifica, no valida y no decide), **"stage", nunca "milestone"**
+(D-067), y **no cambies el formato de las tablas**, que es lo que el estudio lee.
+
+*(Sin el estudio, se puede grabar con QuickTime → Archivo → Nueva grabación de audio, una por toma,
+guardada como `Txx.m4a` en la carpeta, mirando la toma en otra ventana. El Paso 5 recorta el
+silencio del principio y hace entrar la primera frase en 0:01. Es más lento y más propenso a
+errores: usalo solo si el estudio no anda.)*
 
 ### 4.3 El texto, toma por toma (English)
 
@@ -979,13 +939,13 @@ D-026 (la plataforma no certifica, no valida y no decide), y **"stage", nunca "m
 |---|---|---|
 | 0:01 | Las tres cards | The investor's listing. Every list here is scoped by project membership: users only see the projects they belong to. |
 | 0:13 | El campo de búsqueda | Search by area, filter by status… |
-| 0:21 | El mapa | …or switch to the map. It's the same scoped set in every view. |
+| 0:21 | El mapa (o la lista) | …and every view runs over that same scoped set. |
 
 ##### T03 · El proyecto por dentro — video 45 s
 
 | Tiempo | Entra cuando ves | Texto |
 |---|---|---|
-| 0:01 | La portada | Project detail: gallery, estimated completion, and the location on a full-screen map. |
+| 0:01 | La portada | Project detail: gallery, estimated completion, and location. |
 | 0:18 | Los documentos | The documentation section: every file with its own SHA-256 fingerprint and its anchoring badge. |
 | 0:28 | "View developer" y la timeline | Then, who builds it, and how far along it is. |
 
@@ -1069,8 +1029,7 @@ D-026 (la plataforma no certifica, no valida y no decide), y **"stage", nunca "m
 | Tiempo | Entra cuando ves | Texto |
 |---|---|---|
 | 0:01 | "My units" | The portfolio now holds units in two very different situations: six in a delivered building, and one just bought off-plan. |
-| 0:14 | El mapa | Inside the new one: its location… |
-| 0:19 | El esquema del edificio | …and the building schematic, with this unit highlighted on its floor. It's labelled as a reference view: the final plans live in the dossier. |
+| 0:19 | El esquema del edificio | Inside the new one, the building schematic, with this unit highlighted on its floor. It's labelled as a reference view: the final plans live in the dossier. |
 
 ##### T14 · El contrato como registro — video 25 s
 
@@ -1215,95 +1174,53 @@ D-026 (la plataforma no certifica, no valida y no decide), y **"stage", nunca "m
 | 0:01 | El teléfono emulado | The design is mobile-first. At phone width, the sidebar becomes a bottom navigation bar, with Buy in the middle. |
 | 0:15 | El detalle de la unidad | Every screen in this video works in a single column. |
 
-- [ ] En `~/Movies/propnexus-walkthrough/` están `T01.m4a` … `T31.m4a`.
+- [ ] En el estudio, las 31 tomas dicen "✓ voz".
 
 ---
 
 ## Paso 5 · Unir todo
 
-### 5.1 Revisar la carpeta
+- [ ] En la carpeta están `T01.mov` … `T31.mov` y las 31 voces (el estudio lo muestra: todas en
+      verde).
 
-- [ ] En `~/Movies/propnexus-walkthrough/` hay `T01.mov` … `T31.mov` y `T01.m4a` … `T31.m4a`, **con
-      esos nombres exactos**: dos dígitos (`T01`, no `T1`), T mayúscula, sin espacios ni texto
-      extra. Si falta un audio, el comando no se frena: esa toma sale muda y avisa.
-
-### 5.2 Pegar el comando
-
-- [ ] Con la Mac enchufada, pegá esto entero en la Terminal y Enter:
+**Con ffmpeg** (esta Mac lo tiene) — más rápido:
 
 ```bash
-CARPETA="${CARPETA:-$HOME/Movies/propnexus-walkthrough}"
-cd "$CARPETA" || { echo "No existe la carpeta $CARPETA"; exit 1; }
-mkdir -p unidas
-if ffmpeg -hide_banner -encoders 2>/dev/null | grep -q h264_videotoolbox; then
-  codec=(-c:v h264_videotoolbox -b:v 10M)
-else
-  codec=(-c:v libx264 -preset veryfast -crf 20)
-fi
-for video in T[0-9][0-9].mov; do
-  toma="${video%.mov}"
-  dv=$(ffprobe -v error -show_entries format=duration -of csv=p=0 "$video")
-  if [ -f "$toma.m4a" ]; then
-    da=$(ffprobe -v error -show_entries format=duration -of csv=p=0 "$toma.m4a")
-    audio=(-i "$toma.m4a")
-    voz="silenceremove=start_periods=1:start_threshold=-45dB:start_silence=0.1,adelay=1000:all=1,"
-  else
-    echo "  (aviso) $toma no tiene audio: va en silencio"
-    da=0
-    audio=(-f lavfi -i anullsrc=r=48000:cl=stereo)
-    voz=""
-  fi
-  dur=$(awk -v a="$dv" -v b="$da" 'BEGIN { m = (a > b ? a : b); printf "%.2f", m + 0.5 }')
-  echo "$toma: video ${dv%.*} s, audio ${da%.*} s -> queda en ${dur%.*} s"
-  ffmpeg -y -loglevel error -i "$video" "${audio[@]}" -filter_complex \
-    "[0:v]scale=1920:1200:force_original_aspect_ratio=decrease,pad=1920:1200:(ow-iw)/2:(oh-ih)/2:color=white,fps=30,format=yuv420p,tpad=stop_mode=clone:stop_duration=600[v];[1:a]${voz}aresample=48000,aformat=channel_layouts=stereo,apad[a]" \
-    -map "[v]" -map "[a]" -t "$dur" \
-    "${codec[@]}" -c:a aac -b:a 192k "unidas/$toma.mp4" \
-    || { echo "FALLÓ $toma — mandale este mensaje a quien te pasó el guion"; exit 1; }
-done
-printf "file '%s'\n" "$PWD"/unidas/T[0-9][0-9].mp4 > unidas/lista.txt
-ffmpeg -y -loglevel error -f concat -safe 0 -i unidas/lista.txt -c copy walkthrough-final.mp4 \
-  && echo "LISTO: $PWD/walkthrough-final.mp4"
+bash scripts/video-walkthrough/unir.sh
 ```
 
-Va a mostrar una línea por toma (`T01: video 22 s, audio 14 s -> queda en 22 s`) y al final
-**`LISTO: …/walkthrough-final.mp4`**. Son unos minutos: re-encodea cada toma una vez para que todas
-queden del mismo tamaño (1920×1200).
+Una línea por toma (`T01: video 22 s, voz T01.webm -> queda en 22 s`) y al final **`LISTO:
+…/walkthrough-final.mp4 (+ walkthrough-final.srt)`**. Son unos minutos, con la Mac enchufada.
 
-**Qué hace, para que sepas qué esperar:**
+**Sin ffmpeg** — desde el estudio, botón **"Armar el video final"** (abajo a la izquierda). Arma el
+video en tiempo real (~17 min): **no cambies de pestaña ni minimices Chrome** mientras corre. Deja
+`walkthrough-final.mp4` y `walkthrough-final.srt` en la carpeta.
 
-- **Hace entrar la voz en el segundo 0:01 de cada toma:** recorta el silencio del principio de cada
-  audio y le agrega un segundo exacto. *(Probado el 2026-09-28 con un audio de 2,3 s de silencio
-  antes del sonido: el sonido quedó en 0:01,1.)*
-- Une video y audio de cada toma. Dura **lo que dure el más largo de los dos**: si la voz es más
+**Qué hacen los dos, para que sepas qué esperar:**
+
+- Cada toma dura **lo que dure el más largo** entre video y voz, más medio segundo: si la voz es más
   larga, la imagen se congela en el último cuadro; si es más corta, el resto va en silencio.
-- Deja cada toma unida en `unidas/` (sirve para revisar una sola) y pega las 31 **en el orden de
-  los nombres** en `walkthrough-final.mp4`.
+- Todas quedan en 1920×1200; T31 (el teléfono) sale centrada sobre fondo blanco.
+- **`walkthrough-final.srt`** son los subtítulos en inglés, sacados del texto del Paso 4.3 con los
+  tiempos reales de cada toma. Se suben junto al video (YouTube los acepta tal cual).
 
-### 5.3 Si algo falla
-
-- **`FALLÓ Txx`:** ese `.mov` o `.m4a` está dañado o a medio guardar. Abrilo en QuickTime: si no
-  reproduce, rehacelo. Si reproduce y sigue fallando, mandale la salida de la Terminal al técnico.
-- **Rehacer una toma** (video o audio): reemplazá el archivo y volvé a pegar el mismo comando. Rehace
-  todo desde cero.
+**Si algo falla:** `FALLÓ Txx` quiere decir que ese archivo está dañado o a medio guardar: abrilo en
+QuickTime; si no reproduce, rehacelo. **Para rehacer una toma**, reemplazá el archivo y volvé a
+correr el mismo comando: rehace todo.
 
 ---
 
 ## Paso 6 · Revisar y cerrar
 
-### 6.1 Cerrar la sesión de grabación — el mismo día
+### 6.1 Cerrar la sesión — el mismo día que grabás
 
-- [ ] **Keep-alive parado:** en su Terminal, `Ctrl-C`. Lo que se enciende se apaga: si no, queda
-      pegándole a producción indefinidamente.
-- [ ] Íconos del escritorio de vuelta:
-
-  ```bash
-  defaults write com.apple.finder CreateDesktop true && killall Finder
-  ```
-
+- [ ] En la Terminal de `sesion.sh`: **`Ctrl-C`**. Apaga el keep-alive, devuelve los íconos del
+      escritorio y la carpeta de las capturas de pantalla.
 - [ ] No molestar OFF.
-- [ ] Chrome fuera de pantalla completa (`Cmd+Ctrl+F`); si querés, volvé a tildar Ver → "Mostrar
-      siempre la barra de herramientas…".
+- [ ] El Chrome de la grabación: `Cmd+Ctrl+F` para salir de pantalla completa y `Cmd+Q`.
+- [ ] **Terminada la sesión B**, opcional:
+      `node scripts/video-walkthrough/verificar-produccion.mjs --despues` confirma que el dossier de la
+      1A quedó firmado.
 
 ### 6.2 Mirar el resultado
 
@@ -1312,15 +1229,15 @@ queden del mismo tamaño (1920×1200).
   - [ ] La voz corresponde a la pantalla.
   - [ ] Ninguna toma muestra una contraseña, una pantalla de error, el admin o un banner de
         notificación.
-- [ ] ¿Una toma mal? Rehacé ese archivo y volvé al Paso 5.2.
+- [ ] ¿Una toma mal? Rehacé ese archivo (video en el Paso 3, voz en el estudio) y volvé al Paso 5.
 
 **iMovie solo si hace falta agregar títulos o transiciones**, y al final: re-renderiza todo y tarda
-bastante más que el comando.
+bastante más.
 
 ### 6.3 Guardar y entregar
 
-- [ ] Guardá `walkthrough-final.mp4` fuera de la carpeta de trabajo (y `unidas/`, si puede hacer
-      falta rehacer una toma).
+- [ ] Guardá `walkthrough-final.mp4` y `walkthrough-final.srt` fuera de la carpeta de trabajo (y
+      `unidas/`, si puede hacer falta rehacer una toma).
 - [ ] Recién después, mové o borrá el crudo (son varios GB).
 - [ ] Marcá **3.12** en `CLAUDE.md` §Lo que queda del plan y el **criterio 13** en
       `specs/README.md`, en el mismo commit que publique el video.

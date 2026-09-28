@@ -1,0 +1,60 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Lot location map</title>
+<style>
+  html, body { margin: 0; }
+  body { width: 1600px; height: 1100px; font-family: -apple-system, Helvetica, sans-serif; background: #eef1ec; position: relative; }
+  .banda { position: absolute; top: 0; left: 0; right: 0; background: #b3261e; color: #fff; font-weight: 600;
+           font-size: 18px; letter-spacing: .06em; text-transform: uppercase; text-align: center; padding: 8px; z-index: 2; }
+  .ficha { position: absolute; left: 40px; bottom: 40px; background: #fff; border-radius: 12px; padding: 20px 26px;
+           box-shadow: 0 6px 24px rgba(0,0,0,.15); font-size: 19px; color: #1f2a44; line-height: 1.55; }
+  .ficha h1 { margin: 0 0 6px; font-size: 26px; }
+  .ficha small { color: #777; font-size: 15px; }
+</style>
+</head>
+<body>
+  <div class="banda">Sample map · fictional data · PropNexus demo walkthrough</div>
+  <svg width="1600" height="1100" viewBox="0 0 1600 1100" font-family="-apple-system, Helvetica, sans-serif">
+    <title>Location of Lot 12 on Av. del Libertador (fictional)</title>
+    <!-- manzanas -->
+    <g fill="#fbfbf8" stroke="#d3d6cf" stroke-width="2">
+      <rect x="80" y="110" width="330" height="250" rx="6"/><rect x="470" y="110" width="330" height="250" rx="6"/>
+      <rect x="860" y="110" width="330" height="250" rx="6"/><rect x="1250" y="110" width="300" height="250" rx="6"/>
+      <rect x="80" y="440" width="330" height="240" rx="6"/><rect x="470" y="440" width="330" height="240" rx="6"/>
+      <rect x="1250" y="440" width="300" height="240" rx="6"/>
+      <rect x="470" y="760" width="330" height="260" rx="6"/><rect x="860" y="760" width="330" height="260" rx="6"/>
+      <rect x="1250" y="760" width="300" height="260" rx="6"/>
+    </g>
+    <!-- plaza -->
+    <rect x="860" y="440" width="330" height="240" rx="6" fill="#cfe3c4" stroke="#b6cfa9" stroke-width="2"/>
+    <text x="1025" y="568" text-anchor="middle" font-size="20" fill="#4d6b3f">Plaza (fictional)</text>
+    <!-- avenida -->
+    <rect x="0" y="690" width="1600" height="60" fill="#f4d58d"/>
+    <text x="1330" y="727" font-size="21" fill="#7a5c14" font-weight="600" letter-spacing="3">AV. DEL LIBERTADOR</text>
+    <!-- calles -->
+    <g fill="#ffffff"><rect x="0" y="370" width="1600" height="60"/><rect x="420" y="0" width="40" height="1100"/>
+      <rect x="810" y="0" width="40" height="1100"/><rect x="1200" y="0" width="40" height="1100"/></g>
+    <!-- lote -->
+    <rect x="620" y="560" width="150" height="120" fill="#b3261e" fill-opacity=".18" stroke="#b3261e" stroke-width="4"/>
+    <g transform="translate(695 540)">
+      <path d="M0 0 C-26 -34 -30 -48 -30 -62 A30 30 0 1 1 30 -62 C30 -48 26 -34 0 0Z" fill="#b3261e"/>
+      <circle cy="-62" r="11" fill="#fff"/>
+    </g>
+    <text x="695" y="655" text-anchor="middle" font-size="18" font-weight="700" fill="#7c1a14">Lot 12</text>
+    <!-- norte -->
+    <g transform="translate(1520 1020)">
+      <circle r="40" fill="#fff" stroke="#1f2a44" stroke-width="2"/>
+      <polygon points="0,-32 11,9 0,2 -11,9" fill="#1f2a44"/>
+      <text y="28" text-anchor="middle" font-size="18" font-weight="700" fill="#1f2a44">N</text>
+    </g>
+  </svg>
+  <div class="ficha">
+    <h1>Lot location map</h1>
+    Torre Núñez · Lot 12, Block 4<br>
+    Av. del Libertador 7200, Buenos Aires<br>
+    <small>Reference PX-DEMO-2026-0417 · not to scale</small>
+  </div>
+</body>
+</html>

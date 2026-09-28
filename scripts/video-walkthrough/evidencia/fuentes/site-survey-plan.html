@@ -1,0 +1,78 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Site survey plan</title>
+<style>
+  html, body { margin: 0; background: #f7f5ee; }
+  body { width: 1600px; height: 1100px; font-family: -apple-system, Helvetica, sans-serif; color: #1f2a44; }
+  .hoja { position: absolute; inset: 28px; border: 3px solid #1f2a44; }
+  .banda { position: absolute; top: 0; left: 0; right: 0; background: #b3261e; color: #fff; font-weight: 600;
+           font-size: 18px; letter-spacing: .06em; text-transform: uppercase; text-align: center; padding: 8px; }
+  svg { position: absolute; top: 60px; left: 40px; }
+  .cajetin { position: absolute; right: 0; bottom: 0; width: 470px; border-left: 3px solid #1f2a44;
+             border-top: 3px solid #1f2a44; font-size: 17px; background: #fff; }
+  .cajetin div { padding: 9px 14px; border-bottom: 1px solid #c8c8c8; }
+  .cajetin div:last-child { border-bottom: 0; }
+  .cajetin b { display: inline-block; width: 150px; color: #555; font-weight: 600; }
+  .cajetin div.titulo { font-size: 24px; font-weight: 700; color: #1f2a44; }
+</style>
+</head>
+<body>
+<div class="hoja">
+  <div class="banda">Sample drawing · fictional data · PropNexus demo walkthrough</div>
+  <svg width="1020" height="960" viewBox="0 0 1020 960" font-family="-apple-system, Helvetica, sans-serif">
+    <title>Site survey plan of Lot 12, Block 4 (fictional)</title>
+    <defs>
+      <pattern id="grilla" width="40" height="40" patternUnits="userSpaceOnUse">
+        <path d="M40 0H0V40" fill="none" stroke="#d9d4c3" stroke-width="1"/>
+      </pattern>
+    </defs>
+    <rect width="1020" height="960" fill="url(#grilla)"/>
+    <!-- calle -->
+    <rect x="60" y="800" width="900" height="90" fill="#e2ddcc"/>
+    <text x="510" y="852" text-anchor="middle" font-size="22" fill="#6b6553" letter-spacing="4">AV. DEL LIBERTADOR</text>
+    <!-- lote -->
+    <polygon points="170,780 790,780 830,210 210,170" fill="#dfe8f5" stroke="#1f2a44" stroke-width="4"/>
+    <!-- huella del edificio -->
+    <polygon points="260,700 700,700 728,300 290,272" fill="none" stroke="#1f2a44" stroke-width="2" stroke-dasharray="10 7"/>
+    <text x="495" y="500" text-anchor="middle" font-size="22" fill="#1f2a44">Building footprint</text>
+    <text x="495" y="530" text-anchor="middle" font-size="18" fill="#50607f">(indicative)</text>
+    <!-- cotas -->
+    <text x="480" y="770" text-anchor="middle" font-size="20" font-weight="600">31.20 m</text>
+    <text x="520" y="178" text-anchor="middle" font-size="20" font-weight="600">31.46 m</text>
+    <text x="150" y="480" text-anchor="middle" font-size="20" font-weight="600" transform="rotate(-86 150 480)">40.12 m</text>
+    <text x="848" y="495" text-anchor="middle" font-size="20" font-weight="600" transform="rotate(86 848 495)">39.85 m</text>
+    <!-- vértices -->
+    <g fill="#b3261e" font-size="18" font-weight="700">
+      <circle cx="170" cy="780" r="7"/><text x="140" y="770">A</text>
+      <circle cx="790" cy="780" r="7"/><text x="805" y="770">B</text>
+      <circle cx="830" cy="210" r="7"/><text x="845" y="205">C</text>
+      <circle cx="210" cy="170" r="7"/><text x="180" y="160">D</text>
+    </g>
+    <!-- norte -->
+    <g transform="translate(930 110)">
+      <circle r="44" fill="#fff" stroke="#1f2a44" stroke-width="2"/>
+      <polygon points="0,-36 12,10 0,2 -12,10" fill="#1f2a44"/>
+      <text y="30" text-anchor="middle" font-size="20" font-weight="700">N</text>
+    </g>
+    <!-- escala -->
+    <g transform="translate(80 930)" font-size="16">
+      <rect width="100" height="10" fill="#1f2a44"/><rect x="100" width="100" height="10" fill="#fff" stroke="#1f2a44"/>
+      <text y="-6">0</text><text x="92" y="-6">5</text><text x="188" y="-6">10 m</text>
+    </g>
+  </svg>
+
+  <div class="cajetin">
+    <div class="titulo">Site survey plan</div>
+    <div><b>Project</b>Torre Núñez</div>
+    <div><b>Parcel</b>Lot 12, Block 4</div>
+    <div><b>Lot area</b>1,240.50 m²</div>
+    <div><b>Scale</b>1:200 · Sheet 1 of 1</div>
+    <div><b>Reference</b>PX-DEMO-2026-0417</div>
+    <div><b>Date</b>2026-08-05</div>
+    <div><b>Surveyor</b>__________________ (signature)</div>
+  </div>
+</div>
+</body>
+</html>
