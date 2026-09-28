@@ -57,16 +57,18 @@ tampoco tiene campo de signer. El criterio 3 queda sin código pendiente.
 
 ## Lo que queda del plan
 
-**Todo el plan está cerrado salvo dos ítems, y ninguno es código.** (`3.13` — recontacto de los 3
+**Todo el plan está cerrado salvo un ítem, y no es código.** (`3.13` — recontacto de los 3
 pilotos, criterio 4 — se cerró: confirmado por el dueño el 2026-09-22. `3.15` — cobertura ≥95% en
 toda la app, criterio 2 — se cerró el 2026-09-24: las cuatro partes TypeScript en 100% en las
 cuatro métricas y CI corriendo `test:coverage` con umbral en las cuatro, detalle en
-[`specs/SPEC-019-cobertura-de-apps-web.md`](specs/SPEC-019-cobertura-de-apps-web.md).)
+[`specs/SPEC-019-cobertura-de-apps-web.md`](specs/SPEC-019-cobertura-de-apps-web.md). `3.14` —
+muestras de reserva → escrow, criterio 9 — se cerró el 2026-09-28: 6 compras reales en Preprod,
+mediana 0.33 min, en
+[`specs/evidencia-m3/3-preprod/reservation-to-escrow-report.md`](specs/evidencia-m3/3-preprod/reservation-to-escrow-report.md).)
 
 | | Qué | Criterio |
 |---|---|---|
 | 3.12 | **Video walkthrough** — guion completo y listo para grabar en [`specs/GUION-2026-09-21-video-walkthrough.md`](specs/GUION-2026-09-21-video-walkthrough.md) (31 tomas). **No es lo mismo que `SPEC-104`/`SPEC-112`**: esas son accesibilidad (`aria-live`, verificada con el lector de pantalla VoiceOver de macOS), no narración de video — coinciden en la palabra "voice" y nada más. `SPEC-104` ya cerró; `SPEC-112` (la pasada de accesibilidad) sigue abierta, pero por su cuenta, sin relación con este ítem | 13 ⬜ |
-| 3.14 | **Muestras de "reserva → escrow"** — ≥5 compras reales en Preprod, manejadas con la extensión de Chrome, + capturas + nota de performance. Hoy hay 1 sola muestra. **Intentada el 2026-09-21, sin correr: la extensión de Chrome no estaba conectada**, y los logins los hace el dueño. Procedimiento y prerrequisitos en [`specs/PLAN-2026-09-21-muestras-reserva-escrow.md`](specs/PLAN-2026-09-21-muestras-reserva-escrow.md) | 9 ⚠️ |
 
 **La evidencia para enviar vive en [`specs/evidencia-m3/`](specs/evidencia-m3/README.md), en
 inglés y solo lo exportable**, una subcarpeta por ítem de *"Evidence of milestone completion"*. Los
