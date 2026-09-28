@@ -167,7 +167,7 @@ El commit `b0fbbc2` agregó el perfil del desarrollador (`SPEC-220`) con su migr
 - **La organización existe y cuelga de las tres obras Volumen**
   (`Organization.id = j4i5lufleuojlhgwen67rnj2`, "Grupo Alpine", fundada en 2005).
 - **El endpoint responde en producción**: 3 obras entregadas, 21 años en el rubro, 12 unidades
-  vendidas, 1 comprador, y los tres proyectos repartidos en "Previous projects".
+  vendidas (17 desde el 2026-09-28, por las `7A`…`7E`), 1 comprador, y los tres proyectos repartidos en "Previous projects".
 - **La pantalla se verificó renderizada contra producción**, no solo por API: el botón "Ver al
   desarrollador" aparece entre la documentación y el avance, y el perfil abre con la bio, las
   cuatro métricas y las tres cards —cada una con el chip "Grupo Alpine" sobre la portada, que es la
@@ -183,7 +183,9 @@ El commit `b0fbbc2` agregó el perfil del desarrollador (`SPEC-220`) con su migr
   US$ 185.000, 62–140 m²; Volumen 2 — desde US$ 165.000, 55–120 m²; Volumen 3 — desde
   US$ 195.000, 68–150 m². Los 24 / 18 / 30 que muestran las cards son `Project.totalUnits`, las
   unidades declaradas, no filas cargadas. Mirar esto renderizado es lo que destapó el bug del "desde" dividido dos veces
-  (`dc85535`). **El portfolio del buyer sigue siendo solo la 1A**, que es lo que necesita T13.
+  (`dc85535`). **Desde el 2026-09-28 el portfolio del buyer tiene seis unidades de Torre Volumen 3**
+  (la 1A y las `7A`…`7E` de las muestras de reserva → escrow, todas con precio mayor a US$ 195.000,
+  así que el "desde" de la card no cambió). Volumen 3 pasó a 9 filas de `Unit`, 9 vendidas.
 
 *(El proyecto que se crea en cámara en T08 **no** va a tener organización, y está bien: su detalle
 no dibuja el link. El perfil del desarrollador se ve una vez, sobre la obra terminada.)*
@@ -576,8 +578,8 @@ on-chain. Es el contraste contra el que después se entiende el proyecto que nac
       **⏸ CORTE ~1 min.**
 
 - [ ] **T13 · El portfolio** — `/investor/units` → `/investor/unit/<5A>`
-      **Ahora tiene dos unidades, y no podrían ser más distintas:** la 1A de Torre Volumen 3,
-      entregada, y la 5A recién comprada sobre pozo. Entrás a la 5A: galería, mapa a pantalla
+      **Ahora tiene siete unidades, en dos situaciones que no podrían ser más distintas:** seis de
+      Torre Volumen 3, entregada (la 1A y las `7A`…`7E`), y la 5A recién comprada sobre pozo. Entrás a la 5A: galería, mapa a pantalla
       completa, y **BuildingSchematic** — la grilla del edificio con la unidad propia resaltada.
 
 - [ ] **T14 · El contrato como registro** — `/investor/unit/<5A>/contract`
@@ -942,7 +944,7 @@ Back to the investor. The invitation arrives as a pinned notification. The modal
 
 #### T13 · El portfolio — voz ≈15 s · video ≈35 s
 
-The portfolio now holds two units: one delivered, one just bought off-plan. Inside the new one: gallery, full-screen map, and the building schematic that highlights this unit's position in the grid.
+The portfolio now holds units in a delivered building, and one just bought off-plan. Inside the new one: gallery, full-screen map, and the building schematic that highlights this unit's position in the grid.
 
 #### T14 · El contrato como registro — voz ≈15 s · video ≈25 s
 

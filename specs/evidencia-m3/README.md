@@ -49,8 +49,9 @@
 - **Transaction IDs**: [`transaction-ids.pdf`](3-preprod/transaction-ids.pdf) and the
   [`.csv`](3-preprod/txids-volume-test-2026-09-10.csv), each TXID re-verified against the
   chain.
-- ⏳ **Median reservation → escrow < 12 min**, with audit-log and latency screenshots and a short
-  performance note.
+- **Median reservation → escrow < 12 min**: measured **0.33 min** over 6 purchases on Preprod, with
+  audit-log and explorer screenshots —
+  [`reservation-to-escrow-report.pdf`](3-preprod/reservation-to-escrow-report.pdf).
 - ⏳ **Walkthrough video** of the full flow.
 
 ## 4 · Security

@@ -17,6 +17,9 @@
 | [`volume-test-report.pdf`](volume-test-report.pdf) | The volume test of 2026-09-10: 3 projects of 10 stages each, driven end-to-end through the real web app against pre-production — 30/30 stages completed, 180/180 on-chain transactions confirmed, the measured cost, and the one incident found and how it was fixed |
 | [`transaction-ids.pdf`](transaction-ids.pdf) | The formal list of the 180 transaction IDs from the volume test, each one re-verified against the chain (Koios) independently of the application's own database |
 | [`txids-volume-test-2026-09-10.csv`](txids-volume-test-2026-09-10.csv) | The same 180 transactions as a data file, one row each, with a direct Cardanoscan Preprod link |
+| [`reservation-to-escrow-report.pdf`](reservation-to-escrow-report.pdf) | The performance note: median time from reservation to escrow on chain, **0.33 min** over 6 real purchases (target < 12 min), with the audit-log and explorer screenshots |
+| [`reservation-to-escrow-samples-2026-09-28.csv`](reservation-to-escrow-samples-2026-09-28.csv) | The 6 samples, one row each: acceptance time, block time and height, TXID, explorer link |
+| [`reservation-to-escrow-telemetry-2026-09-28.json`](reservation-to-escrow-telemetry-2026-09-28.json) | The application's own latency telemetry for the same samples, verbatim |
 
 ## Status
 
@@ -25,5 +28,5 @@
 | Pre-production URL | ✅ |
 | List of transaction IDs | ✅ |
 | End-to-end flows in pre-production (volume test) | ✅ |
-| Median reservation → escrow < 12 min, with audit-log/latency screenshots and a short performance note | ⏳ pending |
+| Median reservation → escrow < 12 min, with audit-log/latency screenshots and a short performance note | ✅ 0.33 min |
 | Walkthrough video of the full flow | ⏳ pending |

@@ -27,7 +27,8 @@
 > **2026-09-21:** la evidencia para enviar está reunida en
 > [`evidencia-m3/`](evidencia-m3/README.md), con su estado por ítem. Se sumó un pendiente que este
 > documento no tenía: la mediana reserva → escrow se sostiene con **una sola muestra**, y hay que
-> juntar más (`CLAUDE.md` §Lo que queda del plan, ítem 3.14).
+> juntar más (`CLAUDE.md` §Lo que queda del plan, ítem 3.14). **Cerrado el 2026-09-28:** 6 muestras,
+> mediana 0.33 min, en [`evidencia-m3/3-preprod/reservation-to-escrow-report.md`](evidencia-m3/3-preprod/reservation-to-escrow-report.md).
 
 > **2026-09-21, más tarde:** el dueño releyó el criterio *"unit tests ≥95% coverage"* como de toda
 > la app, no solo de los contratos. Eso sí es código: tests por escribir, en

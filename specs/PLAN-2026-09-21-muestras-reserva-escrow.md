@@ -1,8 +1,23 @@
 # Plan — muestras de "reserva → escrow" en Preprod, desde la extensión de Chrome
 
-> **Estado: agendado, sin correr** (2026-09-21). Es el ítem 3.14 de `CLAUDE.md` §Lo que queda del
-> plan. Cuando se corra, el resultado va a `specs/evidencia-m3/3-preprod/`: la nota de performance y
-> sus capturas.
+> **Estado: corrido el 2026-09-28.** 5 muestras nuevas (`7A`…`7E` de Torre Volumen 3) + la del
+> 2026-09-11: **mediana 0.33 min, máximo 0.86 min**, 6/6 con bloque. La nota, las capturas, el CSV y
+> el JSON de la telemetría están en `specs/evidencia-m3/3-preprod/reservation-to-escrow-*`.
+>
+> **Lo que cambió respecto de este plan al correrlo:**
+> - Los logins los hizo el dueño (tres pestañas: developer, buyer y admin), pero no por la razón
+>   original: Claude no escribe contraseñas en un sitio que no sea local.
+> - **El paso 3 no pasa por la campana.** No hay listado de invitaciones (`investor.notifications.tsx`
+>   solo muestra la card con `?invitation=<id>`), así que el investor abre
+>   `/investor/notifications?invitation=<id>`, el link que en la vida real le llegaría. El id se sacó
+>   del audit log del developer (`CREATE_INVITATION.entityId`).
+> - **Sin SELECT contra Turso:** el inicio sale del audit log (`ACCEPT_INVITATION`, que trae el TXID
+>   en `metadataJson`) y la hora del bloque, de Koios (`tx_info`). Queda 1–2 s por debajo de la
+>   telemetría, que arranca el reloj en `OnChainEvent.createdAt`, un poco antes.
+> - La captura del explorador es de **cexplorer**: cardanoscan frena al navegador automatizado con
+>   una verificación anti-bot.
+> - "Ver invitación" a veces necesita **dos clics** para abrir el modal (pasó en 3 de 5, siempre el
+>   primer clic después de cargar la página). No se investigó.
 
 ## Para retomarla
 
