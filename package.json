@@ -15,7 +15,7 @@
     "test": "pnpm -r test",
     "test:coverage": "pnpm -r test:coverage",
     "testids": "node scripts/check-testids.mjs",
-    "verify": "pnpm lint && pnpm typecheck && pnpm testids && pnpm test && pnpm build",
+    "verify": "pnpm lint && pnpm typecheck && pnpm testids && pnpm test:coverage && pnpm build",
     "contracts:check": "cd contracts && aiken check",
     "contracts:build": "cd contracts && aiken build",
     "contracts:verify": "cd contracts && aiken fmt --check && aiken check && aiken build",

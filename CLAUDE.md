@@ -408,7 +408,7 @@ El porqué —el commit de R2 que dejó a `DECISIONS.md` mintiendo durante tres 
 ```bash
 pnpm install                      # bootstrap del workspace
 pnpm dev                          # web + api en paralelo
-pnpm verify                       # app TS: lint + typecheck + tests + build
+pnpm verify                       # app TS: lint + typecheck + testids + tests con umbral de coverage + build (lo mismo que CI)
 pnpm contracts:verify             # Aiken: fmt + check + build
 pnpm verify:all                   # las dos, encadenadas
 pnpm lint:fix                     # Biome arregla lo mecánico
@@ -502,6 +502,11 @@ Sección viva: agregá acá el mismo día que te muerda una. Las de cada frente 
   los dos no había nada, y una regresión de configuración solo se veía en los logs del deploy.
   Lo cierra `apps/api/test/render-config.test.ts` (D-076). **Si agregás una lectura de `env.*`
   nueva, declarala en `render.yaml` o el test se pone rojo** — que es el punto.
+- **`pnpm verify` corría `test` sin coverage, y CI corre `test:coverage` con umbral 100%.** El
+  2026-09-28 una función del `leaflet-falso.ts` que ningún test ejecutaba dejó web en 99.87% de
+  funciones: verde local, rojo en CI, dos pushes seguidos. Desde entonces `verify` corre
+  `test:coverage`. **Si CI agrega un paso, `verify` lo espeja** — un verde local que CI no confirma
+  es el verde falso de siempre.
 - **Las capturas del developer no coinciden en el header.** Documentación (46) va sin logo, Audit
   log (49) va con logo, ninguna trae campana ni idioma, y M2-D3 dice *never omit the logo*. No se
   transcribe captura por captura: D-074 unifica. Si una pantalla nueva "sigue la captura" y saca el

@@ -126,7 +126,7 @@ Environment variables are documented in [`apps/api/.env.example`](apps/api/.env.
 ## Verification
 
 ```bash
-pnpm verify        # lint + typecheck + test-ID traceability + tests + build
+pnpm verify        # lint + typecheck + test-ID traceability + tests with coverage thresholds + build
 pnpm verify:all    # the above, plus the Aiken suite (fmt + check + build)
 ```
 

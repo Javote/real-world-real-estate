@@ -173,7 +173,7 @@ Ningún validador custodia ni transfiere valor, en ninguna fase (D-021).
 | Pieza | Versión / detalle | Estado |
 |---|---|---|
 | GitHub Actions: dos jobs **en paralelo** (`App TS` + `Contratos Aiken`) | `checkout@v7`, `setup-node@v7` (Node 22), `pnpm/action-setup@v6`, `setup-aiken@v1` | ● |
-| `pnpm verify` — **app TS**: lint + typecheck + tests + build | — | ● |
+| `pnpm verify` — **app TS**: lint + typecheck + testids + tests con umbral de coverage (`test:coverage`, igual que CI) + build | — | ● |
 | `pnpm contracts:verify` — **Aiken**: fmt + check + build. Separado a propósito (D-054) | — | ● |
 | `pnpm verify:all` — las dos cadenas encadenadas | — | ● |
 | **Biome 2.5.10** — formateador + linter, uno solo para todo el workspace | `2.5.10` | ● — D-054. Antes no había ninguno, y `pnpm lint` corría sin hacer nada |

@@ -100,6 +100,6 @@ export const marker = vi.fn((posicion: [number, number], _opciones?: unknown) =>
 export const divIcon = vi.fn((opciones: unknown) => opciones)
 
 /** El ícono por defecto: `LocationMapModal` le pasa las imágenes publicadas por Vite. */
-export const Icon = { Default: { prototype: { _getIconUrl: () => '' }, mergeOptions: vi.fn() } }
+export const Icon = { Default: { prototype: { _getIconUrl: vi.fn() }, mergeOptions: vi.fn() } }
 
 export default { map, tileLayer, featureGroup, marker, divIcon, Icon }
