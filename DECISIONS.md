@@ -1279,10 +1279,16 @@ navegador no deja fijarlo) y **un pedido por segundo como máximo para todo el s
 dependencia externa de mapas, después de los tiles de OpenStreetMap que ya se usaban; si no
 responde, la API devuelve `503 GEOCODER_UNAVAILABLE` y el developer marca el punto a mano.
 
-**Lo que no cambia.** La columna sigue admitiendo `NULL` en la base: las filas viejas sin
-coordenadas (`Torre Pending Test`, `Torre Demo E2E`, `Torre Belgrano`, `torre-a`) no tienen de dónde
-sacar un punto, y una migración `NOT NULL` pediría inventárselo. La obligación vive en el contrato de
-creación, no en el esquema. `PATCH /projects/:id` sigue aceptándolas opcionales.
+**Lo que no cambia.** La columna sigue admitiendo `NULL` en la base: una migración `NOT NULL`
+obligaría a inventarle un punto a cualquier fila que llegue sin él (un seed, una base local vieja).
+La obligación vive en el contrato de creación, no en el esquema. `PATCH /projects/:id` sigue
+aceptándolas opcionales.
+
+**En producción no queda ningún proyecto sin coordenadas** (2026-09-28, por la API como admin, con
+permiso explícito del dueño): las tres Torre Volumen en Palermo, Belgrano y Colegiales; `torre-a` en
+su dirección real (Av. Santa Fe 3200, buscada con el propio geocodificador); y `Torre Pending Test`,
+`Torre Demo E2E` y `Torre Belgrano`, que solo declaran el barrio, en un punto de ese barrio de CABA
+separado de los demás para que los pines no se tapen.
 
 **Lo que destapó.** Con coordenadas cargadas aparecieron dos bugs de `LocationMapModal` que no se
 veían: el modal del detalle de obra abría vacío y el modo mapa de "Buy" mostraba 1 pin de 3. Los dos

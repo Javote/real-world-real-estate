@@ -1384,6 +1384,19 @@ INSERT INTO Dossier (id, unitId, masterHash, compiledAt, shareToken, status, sig
   proyecto que nace en el Acto 2 en **"Pre-construction"**. Verificado con el token del investor:
   los tres devuelven `completed` con 10/10 etapas `Completed`.
 
+**Coordenadas — cargadas el 2026-09-28 (D-097), por la API como admin.** Ningún proyecto quedó sin
+punto. Todos en CABA:
+
+| Proyecto | Latitud, longitud | De dónde sale |
+|---|---|---|
+| Torre Volumen 1 | -34.5781, -58.4265 | Palermo |
+| Torre Volumen 2 | -34.562, -58.458 | Belgrano |
+| Torre Volumen 3 | -34.574, -58.449 | Colegiales |
+| `torre-a` | -34.589249, -58.410067 | su dirección real, Av. Santa Fe 3200 (geocodificada) |
+| Torre Pending Test | -34.5889, -58.4306 | Palermo Soho (declara solo "Palermo") |
+| Torre Demo E2E | -34.5826, -58.439 | Palermo Hollywood (declara solo "Palermo") |
+| Torre Belgrano | -34.569, -58.47 | Belgrano R (declara solo "Belgrano") |
+
 **Ids de producción, para no volver a buscarlos:**
 
 | Qué | Tabla | Id |
