@@ -28,8 +28,8 @@ general, sin fecha y sin bloquear nada del SOM. **`SPEC-112` hizo sus capas auto
 2026-09-28 y lo que encontraron se cerró el mismo día**: `SPEC-113` (el contraste de los tokens de
 color de M2-D3 no llegaba al 4.5:1 que M2-D3 mismo exige; el dueño decidió oscurecerlos, **D-098**)
 y `SPEC-114` (nombres, encabezados y landmarks). El registro de hallazgos de axe quedó vacío. A
-`SPEC-112` le quedan la pasada automatizada de VoiceOver, que espera permisos de macOS del dueño, y
-la humana. Ninguna toca el SOM.
+`SPEC-112` le queda solo la pasada humana con VoiceOver: la automatizada (Guidepup) se descartó como
+limitación de la máquina, porque macOS 15 le pide Acceso total al disco. Ninguna toca el SOM.
 
 Lo transversal. Lo de cada frente vive en `apps/web/CLAUDE.md`, `apps/api/CLAUDE.md`,
 `packages/cardano/CLAUDE.md` y `contracts/CLAUDE.md`, y se carga solo cuando tocás ese subárbol.
