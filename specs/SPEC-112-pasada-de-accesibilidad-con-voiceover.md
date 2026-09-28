@@ -20,6 +20,7 @@ solapan**: cada una encuentra una clase de defecto que las otras no ven.
 | Biome (estático) | `alt` faltante, `lang` del documento, uso de `aria-*` mal formado — en el momento de escribir el JSX | Contraste de color, foco dinámico, nada que dependa de render |
 | Vitest + `axe-core` (componente aislado) | Estructura accesible de un componente en sus distintos estados (deshabilitado, error, cargando) | Flujos entre páginas, layout real, contraste calculado por CSS final |
 | Playwright + `axe-core` (e2e) | DOM final completo: contraste real, ids duplicados entre layout y contenido, foco atrapado en modales, navegación por teclado en flujos reales | Nada que el propio `axe-core` no sepa evaluar — nunca reemplaza escuchar la app |
+| VoiceOver automatizado (Guidepup, esta Mac) | Lo que VoiceOver **realmente anuncia**, registrado como texto: nombre y rol de cada control al recorrerlo, los anuncios de las live regions, el orden de lectura, que el foco quede dentro de un modal. Corre antes que la pasada humana y le deja el terreno limpio | Si ese texto **tiene sentido** para una persona — el log dice qué se dijo, no si se entiende |
 | VoiceOver manual | Si lo que se anuncia **tiene sentido** — orden narrativo, foco que "se siente" perdido, algo técnicamente válido pero confuso | Nada automatizable — es la única capa que valida experiencia, no marca |
 
 ## Alcance / NO-alcance
@@ -31,7 +32,12 @@ solapan**: cada una encuentra una clase de defecto que las otras no ven.
   3. **Playwright** — `@axe-core/playwright` sobre los specs de `apps/web/e2e/` existentes y los que
      hagan falta. Hereda el carácter **no bloqueante** de CI que ya tiene toda la suite `e2e`
      (`playwright.config.ts`, comentario de D-015 §5) — esta spec no cambia eso.
-  4. La **pasada manual con VoiceOver** (macOS) sobre las superficies más usadas de cada rol — no
+  4. **VoiceOver automatizado**, en la Mac del dueño (macOS 15, Intel x86_64): el VoiceOver real
+     manejado por código con Guidepup, sobre el mismo recorrido del punto 5, **antes** de la pasada
+     humana (pedido del dueño, 2026-09-28). Todo lo que se pueda afirmar leyendo el log de lo
+     anunciado se afirma acá, así la pasada humana solo juzga lo que ningún log puede juzgar. Ver
+     §Interfaz §4.
+  5. La **pasada manual con VoiceOver** (macOS) sobre las superficies más usadas de cada rol — no
      las 42 rutas completas, un recorrido representativo (login, alta de proyecto, subir evidencia,
      certificar, dossier, audit log): foco visible y su orden al tabular, `label`/`alt` en controles
      e imágenes, jerarquía de `h1`-`h3`, asociación `label`↔`input`, landmarks (`nav`, `main`,
@@ -123,9 +129,61 @@ test('el dashboard del developer no tiene violaciones de accesibilidad', async (
 })
 ```
 
-### 4 · La pasada manual — sin interfaz de código, es QA
+### 4 · VoiceOver automatizado — Guidepup, en esta Mac, antes de la pasada humana
+
+**Por qué Guidepup, verificado en el registro el 2026-09-28:** es la única librería mantenida que
+maneja el **VoiceOver real** de macOS (no un emulador del árbol de accesibilidad) y devuelve lo que
+anunció como texto. `@guidepup/guidepup@0.34.0` (publicada 2026-08-31) y `@guidepup/playwright@0.19.1`
+(peer `@playwright/test ^1.57`; el repo tiene 1.62). Con eso el recorrido corre como un spec de
+Playwright más, con un fixture `voiceOver` que tiene `next()`, `perform()`, `lastSpokenPhrase()` y
+`spokenPhraseLog()`.
+
+**Paso 0 — preparar la máquina (una vez, lo hace el dueño, no se automatiza).** Medido en esta
+Mac el 2026-09-28: macOS 15.7.5, `x86_64`, y el control por AppleScript de VoiceOver **no está
+habilitado** (`defaults read com.apple.VoiceOver4/default SCREnableAppleScript` → no existe).
+`npx @guidepup/setup` lo habilita; macOS pide además permiso de **Accesibilidad** y
+**Automatización** para la terminal que corre los tests (Ajustes del Sistema → Privacidad y
+seguridad). Son permisos de TCC: los da una persona con un click, no un script. Lo que `setup`
+toque en esta versión de macOS se anota acá cuando se corra, no se supone.
+
+**Forma:**
+
+```
+apps/web/e2e-voiceover/                       carpeta propia, fuera de e2e/ (no la levanta la suite normal)
+apps/web/playwright.voiceover.config.ts       workers 1, headed, un solo proyecto desktop
+apps/web/package.json  →  "a11y:voiceover"    playwright test -c playwright.voiceover.config.ts
+```
+
+**No corre en CI ni en `pnpm verify`**, mismo criterio que `test:s3` y `test:yaci`: necesita una
+sesión gráfica de macOS con VoiceOver encendido, y **toma el control de la pantalla y el audio**
+mientras corre (no se usa la máquina en paralelo). Se corre a mano, con `pnpm dev` levantado y la
+base sembrada, y **se apaga VoiceOver al terminar** (`voiceOver.stop()` en el teardown, aunque el
+test falle).
+
+**Qué afirma cada test** — solo cosas que el log puede probar, sobre el recorrido de §Alcance 5:
+
+| Superficie | Qué se afirma sobre lo anunciado |
+|---|---|
+| Login | cada campo se anuncia con su label ("Usuario", "Contraseña"); un login fallido anuncia el error (live region de `SPEC-104`) sin mover el foco |
+| Panel de cada rol | recorriendo por landmarks (rotor, `VO+U`) aparecen header, navegación y `main`, **una sola** navegación principal |
+| Alta de proyecto (formulario largo) | el orden de lo anunciado al tabular sigue el orden visual; los campos inválidos anuncian su mensaje de error |
+| Modal (`ObserveStageModal`) | al abrirse, lo siguiente que se anuncia está dentro del diálogo; al recorrer, nunca sale de él; al cerrar, el foco vuelve al botón que lo abrió |
+| Anclaje / poll (`SPEC-104`) | el cambio de `Pendiente` a `Verificado` se anuncia sin interacción |
+| Dossier y audit log | el recorrido por encabezados (`VO+Cmd+H`) da una jerarquía sin saltos |
+
+**El log completo de cada test se guarda como artefacto** (`e2e-voiceover/.artifacts/<test>.txt`,
+gitignoreado) — es lo que lee quien hace la pasada humana antes de empezar, para saber qué ya se
+probó y escuchar solo lo que falta.
+
+**Lo que esta capa no puede afirmar** y por eso queda para §5: si una frase anunciada se entiende,
+si el orden "se siente" natural, si algo técnicamente correcto confunde. Un test que intente
+afirmar eso con un `toContain` es un falso verde.
+
+### 5 · La pasada manual — sin interfaz de código, es QA
 
 Con VoiceOver (`Cmd+F5`) sobre `pnpm dev` o la URL pública, recorriendo el checklist de §Alcance.
+**Arranca leyendo los logs de §4**: todo lo que §4 ya afirmó no se repite, se escucha solo lo que
+el log no puede juzgar.
 
 ## Invariantes
 
