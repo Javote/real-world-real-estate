@@ -33,10 +33,20 @@ describe("passwordDeDemo", () => {
     );
   });
 
-  it("sin DATABASE_URL también revienta", () => {
-    // "No sé contra qué base estoy" se trata como remota: es la lectura que
-    // falla del lado seguro.
-    expect(() => passwordDeDemo("SEED_ADMIN_PASSWORD", "admin123", {})).toThrow();
+  it("sin DATABASE_URL usa el default: la conexión cae a la base local, y el chequeo también", () => {
+    // Antes esto reventaba con el argumento de "no sé contra qué base estoy".
+    // Pero sí se sabe: `lib/db.ts` conecta a `DEFAULT_DATABASE_URL`, un SQLite
+    // local. El chequeo y la conexión resuelven con `urlDeLaBase`, así que no
+    // pueden volver a leer bases distintas.
+    expect(passwordDeDemo("SEED_ADMIN_PASSWORD", "admin123", {})).toBe("admin123");
+  });
+
+  it("una DATABASE_URL vacía NO cuenta como local: la conexión tampoco caería al default", () => {
+    // `??` solo cae con undefined. Un `DATABASE_URL=` vacío sigue reventando,
+    // del lado seguro, igual que antes.
+    expect(() => passwordDeDemo("SEED_ADMIN_PASSWORD", "admin123", { DATABASE_URL: "" })).toThrow(
+      /SEED_ADMIN_PASSWORD/
+    );
   });
 
   it("contra una base remota CON la variable, la usa", () => {

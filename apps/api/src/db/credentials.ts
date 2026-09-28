@@ -1,4 +1,5 @@
 import { passwordSchema } from "@plataforma/shared";
+import { urlDeLaBase } from "./local-db";
 
 /**
  * Una URL `file:` es un SQLite en disco de esta máquina. Cualquier otra cosa
@@ -28,7 +29,9 @@ export function passwordDeDemo(
   const delEntorno = env[variable]?.trim();
 
   if (!delEntorno) {
-    if (!esBaseLocal(env.DATABASE_URL ?? "")) {
+    // La MISMA resolución que la conexión: sin `DATABASE_URL` el seed escribe
+    // en el SQLite local por defecto, y eso es exactamente "base local" (D-047).
+    if (!esBaseLocal(urlDeLaBase(env))) {
       throw new Error(
         `${variable} no está seteada y DATABASE_URL no apunta a una base local.\n` +
           "Las credenciales de este seed están publicadas en el repo: sembrarlas en una " +

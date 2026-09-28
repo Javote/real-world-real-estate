@@ -671,8 +671,13 @@ lo mismo sin pasar por HTTP. Ver el detalle en `CLAUDE.md` raíz.
   presets del login y en los e2e. Hacerla más larga no arregla nada: publicada es publicada.
   Lo que se controla es dónde se puede sembrar — `DATABASE_URL` con `file:` usa los defaults,
   cualquier otra cosa exige `SEED_ADMIN_PASSWORD`/`SEED_DEMO_PASSWORD` o el seed revienta
-  (D-047). Sin `DATABASE_URL` cuenta como remota. Los helpers y sus tests están en
-  `src/db/credentials.ts`.
+  (D-047). Los helpers y sus tests están en `src/db/credentials.ts`.
+  **Corregido el 2026-09-28:** esto decía "sin `DATABASE_URL` cuenta como remota", y era falso en
+  la práctica: sin la variable, `lib/db.ts` conecta al SQLite local por defecto, así que
+  `pnpm db:seed` sin `.env` reventaba **contra una base local**. El chequeo y la conexión ahora
+  resuelven con la misma función (`urlDeLaBase`, `db/local-db.ts`) y no pueden volver a divergir.
+  Un `DATABASE_URL=` **vacío** sí sigue contando como no local (la conexión tampoco caería al
+  default, porque `??` solo cae con `undefined`).
 - **2026-08-21 · El seed imprimía credenciales que no garantizaba.** Los cuatro `upsert` de
   `src/db/seed.ts` (entonces `prisma/seed.ts`) usaban `update: {}`, así que en una base ya existente el usuario conservaba
   la password vieja mientras el `console.log` del final anunciaba la nueva. Se vio al subir el

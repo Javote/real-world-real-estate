@@ -2,7 +2,7 @@ import "dotenv/config";
 import { existsSync, readdirSync, readFileSync } from "node:fs";
 import path from "node:path";
 import { type Client, createClient } from "../lib/libsql-client";
-import { asegurarDirectorioLocal, DEFAULT_DATABASE_URL } from "./local-db";
+import { asegurarDirectorioLocal, urlDeLaBase } from "./local-db";
 
 // Kysely no trae generador de migraciones (D-049): `migrations/*.sql` es SQL
 // plano que se escribe a mano, con `--> statement-breakpoint` entre statements
@@ -153,9 +153,7 @@ export async function conTecho<T>(
  * razón que `migrationsDir` es parámetro de `applyPendingMigrations`: un test
  * necesita apuntar a su propia base sin pisar la variable de entorno global.
  */
-export async function migrar(
-  url: string = process.env.DATABASE_URL ?? DEFAULT_DATABASE_URL
-): Promise<string[]> {
+export async function migrar(url: string = urlDeLaBase()): Promise<string[]> {
   asegurarDirectorioLocal(url);
 
   // **Estas dos líneas existen para que el silencio se pueda leer.** El
