@@ -29,7 +29,17 @@ const PARAMETROS_FIJOS = {
   "accept-language": "es"
 };
 
-export class GeocodificadorNoDisponible extends Error {}
+/**
+ * Nominatim no respondió como se esperaba. El motivo (código HTTP o tipo de
+ * error, nunca la dirección buscada) se loguea al crearlo: un 503 sin causa en
+ * los logs de Render no se puede diagnosticar.
+ */
+export class GeocodificadorNoDisponible extends Error {
+  constructor(motivo: string) {
+    super(motivo);
+    console.warn(`[geocode] Nominatim no disponible: ${motivo}`);
+  }
+}
 
 interface Opciones {
   fetch?: typeof globalThis.fetch;
@@ -63,8 +73,10 @@ export function crearGeocodificador({
         headers: { "User-Agent": USER_AGENT, Accept: "application/json" },
         signal: AbortSignal.timeout(timeout)
       });
-    } catch {
-      throw new GeocodificadorNoDisponible("sin respuesta");
+    } catch (error) {
+      throw new GeocodificadorNoDisponible(
+        `sin respuesta (${error instanceof Error ? error.name : "desconocido"})`
+      );
     }
     if (!respuesta.ok) throw new GeocodificadorNoDisponible(`HTTP ${respuesta.status}`);
 

@@ -47,7 +47,15 @@ describe("crearGeocodificador", () => {
       },
       espaciado: 0
     });
-    await expect(red.buscar("Corrientes 1234")).rejects.toThrow("sin respuesta");
+    await expect(red.buscar("Corrientes 1234")).rejects.toThrow("sin respuesta (TypeError)");
+
+    const raro = crearGeocodificador({
+      fetch: async () => {
+        throw "no es un Error";
+      },
+      espaciado: 0
+    });
+    await expect(raro.buscar("Corrientes 1234")).rejects.toThrow("sin respuesta (desconocido)");
 
     const ilegible = crearGeocodificador({
       fetch: async () => new Response("<html>", { status: 200 }),
