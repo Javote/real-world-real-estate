@@ -1,9 +1,43 @@
 name: CI
 
+# `paths` espeja la regla de `CLAUDE.md` §Commits y ramas: CI corre si el push
+# toca código. Un push donde todo archivo es `.md`, imagen, `.pdf`, `.csv`,
+# `.log` o `.txt` no dispara nada, igual que `verify:all` no corre local. Es
+# todo-o-nada: un solo archivo fuera de esas extensiones y corre entero. Lo que
+# está bajo `docs/` corre siempre (re-incluido al final, el orden importa):
+# `pnpm testids` lee un `.md` de ahí.
 on:
   pull_request:
+    paths:
+      - '**'
+      - '!**/*.md'
+      - '!**/*.[pP][dD][fF]'
+      - '!**/*.[pP][nN][gG]'
+      - '!**/*.[jJ][pP][gG]'
+      - '!**/*.[jJ][pP][eE][gG]'
+      - '!**/*.[gG][iI][fF]'
+      - '!**/*.[wW][eE][bB][pP]'
+      - '!**/*.[iI][cC][oO]'
+      - '!**/*.[cC][sS][vV]'
+      - '!**/*.log'
+      - '!**/*.txt'
+      - 'docs/**'
   push:
     branches: [main]
+    paths:
+      - '**'
+      - '!**/*.md'
+      - '!**/*.[pP][dD][fF]'
+      - '!**/*.[pP][nN][gG]'
+      - '!**/*.[jJ][pP][gG]'
+      - '!**/*.[jJ][pP][eE][gG]'
+      - '!**/*.[gG][iI][fF]'
+      - '!**/*.[wW][eE][bB][pP]'
+      - '!**/*.[iI][cC][oO]'
+      - '!**/*.[cC][sS][vV]'
+      - '!**/*.log'
+      - '!**/*.txt'
+      - 'docs/**'
 
 concurrency:
   group: ci-${{ github.ref }}

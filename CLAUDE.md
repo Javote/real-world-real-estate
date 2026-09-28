@@ -359,18 +359,34 @@ de API o esquema on-chain. **`main` es la rama de integración y no hay PRs** (D
 `git commit` → `git push`, siempre juntos y en ese orden. No se junta trabajo local "para pushear al
 final", y no se commitea sin el verde.
 
-**La única excepción: un commit donde TODO archivo termina en `.md`, y la decide `git`, no vos.**
+**La única excepción: un commit que no toca código, y la decide `git`, no vos.** "No toca código"
+quiere decir que todo archivo staged es documentación o un archivo que ningún paso del pipeline lee
+(`.md`, `.pdf`, `.png`, `.jpg`, `.jpeg`, `.gif`, `.webp`, `.ico`, `.csv`, `.log`, `.txt`), en
+cualquier carpeta, **y** que nada cae dentro de `docs/`.
 
 ```bash
-[ -n "$(git diff --cached --name-only -- ':(exclude)*.md')" ] && pnpm verify:all
+[ -n "$(git diff --cached --name-only -- ':(exclude)*.md' ':(exclude,icase)*.pdf' ':(exclude,icase)*.png' ':(exclude,icase)*.jpg' ':(exclude,icase)*.jpeg' ':(exclude,icase)*.gif' ':(exclude,icase)*.webp' ':(exclude,icase)*.ico' ':(exclude,icase)*.csv' ':(exclude)*.log' ':(exclude)*.txt')$(git diff --cached --name-only -- docs/)" ] && pnpm verify:all
 ```
 
-Si aparece un solo archivo que no sea `.md`, corre todo. Si no, no corre nada. **La regla es
-mecánica a propósito, y es `git` y no `grep` por una razón medida** — bajo el `grep` que shimea
-Claude Code, la versión con `grep` contestaba al revés justo en el caso peligroso. Y **si algún día
-se tocara algo dentro de `docs/`, el skip no aplica**: `pnpm testids` sí lee un `.md` de ahí. El
+Si aparece un solo archivo con otra extensión (`.ts`, `.tsx`, `.json`, `.yaml`, `.sql`, `.ak`,
+`.css`, `.sh`, …) o cualquier cosa bajo `docs/`, corre todo. Si no, no corre nada. **La lista es de
+lo que se saltea, no de lo que corre:** una extensión nueva que nadie pensó cae del lado seguro.
+**Por qué esas extensiones:** ni Biome, ni `typecheck`, ni los tests, ni `build`, ni Aiken leen un
+archivo del repo con esas extensiones (los tests que nombran `.pdf`/`.png` arman el archivo en
+memoria), y las imágenes de `apps/web/public/` el build solo las copia. **Por qué `docs/` corre
+siempre:** `pnpm testids` lee un `.md` de ahí. El `.json` no se saltea nunca: hay tests que
+comparan el OpenAPI y la colección Postman de `specs/evidencia-m3/` con el código.
+**La regla es mecánica a propósito, y es `git` y no `grep` por una razón medida** — bajo el `grep`
+que shimea Claude Code, la versión con `grep` contestaba al revés justo en el caso peligroso. El
 argumento completo y las mediciones, en
 [`specs/archive/CLAUDE-argumentos-de-las-reglas-2026-09-20.md`](specs/archive/CLAUDE-argumentos-de-las-reglas-2026-09-20.md).
+
+**Historia:** hasta el 2026-09-24 la excepción era solo `.md`; ese día sumó los PDF/log de
+`specs/evidencia-m3/`, y el 2026-09-28 se invirtió a "corre si se tocó código", porque un commit de
+evidencia con un `.csv` o una captura corría `verify:all` completo sin verificar nada.
+**CI espeja esta misma regla** en `.github/workflows/ci.yml` (`paths` con negaciones en `push` y
+`pull_request`, y `docs/**` re-incluido al final), así que un commit sin código tampoco dispara la
+corrida en GitHub Actions.
 
 **La documentación viaja con el código que la causa, en el mismo commit.** Un cambio que altera cómo
 se opera, se configura o se despliega algo llega con su documentación adentro — no en un `docs(...)`
