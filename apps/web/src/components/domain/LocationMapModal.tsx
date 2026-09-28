@@ -1,5 +1,5 @@
-import iconoRetina from 'leaflet/dist/images/marker-icon-2x.png'
 import icono from 'leaflet/dist/images/marker-icon.png'
+import iconoRetina from 'leaflet/dist/images/marker-icon-2x.png'
 import sombra from 'leaflet/dist/images/marker-shadow.png'
 import { X } from 'lucide-react'
 import { useEffect, useRef, useState } from 'react'
