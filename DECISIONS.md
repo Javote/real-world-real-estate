@@ -1323,7 +1323,12 @@ adentro de los pills y de las cards de prueba).
 | `text-muted` | `#6B7280` | `#5F6673` | 3.96 → 4.74 (relleno de info) |
 
 **Lo que no cambia.** Los rellenos claros (`-light`), así que un pill se sigue leyendo como el de la
-captura: el relleno es lo que más pesa en el ojo. El `primary` y los grises de texto que ya pasaban.
+captura: el relleno es lo que más pesa en el ojo. Los grises de texto que ya pasaban. **Y el
+`primary`, que no se toca, pero tampoco se usa como texto sobre su relleno claro:** `#6D4AFF` sobre
+`#EEEAFF` da 4.38:1. Ahí el texto va en `primary-dark` (`#5538DD`, también de M2-D3, 5.96:1) — los
+pills de categoría y rol del audit log, los chips de `StageChips` y los filtros de "Buy". Los íconos
+sobre ese relleno quedan en `primary`: a un gráfico WCAG le pide 3:1. Lo encontró la corrida e2e
+de CI (con el audit log lleno), no la local (con la base recién sembrada), el mismo 2026-09-28.
 `people` y `danger` no los vio axe en las 12 superficies recorridas, pero fallan igual por cálculo y
 entran por el mismo criterio: la decisión es sobre contraste, no sobre qué pantalla se miró.
 

@@ -209,7 +209,7 @@ function InvestorBuy() {
               setQLocal('')
               void navigate({ search: (prev) => ({ ...prev, q: undefined }) })
             }}
-            className="inline-flex items-center gap-s1 rounded-full bg-primary-light px-s3 py-s1 text-caption font-medium text-primary"
+            className="inline-flex items-center gap-s1 rounded-full bg-primary-light px-s3 py-s1 text-caption font-medium text-primary-dark"
           >
             {search.q}
             <X className="size-icon-inline" aria-hidden="true" />
@@ -219,7 +219,7 @@ function InvestorBuy() {
           <button
             type="button"
             onClick={() => void navigate({ search: (prev) => ({ ...prev, status: undefined }) })}
-            className="inline-flex items-center gap-s1 rounded-full bg-primary-light px-s3 py-s1 text-caption font-medium text-primary"
+            className="inline-flex items-center gap-s1 rounded-full bg-primary-light px-s3 py-s1 text-caption font-medium text-primary-dark"
           >
             {t(`project.status.${search.status}`)}
             <X className="size-icon-inline" aria-hidden="true" />

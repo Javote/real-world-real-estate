@@ -41,7 +41,9 @@ export function StageChips({ stages, onOpenStage, ariaLabel }: StageChipsProps) 
               aria-current={stage.anchored ? 'true' : undefined}
               className={cn(
                 'flex h-10 w-10 items-center justify-center rounded-md text-body-sm font-bold',
-                stage.anchored ? 'bg-primary-light text-primary' : 'bg-surface-alt text-disabled'
+                stage.anchored
+                  ? 'bg-primary-light text-primary-dark'
+                  : 'bg-surface-alt text-disabled'
               )}
             >
               {stage.number}

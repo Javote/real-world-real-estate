@@ -24,7 +24,7 @@ export type AuditCategory = 'etapa' | 'certificador' | 'firma' | 'liberacion' | 
 export type ActorRole = 'developer' | 'certifier' | 'notary' | 'investor'
 
 const CATEGORIA: Record<AuditCategory, string> = {
-  etapa: 'bg-primary-light text-primary',
+  etapa: 'bg-primary-light text-primary-dark',
   certificador: 'bg-pending-light text-pending',
   firma: 'bg-verified-light text-verified',
   liberacion: 'bg-verified-light text-verified',
@@ -32,7 +32,7 @@ const CATEGORIA: Record<AuditCategory, string> = {
 }
 
 const ROL: Record<ActorRole, string> = {
-  developer: 'bg-primary-light text-primary',
+  developer: 'bg-primary-light text-primary-dark',
   certifier: 'bg-pending-light text-pending',
   notary: 'bg-verified-light text-verified',
   investor: 'bg-people-light text-people'
