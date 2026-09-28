@@ -7,6 +7,8 @@ import {
   developerProjectCreateResultSchema,
   developerProjectDetailSchema,
   developerProjectListItemSchema,
+  geocodeQuerySchema,
+  geocodeResultSchema,
   MEMBERSHIP_ROLES,
   PROJECT_STATUSES,
   projectDetailSchema,
@@ -84,10 +86,29 @@ describe("projectListQuerySchema", () => {
 
 describe("createProjectSchema y updateProjectSchema", () => {
   it("createProjectSchema acepta el mínimo con defaults", () => {
-    const result = createProjectSchema.safeParse({ name: "Torre Norte", slug: "torre-norte" });
+    const result = createProjectSchema.safeParse({
+      name: "Torre Norte",
+      slug: "torre-norte",
+      latitude: -34.6,
+      longitude: -58.4
+    });
     expect(result.success).toBe(true);
     expect(result.data?.status).toBe("planning");
     expect(result.data?.totalUnits).toBe(0);
+  });
+
+  it("createProjectSchema exige las coordenadas, y en rango (D-097)", () => {
+    expect(
+      createProjectSchema.safeParse({ name: "Torre Norte", slug: "torre-norte" }).success
+    ).toBe(false);
+    expect(
+      createProjectSchema.safeParse({
+        name: "Torre Norte",
+        slug: "torre-norte",
+        latitude: -91,
+        longitude: -58.4
+      }).success
+    ).toBe(false);
   });
 
   it("updateProjectSchema tiene todos los campos opcionales", () => {
@@ -104,17 +125,52 @@ describe("addProjectMemberSchema", () => {
 });
 
 describe("createDeveloperProjectSchema", () => {
-  it("rechaza latitude/longitude/status — esta superficie no los pide", () => {
+  const base = { name: "Torre Norte", slug: "torre-norte" };
+
+  it("exige latitude y longitude — el punto del Map preview (D-097)", () => {
+    expect(createDeveloperProjectSchema.safeParse(base).success).toBe(false);
+    expect(createDeveloperProjectSchema.safeParse({ ...base, latitude: -34.6 }).success).toBe(
+      false
+    );
     expect(
-      createDeveloperProjectSchema.safeParse({
-        name: "Torre Norte",
-        slug: "torre-norte",
-        latitude: -34.6
-      }).success
+      createDeveloperProjectSchema.safeParse({ ...base, latitude: -34.6, longitude: -58.4 }).success
+    ).toBe(true);
+  });
+
+  it("rechaza coordenadas fuera de rango y status", () => {
+    expect(
+      createDeveloperProjectSchema.safeParse({ ...base, latitude: -34.6, longitude: 181 }).success
     ).toBe(false);
     expect(
-      createDeveloperProjectSchema.safeParse({ name: "Torre Norte", slug: "torre-norte" }).success
+      createDeveloperProjectSchema.safeParse({
+        ...base,
+        latitude: -34.6,
+        longitude: -58.4,
+        status: "planning"
+      }).success
+    ).toBe(false);
+  });
+});
+
+describe("geocodeQuerySchema y geocodeResultSchema", () => {
+  it("la query recorta y exige entre 3 y 200 caracteres", () => {
+    expect(geocodeQuerySchema.parse({ q: "  Av. del Libertador 7200  " }).q).toBe(
+      "Av. del Libertador 7200"
+    );
+    expect(geocodeQuerySchema.safeParse({ q: "ab" }).success).toBe(false);
+    expect(geocodeQuerySchema.safeParse({ q: "x".repeat(201) }).success).toBe(false);
+  });
+
+  it("el resultado es un punto con etiqueta, o null", () => {
+    expect(
+      geocodeResultSchema.safeParse({
+        match: { latitude: -34.547, longitude: -58.46, label: "Av. del Libertador 7200, CABA" }
+      }).success
     ).toBe(true);
+    expect(geocodeResultSchema.safeParse({ match: null }).success).toBe(true);
+    expect(
+      geocodeResultSchema.safeParse({ match: { latitude: 100, longitude: 0, label: "x" } }).success
+    ).toBe(false);
   });
 });
 

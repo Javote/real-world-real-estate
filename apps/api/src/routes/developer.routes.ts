@@ -12,6 +12,8 @@ import {
   developerProjectCreateResultSchema,
   developerProjectDetailSchema,
   developerProjectListItemSchema,
+  geocodeQuerySchema,
+  geocodeResultSchema,
   INITIAL_STAGE_STATE,
   onChainEventSchema,
   paginatedResponseSchema
@@ -25,6 +27,7 @@ import { agregadosDeProyectos } from "../domain/project-aggregates";
 import { reconciliarParaLectura } from "../domain/reconcile";
 import { anchorEvent, recordOnChainEvent } from "../domain/stage-transition";
 import { db } from "../lib/db";
+import { geocodificador } from "../lib/geocode";
 import { conUsuario, delegarAOrpc, OpenAPIHandler, ORPCError, os } from "../lib/orpc";
 import { auditScope, authenticate, authorize, projectScope } from "../middlewares/auth";
 import { paramValidator } from "../middlewares/validate-params";
@@ -201,6 +204,9 @@ const createProjectProcedure = orpc
             address: input.address ?? null,
             city: input.city ?? null,
             country: input.country ?? null,
+            // D-097: obligatorias desde el schema — el punto del Map preview.
+            latitude: input.latitude,
+            longitude: input.longitude,
             totalUnits: input.totalUnits ?? 0,
             estimatedDelivery: input.estimatedDelivery ? new Date(input.estimatedDelivery) : null,
             status: "planning",
@@ -607,6 +613,33 @@ router.get(
   delegarAOrpc(kpisHandler, PREFIJO_ABSOLUTO, conUsuario)
 );
 
+/**
+ * D-097 — La dirección que el developer escribe en el alta de proyecto,
+ * convertida en un punto para mover el "Map preview" de la captura 34b. El
+ * detalle (Nominatim, la cola de un pedido por segundo, la caché) vive en
+ * `lib/geocode.ts`. Si Nominatim no responde es un 503 con nombre: el front lo
+ * trata igual que "no encontrado" — el developer marca el punto en el mapa.
+ */
+const geocodeProcedure = orpc
+  .errors({
+    GEOCODER_UNAVAILABLE: { status: 503, message: "The geocoding service is not available" }
+  })
+  .route({ method: "GET", path: "/geocode" })
+  .input(geocodeQuerySchema)
+  .output(geocodeResultSchema)
+  .handler(({ input, errors }) =>
+    geocodificador.buscar(input.q).catch(() => {
+      throw errors.GEOCODER_UNAVAILABLE();
+    })
+  );
+const geocodeHandler = new OpenAPIHandler({ geocodeProcedure });
+
+router.get(
+  "/geocode",
+  authorize({ roles: ["admin", "developer"], acceso: "soloRol" }),
+  delegarAOrpc(geocodeHandler, PREFIJO_ABSOLUTO, conUsuario)
+);
+
 /** El router oRPC combinado de esta vertical — lo consume
  * `scripts/generate-openapi.ts` para generar el fragmento de OpenAPI de las 8
  * rutas migradas de este archivo, aparte del documento manual de la única que
@@ -619,7 +652,8 @@ export const developerOrpcRouter = {
   documentsProcedure,
   auditLogProcedure,
   anchorDocumentProcedure,
-  kpisProcedure
+  kpisProcedure,
+  geocodeProcedure
 };
 
 export default router;

@@ -535,6 +535,31 @@
           }
         },
         {
+          "name": "GET /api/v1/developer/geocode",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/developer/geocode",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "developer",
+                "geocode"
+              ]
+            },
+            "description": "authenticated + authorize(role(admin|developer) · role only)"
+          }
+        },
+        {
           "name": "GET /api/v1/developer/investors",
           "request": {
             "method": "GET",
@@ -2134,7 +2159,7 @@
             "description": "authenticated + authorize(role(admin) · role only)",
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"name\": \"Torre Ejemplo\",\n  \"slug\": \"torre-ejemplo\",\n  \"city\": \"Buenos Aires\",\n  \"country\": \"Argentina\",\n  \"totalUnits\": 24,\n  \"status\": \"planning\"\n}",
+              "raw": "{\n  \"name\": \"Torre Ejemplo\",\n  \"slug\": \"torre-ejemplo\",\n  \"city\": \"Buenos Aires\",\n  \"country\": \"Argentina\",\n  \"latitude\": -34.5781,\n  \"longitude\": -58.4265,\n  \"totalUnits\": 24,\n  \"status\": \"planning\"\n}",
               "options": {
                 "raw": {
                   "language": "json"

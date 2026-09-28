@@ -48,6 +48,7 @@ entre web y los packages de Node.
 | **i18n es-AR/en-US** | `245 líneas` | ◐ | D-025. La maquinaria existe; conviven 36 strings hardcodeados |
 | Vitest + jsdom + Testing Library | `4.1.10` | ● | |
 | Playwright (E2E) | `1.62` | ● | solo Chromium · **no corre en CI**, a mano |
+| Leaflet + tiles de OpenStreetMap | — | ● | Los mapas (`LocationMapModal`). Los tiles son la única request del navegador que no va a nuestra API |
 
 El front se reconstruye desde los entregables: ver [`SPEC-014`](SPEC-014-reconstruccion-del-front.md)
 por qué se conserva y qué se borra.
@@ -65,6 +66,7 @@ por qué se conserva y qué se borra.
 | helmet | `8.3.0` | ● | D-054. Cero dependencias transitivas. Con `x-powered-by` desactivado y 404 en JSON |
 | `express-rate-limit` | `8.6.2` | ● | D-045. Solo sobre `POST /auth/login`. Store en memoria: alcanza con **una** instancia, que es lo que da el free tier (D-040) |
 | dotenv | `16.6.1` | ● | `import "dotenv/config"` como primer import, nunca `dotenv.config()` intercalado |
+| **Nominatim** (geocodificador de OpenStreetMap, servicio externo) | — | ● | D-097. `GET /developer/geocode`: la dirección del alta de proyecto → un punto. Una cola de **un pedido por segundo** para todo el servicio y User-Agent propio, como exige su política de uso; si no responde, 503 y el punto se marca a mano |
 | Vitest + supertest | `4.1.10` / `7.2.2` | ● | 95 tests, base SQLite propia migrada con el runner real |
 
 Base `/api/v1`. De los ~80 endpoints del backlog de M2-D5, **conforman 2**. Los 12 con alcance de proyecto aplican la segunda capa como middleware (SPEC-012).

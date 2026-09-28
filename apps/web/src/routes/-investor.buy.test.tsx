@@ -398,7 +398,7 @@ describe('/investor/buy', () => {
   })
 
   describe('vista de mapa (Leaflet falso)', () => {
-    it('pide los proyectos con el `bbox` del viewport y solo dibuja pines de los que tienen coordenadas', async () => {
+    it('dibuja pines solo de los que tienen coordenadas, y pide con el `bbox` recién cuando el mapa se mueve', async () => {
       const listar = preparar([
         proyecto({ id: 'p1', name: 'Torre A', latitude: -34.6, longitude: -58.4 }),
         proyecto({ id: 'p2', name: 'Torre B', latitude: null, longitude: null }),
@@ -407,13 +407,15 @@ describe('/investor/buy', () => {
       montar(`${RUTA}?view=map`)
 
       await screen.findByTestId('INV-BUY-MAP-001')
-      await waitFor(() => expect(listar).toHaveBeenCalledWith({ bbox: '-58.4,-34.7,-58.3,-34.5' }))
       await waitFor(() => expect(marker).toHaveBeenCalledTimes(1))
       expect(marker).toHaveBeenCalledWith([-34.6, -58.4])
+      // Crear el mapa no filtra el listado: con el zoom de calle del primer pin
+      // lo dejaba en una sola obra (visto en producción el 2026-09-28).
+      expect(listar).not.toHaveBeenCalledWith({ bbox: expect.any(String) })
 
-      // Mover el mapa vuelve a emitir el mismo viewport: no rompe nada.
+      // El encuadre (o el usuario) mueve el mapa, y ahí sí se pide con el viewport.
       dispararMoveend()
-      expect(listar).toHaveBeenLastCalledWith({ bbox: '-58.4,-34.7,-58.3,-34.5' })
+      await waitFor(() => expect(listar).toHaveBeenCalledWith({ bbox: '-58.4,-34.7,-58.3,-34.5' }))
     })
 
     it('tocar un pin abre la card del proyecto y cerrarla la quita', async () => {

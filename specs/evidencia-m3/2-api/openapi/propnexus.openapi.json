@@ -855,6 +855,134 @@
         }
       }
     },
+    "/api/v1/developer/geocode": {
+      "get": {
+        "operationId": "geocodeProcedure",
+        "parameters": [
+          {
+            "name": "q",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "minLength": 3,
+              "maxLength": 200
+            },
+            "allowEmptyValue": true,
+            "allowReserved": true
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "match": {
+                      "anyOf": [
+                        {
+                          "type": "object",
+                          "properties": {
+                            "latitude": {
+                              "type": "number",
+                              "minimum": -90,
+                              "maximum": 90
+                            },
+                            "longitude": {
+                              "type": "number",
+                              "minimum": -180,
+                              "maximum": 180
+                            },
+                            "label": {
+                              "type": "string"
+                            }
+                          },
+                          "required": [
+                            "latitude",
+                            "longitude",
+                            "label"
+                          ],
+                          "additionalProperties": false
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ]
+                    }
+                  },
+                  "required": [
+                    "match"
+                  ],
+                  "additionalProperties": false
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "503",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "oneOf": [
+                    {
+                      "type": "object",
+                      "properties": {
+                        "defined": {
+                          "const": true
+                        },
+                        "code": {
+                          "const": "GEOCODER_UNAVAILABLE"
+                        },
+                        "status": {
+                          "const": 503
+                        },
+                        "message": {
+                          "type": "string",
+                          "default": "The geocoding service is not available"
+                        },
+                        "data": {}
+                      },
+                      "required": [
+                        "defined",
+                        "code",
+                        "status",
+                        "message"
+                      ]
+                    },
+                    {
+                      "type": "object",
+                      "properties": {
+                        "defined": {
+                          "const": false
+                        },
+                        "code": {
+                          "type": "string"
+                        },
+                        "status": {
+                          "type": "number"
+                        },
+                        "message": {
+                          "type": "string"
+                        },
+                        "data": {}
+                      },
+                      "required": [
+                        "defined",
+                        "code",
+                        "status",
+                        "message"
+                      ]
+                    }
+                  ]
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/v1/developer/projects/{id}/stages/{stageId}/evidence": {
       "post": {
         "summary": "POST /api/v1/developer/projects/:id/stages/:stageId/evidence",
@@ -3720,10 +3848,14 @@
                     "type": "string"
                   },
                   "latitude": {
-                    "type": "number"
+                    "type": "number",
+                    "minimum": -90,
+                    "maximum": 90
                   },
                   "longitude": {
-                    "type": "number"
+                    "type": "number",
+                    "minimum": -180,
+                    "maximum": 180
                   },
                   "totalUnits": {
                     "type": "integer",
@@ -3748,7 +3880,9 @@
                 },
                 "required": [
                   "name",
-                  "slug"
+                  "slug",
+                  "latitude",
+                  "longitude"
                 ]
               }
             }
@@ -4354,10 +4488,14 @@
                     "type": "string"
                   },
                   "latitude": {
-                    "type": "number"
+                    "type": "number",
+                    "minimum": -90,
+                    "maximum": 90
                   },
                   "longitude": {
-                    "type": "number"
+                    "type": "number",
+                    "minimum": -180,
+                    "maximum": 180
                   },
                   "totalUnits": {
                     "type": "integer",
@@ -11535,6 +11673,16 @@
                   "country": {
                     "type": "string"
                   },
+                  "latitude": {
+                    "type": "number",
+                    "minimum": -90,
+                    "maximum": 90
+                  },
+                  "longitude": {
+                    "type": "number",
+                    "minimum": -180,
+                    "maximum": 180
+                  },
                   "totalUnits": {
                     "type": "integer",
                     "minimum": 0,
@@ -11546,7 +11694,9 @@
                 },
                 "required": [
                   "name",
-                  "slug"
+                  "slug",
+                  "latitude",
+                  "longitude"
                 ],
                 "additionalProperties": false
               }

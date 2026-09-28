@@ -46,6 +46,8 @@ describe("POST /developer/projects con estimatedDelivery", () => {
       .post("/api/v1/developer/projects")
       .set("Authorization", `Bearer ${tokenDev}`)
       .send({
+        latitude: -34.6,
+        longitude: -58.4,
         name: "Proyecto con fecha estimada",
         slug: `con-fecha-${Date.now()}`,
         estimatedDelivery: "2028-01-01T00:00:00.000Z"
@@ -102,7 +104,12 @@ describe("GET /developer/kpis con proyectos reales", () => {
     const nuevo = await request(app)
       .post("/api/v1/developer/projects")
       .set("Authorization", `Bearer ${tokenSolo}`)
-      .send({ name: "SPEC-017 sin ventas", slug: `spec-017-sin-ventas-${Date.now()}` });
+      .send({
+        latitude: -34.6,
+        longitude: -58.4,
+        name: "SPEC-017 sin ventas",
+        slug: `spec-017-sin-ventas-${Date.now()}`
+      });
     expect(nuevo.status).toBe(201);
 
     const primeraEtapa = nuevo.body.stages[0].id as string;

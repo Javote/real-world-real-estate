@@ -42,6 +42,9 @@ infrastructure; both are run by hand with `pnpm --filter @plataforma/api test:s3
 (`modals-mapa.test.tsx`) — the map may fail to render when the modal opens with `open` set directly
 rather than through user interaction. It still needs to be reproduced in a real browser before
 deciding whether to fix the component or the test.
+**Update 2026-09-28:** reproduced in production (the project-detail location map opened empty) and
+fixed in the component; the `it.fails` became a regular `it`. The figures in the table above are
+those of 2026-09-21 and are left as they were.
 
 ## Coverage
 

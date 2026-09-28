@@ -1246,3 +1246,45 @@ componente nuevo ni un estado nuevo.
 **Junto con esto, el cursor.** Tailwind v4 dejó de poner `cursor: pointer` en `<button>`, así que
 ningún botón de la app mostraba la mano al pasar el mouse (el toggle, las solapas de rol del login,
 todos). `styles.css` lo restituye en `@layer base` para todo botón habilitado.
+
+## D-097 — Todo proyecto nace con coordenadas, y el alta las fija en el "Map preview"
+
+**Decisión del dueño, 2026-09-28.** Latitud y longitud pasan a ser **obligatorias** al crear un
+proyecto, por las dos puertas (`POST /developer/projects` y el CRUD admin `POST /projects`). Un
+proyecto sin coordenadas no se puede dibujar en ningún mapa —el modo mapa de "Buy", el detalle de obra,
+el de la unidad— y la regla 17 dice que sin dato no se dibuja: el hueco no se nota hasta que alguien
+busca el mapa y no está. Pasó: las tres obras de la demo no tenían coordenadas y nadie lo vio.
+
+**No es un desvío, es una transcripción que faltaba.** La captura 34b dibuja un **"Map preview"**
+debajo de "Location", M2-D1 dice *"location with map preview"* y la fila de M2-D5 de
+`/developer/project/new` lista `LocationMapModal`. La implementación lo había omitido, y el schema del
+developer rechazaba latitud y longitud a propósito ("esta superficie no los pide"): la captura muestra
+que sí.
+
+**Cómo se fija el punto — las dos cosas, en la misma tarjeta:**
+
+- **Escribir la dirección** mueve el pin: la API la busca en **Nominatim** (el geocodificador de
+  OpenStreetMap, sesgado a CABA) por `GET /api/v1/developer/geocode?q=`, 0,9 s después de la última
+  tecla.
+- **Tocar o arrastrar el pin** fija el punto exacto (o lo corrige, o lo pone si la dirección no se
+  encontró o Nominatim no respondió).
+
+El mapa es `LocationMapModal` en una variante nueva, `picker` (en línea, un solo pin), no un
+componente nuevo. Sin punto, "Create project" queda deshabilitado.
+
+**Por qué Nominatim pasa por la API y no por el navegador.** El front no hace `fetch` fuera de
+`ApiPort`, y la política de uso de Nominatim exige un User-Agent que identifique a la aplicación (el
+navegador no deja fijarlo) y **un pedido por segundo como máximo para todo el servicio**: la cola de
+`apps/api/src/lib/geocode.ts` es una sola para todos los usuarios, con caché. Es la segunda
+dependencia externa de mapas, después de los tiles de OpenStreetMap que ya se usaban; si no
+responde, la API devuelve `503 GEOCODER_UNAVAILABLE` y el developer marca el punto a mano.
+
+**Lo que no cambia.** La columna sigue admitiendo `NULL` en la base: las filas viejas sin
+coordenadas (`Torre Pending Test`, `Torre Demo E2E`, `Torre Belgrano`, `torre-a`) no tienen de dónde
+sacar un punto, y una migración `NOT NULL` pediría inventárselo. La obligación vive en el contrato de
+creación, no en el esquema. `PATCH /projects/:id` sigue aceptándolas opcionales.
+
+**Lo que destapó.** Con coordenadas cargadas aparecieron dos bugs de `LocationMapModal` que no se
+veían: el modal del detalle de obra abría vacío y el modo mapa de "Buy" mostraba 1 pin de 3. Los dos
+corregidos en el mismo commit — ver `apps/web/CLAUDE.md` §Trampas verificadas. Las tres Torre Volumen
+recibieron coordenadas de CABA en producción el mismo día (Palermo, Belgrano, Colegiales).

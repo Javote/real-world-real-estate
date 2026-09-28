@@ -80,12 +80,11 @@ tres archivos que se suben en T15** — `land-title-deed.pdf`, `site-survey-plan
 verificador de producción (solo lectura: las cinco cuentas, lo que ve cada rol, el saldo de tADA).
 Se puede volver a correr cuando quieras.
 
-**Lo que dejó el 2026-09-28:** todo en verde, con dos avisos.
+**Lo que dejó el 2026-09-28:** todo en verde, con un aviso esperable.
 
-- **Las tres Torre Volumen no tienen coordenadas.** El modo mapa de T02 sale sin pines, y los mapas
-  de T03 y T13 no se dibujan (regla 17: sin dato, no se dibuja). Las tomas de abajo ya tienen la
-  variante sin mapa. **Para tener el mapa**, hay que cargar latitud y longitud en producción
-  (`PATCH /api/v1/projects/:id` como admin): es una decisión del dueño y no está hecha.
+- **Las tres Torre Volumen tienen coordenadas de CABA** (Palermo, Belgrano, Colegiales), cargadas el
+  2026-09-28 (D-097): el modo mapa de T02 muestra sus pines y los mapas de T03 y T13 se dibujan.
+  Desde ese día todo proyecto nuevo nace con coordenadas: el alta las pide (T08).
 - La cola del escribano está vacía: se llena en la pasada de calentamiento de la sesión B (1.3). Es
   lo esperado.
 
@@ -250,36 +249,36 @@ no hay "otra toma" de esas.
 |---|---|---|---|---|---|---|---|
 | T01 | 0:00 | 1 · Investor | Login, y el cambio de idioma | `/login` → `/investor/buy` | 22 s | 13 s | |
 | T02 | 0:22 | 1 · Investor | Buy | `/investor/buy` | 35 s | 15 s | |
-| T03 | 0:57 | 1 · Investor | El proyecto por dentro | `/project/<torre-volumen-3>` | 45 s | 13 s | |
+| T03 | 0:57 | 1 · Investor | El proyecto por dentro | `/project/<torre-volumen-3>` | 45 s | 16 s | |
 | T04 | 1:42 | 1 · Investor | Quién construye | `/project/<torre-volumen-3>/developer` | 40 s | 25 s | |
 | T05 | 2:22 | 1 · Investor | Hasta la prueba | `…/progress` → `…/stage/:stageId` | 45 s | 27 s | |
 | T06 | 3:07 | 1 · Investor | Favoritos | `/investor/favorites` | 10 s | 4 s | |
 | T07 | 3:17 | 2 · Developer | El panel | `/developer` → `/developer/projects` | 30 s | 12 s | |
-| T08 | 3:47 | 2 · Developer | Proyecto nuevo | `/developer/project/new` | 36 s | 25 s | ⚠ irrepetible |
-| T09 | 4:23 | 2 · Developer | El proyecto ya creado | `/developer/project/:id` → `/developer/progress` | 30 s | 15 s | |
-| T10 | 4:53 | 2 · Developer | Unidades | `/developer/project/:id/units` | 32 s | 10 s | |
-| T11 | 5:25 | 2 · Developer | La invitación | `/developer/project/:id/invite` | 25 s | 8 s | ⚠ irrepetible |
-| T12 | 5:50 | 1 · Investor | Aceptar | campana → `/investor/notifications` | 35 s | 15 s | ⚠ irrepetible |
-| T13 | 6:25 | 1 · Investor | El portfolio | `/investor/units` → `/investor/unit/<5A>` | 35 s | 20 s | |
-| T14 | 7:00 | 1 · Investor | El contrato como registro | `/investor/unit/<5A>/contract` | 25 s | 13 s | |
-| T15 | 7:25 | 2 · Developer | Subir evidencia | `/developer/project/:id/upload` | 40 s | 20 s | ⚠ irrepetible |
-| T16 | 8:05 | 2 · Developer | La prueba, y afuera de la app | AnchoringSuccessModal → cardanoscan | 26 s | 11 s | |
-| T17 | 8:31 | 1 · Investor | El mismo anclaje, del otro lado | `/investor/unit/<5A>/notifications` → `/investor/unit/<5A>` | 35 s | 16 s | |
-| T18 | 9:06 | 3 · Certifier | Observar | `/certifier` → `/certifier/assigned` → `/certifier/stage/:id` | 40 s | 17 s | ⚠ irrepetible |
-| T19 | 9:46 | 2 · Developer | Reanudar | `/developer/progress` | 20 s | 11 s | ⚠ irrepetible |
-| T20 | 10:06 | 3 · Certifier | Certificar | `/certifier/stage/:id` | 20 s | 7 s | ⚠ irrepetible |
-| T21 | 10:26 | 3 · Certifier | El certificado | `/certifier/issued` | 15 s | 5 s | |
-| T22 | 10:41 | 2 · Developer | El contrato del lado del developer | `/developer/project/:id/contracts` | 25 s | 14 s | |
-| T23 | 11:06 | 1 · Investor | El dossier | `/investor/unit/<1A>/dossier` | 40 s | 24 s | |
-| T24 | 11:46 | 1 · Investor | Compartir | "Share" → modal | 15 s | 8 s | |
-| T25 | 12:01 | 4 · Notary | La firma | `/notary` → `/notary/dossiers` → `/notary/dossier/:id` | 35 s | 19 s | ⚠ irrepetible |
-| T26 | 12:36 | 4 · Notary | El historial | `/notary/signed` | 15 s | 11 s | |
-| T27 | 12:51 | incógnito | Verificado sin cuenta | `/public/dossier/:shareToken` | 25 s | 18 s | |
-| T28 | 13:16 | 2 · Developer | El círculo se cierra | `/developer/audit-log` | 45 s | 21 s | |
-| T29 | 14:01 | 2 · Developer | El resto del developer | documentation → investors → capital → units → progress | 75 s | 23 s | |
-| T30 | 15:16 | las cuatro | Perfiles y menú | los cuatro `/…/profile` + `/investor/menu` | 60 s | 13 s | |
-| T31 | 16:16 | 1 · Investor | Responsive | DevTools → Device Toolbar | 30 s | 13 s | |
-| | **16:46** | | **Total** | | **1006 s ≈ 17 min** | | |
+| T08 | 3:47 | 2 · Developer | Proyecto nuevo | `/developer/project/new` | 40 s | 30 s | ⚠ irrepetible |
+| T09 | 4:27 | 2 · Developer | El proyecto ya creado | `/developer/project/:id` → `/developer/progress` | 30 s | 15 s | |
+| T10 | 4:57 | 2 · Developer | Unidades | `/developer/project/:id/units` | 32 s | 10 s | |
+| T11 | 5:29 | 2 · Developer | La invitación | `/developer/project/:id/invite` | 25 s | 8 s | ⚠ irrepetible |
+| T12 | 5:54 | 1 · Investor | Aceptar | campana → `/investor/notifications` | 35 s | 15 s | ⚠ irrepetible |
+| T13 | 6:29 | 1 · Investor | El portfolio | `/investor/units` → `/investor/unit/<5A>` | 35 s | 23 s | |
+| T14 | 7:04 | 1 · Investor | El contrato como registro | `/investor/unit/<5A>/contract` | 25 s | 13 s | |
+| T15 | 7:29 | 2 · Developer | Subir evidencia | `/developer/project/:id/upload` | 40 s | 20 s | ⚠ irrepetible |
+| T16 | 8:09 | 2 · Developer | La prueba, y afuera de la app | AnchoringSuccessModal → cardanoscan | 26 s | 11 s | |
+| T17 | 8:35 | 1 · Investor | El mismo anclaje, del otro lado | `/investor/unit/<5A>/notifications` → `/investor/unit/<5A>` | 35 s | 16 s | |
+| T18 | 9:10 | 3 · Certifier | Observar | `/certifier` → `/certifier/assigned` → `/certifier/stage/:id` | 40 s | 17 s | ⚠ irrepetible |
+| T19 | 9:50 | 2 · Developer | Reanudar | `/developer/progress` | 20 s | 11 s | ⚠ irrepetible |
+| T20 | 10:10 | 3 · Certifier | Certificar | `/certifier/stage/:id` | 20 s | 7 s | ⚠ irrepetible |
+| T21 | 10:30 | 3 · Certifier | El certificado | `/certifier/issued` | 15 s | 5 s | |
+| T22 | 10:45 | 2 · Developer | El contrato del lado del developer | `/developer/project/:id/contracts` | 25 s | 14 s | |
+| T23 | 11:10 | 1 · Investor | El dossier | `/investor/unit/<1A>/dossier` | 40 s | 24 s | |
+| T24 | 11:50 | 1 · Investor | Compartir | "Share" → modal | 15 s | 8 s | |
+| T25 | 12:05 | 4 · Notary | La firma | `/notary` → `/notary/dossiers` → `/notary/dossier/:id` | 35 s | 19 s | ⚠ irrepetible |
+| T26 | 12:40 | 4 · Notary | El historial | `/notary/signed` | 15 s | 11 s | |
+| T27 | 12:55 | incógnito | Verificado sin cuenta | `/public/dossier/:shareToken` | 25 s | 18 s | |
+| T28 | 13:20 | 2 · Developer | El círculo se cierra | `/developer/audit-log` | 45 s | 21 s | |
+| T29 | 14:05 | 2 · Developer | El resto del developer | documentation → investors → capital → units → progress | 75 s | 23 s | |
+| T30 | 15:20 | las cuatro | Perfiles y menú | los cuatro `/…/profile` + `/investor/menu` | 60 s | 13 s | |
+| T31 | 16:20 | 1 · Investor | Responsive | DevTools → Device Toolbar | 30 s | 13 s | |
+| | **16:50** | | **Total** | | **1010 s ≈ 17 min** | | |
 
 ### Sesión A · El comprador mira una obra terminada (T01–T06)
 
@@ -321,7 +320,7 @@ no hace falta: se abren ya en inglés.)*
 | 0:13–0:16 | Tipeá `Buenos Aires`. | Las tres siguen (las tres están en Buenos Aires). |
 | 0:17 | Borrá lo tipeado y clic en la pill **"Filters"**. | El diálogo "Filters": "Project status" y "Sort by". |
 | 0:18–0:20 | Clic en **"Delivered"**, después cerrá el diálogo. | La lista filtrada. |
-| 0:21 | Clic en la pill **"Map"**. *Sin coordenadas (Paso 0.2): salteá el mapa — quedate quieto sobre la lista hasta 0:29 y en 0:30 hacé clic en la card de **Torre Volumen 3**.* | El mapa con los pines de las obras. |
+| 0:21 | Clic en la pill **"Map"**. | El mapa con los pines de las tres obras. |
 | 0:22–0:27 | **Quieto.** Si los pines se tapan entre sí, hacé zoom con la rueda. | Los pines. |
 | 0:28 | Clic en el pin de **Torre Volumen 3**. | Su popover. |
 | 0:30 | Clic en **"View project"**. | — |
@@ -337,7 +336,7 @@ no hace falta: se abren ya en inglés.)*
 | 0:03 | Clic en la portada (**"Open gallery"**), pasá una foto con la flecha y cerrá (`Esc`). *Si la obra no tiene fotos, quedate quieto hasta 0:08.* | La galería a pantalla completa. |
 | 0:09 | Clic en el **corazón** ("Save to favorites"). | El corazón se llena. |
 | 0:10–0:12 | **Quieto.** | "Completion: …" y "Location". |
-| 0:13 | Clic en **"Location"**. *Sin coordenadas no aparece: quedate quieto hasta 0:16.* | El mapa a pantalla completa. |
+| 0:13 | Clic en **"Location"**. | El mapa a pantalla completa. |
 | 0:14–0:16 | **Quieto**, y cerrá (`Esc`). | El pin de la obra. |
 | 0:17 | Scroll hasta **"Verified documentation"**. | — |
 | 0:18–0:26 | **Quieto**, el mouse sobre el hash de un documento. | Cada documento con su hash y su badge "Verified". |
@@ -423,7 +422,7 @@ terminó T04, bajando fuera de cámara).
 | 0:20 | Clic en **"Projects"** en la barra lateral. | "My projects · 6 projects" (7 si hiciste el ensayo). |
 | 0:21–0:30 | Scroll lento. | Las tres Torre Volumen arriba; abajo `Torre Pending Test`, `Torre Demo E2E` y `Torre Belgrano`. Si molestan, quedate sobre las de arriba — **no los borres**. |
 
-##### T08 · Proyecto nuevo — 36 s · ⚠ irrepetible
+##### T08 · Proyecto nuevo — 40 s · ⚠ irrepetible
 
 **Antes de grabar:** `/developer/projects` (donde terminó T07).
 
@@ -432,11 +431,17 @@ terminó T04, bajando fuera de cámara).
 | 0:00 | Clic en **"New"**. | "New project · Set up the basic data". |
 | 0:02–0:06 | "Project name": tipeá `Torre Núñez`. | — |
 | 0:07–0:12 | "Location": tipeá `Av. del Libertador 7200, Buenos Aires`. | — |
-| 0:13–0:17 | "Number of units": clic en **+** hasta 12. | — |
-| 0:18–0:23 | "Estimated delivery date": elegí una fecha a dos o tres años. | — |
-| 0:24–0:30 | **Quieto**, el mouse sobre la lista de etapas. | "Standard template (10 stages)" y las diez: "1. Land acquisition" … "10. Final works and subdivision". |
-| 0:31 | Clic en **"Create project"**. | El botón cargando. |
-| 0:32–0:36 | **Quieto.** | — |
+| 0:13–0:16 | **Quieto**: la dirección se busca sola. | "Looking up the address…", y el mapa se mueve hasta Núñez con el pin. Abajo, "Lot marked: -34.5…, -58.4…". |
+| 0:17 | Clic en el mapa, sobre la manzana, para ajustar el pin. | El pin salta ahí; las coordenadas cambian. |
+| 0:18–0:19 | **Quieto.** | — |
+| 0:20–0:23 | "Number of units": clic en **+** hasta 12. | — |
+| 0:24–0:28 | "Estimated delivery date": elegí una fecha a dos o tres años. | — |
+| 0:29–0:34 | **Quieto**, el mouse sobre la lista de etapas. | "Standard template (10 stages)" y las diez: "1. Land acquisition" … "10. Final works and subdivision". |
+| 0:35 | Clic en **"Create project"**. | El botón cargando. |
+| 0:36–0:40 | **Quieto.** | — |
+
+*Si en 0:16 dice "We couldn't find that address" o "The address lookup isn't available", no pasa
+nada: el clic de 0:17 marca el lote igual. Sin lote marcado, "Create project" no se habilita (D-097).*
 
 **⏸ CORTE ~6 min.** El request no vuelve hasta que los 10 mints terminaron: son secuenciales dentro
 del handler (`developer.routes.ts:266`) y cada uno es su propia transacción (D-083 — el validador
@@ -533,7 +538,9 @@ fue recién). Antes de grabar, recargá
 | 0:00 | Clic en **"Units"** en la barra lateral. | "My units · What you bought". |
 | 0:01–0:09 | Scroll lento. | Siete unidades: seis de Torre Volumen 3 (1A y 7A…7E) y la 5A de Torre Núñez. |
 | 0:10 | Clic en la **5A**. | El detalle de la unidad. |
-| 0:11–0:18 | **Quieto**, el mouse sobre la portada y los datos. | El detalle de la 5A. (El botón "Open map" queda deshabilitado: el proyecto nuevo no tiene coordenadas.) |
+| 0:11–0:13 | **Quieto.** | El detalle de la 5A. |
+| 0:14 | Clic en **"Open map"**. | El mapa a pantalla completa, con el pin que marcaste en T08. |
+| 0:15–0:18 | **Quieto**, y cerrá (`Esc`). | — |
 | 0:19 | Clic en **"View my unit in the building"**. | La grilla del edificio con **"Your unit"** resaltada y "Floor 5 · 5A · 85 m²". |
 | 0:20–0:31 | **Quieto.** | Abajo, "Schematic view for reference. Final plans are in the dossier." |
 | 0:32 | Cerrá (`Esc`) y scroll hasta **"Unit details"**. | Project, Unit, Floor, Surface, Total investment, Status. |
@@ -945,7 +952,7 @@ errores: usalo solo si el estudio no anda.)*
 
 | Tiempo | Entra cuando ves | Texto |
 |---|---|---|
-| 0:01 | La portada | Project detail: gallery, estimated completion, and location. |
+| 0:01 | La portada | Project detail: gallery, estimated completion, and the location on a full-screen map. |
 | 0:18 | Los documentos | The documentation section: every file with its own SHA-256 fingerprint and its anchoring badge. |
 | 0:28 | "View developer" y la timeline | Then, who builds it, and how far along it is. |
 
@@ -983,13 +990,13 @@ errores: usalo solo si el estudio no anda.)*
 | 0:04 | Los KPIs | These counters — projects, capital, units, progress, and documents anchored on chain — are aggregates over the same membership-scoped queries. |
 | 0:20 | "My projects" | And the developer's projects. |
 
-##### T08 · Proyecto nuevo — video 36 s
+##### T08 · Proyecto nuevo — video 40 s
 
 | Tiempo | Entra cuando ves | Texto |
 |---|---|---|
-| 0:01 | El formulario vacío | A new project: name, location, units, delivery date, and the standard ten-stage template. |
-| 0:08 | Se tipea la ubicación | Creating it writes the ten stages in a single database transaction, then mints one on-chain thread per stage, one at a time. The validator rejects more than one thread per transaction, so they can't be batched. |
-| 0:31 | El clic en "Create project" | That's why this step takes a few minutes. |
+| 0:01 | El formulario vacío | A new project. Typing the address moves the pin on the map, and a click fine-tunes it: no project is created without a location. |
+| 0:14 | El pin en el mapa | Creating it writes the ten stages in a single database transaction, then mints one on-chain thread per stage, one at a time. The validator rejects more than one thread per transaction, so they can't be batched. |
+| 0:35 | El clic en "Create project" | That's why this step takes a few minutes. |
 
 ##### T09 · El proyecto ya creado — video 30 s
 
@@ -1029,7 +1036,8 @@ errores: usalo solo si el estudio no anda.)*
 | Tiempo | Entra cuando ves | Texto |
 |---|---|---|
 | 0:01 | "My units" | The portfolio now holds units in two very different situations: six in a delivered building, and one just bought off-plan. |
-| 0:19 | El esquema del edificio | Inside the new one, the building schematic, with this unit highlighted on its floor. It's labelled as a reference view: the final plans live in the dossier. |
+| 0:14 | El mapa | Inside the new one: the location its developer marked… |
+| 0:19 | El esquema del edificio | …and the building schematic, with this unit highlighted on its floor. It's labelled as a reference view: the final plans live in the dossier. |
 
 ##### T14 · El contrato como registro — video 25 s
 
@@ -1273,7 +1281,8 @@ Para no prometer en audio algo que la pantalla no hace:
 - **Lo que la versión del 2026-09-21 prometía y la app no hace** (verificado contra el código el
   2026-09-28, y ya sacado del Paso 2 y del Paso 4 — no lo vuelvas a poner):
   - la invitación **no tiene campo de nombre**: es email, unidad y monto (T11);
-  - el alta de proyecto **no tiene vista previa de mapa** (T08);
+  - ~~el alta de proyecto no tiene vista previa de mapa (T08)~~ — **ahora sí** (D-097, 2026-09-28): la
+    dirección mueve el pin y un clic lo ajusta;
   - el detalle de etapa **no muestra GPS ni hora de captura** de las fotos (T05);
   - el contrato del investor **no muestra hash**: total, fecha de firma y el cronograma (T14); el
     txid del contrato está del lado del developer (T22);

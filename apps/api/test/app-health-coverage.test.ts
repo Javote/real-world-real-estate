@@ -11,6 +11,11 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 // `../src/lib/db` se importa ANTES que `../src/app` (no en paralelo) para
 // garantizar que sea la misma instancia de Kysely que el `/health` de la app
 // recién importada va a usar — y así se puede cerrar prolijo en el afterEach.
+//
+// **Los `describe` llevan 20 s de timeout, no los 5 s por defecto:** reimportar
+// `app` entera en frío ronda los 5 s en una Mac Intel y el test caía por
+// tiempo sin que fallara nada de lo que verifica (visto el 2026-09-28, al sumar
+// una ruta). Lo que se mide acá es el status, no cuánto tarda el import.
 
 let dbActual: { destroy: () => Promise<unknown> } | undefined;
 
@@ -30,7 +35,7 @@ afterEach(async () => {
   }
 });
 
-describe("GET /health", () => {
+describe("GET /health", { timeout: 20_000 }, () => {
   it("200 cuando la base responde", async () => {
     const app = await appFresca();
 
@@ -63,7 +68,7 @@ describe("GET /health", () => {
   });
 });
 
-describe("una ruta que no existe", () => {
+describe("una ruta que no existe", { timeout: 20_000 }, () => {
   it("404 en JSON, no la página HTML default de Express", async () => {
     const app = await appFresca();
 

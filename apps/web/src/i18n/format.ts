@@ -58,6 +58,14 @@ function fechaDe(iso: string | number): Date {
   return new Date(iso)
 }
 
+/** Una coordenada en grados decimales, con 5 decimales (~1 m): "-34,54700" en es-AR. */
+export function formatCoordinate(grados: number, locale: Locale): string {
+  return new Intl.NumberFormat(locale, {
+    minimumFractionDigits: 5,
+    maximumFractionDigits: 5
+  }).format(grados)
+}
+
 /** Fecha corta. ISO o epoch ms — lo que mande el backend, nunca un `Date` local. */
 export function formatDate(iso: string | number, locale: Locale): string {
   return new Intl.DateTimeFormat(locale, { dateStyle: 'medium' }).format(fechaDe(iso))

@@ -139,6 +139,7 @@ const MATRIZ: Record<string, string> = {
     "auth + autoriza(rol(admin|developer) · proyecto(Evidence:evidenceId@body → developer))",
   "GET /api/v1/developer/kpis":
     "auth + autoriza(rol(admin|developer) · scope(projectScope(cualquier membresía)))",
+  "GET /api/v1/developer/geocode": "auth + autoriza(rol(admin|developer) · soloRol)",
   "GET /api/v1/developer/projects/:id/units":
     "auth + autoriza(rol(admin|developer) · proyecto(id → developer))",
   "POST /api/v1/developer/projects/:id/units":

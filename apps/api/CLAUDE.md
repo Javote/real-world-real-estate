@@ -939,7 +939,7 @@ roles— y los dos los encontró una auditoría a mano. No había ninguna herram
 encontrar, y con 87 handlers en 18 archivos la auditoría a mano no escala ni se repite.
 
 **Cómo funciona.** `test/route-guards.test.ts` recorre los routers **ya montados** y reconstruye la
-matriz de las 87 rutas: método, path absoluto y cadena de guards declarados. La compara contra un
+matriz de las 88 rutas: método, path absoluto y cadena de guards declarados. La compara contra un
 literal en el propio test. Una ruta nueva, un guard que cambia o uno que desaparece ponen el test en
 rojo hasta que alguien actualice el literal — y actualizarlo es la revisión.
 
@@ -999,7 +999,7 @@ uno de más.
 
 ### El guard único — `authorize`, 2026-09-04 (D-088)
 
-**Las 87 rutas montadas declaran su regla en la firma.** Las únicas dos sin `authorize` son las dos
+**Las 88 rutas montadas declaran su regla en la firma.** Las únicas dos sin `authorize` son las dos
 sin sesión que M2-D5 §2.2 declara: `POST /auth/login` y `GET /public/dossier/:shareToken`.
 
 ```ts

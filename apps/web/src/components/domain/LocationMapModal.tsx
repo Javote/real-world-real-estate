@@ -1,10 +1,20 @@
 import { X } from 'lucide-react'
 import { useEffect, useRef, useState } from 'react'
 import { Dialog, DialogContent, DialogTitle } from '#/components/ui/dialog'
+import { cn } from '#/lib/cn'
 
 // M2-D3 §Modals · LocationMapModal — *"Full-screen interactive Leaflet map."*
-// Se usa para la ubicación de un proyecto, la de una unidad adquirida, y
-// (variante `browse`) el mapa de exploración de la fila 03.
+// Se usa para la ubicación de un proyecto, la de una unidad adquirida,
+// (variante `browse`) el mapa de exploración de la fila 03, y (variante
+// `picker`, D-097) el "Map preview" del alta de proyecto de la captura 34b,
+// donde el developer fija el punto de la obra.
+//
+// **El contenedor del mapa es estado, no un `useRef`** (bug visto en
+// producción el 2026-09-28). En la variante `modal` el `<div>` vive dentro del
+// portal de Radix, que se monta un render DESPUÉS de que el diálogo abre: con
+// un ref, el efecto que crea el mapa corría con el contenedor en `null`, salía
+// temprano y no volvía a correr — el modal abría vacío. Como estado, montar el
+// contenedor re-dispara el efecto.
 //
 // **Leaflet se carga con `import()` dinámico y no como import estático**, por
 // tres razones concretas:
@@ -26,6 +36,10 @@ import { Dialog, DialogContent, DialogTitle } from '#/components/ui/dialog'
 type Leaflet = typeof import('leaflet')
 type LeafletMap = import('leaflet').Map
 type LeafletFeatureGroup = import('leaflet').FeatureGroup
+type LeafletMarker = import('leaflet').Marker
+
+/** Centro de CABA: el punto de partida cuando todavía no hay nada que mostrar. */
+const CENTRO_CABA: [number, number] = [-34.6037, -58.3816]
 
 /**
  * La etiqueta del pin sale de datos del proyecto, así que **se escribe como
@@ -49,7 +63,8 @@ export interface MapMarker {
 
 interface LocationMapModalProps {
   open: boolean
-  onClose: () => void
+  /** Solo `modal`: las variantes en línea (`browse`, `picker`) no se cierran. */
+  onClose?: () => void
   latitude?: number
   longitude?: number
   /** Domicilio ya armado por quien lo usa (D-025). Va arriba a la izquierda. */
@@ -66,11 +81,18 @@ interface LocationMapModalProps {
    * `browse` es el mapa de la fila 03: varios pines, sin diálogo, y el
    * viewport manda `bbox` al listado. Un proyecto sin coordenadas no entra:
    * no se le inventa un punto.
+   *
+   * `picker` es el "Map preview" del alta de proyecto (D-097): en línea, sin
+   * diálogo, con un solo pin que se fija con un clic o arrastrándolo, y que se
+   * mueve solo cuando `latitude`/`longitude` cambian desde afuera (la
+   * dirección encontrada).
    */
-  variant?: 'modal' | 'browse'
+  variant?: 'modal' | 'browse' | 'picker'
   markers?: readonly MapMarker[]
   onSelectMarker?: (id: string) => void
   onBoundsChange?: (bbox: string) => void
+  /** Solo `picker`: el punto que el usuario marcó en el mapa. */
+  onPick?: (latitude: number, longitude: number) => void
 }
 
 export function LocationMapModal({
@@ -85,20 +107,33 @@ export function LocationMapModal({
   variant = 'modal',
   markers,
   onSelectMarker,
-  onBoundsChange
+  onBoundsChange,
+  onPick
 }: LocationMapModalProps) {
-  const contenedor = useRef<HTMLDivElement>(null)
+  const [contenedor, setContenedor] = useState<HTMLDivElement | null>(null)
   const esBrowse = variant === 'browse'
+  const esPicker = variant === 'picker'
 
   // Los callbacks cambian de identidad en cada render del padre. Van por ref
   // —sincronizada en un efecto, no durante el render— para que el mapa no se
   // reconstruya por eso.
   const onSelectRef = useRef(onSelectMarker)
   const onBoundsRef = useRef(onBoundsChange)
+  const onPickRef = useRef(onPick)
   useEffect(() => {
     onSelectRef.current = onSelectMarker
     onBoundsRef.current = onBoundsChange
+    onPickRef.current = onPick
   })
+
+  // En `picker` el punto cambia con cada clic: el mapa NO se reconstruye por
+  // eso (lo sigue el efecto 3). El punto inicial se lee de este ref.
+  const puntoRef = useRef<[number, number] | null>(null)
+  useEffect(() => {
+    puntoRef.current = latitude != null && longitude != null ? [latitude, longitude] : null
+  })
+  const latitudCreacion = esPicker ? undefined : latitude
+  const longitudCreacion = esPicker ? undefined : longitude
 
   const pines = (markers ?? []).filter((m) => m.latitude != null && m.longitude != null)
   const pinesClave = pines.map((m) => `${m.id}:${m.latitude}:${m.longitude}`).join('|')
@@ -110,6 +145,7 @@ export function LocationMapModal({
   const leafletRef = useRef<Leaflet | null>(null)
   const mapaRef = useRef<LeafletMap | null>(null)
   const grupoRef = useRef<LeafletFeatureGroup | null>(null)
+  const pinRef = useRef<LeafletMarker | null>(null)
   const yaEncuadrado = useRef(false)
   const [generacion, setGeneracion] = useState(0)
 
@@ -119,7 +155,7 @@ export function LocationMapModal({
   // `bbox` → refetch → otros pines → mapa nuevo → `fitBounds` → `moveend`. Y
   // de paso le tiraba abajo el pan y el zoom al usuario en cada respuesta.
   useEffect(() => {
-    if (!open || !contenedor.current) return
+    if (!open || !contenedor) return
 
     let destruir: (() => void) | undefined
     let cancelado = false
@@ -128,17 +164,20 @@ export function LocationMapModal({
       const L = await import('leaflet')
       await import('leaflet/dist/leaflet.css')
 
-      if (cancelado || !contenedor.current) return
+      if (cancelado) return
 
       const primerPin = pinesRef.current[0]
-      const centro: [number, number] =
-        latitude != null && longitude != null
-          ? [latitude, longitude]
+      const punto = puntoRef.current
+      const centro: [number, number] = esPicker
+        ? (punto ?? CENTRO_CABA)
+        : latitudCreacion != null && longitudCreacion != null
+          ? [latitudCreacion, longitudCreacion]
           : primerPin
             ? [primerPin.latitude, primerPin.longitude]
-            : [-34.6037, -58.3816]
+            : CENTRO_CABA
+      const zoomInicial = esPicker && !punto ? 12 : zoom
 
-      const mapa = L.map(contenedor.current).setView(centro, zoom)
+      const mapa = L.map(contenedor).setView(centro, zoomInicial)
 
       L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
         attribution: '© OpenStreetMap'
@@ -152,10 +191,18 @@ export function LocationMapModal({
           const b = mapa.getBounds()
           onBoundsRef.current?.(`${b.getWest()},${b.getSouth()},${b.getEast()},${b.getNorth()}`)
         }
+        // El bbox sale recién con el primer `moveend` — el del encuadre del
+        // efecto 2 —, no al crear el mapa. Emitirlo acá mandaba el recuadro del
+        // zoom de calle sobre el primer pin, el listado se filtraba a esa sola
+        // obra, y el encuadre terminaba sobre un pin en vez de todos (visto en
+        // producción el 2026-09-28: 1 pin de 3).
         mapa.on('moveend', emitirBbox)
-        emitirBbox()
-      } else if (latitude != null && longitude != null) {
-        L.marker([latitude, longitude]).addTo(mapa).bindPopup(labels.marker)
+      } else if (esPicker) {
+        mapa.on('click', (e: { latlng: { lat: number; lng: number } }) =>
+          onPickRef.current?.(e.latlng.lat, e.latlng.lng)
+        )
+      } else if (latitudCreacion != null && longitudCreacion != null) {
+        L.marker([latitudCreacion, longitudCreacion]).addTo(mapa).bindPopup(labels.marker)
       }
 
       requestAnimationFrame(() => mapa.invalidateSize())
@@ -168,6 +215,7 @@ export function LocationMapModal({
         mapa.remove()
         mapaRef.current = null
         grupoRef.current = null
+        pinRef.current = null
         yaEncuadrado.current = false
       }
     })()
@@ -176,7 +224,7 @@ export function LocationMapModal({
       cancelado = true
       destruir?.()
     }
-  }, [open, latitude, longitude, zoom, labels.marker, esBrowse])
+  }, [open, contenedor, latitudCreacion, longitudCreacion, zoom, labels.marker, esBrowse, esPicker])
 
   // ── Efecto 2: sincronizar los pines sobre el mapa que ya existe.
   //
@@ -200,9 +248,39 @@ export function LocationMapModal({
 
     if (!yaEncuadrado.current && pinesRef.current.length) {
       yaEncuadrado.current = true
-      mapa.fitBounds(grupo.getBounds().pad(0.2))
+      mapa.fitBounds(grupo.getBounds().pad(0.2), { maxZoom: 15 })
     }
   }, [esBrowse, pinesClave, generacion])
+
+  // ── Efecto 3 (`picker`): el pin sigue al punto, venga de un clic, de
+  // arrastrarlo o de la dirección encontrada. Si el punto quedó fuera de
+  // vista o el mapa está lejos (zoom de ciudad), se centra ahí.
+  useEffect(() => {
+    const L = leafletRef.current
+    const mapa = mapaRef.current
+    if (!esPicker || !L || !mapa) return
+
+    if (latitude == null || longitude == null) {
+      pinRef.current?.remove()
+      pinRef.current = null
+      return
+    }
+
+    if (pinRef.current) {
+      pinRef.current.setLatLng([latitude, longitude])
+    } else {
+      const pin = L.marker([latitude, longitude], { draggable: true }).addTo(mapa)
+      pin.on('dragend', () => {
+        const p = pin.getLatLng()
+        onPickRef.current?.(p.lat, p.lng)
+      })
+      pinRef.current = pin
+    }
+
+    if (mapa.getZoom() < 15 || !mapa.getBounds().contains([latitude, longitude])) {
+      mapa.setView([latitude, longitude], 16)
+    }
+  }, [esPicker, latitude, longitude, generacion])
 
   const mapaEl = (
     <div className="relative">
@@ -212,7 +290,7 @@ export function LocationMapModal({
         </span>
       ) : null}
 
-      {!esBrowse ? (
+      {variant === 'modal' ? (
         <button
           type="button"
           aria-label={labels.close}
@@ -223,9 +301,21 @@ export function LocationMapModal({
         </button>
       ) : null}
 
-      <div ref={contenedor} className="h-[70vh] w-full bg-surface-alt" />
+      <div
+        ref={setContenedor}
+        className={cn('w-full bg-surface-alt', esPicker ? 'h-64 rounded-lg' : 'h-[70vh]')}
+      />
     </div>
   )
+
+  if (esPicker) {
+    if (!open) return null
+    return (
+      <div data-testid={testId} className="overflow-hidden rounded-lg">
+        {mapaEl}
+      </div>
+    )
+  }
 
   if (esBrowse) {
     if (!open) return null
@@ -237,7 +327,7 @@ export function LocationMapModal({
   }
 
   return (
-    <Dialog open={open} onOpenChange={(abierto) => !abierto && onClose()}>
+    <Dialog open={open} onOpenChange={(abierto) => !abierto && onClose?.()}>
       <DialogContent
         data-testid={testId}
         className="max-w-3xl overflow-hidden p-0"

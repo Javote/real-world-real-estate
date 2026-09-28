@@ -50,6 +50,9 @@ corren a mano con `pnpm --filter @plataforma/api test:s3` y
 [`SPEC-019`](SPEC-019-cobertura-de-apps-web.md) §Resultado final y en
 [`apps/web/CLAUDE.md`](../apps/web/CLAUDE.md) §Trampas verificadas — falta reproducirlo en el
 navegador real antes de decidir si se arregla el componente o el test.
+**Actualización 2026-09-28:** reproducido en producción (el mapa del detalle de obra abría vacío) y
+corregido en el componente (D-097); el `it.fails` pasó a `it`. Los números de esta tabla son los del
+2026-09-21 y no se tocan.
 
 **Desde este reporte, CI mide coverage con umbral en las cuatro partes TypeScript.** Hasta el
 2026-09-21 solo cubría la API; web, shared y cardano corrían `test` pelado, sin coverage ni gate —

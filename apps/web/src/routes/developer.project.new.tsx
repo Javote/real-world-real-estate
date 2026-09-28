@@ -1,15 +1,17 @@
 import { useMutation } from '@tanstack/react-query'
 import { createFileRoute, useNavigate } from '@tanstack/react-router'
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { api } from '#/api/port'
 import { DEV_ROLES } from '#/auth/roles'
 import { useRoleGuard } from '#/auth/useRoleGuard'
+import { LocationMapModal } from '#/components/domain/LocationMapModal'
 import { NumberInput } from '#/components/domain/NumberInput'
 import { PrimaryButton } from '#/components/domain/PrimaryButton'
 import { SelectDropdown } from '#/components/domain/SelectDropdown'
 import { TextInput } from '#/components/domain/TextInput'
 import { PanelLayout } from '#/components/PanelLayout'
 import type { TranslationKey } from '#/i18n/dictionary'
+import { formatCoordinate } from '#/i18n/format'
 import { useTranslation } from '#/i18n/useTranslation'
 import { CARD_SHELL } from '#/lib/cardShell'
 import { cn } from '#/lib/cn'
@@ -42,6 +44,14 @@ import { cn } from '#/lib/cn'
 //
 // **El `slug` se deriva del nombre.** El endpoint lo exige y el formulario no
 // lo pide: es un identificador de URL, no un dato que el developer elija.
+//
+// **El "Map preview" de la captura 34b es donde se fija el lote (D-097).**
+// `LocationMapModal` —el componente que la fila de M2-D5 lista para esta
+// pantalla— en su variante `picker`. Dos caminos al mismo punto: escribir la
+// dirección (la API la busca en Nominatim, `GET /developer/geocode`, y el pin
+// cae solo) o tocar/arrastrar el pin. Sin punto no se crea: latitud y
+// longitud son obligatorias en el endpoint, porque un proyecto sin coordenadas
+// no se puede dibujar en ningún mapa (regla 17).
 
 export const Route = createFileRoute('/developer/project/new')({ component: NuevoProyecto })
 
@@ -59,6 +69,16 @@ const ETAPAS_DEL_TEMPLATE: readonly TranslationKey[] = [
   'developer.newProject.stageTemplate.stage10'
 ]
 
+/** Cuánto se espera después de la última tecla antes de buscar la dirección. */
+export const ESPERA_BUSQUEDA_MS = 900
+/** Menos que esto no es una dirección que valga la pena buscar. */
+const MINIMO_PARA_BUSCAR = 5
+
+type EstadoUbicacion = 'inicial' | 'buscando' | 'noEncontrada' | 'noDisponible' | 'lista'
+
+/** Seis decimales (~10 cm): más precisión que eso es ruido del clic. */
+const redondear = (grados: number) => Math.round(grados * 1e6) / 1e6
+
 /** Minúsculas, sin diacríticos, separado por guiones. */
 export function slugify(nombre: string): string {
   return nombre
@@ -72,19 +92,55 @@ export function slugify(nombre: string): string {
 
 function NuevoProyecto() {
   const { ready } = useRoleGuard(DEV_ROLES)
-  const { t } = useTranslation()
+  const { t, locale } = useTranslation()
   const navigate = useNavigate()
 
   const [nombre, setNombre] = useState('')
   const [direccion, setDireccion] = useState('')
   const [unidades, setUnidades] = useState<number | null>(null)
   const [entrega, setEntrega] = useState('')
+  const [punto, setPunto] = useState<{ latitude: number; longitude: number } | null>(null)
+  const [estadoUbicacion, setEstadoUbicacion] = useState<EstadoUbicacion>('inicial')
+
+  // La dirección escrita mueve el pin, con una pausa para no buscar tecla por
+  // tecla (Nominatim acepta un pedido por segundo para todo el servicio). Una
+  // respuesta que llega después de que la dirección cambió se descarta.
+  useEffect(() => {
+    const q = direccion.trim()
+    if (q.length < MINIMO_PARA_BUSCAR) return
+
+    let vigente = true
+    const espera = setTimeout(() => {
+      setEstadoUbicacion('buscando')
+      api
+        .geocodeAddress(q)
+        .then((r) => {
+          if (!vigente) return
+          if (r.match) {
+            setPunto({ latitude: r.match.latitude, longitude: r.match.longitude })
+            setEstadoUbicacion('lista')
+          } else {
+            setEstadoUbicacion('noEncontrada')
+          }
+        })
+        .catch(() => {
+          if (vigente) setEstadoUbicacion('noDisponible')
+        })
+    }, ESPERA_BUSQUEDA_MS)
+
+    return () => {
+      vigente = false
+      clearTimeout(espera)
+    }
+  }, [direccion])
 
   const crear = useMutation({
-    mutationFn: () =>
+    mutationFn: (lote: { latitude: number; longitude: number }) =>
       api.createProject({
         name: nombre.trim(),
         slug: slugify(nombre),
+        latitude: redondear(lote.latitude),
+        longitude: redondear(lote.longitude),
         ...(direccion.trim() ? { address: direccion.trim() } : {}),
         ...(unidades !== null ? { totalUnits: unidades } : {}),
         ...(entrega ? { estimatedDelivery: entrega } : {})
@@ -98,9 +154,23 @@ function NuevoProyecto() {
 
   if (!ready) return null
 
-  // El nombre es lo único que el endpoint exige además del slug, y el slug sale
-  // de él: si no queda nada tras normalizar, no hay proyecto que crear.
-  const puedeCrear = slugify(nombre).length > 0 && !crear.isPending
+  // El endpoint exige el nombre (y el slug, que sale de él) y el punto del
+  // lote: sin alguno de los dos no hay proyecto que crear.
+  const lote = slugify(nombre).length > 0 && !crear.isPending ? punto : null
+
+  const mensajeUbicacion =
+    estadoUbicacion === 'buscando'
+      ? t('developer.newProject.mapSearching')
+      : estadoUbicacion === 'noEncontrada'
+        ? t('developer.newProject.mapNotFound')
+        : estadoUbicacion === 'noDisponible'
+          ? t('developer.newProject.mapUnavailable')
+          : punto
+            ? t('developer.newProject.mapPoint', {
+                latitude: formatCoordinate(punto.latitude, locale),
+                longitude: formatCoordinate(punto.longitude, locale)
+              })
+            : t('developer.newProject.mapHint')
 
   return (
     <PanelLayout
@@ -117,7 +187,7 @@ function NuevoProyecto() {
         data-testid="DEV-PROJECT-CREATE-001"
         onSubmit={(e) => {
           e.preventDefault()
-          if (puedeCrear) crear.mutate()
+          if (lote) crear.mutate(lote)
         }}
       >
         <article className={CARD_SHELL}>
@@ -130,13 +200,30 @@ function NuevoProyecto() {
           />
         </article>
 
-        <article className={CARD_SHELL}>
+        <article className={cn('flex flex-col gap-s3', CARD_SHELL)}>
           <TextInput
             label={t('developer.newProject.location')}
             value={direccion}
             onChange={setDireccion}
             placeholder={t('developer.newProject.locationPlaceholder')}
           />
+          <LocationMapModal
+            open
+            variant="picker"
+            {...(punto ? { latitude: punto.latitude, longitude: punto.longitude } : {})}
+            onPick={(latitude, longitude) => {
+              setPunto({ latitude, longitude })
+              setEstadoUbicacion('lista')
+            }}
+            labels={{
+              title: t('developer.newProject.map'),
+              close: t('common.close'),
+              marker: t('map.marker')
+            }}
+          />
+          <p className="text-body-sm text-text-secondary" aria-live="polite">
+            {mensajeUbicacion}
+          </p>
         </article>
 
         <article className={CARD_SHELL}>
@@ -183,7 +270,7 @@ function NuevoProyecto() {
           <p className="text-body-sm text-danger">{t('developer.newProject.error')}</p>
         ) : null}
 
-        <PrimaryButton type="submit" disabled={!puedeCrear} loading={crear.isPending}>
+        <PrimaryButton type="submit" disabled={!lote} loading={crear.isPending}>
           {t('developer.newProject.submit')}
         </PrimaryButton>
       </form>

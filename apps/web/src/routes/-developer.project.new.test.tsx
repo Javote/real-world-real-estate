@@ -1,15 +1,20 @@
-import { fireEvent, screen } from '@testing-library/react'
+import { act, fireEvent, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
-import { afterEach, describe, expect, it, vi } from 'vitest'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { ApiError, api } from '#/api/port'
 import type { ProjectCreated } from '#/api/types'
 import { dictionary } from '#/i18n/dictionary'
+import * as L from '#/test/leaflet-falso'
 import { autenticarComo, DEVELOPER_USER, montarRuta } from './-test-mount'
 import { Route } from './developer.project.new'
+
+vi.mock('leaflet', () => import('#/test/leaflet-falso'))
+vi.mock('leaflet/dist/leaflet.css', () => ({}))
 
 const t = (clave: keyof (typeof dictionary)['es-AR']) => dictionary['es-AR'][clave]
 
 const creado = { id: 'p-nuevo' } as ProjectCreated
+const LIBERTADOR = { latitude: -34.547, longitude: -58.46, label: 'Av. del Libertador 7200, CABA' }
 
 const montar = () =>
   montarRuta(Route, '/developer/project/new', [
@@ -18,6 +23,25 @@ const montar = () =>
   ])
 
 const boton = () => screen.getByRole('button', { name: t('developer.newProject.submit') })
+const nombre = () => screen.findByLabelText(t('developer.newProject.name'))
+const direccion = () => screen.getByLabelText(t('developer.newProject.location'))
+
+/** Marca el lote con un clic en el mapa (D-097): sin punto no se crea. */
+async function marcarLote(lat = -34.5470001234, lng = -58.4600009876) {
+  await waitFor(() => expect(L.map).toHaveBeenCalled())
+  act(() => L.dispararClick(lat, lng))
+}
+
+/** La búsqueda espera 0,9 s después de la última tecla: los `waitFor` le dan margen. */
+const conMargen = { timeout: 3000 }
+
+beforeEach(() => {
+  vi.clearAllMocks()
+  vi.stubGlobal('requestAnimationFrame', (cb: FrameRequestCallback) => {
+    cb(0)
+    return 0
+  })
+})
 
 describe('/developer/project/new', () => {
   afterEach(() => vi.restoreAllMocks())
@@ -25,11 +49,14 @@ describe('/developer/project/new', () => {
   it('sin nombre no se puede crear, y mostrar el formulario no llama a la API', async () => {
     autenticarComo(DEVELOPER_USER)
     const crear = vi.spyOn(api, 'createProject').mockResolvedValue(creado)
+    const buscar = vi.spyOn(api, 'geocodeAddress')
     montar()
 
     await screen.findByTestId('DEV-PROJECT-CREATE-001')
     expect((boton() as HTMLButtonElement).disabled).toBe(true)
+    expect(screen.getByText(t('developer.newProject.mapHint'))).toBeTruthy()
     expect(crear).not.toHaveBeenCalled()
+    expect(buscar).not.toHaveBeenCalled()
   })
 
   it('un nombre que no deja nada al normalizarlo tampoco alcanza, y enviar el formulario a la fuerza no crea', async () => {
@@ -38,41 +65,65 @@ describe('/developer/project/new', () => {
     montar()
 
     const formulario = await screen.findByTestId('DEV-PROJECT-CREATE-001')
-    await userEvent.type(screen.getByLabelText(t('developer.newProject.name')), '  !!!  ')
+    await userEvent.type(await nombre(), '  !!!  ')
+    await marcarLote()
 
     expect((boton() as HTMLButtonElement).disabled).toBe(true)
     fireEvent.submit(formulario)
     expect(crear).not.toHaveBeenCalled()
   })
 
-  it('con solo el nombre crea el proyecto con su slug y sin dirección, unidades ni entrega', async () => {
+  it('con nombre pero sin lote marcado no se puede crear (D-097)', async () => {
     autenticarComo(DEVELOPER_USER)
     const crear = vi.spyOn(api, 'createProject').mockResolvedValue(creado)
     montar()
 
-    await userEvent.type(
-      await screen.findByLabelText(t('developer.newProject.name')),
-      'Torres del Palermo'
-    )
-    // Una dirección de puros espacios cuenta como vacía.
-    await userEvent.type(screen.getByLabelText(t('developer.newProject.location')), '   ')
+    await userEvent.type(await nombre(), 'Torre X')
+    expect((boton() as HTMLButtonElement).disabled).toBe(true)
+    fireEvent.submit(screen.getByTestId('DEV-PROJECT-CREATE-001'))
+    expect(crear).not.toHaveBeenCalled()
+  })
+
+  it('con nombre y el lote marcado en el mapa crea con el punto redondeado, sin dirección, unidades ni entrega', async () => {
+    autenticarComo(DEVELOPER_USER)
+    const crear = vi.spyOn(api, 'createProject').mockResolvedValue(creado)
+    const buscar = vi.spyOn(api, 'geocodeAddress')
+    montar()
+
+    await userEvent.type(await nombre(), 'Torres del Palermo')
+    // Una dirección de puros espacios cuenta como vacía, y no se busca.
+    await userEvent.type(direccion(), '   ')
+    await marcarLote()
+    expect(await screen.findByText('Lote marcado: -34,54700, -58,46000')).toBeTruthy()
     await userEvent.click(boton())
 
     await vi.waitFor(() =>
-      expect(crear).toHaveBeenCalledWith({ name: 'Torres del Palermo', slug: 'torres-del-palermo' })
+      expect(crear).toHaveBeenCalledWith({
+        name: 'Torres del Palermo',
+        slug: 'torres-del-palermo',
+        // Seis decimales: -34.5470001234 → -34.547 y -58.4600009876 → -58.460001.
+        latitude: -34.547,
+        longitude: -58.460001
+      })
     )
+    expect(buscar).not.toHaveBeenCalled()
   })
 
-  it('con dirección, unidades y entrega los manda los tres', async () => {
+  it('escribir la dirección la busca, pone el pin ahí, y crea con dirección, unidades y entrega', async () => {
     autenticarComo(DEVELOPER_USER)
     const crear = vi.spyOn(api, 'createProject').mockResolvedValue(creado)
+    const buscar = vi.spyOn(api, 'geocodeAddress').mockResolvedValue({ match: LIBERTADOR })
     montar()
 
-    await userEvent.type(await screen.findByLabelText(t('developer.newProject.name')), ' Torre Ñ ')
-    await userEvent.type(
-      screen.getByLabelText(t('developer.newProject.location')),
-      ' Av. Pellegrini 100 '
+    await userEvent.type(await nombre(), ' Torre Ñ ')
+    await userEvent.type(direccion(), ' Av. del Libertador 7200 ')
+    await screen.findByText('Lote marcado: -34,54700, -58,46000', {}, conMargen)
+    expect(buscar).toHaveBeenCalledTimes(1)
+    expect(buscar).toHaveBeenCalledWith('Av. del Libertador 7200')
+    await waitFor(() =>
+      expect(L.marker).toHaveBeenCalledWith([-34.547, -58.46], { draggable: true })
     )
+
     await userEvent.click(screen.getByRole('button', { name: t('developer.newProject.stepUp') }))
     await userEvent.click(screen.getByRole('button', { name: t('developer.newProject.stepUp') }))
     fireEvent.change(screen.getByLabelText(t('developer.newProject.delivery')), {
@@ -84,11 +135,89 @@ describe('/developer/project/new', () => {
       expect(crear).toHaveBeenCalledWith({
         name: 'Torre Ñ',
         slug: 'torre-n',
-        address: 'Av. Pellegrini 100',
+        latitude: -34.547,
+        longitude: -58.46,
+        address: 'Av. del Libertador 7200',
         totalUnits: 2,
         estimatedDelivery: '2027-12-01'
       })
     )
+  })
+
+  it('una dirección corta no se busca', async () => {
+    autenticarComo(DEVELOPER_USER)
+    const buscar = vi.spyOn(api, 'geocodeAddress')
+    montar()
+
+    await userEvent.type(await nombre(), 'Torre X')
+    await userEvent.type(direccion(), 'Av 1')
+    await act(async () => {
+      await new Promise((r) => setTimeout(r, 1100))
+    })
+    expect(buscar).not.toHaveBeenCalled()
+  })
+
+  it('mientras busca lo dice; si no la encuentra pide marcarla en el mapa', async () => {
+    autenticarComo(DEVELOPER_USER)
+    let responder: (r: { match: null }) => void = () => {}
+    vi.spyOn(api, 'geocodeAddress').mockReturnValue(
+      new Promise((r) => {
+        responder = r
+      })
+    )
+    montar()
+
+    await userEvent.type(await nombre(), 'Torre X')
+    await userEvent.type(direccion(), 'Calle Inventada 99999')
+    await screen.findByText(t('developer.newProject.mapSearching'), {}, conMargen)
+    act(() => responder({ match: null }))
+    await screen.findByText(t('developer.newProject.mapNotFound'))
+    expect((boton() as HTMLButtonElement).disabled).toBe(true)
+  })
+
+  it('si la búsqueda falla pide marcarla en el mapa, y marcarla habilita crear', async () => {
+    autenticarComo(DEVELOPER_USER)
+    vi.spyOn(api, 'geocodeAddress').mockRejectedValue(new ApiError(503, 'GEOCODER_UNAVAILABLE'))
+    montar()
+
+    await userEvent.type(await nombre(), 'Torre X')
+    await userEvent.type(direccion(), 'Florida 100, CABA')
+    await screen.findByText(t('developer.newProject.mapUnavailable'), {}, conMargen)
+    await marcarLote()
+    await screen.findByText('Lote marcado: -34,54700, -58,46000')
+    expect((boton() as HTMLButtonElement).disabled).toBe(false)
+  })
+
+  it('una respuesta que llega después de cambiar la dirección se descarta, acierte o falle', async () => {
+    autenticarComo(DEVELOPER_USER)
+    type Respuesta = Awaited<ReturnType<typeof api.geocodeAddress>>
+    const pendientes: Array<{ ok: (r: Respuesta) => void; mal: (e: unknown) => void }> = []
+    vi.spyOn(api, 'geocodeAddress').mockImplementation(
+      () =>
+        new Promise<Respuesta>((ok, mal) => {
+          pendientes.push({ ok, mal })
+        })
+    )
+    montar()
+
+    await userEvent.type(await nombre(), 'Torre X')
+    await userEvent.type(direccion(), 'Florida 100')
+    await waitFor(() => expect(pendientes).toHaveLength(1), conMargen)
+    await userEvent.type(direccion(), '0')
+    await waitFor(() => expect(pendientes).toHaveLength(2), conMargen)
+    await userEvent.type(direccion(), '0')
+    await waitFor(() => expect(pendientes).toHaveLength(3), conMargen)
+
+    // Las dos primeras ya no valen: ni su acierto ni su error cambian nada.
+    await act(async () => {
+      pendientes[0]?.ok({ match: LIBERTADOR })
+      pendientes[1]?.mal(new Error('tarde'))
+    })
+    expect(screen.getByText(t('developer.newProject.mapSearching'))).toBeTruthy()
+    expect(screen.queryByText(t('developer.newProject.mapUnavailable'))).toBeNull()
+
+    await act(async () => pendientes[2]?.ok({ match: null }))
+    await screen.findByText(t('developer.newProject.mapNotFound'))
   })
 
   it('al crear con éxito navega al proyecto nuevo', async () => {
@@ -96,7 +225,8 @@ describe('/developer/project/new', () => {
     vi.spyOn(api, 'createProject').mockResolvedValue(creado)
     const router = montar()
 
-    await userEvent.type(await screen.findByLabelText(t('developer.newProject.name')), 'Torre X')
+    await userEvent.type(await nombre(), 'Torre X')
+    await marcarLote()
     await userEvent.click(boton())
 
     await vi.waitFor(() =>
@@ -109,7 +239,8 @@ describe('/developer/project/new', () => {
     const crear = vi.spyOn(api, 'createProject').mockReturnValue(new Promise(() => {}))
     montar()
 
-    await userEvent.type(await screen.findByLabelText(t('developer.newProject.name')), 'Torre X')
+    await userEvent.type(await nombre(), 'Torre X')
+    await marcarLote()
     await userEvent.click(boton())
 
     await vi.waitFor(() => expect((boton() as HTMLButtonElement).disabled).toBe(true))
@@ -122,7 +253,8 @@ describe('/developer/project/new', () => {
     vi.spyOn(api, 'createProject').mockRejectedValue(new ApiError(400, 'invalid'))
     montar()
 
-    await userEvent.type(await screen.findByLabelText(t('developer.newProject.name')), 'Torre X')
+    await userEvent.type(await nombre(), 'Torre X')
+    await marcarLote()
     expect(screen.queryByText(t('developer.newProject.error'))).toBeNull()
     await userEvent.click(boton())
 

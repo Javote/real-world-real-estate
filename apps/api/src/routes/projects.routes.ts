@@ -183,8 +183,9 @@ const createProjectProcedure = orpc
         address: input.address ?? null,
         city: input.city ?? null,
         country: input.country ?? null,
-        latitude: input.latitude ?? null,
-        longitude: input.longitude ?? null,
+        // D-097: obligatorias desde el schema.
+        latitude: input.latitude,
+        longitude: input.longitude,
         totalUnits: input.totalUnits,
         estimatedDelivery: input.estimatedDelivery ? new Date(input.estimatedDelivery) : null,
         status: input.status,

@@ -29,7 +29,12 @@ describe("POST /developer/projects · el Stage template se aplica siempre", () =
     const res = await request(app)
       .post("/api/v1/developer/projects")
       .set("Authorization", `Bearer ${token}`)
-      .send({ name: "Proyecto con template", slug: `con-template-${Date.now()}` });
+      .send({
+        latitude: -34.6,
+        longitude: -58.4,
+        name: "Proyecto con template",
+        slug: `con-template-${Date.now()}`
+      });
 
     expect(res.status).toBe(201);
     expect(res.body.stages).toHaveLength(DEFAULT_STAGE_CATALOG.length);
@@ -59,7 +64,12 @@ describe("POST /developer/projects · el Stage template se aplica siempre", () =
     const res = await request(app)
       .post("/api/v1/developer/projects")
       .set("Authorization", `Bearer ${token}`)
-      .send({ name: "Proyecto para hilos", slug: `para-hilos-${Date.now()}` });
+      .send({
+        latitude: -34.6,
+        longitude: -58.4,
+        name: "Proyecto para hilos",
+        slug: `para-hilos-${Date.now()}`
+      });
 
     const eventos = await db
       .selectFrom("OnChainEvent")
@@ -80,7 +90,12 @@ describe("POST /developer/projects · el Stage template se aplica siempre", () =
     const res = await request(app)
       .post("/api/v1/developer/projects")
       .set("Authorization", `Bearer ${token}`)
-      .send({ name: "Proyecto para membresía", slug: `para-membresia-${Date.now()}` });
+      .send({
+        latitude: -34.6,
+        longitude: -58.4,
+        name: "Proyecto para membresía",
+        slug: `para-membresia-${Date.now()}`
+      });
 
     // Si la membresía no se hubiera creado en la misma transacción, esta
     // segunda capa de autorización (regla 5) rechazaría al propio creador.

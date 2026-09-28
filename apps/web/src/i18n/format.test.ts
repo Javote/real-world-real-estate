@@ -1,5 +1,11 @@
 import { describe, expect, it } from 'vitest'
-import { formatCurrency, formatCurrencyCompact, formatDate, formatRelative } from './format'
+import {
+  formatCoordinate,
+  formatCurrency,
+  formatCurrencyCompact,
+  formatDate,
+  formatRelative
+} from './format'
 
 // Regla 14: moneda, fecha y relativos salen de `Intl` con el locale activo. Los
 // tests comparan CONTRA EL OTRO LOCALE, no contra un string fijo: lo que
@@ -64,5 +70,12 @@ describe('formatRelative', () => {
   it('usa palabras cuando corresponde ("ayer", no "hace 1 día")', () => {
     const ayer = new Date('2026-03-08T12:00:00.000Z').toISOString()
     expect(formatRelative(ayer, 'en-US', ahora)).toBe('yesterday')
+  })
+})
+
+describe('formatCoordinate', () => {
+  it('cinco decimales, con el separador del locale', () => {
+    expect(formatCoordinate(-34.547, 'es-AR')).toBe('-34,54700')
+    expect(formatCoordinate(-58.46, 'en-US')).toBe('-58.46000')
   })
 })

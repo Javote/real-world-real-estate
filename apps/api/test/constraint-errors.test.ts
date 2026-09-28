@@ -48,7 +48,13 @@ describe("un duplicado es 409, no 500", () => {
     const res = await request(app)
       .post("/api/v1/developer/projects")
       .set("Authorization", `Bearer ${tokenDev}`)
-      .send({ name: "Torre Duplicada", slug: FIXTURES.proyecto.slug, totalUnits: 3 });
+      .send({
+        latitude: -34.6,
+        longitude: -58.4,
+        name: "Torre Duplicada",
+        slug: FIXTURES.proyecto.slug,
+        totalUnits: 3
+      });
 
     expect(res.status).toBe(409);
     expect(res.body.code).toBe("RESOURCE_ALREADY_EXISTS");

@@ -43,6 +43,8 @@ const EJEMPLOS_CAMINO_FELIZ: Record<string, EjemploBody> = {
       slug: "torre-ejemplo",
       city: "Buenos Aires",
       country: "Argentina",
+      latitude: -34.5781,
+      longitude: -58.4265,
       totalUnits: 24,
       status: "planning"
     }

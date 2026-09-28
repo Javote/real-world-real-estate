@@ -127,14 +127,22 @@ no la captura. No reintroducir un `hideBrand`.
 
 ## Trampas verificadas
 
-- **2026-09-23 · posible bug, sin verificar en el navegador: `LocationMapModal` (variante `modal`) con
-  `open` a secas podría no crear el mapa.** El efecto que llama a `L.map` corre antes de que el portal
-  de Radix monte el contenedor (`contenedor.current === null`) y sus dependencias no cambian después,
-  así que no se reintenta. Salió de SPEC-019 W7, con el Leaflet falso: hay un
-  `it.fails('BUG: con open=true a secas…')` en `modals-mapa.test.tsx` que lo fija. **Falta reproducirlo
-  en el navegador real** (`investor.unit.$unitId.index`, `project.$projectId.index`) antes de arreglar
-  nada: si el mapa se ve bien ahí, el test es el que está mal. Detalle en
-  `specs/SPEC-019-cobertura-de-apps-web.md` §Resultado final.
+- **2026-09-28 · dos `import()` concurrentes de un módulo con `vi.mock` dan dos instancias
+  distintas.** Con `vi.mock('leaflet', () => import('#/test/leaflet-falso'))`, si `LocationMapModal`
+  cambia de props mientras la primera importación dinámica sigue pendiente, la segunda resuelve a
+  **otra** instancia del Leaflet falso: el mapa se crea, pero sobre un `L.map` que el test no mira, y el
+  test concluye que no hubo mapa. Medido: `a.map === b.map` da `false`. En el navegador los módulos ES
+  son únicos, así que es un artefacto del test, no del componente. **Montá el mapa con un solo render**
+  (no re-renderices con otras props antes de que exista el mapa) o esperá a que exista antes de cambiar.
+- **2026-09-28 · `LocationMapModal` (variante `modal`) abría vacío, y era real.** El `<div>` del mapa
+  vive dentro del portal de Radix, que se monta un render después de que el diálogo abre: con un
+  `useRef`, el efecto que crea el mapa corría con el contenedor en `null` y no volvía a correr. Nadie
+  lo había visto porque ninguna obra tenía coordenadas; confirmado en producción con Playwright (cero
+  `.leaflet-container` en el modal de `project.$projectId.index`). **Fix:** el contenedor es estado
+  (`ref={setContenedor}`), así que montarlo re-dispara el efecto. De paso, el modo mapa de "Buy"
+  mostraba 1 pin de 3: emitía el `bbox` al crear el mapa, con zoom de calle sobre el primer pin, y el
+  listado se filtraba a esa obra antes del encuadre. Ahora el `bbox` sale con el primer `moveend`.
+  Ver D-097.
 - **2026-09-20 · el front no puede importar VALORES de `@plataforma/shared` por el índice, y por qué se
   ve tarde.** `shared` se compila a **CommonJS** (`dist/`) y el front solo había importado *tipos* de
   ahí. El día que `SPEC-218` necesitó valores (tipos permitidos, topes, detección por magic bytes) el

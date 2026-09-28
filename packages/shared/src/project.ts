@@ -5,8 +5,9 @@ import { onChainEventSchema, stageSchema } from "./stage";
 // El proyecto: su CRUD genérico (`/projects`, admin) y la superficie del
 // developer (`/developer/projects`, que además mintea el Stage template —
 // ver `stage.ts`). Dos endpoints de creación, dos schemas: los campos que
-// acepta cada uno no son los mismos (el CRUD admin permite fijar
-// `latitude`/`longitude`/`status`; el del developer no).
+// acepta cada uno no son los mismos (el CRUD admin permite fijar `status`; el
+// del developer no). **Los dos exigen `latitude`/`longitude`** (D-097): un
+// proyecto sin coordenadas no se puede dibujar en ningún mapa (regla 17).
 
 /** Espeja el estado comercial del proyecto en la migración (D-016). */
 export const PROJECT_STATUSES = ["planning", "in_progress", "delayed", "completed"] as const;
@@ -42,6 +43,10 @@ export const projectListQuerySchema = z.object({
 });
 export type ProjectListQuery = z.infer<typeof projectListQuerySchema>;
 
+/** Latitud y longitud en grados decimales (WGS 84), con su rango válido. */
+export const latitudeSchema = z.number().min(-90).max(90);
+export const longitudeSchema = z.number().min(-180).max(180);
+
 /** Body de `POST /api/v1/projects` (CRUD genérico, admin-only). */
 export const createProjectSchema = z.object({
   name: z.string().min(1),
@@ -49,8 +54,8 @@ export const createProjectSchema = z.object({
   address: z.string().optional(),
   city: z.string().optional(),
   country: z.string().optional(),
-  latitude: z.number().optional(),
-  longitude: z.number().optional(),
+  latitude: latitudeSchema,
+  longitude: longitudeSchema,
   totalUnits: z.number().int().nonnegative().default(0),
   estimatedDelivery: z.iso.datetime().optional(),
   status: projectStatusSchema.default("planning")
@@ -64,8 +69,8 @@ export const updateProjectSchema = z.object({
   address: z.string().optional(),
   city: z.string().optional(),
   country: z.string().optional(),
-  latitude: z.number().optional(),
-  longitude: z.number().optional(),
+  latitude: latitudeSchema.optional(),
+  longitude: longitudeSchema.optional(),
   totalUnits: z.number().int().nonnegative().optional(),
   estimatedDelivery: z.iso.datetime().optional(),
   status: projectStatusSchema.optional()
@@ -81,9 +86,9 @@ export type AddProjectMemberInput = z.infer<typeof addProjectMemberSchema>;
 
 /**
  * Body de `POST /api/v1/developer/projects` — fila 34b-34c, el "Stage
- * template". Sin `latitude`/`longitude`/`status`: esta superficie no los
- * pide (nace siempre en `planning`) y `z.strictObject` lo hace explícito en
- * vez de dejarlos pasar y ser ignorados en silencio.
+ * template". **`latitude`/`longitude` obligatorias** (D-097): son el punto del
+ * "Map preview" de la captura 34b. Sin `status`: nace siempre en `planning`, y
+ * `z.strictObject` lo hace explícito en vez de dejarlo pasar en silencio.
  */
 export const createDeveloperProjectSchema = z.strictObject({
   name: z.string().min(1),
@@ -91,10 +96,34 @@ export const createDeveloperProjectSchema = z.strictObject({
   address: z.string().optional(),
   city: z.string().optional(),
   country: z.string().optional(),
+  latitude: latitudeSchema,
+  longitude: longitudeSchema,
   totalUnits: z.number().int().nonnegative().optional(),
   estimatedDelivery: z.string().optional()
 });
 export type CreateDeveloperProjectInput = z.infer<typeof createDeveloperProjectSchema>;
+
+/**
+ * Query de `GET /api/v1/developer/geocode` (D-097): la dirección que el
+ * developer escribe en el alta de proyecto, para mover el "Map preview" hasta
+ * ahí. Acotada para no reenviarle a Nominatim cualquier cosa.
+ */
+export const geocodeQuerySchema = z.strictObject({
+  q: z.string().trim().min(3).max(200)
+});
+export type GeocodeQuery = z.infer<typeof geocodeQuerySchema>;
+
+/**
+ * Respuesta de `GET /api/v1/developer/geocode`: el mejor punto encontrado, o
+ * `null` si la dirección no se encontró (el developer lo marca a mano en el
+ * mapa). `label` es la dirección como la entiende el geocodificador.
+ */
+export const geocodeResultSchema = z.strictObject({
+  match: z
+    .strictObject({ latitude: latitudeSchema, longitude: longitudeSchema, label: z.string() })
+    .nullable()
+});
+export type GeocodeResult = z.infer<typeof geocodeResultSchema>;
 
 /**
  * La fila de `Project` completa, tal como la devuelven la mayoría de los

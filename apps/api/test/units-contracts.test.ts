@@ -461,7 +461,13 @@ describe("GET /developer/projects — el precio 'desde'", () => {
     const vacio = await request(app)
       .post("/api/v1/developer/projects")
       .set("Authorization", `Bearer ${tokenDev}`)
-      .send({ name: "Sin unidades", slug: `sin-unidades-${Date.now()}`, totalUnits: 0 })
+      .send({
+        latitude: -34.6,
+        longitude: -58.4,
+        name: "Sin unidades",
+        slug: `sin-unidades-${Date.now()}`,
+        totalUnits: 0
+      })
       .expect(201);
 
     const res = await request(app)

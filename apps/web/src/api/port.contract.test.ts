@@ -134,7 +134,10 @@ const CASOS: Record<keyof Api, Caso> = {
   getCapitalSummary: [() => api.getCapitalSummary()],
   getCapitalMonthly: [() => api.getCapitalMonthly()],
   getCapitalByProject: [() => api.getCapitalByProject()],
-  createProject: [() => api.createProject({ name: 'n', slug: 's' })],
+  createProject: [
+    () => api.createProject({ name: 'n', slug: 's', latitude: -34.6, longitude: -58.4 })
+  ],
+  geocodeAddress: [() => api.geocodeAddress('Av. del Libertador 7200')],
   listDeveloperDocuments: [
     () => api.listDeveloperDocuments(),
     () => api.listDeveloperDocuments('pending')

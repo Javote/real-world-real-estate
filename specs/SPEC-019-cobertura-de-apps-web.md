@@ -619,6 +619,10 @@ Ramas inalcanzables borradas en W7/W8: la guarda `images.length === 0` de `Image
 `!actual` ya la cubre) y el `if (inputRef.current)` de `FileDropzone` (ahora `e.currentTarget`). Sin
 `v8 ignore` nuevos.
 
+**✅ Cerrado 2026-09-28 (D-097) — era real: reproducido en producción, el mapa del detalle de obra abría
+vacío. El contenedor del mapa pasó a ser estado, así que montarlo re-dispara el efecto; el `it.fails`
+es un `it`. Lo que sigue queda como registro de cómo se encontró.**
+
 **🐞 Abierto, sin arreglar: `LocationMapModal` variante `modal` con `open` a secas.** El efecto que crea
 el mapa corre antes de que el portal de Radix monte el contenedor (`contenedor.current === null`) y no
 se reintenta. Está fijado como `it.fails` en `modals-mapa.test.tsx`. Hay que confirmarlo en el navegador

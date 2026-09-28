@@ -99,6 +99,8 @@ describe("cliente oRPC tipado de projects, contra el servidor real (SPEC-216 §E
     const client = crearCliente(link);
 
     const creado = await client.createProjectProcedure({
+      latitude: -34.6,
+      longitude: -58.4,
       name: "Cliente oRPC Test",
       slug: `orpc-client-test-${Date.now()}`,
       totalUnits: 1
@@ -120,6 +122,8 @@ describe("cliente oRPC tipado de projects, contra el servidor real (SPEC-216 §E
 
     await expect(
       client.createProjectProcedure({
+        latitude: -34.6,
+        longitude: -58.4,
         name: "Duplicado",
         slug: FIXTURES.proyecto.slug,
         totalUnits: 1
@@ -200,6 +204,8 @@ describe("cliente oRPC tipado de projects, contra el servidor real (SPEC-216 §E
     const client = crearCliente(link);
 
     const creado = await client.createProjectProcedure({
+      latitude: -34.6,
+      longitude: -58.4,
       name: "A renombrar",
       slug: `a-renombrar-${Date.now()}`,
       totalUnits: 1
@@ -220,6 +226,8 @@ describe("cliente oRPC tipado de projects, contra el servidor real (SPEC-216 §E
     const client = crearCliente(link);
 
     const creado = await client.createProjectProcedure({
+      latitude: -34.6,
+      longitude: -58.4,
       name: "Con invitación pendiente",
       slug: `con-invitacion-${Date.now()}`,
       totalUnits: 1
@@ -256,6 +264,8 @@ describe("cliente oRPC tipado de projects, contra el servidor real (SPEC-216 §E
     const client = crearCliente(link);
 
     const conCiudad = await client.createProjectProcedure({
+      latitude: -34.6,
+      longitude: -58.4,
       name: "Filtro de ciudad",
       slug: `filtro-ciudad-${Date.now()}`,
       city: "Rosario",
@@ -286,6 +296,8 @@ describe("cliente oRPC tipado de projects, contra el servidor real (SPEC-216 §E
     const entrega = new Date("2030-06-01T00:00:00.000Z");
 
     const creado = await client.createProjectProcedure({
+      latitude: -34.6,
+      longitude: -58.4,
       name: "Con fecha de entrega",
       slug: `con-entrega-${Date.now()}`,
       totalUnits: 1,

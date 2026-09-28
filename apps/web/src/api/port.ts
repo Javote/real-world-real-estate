@@ -20,6 +20,7 @@ import type {
   DeveloperKpis,
   Dossier,
   DossierShare,
+  GeocodeResult,
   InvestorDirectoryEntry,
   InviteCertifierInput,
   LoginRequest,
@@ -283,6 +284,10 @@ export const api = {
   getCapitalMonthly: () => request<CapitalMonthlyPoint[]>('/api/v1/developer/capital/monthly'),
 
   getCapitalByProject: () => request<CapitalByProject[]>('/api/v1/developer/capital/by-project'),
+
+  /** D-097 — la dirección del alta de proyecto, convertida en un punto (Nominatim, vía la API). */
+  geocodeAddress: (q: string) =>
+    request<GeocodeResult>(`/api/v1/developer/geocode?${new URLSearchParams({ q })}`),
 
   createProject: (proyecto: CreateDeveloperProjectInput) =>
     request<ProjectCreated>(
