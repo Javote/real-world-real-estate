@@ -87,7 +87,11 @@ test('DEV-INVESTORS-LIST-001 · el directorio de investors y su acceso', async (
   await expect(page.getByRole('button', { name: /volver al panel|back to panel/i })).toBeVisible()
   await expect(page.getByRole('button', { name: /notificaciones|notifications/i })).toBeVisible()
   await expect(page.getByRole('button', { name: /mi perfil|my profile/i })).toBeVisible()
-  await expect(page.getByRole('button', { name: /^idioma$|^language$/i })).toBeVisible()
+  // D-096: el toggle es un grupo "Idioma" con los dos idiomas, no un botón suelto.
+  const idioma = page.getByRole('group', { name: /^idioma$|^language$/i })
+  await expect(idioma).toBeVisible()
+  await expect(idioma.getByRole('button', { name: 'Español' })).toBeVisible()
+  await expect(idioma.getByRole('button', { name: 'English' })).toBeVisible()
   await expect(page.getByRole('banner')).toContainText('Prop')
 })
 

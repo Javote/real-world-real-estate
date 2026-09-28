@@ -66,7 +66,8 @@ test('D-095 · el admin entra a los paneles de los otros roles', async ({ page }
   // La barra es BottomNav en mobile y Sidebar en desktop: el link visible.
   await page
     .locator('a:visible')
-    .filter({ hasText: /^Developer$/ })
+    // La app arranca en es-AR: el link dice "Desarrollador" (`nav.admin.developer`).
+    .filter({ hasText: /^(Desarrollador|Developer)$/ })
     .click()
   await expect(page).toHaveURL(/\/developer$/)
   await expect(page.getByTestId('DEV-PANEL-KPIS-001')).toBeVisible()
