@@ -94,6 +94,59 @@ describe("el ciclo unidad → invitación → contrato → release", () => {
       .where("id", "=", unitId)
       .executeTakeFirstOrThrow();
     expect(unidad.status).toBe("reserved");
+
+    // El invitado tiene cuenta: se entera por su lista de novedades (fila 62),
+    // sin necesitar el link con `?invitation=`. Solo el id opaco, sin PII.
+    const novedades = await request(app)
+      .get("/api/v1/investor/notifications")
+      .set("Authorization", `Bearer ${tokenInvestor}`);
+    expect(novedades.status).toBe(200);
+    const aviso = novedades.body.find(
+      (n: { params: { invitationId?: string } }) => n.params.invitationId === res.body.id
+    );
+    expect(aviso).toMatchObject({
+      category: "stage",
+      titleKey: "notifications.invitation.received",
+      params: { invitationId: res.body.id },
+      unitId: null,
+      readAt: null
+    });
+  });
+
+  it("invitar a un email sin cuenta no deja notificación: no hay a quién avisar", async () => {
+    const otraUnidad = await request(app)
+      .post(`/api/v1/developer/projects/${projectId}/units`)
+      .set("Authorization", `Bearer ${tokenDev}`)
+      .send({
+        unitReference: "7D",
+        floor: 7,
+        sizeM2: 60,
+        priceMinorUnits: 9_500_000,
+        currency: "USD"
+      });
+    expect(otraUnidad.status).toBe(201);
+
+    const antes = await db
+      .selectFrom("Notification")
+      .select((eb) => eb.fn.countAll<number>().as("total"))
+      .executeTakeFirstOrThrow();
+
+    const res = await request(app)
+      .post(`/api/v1/developer/projects/${projectId}/invitations`)
+      .set("Authorization", `Bearer ${tokenDev}`)
+      .send({
+        unitId: otraUnidad.body.id,
+        investorEmail: "sin-cuenta@example.com",
+        amountMinorUnits: 9_500_000,
+        currency: "USD"
+      });
+    expect(res.status).toBe(201);
+
+    const despues = await db
+      .selectFrom("Notification")
+      .select((eb) => eb.fn.countAll<number>().as("total"))
+      .executeTakeFirstOrThrow();
+    expect(Number(despues.total)).toBe(Number(antes.total));
   });
 
   it("aceptar crea el contrato y ancla (M3-SC-01)", async () => {

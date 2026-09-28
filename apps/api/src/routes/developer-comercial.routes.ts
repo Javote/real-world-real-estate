@@ -20,6 +20,7 @@ import { z } from "zod";
 import { createId } from "../db/id";
 import type { UserRole } from "../db/types";
 import { anchorCommitmentEvent, commitmentOf } from "../domain/anchoring";
+import { notify } from "../domain/notify";
 import { db } from "../lib/db";
 import { conUsuario, delegarAOrpc, OpenAPIHandler, ORPCError, os } from "../lib/orpc";
 import { authenticate, authorize, projectScope } from "../middlewares/auth";
@@ -296,6 +297,27 @@ const createInvitationProcedure = orpc
       entityType: "Invitation",
       entityId: invitacion.id
     });
+
+    // Si el invitado ya tiene cuenta, se entera por su lista de novedades
+    // (fila 62: la InvitationCard vive ahí). Sin esto, la única forma de ver la
+    // invitación era llegar con `?invitation=<id>` en la URL. Si todavía no tiene
+    // cuenta no hay a quién avisar: la invitación lo espera por email igual
+    // (la comparación es la misma que la del guard `dueño: Invitation`).
+    // `unitId` va en null a propósito: la unidad todavía no es suya, y su feed
+    // por unidad es de lo que pasa después de comprarla.
+    const invitado = await db
+      .selectFrom("User")
+      .select("id")
+      .where("email", "=", input.investorEmail)
+      .executeTakeFirst();
+    if (invitado) {
+      await notify({
+        userId: invitado.id,
+        category: "stage",
+        titleKey: "notifications.invitation.received",
+        params: { invitationId: invitacion.id }
+      });
+    }
 
     return { ...invitacion, status: invitacion.status as InvitationStatus };
   });

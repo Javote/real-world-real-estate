@@ -243,6 +243,106 @@ describe('/investor/notifications', () => {
     expect(screen.queryByTestId('INV-INVITE-DECLINE-003')).toBeNull()
   })
 
+  describe('la invitación que llega como notificación (sin link)', () => {
+    const aviso = (id: string, invitationId: unknown, sobre: Record<string, unknown> = {}) =>
+      notificacion(id, {
+        titleKey: 'notifications.invitation.received',
+        params: invitationId === undefined ? {} : { invitationId },
+        ...sobre
+      })
+
+    it('una pendiente se fija arriba como InvitationCard; abrirla marca leída la notificación', async () => {
+      autenticarComo(INVESTOR_USER)
+      vi.spyOn(api, 'listNotifications').mockResolvedValue([
+        notificacion('n-0', { titleKey: 'clave.otra' }),
+        aviso('n-1', 'inv-9')
+      ])
+      const pedir = vi
+        .spyOn(api, 'getInvitation')
+        .mockResolvedValue(invitacion({ id: 'inv-9', unitReference: '7A' }))
+      const marcar = vi.spyOn(api, 'markNotificationRead').mockResolvedValue(undefined as never)
+      montarRuta(Route, '/investor/notifications')
+
+      const cta = await screen.findByText(t('investor.invite.cta'))
+      expect(pedir).toHaveBeenCalledWith('inv-9')
+      // Fija: la card de la invitación va antes que la notificación más nueva.
+      const lista = screen.getByTestId('INV-NOTIF-LIST-001')
+      const botones = within(lista).getAllByRole('button')
+      expect(botones[0]!.textContent).toContain(t('investor.invite.title'))
+      expect(screen.getByText('clave.otra')).toBeTruthy()
+
+      await userEvent.click(cta)
+      const modal = await screen.findByTestId('INV-INVITE-VIEW-001')
+      expect(modal.textContent).toContain('7A')
+      await waitFor(() => expect(marcar).toHaveBeenCalledWith('n-1'))
+    })
+
+    it('aceptar desde la notificación acepta esa invitación, no la del link', async () => {
+      autenticarComo(INVESTOR_USER)
+      vi.spyOn(api, 'listNotifications').mockResolvedValue([
+        aviso('n-1', 'inv-9', { readAt: ahora })
+      ])
+      vi.spyOn(api, 'getInvitation').mockResolvedValue(invitacion({ id: 'inv-9' }))
+      const marcar = vi.spyOn(api, 'markNotificationRead')
+      const aceptar = vi
+        .spyOn(api, 'acceptInvitation')
+        .mockResolvedValue({ contract: { unitId: 'un-9' }, anchor: {} } as never)
+      const router = montarRuta(Route, '/investor/notifications', RUTAS_EXTRA)
+
+      await userEvent.click(await screen.findByText(t('investor.invite.cta')))
+      await userEvent.click(await screen.findByTestId('INV-INVITE-ACCEPT-002'))
+
+      expect(aceptar).toHaveBeenCalledWith('inv-9')
+      // Ya estaba leída: abrirla no vuelve a marcar.
+      expect(marcar).not.toHaveBeenCalled()
+      await waitFor(() => expect(router.state.location.pathname).toBe('/investor/unit/un-9'))
+    })
+
+    it('una ya resuelta queda en su lugar, sin la llamada a la acción', async () => {
+      autenticarComo(INVESTOR_USER)
+      vi.spyOn(api, 'listNotifications').mockResolvedValue([
+        notificacion('n-0', { titleKey: 'clave.mas.nueva' }),
+        aviso('n-1', 'inv-9')
+      ])
+      vi.spyOn(api, 'getInvitation').mockResolvedValue(
+        invitacion({ id: 'inv-9', status: 'accepted' })
+      )
+      montarRuta(Route, '/investor/notifications')
+
+      const titulo = await screen.findByText(t('investor.invite.title'))
+      const botones = within(screen.getByTestId('INV-NOTIF-LIST-001')).getAllByRole('button')
+      expect(botones[0]!.textContent).toContain('clave.mas.nueva')
+      expect(botones[1]).toBe(titulo.closest('button'))
+      expect(screen.queryByText(t('investor.invite.cta'))).toBeNull()
+    })
+
+    it('la misma invitación por link y por notificación se dibuja una sola vez', async () => {
+      autenticarComo(INVESTOR_USER)
+      vi.spyOn(api, 'listNotifications').mockResolvedValue([aviso('n-1', 'inv-1')])
+      vi.spyOn(api, 'getInvitation').mockResolvedValue(invitacion())
+      montarRuta(Route, '/investor/notifications', [], '/investor/notifications?invitation=inv-1')
+
+      await screen.findByText(t('investor.invite.cta'))
+      expect(screen.getAllByText(t('investor.invite.title'))).toHaveLength(1)
+    })
+
+    it('mientras la invitación no llegó, o si el aviso no trae id, no se dibuja nada en su lugar', async () => {
+      autenticarComo(INVESTOR_USER)
+      vi.spyOn(api, 'listNotifications').mockResolvedValue([
+        aviso('n-1', 'inv-9'),
+        aviso('n-2', undefined),
+        notificacion('n-3', { titleKey: 'clave.visible' })
+      ])
+      const pedir = vi.spyOn(api, 'getInvitation').mockReturnValue(new Promise(() => {}))
+      montarRuta(Route, '/investor/notifications')
+
+      await screen.findByText('clave.visible')
+      expect(pedir).toHaveBeenCalledTimes(1)
+      expect(screen.queryByText(t('investor.invite.title'))).toBeNull()
+      expect(screen.queryByText(t('investor.notifications.empty'))).toBeNull()
+    })
+  })
+
   it('Escape cierra el modal de la invitación sin aceptar ni rechazar', async () => {
     autenticarComo(INVESTOR_USER)
     vi.spyOn(api, 'listNotifications').mockResolvedValue([])

@@ -1,9 +1,10 @@
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
+import { useMutation, useQueries, useQuery, useQueryClient } from '@tanstack/react-query'
 import { createFileRoute, useNavigate } from '@tanstack/react-router'
 import type { LucideIcon } from 'lucide-react'
 import { FileCheck2, FileText, ShieldCheck, Signature } from 'lucide-react'
 import { useState } from 'react'
 import { api } from '#/api/port'
+import type { InvestorInvitation } from '#/api/types'
 import { INVESTOR_ROLES } from '#/auth/roles'
 import { useRoleGuard } from '#/auth/useRoleGuard'
 import type { AuditCategory } from '#/components/domain/AuditEventCard'
@@ -21,8 +22,15 @@ import { CARD_SHELL_EMPTY } from '#/lib/cardShell'
 // Test IDs: INV-NOTIF-LIST-001, INV-INVITE-VIEW-001, INV-INVITE-ACCEPT-002,
 // INV-INVITE-DECLINE-003.
 //
-// No hay GET de listado de invitaciones. La card solo aparece con
-// `?invitation=` (el POST de crear no notifica). No se inventa un endpoint.
+// No hay GET de listado de invitaciones, y no hace falta inventarlo: crear una
+// invitación le deja al invitado (si ya tiene cuenta) una notificación
+// `notifications.invitation.received` con el id en `params.invitationId`, y
+// esta lista la dibuja como InvitationCard — fija arriba mientras esté
+// pendiente (M2-D3), en su lugar cronológico una vez resuelta. `?invitation=`
+// sigue sirviendo para el link directo, aunque no haya notificación.
+
+/** La `titleKey` con la que el backend avisa una invitación nueva. */
+const INVITACION_RECIBIDA = 'notifications.invitation.received'
 
 const CATEGORIAS = ['stage', 'document', 'release', 'signature', 'certificate'] as const
 type NotifCategory = (typeof CATEGORIAS)[number]
@@ -65,7 +73,8 @@ function InvestorNotifications() {
   const search = Route.useSearch()
   const queryClient = useQueryClient()
   const [filtro, setFiltro] = useState<NotifCategory | null>(null)
-  const [modal, setModal] = useState(false)
+  /** El id de la invitación cuyo modal está abierto. */
+  const [abierta, setAbierta] = useState<string | null>(null)
 
   const { data: notificaciones, isPending } = useQuery({
     queryKey: ['notifications', filtro],
@@ -73,10 +82,26 @@ function InvestorNotifications() {
     enabled: ready
   })
 
-  const { data: invitacion } = useQuery({
-    queryKey: ['investor', 'invitation', search.invitation],
-    queryFn: () => api.getInvitation(search.invitation!),
-    enabled: ready && Boolean(search.invitation)
+  // De cada invitación avisada, la notificación que la trajo (para marcarla leída al abrirla).
+  const avisos = new Map<string, { id: string; leida: boolean }>()
+  for (const n of notificaciones ?? []) {
+    const id = n.params.invitationId
+    if (n.titleKey === INVITACION_RECIBIDA && typeof id === 'string') {
+      avisos.set(id, { id: n.id, leida: n.readAt !== null })
+    }
+  }
+  const ids = [...new Set([...(search.invitation ? [search.invitation] : []), ...avisos.keys()])]
+
+  const consultas = useQueries({
+    queries: ids.map((id) => ({
+      queryKey: ['investor', 'invitation', id],
+      queryFn: () => api.getInvitation(id),
+      enabled: ready
+    }))
+  })
+  const invitaciones = new Map<string, InvestorInvitation>()
+  consultas.forEach((c, i) => {
+    if (c.data) invitaciones.set(ids[i]!, c.data)
   })
 
   const marcarLeida = useMutation({
@@ -85,10 +110,10 @@ function InvestorNotifications() {
   })
 
   const aceptar = useMutation({
-    mutationFn: () => api.acceptInvitation(search.invitation!),
+    mutationFn: (id: string) => api.acceptInvitation(id),
     onSuccess: (resultado) => {
       void queryClient.invalidateQueries({ queryKey: ['investor'] })
-      setModal(false)
+      setAbierta(null)
       void navigate({
         to: '/investor/unit/$unitId',
         params: { unitId: resultado.contract.unitId }
@@ -97,16 +122,46 @@ function InvestorNotifications() {
   })
 
   const rechazar = useMutation({
-    mutationFn: () => api.declineInvitation(search.invitation!),
+    mutationFn: (id: string) => api.declineInvitation(id),
     onSuccess: () => {
       void queryClient.invalidateQueries({ queryKey: ['investor', 'invitation'] })
-      setModal(false)
+      setAbierta(null)
       void navigate({ search: {} })
     }
   })
 
   if (!ready) return null
 
+  function abrir(id: string) {
+    const aviso = avisos.get(id)
+    if (aviso && !aviso.leida) marcarLeida.mutate(aviso.id)
+    setAbierta(id)
+  }
+
+  function tarjeta(inv: InvestorInvitation) {
+    return (
+      <InvitationCard
+        key={inv.id}
+        title={t('investor.invite.title')}
+        body={t('investor.invite.body', { project: inv.projectName, unit: inv.unitReference })}
+        ctaLabel={t('investor.invite.cta')}
+        timestampLabel={formatRelative(String(inv.createdAt), locale)}
+        resolved={inv.status !== 'pending'}
+        onOpen={() => abrir(inv.id)}
+      />
+    )
+  }
+
+  // Fijas arriba: las pendientes, y la del link directo aunque ya esté resuelta
+  // (quien llegó por el link tiene que verla). El resto va en su lugar.
+  const fijas = ids
+    .map((id) => invitaciones.get(id))
+    .filter(
+      (inv): inv is InvestorInvitation =>
+        inv !== undefined && (inv.status === 'pending' || inv.id === search.invitation)
+    )
+  const fijadas = new Set(fijas.map((inv) => inv.id))
+  const invitacion = abierta ? invitaciones.get(abierta) : undefined
   const pendiente = invitacion?.status === 'pending'
 
   return (
@@ -127,24 +182,16 @@ function InvestorNotifications() {
       </div>
 
       <section className="flex flex-col gap-s3" data-testid="INV-NOTIF-LIST-001">
-        {invitacion ? (
-          <InvitationCard
-            title={t('investor.invite.title')}
-            body={t('investor.invite.body', {
-              project: invitacion.projectName,
-              unit: invitacion.unitReference
-            })}
-            ctaLabel={t('investor.invite.cta')}
-            timestampLabel={formatRelative(String(invitacion.createdAt), locale)}
-            resolved={!pendiente}
-            onOpen={() => setModal(true)}
-          />
-        ) : null}
+        {fijas.map(tarjeta)}
 
         {isPending ? (
           <Loading />
         ) : notificaciones?.length ? (
           notificaciones.map((n) => {
+            if (n.titleKey === INVITACION_RECIBIDA) {
+              const inv = invitaciones.get(String(n.params.invitationId))
+              return inv && !fijadas.has(inv.id) ? tarjeta(inv) : null
+            }
             const categoria = n.category
             return (
               <NotificationCard
@@ -159,17 +206,17 @@ function InvestorNotifications() {
               />
             )
           })
-        ) : !invitacion ? (
+        ) : fijas.length === 0 ? (
           <p className={CARD_SHELL_EMPTY}>{t('investor.notifications.empty')}</p>
         ) : null}
       </section>
 
       {invitacion ? (
         <InvitationAcceptModal
-          open={modal}
-          onClose={() => setModal(false)}
-          onAccept={() => aceptar.mutate()}
-          onDecline={() => rechazar.mutate()}
+          open
+          onClose={() => setAbierta(null)}
+          onAccept={() => aceptar.mutate(invitacion.id)}
+          onDecline={() => rechazar.mutate(invitacion.id)}
           submitting={aceptar.isPending || rechazar.isPending}
           pending={pendiente}
           details={{

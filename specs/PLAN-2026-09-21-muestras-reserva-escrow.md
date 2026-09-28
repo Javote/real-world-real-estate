@@ -7,17 +7,21 @@
 > **Lo que cambió respecto de este plan al correrlo:**
 > - Los logins los hizo el dueño (tres pestañas: developer, buyer y admin), pero no por la razón
 >   original: Claude no escribe contraseñas en un sitio que no sea local.
-> - **El paso 3 no pasa por la campana.** No hay listado de invitaciones (`investor.notifications.tsx`
->   solo muestra la card con `?invitation=<id>`), así que el investor abre
->   `/investor/notifications?invitation=<id>`, el link que en la vida real le llegaría. El id se sacó
->   del audit log del developer (`CREATE_INVITATION.entityId`).
+> - **El paso 3 no pasó por la campana**, porque crear una invitación no le avisaba al invitado: solo
+>   la veía llegando con `/investor/notifications?invitation=<id>`, el link que en la vida real le
+>   llegaría. El id se sacó del audit log del developer (`CREATE_INVITATION.entityId`). **Arreglado
+>   el 2026-09-28:** crear la invitación deja una notificación `notifications.invitation.received`
+>   para el invitado con cuenta, y la lista la dibuja como `InvitationCard` fija arriba.
 > - **Sin SELECT contra Turso:** el inicio sale del audit log (`ACCEPT_INVITATION`, que trae el TXID
 >   en `metadataJson`) y la hora del bloque, de Koios (`tx_info`). Queda 1–2 s por debajo de la
 >   telemetría, que arranca el reloj en `OnChainEvent.createdAt`, un poco antes.
 > - La captura del explorador es de **cexplorer**: cardanoscan frena al navegador automatizado con
 >   una verificación anti-bot.
-> - "Ver invitación" a veces necesita **dos clics** para abrir el modal (pasó en 3 de 5, siempre el
->   primer clic después de cargar la página). No se investigó.
+> - "Ver invitación" pareció necesitar **dos clics** (3 de 5). **No es un bug de la app:** la
+>   pestaña del buyer estaba en segundo plano mientras se trabajaba en la del developer, y Chrome
+>   frena las pestañas ocultas — medido el 2026-09-28: `visibilityState: hidden`, `#root` sin
+>   contenido y ni un pedido a la API más de 20 s después de cargar. El primer clic caía sobre
+>   `<html>` vacío. Para la próxima corrida: sacar una captura de la pestaña antes de clickear.
 
 ## Para retomarla
 
