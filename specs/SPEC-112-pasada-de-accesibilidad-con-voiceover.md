@@ -6,6 +6,23 @@
 > el mismo día para cubrir también el tooling automatizado que hoy no existe en el repo.
 > Nivel 🟢. **Independiente.** No toca ningún criterio del SOM.
 
+## Estado — 2026-09-28
+
+| Capa | Estado |
+|---|---|
+| 1 · Biome `a11y` | ✅ desde el 2026-09-22 |
+| 2 · Vitest + `axe-core` | ✅ `pnpm --filter web test:a11y`: axe después de cada uno de los 1596 tests. Verde, y probada en rojo con una mutación (§2 §El barrido) |
+| 3 · Playwright + `axe-core` | ✅ `e2e/a11y.spec.ts`: 12 superficies × mobile/desktop, 10/10 verde, y probada en rojo con una mutación |
+| 4 · VoiceOver automatizado (Guidepup) | ⬜ espera el **Paso 0**, que es del dueño: habilitar el control por AppleScript y dar dos permisos de TCC en esta Mac |
+| 5 · Pasada manual con VoiceOver | ⬜ después de la 4 |
+
+**Lo que encontraron las capas 2 y 3 salió a dos specs nuevas**, como pide §Alcance:
+[`SPEC-113`](SPEC-113-el-contraste-de-los-tokens-de-m2-d3.md) (contraste de los tokens normativos
+de M2-D3, **pide una decisión del dueño**) y
+[`SPEC-114`](SPEC-114-nombres-encabezados-y-landmarks.md) (seis defectos de nombres, encabezados y
+landmarks, implementable directo). Mientras estén abiertas, sus violaciones viven en
+`apps/web/a11y/hallazgos.ts` y no ponen en rojo ninguna capa. Cualquier violación **nueva** sí.
+
 ## Propósito
 
 `M2-D3` exige WCAG 2.1 AA (regla de diseño, no opcional) y hoy el repo no tiene ninguna capa
@@ -111,6 +128,52 @@ expect(await axe(container)).toHaveNoViolations()
 `alt` falla con el mensaje `[image-alt] Images must have alternative text`; un
 `<button aria-label="Cerrar">` pasa limpio. `axe-core` resuelve a la 4.13.0 actual sin pin viejo.
 
+#### El barrido: axe después de cada test, no fixtures nuevos (2026-09-28)
+
+El matcher sigue disponible para un test puntual. Pero **la forma principal de la capa es otra**,
+elegida después de medir: la suite de `apps/web` ya renderiza cada componente de M2-D3 y cada ruta
+en sus estados reales (vacío, cargando, error, deshabilitado, con modal abierto) — 1596 tests.
+Escribir fixtures aparte para axe duplicaría esas props y cubriría menos estados. Así que:
+
+```
+apps/web/a11y/hallazgos.ts       el registro de hallazgos abiertos (regla + patrón de HTML + spec)
+apps/web/a11y/vitest-setup.ts    afterEach: axe sobre document.body, falla solo con lo no registrado
+apps/web/vitest.a11y.config.ts   la config base + ese setup; excluye el smoke test del matcher
+pnpm --filter web test:a11y      la corrida
+```
+
+- **No está en `pnpm test` ni en `pnpm verify`** (§Invariantes: ninguna capa bloquea hoy). Medido
+  en esta Mac: ~3 min la suite entera con axe.
+- **Tres reglas apagadas en jsdom, con la razón escrita en el setup**, porque jsdom no puede
+  evaluarlas con verdad: `color-contrast` (no calcula estilos), `region` (los tests montan
+  componentes sin `<main>`) y `landmark-unique` (no aplica `hidden md:flex`, así que ve el
+  `Sidebar` y el `BottomNav` a la vez: 333 falsos positivos). **Las tres se miden en la capa 3**,
+  donde `landmark-unique` no aparece en ninguna corrida. Apagarlas acá no las saca de la vara.
+- **El hook desmonta antes de fallar.** Un `afterEach` que tira corta el `cleanup` de Testing
+  Library y el DOM contamina los tests siguientes del archivo. Medido: sin eso, una sola violación
+  en `NumberInput` ponía rojos los 53 tests de `controls.test.tsx`; con eso, exactamente los 13 que
+  lo renderizan.
+- **Probada en rojo, no solo en verde:** sacarle el `aria-label` a un botón del stepper de
+  `NumberInput` → 13 tests rojos con `[button-name]`, y el mensaje nombra el archivo del registro.
+- `a11y/` vive **fuera de `src/`**: la vara de cobertura de `apps/web` es 100% sobre `src/**`, y
+  esto es soporte de test, igual que `-test-mount.tsx`.
+
+#### El registro de hallazgos — la vía de excepción de §Casos borde
+
+`a11y/hallazgos.ts` lo importan las dos capas (Vitest y Playwright), así que una violación conocida
+se escribe una vez. Cada fila es `{ regla, html, spec, motivo }`: la regla de axe, un patrón sobre
+el HTML del nodo (lo único que axe devuelve igual en jsdom y en el navegador) y **la spec que lo
+cierra, obligatoria por tipo** (`` `SPEC-${number}` ``). No es un silenciador general: el patrón
+identifica al componente, no a la regla, y una regla con un nodo conocido y otro nuevo sigue
+fallando por el nuevo.
+
+**Límite medido:** axe guarda solo la etiqueta de apertura del nodo, no su contenido. Un patrón no
+puede distinguir el mismo botón con o sin imagen adentro, y por eso cada fila anota qué otra cosa
+cubre lo que el patrón no ve.
+
+**Cerrar un hallazgo es borrar su fila.** Si queda, deja de proteger contra una regresión de lo
+que se arregló.
+
 ### 3 · Playwright — `@axe-core/playwright`, no inyección manual del script
 
 **Verificado en el registro, no solo elegido por preferencia:** `@axe-core/playwright@4.13.0`, del
@@ -128,6 +191,21 @@ test('el dashboard del developer no tiene violaciones de accesibilidad', async (
   expect(results.violations).toEqual([])
 })
 ```
+
+#### Lo implementado (2026-09-28): `e2e/a11y.spec.ts`
+
+Recorre el camino de §Alcance 5 con los usuarios del seed: `/login`; developer (panel, obras, alta
+de proyecto, audit log, subir evidencia); certifier (panel, etapa y el `ObserveStageModal`
+abierto); investor (comprar, mis unidades, dossier); notary (panel, revisión de dossier). Son 12
+superficies, cada una en `mobile` y `desktop`.
+
+- Tags `wcag2a`, `wcag2aa`, `wcag21a`, `wcag21aa` (M2-D3 pide WCAG 2.1 AA) **más `best-practice`**,
+  que es donde axe pone landmarks y orden de encabezados, lo que un lector de pantalla usa para
+  moverse.
+- Afirma `violacionesNuevas(...)` vacío, contra el mismo registro de la capa 2. El resultado
+  completo de axe (incluidas las registradas) queda **adjunto a cada test** en el reporte HTML.
+- **Probada en rojo:** sin el `aria-label` de la campana, `/notary` falla con `[button-name]`.
+- Se corre como el resto: `pnpm --filter web e2e a11y`. Hereda el job no bloqueante de CI.
 
 ### 4 · VoiceOver automatizado — Guidepup, en esta Mac, antes de la pasada humana
 
@@ -206,7 +284,10 @@ el log no puede juzgar.
 - Un control con `aria-label` correcto — pasa limpio (caso de control ya verificado).
 - Un componente de terceros (`shadcn/ui`) con una violación conocida y aceptada — necesita una vía
   de excepción explícita (`axe-core` soporta `exclude`/reglas deshabilitadas por selector); sin esto
-  el primer falso positivo de una librería externa bloquea toda la capa.
+  el primer falso positivo de una librería externa bloquea toda la capa. **Resuelto con
+  `a11y/hallazgos.ts`** (§2 §El registro), que sirve igual para terceros y para código propio. En
+  la medición del 2026-09-28 **ninguna violación vino de `shadcn/ui` ni de Radix**: las trece filas
+  del registro son código propio.
 
 **Manuales (heredados de `SPEC-104`, sin re-diseñar):**
 - Los tres caminos que ya cubría `SPEC-104` (login fallido, anclaje, poll) — confirmar que siguen
@@ -220,10 +301,11 @@ el log no puede juzgar.
 
 ## Preguntas abiertas
 
-- **¿Qué componentes/páginas entran primero?** No las 131 componentes ni las 42 rutas de una — se
-  propone empezar por lo que `SPEC-101`-`110` ya identificó como tocado (los 36 componentes de
-  M2-D3) y las rutas con formularios largos, que es donde más rinde `axe-core` en componente aislado.
+- ~~**¿Qué componentes/páginas entran primero?**~~ **Respondida 2026-09-28: todos a la vez.** El
+  barrido de §2 corre axe sobre todo lo que la suite ya renderiza, así que no hubo que elegir.
 - **¿Quién corre la pasada manual y cuándo?** Es trabajo humano sin fecha asignada. No bloquea nada
   del SOM (nivel 🟢, independiente), así que puede tomarse cuando haya disponibilidad.
-- **¿Se suma un `pnpm a11y` o similar que corra las dos capas automatizadas juntas?** Azúcar de
-  conveniencia, no bloqueante — se decide al implementar, no acá.
+- ~~**¿Se suma un `pnpm a11y` que corra las dos capas automatizadas juntas?**~~ **Respondida
+  2026-09-28: no.** Las dos piden cosas distintas (la de Playwright necesita la base sembrada y los
+  servidores arriba) y juntarlas escondería por qué falla cada una. Quedan `test:a11y` y
+  `e2e a11y`.

@@ -24,7 +24,10 @@ unidad, con la firma del escribano en el que la pantalla no lee), y `SPEC-301`, 
 salvo lo **postergado** a propósito (los ítems de §Antes de mainnet) — `specs/README.md` lleva la
 razón de cada una. `SPEC-104` cerró el 2026-09-22 (código y tests hechos desde el 2026-09-19); la
 pasada manual con VoiceOver que le quedaba se separó a `SPEC-112`, ampliada a accesibilidad en
-general, sin fecha y sin bloquear nada del SOM.
+general, sin fecha y sin bloquear nada del SOM. **`SPEC-112` hizo sus capas automatizadas el
+2026-09-28 y abrió dos más en la serie 1xx**: `SPEC-113` (el contraste de los tokens normativos de
+M2-D3 no llega al 4.5:1 que M2-D3 mismo exige, **pide una decisión del dueño**) y `SPEC-114` (seis
+defectos de nombres, encabezados y landmarks, implementable directo). Ninguna toca el SOM.
 
 Lo transversal. Lo de cada frente vive en `apps/web/CLAUDE.md`, `apps/api/CLAUDE.md`,
 `packages/cardano/CLAUDE.md` y `contracts/CLAUDE.md`, y se carga solo cuando tocás ese subárbol.
@@ -408,6 +411,7 @@ pnpm contracts:verify             # Aiken: fmt + check + build
 pnpm verify:all                   # las dos, encadenadas
 pnpm lint:fix                     # Biome arregla lo mecánico
 
+pnpm --filter web test:a11y                   # axe después de cada test de apps/web (SPEC-112)
 pnpm --filter @plataforma/api test:s3         # storage contra MinIO real
 pnpm --filter @plataforma/cardano test:yaci   # anclaje contra un nodo Cardano real
 node contracts/scripts/rechazos-mutantes.mjs  # cada chequeo del validador tiene un test que lo defiende (SPEC-017)
@@ -418,7 +422,8 @@ docker compose -f compose.dev.yml up -d       # solo si querés la infra levanta
 **TypeScript y Aiken no se mezclan:** distinto toolchain, distintos artefactos, distintos modos de
 falla. El CI los corre como dos jobs en paralelo. `test:s3`, `test:yaci` y los dos scripts de
 `contracts/scripts/` **no corren en CI**: los dos primeros levantan infraestructura, y los scripts
-corren `aiken check` una vez por mutante (varios minutos). Se corren a mano.
+corren `aiken check` una vez por mutante (varios minutos). Se corren a mano. `test:a11y` tampoco,
+pero por otra razón: `SPEC-112` decidió que ninguna capa de accesibilidad bloquee todavía.
 
 Los comandos por frente (`db:migrate`, `db:seed`, `e2e`) están en el `CLAUDE.md` de cada uno.
 

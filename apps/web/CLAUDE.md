@@ -265,7 +265,15 @@ pnpm --filter web test            # vitest
 pnpm --filter web build           # dist/ — lo que se publica como static site
 pnpm --filter web e2e:ui          # playwright interactivo
 pnpm --filter web e2e:report      # reporte HTML de la última corrida
+pnpm --filter web test:a11y       # la suite de vitest con axe después de cada test (SPEC-112)
+pnpm --filter web e2e a11y        # axe en el navegador real, 12 superficies × mobile/desktop
 ```
+
+**Accesibilidad: una violación conocida se registra, no se silencia.** Las dos capas de axe leen
+`a11y/hallazgos.ts`: cada fila es regla + patrón de HTML + **la spec que la cierra**. Lo que no
+esté ahí pone la capa en rojo. Si arreglás un hallazgo, **borrá su fila en el mismo commit**: una
+fila que queda deja de proteger contra la regresión de lo que arreglaste. `test:a11y` no está en
+`pnpm verify` ni en CI a propósito (SPEC-112 §Invariantes: ninguna capa bloquea hoy).
 
 **Los E2E entran con la password del seed, no con la del prefill.** `e2e/_credenciales.ts` la resuelve
 igual que `passwordDeDemo` del seed: `SEED_DEMO_PASSWORD` / `SEED_ADMIN_PASSWORD` del entorno o de
