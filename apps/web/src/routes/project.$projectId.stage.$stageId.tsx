@@ -215,6 +215,10 @@ function InvestorStageDetail() {
                       key={f.id}
                       type="button"
                       className="overflow-hidden rounded-lg bg-surface-alt"
+                      // SPEC-114 §2: nombre propio, no heredado del <img>. Mientras
+                      // la URL firmada no llegó, adentro solo hay un ícono
+                      // aria-hidden y el botón quedaba sin nombre.
+                      aria-label={t('investor.stage.photos')}
                       onClick={() => {
                         setFotoInicial(i)
                         setGaleria(true)

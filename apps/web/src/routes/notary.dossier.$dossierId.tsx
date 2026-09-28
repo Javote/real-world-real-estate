@@ -89,7 +89,11 @@ function DossierReview() {
 
               {/* Completitud: **qué fracción de la prueba está sustanciada**, no
                   "cuán listo está el dossier" (regla 17). */}
-              <ProgressBar percent={dossier.completeness} showValue />
+              <ProgressBar
+                percent={dossier.completeness}
+                label={t('investor.dossier.completeness')}
+                showValue
+              />
 
               <div className="flex items-center justify-between gap-s3">
                 <span className="text-body-sm text-text-muted">

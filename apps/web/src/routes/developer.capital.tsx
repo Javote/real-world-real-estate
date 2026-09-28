@@ -176,6 +176,7 @@ function DeveloperCapital() {
                     </div>
                     <ProgressBar
                       percent={total > 0 ? Math.round((p.raisedMinorUnits / total) * 100) : 0}
+                      label={p.projectName}
                       showValue
                     />
                   </div>

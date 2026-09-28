@@ -11,18 +11,26 @@ import { cn } from '#/lib/cn'
 interface ProgressBarProps {
   /** 0-100. */
   percent: number
+  /**
+   * Qué mide la barra, para el lector de pantalla (SPEC-114 §1). Obligatorio:
+   * un `role="progressbar"` sin nombre se anuncia "barra de progreso, 40%" sin
+   * decir de qué, y en un listado todas las barras suenan iguales. En un
+   * listado va el nombre de lo que se mide (el proyecto, la unidad).
+   */
+  label: string
   /** El porcentaje a la derecha, como en el pie del ProjectCard. */
   showValue?: boolean
   className?: string
 }
 
-export function ProgressBar({ percent, showValue, className }: ProgressBarProps) {
+export function ProgressBar({ percent, label, showValue, className }: ProgressBarProps) {
   const acotado = Math.max(0, Math.min(100, Math.round(percent)))
 
   return (
     <div className={cn('flex items-center gap-s2', className)}>
       <div
         role="progressbar"
+        aria-label={label}
         aria-valuenow={acotado}
         aria-valuemin={0}
         aria-valuemax={100}

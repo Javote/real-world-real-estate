@@ -175,7 +175,7 @@ function InvestorDossier() {
                 <span className="text-text-muted">{t('investor.dossier.progress')}</span>
                 <span className="font-bold text-primary">{dossier.completeness}%</span>
               </div>
-              <ProgressBar percent={dossier.completeness} />
+              <ProgressBar percent={dossier.completeness} label={t('investor.dossier.progress')} />
             </article>
 
             <article className={cn('flex flex-col gap-s3', CARD_SHELL)}>

@@ -65,7 +65,7 @@ export function TextArea({
         disabled={disabled}
         ref={ref}
         aria-invalid={error ? true : undefined}
-        aria-errormessage={error ? `${id}-error` : undefined}
+        aria-describedby={error ? `${id}-error` : undefined}
         onChange={(e) => onChange(e.target.value)}
         className={cn(
           'resize-y rounded-md border bg-surface-alt px-s3 py-s2 text-body text-text-primary',

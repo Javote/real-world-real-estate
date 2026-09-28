@@ -120,7 +120,7 @@ function DeveloperUnits() {
                   <span className="text-body-sm text-text-muted">
                     {t('developer.units.occupancy')}
                   </span>
-                  <ProgressBar percent={ocupacion} showValue />
+                  <ProgressBar percent={ocupacion} label={grupo.projectName} showValue />
                 </div>
               </article>
             )

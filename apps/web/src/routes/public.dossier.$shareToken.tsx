@@ -62,7 +62,11 @@ function PublicDossierPage() {
                 verifiedLabel={t('status.signed')}
                 pendingLabel={t('status.pending')}
               />
-              <ProgressBar percent={dossier.completeness} showValue />
+              <ProgressBar
+                percent={dossier.completeness}
+                label={t('investor.dossier.completeness')}
+                showValue
+              />
               <p className="text-caption text-text-muted">
                 {formatDate(String(dossier.compiledAt), locale)}
               </p>

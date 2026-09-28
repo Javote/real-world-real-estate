@@ -57,7 +57,7 @@ export function PendingDossiersQueue() {
             </SecondaryButton>
           </div>
 
-          <ProgressBar percent={d.completeness} showValue />
+          <ProgressBar percent={d.completeness} label={d.unitLabel} showValue />
         </li>
       ))}
     </ul>

@@ -39,6 +39,7 @@ Todos se comunican en la entrega.
 | M3 SOM: "**percentages** configurables" (un `%` de avance por stage) | Ningún entregable de M2/M3 lo define (ni M2-D1, ni M2-D3, ni la captura 34C) — nació de leer el SOM en vez de los entregables. El avance es **derivado**, `completadas/total` por proyecto, sin peso por etapa | (c) verdad del producto + techo de precedencia | D-090, D-091 |
 | M3 SOM: "**signers** configurables" (rol configurable por stage) | Lo que el SOM pide ya existe, con otra forma: D-020 fija **qué rol autoriza cada transición**, construido y testeado — "configurable por proyecto" no aparece en ningún entregable. No se agrega una UI para reasignarlo | (c) verdad del producto + techo de precedencia | D-090, D-092 |
 | M2-D3 §LanguageToggle: "icon plus the **active** locale code" (captura 1: "文A EN") | Se muestran **los dos** códigos, ES y EN, con el activo resaltado y `aria-pressed`. Con uno solo no se sabía qué hacía el botón ni cuál era la alternativa, y el lector de pantalla anunciaba solo "Idioma" | (c) verdad del producto: accesibilidad, pedida por el dueño | D-096 |
+| M2-D3 §Visual Language fija `Verified #14B8A6`, `Pending #F97316`, `Info #3B82F6`, `People #EC4899`, `Danger #EF4444` y `Text muted #6B7280`; M2-D3 §Accessibility exige 4.5:1 para texto y labels | Ganan los 4.5:1: los seis tokens se oscurecen hasta pasar en todos sus fondos reales (2.13–4.29:1 → 4.68–5.75:1). Los rellenos claros de los pills no cambian | (a) contradicción interna, decidida por el dueño | D-098 |
 | M1 §README lista los estados como "…**Certified**…"; el `.puml` dice `Completed` | Gana `Completed`: precedencia interna de M1, y `Certified` implicaría que la plataforma certifica | (a) contradicción interna | D-020, D-026 |
 | M1 §README promete que la taxonomía indica "authoritative" y "anchored on-chain" | El CSV entregado no tiene esas columnas. El hueco lo llenan D-027 y D-028 | (a) contradicción interna | D-027, D-028 |
 | M2-D5 §2.1 usa notación de rutas Wouter | Las rutas se leen como **paths**, no como elección de router | (b) redacción | D-022 |
@@ -1294,3 +1295,39 @@ separado de los demás para que los pines no se tapen.
 veían: el modal del detalle de obra abría vacío y el modo mapa de "Buy" mostraba 1 pin de 3. Los dos
 corregidos en el mismo commit — ver `apps/web/CLAUDE.md` §Trampas verificadas. Las tres Torre Volumen
 recibieron coordenadas de CABA en producción el mismo día (Palermo, Belgrano, Colegiales).
+
+## D-098 — Los colores de estado se oscurecen hasta el 4.5:1 que M2-D3 mismo exige
+
+**Decisión del dueño, 2026-09-28** (*"si los colores normativos de los pills no llegan, está bien
+cambiarlos por un tema de accesibilidad"*). Sale de `SPEC-113`, que midió la auditoría de contraste
+que M2-D3 §Accessibility promete para M3 (*"Live audit against contrast ratios […] occurs in
+Milestone 3"*).
+
+**La contradicción.** M2-D3 §Accessibility: *"Body text and labels meet WCAG 2.1 AA contrast (4.5:1
+against background)"*. M2-D3 §Visual Language y §Status pills fijan como normativos colores que no
+llegan: el pill verified da 2.13:1, el pending 2.37:1, el info 3.01:1. No se pueden cumplir las dos
+secciones a la vez: es el caso (a).
+
+**Qué cambia: solo el color fuerte de seis tokens.** Cada uno se oscurece lo mínimo para pasar
+4.5:1 **en todos los fondos donde se usa**: blanco, el fondo de la app, `surface-alt` y su propio
+relleno claro (`text-muted` además sobre los cuatro rellenos claros, porque los captions viven
+adentro de los pills y de las cards de prueba).
+
+| Token | M2-D3 | Ahora | Peor fondo real, antes → después |
+|---|---|---|---|
+| `verified` | `#14B8A6` | `#0F766E` | 2.13 → 4.68 (su relleno) |
+| `pending` | `#F97316` | `#B43F0B` | 2.37 → 4.86 (su relleno) |
+| `info` | `#3B82F6` | `#1D4ED8` | 3.01 → 5.49 (su relleno) |
+| `people` | `#EC4899` | `#BE185D` | 3.00 → 5.14 (su relleno) |
+| `danger` | `#EF4444` | `#B91C1C` | 3.34 → 5.75 (fondo de la app) |
+| `text-muted` | `#6B7280` | `#5F6673` | 3.96 → 4.74 (relleno de info) |
+
+**Lo que no cambia.** Los rellenos claros (`-light`), así que un pill se sigue leyendo como el de la
+captura: el relleno es lo que más pesa en el ojo. El `primary` y los grises de texto que ya pasaban.
+`people` y `danger` no los vio axe en las 12 superficies recorridas, pero fallan igual por cálculo y
+entran por el mismo criterio: la decisión es sobre contraste, no sobre qué pantalla se miró.
+
+**Cómo se sostiene.** `apps/web/src/styles.test.ts` sigue leyendo M2-D3 y exige cada hex normativo,
+**salvo los de esta tabla**, que tienen que aparecer con su valor nuevo. Y para esos seis, el test
+**calcula el contraste** contra sus fondos: si alguien aclara uno para que "quede más parecido a la
+captura", se pone rojo. Las capas de axe de `SPEC-112` miden el resto en el navegador.

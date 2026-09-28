@@ -112,7 +112,7 @@ export function UnitCard(props: UnitCardProps) {
           <StatusPill tone={props.status.tone}>{props.status.label}</StatusPill>
         </span>
 
-        <ProgressBar percent={props.progress} showValue />
+        <ProgressBar percent={props.progress} label={props.unitReference} showValue />
       </span>
     </Contenedor>
   )

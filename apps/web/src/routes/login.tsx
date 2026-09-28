@@ -78,65 +78,63 @@ export function LoginScreen() {
   }
 
   return (
-    <div className="mx-auto min-h-screen max-w-md" style={{ backgroundColor: '#F4F1ED' }}>
+    <div className="mx-auto min-h-screen max-w-md bg-app-bg">
       <GradientHeader
         title={t('app.name')}
         subtitle={t('login.subtitle')}
         right={<LanguageToggle />}
       />
 
-      <form className="px-4 py-6" onSubmit={submit}>
-        <p className="mb-4 text-center text-sm" style={{ color: '#6B7280' }}>
-          {t('login.demoHint')}
-        </p>
+      {/* SPEC-114 §6: sin <main>, todo lo de abajo quedaba fuera de
+          landmarks y el rotor de VoiceOver no ofrecía adónde saltar. */}
+      <main>
+        <form className="px-4 py-6" onSubmit={submit}>
+          <p className="mb-4 text-center text-sm text-text-muted">{t('login.demoHint')}</p>
 
-        <div className="mb-5 grid grid-cols-2 gap-2" role="tablist">
-          {ROLE_PRESETS.map((p, i) => (
-            <button
-              type="button"
-              key={p.key}
-              role="tab"
-              aria-selected={i === preset}
-              onClick={() => selectPreset(i, p)}
-              className="rounded-xl border px-3 py-2 text-sm font-medium"
-              style={
-                i === preset
-                  ? { borderColor: '#6D4AFF', backgroundColor: '#EEEAFF', color: '#5538DD' }
-                  : { borderColor: '#E5E7EB', color: '#374151' }
-              }
-            >
-              {t(p.tabKey)}
-            </button>
-          ))}
-        </div>
+          <div className="mb-5 grid grid-cols-2 gap-2" role="tablist">
+            {ROLE_PRESETS.map((p, i) => (
+              <button
+                type="button"
+                key={p.key}
+                role="tab"
+                aria-selected={i === preset}
+                onClick={() => selectPreset(i, p)}
+                className="rounded-xl border px-3 py-2 text-sm font-medium"
+                style={
+                  i === preset
+                    ? { borderColor: '#6D4AFF', backgroundColor: '#EEEAFF', color: '#5538DD' }
+                    : { borderColor: '#E5E7EB', color: '#374151' }
+                }
+              >
+                {t(p.tabKey)}
+              </button>
+            ))}
+          </div>
 
-        <div className="mb-4 rounded-lg bg-white p-4">
-          <TextInput
-            label={t('login.usernameLabel')}
-            type="email"
-            value={email}
-            onChange={setEmail}
-            autoComplete="username"
-          />
-          <TextInput
-            label={t('login.passwordLabel')}
-            type="password"
-            value={password}
-            onChange={setPassword}
-            autoComplete="current-password"
-          />
-        </div>
+          <div className="mb-4 rounded-lg bg-white p-4">
+            <TextInput
+              label={t('login.usernameLabel')}
+              type="email"
+              value={email}
+              onChange={setEmail}
+              autoComplete="username"
+            />
+            <TextInput
+              label={t('login.passwordLabel')}
+              type="password"
+              value={password}
+              onChange={setPassword}
+              autoComplete="current-password"
+            />
+          </div>
 
-        {errorKey ? (
-          <p className="mb-4 text-sm" style={{ color: '#EF4444' }}>
-            {t(errorKey)}
-          </p>
-        ) : null}
+          {errorKey ? <p className="mb-4 text-sm text-danger">{t(errorKey)}</p> : null}
 
-        <PrimaryButton type="submit" disabled={busy} loading={busy}>
-          {busy ? t('login.submitting') : t('login.submit')}
-        </PrimaryButton>
-      </form>
+          <PrimaryButton type="submit" disabled={busy} loading={busy}>
+            {busy ? t('login.submitting') : t('login.submit')}
+          </PrimaryButton>
+        </form>
+      </main>
     </div>
   )
 }

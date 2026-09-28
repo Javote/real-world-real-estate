@@ -75,7 +75,7 @@ export function NumberInput({
           placeholder={placeholder}
           disabled={disabled}
           aria-invalid={error ? true : undefined}
-          aria-errormessage={error ? `${id}-error` : undefined}
+          aria-describedby={error ? `${id}-error` : undefined}
           onChange={(e) => {
             const crudo = e.target.value
             onChange(crudo === '' ? null : acotar(Number(crudo)))

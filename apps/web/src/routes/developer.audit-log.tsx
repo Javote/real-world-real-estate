@@ -113,6 +113,10 @@ function AuditLog() {
       </div>
 
       <section className="flex flex-col gap-s3" data-testid="DEV-AUDIT-LIST-001">
+        {/* SPEC-114 §5: cada AuditEventCard es un h3, y sin este h2 el
+            recorrido por encabezados saltaba del h1 del header a las cards.
+            sr-only porque el mismo texto ya se ve como subtítulo del header. */}
+        <h2 className="sr-only">{t('developer.audit.context')}</h2>
         {isPending ? (
           <Loading />
         ) : eventos.length ? (

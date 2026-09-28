@@ -58,7 +58,7 @@ export function SelectDropdown({
           value={value}
           disabled={disabled}
           aria-invalid={error ? true : undefined}
-          aria-errormessage={error ? `${id}-error` : undefined}
+          aria-describedby={error ? `${id}-error` : undefined}
           onChange={(e) => onChange(e.target.value)}
           className={cn(
             'w-full appearance-none rounded-md border bg-surface-alt py-s2 pr-s6 pl-s3',

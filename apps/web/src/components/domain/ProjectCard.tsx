@@ -21,7 +21,7 @@ import { StatusPill, type StatusTone } from './StatusPill'
 // proyecto no está entregado — una sección de progreso propia. Regla 1 de
 // CLAUDE.md: cuando la captura y la prosa difieren, gana la captura.
 
-interface ProjectCardProps {
+interface ProjectCardBaseProps {
   name: string
   location?: string | null
   status: { label: string; tone: StatusTone }
@@ -69,12 +69,29 @@ interface ProjectCardProps {
   labels: { from: string; units?: string; progress?: string }
   testId?: string
   variant?: 'buy' | 'developer'
-  /** Fila 13 — el corazón. Sin handler no se dibuja: no hay favorito fantasma. */
-  favorited?: boolean
-  onToggleFavorite?: () => void
-  favoriteAriaLabel?: string
-  favoriteTestId?: string
 }
+
+/**
+ * Fila 13 — el corazón. Sin handler no se dibuja: no hay favorito fantasma.
+ * **Con handler, la etiqueta es obligatoria** (SPEC-114 §3): antes era
+ * opcional y caía en `''`, un botón de solo ícono sin nombre. El tipo ahora
+ * no deja pedir el corazón sin decir cómo se llama.
+ */
+type FavoritoProps =
+  | {
+      onToggleFavorite: () => void
+      favoriteAriaLabel: string
+      favorited?: boolean
+      favoriteTestId?: string
+    }
+  | {
+      onToggleFavorite?: undefined
+      favoriteAriaLabel?: undefined
+      favorited?: undefined
+      favoriteTestId?: undefined
+    }
+
+type ProjectCardProps = ProjectCardBaseProps & FavoritoProps
 
 export function ProjectCard({
   name,
@@ -193,7 +210,7 @@ export function ProjectCard({
                   <span className="font-medium">{Math.round(progress)}%</span>
                 </div>
               ) : null}
-              <ProgressBar percent={progress} showValue={!esDeveloper} />
+              <ProgressBar percent={progress} label={name} showValue={!esDeveloper} />
             </div>
           ) : null}
         </div>
@@ -203,7 +220,7 @@ export function ProjectCard({
         <FavoriteButton
           favorited={Boolean(favorited)}
           onToggle={onToggleFavorite}
-          ariaLabel={favoriteAriaLabel ?? ''}
+          ariaLabel={favoriteAriaLabel}
           testId={favoriteTestId}
         />
       ) : null}

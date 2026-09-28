@@ -41,6 +41,34 @@ function coloresNormativos(): Array<{ nombre: string; hex: string }> {
 
 const normativos = coloresNormativos()
 
+// D-098: M2-D3 §Accessibility exige 4.5:1 y sus propios colores de estado no
+// llegaban. Estos seis usan otro valor, y el test recalcula el contraste contra
+// cada fondo real donde se usan: aclarar uno "para que se parezca a la
+// captura" lo pone rojo.
+const BASE = ['#ffffff', '#f4f1ed', '#f3f4f6']
+const RELLENOS = ['#d4f4ee', '#ffe8d6', '#dbeafe', '#fce7f3']
+const DESVIOS: Record<string, { nuevo: string; fondos: string[] }> = {
+  '#14b8a6': { nuevo: '#0f766e', fondos: [...BASE, '#d4f4ee'] },
+  '#f97316': { nuevo: '#b43f0b', fondos: [...BASE, '#ffe8d6'] },
+  '#3b82f6': { nuevo: '#1d4ed8', fondos: [...BASE, '#dbeafe'] },
+  '#ec4899': { nuevo: '#be185d', fondos: [...BASE, '#fce7f3'] },
+  '#ef4444': { nuevo: '#b91c1c', fondos: BASE },
+  '#6b7280': { nuevo: '#5f6673', fondos: [...BASE, ...RELLENOS] }
+}
+
+/** Contraste WCAG 2.x entre dos `#rrggbb`. */
+function contraste(a: string, b: string): number {
+  const lum = (hex: string) => {
+    const [r, g, bl] = [1, 3, 5].map((i) => {
+      const c = Number.parseInt(hex.slice(i, i + 2), 16) / 255
+      return c <= 0.03928 ? c / 12.92 : ((c + 0.055) / 1.055) ** 2.4
+    }) as [number, number, number]
+    return 0.2126 * r + 0.7152 * g + 0.0722 * bl
+  }
+  const [x, y] = [lum(a), lum(b)].sort((m, n) => n - m) as [number, number]
+  return (x + 0.05) / (y + 0.05)
+}
+
 describe('tokens de color contra M2-D3', () => {
   it('el entregable define los colores que esperamos encontrar', () => {
     // Si este número cambia, alguien tocó `docs/` (que es inmutable) o el
@@ -48,8 +76,25 @@ describe('tokens de color contra M2-D3', () => {
     expect(normativos.length).toBeGreaterThanOrEqual(17)
   })
 
-  it.each(normativos)('$nombre ($hex) está en styles.css', ({ hex }) => {
-    expect(styles.toLowerCase()).toContain(hex)
+  it.each(normativos)('$nombre ($hex) está en styles.css, o su desvío de D-098', ({ hex }) => {
+    const desvio = DESVIOS[hex]
+    if (desvio) {
+      expect(styles.toLowerCase()).toContain(desvio.nuevo)
+      expect(styles.toLowerCase()).not.toContain(hex)
+    } else {
+      expect(styles.toLowerCase()).toContain(hex)
+    }
+  })
+
+  it('los seis desvíos de D-098 existen en el entregable y siguen pasando 4.5:1', () => {
+    const hexes = normativos.map((n) => n.hex)
+    for (const [viejo, { nuevo, fondos }] of Object.entries(DESVIOS)) {
+      // Si M2-D3 dejara de tener el valor viejo, el desvío no desvía nada.
+      expect(hexes).toContain(viejo)
+      for (const fondo of fondos) {
+        expect(contraste(nuevo, fondo), `${nuevo} sobre ${fondo}`).toBeGreaterThanOrEqual(4.5)
+      }
+    }
   })
 
   it('no quedó ningún color del sistema viejo', () => {

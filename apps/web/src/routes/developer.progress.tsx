@@ -206,6 +206,9 @@ function DeveloperProgress() {
                   </span>
                   <div
                     role="progressbar"
+                    // SPEC-114 §1: la misma regla que `ProgressBar`, en la única
+                    // barra que no lo usa (es más alta, `h-2`).
+                    aria-label={p.nombre}
                     aria-valuenow={porcentaje}
                     aria-valuemin={0}
                     aria-valuemax={100}

@@ -66,55 +66,6 @@ export const HALLAZGOS_ABIERTOS: readonly Hallazgo[] = [
     spec: 'SPEC-113',
     motivo:
       'login: color inline #6b7280 sobre #f4f1ed (4.29:1) — y además es un color literal fuera de los tokens'
-  },
-
-  // ── SPEC-114 · nombres, estructura y landmarks ──
-  {
-    regla: 'aria-progressbar-name',
-    html: /role="progressbar"/,
-    spec: 'SPEC-114',
-    motivo: 'ProgressBar no tiene aria-label ni aria-labelledby'
-  },
-  {
-    regla: 'button-name',
-    // axe guarda solo la etiqueta de apertura, así que esto también cubre una
-    // foto CARGADA con alt vacío. Esa regresión la caza igual
-    // `-project.stage.detail.test.tsx`, que busca la imagen por su nombre.
-    html: /^<button type="button" class="overflow-hidden rounded-lg bg-surface-alt">/,
-    spec: 'SPEC-114',
-    motivo: 'foto de etapa: mientras la imagen no llegó, el botón solo tiene un ícono aria-hidden'
-  },
-  {
-    regla: 'button-name',
-    html: /aria-pressed="(true|false)" aria-label=""/,
-    spec: 'SPEC-114',
-    motivo:
-      'favorito de ProjectCard: favoriteAriaLabel es opcional y cae en "" (latente: los dos llamadores lo pasan)'
-  },
-  {
-    regla: 'aria-valid-attr-value',
-    html: /aria-errormessage="[^"]*-error"/,
-    spec: 'SPEC-114',
-    motivo:
-      'el <p> de error no es live region ni está en aria-describedby: VoiceOver no lo lee de forma fiable'
-  },
-  {
-    regla: 'heading-order',
-    html: /^<h3 class="text-body font-bold text-text-primary">/,
-    spec: 'SPEC-114',
-    motivo: 'AuditEventCard es h3 y el audit log no tiene h2 entre el h1 del header y las cards'
-  },
-  {
-    regla: 'landmark-one-main',
-    html: /^<html/,
-    spec: 'SPEC-114',
-    motivo: '/login no tiene <main>'
-  },
-  {
-    regla: 'region',
-    html: /^<(p class="mb-4 text-center text-sm"|div class="mb-5 grid grid-cols-2 gap-2" role="tablist"|div class="mb-4 rounded-lg bg-white p-4")/,
-    spec: 'SPEC-114',
-    motivo: '/login: el contenido queda fuera de todo landmark'
   }
 ]
 

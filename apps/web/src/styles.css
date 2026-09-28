@@ -31,21 +31,25 @@
   --color-primary-light: #eeeaff; /* fondos tintados: nav seleccionado, role pill */
 
   /* --- Semánticos --------------------------------------------------------- */
-  /* Cada color tiene UN significado y no cambia entre contextos. */
-  --color-verified: #14b8a6; /* badge de verificación, confirmación on-chain, firmado */
+  /* Cada color tiene UN significado y no cambia entre contextos.
+     **Los seis colores fuertes de estado NO son los hex de M2-D3** (D-098): M2-D3
+     §Accessibility exige 4.5:1 y sus propios valores daban 2.13–3.96:1. Se
+     oscurecieron lo mínimo para pasar en todos sus fondos reales; los rellenos
+     `-light` son los de M2-D3. `styles.test.ts` recalcula esos contrastes. */
+  --color-verified: #0f766e; /* badge de verificación, confirmación on-chain, firmado */
   --color-verified-light: #d4f4ee;
-  --color-pending: #f97316; /* pendiente de verificación, acción de observar, en disputa */
+  --color-pending: #b43f0b; /* pendiente de verificación, acción de observar, en disputa */
   --color-pending-light: #ffe8d6;
-  --color-info: #3b82f6; /* pre-construcción, métricas de portfolio */
+  --color-info: #1d4ed8; /* pre-construcción, métricas de portfolio */
   --color-info-light: #dbeafe;
-  --color-people: #ec4899; /* badges de cantidad de inversores */
+  --color-people: #be185d; /* badges de cantidad de inversores */
   --color-people-light: #fce7f3;
-  --color-danger: #ef4444; /* log out, destructivo duro */
+  --color-danger: #b91c1c; /* log out, destructivo duro */
 
   /* --- Neutros ------------------------------------------------------------ */
   --color-text-primary: #111827; /* titulares, números de stat, body denso */
   --color-text-secondary: #374151; /* body normal, helper text */
-  --color-text-muted: #6b7280; /* labels, captions, timestamps */
+  --color-text-muted: #5f6673; /* labels, captions, timestamps — D-098 */
   --color-disabled: #9ca3af; /* inputs deshabilitados, íconos de nav inactivos */
   --color-border: #e5e7eb;
   --color-surface-alt: #f3f4f6; /* card sobre card; hover de botón ghost */

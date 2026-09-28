@@ -400,7 +400,7 @@ describe('NumberInput · variantes', () => {
 
     const campo = screen.getByLabelText('Precio')
     expect(campo.getAttribute('aria-invalid')).toBe('true')
-    expect(campo.getAttribute('aria-errormessage')).toBe('n-error')
+    expect(campo.getAttribute('aria-describedby')).toBe('n-error')
     expect(screen.getByText('Ingresá un precio').id).toBe('n-error')
   })
 
@@ -408,7 +408,7 @@ describe('NumberInput · variantes', () => {
     render(<NumberInput id="n" label="Precio" value={5} onChange={vi.fn()} {...steppers} />)
 
     expect(screen.getByLabelText('Precio').getAttribute('aria-invalid')).toBeNull()
-    expect(screen.getByLabelText('Precio').getAttribute('aria-errormessage')).toBeNull()
+    expect(screen.getByLabelText('Precio').getAttribute('aria-describedby')).toBeNull()
   })
 
   it('deshabilitado apaga el campo y los dos botones', () => {
@@ -567,7 +567,7 @@ describe('SelectDropdown · variantes', () => {
 
     const campo = screen.getByLabelText('Unidad')
     expect(campo.getAttribute('aria-invalid')).toBe('true')
-    expect(campo.getAttribute('aria-errormessage')).toBe('u-error')
+    expect(campo.getAttribute('aria-describedby')).toBe('u-error')
     expect(screen.getByText('Elegí una unidad').id).toBe('u-error')
   })
 

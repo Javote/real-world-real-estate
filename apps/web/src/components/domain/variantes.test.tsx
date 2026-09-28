@@ -72,19 +72,24 @@ describe('LanguageToggle · el idioma activo', () => {
 
 describe('ProgressBar', () => {
   it('sin showValue no escribe el número; con showValue lo escribe redondeado', () => {
-    const { rerender } = render(<ProgressBar percent={42.4} />)
+    const { rerender } = render(<ProgressBar percent={42.4} label="Torre A" />)
     expect(screen.queryByText('42%')).toBeNull()
     expect(screen.getByRole('progressbar').getAttribute('aria-valuenow')).toBe('42')
 
-    rerender(<ProgressBar percent={42.4} showValue className="extra" />)
+    rerender(<ProgressBar percent={42.4} label="Torre A" showValue className="extra" />)
     expect(screen.getByText('42%')).toBeDefined()
   })
 
+  it('SPEC-114 §1: la barra se anuncia con el nombre de lo que mide', () => {
+    render(<ProgressBar percent={40} label="Torre A" />)
+    expect(screen.getByRole('progressbar', { name: 'Torre A' })).toBeDefined()
+  })
+
   it('acota a 0-100: ni negativos ni pasados de rosca', () => {
-    const { rerender } = render(<ProgressBar percent={-20} />)
+    const { rerender } = render(<ProgressBar percent={-20} label="Torre A" />)
     expect(screen.getByRole('progressbar').getAttribute('aria-valuenow')).toBe('0')
 
-    rerender(<ProgressBar percent={250} />)
+    rerender(<ProgressBar percent={250} label="Torre A" />)
     expect(screen.getByRole('progressbar').getAttribute('aria-valuenow')).toBe('100')
   })
 })

@@ -288,6 +288,9 @@ describe('ProjectCard · variante buy', () => {
   })
 
   it('sin handler no hay favorito fantasma', () => {
+    // Desde SPEC-114 §3 el tipo ya no deja pasar props de favorito sin
+    // handler; la guarda en runtime queda igual, por si llega por un spread.
+    // @ts-expect-error — favorito sin onToggleFavorite
     render(<ProjectCard {...base} favorited favoriteAriaLabel="Guardar" />)
     expect(screen.queryByRole('button', { name: 'Guardar' })).toBeNull()
   })
@@ -313,10 +316,25 @@ describe('ProjectCard · variante buy', () => {
     expect(onToggle).toHaveBeenCalledOnce()
     expect(onOpen).not.toHaveBeenCalled()
 
-    // `favorited` ausente es "no favorito", y sin etiqueta el nombre queda vacío.
-    rerender(<ProjectCard {...base} onToggleFavorite={onToggle} favoriteTestId="fav" />)
+    // `favorited` ausente es "no favorito".
+    rerender(
+      <ProjectCard
+        {...base}
+        onToggleFavorite={onToggle}
+        favoriteAriaLabel="Guardar en favoritos"
+        favoriteTestId="fav"
+      />
+    )
     expect(screen.getByTestId('fav').getAttribute('aria-pressed')).toBe('false')
-    expect(screen.getByTestId('fav').getAttribute('aria-label')).toBe('')
+  })
+
+  it('SPEC-114 §3: pedir el corazón sin su etiqueta no compila', () => {
+    // Antes la etiqueta era opcional y caía en '': un botón de solo ícono sin
+    // nombre. Si alguien vuelve a hacerla opcional, este @ts-expect-error se
+    // queda sin error que esperar y `pnpm typecheck` se pone rojo.
+    // @ts-expect-error — onToggleFavorite exige favoriteAriaLabel
+    const sinEtiqueta = <ProjectCard {...base} onOpen={vi.fn()} onToggleFavorite={vi.fn()} />
+    expect(sinEtiqueta).toBeDefined()
   })
 })
 
