@@ -57,6 +57,13 @@ lo mismo sin pasar por HTTP. Ver el detalle en `CLAUDE.md` raíz.
 
 ## Trampas verificadas
 
+- **2026-09-28 · `fs.createReadStream(path)` abre el archivo después, no cuando lo creás.** Si nadie
+  consume el stream y el archivo se borra antes de esa apertura diferida, el `ENOENT` sale como un
+  `error` sin listener: excepción suelta en el proceso. Pasaba en `S3Storage.put` con el cliente S3
+  mockeado (el `send` no lee el body y el test borra el temporal), y tiraba CI de vez en cuando.
+  **Un body de archivo se pasa como `(await fs.promises.open(p)).createReadStream()`, con el
+  `close()` en un `finally`**: el handle ya está abierto y no hay apertura tardía que falle.
+
 - **2026-09-22, más tarde · Los deploys que fallan con "Timed Out" los tumba el apagado por
   inactividad del plan free, no el código.** Render duerme el servicio a los **15 minutos sin
   requests** y manda `SIGTERM` a todas las instancias, incluida la que se está deployando. Si el

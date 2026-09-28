@@ -994,14 +994,34 @@ describe("SPEC-218 · subida por lote", () => {
       const contenido = pdf();
 
       // El chequeo de aplicación (`existentes`) es "leer y después escribir":
-      // los dos pedidos pueden pasarlo antes de que cualquiera inserte. Acá
-      // no se neutraliza nada — se dispara la carrera de verdad, contra el
-      // índice único de la migración 0009.
+      // los dos pedidos pueden pasarlo antes de que cualquiera inserte, y ahí
+      // choca el índice único de la migración 0009. **Que pase o no depende
+      // del timing**: si el primero ya insertó cuando el segundo lee, el
+      // segundo ve el archivo en `existentes` y sale por el 400
+      // NO_FILES_ACCEPTED de siempre — correcto también, pero no es lo que
+      // este test prueba. Sin fijarlo, el test fallaba de vez en cuando en CI
+      // (`[201, 400]`). La barrera fija la intercalación: `storage.put` corre
+      // DESPUÉS del chequeo y ANTES del insert, y ninguno de los dos pedidos
+      // sigue hasta que los dos pasaron por ahí. El insert y el índice siguen
+      // siendo los de verdad.
+      const putReal = storage.put.bind(storage);
+      let llegaron = 0;
+      let soltar!: () => void;
+      const ambos = new Promise<void>((r) => {
+        soltar = r;
+      });
+      const put = vi.spyOn(storage, "put").mockImplementation(async (entrada) => {
+        llegaron += 1;
+        if (llegaron === 2) soltar();
+        await ambos;
+        return putReal(entrada);
+      });
+
       const subida = () =>
         subirLote(miembro, sId, campos, [archivo(Buffer.from(contenido), "concurrente.pdf")]);
 
       const antes = archivosEnDisco();
-      const [a, b] = await Promise.all([subida(), subida()]);
+      const [a, b] = await Promise.all([subida(), subida()]).finally(() => put.mockRestore());
       const statuses = [a.status, b.status].sort();
       expect(statuses).toEqual([201, 409]);
 

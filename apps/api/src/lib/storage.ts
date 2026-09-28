@@ -131,15 +131,27 @@ class S3Storage implements StoragePort {
   }) {
     await this.ensureBucket();
 
-    await this.client.send(
-      new PutObjectCommand({
-        Bucket: this.config.bucket,
-        Key: key,
-        Body: fs.createReadStream(localPath),
-        ContentType: contentType,
-        ContentLength: fs.statSync(localPath).size
-      })
-    );
+    // **El archivo se abre antes del `send` y se cierra siempre después.** Con
+    // `fs.createReadStream(localPath)` la apertura quedaba diferida: si el
+    // `send` terminaba sin leer el body (un error antes de subir, o el mock de
+    // los tests) y el llamador borraba el temporal, esa apertura tardía fallaba
+    // con ENOENT como un `error` sin nadie escuchando — una excepción suelta en
+    // el proceso. Con el handle ya abierto no hay apertura tardía que fallar.
+    const archivo = await fs.promises.open(localPath, "r");
+    try {
+      await this.client.send(
+        new PutObjectCommand({
+          Bucket: this.config.bucket,
+          Key: key,
+          Body: archivo.createReadStream(),
+          ContentType: contentType,
+          ContentLength: (await archivo.stat()).size
+        })
+      );
+    } finally {
+      // Si el SDK consumió el stream, el handle ya está cerrado y esto no hace nada.
+      await archivo.close();
+    }
 
     // **Se relee y se rehashea a propósito.** El hash tiene que cubrir los
     // bytes que quedaron en el object storage, no los del temporal: si la
