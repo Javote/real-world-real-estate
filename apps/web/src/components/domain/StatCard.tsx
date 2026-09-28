@@ -72,7 +72,7 @@ export function StatCard({
         {label}
       </span>
       {helper ? (
-        <span className={cn('text-body-sm', highlighted ? 'text-white/80' : 'text-text-muted')}>
+        <span className={cn('text-body-sm', highlighted ? 'text-white' : 'text-text-muted')}>
           {helper}
         </span>
       ) : null}

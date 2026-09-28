@@ -5,6 +5,31 @@
 > superficies). Nivel 🟡 — **pide una decisión del dueño antes que código**: toca tokens normativos.
 > No toca ningún criterio del SOM.
 
+## Cerrada — 2026-09-28
+
+**El dueño eligió que gane §Accessibility** (*"si los colores normativos de los pills no llegan,
+está bien cambiarlos por un tema de accesibilidad"*) y quedó escrito como **D-098**. Se implementó
+una variante de la opción 1: en vez de agregar tokens de texto aparte, se oscureció el **color
+fuerte** de cada token de estado, que es el que se usa como texto, ícono y fondo de botón. Los
+rellenos `-light` son los de M2-D3. Así también se corrigen usos que axe no llegó a ver, como el
+texto blanco sobre un botón `bg-pending` (antes 2.80:1).
+
+- **Seis tokens, no tres:** `verified`, `pending` e `info` (los pills), `text-muted`, y además
+  `people` (3.00:1) y `danger` (3.34:1), que ninguna pantalla recorrida mostró pero fallaban igual
+  por cálculo. Los valores y los contrastes, en D-098.
+- **El blanco al 80% sobre `primary`** (`ActionCard` destacada y `StatCard` resaltada, 3.88:1) pasa
+  a blanco pleno (5.15:1). Los `text-white/80` sobre el gradiente del header **no se tocaron**: axe
+  no puede medir texto sobre gradiente (lo deja como "incompleto") y no se cambia lo que no se midió.
+  Quedan para la pasada de VoiceOver/humana de `SPEC-112`.
+- **`/login` sin colores literales** en el fondo, el texto de ayuda y el error (ahora `bg-app-bg`,
+  `text-text-muted`, `text-danger`). Las solapas de rol siguen con hex inline que coinciden con
+  tokens y pasan contraste: es deuda de forma, no de accesibilidad.
+- **Cómo se sostiene:** `styles.test.ts` exige los seis valores nuevos, exige que el valor viejo ya
+  no esté, y **recalcula el contraste** de cada uno contra sus fondos reales.
+- **Verificado:** `e2e/a11y.spec.ts` 10/10 y `test:a11y` en verde **con el registro de hallazgos
+  vacío**: cero violaciones de WCAG 2.1 AA + best-practice en las 12 superficies, contraste
+  incluido.
+
 ## El hallazgo
 
 M2-D3 §Accessibility se contradice con su propia tabla de colores:

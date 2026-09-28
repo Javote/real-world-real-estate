@@ -25,9 +25,11 @@ salvo lo **postergado** a propósito (los ítems de §Antes de mainnet) — `spe
 razón de cada una. `SPEC-104` cerró el 2026-09-22 (código y tests hechos desde el 2026-09-19); la
 pasada manual con VoiceOver que le quedaba se separó a `SPEC-112`, ampliada a accesibilidad en
 general, sin fecha y sin bloquear nada del SOM. **`SPEC-112` hizo sus capas automatizadas el
-2026-09-28 y abrió dos más en la serie 1xx**: `SPEC-113` (el contraste de los tokens normativos de
-M2-D3 no llega al 4.5:1 que M2-D3 mismo exige, **pide una decisión del dueño**) y `SPEC-114` (seis
-defectos de nombres, encabezados y landmarks, implementable directo). Ninguna toca el SOM.
+2026-09-28 y lo que encontraron se cerró el mismo día**: `SPEC-113` (el contraste de los tokens de
+color de M2-D3 no llegaba al 4.5:1 que M2-D3 mismo exige; el dueño decidió oscurecerlos, **D-098**)
+y `SPEC-114` (nombres, encabezados y landmarks). El registro de hallazgos de axe quedó vacío. A
+`SPEC-112` le quedan la pasada automatizada de VoiceOver, que espera permisos de macOS del dueño, y
+la humana. Ninguna toca el SOM.
 
 Lo transversal. Lo de cada frente vive en `apps/web/CLAUDE.md`, `apps/api/CLAUDE.md`,
 `packages/cardano/CLAUDE.md` y `contracts/CLAUDE.md`, y se carga solo cuando tocás ese subárbol.

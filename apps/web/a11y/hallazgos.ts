@@ -27,46 +27,8 @@ export interface Hallazgo {
 }
 
 export const HALLAZGOS_ABIERTOS: readonly Hallazgo[] = [
-  // ── SPEC-113 · contraste: los tokens normativos de M2-D3 no dan 4.5:1 ──
-  // Solo lo mide el navegador (jsdom no calcula colores).
-  {
-    regla: 'color-contrast',
-    html: /\btext-pending\b/,
-    spec: 'SPEC-113',
-    motivo: '#f97316 sobre #ffe8d6 da 2.37:1 (pill Pendiente/En obra) y 2.8:1 sobre blanco'
-  },
-  {
-    regla: 'color-contrast',
-    html: /\btext-verified\b/,
-    spec: 'SPEC-113',
-    motivo: '#14b8a6 sobre #d4f4ee da 2.13:1 (encabezado del dossier, pill Vendida)'
-  },
-  {
-    regla: 'color-contrast',
-    html: /\btext-info\b/,
-    spec: 'SPEC-113',
-    motivo:
-      '#3b82f6 sobre #dbeafe da 3.01:1 (pill info) — calculado, ninguna pantalla recorrida lo mostró todavía'
-  },
-  {
-    regla: 'color-contrast',
-    html: /\btext-text-muted\b/,
-    spec: 'SPEC-113',
-    motivo: '#6b7280 sobre #f4f1ed da 4.29:1 y sobre #d4f4ee 4.13:1'
-  },
-  {
-    regla: 'color-contrast',
-    html: /\btext-white\/80\b/,
-    spec: 'SPEC-113',
-    motivo: 'blanco al 80% sobre #6d4aff da 3.88:1 (subtítulo de ActionCard destacada)'
-  },
-  {
-    regla: 'color-contrast',
-    html: /color: rgb\(107, 114, 128\)/,
-    spec: 'SPEC-113',
-    motivo:
-      'login: color inline #6b7280 sobre #f4f1ed (4.29:1) — y además es un color literal fuera de los tokens'
-  }
+  // Vacío desde el 2026-09-28: SPEC-113 y SPEC-114 cerraron. Una fila nueva
+  // lleva la spec que la va a cerrar; ver el comentario de arriba.
 ]
 
 /** Lo mínimo de un resultado de axe que hace falta para filtrar — igual en jsdom y en Playwright. */

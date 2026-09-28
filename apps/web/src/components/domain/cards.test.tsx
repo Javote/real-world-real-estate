@@ -437,7 +437,9 @@ describe('ActionCard', () => {
     )
 
     expect(screen.getByTestId('accion').className).toContain('bg-primary')
-    expect(screen.getByText('Empezá acá').className).toContain('text-white/80')
+    // D-098: blanco pleno — al 80% sobre primary daba 3.88:1.
+    expect(screen.getByText('Empezá acá').className.split(' ')).toContain('text-white')
+    expect(screen.getByText('Empezá acá').className).not.toContain('text-white/80')
   })
 
   it('sin ícono ni descripción es solo el título', () => {
@@ -523,7 +525,9 @@ describe('StatCard', () => {
 
     expect(container.firstElementChild?.className).toContain('bg-primary')
     expect(container.querySelector('svg')?.parentElement?.className).toContain('bg-white/20')
-    expect(screen.getByText('ayuda').className).toContain('text-white/80')
+    // D-098: blanco pleno — al 80% sobre primary daba 3.88:1.
+    expect(screen.getByText('ayuda').className.split(' ')).toContain('text-white')
+    expect(screen.getByText('ayuda').className).not.toContain('text-white/80')
   })
 
   it('el helper normal es gris', () => {

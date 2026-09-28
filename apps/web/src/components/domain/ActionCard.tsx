@@ -56,7 +56,7 @@ export function ActionCard({
       <span className="flex min-w-0 flex-col gap-s1">
         <span className={cn('font-bold', compact ? 'text-body' : 'text-h2')}>{title}</span>
         {description && !compact ? (
-          <span className={cn('text-body-sm', featured ? 'text-white/80' : 'text-text-muted')}>
+          <span className={cn('text-body-sm', featured ? 'text-white' : 'text-text-muted')}>
             {description}
           </span>
         ) : null}

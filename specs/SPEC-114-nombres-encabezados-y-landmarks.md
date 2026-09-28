@@ -9,6 +9,24 @@
 > es de pocas líneas y se verifica con la misma herramienta: separarlos daría seis specs de diez
 > renglones que se leen igual.
 
+## Cerrada — 2026-09-28
+
+Los seis, como dice la tabla de abajo, con dos diferencias respecto del plan:
+
+- **§1 encontró una séptima barra.** Al borrar la fila de `aria-progressbar-name` del registro,
+  `test:a11y` se puso rojo en `/developer/progress`: una barra hecha a mano (`h-2`, más alta que
+  `ProgressBar`) que la fila tapaba. Lleva el nombre del proyecto, igual que las de los listados.
+  Es exactamente para lo que existe la regla de borrar la fila.
+- **§3 quedó en el tipo:** `ProjectCard` tiene `FavoritoProps` como unión. Con
+  `onToggleFavorite`, `favoriteAriaLabel` es obligatorio; sin él, ninguna prop de favorito se puede
+  pasar. Dos `@ts-expect-error` en `cards.test.tsx` lo fijan: si alguien vuelve a hacer opcional la
+  etiqueta, `typecheck` se pone rojo.
+
+El resto, tal cual: `aria-describedby` en `TextArea`/`NumberInput`/`SelectDropdown`, `h2` `sr-only`
+en el audit log con `developer.audit.context` (sin clave nueva), `/login` dentro de `<main>`, y
+`aria-label` propio en el botón de foto de la etapa. **Verificado con el registro de hallazgos
+vacío**: `test:a11y` y `e2e/a11y.spec.ts` en verde.
+
 ## Los seis
 
 | # | Regla de axe | Impacto | Dónde | Qué pasa | Arreglo |
