@@ -1298,9 +1298,9 @@ Para no prometer en audio algo que la pantalla no hace:
 - **No hay PWA instalable.** `index.html` no linkea el manifest, no hay service worker registrado y
   `apps/web/public/manifest.json` sigue siendo el boilerplate de Create TanStack App ("Create
   TanStack App Sample"). Chrome no va a ofrecer instalar. T31 muestra el layout responsive, que sí
-  existe. **`CLAUDE.md` §Estructura describe el front como "SPA + PWA": el código no lo sostiene hoy,
-  y la contradicción queda reportada acá sin tocar nada** (`CLAUDE.md` §Jerarquía de precedencia: si
-  la contradicción es con código, se avisa antes de "arreglar").
+  existe. **La PWA la decidió D-065 y nunca se hizo:** queda especificada en
+  [`SPEC-222`](SPEC-222-la-pwa-que-d-065-decidio.md), postergada a después del video. No la
+  menciones en el audio.
 - **No hay botón de liberar pagos.** D-070 lo sacó a propósito: este producto no administra fondos,
   refleja y respalda lo que pasa afuera (D-026). El endpoint
   `POST /developer/contracts/:id/releases/:stageNum` existe en el backend como deuda declarada y el

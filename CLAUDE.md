@@ -299,7 +299,7 @@ pasó decidir contra una transcripción errónea (ver Trampas).
 
 ```
 apps/api          Express 5 + Kysely      → servicio en Render
-apps/web          TanStack Router + Vite  → static site en Render (SPA + PWA)
+apps/web          TanStack Router + Vite  → static site en Render (SPA; la PWA, sin hacer: SPEC-222)
 packages/shared   contrato Zod (oRPC)     → lo importan los dos
 packages/cardano  AnchorPort              → lo importa la API
 contracts/        Aiken · Plutus V3       → no se hostea, toolchain aparte
@@ -328,7 +328,7 @@ en `specs/entregables.md`.
 
 | Frente | Con qué | Decisión |
 |---|---|---|
-| **web** | TanStack Router + Vite (SPA, sin SSR) · React 19 · Tailwind v4 · shadcn/ui · Lucide · PWA | D-065, D-024 |
+| **web** | TanStack Router + Vite (SPA, sin SSR) · React 19 · Tailwind v4 · shadcn/ui · Lucide · PWA (decidida, sin hacer: `SPEC-222`) | D-065, D-024 |
 | **api** | Express 5 + oRPC + Zod + JWT + bcrypt(10) + Multer + helmet, base `/api/v1` | D-066, D-054 |
 | **shared** | Zod — el contrato único. El schema va acá **antes** que el endpoint | D-012, D-066 |
 | **db** | Kysely · SQLite en dev · Turso en prod · una sola migración | D-038, D-063 |
