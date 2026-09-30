@@ -14,7 +14,8 @@ import { cn } from '#/lib/cn'
 /** Las cinco familias semánticas de la matriz. */
 export type StatusTone = 'verified' | 'pending' | 'info' | 'neutral'
 
-const TONOS: Record<StatusTone, string> = {
+/** Exportada para la tarjeta de estado del detalle de obra: los mismos colores, sin otro pill. */
+export const TONOS: Record<StatusTone, string> = {
   // Verified · Signed · Certified · Paid · Released · Sold · Delivered
   verified: 'bg-verified-light text-verified',
   // Pending · Reserved · In dispute · Under construction · Observed

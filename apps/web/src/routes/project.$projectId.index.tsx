@@ -1,6 +1,15 @@
+import type { ProjectStatus } from '@plataforma/shared'
 import { useMutation, useQueries, useQuery, useQueryClient } from '@tanstack/react-query'
 import { createFileRoute, useNavigate } from '@tanstack/react-router'
-import { Building2, Heart, Images } from 'lucide-react'
+import {
+  Building2,
+  HardHat,
+  Heart,
+  Images,
+  KeyRound,
+  type LucideIcon,
+  PencilRuler
+} from 'lucide-react'
 import { useState } from 'react'
 import { ApiError, api, projectCoverUrl } from '#/api/port'
 import { INVESTOR_ROLES } from '#/auth/roles'
@@ -12,6 +21,7 @@ import { Loading } from '#/components/domain/Loading'
 import { LocationMapModal } from '#/components/domain/LocationMapModal'
 import { PrimaryButton, SecondaryButton } from '#/components/domain/PrimaryButton'
 import { ProgressTimeline } from '#/components/domain/ProgressTimeline'
+import { TONOS } from '#/components/domain/StatusPill'
 import { PanelLayout } from '#/components/PanelLayout'
 import { formatDate, formatMonthYear } from '#/i18n/format'
 import { useTranslation } from '#/i18n/useTranslation'
@@ -19,7 +29,17 @@ import { useObjectUrls } from '#/lib/blobUrls'
 import { CARD_SHELL } from '#/lib/cardShell'
 import { cn } from '#/lib/cn'
 import { esFoto, formatoArchivo, reintentarSiNoEsAusencia } from '#/lib/investor'
-import { avanceDeStages, bajarBlob, timelineDeStages } from '#/lib/stageProgress'
+import { avanceDeStages, bajarBlob, TONO_PROYECTO, timelineDeStages } from '#/lib/stageProgress'
+
+// El ícono de la tarjeta de estado. Ninguno es un tilde a propósito: un tilde
+// verde se lee como "verificado", y esta tarjeta dice en qué etapa de su vida
+// está la obra, no que algo esté anclado (regla 17).
+const ICONO_DE_ESTADO: Record<ProjectStatus, LucideIcon> = {
+  planning: PencilRuler,
+  in_progress: HardHat,
+  delayed: HardHat,
+  completed: KeyRound
+}
 
 // **M2-D5 filas 06-07 · `/project/:projectId`** — capturas 6 y 7.
 // Test IDs: INV-PROJECT-DETAIL-001, INV-PROJECT-DOCS-002. Patrones: P1, P2.
@@ -183,16 +203,25 @@ function InvestorProjectDetail() {
 
         <div className="grid grid-cols-2 gap-s3">
           {/* Captura 6: el valor grande y en negrita, como el "3,500 US$" de ahí.
-              Sin precio (no está en el contrato), el estado es el valor, y la
-              tarjeta —tan alta como el mapa de al lado— lo centra en vertical. */}
-          <article className={cn('flex flex-col justify-center gap-s2', CARD_SHELL)}>
+              Sin precio (no está en el contrato), el estado es el valor: con el
+              color de su familia en la matriz de M2-D3 (el mismo del pill de
+              "Buy") y centrado en los dos ejes, en una tarjeta tan alta como el
+              mapa de al lado. */}
+          <article
+            className={cn(
+              'flex flex-col items-center justify-center gap-s2 text-center',
+              CARD_SHELL,
+              proyecto?.status ? TONOS[TONO_PROYECTO[proyecto.status]] : undefined
+            )}
+          >
             {proyecto?.status ? (
-              <span className="text-h2 font-bold text-text-primary">
-                {t(`project.status.${proyecto.status}`)}
-              </span>
+              <>
+                <EstadoIcono status={proyecto.status} />
+                <span className="text-h2 font-bold">{t(`project.status.${proyecto.status}`)}</span>
+              </>
             ) : null}
             {proyecto?.estimatedDelivery ? (
-              <p className="text-body-sm text-text-muted">
+              <p className="text-body-sm text-text-secondary">
                 {t('investor.project.delivery', {
                   date: formatMonthYear(String(proyecto.estimatedDelivery), locale)
                 })}
@@ -383,5 +412,15 @@ function InvestorProjectDetail() {
         }}
       />
     </PanelLayout>
+  )
+}
+
+/** El badge de 40px del `StatCard`, con el ícono del estado en el color de la tarjeta. */
+function EstadoIcono({ status }: { status: ProjectStatus }) {
+  const Icono = ICONO_DE_ESTADO[status]
+  return (
+    <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-card">
+      <Icono className="size-icon-stat" aria-hidden="true" />
+    </span>
   )
 }

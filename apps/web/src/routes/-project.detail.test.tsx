@@ -146,6 +146,14 @@ describe('/project/:projectId (investor)', () => {
     expect(detalle.textContent).toContain('Etapa actual: Etapa-2')
     // 1 de 3 etapas completadas.
     expect(detalle.textContent).toContain('33%')
+
+    // La tarjeta de estado toma el color de su familia en la matriz de M2-D3
+    // (en obra → pending, como el pill de "Buy") y centra en los dos ejes.
+    const tarjeta = screen.getByText(t['project.status.in_progress']).closest('article')
+    expect(tarjeta?.className).toContain('bg-pending-light')
+    expect(tarjeta?.className).toContain('text-pending')
+    expect(tarjeta?.className).toContain('items-center')
+    expect(tarjeta?.className).toContain('justify-center')
   })
 
   it('con todas las etapas completadas no hay "etapa actual" ni porcentaje', async () => {
