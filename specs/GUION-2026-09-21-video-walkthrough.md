@@ -1403,6 +1403,21 @@ punto. Todos en CABA:
 | Torre Demo E2E | -34.5826, -58.439 | Palermo Hollywood (declara solo "Palermo") |
 | Torre Belgrano | -34.569, -58.47 | Belgrano R (declara solo "Belgrano") |
 
+**Portadas — cargadas el 2026-09-30 (D-099), por la API como developer** (`PUT
+/developer/projects/:id/cover`, queda en el `AuditLog`). Las dos imágenes son de
+`~/Pictures`, tres y tres:
+
+| Proyecto | Portada |
+|---|---|
+| Torre Volumen 3 (la de la sesión A) | `portada-proyecto-16-9.png` (horizontal) |
+| Torre Volumen 1 | `portada-proyecto-16-9.png` (horizontal) |
+| Torre Pending Test | `portada-proyecto-16-9.png` (horizontal) |
+| Torre Volumen 2 | `imagen-vertical-proyecto.png` (vertical, la card la recorta al centro) |
+| Torre Demo E2E | `imagen-vertical-proyecto.png` (vertical) |
+| Torre Belgrano | `imagen-vertical-proyecto.png` (vertical) |
+
+`torre-a` no tiene: sigue oculta. El proyecto que nace en T08 recibe la suya en cámara.
+
 **Ids de producción, para no volver a buscarlos:**
 
 | Qué | Tabla | Id |
