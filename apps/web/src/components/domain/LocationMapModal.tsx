@@ -328,8 +328,12 @@ export function LocationMapModal({
     }
   }, [esPicker, latitude, longitude, generacion])
 
+  // `isolate` en todas las variantes: Leaflet les da a sus capas z-index de 400
+  // a 1000, y sin un contexto de apilamiento propio compiten con el resto de
+  // la página. La miniatura (`preview`) quedaba ENCIMA del diálogo que ella
+  // misma abre (`z-50`), y los pines de "Buy" encima del popover del pin.
   const mapaEl = (
-    <div className="relative">
+    <div className="relative isolate">
       {addressLabel ? (
         <span className="absolute top-s3 left-s3 z-[1000] rounded-md bg-card/90 px-s3 py-s2 text-body-sm text-text-primary shadow-e1">
           {addressLabel}
@@ -349,7 +353,10 @@ export function LocationMapModal({
 
       <div
         ref={setContenedor}
-        className={cn('w-full bg-surface-alt', esPicker ? 'h-64 rounded-lg' : 'h-[70vh]')}
+        className={cn(
+          'w-full bg-surface-alt',
+          esPicker ? 'h-64 rounded-lg' : variant === 'modal' ? 'h-[80vh]' : 'h-[70vh]'
+        )}
       />
     </div>
   )
@@ -357,7 +364,11 @@ export function LocationMapModal({
   if (esPreview) {
     if (!open) return null
     return (
-      <div data-testid={testId} aria-hidden="true" className="pointer-events-none h-full w-full">
+      <div
+        data-testid={testId}
+        aria-hidden="true"
+        className="pointer-events-none isolate h-full w-full"
+      >
         <div ref={setContenedor} className="h-full w-full bg-surface-alt" />
       </div>
     )
@@ -385,7 +396,10 @@ export function LocationMapModal({
     <Dialog open={open} onOpenChange={(abierto) => !abierto && onClose?.()}>
       <DialogContent
         data-testid={testId}
-        className="max-w-3xl overflow-hidden p-0"
+        // `sm:` además del ancho base: el primitivo trae `sm:max-w-lg`, que
+        // `twMerge` no pisa con un `max-w-*` sin variante, y desde 640px el
+        // diálogo quedaba en 512px por más que pidiera más.
+        className="overflow-hidden p-0 sm:max-w-4xl"
         showCloseButton={false}
       >
         <DialogTitle className="sr-only">{labels.title}</DialogTitle>

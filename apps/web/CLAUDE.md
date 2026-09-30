@@ -127,6 +127,15 @@ no la captura. No reintroducir un `hideBrand`.
 
 ## Trampas verificadas
 
+- **2026-09-30 · un mapa de Leaflet en la página tapaba los diálogos, y los diálogos anchos medían
+  512px.** Dos causas, vistas grabando el video contra producción. (1) Leaflet les da a sus capas
+  `z-index` de 400 a 1000; sin un contexto de apilamiento propio, la miniatura del detalle de obra y
+  de unidad quedaba **encima** del diálogo (`z-50`) que ella misma abre, y los pines de "Buy" encima
+  del popover. **Fix:** `isolate` en todas las variantes de `LocationMapModal`. (2) El primitivo
+  `dialog.tsx` trae `sm:max-w-lg`, y `twMerge` **no** lo pisa con un `max-w-*` sin variante: un
+  `DialogContent className="max-w-3xl"` quedaba en 512px desde 640px de ancho. **Un diálogo que
+  necesite otro ancho lo pide en `sm:`** (hoy: mapa, galería y visor de documentos).
+
 - **2026-09-28 · el pin de Leaflet salía como imagen rota en producción.** El `L.Icon.Default` arma la
   URL de `marker-icon.png` desde la ruta de su propio CSS, y Vite no publica esa carpeta: se veía un
   recuadrito con el texto "Marker". Los tests no lo ven (el Leaflet falso no carga imágenes); se vio

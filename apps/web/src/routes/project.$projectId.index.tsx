@@ -182,9 +182,12 @@ function InvestorProjectDetail() {
         </div>
 
         <div className="grid grid-cols-2 gap-s3">
-          <article className={cn('flex flex-col gap-s2', CARD_SHELL)}>
+          {/* Captura 6: el valor grande y en negrita, como el "3,500 US$" de ahí.
+              Sin precio (no está en el contrato), el estado es el valor, y la
+              tarjeta —tan alta como el mapa de al lado— lo centra en vertical. */}
+          <article className={cn('flex flex-col justify-center gap-s2', CARD_SHELL)}>
             {proyecto?.status ? (
-              <span className="text-body-sm font-medium text-text-muted">
+              <span className="text-h2 font-bold text-text-primary">
                 {t(`project.status.${proyecto.status}`)}
               </span>
             ) : null}

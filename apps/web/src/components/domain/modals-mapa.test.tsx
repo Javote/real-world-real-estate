@@ -54,6 +54,18 @@ describe('LocationMapModal — variante modal', () => {
     await waitFor(() => expect(L.marker).toHaveBeenCalledWith([-34.5, -58.4]))
   })
 
+  it('pide el ancho en `sm:` y aísla las capas de Leaflet (se veía de 512px, con la miniatura encima; 2026-09-30)', async () => {
+    render(
+      <LocationMapModal open onClose={vi.fn()} labels={labels} latitude={-34.5} longitude={-58.4} />
+    )
+    await waitFor(() => expect(L.map).toHaveBeenCalled(), { timeout: 500 })
+    const dialogo = screen.getByRole('dialog')
+    // `twMerge` no pisa el `sm:max-w-lg` del primitivo con un `max-w-*` sin variante.
+    expect(dialogo.className).toContain('sm:max-w-4xl')
+    expect(dialogo.className).not.toContain('sm:max-w-lg')
+    expect(dialogo.querySelector('.isolate')).not.toBeNull()
+  })
+
   it('con coordenadas centra ahí, pone el marcador con su popup y muestra el domicilio', async () => {
     montarModal({
       latitude: -31.4,
@@ -386,6 +398,9 @@ describe('LocationMapModal · variante preview (la miniatura de las capturas 6 y
     const envoltorio = screen.getByTestId('MINIATURA')
     // El clic es del botón de afuera, que abre el mapa en `modal`.
     expect(envoltorio.className).toContain('pointer-events-none')
+    // Sin contexto de apilamiento propio, las capas de Leaflet (z 400–1000)
+    // quedaban encima del diálogo que esta miniatura abre (z-50).
+    expect(envoltorio.className).toContain('isolate')
     expect(envoltorio.getAttribute('aria-hidden')).toBe('true')
     expect(screen.queryByRole('dialog')).toBeNull()
     expect(screen.queryByRole('button')).toBeNull()

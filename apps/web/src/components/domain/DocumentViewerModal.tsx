@@ -60,7 +60,11 @@ export function DocumentViewerModal({
 
   return (
     <Dialog open={open} onOpenChange={(abierto) => !abierto && onClose()}>
-      <DialogContent data-testid={testId} className="max-w-2xl">
+      <DialogContent
+        data-testid={testId}
+        // En `sm:`: el primitivo trae `sm:max-w-lg`, que un `max-w-*` sin variante no pisa.
+        className="sm:max-w-2xl"
+      >
         <DialogHeader>
           <DialogTitle className="text-h2 font-bold text-text-primary">{title}</DialogTitle>
           <DialogDescription className="text-body-sm text-text-muted">

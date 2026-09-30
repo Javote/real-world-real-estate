@@ -313,7 +313,9 @@ function InvestorBuy() {
                 type="button"
                 aria-label={t('buy.close')}
                 onClick={() => setPinSeleccionado(null)}
-                className="absolute top-s2 right-s2 z-10 rounded-full bg-card/90 p-s2 text-text-primary shadow-e1"
+                // A la izquierda: la esquina derecha es del corazón de `ProjectCard`
+                // (`top-s3 right-s3`), y a la derecha quedaban a 4px una del otro.
+                className="absolute top-s3 left-s3 z-20 rounded-full bg-card/90 p-s2 text-text-primary shadow-e1"
               >
                 <X className="size-icon-inline" aria-hidden="true" />
               </button>

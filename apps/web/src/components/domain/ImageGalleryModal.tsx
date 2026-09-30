@@ -63,7 +63,8 @@ export function ImageGalleryModal({
     <Dialog open={open} onOpenChange={(abierto) => !abierto && onClose()}>
       <DialogContent
         data-testid={testId}
-        className="max-w-3xl bg-text-primary p-0"
+        // En `sm:`: el primitivo trae `sm:max-w-lg`, que un `max-w-*` sin variante no pisa.
+        className="bg-text-primary p-0 sm:max-w-3xl"
         showCloseButton={false}
       >
         <DialogTitle className="sr-only">{labels.title}</DialogTitle>
