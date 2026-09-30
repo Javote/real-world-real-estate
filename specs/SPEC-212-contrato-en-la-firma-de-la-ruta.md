@@ -312,6 +312,10 @@ más decisiones.
   liso (sin pasar por `.errors()`) tiene `defined: false` y SÍ se reporta — mismo criterio que
   `statusDeError` aplica del lado de Express: lo que el procedimiento declaró a propósito no es un
   fallo, lo que no declaró sí lo es.
+  **Corregido el 2026-09-30:** no era el mismo criterio. `statusDeError` decide por status (`>= 500`),
+  y este filtro reportaba cualquier 4xx sin declarar — un 404 esperado de `GET
+  /public/projects/:id/cover` (D-099) llegó a Sentry como una caída. El filtro pasó a
+  `e.defined || e.status < 500`.
 - **No hubo dependencia circular** (la tercera pregunta que quedaba por confirmar, no solo
   suponer): `lib/orpc.ts` importa `{ Sentry } from "../instrumentation"`, el mismo patrón que ya usa
   `app.ts`. `instrumentation.ts` no importa nada de `lib/orpc.ts` ni de ningún archivo de rutas —

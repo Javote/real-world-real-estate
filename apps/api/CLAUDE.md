@@ -129,7 +129,9 @@ lo mismo sin pasar por HTTP. Ver el detalle en `CLAUDE.md` raíz.
   cualquier fallo no clasificado, así que no hace falta capturar todo, solo lo que un test fija.
   **Cerrado el mismo día, del lado de observabilidad — `lib/orpc.ts` envuelve el export de
   `OpenAPIHandler` con un interceptor que reporta a Sentry cualquier excepción que no sea un
-  `ORPCError` declarado (`e.defined`).** Las 45 rutas no cambiaron ni una línea — el interceptor se
+  `ORPCError` declarado (`e.defined`) o con status < 500.** Hasta el 2026-09-30 era solo `e.defined`, y
+  todo `new ORPCError("NOT_FOUND")` sin declarar (~50 en las rutas) llegaba a Sentry como una caída;
+  ahora el criterio es el mismo que del lado de Express (`statusDeError(err) >= 500`). Las 45 rutas no cambiaron ni una línea — el interceptor se
   inyecta una sola vez, en la construcción, no por call site (ver SPEC-212 §"Implementado 2026-09-20
   — el interceptor de Sentry"). Lo que sigue siendo trabajo por ruta, y no lo reemplaza el
   interceptor genérico: el mapeo a un código de negocio (409 `RESOURCE_ALREADY_EXISTS`, etc.), que

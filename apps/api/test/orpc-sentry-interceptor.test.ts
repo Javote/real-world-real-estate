@@ -84,7 +84,7 @@ describe("el interceptor de Sentry de lib/orpc.ts (SPEC-212)", () => {
     expect(captureException).not.toHaveBeenCalled();
   });
 
-  it("un ORPCError sin nombre (no declarado) sigue reportándose — `defined` es lo que decide, no la clase", async () => {
+  it("un ORPCError sin nombre con status < 500 NO se reporta — un 404 esperado no es una caída", async () => {
     const throwsUndefinedOrpcError = os
       .route({ method: "GET", path: "/undefined-orpc" })
       .handler(() => {
@@ -100,6 +100,23 @@ describe("el interceptor de Sentry de lib/orpc.ts (SPEC-212)", () => {
     const res = await request(app).get("/probe/undefined-orpc");
 
     expect(res.status).toBe(404);
+    expect(captureException).not.toHaveBeenCalled();
+  });
+
+  it("un ORPCError sin nombre con status >= 500 sí se reporta — el status es lo que decide", async () => {
+    const throwsUndefined500 = os.route({ method: "GET", path: "/undefined-500" }).handler(() => {
+      throw new ORPCError("SERVICE_UNAVAILABLE", { message: "caído" });
+    });
+    const app = express();
+    const handler = new OpenAPIHandler({ throwsUndefined500 });
+    app.get("/probe/undefined-500", async (req, res, next) => {
+      const { matched } = await handler.handle(req, res, { prefix: PREFIJO_ABSOLUTO });
+      if (!matched) next();
+    });
+
+    const res = await request(app).get("/probe/undefined-500");
+
+    expect(res.status).toBe(503);
     expect(captureException).toHaveBeenCalledTimes(1);
   });
 });

@@ -65,15 +65,20 @@ async function interceptorDeSentry(opts: { next: () => Promise<unknown> }) {
   try {
     return await opts.next();
   } catch (e) {
-    // Un `ORPCError` que el propio procedimiento declaró con `.errors({...})`
-    // es un rechazo de negocio esperado (un 404, un 409 de restricción), no
-    // un fallo del servidor — mismo criterio que ya aplica `statusDeError`
-    // para `Sentry.setupExpressErrorHandler` en `app.ts` (ver el CLAUDE.md de
-    // este subárbol, "Sentry veía el error ANTES que `errorHandler`"). Sin
-    // este filtro, cada 409 de negocio se reportaría como si el servidor
-    // estuviera roto — exactamente el incidente del 2026-09-11 que ese
-    // archivo ya documenta, repetido acá si no se replica el filtro.
-    if (!(e instanceof ORPCError && e.defined)) {
+    // Un `ORPCError` con status < 500 es un rechazo que el procedimiento
+    // decidió (un 404, un 403, un 409 de restricción), no un fallo del
+    // servidor — mismo criterio que `statusDeError(err) >= 500` para
+    // `Sentry.setupExpressErrorHandler` en `app.ts` (ver el CLAUDE.md de este
+    // subárbol, "Sentry veía el error ANTES que `errorHandler`"). Sin este
+    // filtro, cada 409 de negocio se reportaría como si el servidor estuviera
+    // roto — el incidente del 2026-09-11 que ese archivo ya documenta.
+    //
+    // **Decide el status, no si el error está declarado con `.errors({...})`.**
+    // Hasta el 2026-09-30 decidía `defined`, y los ~50 `new ORPCError("NOT_FOUND")`
+    // sin declarar de las rutas llegaban a Sentry como caídas: lo destapó un
+    // 404 esperado de la portada de un proyecto sin portada (D-099). Un
+    // `ORPCError` declarado se sigue salteando aunque su status sea >= 500.
+    if (!(e instanceof ORPCError && (e.defined || e.status < 500))) {
       // Render no da shell (D-040): sin esto, un 500 no clasificado de una
       // ruta oRPC no queda en ningún lado más que Sentry.
       console.error("[orpc] error no clasificado", e);
