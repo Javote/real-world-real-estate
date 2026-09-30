@@ -1,4 +1,4 @@
-// Lee las 31 tomas del runbook del video: la fila del mapa (Paso 2) y las
+// Lee las 28 tomas del runbook del video: la fila del mapa (Paso 2) y las
 // frases de la narración con sus tiempos (Paso 4.3). El runbook es la única
 // fuente: el estudio de voz y los subtítulos salen de acá, así que editar una
 // frase en el .md alcanza.
@@ -46,9 +46,9 @@ export function leerTomas(texto = readFileSync(RUNBOOK, "utf8")) {
     }
   }
   const lista = [...tomas.values()];
-  if (lista.length !== 31 || lista.some((t) => !t.frases.length || !t.video))
+  if (lista.length !== 28 || lista.some((t) => !t.frases.length || !t.video))
     throw new Error(
-      `El runbook no tiene las 31 tomas completas (${lista.length}). ¿Cambió el formato de las tablas?`
+      `El runbook no tiene las 28 tomas completas (${lista.length}). ¿Cambió el formato de las tablas?`
     );
   return lista;
 }

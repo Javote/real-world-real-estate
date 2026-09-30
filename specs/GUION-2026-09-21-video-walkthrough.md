@@ -20,9 +20,8 @@
 | **0** | Preparar la Mac, los archivos y chequear producción. **Una sola vez** | `preparar.sh` — **ya corrido en esta Mac el 2026-09-28** | ~5 min |
 | **1** | Antes de cada sesión: la Mac, Render despierto, Chrome con las 5 pestañas | `sesion.sh` + `chrome.sh` | ~10 min (+ ensayo la primera vez) |
 | **2A** | Grabar la **sesión A**: el comprador mirando una obra terminada (T01–T06) | el grabador de macOS; al final, `renombrar.sh A` | ~15 min |
-| **2B** | Grabar la **sesión B**: nace un proyecto y recorre la FSM, hasta la firma (T07–T27). **De corrido, sin cortar la sesión** | ídem; al final, `renombrar.sh B` | ~60 min |
-| **2C** | Grabar la **sesión C**: auditoría y el resto de las pantallas (T28–T31) | ídem; al final, `renombrar.sh C` | ~15 min |
-| **3** | Recortar los 31 videos | QuickTime | ~30 min |
+| **2B** | Grabar la **sesión B**: nace un proyecto y recorre la FSM, hasta la firma, y cierra en el audit log (T07–T28). **De corrido, sin cortar la sesión** | ídem; al final, `renombrar.sh B` | ~60 min |
+| **3** | Recortar los 28 videos | QuickTime | ~30 min |
 | **4** | Grabar la voz mirando cada video, con la frase en pantalla en su segundo | el **estudio** (una página local) | ~35 min |
 | **5** | Unir todo, con subtítulos | `unir.sh` (o el estudio, si no hay ffmpeg) | ~10 min |
 | **6** | Mirar el resultado y cerrar | — | ~25 min |
@@ -36,11 +35,12 @@ cd ~/Documents/real-estate/real-world-real-estate
 
 **Cuatro reglas que valen para todo el runbook:**
 
-1. **La unidad es la toma, no el acto.** Son 31 tomas; cada una es un video `Txx.mov` y una voz
+1. **La unidad es la toma, no el acto.** Son 28 tomas; cada una es un video `Txx.mov` y una voz
    `Txx.webm` con el mismo nombre. Todos los tiempos se cuentan desde el **0:00 de la toma ya
    recortada**, así que rehacer una no corre nada del resto.
 2. **La sesión B va de corrido y en orden.** Cada toma deja la base en el estado que necesita la
-   siguiente. Las sesiones A y C se pueden grabar otro día (C, siempre después de B).
+   siguiente. La A se puede grabar otro día, pero **siempre antes de la B**: la B le suma Torre
+   Núñez al investor, que después aparecería en T02.
 3. **Los datos que se ven no tienen que coincidir exacto** con los de este documento. Lo que el
    video tiene que mostrar es que cada rol entra a sus pantallas y que una etapa recorre la FSM
    (Pending → InProgress → Observed → InProgress → Completed). Si un número es otro, se sigue.
@@ -97,7 +97,7 @@ Se puede volver a correr cuando quieras.
   - [ ] **Micrófono:** ninguno.
   - [ ] **Mostrar clics del mouse: SÍ** ← los clics son lo que hace seguible el video.
 - [ ] Modo: **Grabar toda la pantalla** (el ícono de pantalla con un círculo). Con Chrome en
-      pantalla completa, toda la pantalla es la app. (La única excepción es T31, que lo explica ahí.)
+      pantalla completa, toda la pantalla es la app.
 
 Dónde se guarda no hace falta elegirlo: `sesion.sh` lo pone en la carpeta durante la sesión.
 
@@ -105,7 +105,7 @@ Dónde se guarda no hace falta elegirlo: `sesion.sh` lo pone en la carpeta duran
 
 ## Paso 1 · Antes de cada sesión
 
-Se hace antes de la sesión A, antes de la B y antes de la C. Si grabás las tres seguidas, una vez.
+Se hace antes de la sesión A y antes de la B. Si grabás las dos seguidas, una vez.
 
 ### 1.1 `sesion.sh`, en una Terminal aparte, que queda abierta
 
@@ -192,14 +192,14 @@ propia sesión:
 
 ### 1.4 Pantalla completa
 
-- [ ] Pestaña donde arranca la sesión (A: `Cmd+1`; B y C: `Cmd+2`) → `Cmd+Ctrl+F`. Chrome ocupa
+- [ ] Pestaña donde arranca la sesión (A: `Cmd+1`; B: `Cmd+2`) → `Cmd+Ctrl+F`. Chrome ocupa
       toda la pantalla: sin pestañas, sin barra de direcciones, sin Dock.
 - [ ] **El mouse lejos del borde de arriba**: si lo toca, baja la barra de Chrome.
 
 **Para escribir una dirección en pantalla completa** (siempre fuera de cámara): `Cmd+L` muestra la
 barra un momento → pegás → Enter.
 
-### 1.5 El ciclo de cada toma — cinco pasos, 31 veces
+### 1.5 El ciclo de cada toma — cinco pasos, 28 veces
 
 1. **Dejá la pantalla como dice "Antes de grabar"** de la toma. Si pasó más de un minuto desde la
    última acción en esa pestaña, **recargala** (`Cmd+R`) y esperá que cargue.
@@ -223,7 +223,7 @@ descartar (van a `descartadas/`, no se borran).
   Projects · Capital · Units · Progress; Certifier y Notary: Panel · … · Profile) y el header tiene
   la campana y el ícono de perfil.
 - **Una toma termina** cuando empieza una espera (**⏸ CORTE**), cuando pasás de ~90 s, o cuando
-  cambiás de rol. Por eso son 31.
+  cambiás de rol. Por eso son 28.
 
 ### 1.7 Las tomas irrepetibles, y qué hacer si una sale mal
 
@@ -277,10 +277,7 @@ no hay "otra toma" de esas.
 | T26 | 12:33 | 4 · Notary | El historial | `/notary/signed` | 15 s | 11 s | |
 | T27 | 12:48 | incógnito | Verificado sin cuenta | `/public/dossier/:shareToken` | 25 s | 18 s | |
 | T28 | 13:13 | 2 · Developer | El círculo se cierra | `/developer/audit-log` | 45 s | 21 s | |
-| T29 | 13:58 | 2 · Developer | El resto del developer | documentation → investors → capital → units → progress | 75 s | 23 s | |
-| T30 | 15:13 | las cuatro | Perfiles y menú | los cuatro `/…/profile` + `/investor/menu` | 60 s | 13 s | |
-| T31 | 16:13 | 1 · Investor | Responsive | DevTools → Device Toolbar | 30 s | 13 s | |
-| | **16:43** | | **Total** | | **1003 s ≈ 17 min** | | |
+| | **13:58** | | **Total** | | **838 s ≈ 14 min** | | |
 
 ### Sesión A · El comprador mira una obra terminada (T01–T06)
 
@@ -397,7 +394,7 @@ terminó T04, bajando fuera de cámara).
 - [ ] `bash scripts/video-walkthrough/renombrar.sh A` → confirmá con `s`. Quedan `T01.mov` … `T06.mov`.
 - [ ] Si la sesión B no sigue ya: `Ctrl-C` en la Terminal de `sesion.sh` (Paso 6.1).
 
-### Sesión B · Nace un proyecto, recorre la FSM y se firma el dossier (T07–T27)
+### Sesión B · Nace un proyecto, recorre la FSM, se firma el dossier y cierra en el audit log (T07–T28)
 
 **De corrido, en orden, sin cortar la sesión.** Son ~60 minutos, de los cuales ~15 son esperas.
 
@@ -763,20 +760,11 @@ entero**: tiene que verse que no hay sesión — sin barra lateral, sin campana,
 
 Al terminar, **cerrá la ventana de incógnito entera**.
 
-**Fin de la sesión B.**
+#### Acto 6 · El audit log
 
-- [ ] `bash scripts/video-walkthrough/renombrar.sh B` → confirmá con `s`. Quedan `T07.mov` … `T27.mov`.
+##### T28 · El círculo se cierra — 45 s
 
-### Sesión C · Auditoría y el resto de las pantallas (T28–T31)
-
-Siempre **después** de la sesión B: el audit log de T28 muestra lo que pasó en ella.
-
-- [ ] Paso 1 hecho (si pasó tiempo desde la B). Pestañas 1 a 4 logueadas y en inglés. Pestaña 2 al
-      frente, en `/developer`.
-
-#### T28 · El círculo se cierra — 45 s
-
-**Antes de grabar:** pestaña 2, `/developer`.
+**Antes de grabar:** pestaña 2 (`Cmd+2`), `/developer`. Recargá antes de grabar.
 
 | Tiempo | Acción | Lo que tiene que verse |
 |---|---|---|
@@ -792,67 +780,17 @@ Siempre **después** de la sesión B: el audit log de T28 muestra lo que pasó e
 
 **Este es el cierre narrativo del video: todo lo que hiciste, indexado y anclado.**
 
-#### T29 · El resto del developer — 75 s
+**Fin de la sesión B y de la grabación de pantalla.**
 
-**Antes de grabar:** `/developer` (fuera de cámara: "Panel" en la barra lateral).
-
-| Tiempo | Acción | Lo que tiene que verse |
-|---|---|---|
-| 0:00 | Clic en **"Documentation"**. | "Documentation": "Verified on blockchain", "Pending verification", y la lista "Verified documents". |
-| 0:01–0:14 | Scroll lento. | Cada documento con su hash y su badge. |
-| 0:15 | Clic en **"Back to panel"** y en **"Investors"**. | "Investors · … registered investors". |
-| 0:16–0:29 | **Quieto**, scroll lento. | Las cards de inversores, con sus unidades y su inversión. |
-| 0:30 | Clic en **"Capital"** en la barra lateral. | "Capital raised": "Total raised", "Monthly evolution", "By project". |
-| 0:31–0:45 | Scroll lento. | Las barras por mes y el reparto por proyecto. |
-| 0:46 | Clic en **"Units"**. | "Units · … total units, … sold", la ocupación por proyecto. |
-| 0:47–0:59 | Scroll lento. | — |
-| 1:00 | Clic en **"Progress"**. | "Construction progress": "Completed", "In progress", "Pending"; las timelines. |
-| 1:01–1:15 | Scroll lento. | Torre Núñez con su primera etapa ya completa. |
-
-#### T30 · Perfiles y menú — 60 s
-
-**Antes de grabar:** pestaña 2, `/developer/progress` (donde terminó T29).
-
-| Tiempo | Acción | Lo que tiene que verse |
-|---|---|---|
-| 0:00 | Clic en el **ícono de perfil** del header. | "Profile" del developer: nombre, "Role", "Notification preferences". |
-| 0:01–0:12 | **Quieto**, el mouse sobre las preferencias. | "Stage progress", "New documents", "Releases", "Notary signatures", "Certifications". |
-| 0:13 | `Cmd+3` y clic en **"Profile"** en la barra lateral. | El perfil del certifier. |
-| 0:14–0:25 | **Quieto.** | Su nombre y "Role: Certifier". |
-| 0:26 | `Cmd+4` y clic en **"Profile"**. | El perfil del escribano. |
-| 0:27–0:38 | **Quieto.** | "Role: Notary". |
-| 0:39 | `Cmd+1` y clic en **"User"** en la barra lateral. | "Profile · Account & preferences" del investor. |
-| 0:40–0:49 | Apagá y volvé a prender una preferencia. | El toggle cambiando. |
-| 0:50 | Clic en **"Menu"**. | "Menu · Everything yours, in one place". |
-| 0:51–1:00 | **Quieto**, el mouse por las cuatro entradas. | "Browse developments", "Your units and their progress", "Projects you saved", "Updates from your developments". |
-
-**Ojo con los atajos:** acá se salta de pestaña con `Cmd+3`, `Cmd+4`, `Cmd+1` y no con
-`Cmd+Opt+→`, que desde la 4 te llevaría a la 5 (el admin, que no sale en el video).
-
-#### T31 · Responsive — 30 s
-
-**Antes de grabar:** pestaña 1, `/investor/menu`, con DevTools abiertas (`Cmd+Opt+I`) y la Device
-Toolbar (`Cmd+Shift+M`) en un preset de iPhone o Pixel. **Encuadre — la única toma que no es
-pantalla completa:** en `Shift+Cmd+5` elegí **Grabar porción seleccionada** y arrastrá el recuadro
-justo sobre el teléfono emulado, sin el panel de DevTools. El montaje la centra sola sobre fondo
-blanco.
-
-| Tiempo | Acción | Lo que tiene que verse |
-|---|---|---|
-| 0:00–0:05 | **Quieto.** | El menú en ancho de teléfono y, abajo, la **BottomNav de 5 solapas** con "Buy" al centro. |
-| 0:06 | Tap en **"Buy"**. | El listado en una columna. |
-| 0:07–0:14 | Scroll lento. | — |
-| 0:15 | Tap en **"Units"**, y en la 5A. | El detalle de la unidad en una columna. |
-| 0:16–0:30 | Scroll lento. | — |
-
-**Fin de la grabación de pantalla.**
-
-- [ ] `bash scripts/video-walkthrough/renombrar.sh C` → confirmá con `s`. Quedan `T28.mov` … `T31.mov`.
+- [ ] `bash scripts/video-walkthrough/renombrar.sh B` → confirmá con `s`. Quedan `T07.mov` … `T28.mov`.
 - [ ] Cerrá la sesión (Paso 6.1).
+
+*Hasta el 2026-09-30 había una sesión C con tres tomas más (el resto del developer, los perfiles y
+la vista de teléfono). El dueño las sacó: ninguna agregaba un paso al flujo. Ver Anexo A.*
 
 ---
 
-## Paso 3 · Recortar los 31 videos
+## Paso 3 · Recortar los 28 videos
 
 **Por qué importa:** todos los tiempos —los de la pantalla y los de la voz— se cuentan desde el
 0:00 de la toma **recortada**. Un recorte a ojo corre la voz.
@@ -875,8 +813,7 @@ error y `T15b` desde la acción siguiente; abrí `T15.mov` → Edición → **Ag
 - [ ] T07–T11
 - [ ] T12–T14
 - [ ] T15–T22
-- [ ] T23–T27
-- [ ] T28–T31
+- [ ] T23–T28
 
 ---
 
@@ -905,7 +842,7 @@ no hay que arrancar nada a la vez ni guardar a mano.
 
 ### 4.2 El ciclo de cada toma de voz
 
-1. A la izquierda, las 31 tomas: **"falta voz"** en amarillo, **"✓ voz"** en verde. Arranca sola en
+1. A la izquierda, las 28 tomas: **"falta voz"** en amarillo, **"✓ voz"** en verde. Arranca sola en
    la primera que falta.
 2. **Espacio** → cuenta 3, 2, 1 → el video arranca y graba.
 3. **Leé la frase grande cuando aparece.** Debajo, en gris, la próxima con su cuenta regresiva
@@ -1144,7 +1081,7 @@ errores: usalo solo si el estudio no anda.)*
 | 0:01 | "Public dossier" | The public route takes that token and nothing else: a private window, no account, no session. |
 | 0:09 | El badge "Signed" | Anyone with the link — a bank, another notary — sees the dossier hash and the notary's signature, without being a user of the platform. |
 
-#### Acto 6 · Auditoría y resto (T28–T31)
+#### Acto 6 · El audit log (T28)
 
 ##### T28 · El círculo se cierra — video 45 s
 
@@ -1155,40 +1092,13 @@ errores: usalo solo si el estudio no anda.)*
 | 0:21 | El filtro "stage" | Filterable by category… |
 | 0:32 | "Blockchain verification" | …and each transaction opens with its anchoring date and a link to the public explorer. |
 
-##### T29 · El resto del developer — video 75 s
-
-| Tiempo | Entra cuando ves | Texto |
-|---|---|---|
-| 0:01 | "Documentation" | The rest of the developer's surface. Supporting documentation, each file with its anchoring status. |
-| 0:16 | "Investors" | The investor directory, with each investor's units and amount. |
-| 0:31 | "Capital raised" | Capital raised, month by month and by project — as recorded in the contracts, not as funds held. |
-| 0:47 | "Units" | The unit inventory, and its occupancy. |
-| 1:01 | "Construction progress" | And construction progress, across every development. |
-
-##### T30 · Perfiles y menú — video 60 s
-
-| Tiempo | Entra cuando ves | Texto |
-|---|---|---|
-| 0:01 | El perfil del developer | Each role has its own profile, with notification preferences by category. |
-| 0:14 | El perfil del certifier | The certifier… |
-| 0:27 | El perfil del escribano | …the notary… |
-| 0:40 | El perfil del investor | …and the investor. |
-| 0:51 | "Menu" | Plus a menu that gathers the investor's sections in one place. |
-
-##### T31 · Responsive — video 30 s
-
-| Tiempo | Entra cuando ves | Texto |
-|---|---|---|
-| 0:01 | El teléfono emulado | The design is mobile-first. At phone width, the sidebar becomes a bottom navigation bar, with Buy in the middle. |
-| 0:15 | El detalle de la unidad | Every screen in this video works in a single column. |
-
-- [ ] En el estudio, las 31 tomas dicen "✓ voz".
+- [ ] En el estudio, las 28 tomas dicen "✓ voz".
 
 ---
 
 ## Paso 5 · Unir todo
 
-- [ ] En la carpeta están `T01.mov` … `T31.mov` y las 31 voces (el estudio lo muestra: todas en
+- [ ] En la carpeta están `T01.mov` … `T28.mov` y las 28 voces (el estudio lo muestra: todas en
       verde).
 
 **Con ffmpeg** (esta Mac lo tiene) — más rápido:
@@ -1201,14 +1111,14 @@ Una línea por toma (`T01: video 22 s, voz T01.webm -> queda en 22 s`) y al fina
 …/walkthrough-final.mp4 (+ walkthrough-final.srt)`**. Son unos minutos, con la Mac enchufada.
 
 **Sin ffmpeg** — desde el estudio, botón **"Armar el video final"** (abajo a la izquierda). Arma el
-video en tiempo real (~17 min): **no cambies de pestaña ni minimices Chrome** mientras corre. Deja
+video en tiempo real (~14 min): **no cambies de pestaña ni minimices Chrome** mientras corre. Deja
 `walkthrough-final.mp4` y `walkthrough-final.srt` en la carpeta.
 
 **Qué hacen los dos, para que sepas qué esperar:**
 
 - Cada toma dura **lo que dure el más largo** entre video y voz, más medio segundo: si la voz es más
   larga, la imagen se congela en el último cuadro; si es más corta, el resto va en silencio.
-- Todas quedan en 1920×1200; T31 (el teléfono) sale centrada sobre fondo blanco.
+- Todas quedan en 1920×1200.
 - **`walkthrough-final.srt`** son los subtítulos en inglés, sacados del texto del Paso 4.3 con los
   tiempos reales de cada toma. Se suben junto al video (YouTube los acepta tal cual).
 
@@ -1266,13 +1176,18 @@ bastante más.
 | **Idioma** | **Todo en `en-US` desde el primer cuadro**, ya logueado; el toggle ES \| EN queda a la vista en el header y la voz de T01 lo nombra. | Catalyst revisa en inglés. Hasta el 2026-09-30 el cambio se hacía en cámara, en el login; el dueño lo sacó para abrir ya adentro. Los dos diccionarios están completos y la paridad la fuerza el compilador (`dictionary.ts`). |
 | **Entorno** | Producción: `propnexus-web.onrender.com`. Nunca local. | El video tiene que mostrar TXIDs reales en Preprod y la URL pública viva — parte de lo que sostiene el criterio 5. |
 | **La FSM** | **Las cuatro aristas, sobre la misma etapa**: subir evidencia → observar → reanudar → certificar. | Es la máquina de estados entera contada sobre un solo objeto. |
-| **Tomas** | 31 tomas cortas, cortadas donde hay espera, con video y audio por separado. | Cada acción on-chain tarda ~45 s y crear un proyecto bloquea ~6 min. Una toma continua es imposible, y con la toma como unidad los tiempos de pantalla y voz se cuentan desde el mismo 0:00. |
+| **Tomas** | 28 tomas cortas, cortadas donde hay espera, con video y audio por separado. | Cada acción on-chain tarda ~45 s y crear un proyecto bloquea ~6 min. Una toma continua es imposible, y con la toma como unidad los tiempos de pantalla y voz se cuentan desde el mismo 0:00. |
 | **Orden del final** | La firma del escribano (T25) va **antes** de la vista pública (T27). | La vista pública muestra el dossier **ya firmado**, con su badge "Signed". Cambió el 2026-09-28. |
 
 **Los tiempos de espera** salen de
 [`REPORTE-2026-09-10-prueba-de-volumen.md`](REPORTE-2026-09-10-prueba-de-volumen.md) §Cronología
-(180 anclajes reales contra Preprod). **La cobertura:** las 31 tomas recorren todas las rutas de
-`apps/web/src/routes` salvo `/admin`, que se usa fuera de cámara.
+(180 anclajes reales contra Preprod). **La cobertura:** el recorrido completo del flujo —comprar,
+crear un proyecto, las cuatro aristas de la FSM, el dossier, la firma y la vista pública— y cierra
+en el audit log. **Desde el 2026-09-30 (decisión del dueño) el video no pasa por** la documentación,
+los inversores, el capital, las unidades y el progreso del developer, los perfiles de los cuatro
+roles ni la vista de teléfono (las viejas T29–T31): son pantallas secundarias y ninguna agrega un
+paso al flujo. "Audit logs persisted" tiene además su propia evidencia, en
+`specs/evidencia-m3/3-preprod/reservation-to-escrow-audit-log.jpg`.
 
 ## Anexo B · Lo que el video no muestra, y por qué
 
@@ -1287,8 +1202,6 @@ Para no prometer en audio algo que la pantalla no hace:
   - el contrato del investor **no muestra hash**: total, fecha de firma y el cronograma (T14); el
     txid del contrato está del lado del developer (T22);
   - "Observed stages" del developer **no muestra la nota del certifier** (T19);
-  - los perfiles **no muestran credenciales** del escribano ni del certifier: nombre, rol y
-    preferencias (T30);
   - el detalle del proyecto del developer **no lista las etapas**: las diez `Pending` se ven en
     "Progress" (T09);
   - las novedades de la unidad **no abren el modal de la etapa**: llevan al detalle de la unidad, y
@@ -1297,8 +1210,7 @@ Para no prometer en audio algo que la pantalla no hace:
 
 - **No hay PWA instalable.** `index.html` no linkea el manifest, no hay service worker registrado y
   `apps/web/public/manifest.json` sigue siendo el boilerplate de Create TanStack App ("Create
-  TanStack App Sample"). Chrome no va a ofrecer instalar. T31 muestra el layout responsive, que sí
-  existe. **La PWA la decidió D-065 y nunca se hizo:** queda especificada en
+  TanStack App Sample"). Chrome no va a ofrecer instalar. **La PWA la decidió D-065 y nunca se hizo:** queda especificada en
   [`SPEC-222`](SPEC-222-la-pwa-que-d-065-decidio.md), postergada a después del video. No la
   menciones en el audio.
 - **No hay botón de liberar pagos.** D-070 lo sacó a propósito: este producto no administra fondos,

@@ -14,7 +14,7 @@ Node, Chrome). ffmpeg es opcional.
 | 1 | `chrome.sh` | Abre un Chrome aparte (perfil `PropNexus Demo`: sin guardar contraseñas, sin traductor) con las cinco pestañas en `/login` |
 | 2 | `renombrar.sh A\|B\|C` | Al final de cada sesión, pone `Txx.mov` a sus grabaciones en orden; si sobran (tomas repetidas), pregunta cuáles descartar |
 | 4, 5 | `estudio/servidor.mjs` | El estudio en `http://127.0.0.1:8765`: graba la voz de cada toma mirando el video, con la frase en pantalla en su segundo, y guarda `Txx.webm`. Sin ffmpeg, también arma el video final |
-| 5 | `unir.sh` | Con ffmpeg: une video y voz de cada toma, pega las 31 y escribe `walkthrough-final.mp4` y `.srt` |
+| 5 | `unir.sh` | Con ffmpeg: une video y voz de cada toma, pega las 28 y escribe `walkthrough-final.mp4` y `.srt` |
 | — | `evidencia/` | Los tres archivos que se suben en T15 (ficticios, marcados como tales) y `generar.sh` para regenerarlos desde `fuentes/` |
 | — | `lib/` | `tomas.mjs` lee las tomas y la narración **del runbook** (única fuente: el estudio y los subtítulos salen de ahí); `api.mjs`, el acceso a la API |
 

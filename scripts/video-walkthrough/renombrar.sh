@@ -4,8 +4,7 @@
 # después de cada toma.
 #
 #   bash scripts/video-walkthrough/renombrar.sh A    # T01–T06
-#   bash scripts/video-walkthrough/renombrar.sh B    # T07–T27
-#   bash scripts/video-walkthrough/renombrar.sh C    # T28–T31
+#   bash scripts/video-walkthrough/renombrar.sh B    # T07–T28
 #
 # Toma los "Grabación de pantalla …" / "Screen Recording …" de la carpeta, por
 # fecha de creación. Si hay más que tomas (repetiste alguna), muestra la lista
@@ -16,9 +15,8 @@ set -euo pipefail
 carpeta="${CARPETA:-$HOME/Movies/propnexus-walkthrough}"
 case "${1:-}" in
   A) desde=1; hasta=6 ;;
-  B) desde=7; hasta=27 ;;
-  C) desde=28; hasta=31 ;;
-  *) echo "Uso: renombrar.sh A|B|C  (A = T01–T06, B = T07–T27, C = T28–T31)"; exit 1 ;;
+  B) desde=7; hasta=28 ;;
+  *) echo "Uso: renombrar.sh A|B  (A = T01–T06, B = T07–T28)"; exit 1 ;;
 esac
 esperadas=$((hasta - desde + 1))
 cd "$carpeta"
