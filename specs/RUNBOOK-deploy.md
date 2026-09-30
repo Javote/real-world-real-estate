@@ -432,6 +432,24 @@ turso db create propnexus-restore --from-db propnexus --timestamp <ISO-8601>
 Restaurar crea una base **nueva**: se apunta `DATABASE_URL` a ella y se redeploya. No se pisa la
 original hasta estar seguro.
 
+### El service worker (SPEC-222)
+
+**Revertir el deploy no alcanza para el service worker.** El `sw.js` ya quedó instalado en cada
+navegador que abrió la app, y ese navegador lo sigue usando hasta que el mismo path sirva uno
+distinto. El worker nunca guarda respuestas de la API y una navegación siempre va primero a la red,
+así que lo peor esperable es un shell viejo mientras no haya red. Si igual hay que sacarlo:
+
+1. `cp apps/web/sw-baja.js apps/web/public/sw.js`. Ese worker borra las cachés de PropNexus y se
+   desregistra.
+2. En `apps/web/src/main.tsx`, sacar la llamada a `registrarServiceWorker` (si queda, cada carga
+   vuelve a instalar el de baja, que se vuelve a ir: inofensivo, pero es ruido).
+3. `pnpm verify:all`, commit, push, y esperar el deploy del static site.
+4. Verificar en Chrome: DevTools → Application → Service Workers, sin ninguno registrado después de
+   recargar una vez.
+
+`sw.js` sale con `Cache-Control: max-age=0` (lo pone Render en todo estático), así que el navegador
+lo revalida en cada navegación: el de baja llega en la primera visita después del deploy.
+
 ## 4 · Incidentes
 
 | Síntoma | Causa más probable | Qué hacer |

@@ -370,6 +370,23 @@ turso db create propnexus-restore --from-db propnexus --timestamp <ISO-8601>
 Restoring creates a **new** database: point `DATABASE_URL` at it and redeploy. The original is not
 overwritten until you are sure.
 
+### The service worker
+
+**Rolling back the deploy is not enough for the service worker.** `sw.js` is already installed in
+every browser that opened the app, and that browser keeps using it until the same path serves a
+different one. The worker never stores API responses and navigations always try the network first,
+so the worst expected case is an outdated shell while offline. If it still has to go:
+
+1. `cp apps/web/sw-baja.js apps/web/public/sw.js`. That worker deletes PropNexus's caches and
+   unregisters itself.
+2. In `apps/web/src/main.tsx`, remove the `registrarServiceWorker` call (if it stays, every load
+   reinstalls the removal worker, which removes itself again: harmless, but noise).
+3. `pnpm verify:all`, commit, push, and wait for the static site deploy.
+4. Check in Chrome: DevTools → Application → Service Workers shows none registered after one reload.
+
+Render serves every static file with `Cache-Control: max-age=0`, so the browser revalidates `sw.js`
+on every navigation: the removal worker arrives on the first visit after the deploy.
+
 ## 4 · Incidents
 
 | Symptom | Most likely cause | What to do |

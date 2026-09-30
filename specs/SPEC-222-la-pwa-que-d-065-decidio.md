@@ -1,5 +1,10 @@
 # SPEC-222 — La PWA que D-065 decidió y nunca se hizo
 
+> **Estado: hecha el 2026-09-30 en la rama `spec-222-pwa`, sin mergear.** Se mergea a `main`
+> después de entregar M3 (decisión del dueño). Lo que queda después del merge es la pasada manual
+> de §Verificación contra producción. Abajo, §Cómo quedó registra lo que la implementación cambió
+> respecto del plan.
+
 > Nace revisando el guion del video (2026-09-30). Su Anexo B reportaba que no hay PWA instalable,
 > mientras que `CLAUDE.md` describía el front como "SPA + PWA". **Postergada a después de grabar
 > el video.** Si entra antes o después de la entrega de M3 lo decide el dueño: ningún criterio del
@@ -86,3 +91,27 @@ por línea, con más cuidado en `sw.js`.
 
 Una sesión corta, entre 1 y 2 horas. Lo que más tiempo lleva son los tests del worker y la pasada
 manual contra producción, no el código.
+
+## Cómo quedó
+
+| Pieza | Dónde |
+|---|---|
+| Manifest | `apps/web/public/manifest.json` — `background_color` es `--color-app-bg` (`#f4f1ed`) |
+| Íconos | `apps/web/public/icons/`: `icon.svg` (también es el favicon), `icon-192.png`, `icon-512.png`, `icon-maskable-512.png`, `apple-touch-icon.png`. Se generan con `node apps/web/scripts/iconos.mjs`, que rasteriza el SVG con el Chromium de Playwright (sin dependencias nuevas). El `favicon.ico` y los `logo*.png` del boilerplate se borraron |
+| Worker | `apps/web/public/sw.js` |
+| Rollback | `apps/web/sw-baja.js`, **fuera de `public/`** para que no se publique. `RUNBOOK-deploy.md` §3 (y su versión en inglés en `specs/evidencia-m3/5-ops/runbook.md`) |
+| Registro | `apps/web/src/lib/pwa.ts`, llamado desde `main.tsx` con `import.meta.env.PROD` y `navigator.serviceWorker` como argumentos, así el módulo se testea sin tocar el entorno. Un registro que falla va a Sentry |
+| Tests | `src/lib/pwa.test.ts` (el registro, y que manifest, íconos e `index.html` se correspondan, con los tamaños leídos de la cabecera de cada PNG) y `src/lib/sw.test.ts` (los dos workers corridos tal cual sobre un scope falso: cada regla de arriba tiene su caso) |
+
+**Dos correcciones al plan:**
+
+- **Sin `skipWaiting`, la versión nueva no toma el control "en la próxima navegación"** como decía
+  §Invariantes: espera a que se cierren **todas** las pestañas de la app. Es más conservador todavía,
+  y es lo que se quería: nunca cambia debajo de una sesión abierta.
+- **El worker de baja no recarga las pestañas.** El primer borrador lo hacía, y con la app todavía
+  registrando `/sw.js` en cada carga eso era un bucle: instalar, desregistrarse, recargar, instalar.
+  Como no tiene handler de `fetch`, no hace falta recargar nada.
+
+Se probó que los tests muerden: sacar la regla de `/api/` de `sw.js` pone rojo el caso "una
+navegación a la API pasa de largo".
+

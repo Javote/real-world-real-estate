@@ -44,7 +44,7 @@ entre web y los packages de Node.
 | **shadcn/ui** | — | ○ | D-024. Primitivos accesibles para los componentes de M2-D3 |
 | **Tokens de diseño de M2-D3** | — | ○ | D-024. Se **transcriben**, no se eligen |
 | **Cliente del contrato** (`@orpc/client`) | — | ○ | D-066. Reemplaza el espejo escrito a mano de `api/types.ts` |
-| **PWA** (manifest + service worker) | — | ○ | D-065. Desde el arranque, no al final |
+| **PWA** (manifest + service worker) | — | ● | D-065, `SPEC-222`. Manifest e íconos en `public/`; `public/sw.js` escrito a mano, sin dependencias, que nunca cachea la API. El rollback es `sw-baja.js` (`RUNBOOK-deploy.md` §3) |
 | **i18n es-AR/en-US** | `245 líneas` | ◐ | D-025. La maquinaria existe; conviven 36 strings hardcodeados |
 | Vitest + jsdom + Testing Library | `4.1.10` | ● | |
 | Playwright (E2E) | `1.62` | ● | solo Chromium · **no corre en CI**, a mano |

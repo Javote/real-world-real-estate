@@ -1295,12 +1295,9 @@ Para no prometer en audio algo que la pantalla no hace:
     el modal sale de "Evidence by stage" (T17);
   - el KPI del panel del developer cuenta **documentos anclados**, no eventos (T07).
 
-- **No hay PWA instalable.** `index.html` no linkea el manifest, no hay service worker registrado y
-  `apps/web/public/manifest.json` sigue siendo el boilerplate de Create TanStack App ("Create
-  TanStack App Sample"). Chrome no va a ofrecer instalar. T31 muestra el layout responsive, que sí
-  existe. **La PWA la decidió D-065 y nunca se hizo:** queda especificada en
-  [`SPEC-222`](SPEC-222-la-pwa-que-d-065-decidio.md), postergada a después del video. No la
-  menciones en el audio.
+- **La PWA no sale en el video.** Cuando se grabó no existía: la hizo
+  [`SPEC-222`](SPEC-222-la-pwa-que-d-065-decidio.md), mergeada después de entregar M3. T31 muestra
+  el layout responsive, y el audio no menciona la instalación.
 - **No hay botón de liberar pagos.** D-070 lo sacó a propósito: este producto no administra fondos,
   refleja y respalda lo que pasa afuera (D-026). El endpoint
   `POST /developer/contracts/:id/releases/:stageNum` existe en el backend como deuda declarada y el
