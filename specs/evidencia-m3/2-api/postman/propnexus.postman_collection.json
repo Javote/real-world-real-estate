@@ -959,6 +959,33 @@
             },
             "description": "authenticated + authorize(role(admin|developer) · project(id → developer))"
           }
+        },
+        {
+          "name": "PUT /api/v1/developer/projects/:id/cover",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/developer/projects/:id/cover",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "developer",
+                "projects",
+                ":id",
+                "cover"
+              ]
+            },
+            "description": "authenticated + authorize(role(admin|developer) · project(id → developer))"
+          }
         }
       ]
     },
@@ -2269,6 +2296,28 @@
                 "public",
                 "dossier",
                 ":shareToken"
+              ]
+            },
+            "description": "—"
+          }
+        },
+        {
+          "name": "GET /api/v1/public/projects/:id/cover",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/public/projects/:id/cover",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "public",
+                "projects",
+                ":id",
+                "cover"
               ]
             },
             "description": "—"

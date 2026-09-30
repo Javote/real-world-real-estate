@@ -11,6 +11,7 @@ import {
   geocodeResultSchema,
   MEMBERSHIP_ROLES,
   PROJECT_STATUSES,
+  projectCoverResultSchema,
   projectDetailSchema,
   projectListItemSchema,
   projectListQuerySchema,
@@ -33,6 +34,7 @@ const proyecto = {
   estimatedDelivery: null,
   status: "planning" as const,
   organizationId: null,
+  coverUpdatedAt: null,
   createdAt: new Date().toISOString(),
   updatedAt: new Date().toISOString()
 };
@@ -177,6 +179,27 @@ describe("geocodeQuerySchema y geocodeResultSchema", () => {
 describe("projectSchema y sus extensiones", () => {
   it("acepta la fila completa, con organizationId nullable", () => {
     expect(projectSchema.safeParse(proyecto).success).toBe(true);
+  });
+
+  it("coverUpdatedAt es la versión de la portada, o null sin portada (D-099)", () => {
+    const conPortada = projectSchema.parse({ ...proyecto, coverUpdatedAt: "2026-09-30T12:00:00Z" });
+    expect(conPortada.coverUpdatedAt).toEqual(new Date("2026-09-30T12:00:00Z"));
+    // Estricto: dónde está guardada la portada no puede colarse en la respuesta.
+    expect(projectSchema.safeParse({ ...proyecto, coverStorageRef: "cover/x" }).success).toBe(
+      false
+    );
+  });
+
+  it("projectCoverResultSchema devuelve solo la versión nueva", () => {
+    expect(
+      projectCoverResultSchema.safeParse({ coverUpdatedAt: "2026-09-30T12:00:00Z" }).success
+    ).toBe(true);
+    expect(
+      projectCoverResultSchema.safeParse({
+        coverUpdatedAt: "2026-09-30T12:00:00Z",
+        storageRef: "cover/x"
+      }).success
+    ).toBe(false);
   });
 
   it("projectListItemSchema y projectDetailSchema extienden con stages/members", () => {

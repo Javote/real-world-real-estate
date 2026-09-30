@@ -76,7 +76,9 @@ bash scripts/video-walkthrough/preparar.sh
 Crea `~/Movies/propnexus-walkthrough/` (donde cae todo) y `~/Movies/propnexus-evidencia/` con **los
 tres archivos que se suben en T15** — `land-title-deed.pdf`, `site-survey-plan.jpg` y
 `lot-location-map.png`, ficticios y marcados como tales, generados desde
-`scripts/video-walkthrough/evidencia/`. Chequea 15 GB libres, Chrome, Node y ffmpeg, y corre el
+`scripts/video-walkthrough/evidencia/`. **Al lado van las portadas** (D-099), que no genera el script:
+`portada-proyecto-16-9.png` e `imagen-vertical-proyecto.png`, copiadas a mano desde `~/Pictures` el
+2026-09-30. La horizontal (16:9) se adjunta en T08. Chequea 15 GB libres, Chrome, Node y ffmpeg, y corre el
 verificador de producción (solo lectura: las cinco cuentas, lo que ve cada rol, el saldo de tADA).
 Se puede volver a correr cuando quieras.
 
@@ -254,7 +256,7 @@ no hay "otra toma" de esas.
 | T05 | 2:22 | 1 · Investor | Hasta la prueba | `…/progress` → `…/stage/:stageId` | 45 s | 27 s | |
 | T06 | 3:07 | 1 · Investor | Favoritos | `/investor/favorites` | 10 s | 4 s | |
 | T07 | 3:17 | 2 · Developer | El panel | `/developer` → `/developer/projects` | 30 s | 12 s | |
-| T08 | 3:47 | 2 · Developer | Proyecto nuevo | `/developer/project/new` | 40 s | 30 s | ⚠ irrepetible |
+| T08 | 3:47 | 2 · Developer | Proyecto nuevo | `/developer/project/new` | 40 s | 34 s | ⚠ irrepetible |
 | T09 | 4:27 | 2 · Developer | El proyecto ya creado | `/developer/project/:id` → `/developer/progress` | 30 s | 15 s | |
 | T10 | 4:57 | 2 · Developer | Unidades | `/developer/project/:id/units` | 32 s | 10 s | |
 | T11 | 5:29 | 2 · Developer | La invitación | `/developer/project/:id/invite` | 25 s | 8 s | ⚠ irrepetible |
@@ -315,7 +317,7 @@ no hace falta: se abren ya en inglés.)*
 
 | Tiempo | Acción | Lo que tiene que verse |
 |---|---|---|
-| 0:00–0:11 | **Quieto**, el mouse recorre lento las tres cards. | Torre Volumen 1, 2 y 3 con su pill "Delivered" y su cantidad de unidades. |
+| 0:00–0:11 | **Quieto**, el mouse recorre lento las tres cards. | Torre Volumen 1, 2 y 3, cada una con su portada (D-099), su pill "Delivered" y su cantidad de unidades. |
 | 0:12 | Clic en la pill **"Search"**. | El campo "Search by zone…". |
 | 0:13–0:16 | Tipeá `Buenos Aires`. | Las tres siguen (las tres están en Buenos Aires). |
 | 0:17 | Borrá lo tipeado y clic en la pill **"Filters"**. | El diálogo "Filters": "Project status" y "Sort by". |
@@ -333,7 +335,7 @@ no hace falta: se abren ya en inglés.)*
 | Tiempo | Acción | Lo que tiene que verse |
 |---|---|---|
 | 0:00–0:03 | **Quieto.** | Portada y nombre. |
-| 0:03 | Clic en la portada (**"Open gallery"**), pasá una foto con la flecha y cerrá (`Esc`). *Si la obra no tiene fotos, quedate quieto hasta 0:08.* | La galería a pantalla completa. |
+| 0:03 | Clic en la portada (**"Open gallery"**), y cerrá (`Esc`) a los 0:08. *Es una sola imagen: la obra no tiene fotos de evidencia, así que no hay flecha que pasar.* | La portada a pantalla completa. |
 | 0:09 | Clic en el **corazón** ("Save to favorites"). | El corazón se llena. |
 | 0:10–0:12 | **Quieto.** | "Completion: …" y "Location". |
 | 0:13 | Clic en **"Location"**. | El mapa a pantalla completa. |
@@ -424,7 +426,9 @@ terminó T04, bajando fuera de cámara).
 
 ##### T08 · Proyecto nuevo — 40 s · ⚠ irrepetible
 
-**Antes de grabar:** `/developer/projects` (donde terminó T07).
+**Antes de grabar:** `/developer/projects` (donde terminó T07). **Fuera de cámara, una vez:** en un
+alta cualquiera, tocá "Drag an image or tap to select" y navegá hasta `~/Movies/propnexus-evidencia/`
+(Paso 0.2), así en la toma el selector abre ahí; cancelá y volvé a `/developer/projects`.
 
 | Tiempo | Acción | Lo que tiene que verse |
 |---|---|---|
@@ -436,9 +440,10 @@ terminó T04, bajando fuera de cámara).
 | 0:18–0:19 | **Quieto.** | — |
 | 0:20–0:23 | "Number of units": clic en **+** hasta 12. | — |
 | 0:24–0:28 | "Estimated delivery date": elegí una fecha a dos o tres años. | — |
-| 0:29–0:34 | **Quieto**, el mouse sobre la lista de etapas. | "Standard template (10 stages)" y las diez: "1. Land acquisition" … "10. Final works and subdivision". |
-| 0:35 | Clic en **"Create project"**. | El botón cargando. |
-| 0:36–0:40 | **Quieto.** | — |
+| 0:29–0:31 | **Quieto**, el mouse sobre la lista de etapas. | "Standard template (10 stages)" y las diez: "1. Land acquisition" … "10. Final works and subdivision". |
+| 0:32–0:36 | "Cover image": clic en **"Drag an image or tap to select"** y elegí `portada-proyecto-16-9.png`. | El nombre del archivo debajo del recuadro. |
+| 0:37 | Clic en **"Create project"**. | El botón cargando. |
+| 0:38–0:40 | **Quieto.** | — |
 
 *Si en 0:16 dice "We couldn't find that address" o "The address lookup isn't available", no pasa
 nada: el clic de 0:17 marca el lote igual. Sin lote marcado, "Create project" no se habilita (D-097).*
@@ -996,7 +1001,8 @@ errores: usalo solo si el estudio no anda.)*
 |---|---|---|
 | 0:01 | El formulario vacío | A new project. Typing the address moves the pin on the map, and a click fine-tunes it: no project is created without a location. |
 | 0:14 | El pin en el mapa | Creating it writes the ten stages in a single database transaction, then mints one on-chain thread per stage, one at a time. The validator rejects more than one thread per transaction, so they can't be batched. |
-| 0:35 | El clic en "Create project" | That's why this step takes a few minutes. |
+| 0:32 | La portada elegida | The cover is marketing, not evidence: it's never hashed or anchored. |
+| 0:37 | El clic en "Create project" | That's why this step takes a few minutes. |
 
 ##### T09 · El proyecto ya creado — video 30 s
 

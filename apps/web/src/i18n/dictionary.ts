@@ -219,6 +219,7 @@ const esAR = {
   'audit.action.REJECT_DOSSIER': 'Rechazó el dossier',
   'audit.action.CREATE_PROJECT': 'Creó el proyecto',
   'audit.action.UPDATE_PROJECT': 'Actualizó el proyecto',
+  'audit.action.UPDATE_PROJECT_COVER': 'Cambió la portada del proyecto',
   'audit.action.DELETE_PROJECT': 'Eliminó el proyecto',
   'audit.action.ADD_PROJECT_MEMBER': 'Agregó un miembro al proyecto',
   'audit.action.UPDATE_STAGE': 'Actualizó la etapa',
@@ -419,6 +420,18 @@ const esAR = {
   'developer.newProject.stageTemplate.stage10': 'Final de obra y subdivisión',
   'developer.newProject.submit': 'Crear proyecto',
   'developer.newProject.error': 'No se pudo crear el proyecto. Revisá los datos y probá de nuevo.',
+  'developer.newProject.cover': 'Portada',
+  'developer.newProject.coverDropzone': 'Arrastrá una imagen o tocá para elegir',
+  'developer.newProject.coverHint':
+    'Un render o una foto de fachada. JPG o PNG, hasta {max} MB. Opcional.',
+  'developer.newProject.coverRemove': 'Quitar la imagen',
+  'developer.newProject.coverRejected.type': '{name} no es un JPG o PNG válido.',
+  'developer.newProject.coverRejected.size': '{name} supera el tamaño máximo de {max} MB.',
+  'developer.newProject.coverRejected.duplicate': '{name} es la imagen que ya elegiste.',
+  'developer.newProject.coverRejected.tooMany':
+    'La portada es una sola imagen: quitá la que elegiste para cambiarla.',
+  'developer.newProject.coverError':
+    'El proyecto se creó, pero la portada no se pudo subir. Probá de nuevo.',
   'developer.progress.title': 'Avance de obra',
   'developer.progress.context': 'Todas tus obras',
   'developer.progress.completed': 'Completadas',
@@ -846,6 +859,7 @@ const enUS = {
   'audit.action.REJECT_DOSSIER': 'Rejected the dossier',
   'audit.action.CREATE_PROJECT': 'Created the project',
   'audit.action.UPDATE_PROJECT': 'Updated the project',
+  'audit.action.UPDATE_PROJECT_COVER': 'Changed the project cover',
   'audit.action.DELETE_PROJECT': 'Deleted the project',
   'audit.action.ADD_PROJECT_MEMBER': 'Added a project member',
   'audit.action.UPDATE_STAGE': 'Updated the stage',
@@ -1046,6 +1060,18 @@ const enUS = {
   'developer.newProject.stageTemplate.stage10': 'Final works and subdivision',
   'developer.newProject.submit': 'Create project',
   'developer.newProject.error': 'The project could not be created. Check the data and try again.',
+  'developer.newProject.cover': 'Cover image',
+  'developer.newProject.coverDropzone': 'Drag an image or tap to select',
+  'developer.newProject.coverHint':
+    'A render or a facade photo. JPG or PNG, up to {max} MB. Optional.',
+  'developer.newProject.coverRemove': 'Remove the image',
+  'developer.newProject.coverRejected.type': '{name} is not a valid JPG or PNG.',
+  'developer.newProject.coverRejected.size': '{name} is over the {max} MB limit.',
+  'developer.newProject.coverRejected.duplicate': '{name} is the image you already chose.',
+  'developer.newProject.coverRejected.tooMany':
+    'The cover is a single image: remove the one you chose to change it.',
+  'developer.newProject.coverError':
+    'The project was created, but the cover could not be uploaded. Try again.',
   'developer.progress.title': 'Construction progress',
   'developer.progress.context': 'All your developments',
   'developer.progress.completed': 'Completed',

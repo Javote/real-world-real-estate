@@ -72,3 +72,25 @@ export const EVIDENCE_REJECTION_CODES = [
   "EVIDENCE_ALREADY_IN_STAGE"
 ] as const;
 export type EvidenceRejectionCode = (typeof EVIDENCE_REJECTION_CODES)[number];
+
+// ── La portada del proyecto (D-099) ─────────────────────────────────────────
+//
+// **No es evidencia**, y por eso tiene reglas propias en vez de reusar las de
+// arriba: es material comercial (un render, una foto de fachada) que no se
+// hashea, no se ancla y no entra a ningún bundle. Viven acá y no en
+// `project.ts` por la misma razón que las de evidencia: el front las necesita
+// como valores y este módulo no importa nada.
+
+/** Solo imágenes: un PDF no se puede dibujar como portada. */
+export const PROJECT_COVER_ALLOWED_MIME = ["image/jpeg", "image/png"] as const;
+export type ProjectCoverMime = (typeof PROJECT_COVER_ALLOWED_MIME)[number];
+
+/** Una portada se sirve en cada card del listado: más que esto es un render sin comprimir. */
+export const PROJECT_COVER_MAX_FILE_MB = 10;
+export const PROJECT_COVER_MAX_FILE_BYTES = PROJECT_COVER_MAX_FILE_MB * 1024 * 1024;
+
+/** El tipo real de una portada por sus primeros bytes, o `null` si no es JPEG ni PNG. */
+export function detectarTipoDePortada(bytes: ArrayLike<number>): ProjectCoverMime | null {
+  const real = detectarTipoDeEvidencia(bytes);
+  return real === "image/jpeg" || real === "image/png" ? real : null;
+}

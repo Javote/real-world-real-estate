@@ -100,6 +100,7 @@ const MATRIZ: Record<string, string> = {
   "GET /api/v1/audit-logs": "auth + autoriza(rol(admin) · soloRol)",
   "GET /api/v1/audit-logs/telemetry/reservation-to-escrow": "auth + autoriza(rol(admin) · soloRol)",
   "GET /api/v1/public/dossier/:shareToken": "—",
+  "GET /api/v1/public/projects/:id/cover": "—",
   "GET /api/v1/investor/favorites":
     "auth + autoriza(rol(admin|buyer) · scope(Favorite.userId = usuario))",
   "POST /api/v1/investor/favorites/:projectId": "auth + autoriza(rol(admin|buyer) · soloRol)",
@@ -156,6 +157,8 @@ const MATRIZ: Record<string, string> = {
     "auth + autoriza(rol(admin|developer) · proyecto(Contract:id → developer))",
   "POST /api/v1/developer/projects/:id/stages/:stageId/evidence":
     "auth + autoriza(rol(admin|developer) · proyecto(id → developer))",
+  "PUT /api/v1/developer/projects/:id/cover":
+    "auth + autoriza(rol(admin|developer) · proyecto(id → developer))",
   "GET /api/v1/developer/capital/summary":
     "auth + autoriza(rol(admin|developer) · scope(projectScope(developer)))",
   "GET /api/v1/developer/capital/monthly":
@@ -193,11 +196,16 @@ const MATRIZ: Record<string, string> = {
 };
 
 /**
- * Las dos únicas rutas sin sesión del backlog (M2-D5 §2.2): el login, y el link
- * público del dossier, que existe para que alguien de afuera verifique sin cuenta.
- * Cualquier tercera es un olvido hasta que se agregue acá a mano.
+ * Las rutas sin sesión: las dos del backlog (M2-D5 §2.2) —el login, y el link
+ * público del dossier, que existe para que alguien de afuera verifique sin
+ * cuenta— y la portada del proyecto (D-099), material comercial que la card
+ * dibuja con un `<img>`. Cualquier otra es un olvido hasta que se agregue acá a mano.
  */
-const SIN_SESION = new Set(["POST /api/v1/auth/login", "GET /api/v1/public/dossier/:shareToken"]);
+const SIN_SESION = new Set([
+  "POST /api/v1/auth/login",
+  "GET /api/v1/public/dossier/:shareToken",
+  "GET /api/v1/public/projects/:id/cover"
+]);
 
 // La introspección del router (`leerMontaje`, `describir`, `matrizViva`) vive
 // en `src/lib/route-inventory.ts` — la comparte `scripts/generate-api-docs.ts`

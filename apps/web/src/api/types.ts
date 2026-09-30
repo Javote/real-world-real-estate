@@ -68,6 +68,7 @@ import type {
   InvestorUnitListItem,
   InvestorUnitStage as InvestorUnitStageShared,
   InvitationResponse,
+  ProjectCoverResult,
   ProjectDetail as ProjectDetailShared,
   ProjectDocument as ProjectDocumentShared,
   ProjectListItem,
@@ -106,6 +107,9 @@ export type Project = Serialized<ProjectListItem>
  * `Failed` sin bloquear a los demás (D-059).
  */
 export type ProjectCreated = Serialized<DeveloperProjectCreateResult>
+
+/** D-099 — respuesta de `PUT /developer/projects/:id/cover`: la versión nueva de la portada. */
+export type ProjectCover = Serialized<ProjectCoverResult>
 
 export type ProjectMemberUser = Serialized<ProjectMemberWithUser>['user']
 

@@ -108,7 +108,22 @@ export interface ProjectTable {
   status: ProjectStatus;
   /** Anulable: los proyectos anteriores a 0010 no tienen organización. */
   organizationId: string | null;
+  /** D-099: la versión de la portada, `null` si no tiene. Dónde está guardada vive en `ProjectCover`. */
+  coverUpdatedAt: SqliteTimestamp | null;
   createdAt: SqliteTimestamp;
+  updatedAt: SqliteTimestamp;
+}
+
+/**
+ * D-099 — la portada del proyecto, una por proyecto. **No es evidencia**: sin
+ * hash ni anclaje. `storageRef` es opaco y nunca sale al cliente (D-011).
+ */
+export interface ProjectCoverTable {
+  projectId: string;
+  storageRef: string;
+  mimeType: string;
+  sizeBytes: number;
+  uploadedById: string | null;
   updatedAt: SqliteTimestamp;
 }
 
@@ -346,6 +361,7 @@ export interface Database {
   User: UserTable;
   Organization: OrganizationTable;
   Project: ProjectTable;
+  ProjectCover: ProjectCoverTable;
   ProjectMember: ProjectMemberTable;
   Stage: StageTable;
   Evidence: EvidenceTable;

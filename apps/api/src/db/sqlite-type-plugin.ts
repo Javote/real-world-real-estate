@@ -24,7 +24,9 @@ const TIMESTAMP_COLUMNS = new Set([
   // al leer—. Volvía como `number`, con el typechecker diciendo lo contrario.
   // Era inofensivo mientras SIEMPRE fue `null`: la reconciliación es lo primero
   // que la escribe.
-  "blockTimestamp"
+  "blockTimestamp",
+  // D-099: nace con la columna, así que no tiene el problema de las cinco de abajo.
+  "coverUpdatedAt"
 ]);
 
 // ⚠ Siguen faltando cinco, todas declaradas `SqliteTimestamp` en `types.ts` y

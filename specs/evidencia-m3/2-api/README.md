@@ -7,7 +7,7 @@
 
 | File | What it is |
 |---|---|
-| [`openapi/propnexus.openapi.json`](openapi/propnexus.openapi.json) | OpenAPI 3.1 document of the API: 91 operations, each with its method, path, required authorization (role and per-project access rule) and, where the route validates with Zod, the real request and response schemas |
+| [`openapi/propnexus.openapi.json`](openapi/propnexus.openapi.json) | OpenAPI 3.1 document of the API: 94 operations, each with its method, path, required authorization (role and per-project access rule) and, where the route validates with Zod, the real request and response schemas |
 | [`postman/propnexus.postman_collection.json`](postman/propnexus.postman_collection.json) | The same API as a Postman collection (v2.1), grouped by resource, with example bodies for the main flows (login, create project, create stage, upload evidence, accept an invitation, transition a stage) |
 
 Both files are **generated from the mounted router, not written by hand**

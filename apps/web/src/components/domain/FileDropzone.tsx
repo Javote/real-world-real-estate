@@ -47,8 +47,13 @@ interface FileDropzoneProps {
   notes?: ReadonlyMap<File, string>
   /** Por defecto, el tope de `packages/shared` (`EVIDENCE_MAX_FILE_MB`). Solo los tests lo bajan. */
   maxSizeMb?: number
-  /** Por defecto, el tope de `packages/shared` (`EVIDENCE_MAX_FILES`). */
+  /** Por defecto, el tope de `packages/shared` (`EVIDENCE_MAX_FILES`). Con 1, el selector elige uno solo. */
   maxFiles?: number
+  /**
+   * Por defecto, los de evidencia (`EVIDENCE_ALLOWED_MIME`). La portada del
+   * proyecto (D-099) pasa `PROJECT_COVER_ALLOWED_MIME`: solo imágenes.
+   */
+  allowedMime?: readonly string[]
   disabled?: boolean
   className?: string
 }
@@ -60,6 +65,7 @@ export function FileDropzone({
   notes,
   maxSizeMb = EVIDENCE_MAX_FILE_MB,
   maxFiles = EVIDENCE_MAX_FILES,
+  allowedMime = EVIDENCE_ALLOWED_MIME,
   disabled,
   className
 }: FileDropzoneProps) {
@@ -74,7 +80,8 @@ export function FileDropzone({
     const lista = Array.from(entrantes)
     const { aceptados, rechazados: malos } = await clasificarEntrantes(lista, files, {
       maxBytes: maxSizeMb * 1024 * 1024,
-      maxFiles
+      maxFiles,
+      allowedMime
     })
 
     setRechazados(malos)
@@ -123,8 +130,8 @@ export function FileDropzone({
         <input
           id={inputId}
           type="file"
-          multiple
-          accept={EVIDENCE_ALLOWED_MIME.join(',')}
+          multiple={maxFiles > 1}
+          accept={allowedMime.join(',')}
           disabled={disabled}
           className="sr-only"
           onChange={(e) => {

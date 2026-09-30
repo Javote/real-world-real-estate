@@ -24,6 +24,7 @@ const completo = (sobre: Partial<DeveloperProject> = {}): DeveloperProject => ({
   estimatedDelivery: '2027-06-15T12:00:00.000Z',
   status: 'in_progress',
   organizationId: 'o1',
+  coverUpdatedAt: null,
   createdAt: '2026-01-01T00:00:00.000Z',
   updatedAt: '2026-01-01T00:00:00.000Z',
   stageCount: 10,

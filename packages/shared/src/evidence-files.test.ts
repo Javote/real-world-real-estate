@@ -2,12 +2,16 @@ import { describe, expect, it } from "vitest";
 import { evidenceRejectionSchema } from "./evidence-files";
 import {
   detectarTipoDeEvidencia,
+  detectarTipoDePortada,
   EVIDENCE_ALLOWED_MIME,
   EVIDENCE_MAX_FILE_BYTES,
   EVIDENCE_MAX_FILE_MB,
   EVIDENCE_MAX_FILES,
   EVIDENCE_REJECTION_CODES,
-  EVIDENCE_SIGNATURE_BYTES
+  EVIDENCE_SIGNATURE_BYTES,
+  PROJECT_COVER_ALLOWED_MIME,
+  PROJECT_COVER_MAX_FILE_BYTES,
+  PROJECT_COVER_MAX_FILE_MB
 } from "./evidence-rules";
 
 const bytes = (...b: number[]) => Uint8Array.from(b);
@@ -80,5 +84,24 @@ describe("evidence-rules no depende de nada (SPEC-218)", () => {
     expect(
       fuente.split("\n").filter((l) => /^\s*(import|export .* from|.*require\()/.test(l))
     ).toEqual([]);
+  });
+});
+
+describe("la portada del proyecto (D-099)", () => {
+  it("acepta JPEG y PNG por sus primeros bytes", () => {
+    expect(detectarTipoDePortada(bytes(0xff, 0xd8, 0xff, 0xe0))).toBe("image/jpeg");
+    expect(detectarTipoDePortada(bytes(0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a))).toBe(
+      "image/png"
+    );
+  });
+
+  it("un PDF es evidencia válida pero no una portada", () => {
+    expect(detectarTipoDeEvidencia(Buffer.from("%PDF-1.4"))).toBe("application/pdf");
+    expect(detectarTipoDePortada(Buffer.from("%PDF-1.4"))).toBeNull();
+  });
+
+  it("los tipos y el tope salen de una sola constante", () => {
+    expect(PROJECT_COVER_ALLOWED_MIME).toEqual(["image/jpeg", "image/png"]);
+    expect(PROJECT_COVER_MAX_FILE_BYTES).toBe(PROJECT_COVER_MAX_FILE_MB * 1024 * 1024);
   });
 });

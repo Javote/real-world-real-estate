@@ -6,6 +6,7 @@ import {
   EVIDENCE_MAX_FILES,
   hex64ParamSchema,
   positiveIntParamSchema,
+  projectCoverResultSchema,
   stageEvidenceUploadResultSchema,
   stageEvidenceUploadSchema
 } from "@plataforma/shared";
@@ -123,6 +124,12 @@ const REQUEST_SCHEMAS: Record<string, SchemaEntry> = {
       file: z.array(z.file()).min(1).max(EVIDENCE_MAX_FILES)
     }),
     bodyContentType: "multipart/form-data"
+  },
+  // D-099: la portada del proyecto. Multer por la misma razón que la de arriba;
+  // un solo `file`, y el tipo real (JPEG o PNG) lo decide `detectarTipoDePortada`.
+  "PUT /api/v1/developer/projects/:id/cover": {
+    body: z.object({ file: z.file() }),
+    bodyContentType: "multipart/form-data"
   }
   // Las rutas de `notary` (§A), `certifier` (§B), `investor` (§C, salvo
   // `export.pdf`) y `developer`/`developer-comercial`/`capital` (§D, salvo la
@@ -139,7 +146,8 @@ const REQUEST_SCHEMAS: Record<string, SchemaEntry> = {
  * `z.array(...)`; si es la forma `{ items, nextCursor }`, `paginatedResponseSchema(...)`.
  */
 const RESPONSE_SCHEMAS: Record<string, ZodType> = {
-  "POST /api/v1/developer/projects/:id/stages/:stageId/evidence": stageEvidenceUploadResultSchema
+  "POST /api/v1/developer/projects/:id/stages/:stageId/evidence": stageEvidenceUploadResultSchema,
+  "PUT /api/v1/developer/projects/:id/cover": projectCoverResultSchema
 };
 
 /** La forma exacta de `ZodError.flatten()`, que es lo que devuelve todo 400. */
@@ -220,6 +228,7 @@ const ORPC_MIGRADAS = new Set([
   "GET /api/v1/auth/me",
   "POST /api/v1/auth/login",
   "GET /api/v1/public/dossier/:shareToken",
+  "GET /api/v1/public/projects/:id/cover",
   "GET /api/v1/profile",
   "PATCH /api/v1/profile",
   "PATCH /api/v1/profile/notifications",

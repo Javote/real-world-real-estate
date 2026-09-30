@@ -29,6 +29,7 @@ import investorRoutes from "./routes/investor.routes";
 import notaryRoutes from "./routes/notary.routes";
 import notificationsRoutes from "./routes/notifications.routes";
 import profileRoutes from "./routes/profile.routes";
+import projectCoverRoutes from "./routes/project-cover.routes";
 import projectsRoutes from "./routes/projects.routes";
 import projectsObraRoutes from "./routes/projects-obra.routes";
 import publicRoutes from "./routes/public.routes";
@@ -167,6 +168,7 @@ export const MONTAJE = [
   { prefijo: "/api/v1/developer", router: developerComercialRoutes },
   { prefijo: "/api/v1/developer", router: developerEvidenciaRoutes },
   { prefijo: "/api/v1/developer", router: capitalRoutes },
+  { prefijo: "/api/v1/developer", router: projectCoverRoutes },
   { prefijo: "/api/v1/notary", router: notaryRoutes },
   { prefijo: "/api/v1/certifier", router: certifierRoutes }
 ] as const;

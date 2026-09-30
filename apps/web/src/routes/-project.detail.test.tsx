@@ -42,6 +42,7 @@ const proyectoCompleto = (over: Record<string, unknown> = {}) =>
     estimatedDelivery: '2027-06-15T12:00:00.000Z',
     status: 'in_progress',
     organizationId: 'org-1',
+    coverUpdatedAt: null,
     createdAt: '2026-01-01T00:00:00.000Z',
     updatedAt: '2026-01-01T00:00:00.000Z',
     stages: [stage(1, 'Completed'), stage(2, 'InProgress'), stage(3, 'Pending')],
@@ -297,22 +298,42 @@ describe('/project/:projectId (investor)', () => {
     expect(screen.queryByRole('dialog')).toBeNull()
   })
 
-  it('con fotos, la portada es la primera y tocarla abre la galería', async () => {
-    montarConDatos({ documentos: [fotoDoc('f1'), fotoDoc('f2')] })
+  it('con portada (D-099): la del proyecto, versionada, y encabeza la galería con las fotos detrás', async () => {
+    montarConDatos({
+      proyecto: proyectoCompleto({ coverUpdatedAt: '2026-09-30T12:00:00.000Z' }),
+      documentos: [fotoDoc('f1'), fotoDoc('f2')]
+    })
 
     // La portada tiene `alt=""` (decorativa): no hay rol `img` que consultar.
     await waitFor(() =>
-      expect(document.querySelector('img')?.getAttribute('src')).toBe('blob:falso')
+      expect(document.querySelector('img')?.getAttribute('src')).toBe(
+        '/api/v1/public/projects/p1/cover?v=2026-09-30T12%3A00%3A00.000Z'
+      )
     )
+    // Las fotos de evidencia no se bajan hasta abrir la galería.
+    expect(api.downloadEvidence).not.toHaveBeenCalled()
+
     await userEvent.click(screen.getByRole('button', { name: t['investor.unit.openGallery'] }))
 
     const galeria = await screen.findByRole('dialog')
-    // Al abrir se piden también las demás fotos.
-    await waitFor(() => expect(galeria.textContent).toContain('/2'))
+    await waitFor(() => expect(galeria.textContent).toContain('/3'))
     await userEvent.click(
       within(galeria).getByRole('button', { name: t['investor.gallery.close'] })
     )
     await waitFor(() => expect(screen.queryByRole('dialog')).toBeNull())
+  })
+
+  it('sin portada pero con fotos: superficie neutra, y tocarla abre la galería de fotos', async () => {
+    montarConDatos({ documentos: [fotoDoc('f1'), fotoDoc('f2')] })
+    await screen.findByRole('heading', { name: 'Torre Norte' })
+
+    // Una foto de evidencia ya no hace de portada: no es material comercial.
+    expect(document.querySelector('img')).toBeNull()
+
+    await userEvent.click(screen.getByRole('button', { name: t['investor.unit.openGallery'] }))
+
+    const galeria = await screen.findByRole('dialog')
+    await waitFor(() => expect(galeria.textContent).toContain('/2'))
   })
 
   it('un clic en una etapa del timeline navega a esa etapa', async () => {

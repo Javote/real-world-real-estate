@@ -21,6 +21,7 @@ import { resolve } from 'node:path'
 import { afterAll, beforeAll, describe, expect, it, vi } from 'vitest'
 
 type Api = typeof import('./port').api
+type Port = typeof import('./port')
 type Caso = (() => unknown)[]
 
 const ORIGEN = 'https://api.contract-test.example'
@@ -66,6 +67,7 @@ interface Captura {
 
 let capturas: Captura[] = []
 let api: Api
+let projectCoverUrl: Port['projectCoverUrl']
 
 beforeAll(async () => {
   // `API_BASE` se lee al cargar el módulo: hay que fijar el origen ANTES del import.
@@ -84,7 +86,9 @@ beforeAll(async () => {
       return new Response('{}', { status: 200, headers: { 'Content-Type': 'application/json' } })
     })
   )
-  api = (await import('./port')).api
+  const port = await import('./port')
+  api = port.api
+  projectCoverUrl = port.projectCoverUrl
 })
 
 afterAll(() => {
@@ -134,6 +138,9 @@ const CASOS: Record<keyof Api, Caso> = {
   getCapitalSummary: [() => api.getCapitalSummary()],
   getCapitalMonthly: [() => api.getCapitalMonthly()],
   getCapitalByProject: [() => api.getCapitalByProject()],
+  uploadProjectCover: [
+    () => api.uploadProjectCover('p1', new File(['x'], 'render.png', { type: 'image/png' }))
+  ],
   createProject: [
     () => api.createProject({ name: 'n', slug: 's', latitude: -34.6, longitude: -58.4 })
   ],
@@ -256,4 +263,21 @@ describe('ApiPort contra el OpenAPI de la API', () => {
       })
     })
   }
+})
+
+describe('projectCoverUrl (D-099): la URL que pide el <img>, sin fetch', () => {
+  it('apunta a una ruta GET del contrato, en el origen de la API, con `v` declarado', () => {
+    const url = new URL(projectCoverUrl('p1', '2026-09-30T12:00:00.000Z') ?? '')
+    expect(url.origin).toBe(ORIGEN)
+    expect(url.searchParams.get('v')).toBe('2026-09-30T12:00:00.000Z')
+
+    const ruta = PLANTILLAS.find((p) => p.regex.test(url.pathname))
+    const operacion = DOC.paths[ruta?.plantilla ?? '']?.get
+    expect(operacion, `${url.pathname} no existe como GET en el OpenAPI`).toBeDefined()
+    expect((operacion?.parameters ?? []).map((p) => p.name)).toContain('v')
+  })
+
+  it('sin portada no hay URL', () => {
+    expect(projectCoverUrl('p1', null)).toBeNull()
+  })
 })

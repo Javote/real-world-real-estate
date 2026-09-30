@@ -7,9 +7,10 @@ import { StatusPill, type StatusTone } from './StatusPill'
 // "Card is fully tappable; entire surface routes to project detail" y "progress
 // bar is required when status ≠ Delivered".
 //
-// **Los campos que el contrato todavía no da** —imagen de portada, precio
-// desde, rango de m², nombre del developer— se dibujan como ausencia, no como
-// dato falso: sin imagen va una superficie neutra, sin precio no va la línea.
+// **Los campos que el contrato todavía no da** —precio desde, rango de m²,
+// nombre del developer— se dibujan como ausencia, no como dato falso: sin
+// precio no va la línea. La portada ya existe (D-099) pero es opcional: un
+// proyecto sin ella lleva una superficie neutra.
 // La captura 2 los muestra porque **la maqueta usa datos mock** (M2-D1); lo
 // normativo de una captura es la estructura, no los valores. El detalle de
 // cuál falta y por qué está en los props `priceLabel` y `developerName`.

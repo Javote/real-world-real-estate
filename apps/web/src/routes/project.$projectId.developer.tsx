@@ -2,7 +2,7 @@ import { useQuery } from '@tanstack/react-query'
 import { createFileRoute, useNavigate } from '@tanstack/react-router'
 import { Building2, CalendarClock, KeyRound, Users } from 'lucide-react'
 import { useState } from 'react'
-import { api } from '#/api/port'
+import { api, projectCoverUrl } from '#/api/port'
 import type { DeveloperProfile } from '#/api/types'
 import { INVESTOR_ROLES } from '#/auth/roles'
 import { useRoleGuard } from '#/auth/useRoleGuard'
@@ -195,6 +195,7 @@ function InvestorProjectDeveloper() {
             <ProjectCard
               key={obra.id}
               name={obra.name}
+              imageUrl={projectCoverUrl(obra.id, obra.coverUpdatedAt)}
               location={obra.city}
               status={{
                 label: t(`project.status.${obra.status}`),

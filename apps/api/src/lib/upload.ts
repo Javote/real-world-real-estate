@@ -1,6 +1,10 @@
 import fs from "node:fs";
 import path from "node:path";
-import { EVIDENCE_MAX_FILE_BYTES, EVIDENCE_MAX_FILES } from "@plataforma/shared";
+import {
+  EVIDENCE_MAX_FILE_BYTES,
+  EVIDENCE_MAX_FILES,
+  PROJECT_COVER_MAX_FILE_BYTES
+} from "@plataforma/shared";
 import multer from "multer";
 import { createId } from "../db/id";
 
@@ -44,3 +48,14 @@ export const uploadEvidenceFiles = multer({
     files: EVIDENCE_MAX_FILES
   }
 }).array("file", EVIDENCE_MAX_FILES);
+
+// D-099: la portada del proyecto. Un solo archivo, campo `file`, con el tope de
+// la portada (no el de evidencia). Mismo `diskStorage`: el tipo real también se
+// decide en el handler, por los primeros bytes.
+export const uploadProjectCoverFile = multer({
+  storage,
+  limits: {
+    fileSize: PROJECT_COVER_MAX_FILE_BYTES,
+    files: 1
+  }
+}).single("file");

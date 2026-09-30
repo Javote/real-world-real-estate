@@ -60,6 +60,8 @@ async function tipoReal(file: File): Promise<string | null | undefined> {
 export interface OpcionesDeClasificacion {
   maxBytes?: number
   maxFiles?: number
+  /** Por defecto, los de evidencia. La portada del proyecto (D-099) pasa solo imágenes. */
+  allowedMime?: readonly string[]
 }
 
 /**
@@ -72,7 +74,8 @@ export async function clasificarEntrantes(
   actuales: readonly File[],
   {
     maxBytes = EVIDENCE_MAX_FILE_BYTES,
-    maxFiles = EVIDENCE_MAX_FILES
+    maxFiles = EVIDENCE_MAX_FILES,
+    allowedMime = EVIDENCE_ALLOWED_MIME
   }: OpcionesDeClasificacion = {}
 ): Promise<{ aceptados: File[]; rechazados: RechazoLocal[] }> {
   const aceptados: File[] = []
@@ -89,7 +92,7 @@ export async function clasificarEntrantes(
       rechazados.push({ file, motivo: 'size' })
       continue
     }
-    if (!(EVIDENCE_ALLOWED_MIME as readonly string[]).includes(file.type)) {
+    if (!allowedMime.includes(file.type)) {
       rechazados.push({ file, motivo: 'type' })
       continue
     }

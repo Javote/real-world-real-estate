@@ -139,7 +139,8 @@ lo mismo sin pasar por HTTP. Ver el detalle en `CLAUDE.md` raíz.
   se ve leyendo el código del handler, solo probándolo con una excepción real.
 
 - **2026-09-20 · `OpenAPIHandler` SÍ sabe parsear `multipart/form-data` — pero bufferea el archivo
-  entero en memoria sin ningún límite, y por eso NO se usó para la única ruta multipart de la API.**
+  entero en memoria sin ningún límite, y por eso NO se usó para las rutas multipart de la API**
+  (la subida de evidencia y, desde D-099, la portada del proyecto).
   Investigado antes de migrar `developer-evidencia.routes.ts` (SPEC-212 §D): un smoke test confirmó
   que un procedimiento con `z.file()` en el input recibe el `File` + los campos de texto de un
   `multipart/form-data` real, vía el `Response(stream).formData()` nativo de Node
@@ -1004,8 +1005,9 @@ uno de más.
 
 ### El guard único — `authorize`, 2026-09-04 (D-088)
 
-**Las 88 rutas montadas declaran su regla en la firma.** Las únicas dos sin `authorize` son las dos
-sin sesión que M2-D5 §2.2 declara: `POST /auth/login` y `GET /public/dossier/:shareToken`.
+**Las rutas montadas declaran su regla en la firma.** Las únicas sin `authorize` son las tres sin
+sesión: las dos que M2-D5 §2.2 declara, `POST /auth/login` y `GET /public/dossier/:shareToken`, y la
+portada del proyecto, `GET /public/projects/:id/cover` (D-099).
 
 ```ts
 authorize({ roles: ["admin", "developer"], acceso: { proyecto: { param: "id" }, membresias: ["developer"] } })

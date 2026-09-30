@@ -1,7 +1,7 @@
 import { useQuery } from '@tanstack/react-query'
 import { createFileRoute, useNavigate } from '@tanstack/react-router'
 import { Plus } from 'lucide-react'
-import { api } from '#/api/port'
+import { api, projectCoverUrl } from '#/api/port'
 import { DEV_ROLES } from '#/auth/roles'
 import { useRoleGuard } from '#/auth/useRoleGuard'
 import { Loading } from '#/components/domain/Loading'
@@ -80,6 +80,7 @@ function DeveloperProjects() {
                 key={p.id}
                 variant="developer"
                 name={p.name}
+                imageUrl={projectCoverUrl(p.id, p.coverUpdatedAt)}
                 location={[p.city, p.country].filter(Boolean).join(', ')}
                 progress={entregado ? null : p.progress}
                 status={{

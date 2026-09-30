@@ -552,6 +552,18 @@
                               }
                             ]
                           },
+                          "coverUpdatedAt": {
+                            "anyOf": [
+                              {
+                                "type": "string",
+                                "format": "date-time",
+                                "x-native-type": "date"
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ]
+                          },
                           "createdAt": {
                             "type": "string",
                             "format": "date-time",
@@ -634,6 +646,7 @@
                           "estimatedDelivery",
                           "status",
                           "organizationId",
+                          "coverUpdatedAt",
                           "createdAt",
                           "updatedAt",
                           "stageCount",
@@ -746,6 +759,18 @@
                               }
                             ]
                           },
+                          "coverUpdatedAt": {
+                            "anyOf": [
+                              {
+                                "type": "string",
+                                "format": "date-time",
+                                "x-native-type": "date"
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ]
+                          },
                           "createdAt": {
                             "type": "string",
                             "format": "date-time",
@@ -828,6 +853,7 @@
                           "estimatedDelivery",
                           "status",
                           "organizationId",
+                          "coverUpdatedAt",
                           "createdAt",
                           "updatedAt",
                           "stageCount",
@@ -1370,6 +1396,84 @@
                     "bundleId",
                     "merkleRoot",
                     "anchor"
+                  ],
+                  "additionalProperties": false
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Body or query failed schema validation",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ValidationError"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "No session or invalid token"
+          },
+          "403": {
+            "description": "Insufficient role or project membership"
+          }
+        }
+      }
+    },
+    "/api/v1/developer/projects/{id}/cover": {
+      "put": {
+        "summary": "PUT /api/v1/developer/projects/:id/cover",
+        "description": "authenticated + authorize(role(admin|developer) · project(id → developer))",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "schema": {
+              "type": "string",
+              "pattern": "^[a-z][a-z0-9]{23}$"
+            },
+            "required": true
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "multipart/form-data": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "file": {
+                    "type": "string",
+                    "format": "binary",
+                    "contentEncoding": "binary"
+                  }
+                },
+                "required": [
+                  "file"
+                ]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "coverUpdatedAt": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "coverUpdatedAt"
                   ],
                   "additionalProperties": false
                 }
@@ -2027,6 +2131,38 @@
                 }
               }
             }
+          }
+        }
+      }
+    },
+    "/api/v1/public/projects/{id}/cover": {
+      "get": {
+        "operationId": "projectCoverProcedure",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "pattern": "^[a-z][a-z0-9]{23}$"
+            }
+          },
+          {
+            "name": "v",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "maxLength": 64
+            },
+            "allowEmptyValue": true,
+            "allowReserved": true
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {}
           }
         }
       }
@@ -2816,6 +2952,18 @@
                             }
                           ]
                         },
+                        "coverUpdatedAt": {
+                          "anyOf": [
+                            {
+                              "type": "string",
+                              "format": "date-time",
+                              "x-native-type": "date"
+                            },
+                            {
+                              "type": "null"
+                            }
+                          ]
+                        },
                         "createdAt": {
                           "type": "string",
                           "format": "date-time",
@@ -2840,6 +2988,7 @@
                         "estimatedDelivery",
                         "status",
                         "organizationId",
+                        "coverUpdatedAt",
                         "createdAt",
                         "updatedAt"
                       ],
@@ -3705,6 +3854,18 @@
                           }
                         ]
                       },
+                      "coverUpdatedAt": {
+                        "anyOf": [
+                          {
+                            "type": "string",
+                            "format": "date-time",
+                            "x-native-type": "date"
+                          },
+                          {
+                            "type": "null"
+                          }
+                        ]
+                      },
                       "createdAt": {
                         "type": "string",
                         "format": "date-time",
@@ -3809,6 +3970,7 @@
                       "estimatedDelivery",
                       "status",
                       "organizationId",
+                      "coverUpdatedAt",
                       "createdAt",
                       "updatedAt",
                       "stages"
@@ -3991,6 +4153,18 @@
                         }
                       ]
                     },
+                    "coverUpdatedAt": {
+                      "anyOf": [
+                        {
+                          "type": "string",
+                          "format": "date-time",
+                          "x-native-type": "date"
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ]
+                    },
                     "createdAt": {
                       "type": "string",
                       "format": "date-time",
@@ -4015,6 +4189,7 @@
                     "estimatedDelivery",
                     "status",
                     "organizationId",
+                    "coverUpdatedAt",
                     "createdAt",
                     "updatedAt"
                   ],
@@ -4263,6 +4438,18 @@
                         }
                       ]
                     },
+                    "coverUpdatedAt": {
+                      "anyOf": [
+                        {
+                          "type": "string",
+                          "format": "date-time",
+                          "x-native-type": "date"
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ]
+                    },
                     "createdAt": {
                       "type": "string",
                       "format": "date-time",
@@ -4438,6 +4625,7 @@
                     "estimatedDelivery",
                     "status",
                     "organizationId",
+                    "coverUpdatedAt",
                     "createdAt",
                     "updatedAt",
                     "stages",
@@ -4623,6 +4811,18 @@
                         }
                       ]
                     },
+                    "coverUpdatedAt": {
+                      "anyOf": [
+                        {
+                          "type": "string",
+                          "format": "date-time",
+                          "x-native-type": "date"
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ]
+                    },
                     "createdAt": {
                       "type": "string",
                       "format": "date-time",
@@ -4647,6 +4847,7 @@
                     "estimatedDelivery",
                     "status",
                     "organizationId",
+                    "coverUpdatedAt",
                     "createdAt",
                     "updatedAt"
                   ],
@@ -6365,6 +6566,18 @@
                             }
                           ]
                         },
+                        "coverUpdatedAt": {
+                          "anyOf": [
+                            {
+                              "type": "string",
+                              "format": "date-time",
+                              "x-native-type": "date"
+                            },
+                            {
+                              "type": "null"
+                            }
+                          ]
+                        },
                         "createdAt": {
                           "type": "string",
                           "format": "date-time",
@@ -6389,6 +6602,7 @@
                         "estimatedDelivery",
                         "status",
                         "organizationId",
+                        "coverUpdatedAt",
                         "createdAt",
                         "updatedAt"
                       ],
@@ -10073,6 +10287,18 @@
                           }
                         ]
                       },
+                      "coverUpdatedAt": {
+                        "anyOf": [
+                          {
+                            "type": "string",
+                            "format": "date-time",
+                            "x-native-type": "date"
+                          },
+                          {
+                            "type": "null"
+                          }
+                        ]
+                      },
                       "createdAt": {
                         "type": "string",
                         "format": "date-time",
@@ -10097,6 +10323,7 @@
                       "estimatedDelivery",
                       "status",
                       "organizationId",
+                      "coverUpdatedAt",
                       "createdAt",
                       "updatedAt"
                     ],
@@ -11576,6 +11803,18 @@
                           }
                         ]
                       },
+                      "coverUpdatedAt": {
+                        "anyOf": [
+                          {
+                            "type": "string",
+                            "format": "date-time",
+                            "x-native-type": "date"
+                          },
+                          {
+                            "type": "null"
+                          }
+                        ]
+                      },
                       "createdAt": {
                         "type": "string",
                         "format": "date-time",
@@ -11632,6 +11871,7 @@
                       "estimatedDelivery",
                       "status",
                       "organizationId",
+                      "coverUpdatedAt",
                       "createdAt",
                       "updatedAt",
                       "stageCount",
@@ -11800,6 +12040,18 @@
                       "anyOf": [
                         {
                           "type": "string"
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ]
+                    },
+                    "coverUpdatedAt": {
+                      "anyOf": [
+                        {
+                          "type": "string",
+                          "format": "date-time",
+                          "x-native-type": "date"
                         },
                         {
                           "type": "null"
@@ -12091,6 +12343,7 @@
                     "estimatedDelivery",
                     "status",
                     "organizationId",
+                    "coverUpdatedAt",
                     "createdAt",
                     "updatedAt",
                     "stages"
@@ -12340,6 +12593,18 @@
                         }
                       ]
                     },
+                    "coverUpdatedAt": {
+                      "anyOf": [
+                        {
+                          "type": "string",
+                          "format": "date-time",
+                          "x-native-type": "date"
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ]
+                    },
                     "createdAt": {
                       "type": "string",
                       "format": "date-time",
@@ -12449,6 +12714,7 @@
                     "estimatedDelivery",
                     "status",
                     "organizationId",
+                    "coverUpdatedAt",
                     "createdAt",
                     "updatedAt",
                     "stages",

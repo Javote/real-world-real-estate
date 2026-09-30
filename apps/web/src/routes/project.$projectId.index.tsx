@@ -2,7 +2,7 @@ import { useMutation, useQueries, useQuery, useQueryClient } from '@tanstack/rea
 import { createFileRoute, useNavigate } from '@tanstack/react-router'
 import { Building2, Heart, Images } from 'lucide-react'
 import { useState } from 'react'
-import { ApiError, api } from '#/api/port'
+import { ApiError, api, projectCoverUrl } from '#/api/port'
 import { INVESTOR_ROLES } from '#/auth/roles'
 import { useRoleGuard } from '#/auth/useRoleGuard'
 import { DocumentCard } from '#/components/domain/DocumentCard'
@@ -28,6 +28,10 @@ import { avanceDeStages, bajarBlob, timelineDeStages } from '#/lib/stageProgress
 // recibe 403. Se muestra como error, no se cambia la API.
 //
 // Org name, rating y "Price from" no se dibujan: el contrato no los da.
+//
+// **La portada es la del proyecto (D-099)**, pública y cacheable, no la primera
+// foto de evidencia como antes: un render comercial no es prueba de nada. Sin
+// portada, la superficie neutra de siempre.
 
 export const Route = createFileRoute('/project/$projectId/')({
   component: InvestorProjectDetail
@@ -73,20 +77,27 @@ function InvestorProjectDetail() {
   const docs = (documentos ?? []).filter((d) => !esFoto(d.evidenceType, d.mimeType))
 
   const blobs = useQueries({
-    queries: fotos.map((f, i) => ({
+    queries: fotos.map((f) => ({
       queryKey: ['evidence-blob', f.id],
       queryFn: async () => objectUrl(await api.downloadEvidence(f.id)),
       // `gcTime: 0`: la URL se revoca al desmontar, así que la caché no puede
       // sobrevivirle — devolvería una URL muerta al volver a la pantalla.
       gcTime: 0,
-      enabled: ready && isSuccess && (galeria || i === 0)
+      // Solo con la galería abierta: la portada ya no sale de acá (D-099).
+      enabled: ready && isSuccess && galeria
     }))
   })
 
-  const imagenes = fotos.flatMap((_f, i) => {
-    const url = blobs[i]?.data
-    return url ? [{ url, alt: t('investor.unit.gallery') }] : []
-  })
+  // D-099: la portada es un campo del proyecto, no evidencia. Encabeza la
+  // galería, y detrás van las fotos de evidencia, que siguen siendo lo que son.
+  const portada = projectCoverUrl(projectId, proyecto?.coverUpdatedAt ?? null)
+  const imagenes = [
+    ...(portada ? [{ url: portada, alt: t('investor.unit.gallery') }] : []),
+    ...fotos.flatMap((_f, i) => {
+      const url = blobs[i]?.data
+      return url ? [{ url, alt: t('investor.unit.gallery') }] : []
+    })
+  ]
 
   // Solo los documentos abren el visor, y un documento no es una imagen: el
   // visor no tiene página que renderizar.
@@ -120,7 +131,6 @@ function InvestorProjectDetail() {
     stages.map((s) => [s.sequenceOrder, s.id])
   )
   const actual = timeline.find((s) => s.state === 'current')
-  const portada = imagenes[0]?.url
 
   const etiquetasDoc = {
     verified: t('status.verified'),
@@ -147,7 +157,7 @@ function InvestorProjectDetail() {
           <button
             type="button"
             className="block w-full"
-            onClick={() => imagenes.length && setGaleria(true)}
+            onClick={() => (portada || fotos.length) && setGaleria(true)}
             aria-label={t('investor.unit.openGallery')}
           >
             {portada ? (

@@ -154,10 +154,24 @@ export const projectSchema = z.strictObject({
    * `Project` es, por construcción, un campo nuevo en este contrato.
    */
   organizationId: z.string().nullable(),
+  /**
+   * Cuándo se cargó la portada (migración 0012, D-099), o `null` si no tiene.
+   * Es lo único de la portada que sale al cliente: dice si hay imagen que
+   * pedir y sirve de versión en su URL pública, así un cambio de portada no
+   * queda tapado por la caché. Dónde está guardada vive en `ProjectCover` y
+   * nunca sale (D-011).
+   */
+  coverUpdatedAt: z.coerce.date().nullable(),
   createdAt: z.coerce.date(),
   updatedAt: z.coerce.date()
 });
 export type ProjectResponse = z.infer<typeof projectSchema>;
+
+/** `PUT /api/v1/developer/projects/:id/cover` (D-099): la versión nueva de la portada. */
+export const projectCoverResultSchema = z.strictObject({
+  coverUpdatedAt: z.coerce.date()
+});
+export type ProjectCoverResult = z.infer<typeof projectCoverResultSchema>;
 
 /** `GET /api/v1/projects` (array): cada proyecto con sus stages, ya ordenados. */
 export const projectListItemSchema = projectSchema.extend({

@@ -63,6 +63,7 @@ import type {
   MerkleProof,
   ProgressRow,
   Project,
+  ProjectCover,
   ProjectCreated,
   ProjectDetail,
   ProjectDocument,
@@ -130,6 +131,20 @@ async function requestBlob(path: string): Promise<Blob> {
   if (res.status === 401) clearSession()
   if (!res.ok) throw new ApiError(res.status, res.statusText)
   return res.blob()
+}
+
+/**
+ * D-099 — la URL pública de la portada de un proyecto, o `null` si no tiene.
+ *
+ * **No hace fetch, y por eso no está en `api`**: la pide el `<img>`, sin sesión
+ * (la ruta es pública). Vive en este archivo porque es el único que conoce
+ * `API_BASE`. `coverUpdatedAt` es la versión: una portada nueva es una URL
+ * nueva, así que la caché no la tapa.
+ */
+export function projectCoverUrl(projectId: string, coverUpdatedAt: string | null): string | null {
+  if (!coverUpdatedAt) return null
+  const v = new URLSearchParams({ v: coverUpdatedAt })
+  return `${API_BASE}/api/v1/public/projects/${projectId}/cover?${v}`
 }
 
 /** Envoltorio de las listas paginadas por cursor de la API. */
@@ -294,6 +309,16 @@ export const api = {
       '/api/v1/developer/projects',
       jsonInit<CreateDeveloperProjectInput>('POST', proyecto)
     ),
+
+  /** D-099 — carga o reemplaza la portada del proyecto (un JPEG o PNG, campo `file`). */
+  uploadProjectCover: (projectId: string, archivo: File) => {
+    const form = new FormData()
+    form.append('file', archivo)
+    return request<ProjectCover>(`/api/v1/developer/projects/${projectId}/cover`, {
+      method: 'PUT',
+      body: form
+    })
+  },
 
   listDeveloperDocuments: (status?: DeveloperDocumentListQuery['status']) => {
     const qs = status ? `?status=${status}` : ''

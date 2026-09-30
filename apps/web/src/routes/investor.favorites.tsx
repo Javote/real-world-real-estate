@@ -1,6 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { createFileRoute, useNavigate } from '@tanstack/react-router'
-import { api } from '#/api/port'
+import { api, projectCoverUrl } from '#/api/port'
 import type { Project } from '#/api/types'
 import { INVESTOR_ROLES } from '#/auth/roles'
 import { useRoleGuard } from '#/auth/useRoleGuard'
@@ -55,6 +55,7 @@ function InvestorFavorites() {
               <ProjectCard
                 key={proyecto.id}
                 name={proyecto.name}
+                imageUrl={projectCoverUrl(proyecto.id, proyecto.coverUpdatedAt)}
                 location={ubicacion || null}
                 status={{
                   label: t(`project.status.${proyecto.status}`),
