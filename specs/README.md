@@ -140,6 +140,23 @@ código (`ESTADO-2026-09-22-catalyst-milestone-4.md`), no de una auditoría del 
 NPS) y `SPEC-504` (completitud de documentación) — las cuatro **sin empezar**, escritas para tener
 el terreno mapeado antes de que M4 se vuelva el mandato activo.
 
+**La serie `6xx` es el refactor estructural post-M3**, y por la misma razón tampoco cuenta entre las
+abiertas. Nace de una revisión de arquitectura de `apps/web` y `apps/api` hecha el 2026-09-30,
+medida contra producción:
+[`PROPUESTA-2026-09-30-refactor-post-m3.md`](PROPUESTA-2026-09-30-refactor-post-m3.md). Deja escrito
+qué **no** entra y por qué: la carcasa Express delante de oRPC se queda (`SPEC-212`/`SPEC-216`), no se
+parten routers por largo (`SPEC-015` §6), y el cliente oRPC en la web queda para una conversación
+aparte con el dueño (`SPEC-111`).
+
+| Spec | Título | Estado |
+|---|---|---|
+| [`SPEC-601`](SPEC-601-el-guard-de-rol-vive-en-el-router.md) | El guard de rol vive en el router: `beforeLoad` por prefijo y `me` cacheado. Se van 40 `useRoleGuard` y 63 `enabled: ready` | sin empezar · 🟡 |
+| [`SPEC-602`](SPEC-602-los-datos-arrancan-con-la-ruta.md) | Loaders que precargan (`prefetchQuery`, sin `await`) y `staleTime` por defecto, sin tocar los estados de carga de `SPEC-110` | sin empezar · 🟢 · depende de `601` |
+| [`SPEC-603`](SPEC-603-la-api-y-la-base-en-la-misma-region.md) | La API (Oregon) y Turso (us-east-1) en la misma región: cada viaje a la base cuesta ~90–120 ms medidos | sin empezar · 🟡 · la más barata |
+| [`SPEC-604`](SPEC-604-la-capa-de-datos-sale-de-los-routers.md) | Las lecturas repetidas salen de los routers (`Stage`: 20 queries en 10 routers) | sin empezar · 🟢 · con la primera feature que las necesite |
+| [`SPEC-605`](SPEC-605-la-cadena-fuera-del-camino-de-la-request.md) | Anclar y reconciliar fuera de la request (outbox + worker) | **condicional**: contradice D-077; tiene disparadores escritos |
+| [`SPEC-606`](SPEC-606-la-sesion-por-pestana.md) | La sesión: por pestaña, legible por JS, y un logout que el servidor no se entera | **condicional**: decisión del dueño |
+
 Los planes fechados no llevan número: [`PLAN-2026-08-31-anclaje-real.md`](PLAN-2026-08-31-anclaje-real.md)
 fue la secuencia operativa para pasar la instancia desplegada a `ANCHOR_MODE=real` (cerrada el
 2026-09-03), y [`PLAN-2026-09-04-guard-unico.md`](PLAN-2026-09-04-guard-unico.md) unificó los tres guards de
