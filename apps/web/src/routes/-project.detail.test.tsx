@@ -152,6 +152,10 @@ describe('/project/:projectId (investor)', () => {
     const tarjeta = screen.getByText(t['project.status.in_progress']).closest('article')
     expect(tarjeta?.className).toContain('bg-pending-light')
     expect(tarjeta?.className).toContain('text-pending')
+    // Borde del mismo tono, por dentro (no agranda la tarjeta): el fondo claro
+    // sin él casi no se separaba del gris de la página.
+    expect(tarjeta?.className).toContain('ring-inset')
+    expect(tarjeta?.className).toContain('ring-pending')
     expect(tarjeta?.className).toContain('items-center')
     expect(tarjeta?.className).toContain('justify-center')
   })

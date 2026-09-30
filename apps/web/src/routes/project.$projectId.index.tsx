@@ -21,7 +21,7 @@ import { Loading } from '#/components/domain/Loading'
 import { LocationMapModal } from '#/components/domain/LocationMapModal'
 import { PrimaryButton, SecondaryButton } from '#/components/domain/PrimaryButton'
 import { ProgressTimeline } from '#/components/domain/ProgressTimeline'
-import { TONOS } from '#/components/domain/StatusPill'
+import { type StatusTone, TONOS } from '#/components/domain/StatusPill'
 import { PanelLayout } from '#/components/PanelLayout'
 import { formatDate, formatMonthYear } from '#/i18n/format'
 import { useTranslation } from '#/i18n/useTranslation'
@@ -39,6 +39,17 @@ const ICONO_DE_ESTADO: Record<ProjectStatus, LucideIcon> = {
   in_progress: HardHat,
   delayed: HardHat,
   completed: KeyRound
+}
+
+// El borde de la tarjeta de estado, en el color de su familia. Sin él, el fondo
+// claro del tono casi no contrasta con el gris de la página. `ring-inset` se
+// dibuja por dentro: no agranda la tarjeta (el mismo `ring-1` que StageChips
+// usa para lo anclado).
+const BORDE_DE_TONO: Record<StatusTone, string> = {
+  verified: 'ring-1 ring-inset ring-verified',
+  pending: 'ring-1 ring-inset ring-pending',
+  info: 'ring-1 ring-inset ring-info',
+  neutral: 'ring-1 ring-inset ring-border'
 }
 
 // **M2-D5 filas 06-07 · `/project/:projectId`** — capturas 6 y 7.
@@ -211,7 +222,8 @@ function InvestorProjectDetail() {
             className={cn(
               'flex flex-col items-center justify-center gap-s2 text-center',
               CARD_SHELL,
-              proyecto?.status ? TONOS[TONO_PROYECTO[proyecto.status]] : undefined
+              proyecto?.status ? TONOS[TONO_PROYECTO[proyecto.status]] : undefined,
+              proyecto?.status ? BORDE_DE_TONO[TONO_PROYECTO[proyecto.status]] : undefined
             )}
           >
             {proyecto?.status ? (
