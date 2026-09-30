@@ -152,17 +152,17 @@ propia sesión:
 - [ ] **Pestañas 2 a 5:** entrá con cada rol (elegí la solapa, tipeá la contraseña, "Ingresar" /
       "Sign in"). En la 5 no hay solapa: tipeá `admin@example.com`.
 - [ ] **La primera vez:** `Cmd` + `+` una vez, para el zoom al 110% (queda guardado).
-- [ ] **Pestaña 1:** antes de la sesión A, **sin entrar y en castellano** (si se ve en inglés, toggle
-      → ES). Antes de B o C: entrá con `buyer@`.
-- [ ] **Antes de B o C**, si alguna pestaña se ve en castellano: recargala (`Cmd+R`). La sesión
-      sobrevive a la recarga.
+- [ ] **Pestaña 1:** entrá con `buyer@`, igual que las otras. El video arranca ya adentro (T01).
+- [ ] **Las cinco en inglés:** en una cualquiera, toggle del header → **EN**, y recargá las otras
+      (`Cmd+R`). El idioma se guarda en el navegador y lo comparten las cinco; la sesión sobrevive a
+      la recarga.
 
 **Dos reglas que no se rompen:**
 
 1. **Nunca abras una pestaña con un clic desde otra**: hereda la sesión de esa otra, y vas a estar
    grabando al certifier con la sesión del developer sin enterarte. Si hace falta una, `Cmd+T`.
-2. **El idioma se cambia una sola vez, en cámara, en T01.** Después de T01, recargá las pestañas 2 a
-   5 para que pasen a inglés (lo dice T01).
+2. **El idioma no se cambia en cámara.** Todo el video va en inglés desde el primer cuadro; el
+   toggle ES | EN queda a la vista en el header y lo menciona la voz de T01.
 
 ### 1.3 La pasada de calentamiento — menos de 15 min antes de la primera toma
 
@@ -187,8 +187,8 @@ propia sesión:
     firmar el dossier de la 1A deja a T25 sin nada que firmar.
   - Queda un proyecto más en el listado del developer (T07) y una certificación más en el panel del
     certifier: no molestan.
-- [ ] **Al terminar el recorrido, dejá la app en castellano** (toggle → ES). *(Solo antes de la
-      sesión A: si quedó en inglés, T01 arranca en inglés y se pierde el primer gesto del video.)*
+- [ ] **Al terminar el recorrido, dejá la app en inglés** (toggle → EN) y la pestaña 1 en
+      `/investor/buy`, arriba de todo: ahí arranca T01.
 
 ### 1.4 Pantalla completa
 
@@ -249,67 +249,62 @@ no hay "otra toma" de esas.
 
 | Toma | Empieza en | Pestaña | Qué | Pantalla | Video | Voz | |
 |---|---|---|---|---|---|---|---|
-| T01 | 0:00 | 1 · Investor | Login, y el cambio de idioma | `/login` → `/investor/buy` | 22 s | 13 s | |
-| T02 | 0:22 | 1 · Investor | Buy | `/investor/buy` | 35 s | 15 s | |
-| T03 | 0:57 | 1 · Investor | El proyecto por dentro | `/project/<torre-volumen-3>` | 45 s | 16 s | |
-| T04 | 1:42 | 1 · Investor | Quién construye | `/project/<torre-volumen-3>/developer` | 40 s | 25 s | |
-| T05 | 2:22 | 1 · Investor | Hasta la prueba | `…/progress` → `…/stage/:stageId` | 45 s | 27 s | |
-| T06 | 3:07 | 1 · Investor | Favoritos | `/investor/favorites` | 10 s | 4 s | |
-| T07 | 3:17 | 2 · Developer | El panel | `/developer` → `/developer/projects` | 30 s | 12 s | |
-| T08 | 3:47 | 2 · Developer | Proyecto nuevo | `/developer/project/new` | 40 s | 34 s | ⚠ irrepetible |
-| T09 | 4:27 | 2 · Developer | El proyecto ya creado | `/developer/project/:id` → `/developer/progress` | 30 s | 15 s | |
-| T10 | 4:57 | 2 · Developer | Unidades | `/developer/project/:id/units` | 32 s | 10 s | |
-| T11 | 5:29 | 2 · Developer | La invitación | `/developer/project/:id/invite` | 25 s | 8 s | ⚠ irrepetible |
-| T12 | 5:54 | 1 · Investor | Aceptar | campana → `/investor/notifications` | 35 s | 15 s | ⚠ irrepetible |
-| T13 | 6:29 | 1 · Investor | El portfolio | `/investor/units` → `/investor/unit/<5A>` | 35 s | 23 s | |
-| T14 | 7:04 | 1 · Investor | El contrato como registro | `/investor/unit/<5A>/contract` | 25 s | 13 s | |
-| T15 | 7:29 | 2 · Developer | Subir evidencia | `/developer/project/:id/upload` | 40 s | 20 s | ⚠ irrepetible |
-| T16 | 8:09 | 2 · Developer | La prueba, y afuera de la app | AnchoringSuccessModal → cardanoscan | 26 s | 11 s | |
-| T17 | 8:35 | 1 · Investor | El mismo anclaje, del otro lado | `/investor/unit/<5A>/notifications` → `/investor/unit/<5A>` | 35 s | 16 s | |
-| T18 | 9:10 | 3 · Certifier | Observar | `/certifier` → `/certifier/assigned` → `/certifier/stage/:id` | 40 s | 17 s | ⚠ irrepetible |
-| T19 | 9:50 | 2 · Developer | Reanudar | `/developer/progress` | 20 s | 11 s | ⚠ irrepetible |
-| T20 | 10:10 | 3 · Certifier | Certificar | `/certifier/stage/:id` | 20 s | 7 s | ⚠ irrepetible |
-| T21 | 10:30 | 3 · Certifier | El certificado | `/certifier/issued` | 15 s | 5 s | |
-| T22 | 10:45 | 2 · Developer | El contrato del lado del developer | `/developer/project/:id/contracts` | 25 s | 14 s | |
-| T23 | 11:10 | 1 · Investor | El dossier | `/investor/unit/<1A>/dossier` | 40 s | 24 s | |
-| T24 | 11:50 | 1 · Investor | Compartir | "Share" → modal | 15 s | 8 s | |
-| T25 | 12:05 | 4 · Notary | La firma | `/notary` → `/notary/dossiers` → `/notary/dossier/:id` | 35 s | 19 s | ⚠ irrepetible |
-| T26 | 12:40 | 4 · Notary | El historial | `/notary/signed` | 15 s | 11 s | |
-| T27 | 12:55 | incógnito | Verificado sin cuenta | `/public/dossier/:shareToken` | 25 s | 18 s | |
-| T28 | 13:20 | 2 · Developer | El círculo se cierra | `/developer/audit-log` | 45 s | 21 s | |
-| T29 | 14:05 | 2 · Developer | El resto del developer | documentation → investors → capital → units → progress | 75 s | 23 s | |
-| T30 | 15:20 | las cuatro | Perfiles y menú | los cuatro `/…/profile` + `/investor/menu` | 60 s | 13 s | |
-| T31 | 16:20 | 1 · Investor | Responsive | DevTools → Device Toolbar | 30 s | 13 s | |
-| | **16:50** | | **Total** | | **1010 s ≈ 17 min** | | |
+| T01 | 0:00 | 1 · Investor | La apertura, ya adentro | `/investor/buy` | 15 s | 10 s | |
+| T02 | 0:15 | 1 · Investor | Buy | `/investor/buy` | 35 s | 15 s | |
+| T03 | 0:50 | 1 · Investor | El proyecto por dentro | `/project/<torre-volumen-3>` | 45 s | 16 s | |
+| T04 | 1:35 | 1 · Investor | Quién construye | `/project/<torre-volumen-3>/developer` | 40 s | 25 s | |
+| T05 | 2:15 | 1 · Investor | Hasta la prueba | `…/progress` → `…/stage/:stageId` | 45 s | 27 s | |
+| T06 | 3:00 | 1 · Investor | Favoritos | `/investor/favorites` | 10 s | 4 s | |
+| T07 | 3:10 | 2 · Developer | El panel | `/developer` → `/developer/projects` | 30 s | 12 s | |
+| T08 | 3:40 | 2 · Developer | Proyecto nuevo | `/developer/project/new` | 40 s | 34 s | ⚠ irrepetible |
+| T09 | 4:20 | 2 · Developer | El proyecto ya creado | `/developer/project/:id` → `/developer/progress` | 30 s | 15 s | |
+| T10 | 4:50 | 2 · Developer | Unidades | `/developer/project/:id/units` | 32 s | 10 s | |
+| T11 | 5:22 | 2 · Developer | La invitación | `/developer/project/:id/invite` | 25 s | 8 s | ⚠ irrepetible |
+| T12 | 5:47 | 1 · Investor | Aceptar | campana → `/investor/notifications` | 35 s | 15 s | ⚠ irrepetible |
+| T13 | 6:22 | 1 · Investor | El portfolio | `/investor/units` → `/investor/unit/<5A>` | 35 s | 23 s | |
+| T14 | 6:57 | 1 · Investor | El contrato como registro | `/investor/unit/<5A>/contract` | 25 s | 13 s | |
+| T15 | 7:22 | 2 · Developer | Subir evidencia | `/developer/project/:id/upload` | 40 s | 20 s | ⚠ irrepetible |
+| T16 | 8:02 | 2 · Developer | La prueba, y afuera de la app | AnchoringSuccessModal → cardanoscan | 26 s | 11 s | |
+| T17 | 8:28 | 1 · Investor | El mismo anclaje, del otro lado | `/investor/unit/<5A>/notifications` → `/investor/unit/<5A>` | 35 s | 16 s | |
+| T18 | 9:03 | 3 · Certifier | Observar | `/certifier` → `/certifier/assigned` → `/certifier/stage/:id` | 40 s | 17 s | ⚠ irrepetible |
+| T19 | 9:43 | 2 · Developer | Reanudar | `/developer/progress` | 20 s | 11 s | ⚠ irrepetible |
+| T20 | 10:03 | 3 · Certifier | Certificar | `/certifier/stage/:id` | 20 s | 7 s | ⚠ irrepetible |
+| T21 | 10:23 | 3 · Certifier | El certificado | `/certifier/issued` | 15 s | 5 s | |
+| T22 | 10:38 | 2 · Developer | El contrato del lado del developer | `/developer/project/:id/contracts` | 25 s | 14 s | |
+| T23 | 11:03 | 1 · Investor | El dossier | `/investor/unit/<1A>/dossier` | 40 s | 24 s | |
+| T24 | 11:43 | 1 · Investor | Compartir | "Share" → modal | 15 s | 8 s | |
+| T25 | 11:58 | 4 · Notary | La firma | `/notary` → `/notary/dossiers` → `/notary/dossier/:id` | 35 s | 19 s | ⚠ irrepetible |
+| T26 | 12:33 | 4 · Notary | El historial | `/notary/signed` | 15 s | 11 s | |
+| T27 | 12:48 | incógnito | Verificado sin cuenta | `/public/dossier/:shareToken` | 25 s | 18 s | |
+| T28 | 13:13 | 2 · Developer | El círculo se cierra | `/developer/audit-log` | 45 s | 21 s | |
+| T29 | 13:58 | 2 · Developer | El resto del developer | documentation → investors → capital → units → progress | 75 s | 23 s | |
+| T30 | 15:13 | las cuatro | Perfiles y menú | los cuatro `/…/profile` + `/investor/menu` | 60 s | 13 s | |
+| T31 | 16:13 | 1 · Investor | Responsive | DevTools → Device Toolbar | 30 s | 13 s | |
+| | **16:43** | | **Total** | | **1003 s ≈ 17 min** | | |
 
 ### Sesión A · El comprador mira una obra terminada (T01–T06)
 
 Abre por el final del producto: **`torre-volumen-3`**, con sus 10 etapas certificadas. Es el
 contraste contra el que después se entiende el proyecto que nace vacío.
 
-- [ ] Paso 1 hecho. Pestaña 1 en `/login`, **en castellano y sin entrar**. Pantalla completa.
+- [ ] Paso 1 hecho. Las cinco pestañas logueadas y **en inglés**; la 1 en `/investor/buy`, arriba de
+      todo. Pantalla completa.
 
-#### T01 · Login, y el cambio de idioma — 22 s
+#### T01 · La apertura, ya adentro — 15 s
 
-**Antes de grabar:** pestaña 1, `/login`, **en castellano** (Paso 1.2), sin entrar. La solapa "Inversor"
-viene seleccionada y el usuario `buyer@example.com` ya precargado.
+**Antes de grabar:** pestaña 1, `/investor/buy`, arriba de todo, logueada como `buyer@` y **en
+inglés**. El mouse al centro de la pantalla.
 
 | Tiempo | Acción | Lo que tiene que verse |
 |---|---|---|
-| 0:00–0:03 | **Quieto.** | El login en castellano. |
-| 0:03 | Clic en **EN** del toggle de idioma (arriba a la derecha). | Todo pasa a inglés: "Real-estate traceability, anchored on blockchain". |
-| 0:04–0:07 | **Quieto.** | La pantalla en inglés. |
-| 0:07 | Clic en la solapa **"Investor"** (ya está elegida: el clic es para que se vea). | "Username" con `buyer@example.com`. |
-| 0:09–0:14 | Clic en **"Password"** y tipeá la contraseña (Paso 0.1). | Solo puntos. |
-| 0:15 | Clic en **"Sign in"**. | "Signing in…" |
-| 0:16–0:22 | **Quieto** sobre lo que carga. | "Buy" con las tres cards de Torre Volumen. |
+| 0:00–0:05 | **Quieto.** | "Buy" con las tres cards de Torre Volumen; en el header, campana, perfil y el toggle **ES \| EN**. |
+| 0:06 | El mouse va lento hasta el toggle **ES \| EN** del header y queda apoyado. **Sin clic.** | "EN" resaltado. |
+| 0:07–0:12 | **Quieto**, el mouse sobre el toggle. | — |
+| 0:13–0:15 | El mouse vuelve lento al centro. | — |
 
-**Ensayalo antes.** La solapa precarga solo el usuario; la contraseña es la de `SEED_DEMO_PASSWORD`,
-no la local. Un "Invalid credentials" en la primera toma es la peor apertura posible.
-
-**Después:** fuera de cámara, recargá las pestañas 2 a 5 (`Cmd+2` → `Cmd+R`, `Cmd+3` → `Cmd+R`…) para
-que pasen a inglés, y volvé con `Cmd+1`. *(Si todavía no las abriste porque la sesión B es otro día,
-no hace falta: se abren ya en inglés.)*
+**Por qué no hay login ni cambio de idioma en cámara:** decisión del dueño del 2026-09-30 — la voz
+presenta al investor y la localización, y el video gana 7 s. El toggle sigue a la vista en todas
+las tomas.
 
 #### T02 · Buy — 35 s
 
@@ -937,13 +932,12 @@ errores: usalo solo si el estudio no anda.)*
 
 #### Acto 1 · Investor (T01–T06)
 
-##### T01 · Login, y el cambio de idioma — video 22 s
+##### T01 · La apertura, ya adentro — video 15 s
 
 | Tiempo | Entra cuando ves | Texto |
 |---|---|---|
-| 0:01 | El login en castellano | PropNexus opens in Spanish, the default locale. |
-| 0:05 | La pantalla pasa a inglés | The language toggle lives on the login screen itself. Both dictionaries are complete, so the whole interface switches. |
-| 0:14 | Se tipea la contraseña | We sign in as the investor. |
+| 0:01 | "Buy" con las tres cards | PropNexus, signed in as the investor: one of four roles, each with its own surface. |
+| 0:06 | El mouse sobre el toggle de idioma | The interface ships in Spanish, the default, and in English, switchable from every screen. |
 
 ##### T02 · Buy — video 35 s
 
@@ -1269,7 +1263,7 @@ bastante más.
 
 | | Decisión | Por qué |
 |---|---|---|
-| **Idioma** | Abre en `es-AR` (default) y **se cambia a `en-US` en el login, antes de entrar**. | Catalyst revisa en inglés, y el cambio en cámara muestra la localización como feature. Los dos diccionarios están completos y la paridad la fuerza el compilador (`dictionary.ts`). |
+| **Idioma** | **Todo en `en-US` desde el primer cuadro**, ya logueado; el toggle ES \| EN queda a la vista en el header y la voz de T01 lo nombra. | Catalyst revisa en inglés. Hasta el 2026-09-30 el cambio se hacía en cámara, en el login; el dueño lo sacó para abrir ya adentro. Los dos diccionarios están completos y la paridad la fuerza el compilador (`dictionary.ts`). |
 | **Entorno** | Producción: `propnexus-web.onrender.com`. Nunca local. | El video tiene que mostrar TXIDs reales en Preprod y la URL pública viva — parte de lo que sostiene el criterio 5. |
 | **La FSM** | **Las cuatro aristas, sobre la misma etapa**: subir evidencia → observar → reanudar → certificar. | Es la máquina de estados entera contada sobre un solo objeto. |
 | **Tomas** | 31 tomas cortas, cortadas donde hay espera, con video y audio por separado. | Cada acción on-chain tarda ~45 s y crear un proyecto bloquea ~6 min. Una toma continua es imposible, y con la toma como unidad los tiempos de pantalla y voz se cuentan desde el mismo 0:00. |
