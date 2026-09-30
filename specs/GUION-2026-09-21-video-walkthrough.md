@@ -416,8 +416,8 @@ terminó T04, bajando fuera de cámara).
 | 0:00–0:03 | **Quieto.** | "Developer panel", "Welcome, …". |
 | 0:04–0:15 | El mouse pasa lento por los KPIs. | "Active projects", "Capital raised", "Total units", "Average progress", "Verified documents · anchored on chain". |
 | 0:16–0:19 | **Quieto.** | "Development management": "Investors", "Documentation", "Audit log". |
-| 0:20 | Clic en **"Projects"** en la barra lateral. | "My projects · 6 projects" (7 si hiciste el ensayo). |
-| 0:21–0:30 | Scroll lento. | Las tres Torre Volumen arriba; abajo `Torre Pending Test`, `Torre Demo E2E` y `Torre Belgrano`. Si molestan, quedate sobre las de arriba — **no los borres**. |
+| 0:20 | Clic en **"Projects"** en la barra lateral. | "My projects · 3 projects" (4 si hiciste el ensayo). |
+| 0:21–0:30 | Scroll lento. | Las tres Torre Volumen. Las tres torres de prueba ya no se ven (Anexo C.1). |
 
 ##### T08 · Proyecto nuevo — 40 s · ⚠ irrepetible
 
@@ -1336,8 +1336,8 @@ Para no prometer en audio algo que la pantalla no hace:
 | `torre-volumen-2` | 10 | 10 Completed | dev · verifier · **buyer** | 4 vendidas (de 18 declaradas) | 60 |
 | `torre-volumen-3` | 10 | 10 Completed | dev · verifier · buyer | 4 vendidas (de 30 declaradas); la **1A** → buyer, contrato USD 100.000 firmado | 61 |
 | `torre-a` | 3 | 1 Completed, 2 InProgress | **ninguna** | — | 8, 1 `Failed` |
-| `torre-pending-test` | 10 | 9 Pending, 1 InProgress | dev | — | 12 |
-| `torre-belgrano` / `torre-demo-e2e` | 0 | — | dev | — | 0 |
+| `torre-pending-test` | 10 | 9 Pending, 1 InProgress | **ninguna** (desde 2026-09-30) | — | 12 |
+| `torre-belgrano` / `torre-demo-e2e` | 0 | — | **ninguna** (desde 2026-09-30) | — | 0 |
 
 **200 `OnChainEvent` en `Confirmed`, 1 en `Failed`** (ese único está en `torre-a`, que ya no se ve).
 La reconciliación de D-077 corrió sobre todos: no hay eventos con TXID real mostrándose pendientes.
@@ -1376,6 +1376,20 @@ INSERT INTO Dossier (id, unitId, masterHash, compiledAt, shareToken, status, sig
   ('wjji7ls3xm5nro9ehxxur7tp','f3qugedzwjnzhkwth5kqwf3n',
    '8426e9e08fae94ce5de2c38fd0cf8c95ee1f0c181db77f48447dab09de5f8a3e',
    1788447381415, NULL, 'compiled', NULL, NULL, NULL);
+```
+
+- **Las tres torres de prueba quedaron ocultas, sin salir de la base (2026-09-30, decisión del
+  dueño).** `Torre Pending Test`, `Torre Demo E2E` y `Torre Belgrano` eran restos de pruebas: se
+  veían en "My projects" (T07), y la primera —la única con etapas— también en "Construction
+  progress" (T09). Ninguna se usa en el video ni en tests. Se borró su única fila de `ProjectMember`
+  (la del developer); no tenían unidades, dossiers ni otras membresías. Verificado después: cero
+  membresías sobre las tres. **Reversible:**
+
+```sql
+INSERT INTO ProjectMember (id, userId, projectId, membershipRole, createdAt) VALUES
+  ('bhq459or64jfaj1jhquqyrp2','hnrykorp4aqul78oiy9bfe4h','p8tdmsdzy65grxsvoq193ggq','developer',1788558804765),
+  ('zh9stzpfkco3xudketmhfnhb','hnrykorp4aqul78oiy9bfe4h','fovu60gxv23hgz6904lrwhi0','developer',1788889738196),
+  ('igcb1kvk96siv17iau1daeie','hnrykorp4aqul78oiy9bfe4h','orw3r1lusy8pxnv23c1xp2qd','developer',1788907996251);
 ```
 
 - **Los tres `torre-volumen-*` pasaron de `planning` a `completed`.** Figuraban como
