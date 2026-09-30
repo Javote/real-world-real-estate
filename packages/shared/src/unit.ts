@@ -84,6 +84,13 @@ export const investorUnitListItemSchema = z.strictObject({
   projectId: z.string(),
   projectName: z.string(),
   city: z.string().nullable(),
+  /**
+   * La versión de la portada **del proyecto** (D-099), o `null` si no tiene:
+   * la foto de la card de la unidad es la del edificio (captura 14). Se llama
+   * igual que la columna de `Project` a propósito — el plugin de la base
+   * convierte a `Date` por nombre de columna.
+   */
+  coverUpdatedAt: z.coerce.date().nullable(),
   progress: z.number().int().min(0).max(100)
 });
 export type InvestorUnitListItem = z.infer<typeof investorUnitListItemSchema>;

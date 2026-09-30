@@ -2,7 +2,7 @@ import { useQueries, useQuery } from '@tanstack/react-query'
 import { createFileRoute, useNavigate } from '@tanstack/react-router'
 import { Building2, ChevronRight, FileText, Images, MapPin } from 'lucide-react'
 import { useEffect, useRef, useState } from 'react'
-import { ApiError, api } from '#/api/port'
+import { ApiError, api, projectCoverUrl } from '#/api/port'
 import type { MerkleProof } from '#/api/types'
 import { INVESTOR_ROLES } from '#/auth/roles'
 import { useRoleGuard } from '#/auth/useRoleGuard'
@@ -123,19 +123,28 @@ function InvestorUnitDetail() {
 
   const fotos = (documentos ?? []).filter((d) => esFoto(d.evidenceType, d.mimeType))
   const blobs = useQueries({
-    queries: fotos.map((f, i) => ({
+    queries: fotos.map((f) => ({
       queryKey: ['evidence-blob', f.id],
       queryFn: async () => objectUrl(await api.downloadEvidence(f.id)),
       // `gcTime: 0`: la URL se revoca al desmontar, así que la caché no puede
       // sobrevivirle — devolvería una URL muerta al volver a la pantalla.
       gcTime: 0,
-      enabled: ready && Boolean(unidad) && (galeria || i === 0)
+      // Solo con la galería abierta: la portada es la del proyecto (D-099).
+      enabled: ready && Boolean(unidad) && galeria
     }))
   })
-  const imagenes = fotos.flatMap((_f, i) => {
-    const url = blobs[i]?.data
-    return url ? [{ url, alt: t('investor.unit.gallery') }] : []
-  })
+  // D-099: la foto de la unidad es la portada de su proyecto (capturas 14 y
+  // 15), no la primera foto de evidencia. Encabeza la galería; las fotos de
+  // evidencia van detrás.
+  const portada = proyecto ? projectCoverUrl(proyecto.id, proyecto.coverUpdatedAt) : null
+  const imagenes = [
+    ...(portada ? [{ url: portada, alt: t('investor.unit.gallery') }] : []),
+    ...fotos.flatMap((_f, i) => {
+      const url = blobs[i]?.data
+      return url ? [{ url, alt: t('investor.unit.gallery') }] : []
+    })
+  ]
+  const cantidadDeImagenes = (portada ? 1 : 0) + fotos.length
 
   if (!ready) return null
 
@@ -154,7 +163,6 @@ function InvestorUnitDetail() {
   const actual = timeline.find((s) => s.state === 'current')
   const avance = avanceDeStages(stages)
   const ubicacion = [unidad?.city, unidad?.country].filter(Boolean).join(', ')
-  const portada = imagenes[0]?.url
   const tienePisos = (schematic ?? []).some((p) => p.floor != null) || unidad?.floor != null
   const stageDelBundle = stages.find((s) => s.bundleId === bundleId)
 
@@ -201,7 +209,7 @@ function InvestorUnitDetail() {
             // SPEC-105 (F-12): sin fotos no hay nada que abrir — `disabled`,
             // no un handler que no hace nada. El usuario tiene que poder
             // distinguir "no hay nada" de "no anduvo".
-            disabled={fotos.length === 0}
+            disabled={cantidadDeImagenes === 0}
             className="relative overflow-hidden rounded-xl bg-surface-alt disabled:cursor-not-allowed disabled:opacity-60"
             aria-label={t('investor.unit.openGallery')}
           >
@@ -212,9 +220,9 @@ function InvestorUnitDetail() {
                 <Building2 size={28} aria-hidden="true" />
               </span>
             )}
-            {fotos.length ? (
+            {cantidadDeImagenes ? (
               <span className="absolute bottom-s2 left-s2 rounded-full bg-black/50 px-s3 py-s1 text-caption text-white">
-                {t('investor.unit.photosCount', { count: String(fotos.length) })}
+                {t('investor.unit.photosCount', { count: String(cantidadDeImagenes) })}
               </span>
             ) : null}
           </button>
@@ -226,9 +234,27 @@ function InvestorUnitDetail() {
             className="overflow-hidden rounded-xl bg-card text-left shadow-e1 disabled:cursor-not-allowed disabled:opacity-60"
             aria-label={t('investor.unit.openMap')}
           >
-            <span className="flex aspect-video items-center justify-center bg-surface-alt text-primary">
-              <MapPin className="size-icon-stat" aria-hidden="true" />
-            </span>
+            {/* La miniatura de la captura 15: el mapa real, quieto. El clic es
+                de este botón, que lo abre en grande. */}
+            {proyecto?.latitude != null && proyecto.longitude != null ? (
+              <span className="block aspect-video">
+                <LocationMapModal
+                  open
+                  variant="preview"
+                  latitude={proyecto.latitude}
+                  longitude={proyecto.longitude}
+                  labels={{
+                    title: t('investor.unit.location'),
+                    close: t('map.close'),
+                    marker: t('map.marker')
+                  }}
+                />
+              </span>
+            ) : (
+              <span className="flex aspect-video items-center justify-center bg-surface-alt text-primary">
+                <MapPin className="size-icon-stat" aria-hidden="true" />
+              </span>
+            )}
             {ubicacion ? (
               <span className="block truncate px-s3 py-s2 text-caption text-text-muted">
                 {ubicacion}

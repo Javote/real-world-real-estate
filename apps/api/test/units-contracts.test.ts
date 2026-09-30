@@ -412,6 +412,22 @@ describe("inventario de unidades", () => {
     const referencias = res.body.map((u: { unitReference: string }) => u.unitReference);
     expect(referencias).toContain("7C");
   });
+
+  it("cada unidad trae la versión de la portada de su proyecto, como fecha ISO (D-099)", async () => {
+    const version = new Date("2026-09-30T12:00:00.000Z");
+    await db
+      .updateTable("Project")
+      .set({ coverUpdatedAt: version })
+      .where("id", "=", projectId)
+      .execute();
+
+    const res = await request(app)
+      .get("/api/v1/investor/units")
+      .set("Authorization", `Bearer ${tokenInvestor}`);
+
+    const unidad = res.body.find((u: { unitReference: string }) => u.unitReference === "7C");
+    expect(unidad.coverUpdatedAt).toBe(version.toISOString());
+  });
 });
 
 // Fila 35-36 — el "Price from" de la captura. Es una AGREGACIÓN sobre las

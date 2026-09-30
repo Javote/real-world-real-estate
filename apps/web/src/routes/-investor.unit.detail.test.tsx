@@ -3,6 +3,7 @@ import { cleanup, fireEvent, screen, waitFor, within } from '@testing-library/re
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { ApiError, api } from '#/api/port'
 import { dictionary } from '#/i18n/dictionary'
+import * as L from '#/test/leaflet-falso'
 import { autenticarComo, INVESTOR_USER, montarRuta } from './-test-mount'
 import { Route } from './investor.unit.$unitId.index'
 
@@ -486,32 +487,52 @@ describe('/investor/unit/$unitId', () => {
       expect(screen.queryByText(/fotos$/)).toBeNull()
     })
 
-    it('con fotos cuenta solo las fotos, y la portada es la primera (solo se descarga esa hasta abrir)', async () => {
-      const { descargar } = preparar({ documentos: fotos })
+    it('con portada (D-099): la del proyecto encabeza y se cuenta; las fotos no se bajan hasta abrir', async () => {
+      const { descargar } = preparar({
+        proyecto: proyecto({ coverUpdatedAt: '2026-09-30T12:00:00.000Z' }),
+        documentos: fotos
+      })
+      montar()
+
+      // La portada más las dos fotos de evidencia (el PDF no cuenta).
+      await screen.findByText(t['investor.unit.photosCount'].replace('{count}', '3'))
+      const boton = screen.getByRole('button', { name: t['investor.unit.openGallery'] })
+      expect((boton as HTMLButtonElement).disabled).toBe(false)
+      expect(boton.querySelector('img')?.getAttribute('src')).toBe(
+        '/api/v1/public/projects/p1/cover?v=2026-09-30T12%3A00%3A00.000Z'
+      )
+      expect(descargar).not.toHaveBeenCalled()
+    })
+
+    it('sin portada pero con fotos: superficie neutra, y la galería se puede abrir igual', async () => {
+      preparar({ documentos: fotos })
       montar()
 
       await screen.findByText(t['investor.unit.photosCount'].replace('{count}', '2'))
-      await waitFor(() => expect(descargar).toHaveBeenCalledTimes(1))
-      expect(descargar).toHaveBeenCalledWith('f1')
       const boton = screen.getByRole('button', { name: t['investor.unit.openGallery'] })
       expect((boton as HTMLButtonElement).disabled).toBe(false)
-      await waitFor(() => expect(boton.querySelector('img')).toBeTruthy())
+      // Una foto de evidencia ya no hace de portada.
+      expect(boton.querySelector('img')).toBeNull()
     })
 
-    it('abrir la galería descarga el resto y se cierra con el botón de cerrar', async () => {
-      const { descargar } = preparar({ documentos: fotos })
+    it('abrir la galería descarga las fotos, van detrás de la portada, y se cierra con el botón de cerrar', async () => {
+      const { descargar } = preparar({
+        proyecto: proyecto({ coverUpdatedAt: '2026-09-30T12:00:00.000Z' }),
+        documentos: fotos
+      })
       montar()
       const boton = await screen.findByRole('button', { name: t['investor.unit.openGallery'] })
-      await waitFor(() => expect(boton.querySelector('img')).toBeTruthy())
+      await waitFor(() => expect((boton as HTMLButtonElement).disabled).toBe(false))
 
       fireEvent.click(boton)
 
       const modal = await screen.findByTestId('INV-UNIT-GALLERY-001')
+      await waitFor(() => expect(descargar).toHaveBeenCalledWith('f1'))
       await waitFor(() => expect(descargar).toHaveBeenCalledWith('f2'))
       await waitFor(() =>
         expect(
           within(modal).getByText(
-            t['investor.unit.galleryCounter'].replace('{actual}', '1').replace('{total}', '2')
+            t['investor.unit.galleryCounter'].replace('{actual}', '1').replace('{total}', '3')
           )
         ).toBeTruthy()
       )
@@ -525,7 +546,10 @@ describe('/investor/unit/$unitId', () => {
       preparar({ documentos: fotos })
       montar()
       const boton = await screen.findByRole('button', { name: t['investor.unit.openGallery'] })
-      await waitFor(() => expect(boton.querySelector('img')).toBeTruthy())
+      await waitFor(() => expect((boton as HTMLButtonElement).disabled).toBe(false))
+      fireEvent.click(boton)
+      const modal = await screen.findByTestId('INV-UNIT-GALLERY-001')
+      await waitFor(() => expect(modal.querySelector('img')).toBeTruthy())
 
       expect(URL.revokeObjectURL).not.toHaveBeenCalled()
       cleanup()
@@ -565,6 +589,21 @@ describe('/investor/unit/$unitId', () => {
       fireEvent.keyDown(document.activeElement as Element, { key: 'Escape' })
 
       await waitFor(() => expect(screen.queryByTestId('INV-UNIT-LOC-001')).toBeNull())
+    })
+
+    it('con coordenadas, el cuadro muestra el mapa en miniatura, quieto (captura 15)', async () => {
+      preparar()
+      montar()
+      const boton = await screen.findByRole('button', { name: t['investor.unit.openMap'] })
+      await waitFor(() => expect((boton as HTMLButtonElement).disabled).toBe(false))
+
+      await waitFor(() =>
+        expect(L.map).toHaveBeenCalledWith(
+          expect.anything(),
+          expect.objectContaining({ dragging: false })
+        )
+      )
+      expect(boton.querySelector('.pointer-events-none')).toBeTruthy()
     })
 
     it('sin ciudad ni país el mapa no lleva dirección', async () => {

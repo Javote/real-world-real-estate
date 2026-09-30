@@ -19,6 +19,7 @@ const unidad = (sobre: Partial<InvestorUnit>): InvestorUnit => ({
   projectId: 'p1',
   projectName: 'Torre A',
   city: 'Rosario',
+  coverUpdatedAt: null,
   progress: 40,
   ...sobre
 })
@@ -82,6 +83,23 @@ describe('/investor/units', () => {
 
     expect(clase('unitStatus.delivered')).toBe(clase('unitStatus.sold'))
     expect(clase('unitStatus.delivered')).not.toBe(clase('unitStatus.available'))
+  })
+
+  it('la foto de la unidad es la portada de su proyecto (D-099); sin portada, superficie neutra', async () => {
+    autenticarComo(INVESTOR_USER)
+    vi.spyOn(api, 'listInvestorUnits').mockResolvedValue([
+      unidad({ id: 'un-1', unitReference: 'A-101', coverUpdatedAt: '2026-09-30T12:00:00.000Z' }),
+      unidad({ id: 'un-2', unitReference: 'B-202', projectId: 'p2' })
+    ])
+    montarRuta(Route, '/investor/units')
+
+    const lista = await screen.findByTestId('INV-UNITS-LIST-001')
+    await within(lista).findByText('A-101')
+    const imagenes = lista.querySelectorAll('img')
+    expect(imagenes).toHaveLength(1)
+    expect(imagenes[0]?.getAttribute('src')).toBe(
+      '/api/v1/public/projects/p1/cover?v=2026-09-30T12%3A00%3A00.000Z'
+    )
   })
 
   it('tocar una unidad navega a su detalle', async () => {

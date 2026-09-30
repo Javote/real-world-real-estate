@@ -1,7 +1,7 @@
 import type { UnitStatus } from '@plataforma/shared'
 import { useQuery } from '@tanstack/react-query'
 import { createFileRoute, useNavigate } from '@tanstack/react-router'
-import { api } from '#/api/port'
+import { api, projectCoverUrl } from '#/api/port'
 import { INVESTOR_ROLES } from '#/auth/roles'
 import { useRoleGuard } from '#/auth/useRoleGuard'
 import { Loading } from '#/components/domain/Loading'
@@ -60,6 +60,7 @@ function InvestorUnits() {
               variant="investor"
               unitReference={u.unitReference}
               projectName={[u.projectName, u.city].filter(Boolean).join(' · ')}
+              imageUrl={projectCoverUrl(u.projectId, u.coverUpdatedAt) ?? undefined}
               progress={u.progress}
               status={{
                 tone: TONO[u.status],

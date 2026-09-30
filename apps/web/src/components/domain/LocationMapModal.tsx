@@ -10,7 +10,9 @@ import { cn } from '#/lib/cn'
 // Se usa para la ubicación de un proyecto, la de una unidad adquirida,
 // (variante `browse`) el mapa de exploración de la fila 03, y (variante
 // `picker`, D-097) el "Map preview" del alta de proyecto de la captura 34b,
-// donde el developer fija el punto de la obra.
+// donde el developer fija el punto de la obra, y (variante `preview`) la
+// miniatura del detalle de obra y de unidad de las capturas 6 y 15, la que al
+// tocarla abre este mismo mapa en `modal`.
 //
 // **El contenedor del mapa es estado, no un `useRef`** (bug visto en
 // producción el 2026-09-28). En la variante `modal` el `<div>` vive dentro del
@@ -77,7 +79,7 @@ export interface MapMarker {
 
 interface LocationMapModalProps {
   open: boolean
-  /** Solo `modal`: las variantes en línea (`browse`, `picker`) no se cierran. */
+  /** Solo `modal`: las variantes en línea (`browse`, `picker`, `preview`) no se cierran. */
   onClose?: () => void
   latitude?: number
   longitude?: number
@@ -100,8 +102,13 @@ interface LocationMapModalProps {
    * diálogo, con un solo pin que se fija con un clic o arrastrándolo, y que se
    * mueve solo cuando `latitude`/`longitude` cambian desde afuera (la
    * dirección encontrada).
+   *
+   * `preview` es la miniatura de las capturas 6 y 15: en línea, un solo pin y
+   * **sin ninguna interacción** — ni arrastrar, ni zoom, ni controles. Ocupa el
+   * contenedor que le den y no recibe clics (`pointer-events-none`): el clic
+   * es del botón que la envuelve, que abre el mapa en `modal`.
    */
-  variant?: 'modal' | 'browse' | 'picker'
+  variant?: 'modal' | 'browse' | 'picker' | 'preview'
   markers?: readonly MapMarker[]
   onSelectMarker?: (id: string) => void
   onBoundsChange?: (bbox: string) => void
@@ -127,6 +134,7 @@ export function LocationMapModal({
   const [contenedor, setContenedor] = useState<HTMLDivElement | null>(null)
   const esBrowse = variant === 'browse'
   const esPicker = variant === 'picker'
+  const esPreview = variant === 'preview'
 
   // Los callbacks cambian de identidad en cada render del padre. Van por ref
   // —sincronizada en un efecto, no durante el render— para que el mapa no se
@@ -192,7 +200,20 @@ export function LocationMapModal({
             : CENTRO_CABA
       const zoomInicial = esPicker && !punto ? 12 : zoom
 
-      const mapa = L.map(contenedor).setView(centro, zoomInicial)
+      // La miniatura es una imagen que se mueve sola: nada de lo que el usuario
+      // haga sobre ella tiene que mover el mapa (el clic es del botón de afuera).
+      const opciones = esPreview
+        ? {
+            dragging: false,
+            zoomControl: false,
+            scrollWheelZoom: false,
+            doubleClickZoom: false,
+            boxZoom: false,
+            keyboard: false,
+            touchZoom: false
+          }
+        : {}
+      const mapa = L.map(contenedor, opciones).setView(centro, zoomInicial)
 
       L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
         attribution: '© OpenStreetMap'
@@ -239,7 +260,17 @@ export function LocationMapModal({
       cancelado = true
       destruir?.()
     }
-  }, [open, contenedor, latitudCreacion, longitudCreacion, zoom, labels.marker, esBrowse, esPicker])
+  }, [
+    open,
+    contenedor,
+    latitudCreacion,
+    longitudCreacion,
+    zoom,
+    labels.marker,
+    esBrowse,
+    esPicker,
+    esPreview
+  ])
 
   // ── Efecto 2: sincronizar los pines sobre el mapa que ya existe.
   //
@@ -322,6 +353,15 @@ export function LocationMapModal({
       />
     </div>
   )
+
+  if (esPreview) {
+    if (!open) return null
+    return (
+      <div data-testid={testId} aria-hidden="true" className="pointer-events-none h-full w-full">
+        <div ref={setContenedor} className="h-full w-full bg-surface-alt" />
+      </div>
+    )
+  }
 
   if (esPicker) {
     if (!open) return null

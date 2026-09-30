@@ -10483,6 +10483,18 @@
                           }
                         ]
                       },
+                      "coverUpdatedAt": {
+                        "anyOf": [
+                          {
+                            "type": "string",
+                            "format": "date-time",
+                            "x-native-type": "date"
+                          },
+                          {
+                            "type": "null"
+                          }
+                        ]
+                      },
                       "progress": {
                         "type": "integer",
                         "minimum": 0,
@@ -10499,6 +10511,7 @@
                       "projectId",
                       "projectName",
                       "city",
+                      "coverUpdatedAt",
                       "progress"
                     ],
                     "additionalProperties": false

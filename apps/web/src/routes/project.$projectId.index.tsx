@@ -204,8 +204,20 @@ function InvestorProjectDetail() {
               className="overflow-hidden rounded-xl bg-card text-left shadow-e1"
               aria-label={t('investor.project.location')}
             >
-              <span className="flex aspect-video items-center justify-center bg-surface-alt text-primary">
-                <Building2 className="size-icon-stat" aria-hidden="true" />
+              {/* La miniatura de la captura 6: el mapa real, quieto. El clic es
+                  de este botón, que lo abre en grande. */}
+              <span className="block aspect-video">
+                <LocationMapModal
+                  open
+                  variant="preview"
+                  latitude={proyecto.latitude}
+                  longitude={proyecto.longitude}
+                  labels={{
+                    title: t('investor.project.location'),
+                    close: t('map.close'),
+                    marker: t('map.marker')
+                  }}
+                />
               </span>
               {ubicacion ? (
                 <span className="block truncate px-s3 py-s2 text-caption text-text-muted">

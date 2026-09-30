@@ -337,7 +337,7 @@ no hace falta: se abren ya en inglés.)*
 | 0:00–0:03 | **Quieto.** | Portada y nombre. |
 | 0:03 | Clic en la portada (**"Open gallery"**), y cerrá (`Esc`) a los 0:08. *Es una sola imagen: la obra no tiene fotos de evidencia, así que no hay flecha que pasar.* | La portada a pantalla completa. |
 | 0:09 | Clic en el **corazón** ("Save to favorites"). | El corazón se llena. |
-| 0:10–0:12 | **Quieto.** | "Completion: …" y "Location". |
+| 0:10–0:12 | **Quieto.** | "Completion: …" y, al lado, el mapa en miniatura con el pin de la obra. |
 | 0:13 | Clic en **"Location"**. | El mapa a pantalla completa. |
 | 0:14–0:16 | **Quieto**, y cerrá (`Esc`). | El pin de la obra. |
 | 0:17 | Scroll hasta **"Verified documentation"**. | — |
@@ -541,9 +541,9 @@ fue recién). Antes de grabar, recargá
 | Tiempo | Acción | Lo que tiene que verse |
 |---|---|---|
 | 0:00 | Clic en **"Units"** en la barra lateral. | "My units · What you bought". |
-| 0:01–0:09 | Scroll lento. | Siete unidades: seis de Torre Volumen 3 (1A y 7A…7E) y la 5A de Torre Núñez. |
+| 0:01–0:09 | Scroll lento. | Siete unidades, cada una con la portada de su proyecto (D-099): seis de Torre Volumen 3 (1A y 7A…7E) y la 5A de Torre Núñez. |
 | 0:10 | Clic en la **5A**. | El detalle de la unidad. |
-| 0:11–0:13 | **Quieto.** | El detalle de la 5A. |
+| 0:11–0:13 | **Quieto.** | El detalle de la 5A: la portada de Torre Núñez y, al lado, el mapa en miniatura con el pin. |
 | 0:14 | Clic en **"Open map"**. | El mapa a pantalla completa, con el pin que marcaste en T08. |
 | 0:15–0:18 | **Quieto**, y cerrá (`Esc`). | — |
 | 0:19 | Clic en **"View my unit in the building"**. | La grilla del edificio con **"Your unit"** resaltada y "Floor 5 · 5A · 85 m²". |

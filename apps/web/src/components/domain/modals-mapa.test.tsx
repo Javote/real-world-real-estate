@@ -361,3 +361,51 @@ describe('LocationMapModal — variante picker (D-097)', () => {
     expect(pin.remove).toHaveBeenCalledTimes(1)
   })
 })
+
+describe('LocationMapModal · variante preview (la miniatura de las capturas 6 y 15)', () => {
+  it('cerrado no renderiza nada', () => {
+    const { container } = render(
+      <LocationMapModal open={false} variant="preview" labels={labels} />
+    )
+    expect(container.innerHTML).toBe('')
+  })
+
+  it('un mapa quieto con un pin: sin arrastre, zoom ni controles, y no recibe clics', async () => {
+    render(
+      <LocationMapModal
+        open
+        variant="preview"
+        latitude={-34.574}
+        longitude={-58.449}
+        labels={labels}
+        testId="MINIATURA"
+      />
+    )
+    await mapaCreado()
+
+    const envoltorio = screen.getByTestId('MINIATURA')
+    // El clic es del botón de afuera, que abre el mapa en `modal`.
+    expect(envoltorio.className).toContain('pointer-events-none')
+    expect(envoltorio.getAttribute('aria-hidden')).toBe('true')
+    expect(screen.queryByRole('dialog')).toBeNull()
+    expect(screen.queryByRole('button')).toBeNull()
+
+    expect(L.map).toHaveBeenCalledWith(expect.anything(), {
+      dragging: false,
+      zoomControl: false,
+      scrollWheelZoom: false,
+      doubleClickZoom: false,
+      boxZoom: false,
+      keyboard: false,
+      touchZoom: false
+    })
+    expect(ultimoMapa().setView).toHaveBeenCalledWith([-34.574, -58.449], 15)
+    await waitFor(() => expect(L.marker).toHaveBeenCalledWith([-34.574, -58.449]))
+  })
+
+  it('las otras variantes siguen siendo interactivas', async () => {
+    montarModal({ latitude: -31.4, longitude: -64.2 })
+    await mapaCreado()
+    expect(L.map).toHaveBeenCalledWith(expect.anything(), {})
+  })
+})

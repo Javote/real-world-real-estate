@@ -1376,6 +1376,10 @@ de obra van en la galería, **detrás** de la portada.
 - **El alta** sube la portada después de crear el proyecto, a su id nuevo. Si el proyecto se crea y la
   portada falla, reintentar sube solo la portada.
 
+**Las unidades usan la portada de su proyecto** (2026-09-30, mismo día). Las capturas 14 (My Units)
+y 15 (detalle de la unidad) muestran la foto del edificio: una unidad no tiene imagen propia, así
+que `GET /investor/units` trae el `coverUpdatedAt` del proyecto y la card y el detalle la usan.
+
 **Lo que queda para después, a pedido del dueño:** una **galería** del proyecto (varias imágenes
 comerciales), y una pantalla para cambiar la portada de un proyecto ya creado. Hoy, cambiarla es
 `PUT` por la API.

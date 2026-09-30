@@ -203,7 +203,9 @@ const unitsProcedure = orpc
         "Unit.currency as currency",
         "Project.id as projectId",
         "Project.name as projectName",
-        "Project.city as city"
+        "Project.city as city",
+        // D-099: la foto de la card es la portada del proyecto (captura 14).
+        "Project.coverUpdatedAt as coverUpdatedAt"
       ])
       .where("Unit.investorId", "=", context.user.id)
       .execute();
