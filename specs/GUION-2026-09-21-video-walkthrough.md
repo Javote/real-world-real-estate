@@ -703,8 +703,8 @@ sobre una obra terminada.
 | 0:19–0:22 | Scroll. | "Project and unit", "Compiled on …". |
 | 0:23–0:40 | Scroll lento por **"Artifacts"**. | Cada ítem con su hash y su badge. |
 
-*(Esta lectura es la que compila y persiste el dossier: antes de abrirlo, la cola del escribano
-está vacía. M2-D1 describe tres secciones separadas; la implementación las unifica en `Artifacts`,
+*(Una lectura del dossier es la que lo compila y lo persiste, y lo pone en la cola del escribano:
+por eso el Paso 1.3 lo abre en el calentamiento, y cuando grabás esta toma ya está en la cola. M2-D1 describe tres secciones separadas; la implementación las unifica en `Artifacts`,
 una sola lista canónica, porque el orden es parte del compromiso — `domain/dossier.ts:23`.)*
 
 ##### T24 · Compartir — 15 s
@@ -971,7 +971,7 @@ errores: usalo solo si el estudio no anda.)*
 | 0:01 | La lista de etapas | Ten stages, all ten completed, each with its own on-chain record. |
 | 0:12 | El badge "Verified" | Inside a stage, the badge is backed by the transaction of its current state. |
 | 0:19 | Los hashes de los archivos | Every file shows its SHA-256. |
-| 0:26 | El modal de la etapa | The stage milestone groups them under the Merkle root of the bundle they were anchored in, with each file's path to that root. |
+| 0:26 | El modal de la etapa | This view groups them under the Merkle root of the bundle they were anchored in, with each file's path to that root. |
 | 0:37 | "Blockchain verification" | And the transaction behind it, with its anchoring date. |
 
 ##### T06 · Favoritos — video 10 s
@@ -1310,8 +1310,8 @@ Para no prometer en audio algo que la pantalla no hace:
   uno de los cuatro roles del SOM; se usa fuera de cámara para invitar al certifier (corte de T08). No lo
   menciones en el audio.
 - **`torre-a` sigue en la base pero sin membresías.** No se borró porque tiene 8 eventos on-chain
-  colgando. El developer todavía la ve en su listado (T07); el investor, el certifier y el escribano,
-  no.
+  colgando. No la ve ningún rol: todos los listados, incluido el del developer (T07,
+  `misProyectos` en `developer.routes.ts`), están scopeados por membresía.
 - **El rating del desarrollador no existe, y es una decisión (D-094).** Las capturas 59-60 muestran
   un pill "4.8 / 5.0 · 127 investors" junto al nombre de la organización. **La pantalla se construyó
   entera (T04) menos ese pill.** Un rating es una afirmación sobre la calidad de un tercero, y D-026
@@ -1457,4 +1457,4 @@ no dibuja el link. El perfil del desarrollador se ve una vez, sobre la obra term
 |---|---|---|
 | **Certifier** — "Assigned" | **vacía** (las 2 etapas de `torre-a` eran todo lo que tenía) | En **T15**: la evidencia que sube el developer pone esa etapa en `InProgress` y ahí aparece. Es la narrativa correcta — llega una etapa nueva para certificar, en vez de una cola preexistente sin explicación. |
 | **Certifier** — KPIs e "Issued" | **30 certificadas, 30 certificados emitidos** con hash y TXID reales de la prueba de volumen | Ya está. El panel del certifier tiene historia real sin que haga falta preparar nada. |
-| **Escribano** — "Pending review" | **vacía** (`[]`) | En **T23**, cuando el investor abre el dossier de 1A y eso lo compila. Se usa en **T25**. |
+| **Escribano** — "Pending review" | **vacía** (`[]`) | En la **pasada de calentamiento de la sesión B** (Paso 1.3), cuando se abre el dossier de 1A y eso lo compila. Se usa en **T25**. |
