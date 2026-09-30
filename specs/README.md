@@ -143,10 +143,12 @@ el terreno mapeado antes de que M4 se vuelva el mandato activo.
 **La serie `6xx` es el refactor estructural post-M3**, y por la misma razón tampoco cuenta entre las
 abiertas. Nace de una revisión de arquitectura de `apps/web` y `apps/api` hecha el 2026-09-30,
 medida contra producción:
-[`PROPUESTA-2026-09-30-refactor-post-m3.md`](PROPUESTA-2026-09-30-refactor-post-m3.md). Deja escrito
-qué **no** entra y por qué: la carcasa Express delante de oRPC se queda (`SPEC-212`/`SPEC-216`), no se
-parten routers por largo (`SPEC-015` §6), y el cliente oRPC en la web queda para una conversación
-aparte con el dueño (`SPEC-111`).
+[`PROPUESTA-2026-09-30-refactor-post-m3.md`](PROPUESTA-2026-09-30-refactor-post-m3.md). **A pedido
+del dueño, reabre tres decisiones que resultaron ser una sola** (§Decisiones reabiertas de la
+propuesta): la invariante 3 de `SPEC-212` (guards en Express) → `607`; partir los routers grandes
+por concepto, que `SPEC-015` §6 ya pedía y el costo de Express frenaba → `608`; y el cliente oRPC que
+`SPEC-111` descartó → `609`. Las tres se apoyan en experimentos descartables sobre oRPC 1.15.2,
+hechos el mismo día.
 
 | Spec | Título | Estado |
 |---|---|---|
@@ -156,6 +158,9 @@ aparte con el dueño (`SPEC-111`).
 | [`SPEC-604`](SPEC-604-la-capa-de-datos-sale-de-los-routers.md) | Las lecturas repetidas salen de los routers (`Stage`: 20 queries en 10 routers) | sin empezar · 🟢 · con la primera feature que las necesite |
 | [`SPEC-605`](SPEC-605-la-cadena-fuera-del-camino-de-la-request.md) | Anclar y reconciliar fuera de la request (outbox + worker) | **condicional**: contradice D-077; tiene disparadores escritos |
 | [`SPEC-606`](SPEC-606-la-sesion-por-pestana.md) | La sesión: por pestaña, legible por JS, y un logout que el servidor no se entera | **condicional**: decisión del dueño |
+| [`SPEC-607`](SPEC-607-una-sola-capa-de-api.md) | Una sola capa de API: el contrato en `shared` y los guards como `meta` del procedimiento, con la `MATRIZ` de `route-guards.test.ts` intacta. Express queda como carcasa | sin empezar · 🟡 · reabre `SPEC-212` inv. 3 · pide D-NNN · Paso 0 con piloto `notary` |
+| [`SPEC-608`](SPEC-608-los-archivos-por-concepto.md) | Los archivos de la API por concepto, no por prefijo (`investor.routes.ts` mezcla 6 conceptos) | sin empezar · 🟢 · depende de `607` |
+| [`SPEC-609`](SPEC-609-el-cliente-sale-del-contrato.md) | El cliente de la web sale del contrato: `OpenAPILink` + contrato minificado + `Serialized`, con `port.ts` como fachada (324 `spyOn` intactos) | sin empezar · 🟢 · depende de `607` · reabre `SPEC-111` |
 
 Los planes fechados no llevan número: [`PLAN-2026-08-31-anclaje-real.md`](PLAN-2026-08-31-anclaje-real.md)
 fue la secuencia operativa para pasar la instancia desplegada a `ANCHOR_MODE=real` (cerrada el
@@ -198,7 +203,7 @@ mismo— sigue siendo `SPEC-305`, decisión de mainnet.
 | [`SPEC-108`](SPEC-108-higiene-de-componentes.md) | Higiene: el shell de card repetido, el hook disfrazado, la prop que se ignora | F-15·16·17 | **cerrada 2026-09-19** |
 | [`SPEC-109`](SPEC-109-tipos-de-respuesta-desde-shared.md) | `api/types.ts`: cerrar la garantía de "drift imposible" | F-13 | **cerrada 2026-09-19** 🟡 — encontró un bug real (avance 0% en `/developer/project/:id`) verificado con Claude en Chrome |
 | [`SPEC-110`](SPEC-110-estado-de-carga.md) | 30 de 42 rutas muestran el empty-state mientras cargan | F-18 | **cerrada 2026-09-19** — 24 sitios reales (20 rutas + 2 componentes compartidos no nombrados por la auditoría + 2 con isPending mal apuntado), verificado con Claude en Chrome |
-| [`SPEC-111`](SPEC-111-callsites-de-apps-web-al-cliente-orpc.md) | `ApiPort` contra el contrato: cuerpos tipados desde `shared` y un test que impide el drift | anexo (nace de `SPEC-212`) | **cerrada 2026-09-20** — reescrita tras medir: cliente oRPC (B) y tipos desde el OpenAPI (C) descartados; el test encontró un bug real (`downloadEvidence` sin `API_BASE`) |
+| [`SPEC-111`](SPEC-111-callsites-de-apps-web-al-cliente-orpc.md) | `ApiPort` contra el contrato: cuerpos tipados desde `shared` y un test que impide el drift | anexo (nace de `SPEC-212`) | **cerrada 2026-09-20** — reescrita tras medir: cliente oRPC (B) y tipos desde el OpenAPI (C) descartados; el test encontró un bug real (`downloadEvidence` sin `API_BASE`) · **la opción B se reabre en [`SPEC-609`](SPEC-609-el-cliente-sale-del-contrato.md)** (2026-09-30), con las tres objeciones contrastadas |
 | [`SPEC-112`](SPEC-112-pasada-de-accesibilidad-con-voiceover.md) | Accesibilidad: las tres capas automatizadas (Biome `a11y`, Vitest+`axe-core`, Playwright+`@axe-core/playwright`) + la pasada manual con VoiceOver | anexo (nace de separar `SPEC-104`) | **abierta** — capas 1-3 **hechas el 2026-09-28** (`test:a11y` + `e2e/a11y.spec.ts`, las dos probadas en rojo con una mutación) y **en verde con el registro de hallazgos vacío**: lo que encontraron salió a `SPEC-113` y `SPEC-114`, que cerraron el mismo día. La capa 4 (VoiceOver automatizado con Guidepup) se intentó el mismo día y **se descartó como limitación de la máquina** (decisión del dueño): macOS 15 pide Acceso total al disco para el último paso. **Queda solo la pasada manual con VoiceOver**, con el checklist de su §5 |
 | [`SPEC-113`](SPEC-113-el-contraste-de-los-tokens-de-m2-d3.md) | El contraste de los tokens de M2-D3 no llega a la vara que M2-D3 mismo fija | anexo (nace de `SPEC-112` §3) | **cerrada 2026-09-28** — decisión del dueño, **D-098**: seis tokens de color (los tres de los pills, `text-muted`, `people`, `danger`) oscurecidos lo mínimo para pasar 4.5:1 en todos sus fondos reales; rellenos `-light` intactos. `styles.test.ts` recalcula los contrastes. Verificado con axe en el navegador, 10/10 |
 | [`SPEC-114`](SPEC-114-nombres-encabezados-y-landmarks.md) | Lo que un lector de pantalla no puede nombrar ni ubicar | anexo (nace de `SPEC-112` §2-3) | **cerrada 2026-09-28** — los seis, más una séptima barra de progreso sin nombre en `/developer/progress` que apareció al borrar su fila del registro. El favorito sin etiqueta ahora no compila |
@@ -213,7 +218,7 @@ mismo— sigue siendo `SPEC-305`, decisión de mainnet.
 | [`SPEC-209`](SPEC-209-dos-queries-que-la-base-puede-hacer.md) | Dos cosas que hoy hace el proceso y puede hacer la base | B-13·14 | **cerrada 2026-09-18** |
 | [`SPEC-210`](SPEC-210-borrar-evidencia-anclada.md) | Borrar evidencia anclada corta el vínculo y devuelve el error equivocado | B-15 | **cerrada 2026-09-18** |
 | [`SPEC-211`](SPEC-211-limite-de-tasa-en-la-ruta-publica.md) | La otra ruta sin sesión no tiene límite de tasa | B-11 | **cerrada 2026-09-18** 🟡 |
-| [`SPEC-212`](SPEC-212-contrato-en-la-firma-de-la-ruta.md) | El contrato en la firma de la ruta, con oRPC (D-066) — §A notary, §B certifier, §C investor, §D developer | B-06 | **cerrada 2026-09-20 — las cuatro sub-partes**: 45 de las 46 rutas de D-066 son procedimientos oRPC 1.15.2, con cliente tipado probado contra el servidor real y el interceptor de Sentry implementado. **La 46 (`POST …/stages/:stageId/evidence`, multipart) queda con Multer a propósito y pasa a [`SPEC-218`](SPEC-218-subida-de-evidencia-por-lote.md)**, que la endurece. Su validación de texto ya corre por `call()` de oRPC (mismo 400 que las otras 45) |
+| [`SPEC-212`](SPEC-212-contrato-en-la-firma-de-la-ruta.md) | El contrato en la firma de la ruta, con oRPC (D-066) — §A notary, §B certifier, §C investor, §D developer | B-06 | **cerrada 2026-09-20 — las cuatro sub-partes**: 45 de las 46 rutas de D-066 son procedimientos oRPC 1.15.2, con cliente tipado probado contra el servidor real y el interceptor de Sentry implementado. **La 46 (`POST …/stages/:stageId/evidence`, multipart) queda con Multer a propósito y pasa a [`SPEC-218`](SPEC-218-subida-de-evidencia-por-lote.md)**, que la endurece. Su validación de texto ya corre por `call()` de oRPC (mismo 400 que las otras 45) · **su invariante 3 (guards en Express) se reabre en [`SPEC-607`](SPEC-607-una-sola-capa-de-api.md)** (2026-09-30) |
 | [`SPEC-213`](SPEC-213-un-bundle-por-stage.md) | `EvidenceBundle` duplicado por stage: medir antes de decidir | anexo | **cerrada 2026-09-19** 🟡 — invariante corregida en el camino: no "máximo un bundle", sino `UNIQUE(stageId, commitmentHash)` + `ultimoBundlePorStage` en los 3 leftJoin |
 | [`SPEC-214`](SPEC-214-telemetria-con-blocktimestamp.md) | La telemetría del criterio 9 mide lo que tardó alguien en volver a leer | anexo | **cerrada 2026-09-18** |
 | [`SPEC-215`](SPEC-215-seed-idempotente.md) | `pnpm db:seed` revienta sobre una base ya sembrada | anexo | **cerrada 2026-09-18** |

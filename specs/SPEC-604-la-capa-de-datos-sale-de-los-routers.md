@@ -12,7 +12,9 @@
 §El ítem 6 lo midió y lo descartó: la auditoría del backend leyó los 51 archivos y ninguno de sus
 15 hallazgos venía del largo de un router, y cada archivo nuevo sobre un prefijo compartido es un
 invariante más de guards. **Esa regla sigue en pie.** Tampoco es una reestructura en carpetas por
-feature. Esta spec mueve **lecturas**, no rutas.
+feature. Esta spec mueve **lecturas**, no rutas. **Si se hace [`SPEC-608`](SPEC-608-los-archivos-por-concepto.md)**
+(archivos por concepto, después de `SPEC-607`), esta spec se disuelve ahí: cada `queries.ts` vive
+en la carpeta de su concepto, con las mismas reglas de abajo.
 
 ## Lo que hay hoy, medido el 2026-09-30
 
