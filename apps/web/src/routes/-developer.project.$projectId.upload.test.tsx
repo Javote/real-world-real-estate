@@ -15,7 +15,6 @@ const MERKLE = 'c'.repeat(64)
 
 const PDF_FIRMA = [0x25, 0x50, 0x44, 0x46, 0x2d]
 let n = 0
-/** Un PDF con firma real y contenido único (el dropzone descarta repetidos por SHA-256). */
 const pdf = (nombre: string) =>
   new File([Uint8Array.from(PDF_FIRMA), `contenido-${++n}`], nombre, { type: 'application/pdf' })
 
@@ -60,7 +59,6 @@ const input = () => screen.getByLabelText(t['developer.upload.dropzone']) as HTM
 const agregar = (...archivos: File[]) => fireEvent.change(input(), { target: { files: archivos } })
 const anclar = () => screen.getByRole('button', { name: t['developer.upload.anchor'] })
 
-/** Sube un archivo a la etapa 1 y espera a que el botón quede listo. */
 async function conArchivo(nombre = 'plano.pdf') {
   await elegirEtapa()
   agregar(pdf(nombre))

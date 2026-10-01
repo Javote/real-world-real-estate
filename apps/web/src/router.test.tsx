@@ -6,9 +6,6 @@ import { clearSession } from '#/auth/session'
 import { LocaleProvider } from '#/i18n/useTranslation'
 import { getRouter } from './router'
 
-// El router real, con el árbol de rutas generado: cubre `router.tsx` y la raíz
-// (`__root.tsx`, un `<Outlet />`). Los providers viven en `main.tsx` (D-065), así
-// que el test los pone por fuera del router, como hace el bootstrap.
 describe('getRouter (el router real)', () => {
   afterEach(() => {
     vi.restoreAllMocks()

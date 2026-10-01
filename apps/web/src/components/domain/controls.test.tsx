@@ -9,9 +9,6 @@ import { TextArea } from './TextArea'
 import { TextInput } from './TextInput'
 import { ToggleSwitch } from './ToggleSwitch'
 
-// M2-D3 §Forms & Controls. Lo que fijan estos tests no es el aspecto: son las
-// reglas de uso del entregable y las reglas duras del repo.
-
 describe('NumberInput', () => {
   it('vacío es null, no cero', async () => {
     const onChange = vi.fn()
@@ -28,7 +25,6 @@ describe('NumberInput', () => {
 
     await userEvent.clear(screen.getByLabelText('Precio'))
 
-    // Cero afirma "el precio es 0"; null dice "todavía no se cargó".
     expect(onChange).toHaveBeenLastCalledWith(null)
   })
 
@@ -64,7 +60,6 @@ describe('NumberInput', () => {
     )
 
     await userEvent.click(screen.getByRole('button', { name: 'Subir' }))
-    // Un stepper que empieza fuera del rango produce un valor inválido.
     expect(onChange).toHaveBeenCalledWith(2)
   })
 })
@@ -90,7 +85,6 @@ describe('ToggleSwitch', () => {
   it('se anuncia como switch, no como casilla', () => {
     render(<ToggleSwitch id="s" label="Avisos por mail" checked onChange={vi.fn()} />)
 
-    // "activado/desactivado" y no "casilla marcada": son estados distintos.
     expect(screen.getByRole('switch').getAttribute('aria-checked')).toBe('true')
   })
 
@@ -134,16 +128,12 @@ describe('los tres chips', () => {
       />
     )
 
-    // Un stage anclado admite más evidencia: se le suma y se ancla otro bundle.
     await userEvent.click(screen.getByRole('button', { name: 'Etapa 3, anclada' }))
     expect(onSelect).toHaveBeenCalled()
   })
 })
 
 describe('FileDropzone', () => {
-  // SPEC-218: el dropzone valida con las reglas de `packages/shared` (tipo real
-  // por magic bytes, tamaño, cupo y repetidos). Los archivos de estos tests
-  // llevan la firma real, y la validación es ASÍNCRONA (lee los bytes).
   const labels = {
     primary: 'Arrastrá archivos',
     remove: 'Quitar',
@@ -154,14 +144,6 @@ describe('FileDropzone', () => {
     new File([Uint8Array.from(PDF_BYTES), cola], nombre, { type: 'application/pdf' })
 
   it('acepta solo los tipos de la regla 10 — probado por DROP, no por el picker', async () => {
-    // **El picker no sirve para probar esto y es interesante por qué.** El
-    // atributo `accept` del input ya filtra: `userEvent.upload` lo respeta y el
-    // .exe nunca llega a la validación de JS. O sea que el picker prueba el
-    // atributo, no el código.
-    //
-    // Arrastrar-y-soltar NO pasa por `accept` —el navegador entrega lo que sea
-    // que se soltó—, así que es la ruta por la que un archivo prohibido llega
-    // de verdad al componente. Es la que hay que probar.
     const onChange = vi.fn()
     const { container } = render(<FileDropzone files={[]} onChange={onChange} labels={labels} />)
 
@@ -189,8 +171,6 @@ describe('FileDropzone', () => {
   })
 
   it('rechaza lo que pasa el tamaño máximo', async () => {
-    // El tamaño sí se puede probar por el picker: `accept` filtra por tipo, no
-    // por bytes, así que el archivo grande llega a la validación.
     const onChange = vi.fn()
     render(<FileDropzone files={[]} onChange={onChange} labels={labels} maxSizeMb={0.000001} />)
 
@@ -237,8 +217,6 @@ describe('FileDropzone', () => {
     const pdf = pdfReal('a.pdf')
     await userEvent.upload(screen.getByLabelText('Arrastrá archivos'), pdf)
 
-    // Solo avisa: quien lo usa decide cuándo mandar. Un dropzone que dispara la
-    // request haría un anclaje sin que el usuario lo pida (M2-D4 §6.3).
     await waitFor(() => expect(onChange).toHaveBeenCalledWith([pdf]))
   })
 })
@@ -262,8 +240,6 @@ describe('SelectDropdown', () => {
     )
   })
 })
-
-// R11 — SPEC-019 W8: variantes de props de los controles.
 
 describe('NumberInput · variantes', () => {
   const steppers = { stepUpLabel: 'Subir', stepDownLabel: 'Bajar' }
@@ -313,7 +289,6 @@ describe('NumberInput · variantes', () => {
     render(
       <NumberInput id="n" label="Etapa" value={null} min={3} onChange={onChange} {...steppers} />
     )
-    // Con el valor vacío se toma el mínimo: ya está en el piso.
     expect(screen.getByRole('button', { name: 'Bajar' })).toHaveProperty('disabled', true)
   })
 
@@ -675,7 +650,6 @@ describe('FileDropzone · variantes', () => {
     new File([Uint8Array.from([0x25, 0x50, 0x44, 0x46, 0x2d]), nombre], nombre, {
       type: 'application/pdf'
     })
-  // Al arrastrar encima la clase `border-dashed` cambia: se busca por el input.
   const zona = (c: HTMLElement) => c.querySelector('input')?.parentElement as HTMLElement
 
   it('la línea de ayuda solo se dibuja si viene', () => {

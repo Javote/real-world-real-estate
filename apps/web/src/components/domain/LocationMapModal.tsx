@@ -6,62 +6,18 @@ import { useEffect, useRef, useState } from 'react'
 import { Dialog, DialogContent, DialogTitle } from '#/components/ui/dialog'
 import { cn } from '#/lib/cn'
 
-// M2-D3 §Modals · LocationMapModal — *"Full-screen interactive Leaflet map."*
-// Se usa para la ubicación de un proyecto, la de una unidad adquirida,
-// (variante `browse`) el mapa de exploración de la fila 03, y (variante
-// `picker`, D-097) el "Map preview" del alta de proyecto de la captura 34b,
-// donde el developer fija el punto de la obra, y (variante `preview`) la
-// miniatura del detalle de obra y de unidad de las capturas 6 y 15, la que al
-// tocarla abre este mismo mapa en `modal`.
-//
-// **El contenedor del mapa es estado, no un `useRef`** (bug visto en
-// producción el 2026-09-28). En la variante `modal` el `<div>` vive dentro del
-// portal de Radix, que se monta un render DESPUÉS de que el diálogo abre: con
-// un ref, el efecto que crea el mapa corría con el contenedor en `null`, salía
-// temprano y no volvía a correr — el modal abría vacío. Como estado, montar el
-// contenedor re-dispara el efecto.
-//
-// **Leaflet se carga con `import()` dinámico y no como import estático**, por
-// tres razones concretas:
-//
-//   1. Leaflet toca `window` y `document` al importarse. Un import estático lo
-//      arrastra al bundle inicial y al entorno de tests (jsdom), donde no tiene
-//      nada que hacer — este modal es una superficie secundaria que la mayoría
-//      de las sesiones no abre.
-//   2. Su CSS es obligatorio para que los tiles se posicionen: sin él el mapa
-//      se ve como una pila de imágenes rotas. Va junto al módulo, no suelto en
-//      un `styles.css` que lo cargaría siempre.
-//   3. Solo se instancia con el modal ABIERTO. Un mapa montado detrás de un
-//      diálogo cerrado pide tiles que nadie mira.
-//
-// **Los tiles salen a un servidor externo** (OpenStreetMap). Es la única
-// request de la app que no va a nuestra API — vale saberlo: sin red, el modal
-// muestra el marco y el domicilio, que es la información que de verdad importa.
-
 type Leaflet = typeof import('leaflet')
 type LeafletMap = import('leaflet').Map
 type LeafletFeatureGroup = import('leaflet').FeatureGroup
 type LeafletMarker = import('leaflet').Marker
 
-/**
- * El pin por defecto de Leaflet arma la URL de su imagen a partir de la ruta
- * de su propio CSS, que Vite no publica: en producción el pin salía como una
- * imagen rota (visto el 2026-09-28). Se le pasan las imágenes importadas como
- * assets, que Vite sí publica con su hash.
- */
 function usarIconoPublicado(L: Leaflet) {
   delete (L.Icon.Default.prototype as { _getIconUrl?: unknown })._getIconUrl
   L.Icon.Default.mergeOptions({ iconUrl: icono, iconRetinaUrl: iconoRetina, shadowUrl: sombra })
 }
 
-/** Centro de CABA: el punto de partida cuando todavía no hay nada que mostrar. */
 const CENTRO_CABA: [number, number] = [-34.6037, -58.3816]
 
-/**
- * La etiqueta del pin sale de datos del proyecto, así que **se escribe como
- * texto de un nodo, nunca interpolada en `html`**: `divIcon` acepta un
- * `HTMLElement` y esa forma no puede inyectar marcado.
- */
 function iconoDeEtiqueta(L: Leaflet, label: string) {
   const el = document.createElement('span')
   el.className = 'rounded-full bg-primary px-s2 py-s1 text-caption font-bold text-white'
@@ -73,46 +29,26 @@ export interface MapMarker {
   id: string
   latitude: number
   longitude: number
-  /** Etiqueta ya armada (p. ej. el "desde" de la captura 3). Sin dato, pin. */
   label?: string
 }
 
 interface LocationMapModalProps {
   open: boolean
-  /** Solo `modal`: las variantes en línea (`browse`, `picker`, `preview`) no se cierran. */
   onClose?: () => void
   latitude?: number
   longitude?: number
-  /** Domicilio ya armado por quien lo usa (D-025). Va arriba a la izquierda. */
   addressLabel?: string
   labels: {
     title: string
     close: string
-    /** Texto alternativo del marcador, para el lector de pantalla. */
     marker: string
   }
   zoom?: number
   testId?: string
-  /**
-   * `browse` es el mapa de la fila 03: varios pines, sin diálogo, y el
-   * viewport manda `bbox` al listado. Un proyecto sin coordenadas no entra:
-   * no se le inventa un punto.
-   *
-   * `picker` es el "Map preview" del alta de proyecto (D-097): en línea, sin
-   * diálogo, con un solo pin que se fija con un clic o arrastrándolo, y que se
-   * mueve solo cuando `latitude`/`longitude` cambian desde afuera (la
-   * dirección encontrada).
-   *
-   * `preview` es la miniatura de las capturas 6 y 15: en línea, un solo pin y
-   * **sin ninguna interacción** — ni arrastrar, ni zoom, ni controles. Ocupa el
-   * contenedor que le den y no recibe clics (`pointer-events-none`): el clic
-   * es del botón que la envuelve, que abre el mapa en `modal`.
-   */
   variant?: 'modal' | 'browse' | 'picker' | 'preview'
   markers?: readonly MapMarker[]
   onSelectMarker?: (id: string) => void
   onBoundsChange?: (bbox: string) => void
-  /** Solo `picker`: el punto que el usuario marcó en el mapa. */
   onPick?: (latitude: number, longitude: number) => void
 }
 
@@ -136,9 +72,6 @@ export function LocationMapModal({
   const esPicker = variant === 'picker'
   const esPreview = variant === 'preview'
 
-  // Los callbacks cambian de identidad en cada render del padre. Van por ref
-  // —sincronizada en un efecto, no durante el render— para que el mapa no se
-  // reconstruya por eso.
   const onSelectRef = useRef(onSelectMarker)
   const onBoundsRef = useRef(onBoundsChange)
   const onPickRef = useRef(onPick)
@@ -148,8 +81,6 @@ export function LocationMapModal({
     onPickRef.current = onPick
   })
 
-  // En `picker` el punto cambia con cada clic: el mapa NO se reconstruye por
-  // eso (lo sigue el efecto 3). El punto inicial se lee de este ref.
   const puntoRef = useRef<[number, number] | null>(null)
   useEffect(() => {
     puntoRef.current = latitude != null && longitude != null ? [latitude, longitude] : null
@@ -171,11 +102,6 @@ export function LocationMapModal({
   const yaEncuadrado = useRef(false)
   const [generacion, setGeneracion] = useState(0)
 
-  // ── Efecto 1: crear el mapa. **No depende de los pines.**
-  //
-  // Reconstruir el mapa cuando cambia el resultado era un bucle: `moveend` →
-  // `bbox` → refetch → otros pines → mapa nuevo → `fitBounds` → `moveend`. Y
-  // de paso le tiraba abajo el pan y el zoom al usuario en cada respuesta.
   useEffect(() => {
     if (!open || !contenedor) return
 
@@ -200,8 +126,6 @@ export function LocationMapModal({
             : CENTRO_CABA
       const zoomInicial = esPicker && !punto ? 12 : zoom
 
-      // La miniatura es una imagen que se mueve sola: nada de lo que el usuario
-      // haga sobre ella tiene que mover el mapa (el clic es del botón de afuera).
       const opciones = esPreview
         ? {
             dragging: false,
@@ -227,11 +151,6 @@ export function LocationMapModal({
           const b = mapa.getBounds()
           onBoundsRef.current?.(`${b.getWest()},${b.getSouth()},${b.getEast()},${b.getNorth()}`)
         }
-        // El bbox sale recién con el primer `moveend` — el del encuadre del
-        // efecto 2 —, no al crear el mapa. Emitirlo acá mandaba el recuadro del
-        // zoom de calle sobre el primer pin, el listado se filtraba a esa sola
-        // obra, y el encuadre terminaba sobre un pin en vez de todos (visto en
-        // producción el 2026-09-28: 1 pin de 3).
         mapa.on('moveend', emitirBbox)
       } else if (esPicker) {
         mapa.on('click', (e: { latlng: { lat: number; lng: number } }) =>
@@ -272,10 +191,6 @@ export function LocationMapModal({
     esPreview
   ])
 
-  // ── Efecto 2: sincronizar los pines sobre el mapa que ya existe.
-  //
-  // El encuadre automático es UNA vez: después manda el usuario. Volver a
-  // encuadrar con cada respuesta es lo que cerraba el bucle.
   useEffect(() => {
     const L = leafletRef.current
     const mapa = mapaRef.current
@@ -298,9 +213,6 @@ export function LocationMapModal({
     }
   }, [esBrowse, pinesClave, generacion])
 
-  // ── Efecto 3 (`picker`): el pin sigue al punto, venga de un clic, de
-  // arrastrarlo o de la dirección encontrada. Si el punto quedó fuera de
-  // vista o el mapa está lejos (zoom de ciudad), se centra ahí.
   useEffect(() => {
     const L = leafletRef.current
     const mapa = mapaRef.current
@@ -328,10 +240,6 @@ export function LocationMapModal({
     }
   }, [esPicker, latitude, longitude, generacion])
 
-  // `isolate` en todas las variantes: Leaflet les da a sus capas z-index de 400
-  // a 1000, y sin un contexto de apilamiento propio compiten con el resto de
-  // la página. La miniatura (`preview`) quedaba ENCIMA del diálogo que ella
-  // misma abre (`z-50`), y los pines de "Buy" encima del popover del pin.
   const mapaEl = (
     <div className="relative isolate">
       {addressLabel ? (
@@ -396,9 +304,6 @@ export function LocationMapModal({
     <Dialog open={open} onOpenChange={(abierto) => !abierto && onClose?.()}>
       <DialogContent
         data-testid={testId}
-        // `sm:` además del ancho base: el primitivo trae `sm:max-w-lg`, que
-        // `twMerge` no pisa con un `max-w-*` sin variante, y desde 640px el
-        // diálogo quedaba en 512px por más que pidiera más.
         className="overflow-hidden p-0 sm:max-w-4xl"
         showCloseButton={false}
       >

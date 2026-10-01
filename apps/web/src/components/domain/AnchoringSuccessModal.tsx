@@ -6,28 +6,8 @@ import { explorerTxUrl } from '#/lib/explorer'
 import { HashChip, truncateHash } from './HashChip'
 import { PrimaryButton, SecondaryButton } from './PrimaryButton'
 
-// **M2-D4 Pattern 4 · AnchoringSuccessModal — la superficie de emisión de prueba.**
-//
-// **Es la única excepción a "ningún modal se abre solo"** (M2-D4 §6.3): este es
-// emitido por el sistema después de un anclaje exitoso, no iniciado por el
-// usuario. La diferencia con el TxidModal no es cosmética:
-//
-//   TxidModal   → lo abre el usuario, muestra UN TXID.
-//   este        → lo emite el sistema, muestra **los dos artefactos** que la
-//                 acción produjo: el Merkle root y el TXID.
-//
-// Por eso `merkleRoot` no es opcional: si no hay dos artefactos, lo que hubo no
-// fue un anclaje de bundle y el patrón que corresponde es otro.
-
 interface AnchoringSuccessModalProps {
   open: boolean
-  /**
-   * Test ID de M2-D5 (fila 44d).
-   *
-   * Va en el contenido del diálogo y no en un contenedor de afuera: Radix
-   * renderiza el modal en un **portal**, así que un `data-testid` en el div que
-   * lo envuelve queda en un nodo vacío y el test no encuentra nada.
-   */
   testId?: string
   onDone: () => void
   merkleRoot: string
@@ -53,10 +33,6 @@ export function AnchoringSuccessModal({
   labels
 }: AnchoringSuccessModalProps) {
   const announce = useAnnounce()
-  // SPEC-104 (F-03): se anuncia una sola vez, al abrirse — no en cada
-  // re-render mientras `open` sigue en `true`. El texto reusa `labels.title`
-  // (ya en pantalla) y el TXID truncado como lo muestra `HashChip`, nunca el
-  // hash entero letra por letra.
   const yaAnunciado = useRef(false)
   useEffect(() => {
     if (open && !yaAnunciado.current) {
@@ -99,7 +75,6 @@ export function AnchoringSuccessModal({
           >
             {labels.openExplorer}
           </SecondaryButton>
-          {/* "Done" devuelve a la pantalla de origen con el formulario reseteado. */}
           <PrimaryButton onClick={onDone}>{labels.done}</PrimaryButton>
         </div>
       </DialogContent>

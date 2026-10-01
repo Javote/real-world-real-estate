@@ -1,19 +1,6 @@
 import { cn } from '#/lib/cn'
 
-// M2-D3 §Cards · ProgressTimeline — *"Horizontal milestone timeline with one
-// node per stage."*
-//
-// **Es la dimensión de OBRA, no la de prueba.** `StageChips` (P9) muestra qué
-// está anclado; esto muestra en qué etapa va la construcción. Dos preguntas
-// distintas, dos componentes distintos — M2-D4 §6.1: *"patterns compose, never
-// overlap"*.
-//
-// El entregable dice "10 nodes". El componente recibe los stages que existan:
-// diez es el largo de la plantilla, no una constante del dominio, y un proyecto
-// con ocho etapas no puede dibujar dos nodos fantasma.
-
 export interface TimelineStage {
-  /** 1..n — el orden de obra. */
   sequenceOrder: number
   name: string
   state: 'completed' | 'current' | 'pending'
@@ -21,9 +8,7 @@ export interface TimelineStage {
 
 interface ProgressTimelineProps {
   stages: readonly TimelineStage[]
-  /** Etiqueta de la etapa actual, debajo de la línea (M2-D3). */
   currentLabel?: string
-  /** Fecha de finalización estimada, ya formateada con `Intl` (regla 14). */
   finalizationLabel?: string
   ariaLabel: string
   onSelectStage?: (stage: TimelineStage) => void
@@ -31,11 +16,8 @@ interface ProgressTimelineProps {
 }
 
 const NODO: Record<TimelineStage['state'], string> = {
-  // Completado — círculo lleno púrpura.
   completed: 'bg-primary border-primary',
-  // Actual — círculo abierto con anillo púrpura.
   current: 'bg-card border-primary ring-2 ring-primary-light',
-  // Pendiente — círculo abierto gris.
   pending: 'bg-card border-border'
 }
 
@@ -59,9 +41,6 @@ export function ProgressTimeline({
                 aria-current={stage.state === 'current' ? 'step' : undefined}
                 onClick={() => onSelectStage(stage)}
                 className={cn(
-                  // SPEC-105 (F-09): el nodo sigue midiendo 16px visuales —
-                  // `before:-inset-1` extiende el área táctil a 24×24 sin
-                  // que el círculo dibujado crezca (WCAG 2.5.8).
                   'relative size-4 shrink-0 rounded-full border-2 transition-colors',
                   'before:absolute before:-inset-1 before:content-[""]',
                   'focus:outline-none focus-visible:ring-2 focus-visible:ring-primary',
@@ -76,7 +55,6 @@ export function ProgressTimeline({
               />
             )}
 
-            {/* La línea que une. El último nodo no la lleva. */}
             {i < stages.length - 1 ? (
               <span
                 aria-hidden="true"

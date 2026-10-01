@@ -44,7 +44,6 @@ const evento = (over: Record<string, unknown> = {}) => ({
   ...over
 })
 
-/** Etapa completa: fotos, documentos, bundle anclado y transiciones. */
 const detalle = (over: Record<string, unknown> = {}) =>
   ({
     id: 's2',
@@ -191,7 +190,6 @@ describe('/project/:projectId/stage/:stageId (investor)', () => {
     const sinAnclar = screen.getByRole('button', { name: 'acta.pdf' }).closest('article')!
     expect(anclado.textContent).toContain(t['status.verified'])
     expect(sinAnclar.textContent).toContain(t['status.pending'])
-    // Solo el anclado ofrece descarga.
     expect(within(anclado).getByRole('button', { name: t['document.download'] })).toBeTruthy()
     expect(within(sinAnclar).queryByRole('button', { name: t['document.download'] })).toBeNull()
   })
@@ -308,7 +306,6 @@ describe('/project/:projectId/stage/:stageId (investor)', () => {
       const hito = await screen.findByTestId('INV-STAGE-MILESTONE-001')
       await within(hito).findAllByText('plano.pdf')
       expect(api.getBundleFiles).toHaveBeenCalledWith('b1')
-      // Sin `filename`, se usa el hash como nombre.
       expect(within(hito).getAllByText(HASH_B).length).toBeGreaterThan(0)
       expect(within(hito).getAllByText(t['status.verified']).length).toBeGreaterThan(0)
       expect(within(hito).getByTestId('INV-MERKLE-PROOF-002')).toBeTruthy()
@@ -441,7 +438,6 @@ describe('/project/:projectId/stage/:stageId (investor)', () => {
       fireEvent.keyDown(document.activeElement!, { key: 'Escape' })
       await waitFor(() => expect(screen.queryByTestId('INV-STAGE-MILESTONE-001')).toBeNull())
 
-      // Al reabrirlo el camino anterior ya no está.
       await userEvent.click(screen.getByRole('button', { name: t['investor.stage.openMilestone'] }))
       const reabierto = await screen.findByTestId('INV-STAGE-MILESTONE-001')
       expect(within(reabierto).queryByText(t['merkle.proofPath'])).toBeNull()

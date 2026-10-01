@@ -126,8 +126,6 @@ describe('/notary/dossier/$dossierId', () => {
     await userEvent.click(screen.getByTestId('NOT-DOSSIER-REJECT-001'))
 
     const nota = await screen.findByLabelText(/observaciones/i)
-    // `delay: null` — SPEC-019 §Paso 0, punto 5: bajo carga, 23 caracteres
-    // tecla por tecla pasan el `testTimeout`.
     await userEvent.type(nota, 'Falta el plano firmado', { delay: null })
     await userEvent.click(screen.getByRole('button', { name: /enviar/i }))
 

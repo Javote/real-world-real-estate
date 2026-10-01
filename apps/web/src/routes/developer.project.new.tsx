@@ -21,54 +21,8 @@ import { useTranslation } from '#/i18n/useTranslation'
 import { CARD_SHELL } from '#/lib/cardShell'
 import { cn } from '#/lib/cn'
 
-// **M2-D5 filas 34b-34c · `/developer/project/new`** — capturas 34b y 34C.
-// Endpoint: POST /developer/projects. Test ID: DEV-PROJECT-CREATE-001.
-//
-// **La card de "Stage template" ya no es deuda declarada — cerrada
-// 2026-09-08.** Lo que la bloqueaba, y cómo se cerró:
-//
-// 1. **Los diez nombres no existían en ningún entregable.** Los de la captura
-//    (`34C-DEVELOPER-NEW-PROJECT-B.png`) estaban mezclados en inglés y
-//    español. El dueño los confirmó como catálogo normativo, traducidos al
-//    español — viven en `DEFAULT_STAGE_CATALOG` (`packages/shared`) para el
-//    backend, y acá abajo como claves de i18n (regla 14: nada de texto
-//    hardcodeado). Es la misma lista en dos lugares porque el front no
-//    importa valores en runtime de `packages/shared` (solo tipos — no carga
-//    Zod); si el catálogo cambia, cambian los dos.
-// 2. **El backend no aplicaba ningún template.** Ahora `POST
-//    /developer/projects` crea el proyecto, su membresía y las 10 etapas en
-//    una sola transacción de base — atómico a nivel de fila. El anclaje
-//    on-chain de cada etapa es aparte y no puede ser atómico (el validador
-//    rechaza acuñar más de un hilo por transacción,
-//    `mint_rejects_two_threads_in_one_tx`): se intenta una por una, tolerando
-//    que alguna quede `Failed` sin bloquear a las demás (D-059).
-//
-// Es la única plantilla que existe — no hay "ninguna" ni otra opción — así
-// que el dropdown siempre muestra la misma selección; existe para que la
-// pantalla coincida con la captura, no porque haya algo que elegir hoy.
-//
-// **El `slug` se deriva del nombre.** El endpoint lo exige y el formulario no
-// lo pide: es un identificador de URL, no un dato que el developer elija.
-//
-// **El "Map preview" de la captura 34b es donde se fija el lote (D-097).**
-// `LocationMapModal` —el componente que la fila de M2-D5 lista para esta
-// pantalla— en su variante `picker`. Dos caminos al mismo punto: escribir la
-// dirección (la API la busca en Nominatim, `GET /developer/geocode`, y el pin
-// cae solo) o tocar/arrastrar el pin. Sin punto no se crea: latitud y
-// longitud son obligatorias en el endpoint, porque un proyecto sin coordenadas
-// no se puede dibujar en ningún mapa (regla 17).
-//
-// **La portada (D-099) no está en las capturas 34b/34C, y es una decisión del
-// dueño, no un invento:** M2-D3 exige la imagen en `ProjectCard` y el alta no
-// tenía dónde cargarla. Va con `FileDropzone` —el componente de subida que
-// M2-D3 ya define— limitado a una imagen JPEG o PNG, y es opcional. Se sube
-// después de crear el proyecto, a su id: si el proyecto se crea y la portada
-// falla, reintentar sube solo la portada (no vuelve a crear el proyecto, que
-// chocaría con su propio slug).
-
 export const Route = createFileRoute('/developer/project/new')({ component: NuevoProyecto })
 
-/** Espeja `DEFAULT_STAGE_CATALOG` de `packages/shared` — ver el comentario de arriba. */
 const ETAPAS_DEL_TEMPLATE: readonly TranslationKey[] = [
   'developer.newProject.stageTemplate.stage1',
   'developer.newProject.stageTemplate.stage2',
@@ -82,17 +36,13 @@ const ETAPAS_DEL_TEMPLATE: readonly TranslationKey[] = [
   'developer.newProject.stageTemplate.stage10'
 ]
 
-/** Cuánto se espera después de la última tecla antes de buscar la dirección. */
 export const ESPERA_BUSQUEDA_MS = 900
-/** Menos que esto no es una dirección que valga la pena buscar. */
 const MINIMO_PARA_BUSCAR = 5
 
 type EstadoUbicacion = 'inicial' | 'buscando' | 'noEncontrada' | 'noDisponible' | 'lista'
 
-/** Seis decimales (~10 cm): más precisión que eso es ruido del clic. */
 const redondear = (grados: number) => Math.round(grados * 1e6) / 1e6
 
-/** Minúsculas, sin diacríticos, separado por guiones. */
 export function slugify(nombre: string): string {
   return nombre
     .normalize('NFD')
@@ -117,9 +67,6 @@ function NuevoProyecto() {
   const [portada, setPortada] = useState<File[]>([])
   const [creadoId, setCreadoId] = useState<string | null>(null)
 
-  // La dirección escrita mueve el pin, con una pausa para no buscar tecla por
-  // tecla (Nominatim acepta un pedido por segundo para todo el servicio). Una
-  // respuesta que llega después de que la dirección cambió se descarta.
   useEffect(() => {
     const q = direccion.trim()
     if (q.length < MINIMO_PARA_BUSCAR) return
@@ -178,8 +125,6 @@ function NuevoProyecto() {
 
   if (!ready) return null
 
-  // El endpoint exige el nombre (y el slug, que sale de él) y el punto del
-  // lote: sin alguno de los dos no hay proyecto que crear.
   const lote = slugify(nombre).length > 0 && !crear.isPending ? punto : null
 
   const mensajeUbicacion =

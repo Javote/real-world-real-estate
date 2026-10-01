@@ -16,8 +16,6 @@ import { LanguageToggle } from './LanguageToggle'
 import { NAV_TABS } from './navTabs'
 import { ProgressBar } from './ProgressBar'
 
-// SPEC-019 W8 · R11: las variantes de props de los componentes de estructura.
-
 describe('GradientHeader · slots', () => {
   it('sin badge muestra el logo; con badge, el badge ocupa su lugar', () => {
     const { rerender } = render(<GradientHeader title="Panel" />)
@@ -154,7 +152,6 @@ describe('BuildingSchematic · variantes', () => {
     expect(screen.getAllByText(/^[12][AB]$/).map((n) => n.textContent)).toEqual(['2A', '2B', '1A'])
     expect(screen.getByText('1A').getAttribute('aria-current')).toBe('true')
     expect(screen.getByText('2A').getAttribute('aria-current')).toBeNull()
-    // El piso de la unidad propia se resalta.
     expect(screen.getByText('P1').className).toContain('text-primary')
     expect(screen.getByText('P2').className).toContain('text-text-muted')
   })

@@ -71,7 +71,6 @@ describe('/developer/capital', () => {
     montarRuta(Route, '/developer/capital')
 
     const resumenEl = await screen.findByTestId('DEV-CAPITAL-SUMMARY-001')
-    // `Intl` separa moneda y monto con un espacio no cortante; el matcher normaliza el DOM, no esto.
     expect(
       within(resumenEl).getByText(formatCurrency(1000000, 'USD', 'es-AR').replace(/\s/g, ' '))
     ).toBeTruthy()
@@ -84,7 +83,6 @@ describe('/developer/capital', () => {
 
     expect(screen.getByText('Torre A')).toBeTruthy()
     expect(screen.getByText('Torre B')).toBeTruthy()
-    // El porcentaje de cada proyecto es su parte del total.
     expect(screen.getAllByRole('progressbar').map((b) => b.getAttribute('aria-valuenow'))).toEqual([
       '25',
       '75'

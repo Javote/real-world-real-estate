@@ -16,20 +16,6 @@ import { useTranslation } from '#/i18n/useTranslation'
 import { CARD_SHELL } from '#/lib/cardShell'
 import { cn } from '#/lib/cn'
 
-// **M2-D5 filas 52v, 52s y 52r** — captura 52-NOTARY-DOSSIER-A.
-// Test IDs: NOT-DOSSIER-VIEW-001, NOT-DOSSIER-SIGN-001, NOT-DOSSIER-REJECT-001.
-// Patrones: P1, P2, P8.
-//
-// **Lo único que la firma afirma** (D-026): que esta persona atestiguó haber
-// revisado estos hashes en este momento. No dice que los documentos sean
-// auténticos, ni que la obra esté bien, ni que la operación sea válida. El copy
-// de esta pantalla tiene que sostener exactamente eso y nada más.
-//
-// **Firmar es terminal.** Una vez firmado, el `masterHash` se congela del lado
-// del servidor y el rechazo devuelve 409: por eso acá las acciones desaparecen
-// en vez de quedar deshabilitadas — una acción que no va a poder ejecutarse
-// nunca no es una acción.
-
 export const Route = createFileRoute('/notary/dossier/$dossierId')({
   component: DossierReview
 })
@@ -88,8 +74,6 @@ function DossierReview() {
                 </StatusPill>
               </div>
 
-              {/* Completitud: **qué fracción de la prueba está sustanciada**, no
-                  "cuán listo está el dossier" (regla 17). */}
               <ProgressBar
                 percent={dossier.completeness}
                 label={t('investor.dossier.completeness')}
@@ -122,10 +106,6 @@ function DossierReview() {
               ) : null}
             </article>
 
-            {/* Los checklists por sección de la captura. M2-D3 §Accessibility:
-                "status colour is never the sole carrier of meaning" — el color
-                del ícono solo no alcanza; VerificationBadge trae el label de
-                texto que la regla pide. */}
             <article className={cn('flex flex-col gap-s3', CARD_SHELL)}>
               <h3 className="text-body font-bold text-text-primary">
                 {t('notary.dossier.artifacts')}
@@ -190,8 +170,6 @@ function DossierReview() {
         </div>
       ) : null}
 
-      {/* El modal de observación es el mismo componente que usa el certifier:
-          capturar texto para devolver trabajo, con el naranja correctivo. */}
       <ObserveStageModal
         open={rechazando}
         onClose={() => setRechazando(false)}

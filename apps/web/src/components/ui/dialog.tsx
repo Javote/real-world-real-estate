@@ -1,15 +1,3 @@
-// Primitivo de shadcn/ui sobre Radix (ver README de esta carpeta): resuelve el
-// comportamiento accesible de un diálogo —foco atrapado, Escape, aria-modal—,
-// que es lo que M2-D3 §Accessibility pide y lo más caro de reimplementar.
-//
-// Editado en dos puntos: el botón de cierre usa el `SecondaryButton` de
-// M2-D3 (no el `Button` de shadcn, que sería un segundo sistema de botones),
-// y todo el archivo transcribe la escala de M2-D3 en vez de la default de
-// Tailwind (SPEC-102). Antes era shadcn sin adaptar —`bg-background` no
-// existe acá, así que el modal no tenía fondo propio— y 10 de los 12
-// `<DialogContent>` de la app lo parchaban a mano con `bg-card`. El fondo se
-// decide acá, una sola vez; ningún consumidor vuelve a pasarlo.
-
 import { XIcon } from 'lucide-react'
 import { Dialog as DialogPrimitive } from 'radix-ui'
 import type * as React from 'react'

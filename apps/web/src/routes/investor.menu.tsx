@@ -6,15 +6,6 @@ import { ActionCard } from '#/components/domain/ActionCard'
 import { PanelLayout } from '#/components/PanelLayout'
 import { useTranslation } from '#/i18n/useTranslation'
 
-// **M2-D5 filas 31-32 · `/investor/menu`** — Test ID: INV-MENU-001.
-//
-// La única superficie del backlog cuya columna de endpoints dice **"n/a (client
-// routing)"**: es un agregador y no pide datos. Por eso no tiene `useQuery`.
-//
-// **Solo lista destinos que existen.** Un menú con tiles que llevan a pantallas
-// sin construir se ve terminado y no lo está — y es peor que un menú corto,
-// porque promete. Los que faltan entran con su vertical.
-
 export const Route = createFileRoute('/investor/menu')({ component: InvestorMenu })
 
 function InvestorMenu() {

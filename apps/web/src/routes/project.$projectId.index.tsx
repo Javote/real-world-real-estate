@@ -31,9 +31,7 @@ import { cn } from '#/lib/cn'
 import { esFoto, formatoArchivo, reintentarSiNoEsAusencia } from '#/lib/investor'
 import { avanceDeStages, bajarBlob, TONO_PROYECTO, timelineDeStages } from '#/lib/stageProgress'
 
-// El ícono de la tarjeta de estado. Ninguno es un tilde a propósito: un tilde
-// verde se lee como "verificado", y esta tarjeta dice en qué etapa de su vida
-// está la obra, no que algo esté anclado (regla 17).
+// Ninguno es un tilde: un tilde verde se lee como "verificado" (regla 17).
 const ICONO_DE_ESTADO: Record<ProjectStatus, LucideIcon> = {
   planning: PencilRuler,
   in_progress: HardHat,
@@ -41,28 +39,12 @@ const ICONO_DE_ESTADO: Record<ProjectStatus, LucideIcon> = {
   completed: KeyRound
 }
 
-// El borde de la tarjeta de estado, en el color de su familia. Sin él, el fondo
-// claro del tono casi no contrasta con el gris de la página. `ring-inset` se
-// dibuja por dentro: no agranda la tarjeta (el mismo `ring-1` que StageChips
-// usa para lo anclado).
 const BORDE_DE_TONO: Record<StatusTone, string> = {
   verified: 'ring-1 ring-inset ring-verified',
   pending: 'ring-1 ring-inset ring-pending',
   info: 'ring-1 ring-inset ring-info',
   neutral: 'ring-1 ring-inset ring-border'
 }
-
-// **M2-D5 filas 06-07 · `/project/:projectId`** — capturas 6 y 7.
-// Test IDs: INV-PROJECT-DETAIL-001, INV-PROJECT-DOCS-002. Patrones: P1, P2.
-//
-// GET /projects/:id está scopeado por membresía: un buyer que no es miembro
-// recibe 403. Se muestra como error, no se cambia la API.
-//
-// Org name, rating y "Price from" no se dibujan: el contrato no los da.
-//
-// **La portada es la del proyecto (D-099)**, pública y cacheable, no la primera
-// foto de evidencia como antes: un render comercial no es prueba de nada. Sin
-// portada, la superficie neutra de siempre.
 
 export const Route = createFileRoute('/project/$projectId/')({
   component: InvestorProjectDetail
@@ -111,16 +93,11 @@ function InvestorProjectDetail() {
     queries: fotos.map((f) => ({
       queryKey: ['evidence-blob', f.id],
       queryFn: async () => objectUrl(await api.downloadEvidence(f.id)),
-      // `gcTime: 0`: la URL se revoca al desmontar, así que la caché no puede
-      // sobrevivirle — devolvería una URL muerta al volver a la pantalla.
       gcTime: 0,
-      // Solo con la galería abierta: la portada ya no sale de acá (D-099).
       enabled: ready && isSuccess && galeria
     }))
   })
 
-  // D-099: la portada es un campo del proyecto, no evidencia. Encabeza la
-  // galería, y detrás van las fotos de evidencia, que siguen siendo lo que son.
   const portada = projectCoverUrl(projectId, proyecto?.coverUpdatedAt ?? null)
   const imagenes = [
     ...(portada ? [{ url: portada, alt: t('investor.unit.gallery') }] : []),
@@ -130,8 +107,6 @@ function InvestorProjectDetail() {
     })
   ]
 
-  // Solo los documentos abren el visor, y un documento no es una imagen: el
-  // visor no tiene página que renderizar.
   const docAbierto = docs.find((d) => d.id === docId)
 
   const idsFavoritos = new Set((favoritos ?? []).map((p) => p.id))
@@ -157,7 +132,6 @@ function InvestorProjectDetail() {
   const ubicacion = [proyecto?.city, proyecto?.country].filter(Boolean).join(', ')
   const stages = proyecto?.stages ?? []
   const timeline = timelineDeStages(stages)
-  // El timeline sale de `stages` uno a uno: todo nodo tiene su etapa.
   const idPorOrden: Record<number, string> = Object.fromEntries(
     stages.map((s) => [s.sequenceOrder, s.id])
   )
@@ -199,8 +173,6 @@ function InvestorProjectDetail() {
               </span>
             )}
           </button>
-          {/* Sin `data-testid`: INV-FAV-TOGGLE-002 vive en la fila 13
-              (`/investor/favorites`). Acá es la misma acción, no el mismo ID. */}
           <button
             type="button"
             aria-pressed={esFavorito}
@@ -213,11 +185,6 @@ function InvestorProjectDetail() {
         </div>
 
         <div className="grid grid-cols-2 gap-s3">
-          {/* Captura 6: el valor grande y en negrita, como el "3,500 US$" de ahí.
-              Sin precio (no está en el contrato), el estado es el valor: con el
-              color de su familia en la matriz de M2-D3 (el mismo del pill de
-              "Buy") y centrado en los dos ejes, en una tarjeta tan alta como el
-              mapa de al lado. */}
           <article
             className={cn(
               'flex flex-col items-center justify-center gap-s2 text-center',
@@ -248,8 +215,6 @@ function InvestorProjectDetail() {
               className="overflow-hidden rounded-xl bg-card text-left shadow-e1"
               aria-label={t('investor.project.location')}
             >
-              {/* La miniatura de la captura 6: el mapa real, quieto. El clic es
-                  de este botón, que lo abre en grande. */}
               <span className="block aspect-video">
                 <LocationMapModal
                   open
@@ -313,11 +278,6 @@ function InvestorProjectDetail() {
           )}
         </section>
 
-        {/* SPEC-220 · la entrada al perfil del desarrollador, que es como
-            M2-D1 §Screen tree la describe: *"linked from project"*. Solo se
-            dibuja si la obra tiene organización — los proyectos anteriores a
-            la migración 0010 no la tienen, y un link a una pantalla vacía es
-            peor que no ofrecerlo. */}
         {proyecto?.organizationId ? (
           <SecondaryButton
             testId="INV-DEVELOPER-LINK-004"
@@ -427,7 +387,6 @@ function InvestorProjectDetail() {
   )
 }
 
-/** El badge de 40px del `StatCard`, con el ícono del estado en el color de la tarjeta. */
 function EstadoIcono({ status }: { status: ProjectStatus }) {
   const Icono = ICONO_DE_ESTADO[status]
   return (

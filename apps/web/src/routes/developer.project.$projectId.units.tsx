@@ -21,44 +21,6 @@ import { useTranslation } from '#/i18n/useTranslation'
 import { CARD_SHELL, CARD_SHELL_EMPTY } from '#/lib/cardShell'
 import { cn } from '#/lib/cn'
 
-// **M2-D5 fila 44b · `/developer/project/:projectId/units`** — captura 44b.
-// Componentes: UnitCard (variante developer), StatusPill, TextInput,
-// NumberInput, PrimaryButton. Test IDs: DEV-UNITS-LIST-001,
-// DEV-UNIT-CREATE-002, DEV-UNIT-UPDATE-003.
-//
-// **Una card de formulario y una lista** — la captura no tiene más que eso, y
-// los tres test IDs viven en la misma pantalla porque las tres acciones son la
-// misma superficie: listar, agregar, corregir.
-//
-// **La card cambia de modo, no de lugar.** Tocar una fila la carga en el mismo
-// formulario y el título pasa a "Editar <referencia>". Es lo que permiten los
-// cinco componentes que la fila nombra: no hay en M2-D3 un modal de edición ni
-// un menú contextual, y agregar uno sería inventar componente (regla 2).
-//
-// **La referencia no se edita.** El PATCH del endpoint no la acepta a
-// propósito: es la identidad comercial de la unidad y ya la nombran las
-// invitaciones y los contratos. Por eso en modo edición es el título de la
-// card y no un campo — un campo que no guarda es una mentira más cara que su
-// ausencia.
-//
-// **El estado comercial tampoco se edita a mano.** `available → reserved →
-// sold` lo produce el ciclo de invitación y contrato (filas 39 y 40-41), no un
-// dropdown: la plataforma refleja lo que pasó, no lo declara (D-070). El
-// StatusPill lo muestra y M2-D3 es explícito en que los pills son de solo
-// lectura.
-//
-// **El investor sale como "asignada / sin asignar", nunca como nombre.** El
-// endpoint hace `selectAll()` sobre `Unit` y devuelve `investorId`, no una
-// persona; la captura muestra "Carlos Ruiz" porque es dato mock. Pintar un
-// nombre que no vino sería la regla 17 al revés.
-//
-// **Los cuatro tiles van en dos columnas y la captura los muestra en cuatro.**
-// M2-D3 §StatCard §Usage rules es explícito —*"Group into 2-column grids on
-// mobile; 3 or 4 on desktop"*— y a 320px cuatro tiles dejan ~66px por tile:
-// "Available" parte en dos. La captura gana en QUÉ se muestra (los cuatro
-// conteos, que es la diferencia real contra la captura 44); la regla del
-// componente gana en cómo se agrupan.
-
 export const Route = createFileRoute('/developer/project/$projectId/units')({
   component: ProjectUnits
 })
@@ -137,8 +99,6 @@ function ProjectUnits() {
   const contar = (estado: string) => unidades?.filter((u) => u.status === estado).length ?? 0
 
   const enVuelo = crear.isPending || actualizar.isPending
-  // En alta hace falta una referencia; en edición ya la hay y lo que se manda
-  // son los dos campos opcionales, así que alcanza con que alguno tenga valor.
   const puedeGuardar = editando
     ? (piso !== null || superficie !== null) && !enVuelo
     : referencia.trim().length > 0 && !enVuelo
@@ -157,10 +117,6 @@ function ProjectUnits() {
           })
       }}
     >
-      {/*
-        Los tiles CUENTAN unidades y los pills CALIFICAN una: en español eso es
-        distinto número gramatical. Reusar `unitStatus.*` daba "0 Reservada".
-      */}
       <section className="grid grid-cols-2 gap-s3">
         <StatCard
           value={String(unidades?.length ?? 0)}
@@ -268,13 +224,6 @@ function ProjectUnits() {
   )
 }
 
-/**
- * "Piso 3 · 65 m²", con los tramos que la unidad realmente tenga.
- *
- * El `detailLine` de UnitCard llega ya formateado porque el componente no arma
- * copy (D-025); acá se decide qué mostrar cuando falta un dato, y la respuesta
- * es omitir el tramo, no rellenarlo con un cero.
- */
 function detalle(
   unidad: DeveloperProjectUnit,
   t: (clave: TranslationKey, valores?: Record<string, string>) => string

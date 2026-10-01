@@ -1,29 +1,13 @@
 import { useId } from 'react'
 import { cn } from '#/lib/cn'
 
-// M2-D3 §Forms & Controls · TextInput.
-//
-// El label va **arriba del campo y asociado por `htmlFor`**: sin eso,
-// `getByLabel` de los tests falla — que es exactamente para lo que sirve, y así
-// se descubrió que los labels del login viejo no lo tenían.
-//
-// El adorno derecho es del entregable: ojo para passwords, calendario para
-// fechas.
-
 interface TextInputProps {
   label: string
   value: string
   onChange: (value: string) => void
-  /**
-   * `date` está acá porque M2-D3 §TextInput lo contempla en su anatomía:
-   * *"Optional right adornment (eye for passwords, calendar for dates)"*. El
-   * adorno del calendario lo pone el control nativo.
-   */
   type?: 'text' | 'password' | 'email' | 'number' | 'date'
   placeholder?: string
-  /** Ojo, calendario, etc. Va dentro del campo, a la derecha. */
   adornment?: React.ReactNode
-  /** Mensaje de error: pinta el borde y se muestra debajo. */
   error?: string
   autoComplete?: string
   required?: boolean

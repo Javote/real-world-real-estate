@@ -4,28 +4,11 @@ import { cn } from '#/lib/cn'
 import { HashChip } from './HashChip'
 import { StatusPill } from './StatusPill'
 
-// M2-D3 §Cards · DocumentCard — la representación inline de un documento
-// anclado o pendiente. Es el componente que más superficies toca: detalle de
-// stage, documentación de respaldo, índice del dossier y documentación del
-// developer.
-//
-// **El estado se DERIVA del TXID, no se declara.** Por eso `txid` es
-// `string | null` y no hay prop `verified`: sin TXID el documento está
-// "Pendiente", aunque tenga hash (regla 17 y M2-D4 §6.2). La misma decisión que
-// el `VerificationBadge`, que recibe el TXID en vez de un booleano — la regla
-// deja de ser algo que hay que acordarse y pasa a ser la firma del componente.
-//
-// El hash llega COMPLETO (regla 16): `HashChip` trunca para mostrar.
-
 interface DocumentCardProps {
   filename: string
-  /** Ya formateada con `Intl` (regla 14). */
   uploadedAtLabel: string
-  /** "PDF", "JPEG". */
   format: string
-  /** SHA-256 completo. `null` si el archivo todavía no se hasheó. */
   sha256?: string | null
-  /** **La única fuente del estado.** `null` ⇒ Pendiente. */
   txid: string | null
   labels: {
     verified: string
@@ -34,14 +17,11 @@ interface DocumentCardProps {
     download: string
     copy: string
     copied: string
-    /** Etiqueta del chip: "hash". */
     hashLabel?: string
   }
   onView?: () => void
   onDownload?: () => void
-  /** Abre el TxidModal (P3). Nunca se abre solo (M2-D4 §6.3). */
   onOpenProof?: () => void
-  /** La documentación del developer muestra el hash inline (M2-D3). */
   showHash?: boolean
   className?: string
 }
@@ -117,8 +97,6 @@ export function DocumentCard({
               type="button"
               aria-label={labels.download}
               onClick={onDownload}
-              // *"Pending — view enabled, download may be disabled"* (M2-D3):
-              // no se ofrece bajar el PDF de algo cuya prueba no está.
               disabled={!anclado}
               className="rounded-md p-s1 text-text-muted hover:bg-surface-alt hover:text-primary disabled:cursor-not-allowed disabled:text-disabled disabled:hover:bg-transparent"
             >

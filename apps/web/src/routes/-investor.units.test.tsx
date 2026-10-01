@@ -64,7 +64,6 @@ describe('/investor/units', () => {
     expect(within(tarjeta('U-RESERVED')).getByText(t('unitStatus.reserved'))).toBeTruthy()
     expect(within(tarjeta('U-AVAILABLE')).getByText(t('unitStatus.available'))).toBeTruthy()
     expect(within(tarjeta('U-SOLD')).getByText('Torre A · Rosario')).toBeTruthy()
-    // Sin ciudad, el nombre del proyecto va solo.
     expect(within(tarjeta('U-RESERVED')).getByText('Torre A')).toBeTruthy()
   })
 

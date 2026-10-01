@@ -1,14 +1,6 @@
 import { expect, test } from '@playwright/test'
 import { loginConSolapa } from './_helpers'
 
-// **Las 12 superficies de Notary y Certifier** (M2-D5 §6.1 y §6.2), con sus
-// test IDs literales.
-//
-// Corren contra la API real con la base sembrada: es lo que hace que estos IDs
-// cuenten para el ≥95% de la aceptación de M3 (M2-D5 §8). Un test de
-// componente aislado prueba el componente; esto prueba la superficie.
-
-/** El token de la sesión, para pedirle a la API el id que la ruta necesita. */
 async function tokenDe(page: import('@playwright/test').Page) {
   return page.evaluate(
     () => JSON.parse(sessionStorage.getItem('proptrust.session') ?? '{}')?.token ?? null
@@ -43,14 +35,10 @@ test.describe('Certifier', () => {
     await page.goto(`/certifier/stage/${stageId}`)
     await expect(page.getByTestId('CER-STAGE-VIEW-001')).toBeVisible()
 
-    // La acción de certificar está a la vista (fila 56c).
     await expect(page.getByTestId('CER-CERTIFY-001')).toBeVisible()
 
-    // El modal de observación se abre desde "Observar" (fila 57). **Nunca se
-    // abre solo** (M2-D4 §6.3): hace falta el gesto.
     await page.getByRole('button', { name: /observar|observe/i }).click()
     await expect(page.getByRole('dialog')).toBeVisible()
-    // "Empty textarea disables Send" (M2-D3).
     await expect(page.getByRole('button', { name: /^(enviar|send)$/i })).toBeDisabled()
   })
 
@@ -96,8 +84,6 @@ test.describe('Notary', () => {
     await expect(page.getByTestId('NOT-DOSSIER-SIGN-001')).toBeVisible()
     await expect(page.getByTestId('NOT-DOSSIER-REJECT-001')).toBeVisible()
 
-    // **Lo único que la firma afirma** (D-026): el descargo está a la vista
-    // antes de firmar, no escondido en un tooltip.
     await expect(page.getByText(/no certifica|does not certify/i)).toBeVisible()
   })
 
@@ -115,9 +101,6 @@ test.describe('Notary', () => {
   })
 })
 
-// Las cinco superficies de la tanda de cierre (M2-D5 filas 01, 14, 31-32, 44,
-// 45). Una sola aserción cada una: lo que se prueba es que la superficie EXISTE
-// y es alcanzable con su test ID, no su lógica interna.
 test.describe('Superficies de inventario y avance', () => {
   test('DEV-UNITS-INVENTORY-001 · inventario de unidades', async ({ page }) => {
     await loginConSolapa(page, 'Developer')

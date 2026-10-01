@@ -10,12 +10,6 @@ import { InvitationAcceptModal } from './InvitationAcceptModal'
 import { ObserveStageModal } from './ObserveStageModal'
 import { ShareDossierModal } from './ShareDossierModal'
 
-// M2-D3 §Modals & Overlays. Lo que fijan: las reglas de uso del entregable.
-
-// `ui/dialog.tsx` traduce su propio botón de cierre (SPEC-102), así que
-// cualquier modal de este archivo necesita el contexto de idioma para
-// montar — no porque estos tests prueben i18n, sino porque el primitivo que
-// todos comparten ahora lo usa.
 function render(ui: ReactElement) {
   return renderRTL(ui, { wrapper: LocaleProvider })
 }
@@ -35,7 +29,6 @@ describe('ObserveStageModal', () => {
 
   it('una observación vacía deshabilita Enviar', () => {
     render(<ObserveStageModal open onClose={vi.fn()} onSubmit={vi.fn()} labels={labels} />)
-    // Textual del entregable: "Empty textarea disables Send".
     expect(screen.getByRole('button', { name: 'Enviar' })).toHaveProperty('disabled', true)
   })
 
@@ -52,8 +45,6 @@ describe('ObserveStageModal', () => {
   it('el botón de enviar NO es rojo: observar no es destructivo', () => {
     render(<ObserveStageModal open onClose={vi.fn()} onSubmit={vi.fn()} labels={labels} />)
 
-    // M2-D3: "uses the orange 'danger-corrective' treatment, not red —
-    // observation is not destructive". Devuelve trabajo, no borra nada.
     const enviar = screen.getByRole('button', { name: 'Enviar' })
     expect(enviar.className).toContain('bg-pending')
     expect(enviar.className).not.toContain('bg-danger')
@@ -89,8 +80,6 @@ describe('InvitationAcceptModal', () => {
 
   it('la línea de anclaje es NO opcional', () => {
     render(<InvitationAcceptModal {...props} />)
-    // "Anchored-on-chain badge is non-optional — invitations are always
-    // anchored". No hay prop para ocultarla, así que siempre está.
     expect(screen.getByText('Esta invitación queda anclada on-chain')).toBeDefined()
   })
 
@@ -156,7 +145,6 @@ describe('ImageGalleryModal', () => {
     await userEvent.click(screen.getByRole('button', { name: 'Siguiente' }))
     expect(screen.getByText('2/2')).toBeDefined()
 
-    // Circular: desde la última, "siguiente" vuelve a la primera.
     await userEvent.click(screen.getByRole('button', { name: 'Siguiente' }))
     expect(screen.getByText('1/2')).toBeDefined()
   })

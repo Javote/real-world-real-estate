@@ -43,7 +43,6 @@ function preparar(unidades: Unidad[] = UNIDADES) {
   return vi.spyOn(api, 'createInvitation')
 }
 
-/** Espera a que las unidades lleguen al select y devuelve los controles. */
 async function controles() {
   await screen.findByRole('option', { name: 'Unidad u1' })
   return {

@@ -22,10 +22,6 @@ describe('GradientHeader', () => {
     expect(screen.getByRole('banner').textContent).toContain('Prop')
   })
 
-  // SPEC-103 (F-05): `document.title` era "PropNexus" en las 42 rutas.
-  // GradientHeader es el único lugar que pinta el `h1` real de una pantalla
-  // —directo o vía PanelLayout— así que es el único lugar que hace falta
-  // tocar.
   describe('document.title (SPEC-103, F-05)', () => {
     it('publica el título con el sufijo de marca', () => {
       render(<GradientHeader title="Inversores" />)

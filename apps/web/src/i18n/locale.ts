@@ -1,5 +1,3 @@
-// D-025 / M2-D3 §Localization: la clave de localStorage es literal
-// `propnexus.lang`, y `es-AR` es el default si no hay valor guardado.
 export type Locale = 'es-AR' | 'en-US'
 
 const STORAGE_KEY = 'propnexus.lang'
@@ -21,8 +19,5 @@ export function getStoredLocale(): Locale {
 export function setStoredLocale(locale: Locale): void {
   try {
     window.localStorage.setItem(STORAGE_KEY, locale)
-  } catch {
-    // localStorage indisponible (modo privado, cuota): el toggle sigue
-    // funcionando en memoria para la sesión de pestaña actual.
-  }
+  } catch {}
 }

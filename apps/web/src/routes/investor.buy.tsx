@@ -17,14 +17,6 @@ import { Dialog, DialogContent, DialogTitle } from '#/components/ui/dialog'
 import { useTranslation } from '#/i18n/useTranslation'
 import { avanceDeStages, TONO_PROYECTO } from '#/lib/stageProgress'
 
-// **M2-D5 filas 02-05 · `/investor/buy`** — capturas 2-5.
-// Test IDs: INV-BUY-LIST-001, INV-BUY-MAP-001, INV-BUY-SEARCH-001, INV-BUY-FILTER-001.
-//
-// Las filas 03-05 SON modos de la fila 02: `?view=map|search|filter`. No son
-// pantallas aparte. El listado no pre-procesa `%` ni `_`: la API ya escapa.
-//
-// Un proyecto sin coordenadas no entra al mapa. No se le inventa un punto.
-
 export type BuyView = 'map' | 'search' | 'filter'
 
 export type BuySearch = {
@@ -35,9 +27,6 @@ export type BuySearch = {
   city?: string
 }
 
-// Cada clave se devuelve SIEMPRE, con `undefined` si el valor es inválido: el
-// router mezcla `{...searchCrudoDelPadre, ...validado}` y la raíz no valida, así
-// que una clave ausente dejaría pasar el valor crudo (`?status=otro`).
 function parseBuySearch(raw: Record<string, unknown>): BuySearch {
   const view = raw.view
   const status = raw.status
@@ -126,10 +115,6 @@ function InvestorBuy() {
 
   if (!ready) return null
 
-  // Sin `label`: la captura 3 rotula el pin con el "desde", que `GET /projects`
-  // no agrega. Deuda ya declarada en `ProjectCard.priceLabel` — el pin va sin
-  // etiqueta antes que con un número inventado. Pasar `name` acá no hacía nada:
-  // `MapMarker` no tiene ese campo y se descartaba en silencio.
   const pines = (proyectos ?? []).flatMap((p) =>
     p.latitude != null && p.longitude != null
       ? [{ id: p.id, latitude: p.latitude, longitude: p.longitude }]
@@ -167,9 +152,6 @@ function InvestorBuy() {
             ? t('investor.favorites.unsave')
             : t('investor.favorites.save')
         }
-        // Sin `favoriteTestId`: INV-FAV-TOGGLE-002 es de la fila 13
-        // (`/investor/favorites`). El corazón acá es la misma acción, no el
-        // mismo ID — repetirlo lo vuelve inutilizable como selector.
       />
     )
   }
@@ -295,8 +277,6 @@ function InvestorBuy() {
           <LocationMapModal
             open
             variant="browse"
-            // La variante `browse` no dibuja el botón de cierre: `onClose` es obligatorio
-            // por el contrato del modal, pero acá nunca se dispara.
             onClose={setView.bind(null, undefined)}
             markers={pines}
             onSelectMarker={setPinSeleccionado}
@@ -313,8 +293,6 @@ function InvestorBuy() {
                 type="button"
                 aria-label={t('buy.close')}
                 onClick={() => setPinSeleccionado(null)}
-                // A la izquierda: la esquina derecha es del corazón de `ProjectCard`
-                // (`top-s3 right-s3`), y a la derecha quedaban a 4px una del otro.
                 className="absolute top-s3 left-s3 z-20 rounded-full bg-card/90 p-s2 text-text-primary shadow-e1"
               >
                 <X className="size-icon-inline" aria-hidden="true" />
@@ -327,12 +305,7 @@ function InvestorBuy() {
         listado
       )}
 
-      <Dialog
-        open={search.view === 'filter'}
-        // Sin `DialogTrigger`: el diálogo solo se abre por la URL, así que
-        // `onOpenChange` únicamente se dispara para cerrarlo.
-        onOpenChange={() => setView(undefined)}
-      >
+      <Dialog open={search.view === 'filter'} onOpenChange={() => setView(undefined)}>
         <DialogContent data-testid="INV-BUY-FILTER-001">
           <div className="flex items-center justify-between">
             <DialogTitle className="text-h2 font-bold text-text-primary">

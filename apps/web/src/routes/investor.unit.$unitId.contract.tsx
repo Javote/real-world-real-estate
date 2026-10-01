@@ -15,13 +15,6 @@ import { CARD_SHELL } from '#/lib/cardShell'
 import { cn } from '#/lib/cn'
 import { reintentarSiNoEsAusencia } from '#/lib/investor'
 
-// **M2-D5 filas 23-24 y 25v · `/investor/unit/:unitId/contract`** — capturas 23-25.
-// Test IDs: INV-CONTRACT-VIEW-001, INV-RELEASES-LIST-002, INV-TXID-MODAL-001.
-// Patrones: P2, P3, P10.
-//
-// El GET del contrato no trae TXID ni commitment: no se dibuja un hash de
-// contrato. "Paid" no se usa: el estado sale del TXID de cada release (D-021).
-
 export const Route = createFileRoute('/investor/unit/$unitId/contract')({
   component: InvestorContract
 })
@@ -80,7 +73,6 @@ function InvestorContract() {
     )
   }
 
-  // Los releases solo se piden con el contrato cargado: sin contrato no hay filas.
   const filas: ReleaseRecord[] = contrato
     ? (releases ?? []).map((r) => ({
         stageNumber: r.stageNumber,

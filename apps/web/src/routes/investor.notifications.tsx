@@ -18,18 +18,6 @@ import { formatCurrency, formatRelative } from '#/i18n/format'
 import { useTranslation } from '#/i18n/useTranslation'
 import { CARD_SHELL_EMPTY } from '#/lib/cardShell'
 
-// **M2-D5 filas 62 y 63 · `/investor/notifications`**
-// Test IDs: INV-NOTIF-LIST-001, INV-INVITE-VIEW-001, INV-INVITE-ACCEPT-002,
-// INV-INVITE-DECLINE-003.
-//
-// No hay GET de listado de invitaciones, y no hace falta inventarlo: crear una
-// invitación le deja al invitado (si ya tiene cuenta) una notificación
-// `notifications.invitation.received` con el id en `params.invitationId`, y
-// esta lista la dibuja como InvitationCard — fija arriba mientras esté
-// pendiente (M2-D3), en su lugar cronológico una vez resuelta. `?invitation=`
-// sigue sirviendo para el link directo, aunque no haya notificación.
-
-/** La `titleKey` con la que el backend avisa una invitación nueva. */
 const INVITACION_RECIBIDA = 'notifications.invitation.received'
 
 const CATEGORIAS = ['stage', 'document', 'release', 'signature', 'certificate'] as const
@@ -54,7 +42,6 @@ const BORDE: Record<NotifCategory, AuditCategory> = {
 type NotifSearch = { invitation?: string }
 
 function parseSearch(raw: Record<string, unknown>): NotifSearch {
-  // `invitation` explícito (aun `undefined`): el router mezcla el search crudo del padre.
   return {
     invitation:
       typeof raw.invitation === 'string' && raw.invitation.length > 0 ? raw.invitation : undefined
@@ -73,7 +60,6 @@ function InvestorNotifications() {
   const search = Route.useSearch()
   const queryClient = useQueryClient()
   const [filtro, setFiltro] = useState<NotifCategory | null>(null)
-  /** El id de la invitación cuyo modal está abierto. */
   const [abierta, setAbierta] = useState<string | null>(null)
 
   const { data: notificaciones, isPending } = useQuery({
@@ -82,7 +68,6 @@ function InvestorNotifications() {
     enabled: ready
   })
 
-  // De cada invitación avisada, la notificación que la trajo (para marcarla leída al abrirla).
   const avisos = new Map<string, { id: string; leida: boolean }>()
   for (const n of notificaciones ?? []) {
     const id = n.params.invitationId
@@ -152,8 +137,6 @@ function InvestorNotifications() {
     )
   }
 
-  // Fijas arriba: las pendientes, y la del link directo aunque ya esté resuelta
-  // (quien llegó por el link tiene que verla). El resto va en su lugar.
   const fijas = ids
     .map((id) => invitaciones.get(id))
     .filter(

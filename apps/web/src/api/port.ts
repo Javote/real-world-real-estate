@@ -1,6 +1,3 @@
-// ApiPort — ÚNICO lugar del front que hace fetch (prohibición de CLAUDE.md).
-// Adaptador `real` contra apps/api. El adaptador `mock` está pendiente.
-
 import type {
   AnchorDocumentInput,
   Notification as AppNotification,
@@ -79,17 +76,12 @@ export class ApiError extends Error {
   constructor(
     public status: number,
     message: string,
-    /** El cuerpo JSON del error, si lo hubo. Lo necesitan las pantallas que leen un detalle (`code`, `rejected`). */
     public body?: unknown
   ) {
     super(message)
   }
 }
 
-// Origen de la API. Vacío en dev: el proxy de Vite manda `/api` a :8787 desde
-// el mismo origen. En producción el web es estático y vive en otro origen, así
-// que `VITE_API_ORIGIN` trae la URL absoluta (D-065) y la API la acepta por su
-// lista blanca de CORS.
 const API_BASE = import.meta.env.VITE_API_ORIGIN ?? ''
 
 async function request<T>(path: string, init: RequestInit = {}): Promise<T> {
@@ -107,22 +99,13 @@ async function request<T>(path: string, init: RequestInit = {}): Promise<T> {
       const body = await res.json()
       cuerpo = body
       message = body?.message ?? JSON.stringify(body)
-    } catch {
-      // cuerpo no-JSON: queda statusText
-    }
+    } catch {}
     throw new ApiError(res.status, message, cuerpo)
   }
   if (res.status === 204) return undefined as T
   return res.json() as Promise<T>
 }
 
-/**
- * GET de un archivo. Es el único camino binario y NO pasa por `request()`
- * (`request()` parsea JSON), pero tiene que hacer lo mismo que él: usar
- * `API_BASE` —en producción el web vive en otro origen— y limpiar la sesión
- * ante un 401. `downloadEvidence` hacía las dos mal: pegaba contra una URL
- * relativa (el sitio estático, no la API) y no limpiaba la sesión.
- */
 async function requestBlob(path: string): Promise<Blob> {
   const session = getSession()
   const res = await fetch(`${API_BASE}${path}`, {
@@ -133,32 +116,17 @@ async function requestBlob(path: string): Promise<Blob> {
   return res.blob()
 }
 
-/**
- * D-099 — la URL pública de la portada de un proyecto, o `null` si no tiene.
- *
- * **No hace fetch, y por eso no está en `api`**: la pide el `<img>`, sin sesión
- * (la ruta es pública). Vive en este archivo porque es el único que conoce
- * `API_BASE`. `coverUpdatedAt` es la versión: una portada nueva es una URL
- * nueva, así que la caché no la tapa.
- */
 export function projectCoverUrl(projectId: string, coverUpdatedAt: string | null): string | null {
   if (!coverUpdatedAt) return null
   const v = new URLSearchParams({ v: coverUpdatedAt })
   return `${API_BASE}/api/v1/public/projects/${projectId}/cover?${v}`
 }
 
-/** Envoltorio de las listas paginadas por cursor de la API. */
 export interface Paginated<T> {
   items: T[]
-  /** `null` cuando no hay más páginas. */
   nextCursor: string | null
 }
 
-// El cuerpo se declara con el tipo de `packages/shared` en cada call site
-// (`jsonInit<CreateInvitationInput>(…)`): si la API agrega un campo obligatorio
-// o renombra uno, el schema cambia y esto deja de compilar — en vez de un 400
-// en runtime. `port.contract.test.ts` cruza además lo que realmente sale
-// contra el OpenAPI.
 function jsonInit<B>(method: string, body: B): RequestInit {
   return {
     method,
@@ -187,8 +155,6 @@ export const api = {
     return request<Project[]>(`/api/v1/projects${qs ? `?${qs}` : ''}`)
   },
 
-  // Paneles de rol (M2-D5 filas 33-34, 51, 55). Los tipos vienen del contrato
-  // de `packages/shared`: acá no se declara la forma de nada.
   getDeveloperKpis: () => request<DeveloperKpis>('/api/v1/developer/kpis'),
   getCertifierKpis: () => request<CertifierKpis>('/api/v1/certifier/kpis'),
   getCertifierAssignments: () => request<CertifierAssignment[]>('/api/v1/certifier/assignments'),
@@ -197,7 +163,6 @@ export const api = {
 
   getProject: (id: string) => request<ProjectDetail>(`/api/v1/projects/${id}`),
 
-  /** Capturas 59-60 · el desarrollador de una obra. 404 si no tiene organización. */
   getProjectDeveloper: (id: string) =>
     request<DeveloperProfile>(`/api/v1/projects/${id}/developer`),
 
@@ -207,29 +172,17 @@ export const api = {
       jsonInit<StageTransitionInput>('PATCH', { state })
     ),
 
-  // ── Superficie del developer (M2-D5 filas 35-36, 37, 38/44c, 49, 62) ─────
-
   listDeveloperProjects: () => request<DeveloperProject[]>('/api/v1/developer/projects'),
 
   getDeveloperProject: (id: string) =>
     request<DeveloperProjectDetail>(`/api/v1/developer/projects/${id}`),
 
-  /**
-   * Fila 38 — sube y **ancla en la misma request**. **Un lote** (SPEC-218): `form`
-   * trae `file` repetido, hasta `EVIDENCE_MAX_FILES`, y produce un bundle y un
-   * anclaje; los archivos que el backend no acepta vuelven en `rejected`.
-   *
-   * M2-D5 §2.2 lo obliga: *"client awaits success with TXID/Merkle root in the
-   * same response"*. Es lo que alimenta el `AnchoringSuccessModal`, la única
-   * superficie de prueba que se abre sola (M2-D4 §6.3).
-   */
   uploadStageEvidence: (projectId: string, stageId: string, form: FormData) =>
     request<StageEvidenceAnchor>(
       `/api/v1/developer/projects/${projectId}/stages/${stageId}/evidence`,
       { method: 'POST', body: form }
     ),
 
-  // `limit` no entra: la API le pone su default y el front no pagina por tamaño.
   listAuditLog: (params?: Pick<AuditLogQuery, 'category' | 'cursor'>) => {
     const q = new URLSearchParams()
     if (params?.category) q.set('category', params.category)
@@ -239,12 +192,6 @@ export const api = {
   },
 
   listDeveloperUnits: () => request<DeveloperUnit[]>('/api/v1/developer/units'),
-
-  // ── Unidades de un proyecto (M2-D5 fila 44b) ─────────────────────────────
-  //
-  // `unitReference` solo entra en el alta: el PATCH del endpoint no lo acepta,
-  // porque la referencia es la identidad comercial de la unidad y renombrarla
-  // rompería cualquier contrato o invitación que ya la nombre.
 
   listProjectUnits: (projectId: string) =>
     request<DeveloperProjectUnit[]>(`/api/v1/developer/projects/${projectId}/units`),
@@ -261,21 +208,6 @@ export const api = {
       jsonInit<UpdateUnitInput>('PATCH', cambios)
     ),
 
-  /**
-   * Fila 39 — emite la invitación y deja la unidad reservada.
-   *
-   * `amountMinorUnits` es entero y en la unidad mínima (regla 1): la pantalla
-   * recibe pesos o dólares del formulario y hace la cuenta una sola vez, acá
-   * llega ya convertido.
-   */
-  /**
-   * Filas 40-41 — los contratos del proyecto como registro (D-070).
-   *
-   * **No hay método para liberar una etapa y no lo va a haber acá.** El
-   * endpoint existe en el backend como deuda declarada de un encuadre viejo;
-   * exponerlo en el `ApiPort` sería el primer paso para que alguien construya
-   * el botón que D-070 declaró que no es el producto.
-   */
   listProjectContracts: (projectId: string) =>
     request<DeveloperContract[]>(`/api/v1/developer/projects/${projectId}/contracts`),
 
@@ -289,18 +221,12 @@ export const api = {
 
   listInvestors: () => request<InvestorDirectoryEntry[]>('/api/v1/developer/investors'),
 
-  // ── Capital del developer (M2-D5 filas 42-43) ────────────────────────────
-  //
-  // **Montos DECLARADOS, no fondos que la plataforma tenga** (D-021): "capital
-  // levantado" es la suma de los contratos firmados.
-
   getCapitalSummary: () => request<CapitalSummary>('/api/v1/developer/capital/summary'),
 
   getCapitalMonthly: () => request<CapitalMonthlyPoint[]>('/api/v1/developer/capital/monthly'),
 
   getCapitalByProject: () => request<CapitalByProject[]>('/api/v1/developer/capital/by-project'),
 
-  /** D-097 — la dirección del alta de proyecto, convertida en un punto (Nominatim, vía la API). */
   geocodeAddress: (q: string) =>
     request<GeocodeResult>(`/api/v1/developer/geocode?${new URLSearchParams({ q })}`),
 
@@ -310,7 +236,6 @@ export const api = {
       jsonInit<CreateDeveloperProjectInput>('POST', proyecto)
     ),
 
-  /** D-099 — carga o reemplaza la portada del proyecto (un JPEG o PNG, campo `file`). */
   uploadProjectCover: (projectId: string, archivo: File) => {
     const form = new FormData()
     form.append('file', archivo)
@@ -325,7 +250,6 @@ export const api = {
     return request<DeveloperDocument[]>(`/api/v1/developer/documents${qs}`)
   },
 
-  /** Ancla un documento pendiente. Es idempotente: re-anclar devuelve el evento existente. */
   anchorDocument: (evidenceId: string) =>
     request<StageEvidenceAnchor>(
       '/api/v1/developer/documents',
@@ -333,8 +257,6 @@ export const api = {
     ),
 
   listInvestorUnits: () => request<InvestorUnit[]>('/api/v1/investor/units'),
-
-  // ── Superficie del investor (M2-D5 filas 03-13, 15-30, 63) ───────────────
 
   listProjectDocuments: (id: string) =>
     request<ProjectDocument[]>(`/api/v1/projects/${id}/documents`),
@@ -393,8 +315,6 @@ export const api = {
   declineInvitation: (id: string) =>
     request<void>(`/api/v1/investor/invitations/${id}/decline`, { method: 'POST' }),
 
-  // ── Notificaciones (M2-D5 filas 22 y 62) ─────────────────────────────────
-
   listNotifications: (params?: NotificationQuery) => {
     const q = new URLSearchParams()
     if (params?.unitId) q.set('unitId', params.unitId)
@@ -407,11 +327,6 @@ export const api = {
     request<void>(`/api/v1/notifications/${id}/read`, { method: 'PATCH' }),
 
   getUnreadCount: () => request<UnreadCount>('/api/v1/notifications/unread-count'),
-
-  // ── Superficie del certifier (M2-D5 filas 56v, 56c, 57, 58) ──────────────
-  //
-  // `certify` y `observe` son **transiciones de la misma FSM** con distinta
-  // autorización: las dos devuelven el stage actualizado y su anclaje.
 
   getCertifierStage: (stageId: string) =>
     request<CertifierStageView>(`/api/v1/certifier/stages/${stageId}`),
@@ -432,11 +347,6 @@ export const api = {
     request<Paginated<CertifierCertificate>>(
       `/api/v1/certifier/certificates${cursor ? `?cursor=${encodeURIComponent(cursor)}` : ''}`
     ),
-
-  // ── Invitaciones a certificar (SPEC-221, D-095) ──────────────────────────
-  //
-  // El admin invita a un certifier a un proyecto; el certifier acepta o
-  // rechaza desde su panel. Aceptar crea su membresía `verifier`.
 
   listUsers: () => request<UserSummary[]>('/api/v1/users'),
 
@@ -463,8 +373,6 @@ export const api = {
       jsonInit('POST', {})
     ),
 
-  // ── Superficie del notary (M2-D5 filas 52v, 52s, 52r, 53) ────────────────
-
   getDossier: (dossierId: string) => request<Dossier>(`/api/v1/notary/dossiers/${dossierId}`),
 
   signDossier: (dossierId: string) =>
@@ -483,8 +391,6 @@ export const api = {
     request<Paginated<NotarySignature>>(
       `/api/v1/notary/signatures${cursor ? `?cursor=${encodeURIComponent(cursor)}` : ''}`
     ),
-
-  // ── Perfil — UNA superficie con cuatro entradas (M2-D5 §3) ───────────────
 
   getProfile: () => request<Profile>('/api/v1/profile'),
 

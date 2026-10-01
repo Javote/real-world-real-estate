@@ -9,20 +9,6 @@ import {
 import { DangerButton, SecondaryButton } from './PrimaryButton'
 import { TextArea } from './TextArea'
 
-// M2-D3 §Modals · ObserveStageModal — la superficie con la que el certifier
-// devuelve un stage al developer en vez de certificarlo.
-//
-// **Dos reglas del entregable que el componente hace cumplir por construcción:**
-//
-// 1. *"Send button uses the orange 'danger-corrective' treatment, not red —
-//    observation is not destructive."* Observar devuelve trabajo, no borra
-//    nada: el rojo diría otra cosa.
-// 2. *"Empty textarea disables Send."* Una observación vacía no le dice nada al
-//    developer y deja el stage trabado sin motivo registrado.
-//
-// **El texto queda off-chain** (regla 2): va al `AuditLog`, nunca al datum —
-// una observación puede nombrar personas.
-
 interface ObserveStageModalProps {
   open: boolean
   onClose: () => void

@@ -12,35 +12,11 @@ import { NAV_TABS } from '#/components/domain/navTabs'
 import { Sidebar } from '#/components/domain/Sidebar'
 import { useTranslation } from '#/i18n/useTranslation'
 
-// El armazón que comparten los cuatro paneles de rol: header con gradiente,
-// contenido, y el BottomNav scopeado al rol.
-//
-// No es un componente de M2-D3 — es composición. Las cuatro capturas (2, 33,
-// 51, 55) muestran exactamente esta estructura, y repetirla cuatro veces sería
-// garantizar que se desincronicen.
-//
-// **El header es uno (D-074).** Logo + campana + perfil + idioma, siempre.
-// `back` es lo único que la pantalla decide: si hay padre, se pasa; si no, no.
-// La flecha no reemplaza al logo. Las utilidades no se opt-in por pantalla:
-// si una ruta las olvida, igual están.
-//
-// Solo el investor tiene inbox en M2-D5 (`/investor/notifications`). La
-// campana igual se monta en los cuatro roles: cuenta no leídas con
-// GET /notifications/unread-count, que es cross-rol, y en developer / notary /
-// certifier cae al panel. No se inventa una superficie de inbox.
-
 interface PanelLayoutProps {
   rol: keyof typeof NAV_TABS
   title: string
-  /** "Welcome, Esc. Ana Torres" — la línea bajo el título. */
   context?: string
-  /** "← Back to panel" / "← Back". Entre el logo y el título, nunca en su lugar. */
   back?: { label: string; onClick: () => void }
-  /**
-   * Acción primaria de la pantalla, alineada con el título (el "+ Nuevo" de la
-   * captura 35-36). No compite con las utilidades globales del slot derecho:
-   * ver `titleAction` en GradientHeader.
-   */
   headerAction?: ReactNode
   children: ReactNode
 }
@@ -63,8 +39,6 @@ export function PanelLayout({
     queryFn: api.getUnreadCount
   })
 
-  // D-095: el admin entra a los cuatro paneles, y el perfil y la campana lo
-  // devuelven a SU pantalla — no tiene perfil propio ni inbox.
   const esAdmin = getSession()?.user.role === 'admin'
 
   const abrirPerfil = () => {

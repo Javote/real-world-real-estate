@@ -2,8 +2,6 @@ import { render, screen } from '@testing-library/react'
 import { describe, expect, it, vi } from 'vitest'
 import { NotificationBell } from './NotificationBell'
 
-// M2-D3: "Badge displays '9+' when count exceeds 9".
-
 describe('NotificationBell', () => {
   it('sin no leídos no muestra badge', () => {
     render(<NotificationBell unread={0} onClick={vi.fn()} ariaLabel="Notificaciones" />)

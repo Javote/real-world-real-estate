@@ -1,8 +1,3 @@
-// Helper compartido para montar una pantalla de ruta protegida por
-// `useRoleGuard`, con QueryClient + i18n + router de memoria — el mismo
-// armado que `-login.test.tsx` y `queues.test.tsx` repetían archivo por
-// archivo. Nace en la tanda notary de SPEC-017 §paso 5.
-
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import {
   type AnyValidator,
@@ -48,7 +43,6 @@ export const INVESTOR_USER: Session['user'] = {
   fullName: 'Investor Demo'
 }
 
-/** Entra a cualquier pantalla por el bypass de `useRoleGuard` (D-095). */
 export const ADMIN_USER: Session['user'] = {
   id: 'u-adm',
   email: 'admin@example.com',
@@ -56,11 +50,6 @@ export const ADMIN_USER: Session['user'] = {
   fullName: 'Admin Demo'
 }
 
-/**
- * Deja la sesión puesta y `api.me()`/`api.getUnreadCount()` resueltos: lo que
- * `useRoleGuard` y `PanelLayout`/`NotificationBell` piden en cada pantalla
- * protegida, sin repetirlo en cada test.
- */
 export function autenticarComo(user: Session['user']) {
   setSession({ token: 't', user })
   vi.spyOn(api, 'me').mockResolvedValue({
@@ -71,7 +60,6 @@ export function autenticarComo(user: Session['user']) {
   vi.spyOn(api, 'getUnreadCount').mockResolvedValue({ unread: 0 })
 }
 
-/** Lo mínimo que `montarRuta` necesita de una `Route` real de TanStack Router. */
 interface RutaMontable {
   options: {
     component?: RouteComponent
@@ -79,15 +67,6 @@ interface RutaMontable {
   }
 }
 
-/**
- * Monta una pantalla en `path`, con las rutas extra que necesite para navegar.
- *
- * Acepta el componente pelado (forma vieja, la que usan los tests de notary y
- * certifier) o la `Route` real (`Route.options.component` **y**
- * `validateSearch`, para pantallas como `investor.buy`/`investor.notifications`
- * cuyo parseo de query solo corre si `validateSearch` está declarado — sin
- * esto esas ~30 ramas no se ejecutan nunca).
- */
 export function montarRuta(
   componente: RouteComponent | RutaMontable,
   path: string,

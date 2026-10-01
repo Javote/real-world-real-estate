@@ -1,18 +1,10 @@
 import { cn } from '#/lib/cn'
 
-// M2-D3 §Forms & Controls · ToggleSwitch — *"Capsule track with circular thumb.
-// Purple when ON, gray when OFF."* Lo usan las preferencias de notificación.
-//
-// **`role="switch"` y no un checkbox estilado.** El lector de pantalla tiene
-// que anunciar "activado/desactivado", no "casilla marcada": son estados
-// distintos y M2-D3 §Accessibility pide el rol correcto.
-
 interface ToggleSwitchProps {
   id: string
   label: string
   checked: boolean
   onChange: (checked: boolean) => void
-  /** Línea de ayuda debajo del label. */
   description?: string
   disabled?: boolean
   className?: string
@@ -53,9 +45,6 @@ export function ToggleSwitch({
         <span
           aria-hidden="true"
           className={cn(
-            // `left-0.5` ancla el thumb antes del transform. Sin eso el motor
-            // calcula un `left` estático (~22px) y `translate-x` lo suma otra
-            // vez: el círculo termina fuera del track.
             'absolute left-0.5 top-0.5 size-5 rounded-full bg-card shadow-e1 transition-transform',
             checked ? 'translate-x-5' : 'translate-x-0'
           )}

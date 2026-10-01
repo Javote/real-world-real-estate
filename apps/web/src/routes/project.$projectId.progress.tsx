@@ -15,15 +15,6 @@ import { cn } from '#/lib/cn'
 import { claveEstadoStage, reintentarSiNoEsAusencia } from '#/lib/investor'
 import { timelineDeStages } from '#/lib/stageProgress'
 
-// **M2-D5 fila 08 · `/project/:projectId/progress`** — captura 8.
-// Test ID: INV-PROJECT-STAGES-001.
-//
-// **"Etapa N/total" usa la posición en `lista`, no `sequenceOrder` crudo**
-// (M3 §2.5): un proyecto con huecos en `sequenceOrder` (como `torre-a` en
-// producción, 1/2/3 con solo 3 filas) rompería el numerador contra el total
-// si viajaran de columnas distintas — ver el comentario largo en
-// `developer.progress.tsx`, mismo patrón.
-
 export const Route = createFileRoute('/project/$projectId/progress')({
   component: InvestorProjectProgress
 })
@@ -74,7 +65,6 @@ function InvestorProjectProgress() {
 
   const lista = stages ?? []
   const timeline = timelineDeStages(lista)
-  // El timeline sale de `lista` uno a uno: todo nodo tiene su etapa.
   const idPorOrden: Record<number, string> = Object.fromEntries(
     lista.map((s) => [s.sequenceOrder, s.id])
   )

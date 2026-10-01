@@ -12,16 +12,6 @@ import { useTranslation } from '#/i18n/useTranslation'
 import { CARD_SHELL, CARD_SHELL_EMPTY } from '#/lib/cardShell'
 import { cn } from '#/lib/cn'
 
-// **M2-D5 fila 58 · `/certifier/issued`** — captura 58-CERTIFIER-ISSUED.
-// Componentes: HashChip (certificate hash + TXID), StatusPill (Certified).
-// Endpoint: GET /certifier/certificates?cursor=. Test ID: CER-ISSUED-LIST-001.
-// Patrón: P2.
-//
-// **El estado sale del TXID, no de `certifiedAt`.** Un stage puede estar
-// certificado en el registro y su anclaje todavía sin confirmar: ahí el pill
-// dice "Pendiente" (regla 17). La captura muestra "Certified" porque su dato
-// mock ya tiene TXID.
-
 export const Route = createFileRoute('/certifier/issued')({ component: IssuedCertificates })
 
 function IssuedCertificates() {
@@ -67,8 +57,6 @@ function IssuedCertificates() {
                       </span>
                     ) : null}
 
-                    {/* El hash del bundle certificado y su TXID, los dos
-                        completos (regla 16): HashChip trunca al mostrar. */}
                     {c.commitmentHash ? (
                       <HashChip
                         hash={c.commitmentHash}

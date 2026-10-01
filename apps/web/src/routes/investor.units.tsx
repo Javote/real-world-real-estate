@@ -11,17 +11,6 @@ import { PanelLayout } from '#/components/PanelLayout'
 import { useTranslation } from '#/i18n/useTranslation'
 import { CARD_SHELL_EMPTY } from '#/lib/cardShell'
 
-// **M2-D5 fila 14 · `/investor/units`** — "Mis unidades".
-// Endpoint: GET /investor/units. Test ID: INV-UNITS-LIST-001.
-//
-// **El avance que muestra cada card es del PROYECTO** (D-029): los stages son
-// los mismos para todas las unidades hermanas porque un desarrollo tiene un
-// solo trámite. La captura 55 muestra tres unidades del mismo proyecto en tres
-// etapas distintas y casi nos hace modelar stages por unidad — son datos mock.
-//
-// **Aislamiento cross-rol**: el endpoint filtra por `investorId`, así que acá
-// solo llegan las unidades de quien mira (M2-D1 §Cross-role data isolation).
-
 export const Route = createFileRoute('/investor/units')({ component: InvestorUnits })
 
 const TONO: Record<UnitStatus, StatusTone> = {

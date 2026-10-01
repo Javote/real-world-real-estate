@@ -38,7 +38,6 @@ const etapas = [
     bundleId: 'b1',
     txid: TX1
   },
-  // El join de la API duplica el stage: la pantalla lo muestra una vez.
   {
     stageId: 's1',
     name: 'Cimientos',
@@ -140,11 +139,9 @@ const esquema = (): Esquema =>
         { id: 'u1', unitReference: '4B', floor: 4, status: 'reserved' },
         { id: 'u2', unitReference: '4A', floor: 4, status: 'available' },
         { id: 'u3', unitReference: '4C', floor: 4, status: 'sold' },
-        // Sin piso propio dentro de un piso: no se dibuja.
         { id: 'u4', unitReference: '4X', floor: null, status: 'sold' }
       ]
     },
-    // El grupo "sin piso" no entra al esquema.
     { floor: null, units: [{ id: 'u5', unitReference: 'SP1', floor: null, status: 'available' }] }
   ] as unknown as Esquema
 
@@ -161,7 +158,6 @@ const montar = (entrada = '/investor/unit/u1') =>
     entrada
   )
 
-/** Los chips llegan con la unidad: la lista existe desde el primer render, vacía. */
 const esperarChips = async () =>
   within(await screen.findByRole('list', { name: t['investor.unit.stagesAria'] })).findByRole(
     'button',
@@ -307,7 +303,6 @@ describe('/investor/unit/$unitId', () => {
       )
       const linea = screen.getByRole('list', { name: t['investor.project.timelineAria'] })
       expect(linea.querySelectorAll('li')).toHaveLength(3)
-      // Fecha de entrega: en el bloque de datos y como cierre de la línea de tiempo.
       await waitFor(() => expect(screen.getAllByText(/2027/)).toHaveLength(2))
     })
 
@@ -392,7 +387,6 @@ describe('/investor/unit/$unitId', () => {
       expect(getNews).toHaveBeenCalledTimes(1)
       expect(anunciar).not.toHaveBeenCalled()
 
-      // Vuelve el foco a la pestaña: el poll relee y las dos confirman.
       getNews.mockResolvedValue([
         novedad({ id: 'a', status: 'Confirmed' }),
         novedad({ id: 'b', status: 'Confirmed' }),
@@ -469,7 +463,6 @@ describe('/investor/unit/$unitId', () => {
   describe('galería de fotos (INV-UNIT-GALLERY-001)', () => {
     const fotos = [
       documento({ id: 'f1' }),
-      // Foto por el tipo de evidencia, y foto por el MIME: las dos cuentan.
       documento({ id: 'f2', evidenceType: 'document', mimeType: 'image/png' }),
       documento({ id: 'pdf', evidenceType: 'document', mimeType: 'application/pdf' })
     ]
@@ -494,7 +487,6 @@ describe('/investor/unit/$unitId', () => {
       })
       montar()
 
-      // La portada más las dos fotos de evidencia (el PDF no cuenta).
       await screen.findByText(t['investor.unit.photosCount'].replace('{count}', '3'))
       const boton = screen.getByRole('button', { name: t['investor.unit.openGallery'] })
       expect((boton as HTMLButtonElement).disabled).toBe(false)
@@ -511,7 +503,6 @@ describe('/investor/unit/$unitId', () => {
       await screen.findByText(t['investor.unit.photosCount'].replace('{count}', '2'))
       const boton = screen.getByRole('button', { name: t['investor.unit.openGallery'] })
       expect((boton as HTMLButtonElement).disabled).toBe(false)
-      // Una foto de evidencia ya no hace de portada.
       expect(boton.querySelector('img')).toBeNull()
     })
 
@@ -796,7 +787,6 @@ describe('/investor/unit/$unitId', () => {
       montar()
       await esperarChips()
 
-      // Sin TXID el chip no es clicable: el anclaje no está sustanciado.
       expect((chip(1) as HTMLButtonElement).disabled).toBe(true)
     })
 

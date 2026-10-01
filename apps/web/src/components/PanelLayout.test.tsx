@@ -22,8 +22,6 @@ vi.mock('#/api/port', () => ({
 
 type Rol = 'investor' | 'developer' | 'notary' | 'certifier' | 'admin'
 
-// Las pantallas a las que la campana y el perfil pueden llevar: el test lee
-// dónde terminó el router, no un mock de `navigate`.
 const DESTINOS = [
   '/admin',
   '/investor/profile',
@@ -115,8 +113,6 @@ describe('PanelLayout (D-074)', () => {
     expect(texto.indexOf('Inversores')).toBeGreaterThan(texto.indexOf('Volver al panel'))
   })
 
-  // SPEC-103 (F-07): el aria-label de la campana decía solo "Notificaciones",
-  // sin el dato que el prop `unread` ya tenía.
   describe('campana: el aria-label interpola el conteo real (SPEC-103)', () => {
     it('unread === 0 usa la clave sin contador', async () => {
       vi.mocked(api.getUnreadCount).mockResolvedValueOnce({ unread: 0 })

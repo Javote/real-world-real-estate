@@ -27,7 +27,6 @@ const stage = (n: number, state: string) => ({
   updatedAt: '2026-01-01T00:00:00.000Z'
 })
 
-/** Proyecto completo: con ubicación, entrega, organización y tres etapas. */
 const proyectoCompleto = (over: Record<string, unknown> = {}) =>
   ({
     id: 'p1',
@@ -50,7 +49,6 @@ const proyectoCompleto = (over: Record<string, unknown> = {}) =>
     ...over
   }) as unknown as Proyecto
 
-/** Proyecto mínimo: todos los nullables en `null` y sin etapas. */
 const proyectoMinimo = () =>
   proyectoCompleto({
     address: null,
@@ -144,16 +142,11 @@ describe('/project/:projectId (investor)', () => {
     expect(detalle.textContent).toContain('Rosario, Argentina')
     expect(detalle.textContent).toContain('2027')
     expect(detalle.textContent).toContain('Etapa actual: Etapa-2')
-    // 1 de 3 etapas completadas.
     expect(detalle.textContent).toContain('33%')
 
-    // La tarjeta de estado toma el color de su familia en la matriz de M2-D3
-    // (en obra → pending, como el pill de "Buy") y centra en los dos ejes.
     const tarjeta = screen.getByText(t['project.status.in_progress']).closest('article')
     expect(tarjeta?.className).toContain('bg-pending-light')
     expect(tarjeta?.className).toContain('text-pending')
-    // Borde del mismo tono, por dentro (no agranda la tarjeta): el fondo claro
-    // sin él casi no se separaba del gris de la página.
     expect(tarjeta?.className).toContain('ring-inset')
     expect(tarjeta?.className).toContain('ring-pending')
     expect(tarjeta?.className).toContain('items-center')
@@ -265,7 +258,6 @@ describe('/project/:projectId (investor)', () => {
       'article'
     )!
     const pendiente = within(docs).getByRole('button', { name: 'd2.pdf' }).closest('article')!
-    // La foto no es un documento.
     expect(within(docs).queryByText('f1.jpg')).toBeNull()
     expect(anclado.textContent).toContain(t['status.verified'])
     expect(pendiente.textContent).toContain(t['status.pending'])
@@ -316,13 +308,11 @@ describe('/project/:projectId (investor)', () => {
       documentos: [fotoDoc('f1'), fotoDoc('f2')]
     })
 
-    // La portada tiene `alt=""` (decorativa): no hay rol `img` que consultar.
     await waitFor(() =>
       expect(document.querySelector('img')?.getAttribute('src')).toBe(
         '/api/v1/public/projects/p1/cover?v=2026-09-30T12%3A00%3A00.000Z'
       )
     )
-    // Las fotos de evidencia no se bajan hasta abrir la galería.
     expect(api.downloadEvidence).not.toHaveBeenCalled()
 
     await userEvent.click(screen.getByRole('button', { name: t['investor.unit.openGallery'] }))
@@ -339,7 +329,6 @@ describe('/project/:projectId (investor)', () => {
     montarConDatos({ documentos: [fotoDoc('f1'), fotoDoc('f2')] })
     await screen.findByRole('heading', { name: 'Torre Norte' })
 
-    // Una foto de evidencia ya no hace de portada: no es material comercial.
     expect(document.querySelector('img')).toBeNull()
 
     await userEvent.click(screen.getByRole('button', { name: t['investor.unit.openGallery'] }))

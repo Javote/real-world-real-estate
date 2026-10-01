@@ -10,24 +10,11 @@ import { explorerTxUrl } from '#/lib/explorer'
 import { HashChip } from './HashChip'
 import { SecondaryButton } from './PrimaryButton'
 
-// **M2-D4 Pattern 3 · TxidModal — "the canonical 'show me the proof' surface".**
-//
-// Es la profundidad 3 de la jerarquía de divulgación: el `VerificationBadge`
-// contesta *¿está anclado?*, el `HashChip` *¿cuál hash?*, y este modal *el hash
-// completo, con link al explorador*.
-//
-// **Nunca se abre solo** (M2-D4 §6.3): siempre lo inicia el usuario. Por eso el
-// componente es controlado —recibe `open`— y no tiene ningún efecto que lo
-// dispare. "Auto-popping it would interrupt flow without consent."
-
 interface TxidModalProps {
   open: boolean
-  /** Test ID de M2-D5 (filas 25v, 50). Va en el contenido: Radix portalea. */
   testId?: string
   onClose: () => void
-  /** Qué ancla este TXID: nombre del documento, acción, título del evento. */
   label: string
-  /** ISO. Se formatea con el locale activo. */
   anchoredAt: string
   txid: string
   labels: {
@@ -69,8 +56,6 @@ export function TxidModal({
 
           <div className="flex flex-col gap-s1">
             <dt className="text-label font-bold uppercase text-text-muted">{labels.txidLabel}</dt>
-            {/* Acá SÍ va el hash completo: es el único lugar donde el
-                entregable lo permite (M2-D4 Pattern 2). */}
             <dd className="break-all rounded-md bg-surface-alt p-s3 font-mono text-mono-body text-text-primary">
               {txid}
             </dd>

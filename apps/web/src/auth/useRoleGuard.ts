@@ -1,8 +1,3 @@
-// Segunda capa de autorización del front (regla 5 / invariante 1 de
-// SPEC-011): cada landing de rol valida contra el grupo de M2-D1, no solo
-// contra "hay sesión". Nadie con rol developer aterriza en /certifier
-// cambiando la URL a mano.
-
 import { useNavigate } from '@tanstack/react-router'
 import { useEffect, useState } from 'react'
 import { ApiError, api } from '../api/port'
@@ -25,9 +20,6 @@ export function useRoleGuard(allowedRoles: readonly UserRole[]) {
         return
       }
 
-      // Valida el token contra el servidor (invariante 12): un token
-      // corrupto/expirado en sessionStorage no debe dejar pasar solo porque
-      // el objeto de sesión sigue ahí.
       try {
         await api.me()
       } catch (err) {
@@ -36,15 +28,10 @@ export function useRoleGuard(allowedRoles: readonly UserRole[]) {
           if (!cancelled) void navigate({ to: '/login' })
           return
         }
-        // Error de red: no desloguea por una falla transitoria de conexión,
-        // deja pasar con la sesión local ya validada en logins anteriores.
       }
 
       if (cancelled) return
 
-      // D-095: el admin pasa por cualquier guard de rol. Es la salvaguarda
-      // del backend —que lo deja pasar en cada ruta— llevada a la web: sin
-      // esto podía hacer todo por API y nada desde una pantalla.
       if (local.user.role !== 'admin' && !allowedRoles.includes(local.user.role)) {
         void navigate({ to: ROLE_LANDING[local.user.role] })
         return

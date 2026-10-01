@@ -11,9 +11,6 @@ import { useTranslation } from '#/i18n/useTranslation'
 import { CARD_SHELL_EMPTY } from '#/lib/cardShell'
 import { avanceDeStages, TONO_PROYECTO } from '#/lib/stageProgress'
 
-// **M2-D5 fila 13 · `/investor/favorites`** — captura 13.
-// Test IDs: INV-FAV-LIST-001, INV-FAV-TOGGLE-002.
-
 export const Route = createFileRoute('/investor/favorites')({
   component: InvestorFavorites
 })
@@ -72,9 +69,6 @@ function InvestorFavorites() {
                 favorited
                 onToggleFavorite={() => quitar.mutate(proyecto.id)}
                 favoriteAriaLabel={t('investor.favorites.unsave')}
-                // **Un test ID identifica una superficie, no N filas.** En la
-                // primera tarjeta: repetido por fila, un `getByTestId` en
-                // strict mode matchea varios elementos y falla.
                 {...(i === 0 ? { favoriteTestId: 'INV-FAV-TOGGLE-002' } : {})}
               />
             )

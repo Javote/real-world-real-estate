@@ -1,15 +1,11 @@
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import { clasificarEntrantes, sha256DeArchivo } from './evidenceFiles'
 
-// SPEC-218 — lo que el front comprueba ANTES de mandar. Es experiencia de
-// usuario, no una barrera: el backend decide con las mismas reglas.
-
-const PDF = [0x25, 0x50, 0x44, 0x46, 0x2d] // %PDF-
+const PDF = [0x25, 0x50, 0x44, 0x46, 0x2d]
 const PNG = [0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]
 const JPEG = [0xff, 0xd8, 0xff, 0xe0]
 
 let n = 0
-/** Un archivo con la firma real de su tipo y un contenido ÚNICO. */
 const archivo = (firma: number[], nombre: string, tipo: string, cola = `u${++n}`) =>
   new File([Uint8Array.from(firma), cola], nombre, { type: tipo })
 
@@ -115,7 +111,6 @@ describe('clasificarEntrantes', () => {
 
     const r = await clasificarEntrantes([original, copia], [])
 
-    // No bloquea: el backend los va a rechazar con su `rejected`.
     expect(r.aceptados).toEqual([original, copia])
     expect(r.rechazados).toEqual([])
   })

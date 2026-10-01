@@ -10,7 +10,6 @@ import { Route } from './developer.projects'
 
 const t = (clave: keyof (typeof dictionary)['es-AR']) => dictionary['es-AR'][clave]
 
-/** Fixture completa: todo lo anulable presente. */
 const completo = (sobre: Partial<DeveloperProject> = {}): DeveloperProject => ({
   id: 'p1',
   name: 'Torre A',
@@ -34,7 +33,6 @@ const completo = (sobre: Partial<DeveloperProject> = {}): DeveloperProject => ({
   ...sobre
 })
 
-/** Fixture mínima: todo lo anulable en `null`. */
 const minimo = (sobre: Partial<DeveloperProject> = {}): DeveloperProject =>
   completo({
     id: 'p2',

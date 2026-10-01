@@ -16,40 +16,6 @@ import { useTranslation } from '#/i18n/useTranslation'
 import { CARD_SHELL, CARD_SHELL_EMPTY } from '#/lib/cardShell'
 import { cn } from '#/lib/cn'
 
-// **M2-D5 filas 40-41 · `/developer/project/:projectId/contracts`** — capturas
-// 40 y 41. Test ID: DEV-CONTRACTS-LIST-001.
-//
-// **Esta pantalla NO se transcribe con el encuadre de las capturas** (D-070).
-// Lo que muestran es una plataforma que habilita y ejecuta pagos por etapa:
-// "Stage 4/10 released", montos por etapa, "Release stage 5 payment", y un
-// estado "In dispute" que solo tiene sentido si hay plata en juego. Este
-// producto no administra fondos — refleja y respalda lo que pasa afuera. D-070
-// lo dice con todas las letras: *"muestran el contrato como registro y el
-// estado comercial de la unidad, no un botón de liberar"*.
-//
-// **DEV-RELEASE-EXECUTE-002 queda sin reclamar, y es a propósito.** Es el
-// segundo test ID de la fila y no se implementa: pintarlo sobre otra cosa para
-// que el medidor suba sería mentirle al medidor. El endpoint
-// `POST /developer/contracts/:id/releases/:stageNum` sigue en el backend como
-// deuda declarada de D-070 y esta pantalla no lo llama; el `ApiPort` ni
-// siquiera lo expone.
-//
-// **Lo que sí queda es lo que se puede sostener.** El contrato como registro
-// —quién, qué unidad, cuánto, cuándo se firmó— y el anclaje del acuerdo, que
-// es una de las cuatro afirmaciones de D-026: *se registró en este momento*.
-// Ese anclaje no lo emite el contrato sino el accept del investor, así que el
-// backend lo alcanza por la invitación.
-//
-// **Los tres StatCard de la fila se quedan; sus tres métricas no.** Activo /
-// Liberado / En disputa son estados de un flujo de pagos. En su lugar van tres
-// hechos del registro: cuántos contratos hay, cuánto suman y cuántos están
-// anclados.
-//
-// **P1 y P2 componen, no se superponen** (M2-D4 §6.1): el badge contesta
-// "¿está anclado?" (profundidad 1) y el chip "¿cuál TXID?" (profundidad 2). El
-// chip no abre el TxidModal porque la profundidad 3 no la pide esta fila, y un
-// tercer patrón compitiendo por la misma respuesta es redundancia, no rigor.
-
 export const Route = createFileRoute('/developer/project/$projectId/contracts')({
   component: ProjectContracts
 })
@@ -82,8 +48,6 @@ function ProjectContracts() {
   if (!ready) return null
 
   const lista = contratos ?? []
-  // Suma de montos ACORDADOS, no de plata que la plataforma tenga (D-021). En
-  // unidades mínimas enteras de punta a punta: la división la hace `Intl`.
   const total = lista.reduce((acc, c) => acc + c.totalMinorUnits, 0)
   const anclados = lista.filter((c) => c.txid !== null).length
   const moneda = lista[0]?.currency ?? 'USD'

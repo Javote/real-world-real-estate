@@ -1,18 +1,9 @@
-// Grupos canónicos de AuthGuard (M2-D1 §Authentication and Role Gating).
-// El valor del enum de dominio no coincide con la etiqueta de UI todavía
-// (`buyer`→Investor, `verifier`→Certifier: deuda del mismo tipo que D-023,
-// ver SPEC-011 §Preguntas abiertas) — estos grupos son la única traducción.
 import type { UserRole } from '../api/types'
 
 export const INVESTOR_ROLES: readonly UserRole[] = ['buyer']
 export const DEV_ROLES: readonly UserRole[] = ['developer']
 export const NOTARY_ROLES: readonly UserRole[] = ['notary']
 export const CERTIFIER_ROLES: readonly UserRole[] = ['verifier']
-/**
- * D-095: el admin es la salvaguarda — puede hacer todo lo que hace cualquier
- * rol. El backend ya lo deja pasar en cada ruta; en el front, `useRoleGuard`
- * lo deja entrar a cualquier superficie. Este grupo es el de SU pantalla.
- */
 export const ADMIN_ROLES: readonly UserRole[] = ['admin']
 
 export const ROLE_LANDING: Record<UserRole, string> = {
@@ -20,7 +11,6 @@ export const ROLE_LANDING: Record<UserRole, string> = {
   developer: '/developer',
   notary: '/notary',
   verifier: '/certifier',
-  // D-095 · SPEC-221: el admin aterriza en su pantalla. Sigue sin solapa en
-  // /login a propósito — se entra tipeando el usuario.
+  // Sin solapa en /login: el admin entra tipeando el usuario.
   admin: '/admin'
 }

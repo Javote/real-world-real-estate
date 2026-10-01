@@ -14,12 +14,6 @@ import { LocaleProvider } from '#/i18n/useTranslation'
 import { AssignedStagesQueue } from './AssignedStagesQueue'
 import { PendingDossiersQueue } from './PendingDossiersQueue'
 
-// SPEC-105 (F-08) — las dos colas envolvían un SecondaryButton dentro de un
-// <Link>: HTML inválido (<a> no admite contenido interactivo) y violación
-// nested-interactive de axe. El fix es que el botón navegue — un solo
-// elemento interactivo, verificado acá por AUSENCIA de <a> en el árbol y
-// porque el click sí navega.
-
 function montar(Componente: () => React.ReactElement, rutaActual: string) {
   const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } })
   const rootRoute = createRootRoute()

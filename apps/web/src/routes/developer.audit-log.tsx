@@ -17,22 +17,6 @@ import { formatDateTime } from '#/i18n/format'
 import { useTranslation } from '#/i18n/useTranslation'
 import { CARD_SHELL_EMPTY } from '#/lib/cardShell'
 
-// **M2-D5 filas 49 y 50 · `/developer/audit-log`** — captura 49.
-// Test IDs: DEV-AUDIT-LIST-001, DEV-AUDIT-FILTER-002, DEV-AUDIT-VERIFY-001.
-// Patrones: P6 y P3.
-//
-// El header es el de D-074: logo + utilidades, flecha entre el logo y el
-// título. La captura 49 ya coincidía; las hermanas (46, 48) no, y no se
-// transcribe esa omisión.
-//
-// **Es el paso 7 del flujo de evidencia** (M2-D1 §6): el ciclo entero —subida,
-// certificación— queda indexado acá con sus TXIDs.
-//
-// **Append-only** (M2-D4 P6): los eventos no se editan ni se borran. Por eso
-// esta pantalla solo lee y su único gesto es abrir el `TxidModal`, que nunca se
-// abre solo (M2-D4 §6.3).
-
-/** Las cinco categorías del filtro, textuales de M2-D3 §AuditEventCard. */
 const CATEGORIAS: readonly AuditCategory[] = [
   'etapa',
   'certificador',
@@ -41,13 +25,6 @@ const CATEGORIAS: readonly AuditCategory[] = [
   'documento'
 ]
 
-/**
- * De la acción del `AuditLog` a la categoría de la pill.
- *
- * El backend guarda la acción en crudo (`UPLOAD_STAGE_EVIDENCE`, `CERTIFY_STAGE`) y
- * el mapeo a las cinco categorías del entregable es de presentación. Vive acá y
- * no en la API porque es vocabulario de M2-D3, no del dominio.
- */
 function categoriaDe(action: string): AuditCategory {
   if (action.includes('CERTIFY')) return 'certificador'
   if (action.includes('SIGN') || action.includes('DOSSIER')) return 'firma'
@@ -56,7 +33,6 @@ function categoriaDe(action: string): AuditCategory {
   return 'etapa'
 }
 
-/** El rol del actor viene del `User`; `buyer`/`verifier` son los del dominio. */
 function rolDe(role: string | null): ActorRole {
   if (role === 'verifier') return 'certifier'
   if (role === 'notary') return 'notary'
@@ -81,9 +57,6 @@ function AuditLog() {
 
   if (!ready) return null
 
-  // El filtro es del cliente: el endpoint filtra por `entityType` y las
-  // categorías de M2-D3 no son entidades. Con paginación por cursor esto se
-  // mueve al servidor, y ahí sí hace falta que el mapeo viva de aquel lado.
   const eventos = (data?.items ?? []).filter(
     (e) => filtro === null || categoriaDe(e.action) === filtro
   )
@@ -113,9 +86,6 @@ function AuditLog() {
       </div>
 
       <section className="flex flex-col gap-s3" data-testid="DEV-AUDIT-LIST-001">
-        {/* SPEC-114 §5: cada AuditEventCard es un h3, y sin este h2 el
-            recorrido por encabezados saltaba del h1 del header a las cards.
-            sr-only porque el mismo texto ya se ve como subtítulo del header. */}
         <h2 className="sr-only">{t('developer.audit.context')}</h2>
         {isPending ? (
           <Loading />
@@ -157,11 +127,6 @@ function AuditLog() {
         )}
       </section>
 
-      {/* **Solo se monta cuando hay TXID que mostrar.** `TxidModal` formatea
-          la fecha en su cuerpo, así que corre en cada render aunque esté
-          cerrado: con la cadena vacía, `Intl` tira "Invalid time value" y se
-          lleva puesta la pantalla entera. Y además nunca se abre solo
-          (M2-D4 §6.3), así que montarlo cerrado no aporta nada. */}
       {verTxid ? (
         <TxidModal
           open

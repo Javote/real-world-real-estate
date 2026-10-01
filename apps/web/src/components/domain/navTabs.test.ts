@@ -2,11 +2,6 @@ import { describe, expect, it } from 'vitest'
 import { tabNeedsExactMatch } from './BottomNav'
 import { NAV_TABS } from './navTabs'
 
-// M2-D3 §Foundation · BottomNav §Usage rules define las cuatro composiciones,
-// con su orden. Este test las fija: si alguien agrega un tab "porque hace
-// falta", se pone rojo — y agregar un tab es cambiar el entregable, no el
-// código.
-
 describe('composiciones del BottomNav', () => {
   it('INV: Menu · Favorites · Buy (FAB) · Units · User', () => {
     expect(NAV_TABS.investor.map((t) => t.labelKey)).toEqual([

@@ -14,15 +14,6 @@ import type { TranslationKey } from '#/i18n/dictionary'
 import { useTranslation } from '#/i18n/useTranslation'
 import { CARD_SHELL } from '#/lib/cardShell'
 
-// **`/admin` · la pantalla del admin** — D-095, SPEC-221. No es de M2-D5: los
-// entregables definen cuatro roles y ninguna superficie de admin. El admin es
-// la salvaguarda: puede entrar a los cuatro paneles (la barra de navegación lo
-// lleva) y, desde acá, hace lo único que no tiene pantalla en ningún rol —
-// invitar a un certifier a un proyecto.
-//
-// Componentes: todos de M2-D3 (SelectDropdown, PrimaryButton, StatusPill) sobre
-// el mismo armazón que los paneles (PanelLayout). Test IDs propios, `ADMIN-*`.
-
 export const Route = createFileRoute('/admin/')({ component: AdminPanel })
 
 const ERRORES_CON_NOMBRE: Record<string, TranslationKey> = {
@@ -56,7 +47,6 @@ function AdminPanel() {
     enabled: ready
   })
 
-  // El más nuevo primero: el caso de uso real es el proyecto recién creado.
   const ordenados = [...(proyectos ?? [])].sort((a, b) => b.createdAt.localeCompare(a.createdAt))
   const projectId = elegido || ordenados[0]?.id || ''
 

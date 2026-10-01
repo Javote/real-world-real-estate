@@ -60,7 +60,6 @@ describe('AnnounceProvider', () => {
     act(() => screen.getByText('polite').click())
     const segundo = document.querySelector('[aria-live="polite"]')?.textContent
     expect(primero).not.toBe(segundo)
-    // Pero el texto visible (sin el caracter invisible) es el mismo mensaje.
     expect(segundo?.replace('​', '')).toBe(primero)
   })
 

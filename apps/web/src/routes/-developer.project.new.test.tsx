@@ -26,13 +26,11 @@ const boton = () => screen.getByRole('button', { name: t('developer.newProject.s
 const nombre = () => screen.findByLabelText(t('developer.newProject.name'))
 const direccion = () => screen.getByLabelText(t('developer.newProject.location'))
 
-/** Marca el lote con un clic en el mapa (D-097): sin punto no se crea. */
 async function marcarLote(lat = -34.5470001234, lng = -58.4600009876) {
   await waitFor(() => expect(L.map).toHaveBeenCalled())
   act(() => L.dispararClick(lat, lng))
 }
 
-/** Un PNG con firma real (el dropzone mira los primeros bytes, no la extensión). */
 const render = () =>
   new File(
     [Uint8Array.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]), 'fachada'],
@@ -44,7 +42,6 @@ const inputDePortada = () =>
 const elegirPortada = (...archivos: File[]) =>
   fireEvent.change(inputDePortada(), { target: { files: archivos } })
 
-/** La búsqueda espera 0,9 s después de la última tecla: los `waitFor` le dan margen. */
 const conMargen = { timeout: 3000 }
 
 beforeEach(() => {
@@ -103,7 +100,6 @@ describe('/developer/project/new', () => {
     montar()
 
     await userEvent.type(await nombre(), 'Torres del Palermo')
-    // Una dirección de puros espacios cuenta como vacía, y no se busca.
     await userEvent.type(direccion(), '   ')
     await marcarLote()
     expect(await screen.findByText('Lote marcado: -34,54700, -58,46000')).toBeTruthy()
@@ -113,7 +109,6 @@ describe('/developer/project/new', () => {
       expect(crear).toHaveBeenCalledWith({
         name: 'Torres del Palermo',
         slug: 'torres-del-palermo',
-        // Seis decimales: -34.5470001234 → -34.547 y -58.4600009876 → -58.460001.
         latitude: -34.547,
         longitude: -58.460001
       })
@@ -220,7 +215,6 @@ describe('/developer/project/new', () => {
     await userEvent.type(direccion(), '0')
     await waitFor(() => expect(pendientes).toHaveLength(3), conMargen)
 
-    // Las dos primeras ya no valen: ni su acierto ni su error cambian nada.
     await act(async () => {
       pendientes[0]?.ok({ match: LIBERTADOR })
       pendientes[1]?.mal(new Error('tarde'))
@@ -284,7 +278,6 @@ describe('/developer/project/new', () => {
     expect(inputDePortada().accept).toBe('image/jpeg,image/png')
     expect(inputDePortada().multiple).toBe(false)
 
-    // Sin portada se crea igual, y no se sube nada.
     await userEvent.type(await nombre(), 'Torre X')
     await marcarLote()
     await userEvent.click(boton())

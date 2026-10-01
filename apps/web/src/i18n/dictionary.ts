@@ -1,6 +1,3 @@
-// Diccionario i18n (D-025). Nace con esta rebanada (SPEC-011): solo las claves
-// que /login y los 4 shells de panel usan. Cero strings hardcodeados en esas
-// pantallas — todo texto visible sale de una clave de acá.
 import type { Locale } from './locale'
 
 const esAR = {
@@ -488,9 +485,6 @@ const esAR = {
   'investor.favorites.empty': 'Todavía no guardaste ningún desarrollo.',
   'investor.favorites.save': 'Guardar en favoritos',
   'investor.favorites.unsave': 'Sacar de favoritos',
-  // Capturas 59-60 · el perfil de la organización desarrolladora (SPEC-220).
-  // Sin clave de rating: D-094, la plataforma no afirma nada sobre la calidad
-  // de un desarrollador.
   'investor.developer.link': 'Ver al desarrollador',
   'investor.developer.title': 'Desarrollador',
   'investor.developer.back': 'Volver a la obra',

@@ -5,11 +5,6 @@ import { AssignedStagesQueue } from '#/components/AssignedStagesQueue'
 import { PanelLayout } from '#/components/PanelLayout'
 import { useTranslation } from '#/i18n/useTranslation'
 
-// **La solapa 2 del certifier.** Misma situación que `/notary/dossiers`: la
-// declara M2-D3 §BottomNav, la cola vive también en el panel (fila 55) y no
-// tiene fila propia en M2-D5, así que no lleva test ID. Ver el comentario largo
-// en `notary.dossiers.tsx`.
-
 export const Route = createFileRoute('/certifier/assigned')({ component: CertifierAssigned })
 
 function CertifierAssigned() {

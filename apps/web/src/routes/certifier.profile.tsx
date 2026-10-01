@@ -3,9 +3,6 @@ import { CERTIFIER_ROLES } from '#/auth/roles'
 import { useRoleGuard } from '#/auth/useRoleGuard'
 import { ProfileScreen } from '#/components/ProfileScreen'
 
-// **M2-D5 fila cer-prof · `/certifier/profile`** (implícita en el backlog).
-// Test ID: CER-PROFILE-001.
-
 export const Route = createFileRoute('/certifier/profile')({ component: CertifierProfile })
 
 function CertifierProfile() {

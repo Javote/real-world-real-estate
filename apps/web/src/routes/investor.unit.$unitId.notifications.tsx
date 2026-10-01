@@ -16,9 +16,6 @@ import { useTranslation } from '#/i18n/useTranslation'
 import { CARD_SHELL_EMPTY } from '#/lib/cardShell'
 import { reintentarSiNoEsAusencia } from '#/lib/investor'
 
-// **M2-D5 fila 22 · `/investor/unit/:unitId/notifications`** — captura 22.
-// Test IDs: INV-NOTIF-UNIT-001, INV-NOTIF-READ-002.
-
 const CATEGORIAS = ['stage', 'document', 'release', 'signature', 'certificate'] as const
 type NotifCategory = (typeof CATEGORIAS)[number]
 
@@ -113,8 +110,6 @@ function InvestorUnitNotifications() {
                 timestampLabel={formatRelative(String(n.createdAt), locale)}
                 read={n.readAt !== null}
                 readLabel={t('investor.notifications.read')}
-                // Solo la PRIMERA sin leer: el ID marca la acción de marcar
-                // leída, no cada fila. Repetido, deja de ser un selector.
                 {...(n.id === primeraSinLeer ? { testId: 'INV-NOTIF-READ-002' } : {})}
                 {...(filtro ? { category: BORDE[categoria] } : {})}
                 onOpen={n.readAt === null ? () => marcarLeida.mutate(n.id) : undefined}

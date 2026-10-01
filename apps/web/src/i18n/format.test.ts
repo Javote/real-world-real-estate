@@ -7,15 +7,8 @@ import {
   formatRelative
 } from './format'
 
-// Regla 14: moneda, fecha y relativos salen de `Intl` con el locale activo. Los
-// tests comparan CONTRA EL OTRO LOCALE, no contra un string fijo: lo que
-// importa es que el locale cambie el resultado, no la forma exacta que elija la
-// implementación de ICU del runtime.
-
 describe('formatCurrency', () => {
   it('recibe unidades mínimas enteras y divide acá', () => {
-    // 400000 centavos = US$ 4.000. Si el componente recibiera 4000 ya
-    // dividido, esa división habría pasado por un float en algún lado.
     expect(formatCurrency(400000, 'USD', 'en-US')).toContain('4,000')
   })
 
@@ -28,8 +21,6 @@ describe('formatCurrency', () => {
 
 describe('formatCurrencyCompact', () => {
   it('recibe unidades mínimas enteras, igual que formatCurrency', () => {
-    // 84_000_000 centavos = US$ 840.000 → compacto. Lo que se afirma es la
-    // MAGNITUD, no la forma: "840K" y "840 mil" son la misma cuenta.
     expect(formatCurrencyCompact(84_000_000, 'USD', 'en-US')).toContain('840')
   })
 

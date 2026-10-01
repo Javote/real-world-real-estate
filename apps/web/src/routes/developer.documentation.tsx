@@ -13,29 +13,6 @@ import { formatDate } from '#/i18n/format'
 import { useTranslation } from '#/i18n/useTranslation'
 import { CARD_SHELL_EMPTY } from '#/lib/cardShell'
 
-// **M2-D5 filas 46-47 · `/developer/documentation`** — capturas 46 y 47.
-// Endpoints: GET /developer/documents · POST /developer/documents (anclar).
-// Test IDs: DEV-DOCS-LIST-001, DEV-DOC-ANCHOR-002. Patrones: P1, P2.
-//
-// **El corte en dos secciones no es de presentación: es la regla 17.** Un
-// documento está en "Verificados" si y solo si tiene TXID. Con hash pero sin
-// anclaje confirmado va a "Pendientes", nunca a la de arriba (D-027 y M2-D4
-// §6.2). Por eso el filtro es `txid !== null` y no un campo de estado: el
-// `DocumentCard` deriva el pill del mismo dato, así que no pueden discrepar.
-//
-// **El hash va truncado 6+4, contra lo que dice M2-D1.** El Screen Tree pide
-// "full hash chips per document", pero M2-D4 es normativo para todo lo que
-// muestre un hash (CLAUDE.md §Antes de empezar una superficie) y ahí la regla
-// no admite lectura: *"Never display the full untruncated hex inline — only in
-// the verification modal"*, con la jerarquía de profundidad repitiéndolo
-// (§190-191: depth 2 son 6+4, el hash completo es depth 3). La captura muestra
-// el hash largo desbordando la card, que es la maqueta incumpliendo su propio
-// patrón. `HashChip` recibe el hash COMPLETO igual (regla 16) y lo copia
-// entero: la truncación es solo visual.
-//
-// **El chip no abre modal acá.** La fila 46-47 lista P1 y P2, no P3, así que
-// `DocumentCard` va sin `onOpenProof` y el chip queda en lectura + copia.
-
 export const Route = createFileRoute('/developer/documentation')({
   component: DeveloperDocumentation
 })
@@ -138,15 +115,9 @@ function DeveloperDocumentation() {
                 uploadedAtLabel={formatDate(String(d.uploadedAt), locale)}
                 format={d.category}
                 sha256={d.sha256Hash}
-                // Sin TXID: el pill dice "Pendiente" porque el componente lo
-                // deriva de este mismo `null`, no de un flag aparte.
                 txid={null}
                 labels={etiquetas}
               />
-              {/* **El anclaje lo inicia el usuario, siempre.** Un documento con
-                  hash es candidato a la cadena de prueba (D-027), pero anclarlo
-                  solo al abrir la pantalla sería una escritura on-chain que
-                  nadie pidió. */}
               <PrimaryButton
                 onClick={() => anclar.mutate(d.id)}
                 disabled={anclar.isPending || !d.sha256Hash}

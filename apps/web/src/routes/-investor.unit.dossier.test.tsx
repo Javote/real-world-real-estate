@@ -55,7 +55,6 @@ const stagesDeObra = [
     bundleId: null,
     txid: null
   },
-  // Duplicado del join bundles/eventos: se muestra una sola vez.
   {
     stageId: 's1',
     name: 'Cimientos',
@@ -122,7 +121,6 @@ describe('/investor/unit/$unitId/dossier', () => {
     expect(vista.textContent).toContain('50%')
     expect(vista.textContent).toContain('Plano general')
     expect(vista.textContent).toContain('Etapa sin hash')
-    // Firmado, y un artefacto verificado, el otro pendiente (regla 17).
     expect(vista.textContent).toContain(t['status.signed'])
     expect(vista.textContent).toContain(t['status.verified'])
     expect(vista.textContent).toContain(t['status.pending'])
@@ -168,8 +166,6 @@ describe('/investor/unit/$unitId/dossier', () => {
     montar()
 
     await screen.findByRole('button', { name: t['investor.dossier.export'] })
-    // React Query reintenta un 500 (2 veces, con espera): recién después
-    // deja de estar cargando, y ahí no hay dossier ni error de acceso.
     await waitFor(() => expect(screen.queryByRole('status')).toBeNull(), { timeout: 6000 })
     expect(screen.queryByText(t['error.forbidden'])).toBeNull()
     expect(screen.queryByText(t['investor.dossier.certification'])).toBeNull()
@@ -239,7 +235,6 @@ describe('/investor/unit/$unitId/dossier', () => {
     const modal = await screen.findByTestId('INV-DOSSIER-SHARE-001')
     expect(compartir).toHaveBeenCalledWith('u1')
     expect(modal.textContent).toContain(t['investor.dossier.shareTitle'])
-    // El enlace va en un HashChip: se ven los primeros y los últimos caracteres.
     expect(modal.textContent).toContain('k123')
   })
 

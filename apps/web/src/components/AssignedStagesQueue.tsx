@@ -5,12 +5,6 @@ import { Loading } from '#/components/domain/Loading'
 import { SecondaryButton } from '#/components/domain/PrimaryButton'
 import { useTranslation } from '#/i18n/useTranslation'
 
-// La cola de etapas asignadas al certifier (M2-D5 fila 55).
-//
-// Vive suelta porque aparece en DOS lugares —el panel y la solapa "Assigned"—
-// y duplicarla garantizaría que se desincronicen. No es un componente de
-// M2-D3: es composición, como `PanelLayout`.
-
 export function AssignedStagesQueue() {
   const { t } = useTranslation()
   const navigate = useNavigate()
@@ -32,11 +26,6 @@ export function AssignedStagesQueue() {
       {asignados.map((asignacion) => (
         <li
           key={asignacion.stageId}
-          // SPEC-106 (F-11): mismo defecto que PendingDossiersQueue —
-          // `bg-surface-alt` (gris) donde el resto de las listas de la app
-          // usa `bg-card`. La spec solo nombraba la cola del escribano, pero
-          // la invariante 2 ("todas las listas comparten fondo") es general
-          // y esta es la misma cola-tarjeta con el mismo copy-paste.
           className="flex items-center justify-between gap-s3 rounded-lg bg-card p-s3"
         >
           <div className="flex min-w-0 flex-col">
@@ -51,10 +40,6 @@ export function AssignedStagesQueue() {
             </span>
           </div>
 
-          {/* La captura muestra un pill compacto de borde naranja: es el
-              SecondaryButton con el token `pending`, no un componente nuevo.
-              SPEC-105 (F-08): el botón navega — un Link envolviéndolo era un
-              elemento interactivo anidado dentro de otro. */}
           <SecondaryButton
             className="shrink-0 border-pending px-s3 py-s1 text-body-sm text-pending"
             onClick={() =>

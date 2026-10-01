@@ -1,38 +1,11 @@
 import { expect, test } from '@playwright/test'
 import { loginConSolapa } from './_helpers'
 
-// **M2-D5 filas 40-41 · `/developer/project/:projectId/contracts`** — capturas
-// 40 y 41. Test ID: DEV-CONTRACTS-LIST-001.
-//
-// **DEV-RELEASE-EXECUTE-002 no aparece acá porque no existe** (D-070): la
-// plataforma no administra fondos y la pantalla no ofrece liberar nada. Lo que
-// este test afirma al final es justamente esa ausencia — un invariante que se
-// rompe callado, porque agregar un botón "Liberar etapa N" no rompe ningún
-// otro test.
-//
-// El contrato se produce con el ciclo real —unidad → invitación → accept— y no
-// con un fixture: el anclaje que la pantalla muestra lo emite el accept del
-// investor, así que un contrato insertado a mano no tendría TXID y el test
-// pasaría sin probar lo que importa.
-//
-// **Los dos pasos de API van por `page.evaluate`** y no por la UI porque las
-// filas del investor (INV-INVITE-VIEW-001, INV-INVITE-ACCEPT-002) todavía no
-// están transcritas. Mismo recurso que usa `evidence-flow.spec.ts` para
-// resolver el stage del certifier.
-
 const token = (page: import('@playwright/test').Page) =>
   page.evaluate(
     () => JSON.parse(sessionStorage.getItem('proptrust.session') ?? '{}')?.token ?? null
   )
 
-/**
- * Cambia de rol de verdad.
- *
- * **`loginConSolapa` sola no alcanza cuando ya hay sesión.** Espera a que
- * `proptrust.session` exista, y si venís de otro rol ya existe: el poll vuelve
- * en el primer intento y el test sigue con el token anterior. Se ve como un 403
- * del endpoint del rol nuevo y parece un problema de permisos.
- */
 async function cambiarDeRol(page: import('@playwright/test').Page, rol: string) {
   await page.goto('/login')
   await page.evaluate(() => sessionStorage.clear())
@@ -79,7 +52,6 @@ test.describe('Filas 40-41 — los contratos como registro', () => {
       [tokenDev, referencia] as const
     )
 
-    // El accept es lo que crea el contrato Y lo que ancla el commitment.
     await cambiarDeRol(page, 'Investor')
     const tokenInv = await token(page)
     const aceptado = await page.evaluate(
@@ -99,20 +71,14 @@ test.describe('Filas 40-41 — los contratos como registro', () => {
     await page.goto(`/developer/project/${projectId}`)
     await expect(page.getByTestId('DEV-PROJECT-DETAIL-001')).toBeVisible()
 
-    // Por el tile: que la superficie sea ALCANZABLE es parte de lo que se
-    // prueba (D-072).
     await page.getByRole('button', { name: /contratos|contracts/i }).click()
     await expect(page.getByTestId('DEV-CONTRACTS-LIST-001')).toBeVisible()
 
     const tarjeta = page.locator('article').filter({ hasText: referencia })
     await expect(tarjeta).toBeVisible()
-    // El estado comercial de la unidad — lo que D-070 dice que SÍ se puede
-    // mostrar — y el anclaje del acuerdo.
     await expect(tarjeta).toContainText(/vendida|sold/i)
     await expect(tarjeta.getByText(/registrado en cadena|recorded on chain/i)).toBeVisible()
 
-    // **El invariante de D-070.** Ningún botón de liberar, en ninguno de los
-    // dos idiomas, en toda la pantalla.
     await expect(page.getByRole('button', { name: /liberar|release/i })).toHaveCount(0)
   })
 })

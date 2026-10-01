@@ -55,7 +55,6 @@ function preparar(opts: {
 
 const montar = () => montarRuta(Route.options.component as () => React.ReactElement, '/admin/')
 
-/** Espera a que el select de certificadores tenga la opción, elige y pulsa "Invitar". */
 async function invitarA(id: string, nombre: string) {
   const select = await screen.findByLabelText(t['admin.certifier'])
   await within(select).findByText(nombre)
@@ -146,7 +145,6 @@ describe('/admin (invitar certificadores)', () => {
     })
     montar()
 
-    // Las invitaciones y el detalle llegan aparte de los usuarios: se espera a las dos.
     await screen.findByText('Ya Certifica', { selector: 'span' })
     await screen.findByText('Con Pendiente', { selector: 'span' })
     const select = screen.getByLabelText(t['admin.certifier'])

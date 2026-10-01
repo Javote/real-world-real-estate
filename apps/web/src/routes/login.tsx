@@ -13,14 +13,6 @@ import { useAnnounce } from '../lib/announce'
 
 export const Route = createFileRoute('/login')({ component: LoginScreen })
 
-// Perfiles del seed (apps/api/src/db/seed.ts). El rol "certifier" y
-// "investor" de la maqueta corresponden a los roles globales `verifier` y
-// `buyer` del backend — ver SPEC-011 §Preguntas abiertas.
-//
-// La solapa precarga solo el usuario, nunca la contraseña: la del seed depende
-// de `SEED_DEMO_PASSWORD` en cada entorno, y un default local escrito acá
-// autocompletaba una password que en producción no existe (y la publicaba en
-// el bundle).
 export const ROLE_PRESETS = [
   { key: 'buyer', tabKey: 'login.tabs.investor', email: 'buyer@example.com' },
   { key: 'developer', tabKey: 'login.tabs.developer', email: 'developer@example.com' },
@@ -62,15 +54,11 @@ export function LoginScreen() {
     try {
       const res = await api.login(email, password)
       setSession({ token: res.token, user: res.user })
-      // Invariante 2: el ruteo usa el rol que devolvió la API, nunca la
-      // solapa que el usuario tocó antes de enviar el formulario.
       const landing = ROLE_LANDING[res.user.role]
       void navigate({ to: landing })
     } catch (err) {
       const key = errorKeyFor(err)
       setErrorKey(key)
-      // assertive: invalida la acción en curso, se anuncia el mismo texto que
-      // ya se ve en pantalla (invariante 2, no una segunda redacción).
       announce(t(key), 'assertive')
     } finally {
       setBusy(false)
@@ -85,8 +73,6 @@ export function LoginScreen() {
         right={<LanguageToggle />}
       />
 
-      {/* SPEC-114 §6: sin <main>, todo lo de abajo quedaba fuera de
-          landmarks y el rotor de VoiceOver no ofrecía adónde saltar. */}
       <main>
         <form className="px-4 py-6" onSubmit={submit}>
           <p className="mb-4 text-center text-sm text-text-muted">{t('login.demoHint')}</p>

@@ -12,15 +12,6 @@ import { useTranslation } from '#/i18n/useTranslation'
 import { CARD_SHELL, CARD_SHELL_EMPTY } from '#/lib/cardShell'
 import { cn } from '#/lib/cn'
 
-// **M2-D5 fila 53 · `/notary/signed`** — captura 53-NOTARY-SIGNED.
-// Componentes: HashChip (dossier hash + signature TXID), StatusPill.
-// Endpoint: GET /notary/signatures?cursor=. Test ID: NOT-SIGNED-LIST-001.
-// Patrón: P2.
-//
-// **Dos hashes por fila, y son cosas distintas.** El `masterHash` es lo que se
-// firmó; el `signatureTxid` es la prueba de que se firmó. Mostrar uno solo
-// dejaría al notario sin poder demostrar qué atestiguó exactamente.
-
 export const Route = createFileRoute('/notary/signed')({ component: SignedDossiers })
 
 function SignedDossiers() {
@@ -48,8 +39,6 @@ function SignedDossiers() {
                   <h2 className="text-body font-bold text-text-primary">
                     {f.projectName} · {f.unitReference}
                   </h2>
-                  {/* Sin TXID el estado es "Pendiente" aunque el registro diga
-                      firmado: la prueba puede no haber confirmado (regla 17). */}
                   <StatusPill tone={f.signatureTxid ? 'verified' : 'pending'}>
                     {f.signatureTxid ? t('status.signed') : t('status.pending')}
                   </StatusPill>

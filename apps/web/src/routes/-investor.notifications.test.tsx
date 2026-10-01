@@ -144,7 +144,6 @@ describe('/investor/notifications', () => {
     const pedir = vi.spyOn(api, 'getInvitation')
     montarRuta(Route, '/investor/notifications', [], '/investor/notifications?invitation=')
 
-    // Sin invitación válida, la lista vacía es lo que se ve.
     await screen.findByText(t('investor.notifications.empty'))
     expect(pedir).not.toHaveBeenCalled()
   })
@@ -265,7 +264,6 @@ describe('/investor/notifications', () => {
 
       const cta = await screen.findByText(t('investor.invite.cta'))
       expect(pedir).toHaveBeenCalledWith('inv-9')
-      // Fija: la card de la invitación va antes que la notificación más nueva.
       const lista = screen.getByTestId('INV-NOTIF-LIST-001')
       const botones = within(lista).getAllByRole('button')
       expect(botones[0]!.textContent).toContain(t('investor.invite.title'))
@@ -293,7 +291,6 @@ describe('/investor/notifications', () => {
       await userEvent.click(await screen.findByTestId('INV-INVITE-ACCEPT-002'))
 
       expect(aceptar).toHaveBeenCalledWith('inv-9')
-      // Ya estaba leída: abrirla no vuelve a marcar.
       expect(marcar).not.toHaveBeenCalled()
       await waitFor(() => expect(router.state.location.pathname).toBe('/investor/unit/un-9'))
     })

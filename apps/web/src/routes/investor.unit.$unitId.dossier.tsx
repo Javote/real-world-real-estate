@@ -20,17 +20,6 @@ import { cn } from '#/lib/cn'
 import { reintentarSiNoEsAusencia, unicosPorStageId } from '#/lib/investor'
 import { bajarBlob, timelineDeStages } from '#/lib/stageProgress'
 
-// **M2-D5 filas 26-29 y 28s · `/investor/unit/:unitId/dossier`**
-// Test IDs: INV-DOSSIER-VIEW-001, INV-DOSSIER-EXPORT-002, INV-DOSSIER-SHARE-001.
-// Patrón P8. El dossier incompleto no se bloquea: la barra lo refleja.
-//
-// **Dos dimensiones, dos componentes** (M2-D4 §6.1 — "patterns compose, never
-// overlap"): `ProgressBar` de acá abajo es la de PRUEBA — qué fracción de los
-// artefactos tiene TXID (regla 17). El `ProgressTimeline` que se agregó es la
-// de OBRA — en qué etapa va la construcción, mismos datos que ya usa
-// `/investor/unit/:unitId` vía `getInvestorUnit`. Son preguntas distintas y
-// las capturas 26-29 muestran las dos.
-
 export const Route = createFileRoute('/investor/unit/$unitId/dossier')({
   component: InvestorDossier
 })

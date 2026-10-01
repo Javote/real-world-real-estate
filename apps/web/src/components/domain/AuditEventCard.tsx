@@ -2,25 +2,8 @@ import { CARD_SHELL_DENSE } from '#/lib/cardShell'
 import { cn } from '#/lib/cn'
 import { HashChip } from './HashChip'
 
-// M2-D3 §Cards · AuditEventCard — **patrón P6 de M2-D4**, la fila del audit log
-// del developer (captura 49).
-//
-// **Append-only**: los eventos no se editan ni se borran. Por eso el componente
-// no tiene ninguna acción de edición y su único gesto es abrir el `TxidModal`.
-//
-// **Las dos pills tienen paleta propia y cerrada.** M2-D3 pide que el color de
-// la categoría acompañe al del rol "for visual scanning". Los datos de la
-// captura no siguen ese emparejamiento —son mock, no diseño— así que lo que se
-// transcribe es la ESTRUCTURA (posición y forma de cada pill) y el color sale
-// de la matriz semántica, que sí es normativa.
-//
-// **Sin TXID no se dibuja el chip.** Un evento anclado que todavía no confirmó
-// no puede mostrar una prueba que no existe (regla 17).
-
-/** Las cinco categorías del audit log. Las mismas que las notificaciones. */
 export type AuditCategory = 'etapa' | 'certificador' | 'firma' | 'liberacion' | 'documento'
 
-/** Los cuatro roles que producen eventos. */
 export type ActorRole = 'developer' | 'certifier' | 'notary' | 'investor'
 
 const CATEGORIA: Record<AuditCategory, string> = {
@@ -39,16 +22,12 @@ const ROL: Record<ActorRole, string> = {
 }
 
 interface AuditEventCardProps {
-  /** Ya formateado con `Intl` (regla 14). */
   timestampLabel: string
-  /** Título de la acción, ya traducido desde su clave (regla 15). */
   title: string
   category: { key: AuditCategory; label: string }
   actor: { role: ActorRole; roleLabel: string; name: string }
-  /** `null` mientras el anclaje no confirmó. */
   txid: string | null
   labels: { copy: string; copied: string }
-  /** Abre el TxidModal (P3). */
   onOpenProof?: () => void
   className?: string
 }

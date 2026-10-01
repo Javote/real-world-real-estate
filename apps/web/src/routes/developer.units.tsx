@@ -13,22 +13,6 @@ import { useTranslation } from '#/i18n/useTranslation'
 import { CARD_SHELL, CARD_SHELL_EMPTY } from '#/lib/cardShell'
 import { cn } from '#/lib/cn'
 
-// **M2-D5 fila 44 · `/developer/units`** — el inventario cruzando proyectos.
-// Endpoint: GET /developer/units. Test ID: DEV-UNITS-INVENTORY-001.
-//
-// **La captura no es una lista de unidades: es una lista de PROYECTOS** con
-// Total / Vendidas / Disponibles y una barra de ocupación. Las filas sueltas
-// de `UnitCard` (variante developer) viven en `/developer/project/:id/units`
-// (captura 44b), que es otra superficie.
-//
-// **Sin foto en la card.** `DeveloperUnit` no trae imagen y `Project` tampoco
-// tiene columna para una. La ubicación sí: sale de `GET /developer/projects`,
-// que ya la tiene. El badge con ícono es lo que el resto de la app usa cuando
-// hay una entidad y no hay foto.
-//
-// La ocupación es vendidas / total. Reservadas cuentan en el total y no en
-// ninguno de los otros dos tiles — la captura 44 no tiene "Reservadas".
-
 export const Route = createFileRoute('/developer/units')({ component: DeveloperUnits })
 
 function DeveloperUnits() {
@@ -147,7 +131,6 @@ function agrupar(unidades: DeveloperUnit[]) {
   return [...mapa.values()]
 }
 
-/** Los tres conteos chicos DENTRO de la card. No es un StatCard: no lleva ícono. */
 function Conteo({ value, label }: { value: string; label: string }) {
   return (
     <div className="flex flex-col items-center rounded-lg bg-surface-alt p-s2">

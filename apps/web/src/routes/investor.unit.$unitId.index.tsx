@@ -33,10 +33,6 @@ import {
 } from '#/lib/investor'
 import { avanceDeStages, timelineDeStages } from '#/lib/stageProgress'
 
-// **M2-D5 filas 15-18, 19, 20, 21, 25m · `/investor/unit/:unitId`**
-// Test IDs: INV-UNIT-DETAIL-001, INV-UNIT-NEWS-002, INV-UNIT-GALLERY-001,
-// INV-UNIT-LOC-001, INV-UNIT-BUILDING-001. P9 (+ P5 en el hito).
-
 export const Route = createFileRoute('/investor/unit/$unitId/')({
   component: InvestorUnitDetail
 })
@@ -68,18 +64,9 @@ function InvestorUnitDetail() {
     enabled: ready && Boolean(unidad),
     retry: reintentarSiNoEsAusencia,
     refetchInterval: (query) => intervaloDeNovedades(query.state.data),
-    // Sin esto, cambiar de pestaña pausa el poll (default de la librería) y la
-    // confirmación vuelve a depender de que el investor esté mirando esta
-    // pantalla en el instante exacto en que entra al bloque — la misma espera
-    // que el fix existe para evitar.
     refetchIntervalInBackground: true
   })
 
-  // SPEC-104 (F-03): el poll de arriba puede confirmar una novedad con la
-  // pestaña en background — se anuncia recién cuando vuelve el foco (el
-  // efecto corre igual, pero el lector de pantalla no lee nada sin foco) y
-  // agregado, no un anuncio por evento: `refetchIntervalInBackground` puede
-  // acumular varias confirmaciones entre dos renders.
   const noticiasPrevias = useRef<{ id: string; status: string | null }[]>([])
   useEffect(() => {
     if (!news) return
@@ -126,16 +113,10 @@ function InvestorUnitDetail() {
     queries: fotos.map((f) => ({
       queryKey: ['evidence-blob', f.id],
       queryFn: async () => objectUrl(await api.downloadEvidence(f.id)),
-      // `gcTime: 0`: la URL se revoca al desmontar, así que la caché no puede
-      // sobrevivirle — devolvería una URL muerta al volver a la pantalla.
       gcTime: 0,
-      // Solo con la galería abierta: la portada es la del proyecto (D-099).
       enabled: ready && Boolean(unidad) && galeria
     }))
   })
-  // D-099: la foto de la unidad es la portada de su proyecto (capturas 14 y
-  // 15), no la primera foto de evidencia. Encabeza la galería; las fotos de
-  // evidencia van detrás.
   const portada = proyecto ? projectCoverUrl(proyecto.id, proyecto.coverUpdatedAt) : null
   const imagenes = [
     ...(portada ? [{ url: portada, alt: t('investor.unit.gallery') }] : []),
@@ -183,9 +164,6 @@ function InvestorUnitDetail() {
                   : ('occupied' as const)
           }))
   )
-  // El esquema solo se abre desde el botón "edificio", que exige la unidad cargada
-  // y con piso (`tienePisos`, con el esquema aún sin pedir). Se agrupan para que el
-  // tipo lo garantice.
   const esquema =
     unidad && unidad.floor != null && unidadesEsquema.length
       ? { unidad, floor: unidad.floor, unidades: unidadesEsquema }
@@ -206,9 +184,6 @@ function InvestorUnitDetail() {
           <button
             type="button"
             onClick={() => setGaleria(true)}
-            // SPEC-105 (F-12): sin fotos no hay nada que abrir — `disabled`,
-            // no un handler que no hace nada. El usuario tiene que poder
-            // distinguir "no hay nada" de "no anduvo".
             disabled={cantidadDeImagenes === 0}
             className="relative overflow-hidden rounded-xl bg-surface-alt disabled:cursor-not-allowed disabled:opacity-60"
             aria-label={t('investor.unit.openGallery')}
@@ -229,13 +204,10 @@ function InvestorUnitDetail() {
           <button
             type="button"
             onClick={() => setMapa(true)}
-            // SPEC-105 (F-12): sin coordenadas no hay mapa que abrir.
             disabled={proyecto?.latitude == null || proyecto?.longitude == null}
             className="overflow-hidden rounded-xl bg-card text-left shadow-e1 disabled:cursor-not-allowed disabled:opacity-60"
             aria-label={t('investor.unit.openMap')}
           >
-            {/* La miniatura de la captura 15: el mapa real, quieto. El clic es
-                de este botón, que lo abre en grande. */}
             {proyecto?.latitude != null && proyecto.longitude != null ? (
               <span className="block aspect-video">
                 <LocationMapModal
@@ -509,7 +481,6 @@ function InvestorUnitDetail() {
 
       <Dialog
         open={Boolean(bundleId)}
-        // Sin trigger, el único cambio posible es el cierre.
         onOpenChange={() => {
           setBundleId(null)
           setPrueba(null)

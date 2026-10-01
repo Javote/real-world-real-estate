@@ -14,36 +14,6 @@ import { CARD_SHELL } from '#/lib/cardShell'
 import { cn } from '#/lib/cn'
 import { avanceDeStages, TONO_PROYECTO } from '#/lib/stageProgress'
 
-// **M2-D5 fila 37 · `/developer/project/:projectId`** — captura 37.
-// Componentes: ActionCard (grilla de 4), StatCard (3).
-// Endpoint: GET /developer/projects/:id. Test ID: DEV-PROJECT-DETAIL-001.
-//
-// Es el hub del proyecto: el paso 1 del flujo de evidencia entra por acá
-// ("Project detail → Upload evidence", M2-D1 §6).
-//
-// **Los cuatro tiles son los cuatro de la captura.** El de contratos dice
-// "Contratos" y no "Contratos y liberaciones" porque la pantalla a la que
-// lleva es el registro de los acuerdos, no un flujo de pagos (D-070): el tile
-// no puede prometer lo que su destino no hace.
-//
-// Los dos tiles que ocupaban esos lugares mientras las pantallas no existían
-// —"Inversores" y "Registro de auditoría"— se fueron de acá: los dos iban a
-// destinos GLOBALES, no a nada de este proyecto. Viven en los accesos del
-// panel, que es la sección que D-072 creó justamente para eso.
-//
-// **Las tres stats son Avance / Capital / Inversores**, no Avance / Etapas /
-// Evidencia. El capital y el conteo de investors salen de
-// `GET /developer/capital/by-project` (la fila de ESTE proyecto); el avance,
-// del detalle. El monto va compacto porque un tile de una grilla de tres no
-// entra un monto completo (captura 37: "US$ 8.4M").
-//
-// **El orden de la captura:** card blanca (nombre + pill) → acciones → stats.
-// Los ActionCard van `compact`: ícono + label en una línea, sin descripción.
-
-// `.index` porque esta ruta TIENE hijas (`/upload`). Sin el sufijo, TanStack la
-// trata como layout de todo lo que cuelga de `/developer/project/:projectId` y
-// exige un `<Outlet/>`: la pantalla de subir evidencia mostraba el detalle. Es
-// la tercera vez que este archivo-como-layout muerde — ver `notary.index.tsx`.
 export const Route = createFileRoute('/developer/project/$projectId/')({
   component: DeveloperProjectDetail
 })
@@ -145,11 +115,6 @@ function DeveloperProjectDetail() {
 
         <div className="grid grid-cols-3 gap-s3">
           <StatCard
-            // SPEC-109 — GET /developer/projects/:id nunca mandó `progress`
-            // (ni `stageCount`/`priceFromMinorUnits`/`priceCurrency`): el
-            // tipo lo prometía por herencia de la fila de LISTA, y esta
-            // pantalla leía `proyecto?.progress ?? 0` — siempre 0%, tapado
-            // por el fallback. Se deriva de `proyecto.stages`, que sí viaja.
             value={`${avanceDeStages(proyecto?.stages ?? [])}%`}
             label={t('developer.project.progress')}
             icon={TrendingUp}
