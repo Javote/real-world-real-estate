@@ -11,8 +11,8 @@
 
 | Bloque | Ítems | Dónde se verifica |
 |---|---|---|
-| **M3 entregado** | 3.12 (video), 3.13 (pilotos), 3.14 (muestras reserva→escrow), 3.15 (cobertura ≥95%) | `CLAUDE.md` raíz §Lo que queda del plan |
-| **Antes de mainnet (7 ítems)** | Runbook de red (#1), custodia de la clave admin (#2), unicidad de hilo + tope de `evidence_root` (#3), forma de hashes/TXID (#4), `outputRef` buscado (#5), datum validado (#6), decisión sobre las 2 ADA bloqueadas (#7) | `CLAUDE.md` raíz §Antes de mainnet, `SPEC-304`, `SPEC-305`, `SPEC-402`, `SPEC-407`, `SPEC-408` |
+| **M3 entregado y aceptado** | Los 16 criterios del SOM | [`specs/README.md`](README.md) §"Listo" y §Lo que sigue |
+| **Antes de mainnet** | Runbook de red, custodia de la clave admin, unicidad de hilo + tope de `evidence_root`, decisión sobre las 2 ADA bloqueadas, y el proveedor (idea Koios); forma de hashes/TXID, `outputRef` buscado y datum validado van antes, en la Fase 1 | [`specs/README.md`](README.md) §Antes de mainnet, `SPEC-304`, `SPEC-305`, `SPEC-402`, `SPEC-407`, `SPEC-408` |
 | **Dominio nuevo de M4** | Panel de métricas, disputas, NPS, completitud | `SPEC-501`–`SPEC-504` |
 | **Legal** | Greenlight de mainnet por counsel/notary (criterio 2 del SOM) — **es una firma humana, no un paso de este runbook** | Externo — bloqueante, se pide en paralelo a todo lo de arriba, no al final |
 

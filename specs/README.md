@@ -47,7 +47,7 @@ aprobación explícita.
 | — | Output 1: state machine "with... timeouts, and fallback branches" | Ninguno de los dos existe en el validador ni lo pide `docs/` (D-089): se releen como robustez del pipeline de anclaje —`Pending`/`Failed`/reconciliación/retry-anchor, todo ya construido y testeado— en vez de agregar deadline o estado de cancelación a un contrato ya hasheado | ✅ [`DECISIONS.md` D-089](../DECISIONS.md) |
 | 2 | Unit tests **≥95% coverage** | Cobertura de líneas ≥95% en **toda la app** (relectura del dueño, 2026-09-21: separar una parte es artificial) | ✅ Las cuatro partes TypeScript en 100% en las cuatro métricas: `shared` y `cardano` desde [`SPEC-017`](SPEC-017-cobertura-95-en-toda-la-app.md), `apps/api` desde [`SPEC-018`](SPEC-018-cobertura-de-apps-api.md) (2026-09-23), `apps/web` desde [`SPEC-019`](SPEC-019-cobertura-de-apps-web.md) (2026-09-24, con CI corriendo `test:coverage` con umbral en las cuatro). Antes esta fila daba ✅ leyendo el criterio solo sobre los contratos — esta vez es sobre toda la app |
 | 3 | **≥8 stages** con signers/percentages configurables | `DEFAULT_STAGE_CATALOG` (10 etapas, `packages/shared`, captura 34C) | ✅ Sin código pendiente ([`DECISIONS.md` D-090/D-091/D-092](../DECISIONS.md)): "percentages" es el avance derivado (`completadas/total`, D-091) — ningún entregable de M2/M3 pide un peso por stage, y `progressPercentage` (que sí lo era) se borró en `M3-1.1`. "Signers" ya existe con otra forma: D-020 fija determinísticamente qué rol autoriza cada transición (D-092) — ningún entregable pide que sea configurable por proyecto. `torre-a` tiene 10 stages reales, no 8; la ruta que hubiera aceptado un campo suelto (`POST /projects/:id/stages`) se borró el 2026-09-08 (CRUD genérico sin caller, ver `apps/api/CLAUDE.md`) |
-| 4 | **3 pilotos** confirman | Carta firmada | ⬜ externo |
+| 4 | **3 pilotos** confirman | Carta firmada | ✅ Confirmado por el dueño el 2026-09-22 (recontacto de los 3 pilotos) |
 | 5 | Endpoints documentados | OpenAPI | ✅ [`specs/evidencia-m3/2-api/openapi/propnexus.openapi.json`](evidencia-m3/2-api/openapi/propnexus.openapi.json) (OpenAPI 3.1, `pnpm --filter @plataforma/api docs:openapi`) — 85 operaciones, 26 con su schema Zod real de body/query (los 23 que hasta el 2026-09-08 vivían inline se movieron a `packages/shared` para poder introspectarlos); el resto queda con método+path+auth. `test/openapi-freshness.test.ts` lo mantiene sincronizado. **Cerrado del todo el 2026-09-09** ([`PLAN-2026-09-08-documentar-api-completa.md`](PLAN-2026-09-08-documentar-api-completa.md)): las respuestas también tienen su schema — 76/85 rutas (las 9 restantes son legítimamente sin cuerpo JSON: `204 No Content` o archivo binario). También sigue existiendo [`specs/evidencia-m3/2-api/postman/propnexus.postman_collection.json`](evidencia-m3/2-api/postman/propnexus.postman_collection.json) (85 rutas, con 7 bodies de ejemplo del camino feliz), que no reemplaza esto sino que sirve para probar a mano contra una instancia corriendo |
 | 6 | Proof objects validados | El SOM pide literal "hash + timestamp + signer": `GET /evidence/:bundleId/proof/:fileHash` ahora devuelve `signerUserId`/`txid`/`timestamp` (regla 17: null hasta `Confirmed`), `test/evidence-anchor.test.ts`. Los patrones P1–P10 de M2-D4 §8.1 (UI), auditados test por test el 2026-09-10: P1 `VerificationBadge.test.tsx`, P2 `HashChip.test.tsx`, P3/P4/P5/P7/P9/P10 en `components/domain/patterns.test.tsx` (cada uno con el caso "sin TXID no hay señal de prueba"), P6 `AuditEventCard` en `components/domain/cards.test.tsx`. P8 (Dossier) no tiene componente propio para testear: compone P1+P2 a nivel dossier y por artefacto en `investor.unit.$unitId.dossier.tsx` y `notary.dossier.$dossierId.tsx` — verificado leyendo las dos rutas, ninguna dibuja el chip fuera del guard de su prop. 10/10 | ✅ |
 | 7 | **Rechaza evidencia sin firmar** | Test de rechazo. Definido en D-028/D-084/D-086 | ✅ `STAGE_EVIDENCE_UNATTRIBUTED` — evidencia declarada `authoritative` sin `issuingAuthority` no completa el stage; `test/stage-transitions.test.ts` (`PATCH /stages/:id/state · evidencia en stages críticos`), con la relectura explícita del criterio 2 del SOM en el comentario del describe |
@@ -61,35 +61,71 @@ aprobación explícita.
 | 15 | Lista de **TXIDs** de prueba | Publicada y resoluble en un explorador | ✅ **Lista formal publicada el 2026-09-11**: [`specs/EVIDENCIA-2026-09-11-lista-formal-de-txids.md`](EVIDENCIA-2026-09-11-lista-formal-de-txids.md) + [CSV](evidencia-m3/3-preprod/txids-volume-test-2026-09-10.csv), las 180 TXIDs de la prueba de volumen, cada una re-verificada contra Koios el mismo día de la publicación (180/180 confirmadas, 3065–3761 confirmaciones). Antecedentes previos, ya cubiertos por esa muestra más completa: anclaje desde la instancia desplegada el 2026-09-03 (metadata `52a2aa42…f2f7aaf406`, state-thread `21bae8cb…c294970`/`b28eb6cf…36a0dbe`) y evidencia real subida vía Chrome el 2026-09-08 (`ae521653fd9ba003160a9f48a2dfc9a799ee5b3936cbe5fcb8ba6654a793bb8d`) |
 | 16 | README marca carpetas públicas vs privadas | En `README.md` | ✅ |
 
-## Estado medido (2026-09-01)
+## Lo que sigue
 
-**Backend y cadena: la mitad difícil está hecha.**
+**M3: el plan está cerrado entero; falta entregar y que Catalyst acepte.** Una sola cosa depende de
+esa aceptación: **el criterio 3 se cierra por documentación** (D-090, D-091 y D-092), sin construir
+signers ni percentages, por la regla de precedencia del dueño (entregables M2/M3 sobre el SOM,
+2026-09-09). "Signers configurables" no existe en ningún entregable, igual que `progressPercentage`.
 
-| | |
+### Fase 1 — emprolijar la app como está
+
+El diseño de cada ítem está en
+[`AUDITORIA-2026-10-01`](AUDITORIA-2026-10-01-arquitectura-api-y-web.md) §9; el estado, acá.
+
+| # | Qué | Estado |
+|---|---|---|
+| 1 | Reclamar antes de anclar (firma, rechazo y los dos anclajes de evidencia) | ✅ 2026-10-01 — `apps/api/test/reclamar-antes-de-anclar.test.ts`; en producción, dos firmas simultáneas dejaron una sola |
+| 2 | El ciclo del dossier rechazado | ✅ 2026-10-01 |
+| 3 | Sacar `awaitTx` de la request | ✅ 2026-10-01 — en Preprod, alta de proyecto 18,5 s y transición 4,2 s. Límite medido en `yaci.test.ts`: una instancia recién arrancada no avanza un hilo antes del bloque |
+| 4 | La pasada de prosa | §4 comentarios ✅ en `packages/` y `apps/`; `contracts/` queda como está (dueño, 2026-10-01: es mucho más simple). §6 documentación en curso |
+| 5 | W0: observabilidad diferida, un diccionario por idioma, decidir PostHog | sin empezar |
+| 6 | `SPEC-603` misma región | sin empezar |
+| 7 | W1 = `SPEC-601` con armazón en el layout | sin empezar |
+| 8 | `SPEC-402`, `SPEC-407`, `SPEC-408` | sin empezar — adelantadas desde "antes de mainnet" |
+| 9 | `SPEC-222` PWA (rama `spec-222-pwa`) y la pasada manual de `SPEC-112` | sin empezar — después de 5 y 7 |
+
+### Fuera de alcance de M3
+
+| Qué | Por qué |
 |---|---|
-| Contratos | validador con thread token y `mint` validado, datum alineado con M1-D2, **82 tests** |
-| Anclaje | `AnchorPort` simulado y real; probado contra el `Emulator`, contra un devnet local y contra Preprod. El validador viaja por referencia (D-083) |
-| API | autorización en dos capas, FSM aplicada, bundles con Merkle root, audit log, **335 tests** |
-| Storage | port S3 probado contra MinIO real; el hash cubre los bytes guardados |
+| **Mainnet** | Decisión del dueño, 2026-09-09. D-013 lo hace imposible por configuración y `specs/README.md` ya lo declara fuera |
+| **Fusionar anclaje + transición** | Ahorra ~5% del costo on-chain; es 🟡 sobre el core de anclaje. Después de la prueba de volumen, que da la distribución real. Detalle en `specs/PROPUESTA-2026-09-09-fusionar-anclaje-evidencia-transicion.md` |
+| **`TOPE_POR_LECTURA`** | Medir una carga real antes de tocar el número. El disparador por lectura ya se arregló (2026-09-09) |
+| **"Contenido en `Pending`"** | Mejora de UX, ningún criterio la pide. Necesita que el listado de stages devuelva el anclaje y reconcilie |
+| **Columna `AuditLog.projectId`** | Sacaría el mapeo fail-closed de `auditScope`. Pide backfill que para filas viejas no tiene respuesta |
+| **`validationCritical` siempre `true`** | Config muerta con rama viva y testeada en el validador. No molesta |
+| **Upload directo del navegador a R2 (sin pasar por Render)** | Hoy el archivo hace escala en `UPLOAD_DIR` (Multer a disco, en streaming) antes de llegar al bucket. **Ojo: el argumento de RAM que figuraba acá no aplica a Multer** — con `diskStorage` el body no pasa por memoria (`SPEC-218` §Los hallazgos); lo que pesa es disco efímero y latencia. Un presigned URL lo evitaría, pero es un cambio de forma real (CORS, flujo de 3 pasos en el front) y el hash sigue teniendo que releerse desde R2 igual (D-027). **Después de mainnet** — el diseño y el costo, en [`specs/archive/CLAUDE-argumentos-de-las-reglas-2026-09-20.md`](specs/archive/CLAUDE-argumentos-de-las-reglas-2026-09-20.md) §Anexo |
+| **La espera al crear un proyecto** | Medido el 2026-10-01 en Preprod, ya sin `awaitTx`: 18,5 s para los 10 mints. Decidir si hace falta UI de espera |
+| **"Evidence by stage" del investor no abre una etapa en curso** | El chip solo se activa con el `txid` de la transición a `Completed` (`StageChips.tsx:34`, `investor.routes.ts:271`): una etapa `InProgress` con su paquete de evidencia ya anclado queda deshabilitada. Visto grabando T17, que salió del video (2026-10-01). Hay que decidir si el chip se activa con el anclaje de la evidencia |
+| **El "Certify" de la cola del certifier solo abre la etapa** | En "Assigned" y en el panel, el botón de cada etapa dice "Certify" pero navega a `/certifier/stage/:id` (`AssignedStagesQueue.tsx:60`); el que certifica de verdad está abajo de esa pantalla, al lado de "Observe". Confunde justo antes de una acción irrepetible. Visto grabando T18 (2026-10-01) |
 
-**Front:** SPEC-016 cierra el backlog de test IDs del investor. `DEV-RELEASE-EXECUTE-002` está
-excluido del conteo (D-070, no es deuda ni backlog — nunca se implementa).
+### Antes de mainnet
 
-| Dimensión | Especificado | Existe | Conforme |
-|---|---:|---:|---:|
-| Superficies (M2-D5) | 53 | **53** | 53 — una superficie cuenta cuando TODOS sus test IDs están reclamados. Esta tabla es del 2026-09-01; el número vigente (53/53, auditado el 2026-09-03 contra el código) está en §Orden de trabajo, más abajo |
-| Componentes (M2-D3) | 36 | **36** | 36 |
-| Patrones de prueba (M2-D4) | 10 | 10 | 10 |
-| Test IDs | **74** | 74 | 74 (100%) — medido por `pnpm testids`; `DEV-RELEASE-EXECUTE-002` excluido por D-070 |
+**Ninguna de estas bloquea la entrega de M3 — ninguna toca los 16 criterios del SOM, y por eso están
+acá y no en la lista de trabajo.** Pero tampoco son "para siempre después": son las decisiones que
+hay que tomar (con plata, tiempo o riesgo de por medio) antes de habilitar `CARDANO_NETWORK=Mainnet`,
+y hoy vivían dispersas entre `DECISIONS.md`, `specs/README.md` y los `CLAUDE.md` de cada subárbol.
+Esta tabla es el punto de partida cuando llegue el momento — no hay que releer las cuatro auditorías
+del 2026-09-11 de nuevo.
 
-**API contra M2-D5:** de los **64** endpoints especificados coinciden **5** exactos —
-`POST /auth/login`, `GET /auth/me`, `GET /projects`, `GET /projects/:id` y
-`GET /projects/:id/stages`, que entró con el rename de D-067—. Contra **M2-D6** —la guía de
-arquitectura— el backend **sí** está alineado: sus seis dominios funcionales existen. M2-D6 es prosa
-arquitectónica; M2-D5 es el contrato.
+| # | Qué | Por qué espera | Detalle |
+|---|---|---|---|
+| 1 | Habilitar la red: runbook + `CARDANO_NETWORK=Mainnet` | D-013 lo hace imposible **por configuración** hoy — no es solo procedimiento, es código | D-013 |
+| 2 | Custodia y rotabilidad de la clave del `admin` | Es un parámetro del script Aiken, así que es irreemplazable por construcción: perderla o comprometerla congela todos los hilos vivos para siempre. Elegir entre dejarlo así, un multisig M-de-N o un segundo VKH de recuperación — las dos últimas cambian el script hash | D-093, `specs/SPEC-304-la-clave-del-admin-no-se-puede-rotar.md` |
+| 3 | Unicidad del hilo on-chain + tope de `evidence_root` | El validador solo garantiza un token **por transacción**, no por stage (`SPEC-301` ya cerró el camino alcanzable desde el backend; esto es cerrarlo en el validador mismo), y acepta un `evidence_root` de largo arbitrario en stages no críticos. Cambia dirección y policy id de los 180 eventos ya anclados en Preprod — es la única de esta tabla que cambia el script hash | `specs/SPEC-305-el-proximo-cambio-de-script-hash.md` |
+| 7 | Las 2 ADA bloqueadas por etapa (20 por proyecto de 10 etapas) | Sin burn (D-057) son permanentes — no es un bug, es el número real con el que hay que decidir si el costo por proyecto es aceptable en mainnet | D-057, `specs/REPORTE-2026-09-10-prueba-de-volumen.md` |
+| 8 | **Idea:** Koios en vez de Blockfrost, o como segunda fuente | Hoy dependemos de una sola empresa (D-005). Koios es comunitario, no pide key, y cualquiera puede verificar un TXID contra la misma fuente que usamos (el 2026-10-01 confirmó dos tx de Preprod que Blockfrost ya había confirmado). Lucid ya trae el provider; Blockfrost está atado solo en `factory.ts` y en el `fetch` de `confirmedAt`. **Sin medir:** que el provider de Koios evalúe bien Plutus V3. Primer paso: `yaci.test.ts` con ese provider. Paso intermedio más barato: Koios solo como respaldo de `confirmedAt` | D-005 |
 
-*(La medición anterior decía "2 de ~56": el extractor se comía los endpoints con anotaciones. Con el
-parser corregido son 5 de 64.)*
+Los ítems 4–6 de esta lista (`SPEC-402`, `SPEC-407`, `SPEC-408`) se adelantaron a la Fase 1, ítem 8.
+
+**Por qué junta specs de auditorías distintas.** Los ítems 2 y 3 salen de
+`AUDITORIA-2026-09-11-calidad-de-contracts.md`; los ítems 4, 5 y 6, de
+`AUDITORIA-2026-09-11-calidad-de-packages.md`. No comparten numeración porque nacieron de auditorías
+separadas, pero comparten la misma restricción: todas piden una decisión del dueño que no tiene
+sentido apurar para cerrar M3. El resto de las dos series (`SPEC-301`–`SPEC-303`, `SPEC-306`, y todo
+lo que no está en esta tabla de `SPEC-401`…`SPEC-412`) ya está resuelto o es pulido sin fecha —
+`specs/README.md` lleva el estado real de cada una.
 
 ## Orden de trabajo
 
@@ -106,18 +142,6 @@ parser corregido son 5 de 64.)*
 
 Cada vertical trae sus endpoints (con paths scopeados por rol, D-066) y sus test IDs. **El criterio
 de corte de una rebanada es que la app quede corriendo y demostrable.**
-
-## Riesgos, señal temprana y plan B
-
-| Riesgo | Señal temprana | Plan B |
-|---|---|---|
-| **Los 3 pilotos no responden a tiempo** | Sin contacto al cerrar la vertical de evidencia | Escalar a los developers socios; es su compromiso elegirlos |
-| **Scope creep de UI**: 53 superficies, 33 componentes | Una vertical no cierra | Cortar superficies secundarias antes que mover la fecha. **Dossier y audit log no son cortables**: son la tesis del producto |
-| Blockfrost caído o limitado | 402/429 en el adaptador | El anclaje falla y el estado queda `Pending`; se reconcilia en la próxima lectura (D-077). **Caer a `ANCHOR_MODE=simulated` no es plan B**: produciría TXIDs que no existen, que es el incidente del 2026-08-27, y D-075 lo vuelve imposible por código |
-| Confirmaciones lentas rompen la UX | `AnchoringSuccessModal` tarda >30s | Modal en dos tiempos: "enviado" (TXID) → "confirmado" (poll) |
-| Fricción CIP-30 con profesionales | Rechazo de los pilotos | Sin alcance en el validador (D-058); si vuelve, es decisión nueva |
-| La métrica de 12 minutos se descubre tarde | No hay telemetría al llegar a la vertical de invitación | Instrumentarla cuando nazca ese flujo, no después |
-| El free tier duerme el servicio en una demo | Primera demo con la URL fría | El web pasa a static site (D-065) y no duerme; queda la API. Si molesta, el disparador para mirar edge |
 
 ## Registro de specs
 
@@ -195,7 +219,7 @@ el validador no daba (un thread token por stage), y el backend tenía un camino 
 acuñar dos. La parte urgente de `SPEC-301` se cerró sin tocar el script; la de fondo —el validador
 mismo— sigue siendo `SPEC-305`, decisión de mainnet.
 
-**Tres estados.** **Cerrada**: hecha y verificada. **Postergada**: decidida a propósito, con su razón escrita en la fila, y todavía no hecha o no del todo verificada — no es trabajo olvidado ni pendiente de la próxima tanda. **Abierta**: lista para tomarse ahora. Hoy hay **una abierta** (`112`, a la que solo le queda la pasada manual con VoiceOver) y **cinco postergadas**: `304`, `305`, `402`, `407` y `408` esperan a mainnet (`CLAUDE.md` raíz §Antes de mainnet, después del Milestone 3). `219` se cerró el 2026-09-21: el Paso 0 midió cero duplicados en producción y no hizo falta postergar nada. `104` se cerró el 2026-09-22: tenía código y tests automatizados hechos desde el 2026-09-19, y lo único pendiente —la pasada manual con VoiceOver— se separó a [`SPEC-112`](SPEC-112-pasada-de-accesibilidad-con-voiceover.md), que la hereda y la amplía a accesibilidad en general. `112` nace **abierta**, sin fecha: no cuenta como postergada porque nunca tuvo una condición previa que esperar, solo disponibilidad, y no está tomada porque nadie la empezó todavía.
+**Tres estados.** **Cerrada**: hecha y verificada. **Postergada**: decidida a propósito, con su razón escrita en la fila, y todavía no hecha o no del todo verificada — no es trabajo olvidado ni pendiente de la próxima tanda. **Abierta**: lista para tomarse ahora. Hoy hay **una abierta** (`112`, a la que solo le queda la pasada manual con VoiceOver) y **dos postergadas**: `304` y `305` esperan a mainnet (§Antes de mainnet, arriba). `402`, `407` y `408` se adelantaron a la Fase 1, ítem 8. `219` se cerró el 2026-09-21: el Paso 0 midió cero duplicados en producción y no hizo falta postergar nada. `104` se cerró el 2026-09-22: tenía código y tests automatizados hechos desde el 2026-09-19, y lo único pendiente —la pasada manual con VoiceOver— se separó a [`SPEC-112`](SPEC-112-pasada-de-accesibilidad-con-voiceover.md), que la hereda y la amplía a accesibilidad en general. `112` nace **abierta**, sin fecha: no cuenta como postergada porque nunca tuvo una condición previa que esperar, solo disponibilidad, y no está tomada porque nadie la empezó todavía.
 
 | Spec | Título | Hallazgo | Estado |
 |---|---|---|---|
@@ -239,16 +263,16 @@ mismo— sigue siendo `SPEC-305`, decisión de mainnet.
 | [`SPEC-302`](SPEC-302-el-burn-queda-fijado-por-un-test.md) | "No hay burn" pasa de argumento a evidencia | C-03 | **cerrada 2026-09-18** |
 | [`SPEC-303`](SPEC-303-que-sostiene-la-igualdad-de-valor.md) | Escribir qué sostiene la igualdad de valor en el `spend` | C-05 | **cerrada 2026-09-18** |
 | [`SPEC-304`](SPEC-304-la-clave-del-admin-no-se-puede-rotar.md) | La clave del `admin` es irreemplazable por construcción | C-02 | **postergada** · **antes de mainnet** — decidida y documentada (D-093, cerrada 2026-09-18), pero el riesgo sigue vivo: la clave del `admin` es irreemplazable por construcción hasta que mainnet elija una de sus tres formas |
-| [`SPEC-305`](SPEC-305-el-proximo-cambio-de-script-hash.md) | El próximo cambio de script hash: unicidad on-chain y el tope de `evidence_root` | C-01 (3)·C-04 | **postergada** 🔴 · **antes de mainnet** — revisada 2026-09-18 y diferida a propósito: cambia el script hash. Ver `CLAUDE.md` raíz §Antes de mainnet, después del Milestone 3 |
+| [`SPEC-305`](SPEC-305-el-proximo-cambio-de-script-hash.md) | El próximo cambio de script hash: unicidad on-chain y el tope de `evidence_root` | C-01 (3)·C-04 | **postergada** 🔴 · **antes de mainnet** — revisada 2026-09-18 y diferida a propósito: cambia el script hash. Ver §Antes de mainnet, arriba |
 | [`SPEC-306`](SPEC-306-property-tests-sobre-la-evolucion-del-datum.md) | Una propiedad sobre `valid_datum_evolution` | C-06 | **cerrada 2026-09-18** |
 | [`SPEC-401`](SPEC-401-dos-campos-del-contrato-mas-flojos-que-la-realidad.md) | Dos campos del contrato declarados más flojos que la realidad | P-01·02 | **cerrada 2026-09-20** |
-| [`SPEC-402`](SPEC-402-los-hashes-y-txid-tienen-forma.md) | Los 36 hashes y TXID del contrato tienen forma | P-03 | **postergada** · **antes de mainnet** |
+| [`SPEC-402`](SPEC-402-los-hashes-y-txid-tienen-forma.md) | Los 36 hashes y TXID del contrato tienen forma | P-03 | **Fase 1, ítem 8** · sin empezar |
 | [`SPEC-403`](SPEC-403-el-authoritative-del-multipart.md) | El `authoritative` del multipart solo entiende el literal `"true"` | P-04 | **cerrada 2026-09-19** |
 | [`SPEC-404`](SPEC-404-las-funciones-puras-validan-las-dos-direcciones.md) | Las funciones puras validan las dos direcciones, y `MerkleStep` se declara una vez | P-05·06 | **cerrada 2026-09-19** |
 | [`SPEC-405`](SPEC-405-higiene-de-shared.md) | Higiene de `shared`: el idioma, dos tipos, y un comentario al revés | P-07 | **cerrada 2026-09-19** |
 | [`SPEC-406`](SPEC-406-el-simulador-no-olvida-lo-que-confirmo.md) | El simulador deja de olvidar lo que confirmó al reiniciarse | C-01 | **cerrada 2026-09-20** 🟡 |
-| [`SPEC-407`](SPEC-407-el-outputref-se-busca-no-se-supone.md) | El `outputRef` del recibo se busca, no se supone | C-02 | **postergada** 🟡 · **antes de mainnet** |
-| [`SPEC-408`](SPEC-408-lo-que-vuelve-de-la-cadena-se-valida.md) | Lo que vuelve de la cadena se valida, por las dos puertas | C-03 | **postergada** 🟡 · **antes de mainnet** |
+| [`SPEC-407`](SPEC-407-el-outputref-se-busca-no-se-supone.md) | El `outputRef` del recibo se busca, no se supone | C-02 | **Fase 1, ítem 8** · sin empezar |
+| [`SPEC-408`](SPEC-408-lo-que-vuelve-de-la-cadena-se-valida.md) | Lo que vuelve de la cadena se valida, por las dos puertas | C-03 | **Fase 1, ítem 8** · sin empezar |
 | [`SPEC-409`](SPEC-409-verify-devuelve-el-timestamp-del-bloque.md) | `verify()` devuelve el timestamp del bloque, que ya sabe leer | C-04 | **cerrada 2026-09-20** |
 | [`SPEC-410`](SPEC-410-tres-asperezas-del-adaptador.md) | Tres asperezas del adaptador: `canonical()`, un `parseInt` y un `fetch` | C-05 | **cerrada 2026-09-20** |
 | [`SPEC-411`](SPEC-411-lucid-se-carga-solo-si-hace-falta.md) | Lucid se carga solo si hace falta: 2 s y 121 MB por proceso | T-01 | **cerrada 2026-09-20** — 296s→119s de import en la suite de apps/api, medido |
@@ -259,7 +283,7 @@ mismo— sigue siendo `SPEC-305`, decisión de mainnet.
 `101` → `102` → `103`+`104` → `105`+`106` → `107`+`108` → `109`+`110`. **No es una dependencia**: es
 daño evitado sobre línea tocada.
 
-**La serie 3xx está toda revisada: cuatro cerradas y dos postergadas.** `301`, `302`, `303` y `306` no cambian el script hash y ya se tomaron. `304` está **postergada** aunque tenga su decisión escrita (D-093, prosa, no código): el riesgo que describe sigue vivo hasta que mainnet lo resuelva de una de sus tres formas. `305` está **postergada** a propósito: cambia el script hash, invalidaría (o dejaría en un contrato paralelo) los 180 eventos ya anclados en Preprod, y hay que decidirla antes del primer mint en mainnet — junto con `304`, `SPEC-402`, `SPEC-407` y `SPEC-408` de la serie 4xx, todas consolidadas en `CLAUDE.md` raíz §Antes de mainnet, después del Milestone 3.
+**La serie 3xx está toda revisada: cuatro cerradas y dos postergadas.** `301`, `302`, `303` y `306` no cambian el script hash y ya se tomaron. `304` está **postergada** aunque tenga su decisión escrita (D-093, prosa, no código): el riesgo que describe sigue vivo hasta que mainnet lo resuelva de una de sus tres formas. `305` está **postergada** a propósito: cambia el script hash, invalidaría (o dejaría en un contrato paralelo) los 180 eventos ya anclados en Preprod, y hay que decidirla antes del primer mint en mainnet, junto con `304` (§Antes de mainnet, arriba).
 
 **La serie 4xx se ordena por lo que no se deshace.** Primero `402` → `407` → `408`, los tres que
 tocan hashes, `outputRef` y datum: ninguno está roto hoy, los tres son suposiciones no declaradas en
