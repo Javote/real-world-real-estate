@@ -62,6 +62,10 @@ describe("favoritos", () => {
       .get("/api/v1/investor/favorites")
       .set("Authorization", `Bearer ${tokenInvestor}`);
     expect(listado.body.map((p: { id: string }) => p.id)).toContain(proyectoId);
+    // La tarjeta calcula el avance desde `stages`: sin ellos, la pantalla de
+    // favoritos se rompía apenas había uno guardado.
+    const favorito = listado.body.find((p: { id: string }) => p.id === proyectoId);
+    expect(Array.isArray(favorito.stages)).toBe(true);
 
     // Idempotente (regla 8): agregar dos veces no es un error.
     const denuevo = await request(app)

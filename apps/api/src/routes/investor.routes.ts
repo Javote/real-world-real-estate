@@ -11,7 +11,7 @@ import {
   investorUnitListItemSchema,
   notificationQuerySchema,
   notificationSchema,
-  projectSchema,
+  projectListItemSchema,
   unitNewsEventSchema
 } from "@plataforma/shared";
 import { Router } from "express";
@@ -28,7 +28,7 @@ import { authenticate, authorize } from "../middlewares/auth";
 import { paramValidator } from "../middlewares/validate-params";
 import { writeAuditLog } from "../utils/audit";
 import { renderTextPdf } from "../utils/pdf";
-import { avancePorProyecto } from "./_shared";
+import { avancePorProyecto, conStages } from "./_shared";
 
 // **Toda la superficie del investor, bajo `/api/v1/investor`** (M2-D5 §4).
 //
@@ -119,15 +119,17 @@ router.use(authenticate);
 
 const favoritesProcedure = orpc
   .route({ method: "GET", path: "/favorites" })
-  .output(z.array(projectSchema))
-  .handler(({ context }) =>
-    db
-      .selectFrom("Favorite")
-      .innerJoin("Project", "Project.id", "Favorite.projectId")
-      .selectAll("Project")
-      .where("Favorite.userId", "=", context.user.id)
-      .orderBy("Favorite.createdAt", "desc")
-      .execute()
+  .output(z.array(projectListItemSchema))
+  .handler(async ({ context }) =>
+    conStages(
+      await db
+        .selectFrom("Favorite")
+        .innerJoin("Project", "Project.id", "Favorite.projectId")
+        .selectAll("Project")
+        .where("Favorite.userId", "=", context.user.id)
+        .orderBy("Favorite.createdAt", "desc")
+        .execute()
+    )
   );
 const favoritesHandler = new OpenAPIHandler({ favoritesProcedure });
 

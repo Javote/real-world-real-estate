@@ -82,6 +82,39 @@ export async function avancePorProyecto(projectIds: string[]): Promise<Map<strin
 }
 
 /**
+ * Les pega a los proyectos sus stages, ordenados por `sequenceOrder`: la forma
+ * de `projectListItemSchema`.
+ *
+ * La usan el listado de proyectos y los favoritos del investor. Los favoritos
+ * devolvían el proyecto pelado, y la tarjeta calcula el avance desde
+ * `stages`: con un favorito guardado, la pantalla se rompía. Una sola función
+ * para las dos es lo que impide que vuelvan a divergir.
+ */
+export async function conStages<P extends { id: string }>(projectRows: P[]) {
+  const projectIds = projectRows.map((p) => p.id);
+  const stageRows = projectIds.length
+    ? await db
+        .selectFrom("Stage")
+        .selectAll()
+        .where("projectId", "in", projectIds)
+        .orderBy("sequenceOrder", "asc")
+        .execute()
+    : [];
+
+  const stagesByProject = new Map<string, typeof stageRows>();
+  for (const stage of stageRows) {
+    const list = stagesByProject.get(stage.projectId) ?? [];
+    list.push(stage);
+    stagesByProject.set(stage.projectId, list);
+  }
+
+  return projectRows.map((project) => ({
+    ...project,
+    stages: stagesByProject.get(project.id) ?? []
+  }));
+}
+
+/**
  * Los proyectos que este usuario ve, con la MISMA regla que el resto (D-043).
  *
  * La usan los tres paneles de rol para calcular sus KPI. Vive acá y no en cada

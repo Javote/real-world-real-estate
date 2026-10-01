@@ -35,7 +35,7 @@ import {
 } from "../middlewares/auth";
 import { paramValidator } from "../middlewares/validate-params";
 import { writeAuditLog } from "../utils/audit";
-import { relanzarRestriccionComoOrpc } from "./_shared";
+import { conStages, relanzarRestriccionComoOrpc } from "./_shared";
 
 // **SPEC-216 §E6 — migrado a oRPC (D-066)**, junto con `projects-obra.routes.ts`:
 // comparten prefijo (`MONTAJE`, `app.ts`), mismo caso que los cuatro archivos
@@ -128,27 +128,7 @@ const projectListProcedure = orpc
       })
       .execute();
 
-    const projectIds = projectRows.map((p) => p.id);
-    const stageRows = projectIds.length
-      ? await db
-          .selectFrom("Stage")
-          .selectAll()
-          .where("projectId", "in", projectIds)
-          .orderBy("sequenceOrder", "asc")
-          .execute()
-      : [];
-
-    const stagesByProject = new Map<string, typeof stageRows>();
-    for (const stage of stageRows) {
-      const list = stagesByProject.get(stage.projectId) ?? [];
-      list.push(stage);
-      stagesByProject.set(stage.projectId, list);
-    }
-
-    const projectList = projectRows.map((project) => ({
-      ...project,
-      stages: stagesByProject.get(project.id) ?? []
-    }));
+    const projectList = await conStages(projectRows);
 
     return z.array(projectListItemSchema).parse(projectList);
   });

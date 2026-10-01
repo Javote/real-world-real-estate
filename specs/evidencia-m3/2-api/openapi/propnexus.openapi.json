@@ -10308,6 +10308,86 @@
                         "type": "string",
                         "format": "date-time",
                         "x-native-type": "date"
+                      },
+                      "stages": {
+                        "type": "array",
+                        "items": {
+                          "type": "object",
+                          "properties": {
+                            "id": {
+                              "type": "string"
+                            },
+                            "projectId": {
+                              "type": "string"
+                            },
+                            "name": {
+                              "type": "string"
+                            },
+                            "sequenceOrder": {
+                              "type": "integer",
+                              "minimum": -9007199254740991,
+                              "maximum": 9007199254740991,
+                              "exclusiveMinimum": 0
+                            },
+                            "state": {
+                              "enum": [
+                                "Pending",
+                                "InProgress",
+                                "Observed",
+                                "Completed"
+                              ],
+                              "type": "string"
+                            },
+                            "validationCritical": {
+                              "type": "boolean"
+                            },
+                            "certifiedAt": {
+                              "anyOf": [
+                                {
+                                  "type": "string",
+                                  "format": "date-time",
+                                  "x-native-type": "date"
+                                },
+                                {
+                                  "type": "null"
+                                }
+                              ]
+                            },
+                            "certifiedById": {
+                              "anyOf": [
+                                {
+                                  "type": "string"
+                                },
+                                {
+                                  "type": "null"
+                                }
+                              ]
+                            },
+                            "createdAt": {
+                              "type": "string",
+                              "format": "date-time",
+                              "x-native-type": "date"
+                            },
+                            "updatedAt": {
+                              "type": "string",
+                              "format": "date-time",
+                              "x-native-type": "date"
+                            }
+                          },
+                          "required": [
+                            "id",
+                            "projectId",
+                            "name",
+                            "sequenceOrder",
+                            "state",
+                            "validationCritical",
+                            "certifiedAt",
+                            "certifiedById",
+                            "createdAt",
+                            "updatedAt"
+                          ],
+                          "additionalProperties": false
+                        }
                       }
                     },
                     "required": [
@@ -10325,7 +10405,8 @@
                       "organizationId",
                       "coverUpdatedAt",
                       "createdAt",
-                      "updatedAt"
+                      "updatedAt",
+                      "stages"
                     ],
                     "additionalProperties": false
                   }
