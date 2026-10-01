@@ -16,7 +16,10 @@ export function tramos(toma, duracion) {
   return toma.frases.map((f, i) => ({
     ini: f.t,
     fin: i + 1 < toma.frases.length ? toma.frases[i + 1].t - 0.2 : duracion,
-    texto: f.texto
+    texto: f.texto,
+    // Si abajo tapa algo que importa (un botón en el momento de tocarlo), la
+    // columna "Entra cuando ves" del runbook lo pide con "(subtítulo arriba)".
+    arriba: /\(subtítulo arriba\)/.test(f.ver)
   }));
 }
 
@@ -25,7 +28,8 @@ export function filtro(tramosDeLaToma) {
   let f =
     "[0:v]scale=1920:1200:force_original_aspect_ratio=decrease,pad=1920:1200:(ow-iw)/2:(oh-ih)/2:color=white,fps=30,format=yuv420p[v0]";
   tramosDeLaToma.forEach((c, i) => {
-    f += `;[v${i}][${i + 1}:v]overlay=x=(W-w)/2:y=H-h-70:enable='between(t,${c.ini},${c.fin})'[v${i + 1}]`;
+    const y = c.arriba ? "60" : "H-h-70";
+    f += `;[v${i}][${i + 1}:v]overlay=x=(W-w)/2:y=${y}:enable='between(t,${c.ini},${c.fin})'[v${i + 1}]`;
   });
   return { filtro: f, salida: `[v${tramosDeLaToma.length}]` };
 }

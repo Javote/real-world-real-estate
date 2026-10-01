@@ -788,8 +788,8 @@ video, ±3 s.)*
 | 1:06 | "Notary panel" | Now the notary. |
 | 1:09 | "Dossiers pending review" | One dossier is waiting for review. |
 | 1:15 | "Dossier review" | The notary reviews every artifact. |
-| 1:26 | "Verify and sign" | And signs the dossier. |
-| 1:29 | "Signing…" | The signature goes on chain. |
+| 1:26 | "Verify and sign" (subtítulo arriba) | And signs the dossier. |
+| 1:29 | "Signing…" (subtítulo arriba) | The signature goes on chain. |
 | 1:32 | "Signed 1" | The dossier is now signed. |
 
 ##### T27 · Verificado sin cuenta — video 25 s
@@ -857,7 +857,9 @@ bash scripts/video-walkthrough/subtitular.sh T09      # una sola, para revisarla
 ```
 
 Cada frase del Paso 4.3 queda en pantalla desde su segundo hasta que entra la siguiente, para que
-siempre haya un subtítulo. Si una frase sale antes o después de su pantalla, se corrige el tiempo en
+siempre haya un subtítulo. Van abajo; si en algún tramo tapan algo que importa (un botón en el momento de
+tocarlo), en la columna "Entra cuando ves" se agrega *(subtítulo arriba)* y esa frase se dibuja
+arriba. Si una frase sale antes o después de su pantalla, se corrige el tiempo en
 4.3 y se vuelve a correr: el estudio de voz lee la misma tabla.
 
 **Si algo falla:** `FALLÓ Txx` quiere decir que ese archivo está dañado o a medio guardar: abrilo en
