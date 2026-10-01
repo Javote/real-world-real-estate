@@ -503,25 +503,48 @@ reemplaza), se frena acá y se vuelve a la vía incremental de la serie `6xx`.
 
 ## 9. El plan
 
-### Fase 1: emprolijar la app como está
+**Dónde está la migración:** es la Fase 2 de abajo (pasos A0–A5 y W0–W5). **No es una spec
+todavía**, y no tiene nada que ver con `501`–`504`, que son las features de Milestone 4. Antes de A0
+se escribe como spec (ver el final de la Fase 2).
+
+### Fase 1: emprolijar la app como está, en este orden (dueño, 2026-10-01)
 
 | # | Qué | Sobrevive a la migración | Nivel |
 |---|---|---|---|
 | 1 | §1.1 **reclamar antes de anclar** (firma, rechazo y los dos anclajes de evidencia), con el test de concurrencia permanente | la regla sí | 🟡 |
-| 1b | §8 punto 2 **el ciclo del dossier rechazado**: `sign` solo desde `compiled`, y la recompilación devuelve el rechazado a `compiled` cuando cambia su `masterHash` | la regla sí (va a `shared`) | 🟢 |
-| 2 | §1.2 **sacar `awaitTx` de la request**, después de medir con `test:yaci` | **sí** | 🟡 |
-| 3 | §4 **borrar los comentarios**: `packages/` y `contracts/`, después `apps/` | packages sí | 🟢/🟡 |
-| 4 | `SPEC-603` misma región | **sí** | 🟡 |
-| 5 | §3.1 `SPEC-601` con armazón en el layout: **se va el flash** | **sí**: es el paso W1 de la migración | 🟡 |
-| 6 | §3.1 observabilidad diferida y un diccionario por idioma | **sí** | 🟢 |
-| 7 | `SPEC-402` hashes y TXID con forma, adelantada | **sí** | 🟢 |
-| 8 | `SPEC-407` / `SPEC-408`; `304`/`305` decididos antes del primer mint en mainnet | **sí** | 🟡/🔴 |
-| 9 | §6 el estado en una sola tabla, lo cerrado a `archive/` | **sí** | 🟢 |
-| — | `SPEC-112` (VoiceOver manual) y `SPEC-222` (PWA, después de 5 y 6) | | |
+| 2 | §8 punto 2 **el ciclo del dossier rechazado**: `sign` solo desde `compiled`, y la recompilación devuelve el rechazado a `compiled` cuando cambia su `masterHash` | la regla sí (va a `shared`) | 🟢 |
+| 3 | §1.2 **sacar `awaitTx` de la request**, después de medir con `test:yaci` | **sí** | 🟡 |
+| 4 | **La pasada de prosa:** §4 borrar los comentarios (`packages/` → `contracts/` → `apps/`), y §6 el estado en una sola tabla, lo cerrado a `archive/` y los `CLAUDE.md` recortados a trampas vigentes | packages sí | 🟢/🟡 |
+| 5 | §3.1 **W0**: observabilidad diferida y un diccionario por idioma, y decidir si PostHog sigue después de M3 (hoy está solo para web vitals, que Sentry también mide) | **sí** | 🟢 |
+| 6 | `SPEC-603` misma región | **sí** | 🟡 |
+| 7 | §3.1 **W1** = `SPEC-601` con armazón en el layout: **se va el flash** | **sí**: es el primer paso de la migración de la web | 🟡 |
+| 8 | `SPEC-402` hashes y TXID con forma (adelantada; es parte de A1), `SPEC-407`, `SPEC-408` | **sí** | 🟢/🟡 |
+| 9 | `SPEC-222` PWA (la rama `spec-222-pwa`, un commit, se rebasea) y la pasada manual de `SPEC-112`, las dos después de 5 y 7 | **sí** | 🟡 |
 
-**Salen de la Fase 1:** `SPEC-602`, `604`, `607`, `608` y `609`. Las cinco reorganizan `apps/` por
-dentro, que es lo que hace la Fase 2. `605` queda condicional para mainnet (su motivo principal se
-resuelve con el punto 2). `606` sigue condicional.
+**La pasada de prosa se prueba mecánicamente:** cada archivo impreso con el compilador de TypeScript
+y `removeComments`, antes y después, tiene que dar idéntico. Así un diff de miles de líneas en
+archivos 🟡/🔴 no necesita revisión línea por línea. Las directivas las protege el pipeline: un
+`v8 ignore` borrado baja la cobertura, un `biome-ignore` lo agarra el lint, un `@ts-expect-error` el
+typecheck, un `nosemgrep` Semgrep en CI.
+
+### Cada spec abierta, en el plan
+
+| Spec | Dónde queda |
+|---|---|
+| `601` | Fase 1, ítem 7 (= W1) |
+| `602` | se disuelve en W2/W3: los loaders llegan con la fábrica de queries |
+| `603` | Fase 1, ítem 6 |
+| `604` | se disuelve en A3/A4: los `queries.ts` de cada módulo |
+| `605` | condicional, para mainnet: su motivo principal lo resuelve el ítem 3 |
+| `606` | condicional; W1 la abarata, porque la sesión pasa a vivir en el contexto del router |
+| `607` | A2, con la D-NNN que reemplaza la invariante 3 de `SPEC-212` |
+| `608` | A3/A4 |
+| `609` | W2 |
+| `402` · `407` · `408` | Fase 1, ítem 8 |
+| `304` · `305` | antes de mainnet, intactas: la migración no toca `contracts/` |
+| `222` · `112` | Fase 1, ítem 9 |
+| `501`–`504` (M4) | **después de A0–A2**, para que nazcan como módulos y no haya que migrarlas. El scope del notary (§8 punto 6) se decide antes de los pilotos |
+| *Certify* que solo abre la etapa · chip *Evidence by stage* | W4, al migrar la pantalla del certifier y la del investor |
 
 ### Fase 2: la migración, módulo por módulo detrás de los mismos paths
 
@@ -545,15 +568,16 @@ deja pasar el resto a las rutas de Express.
 
 | Paso | Qué | Notas |
 |---|---|---|
-| W0 | Observabilidad diferida y diccionario por idioma | es el punto 6 de la Fase 1 |
-| W1 | `__root` con contexto (`queryClient`, sesión), 6 layouts con armazón y `beforeLoad` | es el punto 5 de la Fase 1 (`SPEC-601` extendida) |
+| W0 | Observabilidad diferida y diccionario por idioma | es el ítem 5 de la Fase 1 |
+| W1 | `__root` con contexto (`queryClient`, sesión), 6 layouts con armazón y `beforeLoad` | es el ítem 7 de la Fase 1 (`SPEC-601` extendida) |
 | W2 | La fábrica de queries por entidad y el cliente desde el contrato detrás de `port.ts` | depende de A2: el contrato tiene que existir |
 | W3 | **Piloto `notary` + pantallas del dossier**, en la misma ventana que A3: loaders, `useSuspenseQuery`, `pending`/`error`/`notFound`, `validateSearch` | |
 | W4 | El resto, por rol: `certifier` → `investor` → `developer` → `admin`; endpoints de pantalla donde haya cascada (detalle de unidad del investor primero) | |
 | W5 | Se borran `useRoleGuard`, las llaves escritas a mano y `unicosPorStageId` | |
 
 **El acople entre los dos lados:** W0 y W1 no esperan a nadie. W2 espera a A2. A3 y W3 van juntos,
-porque el piloto es de punta a punta. A4 y W4 avanzan en paralelo, módulo con su rol.
+porque el piloto es de punta a punta. A4 y W4 avanzan en paralelo, módulo con su rol. **Las features
+de M4 (`501`–`504`) entran después de A2**, en la forma nueva, en paralelo con A4/W4.
 
 **Lo que no se hace:** SSR, un BFF como servicio aparte, Effect-ts, cambiar Express por otro
 framework, `RPCLink` (manda a `/rpc/...` y rompe los paths de M2-D5).
