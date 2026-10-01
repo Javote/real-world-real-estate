@@ -5,6 +5,10 @@
 #
 #   bash scripts/video-walkthrough/unir.sh
 #
+# El video de cada toma es el ya subtitulado (subtituladas/Txx.mp4, de
+# subtitular.sh): el dueño quiere dos versiones, solo subtítulos y voz con
+# subtítulos (2026-10-01). Si falta, se arma acá mismo.
+#
 # La voz puede venir del estudio (Txx.webm, grabada en sincronía con el video:
 # entra tal cual) o de QuickTime (Txx.m4a: se le recorta el silencio del
 # principio y la primera frase entra en 0:01). Si hay las dos, usa la más nueva.
@@ -29,8 +33,9 @@ fi
 # El orden es el del mapa del runbook, no el del nombre: T22 va después de T27.
 orden=$(node --input-type=module -e "import { leerTomas } from '$aqui/lib/tomas.mjs'; console.log(leerTomas().map((t) => t.toma).join(' '))")
 for toma in $orden; do
-  video="$toma.mov"
-  [ -e "$video" ] || { echo "  (aviso) falta $video: no entra"; continue; }
+  [ -e "$toma.mov" ] || { echo "  (aviso) falta $toma.mov: no entra"; continue; }
+  video="subtituladas/$toma.mp4"
+  [ -e "$video" ] || bash "$aqui/subtitular.sh" "$toma" >/dev/null
   dv=$(ffprobe -v error -show_entries format=duration -of csv=p=0 "$video")
   voz=$(ls -t "$toma.webm" "$toma.m4a" 2>/dev/null | head -1 || true)
   if [ -n "$voz" ]; then

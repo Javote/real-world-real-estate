@@ -852,6 +852,10 @@ video, ±3 s.)*
 bash scripts/video-walkthrough/unir.sh
 ```
 
+**Sale con la voz y con los subtítulos dibujados** (decisión del dueño, 2026-10-01: las dos
+versiones son "solo subtítulos" —`subtitular.sh`, abajo— y "voz con subtítulos" —esta—): usa los
+videos de `subtituladas/`, y si falta alguno lo arma primero.
+
 Una línea por toma (`T01: video 22 s, voz T01.webm -> queda en 22 s`) y al final **`LISTO:
 …/walkthrough-final.mp4 (+ walkthrough-final.srt)`**. Son unos minutos, con la Mac enchufada.
 
