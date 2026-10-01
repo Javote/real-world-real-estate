@@ -162,6 +162,12 @@ hechos el mismo día.
 | [`SPEC-608`](SPEC-608-los-archivos-por-concepto.md) | Los archivos de la API por concepto, no por prefijo (`investor.routes.ts` mezcla 6 conceptos) | sin empezar · 🟢 · depende de `607` |
 | [`SPEC-609`](SPEC-609-el-cliente-sale-del-contrato.md) | El cliente de la web sale del contrato: `OpenAPILink` + contrato minificado + `Serialized`, con `port.ts` como fachada (324 `spyOn` intactos) | sin empezar · 🟢 · depende de `607` · reabre `SPEC-111` |
 
+**El orden de la serie `6xx` lo reemplaza [`AUDITORIA-2026-10-01-arquitectura-api-y-web.md`](AUDITORIA-2026-10-01-arquitectura-api-y-web.md)
+§9** (dueño, 2026-10-01): una Fase 1 que emprolija la app como está (`601` con armazón en el layout,
+`603`, `402` adelantada, `407`/`408`, los bugs de su §1 y el ciclo del dossier rechazado) y una Fase 2
+que migra `apps/api` y `apps/web` módulo por módulo, con `dossier` de piloto. `602`, `604`, `607`,
+`608` y `609` salen de la Fase 1: lo que hacen lo hace la migración.
+
 Los planes fechados no llevan número: [`PLAN-2026-08-31-anclaje-real.md`](PLAN-2026-08-31-anclaje-real.md)
 fue la secuencia operativa para pasar la instancia desplegada a `ANCHOR_MODE=real` (cerrada el
 2026-09-03), y [`PLAN-2026-09-04-guard-unico.md`](PLAN-2026-09-04-guard-unico.md) unificó los tres guards de
