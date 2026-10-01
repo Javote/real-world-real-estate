@@ -20,7 +20,7 @@
 | **2** | Off-chain services & API (hash/timestamp, proof objects, Merkle root) | ✅ Completo — proof objects con `hash + timestamp + signer`, Merkle root por bundle de evidencia, endpoints documentados: OpenAPI 3.1 (85 operaciones, `specs/evidencia-m3/2-api/openapi/`) + colección Postman (`specs/evidencia-m3/2-api/postman/`) | — |
 | **3** | UI Implementation & Integration (flujos end-to-end en pre-prod, audit logs) | ✅ 53/53 superficies de M2-D5, audit log append-only y paginable. **Flujos end-to-end en pre-prod: cerrado el 2026-09-10** con la prueba de volumen (30/30 etapas `Completed`, 180/180 eventos on-chain `Confirmed`, las 4 aristas de la FSM ejercitadas en 3 proyectos reales). **La mediana "reserva → creación de escrow < 12 min": 0.33 min sobre 6 compras reales** (2026-09-28, [`evidencia-m3/3-preprod/reservation-to-escrow-report.md`](evidencia-m3/3-preprod/reservation-to-escrow-report.md)), cada TXID verificado por Koios. La primera muestra, del 2026-09-11, se había publicado como 2.76 min con la fórmula vieja (`updatedAt - createdAt`, que sumaba el rato en que nada reconciliaba el estado); con la de SPEC-214 (`blockTimestamp - createdAt`) esa misma compra da 0.44 min. El ejercicio del 2026-09-11 destapó y cerró en el mismo día un bug de UX (la UI no reconciliaba sola sin recargar); ver criterio 9 en `specs/README.md` | — |
 | **4** | Testing & Security (unit/integration, static analysis, dependency scans, telemetría) | ✅ Tests + coverage corriendo en CI (`pnpm test:coverage`), Semgrep (`security-audit` + `owasp-top-ten`) automático en cada CI run, **`pnpm audit` en cada CI desde el 2026-09-11** (gate en crítico + reporte completo no bloqueante), `specs/SECURITY-REVIEW-2026-09.md` con 3 P1 cerrados y 0 abiertos, Sentry + OTel→Grafana Cloud verificados con traces reales en producción | — |
-| **5** | Pre-production Environment & Ops (seed, monitoring, URL pública, walkthrough, runbook) | ✅ URL pública viva (`propnexus-web.onrender.com` / `propnexus-api.onrender.com`), `specs/RUNBOOK-deploy.md` completo, Sentry/Grafana/PostHog encendidos y con datos reales. **Screenshot formal de monitoring: cerrado el 2026-09-11** (`specs/EVIDENCIA-2026-09-11-monitoring-screenshots.md`) | ⬜ **Video walkthrough** — nunca grabado (criterio 13 del SOM) |
+| **5** | Pre-production Environment & Ops (seed, monitoring, URL pública, walkthrough, runbook) | ✅ URL pública viva (`propnexus-web.onrender.com` / `propnexus-api.onrender.com`), `specs/RUNBOOK-deploy.md` completo, Sentry/Grafana/PostHog encendidos y con datos reales. **Screenshot formal de monitoring: cerrado el 2026-09-11** (`specs/EVIDENCIA-2026-09-11-monitoring-screenshots.md`) | ✅ **Video walkthrough** — cerrado el 2026-10-01, en [`evidencia-m3/3-preprod/walkthrough-video.mp4`](evidencia-m3/3-preprod/walkthrough-video.mp4) (criterio 13 del SOM) |
 
 ## Lo que falta, consolidado
 
@@ -42,12 +42,14 @@ Preprod.
 |---|---|---|
 | ~~Hacer el repo de GitHub público~~ | **Hecho** — verificado `PUBLIC` el 2026-09-21 | — |
 | 3 pilotos confirmando (criterio 4 del SOM) | Externo | Recontactar developers/notary socios — `M1-D3-PilotPlan.pdf` |
-| Video walkthrough (criterio 13) | Falta grabar | Se graba sobre lo que ya existe y funciona |
+| ~~Video walkthrough (criterio 13)~~ | **Hecho** — cerrado 2026-10-01 | [`evidencia-m3/3-preprod/walkthrough-video.mp4`](evidencia-m3/3-preprod/walkthrough-video.mp4) |
 | ~~Cobertura ≥95% con unit tests en toda la app (criterio 2)~~ | **Hecho** — cerrado 2026-09-24 | [`SPEC-017`](SPEC-017-cobertura-95-en-toda-la-app.md) (shared, cardano, contratos), [`SPEC-018`](SPEC-018-cobertura-de-apps-api.md) (API, cerrada 2026-09-23) y [`SPEC-019`](SPEC-019-cobertura-de-apps-web.md) (web + CI + evidencia, cerrada 2026-09-24) — las cuatro partes TypeScript en 100% en las cuatro métricas, CI corriendo `test:coverage` con umbral en las cuatro |
 
 ## Próxima sesión
 
-No queda nada técnico salvo el video walkthrough. La muestra real de reserva → escrow
+**2026-10-01: no queda nada.** El video walkthrough (3.12) se cerró ese día; lo que sigue es entregar `evidencia-m3/`. Lo de abajo es el registro de cómo se llegó.
+
+No quedaba nada técnico salvo el video walkthrough. La muestra real de reserva → escrow
 (criterio 9), `pnpm audit` en CI (criterio 4), la lista formal de TXIDs (3.10 / criterio 15) y el
 screenshot de monitoring (3.11 / criterio 14) se cerraron el 2026-09-11. Lo que sigue: grabar el
 video (3.12) y lo externo (3.13, los 3 pilotos).

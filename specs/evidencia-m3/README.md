@@ -52,7 +52,9 @@
 - **Median reservation → escrow < 12 min**: measured **0.33 min** over 6 purchases on Preprod, with
   audit-log and explorer screenshots —
   [`reservation-to-escrow-report.pdf`](3-preprod/reservation-to-escrow-report.pdf).
-- ⏳ **Walkthrough video** of the full flow.
+- **Walkthrough video** of the full flow (~16 min, narrated in English, Preprod):
+  [`walkthrough-video.mp4`](3-preprod/walkthrough-video.mp4), with English subtitles in
+  [`walkthrough-video.srt`](3-preprod/walkthrough-video.srt).
 
 ## 4 · Security
 
