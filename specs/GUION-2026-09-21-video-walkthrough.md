@@ -21,7 +21,7 @@
 | **1** | Antes de cada sesión: la Mac, Render despierto, Chrome con las 5 pestañas | `sesion.sh` + `chrome.sh` | ~10 min (+ ensayo la primera vez) |
 | **2A** | Grabar la **sesión A**: el comprador mirando una obra terminada (T01, una sola toma) | el grabador de macOS; al final, `renombrar.sh A` | ~5 min |
 | **2B** | Grabar la **sesión B**: nace un proyecto y recorre la FSM, hasta la firma, y cierra en el audit log (T07–T28). **De corrido, sin cortar la sesión** | ídem; al final, `renombrar.sh B` | ~60 min |
-| **3** | Recortar los 12 videos | QuickTime | ~30 min |
+| **3** | Recortar los 9 videos | QuickTime | ~30 min |
 | **4** | Grabar la voz mirando cada video, con la frase en pantalla en su segundo | el **estudio** (una página local) | ~35 min |
 | **5** | Unir todo, con subtítulos | `unir.sh` (o el estudio, si no hay ffmpeg) | ~10 min |
 | **6** | Mirar el resultado y cerrar | — | ~25 min |
@@ -35,7 +35,7 @@ cd ~/Documents/real-estate/real-world-real-estate
 
 **Cuatro reglas que valen para todo el runbook:**
 
-1. **La unidad es la toma, no el acto.** Son 12 tomas (la sesión A es una sola, T01; la B va de T07 a T28, con T07, T09, T12 y T18 que funden varias de las originales); cada una es un video `Txx.mov` y una voz
+1. **La unidad es la toma, no el acto.** Son 9 tomas (la sesión A es una sola, T01; la B va de T07 a T28, con T07, T09, T12, T18 y T23 que funden varias de las originales); cada una es un video `Txx.mov` y una voz
    `Txx.webm` con el mismo nombre. Todos los tiempos se cuentan desde el **0:00 de la toma ya
    recortada**, así que rehacer una no corre nada del resto.
 2. **La sesión B va de corrido y en orden.** Cada toma deja la base en el estado que necesita la
@@ -171,7 +171,7 @@ propia sesión:
       esto, un TXID ya confirmado se ve "Pending") y es el ensayo de dónde está cada botón. **No
       hagas las acciones marcadas ⚠ irrepetible.**
 - [ ] **Antes de la sesión B:** abrí una vez el dossier de la 1A (pestaña 1: `Units` → 1A →
-      **"Dossier"**). Esa lectura lo compila y lo pone en la cola del escribano; sin eso, T25 no
+      **"Dossier"**). Esa lectura lo compila y lo pone en la cola del escribano; sin eso, T23 no
       tiene qué firmar. Y corré otra vez el verificador:
 
   ```bash
@@ -184,7 +184,7 @@ propia sesión:
   - cargá una unidad, subí evidencia, observá, reanudá y certificá.
   - **No invites al investor (T09–T12) ni abras o firmes dossiers (T23–T27).** Una invitación
     aceptada le suma la unidad y el proyecto al investor para siempre (se verían en T01 y T12), y
-    firmar el dossier de la 1A deja a T25 sin nada que firmar.
+    firmar el dossier de la 1A deja a T23 sin nada que firmar.
   - Queda un proyecto más en el listado del developer (T07) y una certificación más en el panel del
     certifier: no molestan.
 - [ ] **Al terminar el recorrido, dejá la app en inglés** (toggle → EN) y la pestaña 1 en
@@ -199,7 +199,7 @@ propia sesión:
 **Para escribir una dirección en pantalla completa** (siempre fuera de cámara): `Cmd+L` muestra la
 barra un momento → pegás → Enter.
 
-### 1.5 El ciclo de cada toma — cinco pasos, 12 veces
+### 1.5 El ciclo de cada toma — cinco pasos, 9 veces
 
 1. **Dejá la pantalla como dice "Antes de grabar"** de la toma. Si pasó más de un minuto desde la
    última acción en esa pestaña, **recargala** (`Cmd+R`) y esperá que cargue.
@@ -223,11 +223,11 @@ descartar (van a `descartadas/`, no se borran).
   Projects · Capital · Units · Progress; Certifier y Notary: Panel · … · Profile) y el header tiene
   la campana y el ícono de perfil.
 - **Una toma termina** cuando empieza una espera (**⏸ CORTE**), cuando pasás de ~90 s, o cuando
-  cambiás de rol. Por eso la B son 11 (T07, T09, T12 y T18 funden varias de las originales). La A no tiene esperas y es una sola (T01).
+  cambiás de rol. Por eso la B son 8 (T07, T09, T12, T18 y T23 funden varias de las originales). La A no tiene esperas y es una sola (T01).
 
 ### 1.7 Las tomas irrepetibles, y qué hacer si una sale mal
 
-**T07, T09, T12, T18 y T25** mandan algo a la cadena y dejan la base en otro estado:
+**T07, T09, T12, T18 y T23** mandan algo a la cadena y dejan la base en otro estado:
 no hay "otra toma" de esas.
 
 - **Un error de tipeo o un clic de más:** seguí. Se arregla recortando o la voz lo tapa.
@@ -254,14 +254,11 @@ no hay "otra toma" de esas.
 | T09 | 6:33 | 2 · Developer | El proyecto, la unidad, la invitación y la evidencia, en una toma | `/developer` → … → `/developer/project/:id/upload` → cardanoscan | 195 s | 75 s | ⚠ irrepetible |
 | T12 | 9:48 | 1 · Investor | Aceptar, la unidad y el contrato, en una toma | campana → `/investor/unit/<5B>` → `…/contract` | 104 s | 45 s | ⚠ irrepetible |
 | T18 | 11:32 | 3 → 2 → 3 | Observar, reanudar y certificar, en una toma | `/certifier/stage/:id` → `/developer/progress` → `/certifier/issued` | 87 s | 40 s | ⚠ irrepetible |
-| T23 | 12:59 | 1 · Investor | El dossier | `/investor/unit/<1A>/dossier` | 40 s | 24 s | |
-| T24 | 13:39 | 1 · Investor | Compartir | "Share" → modal | 15 s | 8 s | |
-| T25 | 13:54 | 4 · Notary | La firma | `/notary` → `/notary/dossiers` → `/notary/dossier/:id` | 35 s | 19 s | ⚠ irrepetible |
-| T26 | 14:29 | 4 · Notary | El historial | `/notary/signed` | 15 s | 11 s | |
-| T27 | 14:44 | incógnito | Verificado sin cuenta | `/public/dossier/:shareToken` | 25 s | 18 s | |
-| T22 | 15:09 | 2 · Developer | El contrato del lado del developer | `/developer/project/:id/contracts` | 25 s | 14 s | |
-| T28 | 15:34 | 2 · Developer | El círculo se cierra | `/developer/audit-log` | 45 s | 21 s | |
-| | **16:19** | | **Total** | | **979 s ≈ 16 min** | | |
+| T23 | 12:59 | 1 → 4 | El dossier, compartirlo y la firma, en una toma | `/investor/unit/<1A>/dossier` → `/public/dossier/…` → `/notary/dossier/:id` | 98 s | 45 s | ⚠ irrepetible |
+| T27 | 14:37 | incógnito | Verificado sin cuenta | `/public/dossier/:shareToken` | 25 s | 18 s | |
+| T22 | 15:02 | 2 · Developer | El contrato del lado del developer | `/developer/project/:id/contracts` | 25 s | 14 s | |
+| T28 | 15:27 | 2 · Developer | El círculo se cierra | `/developer/audit-log` | 45 s | 21 s | |
+| | **16:12** | | **Total** | | **972 s ≈ 16 min** | | |
 
 ### Sesión A · El comprador mira una obra terminada (T01)
 
@@ -313,7 +310,7 @@ Lo que hace la toma, medido sobre el video (cuadros cada 3 s, ±3 s):
 
 - [ ] Paso 1 hecho, **incluido el dossier de la 1A compilado** y el verificador en verde (1.3).
 - [ ] Las cinco pestañas logueadas y en inglés (1.2). Pestaña 2 al frente, en `/developer`.
-- [ ] Una nota abierta (Notas o TextEdit) para pegar el link de T24.
+- [ ] Una nota abierta (Notas o TextEdit) para pegar el link de T23.
 
 **La sesión B en bloques.** Un bloque es lo que va de corrido entre una espera de la cadena y la
 siguiente (⛓ = manda algo a la cadena; ⚠ = irrepetible).
@@ -324,8 +321,8 @@ siguiente (⛓ = manda algo a la cadena; ⚠ = irrepetible).
 | 2 | T09 ⛓⚠ (unidad, invitación y evidencia) | 2 | ⏸ ~1-2 min adentro de la toma (la evidencia), cortada |
 | 3 | T12 ⛓⚠ (aceptar, la unidad y el contrato) | 1 | — |
 | 5 | T18 ⛓⚠ (observar, reanudar, certificar) | 3 → 2 → 3 | — (las esperas, cortadas) |
-| 8 | T23 · T24 → T25 ⛓⚠ | 1 → 4 | ⏸ ~1 min |
-| 9 | T26 → T27 → T22 · T28 | 4 → incógnito → 2 | Fin |
+| 8 | T23 ⛓⚠ (el dossier, compartirlo y la firma) | 1 → 4 | — (la espera, cortada) |
+| 9 | T27 → T22 · T28 | incógnito → 2 | Fin |
 
 **Se puede grabar en tomas largas** (decisión del dueño, 2026-10-01, como la sesión A): una
 grabación por bloque, sin parar en las esperas de ~1 min. **Parar solo en la espera de T07**: son
@@ -476,68 +473,34 @@ Lo que hace la toma, medido sobre el video (cuadros cada 2 s, ±2 s):
 **Volvemos a `torre-volumen-3`, unidad 1A** — la entregada. Un dossier final solo significa algo
 sobre una obra terminada.
 
-##### T23 · El dossier — 40 s
+##### T23 · El dossier, compartirlo y la firma — 1:38 · ⚠ irrepetible · ✓ grabada el 2026-10-01
 
-**Antes de grabar:** pestaña 1, `/investor/units`.
+**Dos grabaciones** (en `originales/`): el investor (pestaña 1, entera) y el notary (pestaña 4).
+Funde las viejas T23, T24, T25 y T26. El investor, además de "Share", tocó **"Open view"**: la
+vista pública se ve antes de la firma, todavía en "Pending" (la de después de firmar sigue siendo
+T27). **En la del notary se abrió el Diccionario de macOS** justo después de "Verify and sign"
+(un toque fuerte del trackpad): se cortaron esos 3,6 s (26,4 → 30,0 de la grabación), y el video
+pasa de "Signing…" al panel con el dossier firmado.
 
-| Tiempo | Acción | Lo que tiene que verse |
-|---|---|---|
-| 0:00 | Clic en la **1A** (Torre Volumen 3). | Su detalle. |
-| 0:01–0:03 | Scroll hasta el final y clic en **"Dossier"**. | — |
-| 0:04–0:12 | **Quieto.** | "Share", "Export PDF"; **"Cryptographic certification"** con su texto y el **"Dossier hash"** con badge "Pending" (todavía no lo firmó nadie). |
-| 0:13–0:18 | Scroll lento. | "My unit progress" y "Dossier completeness" con su barra. |
-| 0:19–0:22 | Scroll. | "Project and unit", "Compiled on …". |
-| 0:23–0:40 | Scroll lento por **"Artifacts"**. | Cada ítem con su hash y su badge. |
+Lo que hace la toma, medido sobre el video (cuadros cada 3 s, ±3 s):
 
-*(Una lectura del dossier es la que lo compila y lo persiste, y lo pone en la cola del escribano:
-por eso el Paso 1.3 lo abre en el calentamiento, y cuando grabás esta toma ya está en la cola. M2-D1 describe tres secciones separadas; la implementación las unifica en `Artifacts`,
-una sola lista canónica, porque el orden es parte del compromiso — `domain/dossier.ts:23`.)*
-
-##### T24 · Compartir — 15 s
-
-**Antes de grabar:** el dossier de 1A, arriba de todo.
-
-| Tiempo | Acción | Lo que tiene que verse |
-|---|---|---|
-| 0:00 | Clic en **"Share"**. | El modal "Share dossier". |
-| 0:01–0:09 | **Quieto.** | "Read-only link. Whoever has it sees the hashes, not the platform." y el "Link". |
-| 0:10 | Clic en **"Copy"** del link. | "Copied". |
-| 0:11–0:15 | **Quieto**, y cerrá con **"Close"**. | — |
-
-Fuera de cámara: **pegá el link en una nota** — lo usás en T27. No aprietes "Open view": abriría la
-vista con esta misma ventana.
-
-##### T25 · La firma — 35 s · ⚠ irrepetible
-
-**Antes de grabar:** pestaña 4, `/notary`. Recargá antes de grabar.
-
-| Tiempo | Acción | Lo que tiene que verse |
-|---|---|---|
-| 0:00–0:05 | **Quieto.** | "Notary panel": "Pending dossiers 1", "Verified", "Signed", "Units under review"; abajo, "Dossiers pending review" con la 1A. |
-| 0:06 | Clic en **"Dossiers"** en la barra lateral. | "Dossiers · Pending review and signing". |
-| 0:07–0:09 | **Quieto.** | — |
-| 0:10 | Clic en el dossier de la 1A. | "Dossier review". |
-| 0:11–0:20 | **Quieto**, scroll lento. | Pill "Pending", "Dossier hash", "Dossier artifacts". |
-| 0:21–0:26 | **Quieto** sobre el texto de abajo. | "Signing records that you reviewed these hashes at this moment. It does not certify…" |
-| 0:27 | Clic en **"Verify and sign"**. | "Signing…" |
-| 0:28–0:35 | **Quieto.** | — |
-
-**⏸ CORTE ~1 min.**
-
-##### T26 · El historial — 15 s
-
-**Antes de grabar:** "Dossier review" de la 1A, ya firmado.
-
-| Tiempo | Acción | Lo que tiene que verse |
-|---|---|---|
-| 0:00–0:04 | **Quieto.** | Pill "Signed" y el **"Signature TXID"**. |
-| 0:05 | Clic en **"Signed"** en la barra lateral. | "Signed dossiers · Signature history". |
-| 0:06–0:15 | **Quieto**, el mouse sobre la primera fila. | El hash del dossier y el txid de la firma. |
+| Tiempo | Pantalla |
+|---|---|
+| 0:00 | "Menu" (investor) |
+| 0:06 | **"Units"**: la **1A** de Torre Volumen 3 |
+| 0:12 | El detalle de la 1A, scroll hasta "Dossier" (0:21) |
+| 0:24 | **"Dossier"**: "Cryptographic certification", el hash en "Pending", completitud 100%, "Artifacts" (0:30) |
+| 0:36 | **"Share"**: "Share dossier · Read-only link" → **"Open view"** (0:45) |
+| 0:51 | **"Public dossier"**: el hash en "Pending", los artefactos (scroll hasta 1:05) |
+| 1:06 | "Notary panel": "Pending dossiers 1", la 1A |
+| 1:15 | **"Dossier review"** de la 1A: cada artefacto "Verified" |
+| 1:27 | **"Verify and sign"**: "Signing…" (1:30) |
+| 1:32 | "Notary panel": "Pending dossiers 0", **"Signed 1"**, hasta el final (1:38) |
 
 ##### T27 · Verificado sin cuenta — 25 s
 
 **Antes de grabar:** una **ventana de incógnito**, armada así: `Cmd+Shift+N` → `Cmd+L` →
-pegá el link de T24 (de la nota) → Enter → `Cmd` + `+` hasta 110% (incógnito no recuerda el zoom) →
+pegá el link de T23 (de la nota) → Enter → `Cmd` + `+` hasta 110% (incógnito no recuerda el zoom) →
 `Cmd+Ctrl+F`. **Es el plano más fuerte del producto
 entero**: tiene que verse que no hay sesión — sin barra lateral, sin campana, sin perfil.
 
@@ -596,7 +559,7 @@ la vista de teléfono). El dueño las sacó: ninguna agregaba un paso al flujo. 
 
 ---
 
-## Paso 3 · Recortar los 12 videos
+## Paso 3 · Recortar los 9 videos
 
 **Por qué importa:** todos los tiempos —los de la pantalla y los de la voz— se cuentan desde el
 0:00 de la toma **recortada**. Un recorte a ojo corre la voz.
@@ -619,7 +582,7 @@ error y `T18b` desde la acción siguiente; abrí `T18.mov` → Edición → **Ag
 - [ ] T07, T09
 - [ ] T12
 - [ ] T18
-- [ ] T23–T27
+- [ ] T23, T27
 - [ ] T22, T28
 
 ---
@@ -649,7 +612,7 @@ no hay que arrancar nada a la vez ni guardar a mano.
 
 ### 4.2 El ciclo de cada toma de voz
 
-1. A la izquierda, las 12 tomas: **"falta voz"** en amarillo, **"✓ voz"** en verde. Arranca sola en
+1. A la izquierda, las 9 tomas: **"falta voz"** en amarillo, **"✓ voz"** en verde. Arranca sola en
    la primera que falta.
 2. **Espacio** → cuenta 3, 2, 1 → el video arranca y graba.
 3. **Leé la frase grande cuando aparece.** Debajo, en gris, la próxima con su cuenta regresiva
@@ -806,36 +769,28 @@ video, ±3 s.)*
 | 1:12 | "Assigned 0" | The stage leaves the queue. |
 | 1:18 | "Issued certificates" | And it appears among the issued certificates. |
 
-#### Acto 5 · Dossier y escribano (T23–T27)
+#### Acto 5 · Dossier y escribano (T23, T27)
 
-##### T23 · El dossier — video 40 s
-
-| Tiempo | Entra cuando ves | Texto |
-|---|---|---|
-| 0:01 | El detalle de la 1A | Back to the delivered building: unit 1A, and its dossier. |
-| 0:06 | "Cryptographic certification" | It records hashes and timestamps. It doesn't certify the construction. |
-| 0:13 | La barra de avance | The dossier is compiled on read: its hash is computed at fetch time, over every anchored artifact listed below, in a fixed order. If anything it commits to changed, the hash would change with it. |
-
-##### T24 · Compartir — video 15 s
+##### T23 · El dossier, compartirlo y la firma — video 98 s
 
 | Tiempo | Entra cuando ves | Texto |
 |---|---|---|
-| 0:01 | "Share dossier" | Sharing generates a read-only link with its own token. Whoever has it sees the hashes, not the platform. |
-
-##### T25 · La firma — video 35 s
-
-| Tiempo | Entra cuando ves | Texto |
-|---|---|---|
-| 0:01 | "Notary panel" | The notary. Opening the dossier is what put it in this queue. |
-| 0:11 | "Dossier review" | The review shows the same dossier hash, and its artifacts. |
-| 0:21 | El texto de abajo | The disclaimer says what a signature means: that these hashes were reviewed at this moment — not that the documents are authentic. |
-
-##### T26 · El historial — video 15 s
-
-| Tiempo | Entra cuando ves | Texto |
-|---|---|---|
-| 0:01 | "Signature TXID" | Once signed, the hash is frozen, and the signature has its own transaction. |
-| 0:08 | "Signed dossiers" | The notary's history: each dossier hash next to the transaction of its signature. |
+| 0:01 | "Menu" | Back with the investor, on the delivered tower. |
+| 0:06 | "My units" | Unit 1A, in Torre Volumen 3. |
+| 0:12 | El detalle de la 1A | Its details and its progress. |
+| 0:21 | "Dossier" | At the end, the dossier. |
+| 0:24 | El hash "Pending" | The dossier hash is still pending: nobody has signed it yet. |
+| 0:30 | "Artifacts" | It lists every anchored artifact. |
+| 0:36 | "Share dossier" | We can share it with a read-only link. |
+| 0:45 | "Open view" | Anyone with the link can open it. |
+| 0:51 | "Public dossier" | The public view, without logging in. |
+| 0:57 | Los artefactos | The same hashes, still waiting for a signature. |
+| 1:06 | "Notary panel" | Now the notary. |
+| 1:09 | "Dossiers pending review" | One dossier is waiting for review. |
+| 1:15 | "Dossier review" | The notary reviews every artifact. |
+| 1:26 | "Verify and sign" | And signs the dossier. |
+| 1:29 | "Signing…" | The signature goes on chain. |
+| 1:32 | "Signed 1" | The dossier is now signed. |
 
 ##### T27 · Verificado sin cuenta — video 25 s
 
@@ -863,13 +818,13 @@ video, ±3 s.)*
 | 0:21 | El filtro "stage" | Filterable by category… |
 | 0:32 | "Blockchain verification" | …and each transaction opens with its anchoring date and a link to the public explorer. |
 
-- [ ] En el estudio, las 12 tomas dicen "✓ voz".
+- [ ] En el estudio, las 9 tomas dicen "✓ voz".
 
 ---
 
 ## Paso 5 · Unir todo
 
-- [ ] En la carpeta están `T01.mov` y `T07.mov` … `T28.mov` y las 12 voces (el estudio lo muestra: todas en
+- [ ] En la carpeta están `T01.mov` y `T07.mov` … `T28.mov` y las 9 voces (el estudio lo muestra: todas en
       verde).
 
 **Con ffmpeg** (esta Mac lo tiene) — más rápido:
@@ -959,8 +914,8 @@ bastante más.
 | **Idioma** | **Todo en `en-US` desde el primer cuadro**, ya logueado; el toggle ES \| EN queda a la vista en el header y la voz de T01 lo nombra. | Catalyst revisa en inglés. Hasta el 2026-09-30 el cambio se hacía en cámara, en el login; el dueño lo sacó para abrir ya adentro. Los dos diccionarios están completos y la paridad la fuerza el compilador (`dictionary.ts`). |
 | **Entorno** | Producción: `propnexus-web.onrender.com`. Nunca local. | El video tiene que mostrar TXIDs reales en Preprod y la URL pública viva — parte de lo que sostiene el criterio 5. |
 | **La FSM** | **Las cuatro aristas, sobre la misma etapa**: subir evidencia → observar → reanudar → certificar. | Es la máquina de estados entera contada sobre un solo objeto. |
-| **Tomas** | 12 tomas: la sesión A es un recorrido continuo (T01, decisión del dueño del 2026-10-01: no tiene esperas) y la B son 11 tomas (T07, T09, T12 y T18 funden varias, grabadas de corrido el mismo día), cortadas donde hay espera, con video y audio por separado. | Cada acción on-chain tarda ~45 s y crear un proyecto bloquea ~6 min. Una toma continua es imposible, y con la toma como unidad los tiempos de pantalla y voz se cuentan desde el mismo 0:00. |
-| **Orden del final** | La firma del escribano (T25) va **antes** de la vista pública (T27). | La vista pública muestra el dossier **ya firmado**, con su badge "Signed". Cambió el 2026-09-28. |
+| **Tomas** | 9 tomas: la sesión A es un recorrido continuo (T01, decisión del dueño del 2026-10-01: no tiene esperas) y la B son 8 tomas (T07, T09, T12, T18 y T23 funden varias, grabadas de corrido el mismo día), cortadas donde hay espera, con video y audio por separado. | Cada acción on-chain tarda ~45 s y crear un proyecto bloquea ~6 min. Una toma continua es imposible, y con la toma como unidad los tiempos de pantalla y voz se cuentan desde el mismo 0:00. |
+| **Orden del final** | La firma del escribano (T23) va **antes** de la vista pública (T27). | La vista pública muestra el dossier **ya firmado**, con su badge "Signed". Cambió el 2026-09-28. |
 
 **Los tiempos de espera** salen de
 [`REPORTE-2026-09-10-prueba-de-volumen.md`](REPORTE-2026-09-10-prueba-de-volumen.md) §Cronología
