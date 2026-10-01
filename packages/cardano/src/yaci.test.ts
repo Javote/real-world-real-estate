@@ -124,11 +124,22 @@ let adapter: LucidAnchorAdapter;
 /** La misma instancia que tiene el adaptador: el test del reference script
  * arma un segundo adaptador sobre la misma wallet. */
 let lucid: Awaited<ReturnType<typeof Lucid>>;
+let seed: string;
+
+/** Otro proceso con la misma wallet: lo que ve la API después de que Render
+ * reinicia la instancia. */
+async function instanciaNueva(): Promise<LucidAnchorAdapter> {
+  const otra = await Lucid(new KupmiosDevnet(KUPO_URL, OGMIOS_URL), "Custom", {
+    slotConfig: await slotConfigDelDevnet()
+  });
+  otra.selectWallet.fromSeed(seed);
+  return LucidAnchorAdapter.create({ lucid: otra, network: "Custom" });
+}
 
 beforeAll(async () => {
   if (!corre) return;
 
-  const seed = generateSeedPhrase();
+  seed = generateSeedPhrase();
   // **Kupmios (Kupo + Ogmios) y no Blockfrost**, aunque yaci exponga las dos.
   // El provider Blockfrost de Lucid 0.6 lee `cost_models_raw`, un campo que la
   // API de Blockfrost agregó después y que yaci-store todavía no devuelve: el
@@ -299,5 +310,29 @@ describe.skipIf(!corre)("AnchorPort contra un nodo Cardano local (yaci-devkit)",
     // arriba igual pasaban y el hueco recién se vería en el siguiente.
     const utxos = await lucid.utxosAt(conRef.walletAddress);
     expect(utxos.filter((u) => u.scriptRef)).toHaveLength(1);
+  }, 180_000);
+
+  // El límite de no esperar el bloque: la vista local vive en memoria. Una
+  // instancia recién arrancada no conoce la salida que la anterior envió hace
+  // segundos, así que no puede avanzar ese hilo hasta que entre en un bloque.
+  // Va después del reference script: gasta UTxOs de la misma wallet, y la vista
+  // local del adaptador principal los seguiría ofreciendo.
+  it("una instancia nueva no avanza un hilo cuya última tx no entró en un bloque", async () => {
+    const otra = { ...fuente, id: "clh3k9x0000008l3fyacinew" };
+    const pendiente = buildStageDatum(otra);
+    const abierto = await adapter.openThread({ datum: pendiente });
+
+    const nueva = await instanciaNueva();
+    const avance = {
+      outputRef: abierto.outputRef,
+      previous: pendiente,
+      next: buildStageDatum({ ...otra, state: "InProgress" })
+    };
+    await expect(nueva.advanceThread(avance)).rejects.toThrow(/No existe el UTxO/);
+
+    await esperarBloques();
+    const tarde = await nueva.advanceThread(avance);
+    await esperarBloques();
+    expect((await nueva.verify(tarde.txid))?.datum.state).toBe("InProgress");
   }, 180_000);
 });
