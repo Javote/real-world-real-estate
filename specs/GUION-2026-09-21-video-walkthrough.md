@@ -21,7 +21,7 @@
 | **1** | Antes de cada sesión: la Mac, Render despierto, Chrome con las 5 pestañas | `sesion.sh` + `chrome.sh` | ~10 min (+ ensayo la primera vez) |
 | **2A** | Grabar la **sesión A**: el comprador mirando una obra terminada (T01, una sola toma) | el grabador de macOS; al final, `renombrar.sh A` | ~5 min |
 | **2B** | Grabar la **sesión B**: nace un proyecto y recorre la FSM, hasta la firma, y cierra en el audit log (T07–T28). **De corrido, sin cortar la sesión** | ídem; al final, `renombrar.sh B` | ~60 min |
-| **3** | Recortar los 15 videos | QuickTime | ~30 min |
+| **3** | Recortar los 12 videos | QuickTime | ~30 min |
 | **4** | Grabar la voz mirando cada video, con la frase en pantalla en su segundo | el **estudio** (una página local) | ~35 min |
 | **5** | Unir todo, con subtítulos | `unir.sh` (o el estudio, si no hay ffmpeg) | ~10 min |
 | **6** | Mirar el resultado y cerrar | — | ~25 min |
@@ -35,7 +35,7 @@ cd ~/Documents/real-estate/real-world-real-estate
 
 **Cuatro reglas que valen para todo el runbook:**
 
-1. **La unidad es la toma, no el acto.** Son 15 tomas (la sesión A es una sola, T01; la B va de T07 a T28, con T07, T09 y T12 que funden varias de las originales); cada una es un video `Txx.mov` y una voz
+1. **La unidad es la toma, no el acto.** Son 12 tomas (la sesión A es una sola, T01; la B va de T07 a T28, con T07, T09, T12 y T18 que funden varias de las originales); cada una es un video `Txx.mov` y una voz
    `Txx.webm` con el mismo nombre. Todos los tiempos se cuentan desde el **0:00 de la toma ya
    recortada**, así que rehacer una no corre nada del resto.
 2. **La sesión B va de corrido y en orden.** Cada toma deja la base en el estado que necesita la
@@ -179,7 +179,7 @@ propia sesión:
   ```
 
 - [ ] **La primera vez, un ensayo con las acciones** — la mejor inversión del día (~20 min y tADA de
-      Preprod, que no es plata). **Solo T07, la unidad y la evidencia de T09, y T18–T21**, sobre un proyecto llamado **`Ensayo`**:
+      Preprod, que no es plata). **Solo T07, la unidad y la evidencia de T09, y T18**, sobre un proyecto llamado **`Ensayo`**:
   - crealo como en T07 e invitá al certifier como en su corte;
   - cargá una unidad, subí evidencia, observá, reanudá y certificá.
   - **No invites al investor (T09–T12) ni abras o firmes dossiers (T23–T27).** Una invitación
@@ -199,7 +199,7 @@ propia sesión:
 **Para escribir una dirección en pantalla completa** (siempre fuera de cámara): `Cmd+L` muestra la
 barra un momento → pegás → Enter.
 
-### 1.5 El ciclo de cada toma — cinco pasos, 15 veces
+### 1.5 El ciclo de cada toma — cinco pasos, 12 veces
 
 1. **Dejá la pantalla como dice "Antes de grabar"** de la toma. Si pasó más de un minuto desde la
    última acción en esa pestaña, **recargala** (`Cmd+R`) y esperá que cargue.
@@ -223,11 +223,11 @@ descartar (van a `descartadas/`, no se borran).
   Projects · Capital · Units · Progress; Certifier y Notary: Panel · … · Profile) y el header tiene
   la campana y el ícono de perfil.
 - **Una toma termina** cuando empieza una espera (**⏸ CORTE**), cuando pasás de ~90 s, o cuando
-  cambiás de rol. Por eso la B son 14 (T07, T09 y T12 funden varias de las originales). La A no tiene esperas y es una sola (T01).
+  cambiás de rol. Por eso la B son 11 (T07, T09, T12 y T18 funden varias de las originales). La A no tiene esperas y es una sola (T01).
 
 ### 1.7 Las tomas irrepetibles, y qué hacer si una sale mal
 
-**T07, T09, T12, T18, T19, T20 y T25** mandan algo a la cadena y dejan la base en otro estado:
+**T07, T09, T12, T18 y T25** mandan algo a la cadena y dejan la base en otro estado:
 no hay "otra toma" de esas.
 
 - **Un error de tipeo o un clic de más:** seguí. Se arregla recortando o la voz lo tapa.
@@ -253,18 +253,15 @@ no hay "otra toma" de esas.
 | T07 | 3:33 | 2 · Developer | El panel y el proyecto nuevo, en una toma | `/developer` → … → `/developer/project/new` | 180 s | 60 s | ⚠ irrepetible |
 | T09 | 6:33 | 2 · Developer | El proyecto, la unidad, la invitación y la evidencia, en una toma | `/developer` → … → `/developer/project/:id/upload` → cardanoscan | 195 s | 75 s | ⚠ irrepetible |
 | T12 | 9:48 | 1 · Investor | Aceptar, la unidad y el contrato, en una toma | campana → `/investor/unit/<5B>` → `…/contract` | 104 s | 45 s | ⚠ irrepetible |
-| T18 | 11:32 | 3 · Certifier | Observar | `/certifier` → `/certifier/assigned` → `/certifier/stage/:id` | 40 s | 17 s | ⚠ irrepetible |
-| T19 | 12:12 | 2 · Developer | Reanudar | `/developer/progress` | 20 s | 11 s | ⚠ irrepetible |
-| T20 | 12:32 | 3 · Certifier | Certificar | `/certifier/stage/:id` | 20 s | 7 s | ⚠ irrepetible |
-| T21 | 12:52 | 3 · Certifier | El certificado | `/certifier/issued` | 15 s | 5 s | |
-| T23 | 13:07 | 1 · Investor | El dossier | `/investor/unit/<1A>/dossier` | 40 s | 24 s | |
-| T24 | 13:47 | 1 · Investor | Compartir | "Share" → modal | 15 s | 8 s | |
-| T25 | 14:02 | 4 · Notary | La firma | `/notary` → `/notary/dossiers` → `/notary/dossier/:id` | 35 s | 19 s | ⚠ irrepetible |
-| T26 | 14:37 | 4 · Notary | El historial | `/notary/signed` | 15 s | 11 s | |
-| T27 | 14:52 | incógnito | Verificado sin cuenta | `/public/dossier/:shareToken` | 25 s | 18 s | |
-| T22 | 15:17 | 2 · Developer | El contrato del lado del developer | `/developer/project/:id/contracts` | 25 s | 14 s | |
-| T28 | 15:42 | 2 · Developer | El círculo se cierra | `/developer/audit-log` | 45 s | 21 s | |
-| | **16:27** | | **Total** | | **987 s ≈ 16 min** | | |
+| T18 | 11:32 | 3 → 2 → 3 | Observar, reanudar y certificar, en una toma | `/certifier/stage/:id` → `/developer/progress` → `/certifier/issued` | 87 s | 40 s | ⚠ irrepetible |
+| T23 | 12:59 | 1 · Investor | El dossier | `/investor/unit/<1A>/dossier` | 40 s | 24 s | |
+| T24 | 13:39 | 1 · Investor | Compartir | "Share" → modal | 15 s | 8 s | |
+| T25 | 13:54 | 4 · Notary | La firma | `/notary` → `/notary/dossiers` → `/notary/dossier/:id` | 35 s | 19 s | ⚠ irrepetible |
+| T26 | 14:29 | 4 · Notary | El historial | `/notary/signed` | 15 s | 11 s | |
+| T27 | 14:44 | incógnito | Verificado sin cuenta | `/public/dossier/:shareToken` | 25 s | 18 s | |
+| T22 | 15:09 | 2 · Developer | El contrato del lado del developer | `/developer/project/:id/contracts` | 25 s | 14 s | |
+| T28 | 15:34 | 2 · Developer | El círculo se cierra | `/developer/audit-log` | 45 s | 21 s | |
+| | **16:19** | | **Total** | | **979 s ≈ 16 min** | | |
 
 ### Sesión A · El comprador mira una obra terminada (T01)
 
@@ -326,10 +323,8 @@ siguiente (⛓ = manda algo a la cadena; ⚠ = irrepetible).
 | 1 | T07 ⛓⚠ | 2 | ⏸ ~6 min (los 10 mints). **Fuera de cámara:** 5 Admin invita al certifier, 3 acepta |
 | 2 | T09 ⛓⚠ (unidad, invitación y evidencia) | 2 | ⏸ ~1-2 min adentro de la toma (la evidencia), cortada |
 | 3 | T12 ⛓⚠ (aceptar, la unidad y el contrato) | 1 | — |
-| 5 | T18 ⛓⚠ | 3 | ⏸ ~1 min |
-| 6 | T19 ⛓⚠ | 2 | ⏸ ~1 min |
-| 7 | T20 ⛓⚠ | 3 | ⏸ ~1 min |
-| 8 | T21 → T23 · T24 → T25 ⛓⚠ | 3 → 1 → 4 | ⏸ ~1 min |
+| 5 | T18 ⛓⚠ (observar, reanudar, certificar) | 3 → 2 → 3 | — (las esperas, cortadas) |
+| 8 | T23 · T24 → T25 ⛓⚠ | 1 → 4 | ⏸ ~1 min |
 | 9 | T26 → T27 → T22 · T28 | 4 → incógnito → 2 | Fin |
 
 **Se puede grabar en tomas largas** (decisión del dueño, 2026-10-01, como la sesión A): una
@@ -454,61 +449,27 @@ Lo que hace la toma, medido sobre el video (cuadros cada 3 s, ±3 s):
 **Todo sobre la misma etapa: la 1, "Land acquisition", de Torres de Palermo**, para que se lea como un
 solo objeto recorriendo una máquina de estados y no como cuatro cosas sueltas.
 
-##### T18 · Observar — 40 s · ⚠ irrepetible
+##### T18 · Observar, reanudar y certificar — 1:27 · ⚠ irrepetible · ✓ grabada el 2026-10-01
 
-**Antes de grabar:** pestaña 3, `/certifier`. Recargá antes de grabar.
+**Las cuatro aristas que faltaban, en una toma armada con cuatro grabaciones** (en `originales/`):
+observar (pestaña 3, recortada en 0:36: seguía el spinner "Sending…"), reanudar (pestaña 2,
+entera), certificar (pestaña 3, recortada en 0:16: seguía "Certifying…") y el certificado
+emitido (pestaña 3, entera). Funde las viejas T18, T19, T20 y T21. La observación fue `Please
+attach the signed version`.
 
-| Tiempo | Acción | Lo que tiene que verse |
-|---|---|---|
-| 0:00–0:06 | **Quieto.** | "Certifier panel": "Assigned 1", "Certified 30", "Observed", "Total stages"; y "Assigned stages" con "Stage 1: Land acquisition". |
-| 0:07 | Clic en **"Assigned"** en la barra lateral. | "Assigned · Stages assigned for certification". |
-| 0:08–0:11 | **Quieto.** | La misma etapa. |
-| 0:12 | Clic en la etapa. | "Certify stage · Stage 1", pill "In progress". |
-| 0:13–0:22 | **Quieto**, scroll lento. | "Evidence uploaded by the developer": los tres archivos de T09 con su hash. |
-| 0:23 | Clic en **"Observe"**. | El modal "Observe stage". |
-| 0:24–0:32 | En "Observations" tipeá `The site survey is missing the surveyor's signature.` | — |
-| 0:33 | Clic en **"Send"**. | "Sending…" |
-| 0:34–0:40 | **Quieto.** | — |
+Lo que hace la toma, medido sobre el video (cuadros cada 2 s, ±2 s):
 
-**⏸ CORTE ~1 min.** → arista **`InProgress → Observed`**.
-
-##### T19 · Reanudar — 20 s · ⚠ irrepetible
-
-**Antes de grabar:** pestaña 2, `/developer`. Recargá antes de grabar.
-
-| Tiempo | Acción | Lo que tiene que verse |
-|---|---|---|
-| 0:00 | Clic en **"Progress"** en la barra lateral. | — |
-| 0:01–0:08 | **Quieto.** | Arriba, "Observed stages": "Torres de Palermo · Land acquisition" con pill **"Observed"**. |
-| 0:09 | Clic en **"Resume stage"**. | El botón cargando. |
-| 0:10–0:20 | **Quieto.** | — |
-
-**⏸ CORTE ~1 min.** → arista **`Observed → InProgress`**. Esta sí es una acción deliberada del
-developer: el backend no la dispara solo, a propósito. *(La pantalla no muestra el texto de la
-observación: no lo digas en la voz.)*
-
-##### T20 · Certificar — 20 s · ⚠ irrepetible
-
-**Antes de grabar:** pestaña 3, `/certifier/stage/<id>` (el mismo de T18). Recargá antes de grabar: la
-pill tiene que decir "In progress".
-
-| Tiempo | Acción | Lo que tiene que verse |
-|---|---|---|
-| 0:00–0:04 | **Quieto.** | Pill "In progress", la evidencia. |
-| 0:05 | Clic en **"Certify"**. | "Certifying…" |
-| 0:06–0:20 | **Quieto.** | — |
-
-**⏸ CORTE ~1 min.** → arista **`InProgress → Completed`**. La máquina de estados, entera.
-
-##### T21 · El certificado — 15 s
-
-**Antes de grabar:** la pantalla de la etapa, ya certificada.
-
-| Tiempo | Acción | Lo que tiene que verse |
-|---|---|---|
-| 0:00–0:02 | **Quieto.** | La pill "Certified". |
-| 0:03 | Clic en **"Issued"** en la barra lateral. | "Issued certificates · Technical history". |
-| 0:04–0:15 | **Quieto**, el mouse sobre la primera fila. | "Land acquisition", pill "Certified", su hash y su txid. |
+| Tiempo | Pantalla |
+|---|---|
+| 0:00 | "Certifier panel": "Assigned 1", Torres de Palermo · Adquisición del terreno |
+| 0:08 | **"Certify stage"**: la etapa 1 y los tres archivos del developer |
+| 0:16 | **"Observe"**: el diálogo; se escribe la observación (0:18) |
+| 0:30 | **"Send"**: "Sending…" |
+| 0:36 | "Developer panel" → **"Progress"** (0:42): "Observed stages", la etapa 1 **Observed** |
+| 0:52 | **"Resume stage"** |
+| 0:56 | "Certifier panel" → la etapa (1:04) → **"Certify"** (1:06): "Certifying…" |
+| 1:12 | "Certifier panel": "Assigned 0", "Certified 31" |
+| 1:18 | **"Issued"**: Torres de Palermo, "Certified", arriba de todo, hasta el final (1:27) |
 
 #### Acto 5 · Dossier y escribano
 
@@ -602,7 +563,7 @@ Al terminar, **cerrá la ventana de incógnito entera**.
 
 Los tres StatCard son hechos del registro, no un flujo de pagos — D-070.
 
-**Movida al final el 2026-10-01:** antes iba entre T21 y T23, y obligaba a pasar por la pestaña 2
+**Movida al final el 2026-10-01:** antes iba entre las viejas T21 y T23, y obligaba a pasar por la pestaña 2
 solo para esta toma. El contrato existe desde T12, así que acá dice lo mismo y el developer queda
 con sus dos tomas seguidas. Las herramientas siguen el orden de este mapa, no el número.
 
@@ -635,7 +596,7 @@ la vista de teléfono). El dueño las sacó: ninguna agregaba un paso al flujo. 
 
 ---
 
-## Paso 3 · Recortar los 15 videos
+## Paso 3 · Recortar los 12 videos
 
 **Por qué importa:** todos los tiempos —los de la pantalla y los de la voz— se cuentan desde el
 0:00 de la toma **recortada**. Un recorte a ojo corre la voz.
@@ -657,7 +618,7 @@ error y `T18b` desde la acción siguiente; abrí `T18.mov` → Edición → **Ag
 - [ ] T01
 - [ ] T07, T09
 - [ ] T12
-- [ ] T18–T21
+- [ ] T18
 - [ ] T23–T27
 - [ ] T22, T28
 
@@ -688,7 +649,7 @@ no hay que arrancar nada a la vez ni guardar a mano.
 
 ### 4.2 El ciclo de cada toma de voz
 
-1. A la izquierda, las 15 tomas: **"falta voz"** en amarillo, **"✓ voz"** en verde. Arranca sola en
+1. A la izquierda, las 12 tomas: **"falta voz"** en amarillo, **"✓ voz"** en verde. Arranca sola en
    la primera que falta.
 2. **Espacio** → cuenta 3, 2, 1 → el video arranca y graba.
 3. **Leé la frase grande cuando aparece.** Debajo, en gris, la próxima con su cuenta regresiva
@@ -824,36 +785,26 @@ video, ±3 s.)*
 | 1:27 | "Contract and payments" | Below, the contract and payments. |
 | 1:36 | "My contract and payments" | The contract: the total amount and the signing date. |
 
-#### Acto 4 · La FSM (T18–T21)
+#### Acto 4 · La FSM (T18)
 
-##### T18 · Observar — video 40 s
-
-| Tiempo | Entra cuando ves | Texto |
-|---|---|---|
-| 0:01 | "Certifier panel" | The certifier. The new stage has just entered the queue, because work on it started. |
-| 0:13 | "Evidence uploaded by the developer" | Inside, the evidence the developer uploaded, file by file, with its hash. |
-| 0:24 | El modal "Observe stage" | Observing sends the stage back with a note. That transition is anchored too. |
-
-##### T19 · Reanudar — video 20 s
+##### T18 · Observar, reanudar y certificar — video 87 s
 
 | Tiempo | Entra cuando ves | Texto |
 |---|---|---|
-| 0:01 | "Observed stages" | The developer sees the stage come back as observed. |
-| 0:09 | El clic en "Resume stage" | Resuming is a deliberate action: it's the one transition the backend never fires on its own. |
-
-##### T20 · Certificar — video 20 s
-
-| Tiempo | Entra cuando ves | Texto |
-|---|---|---|
-| 0:01 | La pill "In progress" | The stage is back in progress. |
-| 0:05 | El clic en "Certify" | Certifying closes it. Four transitions, each one recorded on-chain. |
-
-##### T21 · El certificado — video 15 s
-
-| Tiempo | Entra cuando ves | Texto |
-|---|---|---|
-| 0:01 | La pill "Certified" | Certified. |
-| 0:04 | "Issued certificates" | Each certificate, with its hash and the transaction that anchors it. |
+| 0:01 | "Certifier panel" | Now the certifier. |
+| 0:04 | "Assigned stages" | One stage is assigned for review. |
+| 0:08 | "Certify stage" | Stage one, with the evidence uploaded by the developer. |
+| 0:16 | El diálogo "Observe" | Something is missing, so we observe the stage. |
+| 0:21 | Se escribe la observación | We write what the developer needs to fix. |
+| 0:30 | "Sending…" | We send the observation. |
+| 0:36 | "Developer panel" | Back to the developer. |
+| 0:42 | "Observed stages" | The stage now shows as observed. |
+| 0:49 | "Resume stage" | We resume the stage. |
+| 0:56 | "Certifier panel" | The certifier reviews it again. |
+| 1:04 | "Certify stage" | This time, we certify the stage. |
+| 1:07 | "Certifying…" | The certification goes on chain. |
+| 1:12 | "Assigned 0" | The stage leaves the queue. |
+| 1:18 | "Issued certificates" | And it appears among the issued certificates. |
 
 #### Acto 5 · Dossier y escribano (T23–T27)
 
@@ -912,13 +863,13 @@ video, ±3 s.)*
 | 0:21 | El filtro "stage" | Filterable by category… |
 | 0:32 | "Blockchain verification" | …and each transaction opens with its anchoring date and a link to the public explorer. |
 
-- [ ] En el estudio, las 15 tomas dicen "✓ voz".
+- [ ] En el estudio, las 12 tomas dicen "✓ voz".
 
 ---
 
 ## Paso 5 · Unir todo
 
-- [ ] En la carpeta están `T01.mov` y `T07.mov` … `T28.mov` y las 15 voces (el estudio lo muestra: todas en
+- [ ] En la carpeta están `T01.mov` y `T07.mov` … `T28.mov` y las 12 voces (el estudio lo muestra: todas en
       verde).
 
 **Con ffmpeg** (esta Mac lo tiene) — más rápido:
@@ -1008,7 +959,7 @@ bastante más.
 | **Idioma** | **Todo en `en-US` desde el primer cuadro**, ya logueado; el toggle ES \| EN queda a la vista en el header y la voz de T01 lo nombra. | Catalyst revisa en inglés. Hasta el 2026-09-30 el cambio se hacía en cámara, en el login; el dueño lo sacó para abrir ya adentro. Los dos diccionarios están completos y la paridad la fuerza el compilador (`dictionary.ts`). |
 | **Entorno** | Producción: `propnexus-web.onrender.com`. Nunca local. | El video tiene que mostrar TXIDs reales en Preprod y la URL pública viva — parte de lo que sostiene el criterio 5. |
 | **La FSM** | **Las cuatro aristas, sobre la misma etapa**: subir evidencia → observar → reanudar → certificar. | Es la máquina de estados entera contada sobre un solo objeto. |
-| **Tomas** | 15 tomas: la sesión A es un recorrido continuo (T01, decisión del dueño del 2026-10-01: no tiene esperas) y la B son 14 tomas (T07, T09 y T12 funden varias, grabadas de corrido el mismo día), cortadas donde hay espera, con video y audio por separado. | Cada acción on-chain tarda ~45 s y crear un proyecto bloquea ~6 min. Una toma continua es imposible, y con la toma como unidad los tiempos de pantalla y voz se cuentan desde el mismo 0:00. |
+| **Tomas** | 12 tomas: la sesión A es un recorrido continuo (T01, decisión del dueño del 2026-10-01: no tiene esperas) y la B son 11 tomas (T07, T09, T12 y T18 funden varias, grabadas de corrido el mismo día), cortadas donde hay espera, con video y audio por separado. | Cada acción on-chain tarda ~45 s y crear un proyecto bloquea ~6 min. Una toma continua es imposible, y con la toma como unidad los tiempos de pantalla y voz se cuentan desde el mismo 0:00. |
 | **Orden del final** | La firma del escribano (T25) va **antes** de la vista pública (T27). | La vista pública muestra el dossier **ya firmado**, con su badge "Signed". Cambió el 2026-09-28. |
 
 **Los tiempos de espera** salen de
@@ -1033,7 +984,7 @@ Para no prometer en audio algo que la pantalla no hace:
   - el detalle de etapa **no muestra GPS ni hora de captura** de las fotos (la pantalla de etapa, que la sesión A ya no recorre);
   - el contrato del investor **no muestra hash**: total, fecha de firma y el cronograma (T12); el
     txid del contrato está del lado del developer (T22);
-  - "Observed stages" del developer **no muestra la nota del certifier** (T19);
+  - "Observed stages" del developer **no muestra la nota del certifier** (T18);
   - el detalle del proyecto del developer **no lista las etapas**: las diez `Pending` se ven en
     "Progress" (T09);
   - las novedades de la unidad **no abren el modal de la etapa**: llevan al detalle de la unidad, y
