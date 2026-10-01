@@ -123,6 +123,7 @@ del 2026-09-11 de nuevo.
 | 5 | El `outputRef` del recibo se supone `#0` en vez de buscarse | Tiene la respuesta correcta calculada al lado y no la usa — asume una posición de output que puede no serlo | `specs/SPEC-407-el-outputref-se-busca-no-se-supone.md` |
 | 6 | El datum que vuelve de la cadena no se valida, por las dos puertas de lectura | Se confía en la forma sin chequearla — un datum corrupto o de otra versión del contrato se lee como bueno | `specs/SPEC-408-lo-que-vuelve-de-la-cadena-se-valida.md` |
 | 7 | Las 2 ADA bloqueadas por etapa (20 por proyecto de 10 etapas) | Sin burn (D-057) son permanentes — no es un bug, es el número real con el que hay que decidir si el costo por proyecto es aceptable en mainnet | D-057, `specs/REPORTE-2026-09-10-prueba-de-volumen.md` |
+| 8 | **Idea:** Koios en vez de Blockfrost, o como segunda fuente | Hoy dependemos de una sola empresa (D-005). Koios es comunitario, no pide key, y cualquiera puede verificar un TXID contra la misma fuente que usamos (el 2026-10-01 confirmó dos tx de Preprod que Blockfrost ya había confirmado). Lucid ya trae el provider; Blockfrost está atado solo en `factory.ts` y en el `fetch` de `confirmedAt`. **Sin medir:** que el provider de Koios evalúe bien Plutus V3. Primer paso: `yaci.test.ts` con ese provider. Paso intermedio más barato: Koios solo como respaldo de `confirmedAt` | D-005 |
 
 **Por qué junta specs de auditorías distintas.** Los ítems 2 y 3 salen de
 `AUDITORIA-2026-09-11-calidad-de-contracts.md`; los ítems 4, 5 y 6, de
