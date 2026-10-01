@@ -255,10 +255,10 @@ no hay "otra toma" de esas.
 | T12 | 9:48 | 1 · Investor | Aceptar, la unidad y el contrato, en una toma | campana → `/investor/unit/<5B>` → `…/contract` | 104 s | 45 s | ⚠ irrepetible |
 | T18 | 11:32 | 3 → 2 → 3 | Observar, reanudar y certificar, en una toma | `/certifier/stage/:id` → `/developer/progress` → `/certifier/issued` | 87 s | 40 s | ⚠ irrepetible |
 | T23 | 12:59 | 1 → 4 | El dossier, compartirlo y la firma, en una toma | `/investor/unit/<1A>/dossier` → `/public/dossier/…` → `/notary/dossier/:id` | 98 s | 45 s | ⚠ irrepetible |
-| T27 | 14:37 | incógnito | Verificado sin cuenta | `/public/dossier/:shareToken` | 25 s | 18 s | |
-| T22 | 15:02 | 2 · Developer | El contrato del lado del developer | `/developer/project/:id/contracts` | 25 s | 14 s | |
-| T28 | 15:27 | 2 · Developer | El círculo se cierra | `/developer/audit-log` | 45 s | 21 s | |
-| | **16:12** | | **Total** | | **972 s ≈ 16 min** | | |
+| T27 | 14:37 | incógnito | Verificado sin cuenta | `/public/dossier/:shareToken` | 16 s | 18 s | |
+| T22 | 14:53 | 2 · Developer | El contrato del lado del developer | `/developer/project/:id/contracts` | 24 s | 14 s | |
+| T28 | 15:17 | 2 · Developer | El círculo se cierra | `/developer/audit-log` | 53 s | 21 s | |
+| | **16:10** | | **Total** | | **970 s ≈ 16 min** | | |
 
 ### Sesión A · El comprador mira una obra terminada (T01)
 
@@ -499,6 +499,11 @@ Lo que hace la toma, medido sobre el video (cuadros cada 3 s, ±3 s):
 
 ##### T27 · Verificado sin cuenta — 25 s
 
+**✓ Grabada el 2026-10-01 (0:16).** Arranca en el panel del notary ("Signed 1"), abre la ventana de
+incógnito y pega el link: "Dossier público" ya **firmado**. Arranca en castellano —incógnito no
+recuerda el idioma— y pasa a inglés a los ~11 s.
+
+
 **Antes de grabar:** una **ventana de incógnito**, armada así: `Cmd+Shift+N` → `Cmd+L` →
 pegá el link de T23 (de la nota) → Enter → `Cmd` + `+` hasta 110% (incógnito no recuerda el zoom) →
 `Cmd+Ctrl+F`. **Es el plano más fuerte del producto
@@ -516,6 +521,10 @@ Al terminar, **cerrá la ventana de incógnito entera**.
 
 ##### T22 · El contrato del lado del developer — 25 s
 
+**✓ Grabada el 2026-10-01 (0:24).** Panel → "My projects" → Torres de Palermo (10%, US$ 185K, 1
+investor) → **"Contracts"** (0:18): la 5B de Buyer Demo, "Recorded on chain" y su txid.
+
+
 **Antes de grabar:** pestaña 2, `/developer/project/<nuevo>`.
 
 | Tiempo | Acción | Lo que tiene que verse |
@@ -532,6 +541,12 @@ con sus dos tomas seguidas. Las herramientas siguen el orden de este mapa, no el
 
 
 ##### T28 · El círculo se cierra — 45 s
+
+**✓ Grabada el 2026-10-01 (0:53).** Panel → **"Audit log"** (0:08) → filtro **"stage"** (0:14) →
+**"signature"** (0:22) → **"All"** (0:30) → el txid de "Certified the stage" (0:38): "Blockchain
+verification" → **cardanoscan** (0:46) hasta el final. Se grabó después de arreglar el audit log
+para que muestre el tx de cada transición (`754f51c`).
+
 
 **Antes de grabar:** pestaña 2 (`Cmd+2`), `/developer`. Recargá antes de grabar.
 
@@ -792,31 +807,35 @@ video, ±3 s.)*
 | 1:29 | "Signing…" (subtítulo arriba) | The signature goes on chain. |
 | 1:32 | "Signed 1" | The dossier is now signed. |
 
-##### T27 · Verificado sin cuenta — video 25 s
+##### T27 · Verificado sin cuenta — video 16 s
 
 | Tiempo | Entra cuando ves | Texto |
 |---|---|---|
-| 0:01 | "Public dossier" | The public route takes that token and nothing else: a private window, no account, no session. |
-| 0:09 | El badge "Signed" | Anyone with the link — a bank, another notary — sees the dossier hash and the notary's signature, without being a user of the platform. |
+| 0:01 | "Notary panel" | The dossier is now signed. |
+| 0:04 | La ventana de incógnito | Anyone can check it, without an account. |
+| 0:08 | "Dossier público" | This is the shared link, in a private window. |
+| 0:11 | "Signed" | It now shows as signed, with its hash. |
 
-#### Acto 6 · El developer cierra (T22, T28)
-
-##### T22 · El contrato del lado del developer — video 25 s
-
-| Tiempo | Entra cuando ves | Texto |
-|---|---|---|
-| 0:01 | Las tres tarjetas | Back with the developer: the contract of unit 5B, from their side. |
-| 0:09 | La fila de la 5B | Which unit, how much, when it was signed, and the transaction that records it. These counters are facts from the registry, not a payment flow. |
-
-
-##### T28 · El círculo se cierra — video 45 s
+##### T22 · El contrato del lado del developer — video 24 s
 
 | Tiempo | Entra cuando ves | Texto |
 |---|---|---|
-| 0:01 | "Audit log" | The audit log. Every step in this video is here: the project, the invitation, the evidence, the observation, the certification, the signature. |
-| 0:14 | La lista, bajando | Each one with its actor, role, category and timestamp. |
-| 0:21 | El filtro "stage" | Filterable by category… |
-| 0:32 | "Blockchain verification" | …and each transaction opens with its anchoring date and a link to the public explorer. |
+| 0:01 | "Developer panel" | Back with the developer. |
+| 0:06 | "My projects" | We open the project. |
+| 0:12 | El detalle de Torres de Palermo | Ten percent done, and its first buyer. |
+| 0:18 | "Contracts" | The contract for unit 5B, recorded on chain. |
+
+##### T28 · El círculo se cierra — video 53 s
+
+| Tiempo | Entra cuando ves | Texto |
+|---|---|---|
+| 0:01 | "Developer panel" | Finally, the audit log. |
+| 0:08 | "Audit log" | Every action, with who did it and its transaction. |
+| 0:14 | El filtro "stage" | We can filter by stage… |
+| 0:22 | El filtro "signature" | …or by signatures. |
+| 0:30 | "All" | Back to all events. |
+| 0:38 | "Blockchain verification" | Each transaction can be verified… |
+| 0:46 | Cardanoscan | …on Cardanoscan, outside the app. |
 
 - [ ] En el estudio, las 9 tomas dicen "✓ voz".
 
