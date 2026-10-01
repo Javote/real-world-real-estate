@@ -1177,7 +1177,7 @@ suite verifica lo mismo que va a correr en producción.
 ## Comandos
 
 ```bash
-pnpm --filter @plataforma/api dev            # solo la API
+pnpm --filter @plataforma/api dev            # solo la API; antes migra la base si es local (`--solo-local`)
 pnpm --filter @plataforma/api db:migrate     # aplica las migraciones pendientes
 pnpm --filter @plataforma/api db:seed        # datos demo
 pnpm --filter @plataforma/api test:s3        # storage contra el MinIO de compose.dev.yml — NO corre en CI

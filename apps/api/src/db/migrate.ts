@@ -2,6 +2,7 @@ import "dotenv/config";
 import { existsSync, readdirSync, readFileSync } from "node:fs";
 import path from "node:path";
 import { type Client, createClient } from "../lib/libsql-client";
+import { esBaseLocal } from "./credentials";
 import { asegurarDirectorioLocal, urlDeLaBase } from "./local-db";
 
 // Kysely no trae generador de migraciones (D-049): `migrations/*.sql` es SQL
@@ -188,11 +189,24 @@ export async function migrar(url: string = urlDeLaBase()): Promise<string[]> {
   return aplicadas;
 }
 
+/**
+ * La migración de `pnpm dev`: una base local se migra antes de arrancar, igual
+ * que producción en su `startCommand`. Una remota no se toca: migrarla desde una
+ * máquina aplicaría una migración que todavía no se deployó.
+ */
+export async function migrarSoloLocal(url: string = urlDeLaBase()): Promise<string[] | null> {
+  if (!esBaseLocal(url)) {
+    console.log("[migrate] la base no es local: pnpm dev no la migra");
+    return null;
+  }
+  return migrar(url);
+}
+
 // Solo corre como script. Sin este guardia, importarlo desde la suite de tests
 // dispararía una migración contra la base local como efecto secundario del import.
 /* v8 ignore if -- @preserve: guardia para que importar el módulo no migre; solo corre como CLI (SPEC-018) */
 if (require.main === module) {
-  migrar().catch((e) => {
+  (process.argv.includes("--solo-local") ? migrarSoloLocal() : migrar()).catch((e) => {
     console.error(e);
     process.exit(1);
   });

@@ -2,7 +2,7 @@ import { existsSync, mkdtempSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import path from "node:path";
 import { afterEach, describe, expect, it } from "vitest";
-import { migrar } from "../src/db/migrate";
+import { migrar, migrarSoloLocal } from "../src/db/migrate";
 
 // `applyPendingMigrations`/`conTecho` ya tienen su propia suite
 // (`migrate-atomico.test.ts`, `migrate-techo.test.ts`). Lo que `migrar()`
@@ -41,5 +41,17 @@ describe("migrar", () => {
 
     const segunda = await migrar(url);
     expect(segunda).toEqual([]);
+  });
+});
+
+describe("migrarSoloLocal — la migración de pnpm dev", () => {
+  it("migra una base local", async () => {
+    dir = mkdtempSync(path.join(tmpdir(), "migrar-solo-local-"));
+    const aplicadas = await migrarSoloLocal(`file:${path.join(dir, "dev.db")}`);
+    expect(aplicadas?.length).toBeGreaterThan(0);
+  });
+
+  it("no toca una base remota", async () => {
+    expect(await migrarSoloLocal("libsql://no-existe.turso.io")).toBeNull();
   });
 });

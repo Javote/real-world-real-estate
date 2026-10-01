@@ -289,3 +289,10 @@ igual que `passwordDeDemo` del seed: `SEED_DEMO_PASSWORD` / `SEED_ADMIN_PASSWORD
 `apps/api/.env`, y si no están, los defaults locales. La solapa de `/login` (`ROLE_PRESETS`) precarga
 solo el usuario —nunca la contraseña, que depende del entorno—, así que nunca escribas una password
 literal en un spec ni en el front.
+
+**Si los E2E locales fallan en masa y en CI pasan, es la `dev.db`, no los specs.** CI migra y siembra
+una base nueva en cada corrida; la local arrastra estado. Pasó el 2026-10-01 con 43 fallos: a la base
+le faltaba `0012_project_cover.sql` (`/developer/projects` fallaba y la pantalla decía "0 proyectos")
+y sus passwords eran anteriores a `SEED_DEMO_PASSWORD` en `apps/api/.env` (401 en el login de los
+specs). Lo primero ya no pasa: `pnpm dev` migra la base local antes de arrancar. Lo segundo se arregla
+con `pnpm db:seed`.
