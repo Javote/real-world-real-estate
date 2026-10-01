@@ -801,18 +801,25 @@ video, ±3 s.)*
 | Tiempo | Entra cuando ves | Texto |
 |---|---|---|
 | 0:01 | "Buy", arriba de todo | This is the investor's screen. |
-| 0:06 | "Updates" | In the top bar, we have our notifications, our profile settings, and the language toggle. |
-| 0:28 | La pill "Map" | We can search for projects on a map, or by keyword… |
+| 0:06 | "Updates" | In the top bar, we have our notifications… |
+| 0:12 | "Profile" | …our profile settings, and the language toggle. |
+| 0:24 | "Buy" otra vez | For each project, we see its location and its status. |
+| 0:30 | La pill "Map" | We can search for projects on a map… |
+| 0:57 | La pill "Search" | …or by keyword… |
 | 1:12 | El diálogo "Filters" | …and filter them by several criteria. |
-| 1:18 | La lista de "Buy" | For each project, we see its location and its status. |
-| 1:26 | El corazón | We can save any project to our favorites — and find them later in the sidebar on the left. |
+| 1:26 | El corazón | We can save any project to our favorites… |
+| 1:30 | "My favorites" | …and find them later in the sidebar on the left. |
 | 1:42 | El detalle de Torre Volumen 3 | Inside a project, we see its name, a cover image, its status and its location. |
 | 1:51 | "Verified documentation" | We can also see its documents, each one with its fingerprint anchored on Cardano. |
+| 2:00 | El modal de un documento | Each document can be opened and downloaded. |
+| 2:09 | "Progress" | Below, the project's progress, stage by stage. |
 | 2:15 | "Grupo Alpine" | This is the developer's profile: a description, their track record, and their projects. |
 | 2:24 | "Previous projects" | Each project shows its price, its floor area and its status. |
 | 2:39 | "My units" | "Units" takes us to the units we've bought. |
-| 2:51 | El detalle de la 1A | Each unit has its image gallery, its location, its details, its progress, the purchase amount, and the anchoring status of every piece of evidence. |
-| 3:03 | El modal "Terminaciones" | We can also follow every stage, all the way down to the proof behind each one. |
+| 2:51 | El detalle de la 1A | Each unit has its image gallery, its location and its details… |
+| 2:57 | "My unit progress" | …its progress, and the purchase amount. |
+| 3:03 | El modal "Terminaciones" | We can also follow every stage, all the way down to the proof behind each one: its Merkle root and its transaction. |
+| 3:12 | "My contract and payments" | And the contract, with its total amount and its signing date. |
 | 3:21 | "Buy" | "Buy" takes us back to the screen we saw at the start, with the projects on sale. |
 
 #### Acto 2 · Developer (T07–T11)
