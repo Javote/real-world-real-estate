@@ -1,10 +1,11 @@
 import { createHash } from "node:crypto";
 import type { MetadataAnchorReceipt } from "@plataforma/cardano";
 import { createId } from "../db/id";
-import type { OnChainEventRow, OnChainEventType } from "../db/types";
+import type { Database, OnChainEventRow, OnChainEventType } from "../db/types";
 import { Sentry } from "../instrumentation";
 import { anchorPort } from "../lib/anchor";
 import { db } from "../lib/db";
+import { type ExpressionBuilder, sql } from "../lib/kysely";
 
 // Anclaje por metadata de cualquier commitment que **no** mueva el hilo de un
 // stage: aceptación de invitación (M3-SC-01), liberación (M3-SC-03), firma del
@@ -26,7 +27,7 @@ export function commitmentOf(payload: Record<string, string | number>): string {
   return createHash("sha256").update(canonico).digest("hex");
 }
 
-export async function anchorCommitmentEvent(input: {
+type AnclajeInput = {
   projectId: string;
   eventType: OnChainEventType;
   commitment: string;
@@ -34,7 +35,11 @@ export async function anchorCommitmentEvent(input: {
   reference: string;
   stageId?: string | null;
   evidenceId?: string | null;
-}): Promise<OnChainEventRow> {
+};
+
+const RECLAMO_VENCIDO_MS = 10 * 60_000;
+
+async function eventoPendiente(input: AnclajeInput) {
   const ahora = new Date();
 
   // **Este índice es compartido con los eventos del hilo, a propósito.** Es la
@@ -53,33 +58,90 @@ export async function anchorCommitmentEvent(input: {
         .executeTakeFirst()
     : undefined;
 
+  return {
+    id: createId(),
+    projectId: input.projectId,
+    stageId: input.stageId ?? null,
+    evidenceId: input.evidenceId ?? null,
+    // La ref queda persistida, no solo enviada al port: es lo único que
+    // permite volver del registro off-chain a su TXID sin recomputar un
+    // commitment que incluye timestamps.
+    referenceId: input.reference,
+    eventIndex: previo ? previo.eventIndex + 1 : 0,
+    eventType: input.eventType,
+    fromState: null,
+    toState: null,
+    commitment: input.commitment,
+    status: "Pending",
+    txid: null,
+    network: null,
+    outputRef: null,
+    blockTimestamp: null,
+    createdAt: ahora,
+    updatedAt: ahora
+  } as const;
+}
+
+export async function anchorCommitmentEvent(input: AnclajeInput): Promise<OnChainEventRow> {
   const evento = await db
     .insertInto("OnChainEvent")
-    .values({
-      id: createId(),
-      projectId: input.projectId,
-      stageId: input.stageId ?? null,
-      evidenceId: input.evidenceId ?? null,
-      // La ref queda persistida, no solo enviada al port: es lo único que
-      // permite volver del registro off-chain a su TXID sin recomputar un
-      // commitment que incluye timestamps.
-      referenceId: input.reference,
-      eventIndex: previo ? previo.eventIndex + 1 : 0,
-      eventType: input.eventType,
-      fromState: null,
-      toState: null,
-      commitment: input.commitment,
-      status: "Pending",
-      txid: null,
-      network: null,
-      outputRef: null,
-      blockTimestamp: null,
-      createdAt: ahora,
-      updatedAt: ahora
-    })
+    .values(await eventoPendiente(input))
     .returningAll()
     .executeTakeFirstOrThrow();
 
+  return enviar(evento, input);
+}
+
+/**
+ * Ancla el hash de una evidencia **a lo sumo una vez**: el `INSERT` del evento
+ * es condicional, y solo lo gana quien no encuentra otro anclaje vivo de esa
+ * evidencia (con TXID, o `Pending` y reciente). Quien pierde recibe ese evento
+ * y no envía nada. Un `Pending` sin TXID más viejo que `RECLAMO_VENCIDO_MS` es
+ * un envío que murió a mitad de camino y no bloquea el reintento.
+ */
+export async function anclarEvidenciaUnaVez(
+  input: AnclajeInput & { evidenceId: string }
+): Promise<{ evento: OnChainEventRow; nuevo: boolean }> {
+  const valores = await eventoPendiente(input);
+  const vivo = (eb: ExpressionBuilder<Database, "OnChainEvent">) =>
+    eb.and([
+      eb("OnChainEvent.evidenceId", "=", input.evidenceId),
+      eb.or([
+        eb("OnChainEvent.txid", "is not", null),
+        eb.and([
+          eb("OnChainEvent.status", "=", "Pending"),
+          eb("OnChainEvent.createdAt", ">=", new Date(Date.now() - RECLAMO_VENCIDO_MS))
+        ])
+      ])
+    ]);
+
+  const columnas = Object.keys(valores) as (keyof typeof valores)[];
+  const reclamado = await db
+    .insertInto("OnChainEvent")
+    .columns(columnas)
+    .expression(
+      db
+        .selectNoFrom((eb) => columnas.map((c) => eb.val(valores[c]).as(c)))
+        .where((eb) => eb.not(eb.exists(eb.selectFrom("OnChainEvent").select("id").where(vivo))))
+    )
+    .returningAll()
+    .executeTakeFirst();
+
+  if (!reclamado) {
+    const existente = await db
+      .selectFrom("OnChainEvent")
+      .selectAll()
+      .where(vivo)
+      .orderBy(sql`txid is null`)
+      .orderBy("createdAt", "desc")
+      .executeTakeFirstOrThrow();
+    return { evento: existente, nuevo: false };
+  }
+
+  return { evento: await enviar(reclamado, input), nuevo: true };
+}
+
+async function enviar(evento: OnChainEventRow, input: AnclajeInput): Promise<OnChainEventRow> {
   let recibo: MetadataAnchorReceipt;
   try {
     recibo = await anchorPort().anchorCommitment({

@@ -22,7 +22,7 @@ import { Router } from "express";
 import { z } from "zod";
 import { createId } from "../db/id";
 import type { OnChainEventRow, UserRole } from "../db/types";
-import { anchorCommitmentEvent } from "../domain/anchoring";
+import { anclarEvidenciaUnaVez } from "../domain/anchoring";
 import { agregadosDeProyectos } from "../domain/project-aggregates";
 import { reconciliarParaLectura } from "../domain/reconcile";
 import { anchorEvent, recordOnChainEvent } from "../domain/stage-transition";
@@ -496,8 +496,8 @@ router.get(
  * cadena de prueba (D-027). Un documento sin hash no se puede anclar y no se
  * puede mostrar como verificado: es 400, no un anclaje vacío.
  *
- * **Idempotente** (regla 8): si ese documento ya tiene su TXID, devuelve el
- * mismo evento con 200 en vez de gastar otra transacción.
+ * **Idempotente** (regla 8): si ese documento ya tiene su TXID, o un anclaje
+ * en vuelo, devuelve ese evento con 200 en vez de gastar otra transacción.
  */
 const anchorDocumentProcedure = orpc
   .errors({ NO_HASH: { status: 400 } })
@@ -531,16 +531,7 @@ const anchorDocumentProcedure = orpc
 
     await reconciliarParaLectura({ evidenceId: documento.id });
 
-    const yaAnclado = await db
-      .selectFrom("OnChainEvent")
-      .selectAll()
-      .where("evidenceId", "=", documento.id)
-      .where("txid", "is not", null)
-      .executeTakeFirst();
-
-    if (yaAnclado) return { status: 200 as const, body: yaAnclado };
-
-    const anchor = await anchorCommitmentEvent({
+    const { evento: anchor, nuevo } = await anclarEvidenciaUnaVez({
       projectId: documento.projectId,
       stageId: documento.stageId,
       evidenceId: documento.id,
@@ -549,6 +540,8 @@ const anchorDocumentProcedure = orpc
       // Ref opaca: el id del registro, jamás el nombre del archivo (regla 2).
       reference: documento.id
     });
+
+    if (!nuevo) return { status: 200 as const, body: anchor };
 
     await writeAuditLog({
       actorUserId: context.user.id,

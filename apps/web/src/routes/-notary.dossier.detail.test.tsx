@@ -71,6 +71,26 @@ describe('/notary/dossier/$dossierId', () => {
     expect(screen.queryByTestId('NOT-DOSSIER-REJECT-001')).toBeNull()
   })
 
+  it('rechazado: sin acciones hasta que el dossier cambie y vuelva a la cola', async () => {
+    autenticarComo(NOTARY_USER)
+    vi.spyOn(api, 'getDossier').mockResolvedValue({
+      ...unDossier(),
+      status: 'rejected',
+      rejectionNote: 'falta el permiso municipal'
+    })
+
+    montarRuta(
+      Route.options.component as () => React.ReactElement,
+      '/notary/dossier/$dossierId',
+      ['/notary'],
+      '/notary/dossier/d1'
+    )
+
+    await screen.findByText('Torre A · 4B')
+    expect(screen.queryByTestId('NOT-DOSSIER-SIGN-001')).toBeNull()
+    expect(screen.queryByTestId('NOT-DOSSIER-REJECT-001')).toBeNull()
+  })
+
   it('NOT-DOSSIER-SIGN-001: firmar llama a api.signDossier y navega de vuelta al panel', async () => {
     autenticarComo(NOTARY_USER)
     vi.spyOn(api, 'getDossier').mockResolvedValue(unDossier())

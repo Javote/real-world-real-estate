@@ -243,6 +243,22 @@ router.get(
   delegarAOrpc(dossierByIdHandler, PREFIJO_ABSOLUTO)
 );
 
+async function firmaExistente(dossierId: string, masterHash: string) {
+  await reconciliarParaLectura({ referenceId: dossierId });
+
+  const anterior = await db
+    .selectFrom("OnChainEvent")
+    .selectAll()
+    .where("referenceId", "=", dossierId)
+    .where("eventType", "=", "DOSSIER_SIGNATURE")
+    .executeTakeFirst();
+
+  return {
+    status: 200 as const,
+    body: { dossierId, masterHash, anchor: anterior ?? undefined }
+  };
+}
+
 /**
  * Fila 52s — firmar. **Ancla** (M3-SC-04).
  *
@@ -255,8 +271,17 @@ router.get(
  * eso el status de éxito no es fijo: `outputStructure: "detailed"` deja que el
  * handler elija 200 (ya estaba firmado) o 201 (recién se firmó), con el mismo
  * `dossierSignResultSchema` de siempre como cuerpo.
+ *
+ * **Se reclama antes de anclar:** el `UPDATE` a `signed` solo pasa desde
+ * `compiled`, y solo quien lo gana ancla. Dos firmas simultáneas dejan una sola
+ * atestiguación; la otra recibe la firma ganadora. Un dossier `rejected` no se
+ * firma (409) hasta que su `masterHash` cambie y la compilación lo devuelva a
+ * `compiled`.
  */
 const signDossierProcedure = orpc
+  .errors({
+    DOSSIER_NOT_SIGNABLE: { status: 409, message: "Dossier is not awaiting signature" }
+  })
   .route({
     method: "POST",
     path: "/dossiers/{id}/sign",
@@ -270,7 +295,7 @@ const signDossierProcedure = orpc
       z.strictObject({ status: z.literal(201), body: dossierSignResultSchema })
     ])
   )
-  .handler(async ({ input, context }) => {
+  .handler(async ({ input, context, errors }) => {
     const fila = await db
       .selectFrom("Dossier")
       .selectAll()
@@ -279,21 +304,7 @@ const signDossierProcedure = orpc
 
     if (!fila) throw new ORPCError("NOT_FOUND", { message: "Dossier not found" });
 
-    if (fila.status === "signed") {
-      await reconciliarParaLectura({ referenceId: fila.id });
-
-      const anterior = await db
-        .selectFrom("OnChainEvent")
-        .selectAll()
-        .where("referenceId", "=", fila.id)
-        .where("eventType", "=", "DOSSIER_SIGNATURE")
-        .executeTakeFirst();
-
-      return {
-        status: 200,
-        body: { dossierId: fila.id, masterHash: fila.masterHash, anchor: anterior ?? undefined }
-      };
-    }
+    if (fila.status === "signed") return firmaExistente(fila.id, fila.masterHash);
 
     // Se firma el estado ACTUAL, recompilado ahora: firmar el hash guardado
     // sería atestiguar sobre una foto vieja.
@@ -303,7 +314,7 @@ const signDossierProcedure = orpc
 
     const ahora = new Date();
 
-    await db
+    const reclamado = await db
       .updateTable("Dossier")
       .set({
         status: "signed",
@@ -313,7 +324,19 @@ const signDossierProcedure = orpc
         rejectionNote: null
       })
       .where("id", "=", fila.id)
-      .execute();
+      .where("status", "=", "compiled")
+      .returning("id")
+      .executeTakeFirst();
+
+    if (!reclamado) {
+      const actual = await db
+        .selectFrom("Dossier")
+        .select(["status", "masterHash"])
+        .where("id", "=", fila.id)
+        .executeTakeFirstOrThrow();
+      if (actual.status === "signed") return firmaExistente(fila.id, actual.masterHash);
+      throw errors.DOSSIER_NOT_SIGNABLE();
+    }
 
     const anchor = await anchorCommitmentEvent({
       projectId: dossier.projectId,
@@ -367,9 +390,16 @@ router.post(
  * escribirlo: con `errors()`, `input` sigue validándose ANTES de que el
  * handler corra, así que un body inválido sobre un dossier ya firmado sigue
  * dando 400 y no 409 — el mismo orden que tenía el `safeParse` manual.
+ *
+ * Como la firma, **solo parte de `compiled`** y con escritura condicional: un
+ * dossier ya rechazado es 409 `DOSSIER_NOT_REJECTABLE` hasta que vuelva a la
+ * cola.
  */
 const rejectDossierProcedure = orpc
-  .errors({ DOSSIER_SIGNED: { status: 409, message: "Dossier already signed" } })
+  .errors({
+    DOSSIER_SIGNED: { status: 409, message: "Dossier already signed" },
+    DOSSIER_NOT_REJECTABLE: { status: 409, message: "Dossier is not awaiting review" }
+  })
   .route({ method: "POST", path: "/dossiers/{id}/reject" })
   .input(rejectDossierSchema.extend({ id: cuidParamSchema }))
   .output(dossierRejectResultSchema)
@@ -381,15 +411,26 @@ const rejectDossierProcedure = orpc
       .executeTakeFirst();
 
     if (!fila) throw new ORPCError("NOT_FOUND", { message: "Dossier not found" });
-    if (fila.status === "signed") {
-      throw errors.DOSSIER_SIGNED({ message: "Dossier already signed" });
-    }
 
-    await db
+    const rechazado = await db
       .updateTable("Dossier")
       .set({ status: "rejected", rejectionNote: input.note })
       .where("id", "=", fila.id)
-      .execute();
+      .where("status", "=", "compiled")
+      .returning("id")
+      .executeTakeFirst();
+
+    if (!rechazado) {
+      const actual = await db
+        .selectFrom("Dossier")
+        .select("status")
+        .where("id", "=", fila.id)
+        .executeTakeFirstOrThrow();
+      if (actual.status === "signed") {
+        throw errors.DOSSIER_SIGNED({ message: "Dossier already signed" });
+      }
+      throw errors.DOSSIER_NOT_REJECTABLE();
+    }
 
     await notifyUnitInvestor({
       unitId: fila.unitId,

@@ -196,12 +196,20 @@ export async function compileDossier(unitId: string): Promise<CompiledDossier | 
       .where("unitId", "=", unidad.id)
       .executeTakeFirstOrThrow();
   } else if (fila.status !== "signed" && fila.masterHash !== hashCalculado) {
-    // Recompilar solo lo no firmado. Ver el comentario de arriba.
-    fila = await db
+    // Recompilar solo lo no firmado, y nunca pisar una firma que ganó en el
+    // medio. Un dossier rechazado cuyo hash cambió vuelve a la cola del
+    // escribano: el developer agregó lo que faltaba. La `rejectionNote` se
+    // conserva hasta la firma.
+    await db
       .updateTable("Dossier")
-      .set({ masterHash: hashCalculado, compiledAt: ahora })
+      .set({ masterHash: hashCalculado, compiledAt: ahora, status: "compiled" })
       .where("id", "=", fila.id)
-      .returningAll()
+      .where("status", "!=", "signed")
+      .execute();
+    fila = await db
+      .selectFrom("Dossier")
+      .selectAll()
+      .where("id", "=", fila.id)
       .executeTakeFirstOrThrow();
   }
 

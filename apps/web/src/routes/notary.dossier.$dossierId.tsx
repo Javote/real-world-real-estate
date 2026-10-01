@@ -69,6 +69,7 @@ function DossierReview() {
   if (!ready) return null
 
   const firmado = dossier?.status === 'signed'
+  const enRevision = dossier?.status === 'compiled'
 
   return (
     <PanelLayout
@@ -165,7 +166,7 @@ function DossierReview() {
         ) : null}
       </section>
 
-      {!firmado ? (
+      {enRevision ? (
         <div className="flex gap-s3">
           <SecondaryButton
             className="flex-1"

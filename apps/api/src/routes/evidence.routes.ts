@@ -16,7 +16,7 @@ import {
 import { Router } from "express";
 import { z } from "zod";
 import type { UserRole } from "../db/types";
-import { anchorCommitmentEvent } from "../domain/anchoring";
+import { anclarEvidenciaUnaVez } from "../domain/anchoring";
 import {
   hilosSospechosos,
   reconciliarAnclajes,
@@ -291,9 +291,9 @@ router.post(
  * son la buena. Y M2-D4 §6.3 pide que toda superficie de prueba la inicie el
  * usuario.
  *
- * **Idempotente** (regla 8): si ese archivo ya tiene su anclaje, devuelve el
- * mismo evento (200) en vez de gastar otra transacción (201) — mismo patrón
- * que `signDossierProcedure` de `notary.routes.ts` (SPEC-212 §A).
+ * **Idempotente** (regla 8): si ese archivo ya tiene su anclaje, o uno en
+ * vuelo, devuelve ese evento (200) en vez de gastar otra transacción (201).
+ * Lo garantiza el reclamo de `anclarEvidenciaUnaVez`, no un chequeo previo.
  */
 const anchorEvidenceProcedure = orpc
   .route({
@@ -324,26 +324,9 @@ const anchorEvidenceProcedure = orpc
     // bloque (D-077).
     await reconciliarParaLectura({ evidenceId: evidencia.id });
 
-    const yaAnclada = await db
-      .selectFrom("OnChainEvent")
-      .selectAll()
-      .where("evidenceId", "=", evidencia.id)
-      .where("txid", "is not", null)
-      .executeTakeFirst();
-
-    if (yaAnclada) {
-      return { status: 200 as const, body: onChainEventSchema.parse(yaAnclada) };
-    }
-
-    // SPEC-206 (B-08): esto era ~60 líneas reimplementando inline lo que
-    // `anchorCommitmentEvent` ya hace — leer el `eventIndex` previo, insertar
-    // `Pending`, guardar el recibo apenas existe, confirmar best-effort,
-    // marcar `Failed` si el puerto explota. Habían divergido: esta copia no
-    // escribía `referenceId`, así que una evidencia anclada por acá (a
-    // diferencia de una por `POST /developer/documents`) no era reconciliable
-    // por su ref. `reference`/`evidenceId` son el mismo id a propósito: es la
-    // ref opaca al registro, nunca el nombre del archivo (regla 2).
-    const anclado = await anchorCommitmentEvent({
+    // `reference` y `evidenceId` son el mismo id a propósito: es la ref opaca
+    // al registro, nunca el nombre del archivo (regla 2).
+    const { evento: anclado, nuevo } = await anclarEvidenciaUnaVez({
       projectId: evidencia.projectId,
       stageId: evidencia.stageId,
       evidenceId: evidencia.id,
@@ -351,6 +334,8 @@ const anchorEvidenceProcedure = orpc
       commitment: evidencia.sha256Hash,
       reference: evidencia.id
     });
+
+    if (!nuevo) return { status: 200 as const, body: onChainEventSchema.parse(anclado) };
 
     await writeAuditLog({
       actorUserId: context.user.id,
