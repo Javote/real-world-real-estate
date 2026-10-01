@@ -101,6 +101,7 @@ capas de autocura que salieron del único hallazgo). Los criterios **6, 8, 9, 14
 | **Columna `AuditLog.projectId`** | Sacaría el mapeo fail-closed de `auditScope`. Pide backfill que para filas viejas no tiene respuesta |
 | **`validationCritical` siempre `true`** | Config muerta con rama viva y testeada en el validador. No molesta |
 | **Upload directo del navegador a R2 (sin pasar por Render)** | Hoy el archivo hace escala en `UPLOAD_DIR` (Multer a disco, en streaming) antes de llegar al bucket. **Ojo: el argumento de RAM que figuraba acá no aplica a Multer** — con `diskStorage` el body no pasa por memoria (`SPEC-218` §Los hallazgos); lo que pesa es disco efímero y latencia. Un presigned URL lo evitaría, pero es un cambio de forma real (CORS, flujo de 3 pasos en el front) y el hash sigue teniendo que releerse desde R2 igual (D-027). **Después de mainnet** — el diseño y el costo, en [`specs/archive/CLAUDE-argumentos-de-las-reglas-2026-09-20.md`](specs/archive/CLAUDE-argumentos-de-las-reglas-2026-09-20.md) §Anexo |
+| **La espera al crear un proyecto** | Los 10 mints tardan minutos (estimado ~6, sin medir) y la pantalla solo muestra el botón cargando. Pendiente, sin diseño: optimizar el procesamiento en el backend y la UI de la espera. Visto preparando el video, 2026-10-01 |
 
 ## Antes de mainnet, después del Milestone 3
 
