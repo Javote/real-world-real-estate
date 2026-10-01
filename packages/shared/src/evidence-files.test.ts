@@ -68,7 +68,6 @@ describe("las constantes de la subida (SPEC-218)", () => {
     expect(
       evidenceRejectionSchema.safeParse({ index: -1, code: "UNSUPPORTED_FILE_TYPE" }).success
     ).toBe(false);
-    // Sin nombre de archivo: la regla 2 aplica a lo que sale, no solo a lo que se guarda.
     expect(
       evidenceRejectionSchema.safeParse({ index: 0, code: "UNSUPPORTED_FILE_TYPE", filename: "x" })
         .success
@@ -80,7 +79,6 @@ describe("evidence-rules no depende de nada (SPEC-218)", () => {
   it("no importa Zod ni ningún otro módulo: el front lo carga sin arrastrar el contrato entero", async () => {
     const { readFileSync } = await import("node:fs");
     const fuente = readFileSync(new URL("./evidence-rules.ts", import.meta.url), "utf8");
-    // Ninguna línea de código empieza con `import`/`require`: solo comentarios pueden nombrarlos.
     expect(
       fuente.split("\n").filter((l) => /^\s*(import|export .* from|.*require\()/.test(l))
     ).toEqual([]);

@@ -1,13 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { createAnchorPort } from "./factory";
 
-// SPEC-411 — medido, no estimado: `@lucid-evolution/lucid` son 2015ms y 121MB
-// de heap, 453 módulos, cargados en TODO proceso que tocara este package,
-// ancle o no. Este archivo vive separado de `simulated.test.ts` a propósito:
-// vitest aísla `require.cache` por archivo (un fork por test file), y
-// `real.test.ts` importa `./real` estático — si este chequeo compartiera
-// proceso con esa suite, `require.cache` ya tendría Lucid cargado por otra
-// razón y el test no probaría nada.
 describe("createAnchorPort — Lucid se carga solo si hace falta", () => {
   it("modo simulated no carga Lucid", async () => {
     const puerto = await createAnchorPort({});

@@ -1,27 +1,3 @@
-// Genera la wallet de servicio. Superficie 🔴.
-//
-// **Una sola clave, una sola vez.** El servicio recibe una CLAVE DE PAGO en
-// bech32 y nada más (D-078). No hay seed, y no hay una segunda variable con la
-// dirección: la dirección se **deriva** de la clave, así que es imposible
-// configurar una que la clave no controle.
-//
-// **Por qué la dirección es "enterprise" y no una base.** Una dirección base es
-// pago + staking: dos credenciales, o sea dos claves. Con una sola clave de pago
-// no existe la opción de armar una base. No es una limitación de la librería, es
-// la consecuencia de tener una sola clave — que es exactamente lo que queremos
-// en un servicio que paga fees y nunca delega.
-//
-// **La clave se escribe a un archivo y NO se imprime.** Lo único que sale por
-// pantalla es la dirección, que es pública y es la que hay que fondear. Un
-// secreto en el scrollback de una terminal sobrevive a la sesión, se copia con
-// el scroll y termina en capturas de pantalla.
-//
-// **No pisa un archivo existente, nunca.** El admin del validador es el hash de
-// esta clave: regenerarla encima de una wallet ya fondeada y con hilos anclados
-// dejaría esos hilos inalcanzables, sin ningún error visible.
-//
-//   BLOCKFROST_API_KEY=preprod_xxx node scripts/wallet-preprod.mjs [ruta]
-
 import { existsSync, writeFileSync } from "node:fs";
 import { homedir } from "node:os";
 import path from "node:path";
@@ -36,8 +12,6 @@ if (!apiKey) {
   process.exit(1);
 }
 
-// Un proyecto de mainnet acá sería un error caro y silencioso: la clave quedaría
-// asociada a una red que este proyecto no toca (D-013).
 if (!apiKey.startsWith("preprod")) {
   console.error(
     `La key no empieza con "preprod": ${apiKey.slice(0, 8)}…\n` +
@@ -61,8 +35,6 @@ if (existsSync(destino)) {
 
 const privateKey = generatePrivateKey();
 
-// La dirección la deriva Lucid, la misma pieza que va a usar el servicio en
-// producción: si acá saliera una y allá otra, este número no serviría de nada.
 const lucid = await Lucid(new Blockfrost(URL_BLOCKFROST, apiKey), RED);
 lucid.selectWallet.fromPrivateKey(privateKey);
 const address = await lucid.wallet().address();

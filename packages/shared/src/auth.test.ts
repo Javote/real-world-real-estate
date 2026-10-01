@@ -12,9 +12,6 @@ describe("contrato de auth", () => {
     expect(r.success).toBe(true);
   });
 
-  // El caso que justifica `.strict()`: sin él Zod descartaría passwordHash en
-  // silencio y el schema "pasaría" con el secreto adentro. La defensa de la
-  // regla 4 es el schema, no la disciplina de quien escribe la ruta.
   it("FALLA si la respuesta trae passwordHash", () => {
     const r = loginResponseSchema.safeParse({
       token: "t",
@@ -53,9 +50,6 @@ describe("contrato de auth", () => {
     expect(r.success).toBe(false);
   });
 
-  // `extend()` sobre un strictObject conserva la estrictez. Está testeado y no
-  // asumido: si un refactor la perdiera, /auth/me podría filtrar campos del
-  // modelo en silencio y ningún otro test lo vería.
   it("FALLA si /auth/me trae un campo de más", () => {
     const base = {
       id: "u1",
@@ -78,8 +72,6 @@ describe("contrato de auth", () => {
   });
 });
 
-// La política de D-046: NIST SP 800-63B §5.1.1.2 + OWASP Authentication Cheat
-// Sheet. Cada fila de la tabla de esa decisión es un caso de acá.
 describe("passwordSchema — la política de passwords", () => {
   const ok = (pw: string) => passwordSchema.safeParse(pw).success;
 
@@ -89,41 +81,29 @@ describe("passwordSchema — la política de passwords", () => {
   });
 
   it("cuenta CARACTERES y no unidades UTF-16 para el mínimo", () => {
-    // Cuatro emoji tienen `.length === 8` en JS. Si el mínimo usara `.min(8)`
-    // de Zod, esto pasaría con la mitad de los caracteres que la política pide.
     expect("🔐🔐🔐🔐".length).toBe(8);
     expect(ok("🔐🔐🔐🔐")).toBe(false);
     expect(ok("🔐🔐🔐🔐🔐🔐🔐🔐")).toBe(true);
   });
 
   it("acepta 72 bytes y rechaza 73 — el límite de bcrypt", () => {
-    // Más allá de 72 bytes bcrypt trunca EN SILENCIO. Rechazar es la única
-    // salida honesta: NIST prohíbe truncar (D-046).
     expect(ok("a".repeat(72))).toBe(true);
     expect(ok("a".repeat(73))).toBe(false);
   });
 
   it("mide el máximo en BYTES, no en caracteres", () => {
-    // 18 emoji son 4 bytes UTF-8 cada uno: 18 code points pero 72 bytes,
-    // justo en el límite.
     expect(ok("🔐".repeat(18))).toBe(true);
     expect(ok("🔐".repeat(19))).toBe(false);
   });
 
   it("cuenta bien los de 2 y 3 bytes, no solo el ASCII y el emoji", () => {
-    // `byteLength` es un ternario de cuatro ramas (1/2/3/4 bytes) y las otras
-    // políticas solo ejercitan ASCII (1 byte) y emoji (4 bytes) — acá van los
-    // dos tamaños de en medio. "ñ" es 2 bytes (U+00F1, < 0x800); "€" es 3
-    // (U+20AC, entre 0x800 y 0xFFFF).
-    expect(ok("ñ".repeat(36))).toBe(true); // 36 × 2 = 72 bytes, el límite justo.
+    expect(ok("ñ".repeat(36))).toBe(true);
     expect(ok("ñ".repeat(37))).toBe(false);
-    expect(ok("€".repeat(24))).toBe(true); // 24 × 3 = 72 bytes, el límite justo.
+    expect(ok("€".repeat(24))).toBe(true);
     expect(ok("€".repeat(25))).toBe(false);
   });
 
   it("no impone reglas de composición", () => {
-    // NIST lo prohíbe explícitamente: empujan a `Password1!` y bajan la entropía
-    // real. Si alguna vez esto falla, alguien agregó un regex que no debía.
     expect(ok("aaaaaaaa")).toBe(true);
     expect(ok("12345678")).toBe(true);
   });
@@ -136,8 +116,6 @@ describe("passwordSchema — la política de passwords", () => {
 
 describe("el login NO aplica la política", () => {
   it("acepta una password que la política rechazaría", () => {
-    // A propósito (D-046): validar la política en el login lo convertiría en un
-    // oráculo de cuál es, y dejaría afuera cuentas creadas bajo una anterior.
     expect(passwordSchema.safeParse("corta").success).toBe(false);
     expect(
       loginRequestSchema.safeParse({ email: "dev@example.com", password: "corta" }).success

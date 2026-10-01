@@ -1,29 +1,12 @@
 import { z } from "zod";
 
-// Las respuestas de los cuatro paneles de rol (M2-D5 filas 02, 33-34, 51, 55).
-//
-// El schema va acá **antes** que el endpoint (regla 6), y de acá saldrá el
-// cliente cuando entre oRPC (D-066). Hoy la API los usa para tipar sus
-// respuestas y el front para consumirlas: el drift ya es imposible.
-//
-// **Los KPI que hoy no se pueden calcular son `null`, no cero.** La diferencia
-// importa: cero es una afirmación ("no hay unidades vendidas") y `null` es la
-// verdad ("no existe la entidad `Unit` todavía"). Un panel que muestra 0
-// unidades donde no hay modelo de unidades está mintiendo con precisión
-// decimal. El front los renderiza con el guión de `panel.emptyValue`.
-
-/** KPI que puede no ser calculable todavía por falta de una entidad. */
 const kpiPendiente = z.number().int().nonnegative().nullable();
 
 export const developerKpisSchema = z.strictObject({
   activeProjects: z.number().int().nonnegative(),
-  /** Necesita `Unit`, que no existe (D-029: nace en la subdivisión). */
   totalUnits: kpiPendiente,
-  /** Necesita `Contract`. En unidades mínimas enteras cuando exista (regla 1). */
   capitalRaisedMinorUnits: kpiPendiente,
-  /** Porcentaje 0-100 de stages completados sobre el total. */
   averageProgress: z.number().int().min(0).max(100),
-  /** Evidencia con anclaje confirmado. */
   verifiedDocuments: z.number().int().nonnegative()
 });
 export type DeveloperKpis = z.infer<typeof developerKpisSchema>;
@@ -44,10 +27,6 @@ export const certifierAssignmentSchema = z.strictObject({
 });
 export type CertifierAssignment = z.infer<typeof certifierAssignmentSchema>;
 
-/**
- * KPIs del notary. `.nullable()` queda por si en el futuro falta la entidad
- * dossier de nuevo (M2-D4 P8); hoy el handler siempre manda números.
- */
 export const notaryKpisSchema = z.strictObject({
   pendingDossiers: kpiPendiente,
   verified: kpiPendiente,
@@ -60,7 +39,6 @@ export const pendingDossierSchema = z.strictObject({
   dossierId: z.string(),
   unitLabel: z.string(),
   investorName: z.string(),
-  /** Completitud 0-100: cuánta de la evidencia esperada ya está anclada. */
   completeness: z.number().int().min(0).max(100)
 });
 export type PendingDossier = z.infer<typeof pendingDossierSchema>;

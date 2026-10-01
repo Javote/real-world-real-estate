@@ -4,16 +4,9 @@ import { EVIDENCE_MAX_FILES } from "./evidence-rules";
 import type { MerkleStep } from "./merkle";
 import { onChainEventSchema, onChainEventStatusSchema } from "./stage";
 
-/** `true` solo si `A` y `B` son estructuralmente idénticos, en las dos direcciones. */
 type Equal<A, B> =
   (<T>() => T extends A ? 1 : 2) extends <T>() => T extends B ? 1 : 2 ? true : false;
 
-// La documentación de respaldo del developer (M2-D5 filas 46-47) — **M3-BE-14**.
-//
-// Es la misma `Evidence` que sube el flujo de etapas, vista desde el ángulo del
-// developer: qué documentos del proyecto están anclados y cuáles todavía no.
-
-/** Espeja `Evidence.evidenceType` en la migración. */
 export const EVIDENCE_TYPES = ["document", "photo", "certificate"] as const;
 export const evidenceTypeSchema = z.enum(EVIDENCE_TYPES);
 export type EvidenceType = z.infer<typeof evidenceTypeSchema>;
@@ -21,13 +14,6 @@ export type EvidenceType = z.infer<typeof evidenceTypeSchema>;
 const MULTIPART_BOOLEAN_TRUE = new Set(["true", "on", "1"]);
 const MULTIPART_BOOLEAN_FALSE = new Set(["false", "off", "0", ""]);
 
-/**
- * Un booleano de un `<form>` HTML real, no un JSON: sin distinguir mayúsculas,
- * y sin default silencioso ante un valor desconocido (regla 6) — un checkbox
- * sin `value` manda `"on"`, y "true"/"on"/"1" son los tres que un formulario
- * produce de verdad. Ausente sigue siendo `false`: no declarar nada es no
- * declarar nada (SPEC-403).
- */
 const multipartBooleanSchema = z
   .string()
   .optional()
@@ -40,21 +26,11 @@ const multipartBooleanSchema = z
     return z.NEVER;
   });
 
-/**
- * Body de `POST /developer/projects/:id/stages/:stageId/evidence` (fila 38,
- * 44c) — el multipart llega con el archivo aparte (`req.file`, Multer); esto
- * valida los demás campos, que Express entrega como string.
- */
 export const stageEvidenceUploadSchema = z.object({
   evidenceType: evidenceTypeSchema,
   category: z.string().min(1),
   description: z.string().max(2000).optional(),
   authoritative: multipartBooleanSchema,
-  /**
-   * Declaración de origen (D-028 (a)). Va vacía salvo que se declare
-   * autoritativa, y se guarda `null` en vez de "" para que el guard de la
-   * transición tenga un solo estado de "falta".
-   */
   issuingAuthority: z
     .string()
     .max(200)
@@ -63,17 +39,6 @@ export const stageEvidenceUploadSchema = z.object({
 });
 export type StageEvidenceUploadInput = z.infer<typeof stageEvidenceUploadSchema>;
 
-/**
- * La fila de `Evidence` tal como puede salir al cliente — mismas columnas que
- * `EVIDENCE_SAFE_COLUMNS` (`apps/api/src/routes/_shared.ts`), **nunca**
- * `storagePath` (D-011: incidente real de filtración de la ruta absoluta en
- * disco del servidor) y sin `issuingAuthority` (esa declaración solo se lee
- * puertas adentro, para el chequeo de `STAGE_EVIDENCE_UNATTRIBUTED`; ningún
- * endpoint la devuelve hoy). Las dos listas — esta y `EVIDENCE_SAFE_COLUMNS`
- * — tienen que seguir coincidiendo: si una columna nueva de `Evidence` se
- * suma a una y no a la otra, o el `select` la esconde sin que el schema lo
- * sepa, o el schema promete un campo que el `select` nunca trajo.
- */
 export const evidenceSchema = z.strictObject({
   id: z.string(),
   projectId: z.string(),
@@ -93,11 +58,6 @@ export const evidenceSchema = z.strictObject({
 });
 export type EvidenceResponse = z.infer<typeof evidenceSchema>;
 
-/**
- * Evidencia proyectada, embebida en `GET /projects/:id/stages/:stageId`. Sin
- * `projectId`/`stageId`/`uploadedById`/`storedFilename`/`createdAt`/
- * `updatedAt`: el handler no los selecciona (y sin `storagePath`, D-011).
- */
 export const stageEvidenceSummarySchema = z.strictObject({
   id: z.string(),
   evidenceType: evidenceTypeSchema,
@@ -111,7 +71,6 @@ export const stageEvidenceSummarySchema = z.strictObject({
 });
 export type StageEvidenceSummary = z.infer<typeof stageEvidenceSummarySchema>;
 
-/** Body de `PATCH /api/v1/evidence/:id`. */
 export const updateEvidenceSchema = z.object({
   category: z.string().min(1).optional(),
   authoritative: z.boolean().optional(),
@@ -120,28 +79,14 @@ export const updateEvidenceSchema = z.object({
 });
 export type UpdateEvidenceInput = z.infer<typeof updateEvidenceSchema>;
 
-/** Body de `POST /developer/documents` — anclar un documento suelto (M3-BE-14). */
 export const anchorDocumentSchema = z.strictObject({ evidenceId: z.string().min(1) });
 export type AnchorDocumentInput = z.infer<typeof anchorDocumentSchema>;
 
-/** Filtro de `GET /developer/documents` (fila 46-47). */
 export const developerDocumentListQuerySchema = z.object({
   status: z.enum(["anchored", "pending"]).optional()
 });
 export type DeveloperDocumentListQuery = z.infer<typeof developerDocumentListQuerySchema>;
 
-/**
- * Fila 06-07 — `GET /projects/:id/documents` (`INV-PROJECT-DOCS-002`). Distinta
- * de `developerDocumentSchema`: esta trae `stageId`/`evidenceType`/`category`
- * (que el `DocumentCard` del developer no pide) y no tiene `filename`
- * (`originalFilename`, sin renombrar) — dos endpoints que documentan la misma
- * evidencia para dos pantallas no comparten la forma solo porque comparten la
- * tabla.
- *
- * `anchorStatus` nunca es `null` en la salida: el handler ya lo resuelve a
- * `"Pending"` sin TXID y a `"Confirmed"` como default cuando hay TXID sin
- * evento (regla 17 aplicada del lado del servidor, no del cliente).
- */
 export const projectDocumentSchema = z.strictObject({
   id: z.string(),
   stageId: z.string().nullable(),
@@ -154,42 +99,22 @@ export const projectDocumentSchema = z.strictObject({
   sha256Hash: z.string(),
   uploadedAt: z.coerce.date(),
   txid: z.string().nullable(),
-  // No-nullable a propósito (SPEC-401): el handler resuelve
-  // `f.txid ? (f.anchorStatus ?? "Confirmed") : "Pending"` — nunca manda
-  // `null`. El schema tenía razón en exigirlo; le faltaba el enum.
   anchorStatus: onChainEventStatusSchema
 });
 export type ProjectDocument = z.infer<typeof projectDocumentSchema>;
 
-/** Fila 46-47 — un documento del proyecto, con su huella y su prueba. */
 export const developerDocumentSchema = z.strictObject({
   id: z.string(),
   filename: z.string(),
   category: z.string(),
-  /**
-   * Declara provenir de una autoridad externa (D-028). No afirma que la
-   * autoridad lo haya emitido: solo que así fue declarado.
-   *
-   * `z.boolean()` y no `z.coerce.boolean()` (SPEC-401): la coerción es para lo
-   * que *entra*, no para una respuesta — `Boolean(v)` no puede fallar nunca
-   * (`"false"` → `true`), y esta columna ya llega `boolean` desde
-   * `SqliteTypeCoercionPlugin` (`developer.routes.ts` la selecciona sin
-   * renombrar, así que el plugin la matchea por nombre).
-   */
   authoritative: z.boolean(),
   sha256Hash: z.string().nullable(),
   uploadedAt: z.coerce.date(),
-  /** **La única fuente del estado**: `null` ⇒ "Pendiente", nunca "Verificado" (regla 17). */
   txid: z.string().nullable(),
   anchorStatus: onChainEventStatusSchema.nullable()
 });
 export type DeveloperDocument = z.infer<typeof developerDocumentSchema>;
 
-/**
- * Un paso del camino de Merkle: con qué hermano combinar y de qué lado.
- * Deriva de `MerkleStep` (SPEC-404, P-06) — la línea de abajo no compila si
- * alguna de las dos declaraciones gana o pierde un campo sin la otra.
- */
 export const merkleStepSchema = z.strictObject({
   sibling: z.string(),
   position: z.enum(["left", "right"])
@@ -197,18 +122,6 @@ export const merkleStepSchema = z.strictObject({
 const _merkleStepSchemaMatchesInterface: Equal<z.infer<typeof merkleStepSchema>, MerkleStep> = true;
 void _merkleStepSchemaMatchesInterface;
 
-/**
- * El proof object de `GET /evidence/:bundleId/proof/:fileHash` (M3 §2 —
- * "API returns proof objects: hash + timestamp + signer"). El revisor
- * rehashea su archivo, camina `proof` con `merkleRootFromProof` y compara
- * contra `merkleRoot`.
- *
- * `signerUserId` es quien subió el archivo (`Evidence.uploadedById`): la
- * cuarta afirmación que la plataforma puede sostener — "esta persona
- * atestiguó haberlo revisado" — no que la firma sea criptográfica.
- * `timestamp`/`txid` viajan `null` hasta que el anclaje esté `Confirmed`
- * (regla 17: sin TXID, el estado es "Pendiente", nunca "Verificado").
- */
 export const evidenceProofSchema = z.strictObject({
   merkleRoot: z.string(),
   leaf: z.string(),
@@ -220,7 +133,6 @@ export const evidenceProofSchema = z.strictObject({
 });
 export type EvidenceProof = z.infer<typeof evidenceProofSchema>;
 
-/** Fila 25m — `GET /evidence/:bundleId/files`: los archivos del bundle con su hash. */
 export const bundleFilesSchema = z.strictObject({
   bundleId: z.string(),
   merkleRoot: z.string(),
@@ -228,23 +140,14 @@ export const bundleFilesSchema = z.strictObject({
     z.strictObject({
       evidenceId: z.string(),
       sha256Hash: z.string(),
-      /** `null` solo si el `leftJoin` con `Evidence` no encontró la fila. */
       filename: z.string().nullable()
     })
   )
 });
 export type BundleFiles = z.infer<typeof bundleFilesSchema>;
 
-/**
- * Fila 38/44c — `POST /developer/projects/:id/stages/:stageId/evidence`. Lo
- * que alimenta el `AnchoringSuccessModal`: las evidencias recién creadas (un
- * lote, SPEC-218), el bundle que las contiene y **un** anclaje — TXID/Merkle
- * root en la misma respuesta (M2-D5 §2.2).
- */
 export const stageEvidenceUploadResultSchema = z.strictObject({
-  /** Las evidencias ACEPTADAS del lote — al menos una (si no, la ruta responde 400). */
   evidences: z.array(evidenceSchema).min(1).max(EVIDENCE_MAX_FILES),
-  /** Los archivos que NO se aceptaron y por qué. Vacía si el lote entró entero (SPEC-218). */
   rejected: z.array(evidenceRejectionSchema).max(EVIDENCE_MAX_FILES),
   bundleId: z.string(),
   merkleRoot: z.string(),

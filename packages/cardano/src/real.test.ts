@@ -9,18 +9,6 @@ import {
   THREAD_MIN_LOVELACE
 } from "./real";
 
-// SPEC-013 §B. **Acá el validador se ejecuta de verdad**: el `Emulator` de
-// Lucid evalúa el script Plutus compilado por Aiken, así que un rechazo de este
-// archivo es el mismo rechazo que daría la cadena — sin Docker, sin red, sin
-// una sola tADA.
-//
-// Es lo que convierte "el códec compila" en "la transacción entra".
-//
-// Los rechazos exigen `/failed script execution/` a propósito: un
-// `toThrow()` pelado pasaría también si la transacción fallara por una razón
-// nuestra —un UTxO que no está, plata que no alcanza— y el test diría que el
-// validador rechazó algo que nunca llegó a evaluar.
-
 const fuente = {
   id: "clh3k9x0000008l3fstage01",
   projectId: "clh3k9x0000008l3fproj01",
@@ -33,13 +21,7 @@ const root = "a".repeat(64);
 
 let emulator: Emulator;
 let adapter: LucidAnchorAdapter;
-/** La misma instancia que tiene el adaptador: los tests que arman un segundo
- * adaptador sobre la misma wallet la necesitan. */
 let lucid: Awaited<ReturnType<typeof Lucid>>;
-/**
- * Cuánto se le suma al reloj del `Emulator`. Los tests de la vista local lo
- * mueven para vencerla sin esperar tres minutos de verdad.
- */
 let desfase: number;
 
 beforeEach(async () => {
@@ -55,7 +37,6 @@ beforeEach(async () => {
   });
 });
 
-/** Abre el hilo y espera el bloque, que es lo que hace visible el UTxO. */
 async function abrirHilo(datum = buildStageDatum(fuente)) {
   const recibo = await adapter.openThread({ datum });
   emulator.awaitBlock(1);
@@ -72,9 +53,6 @@ describe("openThread contra el validador real", () => {
     expect(prueba?.datum.stageRef).toBe(buildStageDatum(fuente).stageRef);
   });
 
-  // SPEC-409 — sin Blockfrost configurado (el caso del `Emulator`, de este
-  // `describe` entero), `verify()` no puede afirmar el timestamp del bloque:
-  // antes devolvía el reloj del proceso, que no es el del bloque.
   it("sin Blockfrost configurado, blockTimestamp es null — no el reloj del proceso", async () => {
     const recibo = await abrirHilo();
     const prueba = await adapter.verify(recibo.txid);
@@ -82,8 +60,6 @@ describe("openThread contra el validador real", () => {
   });
 
   it("el script rechaza nacer fuera de Pending", async () => {
-    // `mint_rejects_starting_outside_pending`, pero ejecutado de verdad: el
-    // error sale de la evaluación del script, no de una regla nuestra.
     await expect(
       adapter.openThread({ datum: buildStageDatum({ ...fuente, state: "InProgress" }) })
     ).rejects.toThrow(/failed script execution/);
@@ -132,8 +108,6 @@ describe("advanceThread contra el validador real", () => {
   });
 
   it("el script rechaza completar un stage crítico sin commitment", async () => {
-    // La regla del whitepaper, ejecutándose: sin Merkle root de 32 bytes, un
-    // stage validation-critical no llega a Completed. Ni con la firma correcta.
     const abierto = await abrirHilo();
     const enCurso = buildStageDatum({ ...fuente, state: "InProgress" });
     const paso = await adapter.advanceThread({
@@ -217,10 +191,6 @@ describe("advanceThread contra el validador real", () => {
     ).rejects.toThrow(/failed script execution/);
   });
 
-  // SPEC-410 — `utxoAt()` chequeaba que las dos mitades de `outputRef`
-  // existieran y no miraba el resultado del `parseInt`: un índice no numérico
-  // pasaba el guard y salía a consultar al proveedor con `NaN`, con el error
-  // viniendo de Lucid a varios frames del dato malo.
   it.each([
     ["abc#xyz", "ni el hash ni el índice son válidos"],
     [`${"a".repeat(64)}#-1`, "índice negativo"],
@@ -268,10 +238,6 @@ describe("findLiveThread — Capa 1, contra el proveedor de verdad", () => {
   });
 
   it("un UTxO de otro stage en la misma dirección no lo confunde: no lleva el unit buscado", async () => {
-    // Deja un UTxO real en `adapter.address`, pero con el unit de "fuente" —
-    // ningún asset ahí tiene el unit del stageRef que se busca a continuación,
-    // así que `u.assets[unit]` da `undefined` y el `?? 0n` es lo que evita que
-    // la comparación siguiente reviente contra `undefined > 0n`.
     await abrirHilo();
     expect(await adapter.findLiveThread("stage-que-tampoco-existe")).toBeNull();
   });
@@ -286,12 +252,6 @@ describe("la dirección y la policy", () => {
 
 describe("create — defaults", () => {
   it("sin `now` explícito, usa Date.now() del proceso", async () => {
-    // Todo el resto de la suite pasa `now: () => emulator.now()` para atar el
-    // reloj del adaptador al del Emulator. Acá se deja el default a propósito
-    // y se ejercita con `anchorCommitment` —el único camino que llama a
-    // `this.now()` sin construir `validFrom`/`validTo` (eso es solo de
-    // `advanceThread`), así que el reloj real del proceso no choca contra el
-    // del Emulator.
     const sinNow = await LucidAnchorAdapter.create({ lucid, network: "Custom" });
     const recibo = await sinNow.anchorCommitment({
       sha256: "d".repeat(64),
@@ -305,13 +265,10 @@ describe("anchorEvidence · el camino de metadata (D-006)", () => {
   const sha256 = "b".repeat(64);
 
   it("ancla el hash sin tocar el hilo ni el thread token", async () => {
-    // Es el otro componente on-chain de M1: prueba que el archivo existía a
-    // esta hora, no que un stage avanzó. No pasa por ningún validador.
     const recibo = await adapter.anchorCommitment({ sha256, reference: "ev_123" });
     emulator.awaitBlock(1);
 
     expect(recibo.txid).toMatch(/^[0-9a-f]{64}$/);
-    // No quedó ningún UTxO nuevo en la dirección del script.
     expect(await adapter.verify(recibo.txid)).toBeNull();
   });
 
@@ -322,22 +279,13 @@ describe("anchorEvidence · el camino de metadata (D-006)", () => {
   });
 
   it("rechaza una ref que no entre en un string de metadata", async () => {
-    // 64 bytes es el tope de una cadena de metadata (regla 2).
     await expect(adapter.anchorCommitment({ sha256, reference: "x".repeat(65) })).rejects.toThrow(
       /no entra/
     );
   });
 });
 
-// SPEC-410 — `confirmedAt()` es el único `fetch` del repo que sale a una red
-// que no controlamos. Sin `AbortSignal`, un Blockfrost que acepta la conexión
-// y no contesta nunca colgaba la llamada sin límite.
 describe("confirmedAt — timeout contra Blockfrost", () => {
-  // Tiempo real y no fake timers: `AbortSignal.timeout()` programa su propio
-  // temporizador nativo, que los fake timers de vitest no interceptan — un
-  // `vi.advanceTimersByTimeAsync` no lo dispara y el test cuelga hasta su
-  // propio timeout, no el de Blockfrost. `BLOCKFROST_TIMEOUT_MS` (10s) más
-  // margen para el test.
   it(
     "rechaza al vencer el timeout, en vez de esperar para siempre",
     async () => {
@@ -407,9 +355,6 @@ describe("confirmedAt — timeout contra Blockfrost", () => {
   });
 
   it("con 200 pero sin block_time numérico, da null en vez de NaN", async () => {
-    // El campo es opcional en el tipo de respuesta (`block_time?: number`) — un
-    // 200 sin él es el caso que separa el `typeof … === "number"` del `?? null`
-    // de la rama de éxito.
     const fetchSinBlockTime = vi.fn(async () => new Response(JSON.stringify({}), { status: 200 }));
     vi.stubGlobal("fetch", fetchSinBlockTime);
 
@@ -455,9 +400,6 @@ describe("awaitConfirmation", () => {
   });
 
   it("verify() da null sin construir el proof, si el proveedor todavía no confirmó", async () => {
-    // `awaitTx` puede resolver `false` sin tirar — es el único otro contrato
-    // que documenta Lucid, además de rechazar. `!confirmado` es lo que evita
-    // seguir a `threadProof` sobre una transacción que no entró.
     const noConfirmo = vi.spyOn(lucid, "awaitTx").mockResolvedValue(false);
     try {
       expect(await adapter.verify("f".repeat(64))).toBeNull();
@@ -467,9 +409,6 @@ describe("awaitConfirmation", () => {
   });
 
   it("rechaza si verify() no encuentra un AnchorProof", async () => {
-    // El Emulator no deja simular "esperar y nunca confirmar" —su `awaitTx`
-    // no bloquea de verdad— así que se aísla el contrato de awaitConfirmation
-    // directamente: sin proof que devolver, no puede fingir éxito.
     const sinProof = vi.spyOn(adapter, "verify").mockResolvedValue(null);
     try {
       await expect(adapter.awaitConfirmation("f".repeat(64))).rejects.toThrow(/no confirmó/);
@@ -478,18 +417,6 @@ describe("awaitConfirmation", () => {
     }
   });
 });
-
-// ── La cola y la vista local ────────────────────────────────────────────────
-//
-// **El `Emulator` reproduce el bug exacto de Preprod**, y por eso estos tests
-// prueban algo: `getUtxos()` lee solo el ledger —lo que entró en un bloque— y
-// deja el mempool afuera, igual que Blockfrost. Un anclaje sin
-// `emulator.awaitBlock()` detrás es un anclaje contra un proveedor que todavía
-// no vio el anterior; que es la condición que se da en producción cada vez que
-// dos anclajes caen dentro de los ~20 s que tarda un bloque.
-//
-// Sin el arreglo, el primero de estos tests muere en `Your wallet does not have
-// enough funds` y el segundo en `UNKNOWN_THREAD`.
 
 describe("dos anclajes dentro del mismo bloque", () => {
   const unHash = "a".repeat(64);
@@ -501,18 +428,12 @@ describe("dos anclajes dentro del mismo bloque", () => {
 
     expect(segundo.txid).not.toBe(primero.txid);
 
-    // Y la segunda entra **de verdad**: encadenar mal produce transacciones que
-    // se arman bien y el nodo rechaza. Después del bloque, el vuelto de la
-    // wallet tiene que venir de la segunda, que es la prueba de que las dos
-    // llegaron al ledger.
     emulator.awaitBlock(1);
     const enLaWallet = await emulator.getUtxos(adapter.walletAddress);
     expect(enLaWallet.map((u) => u.txHash)).toContain(segundo.txid);
   });
 
   it("aguantan pedidos concurrentes, que es lo que la cola resuelve", async () => {
-    // Sin cola, los dos leen el conjunto de UTxOs antes de que ninguno lo
-    // invalide y no hay `overrideUTxOs()` que llegue a tiempo.
     const [primero, segundo] = await Promise.all([
       adapter.anchorCommitment({ sha256: unHash, reference: "ev_1" }),
       adapter.anchorCommitment({ sha256: otroHash, reference: "ev_2" })
@@ -522,8 +443,6 @@ describe("dos anclajes dentro del mismo bloque", () => {
   });
 
   it("un anclaje que falla no arrastra al siguiente", async () => {
-    // El validador rechaza nacer fuera de `Pending`; la cola tiene que quedar
-    // utilizable igual.
     await expect(
       adapter.openThread({ datum: buildStageDatum({ ...fuente, state: "InProgress" }) })
     ).rejects.toThrow(/failed script execution/);
@@ -533,8 +452,6 @@ describe("dos anclajes dentro del mismo bloque", () => {
   });
 
   it("el hilo avanza sin esperar a que el bloque lo publique", async () => {
-    // Es el caso del PLAN-2026-08-31 §2: crear el stage y moverlo. Antes había
-    // que esperar el bloque entre las dos requests.
     const abierto = await adapter.openThread({ datum: buildStageDatum(fuente) });
     const avance = await adapter.advanceThread({
       outputRef: abierto.outputRef,
@@ -556,8 +473,6 @@ describe("dos anclajes dentro del mismo bloque", () => {
       next: enCurso
     });
 
-    // Reintentar sobre el mismo `outputRef` tiene que dar "no existe", no una
-    // transacción armada contra una entrada consumida.
     await expect(
       adapter.advanceThread({
         outputRef: abierto.outputRef,
@@ -568,10 +483,6 @@ describe("dos anclajes dentro del mismo bloque", () => {
   });
 
   it("un adaptador nuevo encuentra un UTxO que él nunca envió, vía el proveedor", async () => {
-    // La vista local solo tiene lo que ESTE adaptador armó (D-082). Uno recién
-    // creado sobre la misma wallet no tiene nada en `salidasPendientes`, así
-    // que `utxoAt` va directo al proveedor — y, ya confirmado en el bloque, lo
-    // encuentra igual.
     const abierto = await adapter.openThread({ datum: buildStageDatum(fuente) });
     emulator.awaitBlock(1);
 
@@ -592,13 +503,6 @@ describe("dos anclajes dentro del mismo bloque", () => {
 
 describe("la vista local vence", () => {
   it("contesta mientras vale y le devuelve la palabra a la cadena cuando no", async () => {
-    // Las dos mitades en un solo test a propósito: por separado, la segunda
-    // pasaría también sin vista local ninguna —lo que no existe tampoco se
-    // encuentra— y no probaría el vencimiento.
-    //
-    // Que venza es la única salida del estado malo: una transacción que el nodo
-    // termina descartando deja la vista local afirmando UTxOs que no van a
-    // existir nunca. Acá eso se simula no publicando el bloque.
     const primero = await adapter.openThread({ datum: buildStageDatum(fuente) });
     const avance = await adapter.advanceThread({
       outputRef: primero.outputRef,
@@ -622,20 +526,11 @@ describe("la vista local vence", () => {
   });
 });
 
-// ── El reference script ─────────────────────────────────────────────────────
-//
-// Publicar el validador una vez y referenciarlo, en vez de adjuntar sus 2289
-// bytes en cada transacción. Lo que se prueba acá es lo que importa: que el
-// validador **sigue ejecutándose** —referenciado, no adjunto— y que la
-// transacción sale más barata.
-
-/** Lo que la wallet puede mostrar como saldo, sumando todos sus UTxOs. */
 async function saldo(address: string, emu: Emulator): Promise<bigint> {
   const utxos = await emu.getUtxos(address);
   return utxos.reduce((total, u) => total + (u.assets.lovelace ?? 0n), 0n);
 }
 
-/** Lo que costó abrir un hilo, sin contar el ADA que queda en el hilo. */
 async function feeDeAbrirHilo(a: LucidAnchorAdapter, emu: Emulator): Promise<bigint> {
   const antes = await saldo(a.walletAddress, emu);
   await a.openThread({ datum: buildStageDatum(fuente) });
@@ -657,8 +552,6 @@ describe("el reference script", () => {
     expect(publicacion.outputRef).toBe(adapter.referenceScriptOutputRef);
     expect(publicacion.lovelace).toBeGreaterThan(0n);
 
-    // Un adaptador nuevo sobre la misma wallet lo encuentra sin configuración:
-    // es lo que hace la API al arrancar.
     const otro = await LucidAnchorAdapter.create({
       lucid,
       network: "Custom",
@@ -666,18 +559,12 @@ describe("el reference script", () => {
     });
     expect(otro.referenceScriptOutputRef).toBe(publicacion.outputRef);
 
-    // Idempotente (regla 8): no gasta de nuevo y devuelve el mismo UTxO.
     const otraVez = await otro.publishReferenceScript();
     expect(otraVez.txid).toBeNull();
     expect(otraVez.outputRef).toBe(publicacion.outputRef);
   });
 
   it("tira si el proveedor no dejó ninguna salida con el script adentro", async () => {
-    // Forzado, no leído: `enviar()` es privado a nivel de TypeScript, pero en
-    // runtime es un método más — se lo espía para simular la transacción que
-    // se envió (hay txid) pero cuyas salidas no traen el `scriptRef` que
-    // `publishReferenceScript()` busca. El modo de falla real sería un
-    // proveedor que reordena o filtra salidas de forma inesperada.
     const espia = vi
       .spyOn(adapter as unknown as { enviar: (tx: unknown) => Promise<unknown> }, "enviar")
       .mockResolvedValueOnce({
@@ -710,29 +597,12 @@ describe("el reference script", () => {
 
     expect((await adapter.verify(avance.txid))?.datum.state).toBe("InProgress");
 
-    // Y sigue rechazando lo que rechazaba: un reference script que no ejecuta
-    // el validador aceptaría cualquier transición.
     await expect(
       adapter.openThread({ datum: buildStageDatum({ ...fuente, state: "InProgress" }) })
     ).rejects.toThrow(/failed script execution/);
   });
 
   it("no se lo come la selección de monedas cuando la wallet queda corta", async () => {
-    // **El modo de falla que este test cierra.** El UTxO del reference script
-    // vive en la dirección de la wallet, así que para la selección de monedas
-    // es plata: gastarlo borra el script, y desde ahí toda transacción que lo
-    // referencie apunta a una entrada que no existe. Lucid dice en sus errores
-    // que excluye esos UTxOs, pero en 0.6.2 solo excluye los que la propia
-    // transacción declaró con `readFrom` — y un anclaje por metadata no usa el
-    // validador, así que no declara ninguno.
-    //
-    // La wallet se funda con lo justo para publicar y quedar corta: el
-    // reference script pasa a ser el único UTxO que puede pagar el anclaje
-    // siguiente. Sin el filtro, ese anclaje "funciona" y se lleva puesto el
-    // script. El número sale medido —el UTxO del script pide 11,04 ADA y el
-    // vuelto queda en 1,08— y por eso está escrito y no calculado: si el
-    // validador cambia de tamaño, este test se pone rojo y hay que volver a
-    // medirlo, que es exactamente lo que queremos que pase.
     const cuenta = generateEmulatorAccount({ lovelace: 12_400_000n });
     const pobre = new Emulator([cuenta]);
     const suLucid = await Lucid(pobre, "Custom");
@@ -771,8 +641,6 @@ describe("el reference script", () => {
 
     const feeConRef = await feeDeAbrirHilo(conRef, otroEmulator);
 
-    // Medido: 0,2976 → 0,2317 tADA. Se exige la mitad del ahorro observado
-    // para no atar el test a los parámetros de protocolo del `Emulator`.
     expect(feeConRef).toBeLessThan(conAttach - 30_000n);
   });
 });

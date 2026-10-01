@@ -5,9 +5,6 @@ import { InMemoryLedgerStore } from "./ledger";
 import { AnchorRejectedError } from "./port";
 import { canonical, SimulatedAnchorAdapter } from "./simulated";
 
-// SPEC-013 §Casos borde. Cada rechazo del simulador espeja un `expect` del
-// validador: si esta suite se ablanda, el bug se muda a una transacción firmada.
-
 const fuente = {
   id: "clh3k9x0000008l3fstage01",
   projectId: "clh3k9x0000008l3fproj01",
@@ -27,16 +24,12 @@ beforeEach(() => {
 describe("openThread · el mint", () => {
   it("abre el hilo y devuelve el UTxO vivo", async () => {
     const recibo = await port.openThread({ datum: buildStageDatum(fuente) });
-    // D-087: el recibo declara Pending, igual que el adaptador real — que lo
-    // haya confirmado ya (abajo) es otra pregunta, y la contesta `verify`.
     expect(recibo.status).toBe("Pending");
     expect(recibo.outputRef).toBe(`${recibo.txid}#0`);
     expect(await port.verify(recibo.txid)).toMatchObject({ outputRef: recibo.outputRef });
   });
 
   it("rechaza un segundo hilo para el mismo stage", async () => {
-    // Es la propiedad del thread token: un solo hilo por stage, o el
-    // verificador ve dos historias y tiene que preguntarnos cuál vale.
     const datum = buildStageDatum(fuente);
     await port.openThread({ datum });
     await expect(port.openThread({ datum })).rejects.toMatchObject({
@@ -61,10 +54,6 @@ describe("openThread · el mint", () => {
     expect(a.txid).toBe(b.txid);
   });
 
-  // SPEC-410 — regresión: el mismo txid que daba `openThread` antes de
-  // ordenar `canonical()` por clave. Con las claves de hoy (`StageDatum`) el
-  // orden por par y el orden por clave coinciden, así que arreglar el
-  // comparador no puede mover este valor.
   it("el txid no se mueve por haber ordenado canonical() por clave", async () => {
     const recibo = await port.openThread({ datum: buildStageDatum(fuente) });
     expect(recibo.txid).toBe("0d22fc2dceaf2a6ccfb64046f07b43df10ab7932502ab791ec31467f953d1ea4");
@@ -73,10 +62,6 @@ describe("openThread · el mint", () => {
 
 describe("canonical — ordena por clave, no por el par [clave, valor]", () => {
   it("con una clave prefijo de otra, la más corta va primero", () => {
-    // `Object.entries({...}).sort()` sin comparador ordena por
-    // `"clave,valor"`: `"a!b,1"` < `"a,2"` porque `!` (0x21) < `,` (0x2c), así
-    // que el par completo pone "a!b" antes que "a" — al revés del orden por
-    // clave, que es lo que esta función promete.
     expect(canonical({ "a!b": 1, a: 2 })).toBe(canonical({ a: 2, "a!b": 1 }));
     expect(canonical({ "a!b": 1, a: 2 })).toBe('{"a":2,"a!b":1}');
   });
@@ -179,7 +164,6 @@ describe("advanceThread · el spend", () => {
       })
     ).rejects.toMatchObject({ code: "EVIDENCE_REQUIRED" });
 
-    // Y con el commitment, pasa.
     const completo = await port.advanceThread({
       outputRef: paso.outputRef,
       previous: enCurso,
@@ -194,8 +178,6 @@ describe("advanceThread · el spend", () => {
   });
 
   it("los rechazos son AnchorRejectedError, no fallos de infraestructura", async () => {
-    // La distinción decide si se reintenta: un rechazo de regla da lo mismo
-    // cuantas veces se repita.
     await expect(
       port.advanceThread({ outputRef: "no-existe#0", previous: pending, next: inProgress })
     ).rejects.toBeInstanceOf(AnchorRejectedError);
@@ -242,22 +224,12 @@ describe("createAnchorPort", () => {
     const puerto = (await createAnchorPort({ store })) as SimulatedAnchorAdapter;
     const recibo = await puerto.openThread({ datum: buildStageDatum(fuente) });
 
-    // Si el puerto ignorara el store pasado, esto no vería nada — es SU store,
-    // no uno interno del adaptador.
     expect(await store.get(recibo.outputRef)).not.toBeUndefined();
   });
 
   it("revienta con un modo inventado", async () => {
     await expect(createAnchorPort({ mode: "mainnet" })).rejects.toThrow(/ANCHOR_MODE inválido/);
   });
-
-  // ── `real`: lo que se puede probar sin red ──────────────────────────────
-  //
-  // El camino feliz de `real` necesita Blockfrost y una wallet, así que vive en
-  // `yaci.test.ts` y en Preprod a mano. Lo que sí se prueba acá —y es lo que
-  // más barato se rompe— son los rechazos de configuración: tienen que ocurrir
-  // ANTES de tocar la red, o el error que llega es un timeout en vez de "te
-  // falta la clave".
 
   it("rechaza mainnet, que está fuera de alcance", async () => {
     await expect(
@@ -309,9 +281,6 @@ describe("anchorEvidence · el camino de metadata", () => {
 
 describe("verify — condición defensiva", () => {
   it("da null si el UTxO está en el store pero su bloque nunca se registró", async () => {
-    // No hay camino de producción que deje el ledger así — `commit()` siempre
-    // hace `put` y `registrarBloque` juntos — pero `verify()` no confía en esa
-    // invariante y la chequea igual.
     const store = new InMemoryLedgerStore();
     const puerto = new SimulatedAnchorAdapter({ store });
     const txid = "e".repeat(64);
@@ -326,13 +295,6 @@ describe("verify — condición defensiva", () => {
   });
 });
 
-// ── `confirmedAt` deja de afirmar sobre lo que no conoce ───────────────────
-//
-// El simulador es su propia cadena: su ledger es el único lugar donde una
-// transacción suya "está incluida". Contestar `now()` para cualquier txid era
-// afirmar confirmación sobre transacciones ajenas — el único lugar del código
-// que confundía *tengo un hash* con *está confirmada*.
-
 describe("confirmedAt", () => {
   it("devuelve null para un txid que no produjo", async () => {
     const puerto = new SimulatedAnchorAdapter();
@@ -341,8 +303,6 @@ describe("confirmedAt", () => {
   });
 
   it("awaitConfirmation rechaza para un txid que no produjo, en vez de devolver null", async () => {
-    // Mismo criterio que el adaptador real: sin AnchorProof que devolver,
-    // awaitConfirmation() no puede fingir éxito.
     const puerto = new SimulatedAnchorAdapter();
 
     await expect(puerto.awaitConfirmation("f".repeat(64))).rejects.toThrow(AnchorRejectedError);
@@ -362,8 +322,6 @@ describe("confirmedAt", () => {
       reference: "ref-opaca"
     });
 
-    // `verify()` no sirve acá —exige outputRef y datum—, y por eso
-    // `confirmedAt` existe aparte.
     expect(await puerto.verify(txid)).toBeNull();
     expect(await puerto.confirmedAt(txid)).toEqual(expect.any(Number));
   });
@@ -376,8 +334,6 @@ describe("confirmedAt", () => {
   });
 
   it("el momento de inclusión no se mueve al reintentar el mismo anclaje", async () => {
-    // El simulador es determinístico: el segundo intento da el mismo txid. El
-    // bloque en el que entró ya ocurrió, así que su timestamp es historia.
     let reloj = 1_000;
     const puerto = new SimulatedAnchorAdapter({ now: () => reloj });
     const entrada = { sha256: "b".repeat(64), reference: "ref" };
@@ -393,13 +349,6 @@ describe("confirmedAt", () => {
   });
 });
 
-// SPEC-406 — `proofs` y `bloques` eran dos `Map` de la instancia, así que un
-// reinicio del proceso los perdía aunque el `LedgerStore` (SQLite en
-// apps/api) sobreviviera. `reconciliarAnclajes` pregunta exactamente
-// `confirmedAt`, así que un evento anclado antes de reiniciar quedaba
-// `Pending` para siempre. La prueba es "instancia nueva, mismo store": es
-// literalmente lo que un reinicio del proceso hace — el store persiste, la
-// instancia del adaptador no.
 describe("sobrevive a un reinicio del proceso — mismo store, instancia nueva", () => {
   it("confirmedAt de un hilo sigue siendo el mismo número", async () => {
     const store = new InMemoryLedgerStore();

@@ -1,9 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { stageEvidenceUploadSchema } from "./documents";
 
-// SPEC-403 — `authoritative` solo entendía el literal "true"; todo lo demás
-// (incluido "on", lo que manda un checkbox real) caía en `false` sin ruido.
-
 const base = { evidenceType: "document" as const, category: "planos" };
 
 describe("stageEvidenceUploadSchema.authoritative", () => {

@@ -184,7 +184,6 @@ describe("projectSchema y sus extensiones", () => {
   it("coverUpdatedAt es la versión de la portada, o null sin portada (D-099)", () => {
     const conPortada = projectSchema.parse({ ...proyecto, coverUpdatedAt: "2026-09-30T12:00:00Z" });
     expect(conPortada.coverUpdatedAt).toEqual(new Date("2026-09-30T12:00:00Z"));
-    // Estricto: dónde está guardada la portada no puede colarse en la respuesta.
     expect(projectSchema.safeParse({ ...proyecto, coverStorageRef: "cover/x" }).success).toBe(
       false
     );
