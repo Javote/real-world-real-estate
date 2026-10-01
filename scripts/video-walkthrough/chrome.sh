@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # Abre el Chrome de la grabación: una instancia aparte, con su propio perfil
 # (~/Library/Application Support/PropNexusDemo), que no toca el Chrome de todos
-# los días. Reemplaza el Paso 0.5 y la mitad del 1.4 del runbook del video.
+# los días. Es el Paso 1.2 del runbook del video.
 #
 #   bash scripts/video-walkthrough/chrome.sh
 #
@@ -43,10 +43,11 @@ open -na "Google Chrome" --args --user-data-dir="$perfil" \
 
 cat <<EOF
 Chrome de la grabación abierto con 5 pestañas en /login.
-Ahora, en esa ventana (Paso 1.4 del runbook):
+Ahora, en esa ventana (Paso 1.2 del runbook):
   1. Cmd+2, Cmd+3, Cmd+4, Cmd+5: entrá en cada una con su rol (2 developer, 3 certifier,
      4 notary, 5 admin — en la 5 tipeá admin@example.com). La contraseña se tipea.
   2. La primera vez: Cmd + '+' una vez (zoom 110%, queda guardado).
-  3. Cmd+1: la del investor queda en /login, en castellano y sin entrar (sesión A).
-  4. Cmd+Ctrl+F: pantalla completa.
+  3. Cmd+1: entrá con buyer@ igual que las otras (el video arranca ya adentro, T01).
+  4. Las cinco en inglés: toggle del header → EN en una, y Cmd+R en las otras.
+Después, la pasada de calentamiento (1.3) y Cmd+Ctrl+F para pantalla completa (1.4).
 EOF
