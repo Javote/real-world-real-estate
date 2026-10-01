@@ -642,8 +642,9 @@ const acceptInvitationProcedure = orpc
         throw errors.UNIT_NOT_AVAILABLE({ message: "Unit is no longer available" });
       }
 
-      // El `status` solo no alcanza: `PATCH /developer/units/:id` puede
-      // devolver a `available` una unidad que ya tiene contrato, y
+      // El `status` solo no alcanza: una unidad con contrato puede figurar
+      // `available` (datos cargados a mano; hasta el 2026-10-01 también el
+      // `PATCH /developer/units/:id`, que ya no toca el estado), y
       // `Contract_unitId_key` admite uno por unidad. Sin este chequeo, aceptar
       // la re-invitación chocaba en el `INSERT Contract` y salía como un 500
       // no clasificado (SPEC-018, A1) — la misma invariante 4 de arriba.

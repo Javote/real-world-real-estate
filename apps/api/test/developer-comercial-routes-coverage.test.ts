@@ -93,6 +93,26 @@ describe("PATCH /developer/units/:id", () => {
       .executeTakeFirst();
     expect(auditoria).toBeDefined();
   });
+
+  it("no acepta el estado comercial: sold sin contrato no se declara a mano", async () => {
+    const creada = await request(app)
+      .post(`/api/v1/developer/projects/${proyecto}/units`)
+      .set("Authorization", `Bearer ${tokenDev}`)
+      .send({ unitReference: "9S", priceMinorUnits: 1_000_000, currency: "USD" });
+
+    const res = await request(app)
+      .patch(`/api/v1/developer/units/${creada.body.id}`)
+      .set("Authorization", `Bearer ${tokenDev}`)
+      .send({ status: "sold" });
+
+    expect(res.status).toBe(400);
+    const fila = await db
+      .selectFrom("Unit")
+      .select("status")
+      .where("id", "=", creada.body.id)
+      .executeTakeFirstOrThrow();
+    expect(fila.status).toBe("available");
+  });
 });
 
 describe("GET /developer/units — inventario cross-proyecto", () => {
@@ -431,9 +451,11 @@ describe("GET /developer/projects/:id/contracts", () => {
 });
 
 describe("POST /investor/invitations/:id/accept — una unidad que ya tiene contrato", () => {
-  // Vender, devolver la unidad a `available` con el PATCH del developer y
-  // re-invitar: la unidad parece libre, pero `Contract_unitId_key` admite un
-  // solo contrato. Antes de SPEC-018 este accept chocaba en el INSERT y
+  // Vender, devolver la unidad a `available` y re-invitar: la unidad parece
+  // libre, pero `Contract_unitId_key` admite un solo contrato. Desde el
+  // 2026-10-01 el PATCH del developer ya no toca el estado, así que el estado
+  // se reabre directo en la base — el caso sigue existiendo para datos
+  // cargados a mano, y la defensa del accept tiene que seguir en pie. Antes de SPEC-018 este accept chocaba en el INSERT y
   // salía como un 500 no clasificado.
   it("aceptar la re-invitación da 409 UNIT_NOT_AVAILABLE y no toca nada", async () => {
     const tokenInvestor = (await login(FIXTURES.investor)).body.token;
@@ -459,11 +481,11 @@ describe("POST /investor/invitations/:id/accept — una unidad que ya tiene cont
       .set("Authorization", `Bearer ${tokenInvestor}`);
     expect(vendida.status).toBe(201);
 
-    const reabierta = await request(app)
-      .patch(`/api/v1/developer/units/${unidad.body.id}`)
-      .set("Authorization", `Bearer ${tokenDev}`)
-      .send({ status: "available" });
-    expect(reabierta.status).toBe(200);
+    await db
+      .updateTable("Unit")
+      .set({ status: "available" })
+      .where("id", "=", unidad.body.id)
+      .execute();
 
     const segunda = await invitar();
     expect(segunda.status).toBe(201);

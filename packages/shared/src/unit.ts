@@ -19,9 +19,17 @@ export const createUnitSchema = z.strictObject({
 });
 export type CreateUnitInput = z.infer<typeof createUnitSchema>;
 
-/** Body de `PATCH /developer/units/:id`. Sin `unitReference`: no se renombra. */
+/**
+ * Body de `PATCH /developer/units/:id`. Sin `unitReference`: no se renombra.
+ *
+ * **Sin `status`, a propósito (2026-10-01).** El estado comercial lo produce el
+ * ciclo de invitación y contrato: aceptar la invitación marca `sold` y crea el
+ * contrato en el mismo paso (D-070, "la plataforma refleja lo que pasó, no lo
+ * declara"). Con el campo acá, el developer podía marcar `sold` una unidad sin
+ * comprador ni contrato por API — la pantalla nunca lo ofreció. `strictObject`
+ * rechaza el campo con un 400.
+ */
 export const updateUnitSchema = z.strictObject({
-  status: unitStatusSchema.optional(),
   floor: z.number().int().optional(),
   sizeM2: z.number().int().positive().optional(),
   priceMinorUnits: z.number().int().nonnegative().optional(),

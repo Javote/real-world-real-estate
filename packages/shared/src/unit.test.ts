@@ -25,10 +25,12 @@ describe("createUnitSchema", () => {
 
 describe("updateUnitSchema", () => {
   it("no acepta unitReference — no se renombra una unidad", () => {
-    expect(updateUnitSchema.safeParse({ status: "sold", unitReference: "B-202" }).success).toBe(
-      false
-    );
-    expect(updateUnitSchema.safeParse({ status: "sold" }).success).toBe(true);
+    expect(updateUnitSchema.safeParse({ floor: 2, unitReference: "B-202" }).success).toBe(false);
+    expect(updateUnitSchema.safeParse({ floor: 2 }).success).toBe(true);
+  });
+
+  it("no acepta status — el estado comercial lo produce la invitación y el contrato", () => {
+    expect(updateUnitSchema.safeParse({ status: "sold" }).success).toBe(false);
   });
 });
 
