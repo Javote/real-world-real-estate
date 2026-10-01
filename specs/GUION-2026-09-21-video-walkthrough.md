@@ -39,8 +39,8 @@ cd ~/Documents/real-estate/real-world-real-estate
    `Txx.webm` con el mismo nombre. Todos los tiempos se cuentan desde el **0:00 de la toma ya
    recortada**, así que rehacer una no corre nada del resto.
 2. **La sesión B va de corrido y en orden.** Cada toma deja la base en el estado que necesita la
-   siguiente. La A se puede grabar otro día, pero **siempre antes de la B**: la B le suma Torre
-   Núñez al investor, que después aparecería en "Buy" (T01).
+   siguiente. La A se puede grabar otro día, pero **siempre antes de la B**: la B le suma Torres
+   de Palermo al investor, que después aparecería en "Buy" (T01).
 3. **Los datos que se ven no tienen que coincidir exacto** con los de este documento. Lo que el
    video tiene que mostrar es que cada rol entra a sus pantallas y que una etapa recorre la FSM
    (Pending → InProgress → Observed → InProgress → Completed). Si un número es otro, se sigue.
@@ -415,8 +415,8 @@ pasaron más de un par de minutos, recargá (`Cmd+R`) antes de grabar.
 
 ##### T10 · Unidades — 32 s
 
-**Antes de grabar:** `/developer/project/<nuevo>` (fuera de cámara: barra lateral "Projects" → Torre
-Núñez).
+**Antes de grabar:** `/developer/project/<nuevo>` (fuera de cámara: barra lateral "Projects" → Torres
+de Palermo).
 
 | Tiempo | Acción | Lo que tiene que verse |
 |---|---|---|
@@ -498,8 +498,8 @@ solo objeto recorriendo una máquina de estados y no como cuatro cosas sueltas.
 
 ##### T15 · Subir evidencia — 40 s · ⚠ irrepetible
 
-**Antes de grabar:** pestaña 2, `/developer/project/<nuevo>` (fuera de cámara: "Projects" → Torre
-Núñez). **Antes de grabar**, abrí una vez el selector de archivos y navegá hasta
+**Antes de grabar:** pestaña 2, `/developer/project/<nuevo>` (fuera de cámara: "Projects" → Torres
+de Palermo). **Antes de grabar**, abrí una vez el selector de archivos y navegá hasta
 `~/Movies/propnexus-evidencia/` (Paso 0.2), así la próxima vez abre ahí.
 
 | Tiempo | Acción | Lo que tiene que verse |
