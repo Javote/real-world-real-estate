@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # Paso 5 del runbook del video, con ffmpeg: une el video y la voz de cada toma
-# y pega las 22 en el orden del mapa del runbook (T01, T07, T09–T21, T23–T27, T22, T28). Deja walkthrough-final.mp4 y walkthrough-final.srt
+# y pega las 18 en el orden del mapa del runbook (T01, T07, T09, T12–T14, T17–T21, T23–T27, T22, T28). Deja walkthrough-final.mp4 y walkthrough-final.srt
 # (subtítulos en inglés, sacados del runbook) en la carpeta de grabaciones.
 #
 #   bash scripts/video-walkthrough/unir.sh
