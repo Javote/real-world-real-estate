@@ -371,11 +371,12 @@ final", y no se commitea sin el verde.
 
 **La única excepción: un commit que no toca código, y la decide `git`, no vos.** "No toca código"
 quiere decir que todo archivo staged es documentación o un archivo que ningún paso del pipeline lee
-(`.md`, `.pdf`, `.png`, `.jpg`, `.jpeg`, `.gif`, `.webp`, `.ico`, `.csv`, `.log`, `.txt`), en
+(`.md`, `.pdf`, `.png`, `.jpg`, `.jpeg`, `.gif`, `.webp`, `.ico`, `.csv`, `.log`, `.txt`, `.mp4`,
+`.mov`, `.webm`, `.srt`, `.vtt`), en
 cualquier carpeta, **y** que nada cae dentro de `docs/`.
 
 ```bash
-[ -n "$(git diff --cached --name-only -- ':(exclude)*.md' ':(exclude,icase)*.pdf' ':(exclude,icase)*.png' ':(exclude,icase)*.jpg' ':(exclude,icase)*.jpeg' ':(exclude,icase)*.gif' ':(exclude,icase)*.webp' ':(exclude,icase)*.ico' ':(exclude,icase)*.csv' ':(exclude)*.log' ':(exclude)*.txt')$(git diff --cached --name-only -- docs/)" ] && pnpm verify:all
+[ -n "$(git diff --cached --name-only -- ':(exclude)*.md' ':(exclude,icase)*.pdf' ':(exclude,icase)*.png' ':(exclude,icase)*.jpg' ':(exclude,icase)*.jpeg' ':(exclude,icase)*.gif' ':(exclude,icase)*.webp' ':(exclude,icase)*.ico' ':(exclude,icase)*.csv' ':(exclude)*.log' ':(exclude)*.txt' ':(exclude,icase)*.mp4' ':(exclude,icase)*.mov' ':(exclude,icase)*.webm' ':(exclude,icase)*.srt' ':(exclude,icase)*.vtt')$(git diff --cached --name-only -- docs/)" ] && pnpm verify:all
 ```
 
 Si aparece un solo archivo con otra extensión (`.ts`, `.tsx`, `.json`, `.yaml`, `.sql`, `.ak`,
@@ -383,7 +384,8 @@ Si aparece un solo archivo con otra extensión (`.ts`, `.tsx`, `.json`, `.yaml`,
 lo que se saltea, no de lo que corre:** una extensión nueva que nadie pensó cae del lado seguro.
 **Por qué esas extensiones:** ni Biome, ni `typecheck`, ni los tests, ni `build`, ni Aiken leen un
 archivo del repo con esas extensiones (los tests que nombran `.pdf`/`.png` arman el archivo en
-memoria), y las imágenes de `apps/web/public/` el build solo las copia. **Por qué `docs/` corre
+memoria), y las imágenes de `apps/web/public/` el build solo las copia. Los videos y subtítulos
+solo los leen los scripts de `scripts/video-walkthrough/`, que se corren a mano. **Por qué `docs/` corre
 siempre:** `pnpm testids` lee un `.md` de ahí. El `.json` no se saltea nunca: hay tests que
 comparan el OpenAPI y la colección Postman de `specs/evidencia-m3/` con el código.
 **La regla es mecánica a propósito, y es `git` y no `grep` por una razón medida** — bajo el `grep`
@@ -393,7 +395,8 @@ argumento completo y las mediciones, en
 
 **Historia:** hasta el 2026-09-24 la excepción era solo `.md`; ese día sumó los PDF/log de
 `specs/evidencia-m3/`, y el 2026-09-28 se invirtió a "corre si se tocó código", porque un commit de
-evidencia con un `.csv` o una captura corría `verify:all` completo sin verificar nada.
+evidencia con un `.csv` o una captura corría `verify:all` completo sin verificar nada. El
+2026-10-01 sumó videos y subtítulos, con el walkthrough en `specs/evidencia-m3/3-preprod/`.
 **CI espeja esta misma regla** en `.github/workflows/ci.yml` (`paths` con negaciones en `push` y
 `pull_request`, y `docs/**` re-incluido al final), así que un commit sin código tampoco dispara la
 corrida en GitHub Actions.

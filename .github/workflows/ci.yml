@@ -21,6 +21,11 @@ on:
       - '!**/*.[cC][sS][vV]'
       - '!**/*.log'
       - '!**/*.txt'
+      - '!**/*.[mM][pP]4'
+      - '!**/*.[mM][oO][vV]'
+      - '!**/*.[wW][eE][bB][mM]'
+      - '!**/*.[sS][rR][tT]'
+      - '!**/*.[vV][tT][tT]'
       - 'docs/**'
   push:
     branches: [main]
@@ -37,6 +42,11 @@ on:
       - '!**/*.[cC][sS][vV]'
       - '!**/*.log'
       - '!**/*.txt'
+      - '!**/*.[mM][pP]4'
+      - '!**/*.[mM][oO][vV]'
+      - '!**/*.[wW][eE][bB][mM]'
+      - '!**/*.[sS][rR][tT]'
+      - '!**/*.[vV][tT][tT]'
       - 'docs/**'
 
 concurrency:
