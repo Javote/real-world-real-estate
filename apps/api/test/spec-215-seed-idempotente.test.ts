@@ -5,14 +5,6 @@ import { createId } from "../src/db/id";
 import { db } from "../src/lib/db";
 import { FIXTURES } from "./global-setup";
 
-// SPEC-215 — `sembrarUnidadVendida` hacía `onConflict().doNothing()` seguido
-// de `executeTakeFirstOrThrow()`, una contradicción: `doNothing` por
-// definición no devuelve fila cuando la fila ya existe, así que sobre una
-// base ya sembrada tiraba `NoResultError` y dejaba el resto del seed sin
-// correr (`sembrarUsuarios`, antes en la secuencia, ya había escrito). Reduce
-// a la forma que `sembrarProyecto` ya usaba bien: insertar tolerando el
-// conflicto, releer por la clave natural.
-
 let proyecto: string;
 let investor: string;
 
@@ -95,8 +87,6 @@ describe("sembrarUnidadVendida es idempotente", () => {
     const unitReference = `SPEC215-B-${createId()}`;
     const ahora = new Date();
 
-    // Reproduce el estado a medias: la Unit quedó insertada (por ejemplo, por
-    // una corrida anterior que reventó ANTES del insert de Contract).
     await db
       .insertInto("Unit")
       .values({
@@ -132,7 +122,6 @@ describe("sembrarUnidadVendida es idempotente", () => {
       currency: "USD"
     });
 
-    // No duplicó la Unit que ya existía, y completó el Contract que faltaba.
     const unidades = await db
       .selectFrom("Unit")
       .selectAll()

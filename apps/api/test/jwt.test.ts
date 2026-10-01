@@ -11,16 +11,12 @@ afterAll(async () => {
   await db.destroy();
 });
 
-// Los casos salen de specs/SPEC-010 §Casos borde. La clave de firma es código 🔴:
-// cada rama de esta función se prueba explícita, no por inferencia.
 describe("requireJwtSecret", () => {
   it("revienta si la variable no está definida", () => {
     expect(() => requireJwtSecret({})).toThrow(/JWT_SECRET/);
   });
 
   it("revienta si la variable está vacía — el caso de .env.example", () => {
-    // `JWT_SECRET=""` es exactamente lo que trae .env.example, y con el fallback
-    // anterior (`|| "dev-secret"`) era falsy: el modo inseguro salía por omisión.
     expect(() => requireJwtSecret({ JWT_SECRET: "" })).toThrow(/JWT_SECRET/);
   });
 
@@ -51,8 +47,6 @@ describe("arranque de la API", () => {
     vi.stubEnv("JWT_SECRET", "");
     vi.resetModules();
 
-    // La extensión `.js` la exige moduleResolution node16 (apps/api es CJS);
-    // vitest la resuelve al `.ts` real. Ver packages/shared/CLAUDE.md.
     await expect(import("../src/lib/jwt.js")).rejects.toThrow(/JWT_SECRET/);
   });
 });
@@ -61,10 +55,6 @@ describe("el algoritmo de firma está fijado de los dos lados", () => {
   const payload = { userId: "x", role: "admin", email: "x@example.com" };
 
   it("un token HS512 firmado con la clave REAL es rechazado", () => {
-    // El control importa: la clave es la buena y el payload es válido, así que
-    // lo único que puede causar el 401 es el algoritmo. Sin la allowlist, la
-    // familia HS* entera entra — hoy sin consecuencia, porque el secreto es un
-    // string y todas las variantes usan la misma clave; el día que no lo sea, sí.
     const otroAlgoritmo = jwt.sign(payload, process.env.JWT_SECRET!, {
       algorithm: "HS512",
       expiresIn: "7d"
@@ -114,9 +104,6 @@ describe("regresión del P1 · el literal público ya no firma nada", () => {
   });
 
   it("el MISMO payload firmado con la clave real sí entra", async () => {
-    // El control del caso anterior: prueba que el 401 lo causa la firma y no el
-    // payload, el usuario o el header. Sin esto, los dos tests de arriba pasarían
-    // igual si /auth/me estuviera roto.
     const legitimo = jwt.sign(await payloadDe(), process.env.JWT_SECRET!, { expiresIn: "7d" });
 
     const res = await request(app)

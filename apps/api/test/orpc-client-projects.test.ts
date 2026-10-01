@@ -14,9 +14,6 @@ function crearCliente(link: InstanceType<typeof OpenAPILink>) {
   return createORPCClient<RouterClient<typeof projectsOrpcRouter>>(link);
 }
 
-// SPEC-216 §E6 — mismo patrón que `orpc-client-profile.test.ts`. Cubre el
-// CRUD de proyecto + miembros; `projects-obra.routes.ts` (mismo prefijo,
-// stages/retry-anchor) tiene su propio archivo.
 let servidor: http.Server;
 let baseUrl: string;
 let tokenAdmin: string;

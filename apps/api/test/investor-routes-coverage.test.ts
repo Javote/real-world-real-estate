@@ -5,12 +5,6 @@ import { createId } from "../src/db/id";
 import { db } from "../src/lib/db";
 import { FIXTURES } from "./global-setup";
 
-// SPEC-017 §paso 4 — ramas de `investor.routes.ts` que ningún test HTTP
-// ejercitaba: favoritos (alta, baja, y el 404 de proyecto inexistente),
-// el detalle de unidad y sus novedades, el filtro por `unitId` de
-// notificaciones, y el flujo entero de rechazar una invitación (hoy sin
-// ningún test, ni el camino feliz ni el 409 de "ya respondida").
-
 const login = (f: { email: string; password: string }) =>
   request(app).post("/api/v1/auth/login").send({ email: f.email, password: f.password });
 
@@ -62,12 +56,9 @@ describe("favoritos", () => {
       .get("/api/v1/investor/favorites")
       .set("Authorization", `Bearer ${tokenInvestor}`);
     expect(listado.body.map((p: { id: string }) => p.id)).toContain(proyectoId);
-    // La tarjeta calcula el avance desde `stages`: sin ellos, la pantalla de
-    // favoritos se rompía apenas había uno guardado.
     const favorito = listado.body.find((p: { id: string }) => p.id === proyectoId);
     expect(Array.isArray(favorito.stages)).toBe(true);
 
-    // Idempotente (regla 8): agregar dos veces no es un error.
     const denuevo = await request(app)
       .post(`/api/v1/investor/favorites/${proyectoId}`)
       .set("Authorization", `Bearer ${tokenInvestor}`);
@@ -99,10 +90,6 @@ describe("GET /investor/units/:id", () => {
 
 describe("GET /investor/units/:id/dossier/export.pdf", () => {
   it("con artefactos de verdad (no un dossier vacío), el PDF los lista", async () => {
-    // `compileDossier` arma `artifacts` a partir de los Stage del proyecto,
-    // sin filtrar por estado — pero `global-setup.ts` no siembra ningún
-    // Stage, así que sin este insert el dossier de la unidad queda vacío y
-    // el `flatMap` que arma el cuerpo del PDF nunca corre.
     await db
       .insertInto("Stage")
       .values({
@@ -196,8 +183,6 @@ describe("POST /investor/invitations/:id/decline", () => {
         respondedAt: null
       })
       .execute();
-    // La unidad tiene que estar reservada para que el rechazo tenga algo que
-    // devolver a `available` — el mismo estado que deja `createInvitationProcedure`.
     await db.updateTable("Unit").set({ status: "reserved" }).where("id", "=", unidadId).execute();
     return id;
   }

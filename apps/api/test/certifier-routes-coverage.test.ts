@@ -5,15 +5,6 @@ import { createId } from "../src/db/id";
 import { db } from "../src/lib/db";
 import { FIXTURES } from "./global-setup";
 
-// SPEC-017 §paso 4 — `certifier.routes.ts` tenía dos rutas sin NINGÚN test por
-// HTTP (`/stages/:id/certify` y `/stages/:id/observe`, ver el comentario del
-// propio archivo), y otras tres con solo su rama de error probada, nunca el
-// camino feliz: `kpisProcedure` (los tres `.filter()` de estado nunca corrían
-// con stages de verdad), `assignmentsProcedure` (el caso sin proyectos
-// visibles) y `stageViewProcedure`/`certificatesProcedure` (200 real, no solo
-// el 404 con un id inexistente — que además lo bloquea `authorize` antes de
-// llegar al handler, así que ese 404 nunca ejercitaba el cuerpo).
-
 const login = (f: { email: string; password: string }) =>
   request(app).post("/api/v1/auth/login").send({ email: f.email, password: f.password });
 
@@ -21,9 +12,6 @@ let tokenCertificador: string;
 let tokenAdmin: string;
 let proyecto: string;
 
-/** Mismo patrón que `test/stage-transitions.test.ts`: contador con offset
- * aleatorio, no `Math.random()` puro — dos llamadas pueden coincidir sobre el
- * mismo proyecto fixture. */
 let siguienteSequenceOrder = Math.floor(Math.random() * 1_000_000) + 500_000;
 const proximoSequenceOrder = () => siguienteSequenceOrder++;
 

@@ -5,10 +5,6 @@ import { db } from "../src/lib/db";
 import { crearGeocodificador, NOMINATIM_URL, USER_AGENT } from "../src/lib/geocode";
 import { FIXTURES } from "./global-setup";
 
-// D-097 — La dirección del alta de proyecto → un punto, vía Nominatim. Nada de
-// esto sale a internet: el `fetch` se inyecta (librería) o se reemplaza el
-// global (ruta).
-
 const LIBERTADOR = [
   { lat: "-34.5470", lon: "-58.4600", display_name: "Avenida del Libertador 7200, Núñez, CABA" }
 ];

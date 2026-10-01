@@ -3,11 +3,6 @@ import request from "supertest";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { OpenAPIHandler, ORPCError, os } from "../src/lib/orpc";
 
-// `Sentry` en `instrumentation.ts` es `import * as Sentry from "@sentry/node"`
-// re-exportado — un namespace ESM, no configurable, así que `vi.spyOn` sobre
-// él tira "Module namespace is not configurable". Se mockea el paquete
-// entero en su lugar, conservando el resto (`init`, `setupExpressErrorHandler`,
-// que `app.ts`/`instrumentation.ts` también usan).
 const { captureException } = vi.hoisted(() => ({
   captureException: vi.fn((_error: unknown) => "id")
 }));
@@ -16,17 +11,6 @@ vi.mock("@sentry/node", async (importOriginal) => {
   return { ...real, captureException };
 });
 
-// SPEC-212 — cierra la investigación pendiente ("Pendiente — investigar más
-// a fondo: `OpenAPIHandler` nunca llama a `next(err)`"): el interceptor
-// genérico agregado en `lib/orpc.ts` tiene que reportar a Sentry un error NO
-// clasificado y quedarse callado ante un rechazo de negocio declarado
-// (`.errors({...})`) — es el mismo filtro que `statusDeError` ya aplica del
-// lado de `errorHandler.ts`/`app.ts`, ahora del lado de oRPC.
-//
-// Router mínimo, standalone — no `app.ts`: lo único bajo prueba es que
-// `new OpenAPIHandler(...)` (el export de `lib/orpc.ts`, no el de
-// `@orpc/openapi/node` directo) engancha el interceptor, sin depender de
-// `authorize` ni de ninguna ruta real.
 const PREFIJO_ABSOLUTO = "/probe";
 
 const throwsUnclassifiedProcedure = os

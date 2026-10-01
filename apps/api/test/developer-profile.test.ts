@@ -5,19 +5,6 @@ import { createId } from "../src/db/id";
 import { db } from "../src/lib/db";
 import { FIXTURES } from "./global-setup";
 
-// SPEC-220 · `GET /projects/:id/developer` — el perfil de la organización
-// desarrolladora (capturas 59-60 de M2-D2).
-//
-// Lo que estos tests fijan, y por qué cada uno:
-//
-//   - Las estadísticas se **derivan** del registro. Si alguna vez alguien las
-//     guarda en columnas, estos tests siguen pasando solo si las mantiene
-//     coherentes — que es justamente lo que no queremos tener que mantener.
-//   - **No hay `rating`** (D-094). El test lo asienta explícitamente: un campo
-//     que reaparece en el schema rompe acá antes de llegar a una pantalla.
-//   - La segunda capa de autorización vale para esta ruta como para toda otra
-//     (regla 5): un usuario sin membresía en el proyecto recibe 403.
-
 const login = (f: { email: string; password: string }) =>
   request(app).post("/api/v1/auth/login").send({ email: f.email, password: f.password });
 
@@ -26,9 +13,7 @@ let proyectoEntregado: string;
 let proyectoActivo: string;
 let tokenDev: string;
 let tokenAjeno: string;
-/** El proyecto compartido de la suite, que NO tiene organización. */
 let proyectoSinOrg: string;
-/** Organización sin `foundedYear` — para el caso "no lo dijo" (`null`, no 0). */
 let organizacionSinFundacion: string;
 let proyectoSinFundacion: string;
 
@@ -100,9 +85,6 @@ beforeAll(async () => {
     .where("email", "=", FIXTURES.investor.email)
     .executeTakeFirstOrThrow();
 
-  // Dos unidades vendidas al MISMO inversor en el proyecto entregado, más una
-  // disponible: así "unitsSold" y "investors" no pueden salir del mismo conteo
-  // por casualidad — son 2 y 1.
   const crearUnidad = async (
     projectId: string,
     ref: string,
@@ -212,7 +194,6 @@ describe("GET /projects/:id/developer", () => {
     expect(res.body.stats).toMatchObject({
       projectsDelivered: 1,
       unitsSold: 2,
-      // Dos unidades, un solo comprador: el conteo es de personas, no de ventas.
       investors: 1,
       yearsInBusiness: 12
     });
@@ -247,9 +228,6 @@ describe("GET /projects/:id/developer", () => {
       .get(`/api/v1/projects/${proyectoEntregado}/developer`)
       .set("Authorization", `Bearer ${tokenDev}`);
 
-    // El schema es estricto, así que un `rating` que reaparezca rompe el
-    // `.parse()` antes que esta aserción — este test existe para que el
-    // motivo quede escrito al lado, no solo en una migración.
     expect(res.body.organization).not.toHaveProperty("rating");
     expect(res.body.stats).not.toHaveProperty("rating");
   });

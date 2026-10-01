@@ -4,11 +4,6 @@ import { compileDossier } from "../src/domain/dossier";
 import { db } from "../src/lib/db";
 import { FIXTURES } from "./global-setup";
 
-// SPEC-202 (B-02) — reproduce el duplicado de la auditoría del backend
-// (2026-09-11) y prueba que queda cerrado: `Dossier_unitId_key` (migración
-// 0006) hace que dos compilaciones concurrentes de la misma unidad no puedan
-// terminar en dos filas.
-
 let proyecto: string;
 
 async function crearUnidad(reference: string) {
@@ -123,8 +118,6 @@ describe("compileDossier bajo concurrencia (invariante 2)", () => {
       .where("id", "=", primera!.id)
       .execute();
 
-    // Evidencia nueva cambiaría el hash calculado si se recompilara — el
-    // punto es que, firmado, no se recompila (comentario de `dossier.ts`).
     const ahora = new Date();
     const developer = await db
       .selectFrom("User")

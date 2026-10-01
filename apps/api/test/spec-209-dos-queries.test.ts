@@ -9,10 +9,6 @@ import { db } from "../src/lib/db";
 import { FIXTURES } from "./global-setup";
 import { crearStageMinteado } from "./helpers/stages";
 
-// SPEC-209 — B-13 (el N+1 de notificar investors) y B-14 (el filtro en
-// memoria de GET /developer/documents). Las dos son optimizaciones puras:
-// mismos cuerpos, mismos tests, cero cambio de forma.
-
 const token = async (email: string, password: string) => {
   const res = await request(app).post("/api/v1/auth/login").send({ email, password });
   return res.body.token as string;
@@ -114,8 +110,6 @@ describe("notifyUnitInvestors (B-13): un INSERT en vez de N SELECT+INSERT", () =
   });
 
   it("proyecto sin unidades vendidas: el flujo real de subir evidencia no crea notificaciones", async () => {
-    // Proyecto propio y aislado (no el compartido `torre-test`, que otros
-    // tests ya llenan de unidades vendidas): acá no hay ninguna, a propósito.
     const ahora = new Date();
     const dev = await db
       .selectFrom("User")
@@ -165,10 +159,6 @@ describe("notifyUnitInvestors (B-13): un INSERT en vez de N SELECT+INSERT", () =
         contentType: "application/pdf"
       });
 
-    // El chequeo real: el camino completo (0 unidades vendidas →
-    // `notifyUnitInvestors([])`) no explota y la subida sigue respondiendo
-    // 201 — el caso `[]` en sí ya está cubierto arriba, directo sobre la
-    // función.
     expect(res.status).toBe(201);
   });
 });
@@ -235,9 +225,6 @@ describe("GET /developer/documents?status= (B-14): filtro en SQL, no en memoria"
         .execute();
     }
 
-    // Un segundo OnChainEvent sobre la MISMA evidencia (el caso que un
-    // `leftJoin` multiplica): la fila extra tiene que aparecer las mismas
-    // veces que aparecía antes del refactor, ni una más ni una menos.
     if (opts.extraEventoSinTxid) {
       await db
         .insertInto("OnChainEvent")
@@ -320,8 +307,6 @@ describe("GET /developer/documents?status= (B-14): filtro en SQL, no en memoria"
       .get("/api/v1/developer/documents")
       .set("Authorization", `Bearer ${tokenDev}`);
     const filasSinFiltro = sinFiltro.body.filter((d: { id: string }) => d.id === evidenceId);
-    // Dos OnChainEvent → dos filas por el leftJoin, igual que antes del
-    // refactor (el filtro de JS tampoco las habría colapsado).
     expect(filasSinFiltro).toHaveLength(2);
 
     const anchored = await request(app)
@@ -329,8 +314,6 @@ describe("GET /developer/documents?status= (B-14): filtro en SQL, no en memoria"
       .query({ status: "anchored" })
       .set("Authorization", `Bearer ${tokenDev}`);
     const filasAnchored = anchored.body.filter((d: { id: string }) => d.id === evidenceId);
-    // Solo la fila con txid no nulo pasa: la misma cuenta que
-    // `filasSinFiltro.filter(d => d.txid !== null)` habría dado.
     expect(filasAnchored).toHaveLength(1);
 
     const pending = await request(app)

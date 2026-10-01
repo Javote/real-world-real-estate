@@ -1,19 +1,10 @@
 import { execFileSync } from "node:child_process";
 import path from "node:path";
 
-// Levanta MinIO para `test:s3`, y lo baja al terminar. Mismo criterio que el
-// devnet de `packages/cardano` (ver `vitest.devnet.mts`): el teardown de
-// `globalSetup` corre aunque los tests fallen, y solo se apaga lo que se prendió.
-//
-// **Sin `S3_TEST=1` no hace absolutamente nada.** Este archivo se carga en TODA
-// la suite de la API —son 25 archivos que no necesitan Docker—, así que el
-// camino normal es entrar, ver la variable vacía y salir.
-
 const RAIZ = path.resolve(import.meta.dirname, "../../..");
 const COMPOSE = path.join(RAIZ, "compose.dev.yml");
 const SALUD = `${process.env.S3_ENDPOINT ?? "http://localhost:9000"}/minio/health/live`;
 
-/** MinIO arranca en segundos, no en minutos como yaci. */
 const ARRANQUE_MAX_MS = 90 * 1000;
 
 function docker(...args: string[]): string {
@@ -34,9 +25,7 @@ async function esperarListo(): Promise<void> {
   while (Date.now() < limite) {
     try {
       if ((await fetch(SALUD)).ok) return;
-    } catch {
-      // Todavía no escucha.
-    }
+    } catch {}
     await new Promise((r) => setTimeout(r, 1000));
   }
 
@@ -66,7 +55,6 @@ export async function setup(): Promise<void> {
 export async function teardown(): Promise<void> {
   if (process.env.MINIO_LEVANTADO_POR_LA_SUITE !== "1") return;
 
-  // `stop` y no `down`: el compose también define el devnet de Cardano.
   try {
     docker("compose", "-f", COMPOSE, "stop", "minio");
   } catch {

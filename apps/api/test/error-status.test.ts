@@ -3,20 +3,6 @@ import { describe, expect, it } from "vitest";
 import { statusDeError } from "../src/lib/error-status";
 import { HttpError } from "../src/lib/http-error";
 
-// La razón de ser de este archivo: `Sentry.setupExpressErrorHandler` ve el
-// error ANTES que `errorHandler` (app.ts lo explica), así que sin esta
-// clasificación Sentry reportaba como "Unhandled" cosas que `errorHandler`
-// iba a devolver como un 409/400 perfectamente sano — encontrado leyendo el
-// screenshot de monitoring de la evidencia de entrega (un SQLITE_CONSTRAINT_
-// UNIQUE real, generado mandando un formulario duplicado, aparecía en Sentry
-// mezclado con los fallos de verdad).
-//
-// Reusa el MISMO mapeo que `errorHandler` (`CONSTRAINT_ERRORS`,
-// `codigoDeRestriccion`, importados de ahí) en vez de copiarlo: si estos
-// tests y `constraint-errors.test.ts`/`error-handling.test.ts` alguna vez
-// dijeran cosas distintas sobre el mismo error, sería porque alguien editó
-// uno de los dos sin el otro — y con una sola tabla, eso no puede pasar.
-
 describe("statusDeError — la misma clasificación que errorHandler, un paso antes", () => {
   it("un HttpError devuelve su propio status", () => {
     expect(statusDeError(new HttpError(422, "mensaje para el cliente"))).toBe(422);

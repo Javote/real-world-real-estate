@@ -9,17 +9,6 @@ afterAll(async () => {
   await db.destroy();
 });
 
-/**
- * Dos agujeros 🔴 que se cerraron juntos porque son el mismo camino:
- *
- * 1. En Express 4 un handler `async` que rechaza NO llegaba al errorHandler: la
- *    request quedaba colgada y el `unhandledRejection` **mataba el proceso**
- *    (medido: exit 1). Las 25 rutas de esta API son async. Express 5 reenvía los
- *    rechazos al errorHandler — es la razón de la migración.
- * 2. El errorHandler devolvía 400 con `err.message` para cualquier `Error`, o
- *    sea que un fallo interno se reportaba como culpa del cliente y de paso le
- *    filtraba el detalle.
- */
 function appDePrueba() {
   const app = express();
   app.use(express.json());
@@ -48,7 +37,6 @@ describe("un handler async que falla no cuelga la request ni mata el proceso", (
     const res = await request(appDePrueba()).get("/async-explota");
     silencio.mockRestore();
 
-    // En Express 4 esto era un timeout, no un 500.
     expect(res.status).toBe(500);
   });
 

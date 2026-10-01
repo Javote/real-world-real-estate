@@ -1,21 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
-// `instrumentation.ts` es el archivo que se precarga con `node --require`
-// (D-042/D-075) y corre `Sentry.init(...)`/`new NodeSDK(...).start()` al
-// importarse, sin ninguna función exportada — SPEC-017 paso 4, tanda 3 lo
-// envuelve en `initSentry()`/`initOpenTelemetry()` para poder probar las
-// cuatro combinaciones con/sin `SENTRY_DSN` y con/sin
-// `OTEL_EXPORTER_OTLP_ENDPOINT`, sin tocar una red ni un proceso real. Las dos
-// siguen llamándose incondicionalmente al final del archivo — el
-// comportamiento de producción no cambia, solo se vuelve observable.
-//
-// `initSentry` se prueba mockeando `@sentry/node` (es un `import` estático,
-// así que `vi.mock` sí lo intercepta). `initOpenTelemetry` recibe sus
-// dependencias como parámetro en vez de mockear los `@opentelemetry/*`: son
-// requires tardíos y literales, y `vi.mock` no los intercepta (corren por el
-// `require` real de Node) — se comprobó intentándolo primero, y el resultado
-// era `NodeSDK.start()` real registrando globals de OTel de verdad.
-
 const sentryInit = vi.fn();
 vi.mock("@sentry/node", () => ({ init: sentryInit }));
 

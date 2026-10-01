@@ -11,29 +11,10 @@ import {
   S3Client
 } from "@aws-sdk/client-s3";
 
-// El almacenamiento de evidencia detrás de una interfaz propia (D-011).
-//
-// **`s3` no es "el driver de producción" y `disk` el de juguete:** son el mismo
-// código contra dos backends S3 distintos —MinIO en local, Cloudflare R2 en
-// prod— y por eso probar contra MinIO prueba lo que va a correr desplegado.
-// `disk` existe para el arranque sin infraestructura y para la suite.
-//
-// El `storageRef` que se guarda en `Evidence.storagePath` es opaco y **nunca
-// sale al cliente** (D-011, incidente real de filtración de ruta absoluta): con
-// `disk` es una ruta, con `s3` es la key del objeto.
-
 export type StorageDriver = "disk" | "s3";
 
 export interface StoragePort {
   readonly driver: StorageDriver;
-  /**
-   * Guarda el archivo temporal y devuelve su `storageRef`.
-   *
-   * Devuelve **el SHA-256 de los bytes que quedaron guardados**, no el del
-   * temporal: es la deuda 🔴 que `CLAUDE.md` §El SHA-256 se mueve cuando llegue
-   * R2 dejó anotada. Un hash del temporal probaría lo que subimos, no lo que
-   * está guardado, y toda la cadena de prueba cuelga de esa diferencia.
-   */
   put(input: { localPath: string; key: string; contentType: string }): Promise<{
     storageRef: string;
     sha256: string;
@@ -52,12 +33,10 @@ function sha256Of(stream: Readable): Promise<string> {
   });
 }
 
-/** SHA-256 de un archivo local, en streaming (no lo carga entero en memoria). */
 export function sha256DeArchivo(localPath: string): Promise<string> {
   return sha256Of(fs.createReadStream(localPath));
 }
 
-/** Los primeros `n` bytes de un archivo local — para reconocer su tipo real sin leerlo entero. */
 export async function leerCabecera(localPath: string, n: number): Promise<Buffer> {
   const handle = await fs.promises.open(localPath, "r");
   try {
@@ -69,7 +48,6 @@ export async function leerCabecera(localPath: string, n: number): Promise<Buffer
   }
 }
 
-/** Disco local: el archivo ya lo escribió Multer, así que `put` solo lo hashea. */
 class DiskStorage implements StoragePort {
   readonly driver = "disk" as const;
 
@@ -98,7 +76,6 @@ export interface S3StorageConfig {
   accessKeyId: string;
   secretAccessKey: string;
   forcePathStyle: boolean;
-  /** Crear el bucket si falta. En MinIO sí; en R2 el bucket se crea afuera. */
   createBucket: boolean;
 }
 
@@ -131,12 +108,7 @@ class S3Storage implements StoragePort {
   }) {
     await this.ensureBucket();
 
-    // **El archivo se abre antes del `send` y se cierra siempre después.** Con
-    // `fs.createReadStream(localPath)` la apertura quedaba diferida: si el
-    // `send` terminaba sin leer el body (un error antes de subir, o el mock de
-    // los tests) y el llamador borraba el temporal, esa apertura tardía fallaba
-    // con ENOENT como un `error` sin nadie escuchando — una excepción suelta en
-    // el proceso. Con el handle ya abierto no hay apertura tardía que fallar.
+    // Handle abierto y no `createReadStream(path)`: la apertura diferida tira ENOENT sin listener.
     const archivo = await fs.promises.open(localPath, "r");
     try {
       await this.client.send(
@@ -149,14 +121,9 @@ class S3Storage implements StoragePort {
         })
       );
     } finally {
-      // Si el SDK consumió el stream, el handle ya está cerrado y esto no hace nada.
       await archivo.close();
     }
 
-    // **Se relee y se rehashea a propósito.** El hash tiene que cubrir los
-    // bytes que quedaron en el object storage, no los del temporal: si la
-    // subida se truncara, el hash del temporal seguiría siendo "correcto" y
-    // estaríamos anclando la huella de un archivo que no existe en ningún lado.
     const sha256 = await sha256Of(await this.read(key));
     return { storageRef: key, sha256 };
   }
@@ -200,9 +167,6 @@ class S3Storage implements StoragePort {
 function required(name: string): string {
   const valor = process.env[name];
   if (!valor) {
-    // D-042: el modo inseguro no existe. Si el driver es S3 y falta config, el
-    // proceso se cae al arrancar — no en el primer upload, cuando ya hay un
-    // usuario esperando y un archivo a medio camino.
     throw new Error(`STORAGE_DRIVER=s3 exige ${name}, y no está definida`);
   }
   return valor;
@@ -218,8 +182,6 @@ export function createStorage(driver: string = process.env.STORAGE_DRIVER ?? "di
       bucket: required("S3_BUCKET"),
       accessKeyId: required("S3_ACCESS_KEY_ID"),
       secretAccessKey: required("S3_SECRET_ACCESS_KEY"),
-      // MinIO necesita path-style; R2 lo tolera. Default `true` porque el que
-      // se prueba local es MinIO.
       forcePathStyle: (process.env.S3_FORCE_PATH_STYLE ?? "true") === "true",
       createBucket: (process.env.S3_CREATE_BUCKET ?? "false") === "true"
     });

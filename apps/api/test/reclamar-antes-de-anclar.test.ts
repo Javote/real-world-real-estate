@@ -9,14 +9,6 @@ import { anchorPort } from "../src/lib/anchor";
 import { db } from "../src/lib/db";
 import { FIXTURES } from "./global-setup";
 
-// AUDITORIA-2026-10-01 §1.1 y §8 punto 2 — quien ancla primero reclama con una
-// escritura condicional, y el dossier rechazado vuelve a la cola solo cuando
-// cambia su hash.
-//
-// La latencia agregada a `compileDossier` y a `anchorCommitment` es la que abre
-// la ventana entre leer y escribir: contra SQLite local, sin ella, la carrera
-// no se reproduce ni con el código viejo.
-
 const ganchos = vi.hoisted(() => ({ demoraCompilacionMs: 0 }));
 
 vi.mock("../src/domain/dossier", async (importOriginal) => {

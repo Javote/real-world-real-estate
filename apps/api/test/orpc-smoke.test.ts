@@ -4,15 +4,6 @@ import { describe, expect, it } from "vitest";
 import { z } from "zod";
 import { OpenAPIGenerator, OpenAPIHandler, os, ZodToJsonSchemaConverter } from "./helpers/orpc";
 
-// SPEC-212 (2026-09-20): antes de tocar ninguna ruta real, esta suite prueba
-// que oRPC 1.15.2 — la versión que D-066 eligió — se puede instalar, tipar y
-// montar sobre el Express 5 que ya tiene este repo, SIN reemplazar el
-// framework y SIN romper el patrón de "middleware corre antes del handler"
-// que usa `authorize`. No toca `app.ts` ni ninguna ruta montada: es un router
-// oRPC aparte, jamás cableado a `MONTAJE`.
-//
-// El schema es el mismo tipo de `z.strictObject` que ya usan los handlers
-// reales (`packages/shared`) — no un caso simplificado a propósito.
 const pingInputSchema = z.strictObject({ nombre: z.string().min(1) });
 const pingOutputSchema = z.strictObject({ saludo: z.string() });
 
@@ -29,9 +20,6 @@ function montarRouterOrpc(app: express.Express, prefijo: `/${string}`, onAntesDe
   app.use(
     prefijo,
     (_req, _res, next) => {
-      // el equivalente de `authorize(...)`: un middleware Express normal,
-      // corriendo ANTES de que oRPC vea la request — exactamente la cadena
-      // que SPEC-212 pide conservar.
       onAntesDeOrpc?.();
       next();
     },

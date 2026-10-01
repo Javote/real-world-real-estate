@@ -14,37 +14,12 @@ import { authenticate, authorize } from "../middlewares/auth";
 import { paramValidator } from "../middlewares/validate-params";
 import { writeAuditLog } from "../utils/audit";
 
-// **D-099 — la portada del proyecto**, bajo `/api/v1/developer`. La lectura es
-// pública y vive en `public.routes.ts`.
-//
-// M2-D3 la pide en `ProjectCard` ("Cover image (16:9)") y el alta de las
-// capturas 34b/34C no tiene dónde cargarla: el entregable se contradice, y el
-// dueño decidió que es un campo del proyecto, como el nombre o la dirección.
-//
-// **No es evidencia, y por eso no se parece a la subida de evidencia** aunque
-// las dos sean multipart: sin hash, sin bundle, sin anclaje y sin notificación.
-// Un render es material comercial; anclarlo lo pondría al lado de la prueba
-// como si la plataforma afirmara algo sobre lo que muestra (D-026).
-//
-// Multer y no `OpenAPIHandler` por la misma razón que la subida de evidencia:
-// el parser multipart de oRPC bufferea el archivo entero en memoria sin límite
-// (`CLAUDE.md` de este subárbol, §Trampas verificadas).
-
 const router = Router();
 
 router.param("id", paramValidator(cuidParamSchema));
 
 router.use(authenticate);
 
-/**
- * Carga o reemplaza la portada. `PUT` porque hay una sola por proyecto: repetir
- * el pedido deja el mismo estado.
- *
- * Tres pasos, y el orden es el que evita huérfanos: se guarda el objeto nuevo,
- * se confirman las filas (`ProjectCover` + `Project.coverUpdatedAt`, juntas) y
- * recién ahí se borra el objeto viejo. Si las filas no llegan a confirmarse, se
- * borra el nuevo y la portada anterior sigue intacta.
- */
 router.put(
   "/projects/:id/cover",
   authorize({
@@ -64,8 +39,6 @@ router.put(
     try {
       if (!file) return res.status(400).json({ message: "File is required" });
 
-      // El tipo REAL por los primeros bytes, y tiene que coincidir con el
-      // declarado — mismo criterio que la evidencia (regla 10).
       const real = detectarTipoDePortada(await leerCabecera(file.path, EVIDENCE_SIGNATURE_BYTES));
       if (real === null || real !== file.mimetype) {
         return res.status(400).json({
@@ -80,7 +53,6 @@ router.put(
         .where("projectId", "=", projectId)
         .executeTakeFirst();
 
-      // Ref opaca: el nombre que le dio Multer, nunca el del usuario (regla 2).
       const { storageRef } = await storage.put({
         localPath: path.resolve(file.path),
         key: `project-cover/${projectId}/${file.filename}`,
@@ -118,10 +90,6 @@ router.put(
       });
       confirmado = true;
 
-      // La vieja ya no la referencia nadie (la nueva tiene otra ref: Multer le
-      // da a cada archivo un nombre nuevo). Si no se puede borrar, queda un
-      // objeto de más en el bucket: no es motivo para fallar un pedido que ya
-      // cambió la portada.
       if (anterior) {
         await storage
           .remove(anterior.storageRef)
@@ -139,8 +107,6 @@ router.put(
     } catch (err) {
       return next(err);
     } finally {
-      // Con `s3`, el temporal ya cumplió o no sirve; con `disk`, el temporal ES
-      // el almacenamiento y solo se borra si las filas no se confirmaron.
       if (file && (!confirmado || storage.driver === "s3") && fs.existsSync(file.path)) {
         fs.unlinkSync(file.path);
       }

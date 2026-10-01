@@ -5,10 +5,6 @@ import { db } from "../src/lib/db";
 import { FIXTURES } from "./global-setup";
 import { crearStageMinteado } from "./helpers/stages";
 
-// M3 §2.1 — `developerProgressItemSchema` suma `certifiedAt` (del stage) y
-// `estimatedDelivery` (del proyecto), que la captura 45 pide para "Stage
-// Detail" y la etiqueta de finalización del timeline.
-
 const login = (f: { email: string; password: string }) =>
   request(app).post("/api/v1/auth/login").send({ email: f.email, password: f.password });
 

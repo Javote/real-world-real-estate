@@ -4,10 +4,6 @@ import { db } from "../src/lib/db";
 import { avancePorProyecto, relanzarRestriccionComoOrpc } from "../src/routes/_shared";
 import { FIXTURES } from "./global-setup";
 
-// SPEC-018 §A5 — `routes/_shared.ts`, llamado directo: el error que no es de
-// restricción, y `avancePorProyecto` con una lista vacía y con un proyecto
-// sin stages.
-
 let proyecto: string;
 
 beforeAll(async () => {

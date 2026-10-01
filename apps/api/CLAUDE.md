@@ -562,7 +562,7 @@ lo mismo sin pasar por HTTP. Ver el detalle en `CLAUDE.md` raíz.
      genuinamente falló (red caída, wallet sin fondos) y el stage **sigue en `Pending`**. Para un
      stage que ya avanzó sin hilo —el caso de `Estructura`— da 409 `STAGE_ALREADY_ADVANCED` a
      propósito: no existe un mint retroactivo honesto una vez que el estado off-chain avanzó sin
-     prueba (`domain/stage-transition.ts` → `retryStageMint`, explica el porqué en su docstring).
+     prueba (`domain/stage-transition.ts` → `retryStageMint`).
   2. `hasOnChainThread` (calculado, no guardado) en `GET /stages/:id`, `GET /projects/:id/stages` y
      `GET /projects/:id/stages/:stageId` — para que "¿este stage tiene hilo?" se vea en la respuesta
      en vez de tener que saber que `cabezaDelHilo` existe y consultarla a mano.

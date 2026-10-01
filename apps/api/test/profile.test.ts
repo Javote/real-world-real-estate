@@ -17,11 +17,6 @@ afterAll(async () => {
   await db.destroy();
 });
 
-// PATCH /profile/notifications guarda el merge parcial tal cual (Tanda B del
-// plan de documentación: "el merge, no lo que 'debería' devolver"), pero
-// completar la RESPUESTA con notificationPrefsSchema es un cambio de
-// comportamiento real, decidido en el checkpoint del dueño: siempre las 5
-// claves, con default true en las que el merge todavía no tiene.
 describe("PATCH /api/v1/profile/notifications", () => {
   it("un primer PATCH con una sola clave devuelve las 5, con default true en las demás", async () => {
     const res = await request(app)

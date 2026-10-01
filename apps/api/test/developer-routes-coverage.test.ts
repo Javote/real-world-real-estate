@@ -5,14 +5,6 @@ import { createId } from "../src/db/id";
 import { db } from "../src/lib/db";
 import { FIXTURES } from "./global-setup";
 
-// SPEC-017 §Branches — ramas de `developer.routes.ts` sin ejercitar: crear un
-// proyecto con `estimatedDelivery`, el atajo de "sin proyectos visibles" en
-// progress/documents/kpis (un developer sin ninguna membresía, `FIXTURES.
-// ajeno`), el filtro de categoría y de cursor del audit log, y el `?? 0`
-// sobre `SUM(Contract.totalMinorUnits)` — que a diferencia de los `COUNT` de
-// este mismo archivo, SÍ puede dar `NULL` (cero contratos) y necesita su
-// propio caso.
-
 const login = (f: { email: string; password: string }) =>
   request(app).post("/api/v1/auth/login").send({ email: f.email, password: f.password });
 
@@ -24,10 +16,6 @@ beforeAll(async () => {
   tokenDev = (await login(FIXTURES.activo)).body.token;
   tokenAjeno = (await login(FIXTURES.ajeno)).body.token;
 
-  // Un developer nuevo, SIN ninguna membresía previa — a diferencia de
-  // `FIXTURES.activo`, que ya es miembro de `torre-test` (con un contrato de
-  // 12.000.000): para aislar el `SUM` en `NULL` de verdad, el único proyecto
-  // visible tiene que ser el que este test crea.
   const tokenAdmin = (await login(FIXTURES.admin)).body.token;
   const email = `spec-017-solo-${Date.now()}@test.local`;
   await request(app)
@@ -96,12 +84,6 @@ describe("Sin ningún proyecto visible: progress, documents y kpis dan vacío, n
 
 describe("GET /developer/kpis con proyectos reales", () => {
   it("calcula averageProgress sobre etapas reales, y 0 capital sin contratos (SUM nulo)", async () => {
-    // Proyecto PROPIO y nuevo, sin ninguna unidad vendida: a diferencia de
-    // `torre-test` (el fixture compartido, que ya trae un contrato de
-    // 12.000.000), acá `SUM(Contract.totalMinorUnits)` no tiene ninguna fila
-    // para sumar y da `NULL` — la rama que el `?? 0` existe para cubrir. Los
-    // `COUNT` del mismo archivo nunca dan `NULL` (0 filas cuenta 0, no nulo),
-    // así que no hace falta un caso aparte para esos.
     const nuevo = await request(app)
       .post("/api/v1/developer/projects")
       .set("Authorization", `Bearer ${tokenSolo}`)
@@ -165,9 +147,6 @@ describe("GET /developer/audit-log con category y cursor", () => {
 });
 
 describe("GET /developer/audit-log — el txid de las transiciones de etapa", () => {
-  // Hasta el 2026-10-01 las transiciones no guardaban su txid en el metadata y
-  // la pantalla las mostraba sin tx aunque estuvieran ancladas. Ahora lo
-  // guardan, y a las entradas viejas la ruta se lo busca en su OnChainEvent.
   it("una transición nueva trae su txid, y una vieja sin txid lo recupera", async () => {
     const alta = await request(app)
       .post("/api/v1/developer/projects")
@@ -189,8 +168,6 @@ describe("GET /developer/audit-log — el txid de las transiciones de etapa", ()
     const txid = avance.body.anchor.txid as string;
     expect(txid).toBeTruthy();
 
-    // Entradas como las que escribía el código anterior: sin txid, o sin `to`,
-    // o sin metadata, o hacia un estado sin evento anclado.
     const despues = new Date(Date.now() + 1000);
     const viejas = [
       { from: "Pending", to: "InProgress" },
@@ -227,12 +204,9 @@ describe("GET /developer/audit-log — el txid de las transiciones de etapa", ()
     const meta = (f?: Fila) => (f?.metadataJson ? JSON.parse(f.metadataJson) : null);
     const porId = (id: string) => filas.find((f) => f.id === id);
 
-    // La nueva, escrita por la transición misma.
     const nueva = filas.find((f) => f.entityId === etapa && !ids.includes(f.id));
     expect(meta(nueva).txid).toBe(txid);
-    // La vieja hacia InProgress recupera el txid de su evento.
     expect(meta(porId(ids[0] as string)).txid).toBe(txid);
-    // Las demás quedan como estaban.
     expect(meta(porId(ids[1] as string))).toEqual({ from: "InProgress", to: "Completed" });
     expect(meta(porId(ids[2] as string))).toEqual({ nota: "sin to" });
     expect(porId(ids[3] as string)?.metadataJson).toBeNull();

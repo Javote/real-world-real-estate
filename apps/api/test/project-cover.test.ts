@@ -9,10 +9,6 @@ import { db } from "../src/lib/db";
 import { storage } from "../src/lib/storage";
 import { FIXTURES } from "./global-setup";
 
-// D-099 — la portada del proyecto: `PUT /developer/projects/:id/cover` (solo el
-// developer del proyecto) y `GET /public/projects/:id/cover` (sin sesión).
-// Proyectos propios, creados acá: ninguna otra suite ve portadas que no pidió.
-
 const UPLOAD_DIR = resolve(process.cwd(), process.env.UPLOAD_DIR ?? "./test-uploads");
 const archivosEnDisco = () => (existsSync(UPLOAD_DIR) ? readdirSync(UPLOAD_DIR).length : 0);
 
@@ -33,7 +29,6 @@ let developer: string;
 let ajeno: string;
 let developerId: string;
 
-/** Un proyecto nuevo con `FIXTURES.activo` como su developer. */
 async function nuevoProyecto() {
   const id = createId();
   const ahora = new Date();
@@ -280,7 +275,6 @@ describe("GET /public/projects/:id/cover — sin sesión", () => {
     expect(res.status).toBe(200);
     expect(res.headers["content-type"]).toBe("image/png");
     expect(res.headers["cache-control"]).toBe("public, max-age=31536000, immutable");
-    // helmet pone `same-origin`; el web vive en otro origen (D-065).
     expect(res.headers["cross-origin-resource-policy"]).toBe("cross-origin");
     expect(Buffer.compare(res.body as Buffer, imagen)).toBe(0);
   });

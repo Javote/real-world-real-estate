@@ -12,11 +12,6 @@ function crearCliente(link: InstanceType<typeof OpenAPILink>) {
   return createORPCClient<RouterClient<typeof certifierOrpcRouter>>(link);
 }
 
-// SPEC-212 §B — mismo patrón de prueba que §A
-// (`test/orpc-client-notary.test.ts`): "Cubre: generar el cliente oRPC
-// tipado para esa vertical, como prueba de que el contrato es real de los
-// dos lados". Sin caller real todavía (SPEC-111 sigue pendiente para las
-// dos verticales).
 let servidor: http.Server;
 let baseUrl: string;
 let tokenCertificador: string;
@@ -47,8 +42,6 @@ describe("cliente oRPC tipado de certifier, contra el servidor real (SPEC-212 §
 
     const kpis = await client.kpisProcedure();
 
-    // El tipo de `kpis` ya es `CertifierKpis` (inferido del mismo
-    // `certifierKpisSchema` que valida en el servidor) — sin cast.
     expect(typeof kpis.assigned).toBe("number");
     expect(typeof kpis.certified).toBe("number");
     expect(typeof kpis.observed).toBe("number");

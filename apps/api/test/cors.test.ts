@@ -3,10 +3,6 @@ import { afterAll, describe, expect, it } from "vitest";
 import app from "../src/app";
 import { db } from "../src/lib/db";
 
-// D-065: el web pasó a SPA estática en otro origen, así que la API necesita
-// CORS. La lista es blanca y explícita — un `*` con `Authorization` es
-// exactamente lo que no se hace.
-
 afterAll(async () => {
   await db.destroy();
 });
@@ -24,8 +20,6 @@ describe("CORS", () => {
   });
 
   it("permite PUT: la portada del proyecto se sube con PUT desde la web", async () => {
-    // Faltaba, y la portada del alta fallaba desde el browser con la API sana:
-    // curl no hace preflight, así que solo se vio en el navegador (2026-10-01).
     const res = await request(app)
       .options("/api/v1/developer/projects/x/cover")
       .set("Origin", "http://localhost:3000")
@@ -36,8 +30,6 @@ describe("CORS", () => {
   });
 
   it("NO devuelve cabecera para un origen desconocido", async () => {
-    // Sin cabecera, el browser corta. Es el comportamiento correcto: la API
-    // contesta igual, pero el navegador no le entrega la respuesta a la página.
     const res = await request(app)
       .get("/api/v1/auth/me")
       .set("Origin", "https://sitio-que-no-es-nuestro.example");

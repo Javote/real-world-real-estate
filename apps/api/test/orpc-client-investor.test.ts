@@ -12,9 +12,6 @@ function crearCliente(link: InstanceType<typeof OpenAPILink>) {
   return createORPCClient<RouterClient<typeof investorOrpcRouter>>(link);
 }
 
-// SPEC-212 §C — mismo patrón de prueba que §A/§B: "Cubre: generar el
-// cliente oRPC tipado para esa vertical, como prueba de que el contrato es
-// real de los dos lados". Sin caller real todavía (SPEC-111).
 let servidor: http.Server;
 let baseUrl: string;
 let tokenInvestor: string;
@@ -45,7 +42,6 @@ describe("cliente oRPC tipado de investor, contra el servidor real (SPEC-212 §C
 
     const favoritos = await client.favoritesProcedure();
 
-    // El tipo ya es `Project[]` (inferido de `projectSchema`) — sin cast.
     expect(Array.isArray(favoritos)).toBe(true);
   });
 

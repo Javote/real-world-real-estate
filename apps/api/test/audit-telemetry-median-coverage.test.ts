@@ -5,10 +5,6 @@ import { createId } from "../src/db/id";
 import { db } from "../src/lib/db";
 import { FIXTURES } from "./global-setup";
 
-// SPEC-018 §A5 — `mediana()` de `routes/audit.routes.ts` solo se ejercitaba
-// con una cantidad IMPAR de muestras (`reservation-to-escrow-telemetry.test.ts`,
-// 3 eventos). Falta el lado par: el promedio de las dos del medio.
-
 let tokenAdmin: string;
 let proyecto: string;
 

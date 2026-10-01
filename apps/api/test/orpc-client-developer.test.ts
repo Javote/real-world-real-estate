@@ -10,18 +10,6 @@ import { developerComercialOrpcRouter } from "../src/routes/developer-comercial.
 import { FIXTURES } from "./global-setup";
 import { createORPCClient, OpenAPILink, type RouterClient } from "./helpers/orpc";
 
-// SPEC-212 §D — última de las cuatro sub-partes. Mismo criterio que
-// `orpc-client-notary.test.ts`/`orpc-client-certifier.test.ts`/
-// `orpc-client-investor.test.ts`: arma el cliente desde los MISMOS routers
-// oRPC combinados que exportan los tres archivos de esta vertical (no un tipo
-// copiado a mano) y habla HTTP de verdad contra el servidor completo
-// (`authorize` incluido), sin mockear nada.
-//
-// **Tres clientes, un solo prefijo.** `developer.routes.ts`,
-// `developer-comercial.routes.ts` y `capital.routes.ts` comparten
-// `/api/v1/developer` (`MONTAJE`, `app.ts`) — cada uno arma su propio
-// `OpenAPILink`/cliente contra la MISMA `baseUrl`, y los tres conviven porque
-// sus paths son disjuntos (igual que los tres routers Express).
 let servidor: http.Server;
 let baseUrl: string;
 let tokenDev: string;
@@ -52,8 +40,6 @@ describe("cliente oRPC tipado de developer, contra el servidor real (SPEC-212 §
 
     const kpis = await client.kpisProcedure();
 
-    // El tipo de `kpis` ya es `DeveloperKpis` (inferido del mismo
-    // `developerKpisSchema` que valida en el servidor) — typechequea sin cast.
     expect(typeof kpis.activeProjects).toBe("number");
     expect(typeof kpis.averageProgress).toBe("number");
   });
@@ -65,13 +51,6 @@ describe("cliente oRPC tipado de developer, contra el servidor real (SPEC-212 §
     });
     const client = createORPCClient<RouterClient<typeof developerOrpcRouter>>(link);
 
-    // `acceso: { proyecto: { param: "id" } }` resuelve la membresía sobre el
-    // id del path directo (D-043: un proyecto inexistente da `false`, no
-    // `true`, ni para admin) — el 403 sale de `authorize`, antes de que oRPC
-    // vea la request. El 404 "Project not found" del procedimiento es
-    // inalcanzable por esta ruta y por eso no lo prueba `dossierByIdProcedure`
-    // aparte: es la MISMA forma que ya prueba `orpc-client-notary.test.ts`
-    // sobre una ruta `"soloRol"`, que sí llega al handler.
     await expect(
       client.projectByIdProcedure({ id: "aaaaaaaaaaaaaaaaaaaaaaaa" })
     ).rejects.toMatchObject({ status: 403 });
@@ -115,7 +94,7 @@ describe("cliente oRPC tipado de developer, contra el servidor real (SPEC-212 §
       .where("status", "=", "sold")
       .executeTakeFirst();
 
-    if (!unidadVendida) return; // No hay fixture vendida en esta corrida: el caso feliz ya lo cubre otro test.
+    if (!unidadVendida) return;
 
     await expect(
       client.createInvitationProcedure({

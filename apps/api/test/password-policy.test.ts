@@ -24,18 +24,11 @@ const crearUsuario = (password: string, email: string) =>
     .set("Authorization", `Bearer ${adminToken}`)
     .send({ email, password, role: "buyer", fullName: "Test" });
 
-// La política vive en packages/shared (regla 6) y se prueba ahí caso por caso.
-// Acá se prueba que los endpoints que ESCRIBEN passwords la apliquen — que es lo
-// que antes no hacían: cada uno declaraba su propio min(6) inline.
 describe("POST /api/v1/users aplica la política de passwords", () => {
   it(`rechaza con menos de ${PASSWORD_MIN_CHARS} caracteres`, async () => {
     const res = await crearUsuario("corta12", "corta@test.local");
 
     expect(res.status).toBe(400);
-    // SPEC-216 §E4 — migrado a oRPC: el sobre de error ya no es
-    // `error.flatten()`, es `ORPCError.toJSON()` (mismo cambio de forma que
-    // ya aceptaron las 45 rutas de SPEC-212 y `auth.test.ts` en §E2). El
-    // detalle de Zod sigue viajando, en `data.issues`.
     expect(res.body.code).toBe("BAD_REQUEST");
     expect(res.body.data.issues.some((i: { path: string[] }) => i.path.includes("password"))).toBe(
       true
@@ -43,8 +36,6 @@ describe("POST /api/v1/users aplica la política de passwords", () => {
   });
 
   it(`rechaza por encima de ${PASSWORD_MAX_BYTES} bytes en vez de truncar`, async () => {
-    // El caso que importa: sin esto bcrypt hashea los primeros 72 bytes y
-    // descarta el resto sin decir nada (D-046).
     const res = await crearUsuario("a".repeat(PASSWORD_MAX_BYTES + 1), "larga@test.local");
 
     expect(res.status).toBe(400);
@@ -55,8 +46,6 @@ describe("POST /api/v1/users aplica la política de passwords", () => {
   });
 
   it("acepta una password que cumple, y el usuario puede loguearse", async () => {
-    // El control: prueba que la política no rompió el camino feliz. Y que se
-    // pueda LOGUEAR después prueba que lo que se guardó es un hash usable.
     const email = "nuevo@test.local";
     const password = "una password larga y valida";
 
@@ -70,8 +59,6 @@ describe("POST /api/v1/users aplica la política de passwords", () => {
 
 describe("PATCH /api/v1/users/:id aplica la misma política", () => {
   it("rechaza cambiar a una password que no cumple", async () => {
-    // Es el endpoint que se olvida: se endurece el alta y el cambio queda
-    // permitiendo lo que el alta prohíbe.
     const user = await db
       .selectFrom("User")
       .selectAll()

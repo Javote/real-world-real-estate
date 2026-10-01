@@ -13,13 +13,6 @@ function crearCliente(link: InstanceType<typeof OpenAPILink>) {
   return createORPCClient<RouterClient<typeof stagesOrpcRouter>>(link);
 }
 
-// SPEC-216 §E5 — mismo patrón que `orpc-client-profile.test.ts`. Concentra
-// cuatro de los seis `.errors()` con nombre del lote de la spec
-// (`STAGE_TRANSITION_FORBIDDEN`, `STAGE_TRANSITION_INVALID`,
-// `STAGE_EVIDENCE_REQUIRED`/`UNATTRIBUTED` comparten procedimiento con
-// `STAGE_IDENTITY_IMMUTABLE`, cinco en total) — la tabla completa de la FSM
-// ya la prueba `test/stage-transitions.test.ts` por HTTP; este test es la
-// prueba de que el CLIENTE TIPADO ve el mismo contrato, no una repetición.
 let servidor: http.Server;
 let baseUrl: string;
 let tokenAdmin: string;
@@ -85,7 +78,6 @@ describe("cliente oRPC tipado de stages, contra el servidor real (SPEC-216 §E5)
 
     const stage = await client.stageDetailProcedure({ id });
 
-    // El tipo de `stage` ya es el de `stageDetailSchema` — sin cast.
     expect(stage.id).toBe(id);
     expect(Array.isArray(stage.evidences)).toBe(true);
     expect(stage.hasOnChainThread).toBe(false);
@@ -140,9 +132,6 @@ describe("cliente oRPC tipado de stages, contra el servidor real (SPEC-216 §E5)
     });
     const client = crearCliente(link);
 
-    // Pending/InProgress no llegan nunca a Completed sin evidencia en este
-    // helper — se prueba la rama de la FSM que sí es alcanzable sin bundle:
-    // InProgress → Observed es válido, InProgress → InProgress no lo es.
     await expect(
       client.transitionStageProcedure({ id, state: "InProgress" })
     ).rejects.toMatchObject({

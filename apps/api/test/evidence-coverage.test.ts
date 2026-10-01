@@ -8,13 +8,6 @@ import { db } from "../src/lib/db";
 import { FIXTURES } from "./global-setup";
 import { crearStageMinteado } from "./helpers/stages";
 
-// SPEC-018 §A2 — `evidence.routes.ts` ya tenía el 100% de las branches, pero
-// `sha256Pair` (el combinador del camino de Merkle de `GET /evidence/
-// :bundleId/proof/:fileHash`) no corría nunca: los tests existentes piden la
-// prueba de un bundle de UN archivo, y con una sola hoja el camino es vacío y
-// no se combina nada. Acá el bundle tiene dos, y el camino se verifica contra
-// la raíz anclada — que es para lo que existe (M2-D4 P5).
-
 const sha256Pair = (a: string, b: string) =>
   createHash("sha256")
     .update(Buffer.from(a + b, "hex"))
@@ -36,7 +29,6 @@ const nuevoStage = async () =>
     })
   ).id;
 
-/** Sube `n` PDFs en un solo lote: un bundle con `n` hojas. */
 async function subirLote(n: number) {
   const sId = await nuevoStage();
   const req = request(app)
@@ -104,9 +96,6 @@ describe("GET /evidence/:bundleId/proof/:fileHash — bundle de más de un archi
   it("un bundle con una hoja corrupta en la base no arma un camino sobre basura: 404", async () => {
     const lote = await subirLote(2);
     const otra = (await subirLote(1)).evidences[0]!;
-    // El PK de `EvidenceBundleItem` es (bundleId, evidenceId): la hoja
-    // corrupta se cuelga de una evidencia real de otro stage. Mayúsculas: no
-    // es un SHA-256 en hex minúscula, que es lo que `merkleProof` exige.
     await db
       .insertInto("EvidenceBundleItem")
       .values({ bundleId: lote.bundleId, evidenceId: otra.id, sha256Hash: "A".repeat(64) })

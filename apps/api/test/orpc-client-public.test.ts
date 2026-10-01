@@ -12,10 +12,6 @@ function crearCliente(link: InstanceType<typeof OpenAPILink>) {
   return createORPCClient<RouterClient<typeof publicOrpcRouter>>(link);
 }
 
-// SPEC-216 §E2 — mismo patrón que `orpc-client-auth.test.ts`, pero sin
-// `$context`: ningún procedimiento de `public` necesita `req.user`, y este
-// test lo ejercita sin mandar ningún header de sesión — la otra mitad de "la
-// primera vez sin sesión" (junto a `auth.routes.ts`).
 let servidor: http.Server;
 let baseUrl: string;
 let shareToken: string;
@@ -53,9 +49,6 @@ describe("cliente oRPC tipado de public, contra el servidor real (SPEC-216 §E2)
 
     const dossier = await client.publicDossierProcedure({ shareToken });
 
-    // El tipo de `dossier` ya es `PublicDossier` (inferido del mismo
-    // `publicDossierSchema` que valida en el servidor) — sin cast. Nada del
-    // investor ni de la unidad más allá de su referencia.
     expect(dossier.unitReference).toBe(FIXTURES.unidad.unitReference);
     expect(dossier).not.toHaveProperty("investorId");
     expect(dossier).not.toHaveProperty("unitId");

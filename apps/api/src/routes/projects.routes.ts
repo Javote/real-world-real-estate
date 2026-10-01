@@ -37,23 +37,8 @@ import { paramValidator } from "../middlewares/validate-params";
 import { writeAuditLog } from "../utils/audit";
 import { conStages, relanzarRestriccionComoOrpc } from "./_shared";
 
-// **SPEC-216 §E6 — migrado a oRPC (D-066)**, junto con `projects-obra.routes.ts`:
-// comparten prefijo (`MONTAJE`, `app.ts`), mismo caso que los cuatro archivos
-// de `/api/v1/developer` en `SPEC-212` §D — migrar uno no toca el
-// `router.use(authenticate)` del otro, los dos ya lo declaran y coinciden.
-//
-// **`POST /` y `POST /:id/members` insertan contra un índice único**
-// (`Project.slug`, `ProjectMember_userId_projectId_membershipRole_key`) y
-// `POST /:id/members` además contra una FK (`userId`) — los tres envueltos en
-// `relanzarRestriccionComoOrpc` (§Los `.errors()` que hacen falta de
-// SPEC-216: dos de los tres sin test hoy, el riesgo es silencioso, no
-// ausente). `PATCH /:id` también puede tocar `Project.slug` (es editable) y
-// se envuelve igual.
-
 const PREFIJO_ABSOLUTO = "/api/v1/projects";
 
-/** El contexto que cada procedimiento recibe — siempre el usuario ya
- * autenticado por `authenticate`, corrido antes de que oRPC vea la request. */
 export type ProjectsContext = { user: { id: string; email: string; role: UserRole } };
 const orpc = os.$context<ProjectsContext>();
 
@@ -70,23 +55,13 @@ const projectListProcedure = orpc
   .handler(async ({ input, context }) => {
     const { status, city, q, sort, bbox } = input;
 
-    // El scope de visibilidad sale de `projectScope` y no de un query propio: es
-    // la MISMA regla que aplica `canAccessProject` a un proyecto puntual (D-048,
-    // D-049 — reimplementado con el query builder de Kysely, misma semántica:
-    // `EXISTS` correlacionado, sin duplicar filas de un usuario con dos
-    // membresías sobre el mismo proyecto).
     let query = db.selectFrom("Project").selectAll("Project");
 
     if (status) query = query.where("status", "=", status);
     if (city) query = query.where("city", "=", city);
 
     if (q) {
-      // `escape` explícito: sin él, un `%` tipeado en el buscador matchea todo y
-      // un `_` matchea cualquier carácter — el usuario cree que filtró y no.
       const patron = `%${q.replace(/[\\%_]/g, "\\$&")}%`;
-      // Falso positivo de Semgrep en las dos líneas de abajo: es SQL
-      // parametrizado por Kysely (el `sql` tag hace bind, no concatena), no
-      // HTML — la regla lo confunde por la sintaxis de template literal.
       query = query.where((eb) =>
         eb.or([
           // nosemgrep: javascript.express.security.injection.raw-html-format.raw-html-format
@@ -98,15 +73,11 @@ const projectListProcedure = orpc
     }
 
     if (bbox) {
-      // SPEC-208 (B-12): el regex de `bboxSchema` ya garantiza exactamente 4
-      // números separados por coma — `en()` lo deja escrito en vez de que el
-      // destructuring lo asuma en silencio.
       const partes = bbox.split(",").map(Number);
       const minLon = en(partes, 0);
       const minLat = en(partes, 1);
       const maxLon = en(partes, 2);
       const maxLat = en(partes, 3);
-      // Un proyecto sin coordenadas no entra al mapa. No se le inventa un punto.
       query = query
         .where("longitude", ">=", minLon)
         .where("longitude", "<=", maxLon)
@@ -118,8 +89,6 @@ const projectListProcedure = orpc
       .where((eb) => projectScope(eb, context.user.role, context.user.id, ANY_MEMBERSHIP))
       .$call((qb) => {
         if (sort === "name") return qb.orderBy("name", "asc");
-        // `estimatedDelivery` nullable: las entregas sin fecha van al final en
-        // vez de encabezar el listado por ser NULL.
         if (sort === "delivery")
           return qb
             .orderBy(sql`case when estimatedDelivery is null then 1 else 0 end`)
@@ -163,7 +132,6 @@ const createProjectProcedure = orpc
         address: input.address ?? null,
         city: input.city ?? null,
         country: input.country ?? null,
-        // D-097: obligatorias desde el schema.
         latitude: input.latitude,
         longitude: input.longitude,
         totalUnits: input.totalUnits,
@@ -204,7 +172,7 @@ const projectByIdProcedure = os
       .where("id", "=", input.id)
       .executeTakeFirst();
 
-    /* v8 ignore if -- @preserve: authorize({ proyecto }) ya confirmó que existe (SPEC-018) */
+    /* v8 ignore if -- @preserve: authorize({ proyecto }) ya confirmó que existe */
     if (!project) throw new ORPCError("NOT_FOUND", { message: "Project not found" });
 
     const stageRows = await db
@@ -269,10 +237,6 @@ const updateProjectProcedure = orpc
   .handler(async ({ input, context, errors }) => {
     const { id, ...body } = input;
 
-    // Un id inexistente daba 500: `executeTakeFirstOrThrow()` tira un error
-    // que `relanzarRestriccionComoOrpc` no clasifica (no es una restricción
-    // violada). `GET /projects/:id` ya da 404 para lo mismo — esto lo alinea
-    // (SPEC-018 §A5, mismo bug que `users.routes.ts` cerró en A4).
     const existe = await db
       .selectFrom("Project")
       .select("id")
@@ -419,19 +383,6 @@ router.post(
   delegarAOrpc(addProjectMemberHandler, PREFIJO_ABSOLUTO, conUsuario)
 );
 
-/**
- * SPEC-221 · el admin invita a un certifier a un proyecto (D-095).
- *
- * Es el reemplazo con pantalla de `POST /:id/members` para el caso que lo hacía
- * falta siempre: sumar el certifier a un proyecto nuevo. **No crea la
- * membresía**: la crea el certifier al aceptar (`certifier.routes.ts`), igual
- * que el buyer al aceptar la suya. El admin propone; el certifier decide si
- * certifica ese proyecto.
- *
- * Los tres rechazos tienen nombre porque cada uno es un error distinto del
- * admin y la pantalla los dice distinto: el usuario no es un certifier activo,
- * ya certifica este proyecto, o ya tiene una invitación sin responder.
- */
 const inviteCertifierProcedure = orpc
   .errors({
     CERTIFIER_NOT_ELIGIBLE: { status: 400 },
@@ -470,8 +421,6 @@ const inviteCertifierProcedure = orpc
     }
 
     const id = createId();
-    // El índice único PARCIAL (`CertifierInvitation_pending_key`) es la guarda:
-    // dos requests concurrentes no pueden dejar dos invitaciones pendientes.
     await db
       .insertInto("CertifierInvitation")
       .values({
@@ -489,7 +438,7 @@ const inviteCertifierProcedure = orpc
             errors.INVITATION_ALREADY_PENDING({
               message: "Certifier already has a pending invitation for this project"
             }),
-          /* v8 ignore start -- @preserve: el handler ya confirmó que el proyecto y el certifier existen antes del insert (SPEC-018) */
+          /* v8 ignore start -- @preserve: el handler ya confirmó que el proyecto y el certifier existen antes del insert */
           RELATED_RESOURCE_NOT_FOUND: () =>
             new ORPCError("NOT_FOUND", { message: "Project or user not found" })
           /* v8 ignore stop -- @preserve */
@@ -515,7 +464,6 @@ router.post(
   delegarAOrpc(inviteCertifierHandler, PREFIJO_ABSOLUTO, conUsuario)
 );
 
-/** SPEC-221 · las invitaciones a certificar de un proyecto, para la pantalla del admin. */
 const projectCertifierInvitationsProcedure = orpc
   .route({ method: "GET", path: "/{id}/certifier-invitations" })
   .input(z.strictObject({ id: cuidParamSchema }))
@@ -531,27 +479,11 @@ router.get(
   delegarAOrpc(projectCertifierInvitationsHandler, PREFIJO_ABSOLUTO, conUsuario)
 );
 
-/**
- * Fila 06-07 — los documentos del proyecto (INV-PROJECT-DOCS-002).
- *
- * Es la evidencia del proyecto con su estado de prueba, en la forma que come el
- * `DocumentCard`: hash completo (regla 16) y TXID cuando existe.
- *
- * **`storagePath` no sale nunca** (D-011) y **el estado se deriva del TXID, no
- * se declara**: sin TXID el documento está "Pendiente", aunque tenga hash
- * (regla 17). Esa derivación vive acá y no en el cliente para que no haya dos
- * versiones de la misma regla.
- */
 const projectDocumentsProcedure = os
   .route({ method: "GET", path: "/{id}/documents" })
   .input(z.strictObject({ id: cuidParamSchema }))
   .output(z.array(projectDocumentSchema))
   .handler(async ({ input }) => {
-    // **Reconciliar antes de consultar** (D-077): esta respuesta lleva
-    // `anchorStatus`, y sin esto un anclaje que ya está en un bloque se sirve
-    // como `Pending` para siempre. La regla vive en `reconcile.ts`: toda
-    // lectura que devuelva el estado de un anclaje reconcilia su propio
-    // alcance primero. Lo fija `test/reconcile-on-read.test.ts`.
     await reconciliarParaLectura({ projectId: input.id });
 
     const filas = await db
@@ -582,7 +514,7 @@ const projectDocumentsProcedure = os
     return z.array(projectDocumentSchema).parse(
       filas.map((f) => ({
         ...f,
-        /* v8 ignore start -- @preserve: OnChainEvent.status es NOT NULL: si el LEFT JOIN trajo txid, trajo status (SPEC-018) */
+        /* v8 ignore start -- @preserve: OnChainEvent.status es NOT NULL: si el LEFT JOIN trajo txid, trajo status */
         anchorStatus: f.txid ? (f.anchorStatus ?? "Confirmed") : "Pending"
         /* v8 ignore stop -- @preserve */
       }))
@@ -599,7 +531,6 @@ router.get(
   delegarAOrpc(projectDocumentsHandler, PREFIJO_ABSOLUTO)
 );
 
-/** Fila 21 — el esquema del edificio: las unidades por piso. */
 const buildingSchematicProcedure = os
   .route({ method: "GET", path: "/{id}/building-schematic" })
   .input(z.strictObject({ id: cuidParamSchema }))
@@ -613,8 +544,6 @@ const buildingSchematicProcedure = os
       .orderBy("unitReference", "asc")
       .execute();
 
-    // Agrupado por piso, que es como lo dibuja la captura 21. Las unidades sin
-    // piso van juntas al final en vez de inventarles uno.
     const pisos = new Map<number | null, typeof unidades>();
     for (const unidad of unidades) {
       const actual = pisos.get(unidad.floor) ?? [];
@@ -637,20 +566,6 @@ router.get(
   delegarAOrpc(buildingSchematicHandler, PREFIJO_ABSOLUTO)
 );
 
-/**
- * **Capturas 59-60 · el perfil de la organización desarrolladora** (SPEC-220).
- *
- * Cuelga de `/projects/:id` y no de `/developer/:orgId` por tres razones, y la
- * tercera es la que decide: M2-D1 la describe como *"linked from project"*;
- * `/developer/*` ya es el área autenticada del developer y meter ahí una
- * pantalla que mira un investor se presta a confusión; y **la autorización ya
- * está resuelta** — el investor ve al desarrollador de una obra de la que es
- * miembro, sin inventar una regla de permisos nueva para una entidad nueva.
- *
- * 404 cuando el proyecto no tiene organización: los 7 proyectos anteriores a
- * la migración 0010 no la tienen, y una pantalla de perfil vacía diría menos
- * que no ofrecerla. El front solo dibuja el link cuando hay `organizationId`.
- */
 const projectDeveloperProcedure = os
   .route({ method: "GET", path: "/{id}/developer" })
   .input(z.strictObject({ id: cuidParamSchema }))
@@ -662,7 +577,7 @@ const projectDeveloperProcedure = os
       .where("id", "=", input.id)
       .executeTakeFirst();
 
-    /* v8 ignore if -- @preserve: authorize({ proyecto }) ya confirmó que existe (SPEC-018) */
+    /* v8 ignore if -- @preserve: authorize({ proyecto }) ya confirmó que existe */
     if (!proyecto) throw new ORPCError("NOT_FOUND", { message: "Project not found" });
     if (!proyecto.organizationId) {
       throw new ORPCError("NOT_FOUND", { message: "Project has no developer organization" });
@@ -674,11 +589,9 @@ const projectDeveloperProcedure = os
       .where("id", "=", proyecto.organizationId)
       .executeTakeFirst();
 
-    /* v8 ignore if -- @preserve: FK Project.organizationId → Organization (SPEC-018) */
+    /* v8 ignore if -- @preserve: FK Project.organizationId → Organization */
     if (!organizacion) throw new ORPCError("NOT_FOUND", { message: "Organization not found" });
 
-    // Todas las obras de la organización, no solo la que se está mirando: la
-    // captura 59 lista "Previous Projects" y la 60 sigue con "Active Projects".
     const proyectos = await db
       .selectFrom("Project")
       .selectAll()
@@ -689,10 +602,8 @@ const projectDeveloperProcedure = os
     const ids = proyectos.map((p) => p.id);
     const agregados = await agregadosDeProyectos(ids);
 
-    // Unidades de TODAS sus obras: "Units sold" e "investors" son del
-    // desarrollador, no de una obra.
     const unidades = ids.length
-      ? /* v8 ignore start -- @preserve: ids siempre incluye al proyecto que se está mirando (SPEC-018) */
+      ? /* v8 ignore start -- @preserve: ids siempre incluye al proyecto que se está mirando */
         await db
           .selectFrom("Unit")
           .select(["status", "investorId"])
@@ -715,14 +626,10 @@ const projectDeveloperProcedure = os
         projectsDelivered: proyectos.filter((p) => p.status === "completed").length,
         unitsSold: vendidas.length,
         investors: inversores.size,
-        // `null` y no 0 cuando no lo declaró: "0 años en el rubro" es una
-        // afirmación, "no lo dijo" no lo es.
         yearsInBusiness: organizacion.foundedYear
           ? Math.max(0, anioActual - organizacion.foundedYear)
           : null
       },
-      // Entregado es pasado; todo lo demás sigue en curso. `delayed` es una
-      // obra activa con problemas, no una obra previa.
       previousProjects: conAgregados.filter((p) => p.status === "completed"),
       activeProjects: conAgregados.filter((p) => p.status !== "completed")
     });
@@ -738,9 +645,6 @@ router.get(
   delegarAOrpc(projectDeveloperHandler, PREFIJO_ABSOLUTO)
 );
 
-/** El router oRPC combinado de esta vertical — lo consume
- * `scripts/generate-openapi.ts` para generar el fragmento de OpenAPI de las
- * rutas migradas. */
 export const projectsOrpcRouter = {
   projectListProcedure,
   createProjectProcedure,

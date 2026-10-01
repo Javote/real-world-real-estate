@@ -2,11 +2,6 @@ import { afterAll, describe, expect, it } from "vitest";
 import { anchorPort } from "../src/lib/anchor";
 import { db } from "../src/lib/db";
 
-// SPEC-406 — `KyselyLedgerStore` es la mitad de la spec que no se ve desde
-// `packages/cardano`: prueba que `registrarBloque`/`bloqueDe` escriben y leen
-// la tabla real (`SimulatedLedgerBlock`, migración 0008), no un `Map` en
-// memoria que el reinicio del proceso volvería a perder.
-
 afterAll(async () => {
   await db.destroy();
 });

@@ -18,10 +18,6 @@ afterAll(async () => {
   await db.destroy();
 });
 
-// El schema local de esta ruta había quedado con los tres roles viejos y se
-// olvidó "notary" cuando el dominio pasó a cuatro (packages/shared/src/auth.ts
-// ya lo tenía). Sin este test, un admin no podía dar de alta un notary real
-// aunque el rol existiera en la base y en el resto de la API.
 describe("POST /api/v1/users acepta los cinco roles de userRoleSchema", () => {
   it("puede crear un usuario con role notary", async () => {
     const res = await request(app)
@@ -53,7 +49,6 @@ describe("POST /api/v1/users acepta los cinco roles de userRoleSchema", () => {
     expect(res.status).toBe(200);
     expect(res.body.role).toBe("notary");
 
-    // No dejar el fixture mutado para el resto de la suite.
     await db
       .updateTable("User")
       .set({ role: "buyer", updatedAt: new Date() })
@@ -89,7 +84,6 @@ describe("PATCH /api/v1/users/:id actualiza fullName e isActive", () => {
     expect(res.body.fullName).toBe("Investor Renombrado");
     expect(res.body.isActive).toBe(false);
 
-    // No dejar el fixture mutado para el resto de la suite.
     await db
       .updateTable("User")
       .set({ fullName: buyer.fullName, isActive: true, updatedAt: new Date() })

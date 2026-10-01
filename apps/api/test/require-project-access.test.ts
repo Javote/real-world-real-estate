@@ -6,9 +6,6 @@ import { db } from "../src/lib/db";
 import { ANY_MEMBERSHIP, authorize, CUALQUIER_ROL } from "../src/middlewares/auth";
 import { FIXTURES } from "./global-setup";
 
-// SPEC-012 §Invariantes. Es la capa 2 de la regla 5 y es 🔴: cada código de
-// respuesta de la invariante 4 tiene su caso, en las DOS formas de `source`.
-
 let proyecto: string;
 let stage: string;
 let evidencia: string;
@@ -30,8 +27,6 @@ beforeAll(async () => {
 
   const ahora = new Date();
 
-  // Un stage y una evidencia del proyecto de prueba: son lo que la forma B
-  // tiene que cargar para averiguar a qué proyecto pertenecen.
   stage = createId();
   await db
     .insertInto("Stage")
@@ -158,10 +153,6 @@ describe("la regla de proyecto · forma B (hay que cargar la entidad)", () => {
   });
 
   it("el 403 gana sobre el 404: no se filtra si la entidad ajena existe", async () => {
-    // Los dos casos dan el MISMO status para el no-miembro, así que desde
-    // afuera no se puede distinguir "no existe" de "existe y no es tuyo"...
-    // salvo por el caso de arriba, donde la entidad inexistente da 404. Esa
-    // asimetría es deuda conocida y declarada (SPEC-012 §Lo que NO hace).
     const token = await tokenDe(FIXTURES.ajeno);
     const existente = await request(app)
       .get(`/api/v1/stages/${stage}`)
@@ -177,23 +168,15 @@ describe("la regla de proyecto · forma B (hay que cargar la entidad)", () => {
 
 describe("la forma de `authorize` no deja omitir nada", () => {
   it("no compila si la regla de proyecto no dice qué membresías acepta", () => {
-    // Igual que en `canAccessProject` (D-042), lo verifica el TYPECHECK: si
-    // `membresias` se volviera opcional, tsc falla con "Unused
     // '@ts-expect-error' directive". Omitirlo significaría lista vacía —
-    // cerrado, pero en silencio.
     const nuncaSeLlama = () =>
-      // @ts-expect-error — `membresias` es obligatorio (D-042, SPEC-012)
+      // @ts-expect-error — `membresias` es obligatorio
       authorize({ roles: CUALQUIER_ROL, acceso: { proyecto: { param: "id" } } });
 
     expect(nuncaSeLlama).toBeTypeOf("function");
   });
 
   it("no compila si falta `acceso`: la AUSENCIA dejó de ser una opción", () => {
-    // La invariante que trajo el guard único (PLAN-2026-09-04). Con guards
-    // sueltos, "me olvidé de poner requireProjectAccess" era invisible: la
-    // ausencia de una llamada no es un tipo. Acá hay que escribir algo, aunque
-    // ese algo sea `"soloRol"` — y eso ya es una afirmación que se discute en un
-    // diff, no un hueco.
     const nuncaSeLlama = () =>
       // @ts-expect-error — `acceso` es obligatorio (PLAN-2026-09-04)
       authorize({ roles: CUALQUIER_ROL });

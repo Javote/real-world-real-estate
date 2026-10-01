@@ -2,21 +2,6 @@ import type { Express } from "express";
 import request from "supertest";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
-// SPEC-018 §A6 — `app.ts` no tenía ningún test propio para `/health` ni para
-// el 404 final: los dos son funciones que ninguna otra suite HTTP ejercita
-// de pasada (todas piden rutas de negocio bajo `/api/v1/...`).
-//
-// Cada test reimporta `app` con `vi.resetModules()` — así el 503 puede
-// mockear `lib/kysely` sin filtrar ese mock a los otros tests del archivo.
-// `../src/lib/db` se importa ANTES que `../src/app` (no en paralelo) para
-// garantizar que sea la misma instancia de Kysely que el `/health` de la app
-// recién importada va a usar — y así se puede cerrar prolijo en el afterEach.
-//
-// **Los `describe` llevan 20 s de timeout, no los 5 s por defecto:** reimportar
-// `app` entera en frío ronda los 5 s en una Mac Intel y el test caía por
-// tiempo sin que fallara nada de lo que verifica (visto el 2026-09-28, al sumar
-// una ruta). Lo que se mide acá es el status, no cuánto tarda el import.
-
 let dbActual: { destroy: () => Promise<unknown> } | undefined;
 
 async function appFresca(): Promise<Express> {

@@ -9,29 +9,13 @@ import { db } from "../src/lib/db";
 import { FIXTURES } from "./global-setup";
 import { crearStageMinteado } from "./helpers/stages";
 
-/** Un txid de 64 hex, genuinamente aleatorio — no un dígito variable sobre un
- * literal fijo (eso da solo 10 valores posibles, y `OnChainEvent.txid` es
- * único: dos fixtures de la misma suite pueden chocar). */
 const txidDeFixture = () => randomBytes(32).toString("hex");
-
-// D-059. La tabla de transiciones vivía SOLO en Aiken y esta ruta aceptaba
-// cualquier estado desde cualquier estado — incluido salir de `Completed`, que
-// la regla 9 declara terminal. Estos tests son el espejo, del lado de la API,
-// de los 16 pares que `contracts/lib/propnexus/fsm.ak` prueba uno por uno.
 
 let proyecto: string;
 let token: string;
 let tokenAdmin: string;
 let actorId: string;
 
-/** `sequenceOrder` es único por proyecto, y este archivo crea decenas de
- * stages sobre el MISMO proyecto fixture (`FIXTURES.proyecto`, compartido
- * con otras suites). Dos llamadas a `Math.random()` pueden coincidir —lo
- * hicieron, `SQLITE_CONSTRAINT_UNIQUE: Stage.projectId, Stage.sequenceOrder`—
- * así que el valor sale de un contador, no de un sorteo: garantiza que
- * ninguna llamada de ESTE archivo choque con otra. Arranca en un offset
- * aleatorio para no repetirse con lo que sembró un run anterior u otra suite
- * que también use el mismo proyecto. */
 let siguienteSequenceOrder = Math.floor(Math.random() * 1_000_000) + 100;
 const proximoSequenceOrder = () => siguienteSequenceOrder++;
 
@@ -80,8 +64,6 @@ async function agregarEvidencia(
       evidenceType: "certificate",
       category: "permits",
       authoritative: opciones.authoritative ?? true,
-      // Por defecto viene atribuida: D-028 (a) la exige cuando es autoritativa,
-      // así que una evidencia sin `issuingAuthority` es el caso raro, no el normal.
       issuingAuthority:
         opciones.issuingAuthority === undefined
           ? "Municipalidad de Córdoba"
@@ -105,10 +87,6 @@ const patchState = (id: string, state: string) =>
     .set("Authorization", `Bearer ${token}`)
     .send({ state });
 
-// `admin` no tiene la restricción de M2-D1 §Role Permission Matrix
-// ("Stage certification"/"Stage observation" son exclusivas del certifier):
-// la usan los tests que ejercitan la FSM o el anclaje en sí, no la capa de
-// autorización nueva — esa tiene su propio describe más abajo.
 const patchStateAdmin = (id: string, state: string) =>
   request(app)
     .patch(`/api/v1/stages/${id}/state`)
@@ -134,9 +112,6 @@ beforeAll(async () => {
   ).id;
 });
 
-/** Etapa con hilo real (mint), sin pasar por la ruta HTTP que se borró — ver
- * `helpers/stages.ts`. Mismo contador que `crearStage`, para que las dos
- * familias de stages de este archivo nunca choquen entre sí. */
 const crearStageConHilo = (opts: { validationCritical?: boolean } = {}) =>
   crearStageMinteado({
     projectId: proyecto,
@@ -151,9 +126,6 @@ afterAll(async () => {
 });
 
 describe("PATCH /stages/:id/state · la tabla de transiciones", () => {
-  // Los 16 pares, generados igual que en el validador: ninguno queda sin caso.
-  // Con `admin`, que no tiene la restricción de a quién le toca cada
-  // transición (ver el describe de más abajo) — acá se prueba la FSM sola.
   for (const from of STAGE_STATES) {
     for (const to of STAGE_STATES) {
       const permitido = canTransition(from, to);
@@ -163,7 +135,6 @@ describe("PATCH /stages/:id/state · la tabla de transiciones", () => {
         expect(res.status).toBe(permitido ? 200 : 409);
         if (!permitido) {
           expect(res.body.code).toBe("STAGE_TRANSITION_INVALID");
-          // Y el estado no se movió: un rechazo que igual escribe no es un rechazo.
           const fila = await db
             .selectFrom("Stage")
             .selectAll()
@@ -182,11 +153,6 @@ describe("PATCH /stages/:id/state · la tabla de transiciones", () => {
   });
 });
 
-// M2-D1 §Role Permission Matrix: "Stage certification" y "Stage observation"
-// son acciones exclusivas del certifier. Esta ruta (`PATCH /stages/:id/state`)
-// es la del developer, y hasta este cierre un developer podía pedir
-// `→ Completed` o `→ Observed` directo, auto-certificando su propio stage sin
-// pasar por el certifier — la FSM lo permitía y nada más lo impedía.
 describe("PATCH /stages/:id/state · el developer no puede saltear al certifier", () => {
   it("403 al pedir Completed", async () => {
     const id = await crearStage({ state: "InProgress" });
@@ -212,9 +178,6 @@ describe("PATCH /stages/:id/state · el developer no puede saltear al certifier"
   });
 
   it("el 403 gana aunque la transición también sería inválida por la FSM", async () => {
-    // Pending → Completed es inválido por las dos razones a la vez; lo que
-    // importa es que un developer nunca vea "sí, pero..." — ve 403 siempre
-    // que pida algo que no es InProgress, sin filtrar si además era legal.
     const id = await crearStage({ state: "Pending" });
     const res = await patchState(id, "Completed");
     expect(res.status).toBe(403);
@@ -238,18 +201,7 @@ describe("PATCH /stages/:id/state · el developer no puede saltear al certifier"
   });
 });
 
-// M3 criterio 2 — "API rejects unsigned evidence". No hay firma criptográfica
-// de archivos en el dominio (D-026: la plataforma no certifica ni valida);
-// D-028/D-084/D-086 relee "sin firmar" como evidencia declarada
-// `authoritative` sin `issuingAuthority` — la única mitad de D-028 que sigue
-// bloqueando una transición. Los tests de este describe son la prueba de ese
-// criterio, no una casualidad de nombres.
 describe("PATCH /stages/:id/state · evidencia en stages críticos", () => {
-  // Con `admin` en todo el describe: lo que se prueba acá es la regla de
-  // evidencia de `transitionStage`, no la capa de autorización nueva — esa
-  // ya tiene su propio describe ("el developer no puede saltear al
-  // certifier"), y con el token de developer estos `patchState(..., "Completed")`
-  // darían 403 antes de llegar a la regla de evidencia.
   it("409 al completar un stage validation-critical sin evidencia", async () => {
     const id = await crearStage({ state: "InProgress", validationCritical: true });
     const res = await patchStateAdmin(id, "Completed");
@@ -269,9 +221,6 @@ describe("PATCH /stages/:id/state · evidencia en stages críticos", () => {
     expect((await patchStateAdmin(id, "Completed")).status).toBe(200);
   });
 
-  // D-028 (a), acotada por D-084. Lo que se exige NO es que la autoridad sea
-  // válida —la plataforma no valida (D-026)— sino que la declaración esté
-  // completa: si decís que es autoritativa, decís de quién viene.
   it("409 al completar con una evidencia autoritativa sin decir quién la emitió", async () => {
     const id = await crearStage({ state: "InProgress", validationCritical: true });
     await agregarEvidencia(id, { authoritative: true, issuingAuthority: null });
@@ -286,8 +235,6 @@ describe("PATCH /stages/:id/state · evidencia en stages críticos", () => {
     expect((await patchStateAdmin(id, "Completed")).body.code).toBe("STAGE_EVIDENCE_UNATTRIBUTED");
   });
 
-  // El developer sube fotos de obra desde el teléfono y eso no puede pedir
-  // atribución: es exactamente la alternativa que D-028 descartó.
   it("200 con evidencia NO autoritativa y sin atribución", async () => {
     const id = await crearStage({ state: "InProgress", validationCritical: true });
     await agregarEvidencia(id, { authoritative: false, issuingAuthority: null });
@@ -296,10 +243,6 @@ describe("PATCH /stages/:id/state · evidencia en stages críticos", () => {
 });
 
 describe("OnChainEvent · el aterrizaje del anclaje", () => {
-  // D-080. El CHECK de la tabla ya vuelve imposible un TXID sin red; esto
-  // asegura lo otro: que la red que se guarda sea la que el PUERTO declara y no
-  // `CARDANO_NETWORK`. La suite corre en `simulated`, así que un "Preprod" acá
-  // significaría que alguien está leyendo el entorno en vez del adaptador.
   it("persiste la red del puerto junto al TXID, no la del entorno", async () => {
     const anterior = process.env.CARDANO_NETWORK;
     process.env.CARDANO_NETWORK = "Preprod";
@@ -322,9 +265,6 @@ describe("OnChainEvent · el aterrizaje del anclaje", () => {
   });
 
   it("ancla la transición de un stage con hilo abierto", async () => {
-    // El stage nace con hilo real (mint) vía `crearStageMinteado`, sin pasar
-    // por HTTP — la ruta que lo hacía (`POST /projects/:id/stages`) se borró
-    // el 2026-09-08 por ser anterior al Stage template y sin caller real.
     const creado = await crearStageConHilo();
 
     expect(creado.anchor.status).toBe("Confirmed");
@@ -335,17 +275,10 @@ describe("OnChainEvent · el aterrizaje del anclaje", () => {
     expect(res.body.anchor.status).toBe("Confirmed");
     expect(res.body.anchor.fromState).toBe("Pending");
     expect(res.body.anchor.toState).toBe("InProgress");
-    // El hilo se movió: el UTxO nuevo no es el que abrió el `mint`.
     expect(res.body.anchor.outputRef).not.toBe(creado.anchor.outputRef);
   });
 
   it("guarda el TXID real aunque la confirmación falle después — Pending, nunca Failed", async () => {
-    // El escenario real de la prueba de volumen del 2026-09-10
-    // (specs/REPORTE-2026-09-10-prueba-de-volumen.md §Cómo hacerlo más
-    // robusto): la transacción sale a la cadena — hay `receipt`, con `txid` y
-    // `outputRef` reales — pero algo falla DESPUÉS. Antes había un solo
-    // `UPDATE`, corrido recién después de confirmar: un error acá perdía el
-    // recibo entero, indistinguible de un anclaje que nunca se intentó.
     const creado = await crearStageConHilo();
     const puerto = anchorPort();
     const original = puerto.confirmedAt;
@@ -358,14 +291,10 @@ describe("OnChainEvent · el aterrizaje del anclaje", () => {
 
       expect(res.status).toBe(200);
       expect(res.body.state).toBe("InProgress");
-      // No es Failed: la transacción sí salió a la cadena, solo no se pudo
-      // confirmar. D-077 la reconcilia en la próxima lectura.
       expect(res.body.anchor.status).toBe("Pending");
       expect(res.body.anchor.txid).not.toBeNull();
       expect(res.body.anchor.outputRef).not.toBeNull();
 
-      // Y quedó escrito en la base, no solo en la respuesta HTTP — es el
-      // punto del fix: el recibo sobrevive aunque el proceso muera acá mismo.
       const evento = await db
         .selectFrom("OnChainEvent")
         .selectAll()
@@ -380,9 +309,6 @@ describe("OnChainEvent · el aterrizaje del anclaje", () => {
   });
 
   it("deja el evento en Failed —y la declaración escrita— si el stage no tiene hilo", async () => {
-    // Es la invariante 2 de SPEC-013: el registro nunca depende del anclaje.
-    // Un stage insertado a mano (o sembrado antes de que existiera el puerto)
-    // no tiene hilo abierto, así que no se puede gastar nada.
     const id = await crearStage({ state: "Pending" });
     const res = await patchState(id, "InProgress");
 
@@ -393,10 +319,6 @@ describe("OnChainEvent · el aterrizaje del anclaje", () => {
   });
 
   it("un stage crítico se completa Y se ancla, con el Merkle root del bundle", async () => {
-    // Este test documentaba un hueco: hasta que existió `EvidenceBundle`, el
-    // datum viajaba con `evidenceRoot` vacío y el anclaje quedaba en `Failed`
-    // porque el validador exige 32 bytes para completar un stage crítico. Con
-    // el bundle, el circuito cierra entero.
     const creado = await crearStageConHilo({ validationCritical: true });
 
     await patchState(creado.id, "InProgress");
@@ -406,7 +328,6 @@ describe("OnChainEvent · el aterrizaje del anclaje", () => {
     expect(res.status).toBe(200);
     expect(res.body.state).toBe("Completed");
     expect(res.body.anchor.status).toBe("Confirmed");
-    // El commitment anclado es el root del bundle, no un hash cualquiera.
     expect(res.body.anchor.commitment).toMatch(/^[0-9a-f]{64}$/);
   });
 
@@ -462,9 +383,6 @@ describe("POST /projects/:id/stages/:stageId/retry-anchor", () => {
       .set("Authorization", `Bearer ${adminToken}`);
 
   it("reintenta un mint que falló y deja el hilo abierto", async () => {
-    // El escenario que un openThread caído en producción deja: la declaración
-    // ya existe (STAGE_CREATED, Failed, sin outputRef) y el stage sigue
-    // Pending — nunca hubo hilo que gastar.
     const id = await crearStage({ state: "Pending" });
     await db
       .insertInto("OnChainEvent")
@@ -494,8 +412,6 @@ describe("POST /projects/:id/stages/:stageId/retry-anchor", () => {
     expect(res.body.anchor.eventType).toBe("STAGE_CREATED");
     expect(res.body.anchor.outputRef).toBe(`${res.body.anchor.txid}#0`);
 
-    // El hilo ya existe: una transición normal ahora ancla de verdad, en vez
-    // de repetir el Failed que la prueba de arriba documenta.
     const avance = await patchState(id, "InProgress");
     expect(avance.body.anchor.status).toBe("Confirmed");
   });
@@ -518,8 +434,6 @@ describe("POST /projects/:id/stages/:stageId/retry-anchor", () => {
   });
 
   it("404 si el stage nunca tuvo un evento de creación que reintentar", async () => {
-    // El caso de un stage sembrado directo (torre-a en producción): Pending,
-    // sin hilo, y sin ningún STAGE_CREATED que retomar.
     const id = await crearStage({ state: "Pending" });
     const res = await retry(id);
 
@@ -528,9 +442,6 @@ describe("POST /projects/:id/stages/:stageId/retry-anchor", () => {
   });
 
   it("404 si el stage existe pero es de otro proyecto — sin mint", async () => {
-    // `authorize` mira el proyecto de la URL, no el stage: un stage real
-    // pedido bajo un proyecto ajeno llega al handler, y el handler es el que
-    // exige que los dos coincidan.
     const ahora = new Date();
     const otroProyecto = createId();
     await db
@@ -565,15 +476,7 @@ describe("POST /projects/:id/stages/:stageId/retry-anchor", () => {
     openThread.mockRestore();
   });
 
-  // SPEC-301: el validador solo garantiza un token por transacción, no uno por
-  // stage. `THREAD_ALREADY_OPEN` únicamente sabe lo que dice `OnChainEvent`, y
-  // esa fila puede tener `outputRef` en `null` con el hilo vivo igual — es
-  // exactamente el estado que dejó la prueba de volumen
-  // (`REPORTE-2026-09-10-prueba-de-volumen.md`). Antes de mintear se le
-  // pregunta a la cadena, no solo a la base.
   describe("la cadena manda sobre la base (SPEC-301)", () => {
-    /** Abre un hilo real y le borra el `outputRef` a su `OnChainEvent`,
-     * dejando la asimetría "outputRef en null, hilo vivo on-chain" a mano. */
     async function conAsimetria() {
       const creado = await crearStageConHilo();
       await db
@@ -745,11 +648,6 @@ describe("PATCH /stages/:id · la identidad on-chain", () => {
   });
 
   it("un anclaje de metadata (evidencia) no bloquea la identidad — no es hilo", async () => {
-    // El bug que esto cierra: `tieneHiloAnclado` miraba CUALQUIER OnChainEvent
-    // con txid, y un EVIDENCE_ANCHOR (D-006) tiene txid pero nunca outputRef —
-    // no toca el validador ni la identidad del stage. Un stage con evidencia
-    // anclada pero sin hilo real quedaba con `sequenceOrder`/`validationCritical`
-    // bloqueados por error.
     const id = await crearStage();
     const ahora = new Date();
     await db
@@ -789,8 +687,6 @@ describe("D-061 · todo stage es validation-critical", () => {
   });
 
   it("y por lo tanto no se completa sin evidencia", async () => {
-    // Antes de D-061 este mismo stage se completaba sin nada: el default era
-    // `false` y nadie lo marcaba. Ese era el agujero.
     const creado = await crearStageConHilo();
 
     await patchState(creado.id, "InProgress");
@@ -807,15 +703,6 @@ describe("D-061 · todo stage es validation-critical", () => {
 });
 
 describe("eventIndex es el log del stage, no el hilo", () => {
-  // `eventIndex` se documentaba como "la posición en el hilo on-chain: 0 el
-  // mint, 1..n las transiciones". Es falso: los EVIDENCE_ANCHOR también
-  // consumen índice y nunca tocan el validador. En producción, "Terminaciones"
-  // de torre-a tiene 0 mint · 1 transición · 2,3,4 evidencia · 5 transición.
-  //
-  // No hay bug porque `cabezaDelHilo` filtra por `outputRef`, no por índice.
-  // Este test existe para que esa garantía deje de sostenerse solo por lectura
-  // de código: si alguien "simplifica" el filtro confiando en el índice,
-  // `advanceThread` gastaría el UTxO equivocado.
   it("un EVIDENCE_ANCHOR con índice mayor no corre la cabeza del hilo", async () => {
     const { cabezaDelHilo } = await import("../src/domain/stage-transition.js");
 
@@ -826,12 +713,9 @@ describe("eventIndex es el log del stage, no el hilo", () => {
       actorUserId: actorId
     });
 
-    // El mint dejó la cabeza del hilo en el índice 0.
     const cabezaDelMint = await cabezaDelHilo(stage.id);
     expect(cabezaDelMint).not.toBeNull();
 
-    // Un anclaje por metadata toma el índice SIGUIENTE — más alto que el del
-    // único evento del hilo — y no tiene outputRef.
     const ahora = new Date();
     await db
       .insertInto("OnChainEvent")
@@ -854,7 +738,6 @@ describe("eventIndex es el log del stage, no el hilo", () => {
       })
       .execute();
 
-    // El índice más alto del stage ahora es el de la evidencia…
     const ultimo = await db
       .selectFrom("OnChainEvent")
       .select(["eventIndex", "eventType"])
@@ -864,7 +747,6 @@ describe("eventIndex es el log del stage, no el hilo", () => {
       .executeTakeFirstOrThrow();
     expect(ultimo.eventType).toBe("EVIDENCE_ANCHOR");
 
-    // …y aun así la cabeza del hilo sigue siendo la del mint.
     expect(await cabezaDelHilo(stage.id)).toBe(cabezaDelMint);
   });
 });

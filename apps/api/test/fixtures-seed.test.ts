@@ -2,14 +2,6 @@ import { afterAll, describe, expect, it } from "vitest";
 import { sembrarOrganizacion, sembrarProyecto, sembrarStages } from "../src/db/fixtures";
 import { db } from "../src/lib/db";
 
-// `sembrarUsuarios`, `sembrarProyecto`, `sembrarMembresias` y
-// `sembrarUnidadVendida` ya se ejercitan en cada corrida vía
-// `test/global-setup.ts` (SPEC-015 §2) — es la misma plantilla que copia cada
-// archivo. `sembrarOrganizacion` y `sembrarStages` son los dos constructores
-// que también usa `src/db/seed.ts` (el mundo demostrable) y que `global-setup`
-// nunca llama: sin este archivo, el único lugar donde corrían era el seed de
-// desarrollo, a mano, nunca en la suite.
-
 afterAll(async () => {
   await db.destroy();
 });
@@ -39,9 +31,6 @@ describe("sembrarOrganizacion", () => {
       name: "Nombre original"
     });
 
-    // Un segundo llamado con OTRO nombre no lo pisa: `onConflict doNothing`
-    // deja la fila como estaba, y por eso la organización de una base ya
-    // sembrada no cambia entre corridas del seed.
     const segunda = await sembrarOrganizacion(db, {
       slug: "spec-017-organizacion-idempotente",
       name: "Nombre que no debería quedar"

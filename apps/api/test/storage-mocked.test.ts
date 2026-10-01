@@ -6,18 +6,6 @@ import { Readable } from "node:stream";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { createStorage } from "../src/lib/storage";
 
-// El driver S3 (`S3Storage`) solo se prueba contra un MinIO real en
-// `storage-s3.test.ts` (`pnpm test:s3`, necesita Docker, no corre en CI). Acá
-// se cubren sus ramas de éxito y error con el cliente de `@aws-sdk/client-s3`
-// mockeado — mismo código que habla con R2 en prod, sin infraestructura.
-//
-// Cada Command mockeado guarda su input para que los tests puedan afirmar QUÉ
-// se mandó, no solo que algo se mandó.
-//
-// **`vi.hoisted` y no clases sueltas.** `vi.mock` se hoistea al principio del
-// archivo — antes de cualquier `class` declarada más abajo en el código
-// fuente— así que la factory no puede cerrar sobre `FakeS3Client`/`FakeCommand`
-// a menos que también estén en un bloque que `vitest` hoistee con ellas.
 const { mockSend, FakeS3Client, FakeCommand } = vi.hoisted(() => {
   const mockSend = vi.fn();
 
@@ -43,10 +31,6 @@ const { mockSend, FakeS3Client, FakeCommand } = vi.hoisted(() => {
   return { mockSend, FakeS3Client, FakeCommand };
 });
 
-// Un `const` destructurado de `vi.hoisted` es solo un VALOR — a diferencia de
-// una `class` declarada normal, no trae consigo un tipo del mismo nombre. Este
-// tipo es la forma que los tests necesitan para leer `command.__name`, sin
-// depender del tipo de la clase.
 interface ComandoMock<Name extends string = string> {
   readonly __name: Name;
   readonly input: unknown;
@@ -112,7 +96,6 @@ afterEach(() => {
   }
 });
 
-/** Un stream legible con contenido fijo, para simular el `Body` de un `GetObjectCommand`. */
 function cuerpoDe(texto: string): Readable {
   return Readable.from([Buffer.from(texto)]);
 }
@@ -138,8 +121,6 @@ describe("S3Storage.put", () => {
       });
 
       expect(resultado.storageRef).toBe("evidence/mock/archivo.pdf");
-      // El hash es el de "contenido subido" (lo que el Get mockeado dice que
-      // quedó guardado), no el de "otro contenido, el del temporal".
       expect(resultado.sha256).toBe(createHash("sha256").update("contenido subido").digest("hex"));
 
       const put = mockSend.mock.calls.find(
@@ -266,8 +247,6 @@ describe("DiskStorage.remove", () => {
     await storage.remove(temporal);
     expect(fs.existsSync(temporal)).toBe(false);
 
-    // No revienta sobre un archivo que ya no está — un segundo `remove` es
-    // idempotente (regla 8), no un error.
     await expect(storage.remove(temporal)).resolves.toBeUndefined();
   });
 });

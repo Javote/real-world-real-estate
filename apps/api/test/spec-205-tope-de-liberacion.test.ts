@@ -5,11 +5,6 @@ import { db } from "../src/lib/db";
 import { FIXTURES } from "./global-setup";
 import { crearStageMinteado } from "./helpers/stages";
 
-// SPEC-205 (B-07) — nada comparaba la suma de `PaymentAttestation` contra
-// `Contract.totalMinorUnits`. Un release que superaba lo contratado entraba,
-// se registraba y se anclaba su commitment en Cardano: un registro que
-// admite una afirmación falsa, y encima probada on-chain.
-
 const login = (f: { email: string; password: string }) =>
   request(app).post("/api/v1/auth/login").send({ email: f.email, password: f.password });
 
@@ -44,7 +39,6 @@ afterAll(async () => {
   await db.destroy();
 });
 
-/** Un contrato nuevo de `totalMinorUnits` dado, con dos etapas certificadas listas para liberar. */
 async function contratoConDosEtapas(totalMinorUnits: number, sequenceOrderBase: number) {
   const unidad = await request(app)
     .post(`/api/v1/developer/projects/${projectId}/units`)

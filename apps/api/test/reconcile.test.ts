@@ -13,17 +13,6 @@ import { anchorPort } from "../src/lib/anchor";
 import { db } from "../src/lib/db";
 import { FIXTURES } from "./global-setup";
 
-// SPEC-013 §C · la parte mínima: promover a `Confirmed` lo que ya está en la
-// cadena. Corre con el adaptador `simulated`, que desde el 2026-08-31 **solo
-// confirma los txid que él mismo produjo**: un hash inventado le da `null`,
-// igual que se lo daría Blockfrost.
-//
-// Por eso los eventos de esta suite anclan de verdad contra el puerto para
-// obtener su txid, en vez de inventarlo. Antes no hacía falta —el simulador
-// confirmaba cualquier cosa— y eso era justamente lo que había que arreglar:
-// un test que pasa contra un puerto que miente no prueba la promoción, prueba
-// la mentira.
-
 let proyecto: string;
 let tokenAdmin: string;
 let tokenDev: string;
@@ -31,10 +20,6 @@ let tokenDev: string;
 const login = (f: { email: string; password: string }) =>
   request(app).post("/api/v1/auth/login").send({ email: f.email, password: f.password });
 
-/**
- * Un txid que el simulador reconoce como suyo. El simulador es determinístico,
- * así que dos `reference` distintas dan dos txid distintos.
- */
 async function txidReal(reference: string): Promise<string> {
   const recibo = await anchorPort().anchorCommitment({ sha256: "a".repeat(64), reference });
   return recibo.txid;
@@ -63,8 +48,6 @@ async function evento(campos: {
       commitment: "a".repeat(64),
       status: campos.status,
       txid: campos.txid,
-      // El CHECK de la tabla no deja un TXID sin red (D-080): el fixture tiene
-      // que construir filas posibles, no filas cómodas.
       network: campos.txid === null ? null : "Simulated",
       outputRef: null,
       blockTimestamp: null,
@@ -99,14 +82,10 @@ describe("reconciliarAnclajes", () => {
 
     const fila = await leer(id);
     expect(fila.status).toBe("Confirmed");
-    // El timestamp es el del bloque, no el del anclaje: es lo que se puede
-    // sustanciar contra la cadena (regla 17).
     expect(fila.blockTimestamp).toBeInstanceOf(Date);
   });
 
   it("NO toca un evento sin txid: no hay nada que consultar", async () => {
-    // Es el caso de un anclaje que falló al enviarse. Confirmarlo sería
-    // inventar una prueba que no existe.
     const id = await evento({ txid: null, status: "Pending" });
     await reconciliarAnclajes();
     expect((await leer(id)).status).toBe("Pending");
@@ -139,8 +118,6 @@ describe("POST /evidence/reconcile", () => {
   });
 
   it("la ruta no la come `/:id/anchor`: 'reconcile' no se lee como un id", async () => {
-    // Si `/reconcile` se declarara DESPUÉS de `/:id/anchor`, esto daría 404
-    // buscando una evidencia llamada "reconcile".
     const res = await request(app)
       .post("/api/v1/evidence/reconcile")
       .set("Authorization", `Bearer ${tokenAdmin}`);
@@ -173,13 +150,6 @@ describe("POST /evidence/reconcile", () => {
   });
 });
 
-// ── hilosSospechosos · detecta, no repara ───────────────────────────────────
-//
-// El hallazgo real de la prueba de volumen del 2026-09-10
-// (specs/REPORTE-2026-09-10-prueba-de-volumen.md §Hallazgo): una
-// STAGE_TRANSITION sin `txid` cuyo stage ya avanzó a un evento más nuevo.
-
-/** Un stage real, con `sequenceOrder` al azar para no chocar entre corridas. */
 async function stage() {
   const id = createId();
   const ahora = new Date();
@@ -199,7 +169,6 @@ async function stage() {
   return id;
 }
 
-/** `toState` fijo en `"InProgress"`: coincide con el datum que abre `repararHilosSospechosos`. */
 async function transicion(stageId: string, eventIndex: number, txid: string | null) {
   const id = createId();
   const ahora = new Date();
@@ -231,9 +200,7 @@ async function transicion(stageId: string, eventIndex: number, txid: string | nu
 describe("hilosSospechosos", () => {
   it("marca una transición sin TXID que el stage ya dejó atrás", async () => {
     const id = await stage();
-    // El intento que se perdió: sin txid.
     await transicion(id, 0, null);
-    // El stage siguió — hay un evento más nuevo en el mismo hilo.
     await transicion(id, 1, await txidReal(`sospechoso-${id}`));
 
     const sospechosos = await hilosSospechosos();
@@ -241,8 +208,6 @@ describe("hilosSospechosos", () => {
   });
 
   it("NO marca una transición sin TXID que todavía es el último evento del hilo", async () => {
-    // Sin evento más nuevo, puede ser un intento a punto de reintentarse —
-    // no hay nada raro todavía, solo un anclaje que no llegó.
     const id = await stage();
     await transicion(id, 0, null);
 
@@ -260,19 +225,6 @@ describe("hilosSospechosos", () => {
   });
 });
 
-// ── repararHilosSospechosos · Capa 1, sin firmar nada ───────────────────────
-//
-// Cierra el caso "etapa 3" del reporte: la transacción sí salió y confirmó,
-// solo el registro perdió el recibo. `findLiveThread` la encuentra por
-// `stageRef` directo en la cadena (acá, el simulador) y el bookkeeping se
-// completa sin volver a construir ni firmar nada.
-
-/**
- * Abre un hilo real en `Pending` (lo único que el mint acepta) y lo avanza a
- * `InProgress` — el `toState` fijo que pone `transicion()` — para que
- * `findLiveThread` encuentre un UTxO vivo en el estado que las pruebas de
- * reparación necesitan.
- */
 async function abrirHiloEnInProgress(stageId: string) {
   const pending = buildStageDatum({
     id: stageId,
@@ -282,8 +234,6 @@ async function abrirHiloEnInProgress(stageId: string) {
     state: "Pending"
   });
   const abierto = await anchorPort().openThread({ datum: pending });
-  // `pending` ya es un `StageDatum` (`projectRef`/`stageRef` en hex) — no se
-  // reconstruye con `buildStageDatum`, que espera el source (`id`/`projectId`).
   const inProgress = { ...pending, state: "InProgress" as const };
   return anchorPort().advanceThread({
     outputRef: abierto.outputRef,
@@ -306,13 +256,11 @@ describe("repararHilosSospechosos", () => {
     const fila = await leer(eventId);
     expect(fila.txid).toBe(hilo.txid);
     expect(fila.outputRef).toBe(hilo.outputRef);
-    // Queda Pending: es `reconciliarAnclajes`, no esta función, quien confirma.
     expect(fila.status).toBe("Pending");
   });
 
   it("NO repara si el datum del hilo real no coincide con el toState declarado", async () => {
     const id = await stage();
-    // `state: "Pending"` — el `toState` que pone `transicion()` es `"InProgress"`.
     const datum = buildStageDatum({
       id,
       projectId: proyecto,
@@ -355,13 +303,6 @@ describe("repararHilosSospechosos", () => {
   });
 });
 
-// ── D-077 · la reconciliación la dispara la lectura ────────────────────────
-//
-// Sin esto, un anclaje real queda `Pending` para siempre: nadie mueve
-// `Pending → Confirmed` salvo el barrido a mano. Hoy no se nota porque el
-// simulador devuelve `Confirmed` directo; con el modo real encendido, la
-// evidencia queda anclada de verdad y la UI dice "Pendiente" eternamente.
-
 describe("reconciliarParaLectura", () => {
   it("confirma lo que cae dentro del alcance", async () => {
     const id = await evento({ txid: await txidReal("alcance-1"), status: "Pending" });
@@ -371,8 +312,6 @@ describe("reconciliarParaLectura", () => {
     expect((await leer(id)).status).toBe("Confirmed");
   });
 
-  // El alcance es lo que mantiene barata la lectura: mirar todo en cada pantalla
-  // sería una request al proveedor por cada anclaje pendiente del sistema.
   it("no toca lo que cae fuera del alcance", async () => {
     const ajeno = (
       await db
@@ -381,8 +320,6 @@ describe("reconciliarParaLectura", () => {
         .where("slug", "=", FIXTURES.otroProyecto.slug)
         .executeTakeFirstOrThrow()
     ).id;
-    // El txid es real a propósito: si fuera inventado, este test pasaría porque
-    // el simulador no lo conoce, no porque el alcance lo haya excluido.
     const id = await evento({
       txid: await txidReal("fuera-de-alcance-1"),
       status: "Pending",
@@ -394,9 +331,6 @@ describe("reconciliarParaLectura", () => {
     expect((await leer(id)).status).toBe("Pending");
   });
 
-  // La propiedad que importa más que confirmar: una cadena caída no puede
-  // tumbar una pantalla. El registro no depende del anclaje, tampoco para leer
-  // (SPEC-013 §Invariante 2).
   it("se traga el error del proveedor en vez de propagarlo", async () => {
     const id = await evento({ txid: "3".repeat(64), status: "Pending" });
     const puerto = anchorPort();
@@ -438,8 +372,6 @@ describe("reconciliarParaLectura", () => {
 });
 
 describe("GET /investor/units/:id/news", () => {
-  // La prueba de que el cableado existe, y no solo la función: sin la llamada en
-  // la ruta, la pantalla sigue mostrando "Pendiente" sobre algo ya confirmado.
   it("confirma el anclaje pendiente del proyecto antes de responder", async () => {
     const unidad = (
       await db

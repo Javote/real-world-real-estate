@@ -6,11 +6,6 @@ import { createId } from "../src/db/id";
 import { db } from "../src/lib/db";
 import { FIXTURES } from "./global-setup";
 
-// SPEC-201 — reproduce B-01 de la auditoría del backend (2026-09-11) y prueba
-// que queda cerrado: `POST /investor/invitations/:id/accept` ya no puede
-// sacarle la unidad a quien ya la compró, porque las 4 escrituras corren
-// dentro de una sola `db.transaction()` con guardas atómicas.
-
 const login = async (email: string, password: string) =>
   (await request(app).post("/api/v1/auth/login").send({ email, password })).body.token as string;
 
@@ -226,9 +221,6 @@ describe("aceptar una invitación (transacción atómica)", () => {
   });
 
   it("una invitación `pending` sobre una unidad ya `sold` a otro investor — 409 UNIT_NOT_AVAILABLE, sin tocar nada", async () => {
-    // Reproduce el escenario de B-01: dos invitaciones `pending` emitidas
-    // sobre la misma unidad (posible antes del fix de la emisión), aceptadas
-    // en orden. La segunda no puede sacarle la unidad al primero.
     const email1 = "h1@spec201.local";
     const email2 = "h2@spec201.local";
     await crearUsuarioBuyer(email1, "spec201pass");
@@ -240,8 +232,6 @@ describe("aceptar una invitación (transacción atómica)", () => {
     const inv1 = await emitirInvitacion(unidad, email1);
     const invitacion1Id = inv1.body.id as string;
 
-    // Se planta a mano una segunda invitación `pending` sobre la MISMA
-    // unidad — el estado que la auditoría reprodujo antes del fix de emisión.
     const ahora = new Date();
     const invitacion2Id = createId();
     await db
@@ -284,8 +274,6 @@ describe("aceptar una invitación (transacción atómica)", () => {
     expect(unidadFinal.status).toBe("sold");
     expect(unidadFinal.investorId).toBe(usuario1.id);
 
-    // La segunda invitación, tras el 409, queda `pending` — la transacción
-    // se revirtió entera, no solo a medias.
     const invitacion2Final = await db
       .selectFrom("Invitation")
       .select("status")

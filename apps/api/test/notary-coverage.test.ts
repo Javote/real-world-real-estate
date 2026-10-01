@@ -7,11 +7,6 @@ import { compileDossier } from "../src/domain/dossier";
 import { db } from "../src/lib/db";
 import { FIXTURES } from "./global-setup";
 
-// SPEC-018 §A5 — `notary.routes.ts`: `unitsUnderReview`/`pendingDossiers` de
-// `/kpis` con un dossier `compiled` de verdad (no solo `signed`), y re-firmar
-// un dossier ya firmado que se quedó sin su `OnChainEvent` — la carrera que
-// describe el comentario de la línea de arriba en el handler.
-
 const ganchos = vi.hoisted(() => ({ anchorFalla: false }));
 
 vi.mock("../src/domain/anchoring", async (importOriginal) => {
@@ -92,8 +87,6 @@ describe("GET /notary/kpis con un dossier compiled (sin firmar)", () => {
     const investorId = await crearInvestor(`notary-coverage-pend-${createId()}@test.local`);
     const unitId = await crearUnidadVendida(`SPEC018-A5-KPI-${createId()}`, investorId);
 
-    // Directo por dominio, no por HTTP: compilar es lo único que hace falta
-    // para que el dossier exista en estado `compiled`.
     await compileDossier(unitId);
 
     const res = await request(app)
@@ -123,8 +116,6 @@ describe("POST /notary/dossiers/:id/sign — re-firmar sin evento de firma", () 
       const primeraFirma = await request(app)
         .post(`/api/v1/notary/dossiers/${dossier.id}/sign`)
         .set("Authorization", `Bearer ${tokenNotario}`);
-      // El anclaje falló DESPUÉS de que el UPDATE a "signed" ya había corrido:
-      // la respuesta al cliente es el 500 genérico de oRPC.
       expect(primeraFirma.status).toBe(500);
     } finally {
       ganchos.anchorFalla = false;

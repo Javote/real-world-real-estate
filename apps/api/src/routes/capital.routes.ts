@@ -13,25 +13,6 @@ import { db } from "../lib/db";
 import { conUsuario, delegarAOrpc, OpenAPIHandler, os } from "../lib/orpc";
 import { authenticate, authorize, projectScope } from "../middlewares/auth";
 
-// Capital e investors del developer (M2-D5 filas 42-43 y 48) — **M3-BE-11** y
-// **M3-BE-15**.
-//
-// **Nada de esto es plata que se mueva** (D-021). "Capital levantado" es la
-// suma de los contratos firmados y "liberado" la de los releases registrados:
-// montos DECLARADOS, no fondos que la plataforma custodie o transfiera. Si el
-// copy de la captura 42-43 dice otra cosa, gana esta restricción.
-//
-// **Las monedas no se suman entre sí.** Si los contratos de un developer
-// conviven en ARS y USD, `currency` viaja `null` y el total es la suma cruda:
-// convertir con una cotización inventada sería afirmar algo que no podemos
-// sustanciar (regla 17). El cliente muestra el guión de `panel.emptyValue`
-// cuando no hay una moneda única.
-//
-// **SPEC-212 §D — migrado a oRPC (D-066), última de las cuatro sub-partes.**
-// Las cuatro son GET sin body, así que no hay error de negocio que nombrar —
-// mismo patrón de montaje que el resto del prefijo (`OpenAPIHandler` por
-// procedimiento, `authorize` sin cambios).
-
 const PREFIJO_ABSOLUTO = "/api/v1/developer";
 
 type DeveloperContext = { user: { id: string; role: UserRole } };
@@ -41,7 +22,6 @@ const router = Router();
 
 router.use(authenticate);
 
-/** Los ids de los proyectos donde el usuario es developer. */
 async function misProyectoIds(userId: string, role: UserRole): Promise<string[]> {
   const filas = await db
     .selectFrom("Project")
@@ -51,13 +31,11 @@ async function misProyectoIds(userId: string, role: UserRole): Promise<string[]>
   return filas.map((f) => f.id);
 }
 
-/** Una sola moneda, o `null` si conviven varias. */
 function monedaUnica(valores: (string | null)[]): string | null {
   const distintas = new Set(valores.filter((v): v is string => v !== null));
   return distintas.size === 1 ? en([...distintas], 0) : null;
 }
 
-/** Contratos + releases de un conjunto de proyectos, en una sola pasada. */
 async function movimientos(projectIds: string[]) {
   if (projectIds.length === 0) return { contratos: [], releases: [] };
 
@@ -94,13 +72,11 @@ async function movimientos(projectIds: string[]) {
   return { contratos, releases };
 }
 
-/** `YYYY-MM` en UTC (regla 1): el mes no depende del huso de quien mira. */
 function mesUtc(fecha: Date | number): string {
   const d = new Date(fecha);
   return `${d.getUTCFullYear()}-${String(d.getUTCMonth() + 1).padStart(2, "0")}`;
 }
 
-/** Fila 42-43 — los tres StatCard de la cabecera. */
 const summaryProcedure = orpc
   .route({ method: "GET", path: "/capital/summary" })
   .output(capitalSummarySchema)
@@ -114,8 +90,6 @@ const summaryProcedure = orpc
     return {
       raisedMinorUnits: raised,
       releasedMinorUnits: released,
-      // No puede ser negativo: liberar más de lo contratado no es un estado
-      // alcanzable, pero si lo fuera el piso es cero y no un número absurdo.
       pendingMinorUnits: Math.max(raised - released, 0),
       contracts: contratos.length,
       currency: monedaUnica(contratos.map((c) => c.currency))
@@ -129,13 +103,6 @@ router.get(
   delegarAOrpc(summaryHandler, PREFIJO_ABSOLUTO, conUsuario)
 );
 
-/**
- * Fila 42-43 — la serie mensual del Chart.
- *
- * **Solo los meses con movimiento.** Rellenar los vacíos con ceros dibujaría
- * una serie continua donde no hay dato, y el eje del gráfico lo decide el
- * cliente, que es quien sabe qué ventana está mostrando.
- */
 const monthlyProcedure = orpc
   .route({ method: "GET", path: "/capital/monthly" })
   .output(z.array(capitalMonthlyPointSchema))
@@ -170,7 +137,6 @@ router.get(
   delegarAOrpc(monthlyHandler, PREFIJO_ABSOLUTO, conUsuario)
 );
 
-/** Fila 42-43 — el desglose por proyecto, con la barra de ocupación. */
 const byProjectProcedure = orpc
   .route({ method: "GET", path: "/capital/by-project" })
   .output(z.array(capitalByProjectSchema))
@@ -201,7 +167,6 @@ const byProjectProcedure = orpc
           .reduce((acc, r) => acc + r.amountMinorUnits, 0),
         unitsSold: unidadesDel.filter((u) => u.investorId !== null).length,
         totalUnits: unidadesDel.length,
-        // Distintos, no contratos: quien compra dos unidades es un investor.
         investors: new Set(delProyecto.map((c) => c.investorId)).size,
         currency: monedaUnica(delProyecto.map((c) => c.currency))
       };
@@ -215,14 +180,6 @@ router.get(
   delegarAOrpc(byProjectHandler, PREFIJO_ABSOLUTO, conUsuario)
 );
 
-/**
- * Fila 48 — el directorio de investors — **M3-BE-15**.
- *
- * El developer ve el nombre y el mail de quien compró en SUS proyectos, y de
- * nadie más: es la contraparte de una operación suya. Ese recorte es la
- * autorización acá, y sale del `in (misProyectos)` de la query — no de un
- * filtro en memoria que se pueda saltear.
- */
 const investorsProcedure = orpc
   .route({ method: "GET", path: "/investors" })
   .output(z.array(investorDirectoryEntrySchema))
@@ -281,8 +238,6 @@ router.get(
   delegarAOrpc(investorsHandler, PREFIJO_ABSOLUTO, conUsuario)
 );
 
-/** El router oRPC combinado de esta vertical — ver el comentario homólogo en
- * `developer.routes.ts`. */
 export const capitalOrpcRouter = {
   summaryProcedure,
   monthlyProcedure,

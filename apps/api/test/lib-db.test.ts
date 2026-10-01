@@ -1,9 +1,5 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 
-// `vitest.config.mts` siempre define DATABASE_URL (a `file:` local) y nunca
-// DATABASE_AUTH_TOKEN, así que el resto de la suite solo ejercita una rama de
-// cada uno de los dos operadores de `lib/db.ts`: el `??` de `databaseUrl` y el
-// spread condicional de `authToken`. Este test aísla las otras dos.
 describe("lib/db — las ramas que el resto de la suite nunca pisa", () => {
   const urlOriginal = process.env.DATABASE_URL;
   const tokenOriginal = process.env.DATABASE_AUTH_TOKEN;

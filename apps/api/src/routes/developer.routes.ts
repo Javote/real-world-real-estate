@@ -34,28 +34,6 @@ import { paramValidator } from "../middlewares/validate-params";
 import { writeAuditLog } from "../utils/audit";
 import { proyectosVisibles, relanzarRestriccionComoOrpc } from "./_shared";
 
-// Superficie del developer (M2-D5 filas 34b-34c, 35-36, 37, 45, 46-47, 49).
-//
-// **Son los mismos datos que ya sirven las rutas genéricas, con la forma y el
-// path que el backlog pide.** No es duplicación: `/projects` es CRUD nuestro y
-// `/developer/projects` es una superficie del entregable, con su scope y su
-// forma. El día que el CRUD genérico no le sirva a nadie, se borra.
-//
-// **SPEC-212 §D — migrado a oRPC (D-066), última de las cuatro sub-partes.**
-// Mismo patrón que §A/§B/§C: `authorize` sigue siendo middleware Express,
-// corriendo antes de que oRPC vea la request, y hay un `OpenAPIHandler` por
-// procedimiento montado en el path exacto de esa ruta — nunca uno solo
-// compartido en el prefijo del router, para que cada ruta conserve su propio
-// `acceso`. El `prefix` de `.handle()` es el path ABSOLUTO
-// (`PREFIJO_ABSOLUTO`), no el relativo dentro de este router: oRPC lee
-// `req.originalUrl`, que Express nunca reescribe al entrar a un sub-router.
-//
-// **Este archivo comparte prefijo con otros tres** (`developer-comercial.
-// routes.ts`, `developer-evidencia.routes.ts`, `capital.routes.ts`) — los
-// cuatro montados en `/api/v1/developer` (`MONTAJE`, `app.ts`). Migrar una
-// ruta acá no toca el `router.use(authenticate)` de los otros tres archivos,
-// así que no hace falta migrarlos juntos.
-
 const PREFIJO_ABSOLUTO = "/api/v1/developer";
 
 export type DeveloperContext = { user: { id: string; role: UserRole } };
@@ -74,7 +52,6 @@ function misProyectos(userId: string, role: "admin" | "developer") {
     .where((eb) => projectScope(eb, role, userId, ["developer"]));
 }
 
-/** Fila 35-36 — el listado de proyectos del developer, con su avance. */
 const projectsProcedure = orpc
   .route({ method: "GET", path: "/projects" })
   .output(z.array(developerProjectListItemSchema))
@@ -87,17 +64,9 @@ const projectsProcedure = orpc
       .execute();
 
     const ids = proyectos.map((p) => p.id);
-    // **El "Price from" de la captura 35-36 es una agregación, no un campo**, y
-    // el progreso también. Los dos los calcula `agregadosDeProyectos`
-    // (`domain/project-aggregates.ts`), compartido con el perfil del
-    // desarrollador: la regla de las dos monedas estaba escrita acá y hacía
-    // falta igual allá.
     const agregados = await agregadosDeProyectos(ids);
 
     return proyectos.map((proyecto) => {
-      // `sizeMinM2`/`sizeMaxM2` se descartan a propósito: son de la captura 60
-      // y `developerProjectListItemSchema` es estricto, así que una clave de
-      // más rechaza la fila entera.
       const { sizeMinM2: _min, sizeMaxM2: _max, ...resto } = agregados.get(proyecto.id)!;
       return { ...proyecto, ...resto };
     });
@@ -110,7 +79,6 @@ router.get(
   delegarAOrpc(projectsHandler, PREFIJO_ABSOLUTO, conUsuario)
 );
 
-/** Fila 37 — el detalle, que en la captura es una grilla de acciones + 3 stats. */
 const projectByIdProcedure = os
   .route({ method: "GET", path: "/projects/{id}" })
   .input(z.strictObject({ id: cuidParamSchema }))
@@ -122,7 +90,7 @@ const projectByIdProcedure = os
       .where("id", "=", input.id)
       .executeTakeFirst();
 
-    /* v8 ignore if -- @preserve: authorize({ proyecto }) ya confirmó que existe (SPEC-018) */
+    /* v8 ignore if -- @preserve: authorize({ proyecto }) ya confirmó que existe */
     if (!proyecto) throw new ORPCError("NOT_FOUND", { message: "Project not found" });
 
     const stages = await db
@@ -141,7 +109,7 @@ const projectByIdProcedure = os
     return {
       ...proyecto,
       stages,
-      /* v8 ignore start -- @preserve: COUNT(*) siempre devuelve una fila (SPEC-018) */
+      /* v8 ignore start -- @preserve: COUNT(*) siempre devuelve una fila */
       evidenceCount: Number(evidencia?.total ?? 0)
       /* v8 ignore stop -- @preserve */
     };
@@ -157,16 +125,6 @@ router.get(
   delegarAOrpc(projectByIdHandler, PREFIJO_ABSOLUTO)
 );
 
-/**
- * Fila 34b-34c — crear un desarrollo.
- *
- * **`RESOURCE_ALREADY_EXISTS`/`RELATED_RESOURCE_NOT_FOUND` son errores con
- * nombre** (ver `relanzarRestriccionComoOrpc` en `_shared.ts`): un slug
- * repetido choca contra `Project.slug` DENTRO de la transacción, y
- * `OpenAPIHandler` nunca llama a `next(err)` — sin capturarlo acá, oRPC lo
- * respondería como su propio 500 genérico, la regresión que
- * `test/constraint-errors.test.ts` existe para impedir.
- */
 const createProjectProcedure = orpc
   .errors({
     RESOURCE_ALREADY_EXISTS: { status: 409, message: "Resource already exists" },
@@ -178,20 +136,6 @@ const createProjectProcedure = orpc
   .handler(async ({ input, context, errors }) => {
     const ahora = new Date();
 
-    // Proyecto + membresía del creador + las 10 etapas del Stage template
-    // (M2-D1 §5.2, captura 34C) nacen juntos, atómicos a nivel de base: las
-    // 10 filas existen todas o ninguna. El anclaje on-chain de cada una es
-    // aparte —no puede ser atómico, cada mint es su propia transacción de
-    // Cardano (D-083, y el validador rechaza acuñar más de un hilo por tx:
-    // `mint_rejects_two_threads_in_one_tx`)— y se intenta después, en loop,
-    // tolerando que alguna quede `Failed` (D-059: la declaración off-chain
-    // nunca depende del anclaje).
-    //
-    // `.catch(...)` y no `try/catch`: `relanzarRestriccionComoOrpc` devuelve
-    // `never`, así que el tipo de la promesa entera sigue siendo el de la
-    // rama que sí resuelve — sin esto hay que anotar a mano el tipo de un
-    // `let` para el resultado de la transacción, y esa anotación es la que se
-    // desincroniza el día que el `return` de adentro cambie.
     const { proyecto, stages } = await db
       .transaction()
       .execute(async (trx) => {
@@ -204,7 +148,6 @@ const createProjectProcedure = orpc
             address: input.address ?? null,
             city: input.city ?? null,
             country: input.country ?? null,
-            // D-097: obligatorias desde el schema — el punto del Map preview.
             latitude: input.latitude,
             longitude: input.longitude,
             totalUnits: input.totalUnits ?? 0,
@@ -216,8 +159,6 @@ const createProjectProcedure = orpc
           .returningAll()
           .executeTakeFirstOrThrow();
 
-        // Quien crea el proyecto queda como su developer: sin esto, el creador
-        // no pasaría su propia segunda capa de autorización (regla 5).
         await trx
           .insertInto("ProjectMember")
           .values({
@@ -238,7 +179,6 @@ const createProjectProcedure = orpc
               name: etapa.name,
               sequenceOrder: etapa.sequenceOrder,
               state: INITIAL_STAGE_STATE,
-              // D-061: todo stage es validation-critical por default.
               validationCritical: true,
               createdAt: ahora,
               updatedAt: ahora
@@ -258,10 +198,6 @@ const createProjectProcedure = orpc
       entityId: proyecto.id
     });
 
-    // El mint de cada etapa, uno por uno — nunca en batch (el validador lo
-    // rechaza) y nunca bloqueando entre sí: si la etapa 6 falla, las demás
-    // igual se intentan, y la 6 queda declarada con su anclaje en `Failed`,
-    // reintentable después (`retry-anchor`) como cualquier mint que falla.
     const anclajes: OnChainEventRow[] = [];
     for (const stage of stages) {
       const evento = await recordOnChainEvent({
@@ -276,9 +212,6 @@ const createProjectProcedure = orpc
 
     return {
       ...proyecto,
-      // `anclajes[i]` existe siempre: un `push` por cada `stage` del mismo
-      // `for`, en el mismo orden — `noUncheckedIndexedAccess` no puede verlo,
-      // el invariante es del loop de arriba.
       stages: stages.map((stage, i) => ({ ...stage, anchor: anclajes[i]! }))
     };
   });
@@ -290,7 +223,6 @@ router.post(
   delegarAOrpc(createProjectHandler, PREFIJO_ABSOLUTO, conUsuario)
 );
 
-/** Fila 45 — el avance de obra a través de todos los proyectos. */
 const progressProcedure = orpc
   .route({ method: "GET", path: "/progress" })
   .output(z.array(developerProgressItemSchema))
@@ -327,13 +259,6 @@ router.get(
   delegarAOrpc(progressHandler, PREFIJO_ABSOLUTO, conUsuario)
 );
 
-/**
- * Fila 46-47 — la documentación del developer, con su estado de anclaje.
- *
- * "Documento" acá es evidencia: el modelo no distingue todavía entre evidencia
- * de stage y documento suelto de proyecto (M3-SC-06). Cuando lo distinga, esta
- * ruta filtra; hoy devuelve todo con su estado real de prueba.
- */
 const documentsProcedure = orpc
   .route({ method: "GET", path: "/documents" })
   .input(developerDocumentListQuerySchema)
@@ -360,12 +285,6 @@ const documentsProcedure = orpc
       ])
       .where("Evidence.projectId", "in", ids);
 
-    // SPEC-209 (B-14): antes se traía TODA la evidencia de todos los
-    // proyectos y se filtraba en memoria por `d.txid !== null`/`=== null` —
-    // exactamente lo que un `where` sobre la columna ya joineada hace. Mismo
-    // predicado, mismas filas: si `Evidence` tuviera más de un `OnChainEvent`
-    // (el `leftJoin` los multiplicaría), este `where` cuenta lo mismo que
-    // contaba el `.filter()` de antes, ni una fila más ni una menos.
     if (input.status === "anchored") {
       query = query.where("OnChainEvent.txid", "is not", null);
     } else if (input.status === "pending") {
@@ -382,14 +301,6 @@ router.get(
   delegarAOrpc(documentsHandler, PREFIJO_ABSOLUTO, conUsuario)
 );
 
-/**
- * Las transiciones de etapa escritas antes del 2026-10-01 no guardaban su txid
- * en el metadata —solo `from`/`to`—, y la pantalla lo lee de ahí: salían sin tx
- * aunque estuvieran ancladas. El audit log es append-only, así que no se
- * corrigen las filas: se les busca el txid al leerlas, en el `OnChainEvent` de
- * esa misma transición (misma etapa, mismo estado de llegada, el último
- * anterior a la entrada — el evento se escribe antes que el audit).
- */
 async function conTxidDeLaTransicion<
   T extends { entityType: string; entityId: string; metadataJson: string | null; createdAt: Date }
 >(items: T[]): Promise<T[]> {
@@ -425,13 +336,6 @@ async function conTxidDeLaTransicion<
   });
 }
 
-/**
- * Fila 49 — el audit log, paginado por cursor.
- *
- * **Append-only** (M2-D4 P6): los eventos no se editan ni se borran. Si un
- * stage se re-ancla tras una remediación, el evento original queda y se agrega
- * uno nuevo. Esta ruta solo lee.
- */
 const auditLogProcedure = orpc
   .route({ method: "GET", path: "/audit-log" })
   .input(auditLogQuerySchema)
@@ -440,9 +344,6 @@ const auditLogProcedure = orpc
     let query = db
       .selectFrom("AuditLog")
       .leftJoin("User", "User.id", "AuditLog.actorUserId")
-      // **Acota a los proyectos del developer** (M2-D1 §4, M2-D4 §P6). Sin esto
-      // devolvía la tabla entera, con el nombre y el rol de cada usuario del
-      // sistema. El bypass de `admin` vive adentro de `auditScope`.
       .where((eb) => auditScope(eb, context.user.role, context.user.id, ["developer"]))
       .select([
         "AuditLog.id as id",
@@ -483,22 +384,6 @@ router.get(
   delegarAOrpc(auditLogHandler, PREFIJO_ABSOLUTO, conUsuario)
 );
 
-/**
- * Fila 46-47 — anclar un documento suelto — **M3-BE-14** y **M3-SC-06**.
- *
- * "Suelto" quiere decir que no cuelga del cierre de un stage: un permiso, un
- * plano aprobado, un certificado externo. El archivo ya está subido (la subida
- * es `POST /projects/:id/evidence`); esto es el segundo paso, el que el usuario
- * inicia apretando "Anclar" en el `DocumentCard` — **nunca automático**
- * (M2-D4 §6.3).
- *
- * Lo que se ancla es el SHA-256 del archivo, que es el ticket de entrada a la
- * cadena de prueba (D-027). Un documento sin hash no se puede anclar y no se
- * puede mostrar como verificado: es 400, no un anclaje vacío.
- *
- * **Idempotente** (regla 8): si ese documento ya tiene su TXID, o un anclaje
- * en vuelo, devuelve ese evento con 200 en vez de gastar otra transacción.
- */
 const anchorDocumentProcedure = orpc
   .errors({ NO_HASH: { status: 400 } })
   .route({
@@ -521,10 +406,10 @@ const anchorDocumentProcedure = orpc
       .where("id", "=", input.evidenceId)
       .executeTakeFirst();
 
-    /* v8 ignore if -- @preserve: authorize({ proyecto }) ya confirmó que existe (Evidence, en el body) (SPEC-018) */
+    /* v8 ignore if -- @preserve: authorize({ proyecto }) ya confirmó que existe (Evidence, en el body) */
     if (!documento) throw new ORPCError("NOT_FOUND", { message: "Document not found" });
 
-    /* v8 ignore if -- @preserve: Evidence.sha256Hash es NOT NULL (SPEC-018) */
+    /* v8 ignore if -- @preserve: Evidence.sha256Hash es NOT NULL */
     if (!documento.sha256Hash) {
       throw errors.NO_HASH({ message: "Document has no hash" });
     }
@@ -537,7 +422,6 @@ const anchorDocumentProcedure = orpc
       evidenceId: documento.id,
       eventType: "DOCUMENT_ANCHOR",
       commitment: documento.sha256Hash,
-      // Ref opaca: el id del registro, jamás el nombre del archivo (regla 2).
       reference: documento.id
     });
 
@@ -560,11 +444,6 @@ router.post(
   authorize({
     roles: ["admin", "developer"],
     acceso: {
-      // El `evidenceId` llega en el BODY, no en el path: por eso esta ruta hacía
-      // la segunda capa a mano hasta el 2026-09-04. `nombre` conserva el
-      // "Document not found" que ya devolvía — en esta superficie la evidencia
-      // es un documento (M2-D5 fila 46), y devolver "Evidence not found" sería
-      // filtrar el nombre de la tabla al cliente.
       proyecto: { via: "Evidence", param: "evidenceId", en: "body", nombre: "Document" },
       membresias: ["developer"]
     }
@@ -596,8 +475,6 @@ const kpisProcedure = orpc
       .where("projectId", "in", ids)
       .execute();
 
-    // El KPI cuenta `Confirmed`: sin esto, un anclaje que ya entró en un bloque
-    // pero sigue `Pending` en la base lo hace contar de menos.
     await reconciliarParaLectura({ projectIds: ids });
 
     const anclados = await db
@@ -614,9 +491,6 @@ const kpisProcedure = orpc
       .where("projectId", "in", ids)
       .executeTakeFirst();
 
-    // "Capital levantado" = suma de los contratos firmados. **No es plata que la
-    // plataforma tenga** (D-021): es un monto declarado, en unidades mínimas
-    // enteras (regla 1).
     const contratos = await db
       .selectFrom("Contract")
       .innerJoin("Unit", "Unit.id", "Contract.unitId")
@@ -628,12 +502,12 @@ const kpisProcedure = orpc
 
     return {
       activeProjects: ids.length,
-      /* v8 ignore start -- @preserve: COUNT(*) siempre devuelve una fila (SPEC-018) */
+      /* v8 ignore start -- @preserve: COUNT(*) siempre devuelve una fila */
       totalUnits: Number(unidades?.total ?? 0),
       /* v8 ignore stop -- @preserve */
       capitalRaisedMinorUnits: Number(contratos?.total ?? 0),
       averageProgress: stages.length ? Math.round((completados / stages.length) * 100) : 0,
-      /* v8 ignore start -- @preserve: COUNT(*) siempre devuelve una fila (SPEC-018) */
+      /* v8 ignore start -- @preserve: COUNT(*) siempre devuelve una fila */
       verifiedDocuments: Number(anclados?.total ?? 0)
       /* v8 ignore stop -- @preserve */
     };
@@ -649,13 +523,6 @@ router.get(
   delegarAOrpc(kpisHandler, PREFIJO_ABSOLUTO, conUsuario)
 );
 
-/**
- * D-097 — La dirección que el developer escribe en el alta de proyecto,
- * convertida en un punto para mover el "Map preview" de la captura 34b. El
- * detalle (Nominatim, la cola de un pedido por segundo, la caché) vive en
- * `lib/geocode.ts`. Si Nominatim no responde es un 503 con nombre: el front lo
- * trata igual que "no encontrado" — el developer marca el punto en el mapa.
- */
 const geocodeProcedure = orpc
   .errors({
     GEOCODER_UNAVAILABLE: { status: 503, message: "The geocoding service is not available" }
@@ -676,10 +543,6 @@ router.get(
   delegarAOrpc(geocodeHandler, PREFIJO_ABSOLUTO, conUsuario)
 );
 
-/** El router oRPC combinado de esta vertical — lo consume
- * `scripts/generate-openapi.ts` para generar el fragmento de OpenAPI de las 8
- * rutas migradas de este archivo, aparte del documento manual de la única que
- * no migró en `§D` (la subida multipart de `developer-evidencia.routes.ts`). */
 export const developerOrpcRouter = {
   projectsProcedure,
   projectByIdProcedure,

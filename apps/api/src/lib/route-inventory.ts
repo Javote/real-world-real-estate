@@ -7,14 +7,6 @@ import {
 } from "../middlewares/auth";
 import { en } from "./arrays";
 
-// La misma introspección que sostiene `test/route-guards.test.ts` (§La matriz
-// de permisos, ver `CLAUDE.md`), extraída para que un segundo consumidor
-// —`scripts/generate-api-docs.ts`— no repita el árbol de Express a mano.
-// **Un solo lugar interroga al router montado**; el test y el generador de
-// docs solo lo leen.
-
-/** Lo que Express expone del router ya armado. `Layer` no conserva el path de
- * montaje (lo compila a un matcher), por eso el prefijo sale de `MONTAJE`. */
 type Capa = {
   route?: { path: string; methods: Record<string, boolean>; stack: { handle: unknown }[] };
   handle: unknown;
@@ -24,14 +16,9 @@ export type Montaje = {
   prefijo: string;
   guardsDeRouter: GuardDescriptor[];
   rutas: Map<string, GuardDescriptor[]>;
-  /** El handler terminal de cada ruta (el último de la cadena, la lógica de
-   * negocio) — para introspección más allá de los guards. Lo usa
-   * `generate-openapi.ts` para leer el código de éxito real de la respuesta
-   * en vez de adivinarlo por verbo HTTP. */
   handlers: Map<string, unknown>;
 };
 
-/** Las ramas de una regla, siempre como lista plana. `alguna` no anida. */
 export function ramas(acceso: ReglaDeAcceso): ReglaSimple[] {
   return typeof acceso !== "string" && "alguna" in acceso ? [...acceso.alguna] : [acceso];
 }
@@ -57,11 +44,6 @@ export function describir(guard: GuardDescriptor): string {
   return `autoriza(rol(${guard.roles.join("|")}) · ${describirAcceso(guard.acceso)})`;
 }
 
-// La misma cadena de guards, en inglés, para los documentos que se entregan
-// (OpenAPI y Postman en `specs/evidencia-m3/2-api/`, cuyo idioma es el
-// inglés). `describir` queda en castellano porque es la firma que fija
-// `test/route-guards.test.ts`.
-
 function scopeEnIngles(scope: string): string {
   return scope
     .replace("cualquier membresía", "any membership")
@@ -86,7 +68,6 @@ export function describeGuardEn(guard: GuardDescriptor): string {
   return `authorize(role(${guard.roles.join("|")}) · ${acceso})`;
 }
 
-/** Reconstruye, leyendo los routers ya montados, la matriz completa. */
 export function leerMontaje(): Montaje[] {
   return MONTAJE.map(({ prefijo, router }) => {
     const guardsDeRouter: GuardDescriptor[] = [];
@@ -104,9 +85,6 @@ export function leerMontaje(): Montaje[] {
         .map((s) => leerGuard(s.handle))
         .filter((g): g is GuardDescriptor => g !== null);
       const path = `${prefijo}${capa.route.path}`.replace(/\/$/, "") || "/";
-      // El último de la pila es la lógica de negocio; los anteriores son los
-      // middlewares (`authenticate`, `authorize`, Multer) que ya se leyeron
-      // arriba como guards.
       const terminal = capa.route.stack.at(-1)?.handle;
 
       for (const metodo of Object.keys(capa.route.methods)) {

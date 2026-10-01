@@ -15,27 +15,6 @@ const STATEMENTS_0007 = SQL_MIGRACION_0007.split("--> statement-breakpoint")
   .map((s) => s.trim())
   .filter((s) => s.length > 0);
 
-// SPEC-213 (anexo) — dos EvidenceBundle del MISMO stage no pueden tener el
-// MISMO root. NO es "un stage tiene como máximo un EvidenceBundle" — esa
-// primera formulación se probó y rompía comportamiento legítimo (ver el
-// segundo describe): `crearBundle` corre en cada subida de evidencia, no
-// solo al completar, así que un stage con 2+ subidas antes de completarse
-// tiene, a propósito, más de un bundle con roots distintos.
-//
-// El bug real de producción era más angosto: "Terminaciones" de torre-a tenía
-// 4 bundles y 3 roots — dos snapshots legítimos (1 y 2 evidencias) y UN
-// duplicado exacto (mismo root que otro, por la doble-llamada a `crearBundle`
-// en la misma completación, ya cerrada el 2026-09-09 hacia adelante).
-// specs/evidence/evidence-bundle-torre-a-terminaciones-2026-09-18.json trae
-// el detalle completo.
-//
-// Eso deja abierta la invariante 2 de la spec ("el masterHash de un dossier
-// no depende de cuántas filas devuelva un join") para cualquier stage FUTURO
-// con 2+ subidas: ningún índice único evita que existan varios bundles
-// legítimos por stage. Lo que la cierra es `ultimoBundlePorStage`
-// (domain/stage-transition.ts), que los tres `leftJoin` (dossier, certifier,
-// investor) usan en vez de un `leftJoin` directo a `EvidenceBundle`.
-
 async function baseConDosBundlesLegitimos() {
   const c = createClient({ url: ":memory:" });
   await c.execute(`
@@ -57,8 +36,6 @@ async function baseConDosBundlesLegitimos() {
     sql: "INSERT INTO Stage (id, projectId) VALUES (?, ?)",
     args: ["stage-1", "proyecto-1"]
   });
-  // Dos subidas de evidencia legítimas, sin completar — cada una escribe su
-  // propio bundle con un root distinto. NO es el bug.
   await c.execute({
     sql: "INSERT INTO EvidenceBundle (id, projectId, stageId, commitmentHash, createdAt) VALUES (?, ?, ?, ?, ?)",
     args: ["bundle-1", "proyecto-1", "stage-1", "a".repeat(64), 1]
@@ -81,10 +58,6 @@ describe("un leftJoin directo a EvidenceBundle sigue duplicando con bundles leg�
       WHERE Stage.projectId = 'proyecto-1'
     `);
 
-    // Este es el hallazgo real: ni siquiera hace falta el bug de duplicación
-    // para que un leftJoin plano multiplique el artefacto — evidencia
-    // acumulada normal ya alcanza. El índice único (stageId, commitmentHash)
-    // no lo evita, porque los dos roots son distintos a propósito.
     expect(filas.rows).toHaveLength(2);
 
     c.close();
@@ -93,7 +66,6 @@ describe("un leftJoin directo a EvidenceBundle sigue duplicando con bundles leg�
   it("el leftJoin a través de ultimoBundlePorStage (SQL equivalente) devuelve una sola fila: la vigente", async () => {
     const c = await baseConDosBundlesLegitimos();
 
-    // Mismo SQL que domain/stage-transition.ts → ultimoBundlePorStage.
     const filas = await c.execute(`
       SELECT Stage.id as stageId, ultimo.commitmentHash as commitmentHash
       FROM Stage
@@ -117,8 +89,6 @@ describe("un leftJoin directo a EvidenceBundle sigue duplicando con bundles leg�
 describe("UNIQUE(stageId, commitmentHash) — el duplicado exacto sí se rechaza, la evidencia legítima no", () => {
   it("dos bundles con roots DISTINTOS para el mismo stage se aceptan los dos (evidencia acumulándose)", async () => {
     const c = await baseConDosBundlesLegitimos();
-    // baseConDosBundlesLegitimos() ya insertó los dos sin que nada tronara —
-    // este test lo deja explícito: los dos siguen ahí.
     const filas = await c.execute(
       "SELECT commitmentHash FROM EvidenceBundle WHERE stageId = 'stage-1'"
     );
@@ -172,9 +142,6 @@ describe("migración 0007 — corrida dos veces (regla 8)", () => {
     await c.execute("CREATE INDEX EvidenceBundle_stageId_idx ON EvidenceBundle (stageId)");
 
     for (const statement of STATEMENTS_0007) await c.execute(statement);
-    // Sin duplicados que borrar acá (el DELETE es por id literal, y ese id no
-    // existe en esta base sintética) — lo que se prueba es que ninguno de los
-    // tres statements truena en una segunda pasada.
     for (const statement of STATEMENTS_0007) await c.execute(statement);
 
     const filas = await c.execute("SELECT name FROM sqlite_master WHERE type = 'index'");
@@ -225,7 +192,6 @@ describe("EvidenceBundle_stageId_commitmentHash_key contra el esquema real", () 
       })
       .execute();
 
-    // Mismo root, mismo stage — el duplicado real. Se rechaza.
     await expect(
       db
         .insertInto("EvidenceBundle")
@@ -240,7 +206,6 @@ describe("EvidenceBundle_stageId_commitmentHash_key contra el esquema real", () 
         .execute()
     ).rejects.toThrow();
 
-    // Root DISTINTO, mismo stage — evidencia acumulándose. Se acepta.
     await expect(
       db
         .insertInto("EvidenceBundle")

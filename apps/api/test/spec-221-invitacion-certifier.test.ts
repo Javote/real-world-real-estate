@@ -4,13 +4,6 @@ import app from "../src/app";
 import { db } from "../src/lib/db";
 import { FIXTURES } from "./global-setup";
 
-// SPEC-221 · el admin invita a un certifier a un proyecto y el certifier
-// decide (D-095). Hasta hoy, sumar un certifier era `POST /projects/:id/members`
-// por consola; esto lo vuelve un flujo con pantalla, como el del buyer.
-//
-// Se usa `torre-ajena`, el proyecto SIN miembros: es justo el caso real — un
-// proyecto nuevo cuyo certifier todavía no ve nada.
-
 const login = async (cred: { email: string; password: string }) =>
   (await request(app).post("/api/v1/auth/login").send(cred)).body.token as string;
 
@@ -95,7 +88,6 @@ describe("SPEC-221 · invitar a un certifier", () => {
     const creada = await invitar(admin, certifierId);
     expect(creada.status).toBe(201);
 
-    // Una segunda invitación pendiente al mismo certifier y proyecto, no.
     const duplicada = await invitar(admin, certifierId);
     expect(duplicada.status).toBe(409);
     expect(duplicada.body.code).toBe("INVITATION_ALREADY_PENDING");
@@ -113,19 +105,16 @@ describe("SPEC-221 · invitar a un certifier", () => {
     expect(acepta.body.status).toBe("accepted");
     expect(await esMiembro()).toBe(true);
 
-    // Responder dos veces no vale: la guarda es atómica.
     const otraVez = await request(app)
       .post(`/api/v1/certifier/invitations/${creada.body.id}/accept`)
       .set("Authorization", `Bearer ${certifier}`);
     expect(otraVez.status).toBe(409);
     expect(otraVez.body.code).toBe("INVITATION_NOT_PENDING");
 
-    // Ya es miembro: invitarlo de nuevo es un error con nombre, no un duplicado.
     const yaMiembro = await invitar(admin, certifierId);
     expect(yaMiembro.status).toBe(409);
     expect(yaMiembro.body.code).toBe("ALREADY_MEMBER");
 
-    // Y el admin ve el historial del proyecto: la rechazada y la aceptada.
     const historial = await request(app)
       .get(`/api/v1/projects/${proyecto}/certifier-invitations`)
       .set("Authorization", `Bearer ${admin}`);
