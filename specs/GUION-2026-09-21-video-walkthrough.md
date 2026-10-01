@@ -265,12 +265,12 @@ no hay "otra toma" de esas.
 | T19 | 10:06 | 2 · Developer | Reanudar | `/developer/progress` | 20 s | 11 s | ⚠ irrepetible |
 | T20 | 10:26 | 3 · Certifier | Certificar | `/certifier/stage/:id` | 20 s | 7 s | ⚠ irrepetible |
 | T21 | 10:46 | 3 · Certifier | El certificado | `/certifier/issued` | 15 s | 5 s | |
-| T22 | 11:01 | 2 · Developer | El contrato del lado del developer | `/developer/project/:id/contracts` | 25 s | 14 s | |
-| T23 | 11:26 | 1 · Investor | El dossier | `/investor/unit/<1A>/dossier` | 40 s | 24 s | |
-| T24 | 12:06 | 1 · Investor | Compartir | "Share" → modal | 15 s | 8 s | |
-| T25 | 12:21 | 4 · Notary | La firma | `/notary` → `/notary/dossiers` → `/notary/dossier/:id` | 35 s | 19 s | ⚠ irrepetible |
-| T26 | 12:56 | 4 · Notary | El historial | `/notary/signed` | 15 s | 11 s | |
-| T27 | 13:11 | incógnito | Verificado sin cuenta | `/public/dossier/:shareToken` | 25 s | 18 s | |
+| T23 | 11:01 | 1 · Investor | El dossier | `/investor/unit/<1A>/dossier` | 40 s | 24 s | |
+| T24 | 11:41 | 1 · Investor | Compartir | "Share" → modal | 15 s | 8 s | |
+| T25 | 11:56 | 4 · Notary | La firma | `/notary` → `/notary/dossiers` → `/notary/dossier/:id` | 35 s | 19 s | ⚠ irrepetible |
+| T26 | 12:31 | 4 · Notary | El historial | `/notary/signed` | 15 s | 11 s | |
+| T27 | 12:46 | incógnito | Verificado sin cuenta | `/public/dossier/:shareToken` | 25 s | 18 s | |
+| T22 | 13:11 | 2 · Developer | El contrato del lado del developer | `/developer/project/:id/contracts` | 25 s | 14 s | |
 | T28 | 13:36 | 2 · Developer | El círculo se cierra | `/developer/audit-log` | 45 s | 21 s | |
 | | **14:21** | | **Total** | | **861 s ≈ 14 min** | | |
 
@@ -325,6 +325,27 @@ Lo que hace la toma, medido sobre el video (cuadros cada 3 s, ±3 s):
 - [ ] Paso 1 hecho, **incluido el dossier de la 1A compilado** y el verificador en verde (1.3).
 - [ ] Las cinco pestañas logueadas y en inglés (1.2). Pestaña 2 al frente, en `/developer`.
 - [ ] Una nota abierta (Notas o TextEdit) para pegar el link de T24.
+
+**La sesión B en bloques.** Un bloque es lo que va de corrido entre una espera de la cadena y la
+siguiente (⛓ = manda algo a la cadena; ⚠ = irrepetible).
+
+| Bloque | Tomas | Pestañas | Termina en |
+|---|---|---|---|
+| 1 | T07 · T08 ⛓⚠ | 2 | ⏸ ~6 min (los 10 mints). **Fuera de cámara:** 5 Admin invita al certifier, 3 acepta |
+| 2 | T09 · T10 · T11 ⛓⚠ | 2 | ⏸ ~1 min |
+| 3 | T12 ⛓⚠ | 1 | ⏸ ~1 min |
+| 4 | T13 · T14 → T15 ⛓⚠ | 1 → 2 | ⏸ ~1 min |
+| 5 | T16 → T17 → T18 ⛓⚠ | 2 → 1 → 3 | ⏸ ~1 min |
+| 6 | T19 ⛓⚠ | 2 | ⏸ ~1 min |
+| 7 | T20 ⛓⚠ | 3 | ⏸ ~1 min |
+| 8 | T21 → T23 · T24 → T25 ⛓⚠ | 3 → 1 → 4 | ⏸ ~1 min |
+| 9 | T26 → T27 → T22 · T28 | 4 → incógnito → 2 | Fin |
+
+**Se puede grabar en tomas largas** (decisión del dueño, 2026-10-01, como la sesión A): una
+grabación por bloque, sin parar en las esperas de ~1 min. **Parar solo en la espera de T08**: son
+6 minutos y en ese rato sale el admin, que no va en cámara. Con tomas largas **no se corre
+`renombrar.sh B`** (los archivos son menos que las tomas): se dejan con su nombre y se parten en
+`T07.mov` … `T28.mov` mirando los cuadros, como se midió T01 — se le pide a Claude.
 
 #### Acto 2 · Developer
 
@@ -594,18 +615,6 @@ pill tiene que decir "In progress".
 | 0:03 | Clic en **"Issued"** en la barra lateral. | "Issued certificates · Technical history". |
 | 0:04–0:15 | **Quieto**, el mouse sobre la primera fila. | "Land acquisition", pill "Certified", su hash y su txid. |
 
-##### T22 · El contrato del lado del developer — 25 s
-
-**Antes de grabar:** pestaña 2, `/developer/project/<nuevo>`.
-
-| Tiempo | Acción | Lo que tiene que verse |
-|---|---|---|
-| 0:00 | Clic en **"Contracts"**. | — |
-| 0:01–0:08 | **Quieto**, el mouse sobre las tres tarjetas. | "Contracts 1", "Agreed amount", "Anchored 1". |
-| 0:09–0:25 | **Quieto**, el mouse sobre la fila. | "Unit 5A · US$ 185,000", "Signed on …", **"Recorded on chain"** y el txid. |
-
-Los tres StatCard son hechos del registro, no un flujo de pagos — D-070.
-
 #### Acto 5 · Dossier y escribano
 
 **Volvemos a `torre-volumen-3`, unidad 1A** — la entregada. Un dossier final solo significa algo
@@ -684,7 +693,24 @@ entero**: tiene que verse que no hay sesión — sin barra lateral, sin campana,
 
 Al terminar, **cerrá la ventana de incógnito entera**.
 
-#### Acto 6 · El audit log
+#### Acto 6 · El developer cierra: el contrato y el audit log
+
+##### T22 · El contrato del lado del developer — 25 s
+
+**Antes de grabar:** pestaña 2, `/developer/project/<nuevo>`.
+
+| Tiempo | Acción | Lo que tiene que verse |
+|---|---|---|
+| 0:00 | Clic en **"Contracts"**. | — |
+| 0:01–0:08 | **Quieto**, el mouse sobre las tres tarjetas. | "Contracts 1", "Agreed amount", "Anchored 1". |
+| 0:09–0:25 | **Quieto**, el mouse sobre la fila. | "Unit 5A · US$ 185,000", "Signed on …", **"Recorded on chain"** y el txid. |
+
+Los tres StatCard son hechos del registro, no un flujo de pagos — D-070.
+
+**Movida al final el 2026-10-01:** antes iba entre T21 y T23, y obligaba a pasar por la pestaña 2
+solo para esta toma. El contrato existe desde T12, así que acá dice lo mismo y el developer queda
+con sus dos tomas seguidas. Las herramientas siguen el orden de este mapa, no el número.
+
 
 ##### T28 · El círculo se cierra — 45 s
 
@@ -736,8 +762,9 @@ error y `T15b` desde la acción siguiente; abrí `T15.mov` → Edición → **Ag
 - [ ] T01
 - [ ] T07–T11
 - [ ] T12–T14
-- [ ] T15–T22
-- [ ] T23–T28
+- [ ] T15–T21
+- [ ] T23–T27
+- [ ] T22, T28
 
 ---
 
@@ -889,7 +916,7 @@ video, ±3 s.)*
 | 0:01 | "Contract summary" | The contract screen is a record, not an action surface: the agreed amount and the signing date. |
 | 0:13 | "No releases recorded yet." | No release button, by design. Payments happen outside the platform, which never holds funds. |
 
-#### Acto 4 · La FSM (T15–T22)
+#### Acto 4 · La FSM (T15–T21)
 
 ##### T15 · Subir evidencia — video 40 s
 
@@ -942,13 +969,6 @@ video, ±3 s.)*
 | 0:01 | La pill "Certified" | Certified. |
 | 0:04 | "Issued certificates" | Each certificate, with its hash and the transaction that anchors it. |
 
-##### T22 · El contrato del lado del developer — video 25 s
-
-| Tiempo | Entra cuando ves | Texto |
-|---|---|---|
-| 0:01 | Las tres tarjetas | The same contract, from the developer's side. |
-| 0:09 | La fila de la 5A | Which unit, how much, when it was signed, and the transaction that records it. These counters are facts from the registry, not a payment flow. |
-
 #### Acto 5 · Dossier y escribano (T23–T27)
 
 ##### T23 · El dossier — video 40 s
@@ -987,7 +1007,15 @@ video, ±3 s.)*
 | 0:01 | "Public dossier" | The public route takes that token and nothing else: a private window, no account, no session. |
 | 0:09 | El badge "Signed" | Anyone with the link — a bank, another notary — sees the dossier hash and the notary's signature, without being a user of the platform. |
 
-#### Acto 6 · El audit log (T28)
+#### Acto 6 · El developer cierra (T22, T28)
+
+##### T22 · El contrato del lado del developer — video 25 s
+
+| Tiempo | Entra cuando ves | Texto |
+|---|---|---|
+| 0:01 | Las tres tarjetas | Back with the developer: the contract of unit 5A, from their side. |
+| 0:09 | La fila de la 5A | Which unit, how much, when it was signed, and the transaction that records it. These counters are facts from the registry, not a payment flow. |
+
 
 ##### T28 · El círculo se cierra — video 45 s
 
@@ -1027,6 +1055,18 @@ video en tiempo real (~14 min): **no cambies de pestaña ni minimices Chrome** m
 - Todas quedan en 1920×1200.
 - **`walkthrough-final.srt`** son los subtítulos en inglés, sacados del texto del Paso 4.3 con los
   tiempos reales de cada toma. Se suben junto al video (YouTube los acepta tal cual).
+
+**La otra versión: sin voz, con subtítulos dibujados** (decisión del dueño, 2026-10-01). No necesita
+las voces, así que se puede armar apenas están los videos:
+
+```bash
+bash scripts/video-walkthrough/subtitular.sh          # todas: walkthrough-subtitulado.mp4 (+ .srt)
+bash scripts/video-walkthrough/subtitular.sh T15      # una sola, para revisarla: subtituladas/T15.mp4
+```
+
+Cada frase del Paso 4.3 queda en pantalla desde su segundo hasta que entra la siguiente, para que
+siempre haya un subtítulo. Si una frase sale antes o después de su pantalla, se corrige el tiempo en
+4.3 y se vuelve a correr: el estudio de voz lee la misma tabla.
 
 **Si algo falla:** `FALLÓ Txx` quiere decir que ese archivo está dañado o a medio guardar: abrilo en
 QuickTime; si no reproduce, rehacelo. **Para rehacer una toma**, reemplazá el archivo y volvé a

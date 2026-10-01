@@ -4,7 +4,10 @@
 # después de cada toma.
 #
 #   bash scripts/video-walkthrough/renombrar.sh A    # T01 (la sesión A es una sola toma)
-#   bash scripts/video-walkthrough/renombrar.sh B    # T07–T28
+#   bash scripts/video-walkthrough/renombrar.sh B    # T07–T28, en el orden del mapa (T22 después de T27)
+#
+# Con tomas largas (un archivo por bloque, Paso 2) no se usa: los archivos
+# son menos que las tomas, y hay que partirlos primero.
 #
 # Toma los "Grabación de pantalla …" / "Screen Recording …" de la carpeta, por
 # fecha de creación. Si hay más que tomas (repetiste alguna), muestra la lista
@@ -13,12 +16,15 @@
 set -euo pipefail
 
 carpeta="${CARPETA:-$HOME/Movies/propnexus-walkthrough}"
+aqui="$(cd "$(dirname "$0")" && pwd)"
+# Las tomas de cada sesión, en el orden del mapa del runbook (T22 va después de T27).
+orden=$(node --input-type=module -e "import { leerTomas } from '$aqui/lib/tomas.mjs'; console.log(leerTomas().map((t) => t.toma).join(' '))")
 case "${1:-}" in
-  A) desde=1; hasta=1 ;;
-  B) desde=7; hasta=28 ;;
+  A) tomas=(T01) ;;
+  B) read -r -a tomas <<< "${orden#T01 }" ;;
   *) echo "Uso: renombrar.sh A|B  (A = T01, B = T07–T28)"; exit 1 ;;
 esac
-esperadas=$((hasta - desde + 1))
+esperadas=${#tomas[@]}
 cd "$carpeta"
 
 archivos=()
@@ -69,11 +75,11 @@ fi
 
 echo "Así quedarían:"
 i=0
-for n in $(seq "$desde" "$hasta"); do
-  printf "  T%02d.mov  ←  %s  (%s)\n" "$n" "${archivos[$i]}" "$(duracion "${archivos[$i]}")"
+for t in "${tomas[@]}"; do
+  printf "  %s.mov  ←  %s  (%s)\n" "$t" "${archivos[$i]}" "$(duracion "${archivos[$i]}")"
   i=$((i + 1))
 done
-existentes=$(for n in $(seq "$desde" "$hasta"); do [ -e "$(printf 'T%02d.mov' "$n")" ] && printf 'T%02d ' "$n"; done; true)
+existentes=$(for t in "${tomas[@]}"; do [ -e "$t.mov" ] && printf '%s ' "$t"; done; true)
 [ -n "$existentes" ] && echo "  ! ya existen: $existentes— se reemplazan (las viejas van a descartadas/)"
 printf "¿Renombro? [s/N] "
 read -r resp
@@ -81,10 +87,10 @@ read -r resp
 
 mkdir -p descartadas
 i=0
-for n in $(seq "$desde" "$hasta"); do
-  destino=$(printf 'T%02d.mov' "$n")
+for t in "${tomas[@]}"; do
+  destino="$t.mov"
   [ -e "$destino" ] && mv "$destino" "descartadas/$destino.$(date +%H%M%S)"
   mv "${archivos[$i]}" "$destino"
   i=$((i + 1))
 done
-echo "✓ Sesión $1 renombrada: T$(printf %02d "$desde") … T$(printf %02d "$hasta")."
+echo "✓ Sesión $1 renombrada: ${tomas[*]}."
