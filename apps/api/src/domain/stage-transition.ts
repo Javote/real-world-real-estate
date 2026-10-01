@@ -349,30 +349,20 @@ async function anchorEvent(
     .returningAll()
     .executeTakeFirstOrThrow();
 
-  // Confirmar es best-effort, a propósito: si esto falla o el proceso muere
-  // acá, el evento queda `Pending` con TXID real — nunca `Failed`, porque el
-  // anclaje ya ocurrió. D-077 (reconciliación en lectura) lo termina de
-  // resolver la próxima vez que alguien mire este stage.
-  //
-  // El receipt llega `Pending` siempre, con los dos adaptadores (D-087): no
-  // se le pregunta si dice "Confirmed" — se verifica, sin excepción. Contra
-  // el simulador esto encuentra el proof al toque (su ledger queda listo
-  // desde el `commit`); contra Preprod, todavía no hay nada que ver.
+  // Confirmar es best-effort y no espera el bloque: una sola consulta con
+  // timeout. Si la transacción todavía no entró, el evento queda `Pending` con
+  // TXID real y D-077 lo confirma en la próxima lectura. La transición
+  // siguiente no necesita el bloque: la vista local del adaptador encadena
+  // sobre la salida sin confirmar (`yaci.test.ts`, "encadena sin esperar el
+  // bloque").
   try {
-    const proof = await anchorPort().verify(receipt.txid);
-    if (proof) {
-      // `blockTimestamp` puede ser `null` (SPEC-409): sin Blockfrost
-      // configurado (`Emulator`, devnet) no hay fuente para el momento del
-      // bloque. `new Date(null)` daría 1970-01-01 — mentir con más pasos que
-      // no escribirlo. La fila queda `Confirmed` igual; el campo se completa
-      // la próxima vez que `verify`/`confirmedAt` sí tengan de dónde leerlo.
+    const blockTimestamp = await anchorPort().confirmedAt(receipt.txid);
+    if (blockTimestamp !== null) {
       evento = await db
         .updateTable("OnChainEvent")
         .set({
           status: "Confirmed",
-          ...(proof.blockTimestamp !== null
-            ? { blockTimestamp: new Date(proof.blockTimestamp) }
-            : {}),
+          blockTimestamp: new Date(blockTimestamp),
           updatedAt: new Date()
         })
         .where("id", "=", event.id)

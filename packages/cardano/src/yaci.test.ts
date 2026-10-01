@@ -212,6 +212,55 @@ describe.skipIf(!corre)("AnchorPort contra un nodo Cardano local (yaci-devkit)",
     ).rejects.toThrow();
   }, 120_000);
 
+  // Lo que la API hace desde que no espera el bloque adentro de la request:
+  // diez mints seguidos al crear un proyecto, y transiciones pedidas antes de
+  // que la anterior entre en un bloque. Lo sostiene la vista local de
+  // `enviar()`; si no, el segundo envío gasta una salida que el nodo todavía no
+  // conoce y el nodo lo rechaza.
+  it("encadena sin esperar el bloque: mints seguidos y un hilo de punta a punta", async () => {
+    const fuentes = Array.from({ length: 5 }, (_, i) => ({
+      ...fuente,
+      id: `clh3k9x0000008l3fyacich${i}`
+    }));
+
+    const inicio = Date.now();
+    const abiertos = [];
+    for (const f of fuentes) {
+      abiertos.push(await adapter.openThread({ datum: buildStageDatum(f) }));
+    }
+
+    const primero = fuentes[0]!;
+    const pendiente = buildStageDatum(primero);
+    const enCurso = buildStageDatum({ ...primero, state: "InProgress" });
+    const avance = await adapter.advanceThread({
+      outputRef: abiertos[0]!.outputRef,
+      previous: pendiente,
+      next: enCurso
+    });
+    const cierre = await adapter.advanceThread({
+      outputRef: avance.outputRef,
+      previous: enCurso,
+      next: buildStageDatum({
+        ...primero,
+        state: "Completed",
+        evidenceRoot: root,
+        completedAt: Date.now()
+      })
+    });
+    const enviados = Date.now() - inicio;
+
+    await esperarBloques(4);
+
+    for (const [i, abierto] of abiertos.slice(1).entries()) {
+      expect((await adapter.verify(abierto.txid))?.datum.stageRef).toBe(
+        buildStageDatum(fuentes[i + 1]!).stageRef
+      );
+    }
+    expect((await adapter.verify(cierre.txid))?.datum.state).toBe("Completed");
+
+    console.log(`[yaci] 7 transacciones encadenadas enviadas en ${enviados} ms`);
+  }, 180_000);
+
   // **Va último a propósito.** Publicar el reference script muta el adaptador,
   // así que los tres tests de arriba corren antes y cubren el camino con el
   // validador ADJUNTO. Este cubre el referenciado: los dos existen en

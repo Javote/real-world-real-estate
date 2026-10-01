@@ -344,12 +344,12 @@ describe("OnChainEvent · el aterrizaje del anclaje", () => {
     // (specs/REPORTE-2026-09-10-prueba-de-volumen.md §Cómo hacerlo más
     // robusto): la transacción sale a la cadena — hay `receipt`, con `txid` y
     // `outputRef` reales — pero algo falla DESPUÉS. Antes había un solo
-    // `UPDATE`, corrido recién después de `verify()`: un error acá perdía el
+    // `UPDATE`, corrido recién después de confirmar: un error acá perdía el
     // recibo entero, indistinguible de un anclaje que nunca se intentó.
     const creado = await crearStageConHilo();
     const puerto = anchorPort();
-    const original = puerto.verify;
-    puerto.verify = async () => {
+    const original = puerto.confirmedAt;
+    puerto.confirmedAt = async () => {
       throw new Error("Blockfrost caído");
     };
 
@@ -375,7 +375,7 @@ describe("OnChainEvent · el aterrizaje del anclaje", () => {
       expect(evento.outputRef).toBe(res.body.anchor.outputRef);
       expect(evento.status).toBe("Pending");
     } finally {
-      puerto.verify = original;
+      puerto.confirmedAt = original;
     }
   });
 
@@ -866,44 +866,5 @@ describe("eventIndex es el log del stage, no el hilo", () => {
 
     // …y aun así la cabeza del hilo sigue siendo la del mint.
     expect(await cabezaDelHilo(stage.id)).toBe(cabezaDelMint);
-  });
-});
-
-// SPEC-409 — `AnchorProof.blockTimestamp` puede ser `null` (sin Blockfrost,
-// el caso del `Emulator`/devnet). `new Date(null)` daría 1970-01-01: una
-// mentira con más pasos que dejar el campo sin escribir.
-describe("confirmación · blockTimestamp puede llegar null en el proof", () => {
-  it("el evento queda Confirmed igual, sin escribir un blockTimestamp inventado", async () => {
-    const stage = await crearStageConHilo();
-    const verify = vi.spyOn(anchorPort(), "verify").mockResolvedValueOnce({
-      txid: "no-importa",
-      outputRef: `${"a".repeat(64)}#0`,
-      blockTimestamp: null,
-      datum: {
-        projectRef: "00",
-        stageRef: "00",
-        sequenceOrder: 1,
-        validationCritical: false,
-        state: "InProgress",
-        evidenceRoot: "",
-        completedAt: 0
-      }
-    });
-
-    const res = await patchStateAdmin(stage.id, "InProgress");
-    expect(res.status).toBe(200);
-
-    const evento = await db
-      .selectFrom("OnChainEvent")
-      .selectAll()
-      .where("stageId", "=", stage.id)
-      .orderBy("eventIndex", "desc")
-      .limit(1)
-      .executeTakeFirstOrThrow();
-
-    expect(evento.status).toBe("Confirmed");
-    expect(evento.blockTimestamp).toBeNull();
-
-    verify.mockRestore();
   });
 });
