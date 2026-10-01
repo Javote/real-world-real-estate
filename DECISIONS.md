@@ -1383,3 +1383,19 @@ que `GET /investor/units` trae el `coverUpdatedAt` del proyecto y la card y el d
 **Lo que queda para después, a pedido del dueño:** una **galería** del proyecto (varias imágenes
 comerciales), y una pantalla para cambiar la portada de un proyecto ya creado. Hoy, cambiarla es
 `PUT` por la API.
+
+## D-100 — El selector de etapa de "Upload evidence" usa chips numéricos, sin scroll
+
+**Decisión del dueño, 2026-10-01**, preparando el video. La captura 38 muestra chips con nombre
+("1. Land acquisition", "2. Executive project"…) en una sola fila que se desliza: en la pantalla se
+veían una o dos etapas y había que scrollear a la derecha hasta llegar a la 10.
+
+**Por qué es un desvío legítimo, caso (a).** El entregable se contradice: la captura 38 dibuja chips
+con nombre, y M2-D3 define el componente como *"StageChip — numeric 1-10 chips for stage
+selection"*. Gana la ficha de M2-D3 porque es la que da la pantalla usable, y es la misma forma que ya
+usa el investor en "Evidence by stage" (fila 15-18 de M2-D5, `StageChip (10x)`).
+
+**Cómo quedó.** Los diez chips numéricos, con salto de línea en vez de scroll horizontal. El nombre
+de la etapa elegida ya estaba en la tarjeta "Selected stage", así que no se pierde ningún dato. El
+nombre accesible de cada chip sigue diciendo número y nombre (`developer.upload.stageAria`).
+

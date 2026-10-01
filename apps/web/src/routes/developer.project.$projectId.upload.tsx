@@ -163,13 +163,13 @@ function UploadEvidence() {
       <section className="flex flex-col gap-s4" data-testid="DEV-EVIDENCE-UPLOAD-001">
         <article className={cn('flex flex-col gap-s2', CARD_SHELL)}>
           <h2 className="text-body-sm text-text-muted">{t('developer.upload.selectStage')}</h2>
-          {/* Scroll horizontal, como la captura: los chips no se encogen. */}
-          <div className="-mx-s4 flex gap-s2 overflow-x-auto px-s4 pb-s1">
+          {/* D-100: chips numéricos (M2-D3), los diez a la vista sin scroll; el
+              nombre de la etapa elegida va abajo, en "Selected stage". */}
+          <div className="flex flex-wrap gap-s2">
             {proyecto?.stages.map((s) => (
               <StageChip
                 key={s.id}
                 number={s.sequenceOrder}
-                label={s.name}
                 selected={s.id === stageId}
                 onSelect={() => setStageId(s.id)}
                 ariaLabel={t('developer.upload.stageAria', {
