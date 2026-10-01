@@ -23,6 +23,18 @@ describe("CORS", () => {
     expect(res.headers["access-control-allow-headers"]).toContain("Authorization");
   });
 
+  it("permite PUT: la portada del proyecto se sube con PUT desde la web", async () => {
+    // Faltaba, y la portada del alta fallaba desde el browser con la API sana:
+    // curl no hace preflight, así que solo se vio en el navegador (2026-10-01).
+    const res = await request(app)
+      .options("/api/v1/developer/projects/x/cover")
+      .set("Origin", "http://localhost:3000")
+      .set("Access-Control-Request-Method", "PUT");
+
+    expect(res.status).toBe(204);
+    expect(res.headers["access-control-allow-methods"]?.split(",")).toContain("PUT");
+  });
+
   it("NO devuelve cabecera para un origen desconocido", async () => {
     // Sin cabecera, el browser corta. Es el comportamiento correcto: la API
     // contesta igual, pero el navegador no le entrega la respuesta a la página.

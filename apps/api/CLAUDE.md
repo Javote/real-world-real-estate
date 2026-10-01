@@ -57,6 +57,14 @@ lo mismo sin pasar por HTTP. Ver el detalle en `CLAUDE.md` raíz.
 
 ## Trampas verificadas
 
+- **2026-10-01 · CORS no permitía `PUT`, y la portada del alta (D-099) fallaba desde la web con la
+  API sana.** La lista de `Access-Control-Allow-Methods` de `app.ts` era `GET,POST,PATCH,DELETE` y la
+  portada es la única ruta que la web llama con `PUT`: el browser cortaba el preflight y la pantalla
+  decía "the cover could not be uploaded". **`curl` no hace preflight**, así que la ruta respondía
+  200 en cualquier prueba por terminal. Lo fija `test/cors.test.ts`. **Si la web empieza a usar un
+  método nuevo, sumalo a esa lista en el mismo commit** — y probá desde un navegador, no desde
+  `curl`.
+
 - **2026-09-28 · `fs.createReadStream(path)` abre el archivo después, no cuando lo creás.** Si nadie
   consume el stream y el archivo se borra antes de esa apertura diferida, el `ENOENT` sale como un
   `error` sin listener: excepción suelta en el proceso. Pasaba en `S3Storage.put` con el cliente S3

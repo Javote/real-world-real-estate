@@ -80,7 +80,9 @@ app.use((req, res, next) => {
     // nosemgrep: javascript.express.security.cors-misconfiguration.cors-misconfiguration
     res.setHeader("Access-Control-Allow-Origin", origen);
     res.setHeader("Vary", "Origin");
-    res.setHeader("Access-Control-Allow-Methods", "GET,POST,PATCH,DELETE,OPTIONS");
+    // PUT: la portada del proyecto (D-099). Sin él el browser corta el
+    // preflight y la subida falla desde la web aunque la API la acepte.
+    res.setHeader("Access-Control-Allow-Methods", "GET,POST,PUT,PATCH,DELETE,OPTIONS");
     res.setHeader("Access-Control-Allow-Headers", "Authorization,Content-Type");
     res.setHeader("Access-Control-Max-Age", "86400");
   }
