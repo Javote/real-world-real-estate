@@ -76,18 +76,18 @@ check(
 const sinCoords = volumen.filter((p) => p.latitude == null || p.longitude == null);
 if (sinCoords.length)
   aviso(
-    `${sinCoords.map((p) => p.name).join(", ")} sin coordenadas: el modo mapa de T02 sale sin pines ` +
-      "y T03/T13 no muestran el mapa. El runbook tiene la variante sin mapa (T02)."
+    `${sinCoords.map((p) => p.name).join(", ")} sin coordenadas: el modo mapa de T01 sale sin pines ` +
+      "y T01/T13 no muestran el mapa."
   );
-else ok("las tres tienen coordenadas (el mapa de T02 muestra pines)");
+else ok("las tres tienen coordenadas (el mapa de T01 muestra pines)");
 const extra = proyectos.filter((p) => !p.name.startsWith("Torre Volumen"));
 if (!despues && extra.length)
-  aviso(`el investor ve además: ${extra.map((p) => p.name).join(", ")} (se van a ver en T02)`);
+  aviso(`el investor ve además: ${extra.map((p) => p.name).join(", ")} (se van a ver en T01)`);
 const favoritos = await pedir("/investor/favorites", { token: t.investor });
 check(
   favoritos.length === 0,
-  "favoritos vacío (T03 guarda Torre Volumen 3, T06 la muestra)",
-  `ya tiene ${favoritos.length} favorito(s): sacalos con el corazón antes de T03`
+  "favoritos vacío (T01 guarda Torre Volumen 3)",
+  `ya tiene ${favoritos.length} favorito(s): sacalos con el corazón antes de T01`
 );
 const unidades = await pedir("/investor/units", { token: t.investor });
 check(

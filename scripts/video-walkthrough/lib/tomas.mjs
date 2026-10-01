@@ -1,4 +1,4 @@
-// Lee las 28 tomas del runbook del video: la fila del mapa (Paso 2) y las
+// Lee las 23 tomas del runbook del video (T01, la sesión A entera, y T07–T28): la fila del mapa (Paso 2) y las
 // frases de la narración con sus tiempos (Paso 4.3). El runbook es la única
 // fuente: el estudio de voz y los subtítulos salen de acá, así que editar una
 // frase en el .md alcanza.
@@ -7,6 +7,9 @@ import { join } from "node:path";
 import { RAIZ } from "./api.mjs";
 
 export const RUNBOOK = join(RAIZ, "specs", "GUION-2026-09-21-video-walkthrough.md");
+
+// La sesión A es una sola toma (T01) desde el 2026-10-01: T02–T06 no existen.
+export const TOMAS = 23;
 
 const segundos = (mmss) => {
   const [m, s] = mmss.split(":").map(Number);
@@ -46,9 +49,9 @@ export function leerTomas(texto = readFileSync(RUNBOOK, "utf8")) {
     }
   }
   const lista = [...tomas.values()];
-  if (lista.length !== 28 || lista.some((t) => !t.frases.length || !t.video))
+  if (lista.length !== TOMAS || lista.some((t) => !t.frases.length || !t.video))
     throw new Error(
-      `El runbook no tiene las 28 tomas completas (${lista.length}). ¿Cambió el formato de las tablas?`
+      `El runbook no tiene las ${TOMAS} tomas completas (${lista.length}). ¿Cambió el formato de las tablas?`
     );
   return lista;
 }
