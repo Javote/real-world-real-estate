@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Paso 0 del runbook del video (specs/GUION-2026-09-21-video-walkthrough.md):
+# Paso 0 del runbook del video (specs/archive/GUION-2026-09-21-video-walkthrough.md):
 # todo lo que se prepara UNA vez. Se puede correr de nuevo sin romper nada.
 #
 #   bash scripts/video-walkthrough/preparar.sh

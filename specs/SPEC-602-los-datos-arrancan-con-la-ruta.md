@@ -22,7 +22,7 @@
    `await ensureQueryData` a propósito:
    - **No bloquea la navegación** detrás de la red. La pantalla aparece enseguida con su estado de
      carga.
-   - **Los estados de carga de [`SPEC-110`](SPEC-110-estado-de-carga.md) se quedan como están**:
+   - **Los estados de carga de [`SPEC-110`](archive/SPEC-110-estado-de-carga.md) se quedan como están**:
      `isPending` sigue significando lo mismo.
 2. **Las `queryOptions` se definen una vez**, en `src/api/queries.ts` (por ejemplo
    `queries.projects(params)`, `queries.favorites()`), y las usan tanto el loader como el

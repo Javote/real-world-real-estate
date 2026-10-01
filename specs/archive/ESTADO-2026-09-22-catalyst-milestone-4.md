@@ -85,14 +85,14 @@ completitud, agregación de métricas de piloto):
 
 | Spec | Título | Por qué es nueva |
 |---|---|---|
-| [`SPEC-501`](SPEC-501-panel-de-metricas-del-piloto.md) | Panel de métricas del piloto | Agregación de datos que ya existen — bajo riesgo, sin schema nuevo |
-| [`SPEC-502`](SPEC-502-registro-de-disputas.md) | Registro de disputas | Entidad `Dispute` nueva — el dominio nunca tuvo desacuerdo modelado |
-| [`SPEC-503`](SPEC-503-encuesta-nps-del-buyer.md) | Encuesta NPS del buyer | Campo/tabla nueva, superficie nueva del investor |
-| [`SPEC-504`](SPEC-504-completitud-de-documentacion.md) | Completitud de documentación por unidad | Métrica nueva sobre datos existentes — define qué significa "completo" |
+| [`SPEC-501`](../SPEC-501-panel-de-metricas-del-piloto.md) | Panel de métricas del piloto | Agregación de datos que ya existen — bajo riesgo, sin schema nuevo |
+| [`SPEC-502`](../SPEC-502-registro-de-disputas.md) | Registro de disputas | Entidad `Dispute` nueva — el dominio nunca tuvo desacuerdo modelado |
+| [`SPEC-503`](../SPEC-503-encuesta-nps-del-buyer.md) | Encuesta NPS del buyer | Campo/tabla nueva, superficie nueva del investor |
+| [`SPEC-504`](../SPEC-504-completitud-de-documentacion.md) | Completitud de documentación por unidad | Métrica nueva sobre datos existentes — define qué significa "completo" |
 
 **El runbook de cutover a mainnet vive aparte, no como spec**, porque no es código: es la secuencia
 operativa que asume que estas cuatro specs y los 7 ítems de "antes de mainnet" ya están cerrados.
-Ver [`RUNBOOK-mainnet-cutover.md`](RUNBOOK-mainnet-cutover.md).
+Ver [`RUNBOOK-mainnet-cutover.md`](../RUNBOOK-mainnet-cutover.md).
 
 ### Orden de ataque, y por qué
 

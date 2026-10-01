@@ -29,7 +29,7 @@ parte del repo.
 `info.description` afirma:
 
 > *"Body, query y **~24 respuestas de éxito** son el schema Zod real […] el resto de las respuestas
-> **sigue sin schema** (Tanda 2 de `specs/PLAN-2026-09-08-documentar-api-completa.md`)"*
+> **sigue sin schema** (Tanda 2 de `specs/archive/PLAN-2026-09-08-documentar-api-completa.md`)"*
 
 Contadas sobre el JSON commiteado: **76 de las 85 operaciones tienen schema de respuesta 2xx** — las
 9 restantes son legítimamente sin cuerpo (`204` o binario). Y el comentario de `RESPONSE_SCHEMAS`,

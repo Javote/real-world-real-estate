@@ -1,6 +1,6 @@
 # SPEC-113 — El contraste de los tokens de M2-D3 no llega a la vara que M2-D3 mismo fija
 
-> **Origen:** [`SPEC-112`](SPEC-112-pasada-de-accesibilidad-con-voiceover.md) §3, la capa de
+> **Origen:** [`SPEC-112`](../SPEC-112-pasada-de-accesibilidad-con-voiceover.md) §3, la capa de
 > Playwright + `axe-core`, medida en el navegador real el 2026-09-28 (mobile y desktop, 12
 > superficies). Nivel 🟡 — **pide una decisión del dueño antes que código**: toca tokens normativos.
 > No toca ningún criterio del SOM.

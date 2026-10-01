@@ -7,7 +7,7 @@ import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import { RAIZ } from "./api.mjs";
 
-export const RUNBOOK = join(RAIZ, "specs", "GUION-2026-09-21-video-walkthrough.md");
+export const RUNBOOK = join(RAIZ, "specs", "archive", "GUION-2026-09-21-video-walkthrough.md");
 
 // La sesión A es una sola toma (T01) desde el 2026-10-01: T02–T06 no existen.
 // Y T07 funde el panel y el alta (T08 no existe), y T09 la unidad, la invitación y

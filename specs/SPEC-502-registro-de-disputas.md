@@ -1,7 +1,7 @@
 # SPEC-502 — Registro de disputas
 
 > Milestone 4, criterio 1 (`disputes ≤3%`) y output 1 (fallback: *"failed inspection →
-> re-inspection/refund"`). Ver [`ESTADO-2026-09-22-catalyst-milestone-4.md`](ESTADO-2026-09-22-catalyst-milestone-4.md).
+> re-inspection/refund"`). Ver [`ESTADO-2026-09-22-catalyst-milestone-4.md`](archive/ESTADO-2026-09-22-catalyst-milestone-4.md).
 
 ## Propósito
 

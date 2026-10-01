@@ -122,7 +122,7 @@ sale.
 Las reglas 16 y 17 hacen que estos campos sean *la prueba misma*: son lo único que sostiene las
 cuatro afirmaciones del producto. Un contrato que no les pone forma es un contrato que no defiende
 lo que más importa.
-→ [`SPEC-402`](SPEC-402-los-hashes-y-txid-tienen-forma.md)
+→ [`SPEC-402`](../SPEC-402-los-hashes-y-txid-tienen-forma.md)
 
 ### P-04 🟡 · `authoritative` del multipart solo entiende el literal `"true"`
 
@@ -231,7 +231,7 @@ paranoia:
    salida al script, así que el `outputRef` apunta al vuelto de la wallet. Quien llama lo descarta
    —hoy—, y el campo miente igual.
 
-→ [`SPEC-407`](SPEC-407-el-outputref-se-busca-no-se-supone.md)
+→ [`SPEC-407`](../SPEC-407-el-outputref-se-busca-no-se-supone.md)
 
 ### C-03 🟡 · Lo que vuelve de la cadena entra sin validarse, por dos puertas
 
@@ -253,7 +253,7 @@ const vivo = utxos.find((u) => (u.assets[unit] ?? 0n) > 0n);   // findLiveThread
 Cualquiera puede pagar a la dirección de un script con el datum que quiera; el thread token, no —lo
 acuña el validador—. `findLiveThread` (el método más nuevo) usa el token; `verify()` no, y después
 le pasa ese datum al decoder sin validar. Son las dos mitades del mismo agujero.
-→ [`SPEC-408`](SPEC-408-lo-que-vuelve-de-la-cadena-se-valida.md)
+→ [`SPEC-408`](../SPEC-408-lo-que-vuelve-de-la-cadena-se-valida.md)
 
 ### C-04 🟢 · `verify()` inventa el `blockTimestamp` que `confirmedAt()`, en la misma clase, ya sabe leer
 

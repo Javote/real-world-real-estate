@@ -1,6 +1,6 @@
 # SPEC-304 — La clave del `admin` es irreemplazable por construcción, y hay que decirlo
 
-> **Origen:** [`AUDITORIA-2026-09-11-calidad-de-contracts.md`](AUDITORIA-2026-09-11-calidad-de-contracts.md)
+> **Origen:** [`AUDITORIA-2026-09-11-calidad-de-contracts.md`](archive/AUDITORIA-2026-09-11-calidad-de-contracts.md)
 > §C-02. Nivel 🟢 (es documentación). **Independiente.** **No es código**: lo que falta es una
 > decisión escrita y una línea en el checklist de mainnet. Cambiar el diseño es 🔴 y no entra acá.
 

@@ -1016,7 +1016,7 @@ la deuda de distinguir 404 de 403 desde afuera se conserva tal cual (`SPEC-012`)
 **Se pudo hacer recién ahora.** `SPEC-012` prohíbe cambiar semántica de seguridad adentro de un
 refactor, y hasta que existió la matriz no había forma de *probar* que un refactor no la cambiaba.
 Matriz (2026-09-03) → `requireOwnership` (2026-09-04) → unificación: cada paso habilita el
-siguiente. La secuencia completa está en `specs/PLAN-2026-09-04-guard-unico.md`.
+siguiente. La secuencia completa está en `specs/archive/PLAN-2026-09-04-guard-unico.md`.
 
 **La partición, hecha el mismo día.** `"soloRol"` quedaba en 45 de 87 rutas y **26 de ellas sí
 tenían regla de fila**, aplicada por el handler en su query. Decir "esta ruta no tiene regla de fila"

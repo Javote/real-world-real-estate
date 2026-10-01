@@ -2,7 +2,7 @@
 name: implementador-de-lote
 description: >-
   Implementa UN lote de tests de apps/web que ya está especificado al detalle —un lote W1…W9 de
-  specs/SPEC-019-cobertura-de-apps-web.md, o una parte acotada de
+  specs/archive/SPEC-019-cobertura-de-apps-web.md, o una parte acotada de
   specs/SPEC-112-pasada-de-accesibilidad-con-voiceover.md (tests con axe-core en Vitest o
   Playwright)—, en su propio worktree, testea solo lo suyo, commitea en su rama y devuelve un
   reporte. No pushea ni mergea: eso lo hace quien lo lanza. Pasale en el prompt la spec, el lote y

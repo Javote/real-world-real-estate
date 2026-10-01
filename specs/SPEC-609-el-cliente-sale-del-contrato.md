@@ -3,7 +3,7 @@
 > Serie `6xx`, refactor post-M3 ([`PROPUESTA-2026-09-30-refactor-post-m3.md`](PROPUESTA-2026-09-30-refactor-post-m3.md)).
 > **No es mandato hasta entregar M3.** Nivel 🟢: la API no cambia; cambia cómo el front tipa sus
 > llamadas. **Depende de [`SPEC-607`](SPEC-607-una-sola-capa-de-api.md)**: sin el contrato en `shared`,
-> no hay de dónde derivar el cliente. **Reabre [`SPEC-111`](SPEC-111-callsites-de-apps-web-al-cliente-orpc.md)
+> no hay de dónde derivar el cliente. **Reabre [`SPEC-111`](archive/SPEC-111-callsites-de-apps-web-al-cliente-orpc.md)
 > a pedido del dueño (2026-09-30).**
 
 ## Qué había quedado de `SPEC-111`

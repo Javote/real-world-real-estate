@@ -6,7 +6,7 @@
 > **Cerrada 2026-09-22, por lo que sí es código: las dos regiones, `useAnnounce()` y su cableado en
 > las tres clases de evento (§Diseño/§Invariantes) están implementados y con tests automatizados
 > (cerrado 2026-09-19).** Lo único que quedaba —la pasada manual con VoiceOver de §Verificación— se
-> separó a [`SPEC-112`](SPEC-112-pasada-de-accesibilidad-con-voiceover.md): no es una condición para
+> separó a [`SPEC-112`](../SPEC-112-pasada-de-accesibilidad-con-voiceover.md): no es una condición para
 > que esta spec esté "hecha", es una verificación manual más amplia que esta spec sola no agotaba
 > (confirma lo que ya se construyó, y de paso cubre accesibilidad que esta spec nunca prometió —
 > foco, labels, jerarquía de headings). Separarla evita que una tarea de QA sin fecha mantenga
@@ -73,5 +73,5 @@ la cadena", "3 etapas actualizadas"— es `polite`.
 Con VoiceOver sobre `pnpm dev` en los tres caminos: login fallido, subida de evidencia con anclaje, y
 una transición que llegue por poll. Un `grep` no alcanza para esto: el atributo presente no prueba
 que se haya anunciado. **Estos tres caminos son el primer paso de la pasada de
-[`SPEC-112`](SPEC-112-pasada-de-accesibilidad-con-voiceover.md)**, que los hereda y los amplía al
+[`SPEC-112`](../SPEC-112-pasada-de-accesibilidad-con-voiceover.md)**, que los hereda y los amplía al
 resto de la app.

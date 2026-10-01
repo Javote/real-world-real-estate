@@ -1,6 +1,6 @@
 # SPEC-407 — El `outputRef` del recibo se busca, no se supone
 
-> **Origen:** [`AUDITORIA-2026-09-11-calidad-de-packages.md`](AUDITORIA-2026-09-11-calidad-de-packages.md)
+> **Origen:** [`AUDITORIA-2026-09-11-calidad-de-packages.md`](archive/AUDITORIA-2026-09-11-calidad-de-packages.md)
 > §C-02. Nivel 🟡 — toca la construcción de transacciones. **Independiente.**
 > No toca ningún criterio del SOM, pero **vale antes de mainnet**: es el campo cuyo error no se
 > deshace.

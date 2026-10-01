@@ -84,7 +84,7 @@ En concreto, **la recomendación de la auditoría es no hacerlo, al menos no aho
   para que quede más lindo.
 
 **Cuándo reconsiderarlo:** si se toma la fusión de anclaje y transición
-([`PROPUESTA-2026-09-09`](PROPUESTA-2026-09-09-fusionar-anclaje-evidencia-transicion.md)), que agrega
+([`PROPUESTA-2026-09-09`](../PROPUESTA-2026-09-09-fusionar-anclaje-evidencia-transicion.md)), que agrega
 un camino de transacción más. Ahí la separación deja de ser estética y pasa a ser lo que hace
 revisable el cambio — y conviene que venga **junto** con él, no antes.
 

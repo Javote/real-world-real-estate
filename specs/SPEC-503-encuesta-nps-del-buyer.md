@@ -1,6 +1,6 @@
 # SPEC-503 — Encuesta NPS del buyer
 
-> Milestone 4, criterio 1 (`buyer NPS ≥70`). Ver [`ESTADO-2026-09-22-catalyst-milestone-4.md`](ESTADO-2026-09-22-catalyst-milestone-4.md).
+> Milestone 4, criterio 1 (`buyer NPS ≥70`). Ver [`ESTADO-2026-09-22-catalyst-milestone-4.md`](archive/ESTADO-2026-09-22-catalyst-milestone-4.md).
 
 ## Propósito
 

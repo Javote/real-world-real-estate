@@ -1,6 +1,6 @@
 # SPEC-114 — Lo que un lector de pantalla no puede nombrar ni ubicar
 
-> **Origen:** [`SPEC-112`](SPEC-112-pasada-de-accesibilidad-con-voiceover.md) §2 y §3, las capas
+> **Origen:** [`SPEC-112`](../SPEC-112-pasada-de-accesibilidad-con-voiceover.md) §2 y §3, las capas
 > de `axe-core`: `pnpm --filter web test:a11y` sobre los 1596 tests de Vitest y
 > `e2e/a11y.spec.ts` en el navegador real, las dos medidas el 2026-09-28. Nivel 🟢.
 > **Independiente** de `SPEC-113`. No toca ningún criterio del SOM.

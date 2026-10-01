@@ -153,7 +153,7 @@ que faltaba.
 | **Property tests sobre `valid_datum_evolution`** — el único lugar del subárbol con espacio de entrada ancho de verdad; la tabla de transiciones de arriba ya está probada exhaustivamente y ahí un property test no agregaría nada (`SPEC-306`). Generador de `StageDatum` con refs/roots de largo variado, incluidos 0 y 32 | `prop_non_completing_evolution_preserves_evidence`, `prop_evolution_never_bypasses_the_transition_table` (2, 100 casos c/u) |
 | Nacimiento del hilo: estado inicial, evidencia y fecha en cero, orden positivo, refs no vacías y ≤32 bytes | `t_initial_*` (7) |
 | El datum codifica al mismo CBOR que el códec de `packages/cardano` espera — el "valor dorado" (ver `packages/cardano/CLAUDE.md`) | `t_golden_datum_encoding` (1) |
-| El redeemer (`StageRedeemer`/`MintAction`) codifica al mismo CBOR que `encodeAdvanceRedeemer`/`encodeInitRedeemer` de `packages/cardano` — mismo boundary que el datum, cerrado el 2026-09-08 (`specs/PLAN-2026-09-08-tests-aiken-robustez.md`) | `t_golden_redeemer_*` (3) |
+| El redeemer (`StageRedeemer`/`MintAction`) codifica al mismo CBOR que `encodeAdvanceRedeemer`/`encodeInitRedeemer` de `packages/cardano` — mismo boundary que el datum, cerrado el 2026-09-08 (`specs/archive/PLAN-2026-09-08-tests-aiken-robustez.md`) | `t_golden_redeemer_*` (3) |
 
 `validators/stage.ak` — 54 (10 caminos felices + 43 puntos de rechazo + 1 sobre el `else`
 genérico). Los 14 que suma `SPEC-017` (cerrado 2026-09-22) aíslan un punto de rechazo que otro test
@@ -226,7 +226,7 @@ Los negativos van marcados `test ... fail` porque los `expect` abortan en vez de
   `apps/api` lo llama desde `PATCH /milestones/:id/state` y `POST /evidence/:id/anchor`
   (`apps/api/src/lib/anchor.ts`, `apps/api/src/domain/stage-transition.ts`). El detalle de qué
   falta (rebanada C — `verify()`/`reconcile()` contra la cadena real, y Preprod) vive en
-  `specs/SPEC-013-anchorport.md`, no acá.
+  `specs/archive/SPEC-013-anchorport.md`, no acá.
 - **La clave del `admin` no es rotable (D-093, `SPEC-304`).** Es un parámetro del script: la
   dirección y el policy id son función de esa clave. Si `SERVICE_WALLET_PRIVATE_KEY` se pierde o se
   compromete, todos los hilos vivos quedan congelados para siempre —`spend` exige su firma sin

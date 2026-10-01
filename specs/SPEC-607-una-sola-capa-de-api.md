@@ -3,7 +3,7 @@
 > Serie `6xx`, refactor post-M3 ([`PROPUESTA-2026-09-30-refactor-post-m3.md`](PROPUESTA-2026-09-30-refactor-post-m3.md)).
 > **No es mandato hasta entregar M3.** Nivel 🟡: auth, guards y la forma de todas las rutas.
 > **Reabre una decisión, a pedido del dueño (2026-09-30)**: la invariante 3 de
-> [`SPEC-212`](SPEC-212-contrato-en-la-firma-de-la-ruta.md) (`authorize` corre en Express, antes que
+> [`SPEC-212`](archive/SPEC-212-contrato-en-la-firma-de-la-ruta.md) (`authorize` corre en Express, antes que
 > oRPC). Pide un **D-NNN nuevo** que la reemplace, escrito en el mismo commit que la implementa.
 > Es la base de [`SPEC-608`](SPEC-608-los-archivos-por-concepto.md) y [`SPEC-609`](SPEC-609-el-cliente-sale-del-contrato.md).
 
@@ -17,7 +17,7 @@ terminó (`SPEC-216`), y lo que quedó es una forma que nadie eligió como desti
 | Hoy (medido el 2026-09-30) | Costo |
 |---|---|
 | **Dos declaraciones por ruta.** `router.metodo(path, authenticate, authorize(...), delegarAOrpc(handler, PREFIJO))` en Express, y `.route({ method, path })` en oRPC. **El path se escribe dos veces** | 90 `router.*` + 90 `delegarAOrpc` + un `new OpenAPIHandler` por procedimiento |
-| **Los routers que comparten prefijo tienen que declarar los mismos guards de router** (`route-guards.test.ts`, "los routers que comparten prefijo") | Es el costo que hace caro partir archivos ([`SPEC-015`](SPEC-015-saneamiento-de-la-instrumentacion.md) §6) |
+| **Los routers que comparten prefijo tienen que declarar los mismos guards de router** (`route-guards.test.ts`, "los routers que comparten prefijo") | Es el costo que hace caro partir archivos ([`SPEC-015`](archive/SPEC-015-saneamiento-de-la-instrumentacion.md) §6) |
 | **El schema vive en la API**, no en `shared`: el cliente no lo puede derivar | Es la mitad de D-066 que no se cumplió. D-066 dice que del contrato *"se derivan **los handlers y el cliente**"* ([`SPEC-609`](SPEC-609-el-cliente-sale-del-contrato.md)) |
 
 ## Qué se probó antes de escribir esto (2026-09-30, oRPC 1.15.2, con código descartable)
@@ -49,7 +49,7 @@ terminó (`SPEC-216`), y lo que quedó es una forma que nadie eligió como desti
    `/health`, los dos rate limiters (montados en sus paths, delante del handler), Sentry, el 404 JSON
    y `errorHandler`. **Reemplazar Express no entra**: lo que haría otro framework, esto ya lo logra.
 6. **La única ruta que sigue siendo Express es la subida multipart**
-   (`POST /developer/projects/:id/stages/:stageId/evidence`). [`SPEC-218`](SPEC-218-subida-de-evidencia-por-lote.md)
+   (`POST /developer/projects/:id/stages/:stageId/evidence`). [`SPEC-218`](archive/SPEC-218-subida-de-evidencia-por-lote.md)
    la dejó con Multer a disco para no pasar el archivo por RAM. Declara su guard con `authorize`, y
    `route-guards.test.ts` la lee de Express. Es **una excepción con nombre**, no una segunda forma.
 

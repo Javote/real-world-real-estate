@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 // Verifica, SOLO LEYENDO, que producción está como el runbook del video espera
-// (specs/GUION-2026-09-21-video-walkthrough.md). Se corre el día anterior y
+// (specs/archive/GUION-2026-09-21-video-walkthrough.md). Se corre el día anterior y
 // otra vez antes de la sesión B:
 //
 //   node scripts/video-walkthrough/verificar-produccion.mjs            # antes de grabar

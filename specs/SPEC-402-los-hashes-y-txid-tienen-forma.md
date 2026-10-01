@@ -1,6 +1,6 @@
 # SPEC-402 — Los 36 hashes y TXID del contrato tienen forma
 
-> **Origen:** [`AUDITORIA-2026-09-11-calidad-de-packages.md`](AUDITORIA-2026-09-11-calidad-de-packages.md)
+> **Origen:** [`AUDITORIA-2026-09-11-calidad-de-packages.md`](archive/AUDITORIA-2026-09-11-calidad-de-packages.md)
 > §P-03. Nivel 🟢. **Independiente.** No toca ningún criterio del SOM, pero **vale antes de
 > mainnet**: es lo único que separa un "Verificado" real de uno que nadie validó.
 

@@ -1,6 +1,6 @@
 # SPEC-305 — El próximo cambio de script hash: unicidad del hilo on-chain y el tope de `evidence_root`
 
-> **Origen:** [`AUDITORIA-2026-09-11-calidad-de-contracts.md`](AUDITORIA-2026-09-11-calidad-de-contracts.md)
+> **Origen:** [`AUDITORIA-2026-09-11-calidad-de-contracts.md`](archive/AUDITORIA-2026-09-11-calidad-de-contracts.md)
 > §C-01 paso 3 y §C-04. Nivel 🟡/🔴. **Independiente de las otras cuatro**, y la única de la serie
 > que **cambia el script hash**. No toca ningún criterio del SOM.
 >
@@ -12,7 +12,7 @@
 >
 > **Es decisión de mainnet y no debería tomarse dentro del Milestone 3.** Lo urgente de C-01 —que la
 > afirmación publicada sea verdadera y que el backend no mintee dos veces— ya está resuelto sin
-> tocar el script en [`SPEC-301`](SPEC-301-unicidad-del-hilo-no-depende-de-la-base.md).
+> tocar el script en [`SPEC-301`](archive/SPEC-301-unicidad-del-hilo-no-depende-de-la-base.md).
 
 ## Por qué el script hash es la restricción
 
@@ -40,7 +40,7 @@ trabajo nuevo de esta spec, y es la parte que hay que presupuestar.
 `mint` garantiza *un token por transacción*, no *uno por stage*: no mira `tx.inputs`, así que una
 segunda tx re-acuña el mismo asset name. Reproducido en la auditoría (`tmp_mint_is_not_one_shot`, las
 dos llamadas dan `True`). El detalle completo y el camino alcanzable desde el backend están en
-[`SPEC-301`](SPEC-301-unicidad-del-hilo-no-depende-de-la-base.md); acá interesa solo cerrarlo en el
+[`SPEC-301`](archive/SPEC-301-unicidad-del-hilo-no-depende-de-la-base.md); acá interesa solo cerrarlo en el
 validador.
 
 ### Por qué el patrón habitual no sirve

@@ -3,7 +3,7 @@
 > Este runbook **asume que las specs de abajo ya están cerradas**. No es una lista de trabajo — es
 > la secuencia operativa para el día en que sí lo estén. Complementa a
 > [`RUNBOOK-deploy.md`](RUNBOOK-deploy.md) (deploy/rollback de Preprod, que no cambia) y a
-> [`ESTADO-2026-09-22-catalyst-milestone-4.md`](ESTADO-2026-09-22-catalyst-milestone-4.md) (qué pide
+> [`ESTADO-2026-09-22-catalyst-milestone-4.md`](archive/ESTADO-2026-09-22-catalyst-milestone-4.md) (qué pide
 > Catalyst y qué falta). **No ejecutar nada de acá mientras M3 no esté entregado** — D-013 sigue
 > vigente hasta que el dueño la revierta explícitamente.
 

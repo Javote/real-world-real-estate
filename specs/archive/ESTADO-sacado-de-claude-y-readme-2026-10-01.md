@@ -5,22 +5,22 @@
 
 ## Del CLAUDE.md raíz: el encabezado
 
-> **Documento de trabajo activo:** [`specs/ESTADO-2026-09-10-catalyst-milestone-3.md`](specs/ESTADO-2026-09-10-catalyst-milestone-3.md)
+> **Documento de trabajo activo:** [`specs/archive/ESTADO-2026-09-10-catalyst-milestone-3.md`](ESTADO-2026-09-10-catalyst-milestone-3.md)
 > — el cruce contra los 5 Outputs oficiales del Milestone 3 tal como los publica Catalyst, con lo
 > que falta consolidado en una tabla. Es el punto de partida de la próxima sesión.
 >
 > **Las cuatro auditorías del 2026-09-11** (frente, backend, `contracts/`, `packages/`) están
 > transcritas a specs implementables, una por hallazgo, y **el estado de cada una lo lleva
-> [`specs/README.md` §Las cuatro series de pulido](specs/README.md)** — no esta tabla, que solo
+> [`specs/README.md` §Las cuatro series de pulido](../README.md)** — no esta tabla, que solo
 > dice dónde buscar. **Ninguno de los 53 hallazgos toca los 16 criterios del SOM.** Lo que sí hay
 > que decidir antes de mainnet está abajo, en §Antes de mainnet.
 
 | Auditoría | Qué audita | Hallazgos | Serie |
 |---|---|---|---|
-| [`…-calidad-del-frente`](specs/AUDITORIA-2026-09-11-calidad-del-frente.md) | accesibilidad, responsive y mantenibilidad, medidas en el navegador contra las 42 rutas | 18 | `SPEC-101`…`110` |
-| [`…-calidad-del-backend`](specs/AUDITORIA-2026-09-11-calidad-del-backend.md) | los 51 archivos de `apps/api/src`, leídos completos | 15 | `SPEC-201`…`215` |
-| [`…-calidad-de-contracts`](specs/AUDITORIA-2026-09-11-calidad-de-contracts.md) | los dos archivos Aiken — **la parte mejor organizada del repo** | 6 | `SPEC-301`…`306` |
-| [`…-calidad-de-packages`](specs/AUDITORIA-2026-09-11-calidad-de-packages.md) | los dos packages compartidos — **el código mejor tipado del repo** | 14 | `SPEC-401`…`412` |
+| [`…-calidad-del-frente`](AUDITORIA-2026-09-11-calidad-del-frente.md) | accesibilidad, responsive y mantenibilidad, medidas en el navegador contra las 42 rutas | 18 | `SPEC-101`…`110` |
+| [`…-calidad-del-backend`](AUDITORIA-2026-09-11-calidad-del-backend.md) | los 51 archivos de `apps/api/src`, leídos completos | 15 | `SPEC-201`…`215` |
+| [`…-calidad-de-contracts`](AUDITORIA-2026-09-11-calidad-de-contracts.md) | los dos archivos Aiken — **la parte mejor organizada del repo** | 6 | `SPEC-301`…`306` |
+| [`…-calidad-de-packages`](AUDITORIA-2026-09-11-calidad-de-packages.md) | los dos packages compartidos — **el código mejor tipado del repo** | 14 | `SPEC-401`…`412` |
 
 **Las cuatro dejaron bugs reales, no solo pulido, y los reproducidos ya están cerrados:** `SPEC-201`
 y `SPEC-202` eran corrupción de datos (dos invitaciones sobre la misma unidad; dos dossiers para una
@@ -74,16 +74,16 @@ tampoco tiene campo de signer. El criterio 3 queda sin código pendiente.
 pilotos, criterio 4 — se cerró: confirmado por el dueño el 2026-09-22. `3.15` — cobertura ≥95% en
 toda la app, criterio 2 — se cerró el 2026-09-24: las cuatro partes TypeScript en 100% en las
 cuatro métricas y CI corriendo `test:coverage` con umbral en las cuatro, detalle en
-[`specs/SPEC-019-cobertura-de-apps-web.md`](specs/SPEC-019-cobertura-de-apps-web.md). `3.14` —
+[`specs/archive/SPEC-019-cobertura-de-apps-web.md`](SPEC-019-cobertura-de-apps-web.md). `3.14` —
 muestras de reserva → escrow, criterio 9 — se cerró el 2026-09-28: 6 compras reales en Preprod,
 mediana 0.33 min, en
-[`specs/evidencia-m3/3-preprod/reservation-to-escrow-report.md`](specs/evidencia-m3/3-preprod/reservation-to-escrow-report.md).)
+[`specs/evidencia-m3/3-preprod/reservation-to-escrow-report.md`](../evidencia-m3/3-preprod/reservation-to-escrow-report.md).)
 
 | | Qué | Criterio |
 |---|---|---|
-| 3.12 | **Video walkthrough** — runbook paso a paso, listo para grabar, en [`specs/GUION-2026-09-21-video-walkthrough.md`](specs/GUION-2026-09-21-video-walkthrough.md): preparar, grabar en dos sesiones, recortar, voz, unir y cerrar (9 tomas, cada una con sus marcas de tiempo de pantalla y de voz; revisado contra el código el 2026-09-28; el 2026-09-30 el dueño sacó la sesión C y el video cierra en el audit log; el 2026-10-01 la sesión A pasó a ser una sola toma de 3:33, y el panel y el alta del developer otra de 3:00 (T07), y la unidad, la invitación y la evidencia otra de 3:15 (T09), y aceptar, la unidad y el contrato otra de 1:44 (T12), y observar, reanudar y certificar otra de 1:27 (T18), y el dossier y la firma otra de 1:38 (T23), las seis ya grabadas y con narración del dueño). **Cerrado el 2026-10-01:** el `walkthrough-final.mp4` (16:16) salió con la voz baja (−25 LUFS); se normalizó a −16 LUFS y se recomprimió a menos de 100 MB (el límite de archivo de GitHub) en [`specs/evidencia-m3/3-preprod/walkthrough-video.mp4`](specs/evidencia-m3/3-preprod/walkthrough-video.mp4), con su `.srt`. El original y el normalizado en calidad completa quedan fuera del repo, en `~/Movies/propnexus-walkthrough/`. **No es lo mismo que `SPEC-104`/`SPEC-112`**: esas son accesibilidad (`aria-live`, verificada con el lector de pantalla VoiceOver de macOS), no narración de video — coinciden en la palabra "voice" y nada más. `SPEC-104` ya cerró; `SPEC-112` (la pasada de accesibilidad) sigue abierta, pero por su cuenta, sin relación con este ítem | 13 ✅ |
+| 3.12 | **Video walkthrough** — runbook paso a paso, listo para grabar, en [`specs/archive/GUION-2026-09-21-video-walkthrough.md`](GUION-2026-09-21-video-walkthrough.md): preparar, grabar en dos sesiones, recortar, voz, unir y cerrar (9 tomas, cada una con sus marcas de tiempo de pantalla y de voz; revisado contra el código el 2026-09-28; el 2026-09-30 el dueño sacó la sesión C y el video cierra en el audit log; el 2026-10-01 la sesión A pasó a ser una sola toma de 3:33, y el panel y el alta del developer otra de 3:00 (T07), y la unidad, la invitación y la evidencia otra de 3:15 (T09), y aceptar, la unidad y el contrato otra de 1:44 (T12), y observar, reanudar y certificar otra de 1:27 (T18), y el dossier y la firma otra de 1:38 (T23), las seis ya grabadas y con narración del dueño). **Cerrado el 2026-10-01:** el `walkthrough-final.mp4` (16:16) salió con la voz baja (−25 LUFS); se normalizó a −16 LUFS y se recomprimió a menos de 100 MB (el límite de archivo de GitHub) en [`specs/evidencia-m3/3-preprod/walkthrough-video.mp4`](../evidencia-m3/3-preprod/walkthrough-video.mp4), con su `.srt`. El original y el normalizado en calidad completa quedan fuera del repo, en `~/Movies/propnexus-walkthrough/`. **No es lo mismo que `SPEC-104`/`SPEC-112`**: esas son accesibilidad (`aria-live`, verificada con el lector de pantalla VoiceOver de macOS), no narración de video — coinciden en la palabra "voice" y nada más. `SPEC-104` ya cerró; `SPEC-112` (la pasada de accesibilidad) sigue abierta, pero por su cuenta, sin relación con este ítem | 13 ✅ |
 
-**La evidencia para enviar vive en [`specs/evidencia-m3/`](specs/evidencia-m3/README.md), en
+**La evidencia para enviar vive en [`specs/evidencia-m3/`](../evidencia-m3/README.md), en
 inglés y solo lo exportable**, una subcarpeta por ítem de *"Evidence of milestone completion"*. Los
 documentos de trabajo en castellano de los que salen (prueba de volumen, TXIDs, security review,
 runbook, monitoreo, reporte de tests) siguen en `specs/` y son los que se mantienen: **si cambia uno,
@@ -92,9 +92,9 @@ se actualiza su versión en inglés en el mismo commit**, y su PDF con `bash scr
 
 Lo cerrado —las tres Tandas de esquema, código y documentación, y la prueba de volumen que dio los
 criterios 8 y 15— está ítem por ítem en
-[`specs/ESTADO-2026-09-10-catalyst-milestone-3.md`](specs/ESTADO-2026-09-10-catalyst-milestone-3.md),
+[`specs/archive/ESTADO-2026-09-10-catalyst-milestone-3.md`](ESTADO-2026-09-10-catalyst-milestone-3.md),
 con el detalle de la prueba en
-[`specs/REPORTE-2026-09-10-prueba-de-volumen.md`](specs/REPORTE-2026-09-10-prueba-de-volumen.md)
+[`specs/REPORTE-2026-09-10-prueba-de-volumen.md`](../REPORTE-2026-09-10-prueba-de-volumen.md)
 (30/30 etapas `Completed`, 180/180 eventos `Confirmed`, **~99.8 ADA** de costo real medido, y las 3
 capas de autocura que salieron del único hallazgo). Los criterios **6, 8, 9, 14 y 15** quedaron ✅.
 
@@ -108,7 +108,7 @@ capas de autocura que salieron del único hallazgo). Los criterios **6, 8, 9, 14
 | **"Contenido en `Pending`"** | Mejora de UX, ningún criterio la pide. Necesita que el listado de stages devuelva el anclaje y reconcilie |
 | **Columna `AuditLog.projectId`** | Sacaría el mapeo fail-closed de `auditScope`. Pide backfill que para filas viejas no tiene respuesta |
 | **`validationCritical` siempre `true`** | Config muerta con rama viva y testeada en el validador. No molesta |
-| **Upload directo del navegador a R2 (sin pasar por Render)** | Hoy el archivo hace escala en `UPLOAD_DIR` (Multer a disco, en streaming) antes de llegar al bucket. **Ojo: el argumento de RAM que figuraba acá no aplica a Multer** — con `diskStorage` el body no pasa por memoria (`SPEC-218` §Los hallazgos); lo que pesa es disco efímero y latencia. Un presigned URL lo evitaría, pero es un cambio de forma real (CORS, flujo de 3 pasos en el front) y el hash sigue teniendo que releerse desde R2 igual (D-027). **Después de mainnet** — el diseño y el costo, en [`specs/archive/CLAUDE-argumentos-de-las-reglas-2026-09-20.md`](specs/archive/CLAUDE-argumentos-de-las-reglas-2026-09-20.md) §Anexo |
+| **Upload directo del navegador a R2 (sin pasar por Render)** | Hoy el archivo hace escala en `UPLOAD_DIR` (Multer a disco, en streaming) antes de llegar al bucket. **Ojo: el argumento de RAM que figuraba acá no aplica a Multer** — con `diskStorage` el body no pasa por memoria (`SPEC-218` §Los hallazgos); lo que pesa es disco efímero y latencia. Un presigned URL lo evitaría, pero es un cambio de forma real (CORS, flujo de 3 pasos en el front) y el hash sigue teniendo que releerse desde R2 igual (D-027). **Después de mainnet** — el diseño y el costo, en [`specs/archive/CLAUDE-argumentos-de-las-reglas-2026-09-20.md`](CLAUDE-argumentos-de-las-reglas-2026-09-20.md) §Anexo |
 | **La espera al crear un proyecto** | Los 10 mints tardaban minutos porque cada uno esperaba su bloque adentro de la request (`awaitTx`). Eso se sacó (AUDITORIA-2026-10-01 §9, ítem 3): ahora pesa solo construir y enviar diez transacciones en serie. Falta medirlo en Preprod y, si sigue largo, la UI de la espera |
 | **"Evidence by stage" del investor no abre una etapa en curso** | El chip solo se activa con el `txid` de la transición a `Completed` (`StageChips.tsx:34`, `investor.routes.ts:271`): una etapa `InProgress` con su paquete de evidencia ya anclado queda deshabilitada. Visto grabando T17, que salió del video (2026-10-01). Hay que decidir si el chip se activa con el anclaje de la evidencia |
 | **El "Certify" de la cola del certifier solo abre la etapa** | En "Assigned" y en el panel, el botón de cada etapa dice "Certify" pero navega a `/certifier/stage/:id` (`AssignedStagesQueue.tsx:60`); el que certifica de verdad está abajo de esa pantalla, al lado de "Observe". Confunde justo antes de una acción irrepetible. Visto grabando T18 (2026-10-01) |
@@ -157,10 +157,10 @@ lo que no está en esta tabla de `SPEC-401`…`SPEC-412`) ya está resuelto o es
 # Estado, y lo próximo
 
 > **Lo que falta está en §Lo que queda del plan, arriba, y en
-> [`specs/ESTADO-2026-09-10-catalyst-milestone-3.md`](specs/ESTADO-2026-09-10-catalyst-milestone-3.md)**
+> [`specs/archive/ESTADO-2026-09-10-catalyst-milestone-3.md`](ESTADO-2026-09-10-catalyst-milestone-3.md)**
 > (el cruce contra los 5 Outputs oficiales de Catalyst). Acá queda el único ítem que no encaja en
 > ninguna Tanda. **El historial de lo ya cerrado —narración día a día hasta el 2026-09-08— vive en
-> [`specs/archive/CLAUDE-historial-hasta-2026-09-10.md`](specs/archive/CLAUDE-historial-hasta-2026-09-10.md)**:
+> [`specs/archive/CLAUDE-historial-hasta-2026-09-10.md`](CLAUDE-historial-hasta-2026-09-10.md)**:
 > sigue siendo válido tal cual, solo que ya no es "lo próximo".
 
 **Mainnet** — runbook, habilitar la red, custodia de la clave. **Fuera de alcance de este milestone**

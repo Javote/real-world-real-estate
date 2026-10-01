@@ -50,7 +50,7 @@ entre web y los packages de Node.
 | Playwright (E2E) | `1.62` | ● | solo Chromium · **no corre en CI**, a mano |
 | Leaflet + tiles de OpenStreetMap | — | ● | Los mapas (`LocationMapModal`). Los tiles son la única request del navegador que no va a nuestra API |
 
-El front se reconstruye desde los entregables: ver [`SPEC-014`](SPEC-014-reconstruccion-del-front.md)
+El front se reconstruye desde los entregables: ver [`SPEC-014`](archive/SPEC-014-reconstruccion-del-front.md)
 por qué se conserva y qué se borra.
 
 ## 3 · Backend — `apps/api`

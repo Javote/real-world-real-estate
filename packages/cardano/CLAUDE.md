@@ -1,7 +1,7 @@
 # packages/cardano — el `AnchorPort`
 
 > Se carga solo al tocar este subárbol. Lo transversal está en el `CLAUDE.md` de la raíz;
-> el plan de las tres rebanadas, en `specs/SPEC-013-anchorport.md`.
+> el plan de las tres rebanadas, en `specs/archive/SPEC-013-anchorport.md`.
 
 **Es la única puerta a Cardano** (D-014). Nada fuera de acá importa Lucid ni Blockfrost; la API pide
 el puerto y no sabe que la cadena existe.

@@ -26,7 +26,7 @@
 | **5** | Unir todo, con subtítulos | `unir.sh` (o el estudio, si no hay ffmpeg) | ~10 min |
 | **6** | Mirar el resultado y cerrar | — | ~25 min |
 
-**Todas las herramientas están en [`scripts/video-walkthrough/`](../scripts/video-walkthrough/README.md)**
+**Todas las herramientas están en [`scripts/video-walkthrough/`](../../scripts/video-walkthrough/README.md)**
 y se corren desde la raíz del repo, en la Terminal (Cmd+Espacio → "Terminal" → Enter):
 
 ```bash
@@ -943,7 +943,7 @@ bastante más.
 | **Orden del final** | La firma del escribano (T23) va **antes** de la vista pública (T27). | La vista pública muestra el dossier **ya firmado**, con su badge "Signed". Cambió el 2026-09-28. |
 
 **Los tiempos de espera** salen de
-[`REPORTE-2026-09-10-prueba-de-volumen.md`](REPORTE-2026-09-10-prueba-de-volumen.md) §Cronología
+[`REPORTE-2026-09-10-prueba-de-volumen.md`](../REPORTE-2026-09-10-prueba-de-volumen.md) §Cronología
 (180 anclajes reales contra Preprod). **La cobertura:** el recorrido completo del flujo —comprar,
 crear un proyecto, las cuatro aristas de la FSM, el dossier, la firma y la vista pública— y cierra
 en el audit log. **Desde el 2026-09-30 (decisión del dueño) el video no pasa por** la documentación,
@@ -974,7 +974,7 @@ Para no prometer en audio algo que la pantalla no hace:
 - **No hay PWA instalable.** `index.html` no linkea el manifest, no hay service worker registrado y
   `apps/web/public/manifest.json` sigue siendo el boilerplate de Create TanStack App ("Create
   TanStack App Sample"). Chrome no va a ofrecer instalar. **La PWA la decidió D-065 y nunca se hizo:** queda especificada en
-  [`SPEC-222`](SPEC-222-la-pwa-que-d-065-decidio.md), postergada a después del video. No la
+  [`SPEC-222`](../SPEC-222-la-pwa-que-d-065-decidio.md), postergada a después del video. No la
   menciones en el audio.
 - **No hay botón de liberar pagos.** D-070 lo sacó a propósito: este producto no administra fondos,
   refleja y respalda lo que pasa afuera (D-026). El endpoint

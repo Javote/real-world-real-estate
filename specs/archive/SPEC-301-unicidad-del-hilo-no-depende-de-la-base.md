@@ -3,7 +3,7 @@
 > **Origen:** [`AUDITORIA-2026-09-11-calidad-de-contracts.md`](AUDITORIA-2026-09-11-calidad-de-contracts.md)
 > §C-01, pasos 1 y 2. Nivel 🟡 (camino de anclaje). **Independiente.** No toca ningún criterio del
 > SOM y **no cambia el script hash** — cerrar el agujero *on-chain* es otra cosa y vive en
-> [`SPEC-305`](SPEC-305-el-proximo-cambio-de-script-hash.md).
+> [`SPEC-305`](../SPEC-305-el-proximo-cambio-de-script-hash.md).
 
 ## El problema, reproducido
 
@@ -32,7 +32,7 @@ el mismo `stage_ref` y distinto input de semilla, exigiendo que las dos den `Tru
    **nunca toca la cadena**.
 4. El estado "`outputRef` en `null` con el hilo vivo on-chain" está documentado en el propio archivo
    (`:231-236`) y **ya ocurrió**: son las dos etapas con anclaje perdido del
-   [`REPORTE-2026-09-10-prueba-de-volumen.md`](REPORTE-2026-09-10-prueba-de-volumen.md).
+   [`REPORTE-2026-09-10-prueba-de-volumen.md`](../REPORTE-2026-09-10-prueba-de-volumen.md).
 
 En ese estado la guarda pasa, se mintea de nuevo y quedan **dos hilos vivos con el mismo asset
 name**, cada uno capaz de avanzar por su cuenta a estados distintos. Después `findLiveThread`
@@ -67,7 +67,7 @@ su propio doc-comment usa para no repetir la promoción a `Confirmed`: **la mism
 lugares diverge**. El retry detecta y nombra; reconcile repara.
 
 **No toca el validador.** El agujero on-chain sigue abierto después de esta spec, a propósito:
-cerrarlo cambia el script hash y es decisión de mainnet ([`SPEC-305`](SPEC-305-el-proximo-cambio-de-script-hash.md)).
+cerrarlo cambia el script hash y es decisión de mainnet ([`SPEC-305`](../SPEC-305-el-proximo-cambio-de-script-hash.md)).
 
 **No corre reconcile automáticamente.** Sigue siendo un endpoint que alguien dispara.
 

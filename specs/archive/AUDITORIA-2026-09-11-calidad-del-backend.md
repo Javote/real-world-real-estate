@@ -240,7 +240,7 @@ El mismo archivo tiene el otro síntoma del mismo problema, que es B-06 ya ocurr
 `info.description` afirma:
 
 > *"Body, query y **~24 respuestas de éxito** son el schema Zod real […] el resto de las respuestas
-> **sigue sin schema** (Tanda 2 de `specs/PLAN-2026-09-08-documentar-api-completa.md`)"*
+> **sigue sin schema** (Tanda 2 de `specs/archive/PLAN-2026-09-08-documentar-api-completa.md`)"*
 
 Contadas sobre el JSON commiteado: **76 de las 85 operaciones tienen schema de respuesta 2xx**. Y el
 comentario de `RESPONSE_SCHEMAS`, 150 líneas más arriba en el mismo generador, dice que las dos

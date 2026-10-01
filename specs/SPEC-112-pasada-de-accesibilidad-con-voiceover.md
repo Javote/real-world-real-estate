@@ -1,6 +1,6 @@
 # SPEC-112 — Accesibilidad: las tres capas automatizadas + la pasada manual con VoiceOver
 
-> **Origen:** se separa de [`SPEC-104`](SPEC-104-live-regions.md) el 2026-09-22 — esa spec cerró con
+> **Origen:** se separa de [`SPEC-104`](archive/SPEC-104-live-regions.md) el 2026-09-22 — esa spec cerró con
 > su código y tests automatizados hechos, pero la verificación manual que le quedaba pendiente no
 > era solo suya: `SPEC-104` construyó las live regions, no auditó accesibilidad en general. Ampliada
 > el mismo día para cubrir también el tooling automatizado que hoy no existe en el repo.
@@ -17,9 +17,9 @@
 | 5 · Pasada manual con VoiceOver | ⬜ **lo único que queda de esta spec.** La hace una persona, con el checklist de §Interfaz §5 (que ahora incluye lo que iba a cubrir la 4) |
 
 **Lo que encontraron las capas 2 y 3 salió a dos specs nuevas**, como pide §Alcance, y **las dos
-cerraron el mismo 2026-09-28**: [`SPEC-113`](SPEC-113-el-contraste-de-los-tokens-de-m2-d3.md)
+cerraron el mismo 2026-09-28**: [`SPEC-113`](archive/SPEC-113-el-contraste-de-los-tokens-de-m2-d3.md)
 (contraste de los tokens normativos de M2-D3, resuelto por el dueño como D-098) y
-[`SPEC-114`](SPEC-114-nombres-encabezados-y-landmarks.md) (seis defectos de nombres, encabezados y
+[`SPEC-114`](archive/SPEC-114-nombres-encabezados-y-landmarks.md) (seis defectos de nombres, encabezados y
 landmarks, más un séptimo que apareció al borrar su fila). **`apps/web/a11y/hallazgos.ts` quedó
 vacío** y las dos capas siguen en verde: hoy axe no encuentra ninguna violación de WCAG 2.1 AA ni
 de best-practice en las 12 superficies recorridas ni en los ~1600 estados de la suite.

@@ -25,7 +25,7 @@ raíz) — no lo copies acá, se desactualiza. Lo que sí es estable y no rota c
 | `i18n/format.ts` | `Intl` con el locale activo: moneda, fecha, relativos (regla 14) |
 
 Antes de asumir que una superficie sigue siendo un stub, mirá `routes/` — puede que ya se haya
-transcrito. Ver [`specs/SPEC-014`](../../specs/SPEC-014-reconstruccion-del-front.md) para el plan y
+transcrito. Ver [`specs/SPEC-014`](../../specs/archive/SPEC-014-reconstruccion-del-front.md) para el plan y
 `specs/README.md` para qué falta hoy.
 
 ## La jerarquía de profundidad, que es lo que hace coherente a la app

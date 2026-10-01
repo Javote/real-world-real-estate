@@ -1,7 +1,7 @@
 # scripts/video-walkthrough
 
 Las herramientas del runbook del video walkthrough —
-[`specs/GUION-2026-09-21-video-walkthrough.md`](../../specs/GUION-2026-09-21-video-walkthrough.md),
+[`specs/archive/GUION-2026-09-21-video-walkthrough.md`](../../specs/archive/GUION-2026-09-21-video-walkthrough.md),
 ítem 3.12 / criterio 13—. **El runbook dice cuándo se usa cada una**; esto es solo el índice.
 Todas se corren desde la raíz del repo y funcionan con lo que trae esta Mac (bash 3.2 de macOS,
 Node, Chrome). ffmpeg es opcional.

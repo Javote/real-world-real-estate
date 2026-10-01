@@ -1,6 +1,6 @@
 # SPEC-408 — Lo que vuelve de la cadena se valida, por las dos puertas
 
-> **Origen:** [`AUDITORIA-2026-09-11-calidad-de-packages.md`](AUDITORIA-2026-09-11-calidad-de-packages.md)
+> **Origen:** [`AUDITORIA-2026-09-11-calidad-de-packages.md`](archive/AUDITORIA-2026-09-11-calidad-de-packages.md)
 > §C-03. Nivel 🟡 — toca el códec y el adaptador real. **Independiente.**
 > No toca ningún criterio del SOM, pero **vale antes de mainnet**.
 

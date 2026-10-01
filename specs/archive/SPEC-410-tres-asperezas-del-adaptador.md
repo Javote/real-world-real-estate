@@ -40,7 +40,7 @@ guard y sale a consultar al proveedor con `outputIndex: NaN`. El error que vuelv
 proveedor, a varios frames de distancia del dato malo.
 
 `BAD_OUTPUT_REF` ya existe y es el lugar donde debería caer. Se valida la forma entera —hex64 +
-`#` + entero no negativo—, que es la misma que `outputRefSchema` de [`SPEC-402`](SPEC-402-los-hashes-y-txid-tienen-forma.md)
+`#` + entero no negativo—, que es la misma que `outputRefSchema` de [`SPEC-402`](../SPEC-402-los-hashes-y-txid-tienen-forma.md)
 si esa ya se tomó (si no, se declara acá y aquella la reusa; son independientes en cualquier orden).
 
 ## 3 · `confirmedAt()` hace `fetch` sin timeout
