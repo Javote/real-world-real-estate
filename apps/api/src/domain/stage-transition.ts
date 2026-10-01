@@ -518,7 +518,15 @@ export async function transitionStage(input: {
     action: input.auditAction ?? "CHANGE_STAGE_STATE",
     entityType: "Stage",
     entityId: stage.id,
-    metadata: { from: existing.state, to: input.to, ...(input.note ? { note: input.note } : {}) }
+    // El txid va al metadata como en el resto de los anclajes (ACCEPT_INVITATION):
+    // es de donde lo lee la pantalla del audit log. Hasta el 2026-10-01 no
+    // estaba, y las transiciones salían sin tx aunque estuvieran ancladas.
+    metadata: {
+      from: existing.state,
+      to: input.to,
+      txid: anchor.txid,
+      ...(input.note ? { note: input.note } : {})
+    }
   });
 
   return { ok: true, stage, anchor };

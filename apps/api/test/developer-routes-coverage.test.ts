@@ -1,6 +1,7 @@
 import request from "supertest";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import app from "../src/app";
+import { createId } from "../src/db/id";
 import { db } from "../src/lib/db";
 import { FIXTURES } from "./global-setup";
 
@@ -160,5 +161,80 @@ describe("GET /developer/audit-log con category y cursor", () => {
         new Date(primera.body.items[0].createdAt).getTime()
       );
     }
+  });
+});
+
+describe("GET /developer/audit-log — el txid de las transiciones de etapa", () => {
+  // Hasta el 2026-10-01 las transiciones no guardaban su txid en el metadata y
+  // la pantalla las mostraba sin tx aunque estuvieran ancladas. Ahora lo
+  // guardan, y a las entradas viejas la ruta se lo busca en su OnChainEvent.
+  it("una transición nueva trae su txid, y una vieja sin txid lo recupera", async () => {
+    const alta = await request(app)
+      .post("/api/v1/developer/projects")
+      .set("Authorization", `Bearer ${tokenDev}`)
+      .send({
+        latitude: -34.6,
+        longitude: -58.4,
+        name: "Audit txid",
+        slug: `audit-txid-${Date.now()}`
+      });
+    expect(alta.status).toBe(201);
+    const etapa = alta.body.stages[0].id as string;
+
+    const avance = await request(app)
+      .patch(`/api/v1/stages/${etapa}/state`)
+      .set("Authorization", `Bearer ${tokenDev}`)
+      .send({ state: "InProgress" });
+    expect(avance.status).toBe(200);
+    const txid = avance.body.anchor.txid as string;
+    expect(txid).toBeTruthy();
+
+    // Entradas como las que escribía el código anterior: sin txid, o sin `to`,
+    // o sin metadata, o hacia un estado sin evento anclado.
+    const despues = new Date(Date.now() + 1000);
+    const viejas = [
+      { from: "Pending", to: "InProgress" },
+      { from: "InProgress", to: "Completed" },
+      { nota: "sin to" },
+      null
+    ];
+    const ids: string[] = [];
+    for (const meta of viejas) {
+      const id = createId();
+      ids.push(id);
+      await db
+        .insertInto("AuditLog")
+        .values({
+          id,
+          actorUserId: null,
+          action: "CHANGE_STAGE_STATE",
+          entityType: "Stage",
+          entityId: etapa,
+          metadataJson: meta ? JSON.stringify(meta) : null,
+          createdAt: despues
+        })
+        .execute();
+    }
+
+    const res = await request(app)
+      .get("/api/v1/developer/audit-log")
+      .query({ category: "Stage", limit: 100 })
+      .set("Authorization", `Bearer ${tokenDev}`);
+    expect(res.status).toBe(200);
+
+    type Fila = { id: string; entityId: string; metadataJson: string | null };
+    const filas = res.body.items as Fila[];
+    const meta = (f?: Fila) => (f?.metadataJson ? JSON.parse(f.metadataJson) : null);
+    const porId = (id: string) => filas.find((f) => f.id === id);
+
+    // La nueva, escrita por la transición misma.
+    const nueva = filas.find((f) => f.entityId === etapa && !ids.includes(f.id));
+    expect(meta(nueva).txid).toBe(txid);
+    // La vieja hacia InProgress recupera el txid de su evento.
+    expect(meta(porId(ids[0] as string)).txid).toBe(txid);
+    // Las demás quedan como estaban.
+    expect(meta(porId(ids[1] as string))).toEqual({ from: "InProgress", to: "Completed" });
+    expect(meta(porId(ids[2] as string))).toEqual({ nota: "sin to" });
+    expect(porId(ids[3] as string)?.metadataJson).toBeNull();
   });
 });

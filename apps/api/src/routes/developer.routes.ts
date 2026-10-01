@@ -383,6 +383,49 @@ router.get(
 );
 
 /**
+ * Las transiciones de etapa escritas antes del 2026-10-01 no guardaban su txid
+ * en el metadata —solo `from`/`to`—, y la pantalla lo lee de ahí: salían sin tx
+ * aunque estuvieran ancladas. El audit log es append-only, así que no se
+ * corrigen las filas: se les busca el txid al leerlas, en el `OnChainEvent` de
+ * esa misma transición (misma etapa, mismo estado de llegada, el último
+ * anterior a la entrada — el evento se escribe antes que el audit).
+ */
+async function conTxidDeLaTransicion<
+  T extends { entityType: string; entityId: string; metadataJson: string | null; createdAt: Date }
+>(items: T[]): Promise<T[]> {
+  const sinTxid = new Map<T, { to: string; [k: string]: unknown }>();
+  for (const item of items) {
+    if (item.entityType !== "Stage" || !item.metadataJson) continue;
+    const meta = JSON.parse(item.metadataJson) as { to?: string; txid?: string | null };
+    if (meta.to && !meta.txid) sinTxid.set(item, { ...meta, to: meta.to });
+  }
+  if (sinTxid.size === 0) return items;
+
+  const eventos = await db
+    .selectFrom("OnChainEvent")
+    .select(["stageId", "toState", "txid", "createdAt"])
+    .where("eventType", "=", "STAGE_TRANSITION")
+    .where("txid", "is not", null)
+    .where("stageId", "in", [...new Set([...sinTxid.keys()].map((i) => i.entityId))])
+    .orderBy("createdAt", "desc")
+    .execute();
+
+  return items.map((item) => {
+    const meta = sinTxid.get(item);
+    if (!meta) return item;
+    const evento = eventos.find(
+      (e) =>
+        e.stageId === item.entityId &&
+        e.toState === meta.to &&
+        new Date(e.createdAt).getTime() <= new Date(item.createdAt).getTime()
+    );
+    return evento
+      ? { ...item, metadataJson: JSON.stringify({ ...meta, txid: evento.txid }) }
+      : item;
+  });
+}
+
+/**
  * Fila 49 — el audit log, paginado por cursor.
  *
  * **Append-only** (M2-D4 P6): los eventos no se editan ni se borran. Si un
@@ -421,7 +464,7 @@ const auditLogProcedure = orpc
       query = query.where("AuditLog.createdAt", "<", new Date(input.cursor));
     }
 
-    const items = await query.execute();
+    const items = await conTxidDeLaTransicion(await query.execute());
     const ultima = items.at(-1);
 
     return {

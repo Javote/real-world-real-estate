@@ -57,6 +57,13 @@ lo mismo sin pasar por HTTP. Ver el detalle en `CLAUDE.md` raíz.
 
 ## Trampas verificadas
 
+- **2026-10-01 · El audit log mostraba las transiciones de etapa sin tx, ancladas y confirmadas.**
+  La pantalla lee el txid de `AuditLog.metadata.txid`; `ACCEPT_INVITATION` lo guardaba y
+  `transitionStage` no (solo `from`/`to`), aunque ancla dos líneas antes. Ahora lo guarda, y como el
+  audit log es append-only, `GET /developer/audit-log` les busca el txid a las entradas viejas en el
+  `OnChainEvent` de esa transición (`conTxidDeLaTransicion`). **Un anclaje nuevo que escriba
+  `writeAuditLog` tiene que poner su `txid` en el metadata**, o la pantalla no lo ve.
+
 - **2026-10-01 · CORS no permitía `PUT`, y la portada del alta (D-099) fallaba desde la web con la
   API sana.** La lista de `Access-Control-Allow-Methods` de `app.ts` era `GET,POST,PATCH,DELETE` y la
   portada es la única ruta que la web llama con `PUT`: el browser cortaba el preflight y la pantalla
