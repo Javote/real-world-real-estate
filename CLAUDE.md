@@ -223,6 +223,42 @@ El inventario completo —versiones reales, qué corre y qué está solo decidid
 
 Si dudás del nivel, es el más alto de los dos.
 
+# Cómo se trabaja con el dueño
+
+**Lo único que vale es lo escrito en los `.md` del repo.** El agente no usa memoria propia: lo que
+aprende se escribe en el `.md` que corresponde, en el mismo commit que lo causa.
+
+- **Verificá contra el código, no contra los documentos.** `DECISIONS.md`, `specs/` y estos
+  `CLAUDE.md` se desactualizan solos: medí o reproducí antes de afirmar. Si un documento y el código
+  difieren, contá cuántas piezas sostienen cada lado —un test con nombre explícito es intención— y
+  corregí el que perdió en el mismo commit.
+- **El SOM de Catalyst manda sobre `DECISIONS.md`, este archivo y `specs/`, y los entregables de M2
+  y M3 mandan sobre el SOM** (dueño, 2026-09-09). Antes de construir algo "porque lo pide el SOM",
+  buscá si una captura o una fila de M2-D5 lo muestra; si el diseño lo contradice, gana el diseño y
+  lo que se ajusta es cómo se reporta el criterio.
+- **Un solo agente, sin subagentes ni skills que el dueño no haya pedido.** Durante una rebanada, el
+  e2e corre filtrado (`pnpm e2e -g "<TEST-ID>"`) con `LOGIN_RATE_LIMIT_MAX` alto; la suite completa,
+  antes de una demo o al cerrar un bloque.
+- **Comentarios mínimos**: ninguno que narre historia. La historia va al commit.
+- **Los entregables van en inglés**: el `README.md` raíz, `specs/evidencia-m3/` y lo que generan
+  `docs:api`/`docs:openapi`. Los datos reales (etapas en es-AR, logs) no se traducen. El resto del
+  repo, en castellano.
+- **Specs acotadas e independientes**, pero una larga antes que varias partidas a la fuerza: el costo
+  que importa es el de implementar. Cada spec nueva se registra en `specs/README.md` en el mismo
+  commit.
+- **Nada de infraestructura para problemas futuros.** Antes de un cron, un worker, un servicio o un
+  secreto nuevo: ¿el problema existe hoy?, ¿qué secreto permanente pide?, ¿despierta el free tier?
+  Si es futuro, alcanza con documentar el comando a mano.
+- **Lo que se enciende, se apaga** cuando termina lo que lo necesitaba. Si algo queda prendido, se
+  avisa arriba y solo, no al final de otro párrafo.
+- **La librería no decide el diseño.** Si Lucid impone una forma, se toca código. Y antes de
+  arreglar, preguntá si el problema debía existir.
+- **Material de wallet, siempre fresco y fuera del repo**, y se le avisa al dueño para que lo guarde.
+- **Antes de pushear un cambio de `render.yaml` sobre un servicio desplegado, reproducí su
+  `buildCommand` y su `startCommand` literales**: `pnpm verify` no los corre.
+- **Producción se toca con backup verificado antes** (`specs/stack.md` §8b) y nada se borra en la
+  misma sesión en que se reemplaza.
+
 # Commits y ramas
 
 `<tipo>(<scope>): <descripción en imperativo, minúscula, sin punto final> [<REF>]`
@@ -235,7 +271,8 @@ Un commit = un cambio lógico · el cuerpo explica el *por qué* · `BREAKING CH
 de API o esquema on-chain. **`main` es la rama de integración y no hay PRs** (D-030).
 
 **Testear, commitear y pushear son una sola unidad de trabajo.** `pnpm verify:all` en verde →
-`git commit` → `git push`, siempre juntos y en ese orden. No se junta trabajo local "para pushear al
+`git commit` → `git push`, siempre juntos, en ese orden y en un solo comando con `&&` (con `;`, un
+rojo se commitea igual). No se junta trabajo local "para pushear al
 final", y no se commitea sin el verde.
 
 **La única excepción: un commit que no toca código, y la decide `git`, no vos.** "No toca código"
@@ -308,6 +345,9 @@ Usar `git worktree` para aislar trabajo en paralelo está bien — pero cada uno
 completo con su propio `pnpm install`: **~750MB por worktree**, y el disco ya llegó al 99% por
 worktrees mergeados sin borrar.
 
+- **Todo va a `main`.** Si la herramienta obliga a un worktree, el ciclo se cierra en el mismo turno:
+  commit, `git push origin HEAD:main`, `git pull --ff-only` en el checkout principal y borrar
+  worktree y rama. Ramas: en local solo `main`; en `origin`, `main` y `spec-222-pwa`.
 - **Después de todo push a `main`, revisar worktrees y ramas locales mergeadas — sin que lo pidan.**
   `git worktree list` contra `git branch --merged main`: todo lo que aparece en las dos se borra,
   `git worktree remove --force <path>` y después `git branch -d <rama>` (falla sola si no era
