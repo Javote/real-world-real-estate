@@ -42,7 +42,7 @@ adivines**: devolvé el reporte con `needs input:` y la pregunta exacta.
 2. **Leé antes de escribir.** Solo esto, en este orden:
    - La sección de la spec de tu lote, **entera** (la tabla del lote, las recetas R1–R12 que cita,
      §Paralelismo si es SPEC-019, §Interfaz e §Invariantes si es SPEC-112).
-   - `apps/web/CLAUDE.md` §Trampas verificadas.
+   - `apps/web/CLAUDE.md` §Trampas.
    - Un test existente del mismo tipo como molde: `src/routes/-notary.index.test.tsx` para una
      pantalla, `src/components/domain/modals.test.tsx` para un modal,
      `src/test/a11y.smoke.test.tsx` para axe. Copiá su forma; no inventes otra.

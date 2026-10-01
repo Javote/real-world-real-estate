@@ -92,7 +92,7 @@ resolución (por qué `types` apunta al `.d.ts` y no al fuente) está en `packag
 | `lib/` puro y testeable | `lib/propnexus/fsm.ak` | ● | D-008: tipos, tabla de transiciones y reglas del datum, sin contexto de tx |
 | Quien llama al validador | `packages/cardano` — `AnchorPort`: `simulated` y **`real` con Lucid Evolution 0.6.2** | ● | SPEC-013 §A y §B cerradas: transacciones verificadas contra el `Emulator` y contra un devnet local (yaci-devkit `0.10.6`, Conway + PlutusV3). Falta §C (reconciliar + `verify` público) |
 | Infra local | `compose.dev.yml`: MinIO + yaci-devkit | ● | No se despliega (D-041). Los dos tests de integración corren a mano, no en CI |
-| **Tests** | **72** (39 núcleo + 33 validador) | ● | Criterio 2 del SOM: la tabla punto de rechazo → test está en `contracts/CLAUDE.md` |
+| **Tests** | **72** (39 núcleo + 33 validador) | ● | Criterio 2 del SOM: la tabla punto de rechazo → test está en `specs/evidencia-m3/1-repo-ci-tests/aiken-coverage-report.md` |
 | Thread token + handler `mint` | NFT por stage, asset name = `stage_ref`, sin burn | ● | D-058 cierra lo que D-008 prometía: un solo hilo por stage, y nacimiento validado |
 | Firmante | el operador (`admin`), único | ● | D-058: decisión del dueño, y es lo que el whitepaper §System Overview describe |
 | Naming del proyecto | `propnexus/stage-fsm`, `version = "1"` | ● | D-015 cumplido (entero incremental) desde D-054 |
@@ -211,8 +211,8 @@ la ruta en vez de depender de un escáner. Ninguna ruta llama ya a `canAccessPro
 |---|---|
 | **Nitro sigue en beta** | Sigue sin haber Nitro 3 estable. Pero **el `502` en `POST`+`401` ya no es deuda**: se cerró con `credentials: "omit"` al descubrir que era el spec de fetch y no h3 (D-050) |
 | ~~**Evidencia efímera en la instancia desplegada**~~ | **Cerrada** el 2026-08-27 (D-011): la evidencia vive en Cloudflare R2. No hubo código nuevo —el driver `s3` ya estaba probado contra MinIO—, solo el bucket y las variables. Con esto deja de pesar sobre el primer anclaje |
-| ~~**`bcrypt` trae el warning de `url.parse()`**~~ | **Cerrada el 2026-09-10**: bump a `bcrypt@6.0.0`, que reemplazó `@mapbox/node-pre-gyp` por `node-gyp-build` (mismo mecanismo de binario precompilado, sin `url.parse()`). Queda el riesgo genérico de módulo nativo, que no cambia con la versión: sigue siendo más barato desde D-041 (sin imagen propia, el toolchain lo absorbe el entorno de build de Render). **La alternativa `bcryptjs` (JS puro, ~30% más lento) sigue conviniendo menos**: Render free da 0.1 CPU, donde los ~81 ms medidos en una máquina rápida se van a varios cientos. Detalle en `apps/api/CLAUDE.md` §Superficie 🔴. El bump en sí fue mecánico (mismo API de JS); el uso que rodea a `bcrypt` sigue siendo código 🔴 y lo decide el humano |
-| ~~**`contracts/` con 0 tests**~~ | **Cerrada** (D-057, D-058): 73 tests, con la tabla punto de rechazo → test en `contracts/CLAUDE.md`. Era la deuda más grande que quedaba |
+| ~~**`bcrypt` trae el warning de `url.parse()`**~~ | **Cerrada el 2026-09-10**: bump a `bcrypt@6.0.0`, que reemplazó `@mapbox/node-pre-gyp` por `node-gyp-build` (mismo mecanismo de binario precompilado, sin `url.parse()`). Queda el riesgo genérico de módulo nativo, que no cambia con la versión: sigue siendo más barato desde D-041 (sin imagen propia, el toolchain lo absorbe el entorno de build de Render). **La alternativa `bcryptjs` (JS puro, ~30% más lento) sigue conviniendo menos**: Render free da 0.1 CPU, donde los ~81 ms medidos en una máquina rápida se van a varios cientos. Detalle en `specs/archive/CLAUDE-subarboles-hasta-2026-10-01.md` §Superficie 🔴. El bump en sí fue mecánico (mismo API de JS); el uso que rodea a `bcrypt` sigue siendo código 🔴 y lo decide el humano |
+| ~~**`contracts/` con 0 tests**~~ | **Cerrada** (D-057, D-058): 73 tests, con la tabla punto de rechazo → test en `specs/evidencia-m3/1-repo-ci-tests/aiken-coverage-report.md`. Era la deuda más grande que quedaba |
 | ~~**`pnpm audit`: 1 crítica + 13 altas, casi todas vía `bcrypt` → `node-pre-gyp` → `tar`**~~ | **Cerrada junto con el bump de arriba** (2026-09-10): sin `@mapbox/node-pre-gyp` en el árbol, esa cadena entera desaparece de `pnpm audit`. De paso se bumpeó `multer` a `2.3.0` (parcha GHSA-qvfw-j98x-7q72, un bypass del límite de tamaño de archivo — fila de Multer en el inventario, arriba). Quedan **12 vulnerabilidades** (8 moderadas, 4 altas), ninguna crítica — casi todas de dependencias de build del front (`@babel/*`/`browserslist`, cadena de instalación, no de request). No revisadas una por una en esta sesión |
 | **`milestone` en el dominio** | D-023 pendiente; encarece con cada pantalla nueva |
 
@@ -409,7 +409,7 @@ Sin peers faltantes, sin warnings nuevos, y las 108 pruebas y los dos builds ver
 `@libsql/kysely-libsql@0.4.1` declara `^0.8.0`, y en versiones `0.x` el caret solo admite parches,
 así que no dedupea. Consecuencia ya conocida y resuelta: `LibsqlDialect` recibe `{ url, authToken }`
 en vez de un `Client` ya construido, porque los dos tipos `Client` no son asignables entre sí
-(`apps/api/CLAUDE.md` §Trampas). Arrastra dos copias del binario nativo `libsql`.
+(`specs/archive/CLAUDE-subarboles-hasta-2026-10-01.md`). Arrastra dos copias del binario nativo `libsql`.
 
 **3 · Duplicados menores, todos benignos:** `rolldown` en dos versiones (con sus 15 binarios por
 plataforma), `@oxc-project/types` en tres, `chokidar` 4/5, `debug` 2/4, `semver` 6/7. Ruido normal

@@ -262,10 +262,6 @@ que shimea Claude Code, la versión con `grep` contestaba al revés justo en el 
 argumento completo y las mediciones, en
 [`specs/archive/CLAUDE-argumentos-de-las-reglas-2026-09-20.md`](specs/archive/CLAUDE-argumentos-de-las-reglas-2026-09-20.md).
 
-**Historia:** hasta el 2026-09-24 la excepción era solo `.md`; ese día sumó los PDF/log de
-`specs/evidencia-m3/`, y el 2026-09-28 se invirtió a "corre si se tocó código", porque un commit de
-evidencia con un `.csv` o una captura corría `verify:all` completo sin verificar nada. El
-2026-10-01 sumó videos y subtítulos, con el walkthrough en `specs/evidencia-m3/3-preprod/`.
 **CI espeja esta misma regla** en `.github/workflows/ci.yml` (`paths` con negaciones en `push` y
 `pull_request`, y `docs/**` re-incluido al final), así que un commit sin código tampoco dispara la
 corrida en GitHub Actions.
@@ -309,9 +305,8 @@ Los comandos por frente (`db:migrate`, `db:seed`, `e2e`) están en el `CLAUDE.md
 # Worktrees
 
 Usar `git worktree` para aislar trabajo en paralelo está bien — pero cada uno es un checkout
-completo con su propio `pnpm install`, y en este repo eso pesa: **~750MB por worktree** (más si
-corre `docker compose` o baja modelos). El 2026-09-18 el disco llegó a **99% de uso, 120Mi libres**,
-con nueve worktrees viejos —todos ya mergeados y pusheados a `main`— sin borrar.
+completo con su propio `pnpm install`: **~750MB por worktree**, y el disco ya llegó al 99% por
+worktrees mergeados sin borrar.
 
 - **Después de todo push a `main`, revisar worktrees y ramas locales mergeadas — sin que lo pidan.**
   `git worktree list` contra `git branch --merged main`: todo lo que aparece en las dos se borra,
@@ -342,47 +337,25 @@ con nueve worktrees viejos —todos ya mergeados y pusheados a `main`— sin bor
 
 # Trampas transversales
 
-Sección viva: agregá acá el mismo día que te muerda una. Las de cada frente van en su `CLAUDE.md`.
+Una línea cada una; la de un frente va en su `CLAUDE.md`. La narración de cada una está en el commit
+que la arregló (las anteriores al 2026-10-01, en
+[`specs/archive/CLAUDE-subarboles-hasta-2026-10-01.md`](specs/archive/CLAUDE-subarboles-hasta-2026-10-01.md)).
 
-- **Las capturas de M2-D2 tienen datos mock, no datos de diseño.** M2-D1 lo dice: *"the maquette uses
-  mock blockchain interactions"*. Lo normativo de una captura es la **estructura** —layout,
-  componentes, jerarquía, estados—; los valores no. La captura 55 muestra tres unidades del mismo
-  proyecto en tres stages distintos y casi nos hace modelar stages por unidad, cuando el dominio dice
-  que un desarrollo tiene un solo trámite (D-029).
-- **Antes de concluir que un entregable está mal, verificá que estás mirando el entregable.** Cuatro
-  `.puml` regenerados desde los PDF de M1 tenían las flechas de la FSM invertidas, y durante una
-  sesión entera creímos que el entregable estaba mal. El paquete canónico es
-  `M1-D2-Architecture-and-Data-Models/`, hasheado en la Proof of Achievement.
-- **Grepear solo `*.md` esconde entregables.** Una búsqueda con `--include="*.md"` concluyó que algo
-  no aparecía en `docs/`; estaba en un `.csv`. Grepeá sin filtro de extensión.
-- **Los códigos de entregable se reinician en cada milestone y colisionan**: `M1-D1` es el whitepaper,
-  `M2-D1` es el mapa de arquitectura de información. Al citar, usá siempre la forma completa
-  (`M2-D1 §4`). Y `M2-D5`/`M2-D6` son entregables de **Milestone 2** aunque vivan en la carpeta de M3.
-- **Los PDF de este repo no se leen con la herramienta de lectura** (falta `pdftoppm`). Las capturas
-  PNG sí. Para un PDF: `qlmanage -t -s 1800 -o <dir> archivo.pdf`.
-- **Un verificador que vive dentro del corpus que verifica se encuentra a sí mismo.** Un guardia que
-  matcheaba la mención de `docs/` se bloqueó al escribirse. **Antes de agregar un verificador,
-  preguntá si el problema no se arregla mejor cambiando la forma de lo verificado** (D-053).
-- **Editar un `package.json` sin correr `pnpm install` produce un verde falso.** Lo atrapa
-  `pnpm install --frozen-lockfile` en CI, y alcanza. Un verde sobre el entorno equivocado es peor que
-  un rojo.
-- **`pnpm.overrides` vive en `package.json` y pnpm 10+ dejó de leerlo.** El pin
-  `"packageManager": "pnpm@9.15.0"` es lo único que hoy lo sostiene: un pnpm más nuevo instalado en
-  la máquina delega a 9.15.0 y el override se aplica igual —lo prueba la línea 8 de `pnpm-lock.yaml`
-  y que `@types/express` resuelva a 5.0.6—, pero avisa `The "pnpm" field in package.json is no longer
-  read by pnpm`. **Ese warning no es ruido: es la cuenta regresiva.** El día que se suba el pin a
-  pnpm 10+, los overrides se ignoran **en silencio** y sin romper el build; hay que moverlos a
-  `pnpm-workspace.yaml` en el mismo commit que sube la versión.
-- **`pnpm verify` corre contra el entorno de test, no contra el que declara `render.yaml`.** Entre
-  los dos no había nada, y una regresión de configuración solo se veía en los logs del deploy.
-  Lo cierra `apps/api/test/render-config.test.ts` (D-076). **Si agregás una lectura de `env.*`
-  nueva, declarala en `render.yaml` o el test se pone rojo** — que es el punto.
-- **`pnpm verify` corría `test` sin coverage, y CI corre `test:coverage` con umbral 100%.** El
-  2026-09-28 una función del `leaflet-falso.ts` que ningún test ejecutaba dejó web en 99.87% de
-  funciones: verde local, rojo en CI, dos pushes seguidos. Desde entonces `verify` corre
-  `test:coverage`. **Si CI agrega un paso, `verify` lo espeja** — un verde local que CI no confirma
-  es el verde falso de siempre.
-- **Las capturas del developer no coinciden en el header.** Documentación (46) va sin logo, Audit
-  log (49) va con logo, ninguna trae campana ni idioma, y M2-D3 dice *never omit the logo*. No se
-  transcribe captura por captura: D-074 unifica. Si una pantalla nueva "sigue la captura" y saca el
-  logo, está mal.
+- **Las capturas de M2-D2 tienen datos mock**: lo normativo es la estructura, no los valores (la 55
+  casi nos hace modelar stages por unidad, contra D-029).
+- **Antes de declarar mal un entregable, verificá que es el entregable**: el paquete canónico de M1
+  es `M1-D2-Architecture-and-Data-Models/`, no los `.puml` regenerados desde los PDF.
+- **Grepear solo `*.md` esconde entregables**: hay obligaciones en `.csv`.
+- **Los códigos de entregable colisionan entre milestones**: citá siempre `M2-D1 §4`, no `D1`.
+  `M2-D5`/`M2-D6` son de Milestone 2 aunque vivan en la carpeta de M3.
+- **Los PDF no se leen con la herramienta de lectura** (falta `pdftoppm`):
+  `qlmanage -t -s 1800 -o <dir> archivo.pdf`.
+- **Un verificador dentro del corpus que verifica se encuentra a sí mismo**: antes de agregar uno,
+  preguntá si no conviene cambiar la forma de lo verificado (D-053).
+- **Editar un `package.json` sin `pnpm install` da un verde falso.**
+- **`pnpm.overrides` solo se aplica porque `packageManager` pinea pnpm 9.15.0**: el día que suba a
+  10+, los overrides van a `pnpm-workspace.yaml` en el mismo commit, o se ignoran en silencio.
+- **Una lectura nueva de `env.*` se declara en `render.yaml`**, o `apps/api/test/render-config.test.ts`
+  se pone rojo (D-076).
+- **Si CI agrega un paso, `pnpm verify` lo espeja**: un verde local que CI no confirma es falso.
+- **Las capturas del developer no coinciden en el header**: gana D-074, no la captura.

@@ -342,7 +342,7 @@ ventana de los 13-15 minutos. De los cinco fallidos, uno era de código de la AP
 **Esto corrige dos diagnósticos anteriores de este repo**, que atribuían el mismo síntoma a otra
 cosa: el incidente del 2026-09-04 (`ef8e55e`, "arrancó bien catorce minutos antes") y el del
 2026-09-22 (`f3296ed`, atribuido a "un Blockfrost lento"). Los dos son este patrón. Detalle en
-`apps/api/CLAUDE.md` §Trampas verificadas.
+`specs/archive/CLAUDE-subarboles-hasta-2026-10-01.md` §`apps/api/CLAUDE.md`.
 
 ### "No open HTTP ports detected on 0.0.0.0, continuing to scan…"
 
@@ -449,7 +449,7 @@ original hasta estar seguro.
 | Pantallas que andaban empiezan a fallar al parsear | Front y API en commits distintos | Mismo caso de arriba. Los `z.strictObject` de `packages/shared` lo vuelven duro: un campo que falta rompe el parse entero |
 | `ERR_PNPM_OUTDATED_LOCKFILE` en el build | Se tocó un `package.json` sin `pnpm install` | La puerta lo atrapa antes; si llegó acá, `pnpm install` y commitear el lockfile |
 | `Port scan timeout reached, no open ports detected` y después `Timed Out` | El build salió bien y el proceso **nunca escuchó**. El `startCommand` es `migrate && server` | Leé las tres líneas de arranque en orden (abajo). Render tarda ~15 min en darlo por muerto y en free tier **la instancia vieja ya se cerró**: es caída, no degradación |
-| `Error: Cannot find module '@paquete-de-otel-o-similar'` justo después de un log de `instrumentation` | Un `require()` tardío (patrón de `instrumentation.ts`) usa un paquete que no está en `dependencies` — resolvía como transitiva en local, no en una instalación limpia | Declarar el paquete como dependencia directa; el smoke test de CI (`.github/workflows/ci.yml`) ya lo agarra antes de pushear — ver `apps/api/CLAUDE.md` §Trampas verificadas 2026-09-08 |
+| `Error: Cannot find module '@paquete-de-otel-o-similar'` justo después de un log de `instrumentation` | Un `require()` tardío (patrón de `instrumentation.ts`) usa un paquete que no está en `dependencies` — resolvía como transitiva en local, no en una instalación limpia | Declarar el paquete como dependencia directa; el smoke test de CI (`.github/workflows/ci.yml`) ya lo agarra antes de pushear — ver `specs/archive/CLAUDE-subarboles-hasta-2026-10-01.md` §`apps/api/CLAUDE.md`, 2026-09-08 |
 | Deploy `update_in_progress` colgado 5+ min, log corta justo después de `[instrumentation] Sentry activo` | Visto una vez el 2026-09-08, causa no determinada — la instancia vieja ya había recibido `SIGTERM` y la API estaba caída de verdad (confirmado con `curl`, timeout total) | Cancelar el deploy colgado (dashboard o `render deploys cancel`) y disparar uno nuevo con `render deploys create <srv-id>`. El segundo intento, con los mismos env vars, arrancó limpio en ~1 minuto — no se pudo reproducir, tratado como blip transitorio de la plataforma hasta que se repita |
 
 ### Leer un arranque en los logs
@@ -471,8 +471,8 @@ la última, el problema es del servidor, no de la migración.
 
 **Esto existe por el incidente del 2026-09-04**, cuando ninguna de las líneas se imprimía: un arranque
 colgado en la migración y uno colgado en el servidor se veían exactamente igual —un log vacío— y la
-API estuvo ~18 minutos caída por un commit de solo documentación. Detalle en `apps/api/CLAUDE.md`
-§Trampas verificadas. **Corregido el 2026-09-22:** ese arranque no se colgó, lo apagó Render por
+API estuvo ~18 minutos caída por un commit de solo documentación. Detalle en `specs/archive/CLAUDE-subarboles-hasta-2026-10-01.md`
+§`apps/api/CLAUDE.md`. **Corregido el 2026-09-22:** ese arranque no se colgó, lo apagó Render por
 inactividad (§2, "El deploy que coincide con el apagado por inactividad"). Los logs de arranque
 siguen valiendo por lo que dicen: sin ellos no se habría podido ver.
 
@@ -489,7 +489,7 @@ rompió el **build** (`pnpm install` saltea `devDependencies` con esa variable p
 sacar la declaración del Blueprint — Render lo siguió mandando en el entorno del build igual. El fix
 real fue hacer el `buildCommand` inmune a lo que traiga el entorno (`NODE_ENV=development` inline
 antes de `pnpm install`), no depender de qué variables tiene declaradas el Blueprint. Detalle técnico
-completo y los tests que lo cierran en `apps/api/CLAUDE.md` §Trampas verificadas.
+completo y los tests que lo cierran en `specs/archive/CLAUDE-subarboles-hasta-2026-10-01.md` §`apps/api/CLAUDE.md`.
 **La lección que generaliza:** cualquier cambio a `render.yaml` en un servicio ya desplegado se
 reproduce local con el comando **literal** —build y arranque, en ese orden, con `NODE_ENV=production`
 exportado a mano para simular el entorno real de Render— antes de pushear. `pnpm verify` en verde no

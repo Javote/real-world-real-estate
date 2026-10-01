@@ -89,7 +89,7 @@ Mismo procedimiento que `PLAN-2026-08-31-anclaje-real.md` usó para Preprod, con
   D-075 asegura que una configuración a medio cargar solo inhabilita el puerto, no tumba la API, así
   que el riesgo operativo es bajo, pero cargarlos separados generaría una ventana confusa de logs.
 - **El primer anclaje de prueba se hace sobre un proyecto de scratch, no sobre el primer piloto
-  real** — mismo motivo que el incidente de `torre-a` documentado en `apps/api/CLAUDE.md`: hay que
+  real** — mismo motivo que el incidente de `torre-a` documentado en `specs/archive/CLAUDE-subarboles-hasta-2026-10-01.md`: hay que
   confirmar que el hilo se abre bien (mint) antes de que la primera transición real de un piloto
   dependa de eso.
 

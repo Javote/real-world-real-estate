@@ -78,7 +78,7 @@ El diseño de cada ítem está en
 | 1 | Reclamar antes de anclar (firma, rechazo y los dos anclajes de evidencia) | ✅ 2026-10-01 — `apps/api/test/reclamar-antes-de-anclar.test.ts`; en producción, dos firmas simultáneas dejaron una sola |
 | 2 | El ciclo del dossier rechazado | ✅ 2026-10-01 |
 | 3 | Sacar `awaitTx` de la request | ✅ 2026-10-01 — en Preprod, alta de proyecto 18,5 s y transición 4,2 s. Límite medido en `yaci.test.ts`: una instancia recién arrancada no avanza un hilo antes del bloque |
-| 4 | La pasada de prosa | §4 comentarios ✅ en `packages/` y `apps/`; `contracts/` queda como está (dueño, 2026-10-01: es mucho más simple). §6 documentación en curso |
+| 4 | La pasada de prosa | ✅ — §4 comentarios en `packages/` y `apps/`; `contracts/` queda como está (dueño, 2026-10-01: es mucho más simple). §6 documentación ✅ 2026-10-01: el estado en esta tabla, lo cerrado en `archive/` y cada `CLAUDE.md` recortado a trampas vigentes (2.457 → 743 líneas; la narración, en `archive/CLAUDE-subarboles-hasta-2026-10-01.md`) |
 | 5 | W0: observabilidad diferida, un diccionario por idioma, decidir PostHog | sin empezar |
 | 6 | `SPEC-603` misma región | sin empezar |
 | 7 | W1 = `SPEC-601` con armazón en el layout | sin empezar |

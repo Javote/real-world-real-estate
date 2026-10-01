@@ -221,8 +221,7 @@ Las tres clases de §1 quedan cerradas por la forma, no por disciplina.
 
 **Una consecuencia:** el audit se escribe antes de que exista el TXID, así que la pantalla de audit
 deja de leerlo de `AuditLog.metadata.txid` y lo busca en el `OnChainEvent` de la misma referencia.
-Ese join ya existe para las transiciones viejas (`conTxidDeLaTransicion`, `apps/api/CLAUDE.md`
-2026-10-01); pasa a ser el único camino.
+Ese join ya existe para las transiciones viejas (`conTxidDeLaTransicion`, `apps/api/src/routes/developer.routes.ts`); pasa a ser el único camino.
 
 ### 2.4 Effect-ts: no, por ahora
 

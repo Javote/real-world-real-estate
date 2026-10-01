@@ -1054,7 +1054,7 @@ proyecto* eran vínculos **desconectados** en el modelo.
 **Y mirar eso destapó un bug de verdad, ya cerrado:** `POST /investor/invitations/:id/accept` **no
 creaba `ProjectMember`**, así que un investor real aceptaba y toda ruta con `requireProjectAccess` le
 daba 403 — incluidas las del Merkle proof de su propia evidencia. Ningún test lo veía porque el seed
-plantaba la membresía a mano. Detalle y la lección en `apps/api/CLAUDE.md` §Trampas verificadas.
+plantaba la membresía a mano. Detalle y la lección en `specs/archive/CLAUDE-subarboles-hasta-2026-10-01.md`, §`apps/api/CLAUDE.md`.
 **`alguna` se conserva igual**: ahora aceptar crea la membresía, pero los contratos que ya existen
 —y los que nazcan por otro camino— pueden no tenerla, así que *dueño* sigue sin implicar *miembro*.
 
@@ -1294,7 +1294,7 @@ separado de los demás para que los pines no se tapen.
 
 **Lo que destapó.** Con coordenadas cargadas aparecieron dos bugs de `LocationMapModal` que no se
 veían: el modal del detalle de obra abría vacío y el modo mapa de "Buy" mostraba 1 pin de 3. Los dos
-corregidos en el mismo commit — ver `apps/web/CLAUDE.md` §Trampas verificadas. Las tres Torre Volumen
+corregidos en el mismo commit — ver `specs/archive/CLAUDE-subarboles-hasta-2026-10-01.md`, §`apps/web/CLAUDE.md`. Las tres Torre Volumen
 recibieron coordenadas de CABA en producción el mismo día (Palermo, Belgrano, Colegiales).
 
 ## D-098 — Los colores de estado se oscurecen hasta el 4.5:1 que M2-D3 mismo exige

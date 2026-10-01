@@ -48,7 +48,7 @@ corren a mano con `pnpm --filter @plataforma/api test:s3` y
 **El 1 `it.fails` es a propósito, no una regresión:** fija un bug conocido y sin arreglar de
 `LocationMapModal` (`modals-mapa.test.tsx`), documentado en
 [`SPEC-019`](archive/SPEC-019-cobertura-de-apps-web.md) §Resultado final y en
-[`apps/web/CLAUDE.md`](../apps/web/CLAUDE.md) §Trampas verificadas — falta reproducirlo en el
+[`archive/CLAUDE-subarboles-hasta-2026-10-01.md`](archive/CLAUDE-subarboles-hasta-2026-10-01.md) §`apps/web/CLAUDE.md` — falta reproducirlo en el
 navegador real antes de decidir si se arregla el componente o el test.
 **Actualización 2026-09-28:** reproducido en producción (el mapa del detalle de obra abría vacío) y
 corregido en el componente (D-097); el `it.fails` pasó a `it`. Los números de esta tabla son los del
@@ -77,7 +77,7 @@ llegó ahí, archivo por archivo, está en [`SPEC-017`](archive/SPEC-017-cobertu
 
 **Los contratos (`contracts/`) no tienen porcentaje de líneas**: Aiken no mide coverage de líneas.
 La evidencia de cobertura del validador es la tabla *punto de rechazo → test que lo ejercita* de
-[`contracts/CLAUDE.md`](../contracts/CLAUDE.md): cada condición por la que el validador rechaza una
+[`aiken-coverage-report.md`](evidencia-m3/1-repo-ci-tests/aiken-coverage-report.md): cada condición por la que el validador rechaza una
 transacción tiene al menos un test que la dispara.
 
 ## Seguridad en la misma corrida
