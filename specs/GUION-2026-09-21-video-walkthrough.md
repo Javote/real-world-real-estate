@@ -21,7 +21,7 @@
 | **1** | Antes de cada sesión: la Mac, Render despierto, Chrome con las 5 pestañas | `sesion.sh` + `chrome.sh` | ~10 min (+ ensayo la primera vez) |
 | **2A** | Grabar la **sesión A**: el comprador mirando una obra terminada (T01, una sola toma) | el grabador de macOS; al final, `renombrar.sh A` | ~5 min |
 | **2B** | Grabar la **sesión B**: nace un proyecto y recorre la FSM, hasta la firma, y cierra en el audit log (T07–T28). **De corrido, sin cortar la sesión** | ídem; al final, `renombrar.sh B` | ~60 min |
-| **3** | Recortar los 18 videos | QuickTime | ~30 min |
+| **3** | Recortar los 15 videos | QuickTime | ~30 min |
 | **4** | Grabar la voz mirando cada video, con la frase en pantalla en su segundo | el **estudio** (una página local) | ~35 min |
 | **5** | Unir todo, con subtítulos | `unir.sh` (o el estudio, si no hay ffmpeg) | ~10 min |
 | **6** | Mirar el resultado y cerrar | — | ~25 min |
@@ -35,7 +35,7 @@ cd ~/Documents/real-estate/real-world-real-estate
 
 **Cuatro reglas que valen para todo el runbook:**
 
-1. **La unidad es la toma, no el acto.** Son 18 tomas (la sesión A es una sola, T01; la B va de T07 a T28, con T07 que funde el panel y el alta, y T09 que funde la unidad, la invitación y la evidencia); cada una es un video `Txx.mov` y una voz
+1. **La unidad es la toma, no el acto.** Son 15 tomas (la sesión A es una sola, T01; la B va de T07 a T28, con T07, T09 y T12 que funden varias de las originales); cada una es un video `Txx.mov` y una voz
    `Txx.webm` con el mismo nombre. Todos los tiempos se cuentan desde el **0:00 de la toma ya
    recortada**, así que rehacer una no corre nada del resto.
 2. **La sesión B va de corrido y en orden.** Cada toma deja la base en el estado que necesita la
@@ -85,7 +85,7 @@ Se puede volver a correr cuando quieras.
 **Lo que dejó el 2026-09-28:** todo en verde, con un aviso esperable.
 
 - **Las tres Torre Volumen tienen coordenadas de CABA** (Palermo, Belgrano, Colegiales), cargadas el
-  2026-09-28 (D-097): el modo mapa de T01 muestra sus pines y los mapas de T01 y T13 se dibujan.
+  2026-09-28 (D-097): el modo mapa de T01 muestra sus pines y los mapas de T01 y T12 se dibujan.
   Desde ese día todo proyecto nuevo nace con coordenadas: el alta las pide (T07).
 - La cola del escribano está vacía: se llena en la pasada de calentamiento de la sesión B (1.3). Es
   lo esperado.
@@ -182,8 +182,8 @@ propia sesión:
       Preprod, que no es plata). **Solo T07, la unidad y la evidencia de T09, y T18–T21**, sobre un proyecto llamado **`Ensayo`**:
   - crealo como en T07 e invitá al certifier como en su corte;
   - cargá una unidad, subí evidencia, observá, reanudá y certificá.
-  - **No invites al investor (T09–T14) ni abras o firmes dossiers (T23–T27).** Una invitación
-    aceptada le suma la unidad y el proyecto al investor para siempre (se verían en T01 y T13), y
+  - **No invites al investor (T09–T12) ni abras o firmes dossiers (T23–T27).** Una invitación
+    aceptada le suma la unidad y el proyecto al investor para siempre (se verían en T01 y T12), y
     firmar el dossier de la 1A deja a T25 sin nada que firmar.
   - Queda un proyecto más en el listado del developer (T07) y una certificación más en el panel del
     certifier: no molestan.
@@ -199,7 +199,7 @@ propia sesión:
 **Para escribir una dirección en pantalla completa** (siempre fuera de cámara): `Cmd+L` muestra la
 barra un momento → pegás → Enter.
 
-### 1.5 El ciclo de cada toma — cinco pasos, 18 veces
+### 1.5 El ciclo de cada toma — cinco pasos, 15 veces
 
 1. **Dejá la pantalla como dice "Antes de grabar"** de la toma. Si pasó más de un minuto desde la
    última acción en esa pestaña, **recargala** (`Cmd+R`) y esperá que cargue.
@@ -223,7 +223,7 @@ descartar (van a `descartadas/`, no se borran).
   Projects · Capital · Units · Progress; Certifier y Notary: Panel · … · Profile) y el header tiene
   la campana y el ícono de perfil.
 - **Una toma termina** cuando empieza una espera (**⏸ CORTE**), cuando pasás de ~90 s, o cuando
-  cambiás de rol. Por eso la B son 17 (T07 funde el panel y el alta; T09, la unidad, la invitación y la evidencia). La A no tiene esperas y es una sola (T01).
+  cambiás de rol. Por eso la B son 14 (T07, T09 y T12 funden varias de las originales). La A no tiene esperas y es una sola (T01).
 
 ### 1.7 Las tomas irrepetibles, y qué hacer si una sale mal
 
@@ -252,22 +252,19 @@ no hay "otra toma" de esas.
 | T01 | 0:00 | 1 · Investor | La sesión A entera, en una toma | `/investor/buy` → … → `/investor/unit/<1A>` → `/investor/buy` | 213 s | 90 s | |
 | T07 | 3:33 | 2 · Developer | El panel y el proyecto nuevo, en una toma | `/developer` → … → `/developer/project/new` | 180 s | 60 s | ⚠ irrepetible |
 | T09 | 6:33 | 2 · Developer | El proyecto, la unidad, la invitación y la evidencia, en una toma | `/developer` → … → `/developer/project/:id/upload` → cardanoscan | 195 s | 75 s | ⚠ irrepetible |
-| T12 | 9:48 | 1 · Investor | Aceptar | campana → `/investor/notifications` | 35 s | 15 s | ⚠ irrepetible |
-| T13 | 10:23 | 1 · Investor | El portfolio | `/investor/units` → `/investor/unit/<5B>` | 35 s | 23 s | |
-| T14 | 10:58 | 1 · Investor | El contrato como registro | `/investor/unit/<5B>/contract` | 25 s | 13 s | |
-| T17 | 11:23 | 1 · Investor | El mismo anclaje, del otro lado | `/investor/unit/<5B>/notifications` → `/investor/unit/<5B>` | 35 s | 16 s | |
-| T18 | 11:58 | 3 · Certifier | Observar | `/certifier` → `/certifier/assigned` → `/certifier/stage/:id` | 40 s | 17 s | ⚠ irrepetible |
-| T19 | 12:38 | 2 · Developer | Reanudar | `/developer/progress` | 20 s | 11 s | ⚠ irrepetible |
-| T20 | 12:58 | 3 · Certifier | Certificar | `/certifier/stage/:id` | 20 s | 7 s | ⚠ irrepetible |
-| T21 | 13:18 | 3 · Certifier | El certificado | `/certifier/issued` | 15 s | 5 s | |
-| T23 | 13:33 | 1 · Investor | El dossier | `/investor/unit/<1A>/dossier` | 40 s | 24 s | |
-| T24 | 14:13 | 1 · Investor | Compartir | "Share" → modal | 15 s | 8 s | |
-| T25 | 14:28 | 4 · Notary | La firma | `/notary` → `/notary/dossiers` → `/notary/dossier/:id` | 35 s | 19 s | ⚠ irrepetible |
-| T26 | 15:03 | 4 · Notary | El historial | `/notary/signed` | 15 s | 11 s | |
-| T27 | 15:18 | incógnito | Verificado sin cuenta | `/public/dossier/:shareToken` | 25 s | 18 s | |
-| T22 | 15:43 | 2 · Developer | El contrato del lado del developer | `/developer/project/:id/contracts` | 25 s | 14 s | |
-| T28 | 16:08 | 2 · Developer | El círculo se cierra | `/developer/audit-log` | 45 s | 21 s | |
-| | **16:53** | | **Total** | | **1013 s ≈ 17 min** | | |
+| T12 | 9:48 | 1 · Investor | Aceptar, la unidad y el contrato, en una toma | campana → `/investor/unit/<5B>` → `…/contract` | 104 s | 45 s | ⚠ irrepetible |
+| T18 | 11:32 | 3 · Certifier | Observar | `/certifier` → `/certifier/assigned` → `/certifier/stage/:id` | 40 s | 17 s | ⚠ irrepetible |
+| T19 | 12:12 | 2 · Developer | Reanudar | `/developer/progress` | 20 s | 11 s | ⚠ irrepetible |
+| T20 | 12:32 | 3 · Certifier | Certificar | `/certifier/stage/:id` | 20 s | 7 s | ⚠ irrepetible |
+| T21 | 12:52 | 3 · Certifier | El certificado | `/certifier/issued` | 15 s | 5 s | |
+| T23 | 13:07 | 1 · Investor | El dossier | `/investor/unit/<1A>/dossier` | 40 s | 24 s | |
+| T24 | 13:47 | 1 · Investor | Compartir | "Share" → modal | 15 s | 8 s | |
+| T25 | 14:02 | 4 · Notary | La firma | `/notary` → `/notary/dossiers` → `/notary/dossier/:id` | 35 s | 19 s | ⚠ irrepetible |
+| T26 | 14:37 | 4 · Notary | El historial | `/notary/signed` | 15 s | 11 s | |
+| T27 | 14:52 | incógnito | Verificado sin cuenta | `/public/dossier/:shareToken` | 25 s | 18 s | |
+| T22 | 15:17 | 2 · Developer | El contrato del lado del developer | `/developer/project/:id/contracts` | 25 s | 14 s | |
+| T28 | 15:42 | 2 · Developer | El círculo se cierra | `/developer/audit-log` | 45 s | 21 s | |
+| | **16:27** | | **Total** | | **987 s ≈ 16 min** | | |
 
 ### Sesión A · El comprador mira una obra terminada (T01)
 
@@ -328,8 +325,7 @@ siguiente (⛓ = manda algo a la cadena; ⚠ = irrepetible).
 |---|---|---|---|
 | 1 | T07 ⛓⚠ | 2 | ⏸ ~6 min (los 10 mints). **Fuera de cámara:** 5 Admin invita al certifier, 3 acepta |
 | 2 | T09 ⛓⚠ (unidad, invitación y evidencia) | 2 | ⏸ ~1-2 min adentro de la toma (la evidencia), cortada |
-| 3 | T12 ⛓⚠ | 1 | ⏸ ~1 min |
-| 4 | T13 · T14 · T17 | 1 | — |
+| 3 | T12 ⛓⚠ (aceptar, la unidad y el contrato) | 1 | — |
 | 5 | T18 ⛓⚠ | 3 | ⏸ ~1 min |
 | 6 | T19 ⛓⚠ | 2 | ⏸ ~1 min |
 | 7 | T20 ⛓⚠ | 3 | ⏸ ~1 min |
@@ -430,73 +426,33 @@ Lo que hace la toma, medido sobre el video (cuadros cada 3 s, ±3 s):
 
 #### Acto 3 · Investor
 
-##### T12 · Aceptar — 35 s · ⚠ irrepetible
+##### T12 · Aceptar, la unidad y el contrato — 1:44 · ⚠ irrepetible · ✓ grabada el 2026-10-01
 
-**Antes de grabar:** pestaña 1, en cualquier pantalla del investor ("My favorites" si la sesión A
-fue recién). Antes de grabar, recargá
-(`Cmd+R`) para que la campana muestre la invitación.
+**Grabada de corrido como `buyer@`** (pestaña 1): funde las viejas T12, T13 y T14. Se cortó al
+final de "My contract and payments": lo que seguía era T17, y **"Evidence by stage" no respondió**
+— los chips 1–10 no se pueden tocar aunque la etapa 1 tiene evidencia anclada (se ve en la galería
+y en "News"). Bug abierto; T17 sale del video hasta arreglarlo.
 
-| Tiempo | Acción | Lo que tiene que verse |
-|---|---|---|
-| 0:00–0:02 | **Quieto.** | La campana del header con su contador. |
-| 0:03 | Clic en la **campana**. | "Updates · Progress on your units". |
-| 0:04–0:09 | **Quieto.** | Arriba, fijada, la card "Project invitation · Torres de Palermo · 5B" con "View invitation →". |
-| 0:10 | Clic en **"View invitation →"**. | El modal. |
-| 0:11–0:23 | **Quieto**, el mouse baja lento por el modal. | "Project", "Assigned unit", "Total amount", "Estimated handover", "Terms" y **"This invitation is anchored on-chain"**. |
-| 0:24 | Clic en **"Accept invitation"**. | "Accepting…" |
-| 0:25–0:35 | **Quieto.** | — |
+Lo que hace la toma, medido sobre el video (cuadros cada 3 s, ±3 s):
 
-**⏸ CORTE ~1 min.** Aceptar es lo que crea el contrato de la unidad.
-
-##### T13 · El portfolio — 35 s
-
-**Antes de grabar:** "Updates", ya con la invitación aceptada.
-
-| Tiempo | Acción | Lo que tiene que verse |
-|---|---|---|
-| 0:00 | Clic en **"Units"** en la barra lateral. | "My units · What you bought". |
-| 0:01–0:09 | Scroll lento. | Siete unidades, cada una con la portada de su proyecto (D-099): seis de Torre Volumen 3 (1A y 7A…7E) y la 5B de Torres de Palermo. |
-| 0:10 | Clic en la **5B**. | El detalle de la unidad. |
-| 0:11–0:13 | **Quieto.** | El detalle de la 5B: la portada de Torres de Palermo y, al lado, el mapa en miniatura con el pin. |
-| 0:14 | Clic en **"Open map"**. | El mapa a pantalla completa, con el pin que marcaste en T07. |
-| 0:15–0:18 | **Quieto**, y cerrá (`Esc`). | — |
-| 0:19 | Clic en **"View my unit in the building"**. | La grilla del edificio con **"Your unit"** resaltada y "Floor 5 · 5B · 85 m²". |
-| 0:20–0:31 | **Quieto.** | Abajo, "Schematic view for reference. Final plans are in the dossier." |
-| 0:32 | Cerrá (`Esc`) y scroll hasta **"Unit details"**. | Project, Unit, Floor, Surface, Total investment, Status. |
-| 0:33–0:35 | **Quieto.** | — |
-
-##### T14 · El contrato como registro — 25 s
-
-**Antes de grabar:** el detalle de la 5B (donde terminó T13), con scroll hasta la sección "Contract
-and payments" ("Amount: US$ 185,000") hecho antes de apretar grabar.
-
-| Tiempo | Acción | Lo que tiene que verse |
-|---|---|---|
-| 0:00 | Clic en **"View contract and payments"**. | "My contract and payments · 5B". |
-| 0:01–0:12 | **Quieto.** | "Contract summary": "Total amount" y "Signing date". |
-| 0:13–0:25 | **Quieto**, el mouse sobre la sección de abajo. | "Recorded schedule": **"No releases recorded yet."** — es lo correcto, no un bug (Anexo B). |
+| Tiempo | Pantalla |
+|---|---|
+| 0:00 | "Menu", con la campana marcada |
+| 0:09 | **"Updates"**: "Project invitation · Torres de Palermo · 5B" |
+| 0:21 | **"View invitation"**: el modal, "This invitation is anchored on chain" |
+| 0:30 | **"Accept invitation"**: "Accepting…" |
+| 0:33 | El detalle de la **5B** |
+| 0:42 | La galería: la portada y las fotos de evidencia (0:51) |
+| 0:57 | El mapa |
+| 1:03 | "Unit details", "My unit progress", "News" (1:09) |
+| 1:15 | **"View my unit in the building"**: la 5B resaltada |
+| 1:27 | Scroll hasta "Contract and payments" |
+| 1:36 | **"My contract and payments"**: US$ 185,000, firmado el 1 de octubre, hasta el final (1:44) |
 
 #### Acto 4 · Las cuatro aristas de la FSM ← el núcleo
 
 **Todo sobre la misma etapa: la 1, "Land acquisition", de Torres de Palermo**, para que se lea como un
 solo objeto recorriendo una máquina de estados y no como cuatro cosas sueltas.
-
-##### T17 · El mismo anclaje, del otro lado — 35 s
-
-**Antes de grabar:** pestaña 1, `/investor/unit/<5B>/notifications` (fuera de cámara: "Units" → 5B →
-sección "News" → **"View all"**). Recargá antes de grabar.
-
-| Tiempo | Acción | Lo que tiene que verse |
-|---|---|---|
-| 0:00–0:05 | **Quieto.** | "Unit updates · Updates for 5B": "Evidence anchored: Land acquisition" arriba. |
-| 0:06 | Clic en esa novedad. | Te lleva al detalle de la 5B. |
-| 0:07–0:10 | Scroll hasta **"Evidence by stage"**. | "Tap a milestone to view anchored evidence" y los chips de las 10 etapas. |
-| 0:11–0:12 | **Quieto.** | — |
-| 0:13 | Clic en el chip de la etapa **1**. | El modal "Stage milestone". |
-| 0:14–0:32 | **Quieto**, el mouse sobre el "Package Merkle root" y después sobre los hashes. | "Package Merkle root", txid, "Bundle files" con el hash de cada archivo, "Merkle path". |
-| 0:33 | Cerrá (`Esc`). | — |
-
-**Un rol lo produce, otro lo verifica, y es el mismo número** que el de T09.
 
 ##### T18 · Observar — 40 s · ⚠ irrepetible
 
@@ -679,7 +635,7 @@ la vista de teléfono). El dueño las sacó: ninguna agregaba un paso al flujo. 
 
 ---
 
-## Paso 3 · Recortar los 18 videos
+## Paso 3 · Recortar los 15 videos
 
 **Por qué importa:** todos los tiempos —los de la pantalla y los de la voz— se cuentan desde el
 0:00 de la toma **recortada**. Un recorte a ojo corre la voz.
@@ -700,8 +656,8 @@ error y `T18b` desde la acción siguiente; abrí `T18.mov` → Edición → **Ag
 
 - [ ] T01
 - [ ] T07, T09
-- [ ] T12–T14
-- [ ] T17–T21
+- [ ] T12
+- [ ] T18–T21
 - [ ] T23–T27
 - [ ] T22, T28
 
@@ -732,7 +688,7 @@ no hay que arrancar nada a la vez ni guardar a mano.
 
 ### 4.2 El ciclo de cada toma de voz
 
-1. A la izquierda, las 18 tomas: **"falta voz"** en amarillo, **"✓ voz"** en verde. Arranca sola en
+1. A la izquierda, las 15 tomas: **"falta voz"** en amarillo, **"✓ voz"** en verde. Arranca sola en
    la primera que falta.
 2. **Espacio** → cuenta 3, 2, 1 → el video arranca y graba.
 3. **Leé la frase grande cuando aparece.** Debajo, en gris, la próxima con su cuenta regresiva
@@ -847,39 +803,28 @@ video, ±3 s.)*
 | 3:01 | El modal otra vez | Back in the app. |
 | 3:10 | El clic en "Done" | Done. |
 
-#### Acto 3 · Investor (T12–T14)
+#### Acto 3 · Investor (T12)
 
-##### T12 · Aceptar — video 35 s
-
-| Tiempo | Entra cuando ves | Texto |
-|---|---|---|
-| 0:01 | La campana | Back to the investor. The invitation arrives as a notification, pinned at the top. |
-| 0:11 | El modal | Project, unit, total amount, estimated handover — and the invitation itself is anchored on-chain. |
-| 0:24 | El clic en "Accept invitation" | Accepting it is what writes the contract. |
-
-##### T13 · El portfolio — video 35 s
+##### T12 · Aceptar, la unidad y el contrato — video 104 s
 
 | Tiempo | Entra cuando ves | Texto |
 |---|---|---|
-| 0:01 | "My units" | The portfolio now holds units in two very different situations: six in a delivered building, and one just bought off-plan. |
-| 0:14 | El mapa | Inside the new one: the location its developer marked… |
-| 0:19 | El esquema del edificio | …and the building schematic, with this unit highlighted on its floor. It's labelled as a reference view: the final plans live in the dossier. |
+| 0:01 | "Menu" | Now we switch to the investor. |
+| 0:06 | La campana | A new notification arrives. |
+| 0:09 | "Project invitation" | It's an invitation to buy unit 5B. |
+| 0:21 | El modal de la invitación | We open the invitation: the project, the unit and the amount. |
+| 0:27 | "This invitation is anchored on chain" | The invitation is anchored on chain. |
+| 0:30 | "Accepting…" | We accept it. |
+| 0:34 | El detalle de la 5B | Unit 5B is now ours. |
+| 0:42 | La galería | The gallery shows the cover and the evidence images. |
+| 0:57 | El mapa | Its location on the map. |
+| 1:03 | "Unit details" | The unit details and its progress. |
+| 1:09 | "News" | The news: the invitation, the stage in progress, and the anchored evidence. |
+| 1:15 | El edificio | Its place in the building. |
+| 1:27 | "Contract and payments" | Below, the contract and payments. |
+| 1:36 | "My contract and payments" | The contract: the total amount and the signing date. |
 
-##### T14 · El contrato como registro — video 25 s
-
-| Tiempo | Entra cuando ves | Texto |
-|---|---|---|
-| 0:01 | "Contract summary" | The contract screen is a record, not an action surface: the agreed amount and the signing date. |
-| 0:13 | "No releases recorded yet." | No release button, by design. Payments happen outside the platform, which never holds funds. |
-
-#### Acto 4 · La FSM (T17–T21)
-
-##### T17 · El mismo anclaje, del otro lado — video 35 s
-
-| Tiempo | Entra cuando ves | Texto |
-|---|---|---|
-| 0:01 | "Unit updates" | The same upload, from the investor's side: the update arrives on the unit. |
-| 0:14 | El modal de la etapa | Every file's hash, and the package Merkle root — the same number the developer just saw. One role produces it; another can check it. |
+#### Acto 4 · La FSM (T18–T21)
 
 ##### T18 · Observar — video 40 s
 
@@ -967,13 +912,13 @@ video, ±3 s.)*
 | 0:21 | El filtro "stage" | Filterable by category… |
 | 0:32 | "Blockchain verification" | …and each transaction opens with its anchoring date and a link to the public explorer. |
 
-- [ ] En el estudio, las 18 tomas dicen "✓ voz".
+- [ ] En el estudio, las 15 tomas dicen "✓ voz".
 
 ---
 
 ## Paso 5 · Unir todo
 
-- [ ] En la carpeta están `T01.mov` y `T07.mov` … `T28.mov` y las 18 voces (el estudio lo muestra: todas en
+- [ ] En la carpeta están `T01.mov` y `T07.mov` … `T28.mov` y las 15 voces (el estudio lo muestra: todas en
       verde).
 
 **Con ffmpeg** (esta Mac lo tiene) — más rápido:
@@ -1063,7 +1008,7 @@ bastante más.
 | **Idioma** | **Todo en `en-US` desde el primer cuadro**, ya logueado; el toggle ES \| EN queda a la vista en el header y la voz de T01 lo nombra. | Catalyst revisa en inglés. Hasta el 2026-09-30 el cambio se hacía en cámara, en el login; el dueño lo sacó para abrir ya adentro. Los dos diccionarios están completos y la paridad la fuerza el compilador (`dictionary.ts`). |
 | **Entorno** | Producción: `propnexus-web.onrender.com`. Nunca local. | El video tiene que mostrar TXIDs reales en Preprod y la URL pública viva — parte de lo que sostiene el criterio 5. |
 | **La FSM** | **Las cuatro aristas, sobre la misma etapa**: subir evidencia → observar → reanudar → certificar. | Es la máquina de estados entera contada sobre un solo objeto. |
-| **Tomas** | 18 tomas: la sesión A es un recorrido continuo (T01, decisión del dueño del 2026-10-01: no tiene esperas) y la B son 17 tomas (T07 y T09 funden varias, grabadas de corrido el mismo día), cortadas donde hay espera, con video y audio por separado. | Cada acción on-chain tarda ~45 s y crear un proyecto bloquea ~6 min. Una toma continua es imposible, y con la toma como unidad los tiempos de pantalla y voz se cuentan desde el mismo 0:00. |
+| **Tomas** | 15 tomas: la sesión A es un recorrido continuo (T01, decisión del dueño del 2026-10-01: no tiene esperas) y la B son 14 tomas (T07, T09 y T12 funden varias, grabadas de corrido el mismo día), cortadas donde hay espera, con video y audio por separado. | Cada acción on-chain tarda ~45 s y crear un proyecto bloquea ~6 min. Una toma continua es imposible, y con la toma como unidad los tiempos de pantalla y voz se cuentan desde el mismo 0:00. |
 | **Orden del final** | La firma del escribano (T25) va **antes** de la vista pública (T27). | La vista pública muestra el dossier **ya firmado**, con su badge "Signed". Cambió el 2026-09-28. |
 
 **Los tiempos de espera** salen de
@@ -1086,13 +1031,13 @@ Para no prometer en audio algo que la pantalla no hace:
   - ~~el alta de proyecto no tiene vista previa de mapa (T07)~~ — **ahora sí** (D-097, 2026-09-28): la
     dirección mueve el pin y un clic lo ajusta;
   - el detalle de etapa **no muestra GPS ni hora de captura** de las fotos (la pantalla de etapa, que la sesión A ya no recorre);
-  - el contrato del investor **no muestra hash**: total, fecha de firma y el cronograma (T14); el
+  - el contrato del investor **no muestra hash**: total, fecha de firma y el cronograma (T12); el
     txid del contrato está del lado del developer (T22);
   - "Observed stages" del developer **no muestra la nota del certifier** (T19);
   - el detalle del proyecto del developer **no lista las etapas**: las diez `Pending` se ven en
     "Progress" (T09);
   - las novedades de la unidad **no abren el modal de la etapa**: llevan al detalle de la unidad, y
-    el modal sale de "Evidence by stage" (T17);
+    el modal sale de "Evidence by stage" (T17, fuera del video: no responde, bug abierto 2026-10-01);
   - el KPI del panel del developer cuenta **documentos anclados**, no eventos (T07).
 
 - **No hay PWA instalable.** `index.html` no linkea el manifest, no hay service worker registrado y
@@ -1103,7 +1048,7 @@ Para no prometer en audio algo que la pantalla no hace:
 - **No hay botón de liberar pagos.** D-070 lo sacó a propósito: este producto no administra fondos,
   refleja y respalda lo que pasa afuera (D-026). El endpoint
   `POST /developer/contracts/:id/releases/:stageNum` existe en el backend como deuda declarada y el
-  `ApiPort` ni lo expone. Por eso T14 muestra el estado vacío de releases y T22 muestra el contrato
+  `ApiPort` ni lo expone. Por eso T12 muestra el estado vacío de releases y T22 muestra el contrato
   como registro.
 - **La pantalla del admin (`/admin`) no sale en el video.** El admin es la salvaguarda (D-095), no
   uno de los cuatro roles del SOM; se usa fuera de cámara para invitar al certifier (corte de T07). No lo
