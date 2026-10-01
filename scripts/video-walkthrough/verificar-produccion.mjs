@@ -99,12 +99,14 @@ check(
 console.log("\nDeveloper");
 const delDev = await pedir("/developer/projects", { token: t.developer });
 ok(`"My projects" muestra ${delDev.length} proyectos: ${delDev.map((p) => p.name).join(", ")}`);
-const nunez = delDev.filter((p) => p.name === "Torre Núñez");
+const nuevo = delDev.filter((p) => p.name === "Torres de Palermo");
 if (!despues)
   check(
-    nunez.length === 0,
-    'todavía no existe "Torre Núñez" (nace en T08)',
-    'ya existe un "Torre Núñez": usá otro nombre en T08 para no confundirlos'
+    nuevo.length <= 1,
+    nuevo.length
+      ? '"Torres de Palermo" existe: es el que creó T07 (2026-10-01)'
+      : 'todavía no existe "Torres de Palermo" (nace en T07)',
+    `hay ${nuevo.length} "Torres de Palermo": borrá los de prueba antes de seguir`
   );
 
 console.log("\nCertifier");
@@ -143,7 +145,7 @@ console.log("\nAdmin");
 const usuarios = await pedir("/users", { token: t.admin });
 check(
   usuarios.some((u) => u.role === "verifier" && u.fullName === "Verifier Demo" && u.isActive),
-  '"Verifier Demo" activo (es el que se elige en el corte de T08)',
+  '"Verifier Demo" activo (es el que se elige en el corte de T07)',
   'no hay un certifier "Verifier Demo" activo'
 );
 

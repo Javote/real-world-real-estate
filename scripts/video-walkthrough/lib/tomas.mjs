@@ -1,4 +1,4 @@
-// Lee las 23 tomas del runbook del video (T01, la sesión A entera, y T07–T28): la fila del mapa (Paso 2) y las
+// Lee las 22 tomas del runbook del video (T01, la sesión A entera, y T07, T09–T28): la fila del mapa (Paso 2) y las
 // frases de la narración con sus tiempos (Paso 4.3). El runbook es la única
 // fuente: el estudio de voz y los subtítulos salen de acá, así que editar una
 // frase en el .md alcanza.
@@ -9,7 +9,8 @@ import { RAIZ } from "./api.mjs";
 export const RUNBOOK = join(RAIZ, "specs", "GUION-2026-09-21-video-walkthrough.md");
 
 // La sesión A es una sola toma (T01) desde el 2026-10-01: T02–T06 no existen.
-export const TOMAS = 23;
+// Y T07 funde el panel y el alta (T08 no existe), grabada de corrido el mismo día.
+export const TOMAS = 22;
 
 const segundos = (mmss) => {
   const [m, s] = mmss.split(":").map(Number);
