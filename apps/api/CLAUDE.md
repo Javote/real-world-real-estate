@@ -4,7 +4,7 @@
 > bcrypt, uploads, idempotencia, claves de traducción) están en el `CLAUDE.md` de la raíz.
 
 Express 5 + oRPC + Zod + JWT + bcrypt(10) + Multer 2.x + Kysely/SQLite (`@libsql/client`), base
-`/api/v1`. CommonJS (D-016). Los paths van **scopeados por rol** y salen de M2-D5 §4-6; fuera del
+`/api/v1`. ESM (D-102). Los paths van **scopeados por rol** y salen de M2-D5 §4-6; fuera del
 backlog quedan el CRUD de `/projects` y `/users` (admin, `SPEC-221`).
 
 ## Checklist de un endpoint nuevo
@@ -74,12 +74,14 @@ backlog quedan el CRUD de `/projects` y `/users` (admin, `SPEC-221`).
 
 **Módulos, Kysely y la base**
 
-- **`kysely`, `@libsql/*` y `@paralleldrive/cuid2` son ESM puro**: tipos con
-  `resolution-mode: "require"` y valor con `require()`, como en `lib/kysely.ts` y
-  `lib/libsql-client.ts`. No cambies `moduleResolution`.
-- **Un `require()` sin tipar saltea a `tsc`**: el paquete va declarado en `dependencies` o muere en
-  una instalación limpia (lo agarra el smoke test de CI).
-- **Un `import()` dinámico en un test lleva `.js`** (TS2835).
+- **Todo import relativo lleva `.js`** (`nodenext`), y un directorio, `/index.js`.
+- **`tsc` no avisa de `require`, `__dirname` ni `module`**: `@types/node` los declara igual, pero en
+  ESM no existen y fallan recién al arrancar. Van `import.meta.dirname` y
+  `esPuntoDeEntrada(import.meta.url)` (`lib/punto-de-entrada.ts`).
+- **Vitest verde no prueba que el build arranque**: resuelve con su propio loader. Un nombre que Node
+  no encuentra en un paquete CommonJS aparece recién con `node`; lo agarra el smoke test de CI.
+- **`lib/kysely.ts` y `lib/libsql-client.ts` son costuras de tests** (`vi.doMock`): se importa de
+  ahí, no del paquete.
 - **TypeScript hoistea los `import`**: `import "dotenv/config"` va primero, sin código intercalado.
 - **`LibsqlDialect` recibe `{ url, authToken }`, no un `Client`**: trae su propia versión de
   `@libsql/client` y los tipos no casan.
@@ -101,7 +103,10 @@ backlog quedan el CRUD de `/projects` y `/users` (admin, `SPEC-221`).
   no es el código (`specs/RUNBOOK-deploy.md` §2).
 - **`app.listen()` va antes que `initAnchorPort()`**: el puerto no espera a Blockfrost.
 - **Todo paso del `startCommand` anuncia que empieza y que termina**, y `migrate` tiene techo de 120 s.
-- **`--require` necesita `./`**: sin él se busca como paquete. Probá el comando literal del deploy.
+- **`--import` necesita `./`**: sin él se busca como paquete. Probá el comando literal del deploy.
+- **Un solo hook de `import-in-the-middle`, registrado antes de cargar OTel y Sentry**: Sentry va con
+  `registerEsmLoaderHooks: false` y se importa después de que el loader confirmó qué envolver. Si se
+  carga antes, su `node:http` queda sin instrumentar (sin `http.client.request.duration`).
 - **`envVars` de Render es un solo balde para build y start**: `NODE_ENV` va inline en el comando
   (`test/render-config.test.ts`).
 - **Sentry v10 registra sus propios globals de OTel**: `skipOpenTelemetrySetup: true`, o los traces

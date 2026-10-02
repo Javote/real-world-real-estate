@@ -12,32 +12,33 @@ import {
 } from "@plataforma/shared";
 import { type ZodType, z } from "zod";
 import { createDocument } from "zod-openapi";
-import { en } from "../src/lib/arrays";
-import { OpenAPIGenerator, os, ZodToJsonSchemaConverter } from "../src/lib/orpc";
-import { describeGuardEn, leerMontaje } from "../src/lib/route-inventory";
-import { auditOrpcRouter } from "../src/routes/audit.routes";
-import { type AuthContext, authOrpcRouter } from "../src/routes/auth.routes";
-import { capitalOrpcRouter } from "../src/routes/capital.routes";
-import { type CertifierContext, certifierOrpcRouter } from "../src/routes/certifier.routes";
-import { contractsOrpcRouter } from "../src/routes/contracts.routes";
-import { type DeveloperContext, developerOrpcRouter } from "../src/routes/developer.routes";
-import { developerComercialOrpcRouter } from "../src/routes/developer-comercial.routes";
-import { type EvidenceContext, evidenceOrpcRouter } from "../src/routes/evidence.routes";
-import { type InvestorContext, investorOrpcRouter } from "../src/routes/investor.routes";
-import { type NotaryContext, notaryOrpcRouter } from "../src/routes/notary.routes";
+import { en } from "../src/lib/arrays.js";
+import { OpenAPIGenerator, os, ZodToJsonSchemaConverter } from "../src/lib/orpc.js";
+import { esPuntoDeEntrada } from "../src/lib/punto-de-entrada.js";
+import { describeGuardEn, leerMontaje } from "../src/lib/route-inventory.js";
+import { auditOrpcRouter } from "../src/routes/audit.routes.js";
+import { type AuthContext, authOrpcRouter } from "../src/routes/auth.routes.js";
+import { capitalOrpcRouter } from "../src/routes/capital.routes.js";
+import { type CertifierContext, certifierOrpcRouter } from "../src/routes/certifier.routes.js";
+import { contractsOrpcRouter } from "../src/routes/contracts.routes.js";
+import { type DeveloperContext, developerOrpcRouter } from "../src/routes/developer.routes.js";
+import { developerComercialOrpcRouter } from "../src/routes/developer-comercial.routes.js";
+import { type EvidenceContext, evidenceOrpcRouter } from "../src/routes/evidence.routes.js";
+import { type InvestorContext, investorOrpcRouter } from "../src/routes/investor.routes.js";
+import { type NotaryContext, notaryOrpcRouter } from "../src/routes/notary.routes.js";
 import {
   type NotificationsContext,
   notificationsOrpcRouter
-} from "../src/routes/notifications.routes";
-import { type ProfileContext, profileOrpcRouter } from "../src/routes/profile.routes";
-import { type ProjectsContext, projectsOrpcRouter } from "../src/routes/projects.routes";
+} from "../src/routes/notifications.routes.js";
+import { type ProfileContext, profileOrpcRouter } from "../src/routes/profile.routes.js";
+import { type ProjectsContext, projectsOrpcRouter } from "../src/routes/projects.routes.js";
 import {
   type ProjectsObraContext,
   projectsObraOrpcRouter
-} from "../src/routes/projects-obra.routes";
-import { publicOrpcRouter } from "../src/routes/public.routes";
-import { type StagesContext, stagesOrpcRouter } from "../src/routes/stages.routes";
-import { type UsersContext, usersOrpcRouter } from "../src/routes/users.routes";
+} from "../src/routes/projects-obra.routes.js";
+import { publicOrpcRouter } from "../src/routes/public.routes.js";
+import { type StagesContext, stagesOrpcRouter } from "../src/routes/stages.routes.js";
+import { type UsersContext, usersOrpcRouter } from "../src/routes/users.routes.js";
 
 type SchemaEntry = { body?: ZodType; bodyContentType?: string; query?: ZodType };
 
@@ -415,7 +416,7 @@ export async function buildOpenApiDocument() {
 
 async function main() {
   const salida = path.join(
-    __dirname,
+    import.meta.dirname,
     "..",
     "..",
     "..",
@@ -430,4 +431,4 @@ async function main() {
   console.log(`[docs:openapi] escrito ${archivo}`);
 }
 
-if (require.main === module) main();
+if (esPuntoDeEntrada(import.meta.url)) main();

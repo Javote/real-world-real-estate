@@ -1,7 +1,7 @@
 import { INITIAL_STAGE_STATE } from "@plataforma/shared";
-import { createId } from "../../src/db/id";
-import { anchorEvent, recordOnChainEvent } from "../../src/domain/stage-transition";
-import { db } from "../../src/lib/db";
+import { createId } from "../../src/db/id.js";
+import { anchorEvent, recordOnChainEvent } from "../../src/domain/stage-transition.js";
+import { db } from "../../src/lib/db.js";
 
 export async function crearStageMinteado(input: {
   projectId: string;

@@ -1,14 +1,3 @@
-// ESM puro en un package CommonJS: `require()` en runtime (Node 24) tipado con `resolution-mode`.
-const kyselyModule = require("kysely") as typeof import("kysely", { with: {
-  "resolution-mode": "require"
-}});
-
-export const Kysely = kyselyModule.Kysely;
-export const sql = kyselyModule.sql;
-export const SqliteAdapter = kyselyModule.SqliteAdapter;
-
-export type { Kysely as KyselyDb } from "kysely" with { "resolution-mode": "require" };
-
 export type {
   ColumnType,
   Compilable,
@@ -16,6 +5,7 @@ export type {
   ExpressionWrapper,
   Generated,
   Insertable,
+  Kysely as KyselyDb,
   KyselyPlugin,
   PluginTransformQueryArgs,
   PluginTransformResultArgs,
@@ -25,4 +15,5 @@ export type {
   SqlBool,
   UnknownRow,
   Updateable
-} from "kysely" with { "resolution-mode": "require" };
+} from "kysely";
+export { Kysely, SqliteAdapter, sql } from "kysely";

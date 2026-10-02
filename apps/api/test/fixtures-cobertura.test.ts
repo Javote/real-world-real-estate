@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
-import { USER_ROLES } from "../src/db/types";
-import { db } from "../src/lib/db";
-import { ELENCO_TEST } from "./global-setup";
+import { USER_ROLES } from "../src/db/types.js";
+import { db } from "../src/lib/db.js";
+import { ELENCO_TEST } from "./global-setup.js";
 
 describe("el elenco de fixtures cubre todos los roles", () => {
   it("cada rol de USER_ROLES tiene un representante ACTIVO", () => {

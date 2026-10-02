@@ -7,12 +7,12 @@ import {
   projectCoverResultSchema
 } from "@plataforma/shared";
 import { type Request, Router } from "express";
-import { db } from "../lib/db";
-import { leerCabecera, storage } from "../lib/storage";
-import { uploadProjectCoverFile } from "../lib/upload";
-import { authenticate, authorize } from "../middlewares/auth";
-import { paramValidator } from "../middlewares/validate-params";
-import { writeAuditLog } from "../utils/audit";
+import { db } from "../lib/db.js";
+import { leerCabecera, storage } from "../lib/storage.js";
+import { uploadProjectCoverFile } from "../lib/upload.js";
+import { authenticate, authorize } from "../middlewares/auth.js";
+import { paramValidator } from "../middlewares/validate-params.js";
+import { writeAuditLog } from "../utils/audit.js";
 
 const router = Router();
 

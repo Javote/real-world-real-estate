@@ -16,7 +16,7 @@ describe("uploadDir — sin UPLOAD_DIR, ancla al package", () => {
 
     await import("../src/lib/upload.js");
 
-    const esperado = path.resolve(__dirname, "..", "uploads");
+    const esperado = path.resolve(import.meta.dirname, "..", "uploads");
     expect(existsSync(esperado)).toBe(true);
   });
 });

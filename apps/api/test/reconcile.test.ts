@@ -1,17 +1,17 @@
 import { buildStageDatum } from "@plataforma/shared";
 import request from "supertest";
 import { beforeAll, describe, expect, it } from "vitest";
-import app from "../src/app";
-import { createId } from "../src/db/id";
+import app from "../src/app.js";
+import { createId } from "../src/db/id.js";
 import {
   hilosSospechosos,
   reconciliarAnclajes,
   reconciliarParaLectura,
   repararHilosSospechosos
-} from "../src/domain/reconcile";
-import { anchorPort } from "../src/lib/anchor";
-import { db } from "../src/lib/db";
-import { FIXTURES } from "./global-setup";
+} from "../src/domain/reconcile.js";
+import { anchorPort } from "../src/lib/anchor.js";
+import { db } from "../src/lib/db.js";
+import { FIXTURES } from "./global-setup.js";
 
 let proyecto: string;
 let tokenAdmin: string;

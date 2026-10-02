@@ -5,7 +5,7 @@ import type {
   QueryResult,
   RootOperationNode,
   UnknownRow
-} from "../lib/kysely";
+} from "../lib/kysely.js";
 
 const TIMESTAMP_COLUMNS = new Set([
   "createdAt",

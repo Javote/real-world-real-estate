@@ -2,12 +2,12 @@ import { Readable } from "node:stream";
 import { cuidParamSchema, hex64ParamSchema, publicDossierSchema } from "@plataforma/shared";
 import { Router } from "express";
 import { z } from "zod";
-import { compileDossier } from "../domain/dossier";
-import { db } from "../lib/db";
-import { delegarAOrpc, OpenAPIHandler, ORPCError, os } from "../lib/orpc";
-import { storage } from "../lib/storage";
-import { dossierRateLimiter } from "../middlewares/rateLimit";
-import { paramValidator } from "../middlewares/validate-params";
+import { compileDossier } from "../domain/dossier.js";
+import { db } from "../lib/db.js";
+import { delegarAOrpc, OpenAPIHandler, ORPCError, os } from "../lib/orpc.js";
+import { storage } from "../lib/storage.js";
+import { dossierRateLimiter } from "../middlewares/rateLimit.js";
+import { paramValidator } from "../middlewares/validate-params.js";
 
 const PREFIJO_ABSOLUTO = "/api/v1/public";
 

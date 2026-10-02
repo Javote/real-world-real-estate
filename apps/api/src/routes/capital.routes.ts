@@ -7,11 +7,11 @@ import {
 } from "@plataforma/shared";
 import { Router } from "express";
 import { z } from "zod";
-import type { UserRole } from "../db/types";
-import { en } from "../lib/arrays";
-import { db } from "../lib/db";
-import { conUsuario, delegarAOrpc, OpenAPIHandler, os } from "../lib/orpc";
-import { authenticate, authorize, projectScope } from "../middlewares/auth";
+import type { UserRole } from "../db/types.js";
+import { en } from "../lib/arrays.js";
+import { db } from "../lib/db.js";
+import { conUsuario, delegarAOrpc, OpenAPIHandler, os } from "../lib/orpc.js";
+import { authenticate, authorize, projectScope } from "../middlewares/auth.js";
 
 const PREFIJO_ABSOLUTO = "/api/v1/developer";
 

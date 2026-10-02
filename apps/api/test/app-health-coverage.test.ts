@@ -13,7 +13,7 @@ async function appFresca(): Promise<Express> {
 }
 
 afterEach(async () => {
-  vi.doUnmock("../src/lib/kysely");
+  vi.doUnmock("../src/lib/kysely.js");
   if (dbActual) {
     await dbActual.destroy();
     dbActual = undefined;
@@ -31,8 +31,8 @@ describe("GET /health", { timeout: 20_000 }, () => {
   });
 
   it("503 cuando la base no responde — el catch", async () => {
-    vi.doMock("../src/lib/kysely", async (importOriginal) => {
-      const real = await importOriginal<typeof import("../src/lib/kysely")>();
+    vi.doMock("../src/lib/kysely.js", async (importOriginal) => {
+      const real = await importOriginal<typeof import("../src/lib/kysely.js")>();
       return {
         ...real,
         sql: () => ({ execute: () => Promise.reject(new Error("la base se cayó")) })

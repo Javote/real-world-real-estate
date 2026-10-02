@@ -3,7 +3,7 @@ import os from "node:os";
 import path from "node:path";
 import { Readable } from "node:stream";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { createStorage } from "../src/lib/storage";
+import { createStorage } from "../src/lib/storage.js";
 
 const { mockSend, FakeS3Client, FakeCommand } = vi.hoisted(() => {
   const mockSend = vi.fn();

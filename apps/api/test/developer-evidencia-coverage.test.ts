@@ -2,12 +2,12 @@ import { existsSync, readdirSync } from "node:fs";
 import type { Request } from "express";
 import request from "supertest";
 import { afterAll, afterEach, beforeAll, describe, expect, it, vi } from "vitest";
-import app from "../src/app";
-import { createId } from "../src/db/id";
-import { db } from "../src/lib/db";
-import { storage } from "../src/lib/storage";
-import { FIXTURES } from "./global-setup";
-import { crearStageMinteado } from "./helpers/stages";
+import app from "../src/app.js";
+import { createId } from "../src/db/id.js";
+import { db } from "../src/lib/db.js";
+import { storage } from "../src/lib/storage.js";
+import { FIXTURES } from "./global-setup.js";
+import { crearStageMinteado } from "./helpers/stages.js";
 
 vi.mock("@plataforma/shared", async (importOriginal) => ({
   ...(await importOriginal<typeof import("@plataforma/shared")>()),
@@ -18,8 +18,8 @@ const ganchos = vi.hoisted(() => ({
   despuesDeMulter: null as null | ((req: Request) => Promise<void>)
 }));
 
-vi.mock("../src/lib/upload", async (importOriginal) => {
-  const real = await importOriginal<typeof import("../src/lib/upload")>();
+vi.mock("../src/lib/upload.js", async (importOriginal) => {
+  const real = await importOriginal<typeof import("../src/lib/upload.js")>();
   const envuelto: typeof real.uploadEvidenceFiles = (req, res, cb) =>
     real.uploadEvidenceFiles(req, res, (err?: unknown) => {
       const gancho = ganchos.despuesDeMulter;

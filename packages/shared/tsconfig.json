@@ -1,7 +1,7 @@
 {
-  // CommonJS a propósito: apps/api es CJS y lo consume con require() en
-  // runtime (D-016). El front no lo carga en runtime — importa solo tipos, que
-  // `verbatimModuleSyntax` borra en la compilación.
+  // CommonJS: apps/api es ESM y lo importa igual (D-102). El front no lo carga
+  // en runtime — importa solo tipos, que `verbatimModuleSyntax` borra en la
+  // compilación.
   //
   // El package.json apunta `types` al DIST (`dist/index.d.ts`) y `main` también
   // al dist: el typecheck de los consumidores SÍ depende de que este package

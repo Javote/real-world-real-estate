@@ -1,9 +1,9 @@
 import express from "express";
 import request from "supertest";
 import { afterAll, describe, expect, it, vi } from "vitest";
-import { db } from "../src/lib/db";
-import { HttpError } from "../src/lib/http-error";
-import { errorHandler } from "../src/middlewares/errorHandler";
+import { db } from "../src/lib/db.js";
+import { HttpError } from "../src/lib/http-error.js";
+import { errorHandler } from "../src/middlewares/errorHandler.js";
 
 afterAll(async () => {
   await db.destroy();

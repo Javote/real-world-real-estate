@@ -7,7 +7,7 @@ import {
   STAGE_STATES,
   type StageState
 } from "@plataforma/shared";
-import { db } from "../src/lib/db";
+import { db } from "../src/lib/db.js";
 
 interface Args {
   stageId: string;

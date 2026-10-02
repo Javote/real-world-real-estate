@@ -1,14 +1,15 @@
 import "dotenv/config";
 import { existsSync, readdirSync, readFileSync } from "node:fs";
 import path from "node:path";
-import { type Client, createClient } from "../lib/libsql-client";
-import { esBaseLocal } from "./credentials";
-import { asegurarDirectorioLocal, urlDeLaBase } from "./local-db";
+import { type Client, createClient } from "../lib/libsql-client.js";
+import { esPuntoDeEntrada } from "../lib/punto-de-entrada.js";
+import { esBaseLocal } from "./credentials.js";
+import { asegurarDirectorioLocal, urlDeLaBase } from "./local-db.js";
 
 export const MIGRATIONS_DIR = (() => {
   const candidatos = [
-    path.join(__dirname, "..", "..", "migrations"),
-    path.join(__dirname, "..", "..", "..", "migrations")
+    path.join(import.meta.dirname, "..", "..", "migrations"),
+    path.join(import.meta.dirname, "..", "..", "..", "migrations")
   ];
   const encontrado = candidatos.find((dir) => existsSync(dir));
   if (!encontrado) {
@@ -124,7 +125,7 @@ export async function migrarSoloLocal(url: string = urlDeLaBase()): Promise<stri
 }
 
 /* v8 ignore if -- @preserve: guardia para que importar el módulo no migre; solo corre como CLI */
-if (require.main === module) {
+if (esPuntoDeEntrada(import.meta.url)) {
   (process.argv.includes("--solo-local") ? migrarSoloLocal() : migrar()).catch((e) => {
     console.error(e);
     process.exit(1);

@@ -1,10 +1,10 @@
 import request from "supertest";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
-import app from "../src/app";
-import { MEMBERSHIP_ROLES } from "../src/db/types";
-import { db } from "../src/lib/db";
-import { ANY_MEMBERSHIP, canAccessProject } from "../src/middlewares/auth";
-import { FIXTURES } from "./global-setup";
+import app from "../src/app.js";
+import { MEMBERSHIP_ROLES } from "../src/db/types.js";
+import { db } from "../src/lib/db.js";
+import { ANY_MEMBERSHIP, canAccessProject } from "../src/middlewares/auth.js";
+import { FIXTURES } from "./global-setup.js";
 
 let miembro: string;
 let ajeno: string;

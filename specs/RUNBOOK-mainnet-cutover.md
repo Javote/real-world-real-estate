@@ -97,7 +97,7 @@ Mismo procedimiento que `PLAN-2026-08-31-anclaje-real.md` usó para Preprod, con
 
 ```bash
 # el mismo smoke test que valida instrumentación en Preprod, contra el binario compilado real
-node --require dist/src/instrumentation.js dist/src/server.js
+node --import ./dist/src/instrumentation.js dist/src/server.js
 ```
 
 Y una transacción de prueba resuelta contra Blockfrost mainnet, confirmada independientemente en un

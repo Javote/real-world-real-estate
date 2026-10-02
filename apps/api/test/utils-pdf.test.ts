@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { renderTextPdf } from "../src/utils/pdf";
+import { renderTextPdf } from "../src/utils/pdf.js";
 
 describe("renderTextPdf — envolver", () => {
   it("una línea corta no se corta", () => {

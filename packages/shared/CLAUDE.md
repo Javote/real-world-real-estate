@@ -31,6 +31,6 @@ falla el typecheck de los dos lados.
 - **Todo schema de respuesta va `.strict()`**: sin él, Zod descarta claves desconocidas y un
   `passwordHash` filtrado pasa en silencio.
 - **Las fechas viajan como string ISO en UTC** (`z.string().datetime()`), no como `Date`.
-- **El package es CommonJS**, como la API (D-016): el front no puede importar valores por el
-  índice. Un valor que el front necesite va en un módulo sin dependencias con su propia entrada en
+- **El package es CommonJS** (D-102; la API es ESM y lo importa igual): el front no puede importar
+  valores por el índice. Un valor que el front necesite va en un módulo sin dependencias con su propia entrada en
   `exports`.

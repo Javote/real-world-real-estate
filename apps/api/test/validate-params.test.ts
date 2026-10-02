@@ -1,7 +1,7 @@
 import request from "supertest";
 import { beforeAll, describe, expect, it } from "vitest";
-import app from "../src/app";
-import { FIXTURES } from "./global-setup";
+import app from "../src/app.js";
+import { FIXTURES } from "./global-setup.js";
 
 let token: string;
 

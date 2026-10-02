@@ -3,11 +3,11 @@ import fs from "node:fs";
 import path from "node:path";
 import request from "supertest";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
-import app from "../src/app";
-import { createId } from "../src/db/id";
-import { db } from "../src/lib/db";
-import { FIXTURES } from "./global-setup";
-import { crearStageMinteado } from "./helpers/stages";
+import app from "../src/app.js";
+import { createId } from "../src/db/id.js";
+import { db } from "../src/lib/db.js";
+import { FIXTURES } from "./global-setup.js";
+import { crearStageMinteado } from "./helpers/stages.js";
 
 const login = (f: { email: string; password: string }) =>
   request(app).post("/api/v1/auth/login").send({ email: f.email, password: f.password });

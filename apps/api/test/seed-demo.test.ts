@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, it } from "vitest";
-import { sembrarDemo } from "../src/db/seed";
-import { db } from "../src/lib/db";
+import { sembrarDemo } from "../src/db/seed.js";
+import { db } from "../src/lib/db.js";
 
 const ENV_VARS = ["SEED_ADMIN_PASSWORD", "SEED_DEMO_PASSWORD"] as const;
 let previo: Record<string, string | undefined> = {};

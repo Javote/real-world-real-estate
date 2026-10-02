@@ -1,8 +1,8 @@
 import type { LiveThread } from "@plataforma/cardano";
 import { refToHex } from "@plataforma/shared";
-import { anchorPort } from "../lib/anchor";
-import { db } from "../lib/db";
-import { sql } from "../lib/kysely";
+import { anchorPort } from "../lib/anchor.js";
+import { db } from "../lib/db.js";
+import { sql } from "../lib/kysely.js";
 
 export interface ResultadoReconciliacion {
   revisados: number;

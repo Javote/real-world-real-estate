@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { en } from "../src/lib/arrays";
+import { en } from "../src/lib/arrays.js";
 
 describe("en — SPEC-208 (B-12)", () => {
   it("devuelve el valor cuando el índice está en rango", () => {

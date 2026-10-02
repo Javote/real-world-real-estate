@@ -1,10 +1,10 @@
 import request from "supertest";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
-import app from "../src/app";
-import { createId } from "../src/db/id";
-import { en } from "../src/lib/arrays";
-import { db } from "../src/lib/db";
-import { FIXTURES } from "./global-setup";
+import app from "../src/app.js";
+import { createId } from "../src/db/id.js";
+import { en } from "../src/lib/arrays.js";
+import { db } from "../src/lib/db.js";
+import { FIXTURES } from "./global-setup.js";
 
 const ACCION = "TEST_AUDIT_SCOPE";
 

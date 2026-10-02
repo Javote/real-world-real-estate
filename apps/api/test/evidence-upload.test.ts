@@ -4,15 +4,15 @@ import { resolve } from "node:path";
 import { EVIDENCE_MAX_FILE_BYTES } from "@plataforma/shared";
 import request from "supertest";
 import { afterAll, beforeAll, describe, expect, it, vi } from "vitest";
-import app from "../src/app";
-import { createId } from "../src/db/id";
-import { crearBundle } from "../src/domain/stage-transition";
-import { anchorPort } from "../src/lib/anchor";
-import { en } from "../src/lib/arrays";
-import { db } from "../src/lib/db";
-import { storage } from "../src/lib/storage";
-import { FIXTURES } from "./global-setup";
-import { crearStageMinteado } from "./helpers/stages";
+import app from "../src/app.js";
+import { createId } from "../src/db/id.js";
+import { crearBundle } from "../src/domain/stage-transition.js";
+import { anchorPort } from "../src/lib/anchor.js";
+import { en } from "../src/lib/arrays.js";
+import { db } from "../src/lib/db.js";
+import { storage } from "../src/lib/storage.js";
+import { FIXTURES } from "./global-setup.js";
+import { crearStageMinteado } from "./helpers/stages.js";
 
 const UPLOAD_DIR = resolve(process.cwd(), process.env.UPLOAD_DIR ?? "./test-uploads");
 

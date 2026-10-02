@@ -9,14 +9,14 @@ import {
 } from "@plataforma/shared";
 import { Router } from "express";
 import { z } from "zod";
-import type { UserRole } from "../db/types";
-import { cabezaDelHilo, transitionStage } from "../domain/stage-transition";
-import { db, enLote } from "../lib/db";
-import { conUsuario, delegarAOrpc, OpenAPIHandler, ORPCError, os } from "../lib/orpc";
-import { ANY_MEMBERSHIP, authenticate, authorize, CUALQUIER_ROL } from "../middlewares/auth";
-import { paramValidator } from "../middlewares/validate-params";
-import { insertAuditLog } from "../utils/audit";
-import { EVIDENCE_SAFE_COLUMNS } from "./_shared";
+import type { UserRole } from "../db/types.js";
+import { cabezaDelHilo, transitionStage } from "../domain/stage-transition.js";
+import { db, enLote } from "../lib/db.js";
+import { conUsuario, delegarAOrpc, OpenAPIHandler, ORPCError, os } from "../lib/orpc.js";
+import { ANY_MEMBERSHIP, authenticate, authorize, CUALQUIER_ROL } from "../middlewares/auth.js";
+import { paramValidator } from "../middlewares/validate-params.js";
+import { insertAuditLog } from "../utils/audit.js";
+import { EVIDENCE_SAFE_COLUMNS } from "./_shared.js";
 
 const stageDetailSchema = stageSchema.extend({
   evidences: z.array(evidenceSchema),

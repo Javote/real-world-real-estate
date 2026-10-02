@@ -1,11 +1,11 @@
 import { contractReleaseSchema, cuidParamSchema } from "@plataforma/shared";
 import { Router } from "express";
 import { z } from "zod";
-import { reconciliarParaLectura } from "../domain/reconcile";
-import { db } from "../lib/db";
-import { delegarAOrpc, OpenAPIHandler, ORPCError, os } from "../lib/orpc";
-import { authenticate, authorize, CUALQUIER_ROL } from "../middlewares/auth";
-import { paramValidator } from "../middlewares/validate-params";
+import { reconciliarParaLectura } from "../domain/reconcile.js";
+import { db } from "../lib/db.js";
+import { delegarAOrpc, OpenAPIHandler, ORPCError, os } from "../lib/orpc.js";
+import { authenticate, authorize, CUALQUIER_ROL } from "../middlewares/auth.js";
+import { paramValidator } from "../middlewares/validate-params.js";
 
 const PREFIJO_ABSOLUTO = "/api/v1/contracts";
 

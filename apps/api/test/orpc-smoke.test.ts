@@ -2,7 +2,7 @@ import express from "express";
 import request from "supertest";
 import { describe, expect, it } from "vitest";
 import { z } from "zod";
-import { OpenAPIGenerator, OpenAPIHandler, os, ZodToJsonSchemaConverter } from "./helpers/orpc";
+import { OpenAPIGenerator, OpenAPIHandler, os, ZodToJsonSchemaConverter } from "./helpers/orpc.js";
 
 const pingInputSchema = z.strictObject({ nombre: z.string().min(1) });
 const pingOutputSchema = z.strictObject({ saludo: z.string() });

@@ -2,13 +2,13 @@ import { randomUUID } from "node:crypto";
 import { loginRequestSchema, loginResponseSchema, meResponseSchema } from "@plataforma/shared";
 import bcrypt from "bcrypt";
 import { Router } from "express";
-import type { UserRole } from "../db/types";
-import { db } from "../lib/db";
-import { signToken } from "../lib/jwt";
-import { conUsuario, delegarAOrpc, OpenAPIHandler, ORPCError, os } from "../lib/orpc";
-import { authenticate, authorize, CUALQUIER_ROL } from "../middlewares/auth";
-import { loginRateLimiter } from "../middlewares/rateLimit";
-import { writeAuditLog } from "../utils/audit";
+import type { UserRole } from "../db/types.js";
+import { db } from "../lib/db.js";
+import { signToken } from "../lib/jwt.js";
+import { conUsuario, delegarAOrpc, OpenAPIHandler, ORPCError, os } from "../lib/orpc.js";
+import { authenticate, authorize, CUALQUIER_ROL } from "../middlewares/auth.js";
+import { loginRateLimiter } from "../middlewares/rateLimit.js";
+import { writeAuditLog } from "../utils/audit.js";
 
 const PREFIJO_ABSOLUTO = "/api/v1/auth";
 

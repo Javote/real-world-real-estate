@@ -12,16 +12,16 @@ import {
 } from "@plataforma/shared";
 import { Router } from "express";
 import { z } from "zod";
-import type { UserRole } from "../db/types";
-import { anchorCommitmentEvent, commitmentOf } from "../domain/anchoring";
-import { compileDossier } from "../domain/dossier";
-import { notifyUnitInvestor } from "../domain/notify";
-import { reconciliarParaLectura } from "../domain/reconcile";
-import { db } from "../lib/db";
-import { conUsuario, delegarAOrpc, OpenAPIHandler, ORPCError, os } from "../lib/orpc";
-import { authenticate, authorize } from "../middlewares/auth";
-import { paramValidator } from "../middlewares/validate-params";
-import { writeAuditLog } from "../utils/audit";
+import type { UserRole } from "../db/types.js";
+import { anchorCommitmentEvent, commitmentOf } from "../domain/anchoring.js";
+import { compileDossier } from "../domain/dossier.js";
+import { notifyUnitInvestor } from "../domain/notify.js";
+import { reconciliarParaLectura } from "../domain/reconcile.js";
+import { db } from "../lib/db.js";
+import { conUsuario, delegarAOrpc, OpenAPIHandler, ORPCError, os } from "../lib/orpc.js";
+import { authenticate, authorize } from "../middlewares/auth.js";
+import { paramValidator } from "../middlewares/validate-params.js";
+import { writeAuditLog } from "../utils/audit.js";
 
 const PREFIJO_ABSOLUTO = "/api/v1/notary";
 

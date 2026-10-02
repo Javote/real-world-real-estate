@@ -1,7 +1,7 @@
 import type { Server } from "node:http";
-import app from "./app";
-import { initAnchorPort } from "./lib/anchor";
-import { db } from "./lib/db";
+import app from "./app.js";
+import { initAnchorPort } from "./lib/anchor.js";
+import { db } from "./lib/db.js";
 
 const port = Number(process.env.PORT || 8787);
 

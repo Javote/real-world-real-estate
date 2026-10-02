@@ -1,11 +1,11 @@
 import { cuidParamSchema, unreadCountSchema } from "@plataforma/shared";
 import { Router } from "express";
 import { z } from "zod";
-import type { UserRole } from "../db/types";
-import { db } from "../lib/db";
-import { conUsuario, delegarAOrpc, OpenAPIHandler, ORPCError, os } from "../lib/orpc";
-import { authenticate, authorize, CUALQUIER_ROL } from "../middlewares/auth";
-import { paramValidator } from "../middlewares/validate-params";
+import type { UserRole } from "../db/types.js";
+import { db } from "../lib/db.js";
+import { conUsuario, delegarAOrpc, OpenAPIHandler, ORPCError, os } from "../lib/orpc.js";
+import { authenticate, authorize, CUALQUIER_ROL } from "../middlewares/auth.js";
+import { paramValidator } from "../middlewares/validate-params.js";
 
 const PREFIJO_ABSOLUTO = "/api/v1/notifications";
 

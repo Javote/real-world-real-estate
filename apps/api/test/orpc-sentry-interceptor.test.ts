@@ -1,7 +1,7 @@
 import express from "express";
 import request from "supertest";
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { OpenAPIHandler, ORPCError, os } from "../src/lib/orpc";
+import { OpenAPIHandler, ORPCError, os } from "../src/lib/orpc.js";
 
 const { captureException } = vi.hoisted(() => ({
   captureException: vi.fn((_error: unknown) => "id")

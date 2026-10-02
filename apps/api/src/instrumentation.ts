@@ -1,6 +1,7 @@
 import "dotenv/config";
 
-import * as Sentry from "@sentry/node";
+import { register } from "node:module";
+import { createAddHookMessageChannel } from "import-in-the-middle";
 
 export function initSentry(): void {
   if (process.env.SENTRY_DSN) {
@@ -9,7 +10,8 @@ export function initSentry(): void {
       environment: process.env.NODE_ENV ?? "development",
       tracesSampleRate: 0,
       sendDefaultPii: false,
-      skipOpenTelemetrySetup: true
+      skipOpenTelemetrySetup: true,
+      registerEsmLoaderHooks: false
     });
     console.log("[instrumentation] Sentry activo");
   } else {
@@ -31,32 +33,46 @@ interface DependenciasOtel {
   DiagLogLevel: { ERROR: unknown };
 }
 
-function cargarDependenciasOtel(): DependenciasOtel {
-  const { NodeSDK } = require("@opentelemetry/sdk-node");
-  const { getNodeAutoInstrumentations } = require("@opentelemetry/auto-instrumentations-node");
-  const { OTLPTraceExporter } = require("@opentelemetry/exporter-trace-otlp-http");
-  const { OTLPMetricExporter } = require("@opentelemetry/exporter-metrics-otlp-http");
-  const { PeriodicExportingMetricReader } = require("@opentelemetry/sdk-metrics");
-  const { defaultResource, resourceFromAttributes } = require("@opentelemetry/resources");
-  const { ATTR_SERVICE_NAME } = require("@opentelemetry/semantic-conventions");
-  const { diag, DiagConsoleLogger, DiagLogLevel } = require("@opentelemetry/api");
+// En ESM, `--import` no alcanza: lo que importa el grafo ESM solo se instrumenta si el hook de
+// `import-in-the-middle` está registrado antes de cargarlo. Uno solo, para OTel y para Sentry, que por
+// eso arranca con `registerEsmLoaderHooks: false`.
+function registrarHookEsm(): () => Promise<void> {
+  const { registerOptions, waitForAllMessagesAcknowledged } = createAddHookMessageChannel();
+  register("import-in-the-middle/hook.mjs", import.meta.url, registerOptions);
+  return waitForAllMessagesAcknowledged;
+}
+
+async function cargarDependenciasOtel(): Promise<DependenciasOtel> {
+  const [sdkNode, auto, trazas, metricas, sdkMetricas, recursos, semconv, api] = await Promise.all([
+    import("@opentelemetry/sdk-node"),
+    import("@opentelemetry/auto-instrumentations-node"),
+    import("@opentelemetry/exporter-trace-otlp-http"),
+    import("@opentelemetry/exporter-metrics-otlp-http"),
+    import("@opentelemetry/sdk-metrics"),
+    import("@opentelemetry/resources"),
+    import("@opentelemetry/semantic-conventions"),
+    import("@opentelemetry/api")
+  ]);
   return {
-    NodeSDK,
-    getNodeAutoInstrumentations,
-    OTLPTraceExporter,
-    OTLPMetricExporter,
-    PeriodicExportingMetricReader,
-    defaultResource,
-    resourceFromAttributes,
-    ATTR_SERVICE_NAME,
-    diag,
-    DiagConsoleLogger,
-    DiagLogLevel
+    NodeSDK: sdkNode.NodeSDK as DependenciasOtel["NodeSDK"],
+    getNodeAutoInstrumentations:
+      auto.getNodeAutoInstrumentations as DependenciasOtel["getNodeAutoInstrumentations"],
+    OTLPTraceExporter: trazas.OTLPTraceExporter,
+    OTLPMetricExporter: metricas.OTLPMetricExporter,
+    PeriodicExportingMetricReader:
+      sdkMetricas.PeriodicExportingMetricReader as DependenciasOtel["PeriodicExportingMetricReader"],
+    defaultResource: recursos.defaultResource as DependenciasOtel["defaultResource"],
+    resourceFromAttributes:
+      recursos.resourceFromAttributes as DependenciasOtel["resourceFromAttributes"],
+    ATTR_SERVICE_NAME: semconv.ATTR_SERVICE_NAME,
+    diag: api.diag as DependenciasOtel["diag"],
+    DiagConsoleLogger: api.DiagConsoleLogger,
+    DiagLogLevel: api.DiagLogLevel
   };
 }
 
-export function initOpenTelemetry(deps?: DependenciasOtel): void {
-  if (process.env.OTEL_EXPORTER_OTLP_ENDPOINT) {
+export function initOpenTelemetry(deps: DependenciasOtel | undefined): void {
+  if (process.env.OTEL_EXPORTER_OTLP_ENDPOINT && deps) {
     const {
       NodeSDK,
       getNodeAutoInstrumentations,
@@ -69,7 +85,7 @@ export function initOpenTelemetry(deps?: DependenciasOtel): void {
       diag,
       DiagConsoleLogger,
       DiagLogLevel
-    } = deps ?? cargarDependenciasOtel();
+    } = deps;
 
     diag.setLogger(new DiagConsoleLogger(), DiagLogLevel.ERROR);
 
@@ -99,7 +115,21 @@ export function initOpenTelemetry(deps?: DependenciasOtel): void {
   }
 }
 
+const hookListo =
+  process.env.SENTRY_DSN || process.env.OTEL_EXPORTER_OTLP_ENDPOINT
+    ? registrarHookEsm()
+    : undefined;
+const dependenciasOtel = process.env.OTEL_EXPORTER_OTLP_ENDPOINT
+  ? await cargarDependenciasOtel()
+  : undefined;
+
+initOpenTelemetry(dependenciasOtel);
+await hookListo?.();
+
+// Después de OTel: Sentry importa `node:http` al cargarse, y en ESM ese import solo queda instrumentado
+// si el loader ya confirmó qué módulos envolver.
+const Sentry = await import("@sentry/node");
 initSentry();
-initOpenTelemetry();
+await hookListo?.();
 
 export { Sentry };

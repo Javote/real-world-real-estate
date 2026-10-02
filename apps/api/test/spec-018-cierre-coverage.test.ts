@@ -1,12 +1,12 @@
 import { buildStageDatum, refToHex } from "@plataforma/shared";
 import { afterAll, beforeAll, describe, expect, it, vi } from "vitest";
-import { createId } from "../src/db/id";
-import { anchorCommitmentEvent } from "../src/domain/anchoring";
-import { notify, notifyUnitInvestors } from "../src/domain/notify";
-import { reconciliarParaLectura, repararHilosSospechosos } from "../src/domain/reconcile";
-import { anchorPort } from "../src/lib/anchor";
-import { db } from "../src/lib/db";
-import { FIXTURES } from "./global-setup";
+import { createId } from "../src/db/id.js";
+import { anchorCommitmentEvent } from "../src/domain/anchoring.js";
+import { notify, notifyUnitInvestors } from "../src/domain/notify.js";
+import { reconciliarParaLectura, repararHilosSospechosos } from "../src/domain/reconcile.js";
+import { anchorPort } from "../src/lib/anchor.js";
+import { db } from "../src/lib/db.js";
+import { FIXTURES } from "./global-setup.js";
 
 let proyecto: string;
 

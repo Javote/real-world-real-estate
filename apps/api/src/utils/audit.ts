@@ -1,6 +1,6 @@
 import type { AuditAction, AuditEntityType } from "@plataforma/shared";
-import { createId } from "../db/id";
-import { db } from "../lib/db";
+import { createId } from "../db/id.js";
+import { db } from "../lib/db.js";
 
 type EntradaDeAudit = {
   actorUserId?: string;

@@ -1,7 +1,7 @@
-import type { UserRole } from "../db/types";
-import { db } from "../lib/db";
-import { projectScope } from "../middlewares/auth";
-import { codigoDeRestriccion } from "../middlewares/errorHandler";
+import type { UserRole } from "../db/types.js";
+import { db } from "../lib/db.js";
+import { projectScope } from "../middlewares/auth.js";
+import { codigoDeRestriccion } from "../middlewares/errorHandler.js";
 
 type ManejadoresDeRestriccion = {
   RESOURCE_ALREADY_EXISTS: (opts: { message: string }) => unknown;

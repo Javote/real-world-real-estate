@@ -9,14 +9,14 @@ import {
 } from "@plataforma/shared";
 import { Router } from "express";
 import { z } from "zod";
-import type { UserRole } from "../db/types";
-import { reconciliarParaLectura } from "../domain/reconcile";
-import { retryStageMint } from "../domain/stage-transition";
-import { db } from "../lib/db";
-import { conUsuario, delegarAOrpc, OpenAPIHandler, ORPCError, os } from "../lib/orpc";
-import { ANY_MEMBERSHIP, authenticate, authorize, CUALQUIER_ROL } from "../middlewares/auth";
-import { paramValidator } from "../middlewares/validate-params";
-import { writeAuditLog } from "../utils/audit";
+import type { UserRole } from "../db/types.js";
+import { reconciliarParaLectura } from "../domain/reconcile.js";
+import { retryStageMint } from "../domain/stage-transition.js";
+import { db } from "../lib/db.js";
+import { conUsuario, delegarAOrpc, OpenAPIHandler, ORPCError, os } from "../lib/orpc.js";
+import { ANY_MEMBERSHIP, authenticate, authorize, CUALQUIER_ROL } from "../middlewares/auth.js";
+import { paramValidator } from "../middlewares/validate-params.js";
+import { writeAuditLog } from "../utils/audit.js";
 
 const stageDetailNestedSchema = stageSchema.extend({
   evidences: z.array(stageEvidenceSummarySchema),

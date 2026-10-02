@@ -1,10 +1,10 @@
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
-import { createId } from "../src/db/id";
-import { retryStageMint, transitionStage } from "../src/domain/stage-transition";
-import { anchorPort } from "../src/lib/anchor";
-import { db } from "../src/lib/db";
-import { FIXTURES } from "./global-setup";
-import { crearStageMinteado } from "./helpers/stages";
+import { createId } from "../src/db/id.js";
+import { retryStageMint, transitionStage } from "../src/domain/stage-transition.js";
+import { anchorPort } from "../src/lib/anchor.js";
+import { db } from "../src/lib/db.js";
+import { FIXTURES } from "./global-setup.js";
+import { crearStageMinteado } from "./helpers/stages.js";
 
 let proyecto: string;
 let actorId: string;

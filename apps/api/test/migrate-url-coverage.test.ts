@@ -14,7 +14,7 @@ afterEach(() => {
   if (previoAuthToken === undefined) delete process.env.DATABASE_AUTH_TOKEN;
   else process.env.DATABASE_AUTH_TOKEN = previoAuthToken;
   vi.doUnmock("node:fs");
-  vi.doUnmock("../src/lib/libsql-client");
+  vi.doUnmock("../src/lib/libsql-client.js");
   vi.resetModules();
 });
 
@@ -46,7 +46,7 @@ describe("migrar — la URL y el token que le llegan al cliente", () => {
     delete process.env.DATABASE_AUTH_TOKEN;
 
     const createClient = vi.fn().mockReturnValue(clienteFalso());
-    vi.doMock("../src/lib/libsql-client", () => ({ createClient }));
+    vi.doMock("../src/lib/libsql-client.js", () => ({ createClient }));
     vi.resetModules();
 
     const { migrar } = await import("../src/db/migrate.js");
@@ -65,7 +65,7 @@ describe("migrar — la URL y el token que le llegan al cliente", () => {
     process.env.DATABASE_AUTH_TOKEN = "el-token-de-turso";
 
     const createClient = vi.fn().mockReturnValue(clienteFalso());
-    vi.doMock("../src/lib/libsql-client", () => ({ createClient }));
+    vi.doMock("../src/lib/libsql-client.js", () => ({ createClient }));
     vi.resetModules();
 
     const { migrar } = await import("../src/db/migrate.js");

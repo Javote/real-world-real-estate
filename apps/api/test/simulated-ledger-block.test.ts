@@ -1,6 +1,6 @@
 import { afterAll, describe, expect, it } from "vitest";
-import { anchorPort } from "../src/lib/anchor";
-import { db } from "../src/lib/db";
+import { anchorPort } from "../src/lib/anchor.js";
+import { db } from "../src/lib/db.js";
 
 afterAll(async () => {
   await db.destroy();

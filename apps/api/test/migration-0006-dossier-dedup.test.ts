@@ -1,8 +1,8 @@
 import { readFileSync } from "node:fs";
 import path from "node:path";
 import { afterEach, describe, expect, it } from "vitest";
-import { MIGRATIONS_DIR } from "../src/db/migrate";
-import { createClient } from "../src/lib/libsql-client";
+import { MIGRATIONS_DIR } from "../src/db/migrate.js";
+import { createClient } from "../src/lib/libsql-client.js";
 
 const SQL_MIGRACION = readFileSync(
   path.join(MIGRATIONS_DIR, "0006_dossier_unitid_unico.sql"),

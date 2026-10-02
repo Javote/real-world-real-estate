@@ -1,11 +1,11 @@
 import jwt from "jsonwebtoken";
 import request from "supertest";
 import { afterAll, afterEach, describe, expect, it, vi } from "vitest";
-import app from "../src/app";
-import { en } from "../src/lib/arrays";
-import { db } from "../src/lib/db";
-import { requireJwtSecret, signToken, verifyToken } from "../src/lib/jwt";
-import { FIXTURES } from "./global-setup";
+import app from "../src/app.js";
+import { en } from "../src/lib/arrays.js";
+import { db } from "../src/lib/db.js";
+import { requireJwtSecret, signToken, verifyToken } from "../src/lib/jwt.js";
+import { FIXTURES } from "./global-setup.js";
 
 afterAll(async () => {
   await db.destroy();

@@ -3,12 +3,12 @@ import type http from "node:http";
 import type { AddressInfo } from "node:net";
 import request from "supertest";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
-import app from "../src/app";
-import { createId } from "../src/db/id";
-import { db } from "../src/lib/db";
-import { projectsOrpcRouter } from "../src/routes/projects.routes";
-import { FIXTURES } from "./global-setup";
-import { createORPCClient, OpenAPILink, type RouterClient } from "./helpers/orpc";
+import app from "../src/app.js";
+import { createId } from "../src/db/id.js";
+import { db } from "../src/lib/db.js";
+import { projectsOrpcRouter } from "../src/routes/projects.routes.js";
+import { FIXTURES } from "./global-setup.js";
+import { createORPCClient, OpenAPILink, type RouterClient } from "./helpers/orpc.js";
 
 function crearCliente(link: InstanceType<typeof OpenAPILink>) {
   return createORPCClient<RouterClient<typeof projectsOrpcRouter>>(link);

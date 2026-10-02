@@ -1,7 +1,7 @@
 import { afterAll, describe, expect, it } from "vitest";
-import { db } from "../src/lib/db";
-import { describir, leerMontaje, matrizViva, ramas } from "../src/lib/route-inventory";
-import type { ReglaDeAcceso } from "../src/middlewares/auth";
+import { db } from "../src/lib/db.js";
+import { describir, leerMontaje, matrizViva, ramas } from "../src/lib/route-inventory.js";
+import type { ReglaDeAcceso } from "../src/middlewares/auth.js";
 
 afterAll(async () => {
   await db.destroy();

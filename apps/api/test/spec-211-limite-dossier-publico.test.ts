@@ -1,8 +1,8 @@
 import express from "express";
 import request from "supertest";
 import { describe, expect, it, vi } from "vitest";
-import app from "../src/app";
-import { dossierRateLimiter, dossierRateLimitMax } from "../src/middlewares/rateLimit";
+import app from "../src/app.js";
+import { dossierRateLimiter, dossierRateLimitMax } from "../src/middlewares/rateLimit.js";
 
 const appDePrueba = (
   max: number,

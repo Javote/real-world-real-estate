@@ -1,8 +1,8 @@
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
-import { createId } from "../src/db/id";
-import { db } from "../src/lib/db";
-import { avancePorProyecto, relanzarRestriccionComoOrpc } from "../src/routes/_shared";
-import { FIXTURES } from "./global-setup";
+import { createId } from "../src/db/id.js";
+import { db } from "../src/lib/db.js";
+import { avancePorProyecto, relanzarRestriccionComoOrpc } from "../src/routes/_shared.js";
+import { FIXTURES } from "./global-setup.js";
 
 let proyecto: string;
 

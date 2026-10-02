@@ -1,11 +1,11 @@
-import { MONTAJE } from "../app";
+import { MONTAJE } from "../app.js";
 import {
   type GuardDescriptor,
   leerGuard,
   type ReglaDeAcceso,
   type ReglaSimple
-} from "../middlewares/auth";
-import { en } from "./arrays";
+} from "../middlewares/auth.js";
+import { en } from "./arrays.js";
 
 type Capa = {
   route?: { path: string; methods: Record<string, boolean>; stack: { handle: unknown }[] };

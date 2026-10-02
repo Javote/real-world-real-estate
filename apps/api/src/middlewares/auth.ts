@@ -1,9 +1,14 @@
 import type { AuditEntityType } from "@plataforma/shared";
 import type { NextFunction, Request, Response } from "express";
-import type { Database, MembershipRole, UserRole } from "../db/types";
-import { db } from "../lib/db";
-import { verifyToken } from "../lib/jwt";
-import { type ExpressionBuilder, type ExpressionWrapper, type SqlBool, sql } from "../lib/kysely";
+import type { Database, MembershipRole, UserRole } from "../db/types.js";
+import { db } from "../lib/db.js";
+import { verifyToken } from "../lib/jwt.js";
+import {
+  type ExpressionBuilder,
+  type ExpressionWrapper,
+  type SqlBool,
+  sql
+} from "../lib/kysely.js";
 
 type Usuario = { id: string; email: string; role: UserRole };
 

@@ -1,9 +1,13 @@
 import express from "express";
 import request from "supertest";
 import { describe, expect, it } from "vitest";
-import app from "../src/app";
-import { loginRateLimiter, loginRateLimitMax, trustProxyHops } from "../src/middlewares/rateLimit";
-import { FIXTURES } from "./global-setup";
+import app from "../src/app.js";
+import {
+  loginRateLimiter,
+  loginRateLimitMax,
+  trustProxyHops
+} from "../src/middlewares/rateLimit.js";
+import { FIXTURES } from "./global-setup.js";
 
 const appDePrueba = (max: number) => {
   const a = express();

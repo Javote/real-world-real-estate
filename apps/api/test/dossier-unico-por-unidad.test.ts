@@ -1,8 +1,8 @@
 import { afterAll, describe, expect, it } from "vitest";
-import { createId } from "../src/db/id";
-import { compileDossier } from "../src/domain/dossier";
-import { db } from "../src/lib/db";
-import { FIXTURES } from "./global-setup";
+import { createId } from "../src/db/id.js";
+import { compileDossier } from "../src/domain/dossier.js";
+import { db } from "../src/lib/db.js";
+import { FIXTURES } from "./global-setup.js";
 
 let proyecto: string;
 

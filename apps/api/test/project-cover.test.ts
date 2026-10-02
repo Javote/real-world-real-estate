@@ -3,11 +3,11 @@ import { resolve } from "node:path";
 import { PROJECT_COVER_MAX_FILE_BYTES } from "@plataforma/shared";
 import request from "supertest";
 import { afterAll, afterEach, beforeAll, describe, expect, it, vi } from "vitest";
-import app from "../src/app";
-import { createId } from "../src/db/id";
-import { db } from "../src/lib/db";
-import { storage } from "../src/lib/storage";
-import { FIXTURES } from "./global-setup";
+import app from "../src/app.js";
+import { createId } from "../src/db/id.js";
+import { db } from "../src/lib/db.js";
+import { storage } from "../src/lib/storage.js";
+import { FIXTURES } from "./global-setup.js";
 
 const UPLOAD_DIR = resolve(process.cwd(), process.env.UPLOAD_DIR ?? "./test-uploads");
 const archivosEnDisco = () => (existsSync(UPLOAD_DIR) ? readdirSync(UPLOAD_DIR).length : 0);

@@ -1,10 +1,10 @@
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
-import { createId } from "../src/db/id";
-import { compileDossier } from "../src/domain/dossier";
-import { notify, notifyUnitInvestor, notifyUnitInvestors } from "../src/domain/notify";
-import { agregadosDeProyectos } from "../src/domain/project-aggregates";
-import { db } from "../src/lib/db";
-import { FIXTURES } from "./global-setup";
+import { createId } from "../src/db/id.js";
+import { compileDossier } from "../src/domain/dossier.js";
+import { notify, notifyUnitInvestor, notifyUnitInvestors } from "../src/domain/notify.js";
+import { agregadosDeProyectos } from "../src/domain/project-aggregates.js";
+import { db } from "../src/lib/db.js";
+import { FIXTURES } from "./global-setup.js";
 
 let proyecto: string;
 

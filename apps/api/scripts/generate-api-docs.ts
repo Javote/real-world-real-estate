@@ -1,8 +1,9 @@
 import "dotenv/config";
 import { mkdirSync, writeFileSync } from "node:fs";
 import path from "node:path";
-import { en } from "../src/lib/arrays";
-import { describeGuardEn, leerMontaje } from "../src/lib/route-inventory";
+import { en } from "../src/lib/arrays.js";
+import { esPuntoDeEntrada } from "../src/lib/punto-de-entrada.js";
+import { describeGuardEn, leerMontaje } from "../src/lib/route-inventory.js";
 
 type EjemploBody =
   | { modo: "raw"; body: Record<string, unknown> }
@@ -144,7 +145,7 @@ export function buildPostmanCollection(): object {
 
 function main() {
   const salida = path.join(
-    __dirname,
+    import.meta.dirname,
     "..",
     "..",
     "..",
@@ -159,4 +160,4 @@ function main() {
   console.log(`[docs:api] escrito ${archivo}`);
 }
 
-if (require.main === module) main();
+if (esPuntoDeEntrada(import.meta.url)) main();

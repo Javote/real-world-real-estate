@@ -1,11 +1,11 @@
 import { createHash } from "node:crypto";
 import type { MetadataAnchorReceipt } from "@plataforma/cardano";
-import { createId } from "../db/id";
-import type { Database, OnChainEventRow, OnChainEventType } from "../db/types";
-import { Sentry } from "../instrumentation";
-import { anchorPort } from "../lib/anchor";
-import { db } from "../lib/db";
-import { type ExpressionBuilder, sql } from "../lib/kysely";
+import { createId } from "../db/id.js";
+import type { Database, OnChainEventRow, OnChainEventType } from "../db/types.js";
+import { Sentry } from "../instrumentation.js";
+import { anchorPort } from "../lib/anchor.js";
+import { db } from "../lib/db.js";
+import { type ExpressionBuilder, sql } from "../lib/kysely.js";
 
 export function commitmentOf(payload: Record<string, string | number>): string {
   const canonico = JSON.stringify(payload, Object.keys(payload).sort());

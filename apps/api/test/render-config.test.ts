@@ -3,10 +3,10 @@ import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import { load } from "js-yaml";
 import { afterEach, describe, expect, it } from "vitest";
-import { motivoParaNoAnclar } from "../src/lib/anchor";
-import { en } from "../src/lib/arrays";
+import { motivoParaNoAnclar } from "../src/lib/anchor.js";
+import { en } from "../src/lib/arrays.js";
 
-const RAIZ = join(__dirname, "..", "..", "..");
+const RAIZ = join(import.meta.dirname, "..", "..", "..");
 
 interface EnvVar {
   key: string;
@@ -127,7 +127,10 @@ describe("render.yaml — startCommand", () => {
     const flags = /(?:--require|-r|--loader|--import)[= ]([^\s&]+)/g;
     const rutas = [...comando.matchAll(flags)].map((m) => en(m, 1));
 
-    expect(rutas.length, "no se encontró ningún --require en el startCommand").toBeGreaterThan(0);
+    expect(
+      rutas.length,
+      "no se encontró ningún flag de precarga en el startCommand"
+    ).toBeGreaterThan(0);
 
     const sinPrefijo = rutas.filter((r) => !r.startsWith("./") && !r.startsWith("/"));
     expect(

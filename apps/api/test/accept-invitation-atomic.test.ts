@@ -1,10 +1,10 @@
 import bcrypt from "bcrypt";
 import request from "supertest";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
-import app from "../src/app";
-import { createId } from "../src/db/id";
-import { db } from "../src/lib/db";
-import { FIXTURES } from "./global-setup";
+import app from "../src/app.js";
+import { createId } from "../src/db/id.js";
+import { db } from "../src/lib/db.js";
+import { FIXTURES } from "./global-setup.js";
 
 const login = async (email: string, password: string) =>
   (await request(app).post("/api/v1/auth/login").send({ email, password })).body.token as string;

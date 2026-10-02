@@ -2,17 +2,17 @@ import { createHash } from "node:crypto";
 import bcrypt from "bcrypt";
 import request from "supertest";
 import { afterAll, beforeAll, describe, expect, it, vi } from "vitest";
-import app from "../src/app";
-import { createId } from "../src/db/id";
-import { compileDossier } from "../src/domain/dossier";
-import { anchorPort } from "../src/lib/anchor";
-import { db } from "../src/lib/db";
-import { FIXTURES } from "./global-setup";
+import app from "../src/app.js";
+import { createId } from "../src/db/id.js";
+import { compileDossier } from "../src/domain/dossier.js";
+import { anchorPort } from "../src/lib/anchor.js";
+import { db } from "../src/lib/db.js";
+import { FIXTURES } from "./global-setup.js";
 
 const ganchos = vi.hoisted(() => ({ demoraCompilacionMs: 0 }));
 
-vi.mock("../src/domain/dossier", async (importOriginal) => {
-  const real = await importOriginal<typeof import("../src/domain/dossier")>();
+vi.mock("../src/domain/dossier.js", async (importOriginal) => {
+  const real = await importOriginal<typeof import("../src/domain/dossier.js")>();
   return {
     ...real,
     compileDossier: async (unitId: string) => {

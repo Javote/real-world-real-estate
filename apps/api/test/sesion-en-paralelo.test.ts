@@ -1,10 +1,10 @@
 import request from "supertest";
 import { afterAll, afterEach, beforeAll, describe, expect, it, vi } from "vitest";
-import app from "../src/app";
-import type { UserRole } from "../src/db/types";
-import { db } from "../src/lib/db";
-import { FIXTURES } from "./global-setup";
-import { crearStageMinteado } from "./helpers/stages";
+import app from "../src/app.js";
+import type { UserRole } from "../src/db/types.js";
+import { db } from "../src/lib/db.js";
+import { FIXTURES } from "./global-setup.js";
+import { crearStageMinteado } from "./helpers/stages.js";
 
 const token = async (email: string, password: string) => {
   const res = await request(app).post("/api/v1/auth/login").send({ email, password });

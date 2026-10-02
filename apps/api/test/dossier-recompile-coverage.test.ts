@@ -1,10 +1,10 @@
 import bcrypt from "bcrypt";
 import { afterAll, describe, expect, it } from "vitest";
-import { createId } from "../src/db/id";
-import { compileDossier } from "../src/domain/dossier";
-import { transitionStage } from "../src/domain/stage-transition";
-import { db } from "../src/lib/db";
-import { crearStageMinteado } from "./helpers/stages";
+import { createId } from "../src/db/id.js";
+import { compileDossier } from "../src/domain/dossier.js";
+import { transitionStage } from "../src/domain/stage-transition.js";
+import { db } from "../src/lib/db.js";
+import { crearStageMinteado } from "./helpers/stages.js";
 
 afterAll(async () => {
   await db.destroy();

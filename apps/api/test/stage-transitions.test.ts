@@ -2,12 +2,12 @@ import { randomBytes } from "node:crypto";
 import { canTransition, STAGE_STATES, type StageState } from "@plataforma/shared";
 import request from "supertest";
 import { afterAll, beforeAll, describe, expect, it, vi } from "vitest";
-import app from "../src/app";
-import { createId } from "../src/db/id";
-import { anchorPort } from "../src/lib/anchor";
-import { db } from "../src/lib/db";
-import { FIXTURES } from "./global-setup";
-import { crearStageMinteado } from "./helpers/stages";
+import app from "../src/app.js";
+import { createId } from "../src/db/id.js";
+import { anchorPort } from "../src/lib/anchor.js";
+import { db } from "../src/lib/db.js";
+import { FIXTURES } from "./global-setup.js";
+import { crearStageMinteado } from "./helpers/stages.js";
 
 const txidDeFixture = () => randomBytes(32).toString("hex");
 

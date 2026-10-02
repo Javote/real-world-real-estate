@@ -1,7 +1,7 @@
 import { MulterError } from "multer";
 import { describe, expect, it } from "vitest";
-import { statusDeError } from "../src/lib/error-status";
-import { HttpError } from "../src/lib/http-error";
+import { statusDeError } from "../src/lib/error-status.js";
+import { HttpError } from "../src/lib/http-error.js";
 
 describe("statusDeError — la misma clasificación que errorHandler, un paso antes", () => {
   it("un HttpError devuelve su propio status", () => {

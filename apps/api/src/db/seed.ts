@@ -1,8 +1,9 @@
 import "dotenv/config";
 import { DEFAULT_STAGE_CATALOG } from "@plataforma/shared";
-import { compileDossier } from "../domain/dossier";
-import { db } from "../lib/db";
-import { paraMostrar, passwordDeDemo } from "./credentials";
+import { compileDossier } from "../domain/dossier.js";
+import { db } from "../lib/db.js";
+import { esPuntoDeEntrada } from "../lib/punto-de-entrada.js";
+import { paraMostrar, passwordDeDemo } from "./credentials.js";
 import {
   type Personaje,
   sembrarMembresias,
@@ -11,7 +12,7 @@ import {
   sembrarStages,
   sembrarUnidadVendida,
   sembrarUsuarios
-} from "./fixtures";
+} from "./fixtures.js";
 
 const ELENCO_DEMO = [
   {
@@ -119,7 +120,7 @@ export async function sembrarDemo() {
 }
 
 /* v8 ignore if -- @preserve: guardia para que importar el módulo no siembre; solo corre como CLI */
-if (require.main === module) {
+if (esPuntoDeEntrada(import.meta.url)) {
   sembrarDemo()
     .catch((e) => {
       console.error(e);

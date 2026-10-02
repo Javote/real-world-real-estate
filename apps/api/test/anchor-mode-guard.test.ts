@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it } from "vitest";
-import { anchorPort, initAnchorPort } from "../src/lib/anchor";
+import { anchorPort, initAnchorPort } from "../src/lib/anchor.js";
 
 const ANCHOR_MODE = process.env.ANCHOR_MODE;
 const DATABASE_URL = process.env.DATABASE_URL;

@@ -1,5 +1,5 @@
 import { type CertifierInvitation, certifierInvitationSchema } from "@plataforma/shared";
-import { db } from "../lib/db";
+import { db } from "../lib/db.js";
 
 type Filtro =
   | { projectId: string }

@@ -13,17 +13,17 @@ import {
 } from "@plataforma/shared";
 import { Router } from "express";
 import { z } from "zod";
-import { createId } from "../db/id";
-import type { UserRole } from "../db/types";
-import { listarInvitacionesACertificar } from "../domain/certifier-invitation";
-import { reconciliarParaLectura } from "../domain/reconcile";
-import { transitionStage, ultimoBundlePorStage } from "../domain/stage-transition";
-import { db } from "../lib/db";
-import { conUsuario, delegarAOrpc, OpenAPIHandler, ORPCError, os } from "../lib/orpc";
-import { authenticate, authorize } from "../middlewares/auth";
-import { paramValidator } from "../middlewares/validate-params";
-import { writeAuditLog } from "../utils/audit";
-import { proyectosVisibles } from "./_shared";
+import { createId } from "../db/id.js";
+import type { UserRole } from "../db/types.js";
+import { listarInvitacionesACertificar } from "../domain/certifier-invitation.js";
+import { reconciliarParaLectura } from "../domain/reconcile.js";
+import { transitionStage, ultimoBundlePorStage } from "../domain/stage-transition.js";
+import { db } from "../lib/db.js";
+import { conUsuario, delegarAOrpc, OpenAPIHandler, ORPCError, os } from "../lib/orpc.js";
+import { authenticate, authorize } from "../middlewares/auth.js";
+import { paramValidator } from "../middlewares/validate-params.js";
+import { writeAuditLog } from "../utils/audit.js";
+import { proyectosVisibles } from "./_shared.js";
 
 const PREFIJO_ABSOLUTO = "/api/v1/certifier";
 

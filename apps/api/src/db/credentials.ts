@@ -1,5 +1,5 @@
 import { passwordSchema } from "@plataforma/shared";
-import { urlDeLaBase } from "./local-db";
+import { urlDeLaBase } from "./local-db.js";
 
 export const esBaseLocal = (url: string) => /^file:/i.test(url.trim());
 

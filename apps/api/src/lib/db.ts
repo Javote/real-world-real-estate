@@ -1,8 +1,8 @@
-import { asegurarDirectorioLocal, urlDeLaBase } from "../db/local-db";
-import { coerceRow, SqliteTypeCoercionPlugin } from "../db/sqlite-type-plugin";
-import type { Database } from "../db/types";
-import { type Compilable, Kysely } from "./kysely";
-import { LibsqlDialect } from "./libsql-dialect";
+import { asegurarDirectorioLocal, urlDeLaBase } from "../db/local-db.js";
+import { coerceRow, SqliteTypeCoercionPlugin } from "../db/sqlite-type-plugin.js";
+import type { Database } from "../db/types.js";
+import { type Compilable, Kysely } from "./kysely.js";
+import { LibsqlDialect } from "./libsql-dialect.js";
 
 const databaseUrl = urlDeLaBase();
 asegurarDirectorioLocal(databaseUrl);

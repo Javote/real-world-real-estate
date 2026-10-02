@@ -20,19 +20,19 @@ import {
 } from "@plataforma/shared";
 import { Router } from "express";
 import { z } from "zod";
-import { createId } from "../db/id";
-import type { OnChainEventRow, UserRole } from "../db/types";
-import { anclarEvidenciaUnaVez } from "../domain/anchoring";
-import { agregadosDeProyectos } from "../domain/project-aggregates";
-import { reconciliarParaLectura } from "../domain/reconcile";
-import { anchorEvent, recordOnChainEvent } from "../domain/stage-transition";
-import { db } from "../lib/db";
-import { geocodificador } from "../lib/geocode";
-import { conUsuario, delegarAOrpc, OpenAPIHandler, ORPCError, os } from "../lib/orpc";
-import { auditScope, authenticate, authorize, projectScope } from "../middlewares/auth";
-import { paramValidator } from "../middlewares/validate-params";
-import { writeAuditLog } from "../utils/audit";
-import { proyectosVisibles, relanzarRestriccionComoOrpc } from "./_shared";
+import { createId } from "../db/id.js";
+import type { OnChainEventRow, UserRole } from "../db/types.js";
+import { anclarEvidenciaUnaVez } from "../domain/anchoring.js";
+import { agregadosDeProyectos } from "../domain/project-aggregates.js";
+import { reconciliarParaLectura } from "../domain/reconcile.js";
+import { anchorEvent, recordOnChainEvent } from "../domain/stage-transition.js";
+import { db } from "../lib/db.js";
+import { geocodificador } from "../lib/geocode.js";
+import { conUsuario, delegarAOrpc, OpenAPIHandler, ORPCError, os } from "../lib/orpc.js";
+import { auditScope, authenticate, authorize, projectScope } from "../middlewares/auth.js";
+import { paramValidator } from "../middlewares/validate-params.js";
+import { writeAuditLog } from "../utils/audit.js";
+import { proyectosVisibles, relanzarRestriccionComoOrpc } from "./_shared.js";
 
 const PREFIJO_ABSOLUTO = "/api/v1/developer";
 

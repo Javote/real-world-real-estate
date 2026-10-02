@@ -1,11 +1,11 @@
 import { auditLogRowSchema, reservationToEscrowTelemetrySchema } from "@plataforma/shared";
 import { Router } from "express";
 import { z } from "zod";
-import { reconciliarAnclajes } from "../domain/reconcile";
-import { en } from "../lib/arrays";
-import { db } from "../lib/db";
-import { delegarAOrpc, OpenAPIHandler, os } from "../lib/orpc";
-import { authenticate, authorize } from "../middlewares/auth";
+import { reconciliarAnclajes } from "../domain/reconcile.js";
+import { en } from "../lib/arrays.js";
+import { db } from "../lib/db.js";
+import { delegarAOrpc, OpenAPIHandler, os } from "../lib/orpc.js";
+import { authenticate, authorize } from "../middlewares/auth.js";
 
 const PREFIJO_ABSOLUTO = "/api/v1/audit-logs";
 

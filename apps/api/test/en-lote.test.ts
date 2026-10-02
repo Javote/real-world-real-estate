@@ -1,9 +1,9 @@
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
-import { createId } from "../src/db/id";
-import { db, enLote } from "../src/lib/db";
-import { insertAuditLog } from "../src/utils/audit";
-import { FIXTURES } from "./global-setup";
-import { crearStageMinteado } from "./helpers/stages";
+import { createId } from "../src/db/id.js";
+import { db, enLote } from "../src/lib/db.js";
+import { insertAuditLog } from "../src/utils/audit.js";
+import { FIXTURES } from "./global-setup.js";
+import { crearStageMinteado } from "./helpers/stages.js";
 
 let stage: string;
 let actor: string;

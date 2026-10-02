@@ -5,11 +5,11 @@ import {
   updateProfileSchema
 } from "@plataforma/shared";
 import { Router } from "express";
-import type { UserRole } from "../db/types";
-import { db } from "../lib/db";
-import { conUsuario, delegarAOrpc, OpenAPIHandler, os } from "../lib/orpc";
-import { authenticate, authorize, CUALQUIER_ROL } from "../middlewares/auth";
-import { writeAuditLog } from "../utils/audit";
+import type { UserRole } from "../db/types.js";
+import { db } from "../lib/db.js";
+import { conUsuario, delegarAOrpc, OpenAPIHandler, os } from "../lib/orpc.js";
+import { authenticate, authorize, CUALQUIER_ROL } from "../middlewares/auth.js";
+import { writeAuditLog } from "../utils/audit.js";
 
 const PREFIJO_ABSOLUTO = "/api/v1/profile";
 

@@ -1,9 +1,9 @@
 import { createHash } from "node:crypto";
 import type { Dossier, DossierArtifact, DossierStatus } from "@plataforma/shared";
-import { createId } from "../db/id";
-import { db } from "../lib/db";
-import { reconciliarParaLectura } from "./reconcile";
-import { ultimoBundlePorStage } from "./stage-transition";
+import { createId } from "../db/id.js";
+import { db } from "../lib/db.js";
+import { reconciliarParaLectura } from "./reconcile.js";
+import { ultimoBundlePorStage } from "./stage-transition.js";
 
 // El orden de los artefactos es parte del compromiso.
 export function masterHashOf(artifacts: DossierArtifact[]): string {

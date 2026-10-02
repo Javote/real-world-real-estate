@@ -15,21 +15,21 @@ import {
 } from "@plataforma/shared";
 import { Router } from "express";
 import { z } from "zod";
-import type { UserRole } from "../db/types";
-import { anclarEvidenciaUnaVez } from "../domain/anchoring";
+import type { UserRole } from "../db/types.js";
+import { anclarEvidenciaUnaVez } from "../domain/anchoring.js";
 import {
   hilosSospechosos,
   reconciliarAnclajes,
   reconciliarParaLectura,
   repararHilosSospechosos
-} from "../domain/reconcile";
-import { db } from "../lib/db";
-import { conUsuario, delegarAOrpc, OpenAPIHandler, ORPCError, os } from "../lib/orpc";
-import { storage } from "../lib/storage";
-import { ANY_MEMBERSHIP, authenticate, authorize, CUALQUIER_ROL } from "../middlewares/auth";
-import { paramValidator } from "../middlewares/validate-params";
-import { writeAuditLog } from "../utils/audit";
-import { EVIDENCE_SAFE_COLUMNS } from "./_shared";
+} from "../domain/reconcile.js";
+import { db } from "../lib/db.js";
+import { conUsuario, delegarAOrpc, OpenAPIHandler, ORPCError, os } from "../lib/orpc.js";
+import { storage } from "../lib/storage.js";
+import { ANY_MEMBERSHIP, authenticate, authorize, CUALQUIER_ROL } from "../middlewares/auth.js";
+import { paramValidator } from "../middlewares/validate-params.js";
+import { writeAuditLog } from "../utils/audit.js";
+import { EVIDENCE_SAFE_COLUMNS } from "./_shared.js";
 
 const evidenceDetailSchema = evidenceSchema.extend({
   project: projectSchema,

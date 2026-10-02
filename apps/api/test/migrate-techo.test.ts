@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { conTecho } from "../src/db/migrate";
+import { conTecho } from "../src/db/migrate.js";
 
 describe("conTecho", () => {
   it("deja pasar el valor cuando la promesa responde a tiempo", async () => {

@@ -1,13 +1,13 @@
 import type { NextFunction, Request, Response } from "express";
 import request from "supertest";
 import { afterAll, beforeAll, describe, expect, it, vi } from "vitest";
-import app from "../src/app";
-import { createId } from "../src/db/id";
-import { db } from "../src/lib/db";
-import { authorize, CUALQUIER_ROL, leerGuard } from "../src/middlewares/auth";
-import { errorHandler } from "../src/middlewares/errorHandler";
-import { dossierRateLimitMax } from "../src/middlewares/rateLimit";
-import { FIXTURES } from "./global-setup";
+import app from "../src/app.js";
+import { createId } from "../src/db/id.js";
+import { db } from "../src/lib/db.js";
+import { authorize, CUALQUIER_ROL, leerGuard } from "../src/middlewares/auth.js";
+import { errorHandler } from "../src/middlewares/errorHandler.js";
+import { dossierRateLimitMax } from "../src/middlewares/rateLimit.js";
+import { FIXTURES } from "./global-setup.js";
 
 afterAll(async () => {
   await db.destroy();

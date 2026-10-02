@@ -1,9 +1,9 @@
 import request from "supertest";
 import { afterAll, afterEach, beforeAll, describe, expect, it, vi } from "vitest";
-import app from "../src/app";
-import { db } from "../src/lib/db";
-import { crearGeocodificador, NOMINATIM_URL, USER_AGENT } from "../src/lib/geocode";
-import { FIXTURES } from "./global-setup";
+import app from "../src/app.js";
+import { db } from "../src/lib/db.js";
+import { crearGeocodificador, NOMINATIM_URL, USER_AGENT } from "../src/lib/geocode.js";
+import { FIXTURES } from "./global-setup.js";
 
 const LIBERTADOR = [
   { lat: "-34.5470", lon: "-58.4600", display_name: "Avenida del Libertador 7200, Núñez, CABA" }

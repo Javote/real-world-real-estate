@@ -1,9 +1,9 @@
 import bcrypt from "bcrypt";
 import { afterAll, describe, expect, it } from "vitest";
-import { sembrarUnidadVendida } from "../src/db/fixtures";
-import { createId } from "../src/db/id";
-import { db } from "../src/lib/db";
-import { FIXTURES } from "./global-setup";
+import { sembrarUnidadVendida } from "../src/db/fixtures.js";
+import { createId } from "../src/db/id.js";
+import { db } from "../src/lib/db.js";
+import { FIXTURES } from "./global-setup.js";
 
 let proyecto: string;
 let investor: string;

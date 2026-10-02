@@ -1,7 +1,7 @@
 import { copyFileSync, existsSync, mkdirSync, rmSync } from "node:fs";
 import path from "node:path";
 import { afterAll, beforeAll, expect } from "vitest";
-import { SQLITE_SIDECARS, TEMPLATE_DB, TEST_DB_DIR } from "./global-setup";
+import { SQLITE_SIDECARS, TEMPLATE_DB, TEST_DB_DIR } from "./global-setup.js";
 
 const nombreDelArchivo = path.basename(
   expect.getState().testPath ?? "desconocido.test.ts",

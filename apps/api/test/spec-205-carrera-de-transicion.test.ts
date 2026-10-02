@@ -1,8 +1,8 @@
 import { afterAll, describe, expect, it } from "vitest";
-import { transitionStage } from "../src/domain/stage-transition";
-import { db } from "../src/lib/db";
-import { FIXTURES } from "./global-setup";
-import { crearStageMinteado } from "./helpers/stages";
+import { transitionStage } from "../src/domain/stage-transition.js";
+import { db } from "../src/lib/db.js";
+import { FIXTURES } from "./global-setup.js";
+import { crearStageMinteado } from "./helpers/stages.js";
 
 describe("transitionStage — dos transiciones concurrentes sobre el mismo stage", () => {
   afterAll(async () => {

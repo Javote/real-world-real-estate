@@ -1,6 +1,6 @@
 import { afterAll, describe, expect, it } from "vitest";
-import { sembrarOrganizacion, sembrarProyecto, sembrarStages } from "../src/db/fixtures";
-import { db } from "../src/lib/db";
+import { sembrarOrganizacion, sembrarProyecto, sembrarStages } from "../src/db/fixtures.js";
+import { db } from "../src/lib/db.js";
 
 afterAll(async () => {
   await db.destroy();

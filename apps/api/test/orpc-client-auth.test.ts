@@ -1,11 +1,11 @@
 import type http from "node:http";
 import type { AddressInfo } from "node:net";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
-import app from "../src/app";
-import { db } from "../src/lib/db";
-import { authOrpcRouter } from "../src/routes/auth.routes";
-import { FIXTURES } from "./global-setup";
-import { createORPCClient, OpenAPILink, type RouterClient } from "./helpers/orpc";
+import app from "../src/app.js";
+import { db } from "../src/lib/db.js";
+import { authOrpcRouter } from "../src/routes/auth.routes.js";
+import { FIXTURES } from "./global-setup.js";
+import { createORPCClient, OpenAPILink, type RouterClient } from "./helpers/orpc.js";
 
 function crearCliente(link: InstanceType<typeof OpenAPILink>) {
   return createORPCClient<RouterClient<typeof authOrpcRouter>>(link);

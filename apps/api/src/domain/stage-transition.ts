@@ -9,19 +9,19 @@ import {
   STAGE_TRANSITION_ERRORS,
   type StageState
 } from "@plataforma/shared";
-import { createId } from "../db/id";
+import { createId } from "../db/id.js";
 import type {
   Database,
   StageState as DbStageState,
   OnChainEventRow,
   OnChainEventType,
   StageRow
-} from "../db/types";
-import { Sentry } from "../instrumentation";
-import { anchorPort } from "../lib/anchor";
-import { db } from "../lib/db";
-import type { ExpressionBuilder } from "../lib/kysely";
-import { writeAuditLog } from "../utils/audit";
+} from "../db/types.js";
+import { Sentry } from "../instrumentation.js";
+import { anchorPort } from "../lib/anchor.js";
+import { db } from "../lib/db.js";
+import type { ExpressionBuilder } from "../lib/kysely.js";
+import { writeAuditLog } from "../utils/audit.js";
 
 async function recordOnChainEvent(input: {
   projectId: string;

@@ -1,11 +1,11 @@
 import { readFileSync } from "node:fs";
 import path from "node:path";
 import { afterAll, describe, expect, it } from "vitest";
-import { createId } from "../src/db/id";
-import { MIGRATIONS_DIR } from "../src/db/migrate";
-import { db } from "../src/lib/db";
-import { createClient } from "../src/lib/libsql-client";
-import { FIXTURES } from "./global-setup";
+import { createId } from "../src/db/id.js";
+import { MIGRATIONS_DIR } from "../src/db/migrate.js";
+import { db } from "../src/lib/db.js";
+import { createClient } from "../src/lib/libsql-client.js";
+import { FIXTURES } from "./global-setup.js";
 
 const SQL_MIGRACION_0007 = readFileSync(
   path.join(MIGRATIONS_DIR, "0007_evidence_bundle_unico.sql"),

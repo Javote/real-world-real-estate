@@ -2,8 +2,8 @@ import { mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import path from "node:path";
 import { afterEach, describe, expect, it } from "vitest";
-import { applyPendingMigrations } from "../src/db/migrate";
-import { createClient } from "../src/lib/libsql-client";
+import { applyPendingMigrations } from "../src/db/migrate.js";
+import { createClient } from "../src/lib/libsql-client.js";
 
 let dir: string | undefined;
 let client: ReturnType<typeof createClient> | undefined;

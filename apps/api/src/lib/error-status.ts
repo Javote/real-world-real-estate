@@ -1,6 +1,6 @@
 import { MulterError } from "multer";
-import { CONSTRAINT_ERRORS, codigoDeRestriccion } from "../middlewares/errorHandler";
-import { HttpError } from "./http-error";
+import { CONSTRAINT_ERRORS, codigoDeRestriccion } from "../middlewares/errorHandler.js";
+import { HttpError } from "./http-error.js";
 
 export function statusDeError(err: unknown): number {
   if (err instanceof HttpError) return err.status;

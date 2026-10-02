@@ -6,13 +6,13 @@ import {
   sembrarProyecto,
   sembrarUnidadVendida,
   sembrarUsuarios
-} from "../src/db/fixtures";
-import { applyPendingMigrations } from "../src/db/migrate";
-import { SqliteTypeCoercionPlugin } from "../src/db/sqlite-type-plugin";
-import type { Database } from "../src/db/types";
-import { Kysely } from "../src/lib/kysely";
-import { createClient } from "../src/lib/libsql-client";
-import { LibsqlDialect } from "../src/lib/libsql-dialect";
+} from "../src/db/fixtures.js";
+import { applyPendingMigrations } from "../src/db/migrate.js";
+import { SqliteTypeCoercionPlugin } from "../src/db/sqlite-type-plugin.js";
+import type { Database } from "../src/db/types.js";
+import { Kysely } from "../src/lib/kysely.js";
+import { createClient } from "../src/lib/libsql-client.js";
+import { LibsqlDialect } from "../src/lib/libsql-dialect.js";
 
 export const TEST_DB_DIR = path.join(".data", "test");
 export const TEMPLATE_DB = path.join(TEST_DB_DIR, "test.template.db");

@@ -1,7 +1,7 @@
 import type { AnchorPort, LedgerStore, LedgerUtxo, OutputRef } from "@plataforma/cardano";
 import { createAnchorPort, DisabledAnchorAdapter } from "@plataforma/cardano";
 import type { StageDatum } from "@plataforma/shared";
-import { db } from "./db";
+import { db } from "./db.js";
 
 class KyselyLedgerStore implements LedgerStore {
   async get(outputRef: OutputRef): Promise<LedgerUtxo | undefined> {

@@ -6,7 +6,7 @@ import type {
   ProjectStatus,
   StageState
 } from "@plataforma/shared";
-import type { ColumnType, Generated, Insertable, Selectable, Updateable } from "../lib/kysely";
+import type { ColumnType, Generated, Insertable, Selectable, Updateable } from "../lib/kysely.js";
 
 export const USER_ROLES = ["admin", "developer", "buyer", "verifier", "notary"] as const;
 export {

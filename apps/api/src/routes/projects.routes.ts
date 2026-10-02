@@ -17,25 +17,25 @@ import {
 } from "@plataforma/shared";
 import { Router } from "express";
 import { z } from "zod";
-import { createId } from "../db/id";
-import type { UserRole } from "../db/types";
-import { listarInvitacionesACertificar } from "../domain/certifier-invitation";
-import { agregadosDeProyectos } from "../domain/project-aggregates";
-import { reconciliarParaLectura } from "../domain/reconcile";
-import { en } from "../lib/arrays";
-import { db } from "../lib/db";
-import { sql } from "../lib/kysely";
-import { conUsuario, delegarAOrpc, OpenAPIHandler, ORPCError, os } from "../lib/orpc";
+import { createId } from "../db/id.js";
+import type { UserRole } from "../db/types.js";
+import { listarInvitacionesACertificar } from "../domain/certifier-invitation.js";
+import { agregadosDeProyectos } from "../domain/project-aggregates.js";
+import { reconciliarParaLectura } from "../domain/reconcile.js";
+import { en } from "../lib/arrays.js";
+import { db } from "../lib/db.js";
+import { sql } from "../lib/kysely.js";
+import { conUsuario, delegarAOrpc, OpenAPIHandler, ORPCError, os } from "../lib/orpc.js";
 import {
   ANY_MEMBERSHIP,
   authenticate,
   authorize,
   CUALQUIER_ROL,
   projectScope
-} from "../middlewares/auth";
-import { paramValidator } from "../middlewares/validate-params";
-import { writeAuditLog } from "../utils/audit";
-import { conStages, relanzarRestriccionComoOrpc } from "./_shared";
+} from "../middlewares/auth.js";
+import { paramValidator } from "../middlewares/validate-params.js";
+import { writeAuditLog } from "../utils/audit.js";
+import { conStages, relanzarRestriccionComoOrpc } from "./_shared.js";
 
 const PREFIJO_ABSOLUTO = "/api/v1/projects";
 

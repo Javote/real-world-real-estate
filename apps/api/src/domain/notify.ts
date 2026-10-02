@@ -1,6 +1,6 @@
 import type { NotificationCategory } from "@plataforma/shared";
-import { createId } from "../db/id";
-import { db } from "../lib/db";
+import { createId } from "../db/id.js";
+import { db } from "../lib/db.js";
 
 export async function notify(input: {
   userId: string;

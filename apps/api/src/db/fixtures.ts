@@ -1,7 +1,7 @@
 import bcrypt from "bcrypt";
-import type { KyselyDb } from "../lib/kysely";
-import { createId } from "./id";
-import type { Database, MembershipRole, ProjectStatus, StageState, UserRole } from "./types";
+import type { KyselyDb } from "../lib/kysely.js";
+import { createId } from "./id.js";
+import type { Database, MembershipRole, ProjectStatus, StageState, UserRole } from "./types.js";
 
 export interface Personaje {
   email: string;

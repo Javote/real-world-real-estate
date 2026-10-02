@@ -1,6 +1,6 @@
 import type { NextFunction, Request, Response } from "express";
 import { MulterError } from "multer";
-import { HttpError } from "../lib/http-error";
+import { HttpError } from "../lib/http-error.js";
 
 export type ConstraintCode =
   | "SQLITE_CONSTRAINT_UNIQUE"

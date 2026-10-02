@@ -1,3 +1,4 @@
+import { LibsqlConnection as LibsqlConnectionDelDriver, libsql } from "@libsql/kysely-libsql";
 import { vi } from "vitest";
 
 type CompiledQuery = { sql: string };
@@ -5,12 +6,9 @@ type CompiledQuery = { sql: string };
 type Metodo = (...args: unknown[]) => Promise<unknown>;
 type Prototipo = Record<string, Metodo>;
 
-// El mismo módulo CJS que carga `src/lib/libsql-dialect.ts`, y su `@libsql/client` (no el de la API):
+// El mismo módulo que carga `src/lib/libsql-dialect.ts`, y su `@libsql/client` (no el de la API):
 // espiar estos prototipos es espiar al driver y al cliente reales.
-const { LibsqlConnection, libsql } = require("@libsql/kysely-libsql") as {
-  LibsqlConnection: { prototype: Prototipo };
-  libsql: { createClient(config: { url: string }): { close(): void } };
-};
+const LibsqlConnection = LibsqlConnectionDelDriver as unknown as { prototype: Prototipo };
 
 // `enLote` llama a `client.batch` sin pasar por la conexión de Kysely: la clase del cliente se saca
 // de una sonda con la misma URL que usa `db`.

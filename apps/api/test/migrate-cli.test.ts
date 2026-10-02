@@ -2,7 +2,7 @@ import { existsSync, mkdtempSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import path from "node:path";
 import { afterEach, describe, expect, it } from "vitest";
-import { migrar, migrarSoloLocal } from "../src/db/migrate";
+import { migrar, migrarSoloLocal } from "../src/db/migrate.js";
 
 let dir: string | undefined;
 

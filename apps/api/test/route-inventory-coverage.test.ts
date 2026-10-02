@@ -22,7 +22,7 @@ const { routerSintetico } = vi.hoisted(() => {
   return { routerSintetico: { stack } };
 });
 
-vi.mock("../src/app", () => ({ MONTAJE: [{ prefijo: "", router: routerSintetico }] }));
+vi.mock("../src/app.js", () => ({ MONTAJE: [{ prefijo: "", router: routerSintetico }] }));
 
 describe("leerMontaje con un router sintético", () => {
   it("un middleware de router sin GUARD no se agrega a guardsDeRouter", async () => {

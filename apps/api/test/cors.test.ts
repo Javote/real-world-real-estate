@@ -1,7 +1,7 @@
 import request from "supertest";
 import { afterAll, describe, expect, it } from "vitest";
-import app from "../src/app";
-import { db } from "../src/lib/db";
+import app from "../src/app.js";
+import { db } from "../src/lib/db.js";
 
 afterAll(async () => {
   await db.destroy();

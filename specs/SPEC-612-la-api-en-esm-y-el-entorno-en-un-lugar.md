@@ -57,16 +57,19 @@ Dos commits, en este orden. Cada uno se prueba entero (§Verificación) antes de
    `nodenext`.
 2. **Los imports relativos llevan `.js`.** Es mecánico y lo exige `tsc`: un import sin extensión no
    compila con `nodenext`. Se hace con un script que reescribe y se borra; no queda en el repo.
-3. **Los shims se van.** `kysely.ts`, `libsql-client.ts` y `orpc.ts` pasan a `import` normal. Si
-   después de eso un archivo solo reexporta, se borra y sus consumidores importan del paquete. `id.ts`
-   y `libsql-dialect.ts` quedan, sin `require`: tienen lógica propia.
+3. **Los shims se van.** Todos los `require()` pasan a `import`. `kysely.ts` y `libsql-client.ts`
+   quedan como reexport porque son costuras de tests (`vi.doMock` en `app-health-coverage` y
+   `migrate-url-coverage`); `id.ts` y `libsql-dialect.ts`, sin `require`. Las cinco exclusiones de
+   `biome.json` que existían por la sintaxis `resolution-mode` se van.
 4. **`require.main === module`** pasa a un helper que compara `import.meta.url` con
    `process.argv[1]` (Node 22 no tiene `import.meta.main`). **`__dirname`** pasa a
    `import.meta.dirname`.
 5. **La observabilidad arranca con `--import`, no con `--require`.** En ESM, `--require` no ve los
-   módulos que carga el grafo ESM. `instrumentation.ts` registra el hook de carga que necesitan
-   OpenTelemetry y Sentry (`import-in-the-middle`) **antes** de importar nada instrumentable, y la
-   carga de los paquetes de OTel pasa a `await import()` (sigue siendo condicional al endpoint).
+   módulos que carga el grafo ESM. `instrumentation.ts` registra **un solo** hook de
+   `import-in-the-middle` (dependencia directa, la misma 3.4.0 que usan OTel y Sentry) antes de
+   importar nada instrumentable; los paquetes de OTel pasan a `await import()` (condicional al
+   endpoint, como antes), y **Sentry se importa después** de que OTel arrancó y el loader confirmó qué
+   envolver, con `registerEsmLoaderHooks: false` para no registrar un segundo hook.
    Cambian el `startCommand` de `render.yaml`, el smoke de `.github/workflows/ci.yml` y `pnpm dev`.
    `render-config.test.ts` ya acepta `--import` en su chequeo de rutas con `./`.
 6. **`packages/shared` y `packages/cardano` no cambian**: siguen en CommonJS (D-102). La API los
@@ -126,6 +129,49 @@ Antes de cada commit, todo esto en verde. Si algo no se puede correr, se dice cu
 4. `pnpm e2e` completo (levanta la API con `pnpm dev`, que también cambia).
 5. `pnpm --filter @plataforma/api test:s3` contra MinIO (storage es uno de los 12 archivos de A0.2).
 6. En producción, después del deploy: `/health`, un login y un trace nuevo en Tempo.
+
+## A0.1, medido el 2026-10-02
+
+Con un arnés descartable: la base de `main` y la nueva buildeadas cada una con el `buildCommand`
+literal en un worktree limpio, en Node 22, y arrancadas con el `startCommand` literal contra la misma
+base sembrada. Cada corrida hace **683 requests**: login de los cinco roles, todas las rutas GET del
+OpenAPI con cada rol y sin sesión, antes y después de 13 mutaciones (perfil, favorito, notificación,
+transición de etapa, subida de evidencia real y falsa, alta de proyecto, compartir y firmar un
+dossier), más un 500 forzado. Dos corridas de la misma build dan idéntico: el arnés no mete ruido.
+
+| Escenario | Respuestas (status + cuerpo) | OpenTelemetry | Sentry |
+|---|---|---|---|
+| DSN + endpoint | idénticas | mismas instrumentaciones y cantidad de spans de `http`, `express` y `router`; las mismas 17 métricas | los mismos 3 eventos |
+| solo DSN | idénticas | — | los mismos 3 eventos e integraciones |
+| solo endpoint | idénticas | idéntico | — |
+| ninguna | idénticas | — | — |
+
+**Lo que cambió, y por qué está bien:**
+
+- **En CommonJS, Sentry instrumentaba Express dos veces.** Cada request daba el doble de spans de
+  `@sentry/node` (1.370 `helmetMiddleware` para 685 requests) con la ruta repetida
+  (`/api/v1/auth/api/v1/auth/login`), y los spans de `router` salían con un nombre de más
+  (`middleware - patched`). En ESM es una vez: 685 para 685 y `/api/v1/auth/login`. El total de spans
+  de `router` es el mismo (4.314).
+- **El log de OTel sale antes que el de Sentry**, porque Sentry ahora se carga después. Por eso los
+  eventos de Sentry traen una miga de consola menos al principio.
+- **Las migas `http` de Sentry** son los POST del exporter OTLP: su cantidad depende de cuándo se
+  vacía el lote, en las dos builds.
+
+**Lo que se probó además:** `pnpm verify:all` (la API sigue en 100/100/100/100; los tests pasan de
+771 a 775 por los 4 de `esPuntoDeEntrada`), `pnpm e2e` 100/100 con `pnpm dev`, `test:s3` 6/6 contra
+MinIO, migrate + seed sobre una base vacía con el build nuevo (mismo esquema y mismos conteos que
+`main`), `db:migrate` y `db:seed` por `tsx`, y `docs:openapi`/`docs:api` sin un byte de diferencia.
+
+**Un intento que no sirvió:** registrar el hook solo para OTel y dejar que Sentry registre el suyo.
+Quedan dos registros (Node avisa *"The 'import-in-the-middle' hook has already been initialized"*) y,
+con Sentry cargado antes del hook, falta `http.client.request.duration`.
+
+**Hallazgos que A0 no toca** (estaban en `main`, iguales en las dos builds):
+
+- `POST /auth/login` con un JSON mal formado responde **500** y llega a Sentry como error; debería
+  ser 400.
+- Todo evento de Sentry dice venir de `GET /health`, sea cual sea la request que falló.
 
 ## Rollback
 

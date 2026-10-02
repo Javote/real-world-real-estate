@@ -17,16 +17,16 @@ import {
 } from "@plataforma/shared";
 import { Router } from "express";
 import { z } from "zod";
-import { createId } from "../db/id";
-import type { UserRole } from "../db/types";
-import { anchorCommitmentEvent, commitmentOf } from "../domain/anchoring";
-import { notify } from "../domain/notify";
-import { db } from "../lib/db";
-import { conUsuario, delegarAOrpc, OpenAPIHandler, ORPCError, os } from "../lib/orpc";
-import { authenticate, authorize, projectScope } from "../middlewares/auth";
-import { paramValidator } from "../middlewares/validate-params";
-import { writeAuditLog } from "../utils/audit";
-import { relanzarRestriccionComoOrpc } from "./_shared";
+import { createId } from "../db/id.js";
+import type { UserRole } from "../db/types.js";
+import { anchorCommitmentEvent, commitmentOf } from "../domain/anchoring.js";
+import { notify } from "../domain/notify.js";
+import { db } from "../lib/db.js";
+import { conUsuario, delegarAOrpc, OpenAPIHandler, ORPCError, os } from "../lib/orpc.js";
+import { authenticate, authorize, projectScope } from "../middlewares/auth.js";
+import { paramValidator } from "../middlewares/validate-params.js";
+import { writeAuditLog } from "../utils/audit.js";
+import { relanzarRestriccionComoOrpc } from "./_shared.js";
 
 const PREFIJO_ABSOLUTO = "/api/v1/developer";
 

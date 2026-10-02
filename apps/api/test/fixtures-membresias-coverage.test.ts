@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
-import { sembrarMembresias, sembrarProyecto } from "../src/db/fixtures";
-import { db } from "../src/lib/db";
+import { sembrarMembresias, sembrarProyecto } from "../src/db/fixtures.js";
+import { db } from "../src/lib/db.js";
 
 describe("sembrarMembresias con lista vacía", () => {
   it("no inserta nada y no revienta", async () => {

@@ -13,19 +13,19 @@ import {
 } from "@plataforma/shared";
 import { type Request, type RequestHandler, Router } from "express";
 import type { z } from "zod";
-import { createId } from "../db/id";
-import { anchorCommitmentEvent } from "../domain/anchoring";
-import { notifyUnitInvestors } from "../domain/notify";
-import { crearBundle, transitionStage } from "../domain/stage-transition";
-import { db } from "../lib/db";
-import { call, ORPCError, os } from "../lib/orpc";
-import { leerCabecera, sha256DeArchivo, storage } from "../lib/storage";
-import { uploadEvidenceFiles } from "../lib/upload";
-import { authenticate, authorize } from "../middlewares/auth";
-import { codigoDeRestriccion } from "../middlewares/errorHandler";
-import { paramValidator } from "../middlewares/validate-params";
-import { writeAuditLog } from "../utils/audit";
-import { EVIDENCE_SAFE_COLUMNS } from "./_shared";
+import { createId } from "../db/id.js";
+import { anchorCommitmentEvent } from "../domain/anchoring.js";
+import { notifyUnitInvestors } from "../domain/notify.js";
+import { crearBundle, transitionStage } from "../domain/stage-transition.js";
+import { db } from "../lib/db.js";
+import { call, ORPCError, os } from "../lib/orpc.js";
+import { leerCabecera, sha256DeArchivo, storage } from "../lib/storage.js";
+import { uploadEvidenceFiles } from "../lib/upload.js";
+import { authenticate, authorize } from "../middlewares/auth.js";
+import { codigoDeRestriccion } from "../middlewares/errorHandler.js";
+import { paramValidator } from "../middlewares/validate-params.js";
+import { writeAuditLog } from "../utils/audit.js";
+import { EVIDENCE_SAFE_COLUMNS } from "./_shared.js";
 
 const validarCamposDeTexto = os
   .route({ method: "POST", path: "/projects/{id}/stages/{stageId}/evidence" })
