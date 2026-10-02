@@ -4,9 +4,17 @@
 > `authenticate`/`authorize` y la capa de base. **No cambia la API:** paths, bodies, respuestas y
 > códigos de estado quedan idénticos.
 
-## Lo que hay hoy, leído del código el 2026-10-02
+## Lo que hay hoy, medido el 2026-10-02
 
-Cada consulta de Kysely es un viaje a Turso, y el middleware los encadena. `GET /stages/:id`:
+**Kysely serializa todas las consultas del proceso.** `@libsql/kysely-libsql` 0.4.1 usa el
+`SqliteAdapter` de Kysely, que declara `supportsMultipleConnections = false`, y Kysely 0.29 responde
+con un mutex global de conexión (`RuntimeDriver`). Un `Promise.all` de tres consultas paga tres
+viajes; dos requests simultáneas se turnan consulta por consulta; una transacción abierta frena a
+toda la API hasta su `COMMIT`. Contra Turso el mutex no protege nada: cada `LibsqlConnection` es
+independiente y cada transacción abre su propio stream HTTP. En local, el cliente `file:` le cede su
+conexión a la transacción y abre otra para lo que sigue.
+
+Encima, el middleware encadena sus propias lecturas. `GET /stages/:id`:
 
 | # | Consulta | Dónde |
 |---|---|---|
@@ -14,16 +22,26 @@ Cada consulta de Kysely es un viaje a Turso, y el middleware los encadena. `GET 
 | 2 | `Stage.projectId` | `proyectoDeLaEntidad`, mismo archivo |
 | 3 | `Project` con `EXISTS(ProjectMember …)` | `canAccessProject`, mismo archivo |
 | 4 | `Stage` otra vez, completo | el handler, `src/routes/stages.routes.ts` |
-| 5 | `Evidence` + `Project` otra vez + `cabezaDelHilo`, en `Promise.all` | el handler |
+| 5–7 | `Evidence` + `Project` otra vez + `cabezaDelHilo`, en un `Promise.all` que el mutex serializa | el handler |
 
-**Cinco viajes en serie**, y `Stage` y `Project` se leen dos veces. El `Promise.all` sí es paralelo:
-`@libsql/kysely-libsql` 0.4.1 no serializa, cada `executeQuery` va directo al cliente.
+Viajes en serie medidos con `test/viajes-por-request.test.ts` (paso 0):
 
-En las mutaciones se suma la escritura y, después, `writeAuditLog` en otro viaje: `PATCH /stages/:id`
-hace 6–7. Las 6 rutas con `db.transaction()` usan transacciones interactivas: con una URL `libsql://`
-el cliente 0.17 de Node habla HTTPS (`expandConfig(config, true)` → `preferHttp`), y cada sentencia
-de la transacción es un viaje más, más el `COMMIT`. `client.batch([...], "write")` manda todo en uno
-y es atómico.
+| Request | Antes | Después |
+|---|---|---|
+| `GET /auth/me` | 2 | |
+| `GET /projects` | 3 | |
+| `GET /projects/:id` | 5 | |
+| `GET /projects/:id/stages` | 5 | |
+| `GET /stages/:id` | 7 | |
+| `PATCH /stages/:id` | 6 | |
+| `GET /investor/units` | 3 | |
+| `GET /notifications/unread-count` | 2 | |
+
+En las mutaciones, `writeAuditLog` es otro viaje después de la escritura. Las 6 rutas con
+`db.transaction()` usan transacciones interactivas: con una URL `libsql://` el cliente 0.17 de Node
+habla HTTPS (`expandConfig(config, true)` → `preferHttp`), el `BEGIN` viaja con la primera sentencia
+y cada sentencia y el `COMMIT` son un viaje cada uno. `client.batch([...], "write")` manda todo en
+uno y es atómico.
 
 Las 91 rutas con sesión pasan todas por `authorize` (lo garantiza la `MATRIZ` de
 `test/route-guards.test.ts`); 31 resuelven el proyecto desde una entidad (`via`).
@@ -45,16 +63,22 @@ valen por separado.
 
 ## Pasos, en este orden
 
-**0. Medir.** Un helper de test que espía `LibsqlConnection.prototype.executeQuery`, le agrega una
-demora fija y registra inicio y fin de cada consulta. La **profundidad** de una request es la cadena
-más larga de consultas que no se solapan: es la cantidad de viajes que se pagan en serie. Tabla del
-antes para las rutas que más se piden, y un test permanente que fija el presupuesto de cada una.
+**0. Medir.** `test/helpers/viajes.ts` espía `LibsqlConnection.prototype.executeQuery` y
+`commitTransaction`, les agrega una demora fija y registra inicio y fin. Los viajes en serie de una
+request son la cadena más larga de consultas donde cada una empieza después de que terminó la
+anterior. `test/viajes-por-request.test.ts` fija el número de cada ruta: si sube o baja, el test lo
+dice.
 
-**1. La autorización por proyecto en una consulta.** `proyectoDeLaEntidad` + `canAccessProject` pasan
+**1. Sin mutex.** `src/lib/db.ts` arma el dialecto con un adaptador que declara
+`supportsMultipleConnections = true`. Los `Promise.all` que ya existen pasan a ser paralelos, y las
+requests dejan de turnarse. El riesgo: en local, dos escrituras concurrentes contra el mismo archivo
+pueden dar `SQLITE_BUSY`; la suite completa y `pnpm e2e` lo dirían.
+
+**2. La autorización por proyecto en una consulta.** `proyectoDeLaEntidad` + `canAccessProject` pasan
 a ser un solo `SELECT` desde la entidad con `LEFT JOIN Project` y el `EXISTS` de `projectScope` como
 columna: sin fila → 404; fila con el flag en falso → 403. **−1 viaje** en las 31 rutas con `via`.
 
-**2. El usuario en paralelo con la autorización.** `authenticate` verifica el JWT, **lanza** la
+**3. El usuario en paralelo con la autorización.** `authenticate` verifica el JWT, **lanza** la
 lectura de `User` sin esperarla y llama a `next()`. `authorize` corre la regla con el `id` y el `role`
 del JWT y espera las dos cosas juntas. Después decide en el orden de hoy: usuario inexistente,
 inactivo o con un rol distinto del del token → 401; rol no permitido → 403; veredicto de la regla. Recién
@@ -63,14 +87,14 @@ entonces escribe `req.user`. **−1 viaje** en las 91 rutas. La lectura lanzada 
 una promesa rechazada sin manejar tira el proceso en Node 24. Si una ruta futura usara `authenticate`
 sin `authorize`, no tendría `req.user`: falla cerrada, y la `MATRIZ` ya no la deja montar.
 
-**3. Las ramas de `alguna` en paralelo.** Hoy van con `for … await`. Mismo veredicto, sin esperar.
+**4. Las ramas de `alguna` en paralelo.** Hoy van con `for … await`. Mismo veredicto, sin esperar.
 
-**4. Batch de libSQL para la mutación y su audit.** Un `ejecutarEnLote([...consultas compiladas])` en
+**5. Batch de libSQL para la mutación y su audit.** Un `ejecutarEnLote([...consultas compiladas])` en
 `src/lib/db.ts`: compila con Kysely y manda con `client.batch(…, "write")`. Para eso `db.ts` crea el
 cliente y se lo pasa al dialecto como `{ client }`. Se usa donde las escrituras no dependen de una
 lectura intermedia. **−1 viaje** por mutación, y el audit queda atómico.
 
-**5. Los handlers que releen lo que ya se sabe.** Solo en las rutas que el paso 0 mida por encima de
+**6. Los handlers que releen lo que ya se sabe.** Solo en las rutas que el paso 0 mida por encima de
 su presupuesto: lanzar juntas las lecturas que no dependen entre sí (`GET /stages/:id`: `Stage`,
 `Evidence`, `Project` y `cabezaDelHilo` en un solo `Promise.all`). El resto lo hace la migración
 (`SPEC-604` se disuelve en A3/A4).
@@ -81,13 +105,13 @@ pesan las llamadas a Cardano y no Turso.
 
 ## Qué sobrevive a la migración
 
-Los pasos 1–3 viven en funciones de `auth.ts` que no dependen de Express: el middleware de oRPC de A2
-las reusa. El paso 4 es el `audit(trx)` de A1 hecho sobre `batch` en vez de sobre una transacción
+El paso 1 vive en `db.ts` y no lo toca la migración. Los pasos 2–4 viven en funciones de `auth.ts` que no dependen de Express: el middleware de oRPC de A2
+las reusa. El paso 5 es el `audit(trx)` de A1 hecho sobre `batch` en vez de sobre una transacción
 interactiva. **A1 lo hereda:** sobre Turso, una transacción interactiva cuesta un viaje por sentencia.
 
 ## Verificación
 
-- El test de profundidad del paso 0, con el antes y el después en esta spec.
+- `test/viajes-por-request.test.ts`, con el antes y el después en la tabla de arriba.
 - `pnpm verify:all` y `pnpm e2e` completo (toca auth).
 - En producción, después del deploy: la duración de `GET /api/v1/stages/:id` en Tempo, antes y
   después.
