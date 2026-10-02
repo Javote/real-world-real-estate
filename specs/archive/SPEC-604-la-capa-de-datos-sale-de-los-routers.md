@@ -1,14 +1,15 @@
 # SPEC-604 — Las lecturas repetidas salen de los routers
 
-> Serie `6xx`, refactor post-M3 ([`PROPUESTA-2026-09-30-refactor-post-m3.md`](PROPUESTA-2026-09-30-refactor-post-m3.md)).
+> **Absorbida el 2026-10-02 por la Fase 2** ([`SPEC-611`](../SPEC-611-la-migracion-fase-2.md)): las lecturas viven en el `queries.ts` de cada módulo, en [`SPEC-615`](../SPEC-615-el-piloto-dossier.md) y [`SPEC-616`](../SPEC-616-el-resto-modulo-por-modulo.md).
+> Serie `6xx`, refactor post-M3 ([`PROPUESTA-2026-09-30-refactor-post-m3.md`](../PROPUESTA-2026-09-30-refactor-post-m3.md)).
 > **No es mandato hasta entregar M3.** Nivel 🟢: refactor sin cambio de comportamiento, con las
 > respuestas de la API fijadas por los tests existentes. **Cuándo:** no como tanda propia, sino
-> la primera vez que una feature nueva (por ejemplo [`SPEC-501`](SPEC-501-panel-de-metricas-del-piloto.md),
+> la primera vez que una feature nueva (por ejemplo [`SPEC-501`](../SPEC-501-panel-de-metricas-del-piloto.md),
 > que agrega agregados) necesite una de estas lecturas.
 
 ## Qué NO es esta spec
 
-**No es partir routers por largo.** [`SPEC-015`](archive/SPEC-015-saneamiento-de-la-instrumentacion.md)
+**No es partir routers por largo.** [`SPEC-015`](SPEC-015-saneamiento-de-la-instrumentacion.md)
 §El ítem 6 lo midió y lo descartó: la auditoría del backend leyó los 51 archivos y ninguno de sus
 15 hallazgos venía del largo de un router, y cada archivo nuevo sobre un prefijo compartido es un
 invariante más de guards. **Esa regla sigue en pie.** Tampoco es una reestructura en carpetas por
@@ -36,7 +37,7 @@ Las mismas lecturas, escritas varias veces a mano:
 - **"Esta etapa pertenece a este proyecto"** (`where id = ? and projectId = ?`):
   `projects-obra.routes.ts` (2) y otras.
 
-**Esto ya produjo un bug de esta clase.** [`SPEC-109`](archive/SPEC-109-tipos-de-respuesta-desde-shared.md)
+**Esto ya produjo un bug de esta clase.** [`SPEC-109`](SPEC-109-tipos-de-respuesta-desde-shared.md)
 encontró que `/developer/project/:id` mostraba siempre **avance 0%**: el listado calculaba el
 agregado y el detalle no, y el `?? 0` del front lo tapaba. Dos lugares que calculan "lo mismo" por
 separado terminan calculando cosas distintas.

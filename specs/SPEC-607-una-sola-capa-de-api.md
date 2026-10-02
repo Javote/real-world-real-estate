@@ -1,11 +1,25 @@
 # SPEC-607 — Una sola capa de API: el contrato en `shared`, los guards como dato del procedimiento
 
-> Serie `6xx`, refactor post-M3 ([`PROPUESTA-2026-09-30-refactor-post-m3.md`](PROPUESTA-2026-09-30-refactor-post-m3.md)).
-> **No es mandato hasta entregar M3.** Nivel 🟡: auth, guards y la forma de todas las rutas.
-> **Reabre una decisión, a pedido del dueño (2026-09-30)**: la invariante 3 de
-> [`SPEC-212`](archive/SPEC-212-contrato-en-la-firma-de-la-ruta.md) (`authorize` corre en Express, antes que
-> oRPC). Pide un **D-NNN nuevo** que la reemplace, escrito en el mismo commit que la implementa.
-> Es la base de [`SPEC-608`](SPEC-608-los-archivos-por-concepto.md) y [`SPEC-609`](SPEC-609-el-cliente-sale-del-contrato.md).
+> **Fase 2, paso A2** ([`SPEC-611`](SPEC-611-la-migracion-fase-2.md)); el estado, en
+> [`specs/README.md`](README.md). Nivel 🟡: auth, guards y la forma de todas las rutas. La decisión
+> que pedía —reemplazar la invariante 3 de
+> [`SPEC-212`](archive/SPEC-212-contrato-en-la-firma-de-la-ruta.md)— es **D-102**. Escrita en la serie
+> `6xx` ([`PROPUESTA-2026-09-30-refactor-post-m3.md`](PROPUESTA-2026-09-30-refactor-post-m3.md)).
+
+## En la Fase 2
+
+Esta spec se escribió para hacerse sola, vertical por vertical. En la Fase 2 se reparte así:
+
+| Parte | Paso |
+|---|---|
+| **El Paso 0** (el orden guard → validación fijado con un test) y **la infraestructura**: el router oRPC raíz montado en `/api/v1` **antes** de las rutas de Express, que siguen atendiendo lo que el router no conoce (`next()`); el middleware que lee la `meta`; `route-guards.test.ts` leyendo de las dos fuentes | **A2** |
+| **La cadena de middlewares de la auditoría §2.2**: `authenticate` → rol → `loadProject`, que deja la entidad y su proyecto en el contexto para que el handler no la vuelva a leer (reusa las funciones de `SPEC-610`) | **A2** |
+| **El contexto como inyección de dependencias**: `{ db, anchor, storage, clock, config }`, para que un test llame `call(proc, input, { context })` sin supertest ni `vi.mock` | **A2** |
+| **Mover cada vertical**: su contrato a `packages/shared/src/contract/`, su guard a la `meta`, y borrar sus rutas de Express. El piloto ya no es `notary` solo, es `dossier` (notary + investor + público) | **A3** ([`SPEC-615`](SPEC-615-el-piloto-dossier.md)) y **A4** ([`SPEC-616`](SPEC-616-el-resto-modulo-por-modulo.md)) |
+| Borrar `MONTAJE`, `GUARD`, `authorize` de Express, `delegarAOrpc` y `route-inventory` | **A5** ([`SPEC-617`](SPEC-617-una-sola-forma.md)) |
+
+**A2 termina con el router raíz montado y vacío de rutas propias, salvo un procedimiento de prueba
+del Paso 0 que no se publica**: ninguna ruta cambia de dueño en A2, y el OpenAPI no se mueve.
 
 ## Por qué reabrirla
 

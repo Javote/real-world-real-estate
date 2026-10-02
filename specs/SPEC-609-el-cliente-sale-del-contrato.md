@@ -1,10 +1,13 @@
 # SPEC-609 — El cliente de la web sale del contrato (reabre la opción B de `SPEC-111`)
 
-> Serie `6xx`, refactor post-M3 ([`PROPUESTA-2026-09-30-refactor-post-m3.md`](PROPUESTA-2026-09-30-refactor-post-m3.md)).
-> **No es mandato hasta entregar M3.** Nivel 🟢: la API no cambia; cambia cómo el front tipa sus
-> llamadas. **Depende de [`SPEC-607`](SPEC-607-una-sola-capa-de-api.md)**: sin el contrato en `shared`,
-> no hay de dónde derivar el cliente. **Reabre [`SPEC-111`](archive/SPEC-111-callsites-de-apps-web-al-cliente-orpc.md)
-> a pedido del dueño (2026-09-30).**
+> **Fase 2, paso W2** ([`SPEC-611`](SPEC-611-la-migracion-fase-2.md)), junto con
+> [`SPEC-614`](SPEC-614-la-fabrica-de-queries.md); el estado, en [`specs/README.md`](README.md).
+> Nivel 🟢: la API no cambia; cambia cómo el front tipa sus llamadas. **Depende de A2
+> ([`SPEC-607`](SPEC-607-una-sola-capa-de-api.md))**, y avanza **por vertical**: cada módulo que
+> A3/A4 mueve al contrato pasa su cliente al mismo tiempo, y la fachada de `port.ts` deja convivir
+> métodos migrados y sin migrar. Reabrir [`SPEC-111`](archive/SPEC-111-callsites-de-apps-web-al-cliente-orpc.md)
+> quedó decidido en **D-102**. Escrita en la serie `6xx`
+> ([`PROPUESTA-2026-09-30-refactor-post-m3.md`](PROPUESTA-2026-09-30-refactor-post-m3.md)).
 
 ## Qué había quedado de `SPEC-111`
 

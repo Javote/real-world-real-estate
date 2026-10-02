@@ -1,8 +1,9 @@
 # SPEC-608 — Los archivos de la API por concepto, no por prefijo
 
-> Serie `6xx`, refactor post-M3 ([`PROPUESTA-2026-09-30-refactor-post-m3.md`](PROPUESTA-2026-09-30-refactor-post-m3.md)).
+> **Absorbida el 2026-10-02 por la Fase 2** ([`SPEC-611`](../SPEC-611-la-migracion-fase-2.md)): los módulos por concepto de [`SPEC-615`](../SPEC-615-el-piloto-dossier.md) y [`SPEC-616`](../SPEC-616-el-resto-modulo-por-modulo.md).
+> Serie `6xx`, refactor post-M3 ([`PROPUESTA-2026-09-30-refactor-post-m3.md`](../PROPUESTA-2026-09-30-refactor-post-m3.md)).
 > **No es mandato hasta entregar M3.** Nivel 🟢: mueve código sin cambiar comportamiento.
-> **Depende de [`SPEC-607`](SPEC-607-una-sola-capa-de-api.md).** Sin ella, partir sigue costando lo
+> **Depende de [`SPEC-607`](../SPEC-607-una-sola-capa-de-api.md).** Sin ella, partir sigue costando lo
 > que midió `SPEC-015` §6. **Reabre la aplicación de esa regla, no la regla**, a pedido del dueño
 > (2026-09-30).
 

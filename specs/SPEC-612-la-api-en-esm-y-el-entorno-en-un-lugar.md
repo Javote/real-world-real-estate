@@ -1,0 +1,132 @@
+# SPEC-612 — A0: la API en ESM y el entorno en un solo lugar
+
+> Fase 2, paso A0 ([`SPEC-611`](SPEC-611-la-migracion-fase-2.md)); el estado, en
+> [`specs/README.md`](README.md). Nivel 🟡: cambia el `startCommand` de Render y cómo arranca la
+> observabilidad. **Sin cambio de comportamiento**: ni una respuesta, ni un path, ni el OpenAPI.
+
+## Lo que hay hoy, medido el 2026-10-02
+
+**CommonJS con paquetes ESM puros.** `apps/api` compila a CJS (`module: node16`, sin `"type"`), y
+seis dependencias son ESM puro: `kysely`, `@libsql/client`, `@libsql/kysely-libsql`,
+`@paralleldrive/cuid2`, y `@orpc/*`. Se cargan con `require()` (Node 22.12+ hace `require(esm)`) y
+se tipan con `resolution-mode: "require"`:
+
+| Archivo | Qué hace |
+|---|---|
+| `src/lib/kysely.ts` | `require("kysely")` y reexporta valores y tipos |
+| `src/lib/libsql-client.ts` | `require("@libsql/client")` |
+| `src/lib/libsql-dialect.ts` | `require("@libsql/kysely-libsql")` |
+| `src/lib/orpc.ts` | `require` de `@orpc/openapi`, `@orpc/openapi/node`, `@orpc/server`, `@orpc/zod/zod4` |
+| `src/db/id.ts` | `require("@paralleldrive/cuid2")` |
+| `src/instrumentation.ts` | `require` de los 8 paquetes de OpenTelemetry, para cargarlos solo si hay endpoint |
+| `test/helpers/orpc.ts`, `test/helpers/viajes.ts` | lo mismo en los tests |
+
+Eso deja tres trampas en `apps/api/CLAUDE.md` (*"No cambies `moduleResolution`"*, *"Un `require()`
+sin tipar saltea a `tsc`"*, *"Un `import()` dinámico en un test lleva `.js`"*).
+
+**Más piezas que dependen de CJS:**
+
+- `require.main === module` en `src/db/migrate.ts`, `src/db/seed.ts`,
+  `scripts/generate-openapi.ts` y `scripts/generate-api-docs.ts`.
+- `__dirname` en `src/lib/upload.ts`, `src/db/migrate.ts`, los dos scripts y cuatro tests.
+- **706 imports relativos sin extensión** en `src/`, `test/` y `scripts/`, más 28 `import()`.
+- **El arranque:** `--require ./apps/api/dist/src/instrumentation.js` en el `startCommand` de
+  Render, en el smoke test de CI y en `pnpm dev` (`tsx watch --require ./src/instrumentation.ts`).
+- **Render y CI corren Node 22** (`NODE_VERSION: "22"`); el `.nvmrc` dice `22.12.0`. Esta máquina
+  tiene 24. `import.meta.main` no existe en 22.
+
+**El entorno se lee en 12 archivos**, cada uno con su parseo: `app.ts` (`WEB_ORIGIN`), `server.ts`
+(`PORT`), `lib/jwt.ts` (`JWT_SECRET`, falla al importar si falta), `middlewares/rateLimit.ts`
+(`TRUST_PROXY_HOPS`, `LOGIN_RATE_LIMIT_MAX`, con fallback ante valores inválidos), `lib/anchor.ts`
+(`ANCHOR_MODE`, `CARDANO_NETWORK`, `BLOCKFROST_*`, `SERVICE_WALLET_PRIVATE_KEY`, `DATABASE_URL`),
+`lib/storage.ts` (`STORAGE_DRIVER`, `S3_*`), `lib/upload.ts` (`UPLOAD_DIR`), `lib/db.ts`,
+`db/local-db.ts`, `db/migrate.ts`, `db/credentials.ts` (`DATABASE_*`, `SEED_*`) e
+`instrumentation.ts` (`SENTRY_DSN`, `OTEL_EXPORTER_OTLP_ENDPOINT`, `NODE_ENV`).
+**15 archivos de test cambian `process.env` en caliente** y esperan el efecto en la próxima llamada
+(`DATABASE_URL` 20 veces, `ANCHOR_MODE` 12, `SENTRY_DSN` 7…).
+`test/render-config.test.ts` busca con regex qué variables lee el código y exige que `render.yaml`
+las declare.
+
+## Alcance
+
+Dos commits, en este orden. Cada uno se prueba entero (§Verificación) antes de commitear.
+
+### A0.1 — ESM
+
+1. `apps/api/package.json`: `"type": "module"`. `tsconfig.json`: `module` y `moduleResolution`
+   `nodenext`.
+2. **Los imports relativos llevan `.js`.** Es mecánico y lo exige `tsc`: un import sin extensión no
+   compila con `nodenext`. Se hace con un script que reescribe y se borra; no queda en el repo.
+3. **Los shims se van.** `kysely.ts`, `libsql-client.ts` y `orpc.ts` pasan a `import` normal. Si
+   después de eso un archivo solo reexporta, se borra y sus consumidores importan del paquete. `id.ts`
+   y `libsql-dialect.ts` quedan, sin `require`: tienen lógica propia.
+4. **`require.main === module`** pasa a un helper que compara `import.meta.url` con
+   `process.argv[1]` (Node 22 no tiene `import.meta.main`). **`__dirname`** pasa a
+   `import.meta.dirname`.
+5. **La observabilidad arranca con `--import`, no con `--require`.** En ESM, `--require` no ve los
+   módulos que carga el grafo ESM. `instrumentation.ts` registra el hook de carga que necesitan
+   OpenTelemetry y Sentry (`import-in-the-middle`) **antes** de importar nada instrumentable, y la
+   carga de los paquetes de OTel pasa a `await import()` (sigue siendo condicional al endpoint).
+   Cambian el `startCommand` de `render.yaml`, el smoke de `.github/workflows/ci.yml` y `pnpm dev`.
+   `render-config.test.ts` ya acepta `--import` en su chequeo de rutas con `./`.
+6. **`packages/shared` y `packages/cardano` no cambian**: siguen en CommonJS (D-102). La API los
+   importa desde ESM, y Node resuelve sus nombres exportados. Si algún nombre no se resuelve, se ve
+   en el arranque con `node`, no en Vitest (por eso §Verificación arranca el build real).
+7. **La documentación, en el mismo commit**: las tres trampas de `apps/api/CLAUDE.md` se reemplazan
+   por las que dejen ESM; la mención a CommonJS de `apps/api/CLAUDE.md`, de
+   `packages/shared/CLAUDE.md` y del comentario de `packages/shared/tsconfig.json` se corrige;
+   `specs/RUNBOOK-deploy.md` y su versión en inglés (`specs/evidencia-m3/5-ops/runbook.md` + PDF)
+   si citan el `startCommand`.
+
+### A0.2 — El entorno en `platform/config.ts`
+
+1. **Un schema Zod con todas las variables que lee la API** (`src/platform/config.ts`), y una
+   función `entorno(env = process.env)` que lo parsea y devuelve el objeto tipado.
+2. **Cada uno de los 12 archivos lee de `entorno()`** en vez de `process.env`, en el **mismo
+   momento** en que lee hoy: lo que hoy se lee al importar (`JWT_SECRET`), se sigue leyendo al
+   importar; lo que se lee por llamada (`ANCHOR_MODE`, `DATABASE_URL`), se sigue leyendo por llamada.
+   Así los 15 tests que cambian `process.env` en caliente siguen andando sin tocarse.
+3. **Cada campo reproduce el parseo de hoy, incluidos los valores inválidos.** Si hoy
+   `TRUST_PROXY_HOPS=abc` cae al default, el schema cae al mismo default (`.catch`), no tira. Un
+   test por campo fija el caso inválido contra el comportamiento de antes.
+4. **`server.ts` llama a `entorno()` una vez al arrancar**, antes de escuchar, para que una variable
+   mal formada se vea en el log de arranque y no en la primera request que la usa. Lo que hoy no
+   frena el arranque, no lo frena después: solo se loguea.
+5. **`render-config.test.ts` lee las variables del schema**, no con regex sobre el código.
+6. Los scripts de `scripts/` (`repair-thread.ts`, los generadores) quedan con `process.env`: corren
+   a mano, fuera del proceso de la API.
+
+## Invariantes
+
+1. **Ni una respuesta cambia.** Los tests de `apps/api` pasan sin cambiar ninguna expectativa.
+2. **El OpenAPI y la colección Postman no cambian ni un byte** (`openapi-freshness.test.ts`,
+   `api-docs-freshness.test.ts`).
+3. **La observabilidad ve lo mismo que antes**: las mismas instrumentaciones de OpenTelemetry
+   emiten spans (por nombre de scope) y Sentry recibe el mismo error. Se mide antes y después (§3).
+4. **Arranca con el comando literal de Render, en Node 22.**
+5. **La cobertura de `apps/api` no baja** del umbral de `vitest.config.mts`.
+
+## Verificación
+
+Antes de cada commit, todo esto en verde. Si algo no se puede correr, se dice cuál y por qué.
+
+1. `pnpm verify:all`.
+2. **El build y el arranque reales, en Node 22**: el `buildCommand` y el `startCommand` de
+   `render.yaml` literales, sobre una base local migrada, y después:
+   - `GET /health` 200;
+   - login → `GET /auth/me` → una lectura con proyecto (`GET /projects/:id/stages`) → una mutación
+     con audit, con las mismas respuestas que el build de antes (se guardan las dos y se comparan,
+     sin los ids y fechas);
+   - `pnpm db:seed` y `pnpm --filter @plataforma/api docs:openapi` corren desde el build nuevo.
+3. **La observabilidad, antes y después.** Un colector OTLP mínimo en local (un `http.createServer`
+   que guarda los `POST /v1/traces` en JSON), con `OTEL_EXPORTER_OTLP_ENDPOINT` apuntándolo, y un DSN
+   de Sentry hacia otro servidor local que guarda los sobres. Se hace la misma secuencia de requests
+   **con el build de `main` y con el nuevo**: el conjunto de `scope.name` de los spans (`http`,
+   `express`, `undici`…) y los sobres de Sentry ante un 500 tienen que coincidir.
+4. `pnpm e2e` completo (levanta la API con `pnpm dev`, que también cambia).
+5. `pnpm --filter @plataforma/api test:s3` contra MinIO (storage es uno de los 12 archivos de A0.2).
+6. En producción, después del deploy: `/health`, un login y un trace nuevo en Tempo.
+
+## Rollback
+
+Revertir el commit y redeployar. No toca la base ni el estado de los navegadores.

@@ -1,7 +1,8 @@
 # SPEC-602 — Los datos arrancan con la ruta, no después del primer render
 
-> Serie `6xx`, refactor post-M3 ([`PROPUESTA-2026-09-30-refactor-post-m3.md`](PROPUESTA-2026-09-30-refactor-post-m3.md)).
-> **No es mandato hasta entregar M3.** Nivel 🟢. **Depende de [`SPEC-601`](archive/SPEC-601-el-guard-de-rol-vive-en-el-router.md)**:
+> **Absorbida el 2026-10-02 por la Fase 2** ([`SPEC-611`](../SPEC-611-la-migracion-fase-2.md)): `queries.ts` y `staleTime`, con su excepción para los anclajes, en [`SPEC-614`](../SPEC-614-la-fabrica-de-queries.md); los loaders, con cada pantalla en `SPEC-615`/`SPEC-616`, con `ensureQueryData` + `useSuspenseQuery` en vez del `prefetchQuery` sin `await` de acá (auditoría 2026-10-01 §3.2).
+> Serie `6xx`, refactor post-M3 ([`PROPUESTA-2026-09-30-refactor-post-m3.md`](../PROPUESTA-2026-09-30-refactor-post-m3.md)).
+> **No es mandato hasta entregar M3.** Nivel 🟢. **Depende de [`SPEC-601`](SPEC-601-el-guard-de-rol-vive-en-el-router.md)**:
 > sin el `QueryClient` en el contexto del router, un loader no tiene contra qué precargar.
 
 ## Lo que hay hoy, medido el 2026-09-30
@@ -22,7 +23,7 @@
    `await ensureQueryData` a propósito:
    - **No bloquea la navegación** detrás de la red. La pantalla aparece enseguida con su estado de
      carga.
-   - **Los estados de carga de [`SPEC-110`](archive/SPEC-110-estado-de-carga.md) se quedan como están**:
+   - **Los estados de carga de [`SPEC-110`](SPEC-110-estado-de-carga.md) se quedan como están**:
      `isPending` sigue significando lo mismo.
 2. **Las `queryOptions` se definen una vez**, en `src/api/queries.ts` (por ejemplo
    `queries.projects(params)`, `queries.favorites()`), y las usan tanto el loader como el

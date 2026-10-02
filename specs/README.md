@@ -86,6 +86,22 @@ El diseño de cada ítem está en
 | 9 | `SPEC-222` PWA (rama `spec-222-pwa`) y la pasada manual de `SPEC-112` | `222` implementada en la rama, sin mergear: se mergea recién después de entregar M3 (dueño, 2026-09-30: revertir el commit no desinstala un service worker). `112`, más adelante (dueño, 2026-10-02) |
 | 10 | [`SPEC-610`](archive/SPEC-610-menos-viajes-a-la-base-por-request.md) menos viajes a la base por request, sin cambiar la API: `GET /stages/:id` hace 7 en serie y un `PATCH` 6, porque Kysely serializa todas las consultas del proceso | ✅ 2026-10-02 — aprobada por el dueño. Pasos 0–7: `GET /stages/:id` 7 → 2, `PATCH /stages/:id` 6 → 2, `GET /projects/:id` 5 → 2, `GET /projects/:id/stages` 5 → 2, y dos requests simultáneas ya no se turnan. `pnpm verify:all` y `pnpm e2e` 100/100 · 🟡 |
 
+### Fase 2 — la migración, módulo por módulo
+
+El plan, el acople y la regla de salida están en [`SPEC-611`](SPEC-611-la-migracion-fase-2.md)
+(D-102); el estado, acá. Arranca el 2026-10-02 con A0, a pedido del dueño, con lo que queda abierto de
+la Fase 1 (ítems 6 y 9) en paralelo: ninguno de los dos la frena.
+
+| Paso | Qué | Spec | Estado |
+|---|---|---|---|
+| A0 | La API en ESM y el entorno en un solo lugar | [`612`](SPEC-612-la-api-en-esm-y-el-entorno-en-un-lugar.md) | en curso |
+| A1 | Los cimientos de los módulos | [`613`](SPEC-613-los-cimientos-de-los-modulos.md) | sin empezar · pide decidir `notify` |
+| A2 | El contrato en `shared`, el router raíz y los guards como `meta` | [`607`](SPEC-607-una-sola-capa-de-api.md) | sin empezar |
+| W2 | La fábrica de queries y `claveDeError` · el cliente desde el contrato | [`614`](SPEC-614-la-fabrica-de-queries.md) · [`609`](SPEC-609-el-cliente-sale-del-contrato.md) | sin empezar · `614` no espera a la API; `609`, a A2 |
+| A3 + W3 | El piloto `dossier` | [`615`](SPEC-615-el-piloto-dossier.md) | sin empezar · antes, decidir el scope del notary, cuándo se persiste la compilación y si la evidencia de M3 se congela |
+| A4 + W4 | El resto, módulo con su rol | [`616`](SPEC-616-el-resto-modulo-por-modulo.md) | sin empezar · después del piloto |
+| A5 + W5 | Una sola forma | [`617`](SPEC-617-una-sola-forma.md) | sin empezar |
+
 ### Fuera de alcance de M3
 
 | Qué | Por qué |
@@ -98,9 +114,9 @@ El diseño de cada ítem está en
 | **`validationCritical` siempre `true`** | Config muerta con rama viva y testeada en el validador. No molesta |
 | **Upload directo del navegador a R2 (sin pasar por Render)** | Hoy el archivo hace escala en `UPLOAD_DIR` (Multer a disco, en streaming) antes de llegar al bucket. **Ojo: el argumento de RAM que figuraba acá no aplica a Multer** — con `diskStorage` el body no pasa por memoria (`SPEC-218` §Los hallazgos); lo que pesa es disco efímero y latencia. Un presigned URL lo evitaría, pero es un cambio de forma real (CORS, flujo de 3 pasos en el front) y el hash sigue teniendo que releerse desde R2 igual (D-027). **Después de mainnet** — el diseño y el costo, en [`specs/archive/CLAUDE-argumentos-de-las-reglas-2026-09-20.md`](archive/CLAUDE-argumentos-de-las-reglas-2026-09-20.md) §Anexo |
 | **Si PostHog sigue** | Hoy solo mide web vitals, que Sentry también mide, y pesa 90,6 kB gz (ya diferido, fuera del JS inicial). No se saca antes de que Catalyst acepte M3: la evidencia del criterio 14 lo muestra en vivo (dueño, 2026-10-02) |
-| **La espera al crear un proyecto** | Medido el 2026-10-01 en Preprod, ya sin `awaitTx`: 18,5 s para los 10 mints. Decidir si hace falta UI de espera |
-| **"Evidence by stage" del investor no abre una etapa en curso** | El chip solo se activa con el `txid` de la transición a `Completed` (`StageChips.tsx:34`, `investor.routes.ts:271`): una etapa `InProgress` con su paquete de evidencia ya anclado queda deshabilitada. Visto grabando T17, que salió del video (2026-10-01). Hay que decidir si el chip se activa con el anclaje de la evidencia |
-| **El "Certify" de la cola del certifier solo abre la etapa** | En "Assigned" y en el panel, el botón de cada etapa dice "Certify" pero navega a `/certifier/stage/:id` (`AssignedStagesQueue.tsx:60`); el que certifica de verdad está abajo de esa pantalla, al lado de "Observe". Confunde justo antes de una acción irrepetible. Visto grabando T18 (2026-10-01) |
+| **La espera al crear un proyecto** | Medido el 2026-10-01 en Preprod, ya sin `awaitTx`: 18,5 s para los 10 mints. Decidir si hace falta UI de espera → se resuelve en [`SPEC-616`](SPEC-616-el-resto-modulo-por-modulo.md) |
+| **"Evidence by stage" del investor no abre una etapa en curso** | El chip solo se activa con el `txid` de la transición a `Completed` (`StageChips.tsx:34`, `investor.routes.ts:271`): una etapa `InProgress` con su paquete de evidencia ya anclado queda deshabilitada. Visto grabando T17, que salió del video (2026-10-01). Hay que decidir si el chip se activa con el anclaje de la evidencia → se resuelve en [`SPEC-616`](SPEC-616-el-resto-modulo-por-modulo.md) |
+| **El "Certify" de la cola del certifier solo abre la etapa** | En "Assigned" y en el panel, el botón de cada etapa dice "Certify" pero navega a `/certifier/stage/:id` (`AssignedStagesQueue.tsx:60`); el que certifica de verdad está abajo de esa pantalla, al lado de "Observe". Confunde justo antes de una acción irrepetible. Visto grabando T18 (2026-10-01) → se resuelve en [`SPEC-616`](SPEC-616-el-resto-modulo-por-modulo.md) |
 
 ### Antes de mainnet
 
@@ -181,23 +197,30 @@ hechos el mismo día.
 | Spec | Título | Estado |
 |---|---|---|
 | [`SPEC-601`](archive/SPEC-601-el-guard-de-rol-vive-en-el-router.md) | El guard de rol vive en el router: `beforeLoad` por prefijo y `me` cacheado. Se van 40 `useRoleGuard` y 63 `enabled: ready` | **cerrada 2026-10-02** · 🟡 |
-| [`SPEC-602`](SPEC-602-los-datos-arrancan-con-la-ruta.md) | Loaders que precargan (`prefetchQuery`, sin `await`) y `staleTime` por defecto, sin tocar los estados de carga de `SPEC-110` | sin empezar · 🟢 · depende de `601` |
+| [`SPEC-602`](archive/SPEC-602-los-datos-arrancan-con-la-ruta.md) | Loaders que precargan (`prefetchQuery`, sin `await`) y `staleTime` por defecto, sin tocar los estados de carga de `SPEC-110` | **absorbida 2026-10-02** por `614`–`616` |
 | [`SPEC-603`](SPEC-603-la-api-y-la-base-en-la-misma-region.md) | La API (Oregon) y Turso (us-east-1) en la misma región: cada viaje a la base cuesta ~90–120 ms medidos | en curso · 🟡 · opción B, falta el corte |
-| [`SPEC-604`](SPEC-604-la-capa-de-datos-sale-de-los-routers.md) | Las lecturas repetidas salen de los routers (`Stage`: 20 queries en 10 routers) | sin empezar · 🟢 · con la primera feature que las necesite |
+| [`SPEC-604`](archive/SPEC-604-la-capa-de-datos-sale-de-los-routers.md) | Las lecturas repetidas salen de los routers (`Stage`: 20 queries en 10 routers) | **absorbida 2026-10-02** por `615`/`616` |
 | [`SPEC-605`](SPEC-605-la-cadena-fuera-del-camino-de-la-request.md) | Anclar y reconciliar fuera de la request (outbox + worker) | **condicional**: contradice D-077; tiene disparadores escritos |
 | [`SPEC-606`](SPEC-606-la-sesion-por-pestana.md) | La sesión: por pestaña, legible por JS, y un logout que el servidor no se entera | **condicional**: decisión del dueño |
-| [`SPEC-607`](SPEC-607-una-sola-capa-de-api.md) | Una sola capa de API: el contrato en `shared` y los guards como `meta` del procedimiento, con la `MATRIZ` de `route-guards.test.ts` intacta. Express queda como carcasa | sin empezar · 🟡 · reabre `SPEC-212` inv. 3 · pide D-NNN · Paso 0 con piloto `notary` |
-| [`SPEC-608`](SPEC-608-los-archivos-por-concepto.md) | Los archivos de la API por concepto, no por prefijo (`investor.routes.ts` mezcla 6 conceptos) | sin empezar · 🟢 · depende de `607` |
-| [`SPEC-609`](SPEC-609-el-cliente-sale-del-contrato.md) | El cliente de la web sale del contrato: `OpenAPILink` + contrato minificado + `Serialized`, con `port.ts` como fachada (324 `spyOn` intactos) | sin empezar · 🟢 · depende de `607` · reabre `SPEC-111` |
+| [`SPEC-607`](SPEC-607-una-sola-capa-de-api.md) | Una sola capa de API: el contrato en `shared` y los guards como `meta` del procedimiento, con la `MATRIZ` de `route-guards.test.ts` intacta. Express queda como carcasa | **Fase 2, A2** · sin empezar · 🟡 · D-102 |
+| [`SPEC-608`](archive/SPEC-608-los-archivos-por-concepto.md) | Los archivos de la API por concepto, no por prefijo (`investor.routes.ts` mezcla 6 conceptos) | **absorbida 2026-10-02** por `615`/`616` |
+| [`SPEC-609`](SPEC-609-el-cliente-sale-del-contrato.md) | El cliente de la web sale del contrato: `OpenAPILink` + contrato minificado + `Serialized`, con `port.ts` como fachada (324 `spyOn` intactos) | **Fase 2, W2** · sin empezar · 🟢 · depende de A2 · D-102 |
 | [`SPEC-610`](archive/SPEC-610-menos-viajes-a-la-base-por-request.md) | Menos viajes a la base por request: la autorización en una consulta, `User` en paralelo, `batch` para mutación + audit. Sin cambiar la API | **cerrada 2026-10-02** · 🟡 |
+| [`SPEC-611`](SPEC-611-la-migracion-fase-2.md) | **La migración (Fase 2)**: los pasos A0–A5 y W2–W5, su orden, su acople, la regla de salida y las decisiones que pide | el índice de la Fase 2 · D-102 |
+| [`SPEC-612`](SPEC-612-la-api-en-esm-y-el-entorno-en-un-lugar.md) | A0: la API en ESM y el entorno en `platform/config.ts`, sin cambio de comportamiento | **Fase 2, A0** · en curso · 🟡 |
+| [`SPEC-613`](SPEC-613-los-cimientos-de-los-modulos.md) | A1: `ErrorCode`, IDs con marca, `Result`, `audit(trx)`, `notify(trx)`, `anclarConReclamo`, el esquema contra los tipos | **Fase 2, A1** · sin empezar · 🟡 · pide decidir `notify` |
+| [`SPEC-614`](SPEC-614-la-fabrica-de-queries.md) | W2: la fábrica de queries por entidad, invalidar por entidad, `staleTime` y una sola `claveDeError` | **Fase 2, W2** · sin empezar · 🟢 · no espera a la API |
+| [`SPEC-615`](SPEC-615-el-piloto-dossier.md) | A3 + W3: el piloto `dossier` de punta a punta, con su regla de salida | **Fase 2** · sin empezar · 🟡 · pide 3 decisiones |
+| [`SPEC-616`](SPEC-616-el-resto-modulo-por-modulo.md) | A4 + W4: los 7 módulos restantes con las pantallas de su rol, el `error` de 22 pantallas y dos bugs de UX | **Fase 2** · sin empezar · 🟡/🟢 · después del piloto |
+| [`SPEC-617`](SPEC-617-una-sola-forma.md) | A5 + W5: se borra la forma vieja y Biome impide que vuelva | **Fase 2** · sin empezar · 🟡 |
 
 **El orden de la serie `6xx` lo reemplaza [`AUDITORIA-2026-10-01-arquitectura-api-y-web.md`](AUDITORIA-2026-10-01-arquitectura-api-y-web.md)
 §9** (dueño, 2026-10-01): una Fase 1 que emprolija la app como está (`601` con armazón en el layout,
 `603`, `402` adelantada, `407`/`408`, los bugs de su §1 y el ciclo del dossier rechazado) y una Fase 2
 que migra `apps/api` y `apps/web` módulo por módulo, con `dossier` de piloto. `602`, `604`, `607`,
-`608` y `609` salen de la Fase 1: lo que hacen lo hace la migración. **Deuda anotada para W3/W4**
-(dueño, 2026-10-02): 27 de las 33 rutas con datos dibujan una consulta fallida como su estado vacío;
-ninguna pantalla termina su migración sin `error`. La lista, en la auditoría §9 Fase 2.
+`608` y `609` salen de la Fase 1: lo que hacen lo hace la migración. **La Fase 2 quedó escrita como
+spec el 2026-10-02** ([`SPEC-611`](SPEC-611-la-migracion-fase-2.md), D-102): `607` es A2, `609` es la
+mitad de W2, y `602`, `604` y `608` se disolvieron en `614`–`616`.
 
 Los planes fechados no llevan número: [`PLAN-2026-08-31-anclaje-real.md`](archive/PLAN-2026-08-31-anclaje-real.md)
 fue la secuencia operativa para pasar la instancia desplegada a `ANCHOR_MODE=real` (cerrada el

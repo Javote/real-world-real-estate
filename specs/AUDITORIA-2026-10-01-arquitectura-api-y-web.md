@@ -502,9 +502,9 @@ reemplaza), se frena acá y se vuelve a la vía incremental de la serie `6xx`.
 
 ## 9. El plan
 
-**Dónde está la migración:** es la Fase 2 de abajo (pasos A0–A5 y W0–W5). **No es una spec
-todavía**, y no tiene nada que ver con `501`–`504`, que son las features de Milestone 4. Antes de A0
-se escribe como spec (ver el final de la Fase 2).
+**Dónde está la migración:** es la Fase 2 de abajo (pasos A0–A5 y W0–W5), escrita como spec en
+[`SPEC-611`](SPEC-611-la-migracion-fase-2.md). No tiene nada que ver con `501`–`504`, que son las
+features de Milestone 4.
 
 ### Fase 1: emprolijar la app como está, en este orden (dueño, 2026-10-01)
 
@@ -599,9 +599,9 @@ de M4 (`501`–`504`) entran después de A2**, en la forma nueva, en paralelo co
 **Lo que no se hace:** SSR, un BFF como servicio aparte, Effect-ts, cambiar Express por otro
 framework, `RPCLink` (manda a `/rpc/...` y rompe los paths de M2-D5).
 
-**Antes de A0 hay que escribirlo como spec**, con el detalle de A0–A2 y del piloto, y con una
-D-NNN que reemplace la invariante 3 de `SPEC-212` (guards en Express) y la objeción de `SPEC-111` al
-cliente oRPC.
+**Escrito como spec el 2026-10-02:** [`SPEC-611`](SPEC-611-la-migracion-fase-2.md) y una spec por
+paso (`612`–`617`, más `607` y `609`), con **D-102** reemplazando la invariante 3 de `SPEC-212`
+(guards en Express) y la objeción de `SPEC-111` al cliente oRPC.
 
 ---
 

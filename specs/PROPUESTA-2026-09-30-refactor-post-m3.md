@@ -67,13 +67,13 @@ llaman a `useRoleGuard`, que pide `/auth/me` sin caché y pinta en blanco hasta 
 | Spec | Qué | Nivel | Depende de | Cuándo |
 |---|---|---|---|---|
 | [`SPEC-601`](archive/SPEC-601-el-guard-de-rol-vive-en-el-router.md) | El guard de rol pasa al router: `beforeLoad` por rol y `me` cacheado | 🟡 | — | post-M3 |
-| [`SPEC-602`](SPEC-602-los-datos-arrancan-con-la-ruta.md) | Loaders que precargan: los datos arrancan con la ruta y el preload por intent sirve | 🟢 | 601 | post-M3 |
+| [`SPEC-602`](archive/SPEC-602-los-datos-arrancan-con-la-ruta.md) | Loaders que precargan: los datos arrancan con la ruta y el preload por intent sirve | 🟢 | 601 | post-M3 |
 | [`SPEC-603`](SPEC-603-la-api-y-la-base-en-la-misma-region.md) | La API y la base en la misma región | 🟡 | — | post-M3, la más barata |
-| [`SPEC-604`](SPEC-604-la-capa-de-datos-sale-de-los-routers.md) | Las lecturas repetidas salen de los routers (`queries/<entidad>.ts`), sin partir routers por largo (`SPEC-015` §6) | 🟢 | — | con la primera feature que las necesite |
+| [`SPEC-604`](archive/SPEC-604-la-capa-de-datos-sale-de-los-routers.md) | Las lecturas repetidas salen de los routers (`queries/<entidad>.ts`), sin partir routers por largo (`SPEC-015` §6) | 🟢 | — | con la primera feature que las necesite |
 | [`SPEC-605`](SPEC-605-la-cadena-fuera-del-camino-de-la-request.md) | La cadena fuera del camino de la request (outbox) | 🟡 | decisión del dueño | **condicional**: contradice D-077 |
 | [`SPEC-606`](SPEC-606-la-sesion-por-pestana.md) | La sesión: por pestaña, legible por JS, y un logout que el servidor no se entera | 🟡 | decisión del dueño | **condicional** |
 | [`SPEC-607`](SPEC-607-una-sola-capa-de-api.md) | Una sola capa de API: el contrato en `shared` y los guards como `meta` de cada procedimiento. Express queda como carcasa de transporte | 🟡 | — | post-M3 · **reabre `SPEC-212` inv. 3** |
-| [`SPEC-608`](SPEC-608-los-archivos-por-concepto.md) | Los archivos de la API por concepto, no por prefijo | 🟢 | 607 | post-M3 |
+| [`SPEC-608`](archive/SPEC-608-los-archivos-por-concepto.md) | Los archivos de la API por concepto, no por prefijo | 🟢 | 607 | post-M3 |
 | [`SPEC-609`](SPEC-609-el-cliente-sale-del-contrato.md) | El cliente de la web sale del contrato: `OpenAPILink` + `Serialized`, con `port.ts` como fachada | 🟢 | 607 | post-M3 · **reabre `SPEC-111`** |
 
 **Orden sugerido:** `603` primero (es configuración y es la mejora de latencia más grande por

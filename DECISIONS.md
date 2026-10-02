@@ -1399,3 +1399,30 @@ usa el investor en "Evidence by stage" (fila 15-18 de M2-D5, `StageChip (10x)`).
 de la etapa elegida ya estaba en la tarjeta "Selected stage", así que no se pierde ningún dato. El
 nombre accesible de cada chip sigue diciendo número y nombre (`developer.upload.stageAria`).
 
+
+## D-102 — La API es un router oRPC con el contrato en `shared`, en ESM; Express queda como carcasa
+
+**Decisión del dueño, 2026-10-01** (el plan en dos fases de
+[`AUDITORIA-2026-10-01`](specs/AUDITORIA-2026-10-01-arquitectura-api-y-web.md) §9), escrita el
+2026-10-02 con las specs de la Fase 2 ([`SPEC-611`](specs/SPEC-611-la-migracion-fase-2.md)).
+
+**Qué obliga:**
+
+- **`apps/api` es ESM** (`"type": "module"`, `module: nodenext`). Los `require()` con
+  `resolution-mode` desaparecen. `packages/shared` y `packages/cardano` siguen en CommonJS mientras
+  nada pida otra cosa: un módulo ESM los importa sin shims.
+- **El contrato de cada endpoint vive una vez, en `packages/shared`**: path, método, input, output,
+  errores y `meta` con la regla de autorización. La API lo implementa con un solo router oRPC; la web
+  arma su cliente desde el mismo contrato (`OpenAPILink`, detrás de `port.ts`).
+- **La autorización es un middleware de oRPC que lee la `meta`.** Reemplaza la invariante 3 de
+  [`SPEC-212`](specs/archive/SPEC-212-contrato-en-la-firma-de-la-ruta.md) (`authorize` en Express,
+  antes que oRPC), que era una regla para migrar sin cambiar la semántica de seguridad, no un destino.
+  **Lo que no cambia:** la `MATRIZ` de `route-guards.test.ts`, 401 antes que 403 y 403 antes que 400.
+- **Reabre la opción B de [`SPEC-111`](specs/archive/SPEC-111-callsites-de-apps-web-al-cliente-orpc.md)**
+  (el cliente de la web sale del contrato). Sus tres objeciones están contestadas en `SPEC-609`.
+- **Express 5 se queda** como transporte (D-054, D-066): helmet, CORS, rate limit, Multer, Sentry,
+  `/health`. La subida multipart sigue en Express, como excepción con nombre (`SPEC-218`).
+- **Los paths REST de M2-D5 no se mueven.** `RPCLink` queda descartado: manda a `/rpc/...`.
+
+**Mientras dura la migración** conviven las dos formas: lo nuevo atiende lo que conoce y lo viejo, lo
+demás. Cada commit deja la API y la web andando con `pnpm verify:all` en verde.
