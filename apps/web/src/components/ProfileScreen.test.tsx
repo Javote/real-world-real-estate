@@ -18,9 +18,10 @@ const PERFIL = {
 } as never
 
 function montar(props: Partial<Parameters<typeof ProfileScreen>[0]> = {}) {
+  const rol = props.rol ?? 'developer'
   return montarRuta(
-    () => <ProfileScreen rol="developer" testId="PERFIL-001" {...props} />,
-    '/perfil'
+    () => <ProfileScreen rol={rol} testId="PERFIL-001" {...props} />,
+    `/${rol}/profile`
   )
 }
 

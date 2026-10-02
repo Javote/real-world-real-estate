@@ -4,8 +4,6 @@ import { createFileRoute } from '@tanstack/react-router'
 import { useState } from 'react'
 import { ApiError, api } from '#/api/port'
 import type { CertifierInvitation } from '#/api/types'
-import { ADMIN_ROLES } from '#/auth/roles'
-import { useRoleGuard } from '#/auth/useRoleGuard'
 import { PrimaryButton } from '#/components/domain/PrimaryButton'
 import { SelectDropdown } from '#/components/domain/SelectDropdown'
 import { StatusPill, type StatusTone } from '#/components/domain/StatusPill'
@@ -35,7 +33,6 @@ const ROL: Record<MembershipRole, TranslationKey> = {
 }
 
 function AdminPanel() {
-  const { ready } = useRoleGuard(ADMIN_ROLES)
   const { t } = useTranslation()
   const queryClient = useQueryClient()
   const [elegido, setElegido] = useState('')
@@ -43,8 +40,7 @@ function AdminPanel() {
 
   const { data: proyectos } = useQuery({
     queryKey: ['admin', 'projects'],
-    queryFn: () => api.listProjects(),
-    enabled: ready
+    queryFn: () => api.listProjects()
   })
 
   const ordenados = [...(proyectos ?? [])].sort((a, b) => b.createdAt.localeCompare(a.createdAt))
@@ -53,19 +49,18 @@ function AdminPanel() {
   const { data: detalle } = useQuery({
     queryKey: ['admin', 'project', projectId],
     queryFn: () => api.getProject(projectId),
-    enabled: ready && projectId !== ''
+    enabled: projectId !== ''
   })
 
   const { data: invitaciones } = useQuery({
     queryKey: ['admin', 'certifier-invitations', projectId],
     queryFn: () => api.listProjectCertifierInvitations(projectId),
-    enabled: ready && projectId !== ''
+    enabled: projectId !== ''
   })
 
   const { data: usuarios } = useQuery({
     queryKey: ['admin', 'users'],
-    queryFn: api.listUsers,
-    enabled: ready
+    queryFn: api.listUsers
   })
 
   const miembros = detalle?.members ?? []
@@ -95,10 +90,8 @@ function AdminPanel() {
     (codigoDeError && ERRORES_CON_NOMBRE[codigoDeError]) || 'admin.error.generic'
   )
 
-  if (!ready) return null
-
   return (
-    <PanelLayout rol="admin" title={t('admin.title')} context={t('admin.context')}>
+    <PanelLayout title={t('admin.title')} context={t('admin.context')}>
       <section className={CARD_SHELL} data-testid="ADMIN-PROJECT-001">
         <h2 className="text-h2 font-bold text-text-primary">{t('admin.projects')}</h2>
         <SelectDropdown

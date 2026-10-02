@@ -4,8 +4,6 @@ import { FileText, Images } from 'lucide-react'
 import { useState } from 'react'
 import { ApiError, api } from '#/api/port'
 import type { MerkleProof } from '#/api/types'
-import { INVESTOR_ROLES } from '#/auth/roles'
-import { useRoleGuard } from '#/auth/useRoleGuard'
 import { DocumentCard } from '#/components/domain/DocumentCard'
 import { DocumentViewerModal } from '#/components/domain/DocumentViewerModal'
 import { HashChip } from '#/components/domain/HashChip'
@@ -34,7 +32,6 @@ export const Route = createFileRoute('/project/$projectId/stage/$stageId')({
 
 function InvestorStageDetail() {
   const { projectId, stageId } = Route.useParams()
-  const { ready } = useRoleGuard(INVESTOR_ROLES)
   const { t, locale } = useTranslation()
   const navigate = useNavigate()
 
@@ -51,7 +48,6 @@ function InvestorStageDetail() {
   const { data: stages } = useQuery({
     queryKey: ['project', projectId, 'stages'],
     queryFn: () => api.listProjectStages(projectId),
-    enabled: ready,
     retry: reintentarSiNoEsAusencia
   })
 
@@ -62,20 +58,18 @@ function InvestorStageDetail() {
   } = useQuery({
     queryKey: ['project', projectId, 'stage', stageId],
     queryFn: () => api.getProjectStage(projectId, stageId),
-    enabled: ready,
     retry: reintentarSiNoEsAusencia
   })
 
   const { data: bundleFiles } = useQuery({
     queryKey: ['bundle', stage?.bundle?.id, 'files'],
     queryFn: () => api.getBundleFiles(stage!.bundle!.id),
-    enabled: ready && hito && Boolean(stage?.bundle?.id)
+    enabled: hito && Boolean(stage?.bundle?.id)
   })
 
   const { data: documentosDelProyecto } = useQuery({
     queryKey: ['project', projectId, 'documents'],
     queryFn: () => api.listProjectDocuments(projectId),
-    enabled: ready,
     retry: reintentarSiNoEsAusencia
   })
 
@@ -94,16 +88,14 @@ function InvestorStageDetail() {
       return Object.fromEntries(pares.map((p) => [p.id, p.url])) as Record<string, string>
     },
     gcTime: 0,
-    enabled: ready && fotos.length > 0
+    enabled: fotos.length > 0
   })
 
   const docAbierto = docs.find((d) => d.id === docId)
 
-  if (!ready) return null
-
   if (error instanceof ApiError && (error.status === 403 || error.status === 404)) {
     return (
-      <PanelLayout rol="investor" title={t('investor.project.stages')}>
+      <PanelLayout title={t('investor.project.stages')}>
         <p data-testid="INV-STAGE-DETAIL-001">
           {error.status === 403 ? t('error.forbidden') : t('error.notFound')}
         </p>
@@ -148,7 +140,6 @@ function InvestorStageDetail() {
 
   return (
     <PanelLayout
-      rol="investor"
       title={stage?.name ?? t('investor.project.stages')}
       context={
         stage

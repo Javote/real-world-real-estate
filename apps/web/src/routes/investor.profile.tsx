@@ -1,13 +1,9 @@
 import { createFileRoute } from '@tanstack/react-router'
-import { INVESTOR_ROLES } from '#/auth/roles'
-import { useRoleGuard } from '#/auth/useRoleGuard'
 import { ProfileScreen } from '#/components/ProfileScreen'
 
 export const Route = createFileRoute('/investor/profile')({ component: InvestorProfile })
 
 function InvestorProfile() {
-  const { ready } = useRoleGuard(INVESTOR_ROLES)
-  if (!ready) return null
   return (
     <ProfileScreen
       rol="investor"

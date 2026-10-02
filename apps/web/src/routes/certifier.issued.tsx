@@ -1,8 +1,6 @@
 import { useQuery } from '@tanstack/react-query'
 import { createFileRoute } from '@tanstack/react-router'
 import { api } from '#/api/port'
-import { CERTIFIER_ROLES } from '#/auth/roles'
-import { useRoleGuard } from '#/auth/useRoleGuard'
 import { HashChip } from '#/components/domain/HashChip'
 import { Loading } from '#/components/domain/Loading'
 import { StatusPill } from '#/components/domain/StatusPill'
@@ -15,23 +13,15 @@ import { cn } from '#/lib/cn'
 export const Route = createFileRoute('/certifier/issued')({ component: IssuedCertificates })
 
 function IssuedCertificates() {
-  const { ready } = useRoleGuard(CERTIFIER_ROLES)
   const { t, locale } = useTranslation()
 
   const { data, isPending } = useQuery({
     queryKey: ['certifier', 'certificates'],
-    queryFn: () => api.listCertificates(),
-    enabled: ready
+    queryFn: () => api.listCertificates()
   })
 
-  if (!ready) return null
-
   return (
-    <PanelLayout
-      rol="certifier"
-      title={t('certifier.issued.title')}
-      context={t('certifier.issued.context')}
-    >
+    <PanelLayout title={t('certifier.issued.title')} context={t('certifier.issued.context')}>
       <section data-testid="CER-ISSUED-LIST-001">
         {isPending ? (
           <Loading />

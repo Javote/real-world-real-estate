@@ -3,8 +3,6 @@ import { createFileRoute, useNavigate } from '@tanstack/react-router'
 import { AlertCircle, ShieldCheck } from 'lucide-react'
 import { useState } from 'react'
 import { api } from '#/api/port'
-import { CERTIFIER_ROLES } from '#/auth/roles'
-import { useRoleGuard } from '#/auth/useRoleGuard'
 import { DocumentCard } from '#/components/domain/DocumentCard'
 import { ObserveStageModal } from '#/components/domain/ObserveStageModal'
 import { PrimaryButton, SecondaryButton } from '#/components/domain/PrimaryButton'
@@ -21,7 +19,6 @@ export const Route = createFileRoute('/certifier/stage/$stageId')({
 
 function CertifyStage() {
   const { stageId } = Route.useParams()
-  const { ready } = useRoleGuard(CERTIFIER_ROLES)
   const { t, locale } = useTranslation()
   const navigate = useNavigate()
   const queryClient = useQueryClient()
@@ -30,8 +27,7 @@ function CertifyStage() {
 
   const { data: stage } = useQuery({
     queryKey: ['certifier', 'stage', stageId],
-    queryFn: () => api.getCertifierStage(stageId),
-    enabled: ready
+    queryFn: () => api.getCertifierStage(stageId)
   })
 
   const alTerminar = () => {
@@ -52,14 +48,11 @@ function CertifyStage() {
     }
   })
 
-  if (!ready) return null
-
   const sinEvidencia = (stage?.evidence.length ?? 0) === 0
   const yaCerrado = stage?.state === 'Completed'
 
   return (
     <PanelLayout
-      rol="certifier"
       title={t('certifier.stage.title')}
       {...(stage ? { context: `${stage.projectName} · ${stage.name}` } : {})}
     >

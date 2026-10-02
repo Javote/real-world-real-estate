@@ -2,8 +2,6 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { createFileRoute, useNavigate } from '@tanstack/react-router'
 import { FileCheck2, FileClock, ShieldCheck } from 'lucide-react'
 import { api } from '#/api/port'
-import { DEV_ROLES } from '#/auth/roles'
-import { useRoleGuard } from '#/auth/useRoleGuard'
 import { DocumentCard } from '#/components/domain/DocumentCard'
 import { Loading } from '#/components/domain/Loading'
 import { PrimaryButton } from '#/components/domain/PrimaryButton'
@@ -18,23 +16,19 @@ export const Route = createFileRoute('/developer/documentation')({
 })
 
 function DeveloperDocumentation() {
-  const { ready } = useRoleGuard(DEV_ROLES)
   const { t, locale } = useTranslation()
   const navigate = useNavigate()
   const queryClient = useQueryClient()
 
   const { data: documentos, isPending } = useQuery({
     queryKey: ['developer', 'documents'],
-    queryFn: () => api.listDeveloperDocuments(),
-    enabled: ready
+    queryFn: () => api.listDeveloperDocuments()
   })
 
   const anclar = useMutation({
     mutationFn: (evidenceId: string) => api.anchorDocument(evidenceId),
     onSuccess: () => void queryClient.invalidateQueries({ queryKey: ['developer', 'documents'] })
   })
-
-  if (!ready) return null
 
   const verificados = documentos?.filter((d) => d.txid !== null) ?? []
   const pendientes = documentos?.filter((d) => d.txid === null) ?? []
@@ -51,7 +45,6 @@ function DeveloperDocumentation() {
 
   return (
     <PanelLayout
-      rol="developer"
       title={t('developer.docs.title')}
       context={t('developer.docs.context', { count: String(documentos?.length ?? 0) })}
       back={{

@@ -51,6 +51,25 @@ a `api.me()` **sin pasar por React Query**, así que:
 6. **`useRoleGuard` se borra**, con su test. Los casos del test se mudan a `requireRole.test.ts`,
    uno por uno (ver §Invariantes).
 
+## Lo que la implementación agregó o ajustó (W1, 2026-10-02)
+
+- **El armazón va en el layout** (AUDITORIA-2026-10-01 §3.1, punto 2): el layout no renderiza solo
+  `<Outlet />` sino `PanelShell` (sidebar, header, `<main>` con el `<Outlet />`, bottom nav), que
+  no se desmonta al navegar. La pantalla sigue envolviendo su contenido en `PanelLayout`, que ahora
+  solo publica título, `context`, `back` y `headerAction` a un store que lee el header. No se usa
+  `staticData`: la mitad de los títulos dependen de datos de la pantalla (nombre del proyecto, del
+  perfil). `rol` sale del layout, no de la pantalla.
+- **`me` lleva el token en la llave**, `['auth', 'me', token]`, con `staleTime` de 5 min (justificado
+  en `requireRole.ts`), y se pide con `fetchQuery`, que respeta el `staleTime`
+  (`ensureQueryData` devolvería un dato vencido sin revalidar). Con el token en la llave el
+  invariante 7 se cumple sin que `request()` conozca al `QueryClient`: un 401 deja sin sesión, así
+  que la próxima navegación redirige antes de leer la caché, y un login nuevo trae otro token y otra
+  llave. `request()` no cambia.
+- **El `QueryClient` lo crea `getRouter()`** y lo provee con `Wrap`; `main.tsx` ya no lo crea.
+- **Los dos casos de "desmontar con `/auth/me` pendiente" no se mudan**: probaban la cancelación del
+  `useEffect`, que ya no existe. `requireRole.test.tsx` suma el admin (D-095), los invariantes 5–7 y
+  el del token en la llave; `-layouts.test.tsx` monta los seis layouts reales.
+
 ## Invariantes (los mismos de hoy, más uno)
 
 1. **Un rol sin permiso va a SU landing**, nunca a `/login` ni a la ruta pedida (invariante 1 de

@@ -55,7 +55,6 @@ export function ProfileScreen({ rol, testId, back, editTestId, prefsTestId }: Pr
 
   return (
     <PanelLayout
-      rol={rol}
       title={t('profile.title')}
       context={rol === 'investor' ? t('profile.context') : (perfil?.fullName ?? undefined)}
       {...(back ? { back } : {})}

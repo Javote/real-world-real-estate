@@ -2,8 +2,6 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { createFileRoute } from '@tanstack/react-router'
 import { Activity, AlertCircle, Clock, ShieldCheck } from 'lucide-react'
 import { api } from '#/api/port'
-import { CERTIFIER_ROLES } from '#/auth/roles'
-import { useRoleGuard } from '#/auth/useRoleGuard'
 import { AssignedStagesQueue } from '#/components/AssignedStagesQueue'
 import { PrimaryButton, SecondaryButton } from '#/components/domain/PrimaryButton'
 import { StatCard } from '#/components/domain/StatCard'
@@ -15,23 +13,19 @@ import { useKpiValue } from '#/lib/useKpiValue'
 export const Route = createFileRoute('/certifier/')({ component: CertifierPanel })
 
 function CertifierPanel() {
-  const { session, ready } = useRoleGuard(CERTIFIER_ROLES)
+  const { session } = Route.useRouteContext()
   const { t } = useTranslation()
   const kpi = useKpiValue()
 
   const { data: kpis } = useQuery({
     queryKey: ['certifier', 'kpis'],
-    queryFn: api.getCertifierKpis,
-    enabled: ready
+    queryFn: api.getCertifierKpis
   })
-  if (!ready) return null
 
   return (
     <PanelLayout
-      rol="certifier"
       title={t('panel.certifier.title')}
-      /* v8 ignore next -- @preserve: `useRoleGuard` hace `setSession` y `setReady(true)` juntos y la pantalla ya salió en `if (!ready) return null`, así que `session` nunca es `null` acá */
-      context={session ? t('panel.welcome', { name: session.user.fullName }) : undefined}
+      context={t('panel.welcome', { name: session.user.fullName })}
     >
       <InvitacionesACertificar />
 

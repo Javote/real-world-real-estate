@@ -4,8 +4,6 @@ import { Building2, CalendarClock, KeyRound, Users } from 'lucide-react'
 import { useState } from 'react'
 import { api, projectCoverUrl } from '#/api/port'
 import type { DeveloperProfile } from '#/api/types'
-import { INVESTOR_ROLES } from '#/auth/roles'
-import { useRoleGuard } from '#/auth/useRoleGuard'
 import { Loading } from '#/components/domain/Loading'
 import { SecondaryButton } from '#/components/domain/PrimaryButton'
 import { ProjectCard } from '#/components/domain/ProjectCard'
@@ -23,7 +21,6 @@ export const Route = createFileRoute('/project/$projectId/developer')({
 
 function InvestorProjectDeveloper() {
   const { projectId } = Route.useParams()
-  const { ready } = useRoleGuard(INVESTOR_ROLES)
   const { t, locale } = useTranslation()
   const navigate = useNavigate()
   const [expandida, setExpandida] = useState(false)
@@ -31,18 +28,14 @@ function InvestorProjectDeveloper() {
   const { data, error, isPending } = useQuery({
     queryKey: ['project', projectId, 'developer'],
     queryFn: () => api.getProjectDeveloper(projectId),
-    enabled: ready,
     retry: reintentarSiNoEsAusencia
   })
 
   const volver = () => void navigate({ to: '/project/$projectId', params: { projectId } })
 
-  if (!ready) return null
-
   if (error || (!isPending && !data?.organization)) {
     return (
       <PanelLayout
-        rol="investor"
         title={t('investor.developer.title')}
         back={{ label: t('investor.developer.back'), onClick: volver }}
       >
@@ -55,7 +48,6 @@ function InvestorProjectDeveloper() {
 
   return (
     <PanelLayout
-      rol="investor"
       title={data?.organization?.name ?? t('investor.developer.title')}
       back={{ label: t('investor.developer.back'), onClick: volver }}
     >

@@ -3,8 +3,6 @@ import { createFileRoute, useNavigate } from '@tanstack/react-router'
 import { AlertCircle, ShieldCheck } from 'lucide-react'
 import { useState } from 'react'
 import { api } from '#/api/port'
-import { NOTARY_ROLES } from '#/auth/roles'
-import { useRoleGuard } from '#/auth/useRoleGuard'
 import { HashChip } from '#/components/domain/HashChip'
 import { ObserveStageModal } from '#/components/domain/ObserveStageModal'
 import { PrimaryButton, SecondaryButton } from '#/components/domain/PrimaryButton'
@@ -22,7 +20,6 @@ export const Route = createFileRoute('/notary/dossier/$dossierId')({
 
 function DossierReview() {
   const { dossierId } = Route.useParams()
-  const { ready } = useRoleGuard(NOTARY_ROLES)
   const { t } = useTranslation()
   const navigate = useNavigate()
   const queryClient = useQueryClient()
@@ -31,8 +28,7 @@ function DossierReview() {
 
   const { data: dossier } = useQuery({
     queryKey: ['notary', 'dossier', dossierId],
-    queryFn: () => api.getDossier(dossierId),
-    enabled: ready
+    queryFn: () => api.getDossier(dossierId)
   })
 
   const alTerminar = () => {
@@ -52,14 +48,11 @@ function DossierReview() {
     }
   })
 
-  if (!ready) return null
-
   const firmado = dossier?.status === 'signed'
   const enRevision = dossier?.status === 'compiled'
 
   return (
     <PanelLayout
-      rol="notary"
       title={t('notary.dossier.title')}
       {...(dossier ? { context: `${dossier.projectName} · ${dossier.unitReference}` } : {})}
     >

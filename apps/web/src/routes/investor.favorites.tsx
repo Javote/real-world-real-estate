@@ -2,8 +2,6 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { createFileRoute, useNavigate } from '@tanstack/react-router'
 import { api, projectCoverUrl } from '#/api/port'
 import type { Project } from '#/api/types'
-import { INVESTOR_ROLES } from '#/auth/roles'
-import { useRoleGuard } from '#/auth/useRoleGuard'
 import { Loading } from '#/components/domain/Loading'
 import { ProjectCard } from '#/components/domain/ProjectCard'
 import { PanelLayout } from '#/components/PanelLayout'
@@ -16,15 +14,13 @@ export const Route = createFileRoute('/investor/favorites')({
 })
 
 function InvestorFavorites() {
-  const { ready } = useRoleGuard(INVESTOR_ROLES)
   const { t } = useTranslation()
   const navigate = useNavigate()
   const queryClient = useQueryClient()
 
   const { data: favoritos, isPending } = useQuery({
     queryKey: ['investor', 'favorites'],
-    queryFn: api.listFavorites,
-    enabled: ready
+    queryFn: api.listFavorites
   })
 
   const quitar = useMutation({
@@ -32,13 +28,10 @@ function InvestorFavorites() {
     onSuccess: () => void queryClient.invalidateQueries({ queryKey: ['investor', 'favorites'] })
   })
 
-  if (!ready) return null
-
   const lista = favoritos ?? []
 
   return (
     <PanelLayout
-      rol="investor"
       title={t('investor.favorites.title')}
       context={t('investor.favorites.context', { count: String(lista.length) })}
     >

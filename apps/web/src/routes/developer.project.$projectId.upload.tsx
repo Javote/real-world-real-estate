@@ -10,8 +10,6 @@ import { ShieldCheck } from 'lucide-react'
 import { useState } from 'react'
 import { ApiError, api } from '#/api/port'
 import type { StageEvidenceAnchor } from '#/api/types'
-import { DEV_ROLES } from '#/auth/roles'
-import { useRoleGuard } from '#/auth/useRoleGuard'
 import { AnchoringSuccessModal } from '#/components/domain/AnchoringSuccessModal'
 import { StageChip } from '#/components/domain/Chips'
 import { FileDropzone } from '#/components/domain/FileDropzone'
@@ -50,7 +48,6 @@ function rechazosDeUnError(error: unknown): RechazoDelServidor[] | null {
 
 function UploadEvidence() {
   const { projectId } = Route.useParams()
-  const { ready } = useRoleGuard(DEV_ROLES)
   const { t } = useTranslation()
   const navigate = useNavigate()
   const queryClient = useQueryClient()
@@ -64,8 +61,7 @@ function UploadEvidence() {
 
   const { data: proyecto } = useQuery({
     queryKey: ['developer', 'project', projectId],
-    queryFn: () => api.getDeveloperProject(projectId),
-    enabled: ready
+    queryFn: () => api.getDeveloperProject(projectId)
   })
 
   const marcarRechazados = (enviados: readonly File[], rechazos: readonly RechazoDelServidor[]) => {
@@ -109,14 +105,11 @@ function UploadEvidence() {
     }
   })
 
-  if (!ready) return null
-
   const etapaElegida = proyecto?.stages.find((s) => s.id === stageId)
   const puedeAnclar = stageId !== null && archivos.length > 0 && !subir.isPending
 
   return (
     <PanelLayout
-      rol="developer"
       title={t('developer.upload.title')}
       context={t('developer.upload.context')}
       back={{

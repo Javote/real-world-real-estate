@@ -3,8 +3,6 @@ import { createFileRoute, useNavigate } from '@tanstack/react-router'
 import { Home } from 'lucide-react'
 import { api } from '#/api/port'
 import type { DeveloperUnit } from '#/api/types'
-import { DEV_ROLES } from '#/auth/roles'
-import { useRoleGuard } from '#/auth/useRoleGuard'
 import { Loading } from '#/components/domain/Loading'
 import { ProgressBar } from '#/components/domain/ProgressBar'
 import { StatCard } from '#/components/domain/StatCard'
@@ -16,23 +14,18 @@ import { cn } from '#/lib/cn'
 export const Route = createFileRoute('/developer/units')({ component: DeveloperUnits })
 
 function DeveloperUnits() {
-  const { ready } = useRoleGuard(DEV_ROLES)
   const { t } = useTranslation()
   const navigate = useNavigate()
 
   const { data: unidades, isPending } = useQuery({
     queryKey: ['developer', 'units'],
-    queryFn: api.listDeveloperUnits,
-    enabled: ready
+    queryFn: api.listDeveloperUnits
   })
 
   const { data: proyectos } = useQuery({
     queryKey: ['developer', 'projects'],
-    queryFn: api.listDeveloperProjects,
-    enabled: ready
+    queryFn: api.listDeveloperProjects
   })
-
-  if (!ready) return null
 
   const vendidas =
     unidades?.filter((u) => u.status === 'sold' || u.status === 'delivered').length ?? 0
@@ -41,7 +34,6 @@ function DeveloperUnits() {
 
   return (
     <PanelLayout
-      rol="developer"
       title={t('developer.units.title')}
       context={t('developer.units.context', {
         sold: String(vendidas),

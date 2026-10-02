@@ -3,8 +3,6 @@ import { useQuery } from '@tanstack/react-query'
 import { createFileRoute, useNavigate } from '@tanstack/react-router'
 import { FileSignature, ShieldCheck, Wallet } from 'lucide-react'
 import { api } from '#/api/port'
-import { DEV_ROLES } from '#/auth/roles'
-import { useRoleGuard } from '#/auth/useRoleGuard'
 import { HashChip } from '#/components/domain/HashChip'
 import { Loading } from '#/components/domain/Loading'
 import { StatCard } from '#/components/domain/StatCard'
@@ -29,23 +27,18 @@ const TONO: Record<UnitStatus, StatusTone> = {
 
 function ProjectContracts() {
   const { projectId } = Route.useParams()
-  const { ready } = useRoleGuard(DEV_ROLES)
   const { t, locale } = useTranslation()
   const navigate = useNavigate()
 
   const { data: proyecto } = useQuery({
     queryKey: ['developer', 'project', projectId],
-    queryFn: () => api.getDeveloperProject(projectId),
-    enabled: ready
+    queryFn: () => api.getDeveloperProject(projectId)
   })
 
   const { data: contratos, isPending } = useQuery({
     queryKey: ['developer', 'project', projectId, 'contracts'],
-    queryFn: () => api.listProjectContracts(projectId),
-    enabled: ready
+    queryFn: () => api.listProjectContracts(projectId)
   })
-
-  if (!ready) return null
 
   const lista = contratos ?? []
   const total = lista.reduce((acc, c) => acc + c.totalMinorUnits, 0)
@@ -54,7 +47,6 @@ function ProjectContracts() {
 
   return (
     <PanelLayout
-      rol="developer"
       title={t('developer.contracts.title')}
       {...(proyecto ? { context: proyecto.name } : {})}
       back={{

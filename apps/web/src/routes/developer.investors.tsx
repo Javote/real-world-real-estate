@@ -1,8 +1,6 @@
 import { useQuery } from '@tanstack/react-query'
 import { createFileRoute, useNavigate } from '@tanstack/react-router'
 import { api } from '#/api/port'
-import { DEV_ROLES } from '#/auth/roles'
-import { useRoleGuard } from '#/auth/useRoleGuard'
 import { InvestorCard } from '#/components/domain/InvestorCard'
 import { Loading } from '#/components/domain/Loading'
 import { PanelLayout } from '#/components/PanelLayout'
@@ -13,21 +11,16 @@ import { CARD_SHELL_EMPTY } from '#/lib/cardShell'
 export const Route = createFileRoute('/developer/investors')({ component: DeveloperInvestors })
 
 function DeveloperInvestors() {
-  const { ready } = useRoleGuard(DEV_ROLES)
   const { t, locale } = useTranslation()
   const navigate = useNavigate()
 
   const { data: investors, isPending } = useQuery({
     queryKey: ['developer', 'investors'],
-    queryFn: api.listInvestors,
-    enabled: ready
+    queryFn: api.listInvestors
   })
-
-  if (!ready) return null
 
   return (
     <PanelLayout
-      rol="developer"
       title={t('developer.investors.title')}
       context={t('developer.investors.context', { count: String(investors?.length ?? 0) })}
       back={{

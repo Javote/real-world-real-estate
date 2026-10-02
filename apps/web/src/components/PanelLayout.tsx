@@ -1,7 +1,7 @@
 import { useQuery } from '@tanstack/react-query'
-import { useNavigate } from '@tanstack/react-router'
+import { Outlet, useNavigate } from '@tanstack/react-router'
 import { User } from 'lucide-react'
-import type { ReactNode } from 'react'
+import { createContext, type ReactNode, useContext, useLayoutEffect, useState } from 'react'
 import { api } from '#/api/port'
 import { getSession } from '#/auth/session'
 import { BottomNav } from '#/components/domain/BottomNav'
@@ -12,27 +12,64 @@ import { NAV_TABS } from '#/components/domain/navTabs'
 import { Sidebar } from '#/components/domain/Sidebar'
 import { useTranslation } from '#/i18n/useTranslation'
 
-interface PanelLayoutProps {
-  rol: keyof typeof NAV_TABS
+type Rol = keyof typeof NAV_TABS
+
+interface Cabecera {
   title: string
   context?: string
   back?: { label: string; onClick: () => void }
   headerAction?: ReactNode
-  children: ReactNode
 }
 
-export function PanelLayout({
-  rol,
-  title,
-  context,
-  back,
-  headerAction,
-  children
-}: PanelLayoutProps) {
+function crearCabecera() {
+  let actual: Cabecera = { title: '' }
+  const oyentes = new Set<() => void>()
+  return {
+    leer: () => actual,
+    publicar: (cabecera: Cabecera) => {
+      actual = cabecera
+      for (const oyente of oyentes) oyente()
+    },
+    suscribir: (oyente: () => void) => {
+      oyentes.add(oyente)
+      return () => {
+        oyentes.delete(oyente)
+      }
+    }
+  }
+}
+
+type CabeceraStore = ReturnType<typeof crearCabecera>
+
+const CabeceraContext = createContext<CabeceraStore>(crearCabecera())
+
+export function PanelShell({ rol }: { rol: Rol }) {
+  const { t } = useTranslation()
+  const [cabecera] = useState(crearCabecera)
+  const tabs = NAV_TABS[rol].map((tab) => ({ ...tab, label: t(tab.labelKey) }))
+
+  return (
+    <CabeceraContext value={cabecera}>
+      <Sidebar tabs={tabs} ariaLabel={t('nav.ariaLabel')} />
+      <div className="min-h-dvh bg-app-bg pb-24 md:pl-64">
+        <EncabezadoDelPanel rol={rol} cabecera={cabecera} />
+
+        <main className="mx-auto flex max-w-2xl flex-col gap-s4 p-s4">
+          <Outlet />
+        </main>
+
+        <BottomNav tabs={tabs} ariaLabel={t('nav.ariaLabel')} />
+      </div>
+    </CabeceraContext>
+  )
+}
+
+function EncabezadoDelPanel({ rol, cabecera }: { rol: Rol; cabecera: CabeceraStore }) {
   const { t } = useTranslation()
   const navigate = useNavigate()
+  const [{ title, context, back, headerAction }, setActual] = useState(cabecera.leer)
 
-  const tabs = NAV_TABS[rol].map((tab) => ({ ...tab, label: t(tab.labelKey) }))
+  useLayoutEffect(() => cabecera.suscribir(() => setActual(cabecera.leer())), [cabecera])
 
   const { data: unread } = useQuery({
     queryKey: ['notifications', 'unread-count'],
@@ -74,42 +111,45 @@ export function PanelLayout({
   }
 
   return (
-    <>
-      <Sidebar tabs={tabs} ariaLabel={t('nav.ariaLabel')} />
-      <div className="min-h-dvh bg-app-bg pb-24 md:pl-64">
-        <GradientHeader
-          title={title}
-          {...(context ? { context } : {})}
-          {...(back ? { back } : {})}
-          {...(headerAction ? { titleAction: headerAction } : {})}
-          right={
-            <>
-              <NotificationBell
-                unread={unread?.unread ?? 0}
-                onClick={abrirNotificaciones}
-                ariaLabel={
-                  unread?.unread
-                    ? t('notifications.bellWithCount', { count: String(unread.unread) })
-                    : t('notifications.ariaLabel')
-                }
-              />
-              <button
-                type="button"
-                onClick={abrirPerfil}
-                aria-label={t('profile.ariaLabel')}
-                className="flex h-10 w-10 items-center justify-center rounded-full bg-white/20 text-white"
-              >
-                <User size={20} aria-hidden="true" />
-              </button>
-              <LanguageToggle />
-            </>
-          }
-        />
-
-        <main className="mx-auto flex max-w-2xl flex-col gap-s4 p-s4">{children}</main>
-
-        <BottomNav tabs={tabs} ariaLabel={t('nav.ariaLabel')} />
-      </div>
-    </>
+    <GradientHeader
+      title={title}
+      {...(context ? { context } : {})}
+      {...(back ? { back } : {})}
+      {...(headerAction ? { titleAction: headerAction } : {})}
+      right={
+        <>
+          <NotificationBell
+            unread={unread?.unread ?? 0}
+            onClick={abrirNotificaciones}
+            ariaLabel={
+              unread?.unread
+                ? t('notifications.bellWithCount', { count: String(unread.unread) })
+                : t('notifications.ariaLabel')
+            }
+          />
+          <button
+            type="button"
+            onClick={abrirPerfil}
+            aria-label={t('profile.ariaLabel')}
+            className="flex h-10 w-10 items-center justify-center rounded-full bg-white/20 text-white"
+          >
+            <User size={20} aria-hidden="true" />
+          </button>
+          <LanguageToggle />
+        </>
+      }
+    />
   )
+}
+
+interface PanelLayoutProps extends Cabecera {
+  children: ReactNode
+}
+
+export function PanelLayout({ children, ...cabecera }: PanelLayoutProps) {
+  const store = useContext(CabeceraContext)
+
+  useLayoutEffect(() => store.publicar(cabecera))
+
+  return children
 }

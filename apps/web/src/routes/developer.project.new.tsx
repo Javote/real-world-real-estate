@@ -6,8 +6,6 @@ import { useMutation } from '@tanstack/react-query'
 import { createFileRoute, useNavigate } from '@tanstack/react-router'
 import { useEffect, useState } from 'react'
 import { api } from '#/api/port'
-import { DEV_ROLES } from '#/auth/roles'
-import { useRoleGuard } from '#/auth/useRoleGuard'
 import { FileDropzone } from '#/components/domain/FileDropzone'
 import { LocationMapModal } from '#/components/domain/LocationMapModal'
 import { NumberInput } from '#/components/domain/NumberInput'
@@ -54,7 +52,6 @@ export function slugify(nombre: string): string {
 }
 
 function NuevoProyecto() {
-  const { ready } = useRoleGuard(DEV_ROLES)
   const { t, locale } = useTranslation()
   const navigate = useNavigate()
 
@@ -123,8 +120,6 @@ function NuevoProyecto() {
       })
   })
 
-  if (!ready) return null
-
   const lote = slugify(nombre).length > 0 && !crear.isPending ? punto : null
 
   const mensajeUbicacion =
@@ -143,7 +138,6 @@ function NuevoProyecto() {
 
   return (
     <PanelLayout
-      rol="developer"
       title={t('developer.newProject.title')}
       context={t('developer.newProject.context')}
       back={{
