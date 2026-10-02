@@ -2,8 +2,6 @@ import { useQuery } from '@tanstack/react-query'
 import { createFileRoute, useNavigate } from '@tanstack/react-router'
 import { useState } from 'react'
 import { api } from '#/api/port'
-import { DEV_ROLES } from '#/auth/roles'
-import { useRoleGuard } from '#/auth/useRoleGuard'
 import {
   type ActorRole,
   type AuditCategory,
@@ -43,7 +41,6 @@ function rolDe(role: string | null): ActorRole {
 export const Route = createFileRoute('/developer/audit-log')({ component: AuditLog })
 
 function AuditLog() {
-  const { ready } = useRoleGuard(DEV_ROLES)
   const { t, locale } = useTranslation()
   const navigate = useNavigate()
   const [filtro, setFiltro] = useState<AuditCategory | null>(null)
@@ -51,11 +48,8 @@ function AuditLog() {
 
   const { data, isPending } = useQuery({
     queryKey: ['developer', 'audit-log'],
-    queryFn: () => api.listAuditLog(),
-    enabled: ready
+    queryFn: () => api.listAuditLog()
   })
-
-  if (!ready) return null
 
   const eventos = (data?.items ?? []).filter(
     (e) => filtro === null || categoriaDe(e.action) === filtro
@@ -63,7 +57,6 @@ function AuditLog() {
 
   return (
     <PanelLayout
-      rol="developer"
       title={t('developer.audit.title')}
       context={t('developer.audit.context')}
       back={{

@@ -5,8 +5,6 @@ import { FileCheck2, FileText, ShieldCheck, Signature } from 'lucide-react'
 import { useState } from 'react'
 import { api } from '#/api/port'
 import type { InvestorInvitation } from '#/api/types'
-import { INVESTOR_ROLES } from '#/auth/roles'
-import { useRoleGuard } from '#/auth/useRoleGuard'
 import type { AuditCategory } from '#/components/domain/AuditEventCard'
 import { CategoryChip } from '#/components/domain/Chips'
 import { InvitationAcceptModal } from '#/components/domain/InvitationAcceptModal'
@@ -54,7 +52,6 @@ export const Route = createFileRoute('/investor/notifications')({
 })
 
 function InvestorNotifications() {
-  const { ready } = useRoleGuard(INVESTOR_ROLES)
   const { t, tDinamico, locale } = useTranslation()
   const navigate = useNavigate({ from: '/investor/notifications' })
   const search = Route.useSearch()
@@ -64,8 +61,7 @@ function InvestorNotifications() {
 
   const { data: notificaciones, isPending } = useQuery({
     queryKey: ['notifications', filtro],
-    queryFn: () => api.listNotifications(filtro ? { category: filtro } : undefined),
-    enabled: ready
+    queryFn: () => api.listNotifications(filtro ? { category: filtro } : undefined)
   })
 
   const avisos = new Map<string, { id: string; leida: boolean }>()
@@ -80,8 +76,7 @@ function InvestorNotifications() {
   const consultas = useQueries({
     queries: ids.map((id) => ({
       queryKey: ['investor', 'invitation', id],
-      queryFn: () => api.getInvitation(id),
-      enabled: ready
+      queryFn: () => api.getInvitation(id)
     }))
   })
   const invitaciones = new Map<string, InvestorInvitation>()
@@ -115,8 +110,6 @@ function InvestorNotifications() {
     }
   })
 
-  if (!ready) return null
-
   function abrir(id: string) {
     const aviso = avisos.get(id)
     if (aviso && !aviso.leida) marcarLeida.mutate(aviso.id)
@@ -149,7 +142,6 @@ function InvestorNotifications() {
 
   return (
     <PanelLayout
-      rol="investor"
       title={t('investor.notifications.title')}
       context={t('investor.notifications.context')}
     >

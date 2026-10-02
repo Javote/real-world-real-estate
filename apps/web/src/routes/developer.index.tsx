@@ -11,8 +11,6 @@ import {
   Users
 } from 'lucide-react'
 import { api } from '#/api/port'
-import { DEV_ROLES } from '#/auth/roles'
-import { useRoleGuard } from '#/auth/useRoleGuard'
 import { ActionCard } from '#/components/domain/ActionCard'
 import { StatCard } from '#/components/domain/StatCard'
 import { PanelLayout } from '#/components/PanelLayout'
@@ -22,25 +20,20 @@ import { useKpiValue } from '#/lib/useKpiValue'
 export const Route = createFileRoute('/developer/')({ component: DeveloperPanel })
 
 function DeveloperPanel() {
-  const { session, ready } = useRoleGuard(DEV_ROLES)
+  const { session } = Route.useRouteContext()
   const { t } = useTranslation()
   const kpi = useKpiValue()
   const navigate = useNavigate()
 
   const { data } = useQuery({
     queryKey: ['developer', 'kpis'],
-    queryFn: api.getDeveloperKpis,
-    enabled: ready
+    queryFn: api.getDeveloperKpis
   })
-
-  if (!ready) return null
 
   return (
     <PanelLayout
-      rol="developer"
       title={t('panel.developer.title')}
-      /* v8 ignore next -- @preserve: `useRoleGuard` hace `setSession` y `setReady(true)` juntos y la pantalla ya salió en `if (!ready) return null`, así que `session` nunca es `null` acá */
-      context={session ? t('panel.welcome', { name: session.user.fullName }) : undefined}
+      context={t('panel.welcome', { name: session.user.fullName })}
     >
       <section className="grid grid-cols-2 gap-s4" data-testid="DEV-PANEL-KPIS-001">
         <ActionCard

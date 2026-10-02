@@ -2,8 +2,6 @@ import { useQuery } from '@tanstack/react-query'
 import { createFileRoute, useNavigate } from '@tanstack/react-router'
 import { Plus } from 'lucide-react'
 import { api, projectCoverUrl } from '#/api/port'
-import { DEV_ROLES } from '#/auth/roles'
-import { useRoleGuard } from '#/auth/useRoleGuard'
 import { Loading } from '#/components/domain/Loading'
 import { SecondaryButton } from '#/components/domain/PrimaryButton'
 import { ProjectCard } from '#/components/domain/ProjectCard'
@@ -16,21 +14,16 @@ import { TONO_PROYECTO } from '#/lib/stageProgress'
 export const Route = createFileRoute('/developer/projects')({ component: DeveloperProjects })
 
 function DeveloperProjects() {
-  const { ready } = useRoleGuard(DEV_ROLES)
   const { t, locale } = useTranslation()
   const navigate = useNavigate()
 
   const { data: proyectos, isPending } = useQuery({
     queryKey: ['developer', 'projects'],
-    queryFn: api.listDeveloperProjects,
-    enabled: ready
+    queryFn: api.listDeveloperProjects
   })
-
-  if (!ready) return null
 
   return (
     <PanelLayout
-      rol="developer"
       title={t('developer.projects.title')}
       context={t('developer.projects.context', { count: String(proyectos?.length ?? 0) })}
       back={{

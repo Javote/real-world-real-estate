@@ -3,8 +3,6 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { createFileRoute, useNavigate } from '@tanstack/react-router'
 import { AlertCircle } from 'lucide-react'
 import { api } from '#/api/port'
-import { DEV_ROLES } from '#/auth/roles'
-import { useRoleGuard } from '#/auth/useRoleGuard'
 import { Loading } from '#/components/domain/Loading'
 import { PrimaryButton } from '#/components/domain/PrimaryButton'
 import { ProgressTimeline, type TimelineStage } from '#/components/domain/ProgressTimeline'
@@ -34,23 +32,19 @@ interface DetalleStage {
 }
 
 function DeveloperProgress() {
-  const { ready } = useRoleGuard(DEV_ROLES)
   const { t, locale } = useTranslation()
   const navigate = useNavigate()
   const queryClient = useQueryClient()
 
   const { data: filas, isPending } = useQuery({
     queryKey: ['developer', 'progress'],
-    queryFn: api.getDeveloperProgress,
-    enabled: ready
+    queryFn: api.getDeveloperProgress
   })
 
   const reanudar = useMutation({
     mutationFn: (stageId: string) => api.setMilestoneState(stageId, 'InProgress'),
     onSuccess: () => void queryClient.invalidateQueries({ queryKey: ['developer', 'progress'] })
   })
-
-  if (!ready) return null
 
   const observadas = (filas ?? []).filter((f) => f.state === 'Observed')
 
@@ -91,7 +85,6 @@ function DeveloperProgress() {
 
   return (
     <PanelLayout
-      rol="developer"
       title={t('developer.progress.title')}
       context={t('developer.progress.context')}
       back={{

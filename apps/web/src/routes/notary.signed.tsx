@@ -1,8 +1,6 @@
 import { useQuery } from '@tanstack/react-query'
 import { createFileRoute } from '@tanstack/react-router'
 import { api } from '#/api/port'
-import { NOTARY_ROLES } from '#/auth/roles'
-import { useRoleGuard } from '#/auth/useRoleGuard'
 import { HashChip } from '#/components/domain/HashChip'
 import { Loading } from '#/components/domain/Loading'
 import { StatusPill } from '#/components/domain/StatusPill'
@@ -15,19 +13,15 @@ import { cn } from '#/lib/cn'
 export const Route = createFileRoute('/notary/signed')({ component: SignedDossiers })
 
 function SignedDossiers() {
-  const { ready } = useRoleGuard(NOTARY_ROLES)
   const { t, locale } = useTranslation()
 
   const { data, isPending } = useQuery({
     queryKey: ['notary', 'signatures'],
-    queryFn: () => api.listSignatures(),
-    enabled: ready
+    queryFn: () => api.listSignatures()
   })
 
-  if (!ready) return null
-
   return (
-    <PanelLayout rol="notary" title={t('notary.signed.title')} context={t('notary.signed.context')}>
+    <PanelLayout title={t('notary.signed.title')} context={t('notary.signed.context')}>
       <section data-testid="NOT-SIGNED-LIST-001">
         {isPending ? (
           <Loading />

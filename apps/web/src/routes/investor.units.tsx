@@ -2,8 +2,6 @@ import type { UnitStatus } from '@plataforma/shared'
 import { useQuery } from '@tanstack/react-query'
 import { createFileRoute, useNavigate } from '@tanstack/react-router'
 import { api, projectCoverUrl } from '#/api/port'
-import { INVESTOR_ROLES } from '#/auth/roles'
-import { useRoleGuard } from '#/auth/useRoleGuard'
 import { Loading } from '#/components/domain/Loading'
 import type { StatusTone } from '#/components/domain/StatusPill'
 import { UnitCard } from '#/components/domain/UnitCard'
@@ -21,24 +19,16 @@ const TONO: Record<UnitStatus, StatusTone> = {
 }
 
 function InvestorUnits() {
-  const { ready } = useRoleGuard(INVESTOR_ROLES)
   const { t } = useTranslation()
   const navigate = useNavigate()
 
   const { data: unidades, isPending } = useQuery({
     queryKey: ['investor', 'units'],
-    queryFn: api.listInvestorUnits,
-    enabled: ready
+    queryFn: api.listInvestorUnits
   })
 
-  if (!ready) return null
-
   return (
-    <PanelLayout
-      rol="investor"
-      title={t('investor.units.title')}
-      context={t('investor.units.context')}
-    >
+    <PanelLayout title={t('investor.units.title')} context={t('investor.units.context')}>
       <section className="flex flex-col gap-s3" data-testid="INV-UNITS-LIST-001">
         {isPending ? (
           <Loading />

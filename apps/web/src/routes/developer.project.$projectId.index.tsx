@@ -2,8 +2,6 @@ import { useQuery } from '@tanstack/react-query'
 import { createFileRoute, useNavigate } from '@tanstack/react-router'
 import { DollarSign, FileText, Home, TrendingUp, Upload, Users } from 'lucide-react'
 import { api } from '#/api/port'
-import { DEV_ROLES } from '#/auth/roles'
-import { useRoleGuard } from '#/auth/useRoleGuard'
 import { ActionCard } from '#/components/domain/ActionCard'
 import { StatCard } from '#/components/domain/StatCard'
 import { StatusPill } from '#/components/domain/StatusPill'
@@ -20,30 +18,24 @@ export const Route = createFileRoute('/developer/project/$projectId/')({
 
 function DeveloperProjectDetail() {
   const { projectId } = Route.useParams()
-  const { ready } = useRoleGuard(DEV_ROLES)
   const { t, locale } = useTranslation()
   const navigate = useNavigate()
 
   const { data: proyecto } = useQuery({
     queryKey: ['developer', 'project', projectId],
-    queryFn: () => api.getDeveloperProject(projectId),
-    enabled: ready
+    queryFn: () => api.getDeveloperProject(projectId)
   })
 
   const { data: capitalPorProyecto } = useQuery({
     queryKey: ['developer', 'capital', 'by-project'],
-    queryFn: api.getCapitalByProject,
-    enabled: ready
+    queryFn: api.getCapitalByProject
   })
-
-  if (!ready) return null
 
   const capital = capitalPorProyecto?.find((p) => p.projectId === projectId)
   const ubicacion = [proyecto?.city, proyecto?.country].filter(Boolean).join(', ')
 
   return (
     <PanelLayout
-      rol="developer"
       title={proyecto?.name ?? t('developer.project.title')}
       {...(ubicacion ? { context: ubicacion } : {})}
       back={{

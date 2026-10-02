@@ -5,8 +5,6 @@ import { Plus } from 'lucide-react'
 import { useState } from 'react'
 import { api } from '#/api/port'
 import type { DeveloperProjectUnit } from '#/api/types'
-import { DEV_ROLES } from '#/auth/roles'
-import { useRoleGuard } from '#/auth/useRoleGuard'
 import { Loading } from '#/components/domain/Loading'
 import { NumberInput } from '#/components/domain/NumberInput'
 import { PrimaryButton, SecondaryButton } from '#/components/domain/PrimaryButton'
@@ -34,7 +32,6 @@ const TONO: Record<UnitStatus, StatusTone> = {
 
 function ProjectUnits() {
   const { projectId } = Route.useParams()
-  const { ready } = useRoleGuard(DEV_ROLES)
   const { t, locale } = useTranslation()
   const navigate = useNavigate()
   const queryClient = useQueryClient()
@@ -46,14 +43,12 @@ function ProjectUnits() {
 
   const { data: proyecto } = useQuery({
     queryKey: ['developer', 'project', projectId],
-    queryFn: () => api.getDeveloperProject(projectId),
-    enabled: ready
+    queryFn: () => api.getDeveloperProject(projectId)
   })
 
   const { data: unidades, isPending: unidadesPending } = useQuery({
     queryKey: ['developer', 'project', projectId, 'units'],
-    queryFn: () => api.listProjectUnits(projectId),
-    enabled: ready
+    queryFn: () => api.listProjectUnits(projectId)
   })
 
   const limpiar = () => {
@@ -87,8 +82,6 @@ function ProjectUnits() {
     onSuccess: refrescar
   })
 
-  if (!ready) return null
-
   const editar = (unidad: DeveloperProjectUnit) => {
     setEditando(unidad)
     setReferencia(unidad.unitReference)
@@ -105,7 +98,6 @@ function ProjectUnits() {
 
   return (
     <PanelLayout
-      rol="developer"
       title={t('developer.projectUnits.title')}
       {...(proyecto ? { context: proyecto.name } : {})}
       back={{

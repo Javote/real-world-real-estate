@@ -1208,7 +1208,7 @@ desde una pantalla.
 
 **Qué cambia (SPEC-221):**
 
-- **El admin pasa por cualquier guard de rol** (`useRoleGuard`) y aterriza en `/admin`. Desde su
+- **El admin pasa por cualquier guard de rol** (`requireRole`, SPEC-601) y aterriza en `/admin`. Desde su
   barra de navegación entra a los cuatro paneles. Sigue sin solapa en `/login`: se entra tipeando
   el usuario.
 - **`/admin` hace lo único que no tenía pantalla en ningún rol: invitar a un certifier a un

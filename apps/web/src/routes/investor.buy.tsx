@@ -4,8 +4,6 @@ import { MapPin, Search, SlidersHorizontal, X } from 'lucide-react'
 import { useEffect, useState } from 'react'
 import { api, projectCoverUrl } from '#/api/port'
 import type { Project } from '#/api/types'
-import { INVESTOR_ROLES } from '#/auth/roles'
-import { useRoleGuard } from '#/auth/useRoleGuard'
 import { FilterPill } from '#/components/domain/Chips'
 import { Loading } from '#/components/domain/Loading'
 import { LocationMapModal } from '#/components/domain/LocationMapModal'
@@ -52,7 +50,6 @@ export const Route = createFileRoute('/investor/buy')({
 })
 
 function InvestorBuy() {
-  const { ready } = useRoleGuard(INVESTOR_ROLES)
   const { t } = useTranslation()
   const navigate = useNavigate({ from: '/investor/buy' })
   const search = Route.useSearch()
@@ -87,14 +84,12 @@ function InvestorBuy() {
 
   const { data: proyectos, isPending } = useQuery({
     queryKey: ['projects', params],
-    queryFn: () => api.listProjects(params),
-    enabled: ready
+    queryFn: () => api.listProjects(params)
   })
 
   const { data: favoritos } = useQuery({
     queryKey: ['investor', 'favorites'],
-    queryFn: api.listFavorites,
-    enabled: ready
+    queryFn: api.listFavorites
   })
 
   const idsFavoritos = new Set((favoritos ?? []).map((p) => p.id))
@@ -112,8 +107,6 @@ function InvestorBuy() {
       search: (prev) => ({ ...prev, view })
     })
   }
-
-  if (!ready) return null
 
   const pines = (proyectos ?? []).flatMap((p) =>
     p.latitude != null && p.longitude != null
@@ -226,7 +219,7 @@ function InvestorBuy() {
   )
 
   return (
-    <PanelLayout rol="investor" title={t('panel.investor.title')}>
+    <PanelLayout title={t('panel.investor.title')}>
       {toolbar}
       {chipsActivos}
 

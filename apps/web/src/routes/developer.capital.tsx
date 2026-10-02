@@ -3,8 +3,6 @@ import { useQuery } from '@tanstack/react-query'
 import { createFileRoute, useNavigate } from '@tanstack/react-router'
 import { Building2, DollarSign } from 'lucide-react'
 import { api } from '#/api/port'
-import { DEV_ROLES } from '#/auth/roles'
-import { useRoleGuard } from '#/auth/useRoleGuard'
 import { Loading } from '#/components/domain/Loading'
 import { ProgressBar } from '#/components/domain/ProgressBar'
 import { PanelLayout } from '#/components/PanelLayout'
@@ -17,29 +15,23 @@ import { cn } from '#/lib/cn'
 export const Route = createFileRoute('/developer/capital')({ component: DeveloperCapital })
 
 function DeveloperCapital() {
-  const { ready } = useRoleGuard(DEV_ROLES)
   const { t, locale } = useTranslation()
   const navigate = useNavigate()
 
   const { data: resumen, isPending: resumenPending } = useQuery({
     queryKey: ['developer', 'capital', 'summary'],
-    queryFn: api.getCapitalSummary,
-    enabled: ready
+    queryFn: api.getCapitalSummary
   })
 
   const { data: mensual, isPending: mensualPending } = useQuery({
     queryKey: ['developer', 'capital', 'monthly'],
-    queryFn: api.getCapitalMonthly,
-    enabled: ready
+    queryFn: api.getCapitalMonthly
   })
 
   const { data: porProyecto, isPending: porProyectoPending } = useQuery({
     queryKey: ['developer', 'capital', 'by-project'],
-    queryFn: api.getCapitalByProject,
-    enabled: ready
+    queryFn: api.getCapitalByProject
   })
-
-  if (!ready) return null
 
   const cargando = resumenPending || mensualPending || porProyectoPending
 
@@ -48,7 +40,6 @@ function DeveloperCapital() {
 
   return (
     <PanelLayout
-      rol="developer"
       title={t('developer.capital.title')}
       context={t('developer.capital.context')}
       back={{

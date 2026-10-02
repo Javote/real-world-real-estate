@@ -9,7 +9,13 @@
 // Additionally, you should also exclude this file from your linter and/or formatter to prevent it from being checked or modified.
 
 import { Route as rootRouteImport } from './routes/__root'
+import { Route as ProjectRouteImport } from './routes/project'
+import { Route as NotaryRouteImport } from './routes/notary'
 import { Route as LoginRouteImport } from './routes/login'
+import { Route as InvestorRouteImport } from './routes/investor'
+import { Route as DeveloperRouteImport } from './routes/developer'
+import { Route as CertifierRouteImport } from './routes/certifier'
+import { Route as AdminRouteImport } from './routes/admin'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as NotaryIndexRouteImport } from './routes/notary.index'
 import { Route as DeveloperIndexRouteImport } from './routes/developer.index'
@@ -53,9 +59,39 @@ import { Route as DeveloperProjectProjectIdUnitsRouteImport } from './routes/dev
 import { Route as DeveloperProjectProjectIdInviteRouteImport } from './routes/developer.project.$projectId.invite'
 import { Route as DeveloperProjectProjectIdContractsRouteImport } from './routes/developer.project.$projectId.contracts'
 
+const ProjectRoute = ProjectRouteImport.update({
+  id: '/project',
+  path: '/project',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const NotaryRoute = NotaryRouteImport.update({
+  id: '/notary',
+  path: '/notary',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const LoginRoute = LoginRouteImport.update({
   id: '/login',
   path: '/login',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const InvestorRoute = InvestorRouteImport.update({
+  id: '/investor',
+  path: '/investor',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const DeveloperRoute = DeveloperRouteImport.update({
+  id: '/developer',
+  path: '/developer',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const CertifierRoute = CertifierRouteImport.update({
+  id: '/certifier',
+  path: '/certifier',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const AdminRoute = AdminRouteImport.update({
+  id: '/admin',
+  path: '/admin',
   getParentRoute: () => rootRouteImport,
 } as any)
 const IndexRoute = IndexRouteImport.update({
@@ -64,129 +100,129 @@ const IndexRoute = IndexRouteImport.update({
   getParentRoute: () => rootRouteImport,
 } as any)
 const NotaryIndexRoute = NotaryIndexRouteImport.update({
-  id: '/notary/',
-  path: '/notary/',
-  getParentRoute: () => rootRouteImport,
+  id: '/',
+  path: '/',
+  getParentRoute: () => NotaryRoute,
 } as any)
 const DeveloperIndexRoute = DeveloperIndexRouteImport.update({
-  id: '/developer/',
-  path: '/developer/',
-  getParentRoute: () => rootRouteImport,
+  id: '/',
+  path: '/',
+  getParentRoute: () => DeveloperRoute,
 } as any)
 const CertifierIndexRoute = CertifierIndexRouteImport.update({
-  id: '/certifier/',
-  path: '/certifier/',
-  getParentRoute: () => rootRouteImport,
+  id: '/',
+  path: '/',
+  getParentRoute: () => CertifierRoute,
 } as any)
 const AdminIndexRoute = AdminIndexRouteImport.update({
-  id: '/admin/',
-  path: '/admin/',
-  getParentRoute: () => rootRouteImport,
+  id: '/',
+  path: '/',
+  getParentRoute: () => AdminRoute,
 } as any)
 const NotarySignedRoute = NotarySignedRouteImport.update({
-  id: '/notary/signed',
-  path: '/notary/signed',
-  getParentRoute: () => rootRouteImport,
+  id: '/signed',
+  path: '/signed',
+  getParentRoute: () => NotaryRoute,
 } as any)
 const NotaryProfileRoute = NotaryProfileRouteImport.update({
-  id: '/notary/profile',
-  path: '/notary/profile',
-  getParentRoute: () => rootRouteImport,
+  id: '/profile',
+  path: '/profile',
+  getParentRoute: () => NotaryRoute,
 } as any)
 const NotaryDossiersRoute = NotaryDossiersRouteImport.update({
-  id: '/notary/dossiers',
-  path: '/notary/dossiers',
-  getParentRoute: () => rootRouteImport,
+  id: '/dossiers',
+  path: '/dossiers',
+  getParentRoute: () => NotaryRoute,
 } as any)
 const InvestorUnitsRoute = InvestorUnitsRouteImport.update({
-  id: '/investor/units',
-  path: '/investor/units',
-  getParentRoute: () => rootRouteImport,
+  id: '/units',
+  path: '/units',
+  getParentRoute: () => InvestorRoute,
 } as any)
 const InvestorProfileRoute = InvestorProfileRouteImport.update({
-  id: '/investor/profile',
-  path: '/investor/profile',
-  getParentRoute: () => rootRouteImport,
+  id: '/profile',
+  path: '/profile',
+  getParentRoute: () => InvestorRoute,
 } as any)
 const InvestorNotificationsRoute = InvestorNotificationsRouteImport.update({
-  id: '/investor/notifications',
-  path: '/investor/notifications',
-  getParentRoute: () => rootRouteImport,
+  id: '/notifications',
+  path: '/notifications',
+  getParentRoute: () => InvestorRoute,
 } as any)
 const InvestorMenuRoute = InvestorMenuRouteImport.update({
-  id: '/investor/menu',
-  path: '/investor/menu',
-  getParentRoute: () => rootRouteImport,
+  id: '/menu',
+  path: '/menu',
+  getParentRoute: () => InvestorRoute,
 } as any)
 const InvestorFavoritesRoute = InvestorFavoritesRouteImport.update({
-  id: '/investor/favorites',
-  path: '/investor/favorites',
-  getParentRoute: () => rootRouteImport,
+  id: '/favorites',
+  path: '/favorites',
+  getParentRoute: () => InvestorRoute,
 } as any)
 const InvestorBuyRoute = InvestorBuyRouteImport.update({
-  id: '/investor/buy',
-  path: '/investor/buy',
-  getParentRoute: () => rootRouteImport,
+  id: '/buy',
+  path: '/buy',
+  getParentRoute: () => InvestorRoute,
 } as any)
 const DeveloperUnitsRoute = DeveloperUnitsRouteImport.update({
-  id: '/developer/units',
-  path: '/developer/units',
-  getParentRoute: () => rootRouteImport,
+  id: '/units',
+  path: '/units',
+  getParentRoute: () => DeveloperRoute,
 } as any)
 const DeveloperProjectsRoute = DeveloperProjectsRouteImport.update({
-  id: '/developer/projects',
-  path: '/developer/projects',
-  getParentRoute: () => rootRouteImport,
+  id: '/projects',
+  path: '/projects',
+  getParentRoute: () => DeveloperRoute,
 } as any)
 const DeveloperProgressRoute = DeveloperProgressRouteImport.update({
-  id: '/developer/progress',
-  path: '/developer/progress',
-  getParentRoute: () => rootRouteImport,
+  id: '/progress',
+  path: '/progress',
+  getParentRoute: () => DeveloperRoute,
 } as any)
 const DeveloperProfileRoute = DeveloperProfileRouteImport.update({
-  id: '/developer/profile',
-  path: '/developer/profile',
-  getParentRoute: () => rootRouteImport,
+  id: '/profile',
+  path: '/profile',
+  getParentRoute: () => DeveloperRoute,
 } as any)
 const DeveloperInvestorsRoute = DeveloperInvestorsRouteImport.update({
-  id: '/developer/investors',
-  path: '/developer/investors',
-  getParentRoute: () => rootRouteImport,
+  id: '/investors',
+  path: '/investors',
+  getParentRoute: () => DeveloperRoute,
 } as any)
 const DeveloperDocumentationRoute = DeveloperDocumentationRouteImport.update({
-  id: '/developer/documentation',
-  path: '/developer/documentation',
-  getParentRoute: () => rootRouteImport,
+  id: '/documentation',
+  path: '/documentation',
+  getParentRoute: () => DeveloperRoute,
 } as any)
 const DeveloperCapitalRoute = DeveloperCapitalRouteImport.update({
-  id: '/developer/capital',
-  path: '/developer/capital',
-  getParentRoute: () => rootRouteImport,
+  id: '/capital',
+  path: '/capital',
+  getParentRoute: () => DeveloperRoute,
 } as any)
 const DeveloperAuditLogRoute = DeveloperAuditLogRouteImport.update({
-  id: '/developer/audit-log',
-  path: '/developer/audit-log',
-  getParentRoute: () => rootRouteImport,
+  id: '/audit-log',
+  path: '/audit-log',
+  getParentRoute: () => DeveloperRoute,
 } as any)
 const CertifierProfileRoute = CertifierProfileRouteImport.update({
-  id: '/certifier/profile',
-  path: '/certifier/profile',
-  getParentRoute: () => rootRouteImport,
+  id: '/profile',
+  path: '/profile',
+  getParentRoute: () => CertifierRoute,
 } as any)
 const CertifierIssuedRoute = CertifierIssuedRouteImport.update({
-  id: '/certifier/issued',
-  path: '/certifier/issued',
-  getParentRoute: () => rootRouteImport,
+  id: '/issued',
+  path: '/issued',
+  getParentRoute: () => CertifierRoute,
 } as any)
 const CertifierAssignedRoute = CertifierAssignedRouteImport.update({
-  id: '/certifier/assigned',
-  path: '/certifier/assigned',
-  getParentRoute: () => rootRouteImport,
+  id: '/assigned',
+  path: '/assigned',
+  getParentRoute: () => CertifierRoute,
 } as any)
 const ProjectProjectIdIndexRoute = ProjectProjectIdIndexRouteImport.update({
-  id: '/project/$projectId/',
-  path: '/project/$projectId/',
-  getParentRoute: () => rootRouteImport,
+  id: '/$projectId/',
+  path: '/$projectId/',
+  getParentRoute: () => ProjectRoute,
 } as any)
 const PublicDossierShareTokenRoute = PublicDossierShareTokenRouteImport.update({
   id: '/public/dossier/$shareToken',
@@ -195,94 +231,100 @@ const PublicDossierShareTokenRoute = PublicDossierShareTokenRouteImport.update({
 } as any)
 const ProjectProjectIdProgressRoute =
   ProjectProjectIdProgressRouteImport.update({
-    id: '/project/$projectId/progress',
-    path: '/project/$projectId/progress',
-    getParentRoute: () => rootRouteImport,
+    id: '/$projectId/progress',
+    path: '/$projectId/progress',
+    getParentRoute: () => ProjectRoute,
   } as any)
 const ProjectProjectIdDeveloperRoute =
   ProjectProjectIdDeveloperRouteImport.update({
-    id: '/project/$projectId/developer',
-    path: '/project/$projectId/developer',
-    getParentRoute: () => rootRouteImport,
+    id: '/$projectId/developer',
+    path: '/$projectId/developer',
+    getParentRoute: () => ProjectRoute,
   } as any)
 const NotaryDossierDossierIdRoute = NotaryDossierDossierIdRouteImport.update({
-  id: '/notary/dossier/$dossierId',
-  path: '/notary/dossier/$dossierId',
-  getParentRoute: () => rootRouteImport,
+  id: '/dossier/$dossierId',
+  path: '/dossier/$dossierId',
+  getParentRoute: () => NotaryRoute,
 } as any)
 const DeveloperProjectNewRoute = DeveloperProjectNewRouteImport.update({
-  id: '/developer/project/new',
-  path: '/developer/project/new',
-  getParentRoute: () => rootRouteImport,
+  id: '/project/new',
+  path: '/project/new',
+  getParentRoute: () => DeveloperRoute,
 } as any)
 const CertifierStageStageIdRoute = CertifierStageStageIdRouteImport.update({
-  id: '/certifier/stage/$stageId',
-  path: '/certifier/stage/$stageId',
-  getParentRoute: () => rootRouteImport,
+  id: '/stage/$stageId',
+  path: '/stage/$stageId',
+  getParentRoute: () => CertifierRoute,
 } as any)
 const InvestorUnitUnitIdIndexRoute = InvestorUnitUnitIdIndexRouteImport.update({
-  id: '/investor/unit/$unitId/',
-  path: '/investor/unit/$unitId/',
-  getParentRoute: () => rootRouteImport,
+  id: '/unit/$unitId/',
+  path: '/unit/$unitId/',
+  getParentRoute: () => InvestorRoute,
 } as any)
 const DeveloperProjectProjectIdIndexRoute =
   DeveloperProjectProjectIdIndexRouteImport.update({
-    id: '/developer/project/$projectId/',
-    path: '/developer/project/$projectId/',
-    getParentRoute: () => rootRouteImport,
+    id: '/project/$projectId/',
+    path: '/project/$projectId/',
+    getParentRoute: () => DeveloperRoute,
   } as any)
 const ProjectProjectIdStageStageIdRoute =
   ProjectProjectIdStageStageIdRouteImport.update({
-    id: '/project/$projectId/stage/$stageId',
-    path: '/project/$projectId/stage/$stageId',
-    getParentRoute: () => rootRouteImport,
+    id: '/$projectId/stage/$stageId',
+    path: '/$projectId/stage/$stageId',
+    getParentRoute: () => ProjectRoute,
   } as any)
 const InvestorUnitUnitIdNotificationsRoute =
   InvestorUnitUnitIdNotificationsRouteImport.update({
-    id: '/investor/unit/$unitId/notifications',
-    path: '/investor/unit/$unitId/notifications',
-    getParentRoute: () => rootRouteImport,
+    id: '/unit/$unitId/notifications',
+    path: '/unit/$unitId/notifications',
+    getParentRoute: () => InvestorRoute,
   } as any)
 const InvestorUnitUnitIdDossierRoute =
   InvestorUnitUnitIdDossierRouteImport.update({
-    id: '/investor/unit/$unitId/dossier',
-    path: '/investor/unit/$unitId/dossier',
-    getParentRoute: () => rootRouteImport,
+    id: '/unit/$unitId/dossier',
+    path: '/unit/$unitId/dossier',
+    getParentRoute: () => InvestorRoute,
   } as any)
 const InvestorUnitUnitIdContractRoute =
   InvestorUnitUnitIdContractRouteImport.update({
-    id: '/investor/unit/$unitId/contract',
-    path: '/investor/unit/$unitId/contract',
-    getParentRoute: () => rootRouteImport,
+    id: '/unit/$unitId/contract',
+    path: '/unit/$unitId/contract',
+    getParentRoute: () => InvestorRoute,
   } as any)
 const DeveloperProjectProjectIdUploadRoute =
   DeveloperProjectProjectIdUploadRouteImport.update({
-    id: '/developer/project/$projectId/upload',
-    path: '/developer/project/$projectId/upload',
-    getParentRoute: () => rootRouteImport,
+    id: '/project/$projectId/upload',
+    path: '/project/$projectId/upload',
+    getParentRoute: () => DeveloperRoute,
   } as any)
 const DeveloperProjectProjectIdUnitsRoute =
   DeveloperProjectProjectIdUnitsRouteImport.update({
-    id: '/developer/project/$projectId/units',
-    path: '/developer/project/$projectId/units',
-    getParentRoute: () => rootRouteImport,
+    id: '/project/$projectId/units',
+    path: '/project/$projectId/units',
+    getParentRoute: () => DeveloperRoute,
   } as any)
 const DeveloperProjectProjectIdInviteRoute =
   DeveloperProjectProjectIdInviteRouteImport.update({
-    id: '/developer/project/$projectId/invite',
-    path: '/developer/project/$projectId/invite',
-    getParentRoute: () => rootRouteImport,
+    id: '/project/$projectId/invite',
+    path: '/project/$projectId/invite',
+    getParentRoute: () => DeveloperRoute,
   } as any)
 const DeveloperProjectProjectIdContractsRoute =
   DeveloperProjectProjectIdContractsRouteImport.update({
-    id: '/developer/project/$projectId/contracts',
-    path: '/developer/project/$projectId/contracts',
-    getParentRoute: () => rootRouteImport,
+    id: '/project/$projectId/contracts',
+    path: '/project/$projectId/contracts',
+    getParentRoute: () => DeveloperRoute,
   } as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
+  '/admin': typeof AdminRouteWithChildren
+  '/certifier': typeof CertifierRouteWithChildren
+  '/developer': typeof DeveloperRouteWithChildren
+  '/investor': typeof InvestorRouteWithChildren
   '/login': typeof LoginRoute
+  '/notary': typeof NotaryRouteWithChildren
+  '/project': typeof ProjectRouteWithChildren
   '/certifier/assigned': typeof CertifierAssignedRoute
   '/certifier/issued': typeof CertifierIssuedRoute
   '/certifier/profile': typeof CertifierProfileRoute
@@ -327,7 +369,9 @@ export interface FileRoutesByFullPath {
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
+  '/investor': typeof InvestorRouteWithChildren
   '/login': typeof LoginRoute
+  '/project': typeof ProjectRouteWithChildren
   '/certifier/assigned': typeof CertifierAssignedRoute
   '/certifier/issued': typeof CertifierIssuedRoute
   '/certifier/profile': typeof CertifierProfileRoute
@@ -373,7 +417,13 @@ export interface FileRoutesByTo {
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
+  '/admin': typeof AdminRouteWithChildren
+  '/certifier': typeof CertifierRouteWithChildren
+  '/developer': typeof DeveloperRouteWithChildren
+  '/investor': typeof InvestorRouteWithChildren
   '/login': typeof LoginRoute
+  '/notary': typeof NotaryRouteWithChildren
+  '/project': typeof ProjectRouteWithChildren
   '/certifier/assigned': typeof CertifierAssignedRoute
   '/certifier/issued': typeof CertifierIssuedRoute
   '/certifier/profile': typeof CertifierProfileRoute
@@ -420,7 +470,13 @@ export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
   fullPaths:
     | '/'
+    | '/admin'
+    | '/certifier'
+    | '/developer'
+    | '/investor'
     | '/login'
+    | '/notary'
+    | '/project'
     | '/certifier/assigned'
     | '/certifier/issued'
     | '/certifier/profile'
@@ -465,7 +521,9 @@ export interface FileRouteTypes {
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
+    | '/investor'
     | '/login'
+    | '/project'
     | '/certifier/assigned'
     | '/certifier/issued'
     | '/certifier/profile'
@@ -510,7 +568,13 @@ export interface FileRouteTypes {
   id:
     | '__root__'
     | '/'
+    | '/admin'
+    | '/certifier'
+    | '/developer'
+    | '/investor'
     | '/login'
+    | '/notary'
+    | '/project'
     | '/certifier/assigned'
     | '/certifier/issued'
     | '/certifier/profile'
@@ -556,57 +620,65 @@ export interface FileRouteTypes {
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
+  AdminRoute: typeof AdminRouteWithChildren
+  CertifierRoute: typeof CertifierRouteWithChildren
+  DeveloperRoute: typeof DeveloperRouteWithChildren
+  InvestorRoute: typeof InvestorRouteWithChildren
   LoginRoute: typeof LoginRoute
-  CertifierAssignedRoute: typeof CertifierAssignedRoute
-  CertifierIssuedRoute: typeof CertifierIssuedRoute
-  CertifierProfileRoute: typeof CertifierProfileRoute
-  DeveloperAuditLogRoute: typeof DeveloperAuditLogRoute
-  DeveloperCapitalRoute: typeof DeveloperCapitalRoute
-  DeveloperDocumentationRoute: typeof DeveloperDocumentationRoute
-  DeveloperInvestorsRoute: typeof DeveloperInvestorsRoute
-  DeveloperProfileRoute: typeof DeveloperProfileRoute
-  DeveloperProgressRoute: typeof DeveloperProgressRoute
-  DeveloperProjectsRoute: typeof DeveloperProjectsRoute
-  DeveloperUnitsRoute: typeof DeveloperUnitsRoute
-  InvestorBuyRoute: typeof InvestorBuyRoute
-  InvestorFavoritesRoute: typeof InvestorFavoritesRoute
-  InvestorMenuRoute: typeof InvestorMenuRoute
-  InvestorNotificationsRoute: typeof InvestorNotificationsRoute
-  InvestorProfileRoute: typeof InvestorProfileRoute
-  InvestorUnitsRoute: typeof InvestorUnitsRoute
-  NotaryDossiersRoute: typeof NotaryDossiersRoute
-  NotaryProfileRoute: typeof NotaryProfileRoute
-  NotarySignedRoute: typeof NotarySignedRoute
-  AdminIndexRoute: typeof AdminIndexRoute
-  CertifierIndexRoute: typeof CertifierIndexRoute
-  DeveloperIndexRoute: typeof DeveloperIndexRoute
-  NotaryIndexRoute: typeof NotaryIndexRoute
-  CertifierStageStageIdRoute: typeof CertifierStageStageIdRoute
-  DeveloperProjectNewRoute: typeof DeveloperProjectNewRoute
-  NotaryDossierDossierIdRoute: typeof NotaryDossierDossierIdRoute
-  ProjectProjectIdDeveloperRoute: typeof ProjectProjectIdDeveloperRoute
-  ProjectProjectIdProgressRoute: typeof ProjectProjectIdProgressRoute
+  NotaryRoute: typeof NotaryRouteWithChildren
+  ProjectRoute: typeof ProjectRouteWithChildren
   PublicDossierShareTokenRoute: typeof PublicDossierShareTokenRoute
-  ProjectProjectIdIndexRoute: typeof ProjectProjectIdIndexRoute
-  DeveloperProjectProjectIdContractsRoute: typeof DeveloperProjectProjectIdContractsRoute
-  DeveloperProjectProjectIdInviteRoute: typeof DeveloperProjectProjectIdInviteRoute
-  DeveloperProjectProjectIdUnitsRoute: typeof DeveloperProjectProjectIdUnitsRoute
-  DeveloperProjectProjectIdUploadRoute: typeof DeveloperProjectProjectIdUploadRoute
-  InvestorUnitUnitIdContractRoute: typeof InvestorUnitUnitIdContractRoute
-  InvestorUnitUnitIdDossierRoute: typeof InvestorUnitUnitIdDossierRoute
-  InvestorUnitUnitIdNotificationsRoute: typeof InvestorUnitUnitIdNotificationsRoute
-  ProjectProjectIdStageStageIdRoute: typeof ProjectProjectIdStageStageIdRoute
-  DeveloperProjectProjectIdIndexRoute: typeof DeveloperProjectProjectIdIndexRoute
-  InvestorUnitUnitIdIndexRoute: typeof InvestorUnitUnitIdIndexRoute
 }
 
 declare module '@tanstack/react-router' {
   interface FileRoutesByPath {
+    '/project': {
+      id: '/project'
+      path: '/project'
+      fullPath: '/project'
+      preLoaderRoute: typeof ProjectRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/notary': {
+      id: '/notary'
+      path: '/notary'
+      fullPath: '/notary'
+      preLoaderRoute: typeof NotaryRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/login': {
       id: '/login'
       path: '/login'
       fullPath: '/login'
       preLoaderRoute: typeof LoginRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/investor': {
+      id: '/investor'
+      path: '/investor'
+      fullPath: '/investor'
+      preLoaderRoute: typeof InvestorRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/developer': {
+      id: '/developer'
+      path: '/developer'
+      fullPath: '/developer'
+      preLoaderRoute: typeof DeveloperRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/certifier': {
+      id: '/certifier'
+      path: '/certifier'
+      fullPath: '/certifier'
+      preLoaderRoute: typeof CertifierRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/admin': {
+      id: '/admin'
+      path: '/admin'
+      fullPath: '/admin'
+      preLoaderRoute: typeof AdminRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/': {
@@ -618,178 +690,178 @@ declare module '@tanstack/react-router' {
     }
     '/notary/': {
       id: '/notary/'
-      path: '/notary'
+      path: '/'
       fullPath: '/notary/'
       preLoaderRoute: typeof NotaryIndexRouteImport
-      parentRoute: typeof rootRouteImport
+      parentRoute: typeof NotaryRoute
     }
     '/developer/': {
       id: '/developer/'
-      path: '/developer'
+      path: '/'
       fullPath: '/developer/'
       preLoaderRoute: typeof DeveloperIndexRouteImport
-      parentRoute: typeof rootRouteImport
+      parentRoute: typeof DeveloperRoute
     }
     '/certifier/': {
       id: '/certifier/'
-      path: '/certifier'
+      path: '/'
       fullPath: '/certifier/'
       preLoaderRoute: typeof CertifierIndexRouteImport
-      parentRoute: typeof rootRouteImport
+      parentRoute: typeof CertifierRoute
     }
     '/admin/': {
       id: '/admin/'
-      path: '/admin'
+      path: '/'
       fullPath: '/admin/'
       preLoaderRoute: typeof AdminIndexRouteImport
-      parentRoute: typeof rootRouteImport
+      parentRoute: typeof AdminRoute
     }
     '/notary/signed': {
       id: '/notary/signed'
-      path: '/notary/signed'
+      path: '/signed'
       fullPath: '/notary/signed'
       preLoaderRoute: typeof NotarySignedRouteImport
-      parentRoute: typeof rootRouteImport
+      parentRoute: typeof NotaryRoute
     }
     '/notary/profile': {
       id: '/notary/profile'
-      path: '/notary/profile'
+      path: '/profile'
       fullPath: '/notary/profile'
       preLoaderRoute: typeof NotaryProfileRouteImport
-      parentRoute: typeof rootRouteImport
+      parentRoute: typeof NotaryRoute
     }
     '/notary/dossiers': {
       id: '/notary/dossiers'
-      path: '/notary/dossiers'
+      path: '/dossiers'
       fullPath: '/notary/dossiers'
       preLoaderRoute: typeof NotaryDossiersRouteImport
-      parentRoute: typeof rootRouteImport
+      parentRoute: typeof NotaryRoute
     }
     '/investor/units': {
       id: '/investor/units'
-      path: '/investor/units'
+      path: '/units'
       fullPath: '/investor/units'
       preLoaderRoute: typeof InvestorUnitsRouteImport
-      parentRoute: typeof rootRouteImport
+      parentRoute: typeof InvestorRoute
     }
     '/investor/profile': {
       id: '/investor/profile'
-      path: '/investor/profile'
+      path: '/profile'
       fullPath: '/investor/profile'
       preLoaderRoute: typeof InvestorProfileRouteImport
-      parentRoute: typeof rootRouteImport
+      parentRoute: typeof InvestorRoute
     }
     '/investor/notifications': {
       id: '/investor/notifications'
-      path: '/investor/notifications'
+      path: '/notifications'
       fullPath: '/investor/notifications'
       preLoaderRoute: typeof InvestorNotificationsRouteImport
-      parentRoute: typeof rootRouteImport
+      parentRoute: typeof InvestorRoute
     }
     '/investor/menu': {
       id: '/investor/menu'
-      path: '/investor/menu'
+      path: '/menu'
       fullPath: '/investor/menu'
       preLoaderRoute: typeof InvestorMenuRouteImport
-      parentRoute: typeof rootRouteImport
+      parentRoute: typeof InvestorRoute
     }
     '/investor/favorites': {
       id: '/investor/favorites'
-      path: '/investor/favorites'
+      path: '/favorites'
       fullPath: '/investor/favorites'
       preLoaderRoute: typeof InvestorFavoritesRouteImport
-      parentRoute: typeof rootRouteImport
+      parentRoute: typeof InvestorRoute
     }
     '/investor/buy': {
       id: '/investor/buy'
-      path: '/investor/buy'
+      path: '/buy'
       fullPath: '/investor/buy'
       preLoaderRoute: typeof InvestorBuyRouteImport
-      parentRoute: typeof rootRouteImport
+      parentRoute: typeof InvestorRoute
     }
     '/developer/units': {
       id: '/developer/units'
-      path: '/developer/units'
+      path: '/units'
       fullPath: '/developer/units'
       preLoaderRoute: typeof DeveloperUnitsRouteImport
-      parentRoute: typeof rootRouteImport
+      parentRoute: typeof DeveloperRoute
     }
     '/developer/projects': {
       id: '/developer/projects'
-      path: '/developer/projects'
+      path: '/projects'
       fullPath: '/developer/projects'
       preLoaderRoute: typeof DeveloperProjectsRouteImport
-      parentRoute: typeof rootRouteImport
+      parentRoute: typeof DeveloperRoute
     }
     '/developer/progress': {
       id: '/developer/progress'
-      path: '/developer/progress'
+      path: '/progress'
       fullPath: '/developer/progress'
       preLoaderRoute: typeof DeveloperProgressRouteImport
-      parentRoute: typeof rootRouteImport
+      parentRoute: typeof DeveloperRoute
     }
     '/developer/profile': {
       id: '/developer/profile'
-      path: '/developer/profile'
+      path: '/profile'
       fullPath: '/developer/profile'
       preLoaderRoute: typeof DeveloperProfileRouteImport
-      parentRoute: typeof rootRouteImport
+      parentRoute: typeof DeveloperRoute
     }
     '/developer/investors': {
       id: '/developer/investors'
-      path: '/developer/investors'
+      path: '/investors'
       fullPath: '/developer/investors'
       preLoaderRoute: typeof DeveloperInvestorsRouteImport
-      parentRoute: typeof rootRouteImport
+      parentRoute: typeof DeveloperRoute
     }
     '/developer/documentation': {
       id: '/developer/documentation'
-      path: '/developer/documentation'
+      path: '/documentation'
       fullPath: '/developer/documentation'
       preLoaderRoute: typeof DeveloperDocumentationRouteImport
-      parentRoute: typeof rootRouteImport
+      parentRoute: typeof DeveloperRoute
     }
     '/developer/capital': {
       id: '/developer/capital'
-      path: '/developer/capital'
+      path: '/capital'
       fullPath: '/developer/capital'
       preLoaderRoute: typeof DeveloperCapitalRouteImport
-      parentRoute: typeof rootRouteImport
+      parentRoute: typeof DeveloperRoute
     }
     '/developer/audit-log': {
       id: '/developer/audit-log'
-      path: '/developer/audit-log'
+      path: '/audit-log'
       fullPath: '/developer/audit-log'
       preLoaderRoute: typeof DeveloperAuditLogRouteImport
-      parentRoute: typeof rootRouteImport
+      parentRoute: typeof DeveloperRoute
     }
     '/certifier/profile': {
       id: '/certifier/profile'
-      path: '/certifier/profile'
+      path: '/profile'
       fullPath: '/certifier/profile'
       preLoaderRoute: typeof CertifierProfileRouteImport
-      parentRoute: typeof rootRouteImport
+      parentRoute: typeof CertifierRoute
     }
     '/certifier/issued': {
       id: '/certifier/issued'
-      path: '/certifier/issued'
+      path: '/issued'
       fullPath: '/certifier/issued'
       preLoaderRoute: typeof CertifierIssuedRouteImport
-      parentRoute: typeof rootRouteImport
+      parentRoute: typeof CertifierRoute
     }
     '/certifier/assigned': {
       id: '/certifier/assigned'
-      path: '/certifier/assigned'
+      path: '/assigned'
       fullPath: '/certifier/assigned'
       preLoaderRoute: typeof CertifierAssignedRouteImport
-      parentRoute: typeof rootRouteImport
+      parentRoute: typeof CertifierRoute
     }
     '/project/$projectId/': {
       id: '/project/$projectId/'
-      path: '/project/$projectId'
+      path: '/$projectId'
       fullPath: '/project/$projectId/'
       preLoaderRoute: typeof ProjectProjectIdIndexRouteImport
-      parentRoute: typeof rootRouteImport
+      parentRoute: typeof ProjectRoute
     }
     '/public/dossier/$shareToken': {
       id: '/public/dossier/$shareToken'
@@ -800,118 +872,161 @@ declare module '@tanstack/react-router' {
     }
     '/project/$projectId/progress': {
       id: '/project/$projectId/progress'
-      path: '/project/$projectId/progress'
+      path: '/$projectId/progress'
       fullPath: '/project/$projectId/progress'
       preLoaderRoute: typeof ProjectProjectIdProgressRouteImport
-      parentRoute: typeof rootRouteImport
+      parentRoute: typeof ProjectRoute
     }
     '/project/$projectId/developer': {
       id: '/project/$projectId/developer'
-      path: '/project/$projectId/developer'
+      path: '/$projectId/developer'
       fullPath: '/project/$projectId/developer'
       preLoaderRoute: typeof ProjectProjectIdDeveloperRouteImport
-      parentRoute: typeof rootRouteImport
+      parentRoute: typeof ProjectRoute
     }
     '/notary/dossier/$dossierId': {
       id: '/notary/dossier/$dossierId'
-      path: '/notary/dossier/$dossierId'
+      path: '/dossier/$dossierId'
       fullPath: '/notary/dossier/$dossierId'
       preLoaderRoute: typeof NotaryDossierDossierIdRouteImport
-      parentRoute: typeof rootRouteImport
+      parentRoute: typeof NotaryRoute
     }
     '/developer/project/new': {
       id: '/developer/project/new'
-      path: '/developer/project/new'
+      path: '/project/new'
       fullPath: '/developer/project/new'
       preLoaderRoute: typeof DeveloperProjectNewRouteImport
-      parentRoute: typeof rootRouteImport
+      parentRoute: typeof DeveloperRoute
     }
     '/certifier/stage/$stageId': {
       id: '/certifier/stage/$stageId'
-      path: '/certifier/stage/$stageId'
+      path: '/stage/$stageId'
       fullPath: '/certifier/stage/$stageId'
       preLoaderRoute: typeof CertifierStageStageIdRouteImport
-      parentRoute: typeof rootRouteImport
+      parentRoute: typeof CertifierRoute
     }
     '/investor/unit/$unitId/': {
       id: '/investor/unit/$unitId/'
-      path: '/investor/unit/$unitId'
+      path: '/unit/$unitId'
       fullPath: '/investor/unit/$unitId/'
       preLoaderRoute: typeof InvestorUnitUnitIdIndexRouteImport
-      parentRoute: typeof rootRouteImport
+      parentRoute: typeof InvestorRoute
     }
     '/developer/project/$projectId/': {
       id: '/developer/project/$projectId/'
-      path: '/developer/project/$projectId'
+      path: '/project/$projectId'
       fullPath: '/developer/project/$projectId/'
       preLoaderRoute: typeof DeveloperProjectProjectIdIndexRouteImport
-      parentRoute: typeof rootRouteImport
+      parentRoute: typeof DeveloperRoute
     }
     '/project/$projectId/stage/$stageId': {
       id: '/project/$projectId/stage/$stageId'
-      path: '/project/$projectId/stage/$stageId'
+      path: '/$projectId/stage/$stageId'
       fullPath: '/project/$projectId/stage/$stageId'
       preLoaderRoute: typeof ProjectProjectIdStageStageIdRouteImport
-      parentRoute: typeof rootRouteImport
+      parentRoute: typeof ProjectRoute
     }
     '/investor/unit/$unitId/notifications': {
       id: '/investor/unit/$unitId/notifications'
-      path: '/investor/unit/$unitId/notifications'
+      path: '/unit/$unitId/notifications'
       fullPath: '/investor/unit/$unitId/notifications'
       preLoaderRoute: typeof InvestorUnitUnitIdNotificationsRouteImport
-      parentRoute: typeof rootRouteImport
+      parentRoute: typeof InvestorRoute
     }
     '/investor/unit/$unitId/dossier': {
       id: '/investor/unit/$unitId/dossier'
-      path: '/investor/unit/$unitId/dossier'
+      path: '/unit/$unitId/dossier'
       fullPath: '/investor/unit/$unitId/dossier'
       preLoaderRoute: typeof InvestorUnitUnitIdDossierRouteImport
-      parentRoute: typeof rootRouteImport
+      parentRoute: typeof InvestorRoute
     }
     '/investor/unit/$unitId/contract': {
       id: '/investor/unit/$unitId/contract'
-      path: '/investor/unit/$unitId/contract'
+      path: '/unit/$unitId/contract'
       fullPath: '/investor/unit/$unitId/contract'
       preLoaderRoute: typeof InvestorUnitUnitIdContractRouteImport
-      parentRoute: typeof rootRouteImport
+      parentRoute: typeof InvestorRoute
     }
     '/developer/project/$projectId/upload': {
       id: '/developer/project/$projectId/upload'
-      path: '/developer/project/$projectId/upload'
+      path: '/project/$projectId/upload'
       fullPath: '/developer/project/$projectId/upload'
       preLoaderRoute: typeof DeveloperProjectProjectIdUploadRouteImport
-      parentRoute: typeof rootRouteImport
+      parentRoute: typeof DeveloperRoute
     }
     '/developer/project/$projectId/units': {
       id: '/developer/project/$projectId/units'
-      path: '/developer/project/$projectId/units'
+      path: '/project/$projectId/units'
       fullPath: '/developer/project/$projectId/units'
       preLoaderRoute: typeof DeveloperProjectProjectIdUnitsRouteImport
-      parentRoute: typeof rootRouteImport
+      parentRoute: typeof DeveloperRoute
     }
     '/developer/project/$projectId/invite': {
       id: '/developer/project/$projectId/invite'
-      path: '/developer/project/$projectId/invite'
+      path: '/project/$projectId/invite'
       fullPath: '/developer/project/$projectId/invite'
       preLoaderRoute: typeof DeveloperProjectProjectIdInviteRouteImport
-      parentRoute: typeof rootRouteImport
+      parentRoute: typeof DeveloperRoute
     }
     '/developer/project/$projectId/contracts': {
       id: '/developer/project/$projectId/contracts'
-      path: '/developer/project/$projectId/contracts'
+      path: '/project/$projectId/contracts'
       fullPath: '/developer/project/$projectId/contracts'
       preLoaderRoute: typeof DeveloperProjectProjectIdContractsRouteImport
-      parentRoute: typeof rootRouteImport
+      parentRoute: typeof DeveloperRoute
     }
   }
 }
 
-const rootRouteChildren: RootRouteChildren = {
-  IndexRoute: IndexRoute,
-  LoginRoute: LoginRoute,
+interface AdminRouteChildren {
+  AdminIndexRoute: typeof AdminIndexRoute
+}
+
+const AdminRouteChildren: AdminRouteChildren = {
+  AdminIndexRoute: AdminIndexRoute,
+}
+
+const AdminRouteWithChildren = AdminRoute._addFileChildren(AdminRouteChildren)
+
+interface CertifierRouteChildren {
+  CertifierAssignedRoute: typeof CertifierAssignedRoute
+  CertifierIssuedRoute: typeof CertifierIssuedRoute
+  CertifierProfileRoute: typeof CertifierProfileRoute
+  CertifierIndexRoute: typeof CertifierIndexRoute
+  CertifierStageStageIdRoute: typeof CertifierStageStageIdRoute
+}
+
+const CertifierRouteChildren: CertifierRouteChildren = {
   CertifierAssignedRoute: CertifierAssignedRoute,
   CertifierIssuedRoute: CertifierIssuedRoute,
   CertifierProfileRoute: CertifierProfileRoute,
+  CertifierIndexRoute: CertifierIndexRoute,
+  CertifierStageStageIdRoute: CertifierStageStageIdRoute,
+}
+
+const CertifierRouteWithChildren = CertifierRoute._addFileChildren(
+  CertifierRouteChildren,
+)
+
+interface DeveloperRouteChildren {
+  DeveloperAuditLogRoute: typeof DeveloperAuditLogRoute
+  DeveloperCapitalRoute: typeof DeveloperCapitalRoute
+  DeveloperDocumentationRoute: typeof DeveloperDocumentationRoute
+  DeveloperInvestorsRoute: typeof DeveloperInvestorsRoute
+  DeveloperProfileRoute: typeof DeveloperProfileRoute
+  DeveloperProgressRoute: typeof DeveloperProgressRoute
+  DeveloperProjectsRoute: typeof DeveloperProjectsRoute
+  DeveloperUnitsRoute: typeof DeveloperUnitsRoute
+  DeveloperIndexRoute: typeof DeveloperIndexRoute
+  DeveloperProjectNewRoute: typeof DeveloperProjectNewRoute
+  DeveloperProjectProjectIdContractsRoute: typeof DeveloperProjectProjectIdContractsRoute
+  DeveloperProjectProjectIdInviteRoute: typeof DeveloperProjectProjectIdInviteRoute
+  DeveloperProjectProjectIdUnitsRoute: typeof DeveloperProjectProjectIdUnitsRoute
+  DeveloperProjectProjectIdUploadRoute: typeof DeveloperProjectProjectIdUploadRoute
+  DeveloperProjectProjectIdIndexRoute: typeof DeveloperProjectProjectIdIndexRoute
+}
+
+const DeveloperRouteChildren: DeveloperRouteChildren = {
   DeveloperAuditLogRoute: DeveloperAuditLogRoute,
   DeveloperCapitalRoute: DeveloperCapitalRoute,
   DeveloperDocumentationRoute: DeveloperDocumentationRoute,
@@ -920,37 +1035,96 @@ const rootRouteChildren: RootRouteChildren = {
   DeveloperProgressRoute: DeveloperProgressRoute,
   DeveloperProjectsRoute: DeveloperProjectsRoute,
   DeveloperUnitsRoute: DeveloperUnitsRoute,
+  DeveloperIndexRoute: DeveloperIndexRoute,
+  DeveloperProjectNewRoute: DeveloperProjectNewRoute,
+  DeveloperProjectProjectIdContractsRoute:
+    DeveloperProjectProjectIdContractsRoute,
+  DeveloperProjectProjectIdInviteRoute: DeveloperProjectProjectIdInviteRoute,
+  DeveloperProjectProjectIdUnitsRoute: DeveloperProjectProjectIdUnitsRoute,
+  DeveloperProjectProjectIdUploadRoute: DeveloperProjectProjectIdUploadRoute,
+  DeveloperProjectProjectIdIndexRoute: DeveloperProjectProjectIdIndexRoute,
+}
+
+const DeveloperRouteWithChildren = DeveloperRoute._addFileChildren(
+  DeveloperRouteChildren,
+)
+
+interface InvestorRouteChildren {
+  InvestorBuyRoute: typeof InvestorBuyRoute
+  InvestorFavoritesRoute: typeof InvestorFavoritesRoute
+  InvestorMenuRoute: typeof InvestorMenuRoute
+  InvestorNotificationsRoute: typeof InvestorNotificationsRoute
+  InvestorProfileRoute: typeof InvestorProfileRoute
+  InvestorUnitsRoute: typeof InvestorUnitsRoute
+  InvestorUnitUnitIdContractRoute: typeof InvestorUnitUnitIdContractRoute
+  InvestorUnitUnitIdDossierRoute: typeof InvestorUnitUnitIdDossierRoute
+  InvestorUnitUnitIdNotificationsRoute: typeof InvestorUnitUnitIdNotificationsRoute
+  InvestorUnitUnitIdIndexRoute: typeof InvestorUnitUnitIdIndexRoute
+}
+
+const InvestorRouteChildren: InvestorRouteChildren = {
   InvestorBuyRoute: InvestorBuyRoute,
   InvestorFavoritesRoute: InvestorFavoritesRoute,
   InvestorMenuRoute: InvestorMenuRoute,
   InvestorNotificationsRoute: InvestorNotificationsRoute,
   InvestorProfileRoute: InvestorProfileRoute,
   InvestorUnitsRoute: InvestorUnitsRoute,
-  NotaryDossiersRoute: NotaryDossiersRoute,
-  NotaryProfileRoute: NotaryProfileRoute,
-  NotarySignedRoute: NotarySignedRoute,
-  AdminIndexRoute: AdminIndexRoute,
-  CertifierIndexRoute: CertifierIndexRoute,
-  DeveloperIndexRoute: DeveloperIndexRoute,
-  NotaryIndexRoute: NotaryIndexRoute,
-  CertifierStageStageIdRoute: CertifierStageStageIdRoute,
-  DeveloperProjectNewRoute: DeveloperProjectNewRoute,
-  NotaryDossierDossierIdRoute: NotaryDossierDossierIdRoute,
-  ProjectProjectIdDeveloperRoute: ProjectProjectIdDeveloperRoute,
-  ProjectProjectIdProgressRoute: ProjectProjectIdProgressRoute,
-  PublicDossierShareTokenRoute: PublicDossierShareTokenRoute,
-  ProjectProjectIdIndexRoute: ProjectProjectIdIndexRoute,
-  DeveloperProjectProjectIdContractsRoute:
-    DeveloperProjectProjectIdContractsRoute,
-  DeveloperProjectProjectIdInviteRoute: DeveloperProjectProjectIdInviteRoute,
-  DeveloperProjectProjectIdUnitsRoute: DeveloperProjectProjectIdUnitsRoute,
-  DeveloperProjectProjectIdUploadRoute: DeveloperProjectProjectIdUploadRoute,
   InvestorUnitUnitIdContractRoute: InvestorUnitUnitIdContractRoute,
   InvestorUnitUnitIdDossierRoute: InvestorUnitUnitIdDossierRoute,
   InvestorUnitUnitIdNotificationsRoute: InvestorUnitUnitIdNotificationsRoute,
-  ProjectProjectIdStageStageIdRoute: ProjectProjectIdStageStageIdRoute,
-  DeveloperProjectProjectIdIndexRoute: DeveloperProjectProjectIdIndexRoute,
   InvestorUnitUnitIdIndexRoute: InvestorUnitUnitIdIndexRoute,
+}
+
+const InvestorRouteWithChildren = InvestorRoute._addFileChildren(
+  InvestorRouteChildren,
+)
+
+interface NotaryRouteChildren {
+  NotaryDossiersRoute: typeof NotaryDossiersRoute
+  NotaryProfileRoute: typeof NotaryProfileRoute
+  NotarySignedRoute: typeof NotarySignedRoute
+  NotaryIndexRoute: typeof NotaryIndexRoute
+  NotaryDossierDossierIdRoute: typeof NotaryDossierDossierIdRoute
+}
+
+const NotaryRouteChildren: NotaryRouteChildren = {
+  NotaryDossiersRoute: NotaryDossiersRoute,
+  NotaryProfileRoute: NotaryProfileRoute,
+  NotarySignedRoute: NotarySignedRoute,
+  NotaryIndexRoute: NotaryIndexRoute,
+  NotaryDossierDossierIdRoute: NotaryDossierDossierIdRoute,
+}
+
+const NotaryRouteWithChildren =
+  NotaryRoute._addFileChildren(NotaryRouteChildren)
+
+interface ProjectRouteChildren {
+  ProjectProjectIdDeveloperRoute: typeof ProjectProjectIdDeveloperRoute
+  ProjectProjectIdProgressRoute: typeof ProjectProjectIdProgressRoute
+  ProjectProjectIdIndexRoute: typeof ProjectProjectIdIndexRoute
+  ProjectProjectIdStageStageIdRoute: typeof ProjectProjectIdStageStageIdRoute
+}
+
+const ProjectRouteChildren: ProjectRouteChildren = {
+  ProjectProjectIdDeveloperRoute: ProjectProjectIdDeveloperRoute,
+  ProjectProjectIdProgressRoute: ProjectProjectIdProgressRoute,
+  ProjectProjectIdIndexRoute: ProjectProjectIdIndexRoute,
+  ProjectProjectIdStageStageIdRoute: ProjectProjectIdStageStageIdRoute,
+}
+
+const ProjectRouteWithChildren =
+  ProjectRoute._addFileChildren(ProjectRouteChildren)
+
+const rootRouteChildren: RootRouteChildren = {
+  IndexRoute: IndexRoute,
+  AdminRoute: AdminRouteWithChildren,
+  CertifierRoute: CertifierRouteWithChildren,
+  DeveloperRoute: DeveloperRouteWithChildren,
+  InvestorRoute: InvestorRouteWithChildren,
+  LoginRoute: LoginRoute,
+  NotaryRoute: NotaryRouteWithChildren,
+  ProjectRoute: ProjectRouteWithChildren,
+  PublicDossierShareTokenRoute: PublicDossierShareTokenRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)

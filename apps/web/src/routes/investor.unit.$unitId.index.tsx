@@ -4,8 +4,6 @@ import { Building2, ChevronRight, FileText, Images, MapPin } from 'lucide-react'
 import { useEffect, useRef, useState } from 'react'
 import { ApiError, api, projectCoverUrl } from '#/api/port'
 import type { MerkleProof } from '#/api/types'
-import { INVESTOR_ROLES } from '#/auth/roles'
-import { useRoleGuard } from '#/auth/useRoleGuard'
 import { BuildingSchematic } from '#/components/domain/BuildingSchematic'
 import { HashChip } from '#/components/domain/HashChip'
 import { ImageGalleryModal } from '#/components/domain/ImageGalleryModal'
@@ -39,7 +37,6 @@ export const Route = createFileRoute('/investor/unit/$unitId/')({
 
 function InvestorUnitDetail() {
   const { unitId } = Route.useParams()
-  const { ready } = useRoleGuard(INVESTOR_ROLES)
   const { t, locale } = useTranslation()
   const navigate = useNavigate()
   const announce = useAnnounce()
@@ -54,14 +51,13 @@ function InvestorUnitDetail() {
   const { data: unidad, error } = useQuery({
     queryKey: ['investor', 'unit', unitId],
     queryFn: () => api.getInvestorUnit(unitId),
-    enabled: ready,
     retry: reintentarSiNoEsAusencia
   })
 
   const { data: news } = useQuery({
     queryKey: ['investor', 'unit', unitId, 'news'],
     queryFn: () => api.getInvestorUnitNews(unitId),
-    enabled: ready && Boolean(unidad),
+    enabled: Boolean(unidad),
     retry: reintentarSiNoEsAusencia,
     refetchInterval: (query) => intervaloDeNovedades(query.state.data),
     refetchIntervalInBackground: true
@@ -78,28 +74,28 @@ function InvestorUnitDetail() {
   const { data: proyecto } = useQuery({
     queryKey: ['project', unidad?.projectId],
     queryFn: () => api.getProject(unidad!.projectId),
-    enabled: ready && Boolean(unidad?.projectId),
+    enabled: Boolean(unidad?.projectId),
     retry: reintentarSiNoEsAusencia
   })
 
   const { data: documentos } = useQuery({
     queryKey: ['project', unidad?.projectId, 'documents'],
     queryFn: () => api.listProjectDocuments(unidad!.projectId),
-    enabled: ready && Boolean(unidad?.projectId),
+    enabled: Boolean(unidad?.projectId),
     retry: reintentarSiNoEsAusencia
   })
 
   const { data: contrato } = useQuery({
     queryKey: ['investor', 'contract', unitId],
     queryFn: () => api.getInvestorContract(unitId),
-    enabled: ready && Boolean(unidad),
+    enabled: Boolean(unidad),
     retry: reintentarSiNoEsAusencia
   })
 
   const { data: schematic } = useQuery({
     queryKey: ['project', unidad?.projectId, 'schematic'],
     queryFn: () => api.getBuildingSchematic(unidad!.projectId),
-    enabled: ready && edificio && Boolean(unidad?.projectId)
+    enabled: edificio && Boolean(unidad?.projectId)
   })
 
   const { data: bundleFiles } = useQuery({
@@ -114,7 +110,7 @@ function InvestorUnitDetail() {
       queryKey: ['evidence-blob', f.id],
       queryFn: async () => objectUrl(await api.downloadEvidence(f.id)),
       gcTime: 0,
-      enabled: ready && Boolean(unidad) && galeria
+      enabled: Boolean(unidad) && galeria
     }))
   })
   const portada = proyecto ? projectCoverUrl(proyecto.id, proyecto.coverUpdatedAt) : null
@@ -127,11 +123,9 @@ function InvestorUnitDetail() {
   ]
   const cantidadDeImagenes = (portada ? 1 : 0) + fotos.length
 
-  if (!ready) return null
-
   if (error instanceof ApiError && (error.status === 403 || error.status === 404)) {
     return (
-      <PanelLayout rol="investor" title={t('investor.units.title')}>
+      <PanelLayout title={t('investor.units.title')}>
         <p data-testid="INV-UNIT-DETAIL-001">
           {error.status === 403 ? t('error.forbidden') : t('error.notFound')}
         </p>
@@ -171,7 +165,6 @@ function InvestorUnitDetail() {
 
   return (
     <PanelLayout
-      rol="investor"
       title={unidad?.unitReference ?? t('investor.units.title')}
       {...(unidad ? { context: unidad.projectName } : {})}
       back={{

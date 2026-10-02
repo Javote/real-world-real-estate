@@ -12,8 +12,6 @@ import {
 } from 'lucide-react'
 import { useState } from 'react'
 import { ApiError, api, projectCoverUrl } from '#/api/port'
-import { INVESTOR_ROLES } from '#/auth/roles'
-import { useRoleGuard } from '#/auth/useRoleGuard'
 import { DocumentCard } from '#/components/domain/DocumentCard'
 import { DocumentViewerModal } from '#/components/domain/DocumentViewerModal'
 import { ImageGalleryModal } from '#/components/domain/ImageGalleryModal'
@@ -52,7 +50,6 @@ export const Route = createFileRoute('/project/$projectId/')({
 
 function InvestorProjectDetail() {
   const { projectId } = Route.useParams()
-  const { ready } = useRoleGuard(INVESTOR_ROLES)
   const { t, locale } = useTranslation()
   const navigate = useNavigate()
   const queryClient = useQueryClient()
@@ -69,21 +66,19 @@ function InvestorProjectDetail() {
   } = useQuery({
     queryKey: ['project', projectId],
     queryFn: () => api.getProject(projectId),
-    enabled: ready,
     retry: reintentarSiNoEsAusencia
   })
 
   const { data: documentos, isPending: documentosPending } = useQuery({
     queryKey: ['project', projectId, 'documents'],
     queryFn: () => api.listProjectDocuments(projectId),
-    enabled: ready && isSuccess,
+    enabled: isSuccess,
     retry: reintentarSiNoEsAusencia
   })
 
   const { data: favoritos } = useQuery({
     queryKey: ['investor', 'favorites'],
-    queryFn: api.listFavorites,
-    enabled: ready
+    queryFn: api.listFavorites
   })
 
   const fotos = (documentos ?? []).filter((d) => esFoto(d.evidenceType, d.mimeType))
@@ -94,7 +89,7 @@ function InvestorProjectDetail() {
       queryKey: ['evidence-blob', f.id],
       queryFn: async () => objectUrl(await api.downloadEvidence(f.id)),
       gcTime: 0,
-      enabled: ready && isSuccess && galeria
+      enabled: isSuccess && galeria
     }))
   })
 
@@ -117,11 +112,9 @@ function InvestorProjectDetail() {
     onSuccess: () => void queryClient.invalidateQueries({ queryKey: ['investor', 'favorites'] })
   })
 
-  if (!ready) return null
-
   if (error instanceof ApiError && error.status === 403) {
     return (
-      <PanelLayout rol="investor" title={t('error.forbidden')}>
+      <PanelLayout title={t('error.forbidden')}>
         <p className="text-body text-text-muted" data-testid="INV-PROJECT-DETAIL-001">
           {t('error.forbidden')}
         </p>
@@ -149,7 +142,6 @@ function InvestorProjectDetail() {
 
   return (
     <PanelLayout
-      rol="investor"
       title={proyecto?.name ?? t('panel.investor.title')}
       {...(ubicacion ? { context: ubicacion } : {})}
       back={{

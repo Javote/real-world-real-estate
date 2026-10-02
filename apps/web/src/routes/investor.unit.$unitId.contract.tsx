@@ -2,8 +2,6 @@ import { useQuery } from '@tanstack/react-query'
 import { createFileRoute, useNavigate } from '@tanstack/react-router'
 import { useState } from 'react'
 import { ApiError, api } from '#/api/port'
-import { INVESTOR_ROLES } from '#/auth/roles'
-import { useRoleGuard } from '#/auth/useRoleGuard'
 import { Loading } from '#/components/domain/Loading'
 import type { ReleaseRecord } from '#/components/domain/ReleaseProofList'
 import { ReleaseProofList } from '#/components/domain/ReleaseProofList'
@@ -21,7 +19,6 @@ export const Route = createFileRoute('/investor/unit/$unitId/contract')({
 
 function InvestorContract() {
   const { unitId } = Route.useParams()
-  const { ready } = useRoleGuard(INVESTOR_ROLES)
   const { t, locale } = useTranslation()
   const navigate = useNavigate()
   const [txid, setTxid] = useState<ReleaseRecord | null>(null)
@@ -29,29 +26,24 @@ function InvestorContract() {
   const { data: unidad } = useQuery({
     queryKey: ['investor', 'unit', unitId],
     queryFn: () => api.getInvestorUnit(unitId),
-    enabled: ready,
     retry: reintentarSiNoEsAusencia
   })
 
   const { data: contrato, error } = useQuery({
     queryKey: ['investor', 'contract', unitId],
     queryFn: () => api.getInvestorContract(unitId),
-    enabled: ready,
     retry: reintentarSiNoEsAusencia
   })
 
   const { data: releases, isPending: releasesPending } = useQuery({
     queryKey: ['contract', contrato?.id, 'releases'],
     queryFn: () => api.listContractReleases(contrato!.id),
-    enabled: ready && Boolean(contrato?.id)
+    enabled: Boolean(contrato?.id)
   })
-
-  if (!ready) return null
 
   if (error instanceof ApiError && error.status === 404) {
     return (
       <PanelLayout
-        rol="investor"
         title={t('investor.contract.title')}
         back={{
           label: t('nav.back'),
@@ -67,7 +59,7 @@ function InvestorContract() {
 
   if (error instanceof ApiError && error.status === 403) {
     return (
-      <PanelLayout rol="investor" title={t('investor.contract.title')}>
+      <PanelLayout title={t('investor.contract.title')}>
         <p data-testid="INV-CONTRACT-VIEW-001">{t('error.forbidden')}</p>
       </PanelLayout>
     )
@@ -85,7 +77,6 @@ function InvestorContract() {
 
   return (
     <PanelLayout
-      rol="investor"
       title={t('investor.contract.title')}
       {...(unidad ? { context: unidad.unitReference } : {})}
       back={{

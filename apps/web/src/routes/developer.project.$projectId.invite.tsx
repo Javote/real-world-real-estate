@@ -2,8 +2,6 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { createFileRoute, useNavigate } from '@tanstack/react-router'
 import { useState } from 'react'
 import { api } from '#/api/port'
-import { DEV_ROLES } from '#/auth/roles'
-import { useRoleGuard } from '#/auth/useRoleGuard'
 import { NumberInput } from '#/components/domain/NumberInput'
 import { PrimaryButton } from '#/components/domain/PrimaryButton'
 import { SelectDropdown } from '#/components/domain/SelectDropdown'
@@ -21,7 +19,6 @@ const MONEDA_POR_DEFECTO = 'USD'
 
 function InviteInvestor() {
   const { projectId } = Route.useParams()
-  const { ready } = useRoleGuard(DEV_ROLES)
   const { t } = useTranslation()
   const navigate = useNavigate()
   const queryClient = useQueryClient()
@@ -32,8 +29,7 @@ function InviteInvestor() {
 
   const { data: unidades } = useQuery({
     queryKey: ['developer', 'project', projectId, 'units'],
-    queryFn: () => api.listProjectUnits(projectId),
-    enabled: ready
+    queryFn: () => api.listProjectUnits(projectId)
   })
 
   const unidad = unidades?.find((u) => u.id === unitId)
@@ -54,8 +50,6 @@ function InviteInvestor() {
       })
     }
   })
-
-  if (!ready) return null
 
   const elegirUnidad = (id: string) => {
     setUnitId(id)
@@ -83,7 +77,6 @@ function InviteInvestor() {
 
   return (
     <PanelLayout
-      rol="developer"
       title={t('developer.invite.title')}
       context={t('developer.invite.context')}
       back={{

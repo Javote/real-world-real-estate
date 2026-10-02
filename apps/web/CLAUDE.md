@@ -9,7 +9,7 @@ Vitest+jsdom · Playwright. El estado vive en `specs/README.md`.
 | Dónde | Qué |
 |---|---|
 | `api/port.ts` | Único lugar que hace `fetch`. **Un método nuevo exige su caso en `api/port.contract.test.ts`**, que lo cruza contra el OpenAPI (`SPEC-111`) |
-| `auth/*` | `useRoleGuard`: los AuthGuard role groups de M2-D1 §7.2 |
+| `auth/*` | `requireRole`: los AuthGuard role groups de M2-D1 §7.2, en el `beforeLoad` de los seis layouts por prefijo (`investor`, `project`, `developer`, `notary`, `certifier`, `admin`). La pantalla lee la sesión con `Route.useRouteContext()` (SPEC-601) |
 | `i18n/*` · `i18n/format.ts` | Diccionario propio; moneda y fecha con `Intl` (regla 14). La clave de idioma en `localStorage` es `propnexus.lang` |
 | `styles.css` | Los tokens de M2-D3 en `@theme`. `styles.test.ts` los compara contra el entregable: ningún componente escribe un color, tamaño, radio o sombra literal |
 | `components/domain/` | Los componentes de M2-D3 y los patrones de prueba de M2-D4 |
@@ -23,8 +23,14 @@ modal que se abre solo es `AnchoringSuccessModal`.
 **Dos componentes llevan la regla adentro:** `VerificationBadge` recibe el TXID, no un booleano
 (regla 17); `HashChip` recibe el hash completo y trunca 6+4 contando el `0x` (D-069).
 
-**El header es uno** (D-074): `PanelLayout` pinta siempre logo + campana + perfil + idioma; con
-padre, pasa `back`. No reintroducir un `hideBrand`. Login solo lleva el toggle de idioma.
+**El header es uno** (D-074): `PanelShell` pinta siempre logo + campana + perfil + idioma; con
+padre, la pantalla pasa `back`. No reintroducir un `hideBrand`. Login solo lleva el toggle de idioma.
+
+**El armazón vive en el layout, no en la pantalla** (SPEC-601): `PanelShell` (sidebar, header,
+`<main>` con el `<Outlet />`, bottom nav) lo monta la ruta de layout y no se desmonta al navegar. La
+pantalla envuelve su contenido en `PanelLayout`, que solo publica título, `context`, `back` y
+`headerAction` al header. Una pantalla nueva no lleva guard ni `enabled: ready`: el `beforeLoad` del
+layout ya resolvió la sesión antes de montarla.
 
 **Mobile-first**: la captura es un teléfono de ~380px; los strings en español son 20-30% más largos,
 nada de anchos fijos salvo FAB e íconos.
@@ -76,6 +82,13 @@ unidad.
   CORS, falta `WEB_ORIGIN` en la API (`specs/RUNBOOK-deploy.md`).
 - **Los E2E entran con la password del seed** (`e2e/_credenciales.ts`), nunca con un literal.
 - **Si los E2E locales fallan en masa y en CI pasan, es la `dev.db`**: `pnpm db:seed`.
+- **Si fallan sueltos en el login con "No se pudo conectar con la API", es `tsx watch`**: reinicia
+  la API ante un *change* en `node_modules/.pnpm` que la suite no causa (visto el 2026-10-02).
+  Levantá la API sin `watch` y la web aparte; Playwright reusa los dos.
+- **`montarRuta` cuelga la pantalla del layout de su prefijo**, con el `requireRole` real: un test
+  que la monta en un path inventado (`/perfil`) se queda sin header.
+- **`parentRoute` de TanStack no está resuelto antes de `addChildren`**: para armar un árbol a mano,
+  separá los hijos vos.
 
 ## Comandos
 

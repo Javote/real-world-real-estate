@@ -81,7 +81,7 @@ El diseño de cada ítem está en
 | 4 | La pasada de prosa | ✅ — §4 comentarios en `packages/` y `apps/`; `contracts/` queda como está (dueño, 2026-10-01: es mucho más simple). §6 documentación ✅ 2026-10-01: el estado en esta tabla, lo cerrado en `archive/` y cada `CLAUDE.md` recortado a trampas vigentes (2.457 → 743 líneas; la narración, en `archive/CLAUDE-subarboles-hasta-2026-10-01.md`) |
 | 5 | W0: observabilidad diferida, un diccionario por idioma, decidir PostHog | sin empezar |
 | 6 | `SPEC-603` misma región | en curso — opción B: la base copiada a Oregon (`propnexus-west`), idéntica byte a byte a producción el 2026-10-01. Falta el corte en Render; el detalle, en la spec |
-| 7 | W1 = `SPEC-601` con armazón en el layout | sin empezar |
+| 7 | W1 = `SPEC-601` con armazón en el layout | en revisión — rama `worktree-w1-spec-601` en `origin`, sin mergear (🟡: revisión línea por línea). `pnpm verify:all` en verde y `pnpm e2e` 100/100 (2026-10-02); falta la pasada manual con las DevTools de red (§Verificación de la spec) |
 | 8 | `SPEC-402`, `SPEC-407`, `SPEC-408` | sin empezar — adelantadas desde "antes de mainnet" |
 | 9 | `SPEC-222` PWA (rama `spec-222-pwa`) y la pasada manual de `SPEC-112` | sin empezar — después de 5 y 7, y la rama se mergea recién después de entregar M3 (dueño, 2026-09-30: revertir el commit no desinstala un service worker) |
 
@@ -178,7 +178,7 @@ hechos el mismo día.
 
 | Spec | Título | Estado |
 |---|---|---|
-| [`SPEC-601`](SPEC-601-el-guard-de-rol-vive-en-el-router.md) | El guard de rol vive en el router: `beforeLoad` por prefijo y `me` cacheado. Se van 40 `useRoleGuard` y 63 `enabled: ready` | sin empezar · 🟡 |
+| [`SPEC-601`](SPEC-601-el-guard-de-rol-vive-en-el-router.md) | El guard de rol vive en el router: `beforeLoad` por prefijo y `me` cacheado. Se van 40 `useRoleGuard` y 63 `enabled: ready` | en revisión (ver Fase 1, ítem 7) · 🟡 |
 | [`SPEC-602`](SPEC-602-los-datos-arrancan-con-la-ruta.md) | Loaders que precargan (`prefetchQuery`, sin `await`) y `staleTime` por defecto, sin tocar los estados de carga de `SPEC-110` | sin empezar · 🟢 · depende de `601` |
 | [`SPEC-603`](SPEC-603-la-api-y-la-base-en-la-misma-region.md) | La API (Oregon) y Turso (us-east-1) en la misma región: cada viaje a la base cuesta ~90–120 ms medidos | en curso · 🟡 · opción B, falta el corte |
 | [`SPEC-604`](SPEC-604-la-capa-de-datos-sale-de-los-routers.md) | Las lecturas repetidas salen de los routers (`Stage`: 20 queries en 10 routers) | sin empezar · 🟢 · con la primera feature que las necesite |
