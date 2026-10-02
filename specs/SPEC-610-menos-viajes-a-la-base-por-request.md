@@ -26,17 +26,17 @@ Encima, el middleware encadena sus propias lecturas. `GET /stages/:id`:
 
 Viajes en serie medidos con `test/viajes-por-request.test.ts` (paso 0):
 
-| Request | Antes | Paso 1 | Paso 2 |
-|---|---|---|---|
-| `GET /auth/me` | 2 | 2 | 2 |
-| `GET /projects` | 3 | 3 | 3 |
-| `GET /projects/:id` | 5 | 5 | 5 |
-| `GET /projects/:id/stages` | 5 | 5 | 5 |
-| `GET /stages/:id` | 7 | 5 | 4 |
-| `PATCH /stages/:id` | 6 | 6 | 5 |
-| `GET /investor/units` | 3 | 3 | 3 |
-| `GET /notifications/unread-count` | 2 | 2 | 2 |
-| Dos `GET /auth/me` simultáneos | 4 | 2 | 2 |
+| Request | Antes | Paso 1 | Paso 2 | Paso 3 |
+|---|---|---|---|---|
+| `GET /auth/me` | 2 | 2 | 2 | 2 |
+| `GET /projects` | 3 | 3 | 3 | 3 |
+| `GET /projects/:id` | 5 | 5 | 5 | 4 |
+| `GET /projects/:id/stages` | 5 | 5 | 5 | 3 |
+| `GET /stages/:id` | 7 | 5 | 4 | 3 |
+| `PATCH /stages/:id` | 6 | 6 | 5 | 4 |
+| `GET /investor/units` | 3 | 3 | 3 | 3 |
+| `GET /notifications/unread-count` | 2 | 2 | 2 | 2 |
+| Dos `GET /auth/me` simultáneos | 4 | 2 | 2 | 2 |
 
 En las mutaciones, `writeAuditLog` es otro viaje después de la escritura. Las 6 rutas con
 `db.transaction()` usan transacciones interactivas: con una URL `libsql://` el cliente 0.17 de Node
@@ -70,7 +70,7 @@ request son la cadena más larga de consultas donde cada una empieza después de
 anterior. `test/viajes-por-request.test.ts` fija el número de cada ruta: si sube o baja, el test lo
 dice.
 
-**1. Sin mutex.** `src/lib/db.ts` arma el dialecto con un adaptador que declara
+**1. Sin mutex.** `src/lib/libsql-dialect.ts` arma el dialecto con un adaptador que declara
 `supportsMultipleConnections = true`. Los `Promise.all` que ya existen pasan a ser paralelos, y las
 requests dejan de turnarse. El riesgo: en local, dos escrituras concurrentes contra el mismo archivo
 pueden dar `SQLITE_BUSY`; la suite completa y `pnpm e2e` lo dirían. **Hecho el 2026-10-02:** la
@@ -83,13 +83,19 @@ a ser un solo `SELECT` desde la entidad con `LEFT JOIN Project` y el `EXISTS` de
 columna: sin fila → 404; fila con el flag en falso → 403. **−1 viaje** en las 31 rutas con `via`.
 
 **3. El usuario en paralelo con la autorización.** `authenticate` verifica el JWT, **lanza** la
-lectura de `User` sin esperarla y llama a `next()`. `authorize` corre la regla con el `id` y el `role`
-del JWT y espera las dos cosas juntas. Después decide en el orden de hoy: usuario inexistente,
-inactivo o con un rol distinto del del token → 401; rol no permitido → 403; veredicto de la regla. Recién
-entonces escribe `req.user`. **−1 viaje** en las 91 rutas. La lectura lanzada **nunca rechaza**
-(devuelve un resultado): si `paramValidator` corta con 400 antes de `authorize`, nadie la espera, y
-una promesa rechazada sin manejar tira el proceso en Node 24. Si una ruta futura usara `authenticate`
-sin `authorize`, no tendría `req.user`: falla cerrada, y la `MATRIZ` ya no la deja montar.
+lectura de `User` sin esperarla, la guarda en `req.sesion` junto con lo que dice el token y llama a
+`next()`. `authorize` corre la regla con el `id`, el `role` y el `email` del token mientras espera esa
+lectura. Usuario inexistente o inactivo → 401 `User not active`; la lectura falla → 401 `Invalid
+token`, los dos mensajes de antes. Si el `role` o el `email` de la base no son los del token, la regla
+se vuelve a evaluar con los de la base (un viaje más, solo en ese caso): el veredicto es siempre el
+de la base, como antes. Recién entonces escribe `req.user`. La lectura lanzada **nunca rechaza**: si
+`paramValidator` corta con 400 antes de `authorize`, nadie la espera, y una promesa rechazada sin
+manejar tira el proceso en Node 24. Por lo mismo, la regla anticipada lleva su `catch` cuando el 401
+corta antes de esperarla. Una ruta con `authenticate` y sin `authorize` no tendría `req.user`: falla
+cerrada, y la `MATRIZ` no la deja montar. Si `req.user` ya existe (los tests unitarios de
+`authorize`), se usa tal cual. Lo fija `test/sesion-en-paralelo.test.ts`, con las dos ramas
+verificadas por mutación: sin la reevaluación caen los dos tests de rol, y sin el `catch` Vitest
+marca la promesa sin manejar.
 
 **4. Las ramas de `alguna` en paralelo.** Hoy van con `for … await`. Mismo veredicto, sin esperar.
 

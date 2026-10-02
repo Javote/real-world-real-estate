@@ -65,13 +65,13 @@ const CASOS: Caso[] = [
   },
   {
     ruta: "GET /projects/:id",
-    enSerie: 5,
+    enSerie: 4,
     pedir: () =>
       request(app).get(`/api/v1/projects/${proyecto}`).set("Authorization", `Bearer ${developer}`)
   },
   {
     ruta: "GET /projects/:id/stages",
-    enSerie: 5,
+    enSerie: 3,
     pedir: () =>
       request(app)
         .get(`/api/v1/projects/${proyecto}/stages`)
@@ -79,13 +79,13 @@ const CASOS: Caso[] = [
   },
   {
     ruta: "GET /stages/:id",
-    enSerie: 4,
+    enSerie: 3,
     pedir: () =>
       request(app).get(`/api/v1/stages/${stage}`).set("Authorization", `Bearer ${developer}`)
   },
   {
     ruta: "PATCH /stages/:id",
-    enSerie: 5,
+    enSerie: 4,
     pedir: () =>
       request(app)
         .patch(`/api/v1/stages/${stage}`)

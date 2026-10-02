@@ -5,14 +5,15 @@ import { db } from "../lib/db";
 import { verifyToken } from "../lib/jwt";
 import { type ExpressionBuilder, type ExpressionWrapper, type SqlBool, sql } from "../lib/kysely";
 
+type Usuario = { id: string; email: string; role: UserRole };
+
+type UsuarioLeido = Usuario | { rechazo: "User not active" | "Invalid token" };
+
 declare global {
   namespace Express {
     interface Request {
-      user?: {
-        id: string;
-        email: string;
-        role: UserRole;
-      };
+      user?: Usuario;
+      sesion?: { token: Usuario; usuario: Promise<UsuarioLeido> };
     }
   }
 }
@@ -32,37 +33,46 @@ export function leerGuard(fn: unknown): GuardDescriptor | null {
   return (fn as unknown as Record<symbol, GuardDescriptor | undefined>)[GUARD] ?? null;
 }
 
-export async function authenticate(req: Request, res: Response, next: NextFunction) {
+// Nunca rechaza: si la request corta antes de `authorize` (un 400 de `paramValidator`), nadie la
+// espera, y una promesa rechazada sin manejar tira el proceso.
+async function leerUsuario(id: string): Promise<UsuarioLeido> {
+  try {
+    const user = await db
+      .selectFrom("User")
+      .select(["id", "email", "role", "isActive"])
+      .where("id", "=", id)
+      .executeTakeFirst();
+
+    if (!user?.isActive) return { rechazo: "User not active" };
+
+    return { id: user.id, email: user.email, role: user.role };
+  } catch {
+    return { rechazo: "Invalid token" };
+  }
+}
+
+// No espera a la base: `authorize` lee el usuario en paralelo con la regla y recién ahí escribe
+// `req.user`.
+export function authenticate(req: Request, res: Response, next: NextFunction) {
   const authHeader = req.headers.authorization;
 
   if (!authHeader?.startsWith("Bearer ")) {
     return res.status(401).json({ message: "Missing or invalid token" });
   }
 
+  let payload: ReturnType<typeof verifyToken>;
   try {
-    const token = authHeader.slice("Bearer ".length);
-    const payload = verifyToken(token);
-
-    const user = await db
-      .selectFrom("User")
-      .select(["id", "email", "role", "isActive"])
-      .where("id", "=", payload.userId)
-      .executeTakeFirst();
-
-    if (!user?.isActive) {
-      return res.status(401).json({ message: "User not active" });
-    }
-
-    req.user = {
-      id: user.id,
-      email: user.email,
-      role: user.role
-    };
-
-    next();
+    payload = verifyToken(authHeader.slice("Bearer ".length));
   } catch {
     return res.status(401).json({ message: "Invalid token" });
   }
+
+  req.sesion = {
+    token: { id: payload.userId, email: payload.email, role: payload.role as UserRole },
+    usuario: leerUsuario(payload.userId)
+  };
+
+  next();
 }
 
 Object.defineProperty(authenticate, GUARD, {
@@ -121,7 +131,7 @@ type EntidadConProyecto = "Stage" | "Evidence" | "EvidenceBundle" | "Unit" | "Co
 async function accesoPorEntidad(
   via: EntidadConProyecto,
   key: string,
-  user: NonNullable<Request["user"]>,
+  user: Usuario,
   allowedMemberships: MembershipRole[]
 ): Promise<{ permitido: boolean } | undefined> {
   const permitido = (eb: ExpressionBuilder<Database, "Project">) =>
@@ -181,7 +191,7 @@ function leerParam(req: Request, param: string, en: "path" | "body" = "path"): s
 }
 
 async function evaluarProyecto(
-  user: NonNullable<Request["user"]>,
+  user: Usuario,
   req: Request,
   source: ProjectSource,
   allowedMemberships: MembershipRole[]
@@ -257,11 +267,7 @@ async function cargarDueño(
   return fila ? { dueño: fila.investorId, contra: "id" } : null;
 }
 
-async function evaluarDueño(
-  user: NonNullable<Request["user"]>,
-  req: Request,
-  source: OwnerSource
-): Promise<Veredicto> {
+async function evaluarDueño(user: Usuario, req: Request, source: OwnerSource): Promise<Veredicto> {
   const key = leerParam(req, source.param);
   if (typeof key !== "string") return key;
 
@@ -284,11 +290,7 @@ export type ReglaSimple =
 
 export type ReglaDeAcceso = ReglaSimple | { alguna: [ReglaSimple, ReglaSimple, ...ReglaSimple[]] };
 
-async function evaluarSimple(
-  user: NonNullable<Request["user"]>,
-  req: Request,
-  regla: ReglaSimple
-): Promise<Veredicto> {
+async function evaluarSimple(user: Usuario, req: Request, regla: ReglaSimple): Promise<Veredicto> {
   if (regla === "soloRol") return PASA;
 
   if ("scopeEnQuery" in regla) return PASA;
@@ -297,11 +299,7 @@ async function evaluarSimple(
   return evaluarDueño(user, req, regla.dueño);
 }
 
-async function evaluarRegla(
-  user: NonNullable<Request["user"]>,
-  req: Request,
-  regla: ReglaDeAcceso
-): Promise<Veredicto> {
+async function evaluarRegla(user: Usuario, req: Request, regla: ReglaDeAcceso): Promise<Veredicto> {
   if (typeof regla === "string" || !("alguna" in regla)) {
     return evaluarSimple(user, req, regla);
   }
@@ -320,18 +318,43 @@ async function evaluarRegla(
   return veredictos.find((v) => !v.ok && v.status === 403) ?? veredictos[0] ?? PROHIBIDO;
 }
 
+function veredictoPara(
+  user: Usuario,
+  req: Request,
+  regla: { roles: UserRole[]; acceso: ReglaDeAcceso }
+): Promise<Veredicto> {
+  if (!regla.roles.includes(user.role)) return Promise.resolve(PROHIBIDO);
+  return evaluarRegla(user, req, regla.acceso);
+}
+
 export function authorize(regla: { roles: UserRole[]; acceso: ReglaDeAcceso }) {
   return marcar(
     async (req: Request, res: Response, next: NextFunction) => {
-      if (!req.user) {
+      let veredicto: Veredicto;
+
+      if (req.user) {
+        veredicto = await veredictoPara(req.user, req, regla);
+      } else if (req.sesion) {
+        const { token, usuario } = req.sesion;
+
+        // La regla corre con lo que dice el token mientras la base confirma al usuario.
+        const anticipado = veredictoPara(token, req, regla);
+        anticipado.catch(() => {});
+
+        const leido = await usuario;
+        if ("rechazo" in leido) {
+          return res.status(401).json({ message: leido.rechazo });
+        }
+
+        req.user = leido;
+        veredicto =
+          leido.role === token.role && leido.email === token.email
+            ? await anticipado
+            : await veredictoPara(leido, req, regla);
+      } else {
         return res.status(401).json({ message: "Unauthorized" });
       }
 
-      if (!regla.roles.includes(req.user.role)) {
-        return res.status(403).json({ message: "Forbidden" });
-      }
-
-      const veredicto = await evaluarRegla(req.user, req, regla.acceso);
       if (!veredicto.ok) {
         return res.status(veredicto.status).json({ message: veredicto.message });
       }
