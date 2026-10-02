@@ -87,15 +87,6 @@ const updateStageProcedure = orpc
   .handler(async ({ input, context, errors }) => {
     const { id, ...body } = input;
 
-    const stageExisting = await db
-      .selectFrom("Stage")
-      .selectAll()
-      .where("id", "=", id)
-      .executeTakeFirst();
-
-    /* v8 ignore if -- @preserve: authorize({ proyecto: { via: "Stage" } }) ya cargó el stage */
-    if (!stageExisting) throw new ORPCError("NOT_FOUND", { message: "Stage not found" });
-
     const tocaIdentidad = body.sequenceOrder !== undefined || body.validationCritical !== undefined;
 
     if (tocaIdentidad && (await cabezaDelHilo(id)) !== null) {

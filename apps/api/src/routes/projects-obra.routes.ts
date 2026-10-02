@@ -42,28 +42,25 @@ const stagesOfProjectProcedure = os
   .input(z.strictObject({ id: cuidParamSchema }))
   .output(z.array(stageWithThreadSchema))
   .handler(async ({ input }) => {
-    const result = await db
-      .selectFrom("Stage")
-      .selectAll()
-      .where("projectId", "=", input.id)
-      .orderBy("sequenceOrder", "asc")
-      .execute();
+    const [result, hilos] = await Promise.all([
+      db
+        .selectFrom("Stage")
+        .selectAll()
+        .where("projectId", "=", input.id)
+        .orderBy("sequenceOrder", "asc")
+        .execute(),
+      db
+        .selectFrom("OnChainEvent")
+        .select("stageId")
+        .distinct()
+        .where("stageId", "in", (eb) =>
+          eb.selectFrom("Stage").select("Stage.id").where("Stage.projectId", "=", input.id)
+        )
+        .where("outputRef", "is not", null)
+        .execute()
+    ]);
 
-    const conHilo = new Set(
-      (
-        await db
-          .selectFrom("OnChainEvent")
-          .select("stageId")
-          .distinct()
-          .where(
-            "stageId",
-            "in",
-            result.map((s) => s.id)
-          )
-          .where("outputRef", "is not", null)
-          .execute()
-      ).map((r) => r.stageId)
-    );
+    const conHilo = new Set(hilos.map((r) => r.stageId));
 
     return z
       .array(stageWithThreadSchema)

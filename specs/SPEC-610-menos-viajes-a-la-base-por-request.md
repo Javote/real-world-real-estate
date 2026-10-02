@@ -26,18 +26,18 @@ Encima, el middleware encadena sus propias lecturas. `GET /stages/:id`:
 
 Viajes en serie medidos con `test/viajes-por-request.test.ts` (paso 0):
 
-| Request | Antes | Paso 1 | Paso 2 | Paso 3 | Paso 4 | Paso 5 | Paso 6 |
-|---|---|---|---|---|---|---|---|
-| `GET /auth/me` | 2 | 2 | 2 | 2 | 2 | 2 | 2 |
-| `GET /projects` | 3 | 3 | 3 | 3 | 3 | 3 | 3 |
-| `GET /projects/:id` | 5 | 5 | 5 | 4 | 4 | 4 | 2 |
-| `GET /projects/:id/stages` | 5 | 5 | 5 | 3 | 3 | 3 | 3 |
-| `GET /stages/:id` | 7 | 5 | 4 | 3 | 3 | 3 | 2 |
-| `PATCH /stages/:id` | 6 | 6 | 5 | 4 | 4 | 3 | 3 |
-| `GET /investor/units` | 3 | 3 | 3 | 3 | 3 | 3 | 3 |
-| `GET /notifications/unread-count` | 2 | 2 | 2 | 2 | 2 | 2 | 2 |
-| `GET /contracts/:id/releases` (regla `alguna`) | — | — | — | 5 | 4 | 4 | 4 |
-| Dos `GET /auth/me` simultáneos | 4 | 2 | 2 | 2 | 2 | 2 | 2 |
+| Request | Antes | Paso 1 | Paso 2 | Paso 3 | Paso 4 | Paso 5 | Paso 6 | Paso 7 |
+|---|---|---|---|---|---|---|---|---|
+| `GET /auth/me` | 2 | 2 | 2 | 2 | 2 | 2 | 2 | 2 |
+| `GET /projects` | 3 | 3 | 3 | 3 | 3 | 3 | 3 | 3 |
+| `GET /projects/:id` | 5 | 5 | 5 | 4 | 4 | 4 | 2 | 2 |
+| `GET /projects/:id/stages` | 5 | 5 | 5 | 3 | 3 | 3 | 3 | 2 |
+| `GET /stages/:id` | 7 | 5 | 4 | 3 | 3 | 3 | 2 | 2 |
+| `PATCH /stages/:id` | 6 | 6 | 5 | 4 | 4 | 3 | 3 | 2 |
+| `GET /investor/units` | 3 | 3 | 3 | 3 | 3 | 3 | 3 | 3 |
+| `GET /notifications/unread-count` | 2 | 2 | 2 | 2 | 2 | 2 | 2 | 2 |
+| `GET /contracts/:id/releases` (regla `alguna`) | — | — | — | 5 | 4 | 4 | 4 | 4 |
+| Dos `GET /auth/me` simultáneos | 4 | 2 | 2 | 2 | 2 | 2 | 2 | 2 |
 
 En las mutaciones, `writeAuditLog` es otro viaje después de la escritura. Las 6 rutas con
 `db.transaction()` usan transacciones interactivas. Las consultas de Kysely no van por el
@@ -119,6 +119,16 @@ van juntas en un `Promise.all`: `GET /stages/:id` (`Stage`, `Evidence`, `Project
 /contracts/:id/releases` queda como está: espera a `reconciliarParaLectura` antes de leer, y esa
 espera es la regla de D-077, no una relectura. El resto lo hace la migración (`SPEC-604` se disuelve
 en A3/A4).
+
+**7. Las dos rutas de stages que quedaban en 3.** `PATCH /stages/:id` ya no relee el `Stage` antes
+de escribir: esa lectura solo servía para un 404 que `authorize` ya descartó. Si el body toca
+`sequenceOrder` o `validationCritical`, sigue consultando `cabezaDelHilo` antes del lote y paga 3:
+meter esa condición en el `UPDATE` obligaría a impedir que el audit del mismo lote se escriba cuando
+el update no cambió nada, y ese caso casi siempre termina en 409. `GET /projects/:id/stages` busca
+los hilos on-chain con una subconsulta por `projectId` en vez de esperar los ids de la primera
+consulta, y las dos van en un `Promise.all`. **2 es el piso con este diseño:** un viaje para
+autorizar (con `User` en paralelo) y uno para los datos; bajar a 1 pide meter la autorización en la
+consulta de cada handler, y eso es A2.
 
 **Lo que no se hace:** confiar en el rol del JWT sin consultar la base, cachear usuarios en memoria
 (una sola instancia hoy, pero la invalidación es un problema nuevo) y tocar `transitionStage`, donde

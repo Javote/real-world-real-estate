@@ -108,7 +108,7 @@ const CASOS: Caso[] = [
   },
   {
     ruta: "GET /projects/:id/stages",
-    enSerie: 3,
+    enSerie: 2,
     pedir: () =>
       request(app)
         .get(`/api/v1/projects/${proyecto}/stages`)
@@ -122,7 +122,7 @@ const CASOS: Caso[] = [
   },
   {
     ruta: "PATCH /stages/:id",
-    enSerie: 3,
+    enSerie: 2,
     pedir: () =>
       request(app)
         .patch(`/api/v1/stages/${stage}`)
