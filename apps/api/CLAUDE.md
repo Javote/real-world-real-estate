@@ -86,6 +86,9 @@ backlog quedan el CRUD de `/projects` y `/users` (admin, `SPEC-221`).
 - **El `LibsqlDialect` es el de `lib/libsql-dialect.ts`, no el del paquete**: el original usa el
   `SqliteAdapter` de Kysely, que pone un mutex global y vuelve serie todo `Promise.all` y toda request
   concurrente (`SPEC-610`; lo fija `test/viajes-por-request.test.ts`).
+- **Escrituras que no dependen de una lectura intermedia van con `enLote`, no con `db.transaction()`**:
+  sobre Turso, una transacción interactiva cuesta un viaje por sentencia más el COMMIT; `enLote` es un
+  `batch`, un viaje y atómico. El audit va con `insertAuditLog` adentro del lote.
 - **Una columna nueva de fecha o booleana se suma a `SqliteTypeCoercionPlugin`**; nada lo fuerza.
 - **Kysely no genera ids ni timestamps**: cada insert pasa `createId()` y fechas, y cada update suma
   `updatedAt`.

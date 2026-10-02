@@ -26,22 +26,23 @@ Encima, el middleware encadena sus propias lecturas. `GET /stages/:id`:
 
 Viajes en serie medidos con `test/viajes-por-request.test.ts` (paso 0):
 
-| Request | Antes | Paso 1 | Paso 2 | Paso 3 | Paso 4 |
-|---|---|---|---|---|---|
-| `GET /auth/me` | 2 | 2 | 2 | 2 | 2 |
-| `GET /projects` | 3 | 3 | 3 | 3 | 3 |
-| `GET /projects/:id` | 5 | 5 | 5 | 4 | 4 |
-| `GET /projects/:id/stages` | 5 | 5 | 5 | 3 | 3 |
-| `GET /stages/:id` | 7 | 5 | 4 | 3 | 3 |
-| `PATCH /stages/:id` | 6 | 6 | 5 | 4 | 4 |
-| `GET /investor/units` | 3 | 3 | 3 | 3 | 3 |
-| `GET /notifications/unread-count` | 2 | 2 | 2 | 2 | 2 |
-| `GET /contracts/:id/releases` (regla `alguna`) | — | — | — | 5 | 4 |
-| Dos `GET /auth/me` simultáneos | 4 | 2 | 2 | 2 | 2 |
+| Request | Antes | Paso 1 | Paso 2 | Paso 3 | Paso 4 | Paso 5 |
+|---|---|---|---|---|---|---|
+| `GET /auth/me` | 2 | 2 | 2 | 2 | 2 | 2 |
+| `GET /projects` | 3 | 3 | 3 | 3 | 3 | 3 |
+| `GET /projects/:id` | 5 | 5 | 5 | 4 | 4 | 4 |
+| `GET /projects/:id/stages` | 5 | 5 | 5 | 3 | 3 | 3 |
+| `GET /stages/:id` | 7 | 5 | 4 | 3 | 3 | 3 |
+| `PATCH /stages/:id` | 6 | 6 | 5 | 4 | 4 | 3 |
+| `GET /investor/units` | 3 | 3 | 3 | 3 | 3 | 3 |
+| `GET /notifications/unread-count` | 2 | 2 | 2 | 2 | 2 | 2 |
+| `GET /contracts/:id/releases` (regla `alguna`) | — | — | — | 5 | 4 | 4 |
+| Dos `GET /auth/me` simultáneos | 4 | 2 | 2 | 2 | 2 | 2 |
 
 En las mutaciones, `writeAuditLog` es otro viaje después de la escritura. Las 6 rutas con
-`db.transaction()` usan transacciones interactivas: con una URL `libsql://` el cliente 0.17 de Node
-habla HTTPS (`expandConfig(config, true)` → `preferHttp`), el `BEGIN` viaja con la primera sentencia
+`db.transaction()` usan transacciones interactivas. Las consultas de Kysely no van por el
+`@libsql/client` 0.17 de la API sino por el 0.8.1 que trae `@libsql/kysely-libsql`; los dos, con una
+URL `libsql://` en Node, hablan HTTPS (`expandConfig(config, true)` → `preferHttp`), el `BEGIN` viaja con la primera sentencia
 y cada sentencia y el `COMMIT` son un viaje cada uno. `client.batch([...], "write")` manda todo en
 uno y es atómico.
 
@@ -100,10 +101,17 @@ marca la promesa sin manejar.
 
 **4. Las ramas de `alguna` en paralelo.** Hoy van con `for … await`. Mismo veredicto, sin esperar.
 
-**5. Batch de libSQL para la mutación y su audit.** Un `ejecutarEnLote([...consultas compiladas])` en
-`src/lib/db.ts`: compila con Kysely y manda con `client.batch(…, "write")`. Para eso `db.ts` crea el
-cliente y se lo pasa al dialecto como `{ client }`. Se usa donde las escrituras no dependen de una
-lectura intermedia. **−1 viaje** por mutación, y el audit queda atómico.
+**5. Batch de libSQL para la mutación y su audit.** `enLote(...consultas)` en `src/lib/db.ts`:
+compila con Kysely y manda todo con `client.batch(…, "write")`, un viaje y atómico, y pasa las filas
+por `coerceRow` para devolverlas con los tipos de Kysely. El cliente es el del driver que Kysely ya
+creó (`LibsqlDialect.cliente`): misma versión, sin un segundo pool, y `db.destroy()` lo sigue
+cerrando. `writeAuditLog` se parte en `insertAuditLog` (la consulta sin ejecutar) para poder ir en el
+lote. **Alcance:** `PATCH /stages/:id`, la mutación que mide la tabla. Las otras escrituras con audit
+son el `audit(trx)` de A1, que hereda `enLote` en vez de una transacción interactiva. `enLote` es lo
+único de la API que no pasa por `LibsqlConnection.executeQuery` (contra 238 llamadas de Kysely): el
+driver no tiene camino para `batch`, y `db.transaction()` costaría un viaje por sentencia más el
+COMMIT. El helper de viajes espía `batch` en el prototipo del cliente para contarlo. Lo fija
+`test/en-lote.test.ts`: tipos coercionados, y un audit que falla deja la mutación sin aplicar.
 
 **6. Los handlers que releen lo que ya se sabe.** Solo en las rutas que el paso 0 mida por encima de
 su presupuesto: lanzar juntas las lecturas que no dependen entre sí (`GET /stages/:id`: `Stage`,

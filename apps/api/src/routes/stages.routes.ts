@@ -11,11 +11,11 @@ import { Router } from "express";
 import { z } from "zod";
 import type { UserRole } from "../db/types";
 import { cabezaDelHilo, transitionStage } from "../domain/stage-transition";
-import { db } from "../lib/db";
+import { db, enLote } from "../lib/db";
 import { conUsuario, delegarAOrpc, OpenAPIHandler, ORPCError, os } from "../lib/orpc";
 import { ANY_MEMBERSHIP, authenticate, authorize, CUALQUIER_ROL } from "../middlewares/auth";
 import { paramValidator } from "../middlewares/validate-params";
-import { writeAuditLog } from "../utils/audit";
+import { insertAuditLog } from "../utils/audit";
 import { EVIDENCE_SAFE_COLUMNS } from "./_shared";
 
 const stageDetailSchema = stageSchema.extend({
@@ -104,19 +104,19 @@ const updateStageProcedure = orpc
       });
     }
 
-    const stage = await db
-      .updateTable("Stage")
-      .set({ ...body, updatedAt: new Date() })
-      .where("id", "=", id)
-      .returningAll()
-      .executeTakeFirstOrThrow();
-
-    await writeAuditLog({
-      actorUserId: context.user.id,
-      action: "UPDATE_STAGE",
-      entityType: "Stage",
-      entityId: stage.id
-    });
+    const [[stage]] = await enLote(
+      db
+        .updateTable("Stage")
+        .set({ ...body, updatedAt: new Date() })
+        .where("id", "=", id)
+        .returningAll(),
+      insertAuditLog({
+        actorUserId: context.user.id,
+        action: "UPDATE_STAGE",
+        entityType: "Stage",
+        entityId: id
+      })
+    );
 
     return stageSchema.parse(stage);
   });

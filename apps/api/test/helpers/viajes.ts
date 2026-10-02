@@ -2,32 +2,42 @@ import { vi } from "vitest";
 
 type CompiledQuery = { sql: string };
 
-type Conexion = {
-  executeQuery(q: CompiledQuery): Promise<unknown>;
-  commitTransaction(): Promise<void>;
+type Metodo = (...args: unknown[]) => Promise<unknown>;
+type Prototipo = Record<string, Metodo>;
+
+// El mismo módulo CJS que carga `src/lib/libsql-dialect.ts`, y su `@libsql/client` (no el de la API):
+// espiar estos prototipos es espiar al driver y al cliente reales.
+const { LibsqlConnection, libsql } = require("@libsql/kysely-libsql") as {
+  LibsqlConnection: { prototype: Prototipo };
+  libsql: { createClient(config: { url: string }): { close(): void } };
 };
 
-// El mismo módulo CJS que carga `src/lib/libsql-dialect.ts`: espiar su prototipo es espiar al driver real.
-const { LibsqlConnection } = require("@libsql/kysely-libsql") as {
-  LibsqlConnection: { prototype: Conexion };
-};
+// `enLote` llama a `client.batch` sin pasar por la conexión de Kysely: la clase del cliente se saca
+// de una sonda con la misma URL que usa `db`.
+function prototipoDelCliente(): Prototipo {
+  const sonda = libsql.createClient({ url: process.env.DATABASE_URL as string });
+  const prototipo = Object.getPrototypeOf(sonda) as Prototipo;
+  sonda.close();
+  return prototipo;
+}
 
 type Viaje = { sql: string; inicio: number; fin: number };
 
 const esperar = (ms: number) => new Promise((r) => setTimeout(r, ms));
 
 /**
- * Cuántos viajes a la base paga `fn` en serie. Cada consulta (y cada COMMIT, que sobre HTTP es un
- * viaje propio) tarda `demoraMs` de más; la profundidad es la cadena más larga de viajes donde cada
- * uno empieza después de que terminó el anterior. Los que van en `Promise.all` cuentan una vez.
+ * Cuántos viajes a la base paga `fn` en serie. Cada consulta, cada COMMIT y cada `batch` (los dos,
+ * sobre HTTP, un viaje propio) tarda `demoraMs` de más; la profundidad es la cadena más larga de
+ * viajes donde cada uno empieza después de que terminó el anterior. Los que van en `Promise.all`
+ * cuentan una vez.
  */
 export async function medirViajes(fn: () => Promise<unknown>, demoraMs = 15) {
   const viajes: Viaje[] = [];
 
-  const envolver = <K extends keyof Conexion>(metodo: K, sql: (args: unknown[]) => string) => {
-    const original = LibsqlConnection.prototype[metodo] as (...args: unknown[]) => Promise<unknown>;
-    return vi.spyOn(LibsqlConnection.prototype, metodo).mockImplementation(async function (
-      this: Conexion,
+  const envolver = (prototipo: Prototipo, metodo: string, sql: (args: unknown[]) => string) => {
+    const original = prototipo[metodo] as Metodo;
+    return vi.spyOn(prototipo, metodo).mockImplementation(async function (
+      this: unknown,
       ...args: unknown[]
     ) {
       const viaje = { sql: sql(args), inicio: performance.now(), fin: Number.POSITIVE_INFINITY };
@@ -38,12 +48,13 @@ export async function medirViajes(fn: () => Promise<unknown>, demoraMs = 15) {
       } finally {
         viaje.fin = performance.now();
       }
-    } as never);
+    });
   };
 
   const espias = [
-    envolver("executeQuery", ([q]) => (q as CompiledQuery).sql),
-    envolver("commitTransaction", () => "COMMIT")
+    envolver(LibsqlConnection.prototype, "executeQuery", ([q]) => (q as CompiledQuery).sql),
+    envolver(LibsqlConnection.prototype, "commitTransaction", () => "COMMIT"),
+    envolver(prototipoDelCliente(), "batch", ([lote]) => `BATCH(${(lote as unknown[]).length})`)
   ];
 
   try {

@@ -11,6 +11,7 @@ export type { Kysely as KyselyDb } from "kysely" with { "resolution-mode": "requ
 
 export type {
   ColumnType,
+  Compilable,
   ExpressionBuilder,
   ExpressionWrapper,
   Generated,

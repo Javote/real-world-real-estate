@@ -19,7 +19,7 @@ const TIMESTAMP_COLUMNS = new Set([
 
 const BOOLEAN_COLUMNS = new Set(["isActive", "authoritative", "validationCritical"]);
 
-function coerceRow(row: UnknownRow): UnknownRow {
+export function coerceRow(row: UnknownRow): UnknownRow {
   const out: UnknownRow = {};
   for (const [key, value] of Object.entries(row)) {
     if (value !== null && TIMESTAMP_COLUMNS.has(key) && typeof value === "number") {
