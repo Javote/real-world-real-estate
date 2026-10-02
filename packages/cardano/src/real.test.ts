@@ -1,7 +1,14 @@
-import { generateEmulatorAccount, Lucid } from "@lucid-evolution/lucid";
+import {
+  generateEmulatorAccount,
+  Lucid,
+  mintingPolicyToId,
+  paymentCredentialOf,
+  scriptFromNative
+} from "@lucid-evolution/lucid";
 import { Emulator } from "@lucid-evolution/provider";
 import { buildStageDatum } from "@plataforma/shared";
 import { beforeEach, describe, expect, it, vi } from "vitest";
+import { encodeStageDatum } from "./codec";
 import {
   BLOCKFROST_TIMEOUT_MS,
   LucidAnchorAdapter,
@@ -303,6 +310,80 @@ describe("el outputRef del recibo se busca, no se supone (SPEC-407)", () => {
       }
     }
   );
+});
+
+describe("verify: un UTxO en el script no es un hilo hasta que lleva el thread token (SPEC-408)", () => {
+  const datum = buildStageDatum(fuente);
+
+  async function enviarDirecto(tx: ReturnType<typeof lucid.newTx>) {
+    const firmada = await (await tx.complete()).sign.withWallet().complete();
+    const txid = await firmada.submit();
+    emulator.awaitBlock(1);
+    return txid;
+  }
+
+  it("un pago al script con un datum válido y sin token da null, no un proof", async () => {
+    const txid = await enviarDirecto(
+      lucid
+        .newTx()
+        .pay.ToContract(
+          adapter.address,
+          { kind: "inline", value: encodeStageDatum(datum) },
+          { lovelace: THREAD_MIN_LOVELACE }
+        )
+    );
+
+    expect(await adapter.verify(txid)).toBeNull();
+  });
+
+  it("con un token de otra policy y el mismo nombre de asset, da null", async () => {
+    const otraPolicy = scriptFromNative({
+      type: "sig",
+      keyHash: paymentCredentialOf(adapter.walletAddress).hash
+    });
+    const unit = `${mintingPolicyToId(otraPolicy)}${datum.stageRef}`;
+
+    const txid = await enviarDirecto(
+      lucid
+        .newTx()
+        .mintAssets({ [unit]: 1n })
+        .attach.MintingPolicy(otraPolicy)
+        .pay.ToContract(
+          adapter.address,
+          { kind: "inline", value: encodeStageDatum(datum) },
+          { lovelace: THREAD_MIN_LOVELACE, [unit]: 1n }
+        )
+    );
+
+    expect(await adapter.verify(txid)).toBeNull();
+  });
+
+  it("con nuestro token pero de otro stage que el del datum, da null", async () => {
+    const abierto = await abrirHilo(datum);
+    const [vivo] = await lucid.utxosByOutRef([
+      { txHash: abierto.txid, outputIndex: Number(abierto.outputRef.split("#")[1]) }
+    ]);
+    const otroStage = buildStageDatum({ ...fuente, id: "clh3k9x0000008l3fstage99" });
+
+    const espia = vi
+      .spyOn(lucid, "utxosAt")
+      .mockResolvedValueOnce([{ ...vivo!, datum: encodeStageDatum(otroStage) }]);
+
+    try {
+      expect(await adapter.verify(abierto.txid)).toBeNull();
+    } finally {
+      espia.mockRestore();
+    }
+  });
+
+  it("el hilo de verdad sigue dando su proof", async () => {
+    const abierto = await abrirHilo(datum);
+    expect(await adapter.verify(abierto.txid)).toMatchObject({
+      txid: abierto.txid,
+      outputRef: abierto.outputRef,
+      datum
+    });
+  });
 });
 
 describe("findLiveThread — Capa 1, contra el proveedor de verdad", () => {

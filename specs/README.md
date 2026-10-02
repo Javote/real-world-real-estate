@@ -82,7 +82,7 @@ El diseño de cada ítem está en
 | 5 | W0: observabilidad diferida, un diccionario por idioma, decidir PostHog | sin empezar |
 | 6 | `SPEC-603` misma región | en curso — opción B: la base copiada a Oregon (`propnexus-west`), idéntica byte a byte a producción el 2026-10-01. Falta el corte en Render; el detalle, en la spec |
 | 7 | W1 = `SPEC-601` con armazón en el layout | sin empezar |
-| 8 | `SPEC-402`, `SPEC-407`, `SPEC-408` | `402` ✅ 2026-10-02 — producción medida: cero filas fuera de forma, sin migración. `407` ✅ 2026-10-02 — el `outputRef` sale de la salida con el token. `408` sin empezar |
+| 8 | `SPEC-402`, `SPEC-407`, `SPEC-408` | `402` ✅ 2026-10-02 — producción medida: cero filas fuera de forma, sin migración. `407` ✅ 2026-10-02 — el `outputRef` sale de la salida con el token. `408` ✅ 2026-10-02 — el datum pasa por `stageDatumSchema` y `verify` exige el thread token |
 | 9 | `SPEC-222` PWA (rama `spec-222-pwa`) y la pasada manual de `SPEC-112` | sin empezar — después de 5 y 7, y la rama se mergea recién después de entregar M3 (dueño, 2026-09-30: revertir el commit no desinstala un service worker) |
 
 ### Fuera de alcance de M3
@@ -274,7 +274,7 @@ mismo— sigue siendo `SPEC-305`, decisión de mainnet.
 | [`SPEC-405`](archive/SPEC-405-higiene-de-shared.md) | Higiene de `shared`: el idioma, dos tipos, y un comentario al revés | P-07 | **cerrada 2026-09-19** |
 | [`SPEC-406`](archive/SPEC-406-el-simulador-no-olvida-lo-que-confirmo.md) | El simulador deja de olvidar lo que confirmó al reiniciarse | C-01 | **cerrada 2026-09-20** 🟡 |
 | [`SPEC-407`](archive/SPEC-407-el-outputref-se-busca-no-se-supone.md) | El `outputRef` del recibo se busca, no se supone | C-02 | **cerrada 2026-10-02** 🟡 — con el hilo fuera del índice 0, el código anterior devolvía el vuelto de la wallet sin que fallara nada; ahora el recibo sale de la salida que lleva el token, o la operación lanza |
-| [`SPEC-408`](SPEC-408-lo-que-vuelve-de-la-cadena-se-valida.md) | Lo que vuelve de la cadena se valida, por las dos puertas | C-03 | **Fase 1, ítem 8** · sin empezar |
+| [`SPEC-408`](archive/SPEC-408-lo-que-vuelve-de-la-cadena-se-valida.md) | Lo que vuelve de la cadena se valida, por las dos puertas | C-03 | **cerrada 2026-10-02** 🟡 — `verify()` le daba un `AnchorProof` a cualquier pago al script con un datum armado a mano; ahora exige el token `policyId + stageRef` del datum, sin cambiar la firma del puerto |
 | [`SPEC-409`](archive/SPEC-409-verify-devuelve-el-timestamp-del-bloque.md) | `verify()` devuelve el timestamp del bloque, que ya sabe leer | C-04 | **cerrada 2026-09-20** |
 | [`SPEC-410`](archive/SPEC-410-tres-asperezas-del-adaptador.md) | Tres asperezas del adaptador: `canonical()`, un `parseInt` y un `fetch` | C-05 | **cerrada 2026-09-20** |
 | [`SPEC-411`](archive/SPEC-411-lucid-se-carga-solo-si-hace-falta.md) | Lucid se carga solo si hace falta: 2 s y 121 MB por proceso | T-01 | **cerrada 2026-09-20** — 296s→119s de import en la suite de apps/api, medido |

@@ -40,6 +40,9 @@ rojos a propósito. Los índices de constructor salen del orden de declaración 
 - **El `outputRef` de un recibo sale de `reciboDelHilo()`**, que busca la salida con el thread token;
   nunca `${txid}#0`, que hoy coincide por cómo Lucid ordena las salidas y no por nada que declaremos
   (`SPEC-407`). El `#0` del simulador sí es verdad: ahí él decide los índices.
+- **Un UTxO en la dirección del script no es un hilo hasta que lleva el thread token**: cualquiera
+  puede pagarle al script con el datum que quiera. Todo lo que lee la cadena filtra por el token, y
+  todo datum entra por `decodeStageDatum`, que valida con `stageDatumSchema` (`SPEC-408`).
 - **La vista de UTxOs pendientes se vence en `enCola()`**, antes del trabajo; adentro de `enviar()`
   llega tarde. La cola guarda una promesa que nunca rechaza (un rechazo suelto mata el proceso), y
   vale para una sola instancia.

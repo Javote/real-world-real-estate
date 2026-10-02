@@ -422,16 +422,24 @@ export class LucidAnchorAdapter implements AnchorPort {
     this.lucid.clearUTxOOverride();
   }
 
+  // `verify` no sabe el stage: primero algún token de la policy, y el exacto recién con el datum.
   private async threadProof(txid: string): Promise<AnchorProof | null> {
     const utxos = await this.lucid.utxosAt(this.refs.address);
-    const vivo = utxos.find((u) => u.txHash === txid);
+    const vivo = utxos.find(
+      (u) =>
+        u.txHash === txid &&
+        Object.keys(u.assets).some((unit) => unit.startsWith(this.refs.policyId))
+    );
     if (!vivo?.datum) return null;
+
+    const datum = decodeStageDatum(vivo.datum);
+    if ((vivo.assets[this.unitOf(datum)] ?? 0n) === 0n) return null;
 
     return {
       txid,
       outputRef: `${vivo.txHash}#${vivo.outputIndex}`,
       blockTimestamp: await this.confirmedAt(txid),
-      datum: decodeStageDatum(vivo.datum)
+      datum
     };
   }
 }
