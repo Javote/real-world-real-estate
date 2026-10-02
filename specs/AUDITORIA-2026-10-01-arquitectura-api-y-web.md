@@ -521,6 +521,7 @@ se escribe como spec (ver el final de la Fase 2).
 | 7 | §3.1 **W1** = `SPEC-601` con armazón en el layout: **se va el flash** | **sí**: es el primer paso de la migración de la web | 🟡 |
 | 8 | `SPEC-402` hashes y TXID con forma (adelantada; es parte de A1), `SPEC-407`, `SPEC-408` | **sí** | 🟢/🟡 |
 | 9 | `SPEC-222` PWA (la rama `spec-222-pwa`, un commit, se rebasea) y la pasada manual de `SPEC-112`, las dos después de 5 y 7 | **sí** | 🟡 |
+| 10 | `SPEC-610` **menos viajes a la base por request**: la autorización en una consulta, `User` en paralelo con ella y `batch` para mutación + audit. Agregado por el dueño el 2026-10-02 | **sí**: el middleware de A2 reusa las funciones, y A1 hereda el `batch` | 🟡 |
 
 **La pasada de prosa se prueba mecánicamente:** cada archivo impreso con el compilador de TypeScript
 y `removeComments`, antes y después, tiene que dar idéntico. Así un diff de miles de líneas en
@@ -544,6 +545,7 @@ typecheck, un `nosemgrep` Semgrep en CI.
 | `402` · `407` · `408` | Fase 1, ítem 8 |
 | `304` · `305` | antes de mainnet, intactas: la migración no toca `contracts/` |
 | `222` · `112` | Fase 1, ítem 9 |
+| `610` | Fase 1, ítem 10 |
 | `501`–`504` (M4) | **después de A0–A2**, para que nazcan como módulos y no haya que migrarlas. El scope del notary (§8 punto 6) se decide antes de los pilotos |
 | *Certify* que solo abre la etapa · chip *Evidence by stage* | W4, al migrar la pantalla del certifier y la del investor |
 

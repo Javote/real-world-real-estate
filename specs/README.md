@@ -84,6 +84,7 @@ El diseño de cada ítem está en
 | 7 | W1 = `SPEC-601` con armazón en el layout | en revisión — mergeada a `main` el 2026-10-02; falta la revisión línea por línea (🟡). `pnpm verify:all` en verde, `pnpm e2e` 100/100 y la pasada manual de §Verificación hecha en Chrome (2026-10-02): login de buyer → buy → units → favorites con un solo `/auth/me`, y en 3.599 frames el mismo header y ningún `<main>` vacío |
 | 8 | `SPEC-402`, `SPEC-407`, `SPEC-408` | `402` ✅ 2026-10-02 — producción medida: cero filas fuera de forma, sin migración. `407` ✅ 2026-10-02 — el `outputRef` sale de la salida con el token. `408` ✅ 2026-10-02 — el datum pasa por `stageDatumSchema` y `verify` exige el thread token |
 | 9 | `SPEC-222` PWA (rama `spec-222-pwa`) y la pasada manual de `SPEC-112` | sin empezar — después de 5 y 7, y la rama se mergea recién después de entregar M3 (dueño, 2026-09-30: revertir el commit no desinstala un service worker) |
+| 10 | [`SPEC-610`](SPEC-610-menos-viajes-a-la-base-por-request.md) menos viajes a la base por request, sin cambiar la API: `GET /stages/:id` hace 5 en serie y un `PATCH` 6–7 | en curso — spec escrita el 2026-10-02 · 🟡 |
 
 ### Fuera de alcance de M3
 
@@ -188,6 +189,7 @@ hechos el mismo día.
 | [`SPEC-607`](SPEC-607-una-sola-capa-de-api.md) | Una sola capa de API: el contrato en `shared` y los guards como `meta` del procedimiento, con la `MATRIZ` de `route-guards.test.ts` intacta. Express queda como carcasa | sin empezar · 🟡 · reabre `SPEC-212` inv. 3 · pide D-NNN · Paso 0 con piloto `notary` |
 | [`SPEC-608`](SPEC-608-los-archivos-por-concepto.md) | Los archivos de la API por concepto, no por prefijo (`investor.routes.ts` mezcla 6 conceptos) | sin empezar · 🟢 · depende de `607` |
 | [`SPEC-609`](SPEC-609-el-cliente-sale-del-contrato.md) | El cliente de la web sale del contrato: `OpenAPILink` + contrato minificado + `Serialized`, con `port.ts` como fachada (324 `spyOn` intactos) | sin empezar · 🟢 · depende de `607` · reabre `SPEC-111` |
+| [`SPEC-610`](SPEC-610-menos-viajes-a-la-base-por-request.md) | Menos viajes a la base por request: la autorización en una consulta, `User` en paralelo, `batch` para mutación + audit. Sin cambiar la API | en curso (ver Fase 1, ítem 10) · 🟡 |
 
 **El orden de la serie `6xx` lo reemplaza [`AUDITORIA-2026-10-01-arquitectura-api-y-web.md`](AUDITORIA-2026-10-01-arquitectura-api-y-web.md)
 §9** (dueño, 2026-10-01): una Fase 1 que emprolija la app como está (`601` con armazón en el layout,
