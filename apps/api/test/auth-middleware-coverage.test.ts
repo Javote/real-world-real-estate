@@ -9,14 +9,10 @@ import { errorHandler } from "../src/middlewares/errorHandler";
 import { dossierRateLimitMax } from "../src/middlewares/rateLimit";
 import { FIXTURES } from "./global-setup";
 
-// SPEC-018 §A4 — middlewares (`auth.ts`, `errorHandler.ts`, `rateLimit.ts`) y
-// las dos rutas admin-only (`auth.routes.ts`, `users.routes.ts`).
-
 afterAll(async () => {
   await db.destroy();
 });
 
-/** Un `res` de Express falso, con `status().json()` encadenable y espiable. */
 function fakeRes() {
   const res = {} as Response;
   res.status = vi.fn().mockReturnValue(res) as unknown as Response["status"];

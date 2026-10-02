@@ -27,7 +27,6 @@ const stage = (n: number, state: string) => ({
   updatedAt: '2026-01-01T00:00:00.000Z'
 })
 
-/** Proyecto completo: con ubicación, entrega, organización y tres etapas. */
 const proyectoCompleto = (over: Record<string, unknown> = {}) =>
   ({
     id: 'p1',
@@ -42,6 +41,7 @@ const proyectoCompleto = (over: Record<string, unknown> = {}) =>
     estimatedDelivery: '2027-06-15T12:00:00.000Z',
     status: 'in_progress',
     organizationId: 'org-1',
+    coverUpdatedAt: null,
     createdAt: '2026-01-01T00:00:00.000Z',
     updatedAt: '2026-01-01T00:00:00.000Z',
     stages: [stage(1, 'Completed'), stage(2, 'InProgress'), stage(3, 'Pending')],
@@ -49,7 +49,6 @@ const proyectoCompleto = (over: Record<string, unknown> = {}) =>
     ...over
   }) as unknown as Proyecto
 
-/** Proyecto mínimo: todos los nullables en `null` y sin etapas. */
 const proyectoMinimo = () =>
   proyectoCompleto({
     address: null,
@@ -143,8 +142,15 @@ describe('/project/:projectId (investor)', () => {
     expect(detalle.textContent).toContain('Rosario, Argentina')
     expect(detalle.textContent).toContain('2027')
     expect(detalle.textContent).toContain('Etapa actual: Etapa-2')
-    // 1 de 3 etapas completadas.
     expect(detalle.textContent).toContain('33%')
+
+    const tarjeta = screen.getByText(t['project.status.in_progress']).closest('article')
+    expect(tarjeta?.className).toContain('bg-pending-light')
+    expect(tarjeta?.className).toContain('text-pending')
+    expect(tarjeta?.className).toContain('ring-inset')
+    expect(tarjeta?.className).toContain('ring-pending')
+    expect(tarjeta?.className).toContain('items-center')
+    expect(tarjeta?.className).toContain('justify-center')
   })
 
   it('con todas las etapas completadas no hay "etapa actual" ni porcentaje', async () => {
@@ -252,7 +258,6 @@ describe('/project/:projectId (investor)', () => {
       'article'
     )!
     const pendiente = within(docs).getByRole('button', { name: 'd2.pdf' }).closest('article')!
-    // La foto no es un documento.
     expect(within(docs).queryByText('f1.jpg')).toBeNull()
     expect(anclado.textContent).toContain(t['status.verified'])
     expect(pendiente.textContent).toContain(t['status.pending'])
@@ -297,22 +302,39 @@ describe('/project/:projectId (investor)', () => {
     expect(screen.queryByRole('dialog')).toBeNull()
   })
 
-  it('con fotos, la portada es la primera y tocarla abre la galería', async () => {
-    montarConDatos({ documentos: [fotoDoc('f1'), fotoDoc('f2')] })
+  it('con portada (D-099): la del proyecto, versionada, y encabeza la galería con las fotos detrás', async () => {
+    montarConDatos({
+      proyecto: proyectoCompleto({ coverUpdatedAt: '2026-09-30T12:00:00.000Z' }),
+      documentos: [fotoDoc('f1'), fotoDoc('f2')]
+    })
 
-    // La portada tiene `alt=""` (decorativa): no hay rol `img` que consultar.
     await waitFor(() =>
-      expect(document.querySelector('img')?.getAttribute('src')).toBe('blob:falso')
+      expect(document.querySelector('img')?.getAttribute('src')).toBe(
+        '/api/v1/public/projects/p1/cover?v=2026-09-30T12%3A00%3A00.000Z'
+      )
     )
+    expect(api.downloadEvidence).not.toHaveBeenCalled()
+
     await userEvent.click(screen.getByRole('button', { name: t['investor.unit.openGallery'] }))
 
     const galeria = await screen.findByRole('dialog')
-    // Al abrir se piden también las demás fotos.
-    await waitFor(() => expect(galeria.textContent).toContain('/2'))
+    await waitFor(() => expect(galeria.textContent).toContain('/3'))
     await userEvent.click(
       within(galeria).getByRole('button', { name: t['investor.gallery.close'] })
     )
     await waitFor(() => expect(screen.queryByRole('dialog')).toBeNull())
+  })
+
+  it('sin portada pero con fotos: superficie neutra, y tocarla abre la galería de fotos', async () => {
+    montarConDatos({ documentos: [fotoDoc('f1'), fotoDoc('f2')] })
+    await screen.findByRole('heading', { name: 'Torre Norte' })
+
+    expect(document.querySelector('img')).toBeNull()
+
+    await userEvent.click(screen.getByRole('button', { name: t['investor.unit.openGallery'] }))
+
+    const galeria = await screen.findByRole('dialog')
+    await waitFor(() => expect(galeria.textContent).toContain('/2'))
   })
 
   it('un clic en una etapa del timeline navega a esa etapa', async () => {

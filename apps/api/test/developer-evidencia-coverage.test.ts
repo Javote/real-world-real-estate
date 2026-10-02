@@ -9,31 +9,11 @@ import { storage } from "../src/lib/storage";
 import { FIXTURES } from "./global-setup";
 import { crearStageMinteado } from "./helpers/stages";
 
-// SPEC-018 §A2 — las ramas de `developer-evidencia.routes.ts` que
-// `evidence-upload.test.ts` no alcanza: los dos caminos del drenaje de
-// `rechazarStageAntesDeRecibir` (un body que ya llegó entero, y uno que no
-// termina nunca), un `POST` que no es multipart, la carrera del stage que se
-// cierra mientras suben los bytes, y las dos fallas de infraestructura del
-// final (un insert que falla por otra cosa que el `UNIQUE`, y un `remove` que
-// no puede limpiar).
-
-// **El tope de drenaje, achicado.** `TOPE_DE_DRENAJE` es
-// `EVIDENCE_MAX_FILES × EVIDENCE_MAX_FILE_BYTES + 1 MB` —501 MB con los valores
-// reales—, calculado al importar la ruta. Pasarlo de verdad en un test es
-// mandar medio GB por loopback; con el tope por archivo en 64 KB, el drenaje
-// corta pasados los ~1,6 MB y la rama es la misma. En este archivo Multer
-// también corta en 64 KB por archivo: ningún test de acá sube algo tan grande.
 vi.mock("@plataforma/shared", async (importOriginal) => ({
   ...(await importOriginal<typeof import("@plataforma/shared")>()),
   EVIDENCE_MAX_FILE_BYTES: 64 * 1024
 }));
 
-// **Un gancho entre Multer y el handler.** La carrera que comenta la línea
-// "El stage pudo cerrarse mientras se subían los bytes" pasa justo ahí:
-// después del primer `stageQueAceptaSubida` (que dejó pasar) y antes del
-// segundo. Se envuelve el Multer real —los archivos se escriben igual a
-// disco— y, si un test puso el gancho, corre antes de devolverle el control
-// a la ruta.
 const ganchos = vi.hoisted(() => ({
   despuesDeMulter: null as null | ((req: Request) => Promise<void>)
 }));
@@ -60,7 +40,6 @@ let projectId: string;
 let actorId: string;
 let contador = Math.floor(Math.random() * 1_000_000) + 3_000_000;
 
-/** Un stage propio por test: los conteos de filas no se pisan entre tests. */
 const nuevoStage = async () =>
   (
     await crearStageMinteado({
@@ -141,8 +120,6 @@ describe("rechazarStageAntesDeRecibir — el drenaje del body", () => {
     await cerrar(sId);
     const antes = archivosEnDisco();
 
-    // 2 MB > 10 × 64 KB + 1 MB. Sin `Content-Type` JSON, para que ningún
-    // parser de Express lo consuma antes del drenaje.
     const pedido = request(app)
       .post(url(sId))
       .set("Authorization", `Bearer ${miembro}`)

@@ -1,14 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
-// SPEC-018 A6 — tres ramas de `db/migrate.ts` que el resto de la suite no
-// ejercita: `MIGRATIONS_DIR` sin ningún candidato existente (tira al
-// IMPORTAR el módulo, no al llamar una función), y las dos mitades de cómo
-// `migrar()` arma la config del cliente — `DATABASE_URL` ausente (cae al
-// default) y `DATABASE_AUTH_TOKEN` presente (viaja al cliente). Las dos
-// últimas mockean `lib/libsql-client` para no migrar de verdad contra
-// `.data/dev.db` (migrar sin mock migraría la base de desarrollo real, que
-// `migrate-cli.test.ts` evita justamente pasando siempre una `url` propia).
-
 let previoDatabaseUrl: string | undefined;
 let previoAuthToken: string | undefined;
 

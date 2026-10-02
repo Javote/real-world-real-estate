@@ -3,11 +3,6 @@ import request from "supertest";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { OpenAPIHandler, ORPCError, os } from "../src/lib/orpc";
 
-// `Sentry` en `instrumentation.ts` es `import * as Sentry from "@sentry/node"`
-// re-exportado — un namespace ESM, no configurable, así que `vi.spyOn` sobre
-// él tira "Module namespace is not configurable". Se mockea el paquete
-// entero en su lugar, conservando el resto (`init`, `setupExpressErrorHandler`,
-// que `app.ts`/`instrumentation.ts` también usan).
 const { captureException } = vi.hoisted(() => ({
   captureException: vi.fn((_error: unknown) => "id")
 }));
@@ -16,17 +11,6 @@ vi.mock("@sentry/node", async (importOriginal) => {
   return { ...real, captureException };
 });
 
-// SPEC-212 — cierra la investigación pendiente ("Pendiente — investigar más
-// a fondo: `OpenAPIHandler` nunca llama a `next(err)`"): el interceptor
-// genérico agregado en `lib/orpc.ts` tiene que reportar a Sentry un error NO
-// clasificado y quedarse callado ante un rechazo de negocio declarado
-// (`.errors({...})`) — es el mismo filtro que `statusDeError` ya aplica del
-// lado de `errorHandler.ts`/`app.ts`, ahora del lado de oRPC.
-//
-// Router mínimo, standalone — no `app.ts`: lo único bajo prueba es que
-// `new OpenAPIHandler(...)` (el export de `lib/orpc.ts`, no el de
-// `@orpc/openapi/node` directo) engancha el interceptor, sin depender de
-// `authorize` ni de ninguna ruta real.
 const PREFIJO_ABSOLUTO = "/probe";
 
 const throwsUnclassifiedProcedure = os
@@ -84,7 +68,7 @@ describe("el interceptor de Sentry de lib/orpc.ts (SPEC-212)", () => {
     expect(captureException).not.toHaveBeenCalled();
   });
 
-  it("un ORPCError sin nombre (no declarado) sigue reportándose — `defined` es lo que decide, no la clase", async () => {
+  it("un ORPCError sin nombre con status < 500 NO se reporta — un 404 esperado no es una caída", async () => {
     const throwsUndefinedOrpcError = os
       .route({ method: "GET", path: "/undefined-orpc" })
       .handler(() => {
@@ -100,6 +84,23 @@ describe("el interceptor de Sentry de lib/orpc.ts (SPEC-212)", () => {
     const res = await request(app).get("/probe/undefined-orpc");
 
     expect(res.status).toBe(404);
+    expect(captureException).not.toHaveBeenCalled();
+  });
+
+  it("un ORPCError sin nombre con status >= 500 sí se reporta — el status es lo que decide", async () => {
+    const throwsUndefined500 = os.route({ method: "GET", path: "/undefined-500" }).handler(() => {
+      throw new ORPCError("SERVICE_UNAVAILABLE", { message: "caído" });
+    });
+    const app = express();
+    const handler = new OpenAPIHandler({ throwsUndefined500 });
+    app.get("/probe/undefined-500", async (req, res, next) => {
+      const { matched } = await handler.handle(req, res, { prefix: PREFIJO_ABSOLUTO });
+      if (!matched) next();
+    });
+
+    const res = await request(app).get("/probe/undefined-500");
+
+    expect(res.status).toBe(503);
     expect(captureException).toHaveBeenCalledTimes(1);
   });
 });

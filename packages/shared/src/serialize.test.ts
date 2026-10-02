@@ -1,12 +1,6 @@
 import { describe, expectTypeOf, it } from "vitest";
 import type { Serialized } from "./serialize";
 
-// SPEC-109 (F-13) — aserciones de TIPO, no de runtime: `Serialized<T>` no
-// existe en tiempo de ejecución, es una transformación que el compilador
-// aplica. `expectTypeOf` falla el build si la forma derivada no es la
-// esperada — es la red que sostiene la invariante 2 de la spec ("el tipo que
-// el front usa es el serializado, no el inferido crudo").
-
 describe("Serialized<T>", () => {
   it("convierte Date a string, y deja todo lo demás igual", () => {
     interface Origen {

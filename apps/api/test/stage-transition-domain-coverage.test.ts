@@ -6,11 +6,6 @@ import { db } from "../src/lib/db";
 import { FIXTURES } from "./global-setup";
 import { crearStageMinteado } from "./helpers/stages";
 
-// SPEC-018 §A5 — las ramas de `domain/stage-transition.ts` que ninguna otra
-// suite ejercita: `verify()` devolviendo `null` (la fila queda `Pending`), y
-// `transitionStage`/`retryStageMint` llamados directo (sin pasar por HTTP)
-// sobre un stage inexistente, más el puerto `disabled` en el retry.
-
 let proyecto: string;
 let actorId: string;
 
@@ -38,13 +33,13 @@ afterAll(async () => {
 describe("transitionStage — anclaje cuya confirmación no encuentra proof", () => {
   it("deja el evento en Pending, sin tirar", async () => {
     const puerto = anchorPort();
-    const original = puerto.verify;
-    puerto.verify = async () => null;
+    const original = puerto.confirmedAt;
+    puerto.confirmedAt = async () => null;
 
     try {
       const stage = await crearStageMinteado({
         projectId: proyecto,
-        name: "SPEC-018 A5 — verify sin proof",
+        name: "SPEC-018 A5 — sin confirmar",
         sequenceOrder: 995_201,
         validationCritical: false,
         actorUserId: actorId
@@ -62,7 +57,7 @@ describe("transitionStage — anclaje cuya confirmación no encuentra proof", ()
         expect(resultado.anchor.txid).not.toBeNull();
       }
     } finally {
-      puerto.verify = original;
+      puerto.confirmedAt = original;
     }
   });
 });
@@ -101,9 +96,6 @@ describe("retryStageMint", () => {
       .returningAll()
       .executeTakeFirstOrThrow();
 
-    // Sin ningún OnChainEvent STAGE_CREATED: alcanza para que, con la consulta
-    // a la cadena salteada, la función siga hasta el 404 de más abajo en vez
-    // de tirar por preguntarle a un puerto inhabilitado.
     const puerto = anchorPort();
     const modoOriginal = puerto.mode;
     let consultas = 0;

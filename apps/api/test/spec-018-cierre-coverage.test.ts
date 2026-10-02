@@ -8,13 +8,6 @@ import { anchorPort } from "../src/lib/anchor";
 import { db } from "../src/lib/db";
 import { FIXTURES } from "./global-setup";
 
-// SPEC-018 §Consolidación — los tres catches que quedaron sin ejercitar
-// después de A1-A6: `anchoring.ts` (confirmar un commitment que falla),
-// `notify.ts` (el INSERT de una notificación que viola una FK), y
-// `reconcile.ts` (el catch externo de `reconciliarParaLectura` — distinto
-// del catch interno por-evento que `reconcile.test.ts` ya cubre — y el
-// `findLiveThread` que falla para UN sospechoso sin tumbar a los demás).
-
 let proyecto: string;
 
 beforeAll(async () => {
@@ -195,12 +188,10 @@ describe("repararHilosSospechosos — findLiveThread falla para UNO, sigue con l
         .execute();
     }
 
-    // El que revienta.
     const idRompe = await stage();
     const eventoRompe = await transicionSinTxid(idRompe, 0);
     await transicionConTxid(idRompe, 1, `cierre-rompe-${idRompe}`);
 
-    // El que sí se repara: hilo real abierto y avanzado.
     const idSano = await stage();
     const pending = buildStageDatum({
       id: idSano,

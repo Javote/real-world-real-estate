@@ -1,6 +1,6 @@
 # SPEC-304 — La clave del `admin` es irreemplazable por construcción, y hay que decirlo
 
-> **Origen:** [`AUDITORIA-2026-09-11-calidad-de-contracts.md`](AUDITORIA-2026-09-11-calidad-de-contracts.md)
+> **Origen:** [`AUDITORIA-2026-09-11-calidad-de-contracts.md`](archive/AUDITORIA-2026-09-11-calidad-de-contracts.md)
 > §C-02. Nivel 🟢 (es documentación). **Independiente.** **No es código**: lo que falta es una
 > decisión escrita y una línea en el checklist de mainnet. Cambiar el diseño es 🔴 y no entra acá.
 
@@ -41,7 +41,7 @@ con datos de demo es perfectamente aceptable.
 |---|---|---|
 | 1 | `DECISIONS.md` | decisión nueva (la próxima libre, hoy `D-094`): **la clave del `admin` no es rotable** — es parámetro del script, así que rotarla cambia el policy id y abandona los hilos vivos. Con la consecuencia escrita, no solo el hecho |
 | 2 | `CLAUDE.md` raíz · §Estado, ítem 1 (Mainnet) | el checklist dice hoy *"runbook, habilitar la red, custodia de la clave"*. Sumar que **la clave es irreemplazable por construcción**, y que por eso la custodia no es una tarea de operaciones sino un requisito de diseño |
-| 3 | `contracts/CLAUDE.md` · §Estado y deuda | la misma consecuencia, del lado del subárbol que la causa |
+| 3 | `contracts/CLAUDE.md` | la misma consecuencia, del lado del subárbol que la causa |
 
 ## Las opciones, para que la decisión de mainnet no arranque de cero
 

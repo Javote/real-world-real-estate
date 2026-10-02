@@ -1,24 +1,8 @@
 import { cn } from '#/lib/cn'
 
-// **No es un componente del catálogo de M2-D3: es una sub-parte** que el
-// entregable describe adentro de dos componentes distintos — el pie del
-// `ProjectCard` ("footer progress bar with percentage on the right") y las
-// barras de completitud del panel del notary (M2-D5 fila 51).
-//
-// Vive suelto para no duplicarlo, no para agregar un componente que el
-// entregable no tiene. Si algún día M2-D3 lo nombra, se le pone su nombre.
-
 interface ProgressBarProps {
-  /** 0-100. */
   percent: number
-  /**
-   * Qué mide la barra, para el lector de pantalla (SPEC-114 §1). Obligatorio:
-   * un `role="progressbar"` sin nombre se anuncia "barra de progreso, 40%" sin
-   * decir de qué, y en un listado todas las barras suenan iguales. En un
-   * listado va el nombre de lo que se mide (el proyecto, la unidad).
-   */
   label: string
-  /** El porcentaje a la derecha, como en el pie del ProjectCard. */
   showValue?: boolean
   className?: string
 }

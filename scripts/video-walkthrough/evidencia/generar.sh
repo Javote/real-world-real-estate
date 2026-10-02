@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # Regenera los tres archivos de evidencia que se suben en cámara en T15 del
-# runbook del video (specs/GUION-2026-09-21-video-walkthrough.md) desde sus
+# runbook del video (specs/archive/GUION-2026-09-21-video-walkthrough.md) desde sus
 # fuentes HTML en fuentes/. Los archivos generados se commitean: este script
 # solo hace falta si se cambia una fuente.
 #

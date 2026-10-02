@@ -12,11 +12,6 @@ import { CARD_SHELL, CARD_SHELL_DENSE } from '#/lib/cardShell'
 import { cn } from '#/lib/cn'
 import { reintentarSiNoEsAusencia } from '#/lib/investor'
 
-// **M2-D5 fila 28s · `/public/dossier/:shareToken`** — Test ID: INV-DOSSIER-PUBLIC-002.
-//
-// Fuera del guard: el endpoint no pide sesión. No se monta PanelLayout
-// (el unread-count pediría 401). Header: logo + idioma.
-
 export const Route = createFileRoute('/public/dossier/$shareToken')({
   component: PublicDossierPage
 })

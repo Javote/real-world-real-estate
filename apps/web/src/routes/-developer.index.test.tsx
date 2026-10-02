@@ -23,7 +23,6 @@ describe('/developer (panel)', () => {
     montarRuta(Route, '/developer/')
 
     const panel = await screen.findByTestId('DEV-PANEL-KPIS-001')
-    // Solo los dos KPI pendientes (unidades y capital) muestran el guión; el resto, su cero.
     await vi.waitFor(() =>
       expect(within(panel).getAllByText(t('panel.emptyValue'))).toHaveLength(2)
     )
@@ -44,7 +43,6 @@ describe('/developer (panel)', () => {
     const panel = await screen.findByTestId('DEV-PANEL-KPIS-001')
     await vi.waitFor(() => expect(panel.textContent).toContain('42'))
     expect(panel.textContent).toContain('3')
-    // El capital llega en unidades mínimas: 500000 centavos son 5000.
     expect(panel.textContent).toContain('5')
     expect(panel.textContent).toContain('65%')
     expect(panel.textContent).toContain('7')

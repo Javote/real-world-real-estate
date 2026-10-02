@@ -5,12 +5,6 @@ import { createId } from "../src/db/id";
 import { db } from "../src/lib/db";
 import { FIXTURES } from "./global-setup";
 
-// SPEC-018 §A5 — el mismo bug que A4 cerró en `users.routes.ts:179`:
-// `PATCH /projects/:id` de un id inexistente daba el 500 genérico de oRPC en
-// vez de 404 (`executeTakeFirstOrThrow()` tira un error que
-// `relanzarRestriccionComoOrpc` no clasifica). No había ningún test de
-// `PATCH /projects/:id` antes de este archivo.
-
 let tokenAdmin: string;
 let proyectoAjeno: string;
 

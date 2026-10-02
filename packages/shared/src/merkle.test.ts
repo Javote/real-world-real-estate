@@ -2,8 +2,6 @@ import { createHash } from "node:crypto";
 import { describe, expect, it } from "vitest";
 import { merkleProof, merkleRoot, merkleRootFromProof } from "./merkle";
 
-// El hash que usa la API. Acá se inyecta el de Node; el package en sí no
-// importa `node:crypto` porque también lo compila el browser.
 const sha256Pair = (a: string, b: string) =>
   createHash("sha256")
     .update(Buffer.from(a + b, "hex"))
@@ -17,8 +15,6 @@ describe("merkleRoot", () => {
   });
 
   it("no depende del orden en que se subieron los archivos", () => {
-    // El orden de subida es un dato accidental: dos personas con la misma
-    // evidencia tienen que llegar al mismo commitment.
     const a = merkleRoot([hoja(1), hoja(2), hoja(3)], sha256Pair);
     const b = merkleRoot([hoja(3), hoja(1), hoja(2)], sha256Pair);
     expect(a).toBe(b);
@@ -31,8 +27,6 @@ describe("merkleRoot", () => {
   });
 
   it("distingue conjuntos que el estilo Bitcoin confundiría", () => {
-    // Con duplicación de nodo impar, [A,B,C] y [A,B,C,C] dan el mismo root.
-    // Subiendo el impar sin duplicar, no.
     const tres = merkleRoot([hoja(1), hoja(2), hoja(3)], sha256Pair);
     const cuatro = merkleRoot([hoja(1), hoja(2), hoja(3), hoja(3)], sha256Pair);
     expect(tres).not.toBe(cuatro);
@@ -56,8 +50,6 @@ describe("merkleRoot", () => {
 });
 
 describe("merkleProof", () => {
-  // La promesa de M2-D4 P5: un revisor rehace SU archivo hasta la raíz sin
-  // necesitar los demás archivos, solo sus hashes hermanos.
   const hojas = [hoja(1), hoja(2), hoja(3), hoja(4), hoja(5)];
   const root = merkleRoot(hojas, sha256Pair);
 
@@ -82,9 +74,6 @@ describe("merkleProof", () => {
   });
 });
 
-// SPEC-404 (P-05) — `merkleRootFromProof` es literalmente "lo que corre el
-// verificador" (su propio docstring), y era la única de las cuatro funciones
-// sin una sola aserción: aceptaba una hoja o un hermano con cualquier forma.
 describe("merkleRootFromProof — valida lo que verifica", () => {
   it("rechaza una hoja que no sea SHA-256 en hex", () => {
     expect(() => merkleRootFromProof("no-es-un-hash", [], sha256Pair)).toThrow(/SHA-256/);
@@ -101,10 +90,6 @@ describe("merkleRootFromProof — valida lo que verifica", () => {
   });
 
   it("el root de un bundle de 5 hojas es idéntico al de antes de esta spec", () => {
-    // Ancla el valor: cualquier cambio a la construcción del árbol lo mueve, y
-    // eso invalidaría los 180 eventos ya anclados contra la construcción de hoy.
-    // Valor calculado con la implementación previa a SPEC-404, sin tocar la
-    // función — esta spec no cambia el árbol (Alcance / NO-alcance).
     const hojas = [hoja(1), hoja(2), hoja(3), hoja(4), hoja(5)];
     expect(merkleRoot(hojas, sha256Pair)).toBe(
       "6501d4a0ed0060efc9f9370fe3738155fcff62c0f47b78d5ae2ac919ba53cdac"

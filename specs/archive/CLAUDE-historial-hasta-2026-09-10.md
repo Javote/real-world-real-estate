@@ -13,7 +13,7 @@
 > cuando haga falta reconstruir el *por qué* de una decisión ya tomada.
 >
 > El estado vigente de la entrega vive en `CLAUDE.md` raíz (`§El plan de entrega del Milestone 3`) y
-> en `specs/ESTADO-2026-09-10-catalyst-milestone-3.md` (el contraste contra los 5 Outputs oficiales
+> en `specs/archive/ESTADO-2026-09-10-catalyst-milestone-3.md` (el contraste contra los 5 Outputs oficiales
 > de Catalyst).
 
 ---
@@ -21,7 +21,7 @@
 **La instancia desplegada ancló de verdad por primera vez el 2026-09-03**, contra Cardano Preprod:
 `OnChainEvent` tiene su primera fila, `Confirmed`, con TXID real
 (`52a2aa42…f2f7aaf406`). Arrancar en real era configuración; esto ya es prueba. Lo que se hizo para
-llegar está en `DECISIONS.md` (D-075 → D-087) y en `specs/PLAN-2026-08-31-anclaje-real.md`; los
+llegar está en `DECISIONS.md` (D-075 → D-087) y en `specs/archive/PLAN-2026-08-31-anclaje-real.md`; los
 números medidos, en `specs/README.md`. Acá solo lo que falta.
 
 | # | Qué | Por qué ahí | Nivel |

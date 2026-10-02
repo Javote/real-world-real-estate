@@ -69,9 +69,6 @@ describe('BottomNav · tab activo', () => {
     expect(capital.getAttribute('data-status')).not.toBe('active')
   })
 
-  // SPEC-103 (F-06): el tab activo se distinguía solo por color y peso — sin
-  // aria-current, la navegación no anuncia dónde está quien usa un lector de
-  // pantalla.
   it('exactamente un aria-current="page", y coincide con el tab resaltado', async () => {
     renderNav('/developer/capital')
 

@@ -1,10 +1,17 @@
+import type { ProjectStatus } from '@plataforma/shared'
 import { useMutation, useQueries, useQuery, useQueryClient } from '@tanstack/react-query'
 import { createFileRoute, useNavigate } from '@tanstack/react-router'
-import { Building2, Heart, Images } from 'lucide-react'
+import {
+  Building2,
+  HardHat,
+  Heart,
+  Images,
+  KeyRound,
+  type LucideIcon,
+  PencilRuler
+} from 'lucide-react'
 import { useState } from 'react'
-import { ApiError, api } from '#/api/port'
-import { INVESTOR_ROLES } from '#/auth/roles'
-import { useRoleGuard } from '#/auth/useRoleGuard'
+import { ApiError, api, projectCoverUrl } from '#/api/port'
 import { DocumentCard } from '#/components/domain/DocumentCard'
 import { DocumentViewerModal } from '#/components/domain/DocumentViewerModal'
 import { ImageGalleryModal } from '#/components/domain/ImageGalleryModal'
@@ -12,6 +19,7 @@ import { Loading } from '#/components/domain/Loading'
 import { LocationMapModal } from '#/components/domain/LocationMapModal'
 import { PrimaryButton, SecondaryButton } from '#/components/domain/PrimaryButton'
 import { ProgressTimeline } from '#/components/domain/ProgressTimeline'
+import { type StatusTone, TONOS } from '#/components/domain/StatusPill'
 import { PanelLayout } from '#/components/PanelLayout'
 import { formatDate, formatMonthYear } from '#/i18n/format'
 import { useTranslation } from '#/i18n/useTranslation'
@@ -19,15 +27,22 @@ import { useObjectUrls } from '#/lib/blobUrls'
 import { CARD_SHELL } from '#/lib/cardShell'
 import { cn } from '#/lib/cn'
 import { esFoto, formatoArchivo, reintentarSiNoEsAusencia } from '#/lib/investor'
-import { avanceDeStages, bajarBlob, timelineDeStages } from '#/lib/stageProgress'
+import { avanceDeStages, bajarBlob, TONO_PROYECTO, timelineDeStages } from '#/lib/stageProgress'
 
-// **M2-D5 filas 06-07 · `/project/:projectId`** — capturas 6 y 7.
-// Test IDs: INV-PROJECT-DETAIL-001, INV-PROJECT-DOCS-002. Patrones: P1, P2.
-//
-// GET /projects/:id está scopeado por membresía: un buyer que no es miembro
-// recibe 403. Se muestra como error, no se cambia la API.
-//
-// Org name, rating y "Price from" no se dibujan: el contrato no los da.
+// Ninguno es un tilde: un tilde verde se lee como "verificado" (regla 17).
+const ICONO_DE_ESTADO: Record<ProjectStatus, LucideIcon> = {
+  planning: PencilRuler,
+  in_progress: HardHat,
+  delayed: HardHat,
+  completed: KeyRound
+}
+
+const BORDE_DE_TONO: Record<StatusTone, string> = {
+  verified: 'ring-1 ring-inset ring-verified',
+  pending: 'ring-1 ring-inset ring-pending',
+  info: 'ring-1 ring-inset ring-info',
+  neutral: 'ring-1 ring-inset ring-border'
+}
 
 export const Route = createFileRoute('/project/$projectId/')({
   component: InvestorProjectDetail
@@ -35,7 +50,6 @@ export const Route = createFileRoute('/project/$projectId/')({
 
 function InvestorProjectDetail() {
   const { projectId } = Route.useParams()
-  const { ready } = useRoleGuard(INVESTOR_ROLES)
   const { t, locale } = useTranslation()
   const navigate = useNavigate()
   const queryClient = useQueryClient()
@@ -52,44 +66,42 @@ function InvestorProjectDetail() {
   } = useQuery({
     queryKey: ['project', projectId],
     queryFn: () => api.getProject(projectId),
-    enabled: ready,
     retry: reintentarSiNoEsAusencia
   })
 
   const { data: documentos, isPending: documentosPending } = useQuery({
     queryKey: ['project', projectId, 'documents'],
     queryFn: () => api.listProjectDocuments(projectId),
-    enabled: ready && isSuccess,
+    enabled: isSuccess,
     retry: reintentarSiNoEsAusencia
   })
 
   const { data: favoritos } = useQuery({
     queryKey: ['investor', 'favorites'],
-    queryFn: api.listFavorites,
-    enabled: ready
+    queryFn: api.listFavorites
   })
 
   const fotos = (documentos ?? []).filter((d) => esFoto(d.evidenceType, d.mimeType))
   const docs = (documentos ?? []).filter((d) => !esFoto(d.evidenceType, d.mimeType))
 
   const blobs = useQueries({
-    queries: fotos.map((f, i) => ({
+    queries: fotos.map((f) => ({
       queryKey: ['evidence-blob', f.id],
       queryFn: async () => objectUrl(await api.downloadEvidence(f.id)),
-      // `gcTime: 0`: la URL se revoca al desmontar, así que la caché no puede
-      // sobrevivirle — devolvería una URL muerta al volver a la pantalla.
       gcTime: 0,
-      enabled: ready && isSuccess && (galeria || i === 0)
+      enabled: isSuccess && galeria
     }))
   })
 
-  const imagenes = fotos.flatMap((_f, i) => {
-    const url = blobs[i]?.data
-    return url ? [{ url, alt: t('investor.unit.gallery') }] : []
-  })
+  const portada = projectCoverUrl(projectId, proyecto?.coverUpdatedAt ?? null)
+  const imagenes = [
+    ...(portada ? [{ url: portada, alt: t('investor.unit.gallery') }] : []),
+    ...fotos.flatMap((_f, i) => {
+      const url = blobs[i]?.data
+      return url ? [{ url, alt: t('investor.unit.gallery') }] : []
+    })
+  ]
 
-  // Solo los documentos abren el visor, y un documento no es una imagen: el
-  // visor no tiene página que renderizar.
   const docAbierto = docs.find((d) => d.id === docId)
 
   const idsFavoritos = new Set((favoritos ?? []).map((p) => p.id))
@@ -100,11 +112,9 @@ function InvestorProjectDetail() {
     onSuccess: () => void queryClient.invalidateQueries({ queryKey: ['investor', 'favorites'] })
   })
 
-  if (!ready) return null
-
   if (error instanceof ApiError && error.status === 403) {
     return (
-      <PanelLayout rol="investor" title={t('error.forbidden')}>
+      <PanelLayout title={t('error.forbidden')}>
         <p className="text-body text-text-muted" data-testid="INV-PROJECT-DETAIL-001">
           {t('error.forbidden')}
         </p>
@@ -115,12 +125,10 @@ function InvestorProjectDetail() {
   const ubicacion = [proyecto?.city, proyecto?.country].filter(Boolean).join(', ')
   const stages = proyecto?.stages ?? []
   const timeline = timelineDeStages(stages)
-  // El timeline sale de `stages` uno a uno: todo nodo tiene su etapa.
   const idPorOrden: Record<number, string> = Object.fromEntries(
     stages.map((s) => [s.sequenceOrder, s.id])
   )
   const actual = timeline.find((s) => s.state === 'current')
-  const portada = imagenes[0]?.url
 
   const etiquetasDoc = {
     verified: t('status.verified'),
@@ -134,7 +142,6 @@ function InvestorProjectDetail() {
 
   return (
     <PanelLayout
-      rol="investor"
       title={proyecto?.name ?? t('panel.investor.title')}
       {...(ubicacion ? { context: ubicacion } : {})}
       back={{
@@ -147,7 +154,7 @@ function InvestorProjectDetail() {
           <button
             type="button"
             className="block w-full"
-            onClick={() => imagenes.length && setGaleria(true)}
+            onClick={() => (portada || fotos.length) && setGaleria(true)}
             aria-label={t('investor.unit.openGallery')}
           >
             {portada ? (
@@ -158,8 +165,6 @@ function InvestorProjectDetail() {
               </span>
             )}
           </button>
-          {/* Sin `data-testid`: INV-FAV-TOGGLE-002 vive en la fila 13
-              (`/investor/favorites`). Acá es la misma acción, no el mismo ID. */}
           <button
             type="button"
             aria-pressed={esFavorito}
@@ -172,14 +177,22 @@ function InvestorProjectDetail() {
         </div>
 
         <div className="grid grid-cols-2 gap-s3">
-          <article className={cn('flex flex-col gap-s2', CARD_SHELL)}>
+          <article
+            className={cn(
+              'flex flex-col items-center justify-center gap-s2 text-center',
+              CARD_SHELL,
+              proyecto?.status ? TONOS[TONO_PROYECTO[proyecto.status]] : undefined,
+              proyecto?.status ? BORDE_DE_TONO[TONO_PROYECTO[proyecto.status]] : undefined
+            )}
+          >
             {proyecto?.status ? (
-              <span className="text-body-sm font-medium text-text-muted">
-                {t(`project.status.${proyecto.status}`)}
-              </span>
+              <>
+                <EstadoIcono status={proyecto.status} />
+                <span className="text-h2 font-bold">{t(`project.status.${proyecto.status}`)}</span>
+              </>
             ) : null}
             {proyecto?.estimatedDelivery ? (
-              <p className="text-body-sm text-text-muted">
+              <p className="text-body-sm text-text-secondary">
                 {t('investor.project.delivery', {
                   date: formatMonthYear(String(proyecto.estimatedDelivery), locale)
                 })}
@@ -194,8 +207,18 @@ function InvestorProjectDetail() {
               className="overflow-hidden rounded-xl bg-card text-left shadow-e1"
               aria-label={t('investor.project.location')}
             >
-              <span className="flex aspect-video items-center justify-center bg-surface-alt text-primary">
-                <Building2 className="size-icon-stat" aria-hidden="true" />
+              <span className="block aspect-video">
+                <LocationMapModal
+                  open
+                  variant="preview"
+                  latitude={proyecto.latitude}
+                  longitude={proyecto.longitude}
+                  labels={{
+                    title: t('investor.project.location'),
+                    close: t('map.close'),
+                    marker: t('map.marker')
+                  }}
+                />
               </span>
               {ubicacion ? (
                 <span className="block truncate px-s3 py-s2 text-caption text-text-muted">
@@ -247,11 +270,6 @@ function InvestorProjectDetail() {
           )}
         </section>
 
-        {/* SPEC-220 · la entrada al perfil del desarrollador, que es como
-            M2-D1 §Screen tree la describe: *"linked from project"*. Solo se
-            dibuja si la obra tiene organización — los proyectos anteriores a
-            la migración 0010 no la tienen, y un link a una pantalla vacía es
-            peor que no ofrecerlo. */}
         {proyecto?.organizationId ? (
           <SecondaryButton
             testId="INV-DEVELOPER-LINK-004"
@@ -358,5 +376,14 @@ function InvestorProjectDetail() {
         }}
       />
     </PanelLayout>
+  )
+}
+
+function EstadoIcono({ status }: { status: ProjectStatus }) {
+  const Icono = ICONO_DE_ESTADO[status]
+  return (
+    <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-card">
+      <Icono className="size-icon-stat" aria-hidden="true" />
+    </span>
   )
 }

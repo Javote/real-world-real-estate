@@ -3,39 +3,13 @@ import { useEffect } from 'react'
 import { cn } from '#/lib/cn'
 import { PropNexusMark } from './PropNexusMark'
 
-// M2-D3 §Foundation · GradientHeader — *"Use on every primary screen, every
-// modal landing, every detail view"*.
-//
-// El logo no se omite: es el ancla agnóstica de rol (M2-D3 y D-074). El slot
-// derecho es de utilidades globales. Si hay `back`, va **entre** la marca y
-// el título — nunca en el lugar del logo, nunca debajo del h1.
-//
-// **También publica `document.title`** (SPEC-103, F-05): todas las pantallas
-// reales pasan por acá —directo o vía `PanelLayout`— así que es el único
-// lugar donde hace falta escribirlo. `title` ya es la traducción que el
-// llamador le pasó al `h1`; nunca un string nuevo. El nombre de marca es la
-// única excepción a "sale del diccionario" (D-018: es marca, no traducción).
-
 interface GradientHeaderProps {
   title: string
   subtitle?: string
-  /** Línea de contexto bajo el título: "Welcome, Admin Alpine". */
   context?: string
-  /** "← Back to <parent>" en pantallas que tienen padre. */
   back?: { label: string; onClick: () => void }
-  /** Solo utilidades globales. */
   right?: React.ReactNode
-  /**
-   * Acción primaria de la pantalla, **a la altura del `h1`** — el "+ New" de
-   * la captura 35-36.
-   *
-   * Va acá y no en `right` porque no es lo mismo: `right` son utilidades
-   * globales (notificaciones, idioma, perfil) que se repiten en toda la app y
-   * viven en la fila de arriba. Esta es la acción de ESTA pantalla, y la
-   * captura la alinea con el título.
-   */
   titleAction?: React.ReactNode
-  /** Badge cuadrado a la izquierda del título (el logo del proyecto en el panel). */
   badge?: React.ReactNode
   className?: string
 }
@@ -68,7 +42,6 @@ export function GradientHeader({
   return (
     <header
       className={cn(
-        // Radio solo abajo: el header nace pegado al borde superior del viewport.
         'bg-linear-to-br from-primary to-primary-dark rounded-b-xl px-s4 pb-s5 pt-s4 text-white',
         className
       )}

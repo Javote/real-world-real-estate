@@ -6,14 +6,6 @@ import { transitionStage } from "../src/domain/stage-transition";
 import { db } from "../src/lib/db";
 import { crearStageMinteado } from "./helpers/stages";
 
-// SPEC-018 §A5 — `compileDossier` recompila un dossier NO firmado cuyo hash
-// cambió (`dossier.ts` — el `else if` que compara `masterHash` contra el
-// recién calculado). Ningún test existente completa un stage entre dos
-// compilaciones — todos los que hay verifican la estabilidad, no el cambio.
-// Proyecto propio y aislado: completar un stage es un efecto de proyecto
-// entero, y no hay que arriesgar los conteos que otras suites asumen sobre
-// `FIXTURES.proyecto`.
-
 afterAll(async () => {
   await db.destroy();
 });
@@ -86,8 +78,6 @@ describe("compileDossier — recompila cuando lo que compromete cambió", () => 
 
     const segundo = await compileDossier(unitId);
     expect(segundo).not.toBeNull();
-    // Misma fila (mismo id, mismo shareToken si lo hubiera) — se actualiza,
-    // no se duplica.
     expect(segundo!.id).toBe(dossierId);
     expect(segundo!.masterHash).not.toBe(hashInicial);
 

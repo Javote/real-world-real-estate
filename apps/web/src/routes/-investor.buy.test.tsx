@@ -25,6 +25,7 @@ const proyecto = (sobre: Partial<Project>): Project => ({
   estimatedDelivery: null,
   status: 'in_progress',
   organizationId: null,
+  coverUpdatedAt: null,
   createdAt: '2026-01-01T00:00:00.000Z',
   updatedAt: '2026-01-01T00:00:00.000Z',
   stages: [],
@@ -47,7 +48,6 @@ function montar(entrada = RUTA) {
   return montarRuta(Route, RUTA, EXTRAS, entrada)
 }
 
-/** Lo que `validateSearch` dejó en la ruta (`location.search` es la URL cruda). */
 const busqueda = (router: ReturnType<typeof montar>) => router.state.matches.at(-1)?.search
 
 function preparar(proyectos: Project[] = [TORRE_A, TORRE_B], favoritos: Project[] = []) {
@@ -171,8 +171,6 @@ describe('/investor/buy', () => {
       })
     })
 
-    // El router mezcla `{...searchCrudoDelPadre, ...validado}` y la raíz no valida:
-    // el parser devuelve cada clave (`undefined` si es inválida) para pisar el crudo.
     it('un estado inválido en la URL no llega al pedido de proyectos', async () => {
       const listar = preparar()
       montar(`${RUTA}?status=otro&sort=otro`)
@@ -270,7 +268,6 @@ describe('/investor/buy', () => {
 
       await screen.findByTestId('INV-BUY-FILTER-001')
       expect(busqueda(router)).toEqual({ view: 'filter' })
-      // El overlay del diálogo tapa la barra: se busca la pill aunque esté aria-hidden.
       const pill = screen
         .getAllByRole('button', { name: t('buy.filters'), hidden: true })
         .find((p) => p.getAttribute('aria-pressed') === 'true') as HTMLElement
@@ -388,8 +385,6 @@ describe('/investor/buy', () => {
       expect(within(zona).queryByRole('button')).toBeNull()
 
       await userEvent.type(within(zona).getByLabelText(t('buy.searchLabel')), 'T')
-      // El debounce del campo navega a `?q=T`: esperarlo antes de elegir evita que,
-      // bajo carga (cobertura), pise la navegación al proyecto y la deje en /investor/buy.
       await waitFor(() => expect(busqueda(router)).toEqual({ view: 'search', q: 'T' }))
       await userEvent.click(await within(zona).findByRole('button', { name: 'Torre B' }))
 
@@ -409,11 +404,8 @@ describe('/investor/buy', () => {
       await screen.findByTestId('INV-BUY-MAP-001')
       await waitFor(() => expect(marker).toHaveBeenCalledTimes(1))
       expect(marker).toHaveBeenCalledWith([-34.6, -58.4])
-      // Crear el mapa no filtra el listado: con el zoom de calle del primer pin
-      // lo dejaba en una sola obra (visto en producción el 2026-09-28).
       expect(listar).not.toHaveBeenCalledWith({ bbox: expect.any(String) })
 
-      // El encuadre (o el usuario) mueve el mapa, y ahí sí se pide con el viewport.
       dispararMoveend()
       await waitFor(() => expect(listar).toHaveBeenCalledWith({ bbox: '-58.4,-34.7,-58.3,-34.5' }))
     })

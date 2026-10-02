@@ -6,13 +6,6 @@ import { en } from "../src/lib/arrays";
 import { db } from "../src/lib/db";
 import { FIXTURES } from "./global-setup";
 
-// `GET /developer/audit-log` devolvía la tabla entera. El entregable dice lo
-// contrario —M2-D1 §4 "developer sees project-scoped events", M2-D4 §P6 "all
-// events scoped to that developer's projects"— y el agujero apareció al
-// etiquetar la ruta, no por un reporte. Estos casos fijan las tres cosas que
-// importan: se ve lo propio, NO se ve lo ajeno, y lo que no cuelga de un
-// proyecto queda afuera.
-
 const ACCION = "TEST_AUDIT_SCOPE";
 
 let deLoMio: string;
@@ -101,19 +94,14 @@ describe("GET /developer/audit-log · scope por proyecto", () => {
   });
 
   it("y también los de una entidad que cuelga de su proyecto", async () => {
-    // El caso del join: el evento apunta a un Stage, y el Stage al proyecto.
     expect(await acciones(FIXTURES.activo)).toContain(deUnStagePropio);
   });
 
   it("NO ve los de un proyecto donde no es miembro", async () => {
-    // El agujero, como test de regresión.
     expect(await acciones(FIXTURES.activo)).not.toContain(deOtroProyecto);
   });
 
   it("NO ve los que no cuelgan de ningún proyecto", async () => {
-    // `User` no está en el mapeo a propósito: crear usuarios o cambiar roles no
-    // pertenece a un proyecto. Fail-closed — un entityType que nadie mapeó no se
-    // muestra, en vez de mostrarse a todos.
     expect(await acciones(FIXTURES.activo)).not.toContain(deUnUsuario);
   });
 

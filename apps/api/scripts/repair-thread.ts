@@ -9,49 +9,6 @@ import {
 } from "@plataforma/shared";
 import { db } from "../src/lib/db";
 
-// Capa 2 de specs/REPORTE-2026-09-10-prueba-de-volumen.md §Reparación del hilo
-// huérfano de la etapa 3 — la herramienta que esa sesión hizo a mano, ahora
-// general y guardada en el repo.
-//
-// **Qué resuelve.** Un stage cuyo hilo on-chain existe (mint hecho, tal vez
-// varias transiciones) pero cuya siguiente transición nunca se envió, o se
-// envió y el proceso murió antes de guardar el recibo (D-059, y el caso real
-// de la etapa 3: `AnchorRejectedError` no fue la causa, un `crash` a mitad de
-// camino sí). Encuentra el UTxO vivo del hilo **directo en la cadena**
-// (`findLiveThread`, Capa 1 del mismo puerto) y arma la transacción de avance
-// a partir de ahí — no hace falta conocer el `outputRef` a mano como en la
-// versión de sesión anterior.
-//
-// **Por qué es 🔴 y por qué el diseño lo refleja** (`CLAUDE.md` raíz
-// §Niveles de autonomía: claves y firmas, siempre el humano lidera). Esta
-// herramienta firma con `SERVICE_WALLET_PRIVATE_KEY` y gasta ADA de verdad.
-// El riesgo que el dueño pidió eliminar —"que no haya riesgo de gastar
-// ADA"— no es que la herramienta no pueda enviar transacciones, es que
-// **nunca lo haga por accidente**:
-//
-//   1. **Sin `--confirm`, no firma nada.** El comportamiento por default es
-//      leer el hilo vivo, armar el datum siguiente y mostrar exactamente lo
-//      que se haría — el mismo criterio que el dry run de la migración 0004
-//      (`BEGIN; ...; ROLLBACK;`), pero para una transacción de verdad no hay
-//      forma de "revertirla" después de enviada, así que acá el dry run es
-//      el default, no una opción.
-//   2. **No es una ruta ni un job.** Nada del código de producción la
-//      importa ni la llama — vive en `scripts/`, que solo corre `tsx` a
-//      mano, igual que `docs:openapi`/`docs:api`. No hay wiring que un futuro
-//      cron o endpoint pueda activar sin querer.
-//   3. **No toca la base.** Igual que la versión de sesión anterior, imprime
-//      el `UPDATE OnChainEvent` para correrlo aparte, revisado — la
-//      reparación de bookkeeping (Capa 1, `domain/reconcile.ts` →
-//      `repararHilosSospechosos`) ya lo hace sola cuando el hilo encontrado
-//      coincide con lo que el evento declara; esta herramienta es para
-//      cuando hace falta *enviar* la transacción que falta, que es la parte
-//      que Capa 1 nunca hace.
-//
-// Uso:
-//   pnpm --filter @plataforma/api exec tsx scripts/repair-thread.ts \
-//     --stage <stageId> --to <InProgress|Observed|Completed> \
-//     [--evidence-root <hex de 64>] [--completed-at <epoch ms>] [--confirm]
-
 interface Args {
   stageId: string;
   to: StageState;

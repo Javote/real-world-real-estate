@@ -71,6 +71,26 @@ describe('/notary/dossier/$dossierId', () => {
     expect(screen.queryByTestId('NOT-DOSSIER-REJECT-001')).toBeNull()
   })
 
+  it('rechazado: sin acciones hasta que el dossier cambie y vuelva a la cola', async () => {
+    autenticarComo(NOTARY_USER)
+    vi.spyOn(api, 'getDossier').mockResolvedValue({
+      ...unDossier(),
+      status: 'rejected',
+      rejectionNote: 'falta el permiso municipal'
+    })
+
+    montarRuta(
+      Route.options.component as () => React.ReactElement,
+      '/notary/dossier/$dossierId',
+      ['/notary'],
+      '/notary/dossier/d1'
+    )
+
+    await screen.findByText('Torre A · 4B')
+    expect(screen.queryByTestId('NOT-DOSSIER-SIGN-001')).toBeNull()
+    expect(screen.queryByTestId('NOT-DOSSIER-REJECT-001')).toBeNull()
+  })
+
   it('NOT-DOSSIER-SIGN-001: firmar llama a api.signDossier y navega de vuelta al panel', async () => {
     autenticarComo(NOTARY_USER)
     vi.spyOn(api, 'getDossier').mockResolvedValue(unDossier())
@@ -106,8 +126,6 @@ describe('/notary/dossier/$dossierId', () => {
     await userEvent.click(screen.getByTestId('NOT-DOSSIER-REJECT-001'))
 
     const nota = await screen.findByLabelText(/observaciones/i)
-    // `delay: null` — SPEC-019 §Paso 0, punto 5: bajo carga, 23 caracteres
-    // tecla por tecla pasan el `testTimeout`.
     await userEvent.type(nota, 'Falta el plano firmado', { delay: null })
     await userEvent.click(screen.getByRole('button', { name: /enviar/i }))
 

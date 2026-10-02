@@ -1,14 +1,6 @@
 import { useEffect, useRef } from 'react'
 import { cn } from '#/lib/cn'
 
-// M2-D3 §Forms & Controls · TextArea — *"Same styling as TextInput, larger.
-// Optional character counter."*
-//
-// Lo usan las dos superficies donde alguien escribe prosa: la observación del
-// certifier (`ObserveStageModal`) y la nota de rechazo del notario. En las dos
-// **el texto queda off-chain**: puede nombrar personas, y a la cadena solo van
-// commitments y refs opacas (regla 2).
-
 interface TextAreaProps {
   id: string
   label: string
@@ -16,11 +8,9 @@ interface TextAreaProps {
   onChange: (value: string) => void
   placeholder?: string
   rows?: number
-  /** Con esto aparece el contador. Además limita la entrada. */
   maxLength?: number
   error?: string
   disabled?: boolean
-  /** El modal de observación lo pide enfocado al abrir (M2-D3). */
   autoFocus?: boolean
   className?: string
 }
@@ -40,12 +30,6 @@ export function TextArea({
 }: TextAreaProps) {
   const ref = useRef<HTMLTextAreaElement>(null)
 
-  // **Foco por ref y no por el atributo `autoFocus`.** M2-D3 lo pide para el
-  // `ObserveStageModal` —"Observations textarea (focused on open)"—, pero el
-  // atributo de React enfoca al MONTAR, y adentro de un diálogo el montaje pasa
-  // antes de que el diálogo tome el foco: se lo roba de vuelta y el cursor
-  // termina en el contenedor. Con el efecto, el foco se pide después de que el
-  // árbol se estabilizó, que es cuando el usuario lo ve.
   useEffect(() => {
     if (autoFocus) ref.current?.focus()
   }, [autoFocus])

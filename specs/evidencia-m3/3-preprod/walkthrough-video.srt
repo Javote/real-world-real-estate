@@ -1,0 +1,483 @@
+1
+00:00:01,000 --> 00:00:03,974
+This is the investor's screen.
+
+2
+00:00:06,000 --> 00:00:10,278
+In the top bar, we have our notifications…
+
+3
+00:00:12,000 --> 00:00:15,843
+…our profile settings, and the language toggle.
+
+4
+00:00:24,000 --> 00:00:29,148
+For each project, we see its location and its status.
+
+5
+00:00:30,000 --> 00:00:34,278
+We can search for projects on a map…
+
+6
+00:00:57,000 --> 00:00:59,104
+…or by keyword…
+
+7
+00:01:12,000 --> 00:01:15,409
+…and filter them by several criteria.
+
+8
+00:01:26,000 --> 00:01:29,800
+We can save any project to our favorites…
+
+9
+00:01:30,000 --> 00:01:35,148
+…and find them later in the sidebar on the left.
+
+10
+00:01:42,000 --> 00:01:49,322
+Inside a project, we see its name, a cover image, its status and its location.
+
+11
+00:01:51,000 --> 00:01:57,887
+We can also see its documents, each one with its fingerprint anchored on Cardano.
+
+12
+00:02:00,000 --> 00:02:03,843
+Each document can be opened and downloaded.
+
+13
+00:02:09,000 --> 00:02:12,843
+Below, the project's progress, stage by stage.
+
+14
+00:02:15,000 --> 00:02:21,452
+This is the developer's profile: a description, their track record, and their projects.
+
+15
+00:02:24,000 --> 00:02:29,583
+Each project shows its price, its floor area and its status.
+
+16
+00:02:39,000 --> 00:02:43,278
+"Units" takes us to the units we've bought.
+
+17
+00:02:51,000 --> 00:02:56,583
+Each unit has its image gallery, its location and its details…
+
+18
+00:02:57,000 --> 00:03:00,409
+…its progress, and the purchase amount.
+
+19
+00:03:03,000 --> 00:03:11,800
+We can also follow every stage, all the way down to the proof behind each one: its Merkle root and its transaction.
+
+20
+00:03:12,000 --> 00:03:17,583
+And the contract, with its total amount and its signing date.
+
+21
+00:03:21,000 --> 00:03:29,191
+"Buy" takes us back to the screen we saw at the start, with the projects on sale.
+
+22
+00:03:34,880 --> 00:03:37,854
+This is the developer panel.
+
+23
+00:03:39,880 --> 00:03:45,463
+From the sidebar on the left, we can open our projects.
+
+24
+00:03:53,880 --> 00:03:59,897
+Under Capital, we see the total raised and the number of investors.
+
+25
+00:04:03,880 --> 00:04:08,593
+In Progress, we follow each project, stage by stage.
+
+26
+00:04:19,880 --> 00:04:25,028
+Back on the panel, these cards show the key metrics.
+
+27
+00:04:29,880 --> 00:04:33,723
+Below, we can list all our investors.
+
+28
+00:04:39,880 --> 00:04:43,723
+We can see all the anchored evidence.
+
+29
+00:05:01,880 --> 00:05:05,723
+And we can see the audit log.
+
+30
+00:05:17,880 --> 00:05:20,854
+Let's create a new project.
+
+31
+00:05:27,880 --> 00:05:30,419
+We choose a name.
+
+32
+00:05:33,880 --> 00:05:39,028
+We can enter the exact address, or use the map.
+
+33
+00:05:49,880 --> 00:05:53,289
+We choose the number of units.
+
+34
+00:05:53,880 --> 00:05:58,593
+We confirm the stage template: the standard ten stages.
+
+35
+00:05:59,880 --> 00:06:03,289
+We set the estimated delivery date.
+
+36
+00:06:15,880 --> 00:06:19,289
+We attach the project's cover image.
+
+37
+00:06:27,880 --> 00:06:30,854
+And we click Create project.
+
+38
+00:06:35,910 --> 00:06:38,884
+Back on the developer panel.
+
+39
+00:06:40,910 --> 00:06:44,319
+Our new project is already listed.
+
+40
+00:06:46,910 --> 00:06:49,884
+It starts at zero percent.
+
+41
+00:06:55,910 --> 00:06:59,753
+In Progress, the delivered towers are complete.
+
+42
+00:07:07,910 --> 00:07:12,188
+The new project has ten stages, all pending.
+
+43
+00:07:19,910 --> 00:07:22,884
+Let's open the project again.
+
+44
+00:07:26,910 --> 00:07:29,884
+First, we add a unit.
+
+45
+00:07:31,910 --> 00:07:36,623
+Unit 5B, on the fifth floor, 85 square meters.
+
+46
+00:07:43,910 --> 00:07:46,884
+It shows up as available.
+
+47
+00:07:55,910 --> 00:07:58,884
+Now we invite a buyer.
+
+48
+00:08:01,910 --> 00:08:04,884
+We enter the buyer's email…
+
+49
+00:08:07,910 --> 00:08:09,580
+…the unit…
+
+50
+00:08:10,910 --> 00:08:13,014
+…and the amount.
+
+51
+00:08:16,910 --> 00:08:19,449
+We send the invitation.
+
+52
+00:08:19,910 --> 00:08:22,884
+Unit 5B is now reserved.
+
+53
+00:08:29,910 --> 00:08:34,188
+Now we upload evidence for the first stage.
+
+54
+00:08:38,910 --> 00:08:41,449
+We select stage one.
+
+55
+00:08:41,910 --> 00:08:44,449
+We choose the files.
+
+56
+00:09:02,910 --> 00:09:05,884
+Three documents, ready to anchor.
+
+57
+00:09:08,910 --> 00:09:11,449
+We click Anchor evidence.
+
+58
+00:09:14,910 --> 00:09:18,319
+The evidence is anchored on Cardano.
+
+59
+00:09:20,910 --> 00:09:24,753
+We can check it on the explorer.
+
+60
+00:09:26,910 --> 00:09:30,319
+This is the transaction on Cardanoscan.
+
+61
+00:09:35,910 --> 00:09:38,449
+Back in the app.
+
+62
+00:09:44,910 --> 00:09:46,145
+Done.
+
+63
+00:09:51,440 --> 00:09:54,849
+Now we switch to the investor.
+
+64
+00:09:56,440 --> 00:09:58,979
+A new notification arrives.
+
+65
+00:09:59,440 --> 00:10:03,283
+It's an invitation to buy unit 5B.
+
+66
+00:10:11,440 --> 00:10:17,023
+We open the invitation: the project, the unit and the amount.
+
+67
+00:10:17,440 --> 00:10:20,240
+The invitation is anchored on chain.
+
+68
+00:10:20,440 --> 00:10:22,544
+We accept it.
+
+69
+00:10:24,440 --> 00:10:27,414
+Unit 5B is now ours.
+
+70
+00:10:32,440 --> 00:10:37,153
+The gallery shows the cover and the evidence images.
+
+71
+00:10:47,440 --> 00:10:50,414
+Its location on the map.
+
+72
+00:10:53,440 --> 00:10:56,849
+The unit details and its progress.
+
+73
+00:10:59,440 --> 00:11:05,240
+The news: the invitation, the stage in progress, and the anchored evidence.
+
+74
+00:11:05,440 --> 00:11:08,414
+Its place in the building.
+
+75
+00:11:17,440 --> 00:11:20,414
+Below, the contract and payments.
+
+76
+00:11:26,440 --> 00:11:31,153
+The contract: the total amount and the signing date.
+
+77
+00:11:35,740 --> 00:11:37,844
+Now the certifier.
+
+78
+00:11:38,740 --> 00:11:42,149
+One stage is assigned for review.
+
+79
+00:11:42,740 --> 00:11:47,453
+Stage one, with the evidence uploaded by the developer.
+
+80
+00:11:50,740 --> 00:11:55,018
+Something is missing, so we observe the stage.
+
+81
+00:11:55,740 --> 00:12:00,018
+We write what the developer needs to fix.
+
+82
+00:12:04,740 --> 00:12:07,279
+We send the observation.
+
+83
+00:12:10,740 --> 00:12:13,279
+Back to the developer.
+
+84
+00:12:16,740 --> 00:12:20,149
+The stage now shows as observed.
+
+85
+00:12:23,740 --> 00:12:26,279
+We resume the stage.
+
+86
+00:12:30,740 --> 00:12:33,714
+The certifier reviews it again.
+
+87
+00:12:38,740 --> 00:12:41,540
+This time, we certify the stage.
+
+88
+00:12:41,740 --> 00:12:44,714
+The certification goes on chain.
+
+89
+00:12:46,740 --> 00:12:49,714
+The stage leaves the queue.
+
+90
+00:12:52,740 --> 00:12:56,583
+And it appears among the issued certificates.
+
+91
+00:13:03,710 --> 00:13:07,988
+Back with the investor, on the delivered tower.
+
+92
+00:13:08,710 --> 00:13:12,119
+Unit 1A, in Torre Volumen 3.
+
+93
+00:13:14,710 --> 00:13:17,684
+Its details and its progress.
+
+94
+00:13:23,710 --> 00:13:26,510
+At the end, the dossier.
+
+95
+00:13:26,710 --> 00:13:32,293
+The dossier hash is still pending: nobody has signed it yet.
+
+96
+00:13:32,710 --> 00:13:35,684
+It lists every anchored artifact.
+
+97
+00:13:38,710 --> 00:13:42,988
+We can share it with a read-only link.
+
+98
+00:13:47,710 --> 00:13:51,553
+Anyone with the link can open it.
+
+99
+00:13:53,710 --> 00:13:57,119
+The public view, without logging in.
+
+100
+00:13:59,710 --> 00:14:03,988
+The same hashes, still waiting for a signature.
+
+101
+00:14:08,710 --> 00:14:10,814
+Now the notary.
+
+102
+00:14:11,710 --> 00:14:15,119
+One dossier is waiting for review.
+
+103
+00:14:17,710 --> 00:14:20,684
+The notary reviews every artifact.
+
+104
+00:14:28,710 --> 00:14:31,249
+And signs the dossier.
+
+105
+00:14:31,710 --> 00:14:34,510
+The signature goes on chain.
+
+106
+00:14:34,710 --> 00:14:37,684
+The dossier is now signed.
+
+107
+00:14:42,210 --> 00:14:45,010
+The dossier is now signed.
+
+108
+00:14:45,210 --> 00:14:49,010
+Anyone can check it, without an account.
+
+109
+00:14:49,210 --> 00:14:52,010
+This is the shared link, in a private window.
+
+110
+00:14:52,210 --> 00:14:56,488
+It now shows as signed, with its hash.
+
+111
+00:14:58,640 --> 00:15:01,179
+Back with the developer.
+
+112
+00:15:03,640 --> 00:15:06,179
+We open the project.
+
+113
+00:15:09,640 --> 00:15:13,483
+Ten percent done, and its first buyer.
+
+114
+00:15:15,640 --> 00:15:19,918
+The contract for unit 5B, recorded on chain.
+
+115
+00:15:23,510 --> 00:15:26,049
+Finally, the audit log.
+
+116
+00:15:30,510 --> 00:15:35,223
+Every action, with who did it and its transaction.
+
+117
+00:15:36,510 --> 00:15:39,484
+We can filter by stage…
+
+118
+00:15:44,510 --> 00:15:46,614
+…or by signatures.
+
+119
+00:15:52,510 --> 00:15:55,049
+Back to all events.
+
+120
+00:16:00,510 --> 00:16:03,484
+Each transaction can be verified…
+
+121
+00:16:08,510 --> 00:16:11,484
+…on Cardanoscan, outside the app.

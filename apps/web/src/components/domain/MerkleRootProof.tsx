@@ -1,18 +1,5 @@
 import { HashChip } from './HashChip'
 
-// **M2-D4 Pattern 5 · Merkle root — la prueba de integridad del bundle.**
-//
-// Se ancla **solo la raíz**, no cada archivo: anclar archivo por archivo es
-// derrochar cadena y además conceptualmente equivocado, porque lo que importa
-// es el bundle entero.
-//
-// **Por qué se muestran la raíz Y los hashes de archivo:** la raíz sola prueba
-// la integridad del conjunto pero no dice cuál archivo es cuál. Los hashes por
-// archivo le dan al revisor los valores que necesita para verificar uno
-// específico caminando el árbol. Los dos son públicos y los dos van en la
-// superficie — pero a profundidades distintas: raíz + TXID juntos acá, hashes
-// por archivo un nivel más adentro (el modal de stage).
-
 interface ArchivoDelBundle {
   id: string
   nombre: string
@@ -21,12 +8,9 @@ interface ArchivoDelBundle {
 
 interface MerkleRootProofProps {
   merkleRoot: string
-  /** TXID del anclaje del bundle. `null` mientras no confirmó. */
   txid: string | null
-  /** Un nivel más adentro: solo cuando la superficie es el modal de stage. */
   archivos?: ArchivoDelBundle[]
   onOpenTxid?: () => void
-  /** Cargar el camino de Merkle de un archivo: lo inicia el usuario (P5). */
   onOpenArchivo?: (archivo: ArchivoDelBundle) => void
   testId?: string
   labels: {
@@ -34,7 +18,6 @@ interface MerkleRootProofProps {
     txidLabel: string
     filesLabel: string
     pending: string
-    /** Sin raíz: hashes por archivo, sin afirmar el paquete. */
     pendingRoot?: string
     copy: string
     copied: string
@@ -71,8 +54,6 @@ export function MerkleRootProof({
             copiedLabel={labels.copied}
           />
         ) : (
-          // Sin TXID no se muestra chip: un HashChip vacío insinuaría una
-          // prueba que no existe (regla 17).
           <span className="text-body-sm text-pending">{labels.pending}</span>
         )}
       </div>

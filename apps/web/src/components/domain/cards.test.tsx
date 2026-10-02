@@ -13,8 +13,6 @@ import { ProjectCard } from './ProjectCard'
 import { StatCard } from './StatCard'
 import { UnitCard } from './UnitCard'
 
-// M2-D3 §Cards. Estos tests fijan las reglas del entregable, no el aspecto.
-
 const TXID = '3f8a9b2c1d0e4f5a6b7c8d9e0f1a2b3c4d5e6f708192a3b4c5d6e7f8091a2b3c'
 const COPIA = { copy: 'Copiar', copied: 'Copiado' }
 
@@ -102,7 +100,6 @@ describe('UnitCard', () => {
         status={{ tone: 'verified', label: 'Vendida' }}
       />
     )
-    // El avance es del PROYECTO y es el mismo para todas las unidades hermanas.
     expect(screen.getByRole('progressbar').getAttribute('aria-valuenow')).toBe('60')
 
     rerender(
@@ -114,7 +111,6 @@ describe('UnitCard', () => {
         status={{ tone: 'neutral', label: 'Disponible' }}
       />
     )
-    // Repetir el mismo número en cuarenta filas no informa nada.
     expect(screen.queryByRole('progressbar')).toBeNull()
   })
 })
@@ -131,7 +127,6 @@ describe('ProgressTimeline', () => {
         ]}
       />
     )
-    // Un proyecto de tres etapas no puede dibujar siete nodos fantasma.
     expect(screen.getByRole('list', { name: 'Avance' }).children).toHaveLength(3)
   })
 })
@@ -216,8 +211,6 @@ describe('InvestorCard', () => {
   })
 })
 
-// R11 — SPEC-019 W8: una variante de props por `it`, cada una con algo visible.
-
 describe('ProjectCard · variante buy', () => {
   const base = {
     name: 'Torre Alpine',
@@ -288,8 +281,6 @@ describe('ProjectCard · variante buy', () => {
   })
 
   it('sin handler no hay favorito fantasma', () => {
-    // Desde SPEC-114 §3 el tipo ya no deja pasar props de favorito sin
-    // handler; la guarda en runtime queda igual, por si llega por un spread.
     // @ts-expect-error — favorito sin onToggleFavorite
     render(<ProjectCard {...base} favorited favoriteAriaLabel="Guardar" />)
     expect(screen.queryByRole('button', { name: 'Guardar' })).toBeNull()
@@ -316,7 +307,6 @@ describe('ProjectCard · variante buy', () => {
     expect(onToggle).toHaveBeenCalledOnce()
     expect(onOpen).not.toHaveBeenCalled()
 
-    // `favorited` ausente es "no favorito".
     rerender(
       <ProjectCard
         {...base}
@@ -329,9 +319,7 @@ describe('ProjectCard · variante buy', () => {
   })
 
   it('SPEC-114 §3: pedir el corazón sin su etiqueta no compila', () => {
-    // Antes la etiqueta era opcional y caía en '': un botón de solo ícono sin
     // nombre. Si alguien vuelve a hacerla opcional, este @ts-expect-error se
-    // queda sin error que esperar y `pnpm typecheck` se pone rojo.
     // @ts-expect-error — onToggleFavorite exige favoriteAriaLabel
     const sinEtiqueta = <ProjectCard {...base} onOpen={vi.fn()} onToggleFavorite={vi.fn()} />
     expect(sinEtiqueta).toBeDefined()
@@ -399,7 +387,6 @@ describe('ProjectCard · variante developer', () => {
     render(<ProjectCard {...base} progress={42.6} />)
 
     expect(screen.getByText('Avance')).toBeDefined()
-    // El "43%" del encabezado; la barra no repite el valor en esta variante.
     expect(screen.getAllByText('43%')).toHaveLength(1)
     expect(screen.getByRole('progressbar').getAttribute('aria-valuenow')).toBe('43')
   })
@@ -437,7 +424,6 @@ describe('ActionCard', () => {
     )
 
     expect(screen.getByTestId('accion').className).toContain('bg-primary')
-    // D-098: blanco pleno — al 80% sobre primary daba 3.88:1.
     expect(screen.getByText('Empezá acá').className.split(' ')).toContain('text-white')
     expect(screen.getByText('Empezá acá').className).not.toContain('text-white/80')
   })
@@ -482,7 +468,6 @@ describe('StatCard', () => {
     expect(screen.getByText('12')).toBeDefined()
     expect(screen.getByText('Proyectos')).toBeDefined()
     expect(container.querySelector('svg')).toBeNull()
-    // Sin onClick es un div, no un botón.
     expect(screen.queryByRole('button')).toBeNull()
   })
 
@@ -525,7 +510,6 @@ describe('StatCard', () => {
 
     expect(container.firstElementChild?.className).toContain('bg-primary')
     expect(container.querySelector('svg')?.parentElement?.className).toContain('bg-white/20')
-    // D-098: blanco pleno — al 80% sobre primary daba 3.88:1.
     expect(screen.getByText('ayuda').className.split(' ')).toContain('text-white')
     expect(screen.getByText('ayuda').className).not.toContain('text-white/80')
   })
@@ -745,7 +729,6 @@ describe('DocumentCard · variantes', () => {
     const onDownload = vi.fn()
     render(<DocumentCard {...base} txid={TXID} onDownload={onDownload} className="extra" />)
 
-    // Sin onView no hay ojo, pero sí la fila de acciones.
     expect(screen.queryByRole('button', { name: 'Ver' })).toBeNull()
     await userEvent.click(screen.getByRole('button', { name: 'Descargar' }))
     expect(onDownload).toHaveBeenCalledOnce()
@@ -759,7 +742,6 @@ describe('DocumentCard · variantes', () => {
     expect(screen.getByRole('button', { name: 'Copiar' })).toBeDefined()
 
     rerender(<DocumentCard {...base} txid={null} sha256={'a'.repeat(64)} />)
-    // Sin showHash el hash no se muestra aunque exista.
     expect(screen.queryByRole('button', { name: 'Copiar' })).toBeNull()
 
     rerender(
@@ -785,7 +767,6 @@ describe('DocumentCard · variantes', () => {
         onOpenProof={onOpenProof}
       />
     )
-    // Pendiente: solo el botón de copia.
     expect(screen.getAllByRole('button')).toHaveLength(1)
 
     rerender(

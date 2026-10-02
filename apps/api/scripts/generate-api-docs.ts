@@ -4,29 +4,6 @@ import path from "node:path";
 import { en } from "../src/lib/arrays";
 import { describeGuardEn, leerMontaje } from "../src/lib/route-inventory";
 
-// M3 §2 — "endpoints documentados". No hay oRPC todavía (D-066 es
-// aspiracional, ver `packages/shared/CLAUDE.md`) y escribir un Postman a mano
-// para 87 rutas envejece mal: el día que una cambie, nadie se acuerda de
-// actualizar un JSON aparte.
-//
-// Este generador no adivina nada nuevo: lee la MISMA introspección que
-// sostiene `test/route-guards.test.ts` (`leerMontaje`, que interroga el
-// router que Express armó de verdad) y la vuelca a una colección Postman.
-// Si mañana se agrega una ruta o cambia un guard, `pnpm docs:api` lo ve
-// porque lee el árbol real, no un mapa mantenido a mano — la misma garantía
-// que la matriz de permisos, aplicada a la documentación.
-//
-// **Bodies de ejemplo: acotados a propósito.** Automatizarlos para las 87
-// rutas pediría que cada handler exportara su schema en un lugar
-// introspectable — varios lo definen como `z.object` local (ver
-// `POST /projects/:id/stages`), y migrarlos todos es un proyecto aparte que
-// nadie pidió. `EJEMPLOS_CAMINO_FELIZ` cubre a mano el puñado de endpoints
-// que un reviewer de Catalyst va a ejercitar de verdad —login, crear
-// proyecto, crear stage, subir evidencia, aceptar invitación, transicionar
-// un stage, liberar un pago— transcritos del `schema.safeParse` real de cada
-// ruta. El resto de las 88 rutas queda con método+path+auth, que alcanza
-// para navegar aunque no para copiar y pegar un body.
-
 type EjemploBody =
   | { modo: "raw"; body: Record<string, unknown> }
   | { modo: "formdata"; campos: { key: string; value?: string; type: "text" | "file" }[] };
@@ -89,7 +66,6 @@ interface PostmanFolder {
   item: PostmanRequestItem[];
 }
 
-/** Agrupa por prefijo: varios routers pueden compartir uno (`/developer`). */
 function agruparPorPrefijo(): Map<string, Map<string, string>> {
   const porPrefijo = new Map<string, Map<string, string>>();
 
@@ -105,7 +81,6 @@ function agruparPorPrefijo(): Map<string, Map<string, string>> {
 }
 
 function aItemPostman(clave: string, descripcionGuards: string): PostmanRequestItem {
-  // "MÉTODO /ruta", siempre — es esta misma inventiva la que arma `clave`.
   const partes = clave.split(" ");
   const metodo = en(partes, 0);
   const ruta = en(partes, 1);
@@ -161,9 +136,6 @@ export function buildPostmanCollection(): object {
     variable: [
       { key: "baseUrl", value: "http://localhost:3001" },
       { key: "token", value: "" },
-      // Nunca un literal acá: la password de demo vive en apps/api/.env
-      // (D-047) o se pide al dueño para el ambiente real. Ver
-      // apps/api/CLAUDE.md — "las credenciales del seed son públicas".
       { key: "password", value: "" }
     ],
     item: folders

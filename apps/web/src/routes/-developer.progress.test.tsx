@@ -22,7 +22,6 @@ const fila = (sobre: Partial<ProgressRow>): ProgressRow => ({
   ...sobre
 })
 
-/** Torre A: los cuatro estados, con entrega y con `certifiedAt` en la completada. */
 const TORRE_A: ProgressRow[] = [
   fila({
     stageId: 'a1',
@@ -55,7 +54,6 @@ const TORRE_A: ProgressRow[] = [
   })
 ]
 
-/** Torre B: todo pendiente y sin fecha de entrega. */
 const TORRE_B: ProgressRow[] = [
   fila({
     stageId: 'b1',
@@ -94,7 +92,6 @@ describe('/developer/progress', () => {
     montarRuta(Route, '/developer/progress')
 
     await screen.findByText('Torre B', { selector: 'h2' })
-    // Cada tile es "valor" + "etiqueta"; el resumen es la primera sección de la pantalla.
     const resumen = document.querySelector('section.grid-cols-3')
     expect(resumen?.textContent).toBe(
       `1${t('developer.progress.completed')}2${t('developer.progress.inProgress')}2${t('developer.progress.pending')}`
@@ -109,11 +106,9 @@ describe('/developer/progress', () => {
     const lista = await screen.findByTestId('DEV-PROGRESS-001')
     await within(lista).findByText('Torre A')
     const [barraA, barraB] = within(lista).getAllByRole('progressbar')
-    // 1 completada de 4.
     expect(barraA.getAttribute('aria-valuenow')).toBe('25')
     expect(barraB.getAttribute('aria-valuenow')).toBe('0')
 
-    // Torre A: la primera etapa en curso u observada es la actual, y hay fecha de entrega.
     expect(within(lista).getByText('Etapa 2: Estructura')).toBeTruthy()
     expect(
       within(lista).getByText(
@@ -123,9 +118,7 @@ describe('/developer/progress', () => {
     expect(
       within(lista).getByText(`Etapa 1/4 · ${formatMonthYear('2026-03-10T12:00:00.000Z', 'es-AR')}`)
     ).toBeTruthy()
-    // La etapa sin certificar no lleva fecha.
     expect(within(lista).getByText('Etapa 4/4')).toBeTruthy()
-    // Torre B: todo pendiente, sin etapa actual ni entrega.
     expect(within(lista).queryByText(/Etapa 1: Proyecto/)).toBeNull()
     expect(within(lista).getAllByText(/Finalización/)).toHaveLength(1)
 

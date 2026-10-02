@@ -6,9 +6,6 @@ import { getSession } from '#/auth/session'
 import { autenticarComo, DEVELOPER_USER, INVESTOR_USER, montarRuta } from '#/routes/-test-mount'
 import { ProfileScreen } from './ProfileScreen'
 
-// M2-D5 fila 30: una sola superficie con cuatro entradas. Acá se prueba el
-// componente con sus props; las cuatro rutas de rol tienen su propio test.
-
 const PERFIL = {
   id: 'u-dev',
   email: 'developer@example.com',
@@ -21,9 +18,10 @@ const PERFIL = {
 } as never
 
 function montar(props: Partial<Parameters<typeof ProfileScreen>[0]> = {}) {
+  const rol = props.rol ?? 'developer'
   return montarRuta(
-    () => <ProfileScreen rol="developer" testId="PERFIL-001" {...props} />,
-    '/perfil'
+    () => <ProfileScreen rol={rol} testId="PERFIL-001" {...props} />,
+    `/${rol}/profile`
   )
 }
 
@@ -195,7 +193,6 @@ describe('ProfileScreen', () => {
       const campo = screen.getByLabelText('Nombre')
       await userEvent.clear(campo)
       await userEvent.type(campo, '   ')
-      // `required` no frena espacios: el recorte sí.
       await userEvent.click(screen.getByRole('button', { name: 'Guardar' }))
 
       expect(guardar).not.toHaveBeenCalled()

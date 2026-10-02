@@ -2,8 +2,6 @@ import { useQuery } from '@tanstack/react-query'
 import { createFileRoute, useNavigate } from '@tanstack/react-router'
 import { FileText, Images } from 'lucide-react'
 import { ApiError, api } from '#/api/port'
-import { INVESTOR_ROLES } from '#/auth/roles'
-import { useRoleGuard } from '#/auth/useRoleGuard'
 import { Loading } from '#/components/domain/Loading'
 import { ProgressTimeline } from '#/components/domain/ProgressTimeline'
 import { StatusPill } from '#/components/domain/StatusPill'
@@ -15,29 +13,18 @@ import { cn } from '#/lib/cn'
 import { claveEstadoStage, reintentarSiNoEsAusencia } from '#/lib/investor'
 import { timelineDeStages } from '#/lib/stageProgress'
 
-// **M2-D5 fila 08 · `/project/:projectId/progress`** — captura 8.
-// Test ID: INV-PROJECT-STAGES-001.
-//
-// **"Etapa N/total" usa la posición en `lista`, no `sequenceOrder` crudo**
-// (M3 §2.5): un proyecto con huecos en `sequenceOrder` (como `torre-a` en
-// producción, 1/2/3 con solo 3 filas) rompería el numerador contra el total
-// si viajaran de columnas distintas — ver el comentario largo en
-// `developer.progress.tsx`, mismo patrón.
-
 export const Route = createFileRoute('/project/$projectId/progress')({
   component: InvestorProjectProgress
 })
 
 function InvestorProjectProgress() {
   const { projectId } = Route.useParams()
-  const { ready } = useRoleGuard(INVESTOR_ROLES)
   const { t, locale } = useTranslation()
   const navigate = useNavigate()
 
   const { data: proyecto, error: errorProyecto } = useQuery({
     queryKey: ['project', projectId],
     queryFn: () => api.getProject(projectId),
-    enabled: ready,
     retry: reintentarSiNoEsAusencia
   })
 
@@ -48,25 +35,21 @@ function InvestorProjectProgress() {
   } = useQuery({
     queryKey: ['project', projectId, 'stages'],
     queryFn: () => api.listProjectStages(projectId),
-    enabled: ready,
     retry: reintentarSiNoEsAusencia
   })
 
   const { data: documentos } = useQuery({
     queryKey: ['project', projectId, 'documents'],
     queryFn: () => api.listProjectDocuments(projectId),
-    enabled: ready,
     retry: reintentarSiNoEsAusencia
   })
-
-  if (!ready) return null
 
   if (
     (error instanceof ApiError && error.status === 403) ||
     (errorProyecto instanceof ApiError && errorProyecto.status === 403)
   ) {
     return (
-      <PanelLayout rol="investor" title={t('investor.project.progress')}>
+      <PanelLayout title={t('investor.project.progress')}>
         <p data-testid="INV-PROJECT-STAGES-001">{t('error.forbidden')}</p>
       </PanelLayout>
     )
@@ -74,7 +57,6 @@ function InvestorProjectProgress() {
 
   const lista = stages ?? []
   const timeline = timelineDeStages(lista)
-  // El timeline sale de `lista` uno a uno: todo nodo tiene su etapa.
   const idPorOrden: Record<number, string> = Object.fromEntries(
     lista.map((s) => [s.sequenceOrder, s.id])
   )
@@ -90,7 +72,6 @@ function InvestorProjectProgress() {
 
   return (
     <PanelLayout
-      rol="investor"
       title={t('investor.project.progress')}
       {...(proyecto ? { context: proyecto.name } : {})}
       back={{

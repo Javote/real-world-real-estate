@@ -2,17 +2,6 @@ import { readdirSync, readFileSync, statSync } from 'node:fs'
 import path from 'node:path'
 import { describe, expect, it } from 'vitest'
 
-// **El valor dorado del sistema visual.**
-//
-// M2-D3 dice, literal, "Hex values are normative". Este test lee el entregable
-// —no una copia, el archivo de `docs/`— y verifica que cada color normativo esté
-// realmente en `styles.css`. Es el mismo patrón que en `contracts/`: un valor
-// fijado de los dos lados, para que una divergencia salga como test rojo y no
-// como una pantalla que se ve "parecida".
-//
-// Sin esto, la paleta se degrada de a un `#`: alguien ajusta un tono para que
-// "quede mejor", nadie lo nota, y en seis pantallas ya no hay sistema.
-
 const raiz = path.resolve(import.meta.dirname, '../../..')
 const d3 = readFileSync(
   path.join(raiz, 'docs/milestone-2-diseno/M2-D3-Design-principles-and-component-library.md'),
@@ -20,7 +9,6 @@ const d3 = readFileSync(
 )
 const styles = readFileSync(path.join(import.meta.dirname, 'styles.css'), 'utf8')
 
-/** Los pares `Nombre` / `#HEX` de §Visual Language, tal como los lista el entregable. */
 function coloresNormativos(): Array<{ nombre: string; hex: string }> {
   const visual = d3.slice(
     d3.indexOf('## Visual Language'),
@@ -41,10 +29,6 @@ function coloresNormativos(): Array<{ nombre: string; hex: string }> {
 
 const normativos = coloresNormativos()
 
-// D-098: M2-D3 §Accessibility exige 4.5:1 y sus propios colores de estado no
-// llegaban. Estos seis usan otro valor, y el test recalcula el contraste contra
-// cada fondo real donde se usan: aclarar uno "para que se parezca a la
-// captura" lo pone rojo.
 const BASE = ['#ffffff', '#f4f1ed', '#f3f4f6']
 const RELLENOS = ['#d4f4ee', '#ffe8d6', '#dbeafe', '#fce7f3']
 const DESVIOS: Record<string, { nuevo: string; fondos: string[] }> = {
@@ -56,7 +40,6 @@ const DESVIOS: Record<string, { nuevo: string; fondos: string[] }> = {
   '#6b7280': { nuevo: '#5f6673', fondos: [...BASE, ...RELLENOS] }
 }
 
-/** Contraste WCAG 2.x entre dos `#rrggbb`. */
 function contraste(a: string, b: string): number {
   const lum = (hex: string) => {
     const [r, g, bl] = [1, 3, 5].map((i) => {
@@ -71,8 +54,6 @@ function contraste(a: string, b: string): number {
 
 describe('tokens de color contra M2-D3', () => {
   it('el entregable define los colores que esperamos encontrar', () => {
-    // Si este número cambia, alguien tocó `docs/` (que es inmutable) o el
-    // parser dejó de entender el formato. Las dos cosas hay que mirarlas.
     expect(normativos.length).toBeGreaterThanOrEqual(17)
   })
 
@@ -89,7 +70,6 @@ describe('tokens de color contra M2-D3', () => {
   it('los seis desvíos de D-098 existen en el entregable y siguen pasando 4.5:1', () => {
     const hexes = normativos.map((n) => n.hex)
     for (const [viejo, { nuevo, fondos }] of Object.entries(DESVIOS)) {
-      // Si M2-D3 dejara de tener el valor viejo, el desvío no desvía nada.
       expect(hexes).toContain(viejo)
       for (const fondo of fondos) {
         expect(contraste(nuevo, fondo), `${nuevo} sobre ${fondo}`).toBeGreaterThanOrEqual(4.5)
@@ -98,8 +78,6 @@ describe('tokens de color contra M2-D3', () => {
   })
 
   it('no quedó ningún color del sistema viejo', () => {
-    // La paleta anterior era de otra familia entera y no compartía un solo
-    // valor con la normativa (D-064). Estos tres eran sus más usados.
     for (const viejo of ['#3182ce', '#38a169', '#2d3748']) {
       expect(styles.toLowerCase()).not.toContain(viejo)
     }
@@ -121,30 +99,12 @@ describe('reglas del sistema', () => {
   })
 
   it('el número del StatCard es más grande que el h1, a propósito', () => {
-    // M2-D3: "intentionally heavier than Heading 1 to dominate dashboards".
     const stat = Number(/--text-stat: (\d+)px/.exec(styles)?.[1])
     const h1 = Number(/--text-h1: (\d+)px/.exec(styles)?.[1])
     expect(stat).toBeGreaterThan(h1)
   })
 })
 
-// SPEC-101. `--size-icon-sm/md/lg` no existían en `styles.css`: Tailwind v4 no
-// genera la utilidad de un token que no existe y no emite ningún error, así
-// que 52 usos quedaban cayendo al default de Lucide (24px) sin que nadie lo
-// notara. La causa raíz era doble — faltaban los tokens Y no había guardia
-// que mirara `src/**/*.tsx` — y esta sección cierra las dos.
-//
-// **M2-D3 nombra la escala de íconos por contexto, no por talla.** Sus cinco
-// filas son los cinco nombres que ya existían en `styles.css`
-// (`inline`/`pill`/`stat`/`nav`/`empty`); `sm`/`md`/`lg` nunca estuvieron en
-// el entregable, así que agregarlos habría sido elegir tokens en vez de
-// transcribirlos. El arreglo fue el inverso: los 52 usos se movieron a los
-// nombres normativos.
-
-/** Extrae `{ contexto, px }` de una tabla `| Columna | Npx... | ... |` del
- * entregable, cortando entre dos encabezados. Toma el primer `\d+px` de la
- * segunda columna — cubre casos como "20px in 40px badge" (queremos 20) y
- * "48px+" (queremos 48). */
 function filasConPx(desde: string, hasta: string): Array<{ contexto: string; px: number }> {
   const bloque = d3.slice(d3.indexOf(desde), d3.indexOf(hasta))
   const filas: Array<{ contexto: string; px: number }> = []
@@ -155,9 +115,6 @@ function filasConPx(desde: string, hasta: string): Array<{ contexto: string; px:
   return filas
 }
 
-/** Extrae `{ token, px }` de la tabla de espaciado (`| s-N | N | ... |`).
- * `token` queda como aparece en la variable CSS (`s1`, no `1`): `--spacing-`
- * conserva la `s`, a diferencia de `--radius-`, que no lleva la `r`. */
 function filasDeEspaciado(desde: string, hasta: string): Array<{ token: string; px: number }> {
   const bloque = d3.slice(d3.indexOf(desde), d3.indexOf(hasta))
   const filas: Array<{ token: string; px: number }> = []
@@ -168,9 +125,6 @@ function filasDeEspaciado(desde: string, hasta: string): Array<{ token: string; 
   return filas
 }
 
-/** Extrae `{ token, px }` de la tabla de radios (`| r-xxx | N | ... |`).
- * `token` es lo que sigue a `r-` (`md`, `full`, ...): la variable CSS es
- * `--radius-md`, sin la `r`. */
 function filasDeRadios(desde: string, hasta: string): Array<{ token: string; px: number }> {
   const bloque = d3.slice(d3.indexOf(desde), d3.indexOf(hasta))
   const filas: Array<{ token: string; px: number }> = []
@@ -185,9 +139,6 @@ const tamañosDeIcono = filasConPx('### Sizes', '## Spacing')
 const espaciado = filasDeEspaciado('### Spacing tokens', '### Radii')
 const radios = filasDeRadios('### Radii', '### Elevation')
 
-/** Los cinco nombres normativos de ícono, en el mismo orden que M2-D3 §Sizes.
- * No se leen del entregable —esos nombres son nuestra convención, M2-D3 solo
- * describe el contexto—, así que van fijos acá, uno por fila de la tabla. */
 const NOMBRES_DE_ICONO = ['inline', 'pill', 'stat', 'nav', 'empty']
 
 describe('tokens de tamaño e ícono contra M2-D3 (SPEC-101)', () => {
@@ -216,9 +167,6 @@ describe('tokens de tamaño e ícono contra M2-D3 (SPEC-101)', () => {
   })
 
   it('el entregable define los cuatro radios que esperamos', () => {
-    // La spec que abrió esta guardia decía "los 3 radios" — el entregable
-    // tiene 4 (r-md, r-lg, r-xl, r-full), y `styles.css` ya los tenía los
-    // cuatro. Corrección medida, no la que traía la spec.
     expect(radios.length).toBe(4)
   })
 
@@ -226,13 +174,6 @@ describe('tokens de tamaño e ícono contra M2-D3 (SPEC-101)', () => {
     expect(styles).toContain(`--radius-${token}: ${px}px`)
   })
 })
-
-// La mitad que faltaba: que una clase fantasma sea un test rojo, no un ícono
-// del tamaño equivocado. Escanea `src/**/*.tsx` en busca de las familias de
-// utilidad que salen de nuestros propios tokens (`size-icon-*`, la escala de
-// espaciado en cualquier dirección — `p-s4`, `gap-x-s2`, `top-s12` — y
-// `rounded-*`, directional incluido) y exige que el token exista en
-// `styles.css`.
 
 function archivosTsx(dir: string): string[] {
   const salida: string[] = []
@@ -249,10 +190,6 @@ const SRC = path.join(import.meta.dirname)
 
 type Hallazgo = { archivo: string; clase: string; token: string }
 
-/** Cada clase encontrada, con el nombre de la variable CSS que debería
- * sustentarla. `rounded-t-md`/`rounded-b-xl` (direccionales) resuelven al
- * mismo token que su forma sin dirección — el radio es el mismo, solo cambia
- * qué esquinas lo llevan. */
 function hallazgosDeUnArchivo(archivo: string): Hallazgo[] {
   const contenido = readFileSync(archivo, 'utf8')
   const relativo = path.relative(SRC, archivo)

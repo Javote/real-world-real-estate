@@ -5,11 +5,6 @@ import { createId } from "../src/db/id";
 import { db } from "../src/lib/db";
 import { FIXTURES } from "./global-setup";
 
-// La tercera capa de la regla 5: el recurso es de quien lo pide (M2-D1
-// §Cross-role data isolation). Vivió como un `if` copiado en nueve handlers
-// hasta el 2026-09-04; acá se prueba una vez, en el middleware, con un caso por
-// cada código de respuesta y por cada forma de `OwnerSource`.
-
 let unidadPropia: string;
 let unidadAjena: string;
 let unidadSinDueño: string;
@@ -42,9 +37,6 @@ beforeAll(async () => {
       .executeTakeFirstOrThrow()
   ).id;
 
-  // El dueño de la unidad ajena es un usuario cualquiera que NO es el investor
-  // del elenco. Sirve el developer: la columna guarda un id de usuario y lo que
-  // se prueba es la comparación, no el rol de quien figura como dueño.
   const otroDueño = await idDe(FIXTURES.activo.email);
 
   const unidad = (ref: string, investorId: string | null) => ({
@@ -65,8 +57,6 @@ beforeAll(async () => {
   unidadSinDueño = sinDueño.id;
   await db.insertInto("Unit").values([ajena, sinDueño]).execute();
 
-  // El contrato de la unidad ajena: `ContractOfUnit` resuelve la fila por
-  // `unitId` y no por su clave primaria, así que el caso tiene que existir.
   await db
     .insertInto("Contract")
     .values({
@@ -121,9 +111,6 @@ describe("requireOwnership · via Unit", () => {
   });
 
   it("una unidad SIN dueño también es 403, no un pase libre", async () => {
-    // `investorId` null es una unidad sin vender. La comparación suelta daba 403
-    // por cómo se comporta `!==` con null; el middleware lo dice explícito, y
-    // este test es lo que impide que alguien lo "simplifique" a `?? user.id`.
     const res = await request(app)
       .get(`/api/v1/investor/units/${unidadSinDueño}`)
       .set("Authorization", `Bearer ${await tokenDe(FIXTURES.investor)}`);
@@ -175,8 +162,6 @@ describe("requireOwnership · via Unit", () => {
 
 describe("requireOwnership · via Invitation", () => {
   it("compara contra el EMAIL, no contra el id", async () => {
-    // La invitación existe antes de que el investor tenga cuenta: se emite a un
-    // email. Si esto comparara ids, ninguna invitación sería de nadie.
     const res = await request(app)
       .get(`/api/v1/investor/invitations/${invitacionPropia}`)
       .set("Authorization", `Bearer ${await tokenDe(FIXTURES.investor)}`);

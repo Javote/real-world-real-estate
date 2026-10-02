@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 // Verifica, SOLO LEYENDO, que producción está como el runbook del video espera
-// (specs/GUION-2026-09-21-video-walkthrough.md). Se corre el día anterior y
+// (specs/archive/GUION-2026-09-21-video-walkthrough.md). Se corre el día anterior y
 // otra vez antes de la sesión B:
 //
 //   node scripts/video-walkthrough/verificar-produccion.mjs            # antes de grabar
@@ -76,18 +76,18 @@ check(
 const sinCoords = volumen.filter((p) => p.latitude == null || p.longitude == null);
 if (sinCoords.length)
   aviso(
-    `${sinCoords.map((p) => p.name).join(", ")} sin coordenadas: el modo mapa de T02 sale sin pines ` +
-      "y T03/T13 no muestran el mapa. El runbook tiene la variante sin mapa (T02)."
+    `${sinCoords.map((p) => p.name).join(", ")} sin coordenadas: el modo mapa de T01 sale sin pines ` +
+      "y T01/T13 no muestran el mapa."
   );
-else ok("las tres tienen coordenadas (el mapa de T02 muestra pines)");
+else ok("las tres tienen coordenadas (el mapa de T01 muestra pines)");
 const extra = proyectos.filter((p) => !p.name.startsWith("Torre Volumen"));
 if (!despues && extra.length)
-  aviso(`el investor ve además: ${extra.map((p) => p.name).join(", ")} (se van a ver en T02)`);
+  aviso(`el investor ve además: ${extra.map((p) => p.name).join(", ")} (se van a ver en T01)`);
 const favoritos = await pedir("/investor/favorites", { token: t.investor });
 check(
   favoritos.length === 0,
-  "favoritos vacío (T03 guarda Torre Volumen 3, T06 la muestra)",
-  `ya tiene ${favoritos.length} favorito(s): sacalos con el corazón antes de T03`
+  "favoritos vacío (T01 guarda Torre Volumen 3)",
+  `ya tiene ${favoritos.length} favorito(s): sacalos con el corazón antes de T01`
 );
 const unidades = await pedir("/investor/units", { token: t.investor });
 check(
@@ -99,12 +99,14 @@ check(
 console.log("\nDeveloper");
 const delDev = await pedir("/developer/projects", { token: t.developer });
 ok(`"My projects" muestra ${delDev.length} proyectos: ${delDev.map((p) => p.name).join(", ")}`);
-const nunez = delDev.filter((p) => p.name === "Torre Núñez");
+const nuevo = delDev.filter((p) => p.name === "Torres de Palermo");
 if (!despues)
   check(
-    nunez.length === 0,
-    'todavía no existe "Torre Núñez" (nace en T08)',
-    'ya existe un "Torre Núñez": usá otro nombre en T08 para no confundirlos'
+    nuevo.length <= 1,
+    nuevo.length
+      ? '"Torres de Palermo" existe: es el que creó T07 (2026-10-01)'
+      : 'todavía no existe "Torres de Palermo" (nace en T07)',
+    `hay ${nuevo.length} "Torres de Palermo": borrá los de prueba antes de seguir`
   );
 
 console.log("\nCertifier");
@@ -143,7 +145,7 @@ console.log("\nAdmin");
 const usuarios = await pedir("/users", { token: t.admin });
 check(
   usuarios.some((u) => u.role === "verifier" && u.fullName === "Verifier Demo" && u.isActive),
-  '"Verifier Demo" activo (es el que se elige en el corte de T08)',
+  '"Verifier Demo" activo (es el que se elige en el corte de T07)',
   'no hay un certifier "Verifier Demo" activo'
 );
 

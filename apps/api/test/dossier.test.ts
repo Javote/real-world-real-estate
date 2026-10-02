@@ -5,13 +5,6 @@ import { createId } from "../src/db/id";
 import { db } from "../src/lib/db";
 import { FIXTURES } from "./global-setup";
 
-// M2-D5 filas 26-29, 28s, 52v, 52s, 52r, 53 — **M3-BE-12** y **M3-BE-17**,
-// patrón P8.
-//
-// Lo que fijan estos tests no son los hashes: es que **la firma no pueda
-// quedar apuntando a un hash que ya cambió**, y que el link público no exponga
-// más de lo que un desconocido con el link debería ver.
-
 const login = (f: { email: string; password: string }) =>
   request(app).post("/api/v1/auth/login").send({ email: f.email, password: f.password });
 
@@ -66,8 +59,6 @@ describe("GET /investor/units/:id/dossier", () => {
     expect(res.body.masterHash).toMatch(/^[0-9a-f]{64}$/);
     expect(res.body.unitReference).toBe(FIXTURES.unidad.unitReference);
     expect(Array.isArray(res.body.artifacts)).toBe(true);
-    // Sin firma, el TXID es null: nunca se muestra una prueba que no existe
-    // (regla 17).
     expect(res.body.signatureTxid).toBeNull();
     dossierId = res.body.id;
   });
@@ -88,7 +79,6 @@ describe("GET /investor/units/:id/dossier", () => {
       .get(`/api/v1/investor/units/${unitId}/dossier`)
       .set("Authorization", `Bearer ${tokenDev}`);
 
-    // developer no está en el grupo de rol de la superficie del investor.
     expect([403, 401]).toContain(res.status);
   });
 });
@@ -136,14 +126,11 @@ describe("POST /investor/units/:id/dossier/share", () => {
 
     expect(publico.status).toBe(200);
     expect(publico.body.masterHash).toBe(compartido.body.masterHash);
-    // Nada del investor ni de la unidad más allá de su referencia.
     expect(publico.body.investorId).toBeUndefined();
     expect(publico.body.unitId).toBeUndefined();
   });
 
   it("un token bien formado que no existe es 404 sin más detalle", async () => {
-    // 64 hex — la forma real de un `shareToken` (`randomBytes(32).toString("hex")`)
-    // — que nunca se generó, para separar "no existe" de "está mal formado".
     const res = await request(app).get(`/api/v1/public/dossier/${"a".repeat(64)}`);
     expect(res.status).toBe(404);
   });
@@ -189,8 +176,6 @@ describe("el flujo del notario", () => {
     expect(res.status).toBe(200);
     const propio = res.body.find((d: { dossierId: string }) => d.dossierId === dossierId);
     expect(propio).toBeTruthy();
-    // La unidad ya tiene investor (es la del fixture): el fallback a la
-    // referencia de la unidad no aplica.
     expect(propio.investorName).toBe(FIXTURES.investor.fullName);
   });
 
@@ -211,8 +196,6 @@ describe("el flujo del notario", () => {
     expect(firma.body.masterHash).toMatch(/^[0-9a-f]{64}$/);
     expect(firma.body.anchor.eventType).toBe("DOSSIER_SIGNATURE");
 
-    // El commitment anclado NO es el masterHash pelado: es el hash del evento,
-    // que además compromete el momento de la firma.
     expect(firma.body.anchor.commitment).not.toBe(firma.body.masterHash);
 
     const releido = await request(app)
@@ -241,8 +224,6 @@ describe("el flujo del notario", () => {
   });
 
   it("rechazar un dossier sin firmar contesta 200 y deja la nota", async () => {
-    // Unidad propia para este caso: el dossier de arriba ya quedó firmado, y
-    // firmar es terminal.
     const unidad = await db
       .insertInto("Unit")
       .values({
@@ -271,8 +252,6 @@ describe("el flujo del notario", () => {
       .set("Authorization", `Bearer ${tokenNotario}`)
       .send({ note: "falta el permiso municipal" });
 
-    // **200 y no 201**: rechazar no crea nada, cambia el estado de algo que ya
-    // existía.
     expect(rechazo.status).toBe(200);
     expect(rechazo.body.status).toBe("rejected");
 
@@ -284,8 +263,6 @@ describe("el flujo del notario", () => {
     expect(fila.status).toBe("rejected");
     expect(fila.rejectionNote).toBe("falta el permiso municipal");
 
-    // **Rechazar NO ancla**: no hay nada que probar sobre lo que no ocurrió, y
-    // el texto de la observación puede nombrar personas (regla 2).
     const eventos = await db
       .selectFrom("OnChainEvent")
       .select("id")
@@ -324,11 +301,6 @@ describe("el flujo del notario", () => {
     expect(firma.status).toBe("signed");
   });
 
-  // Un segundo dossier, firmado por el ADMIN (no por `tokenNotario`): sin
-  // esto, `Dossier.signedById` de todo lo firmado en este archivo apunta
-  // siempre al mismo notario, y `kpis`/`signatures` nunca ejercitan la rama
-  // "firmado, pero por otro" — la mitad disyuntiva de "un admin ve el total;
-  // un notario, lo que firmó él más la cola común" nunca se ponía a prueba.
   let dossierAjenoId: string;
   it("un segundo dossier, firmado por el admin", async () => {
     const unidad = await db
@@ -366,7 +338,6 @@ describe("el flujo del notario", () => {
       .get("/api/v1/notary/kpis")
       .set("Authorization", `Bearer ${tokenNotario}`);
     expect(notario.status).toBe(200);
-    // `dossierId` es suyo; `dossierAjenoId` lo firmó el admin.
     expect(notario.body.signed).toBe(1);
 
     const admin = await request(app)

@@ -12,7 +12,6 @@ function crearCliente(link: InstanceType<typeof OpenAPILink>) {
   return createORPCClient<RouterClient<typeof auditOrpcRouter>>(link);
 }
 
-// SPEC-216 §E3 — mismo patrón que `orpc-client-profile.test.ts`.
 let servidor: http.Server;
 let baseUrl: string;
 let tokenAdmin: string;
@@ -49,8 +48,6 @@ describe("cliente oRPC tipado de audit, contra el servidor real (SPEC-216 §E3)"
 
     const logs = await client.auditLogsProcedure();
 
-    // El tipo de `logs` ya es `AuditLogRow[]` (inferido del mismo
-    // `auditLogRowSchema` que valida en el servidor) — sin cast.
     expect(Array.isArray(logs)).toBe(true);
   });
 

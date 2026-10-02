@@ -2,10 +2,8 @@ import { useQueries, useQuery } from '@tanstack/react-query'
 import { createFileRoute, useNavigate } from '@tanstack/react-router'
 import { Building2, ChevronRight, FileText, Images, MapPin } from 'lucide-react'
 import { useEffect, useRef, useState } from 'react'
-import { ApiError, api } from '#/api/port'
+import { ApiError, api, projectCoverUrl } from '#/api/port'
 import type { MerkleProof } from '#/api/types'
-import { INVESTOR_ROLES } from '#/auth/roles'
-import { useRoleGuard } from '#/auth/useRoleGuard'
 import { BuildingSchematic } from '#/components/domain/BuildingSchematic'
 import { HashChip } from '#/components/domain/HashChip'
 import { ImageGalleryModal } from '#/components/domain/ImageGalleryModal'
@@ -33,17 +31,12 @@ import {
 } from '#/lib/investor'
 import { avanceDeStages, timelineDeStages } from '#/lib/stageProgress'
 
-// **M2-D5 filas 15-18, 19, 20, 21, 25m · `/investor/unit/:unitId`**
-// Test IDs: INV-UNIT-DETAIL-001, INV-UNIT-NEWS-002, INV-UNIT-GALLERY-001,
-// INV-UNIT-LOC-001, INV-UNIT-BUILDING-001. P9 (+ P5 en el hito).
-
 export const Route = createFileRoute('/investor/unit/$unitId/')({
   component: InvestorUnitDetail
 })
 
 function InvestorUnitDetail() {
   const { unitId } = Route.useParams()
-  const { ready } = useRoleGuard(INVESTOR_ROLES)
   const { t, locale } = useTranslation()
   const navigate = useNavigate()
   const announce = useAnnounce()
@@ -58,28 +51,18 @@ function InvestorUnitDetail() {
   const { data: unidad, error } = useQuery({
     queryKey: ['investor', 'unit', unitId],
     queryFn: () => api.getInvestorUnit(unitId),
-    enabled: ready,
     retry: reintentarSiNoEsAusencia
   })
 
   const { data: news } = useQuery({
     queryKey: ['investor', 'unit', unitId, 'news'],
     queryFn: () => api.getInvestorUnitNews(unitId),
-    enabled: ready && Boolean(unidad),
+    enabled: Boolean(unidad),
     retry: reintentarSiNoEsAusencia,
     refetchInterval: (query) => intervaloDeNovedades(query.state.data),
-    // Sin esto, cambiar de pestaña pausa el poll (default de la librería) y la
-    // confirmación vuelve a depender de que el investor esté mirando esta
-    // pantalla en el instante exacto en que entra al bloque — la misma espera
-    // que el fix existe para evitar.
     refetchIntervalInBackground: true
   })
 
-  // SPEC-104 (F-03): el poll de arriba puede confirmar una novedad con la
-  // pestaña en background — se anuncia recién cuando vuelve el foco (el
-  // efecto corre igual, pero el lector de pantalla no lee nada sin foco) y
-  // agregado, no un anuncio por evento: `refetchIntervalInBackground` puede
-  // acumular varias confirmaciones entre dos renders.
   const noticiasPrevias = useRef<{ id: string; status: string | null }[]>([])
   useEffect(() => {
     if (!news) return
@@ -91,28 +74,28 @@ function InvestorUnitDetail() {
   const { data: proyecto } = useQuery({
     queryKey: ['project', unidad?.projectId],
     queryFn: () => api.getProject(unidad!.projectId),
-    enabled: ready && Boolean(unidad?.projectId),
+    enabled: Boolean(unidad?.projectId),
     retry: reintentarSiNoEsAusencia
   })
 
   const { data: documentos } = useQuery({
     queryKey: ['project', unidad?.projectId, 'documents'],
     queryFn: () => api.listProjectDocuments(unidad!.projectId),
-    enabled: ready && Boolean(unidad?.projectId),
+    enabled: Boolean(unidad?.projectId),
     retry: reintentarSiNoEsAusencia
   })
 
   const { data: contrato } = useQuery({
     queryKey: ['investor', 'contract', unitId],
     queryFn: () => api.getInvestorContract(unitId),
-    enabled: ready && Boolean(unidad),
+    enabled: Boolean(unidad),
     retry: reintentarSiNoEsAusencia
   })
 
   const { data: schematic } = useQuery({
     queryKey: ['project', unidad?.projectId, 'schematic'],
     queryFn: () => api.getBuildingSchematic(unidad!.projectId),
-    enabled: ready && edificio && Boolean(unidad?.projectId)
+    enabled: edificio && Boolean(unidad?.projectId)
   })
 
   const { data: bundleFiles } = useQuery({
@@ -123,25 +106,26 @@ function InvestorUnitDetail() {
 
   const fotos = (documentos ?? []).filter((d) => esFoto(d.evidenceType, d.mimeType))
   const blobs = useQueries({
-    queries: fotos.map((f, i) => ({
+    queries: fotos.map((f) => ({
       queryKey: ['evidence-blob', f.id],
       queryFn: async () => objectUrl(await api.downloadEvidence(f.id)),
-      // `gcTime: 0`: la URL se revoca al desmontar, así que la caché no puede
-      // sobrevivirle — devolvería una URL muerta al volver a la pantalla.
       gcTime: 0,
-      enabled: ready && Boolean(unidad) && (galeria || i === 0)
+      enabled: Boolean(unidad) && galeria
     }))
   })
-  const imagenes = fotos.flatMap((_f, i) => {
-    const url = blobs[i]?.data
-    return url ? [{ url, alt: t('investor.unit.gallery') }] : []
-  })
-
-  if (!ready) return null
+  const portada = proyecto ? projectCoverUrl(proyecto.id, proyecto.coverUpdatedAt) : null
+  const imagenes = [
+    ...(portada ? [{ url: portada, alt: t('investor.unit.gallery') }] : []),
+    ...fotos.flatMap((_f, i) => {
+      const url = blobs[i]?.data
+      return url ? [{ url, alt: t('investor.unit.gallery') }] : []
+    })
+  ]
+  const cantidadDeImagenes = (portada ? 1 : 0) + fotos.length
 
   if (error instanceof ApiError && (error.status === 403 || error.status === 404)) {
     return (
-      <PanelLayout rol="investor" title={t('investor.units.title')}>
+      <PanelLayout title={t('investor.units.title')}>
         <p data-testid="INV-UNIT-DETAIL-001">
           {error.status === 403 ? t('error.forbidden') : t('error.notFound')}
         </p>
@@ -154,7 +138,6 @@ function InvestorUnitDetail() {
   const actual = timeline.find((s) => s.state === 'current')
   const avance = avanceDeStages(stages)
   const ubicacion = [unidad?.city, unidad?.country].filter(Boolean).join(', ')
-  const portada = imagenes[0]?.url
   const tienePisos = (schematic ?? []).some((p) => p.floor != null) || unidad?.floor != null
   const stageDelBundle = stages.find((s) => s.bundleId === bundleId)
 
@@ -175,9 +158,6 @@ function InvestorUnitDetail() {
                   : ('occupied' as const)
           }))
   )
-  // El esquema solo se abre desde el botón "edificio", que exige la unidad cargada
-  // y con piso (`tienePisos`, con el esquema aún sin pedir). Se agrupan para que el
-  // tipo lo garantice.
   const esquema =
     unidad && unidad.floor != null && unidadesEsquema.length
       ? { unidad, floor: unidad.floor, unidades: unidadesEsquema }
@@ -185,7 +165,6 @@ function InvestorUnitDetail() {
 
   return (
     <PanelLayout
-      rol="investor"
       title={unidad?.unitReference ?? t('investor.units.title')}
       {...(unidad ? { context: unidad.projectName } : {})}
       back={{
@@ -198,10 +177,7 @@ function InvestorUnitDetail() {
           <button
             type="button"
             onClick={() => setGaleria(true)}
-            // SPEC-105 (F-12): sin fotos no hay nada que abrir — `disabled`,
-            // no un handler que no hace nada. El usuario tiene que poder
-            // distinguir "no hay nada" de "no anduvo".
-            disabled={fotos.length === 0}
+            disabled={cantidadDeImagenes === 0}
             className="relative overflow-hidden rounded-xl bg-surface-alt disabled:cursor-not-allowed disabled:opacity-60"
             aria-label={t('investor.unit.openGallery')}
           >
@@ -212,23 +188,38 @@ function InvestorUnitDetail() {
                 <Building2 size={28} aria-hidden="true" />
               </span>
             )}
-            {fotos.length ? (
+            {cantidadDeImagenes ? (
               <span className="absolute bottom-s2 left-s2 rounded-full bg-black/50 px-s3 py-s1 text-caption text-white">
-                {t('investor.unit.photosCount', { count: String(fotos.length) })}
+                {t('investor.unit.photosCount', { count: String(cantidadDeImagenes) })}
               </span>
             ) : null}
           </button>
           <button
             type="button"
             onClick={() => setMapa(true)}
-            // SPEC-105 (F-12): sin coordenadas no hay mapa que abrir.
             disabled={proyecto?.latitude == null || proyecto?.longitude == null}
             className="overflow-hidden rounded-xl bg-card text-left shadow-e1 disabled:cursor-not-allowed disabled:opacity-60"
             aria-label={t('investor.unit.openMap')}
           >
-            <span className="flex aspect-video items-center justify-center bg-surface-alt text-primary">
-              <MapPin className="size-icon-stat" aria-hidden="true" />
-            </span>
+            {proyecto?.latitude != null && proyecto.longitude != null ? (
+              <span className="block aspect-video">
+                <LocationMapModal
+                  open
+                  variant="preview"
+                  latitude={proyecto.latitude}
+                  longitude={proyecto.longitude}
+                  labels={{
+                    title: t('investor.unit.location'),
+                    close: t('map.close'),
+                    marker: t('map.marker')
+                  }}
+                />
+              </span>
+            ) : (
+              <span className="flex aspect-video items-center justify-center bg-surface-alt text-primary">
+                <MapPin className="size-icon-stat" aria-hidden="true" />
+              </span>
+            )}
             {ubicacion ? (
               <span className="block truncate px-s3 py-s2 text-caption text-text-muted">
                 {ubicacion}
@@ -483,7 +474,6 @@ function InvestorUnitDetail() {
 
       <Dialog
         open={Boolean(bundleId)}
-        // Sin trigger, el único cambio posible es el cierre.
         onOpenChange={() => {
           setBundleId(null)
           setPrueba(null)

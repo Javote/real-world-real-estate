@@ -34,6 +34,7 @@ const proyecto = (sobre: Partial<DeveloperProject>): DeveloperProject => ({
   estimatedDelivery: null,
   status: 'in_progress',
   organizationId: null,
+  coverUpdatedAt: null,
   createdAt: '2026-01-01T00:00:00.000Z',
   updatedAt: '2026-01-01T00:00:00.000Z',
   stageCount: 10,
@@ -44,12 +45,10 @@ const proyecto = (sobre: Partial<DeveloperProject>): DeveloperProject => ({
 })
 
 const UNIDADES: DeveloperUnit[] = [
-  // Torre A: una vendida, una entregada, una disponible y una reservada.
   unidad({ id: 'u1', status: 'sold' }),
   unidad({ id: 'u2', status: 'delivered' }),
   unidad({ id: 'u3', status: 'available' }),
   unidad({ id: 'u4', status: 'reserved' }),
-  // Torre B: solo disponibles, y su proyecto no viene en el listado de proyectos.
   unidad({ id: 'u5', status: 'available', projectId: 'p2', projectName: 'Torre B' })
 ]
 
@@ -86,7 +85,6 @@ describe('/developer/units', () => {
     montarRuta(Route, '/developer/units')
 
     const a = await tarjeta('Torre A')
-    // Total 4, vendidas 2 (sold + delivered), disponibles 1; la reservada solo cuenta en el total.
     const conteos = [...a.querySelectorAll('.bg-surface-alt > span:first-child')].map(
       (n) => n.textContent
     )

@@ -12,13 +12,6 @@ import { StageChips } from './StageChips'
 import { TxidModal } from './TxidModal'
 import { VerifiedWatermark } from './VerifiedWatermark'
 
-// M2-D4 §6.2 · "Patterns never claim more than they can prove". Estos tests son
-// esa regla, ejecutada: cada patrón que puede mostrar una señal de prueba tiene
-// un caso que verifica que NO la muestra cuando no hay anclaje.
-
-// `ui/dialog.tsx` traduce su propio botón de cierre (SPEC-102): TxidModal y
-// AnchoringSuccessModal (P3/P4) lo usan y necesitan el contexto de idioma
-// para montar, aunque este archivo no pruebe i18n.
 function Providers({ children }: { children: React.ReactNode }) {
   return (
     <LocaleProvider>
@@ -78,8 +71,6 @@ describe('P3 · TxidModal', () => {
 
 describe('P4 · AnchoringSuccessModal', () => {
   it('muestra LOS DOS artefactos: Merkle root y TXID', async () => {
-    // Es lo que lo distingue del TxidModal: la acción produjo dos cosas y las
-    // dos son el artefacto.
     Object.assign(navigator, { clipboard: { writeText: vi.fn().mockResolvedValue(undefined) } })
 
     render(
@@ -103,7 +94,6 @@ describe('P4 · AnchoringSuccessModal', () => {
 
     expect(screen.getByText('Merkle root')).toBeDefined()
     expect(screen.getByText('TXID')).toBeDefined()
-    // Dos chips: uno por artefacto.
     expect(screen.getAllByLabelText('Copiar')).toHaveLength(2)
   })
 
@@ -149,7 +139,6 @@ describe('P5 · MerkleRootProof', () => {
   it('sin TXID no muestra chip: dice Pendiente', () => {
     render(<MerkleRootProof merkleRoot={ROOT} txid={null} labels={labels} />)
     expect(screen.getByText('Pendiente')).toBeDefined()
-    // Un chip vacío insinuaría una prueba que no existe.
     expect(screen.getAllByLabelText('Copiar')).toHaveLength(1)
   })
 
@@ -172,7 +161,6 @@ describe('P5 · MerkleRootProof', () => {
 
 describe('P7 · VerifiedWatermark', () => {
   it('sin anclaje NO estampa el sello', () => {
-    // El anti-patrón explícito del entregable.
     render(
       <VerifiedWatermark txid={null} label="VERIFICADO">
         <img src="/doc.png" alt="documento" />
@@ -189,8 +177,6 @@ describe('P7 · VerifiedWatermark', () => {
     )
     const sello = screen.getByText('VERIFICADO')
     expect(sello).toBeDefined()
-    // `pointer-events-none`: el sello es visual, no una capa que bloquee el
-    // documento debajo.
     expect(sello.parentElement?.className).toContain('pointer-events-none')
   })
 })
@@ -214,7 +200,6 @@ describe('P9 · StageChips', () => {
     await userEvent.click(screen.getByText('1'))
     expect(abrir).toHaveBeenCalledOnce()
 
-    // El 8 no está anclado: tocarlo no puede abrir una prueba que no existe.
     await userEvent.click(screen.getByText('8'))
     expect(abrir).toHaveBeenCalledOnce()
   })
@@ -250,14 +235,10 @@ describe('P10 · ReleaseProofList', () => {
 
     expect(screen.getByText('Etapa 1')).toBeDefined()
     expect(screen.getByText('Etapa 2')).toBeDefined()
-    // Un chip para la anclada, "Pendiente" para la otra: la cardinalidad
-    // on-chain es por release, no por contrato.
     expect(screen.getAllByLabelText('Copiar')).toHaveLength(1)
     expect(screen.getByText('Pendiente')).toBeDefined()
   })
 })
-
-// R11 — SPEC-019 W8: variantes de los patrones de prueba.
 
 describe('P5 · MerkleRootProof · variantes', () => {
   const labels = {
@@ -290,7 +271,6 @@ describe('P5 · MerkleRootProof · variantes', () => {
     const { rerender } = render(
       <MerkleRootProof merkleRoot={ROOT} txid={TXID} labels={labels} testId="merkle" />
     )
-    // Raíz + TXID, cada uno con su botón de copia y ninguno cliqueable.
     expect(screen.getAllByRole('button')).toHaveLength(2)
     expect(screen.getByTestId('merkle')).toBeDefined()
 

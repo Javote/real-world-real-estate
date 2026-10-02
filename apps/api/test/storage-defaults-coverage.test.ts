@@ -5,14 +5,6 @@ import { Readable } from "node:stream";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { createStorage } from "../src/lib/storage";
 
-// SPEC-018 §A6 — tres ramas de `lib/storage.ts` que `storage-mocked.test.ts`
-// no alcanza porque siempre fija las tres variables juntas
-// (`S3_ENDPOINT`, `S3_CREATE_BUCKET`) y nunca reusa la misma instancia dos
-// veces: un S3 sin `endpoint` (AWS puro, sin MinIO/R2 de por medio), el
-// `bucketReady` ya en `true` (el segundo `put` no vuelve a preguntar), y
-// `S3_CREATE_BUCKET` directamente AUSENTE — no en `"false"`, que es la otra
-// rama de la misma comparación pero no la del operador `??`.
-
 const { mockSend, FakeS3Client, FakeCommand } = vi.hoisted(() => {
   const mockSend = vi.fn();
 
@@ -119,8 +111,6 @@ function archivoTemporal(nombre: string, contenido: string) {
 
 describe('createStorage("s3") sin S3_ENDPOINT — AWS puro, sin MinIO/R2 de por medio', () => {
   it("igual sube y lee el hash de lo guardado", async () => {
-    // `S3_ENDPOINT` queda ausente a propósito: la rama que se prueba es
-    // `config.endpoint ? {...} : {}` con el lado falso.
     mockSend.mockImplementation((command: ComandoMock) => {
       if (command.__name === "HeadBucket") return Promise.resolve({});
       if (command.__name === "Put") return Promise.resolve({});
@@ -147,8 +137,6 @@ describe('createStorage("s3") sin S3_ENDPOINT — AWS puro, sin MinIO/R2 de por 
 describe('S3_CREATE_BUCKET ausente (no "false", AUSENTE) — el default de `??` es false', () => {
   it("un bucket ausente revienta en vez de crearlo, igual que con S3_CREATE_BUCKET=false", async () => {
     process.env.S3_ENDPOINT = "http://localhost:9000";
-    // A propósito: NO se setea S3_CREATE_BUCKET, ni siquiera a "false" — eso
-    // ejercitaría el lado derecho del `??`, no el operador en sí.
     mockSend.mockImplementation((command: ComandoMock) => {
       if (command.__name === "HeadBucket") return Promise.reject(new Error("NotFound"));
       throw new Error(`comando inesperado: ${command.__name}`);
@@ -182,7 +170,6 @@ describe("S3Storage — bucketReady ya en true", () => {
       throw new Error(`comando inesperado: ${command.__name}`);
     });
 
-    // Una sola instancia — es la misma instancia la que recuerda `bucketReady`.
     const storage = createStorage("s3");
     const temporal1 = archivoTemporal(`propnexus-s3-ready-1-${Date.now()}.pdf`, "uno");
     const temporal2 = archivoTemporal(`propnexus-s3-ready-2-${Date.now()}.pdf`, "dos");
@@ -192,7 +179,6 @@ describe("S3Storage — bucketReady ya en true", () => {
       expect(headBucketLlamadas).toBe(1);
 
       await storage.put({ localPath: temporal2, key: "k2", contentType: "application/pdf" });
-      // El segundo put NO vuelve a llamar HeadBucket: bucketReady ya es true.
       expect(headBucketLlamadas).toBe(1);
     } finally {
       fs.unlinkSync(temporal1);

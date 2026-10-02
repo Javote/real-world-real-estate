@@ -2,7 +2,7 @@
 name: implementador-de-lote
 description: >-
   Implementa UN lote de tests de apps/web que ya está especificado al detalle —un lote W1…W9 de
-  specs/SPEC-019-cobertura-de-apps-web.md, o una parte acotada de
+  specs/archive/SPEC-019-cobertura-de-apps-web.md, o una parte acotada de
   specs/SPEC-112-pasada-de-accesibilidad-con-voiceover.md (tests con axe-core en Vitest o
   Playwright)—, en su propio worktree, testea solo lo suyo, commitea en su rama y devuelve un
   reporte. No pushea ni mergea: eso lo hace quien lo lanza. Pasale en el prompt la spec, el lote y
@@ -42,7 +42,7 @@ adivines**: devolvé el reporte con `needs input:` y la pregunta exacta.
 2. **Leé antes de escribir.** Solo esto, en este orden:
    - La sección de la spec de tu lote, **entera** (la tabla del lote, las recetas R1–R12 que cita,
      §Paralelismo si es SPEC-019, §Interfaz e §Invariantes si es SPEC-112).
-   - `apps/web/CLAUDE.md` §Trampas verificadas.
+   - `apps/web/CLAUDE.md` §Trampas.
    - Un test existente del mismo tipo como molde: `src/routes/-notary.index.test.tsx` para una
      pantalla, `src/components/domain/modals.test.tsx` para un modal,
      `src/test/a11y.smoke.test.tsx` para axe. Copiá su forma; no inventes otra.

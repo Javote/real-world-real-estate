@@ -3,8 +3,6 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { createFileRoute, useNavigate } from '@tanstack/react-router'
 import { AlertCircle } from 'lucide-react'
 import { api } from '#/api/port'
-import { DEV_ROLES } from '#/auth/roles'
-import { useRoleGuard } from '#/auth/useRoleGuard'
 import { Loading } from '#/components/domain/Loading'
 import { PrimaryButton } from '#/components/domain/PrimaryButton'
 import { ProgressTimeline, type TimelineStage } from '#/components/domain/ProgressTimeline'
@@ -18,58 +16,14 @@ import { cn } from '#/lib/cn'
 import { claveEstadoStage } from '#/lib/investor'
 import { avanceDeStages } from '#/lib/stageProgress'
 
-// **M2-D5 fila 45 · `/developer/progress`** — el avance de obra a través de
-// todos los proyectos. Endpoint: GET /developer/progress.
-// Test ID: DEV-PROGRESS-001.
-//
-// **Es la dimensión de OBRA, no la de prueba.** El `ProgressTimeline` muestra
-// en qué etapa va la construcción; qué está anclado lo muestran los
-// `StageChips` (P9). Dos preguntas distintas — M2-D4 §6.1: los patrones
-// componen, nunca se superponen.
-//
-// **Los tres StatCard se derivan de los estados de las etapas**, que el
-// endpoint ya trae. La captura 45 los muestra sobre UN desarrollo de diez
-// etapas; acá el endpoint cruza proyectos, así que los conteos y los
-// timelines son por el conjunto, agrupados por proyecto. No hay thumbnail de
-// etapa en el contrato: no se dibuja (deuda declarada, `apps/web/CLAUDE.md`).
-//
-// **"Overall Progress: N%" (M3 §2.2) es derivado por proyecto** (D-021/
-// DECISIONS.md: `completadas/total`, sin peso por etapa) y lo dibuja esta
-// pantalla — no `ProgressTimeline`, que solo sabe de nodos y una etiqueta.
-// `finalizationLabel` sale de `Project.estimatedDelivery`. "Stage Detail"
-// lista las etapas del proyecto con su `certifiedAt` cuando existe.
-//
-// **"Etapa N/total" usa la POSICIÓN en la lista, no `sequenceOrder` crudo**
-// (M3 §2.5, encontrado corrigiendo la etapa fabricada de `torre-a`). Un
-// proyecto viejo puede tener huecos —`torre-a` en producción tiene
-// `sequenceOrder` 1/2/3 con solo 3 filas, no 10— y numerador/denominador
-// tienen que salir de la MISMA base o el numerador puede superar al total.
-// Tampoco vale hardcodear el tamaño del catálogo (10): la fila 1 de `torre-a`
-// es "Cimentación", que en `DEFAULT_STAGE_CATALOG` es la etapa 4 — decir
-// "1/10" ahí sería una alineación falsa con un catálogo que ese proyecto no
-// usa. La posición en la lista es honesta para cualquier forma que tenga el
-// proyecto.
-//
-// **"Etapas observadas" (`DEV-PROGRESS-RESUME`) no está en ninguna
-// captura — es una decisión nueva, no una superficie de M2-D5.** El diagrama
-// canónico (`M1-D2c-milestone-lifecycle`) etiqueta `Observed → InProgress`
-// como "remediation completed": el developer decide cuándo la corrección
-// está lista, así que es una acción explícita y separada de subir evidencia
-// (a diferencia de `Pending → InProgress`, que sí se dispara solo con la
-// primera evidencia — ver `POST /projects/:id/evidence`). Reusa
-// `PATCH /stages/:id/state`, ya restringido a que el developer solo pueda
-// pedir `→ InProgress`.
-
 export const Route = createFileRoute('/developer/progress')({ component: DeveloperProgress })
 
-/** Del estado de la FSM al estado visual del nodo. */
 function nodoDe(state: string): TimelineStage['state'] {
   if (state === 'Completed') return 'completed'
   if (state === 'InProgress' || state === 'Observed') return 'current'
   return 'pending'
 }
 
-/** Fila de "Stage Detail" — el dato crudo, no el nodo mapeado del timeline. */
 interface DetalleStage {
   stageId: string
   name: string
@@ -78,15 +32,13 @@ interface DetalleStage {
 }
 
 function DeveloperProgress() {
-  const { ready } = useRoleGuard(DEV_ROLES)
   const { t, locale } = useTranslation()
   const navigate = useNavigate()
   const queryClient = useQueryClient()
 
   const { data: filas, isPending } = useQuery({
     queryKey: ['developer', 'progress'],
-    queryFn: api.getDeveloperProgress,
-    enabled: ready
+    queryFn: api.getDeveloperProgress
   })
 
   const reanudar = useMutation({
@@ -94,11 +46,8 @@ function DeveloperProgress() {
     onSuccess: () => void queryClient.invalidateQueries({ queryKey: ['developer', 'progress'] })
   })
 
-  if (!ready) return null
-
   const observadas = (filas ?? []).filter((f) => f.state === 'Observed')
 
-  // Agrupado por proyecto: la respuesta viene plana, una fila por etapa.
   const porProyecto = new Map<
     string,
     {
@@ -136,7 +85,6 @@ function DeveloperProgress() {
 
   return (
     <PanelLayout
-      rol="developer"
       title={t('developer.progress.title')}
       context={t('developer.progress.context')}
       back={{
@@ -169,7 +117,6 @@ function DeveloperProgress() {
                   <span className="text-body-sm font-medium text-text-primary">
                     {f.projectName} · {f.stageName}
                   </span>
-                  {/* SPEC-106 (F-10): hijo directo de una columna flex. */}
                   <StatusPill tone="pending" className="self-start">
                     {t('status.observed')}
                   </StatusPill>
@@ -206,8 +153,6 @@ function DeveloperProgress() {
                   </span>
                   <div
                     role="progressbar"
-                    // SPEC-114 §1: la misma regla que `ProgressBar`, en la única
-                    // barra que no lo usa (es más alta, `h-2`).
                     aria-label={p.nombre}
                     aria-valuenow={porcentaje}
                     aria-valuemin={0}

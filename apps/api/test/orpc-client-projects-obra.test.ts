@@ -13,7 +13,6 @@ function crearCliente(link: InstanceType<typeof OpenAPILink>) {
   return createORPCClient<RouterClient<typeof projectsObraOrpcRouter>>(link);
 }
 
-// SPEC-216 §E6 — mismo patrón que `orpc-client-profile.test.ts`.
 let servidor: http.Server;
 let baseUrl: string;
 let tokenAdmin: string;

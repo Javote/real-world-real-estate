@@ -1,17 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
-// SPEC-018 A6 — dos ramas de `instrumentation.ts` que `test/instrumentation.test.ts`
-// (SPEC-017 paso 4) no ejercita: `NODE_ENV` ausente en `initSentry` (la suite
-// siempre corre con `NODE_ENV=test`, fijado en `vitest.config.mts`, así que
-// el `?? "development"` nunca tomaba el lado default) y el `.catch()` del
-// `sdk.shutdown()` que corre en `SIGTERM` — el test existente prueba que
-// `shutdown` se llama, no que un `shutdown` que RECHAZA no tira un
-// unhandled rejection.
-//
-// Mismo patrón que `test/instrumentation.test.ts`: `@sentry/node` se
-// mockea porque es un `import` estático; los `@opentelemetry/*` no, porque
-// son requires tardíos — se les pasan dependencias falsas por parámetro.
-
 const sentryInit = vi.fn();
 vi.mock("@sentry/node", () => ({ init: sentryInit }));
 
@@ -69,11 +57,6 @@ describe("initOpenTelemetry — el catch del shutdown en SIGTERM", () => {
       return { start: vi.fn(), shutdown };
     });
 
-    // Se captura el listener con `vi.spyOn(process, "on")` y se invoca a
-    // mano — no se manda una señal real al proceso de test (`process.emit`
-    // dispararía TODOS los listeners de `SIGTERM` que otras suites de este
-    // mismo archivo/proceso ya hayan dejado registrados, que es ruido que no
-    // hace falta para probar este `.catch`).
     const onSpy = vi.spyOn(process, "on");
 
     initOpenTelemetry({
@@ -100,9 +83,6 @@ describe("initOpenTelemetry — el catch del shutdown en SIGTERM", () => {
     listener();
 
     expect(shutdown).toHaveBeenCalledTimes(1);
-    // El rechazo de `shutdown()` ya está encadenado con `.catch(() => undefined)`
-    // en la misma expresión síncrona de `listener()` — esperar sobre esa
-    // misma promesa no reintroduce el rechazo, solo confirma que resolvió.
     await expect(shutdown.mock.results[0]?.value).rejects.toThrow("shutdown roto");
   });
 });

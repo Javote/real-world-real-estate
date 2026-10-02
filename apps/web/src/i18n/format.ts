@@ -1,20 +1,5 @@
 import type { Locale } from './locale'
 
-// Formateo con `Intl` y el locale activo (regla 14 / D-025).
-//
-// **Ningún componente arma un número o una fecha a mano.** No es prolijidad: en
-// `es-AR` el separador decimal es coma y el de miles es punto, y las fechas van
-// día/mes. Una fecha `toLocaleDateString()` sin locale explícito usa el del
-// navegador, que no es el que el usuario eligió en la app — y entonces la fecha
-// dice una cosa y el resto de la pantalla otra.
-
-/**
- * Montos en la moneda que venga del backend.
- *
- * **El monto llega en la unidad mínima entera** (centavos, regla 1: dinero
- * jamás en float) y se divide acá. Recibir el número ya dividido sería aceptar
- * que alguien hizo esa cuenta en punto flotante antes.
- */
 export function formatCurrency(minorUnits: number, currency: string, locale: Locale): string {
   return new Intl.NumberFormat(locale, {
     style: 'currency',
@@ -23,17 +8,6 @@ export function formatCurrency(minorUnits: number, currency: string, locale: Loc
   }).format(minorUnits / 100)
 }
 
-/**
- * Montos en la forma compacta de las StatCards: "US$ 8,4 M".
- *
- * Es la presentación que el entregable usa para dinero en un tile —la captura
- * 37 muestra "US$ 8.4M"— y existe por una razón de layout, no de gusto: el
- * número de un StatCard va a 28px y un tile de una grilla de tres no entra un
- * monto completo sin partirlo en tres líneas.
- *
- * El input sigue siendo la unidad mínima entera (regla 1): la división la hace
- * `Intl`, igual que en `formatCurrency`.
- */
 export function formatCurrencyCompact(
   minorUnits: number,
   currency: string,
@@ -47,18 +21,12 @@ export function formatCurrencyCompact(
   }).format(minorUnits / 100)
 }
 
-/**
- * El plugin de SQLite no convierte todas las columnas timestamp: `signedAt` y
- * `releasedAt` viajan como epoch ms. `new Date("1787…")` es Invalid; el número
- * crudo no. Aceptamos las dos formas que el JSON realmente manda.
- */
 function fechaDe(iso: string | number): Date {
   if (typeof iso === 'number') return new Date(iso)
   if (/^\d{13}$/.test(iso)) return new Date(Number(iso))
   return new Date(iso)
 }
 
-/** Una coordenada en grados decimales, con 5 decimales (~1 m): "-34,54700" en es-AR. */
 export function formatCoordinate(grados: number, locale: Locale): string {
   return new Intl.NumberFormat(locale, {
     minimumFractionDigits: 5,
@@ -66,24 +34,20 @@ export function formatCoordinate(grados: number, locale: Locale): string {
   }).format(grados)
 }
 
-/** Fecha corta. ISO o epoch ms — lo que mande el backend, nunca un `Date` local. */
 export function formatDate(iso: string | number, locale: Locale): string {
   return new Intl.DateTimeFormat(locale, { dateStyle: 'medium' }).format(fechaDe(iso))
 }
 
-/** "December 2027" — la fecha de entrega del ProjectCard de developer. */
 export function formatMonthYear(iso: string | number, locale: Locale): string {
   return new Intl.DateTimeFormat(locale, { month: 'long', year: 'numeric' }).format(fechaDe(iso))
 }
 
-/** Fecha + hora, para los eventos del audit log y los anclajes. */
 export function formatDateTime(iso: string | number, locale: Locale): string {
   return new Intl.DateTimeFormat(locale, { dateStyle: 'medium', timeStyle: 'short' }).format(
     fechaDe(iso)
   )
 }
 
-/** "hace 2 horas" / "2 hours ago" — la metadata de M2-D3 §Caption. */
 export function formatRelative(
   iso: string | number,
   locale: Locale,

@@ -5,16 +5,6 @@ import path from "node:path";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { createStorage } from "../src/lib/storage";
 
-// Integración real contra un S3: MinIO en local (`compose.dev.yml`), R2 en
-// prod. **No corre en CI**: necesita el contenedor arriba, y el CI no levanta
-// infraestructura. Se corre a mano, que es exactamente el caso de uso —
-// verificar que el código que va a hablar con R2 funciona contra un S3 de
-// verdad y no solo contra el driver de disco.
-//
-// MinIO lo levanta y lo baja la propia suite (`global-setup-minio.ts`); si ya
-// estaba corriendo, se usa y se deja como estaba.
-//
-//   pnpm --filter @plataforma/api test:s3
 const corre = process.env.S3_TEST === "1";
 
 const temporal = path.join(os.tmpdir(), `propnexus-s3-${Date.now()}.pdf`);
@@ -26,9 +16,6 @@ afterAll(() => {
 });
 
 describe.skipIf(!corre)("StoragePort · s3 contra un S3 real", () => {
-  // Perezoso a propósito: `describe.skipIf` **igual ejecuta el cuerpo** para
-  // recolectar los tests, así que construir el storage acá arriba haría
-  // explotar la suite entera en cualquier máquina sin MinIO.
   let storage: ReturnType<typeof createStorage>;
   const key = `evidence/test/${path.basename(temporal)}`;
 
@@ -45,8 +32,6 @@ describe.skipIf(!corre)("StoragePort · s3 contra un S3 real", () => {
       contentType: "application/pdf"
     });
 
-    // Esta igualdad es la deuda 🔴 que cierra el port: el hash sale de releer
-    // el objeto subido, no del temporal.
     expect(guardado.sha256).toBe(sha256Esperado);
     expect(guardado.storageRef).toBe(key);
   });

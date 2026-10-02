@@ -2,20 +2,8 @@ import { ChevronLeft, ChevronRight, X } from 'lucide-react'
 import { useEffect, useState } from 'react'
 import { Dialog, DialogContent, DialogTitle } from '#/components/ui/dialog'
 
-// M2-D3 §Modals · ImageGalleryModal — carrusel a pantalla completa para galerías
-// de proyecto, de unidad y de evidencia fotográfica de stage.
-//
-// El pie cambia según el contexto —proyecto, stage, o GPS + timestamp— y por eso
-// `caption` es un string que arma quien lo usa: el componente no sabe de qué
-// galería es.
-//
-// **El índice se resetea al abrir**, no al cerrar: si se cierra en la foto 3 y
-// se vuelve a abrir, empieza donde el que abre diga. Guardar el índice entre
-// aperturas haría que la galería recuerde algo que el usuario no pidió.
-
 export interface GalleryImage {
   url: string
-  /** Texto alternativo real. Nunca el nombre del archivo. */
   alt: string
   caption?: string
 }
@@ -24,14 +12,12 @@ interface ImageGalleryModalProps {
   open: boolean
   onClose: () => void
   images: readonly GalleryImage[]
-  /** Desde qué foto abre. */
   initialIndex?: number
   labels: {
     title: string
     close: string
     previous: string
     next: string
-    /** "2/4" — se arma con `Intl` afuera si el locale lo pide distinto. */
     counter: (actual: number, total: number) => string
   }
   testId?: string
@@ -47,13 +33,10 @@ export function ImageGalleryModal({
 }: ImageGalleryModalProps) {
   const [indice, setIndice] = useState(initialIndex)
 
-  // Al abrir vuelve a la foto que pidieron. `open` en las dependencias es lo
-  // que hace que reabrir reinicie en vez de continuar donde quedó.
   useEffect(() => {
     if (open) setIndice(initialIndex)
   }, [open, initialIndex])
 
-  // Sin fotos el índice da `undefined`: una sola guarda cubre eso y el tipo.
   const actual = images[Math.min(indice, images.length - 1)]
   if (!actual) return null
 
@@ -63,7 +46,7 @@ export function ImageGalleryModal({
     <Dialog open={open} onOpenChange={(abierto) => !abierto && onClose()}>
       <DialogContent
         data-testid={testId}
-        className="max-w-3xl bg-text-primary p-0"
+        className="bg-text-primary p-0 sm:max-w-3xl"
         showCloseButton={false}
       >
         <DialogTitle className="sr-only">{labels.title}</DialogTitle>

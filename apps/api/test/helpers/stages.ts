@@ -3,16 +3,6 @@ import { createId } from "../../src/db/id";
 import { anchorEvent, recordOnChainEvent } from "../../src/domain/stage-transition";
 import { db } from "../../src/lib/db";
 
-// 2026-09-08: reemplaza al `POST /api/v1/projects/:id/stages` que la suite
-// usaba para crear una etapa suelta con hilo real — la ruta se borró (era
-// anterior al Stage template de 10, ninguna decisión de producto la pedía
-// después de eso, y ningún componente del front la llamó nunca). Lo que las
-// pruebas necesitaban no era la ruta HTTP: era una etapa con su mint real.
-// Esta función hace exactamente lo que hacía el handler, sin pasar por
-// Express — mismas dos llamadas de dominio (`recordOnChainEvent` +
-// `anchorEvent`), mismo shape de retorno (`{ ...stage, anchor }`) para que
-// las aserciones existentes (`.id`, `.anchor.status`, `.anchor.outputRef`)
-// seguiran andando igual.
 export async function crearStageMinteado(input: {
   projectId: string;
   name: string;

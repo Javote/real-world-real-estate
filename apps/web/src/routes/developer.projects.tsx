@@ -1,9 +1,7 @@
 import { useQuery } from '@tanstack/react-query'
 import { createFileRoute, useNavigate } from '@tanstack/react-router'
 import { Plus } from 'lucide-react'
-import { api } from '#/api/port'
-import { DEV_ROLES } from '#/auth/roles'
-import { useRoleGuard } from '#/auth/useRoleGuard'
+import { api, projectCoverUrl } from '#/api/port'
 import { Loading } from '#/components/domain/Loading'
 import { SecondaryButton } from '#/components/domain/PrimaryButton'
 import { ProjectCard } from '#/components/domain/ProjectCard'
@@ -13,41 +11,19 @@ import { useTranslation } from '#/i18n/useTranslation'
 import { CARD_SHELL_EMPTY } from '#/lib/cardShell'
 import { TONO_PROYECTO } from '#/lib/stageProgress'
 
-// **M2-D5 fila 35-36 · `/developer/projects`** — captura 35/36.
-// Componentes: ProjectCard, StatusPill, ProgressTimeline (inline).
-// Endpoint: GET /developer/projects. Test ID: DEV-PROJECTS-LIST-001.
-//
-// Es el paso 0 del flujo de evidencia (M2-D1 §6): desde acá se entra al
-// proyecto y de ahí a subir. El avance que muestra cada card es **del
-// proyecto** (D-029), no de una unidad.
-//
-// "+ New" va en `headerAction`, alineado con el título (captura 35-36). El
-// header es el de D-074: logo + utilidades; la flecha no reemplaza al logo.
-//
-// **Un dato de la captura no se dibuja, y es deuda declarada, no olvido.** El
-// subtítulo dice "3 proyectos" y no "3 projects by Grupo Alpine" porque no hay
-// entidad de organización; el porqué está en el prop `developerName` de
-// ProjectCard. El "Price from" sí está: lo agrega el endpoint desde las
-// unidades del proyecto.
-
 export const Route = createFileRoute('/developer/projects')({ component: DeveloperProjects })
 
 function DeveloperProjects() {
-  const { ready } = useRoleGuard(DEV_ROLES)
   const { t, locale } = useTranslation()
   const navigate = useNavigate()
 
   const { data: proyectos, isPending } = useQuery({
     queryKey: ['developer', 'projects'],
-    queryFn: api.listDeveloperProjects,
-    enabled: ready
+    queryFn: api.listDeveloperProjects
   })
-
-  if (!ready) return null
 
   return (
     <PanelLayout
-      rol="developer"
       title={t('developer.projects.title')}
       context={t('developer.projects.context', { count: String(proyectos?.length ?? 0) })}
       back={{
@@ -80,6 +56,7 @@ function DeveloperProjects() {
                 key={p.id}
                 variant="developer"
                 name={p.name}
+                imageUrl={projectCoverUrl(p.id, p.coverUpdatedAt)}
                 location={[p.city, p.country].filter(Boolean).join(', ')}
                 progress={entregado ? null : p.progress}
                 status={{

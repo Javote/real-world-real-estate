@@ -12,15 +12,11 @@ afterAll(async () => {
   await db.destroy();
 });
 
-// Los casos borde salen de specs/SPEC-008 §Casos borde. Si un caso no está en
-// la spec, el test no existe — y al revés: cada fila de esa tabla es un test.
 describe("POST /api/v1/auth/login", () => {
   it("AUTH-LOGIN-001 · credenciales válidas devuelven token y usuario", async () => {
     const res = await login(FIXTURES.activo.email, FIXTURES.activo.password);
 
     expect(res.status).toBe(200);
-    // El contrato compartido es la aserción: si la API cambia la forma de la
-    // respuesta sin actualizar el schema, este test falla (regla 6).
     expect(loginResponseSchema.safeParse(res.body).success).toBe(true);
     expect(res.body.user.email).toBe(FIXTURES.activo.email);
   });
@@ -30,7 +26,6 @@ describe("POST /api/v1/auth/login", () => {
 
     expect(res.status).toBe(200);
     expect(res.body.user).not.toHaveProperty("passwordHash");
-    // Y no solo en `user`: en ninguna parte del cuerpo (regla 4 de CLAUDE.md).
     expect(JSON.stringify(res.body)).not.toContain("passwordHash");
     expect(JSON.stringify(res.body)).not.toContain("$2b$");
   });
@@ -46,8 +41,6 @@ describe("POST /api/v1/auth/login", () => {
     const inexistente = await login("no-existe@test.local", "loquesea");
     const passwordMala = await login(FIXTURES.activo.email, "password-equivocada");
 
-    // Si las dos respuestas difirieran, la API sería un oráculo de qué emails
-    // están registrados: enumeración de usuarios gratis para cualquiera.
     expect(inexistente.status).toBe(passwordMala.status);
     expect(inexistente.body).toEqual(passwordMala.body);
   });
@@ -56,10 +49,6 @@ describe("POST /api/v1/auth/login", () => {
     const res = await request(app).post("/api/v1/auth/login").send({});
 
     expect(res.status).toBe(400);
-    // SPEC-216 §E2 — migrado a oRPC: el sobre de error ya no es
-    // `error.flatten()`, es `ORPCError.toJSON()` (mismo cambio de forma que
-    // ya aceptaron las 45 rutas de SPEC-212 — ver ese spec, "el shape SÍ
-    // cambia"). El detalle de Zod sigue viajando, en `data.issues`.
     expect(res.body.code).toBe("BAD_REQUEST");
     expect(Array.isArray(res.body.data?.issues)).toBe(true);
     expect(res.body.data.issues.length).toBe(2);
@@ -121,9 +110,6 @@ describe("GET /api/v1/auth/me", () => {
       .get("/api/v1/auth/me")
       .set("Authorization", `Bearer ${body.token}`);
 
-    // El JWT sigue siendo criptográficamente válido: lo que lo invalida es la
-    // revalidación de isActive en cada request (D-016). Sin ella, desactivar a
-    // alguien no tendría efecto hasta que expire el token, 7 días después.
     expect(res.status).toBe(401);
   });
 });

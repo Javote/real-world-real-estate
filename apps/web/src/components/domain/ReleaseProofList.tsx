@@ -2,24 +2,11 @@ import { CARD_SHELL_DENSE } from '#/lib/cardShell'
 import { cn } from '#/lib/cn'
 import { HashChip } from './HashChip'
 
-// **M2-D4 Pattern 10 · prueba financiera por liberación.**
-//
-// **Por qué por release y no por contrato**, textual: el contrato es una entidad
-// lógica pero **no es el artefacto on-chain** en este modelo — cada liberación
-// sí lo es. Mostrar el TXID a nivel release refleja la cardinalidad real de los
-// eventos en la cadena.
-//
-// Y recordar D-021: "release" significa **anclar el evento de liberación**, no
-// ejecutar el pago. El monto es cronograma registrado, no plata que se mueva.
-
 export interface ReleaseRecord {
   stageNumber: number
-  /** En unidades mínimas enteras (regla 1). Lo formatea quien lo monta. */
   amountMinorUnits: number
   currency: string
-  /** ISO. */
   releasedAt: string
-  /** TXID del anclaje de la liberación. `null` si todavía no confirmó. */
   txid: string | null
 }
 

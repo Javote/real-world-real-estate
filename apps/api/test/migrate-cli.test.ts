@@ -2,14 +2,7 @@ import { existsSync, mkdtempSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import path from "node:path";
 import { afterEach, describe, expect, it } from "vitest";
-import { migrar } from "../src/db/migrate";
-
-// `applyPendingMigrations`/`conTecho` ya tienen su propia suite
-// (`migrate-atomico.test.ts`, `migrate-techo.test.ts`). Lo que `migrar()`
-// agrega encima —resolver la URL, crear el directorio si falta, conectar,
-// cerrar el cliente, los mensajes de log— es justo lo que corre
-// `pnpm db:migrate` y el `startCommand` de Render, y no tenía ningún test:
-// `main()` estaba detrás del guardia `require.main === module`.
+import { migrar, migrarSoloLocal } from "../src/db/migrate";
 
 let dir: string | undefined;
 
@@ -21,8 +14,6 @@ afterEach(() => {
 describe("migrar", () => {
   it("crea el directorio que falta, aplica las migraciones reales y devuelve sus nombres", async () => {
     dir = mkdtempSync(path.join(tmpdir(), "spec-017-migrate-"));
-    // El subdirectorio "nested" no existe todavía — es lo que prueba
-    // `asegurarDirectorioLocal`, que SQLite no crea solo.
     const url = `file:${path.join(dir, "nested", "migrate-test.db")}`;
 
     const aplicadas = await migrar(url);
@@ -41,5 +32,17 @@ describe("migrar", () => {
 
     const segunda = await migrar(url);
     expect(segunda).toEqual([]);
+  });
+});
+
+describe("migrarSoloLocal — la migración de pnpm dev", () => {
+  it("migra una base local", async () => {
+    dir = mkdtempSync(path.join(tmpdir(), "migrar-solo-local-"));
+    const aplicadas = await migrarSoloLocal(`file:${path.join(dir, "dev.db")}`);
+    expect(aplicadas?.length).toBeGreaterThan(0);
+  });
+
+  it("no toca una base remota", async () => {
+    expect(await migrarSoloLocal("libsql://no-existe.turso.io")).toBeNull();
   });
 });

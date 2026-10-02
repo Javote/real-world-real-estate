@@ -29,9 +29,6 @@ describe("refToHex", () => {
   });
 
   it("rechaza una ref más larga que un asset name", () => {
-    // 32 bytes es el límite de Cardano para el asset name del thread token,
-    // no una preferencia nuestra: pasarse no es un warning, es un NFT que no
-    // se puede acuñar.
     expect(() => refToHex("x".repeat(MAX_REF_BYTES + 1))).toThrow();
     expect(refToHex("x".repeat(MAX_REF_BYTES))).toHaveLength(MAX_REF_BYTES * 2);
   });
@@ -43,8 +40,6 @@ describe("refToHex", () => {
   });
 });
 
-// SPEC-404 (P-05) — `hexToRef` es la vuelta, y corre con datos que no
-// controlamos: no puede devolver basura en silencio sobre hex inválido.
 describe("hexToRef", () => {
   it("rechaza hex con caracteres que no son 0-9a-f", () => {
     expect(() => hexToRef("zz")).toThrow();
@@ -88,8 +83,6 @@ describe("buildStageDatum", () => {
   });
 
   it("no deja nacer un stage con evidencia o fecha ya puestas", () => {
-    // Es el espejo de `mint_rejects_preloaded_evidence` del validador: si esto
-    // pasara, el anclaje fallaría recién al firmar.
     const datum = buildStageDatum({ ...fuente, evidenceRoot: root, completedAt: 5 });
     expect(isValidInitialDatum(datum)).toBe(false);
   });

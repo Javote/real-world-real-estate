@@ -1,6 +1,6 @@
 # SPEC-501 — Panel de métricas del piloto
 
-> Milestone 4, criterio 1 del SOM (ver [`ESTADO-2026-09-22-catalyst-milestone-4.md`](ESTADO-2026-09-22-catalyst-milestone-4.md)).
+> Milestone 4, criterio 1 del SOM (ver [`ESTADO-2026-09-22-catalyst-milestone-4.md`](archive/ESTADO-2026-09-22-catalyst-milestone-4.md)).
 
 ## Propósito
 

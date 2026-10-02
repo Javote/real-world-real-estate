@@ -5,10 +5,6 @@ import { createId } from "../src/db/id";
 import { db } from "../src/lib/db";
 import { FIXTURES } from "./global-setup";
 
-// M3 §3 — mediana reserva → escrow < 12 min (D-021). El evento es
-// `OnChainEvent` de tipo INVITATION_ACCEPTED: createdAt = instante de la
-// reserva, updatedAt = cuándo `reconciliarAnclajes` lo vio Confirmed.
-
 let tokenAdmin: string;
 let tokenDev: string;
 let proyecto: string;
@@ -46,12 +42,6 @@ async function crearEvento(minutosHastaConfirmar: number | null) {
     .execute();
 }
 
-/**
- * SPEC-214: crea un evento `Confirmed` donde `blockTimestamp` y `updatedAt`
- * pueden divergir a propósito — es lo que reproduce el hueco que el cierre
- * del criterio 9 encontró (D-077: alguien volvió a leer minutos después de
- * que la cadena ya había confirmado).
- */
 async function crearEventoConfirmado(opts: {
   minutosHastaBloque: number | null;
   minutosHastaLectura: number;
@@ -137,15 +127,12 @@ describe("GET /audit-logs/telemetry/reservation-to-escrow", () => {
     expect(res.body.sampleSize).toBe(3);
     expect(res.body.medianMinutes).toBeCloseTo(8, 1);
     expect(res.body.maxMinutes).toBeCloseTo(20, 1);
-    // Los tres tienen blockTimestamp (crearEvento lo iguala a updatedAt).
     expect(res.body.withBlockTimestampCount).toBe(3);
   });
 
   describe("SPEC-214 — mide contra blockTimestamp, no contra updatedAt", () => {
     it("con blockTimestamp y updatedAt divergentes, mide la latencia de cadena real", async () => {
       await db.deleteFrom("OnChainEvent").where("eventType", "=", "INVITATION_ACCEPTED").execute();
-      // La cadena confirmó a los 3 min; nadie volvió a leer el proyecto hasta
-      // los 40 — es exactamente el hueco que updatedAt-createdAt inflaba.
       await crearEventoConfirmado({ minutosHastaBloque: 3, minutosHastaLectura: 40 });
 
       const res = await request(app)
@@ -160,8 +147,6 @@ describe("GET /audit-logs/telemetry/reservation-to-escrow", () => {
 
     it("una fila Confirmed vieja sin blockTimestamp usa updatedAt como respaldo, y no cuenta en withBlockTimestampCount", async () => {
       await db.deleteFrom("OnChainEvent").where("eventType", "=", "INVITATION_ACCEPTED").execute();
-      // blockTimestamp null pero Confirmed: el caso de antes de que la
-      // columna se poblara consistentemente.
       await crearEventoConfirmado({ minutosHastaBloque: null, minutosHastaLectura: 7 });
 
       const res = await request(app)
@@ -184,8 +169,6 @@ describe("GET /audit-logs/telemetry/reservation-to-escrow", () => {
         .set("Authorization", `Bearer ${tokenAdmin}`);
 
       expect(res.status).toBe(200);
-      // La fila con blockTimestamp negativo queda afuera: sampleSize cuenta
-      // solo la otra, ninguna mediana negativa.
       expect(res.body.sampleSize).toBe(1);
       expect(res.body.medianMinutes).toBeCloseTo(6, 1);
       expect(res.body.medianMinutes).toBeGreaterThanOrEqual(0);

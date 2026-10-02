@@ -11,50 +11,29 @@ import {
   Users
 } from 'lucide-react'
 import { api } from '#/api/port'
-import { DEV_ROLES } from '#/auth/roles'
-import { useRoleGuard } from '#/auth/useRoleGuard'
 import { ActionCard } from '#/components/domain/ActionCard'
 import { StatCard } from '#/components/domain/StatCard'
 import { PanelLayout } from '#/components/PanelLayout'
 import { useTranslation } from '#/i18n/useTranslation'
 import { useKpiValue } from '#/lib/useKpiValue'
 
-// **M2-D5 fila 33-34 · `/developer` (Panel)** — captura 33-DEVELOPER-HOME-A.
-// Componentes: StatCard, ActionCard (featured), NotificationBell,
-// GradientHeader. Endpoint: GET /developer/kpis. Test ID: DEV-PANEL-KPIS-001.
-//
-// **Dos tiles de la captura 34 no se dibujan, y es deuda, no olvido.**
-// "Active investors" (7 / 12 total) y "Verified events" (16) están en la
-// maqueta; `developerKpisSchema` no los expone. El directorio y el audit log
-// existen como pantallas, pero el panel no puede afirmar un número que el
-// contrato no trae (regla 17). El índice está en `apps/web/CLAUDE.md`.
-
-// `.index` y no `developer.tsx`: un archivo de ruta sin `.index` es el LAYOUT
-// de todo lo que cuelga del prefijo y tiene que renderizar un `<Outlet/>`. Sin
-// esto, `/developer/projects` mostraba el panel. Misma corrección que en
-// `notary.index.tsx` y `certifier.index.tsx`.
 export const Route = createFileRoute('/developer/')({ component: DeveloperPanel })
 
 function DeveloperPanel() {
-  const { session, ready } = useRoleGuard(DEV_ROLES)
+  const { session } = Route.useRouteContext()
   const { t } = useTranslation()
   const kpi = useKpiValue()
   const navigate = useNavigate()
 
   const { data } = useQuery({
     queryKey: ['developer', 'kpis'],
-    queryFn: api.getDeveloperKpis,
-    enabled: ready
+    queryFn: api.getDeveloperKpis
   })
-
-  if (!ready) return null
 
   return (
     <PanelLayout
-      rol="developer"
       title={t('panel.developer.title')}
-      /* v8 ignore next -- @preserve: `useRoleGuard` hace `setSession` y `setReady(true)` juntos y la pantalla ya salió en `if (!ready) return null`, así que `session` nunca es `null` acá (SPEC-019) */
-      context={session ? t('panel.welcome', { name: session.user.fullName }) : undefined}
+      context={t('panel.welcome', { name: session.user.fullName })}
     >
       <section className="grid grid-cols-2 gap-s4" data-testid="DEV-PANEL-KPIS-001">
         <ActionCard
@@ -70,9 +49,6 @@ function DeveloperPanel() {
           icon={Building2}
           tone="entity"
         />
-        {/* El KPI llega en unidades mínimas (regla 1). useKpiValue no sabe de
-            moneda: se divide acá, una sola vez, igual que `formatCurrency`.
-            Sin `currency` en el schema no se puede pintar "US$". */}
         <StatCard
           value={kpi(
             data?.capitalRaisedMinorUnits != null ? data.capitalRaisedMinorUnits / 100 : null
@@ -104,23 +80,6 @@ function DeveloperPanel() {
         />
       </section>
 
-      {/*           **Los accesos a las pantallas huérfanas (D-072), fuera del grid de
-          KPIs a propósito.** Las capturas 33/34 fijan la composición de ese
-          grid —un ActionCard destacado y siete StatCards— y meterle tiles de
-          navegación lo desviaría de lo que el entregable muestra. Acá van los
-          destinos que M2-D1 §5.2 le da al developer sin decir cómo se llega.
-
-          Del grid de siete, hoy hay cinco: faltan Active investors y Verified
-          events (ver el comentario de arriba). Capital raised sí está: el
-          schema ya lo trae.
-
-          Solo se listan los que EXISTEN.
-
-          **Lleva label de sección** porque sin él las dos cards se leen como
-          dos KPIs más y el grid de arriba parece cortarse a la mitad. Son otra
-          cosa —destinos, no métricas— y el label es lo que lo dice. El estilo
-          es el que M2-D3 fija para labels de sección (`--text-label`, bold,
-          mayúsculas), el mismo de TxidModal y MerkleRootProof. */}
       <section className="flex flex-col gap-s3">
         <h2 className="text-label font-bold uppercase text-text-muted">
           {t('panel.developer.shortcuts')}

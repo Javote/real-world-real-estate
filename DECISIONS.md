@@ -40,6 +40,7 @@ Todos se comunican en la entrega.
 | M3 SOM: "**signers** configurables" (rol configurable por stage) | Lo que el SOM pide ya existe, con otra forma: D-020 fija **qué rol autoriza cada transición**, construido y testeado — "configurable por proyecto" no aparece en ningún entregable. No se agrega una UI para reasignarlo | (c) verdad del producto + techo de precedencia | D-090, D-092 |
 | M2-D3 §LanguageToggle: "icon plus the **active** locale code" (captura 1: "文A EN") | Se muestran **los dos** códigos, ES y EN, con el activo resaltado y `aria-pressed`. Con uno solo no se sabía qué hacía el botón ni cuál era la alternativa, y el lector de pantalla anunciaba solo "Idioma" | (c) verdad del producto: accesibilidad, pedida por el dueño | D-096 |
 | M2-D3 §Visual Language fija `Verified #14B8A6`, `Pending #F97316`, `Info #3B82F6`, `People #EC4899`, `Danger #EF4444` y `Text muted #6B7280`; M2-D3 §Accessibility exige 4.5:1 para texto y labels | Ganan los 4.5:1: los seis tokens se oscurecen hasta pasar en todos sus fondos reales (2.13–4.29:1 → 4.68–5.75:1). Los rellenos claros de los pills no cambian | (a) contradicción interna, decidida por el dueño | D-098 |
+| M2-D3 §ProjectCard exige "**Cover image** (16:9)" y las capturas 2 y 6 la muestran; el alta de las capturas 34b/34C no tiene dónde cargarla | El alta suma un campo **Portada**, opcional (una imagen JPG o PNG), con el `FileDropzone` que M2-D3 ya define. Es un dato comercial del proyecto, **no evidencia**: no se hashea ni se ancla | (a) contradicción interna, decidida por el dueño | D-099 |
 | M1 §README lista los estados como "…**Certified**…"; el `.puml` dice `Completed` | Gana `Completed`: precedencia interna de M1, y `Certified` implicaría que la plataforma certifica | (a) contradicción interna | D-020, D-026 |
 | M1 §README promete que la taxonomía indica "authoritative" y "anchored on-chain" | El CSV entregado no tiene esas columnas. El hueco lo llenan D-027 y D-028 | (a) contradicción interna | D-027, D-028 |
 | M2-D5 §2.1 usa notación de rutas Wouter | Las rutas se leen como **paths**, no como elección de router | (b) redacción | D-022 |
@@ -1015,7 +1016,7 @@ la deuda de distinguir 404 de 403 desde afuera se conserva tal cual (`SPEC-012`)
 **Se pudo hacer recién ahora.** `SPEC-012` prohíbe cambiar semántica de seguridad adentro de un
 refactor, y hasta que existió la matriz no había forma de *probar* que un refactor no la cambiaba.
 Matriz (2026-09-03) → `requireOwnership` (2026-09-04) → unificación: cada paso habilita el
-siguiente. La secuencia completa está en `specs/PLAN-2026-09-04-guard-unico.md`.
+siguiente. La secuencia completa está en `specs/archive/PLAN-2026-09-04-guard-unico.md`.
 
 **La partición, hecha el mismo día.** `"soloRol"` quedaba en 45 de 87 rutas y **26 de ellas sí
 tenían regla de fila**, aplicada por el handler en su query. Decir "esta ruta no tiene regla de fila"
@@ -1053,7 +1054,7 @@ proyecto* eran vínculos **desconectados** en el modelo.
 **Y mirar eso destapó un bug de verdad, ya cerrado:** `POST /investor/invitations/:id/accept` **no
 creaba `ProjectMember`**, así que un investor real aceptaba y toda ruta con `requireProjectAccess` le
 daba 403 — incluidas las del Merkle proof de su propia evidencia. Ningún test lo veía porque el seed
-plantaba la membresía a mano. Detalle y la lección en `apps/api/CLAUDE.md` §Trampas verificadas.
+plantaba la membresía a mano. Detalle y la lección en `specs/archive/CLAUDE-subarboles-hasta-2026-10-01.md`, §`apps/api/CLAUDE.md`.
 **`alguna` se conserva igual**: ahora aceptar crea la membresía, pero los contratos que ya existen
 —y los que nazcan por otro camino— pueden no tenerla, así que *dueño* sigue sin implicar *miembro*.
 
@@ -1207,7 +1208,7 @@ desde una pantalla.
 
 **Qué cambia (SPEC-221):**
 
-- **El admin pasa por cualquier guard de rol** (`useRoleGuard`) y aterriza en `/admin`. Desde su
+- **El admin pasa por cualquier guard de rol** (`requireRole`, SPEC-601) y aterriza en `/admin`. Desde su
   barra de navegación entra a los cuatro paneles. Sigue sin solapa en `/login`: se entra tipeando
   el usuario.
 - **`/admin` hace lo único que no tenía pantalla en ningún rol: invitar a un certifier a un
@@ -1293,7 +1294,7 @@ separado de los demás para que los pines no se tapen.
 
 **Lo que destapó.** Con coordenadas cargadas aparecieron dos bugs de `LocationMapModal` que no se
 veían: el modal del detalle de obra abría vacío y el modo mapa de "Buy" mostraba 1 pin de 3. Los dos
-corregidos en el mismo commit — ver `apps/web/CLAUDE.md` §Trampas verificadas. Las tres Torre Volumen
+corregidos en el mismo commit — ver `specs/archive/CLAUDE-subarboles-hasta-2026-10-01.md`, §`apps/web/CLAUDE.md`. Las tres Torre Volumen
 recibieron coordenadas de CABA en producción el mismo día (Palermo, Belgrano, Colegiales).
 
 ## D-098 — Los colores de estado se oscurecen hasta el 4.5:1 que M2-D3 mismo exige
@@ -1336,3 +1337,65 @@ entran por el mismo criterio: la decisión es sobre contraste, no sobre qué pan
 **salvo los de esta tabla**, que tienen que aparecer con su valor nuevo. Y para esos seis, el test
 **calcula el contraste** contra sus fondos: si alguien aclara uno para que "quede más parecido a la
 captura", se pone rojo. Las capas de axe de `SPEC-112` miden el resto en el navegador.
+
+## D-099 — La portada del proyecto es un campo del proyecto, no evidencia
+
+**Decisión del dueño, 2026-09-30.** Todo proyecto puede tener **una** imagen de portada —un render, una
+foto de fachada—, que se carga en el alta y se dibuja en la card del listado y arriba del detalle de
+obra. Es opcional: sin portada, la card y el detalle muestran la superficie neutra de siempre.
+
+**Por qué es un desvío legítimo, caso (a).** M2-D3 §ProjectCard pide *"Cover image (16:9) with
+overlaid developer chip"*, y las capturas 2 (Buy) y 6 (detalle de obra) la muestran. Pero el alta
+(capturas 34b/34C, fila de M2-D5 `/developer/project/new`) no tiene ningún campo de imagen: el
+entregable exige mostrar algo que no da forma de cargar. Hasta hoy el código lo resolvía de la peor
+manera: la card nunca tenía imagen y el detalle tomaba como portada la primera **evidencia** que fuera
+foto.
+
+**No es evidencia, y esa es la mitad importante de la decisión.** Un render es material comercial.
+Si entrara como evidencia se hashearía, se anclaría y aparecería al lado de la prueba, como si la
+plataforma afirmara algo sobre lo que muestra — y D-026 limita lo que la plataforma sostiene a cuatro
+afirmaciones sobre documentos y atestaciones. Por eso la portada no toca `Evidence`, ni bundles, ni
+la cadena, y no dispara notificaciones. Las fotos de evidencia siguen siendo lo que son: en el detalle
+de obra van en la galería, **detrás** de la portada.
+
+**Cómo está hecha.**
+
+- **Base (migración `0012`):** tabla `ProjectCover` (una fila por proyecto, con la ref opaca del
+  archivo en R2 — D-011, nunca sale al cliente) y columna `Project.coverUpdatedAt`, que es lo único que
+  ve el front: dice si hay portada y es la versión de su URL.
+- **`PUT /developer/projects/:id/cover`** (multipart, un archivo `file`), solo el developer del
+  proyecto. JPEG o PNG por los primeros bytes (regla 10), hasta `PROJECT_COVER_MAX_FILE_MB` (10 MB),
+  los dos en `packages/shared/src/evidence-rules.ts`. Reemplazar borra el objeto anterior después de
+  confirmar las filas. Escribe `AuditLog` (`UPDATE_PROJECT_COVER`).
+- **`GET /public/projects/:id/cover`, sin sesión.** Es la tercera ruta sin sesión, después del login y
+  el dossier público. Pública porque es material comercial sin PII, el id del proyecto es opaco, y así
+  la card la pide con un `<img>` común que el navegador cachea (`immutable`: una portada nueva es una
+  URL nueva, `?v=<coverUpdatedAt>`). Con sesión, cada card tendría que bajarla como blob por `ApiPort`.
+  Pisa el `Cross-Origin-Resource-Policy: same-origin` de helmet con `cross-origin`: el web vive en otro
+  origen (D-065) y sin eso el navegador descarta la imagen.
+- **El alta** sube la portada después de crear el proyecto, a su id nuevo. Si el proyecto se crea y la
+  portada falla, reintentar sube solo la portada.
+
+**Las unidades usan la portada de su proyecto** (2026-09-30, mismo día). Las capturas 14 (My Units)
+y 15 (detalle de la unidad) muestran la foto del edificio: una unidad no tiene imagen propia, así
+que `GET /investor/units` trae el `coverUpdatedAt` del proyecto y la card y el detalle la usan.
+
+**Lo que queda para después, a pedido del dueño:** una **galería** del proyecto (varias imágenes
+comerciales), y una pantalla para cambiar la portada de un proyecto ya creado. Hoy, cambiarla es
+`PUT` por la API.
+
+## D-100 — El selector de etapa de "Upload evidence" usa chips numéricos, sin scroll
+
+**Decisión del dueño, 2026-10-01**, preparando el video. La captura 38 muestra chips con nombre
+("1. Land acquisition", "2. Executive project"…) en una sola fila que se desliza: en la pantalla se
+veían una o dos etapas y había que scrollear a la derecha hasta llegar a la 10.
+
+**Por qué es un desvío legítimo, caso (a).** El entregable se contradice: la captura 38 dibuja chips
+con nombre, y M2-D3 define el componente como *"StageChip — numeric 1-10 chips for stage
+selection"*. Gana la ficha de M2-D3 porque es la que da la pantalla usable, y es la misma forma que ya
+usa el investor en "Evidence by stage" (fila 15-18 de M2-D5, `StageChip (10x)`).
+
+**Cómo quedó.** Los diez chips numéricos, con salto de línea en vez de scroll horizontal. El nombre
+de la etapa elegida ya estaba en la tarjeta "Selected stage", así que no se pierde ningún dato. El
+nombre accesible de cada chip sigue diciendo número y nombre (`developer.upload.stageAria`).
+

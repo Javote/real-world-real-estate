@@ -1,9 +1,6 @@
 import { expect, test } from '@playwright/test'
 import { loginConSolapa } from './_helpers'
 
-// **SPEC-016 — superficie del investor.** Aserciones de estructura y de
-// presencia de test IDs, no de conteo (la suite comparte la base de seed).
-
 async function cambiarDeRol(page: import('@playwright/test').Page, rol: string) {
   await page.goto('/login')
   await page.evaluate(() => sessionStorage.clear())
@@ -46,8 +43,6 @@ test.describe('SPEC-016 — investor', () => {
     await loginConSolapa(page, 'Investor')
     await expect(page.getByTestId('INV-BUY-LIST-001')).toBeVisible()
 
-    // Presencia, no conteo: el seed le da al buyer membresía en un proyecto.
-    // Un `return` temprano acá era un test verde que no probaba nada.
     const card = page.getByTestId('INV-BUY-LIST-001').locator('article').first()
     await expect(card).toBeVisible()
     await card.locator('button').first().click()
@@ -68,8 +63,6 @@ test.describe('SPEC-016 — investor', () => {
     await page.goto('/investor/units')
     await expect(page.getByTestId('INV-UNITS-LIST-001')).toBeVisible()
 
-    // El seed le asigna una unidad a buyer@example.com: si no está, es un fallo
-    // real de la superficie, no un dato faltante que haya que saltear.
     const unidad = page.getByTestId('INV-UNITS-LIST-001').locator('button').first()
     await expect(unidad).toBeVisible()
     await unidad.click()

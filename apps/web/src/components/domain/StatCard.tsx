@@ -1,16 +1,6 @@
 import type { LucideIcon } from 'lucide-react'
 import { cn } from '#/lib/cn'
 
-// M2-D3 §Foundation · StatCard — *"the most-reused unit in the platform"*.
-//
-// El color del ícono **es semántico, no decorativo** (M2-D3): verde =
-// financiero, morado = entidad/inventario, naranja = tendencia, azul =
-// portfolio, rosa = personas, teal = verificación. Por eso es una unión y no un
-// string de clase.
-//
-// Y "always pair the number with a label — the number alone is never used": el
-// label no es opcional en el tipo.
-
 export type StatTone = 'financial' | 'entity' | 'trend' | 'portfolio' | 'people' | 'verification'
 
 const BADGES: Record<StatTone, string> = {
@@ -25,11 +15,9 @@ const BADGES: Record<StatTone, string> = {
 interface StatCardProps {
   value: string
   label: string
-  /** La línea chica de abajo: "of construction completed", "3 total". */
   helper?: string
   icon?: LucideIcon
   tone?: StatTone
-  /** Variante de fondo lleno: el tile "New project" del panel del developer. */
   highlighted?: boolean
   onClick?: () => void
 }
@@ -55,7 +43,6 @@ export function StatCard({
     >
       {Icon ? (
         <span
-          // Badge de 40px con ícono de 20px (M2-D3 §Sizes).
           className={cn(
             'flex h-10 w-10 items-center justify-center rounded-xl',
             highlighted ? 'bg-white/20 text-white' : BADGES[tone]

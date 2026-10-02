@@ -1,8 +1,6 @@
 import { useQuery } from '@tanstack/react-query'
 import { createFileRoute } from '@tanstack/react-router'
 import { api } from '#/api/port'
-import { NOTARY_ROLES } from '#/auth/roles'
-import { useRoleGuard } from '#/auth/useRoleGuard'
 import { HashChip } from '#/components/domain/HashChip'
 import { Loading } from '#/components/domain/Loading'
 import { StatusPill } from '#/components/domain/StatusPill'
@@ -12,31 +10,18 @@ import { useTranslation } from '#/i18n/useTranslation'
 import { CARD_SHELL, CARD_SHELL_EMPTY } from '#/lib/cardShell'
 import { cn } from '#/lib/cn'
 
-// **M2-D5 fila 53 · `/notary/signed`** — captura 53-NOTARY-SIGNED.
-// Componentes: HashChip (dossier hash + signature TXID), StatusPill.
-// Endpoint: GET /notary/signatures?cursor=. Test ID: NOT-SIGNED-LIST-001.
-// Patrón: P2.
-//
-// **Dos hashes por fila, y son cosas distintas.** El `masterHash` es lo que se
-// firmó; el `signatureTxid` es la prueba de que se firmó. Mostrar uno solo
-// dejaría al notario sin poder demostrar qué atestiguó exactamente.
-
 export const Route = createFileRoute('/notary/signed')({ component: SignedDossiers })
 
 function SignedDossiers() {
-  const { ready } = useRoleGuard(NOTARY_ROLES)
   const { t, locale } = useTranslation()
 
   const { data, isPending } = useQuery({
     queryKey: ['notary', 'signatures'],
-    queryFn: () => api.listSignatures(),
-    enabled: ready
+    queryFn: () => api.listSignatures()
   })
 
-  if (!ready) return null
-
   return (
-    <PanelLayout rol="notary" title={t('notary.signed.title')} context={t('notary.signed.context')}>
+    <PanelLayout title={t('notary.signed.title')} context={t('notary.signed.context')}>
       <section data-testid="NOT-SIGNED-LIST-001">
         {isPending ? (
           <Loading />
@@ -48,8 +33,6 @@ function SignedDossiers() {
                   <h2 className="text-body font-bold text-text-primary">
                     {f.projectName} · {f.unitReference}
                   </h2>
-                  {/* Sin TXID el estado es "Pendiente" aunque el registro diga
-                      firmado: la prueba puede no haber confirmado (regla 17). */}
                   <StatusPill tone={f.signatureTxid ? 'verified' : 'pending'}>
                     {f.signatureTxid ? t('status.signed') : t('status.pending')}
                   </StatusPill>

@@ -9,8 +9,6 @@ import { LocationMapModal, type MapMarker } from './LocationMapModal'
 vi.mock('leaflet', () => import('#/test/leaflet-falso'))
 vi.mock('leaflet/dist/leaflet.css', () => ({}))
 
-// SPEC-019 W7 · R7 + R8. El Leaflet falso guarda el callback de `moveend`.
-
 function render(ui: ReactElement) {
   return renderRTL(ui, { wrapper: LocaleProvider })
 }
@@ -34,9 +32,6 @@ const ultimoMapa = () => L.map.mock.results.at(-1)?.value as ReturnType<typeof L
 
 type Props = Parameters<typeof LocationMapModal>[0]
 
-// Antes de 2026-09-28 este helper renderizaba dos veces (con otro `zoom`) para
-// esquivar el bug del portal: el mapa del modal no se creaba. Con el
-// contenedor como estado el bug no existe y alcanza con un render.
 function montarModal(props: Partial<Props> = {}) {
   const completo = (zoom: number) => (
     <LocationMapModal open onClose={vi.fn()} labels={labels} {...props} zoom={zoom} />
@@ -52,6 +47,17 @@ describe('LocationMapModal — variante modal', () => {
     )
     await waitFor(() => expect(L.map).toHaveBeenCalled(), { timeout: 500 })
     await waitFor(() => expect(L.marker).toHaveBeenCalledWith([-34.5, -58.4]))
+  })
+
+  it('pide el ancho en `sm:` y aísla las capas de Leaflet (se veía de 512px, con la miniatura encima; 2026-09-30)', async () => {
+    render(
+      <LocationMapModal open onClose={vi.fn()} labels={labels} latitude={-34.5} longitude={-58.4} />
+    )
+    await waitFor(() => expect(L.map).toHaveBeenCalled(), { timeout: 500 })
+    const dialogo = screen.getByRole('dialog')
+    expect(dialogo.className).toContain('sm:max-w-4xl')
+    expect(dialogo.className).not.toContain('sm:max-w-lg')
+    expect(dialogo.querySelector('.isolate')).not.toBeNull()
   })
 
   it('con coordenadas centra ahí, pone el marcador con su popup y muestra el domicilio', async () => {
@@ -191,7 +197,6 @@ describe('LocationMapModal — variante browse', () => {
     )
     await mapaCreado()
     await waitFor(() => expect(ultimoMapa().invalidateSize).toHaveBeenCalled())
-    // El Leaflet falso solo guarda los callbacks de `moveend` y `click`; cualquier otro se ignora.
     ultimoMapa().on('zoomend', vi.fn())
     act(() => L.dispararMoveend())
     expect(onBoundsChange).toHaveBeenCalledTimes(1)
@@ -230,7 +235,6 @@ describe('LocationMapModal — variante browse', () => {
     const mapa = ultimoMapa()
     expect(mapa.fitBounds).toHaveBeenCalledTimes(1)
 
-    // Otros pines: se re-sincronizan pero no se vuelve a encuadrar.
     rerender(
       <LocationMapModal
         open
@@ -333,16 +337,13 @@ describe('LocationMapModal — variante picker (D-097)', () => {
     await waitFor(() => expect(L.marker).toHaveBeenCalledTimes(1))
     const mapa = ultimoMapa()
     const pin = L.marker.mock.results[0]?.value
-    // A la vista y de cerca: el pin se mueve, la cámara no.
     mapa.setView.mockClear()
     rerender(picker({ latitude: -34.55, longitude: -58.461 }))
     await waitFor(() => expect(pin.setLatLng).toHaveBeenCalledWith([-34.55, -58.461]))
     expect(mapa.setView).not.toHaveBeenCalled()
-    // Fuera de vista: centra.
     L.estado.contiene = false
     rerender(picker({ latitude: -34.6, longitude: -58.5 }))
     await waitFor(() => expect(mapa.setView).toHaveBeenCalledWith([-34.6, -58.5], 16))
-    // A la vista pero con zoom de ciudad: acerca.
     L.estado.contiene = true
     L.estado.zoom = 12
     rerender(picker({ latitude: -34.61, longitude: -58.51 }))
@@ -359,5 +360,53 @@ describe('LocationMapModal — variante picker (D-097)', () => {
     await waitFor(() => expect(pin.remove).toHaveBeenCalled())
     rerender(picker({ latitude: -34.547 }))
     expect(pin.remove).toHaveBeenCalledTimes(1)
+  })
+})
+
+describe('LocationMapModal · variante preview (la miniatura de las capturas 6 y 15)', () => {
+  it('cerrado no renderiza nada', () => {
+    const { container } = render(
+      <LocationMapModal open={false} variant="preview" labels={labels} />
+    )
+    expect(container.innerHTML).toBe('')
+  })
+
+  it('un mapa quieto con un pin: sin arrastre, zoom ni controles, y no recibe clics', async () => {
+    render(
+      <LocationMapModal
+        open
+        variant="preview"
+        latitude={-34.574}
+        longitude={-58.449}
+        labels={labels}
+        testId="MINIATURA"
+      />
+    )
+    await mapaCreado()
+
+    const envoltorio = screen.getByTestId('MINIATURA')
+    expect(envoltorio.className).toContain('pointer-events-none')
+    expect(envoltorio.className).toContain('isolate')
+    expect(envoltorio.getAttribute('aria-hidden')).toBe('true')
+    expect(screen.queryByRole('dialog')).toBeNull()
+    expect(screen.queryByRole('button')).toBeNull()
+
+    expect(L.map).toHaveBeenCalledWith(expect.anything(), {
+      dragging: false,
+      zoomControl: false,
+      scrollWheelZoom: false,
+      doubleClickZoom: false,
+      boxZoom: false,
+      keyboard: false,
+      touchZoom: false
+    })
+    expect(ultimoMapa().setView).toHaveBeenCalledWith([-34.574, -58.449], 15)
+    await waitFor(() => expect(L.marker).toHaveBeenCalledWith([-34.574, -58.449]))
+  })
+
+  it('las otras variantes siguen siendo interactivas', async () => {
+    montarModal({ latitude: -31.4, longitude: -64.2 })
+    await mapaCreado()
+    expect(L.map).toHaveBeenCalledWith(expect.anything(), {})
   })
 })

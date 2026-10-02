@@ -13,10 +13,6 @@ function crearCliente(link: InstanceType<typeof OpenAPILink>) {
   return createORPCClient<RouterClient<typeof contractsOrpcRouter>>(link);
 }
 
-// SPEC-216 §E3 — mismo patrón que `orpc-client-profile.test.ts`. `authorize`
-// sigue resolviendo la única regla disyuntiva (`alguna`) de la API ANTES de
-// que oRPC vea la request: este test prueba las dos ramas, no que oRPC sepa
-// nada de la disyunción.
 let servidor: http.Server;
 let baseUrl: string;
 let contratoId: string;
@@ -90,8 +86,6 @@ describe("cliente oRPC tipado de contracts, contra el servidor real (SPEC-216 §
     });
     const client = crearCliente(link);
 
-    // El tipo de `releases` ya es `ContractRelease[]` (inferido del mismo
-    // `contractReleaseSchema` que valida en el servidor) — sin cast.
     const releases = await client.releasesProcedure({ contractId: contratoId });
     expect(Array.isArray(releases)).toBe(true);
   });

@@ -1,15 +1,6 @@
 import { Loader2 } from 'lucide-react'
 import { cn } from '#/lib/cn'
 
-// M2-D3 §Forms & Controls · PrimaryButton — la acción de mayor jerarquía.
-//
-// "Disabled — lighter purple, reduced opacity": es **opacidad sobre el mismo
-// morado**, no un hex nuevo. Inventar un token para eso sería agregar un color
-// que el entregable no tiene.
-//
-// El label es verbo primero ("Anclar evidencia", "Verificar y firmar"), y va
-// como máximo uno por pantalla — dos solo en una barra de CTA pareada.
-
 interface ButtonProps {
   children: React.ReactNode
   type?: 'button' | 'submit'
@@ -17,15 +8,6 @@ interface ButtonProps {
   loading?: boolean
   onClick?: () => void
   className?: string
-  /**
-   * Test ID de M2-D5, cuando el botón ES la superficie del backlog —
-   * `CER-CERTIFY-001`, `NOT-DOSSIER-SIGN-001`.
-   *
-   * Explícito y no un spread de props sueltas: **una superficie sin sus test
-   * IDs no está terminada** (regla 4), así que el hook tiene que ser parte del
-   * contrato del componente y no algo que se cuela por accidente. Sin esto el
-   * atributo se descartaba en silencio y el test no encontraba nada.
-   */
   testId?: string
 }
 
@@ -55,8 +37,6 @@ export function PrimaryButton({
   )
 }
 
-// SecondaryButton — misma forma y padding que el primario, menor énfasis.
-// "Cancel", "Back to <parent>", "View dossier".
 export function SecondaryButton({
   children,
   type = 'button',
@@ -78,20 +58,12 @@ export function SecondaryButton({
         className
       )}
     >
-      {/* SPEC-108 (F-17): `loading` está en el tipo desde siempre — solo
-          `PrimaryButton` lo implementaba, y los otros dos type-checkeaban
-          con `loading` sin hacer nada. */}
       {loading ? <Loader2 size={18} className="animate-spin" aria-hidden="true" /> : null}
       {children}
     </button>
   )
 }
 
-// DangerButton — destructivo o correctivo, y se usa poco.
-//
-// Las dos variantes están en el entregable y significan cosas distintas:
-// `danger` es destructivo (rojo); `corrective` es naranja, y existe para
-// "enviar con observaciones" — señala que hay que corregir, no que se destruye.
 export function DangerButton({
   children,
   type = 'button',

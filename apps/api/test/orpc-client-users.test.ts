@@ -12,9 +12,6 @@ function crearCliente(link: InstanceType<typeof OpenAPILink>) {
   return createORPCClient<RouterClient<typeof usersOrpcRouter>>(link);
 }
 
-// SPEC-216 §E4 — mismo patrón que `orpc-client-profile.test.ts`. Aislado en
-// su propio commit por tocar superficie 🔴 (bcrypt): este test es la prueba
-// de que el transporte cambió y `bcrypt.hash`/`passwordHash` no.
 let servidor: http.Server;
 let baseUrl: string;
 let tokenAdmin: string;

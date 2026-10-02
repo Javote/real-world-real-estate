@@ -34,7 +34,6 @@ const obra = (id: string, over: Record<string, unknown> = {}) => ({
   ...over
 })
 
-/** Perfil completo: bio, años, dos listados con datos. */
 const perfil = (over: Record<string, unknown> = {}) =>
   ({
     organization: organizacion(BIO_CORTA),
@@ -109,7 +108,6 @@ describe('/project/:projectId/developer (investor)', () => {
     montar()
 
     const previas = await screen.findByTestId('INV-DEVELOPER-PREVIOUS-002')
-    // `formatCurrency` recibe unidades mínimas: 19.500.000 centavos son US$ 195.000.
     expect(previas.textContent).toMatch(/195\.000/)
     expect(previas.textContent).toContain('60 m² – 150 m²')
   })
@@ -181,8 +179,6 @@ describe('/project/:projectId/developer (investor)', () => {
     mockear(perfil({ organization: organizacion(BIO_LARGA) }))
     montar()
 
-    // `Bio` se declara dentro de la pantalla: cada render la remonta, así que
-    // el párrafo se vuelve a buscar en vez de guardar la referencia.
     expect((await screen.findByText(BIO_LARGA)).className).toContain('line-clamp-3')
 
     await userEvent.click(screen.getByRole('button', { name: t['investor.developer.seeMore'] }))

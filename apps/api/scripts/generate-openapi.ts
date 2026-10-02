@@ -6,6 +6,7 @@ import {
   EVIDENCE_MAX_FILES,
   hex64ParamSchema,
   positiveIntParamSchema,
+  projectCoverResultSchema,
   stageEvidenceUploadResultSchema,
   stageEvidenceUploadSchema
 } from "@plataforma/shared";
@@ -38,111 +39,26 @@ import { publicOrpcRouter } from "../src/routes/public.routes";
 import { type StagesContext, stagesOrpcRouter } from "../src/routes/stages.routes";
 import { type UsersContext, usersOrpcRouter } from "../src/routes/users.routes";
 
-// El otro consumidor de `route-inventory` (junto a `generate-api-docs.ts` y
-// `test/route-guards.test.ts`): un documento OpenAPI 3.1, leído del MISMO
-// router montado — no un mapa mantenido a mano que envejece en silencio.
-//
-// **Esto era imposible hasta el commit anterior.** 23 de los 26 endpoints que
-// validan con Zod tenían su schema declarado INLINE, dentro del handler — sin
-// una referencia importable, no hay nada que pasarle a `zod-openapi`. Migrar
-// esos schemas a `packages/shared` (regla 6, que ya lo pedía por otro motivo)
-// es lo que habilita este generador: hoy los 26 `safeParse` de la API resuelven
-// a un export con nombre, y este archivo solo los mapea a su ruta.
-//
-// **La ambición es la misma que la del Postman: acotada, y a propósito.**
-// Body/query van con su schema real donde existe — que es la parte que un
-// reviewer necesita para armar un request válido.
-//
-// **Las respuestas — Tanda 1 y Tanda 2 del plan
-// (`specs/PLAN-2026-09-08-documentar-api-completa.md`), cerradas.** Tanda 1
-// conectó las ~24 que ya tenían un schema Zod real en `packages/shared`
-// —antes solo usado para tipar en compile-time (`satisfies`) o ni eso—; Tanda
-// 2 escribió el schema que faltaba para las ~61 restantes, archivo por
-// archivo. Las dos VALIDAN en runtime (`schema.parse(...)` antes de
-// responder) y se documentan acá en `RESPONSE_SCHEMAS`. De las rutas que no
-// migraron a oRPC, solo quedan sin entrada las que legítimamente no tienen
-// cuerpo JSON: `204 No Content` (borrados) — las que devuelven un archivo
-// binario (`/dossier/export.pdf`, SPEC-212 §C, y `/evidence/:id/download`,
-// SPEC-217) migraron a oRPC y ya no pasan por acá.
-//
-// **El código de éxito se lee del handler, no se adivina por verbo HTTP.**
-// La primera versión de este generador usaba una convención (`POST → 201`,
-// `DELETE → 204`, resto `200`) y mentía en al menos tres rutas reales:
-// `POST /auth/login` (200, no crea nada), `POST /evidence/reconcile` (200, es
-// un disparador de mantenimiento) y `POST /invitations/:id/decline` (204, no
-// 201). `codigoDeExito` (abajo) regexea el `res.status(2xx)` real del handler
-// terminal — que `leerMontaje` ahora expone en `handlers` para esto. Sigue sin
-// cubrir las respuestas **secundarias** de un handler idempotente (`200` si
-// ya existía, `201` si se creó ahora): documenta la de creación, que es la
-// más informativa — mismo tipo de límite que `EJEMPLOS_CAMINO_FELIZ` en
-// `generate-api-docs.ts`.
-
 type SchemaEntry = { body?: ZodType; bodyContentType?: string; query?: ZodType };
 
-/**
- * Ruta → sus schemas de entrada. Una entrada por cada uno de los 26
- * `safeParse(req.body|query)` que hay en `apps/api/src/routes`.
- *
- * `test/openapi-freshness.test.ts` (mismo patrón que la de Postman) prueba
- * que el JSON commiteado sea el que este archivo generaría hoy — pero no
- * prueba que esta lista esté completa: si un `safeParse` nuevo no se agrega
- * acá, el documento generado simplemente no cambia y el test sigue verde. La
- * única defensa real es la misma que sostiene el literal de
- * `route-guards.test.ts`: se edita el mismo día que se agrega el `safeParse`.
- */
 const REQUEST_SCHEMAS: Record<string, SchemaEntry> = {
-  // Multipart, **por lote desde SPEC-218**: `file` se repite (hasta
-  // `EVIDENCE_MAX_FILES`) y `stageEvidenceUploadSchema` valida los demás campos
-  // del form, que Express entrega como string. El archivo no lo valida un schema
-  // Zod sino Multer (tope de tamaño y de cantidad, de `packages/shared`) y, para
-  // el tipo real, `detectarTipoDeEvidencia` en el handler — se declara acá solo
-  // para que el documento diga cómo es el pedido.
-  //
-  // **Se queda afuera de `OpenAPIHandler` a propósito, la única de las 46
-  // rutas que no migra así.** `OpenAPIHandler` parsea `multipart/form-data` con
-  // el `Response(stream).formData()` nativo de Node, que bufferea el archivo
-  // ENTERO en memoria sin ningún límite configurable — a diferencia de Multer,
-  // que aplica `limits.fileSize`/`limits.files` en streaming y escribe a disco
-  // (regla 10). Probado antes de descartarlo: `test/zzz-multipart-smoke.test.ts`
-  // (borrado tras la prueba) confirmó que oRPC SÍ puede parsear un `File` +
-  // campos de texto — la razón de no usarlo acá es de recursos, no de capacidad.
-  // (Y NO es un problema de RAM de Multer: con `diskStorage` el body no pasa por
-  // memoria — ver `SPEC-218` §Los hallazgos.)
-  //
-  // **Lo que SÍ migró (2026-09-20, investigación "Multer + `call()`" de
-  // SPEC-212): el paso de validación de los campos de texto.** Multer sigue
-  // parseando el multipart, pero `stageEvidenceUploadSchema.safeParse` se
-  // reemplazó por `call(validarCamposDeTexto, req.body)` en
-  // `developer-evidencia.routes.ts` — mismo schema, corrido a través del
-  // `.input()` de un procedimiento oRPC invocado EN PROCESO (nunca por HTTP,
-  // `OpenAPIHandler` sigue sin tocar esta ruta). El 400 resultante ya no es
-  // `error.flatten()`: tiene el mismo shape (`{code, status, data: {issues}}`)
-  // que las otras rutas.
   "POST /api/v1/developer/projects/:id/stages/:stageId/evidence": {
     body: stageEvidenceUploadSchema.extend({
       file: z.array(z.file()).min(1).max(EVIDENCE_MAX_FILES)
     }),
     bodyContentType: "multipart/form-data"
+  },
+  "PUT /api/v1/developer/projects/:id/cover": {
+    body: z.object({ file: z.file() }),
+    bodyContentType: "multipart/form-data"
   }
-  // Las rutas de `notary` (§A), `certifier` (§B), `investor` (§C, salvo
-  // `export.pdf`) y `developer`/`developer-comercial`/`capital` (§D, salvo la
-  // subida multipart de arriba) ya NO están acá: su schema se declara una
-  // sola vez en el procedimiento oRPC y de ahí sale tanto la validación como
-  // el fragmento de OpenAPI — ver `ORPC_MIGRADAS` y el merge al final de
-  // `buildOpenApiDocument`.
 };
 
-/**
- * Ruta → su schema de respuesta de éxito. Tanda 1 del plan: solo las que ya
- * tenían un schema Zod real antes de este cambio — ninguno se escribió acá,
- * solo se conectó. Si el handler devuelve una lista, el valor es
- * `z.array(...)`; si es la forma `{ items, nextCursor }`, `paginatedResponseSchema(...)`.
- */
 const RESPONSE_SCHEMAS: Record<string, ZodType> = {
-  "POST /api/v1/developer/projects/:id/stages/:stageId/evidence": stageEvidenceUploadResultSchema
+  "POST /api/v1/developer/projects/:id/stages/:stageId/evidence": stageEvidenceUploadResultSchema,
+  "PUT /api/v1/developer/projects/:id/cover": projectCoverResultSchema
 };
 
-/** La forma exacta de `ZodError.flatten()`, que es lo que devuelve todo 400. */
 const zodErrorSchema = z
   .object({
     formErrors: z.array(z.string()),
@@ -150,40 +66,14 @@ const zodErrorSchema = z
   })
   .meta({ id: "ValidationError" });
 
-/**
- * El código de éxito real, leído del propio handler — no una convención por
- * verbo HTTP. Se probó la convención (`POST → 201`, `DELETE → 204`, resto
- * `200`) primero y mentía en al menos tres rutas reales: `POST /auth/login`
- * (200, no crea nada), `POST /evidence/reconcile` (200, es un disparador de
- * mantenimiento) y `POST /invitations/:id/decline` (204, no 201). La única
- * fuente que no miente es el código fuente del handler.
- *
- * Cuando el handler tiene más de un código de éxito (el patrón idempotente:
- * `200` si ya existía, `201` si se creó ahora — `POST /evidence/:id/anchor`,
- * `POST /notary/dossiers/:id/sign`), se documenta el de **creación**: es la
- * rama más informativa, y la limitación queda declarada arriba en la
- * descripción del documento.
- */
 function codigoDeExito(handler: unknown): string {
   if (typeof handler !== "function") return "200";
   const codigos = [...handler.toString().matchAll(/res\.status\((2\d\d)\)/g)].map((m) => m[1]);
   if (codigos.includes("201")) return "201";
   if (codigos.includes("204")) return "204";
-  // Sin `.status()` explícito, `res.json(...)` responde 200 — el default de
-  // Express, no una adivinanza.
   return codigos[0] ?? "200";
 }
 
-/**
- * La forma real de cada param, **por nombre** — no por ruta. En este dominio
- * el nombre alcanza: cualquier `:id`/`:projectId`/`:stageId`/`:contractId`/
- * `:unitId`/`:bundleId` es un `cuid2` (`createId()`, la única forma en que
- * este código genera ids); `:fileHash` y `:shareToken` comparten la forma
- * hex64 sin compartir origen (ver `packages/shared/src/params.ts`); `:stageNum`
- * es el único numérico. Es la misma tabla que sostiene los
- * `router.param(...)` de cada archivo de rutas — si un param nuevo aparece acá
- * y no ahí (o viceversa), documentación y runtime divergen en silencio.
- */
 const PARAM_SCHEMAS: Record<string, ZodType> = {
   id: cuidParamSchema,
   projectId: cuidParamSchema,
@@ -197,7 +87,6 @@ const PARAM_SCHEMAS: Record<string, ZodType> = {
 };
 
 function parametrosDePath(ruta: string): string[] {
-  // El grupo de captura no es opcional en el patrón — siempre matchea si `m` existe.
   return [...ruta.matchAll(/:([A-Za-z0-9_]+)/g)].map((m) => en(m, 1));
 }
 
@@ -205,21 +94,11 @@ function aPathOpenApi(ruta: string): string {
   return ruta.replace(/:([A-Za-z0-9_]+)/g, "{$1}");
 }
 
-/**
- * Las rutas de `notary` (§A), `certifier` (§B), `investor` (§C, las 14),
- * `developer`/`developer-comercial`/`capital` (§D, las 19 — todas salvo la
- * subida multipart) y, desde SPEC-216, `profile`/`notifications` (§E1),
- * `auth`/`public` (§E2), `audit`/`contracts` (§E3), `stages` (§E5),
- * `projects`/`projects-obra` (§E6), `evidence` (§E7, las 8, incluida
- * `GET /:id/download` de `SPEC-217`) y `users` (§E4) — ya migradas a
- * oRPC. El bucle de abajo las saltea y su fragmento sale, aparte, de sus
- * routers oRPC combinados con `OpenAPIGenerator` (ver el final de esta
- * función).
- */
 const ORPC_MIGRADAS = new Set([
   "GET /api/v1/auth/me",
   "POST /api/v1/auth/login",
   "GET /api/v1/public/dossier/:shareToken",
+  "GET /api/v1/public/projects/:id/cover",
   "GET /api/v1/profile",
   "PATCH /api/v1/profile",
   "PATCH /api/v1/profile/notifications",
@@ -310,7 +189,6 @@ export async function buildOpenApiDocument() {
     for (const [clave, guards] of rutas) {
       if (ORPC_MIGRADAS.has(clave)) continue;
 
-      // "MÉTODO /ruta", siempre — es esta misma inventiva la que arma `clave`.
       const partesClave = clave.split(" ");
       const metodo = en(partesClave, 0);
       const ruta = en(partesClave, 1);
@@ -366,22 +244,10 @@ export async function buildOpenApiDocument() {
     }
   }
 
-  // Las rutas de `notary` (§A) y `certifier` (§B): un router oRPC combinado
-  // por vertical, prefijado al mismo path absoluto que `MONTAJE` usa para
-  // montarlas de verdad (`os.prefix(...).router(...)`, no un string armado a
-  // mano dos veces), y `OpenAPIGenerator` arma su fragmento desde ahí — el
-  // mismo contrato Zod que valida en runtime, no una segunda copia.
-  // `ZodToJsonSchemaConverter` tiene que ser el de `@orpc/zod/zod4`: el de
-  // Zod v3 devuelve un schema vacío en silencio contra la forma interna de
-  // Zod v4 (D-035) — ver `src/lib/orpc.ts`.
   const generadorOrpc = new OpenAPIGenerator({
     schemaConverters: [new ZodToJsonSchemaConverter()]
   });
 
-  // SPEC-216 §E2 — `auth` mezcla un procedimiento sin `user` (`/login`) con
-  // uno que lo exige (`/me`): `AuthContext` lo declara opcional y es el
-  // contexto MÁS ANCHO de los dos, mismo criterio que ya documentaba
-  // `notary.routes.ts` para un router combinado de contexto mixto.
   const documentoAuth = await generadorOrpc.generate(
     os.$context<AuthContext>().prefix("/api/v1/auth").router(authOrpcRouter),
     {
@@ -390,8 +256,6 @@ export async function buildOpenApiDocument() {
   );
   Object.assign(paths, documentoAuth.paths);
 
-  // SPEC-216 §E2 — sin `authenticate` corriendo antes, así que sin `$context`:
-  // ningún procedimiento de `public` necesita `user`.
   const documentoPublic = await generadorOrpc.generate(
     os.prefix("/api/v1/public").router(publicOrpcRouter),
     {
@@ -400,7 +264,6 @@ export async function buildOpenApiDocument() {
   );
   Object.assign(paths, documentoPublic.paths);
 
-  // SPEC-216 §E1 — los dos más chicos del lote, migrados juntos.
   const documentoProfile = await generadorOrpc.generate(
     os.$context<ProfileContext>().prefix("/api/v1/profile").router(profileOrpcRouter),
     {
@@ -420,7 +283,6 @@ export async function buildOpenApiDocument() {
   );
   Object.assign(paths, documentoNotifications.paths);
 
-  // SPEC-216 §E3 — ninguno de los dos toca `req.user`, sin `$context`.
   const documentoAudit = await generadorOrpc.generate(
     os.prefix("/api/v1/audit-logs").router(auditOrpcRouter),
     {
@@ -437,7 +299,6 @@ export async function buildOpenApiDocument() {
   );
   Object.assign(paths, documentoContracts.paths);
 
-  // SPEC-216 §E5.
   const documentoStages = await generadorOrpc.generate(
     os.$context<StagesContext>().prefix("/api/v1/stages").router(stagesOrpcRouter),
     {
@@ -446,10 +307,6 @@ export async function buildOpenApiDocument() {
   );
   Object.assign(paths, documentoStages.paths);
 
-  // SPEC-216 §E6 — comparten prefijo (`projects.routes.ts` +
-  // `projects-obra.routes.ts`), mismo criterio que `developer`/
-  // `developer-comercial`/`capital` (§D): dos `generate()` separados, paths
-  // disjuntos, sin choque.
   const documentoProjects = await generadorOrpc.generate(
     os.$context<ProjectsContext>().prefix("/api/v1/projects").router(projectsOrpcRouter),
     {
@@ -466,7 +323,6 @@ export async function buildOpenApiDocument() {
   );
   Object.assign(paths, documentoProjectsObra.paths);
 
-  // SPEC-216 §E7 + SPEC-217 — las 8 rutas de evidence.
   const documentoEvidence = await generadorOrpc.generate(
     os.$context<EvidenceContext>().prefix("/api/v1/evidence").router(evidenceOrpcRouter),
     {
@@ -475,8 +331,6 @@ export async function buildOpenApiDocument() {
   );
   Object.assign(paths, documentoEvidence.paths);
 
-  // SPEC-216 §E4 — aislado en su propio commit por tocar superficie 🔴
-  // (bcrypt), pero el fragmento de OpenAPI sale igual que cualquier otro.
   const documentoUsers = await generadorOrpc.generate(
     os.$context<UsersContext>().prefix("/api/v1/users").router(usersOrpcRouter),
     {
@@ -509,11 +363,6 @@ export async function buildOpenApiDocument() {
   );
   Object.assign(paths, documentoInvestor.paths);
 
-  // `developer`, `developer-comercial` y `capital` (§D) comparten el MISMO
-  // prefijo absoluto (`/api/v1/developer`, `MONTAJE`) en tres archivos
-  // distintos — tres `generate()` separados, cada uno con ese prefijo, se
-  // combinan sin choque porque sus paths son disjuntos (mismo criterio que
-  // sostiene que los tres routers Express convivan sin pisarse).
   const documentoDeveloper = await generadorOrpc.generate(
     os.$context<DeveloperContext>().prefix("/api/v1/developer").router(developerOrpcRouter),
     {
@@ -554,12 +403,6 @@ export async function buildOpenApiDocument() {
         "success responses are the real Zod schema, validated at runtime before responding — " +
         "the remaining 9 legitimately have no JSON body (`204 No Content` or a binary file)."
     },
-    // Sin `/api/v1`: los 70 paths ya lo traen (sale de `MONTAJE`, el prefijo es
-    // parte de la clave). Con el prefijo acá TAMBIÉN, un cliente generado o el
-    // botón "Try it" de Swagger UI arman `.../api/v1/api/v1/auth/login` — doble
-    // prefijo, 404 (SPEC-204). El puerto sale de `apps/api/.env.example` (8787
-    // es el puerto de dev), no del 3001 que no aparece en ningún otro lado del
-    // repo.
     servers: [{ url: "http://localhost:8787", description: "Local (pnpm dev)" }],
     components: {
       securitySchemes: {

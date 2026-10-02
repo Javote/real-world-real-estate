@@ -5,9 +5,6 @@ import app from "../src/app";
 import { loginRateLimiter, loginRateLimitMax, trustProxyHops } from "../src/middlewares/rateLimit";
 import { FIXTURES } from "./global-setup";
 
-// El limiter se prueba montado en una app mínima y con un max propio: la suite
-// entera comparte proceso e IP, así que probarlo contra la app real haría chocar
-// a los otros archivos. Lo que se verifica contra la app real es el CABLEADO.
 const appDePrueba = (max: number) => {
   const a = express();
   a.use(express.json());
@@ -28,8 +25,6 @@ describe("límite de intentos de login", () => {
   });
 
   it("cuenta los intentos exitosos también", async () => {
-    // Lo que se protege es CPU, y el bcrypt se paga igual cuando la password es
-    // correcta. Un limiter que solo cuenta fallos no defiende de nada acá.
     const a = appDePrueba(2);
 
     expect((await request(a).post("/login").send({})).status).toBe(200);
@@ -56,9 +51,6 @@ describe("trustProxyHops", () => {
   });
 
   it("`true` no es una configuración alcanzable", () => {
-    // Es la única forma realmente peligrosa: con `trust proxy: true` cualquiera
-    // falsifica X-Forwarded-For y el límite deja de existir, sin ruido. Al
-    // parsear siempre a entero, esa configuración no se puede escribir.
     expect(trustProxyHops({ TRUST_PROXY_HOPS: "true" })).toBe(0);
     expect(trustProxyHops({ TRUST_PROXY_HOPS: "-1" })).toBe(0);
     expect(trustProxyHops({ TRUST_PROXY_HOPS: "cualquier cosa" })).toBe(0);
@@ -79,8 +71,6 @@ describe("loginRateLimitMax", () => {
 
 describe("cableado sobre la app real", () => {
   it("POST /auth/login responde con las cabeceras del limiter", async () => {
-    // Prueba que el limiter está EN la cadena de /login. Sin esto, los tests de
-    // arriba pasarían igual con el middleware sin montar.
     const res = await request(app)
       .post("/api/v1/auth/login")
       .send({ email: FIXTURES.activo.email, password: FIXTURES.activo.password });
@@ -90,8 +80,6 @@ describe("cableado sobre la app real", () => {
   });
 
   it("otros endpoints no llevan el limiter", async () => {
-    // Está puesto donde duele el bcrypt, no en toda la API: un limiter global
-    // sería una decisión de producto que nadie tomó.
     const res = await request(app).get("/api/v1/auth/me");
 
     expect(res.headers).not.toHaveProperty("ratelimit");

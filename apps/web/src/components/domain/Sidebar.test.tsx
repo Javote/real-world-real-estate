@@ -67,8 +67,6 @@ describe('Sidebar (M2-D3 §Principle 4) · tab activo', () => {
     expect(nav.textContent).toContain('Nexus')
   })
 
-  // SPEC-103 (F-06): mismo criterio que BottomNav — el sidebar de desktop
-  // pintaba el tab activo solo con una píldora de color, sin anunciarlo.
   it('exactamente un aria-current="page", y coincide con el tab resaltado', async () => {
     renderSidebar('/developer/capital')
 

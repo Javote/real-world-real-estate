@@ -1,26 +1,8 @@
 import type { GeocodeResult } from "@plataforma/shared";
 
-// D-097 — La dirección del alta de proyecto se convierte en un punto con
-// Nominatim (el geocodificador de OpenStreetMap), y el front mueve el "Map
-// preview" de la captura 34b hasta ahí. Pasa por la API y no por el navegador
-// por dos razones: la regla del front de no hacer `fetch` fuera de `ApiPort`, y
-// la política de uso de Nominatim, que exige un User-Agent que identifique a
-// la aplicación (un navegador no lo deja fijar) y como máximo **un pedido por
-// segundo** para todo el servicio — por eso la cola de acá abajo es una sola,
-// compartida por todos los usuarios, y no un rate limit por usuario.
-// https://operations.osmfoundation.org/policies/nominatim/
-//
-// La dirección de una obra no es PII (regla 2), pero igual no se loguea: no
-// hace falta para nada.
-
 export const NOMINATIM_URL = "https://nominatim.openstreetmap.org/search";
 export const USER_AGENT = "PropNexus/1.0 (+https://propnexus-web.onrender.com)";
 
-/**
- * Sesgo hacia CABA: `viewbox` prioriza resultados dentro de la Ciudad, sin
- * excluir los de afuera (`bounded` queda en 0), y `countrycodes` los acota a
- * Argentina. Una obra en pozo de otra provincia se sigue encontrando.
- */
 const PARAMETROS_FIJOS = {
   format: "jsonv2",
   limit: "1",
@@ -29,11 +11,6 @@ const PARAMETROS_FIJOS = {
   "accept-language": "es"
 };
 
-/**
- * Nominatim no respondió como se esperaba. El motivo (código HTTP o tipo de
- * error, nunca la dirección buscada) se loguea al crearlo: un 503 sin causa en
- * los logs de Render no se puede diagnosticar.
- */
 export class GeocodificadorNoDisponible extends Error {
   constructor(motivo: string) {
     super(motivo);
@@ -43,7 +20,6 @@ export class GeocodificadorNoDisponible extends Error {
 
 interface Opciones {
   fetch?: typeof globalThis.fetch;
-  /** Milisegundos mínimos entre dos pedidos a Nominatim. */
   espaciado?: number;
   timeout?: number;
   tamanoCache?: number;
@@ -67,8 +43,6 @@ export function crearGeocodificador({
     const url = `${NOMINATIM_URL}?${new URLSearchParams({ ...PARAMETROS_FIJOS, q })}`;
     let respuesta: Response;
     try {
-      // Sin `fetch` inyectado se lee el global en cada pedido, no al crear el
-      // geocodificador: así los tests de ruta pueden reemplazarlo.
       respuesta = await (fetchInyectado ?? globalThis.fetch)(url, {
         headers: { "User-Agent": USER_AGENT, Accept: "application/json" },
         signal: AbortSignal.timeout(timeout)
@@ -98,11 +72,6 @@ export function crearGeocodificador({
   }
 
   return {
-    /**
-     * El punto de una dirección. Los pedidos se encolan (uno por vez, con
-     * `espaciado` entre cada uno) y los aciertos y los "no encontrado" quedan
-     * en caché: la misma dirección no vuelve a salir a Nominatim.
-     */
     buscar(q: string): Promise<GeocodeResult> {
       const clave = q.trim().toLowerCase();
       const guardado = cache.get(clave);

@@ -1,31 +1,11 @@
 import { Mail } from 'lucide-react'
 import { cn } from '#/lib/cn'
 
-// M2-D3 §Cards · InvitationCard — la variante de notificación reservada a las
-// invitaciones a proyecto. *"Always pinned to the top of the list when
-// unresolved."*
-//
-// El anclado al tope no lo decide este componente: es de la lista que lo
-// ordena. Acá está la forma —acentos púrpura, sobre, CTA— y el estado
-// `resolved`, que es lo que le dice a esa lista si sigue pineada.
-//
-// **La invitación siempre está anclada** (M2-D3 lo llama "non-optional" en el
-// modal de aceptación): aceptar es el primer commitment del ciclo comercial
-// (M3-SC-01). Este componente no muestra la prueba —eso es del modal—, solo
-// abre la puerta.
-
 interface InvitationCardProps {
   title: string
-  /** Resumen de la oferta, ya armado y traducido por quien lo usa. */
   body: string
-  /** "Ver invitación →" */
   ctaLabel: string
-  /** Ya formateado con `Intl`. */
   timestampLabel: string
-  /**
-   * `false` mientras esté pendiente. Resuelta, la lista la devuelve al montón
-   * normal con su estado en el cuerpo.
-   */
   resolved?: boolean
   onOpen: () => void
   className?: string

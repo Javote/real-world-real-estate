@@ -3,8 +3,6 @@ import { beforeEach, describe, expect, it } from 'vitest'
 import { LocaleProvider } from '#/i18n/useTranslation'
 import { LanguageToggle } from './LanguageToggle'
 
-// D-096: los dos idiomas a la vista, el activo marcado con `aria-pressed`.
-
 describe('LanguageToggle', () => {
   beforeEach(() => window.localStorage.clear())
 

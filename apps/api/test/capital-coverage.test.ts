@@ -6,12 +6,6 @@ import { db } from "../src/lib/db";
 import { FIXTURES } from "./global-setup";
 import { crearStageMinteado } from "./helpers/stages";
 
-// SPEC-018 A3 — `capital.routes.ts`. `capital.test.ts` fija los totales
-// exactos contra la plantilla, que tiene un solo contrato y ninguna
-// liberación: con eso nunca corrieron los `reduce` de las liberaciones, el
-// orden por mes, ni el investor con dos unidades del mismo proyecto. Este
-// archivo arma ese estado en su propia base, sin tocar los números de aquel.
-
 const login = (f: { email: string; password: string }) =>
   request(app).post("/api/v1/auth/login").send({ email: f.email, password: f.password });
 
@@ -19,7 +13,6 @@ const TORRE = "Torre Test";
 const CONTRATO_FIXTURE = 12_000_000;
 const SEGUNDO_CONTRATO = 3_000_000;
 const LIBERADO = 1_000_000;
-// Un mes que ningún `createdAt` de la suite puede caer: el de la liberación.
 const MES_DE_LA_LIBERACION = "2025-01";
 
 let tokenDev: string;
@@ -47,8 +40,6 @@ beforeAll(async () => {
       .executeTakeFirstOrThrow()
   ).id;
 
-  // El mismo investor de la plantilla compra una segunda unidad del mismo
-  // proyecto: dos contratos, un proyecto.
   const unidad = await request(app)
     .post(`/api/v1/developer/projects/${proyecto}/units`)
     .set("Authorization", `Bearer ${tokenDev}`)
@@ -68,7 +59,6 @@ beforeAll(async () => {
   expect(aceptada.status).toBe(201);
   const contractId = aceptada.body.contract.id as string;
 
-  // Una liberación real: etapa certificada y `POST …/releases/:stageNum`.
   const sequenceOrder = 900_901;
   const stage = await crearStageMinteado({
     projectId: proyecto,
@@ -92,15 +82,12 @@ beforeAll(async () => {
     .send({ amountMinorUnits: LIBERADO });
   expect(liberacion.status).toBe(201);
 
-  // La liberación se corre a otro mes para que la serie tenga dos puntos que
-  // ordenar: en el flujo real todo pasa en el mismo instante.
   await db
     .updateTable("PaymentAttestation")
     .set({ releasedAt: new Date(`${MES_DE_LA_LIBERACION}-15T12:00:00Z`) })
     .where("contractId", "=", contractId)
     .execute();
 
-  // Un developer con un proyecto propio y ningún contrato.
   const email = `dev-capital-${createId()}@test.local`;
   const creado = await request(app)
     .post("/api/v1/users")

@@ -13,10 +13,6 @@ import { db } from "../src/lib/db";
 import { storage } from "../src/lib/storage";
 import { FIXTURES } from "./global-setup";
 
-// SPEC-217 — `GET /evidence/:id/download` migrada a oRPC con streaming real.
-// Compara bytes contra archivos reales en disco (no un mock de `storage`),
-// salvo el caso del error a mitad de descarga, que necesita un `Readable` que
-// falle a propósito.
 let servidor: http.Server;
 let puerto: number;
 let tokenDev: string;
@@ -103,7 +99,6 @@ afterAll(async () => {
   await db.destroy();
 });
 
-/** Binario a supertest: sin esto `res.body` de un `application/pdf` llega vacío. */
 const binario = (res: request.Response, cb: (err: Error | null, body: Buffer) => void): void => {
   const partes: Buffer[] = [];
   res.on("data", (c: Buffer) => partes.push(c));
@@ -253,7 +248,6 @@ describe("GET /evidence/:id/download (SPEC-217)", () => {
           .on("error", () => resolve(false));
       });
       expect(completa).toBe(false);
-      // Dejar pasar un tick por si el `'error'` sin escuchar se propagara tarde.
       await new Promise((r) => setTimeout(r, 50));
       expect(sinCapturar).toEqual([]);
     } finally {

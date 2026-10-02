@@ -1,26 +1,9 @@
-// El contrato de `ApiPort` contra el OpenAPI que publica la API.
-//
-// `port.ts` es el único lugar que arma URLs, verbos, cuerpos y filtros — a
-// mano. Los TIPOS de respuesta ya se derivan de `packages/shared`
-// (`Serialized<T>`, SPEC-109), pero el emparejamiento "este método pega contra
-// esta ruta" se sostenía solo por disciplina: renombrar una ruta, mover un
-// filtro o agregar un campo obligatorio en la API dejaba al front compilando y
-// fallando en runtime con un 404 o un 400.
-//
-// Este test ejecuta CADA método de `api` con un `fetch` falso, captura el
-// request que arma y lo cruza contra `specs/evidencia-m3/2-api/openapi/propnexus.openapi.json` —
-// el mismo documento que la API genera desde sus procedimientos y cuya
-// frescura ya fija `apps/api/test/openapi-freshness.test.ts`. Así el drift se
-// vuelve un test rojo y no un 4xx en producción.
-//
-// **Lo que NO cubre, a propósito (SPEC-111):** que el TIPO de respuesta de un
-// método sea el schema de esa ruta. Eso sigue siendo `request<T>` a mano.
-
 import { readFileSync } from 'node:fs'
 import { resolve } from 'node:path'
 import { afterAll, beforeAll, describe, expect, it, vi } from 'vitest'
 
 type Api = typeof import('./port').api
+type Port = typeof import('./port')
 type Caso = (() => unknown)[]
 
 const ORIGEN = 'https://api.contract-test.example'
@@ -36,17 +19,12 @@ interface EsquemaJson {
 }
 
 const DOC = JSON.parse(
-  // jsdom hace que `import.meta.url` sea http: el path sale del cwd, que vitest
-  // fija en `apps/web` (donde vive `vitest.config.ts`).
   readFileSync(
     resolve(process.cwd(), '../../specs/evidencia-m3/2-api/openapi/propnexus.openapi.json'),
     'utf8'
   )
 ) as { paths: Record<string, Record<string, Operacion>> }
 
-// Un path de OpenAPI (`/x/{id}`) como regex. Ante dos plantillas que matchean
-// (`/dossiers/pending` y `/dossiers/{id}`) gana la que tiene MENOS parámetros:
-// la más literal.
 const PLANTILLAS = Object.keys(DOC.paths)
   .map((plantilla) => ({
     plantilla,
@@ -66,9 +44,9 @@ interface Captura {
 
 let capturas: Captura[] = []
 let api: Api
+let projectCoverUrl: Port['projectCoverUrl']
 
 beforeAll(async () => {
-  // `API_BASE` se lee al cargar el módulo: hay que fijar el origen ANTES del import.
   vi.stubEnv('VITE_API_ORIGIN', ORIGEN)
   vi.resetModules()
   vi.stubGlobal(
@@ -84,7 +62,9 @@ beforeAll(async () => {
       return new Response('{}', { status: 200, headers: { 'Content-Type': 'application/json' } })
     })
   )
-  api = (await import('./port')).api
+  const port = await import('./port')
+  api = port.api
+  projectCoverUrl = port.projectCoverUrl
 })
 
 afterAll(() => {
@@ -92,9 +72,6 @@ afterAll(() => {
   vi.unstubAllGlobals()
 })
 
-// Un caso por cada forma de llamar a un método. Tipado como `Record<keyof Api>`:
-// agregar un método a `api` sin su entrada acá es un error de `tsc`, no un
-// método que nadie contrasta.
 const CASOS: Record<keyof Api, Caso> = {
   login: [() => api.login('a@b.co', 'x')],
   me: [() => api.me()],
@@ -134,6 +111,9 @@ const CASOS: Record<keyof Api, Caso> = {
   getCapitalSummary: [() => api.getCapitalSummary()],
   getCapitalMonthly: [() => api.getCapitalMonthly()],
   getCapitalByProject: [() => api.getCapitalByProject()],
+  uploadProjectCover: [
+    () => api.uploadProjectCover('p1', new File(['x'], 'render.png', { type: 'image/png' }))
+  ],
   createProject: [
     () => api.createProject({ name: 'n', slug: 's', latitude: -34.6, longitude: -58.4 })
   ],
@@ -207,8 +187,6 @@ describe('ApiPort contra el OpenAPI de la API', () => {
       it(`${metodo} #${i + 1}: verbo, path, filtros y cuerpo existen en el contrato`, async () => {
         const c = await capturar(llamada)
 
-        // En producción el web vive en otro origen (D-065): una URL relativa
-        // pega contra el sitio estático, no contra la API.
         expect(c.url.origin, 'la URL tiene que salir de VITE_API_ORIGIN').toBe(ORIGEN)
 
         const ruta = PLANTILLAS.find((p) => p.regex.test(c.url.pathname))
@@ -220,7 +198,6 @@ describe('ApiPort contra el OpenAPI de la API', () => {
           `${c.url.pathname} existe pero no acepta ${c.metodo} (la API la declara con otro verbo)`
         ).toBeDefined()
 
-        // Cada filtro que manda el front tiene que estar declarado en la ruta.
         const declarados = (operacion?.parameters ?? [])
           .filter((p) => p.in === 'query')
           .map((p) => p.name)
@@ -237,8 +214,6 @@ describe('ApiPort contra el OpenAPI de la API', () => {
         }
         if (c.cuerpo === undefined || Object.keys(c.cuerpo as object).length === 0) return
 
-        // Cuerpo JSON: la ruta lo declara, no manda claves que ella no conozca
-        // y no se olvida de un campo que ella exige.
         const esquema = operacion?.requestBody?.content['application/json']?.schema
         expect(esquema, `${c.metodo} ${ruta?.plantilla} no declara un cuerpo JSON`).toBeDefined()
         const enviadas = Object.keys(c.cuerpo as object)
@@ -256,4 +231,21 @@ describe('ApiPort contra el OpenAPI de la API', () => {
       })
     })
   }
+})
+
+describe('projectCoverUrl (D-099): la URL que pide el <img>, sin fetch', () => {
+  it('apunta a una ruta GET del contrato, en el origen de la API, con `v` declarado', () => {
+    const url = new URL(projectCoverUrl('p1', '2026-09-30T12:00:00.000Z') ?? '')
+    expect(url.origin).toBe(ORIGEN)
+    expect(url.searchParams.get('v')).toBe('2026-09-30T12:00:00.000Z')
+
+    const ruta = PLANTILLAS.find((p) => p.regex.test(url.pathname))
+    const operacion = DOC.paths[ruta?.plantilla ?? '']?.get
+    expect(operacion, `${url.pathname} no existe como GET en el OpenAPI`).toBeDefined()
+    expect((operacion?.parameters ?? []).map((p) => p.name)).toContain('v')
+  })
+
+  it('sin portada no hay URL', () => {
+    expect(projectCoverUrl('p1', null)).toBeNull()
+  })
 })

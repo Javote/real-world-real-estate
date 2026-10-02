@@ -13,7 +13,6 @@ function crearCliente(link: InstanceType<typeof OpenAPILink>) {
   return createORPCClient<RouterClient<typeof notificationsOrpcRouter>>(link);
 }
 
-// SPEC-216 §E1 — mismo patrón que `orpc-client-profile.test.ts`.
 let servidor: http.Server;
 let baseUrl: string;
 let token: string;
@@ -53,8 +52,6 @@ describe("cliente oRPC tipado de notifications, contra el servidor real (SPEC-21
 
     const conteo = await client.unreadCountProcedure();
 
-    // El tipo de `conteo` ya es `UnreadCount` (inferido del mismo
-    // `unreadCountSchema` que valida en el servidor) — sin cast.
     expect(typeof conteo.unread).toBe("number");
   });
 

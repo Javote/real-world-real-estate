@@ -12,15 +12,6 @@ function crearCliente(link: InstanceType<typeof OpenAPILink>) {
   return createORPCClient<RouterClient<typeof notaryOrpcRouter>>(link);
 }
 
-// SPEC-212 §A — "Cubre: generar el cliente oRPC tipado para esa vertical
-// (@orpc/client), como prueba de que el contrato es real de los dos lados".
-//
-// No hay caller real todavía (`apps/web` sigue en `ApiPort`, migrarlo es
-// SPEC-111, fuera de esta spec) — este test ES la prueba: arma el cliente
-// desde el MISMO `notaryOrpcRouter` que exporta `notary.routes.ts` (no un
-// tipo copiado a mano), habla HTTP de verdad contra el servidor completo
-// (`authorize` incluido, sin mockear nada) y verifica que lo que el cliente
-// tipa es lo que el servidor de verdad devuelve.
 let servidor: http.Server;
 let baseUrl: string;
 let tokenNotario: string;
@@ -51,9 +42,6 @@ describe("cliente oRPC tipado de notary, contra el servidor real (SPEC-212 §A)"
 
     const kpis = await client.kpisProcedure();
 
-    // El tipo de `kpis` ya es `NotaryKpis` (inferido del mismo
-    // `notaryKpisSchema` que valida en el servidor) — estas propiedades
-    // typechequean sin cast.
     expect(typeof kpis.pendingDossiers).toBe("number");
     expect(typeof kpis.verified).toBe("number");
     expect(typeof kpis.signed).toBe("number");

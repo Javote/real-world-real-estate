@@ -14,8 +14,6 @@ function crearCliente(link: InstanceType<typeof OpenAPILink>) {
   return createORPCClient<RouterClient<typeof evidenceOrpcRouter>>(link);
 }
 
-// SPEC-216 §E7 — mismo patrón que `orpc-client-profile.test.ts`. Cubre las 8
-// rutas migradas (`GET /:id/download` cierra con `SPEC-217`).
 let servidor: http.Server;
 let baseUrl: string;
 let tokenAdmin: string;
@@ -123,9 +121,6 @@ describe("cliente oRPC tipado de evidence, contra el servidor real (SPEC-216 §E
     });
     const client = crearCliente(link);
 
-    // `outputStructure: "detailed"` (SPEC-212 §A, mismo patrón que
-    // `signDossierProcedure`): el cliente ve `{status, body}`, no el body
-    // pelado — es lo que permite que el 200 y el 201 compartan un solo output.
     const primera = await client.anchorEvidenceProcedure({ id });
     expect(primera.status).toBe(201);
     expect(primera.body.txid).toBeTruthy();

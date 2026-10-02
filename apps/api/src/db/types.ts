@@ -8,16 +8,7 @@ import type {
 } from "@plataforma/shared";
 import type { ColumnType, Generated, Insertable, Selectable, Updateable } from "../lib/kysely";
 
-// Los valores son los que declara la migración (`migrations/0000_init.sql`)
-// (D-016). SQLite no tiene enum nativo: se modelan como `text`, y la
-// restricción real la sigue haciendo Zod en `packages/shared` (regla 6).
 export const USER_ROLES = ["admin", "developer", "buyer", "verifier", "notary"] as const;
-// PROJECT_STATUSES, MEMBERSHIP_ROLES, EVIDENCE_TYPES, la FSM del stage y (desde
-// la Tanda 2 de documentación de la API) los dos enums de OnChainEvent NO se
-// declaran acá: viven en `packages/shared`, que es donde el schema Zod de
-// cada endpoint ya los necesita (regla 6). Se re-exportan para que quien
-// trabaje con la base los tenga a mano sin importar de dos lugares distintos
-// — el mismo motivo por el que ya pasaba con `STAGE_STATES`.
 export {
   EVIDENCE_TYPES,
   MEMBERSHIP_ROLES,
@@ -37,26 +28,8 @@ export type {
   StageState
 };
 
-// Kysely no tiene columnas booleanas/timestamp: SQLite las guarda como
-// `integer` (0/1, epoch ms) y el driver de libSQL las devuelve como
-// `number`. `ColumnType<Select, Insert, Update>` documenta esa asimetría
-// donde aplica (booleans e IDs con default de servidor); donde no hace falta
-// (columnas nullable comunes) alcanza con el tipo de SELECT.
 type SqliteBoolean = ColumnType<boolean, boolean | number, boolean | number>;
 type SqliteTimestamp = ColumnType<Date, Date | number, Date | number>;
-/**
- * SPEC-208 (B-10) — `compiledAt`, `readAt`, `releasedAt`, `respondedAt` y
- * `signedAt` decían `SqliteTimestamp` (`Date` al leer) sin estar en
- * `TIMESTAMP_COLUMNS` de `sqlite-type-plugin.ts`: el runtime devuelve
- * `number`, siempre, y el tipo afirmaba lo contrario. Agregarlas al plugin
- * cambiaría la forma del JSON de la API (`Date` serializa a string ISO,
- * `number` a número) y las cinco ya tienen consumidores en el front —
- * rebanada propia, con su verificación del lado del web. Mientras tanto, el
- * tipo dice la verdad: `number` al leer, sin perder la forma flexible al
- * escribir. **Cero cambio de runtime ni de JSON** — cuando la rebanada
- * llegue, estas vuelven a `SqliteTimestamp` en el mismo commit que las suma
- * al plugin.
- */
 type SqliteTimestampSinCoercion = ColumnType<number, Date | number, Date | number>;
 type GeneratedId = Generated<string>;
 
@@ -67,28 +40,16 @@ export interface UserTable {
   role: UserRole;
   fullName: string;
   isActive: SqliteBoolean;
-  /** Preferencias de notificación, JSON. Ver `PATCH /profile/notifications`. */
   notificationPrefsJson: string | null;
   createdAt: SqliteTimestamp;
   updatedAt: SqliteTimestamp;
 }
 
-/**
- * La organización desarrolladora (migración 0010, SPEC-220). Solo lo
- * autodeclarado: el resto de lo que muestran las capturas 59-60 —obras
- * entregadas, unidades vendidas, inversores— se deriva de `Project` y `Unit`
- * en cada lectura.
- *
- * Sin columna `rating`: D-094. Un rating es una afirmación sobre la calidad
- * del desarrollador y no hay de dónde calcularlo, así que la columna solo
- * podría llenarse a mano.
- */
 export interface OrganizationTable {
   id: GeneratedId;
   name: string;
   slug: string;
   bio: string | null;
-  /** Año de fundación. Los "20+ years in business" de la captura se derivan. */
   foundedYear: number | null;
   createdAt: SqliteTimestamp;
   updatedAt: SqliteTimestamp;
@@ -106,9 +67,18 @@ export interface ProjectTable {
   totalUnits: number;
   estimatedDelivery: SqliteTimestamp | null;
   status: ProjectStatus;
-  /** Anulable: los proyectos anteriores a 0010 no tienen organización. */
   organizationId: string | null;
+  coverUpdatedAt: SqliteTimestamp | null;
   createdAt: SqliteTimestamp;
+  updatedAt: SqliteTimestamp;
+}
+
+export interface ProjectCoverTable {
+  projectId: string;
+  storageRef: string;
+  mimeType: string;
+  sizeBytes: number;
+  uploadedById: string | null;
   updatedAt: SqliteTimestamp;
 }
 
@@ -141,7 +111,6 @@ export interface EvidenceTable {
   evidenceType: EvidenceType;
   category: string;
   authoritative: SqliteBoolean;
-  /** Declaración de origen, obligatoria cuando `authoritative` (D-028 (a), D-084). */
   issuingAuthority: string | null;
   originalFilename: string;
   storedFilename: string;
@@ -164,89 +133,54 @@ export interface AuditLogTable {
   createdAt: SqliteTimestamp;
 }
 
-/**
- * El aterrizaje del anclaje (M1-D2 §2 `OnChainEvent`). Una fila por evento del
- * hilo on-chain de un stage: `eventIndex` 0 es el `mint` del thread token,
- * 1..n las transiciones.
- *
- * Se escribe **en el mismo momento que la declaración**, con `status:
- * "Pending"` y sin `txid`: el registro avanza y la prueba queda pendiente. Al
- * revés no puede pasar (D-059).
- */
 export interface OnChainEventTable {
   id: GeneratedId;
   projectId: string;
   stageId: string | null;
-  /** Solo en `EVIDENCE_ANCHOR`: qué archivo ancló esta transacción. */
   evidenceId: string | null;
-  /** Ref opaca al registro off-chain anclado (release, invitación, dossier, documento). */
   referenceId: string | null;
   eventIndex: number;
   eventType: OnChainEventType;
   fromState: StageState | null;
   toState: StageState | null;
-  /** Commitment anclado (evidence root / SHA-256), hex. */
   commitment: string | null;
   status: OnChainEventStatus;
   txid: string | null;
-  /** La red del `txid`. NULL solo si no hay TXID — lo impone un CHECK (D-080). */
   network: string | null;
-  /** UTxO del thread token: `txid#index`. Estado crítico — sin esto el hilo se pierde. */
   outputRef: string | null;
   blockTimestamp: SqliteTimestamp | null;
   createdAt: SqliteTimestamp;
   updatedAt: SqliteTimestamp;
 }
 
-/**
- * Ledger del adaptador simulado del `AnchorPort` (SPEC-013 §A). Solo se escribe
- * con `ANCHOR_MODE=simulated`; con el adaptador real, el ledger es Cardano.
- */
 export interface SimulatedLedgerUtxoTable {
   outputRef: string;
-  /** `stageRef` del datum = asset name del thread token. */
   assetName: string;
   datumJson: string;
   spentByTxid: string | null;
   createdAt: SqliteTimestamp;
 }
 
-/**
- * El registro de qué txid el simulador **efectivamente produjo**, con el
- * momento en que entró a su ledger (SPEC-406). Separada de
- * `SimulatedLedgerUtxo` porque un anclaje por metadata no deja UTxO: esta es
- * la única fila que existe para él.
- */
 export interface SimulatedLedgerBlockTable {
   txid: string;
-  /** POSIX ms — no pasa por el plugin de coerción, es el mismo `number` que usa `LedgerStore`. */
   blockAt: number;
 }
 
-/**
- * `EvidenceBundle` de M1-D2 §2: el conjunto de evidencia que sostiene el cierre
- * de un stage, con su Merkle root. Es lo que hace anclable un stage
- * `validation_critical` (D-061).
- */
 export interface EvidenceBundleTable {
   id: GeneratedId;
   projectId: string;
   stageId: string;
-  /** Merkle root del bundle, hex de 64. Es el `evidenceRoot` del datum. */
   commitmentHash: string;
   createdById: string | null;
   createdAt: SqliteTimestamp;
 }
 
-/** Un acta, no un índice: el hash se copia para que el root siga siendo
- * reconstruible aunque la evidencia se borre. */
 export interface EvidenceBundleItemTable {
   bundleId: string;
   evidenceId: string;
   sha256Hash: string;
 }
 
-/** Favoritos del investor (M2-D5 fila 13). No toca la cadena de prueba. */
 export interface FavoriteTable {
   userId: string;
   projectId: string;
@@ -260,7 +194,6 @@ export interface UnitTable {
   status: string;
   floor: number | null;
   sizeM2: number | null;
-  /** Unidades mínimas enteras (regla 1). */
   priceMinorUnits: number | null;
   currency: string | null;
   investorId: string | null;
@@ -281,7 +214,6 @@ export interface InvitationTable {
   respondedAt: SqliteTimestampSinCoercion | null;
 }
 
-/** SPEC-221 · el admin invita a un certifier a un proyecto (`0011`). */
 export interface CertifierInvitationTable {
   id: GeneratedId;
   projectId: string;
@@ -302,12 +234,6 @@ export interface ContractTable {
   createdAt: SqliteTimestamp;
 }
 
-/**
- * La declaración de que la parte del pago de una etapa ya se liberó por los
- * canales normales entre developer e investor — la plataforma no la ejecuta,
- * la atestigua y ancla su hash (D-021, D-070). Se llamó `PaymentRelease`
- * hasta que el nombre sonó a que la plataforma movía la plata.
- */
 export interface PaymentAttestationTable {
   id: GeneratedId;
   contractId: string;
@@ -320,7 +246,6 @@ export interface PaymentAttestationTable {
 export interface DossierTable {
   id: GeneratedId;
   unitId: string;
-  /** El hash maestro que compromete el artefacto compilado (M2-D4 P8). */
   masterHash: string;
   compiledAt: SqliteTimestampSinCoercion;
   shareToken: string | null;
@@ -334,7 +259,6 @@ export interface NotificationTable {
   id: GeneratedId;
   userId: string;
   category: string;
-  /** Clave de traducción, nunca copy (regla 15). */
   titleKey: string;
   paramsJson: string | null;
   unitId: string | null;
@@ -346,6 +270,7 @@ export interface Database {
   User: UserTable;
   Organization: OrganizationTable;
   Project: ProjectTable;
+  ProjectCover: ProjectCoverTable;
   ProjectMember: ProjectMemberTable;
   Stage: StageTable;
   Evidence: EvidenceTable;

@@ -3,19 +3,6 @@ import { expect, type Page, test } from '@playwright/test'
 import { describir, violacionesNuevas } from '../a11y/hallazgos'
 import { loginConSolapa } from './_helpers'
 
-// **SPEC-112 §3 — axe-core sobre el DOM final, en el navegador real.** Es la
-// capa que mide lo que jsdom no puede: contraste, landmarks de la página
-// entera, lo que el CSS esconde de verdad. Recorre lo de SPEC-112 §Alcance
-// (login, alta de proyecto, subir evidencia, certificar, dossier, audit log),
-// en mobile y desktop.
-//
-// Afirma que no haya violaciones FUERA de `a11y/hallazgos.ts`: lo registrado
-// ya tiene su spec, lo nuevo pone esto en rojo. Como el resto de `e2e/`, no
-// bloquea CI (D-015 §5, SPEC-112 §Invariantes). El resultado completo de axe
-// —incluidas las registradas— queda adjunto a cada test en el reporte.
-
-// M2-D3 pide WCAG 2.1 AA. `best-practice` suma landmarks y encabezados, que
-// son lo que un lector de pantalla usa para moverse.
 const TAGS = ['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa', 'best-practice']
 
 async function sinViolacionesNuevas(page: Page, superficie: string) {
@@ -35,7 +22,6 @@ async function tokenDe(page: Page) {
   )
 }
 
-/** El primer id de una lista de la API, para la ruta que lo necesita. */
 async function primerId(page: Page, ruta: string, campo: string) {
   const token = await tokenDe(page)
   const id = await page.evaluate(
@@ -94,7 +80,6 @@ test('certifier · panel, etapa y el modal de observar', async ({ page }) => {
   await expect(page.getByTestId('CER-STAGE-VIEW-001')).toBeVisible()
   await sinViolacionesNuevas(page, '/certifier/stage/:id')
 
-  // Un modal abierto: el foco y el contenido detrás cambian lo que axe ve.
   await page.getByRole('button', { name: /observar|observe/i }).click()
   await expect(page.getByRole('dialog')).toBeVisible()
   await sinViolacionesNuevas(page, 'ObserveStageModal')

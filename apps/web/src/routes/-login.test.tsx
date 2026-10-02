@@ -1,8 +1,3 @@
-// Tests del flujo de login.
-// Monta LoginScreen en un router de memoria con un /dashboard stub: se prueba
-// el flujo real del navegador (form → ApiPort → sesión → redirect), con el
-// fetch mockeado — el test no depende de la API levantada.
-
 import {
   createMemoryHistory,
   createRootRoute,
@@ -104,8 +99,6 @@ describe('LoginScreen', () => {
     fireEvent.change(screen.getByLabelText('Contraseña'), { target: { value: 'la-del-seed' } })
     fireEvent.click(screen.getByText('Ingresar'))
 
-    // DEMO_USER.role === 'developer' → /developer (invariante 2: el ruteo
-    // usa el rol de la respuesta, no la solapa tocada).
     await screen.findByText('DEVELOPER-STUB')
 
     expect(fetchMock).toHaveBeenCalledWith(
@@ -132,7 +125,6 @@ describe('LoginScreen', () => {
     await renderLogin()
     expect((screen.getByLabelText('Contraseña') as HTMLInputElement).value).toBe('')
 
-    // Lo tipeado bajo una solapa no se arrastra a otra.
     fireEvent.change(screen.getByLabelText('Contraseña'), { target: { value: 'otra' } })
     fireEvent.click(screen.getByText('Certificador'))
     expect((screen.getByLabelText('Usuario') as HTMLInputElement).value).toBe(
@@ -150,9 +142,6 @@ describe('LoginScreen', () => {
   })
 
   it('invariante 2: rutea por el rol que devuelve la API, no por la solapa tocada', async () => {
-    // Se toca la solapa Certifier pero la API responde con un usuario
-    // developer (podría pasar con cualquier credencial válida bajo la solapa
-    // equivocada) — el ruteo tiene que ir a /developer, no a /certifier.
     const fetchMock = vi.fn<typeof fetch>(
       async () => new Response(JSON.stringify({ token: 't', user: DEMO_USER }), { status: 200 })
     )
@@ -197,23 +186,16 @@ describe('LoginScreen', () => {
     const router = await renderLogin()
     fireEvent.click(screen.getByText('Ingresar'))
 
-    // El mismo texto ahora también vive en la live region assertive (SPEC-104):
-    // se scopea al párrafo visible para no matchear las dos.
     await screen.findByText('Credenciales inválidas', { selector: 'p' })
     expect(router.state.location.pathname).toBe('/login')
     expect(screen.queryByText('DEVELOPER-STUB')).toBeNull()
     expect(window.sessionStorage.getItem('proptrust.session')).toBeNull()
-    // SPEC-104 (F-03): el mismo texto que se ve se anuncia, assertive porque
-    // invalida el submit en curso.
     expect(document.querySelector('[aria-live="assertive"]')?.textContent).toBe(
       'Credenciales inválidas'
     )
   })
 
   it('demasiados intentos (429): lo dice, en vez de culpar a la API caída', async () => {
-    // Antes de D-045 cualquier status que no fuera 401 caía en el mensaje de
-    // "¿está levantada?", que con un 429 es falso: la API está perfectamente
-    // levantada y es justamente ella la que decidió cortar.
     vi.stubGlobal(
       'fetch',
       vi.fn(

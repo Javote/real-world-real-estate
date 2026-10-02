@@ -1,39 +1,16 @@
-// Generador de PDF mínimo, sin dependencias.
-//
-// Existe por una sola superficie: `GET /investor/units/:id/dossier/export.pdf`
-// (M2-D5 fila 26-29, INV-DOSSIER-EXPORT-002). El export del dossier tiene que
-// devolver un `application/pdf` de verdad — un `.txt` con otro Content-Type es
-// un archivo que el visor del sistema no abre.
-//
-// **No es una librería de layout y no debe convertirse en una.** Escribe líneas
-// de texto monoespaciado en páginas Letter con Courier, que es lo que el
-// artefacto necesita: hashes, TXIDs y etiquetas, en una grilla legible. Si
-// alguna vez hace falta un PDF con tablas, imágenes o tipografías, eso es una
-// dependencia, no más código acá.
-//
-// Courier y no Helvetica a propósito: un hash SHA-256 en tipografía
-// proporcional es ilegible para compararlo a ojo, que es justo para lo que
-// alguien imprime este PDF.
-
 const ANCHO_LINEA = 92;
 const LINEAS_POR_PAGINA = 56;
 
-/** El texto que entra a un `Tj`: escapado y sin nada fuera de ASCII imprimible. */
 function escaparTexto(linea: string): string {
-  return (
-    linea
-      .normalize("NFD")
-      // Se sacan los diacríticos en vez de mapearlos a WinAnsi: la fuente base
-      // no lleva encoding declarado y un byte >127 saldría como basura.
-      .replace(/[̀-ͯ]/g, "")
-      .replace(/[^\x20-\x7e]/g, "?")
-      .replace(/\\/g, "\\\\")
-      .replace(/\(/g, "\\(")
-      .replace(/\)/g, "\\)")
-  );
+  return linea
+    .normalize("NFD")
+    .replace(/[̀-ͯ]/g, "")
+    .replace(/[^\x20-\x7e]/g, "?")
+    .replace(/\\/g, "\\\\")
+    .replace(/\(/g, "\\(")
+    .replace(/\)/g, "\\)");
 }
 
-/** Corta una línea larga en varias, para que nada se salga de la página. */
 function envolver(linea: string): string[] {
   if (linea.length <= ANCHO_LINEA) return [linea];
   const partes: string[] = [];
@@ -51,7 +28,6 @@ export function renderTextPdf(lineas: string[]): Buffer {
     paginas.push(envueltas.slice(i, i + LINEAS_POR_PAGINA));
   }
 
-  // Objetos: 1 catálogo, 2 páginas, 3 fuente, y después dos por página.
   const objetos: string[] = [];
   const idPagina = (i: number) => 4 + i * 2;
   const idContenido = (i: number) => 5 + i * 2;
@@ -79,8 +55,6 @@ export function renderTextPdf(lineas: string[]): Buffer {
     );
   }
 
-  // El xref necesita el offset en BYTES de cada objeto, así que el documento se
-  // arma midiendo a medida que se escribe y no concatenando al final.
   let pdf = "%PDF-1.4\n";
   const offsets: number[] = [];
 

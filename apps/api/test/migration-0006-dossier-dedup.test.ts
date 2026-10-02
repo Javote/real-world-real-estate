@@ -4,12 +4,6 @@ import { afterEach, describe, expect, it } from "vitest";
 import { MIGRATIONS_DIR } from "../src/db/migrate";
 import { createClient } from "../src/lib/libsql-client";
 
-// SPEC-202 (B-02) — prueba la migración 0006 en aislamiento, contra una base
-// en memoria con SOLO la tabla `Dossier` (no hace falta el esquema entero: la
-// migración solo toca esta tabla), sembrada con los duplicados que la
-// auditoría reprodujo. El criterio de desempate está escrito en el propio
-// archivo de migración; acá se verifica que el SQL lo aplica de verdad.
-
 const SQL_MIGRACION = readFileSync(
   path.join(MIGRATIONS_DIR, "0006_dossier_unitid_unico.sql"),
   "utf-8"
@@ -79,7 +73,6 @@ describe("migración 0006 — un dossier por unidad", () => {
     const filas = await c.execute("SELECT id FROM Dossier ORDER BY id");
     expect(filas.rows.map((r) => r.id)).toEqual(["d1", "d2"]);
 
-    // El índice único ahora existe: un segundo insert sobre u1 choca.
     await expect(
       c.execute({
         sql: "INSERT INTO Dossier (id, unitId, masterHash, compiledAt) VALUES (?, ?, 'x', 2)",

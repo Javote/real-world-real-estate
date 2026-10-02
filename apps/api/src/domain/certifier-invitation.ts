@@ -1,12 +1,6 @@
 import { type CertifierInvitation, certifierInvitationSchema } from "@plataforma/shared";
 import { db } from "../lib/db";
 
-// SPEC-221 · la invitación a certificar un proyecto (D-095).
-//
-// La leen dos superficies —el admin, por proyecto; el certifier, las suyas— y
-// las dos necesitan la misma forma: con el nombre del proyecto y del certifier,
-// que la tabla guarda como ids. Una sola consulta para que no diverjan.
-
 type Filtro =
   | { projectId: string }
   | { certifierId: string; soloPendientes: true }

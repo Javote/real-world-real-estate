@@ -6,10 +6,6 @@ import { anchorPort } from "../src/lib/anchor";
 import { db } from "../src/lib/db";
 import { FIXTURES } from "./global-setup";
 
-// SPEC-018 §A5 — las dos ramas de `repararHilosSospechosos` que
-// `reconcile.test.ts` no alcanza: el puerto inhabilitado, y la carrera donde
-// otro proceso ya escribió el `txid` entre el `findLiveThread` y el `UPDATE`.
-
 let proyecto: string;
 
 beforeAll(async () => {
@@ -146,8 +142,6 @@ describe("repararHilosSospechosos · la carrera con otro proceso", () => {
     const original = puerto.findLiveThread;
     puerto.findLiveThread = async (ref: string) => {
       const resultado = await original.call(puerto, ref);
-      // Simula que otro proceso ganó la carrera y ya escribió el txid justo
-      // acá, antes de que este código llegue a su propio UPDATE.
       await db
         .updateTable("OnChainEvent")
         .set({ txid: "otro-proceso-gano", network: "Simulated", updatedAt: new Date() })
@@ -165,8 +159,6 @@ describe("repararHilosSospechosos · la carrera con otro proceso", () => {
         .select("txid")
         .where("id", "=", eventId)
         .executeTakeFirstOrThrow();
-      // El `WHERE txid IS NULL` del propio update no matcheó: el valor que
-      // quedó es el que escribió "el otro proceso", no `hilo.txid`.
       expect(fila.txid).toBe("otro-proceso-gano");
       expect(fila.txid).not.toBe(hilo.txid);
     } finally {

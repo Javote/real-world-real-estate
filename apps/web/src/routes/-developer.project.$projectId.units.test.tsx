@@ -23,7 +23,6 @@ const unidad = (id: string, over: Partial<Record<keyof Unidad, unknown>> = {}): 
   }) as unknown as Unidad
 
 const UNIDADES = [
-  // completa: piso, superficie, precio e investor
   unidad('a', {
     status: 'sold',
     floor: 3,
@@ -32,11 +31,8 @@ const UNIDADES = [
     currency: 'USD',
     investorId: 'i1'
   }),
-  // solo piso
   unidad('b', { status: 'reserved', floor: 5, investorId: 'i2' }),
-  // solo superficie, precio sin moneda (no se muestra)
   unidad('c', { sizeM2: 40, priceMinorUnits: 5_000_000 }),
-  // mínima
   unidad('d')
 ]
 

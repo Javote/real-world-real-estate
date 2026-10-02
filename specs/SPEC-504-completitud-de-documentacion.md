@@ -1,6 +1,6 @@
 # SPEC-504 — Completitud de documentación por unidad
 
-> Milestone 4, criterio 1 (`document completeness ≥95%`). Ver [`ESTADO-2026-09-22-catalyst-milestone-4.md`](ESTADO-2026-09-22-catalyst-milestone-4.md).
+> Milestone 4, criterio 1 (`document completeness ≥95%`). Ver [`ESTADO-2026-09-22-catalyst-milestone-4.md`](archive/ESTADO-2026-09-22-catalyst-milestone-4.md).
 
 ## Propósito
 

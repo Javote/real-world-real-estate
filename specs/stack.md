@@ -50,7 +50,7 @@ entre web y los packages de Node.
 | Playwright (E2E) | `1.62` | ● | solo Chromium · **no corre en CI**, a mano |
 | Leaflet + tiles de OpenStreetMap | — | ● | Los mapas (`LocationMapModal`). Los tiles son la única request del navegador que no va a nuestra API |
 
-El front se reconstruye desde los entregables: ver [`SPEC-014`](SPEC-014-reconstruccion-del-front.md)
+El front se reconstruye desde los entregables: ver [`SPEC-014`](archive/SPEC-014-reconstruccion-del-front.md)
 por qué se conserva y qué se borra.
 
 ## 3 · Backend — `apps/api`
@@ -92,7 +92,7 @@ resolución (por qué `types` apunta al `.d.ts` y no al fuente) está en `packag
 | `lib/` puro y testeable | `lib/propnexus/fsm.ak` | ● | D-008: tipos, tabla de transiciones y reglas del datum, sin contexto de tx |
 | Quien llama al validador | `packages/cardano` — `AnchorPort`: `simulated` y **`real` con Lucid Evolution 0.6.2** | ● | SPEC-013 §A y §B cerradas: transacciones verificadas contra el `Emulator` y contra un devnet local (yaci-devkit `0.10.6`, Conway + PlutusV3). Falta §C (reconciliar + `verify` público) |
 | Infra local | `compose.dev.yml`: MinIO + yaci-devkit | ● | No se despliega (D-041). Los dos tests de integración corren a mano, no en CI |
-| **Tests** | **72** (39 núcleo + 33 validador) | ● | Criterio 2 del SOM: la tabla punto de rechazo → test está en `contracts/CLAUDE.md` |
+| **Tests** | **72** (39 núcleo + 33 validador) | ● | Criterio 2 del SOM: la tabla punto de rechazo → test está en `specs/evidencia-m3/1-repo-ci-tests/aiken-coverage-report.md` |
 | Thread token + handler `mint` | NFT por stage, asset name = `stage_ref`, sin burn | ● | D-058 cierra lo que D-008 prometía: un solo hilo por stage, y nacimiento validado |
 | Firmante | el operador (`admin`), único | ● | D-058: decisión del dueño, y es lo que el whitepaper §System Overview describe |
 | Naming del proyecto | `propnexus/stage-fsm`, `version = "1"` | ● | D-015 cumplido (entero incremental) desde D-054 |
@@ -103,7 +103,7 @@ Ningún validador custodia ni transfiere valor, en ninguna fase (D-021).
 
 | Pieza | Hoy | Destino | Estado | Decisión |
 |---|---|---|---|---|
-| Base de datos | **SQLite** (`.data/dev.db`, Kysely sobre `@libsql/client`) | **SQLite** vía **Turso** en prod (free: 5 GB · 500M lecturas · 10M escrituras) | ● — creada y migrada el 2026-08-27 (`propnexus`, org `javote`); verificada contra la instancia desplegada | D-038 · D-040 — Turso **obligatorio**, no preferencia: en free no hay disco. ORM: D-048 → D-049 |
+| Base de datos | **SQLite** (`.data/dev.db`, Kysely sobre `@libsql/client`) | **SQLite** vía **Turso** en prod (free: 5 GB · 500M lecturas · 10M escrituras) | ● — `propnexus` (org `javote`, `aws-us-east-1`), con delete protection; la copia en Oregon de `SPEC-603` y las coordenadas, en §8b | D-038 · D-040 — Turso **obligatorio**, no preferencia: en free no hay disco. ORM: D-048 → D-049 |
 | Migraciones | SQL plano en `apps/api/migrations/`, **una sola** (`0000_init.sql`, D-063), tracking propio (`_migrations`), **un solo runner** (D-052) | idempotentes en el `startCommand` | ● — verificado sobre el **compilado**, contra base nueva y re-aplicando | D-012 · D-049 |
 | Archivos de evidencia | `STORAGE_DRIVER=disk` por default; **`s3` implementado y probado contra MinIO** | **Cloudflare R2** en prod (free: 10 GB, egress $0) — mismo código, otras variables | ● — bucket `propnexus-evidencia` creado y en uso; los 6 tests de integración pasan contra R2 real y un archivo subido **sobrevivió a un restart** de la API (verificado 2026-08-27) | D-011 · D-040 |
 | URLs de archivos | descarga por endpoint autenticado | prefirmadas, TTL ≤15 min | ○ | D-011 |
@@ -125,18 +125,16 @@ Ningún validador custodia ni transfiere valor, en ninguna fase (D-021).
 | Anclaje de evidencia: metadata de tx, label `1904`, strings ≤64 bytes | ● — lo dispara el admin | D-006 · D-061 |
 | Merkle root del bundle en el datum, verificado por el validador | ● | D-061 |
 | Devnet local (yaci-devkit `0.10.6`, Conway + PlutusV3) | ● — `compose.dev.yml` | SPEC-013 |
-| Provider contra Preprod: **Blockfrost** | ○ — en local se usa Kupmios; ver `packages/cardano/CLAUDE.md` | D-005 |
-| Cuenta Blockfrost (proyecto Preprod) | ○ — **no creada** | — |
-| Wallet de servicio (seed nueva y exclusiva de Preprod, fondeada por faucet) | ○ — **no creada** | 🔴 |
+| Provider contra Preprod: **Blockfrost** | ● — en local, contra el devnet, se usa Kupmios (`packages/cardano/CLAUDE.md`) | D-005 |
+| Cuenta Blockfrost (proyecto Preprod) | ● — `BLOCKFROST_API_KEY` en `apps/api/.env` y en el dashboard de Render | — |
+| Wallet de servicio: **una clave de pago**, sin seed, dirección enterprise derivada | ● — fondeada por faucet; coordenadas en §8b | 🔴 · D-078 |
 | Reconciliación y `verify()` público sin cuenta | ○ — rebanada C | SPEC-013 |
 | Co-firma CIP-30 para notario/certificador | — **sin alcance en el validador** | D-009 · D-058 |
 
 ## 8 · Infraestructura y despliegue
 
-> **Del 0% al deploy configurado (2026-08-23).** Existe `render.yaml` en la raíz y
-> `specs/RUNBOOK-deploy.md`. Lo que falta ya no es código ni configuración: son **tres altas de
-> cuenta** (Render, Turso) y pegar cuatro variables. El procedimiento exacto está en el runbook y
-> **no se repite acá**.
+> **Desplegado desde el 2026-08-27.** El procedimiento está en `specs/RUNBOOK-deploy.md` y no se
+> repite acá; las coordenadas, en §8b.
 >
 > **No hay Dockerfiles y no los va a haber** (D-041): runtime nativo de Node. Si ves una fila
 > pidiendo una imagen, es deuda de D-010, que era una decisión de Railway.
@@ -146,27 +144,61 @@ Ningún validador custodia ni transfiere valor, en ninguna fase (D-021).
 | **`render.yaml`** (Blueprint: 2 servicios, `plan: free`, `rootDir`, `buildFilter`) | ● — escrito y desplegado; **el `buildFilter` no filtra**, medido el 2026-08-27 (RUNBOOK §2) | D-041 |
 | Runtime: **nativo de Node**, sin imagen propia · `NODE_VERSION=22` (la del CI) | ● — declarado | D-041 |
 | `startCommand` de la API: migraciones **y después** el servidor | ● — verificado sobre el compilado | D-012 · D-040 |
-| Script `start` de `apps/web` (`node .output/server/index.mjs`) | ● — respeta `PORT`, verificado | D-041 |
 | Script `start` de `apps/api` (`node dist/src/server.js`) | ● | — |
 | `healthCheckPath`: `/health` en la API, `/` en el web | ● — declarado | D-010 |
-| **Proxy `/api/**` del web hacia la API** (route rules de Nitro, horneadas en el build) | ● — **sin CORS y sin URL de API en el navegador**; el `502` en `POST`+`401` cerrado | D-050 |
-| `API_ORIGIN` es **build time**, no runtime — cambiarla exige redeploy del web | ● — documentado en el YAML y el runbook | D-031 (`ports.ts`) |
+| Web como **static site**; la URL de la API sale de `VITE_API_ORIGIN` y la API la acepta por `WEB_ORIGIN` (CORS) | ● | D-065 |
+| `VITE_API_ORIGIN` es **build time** — cambiarla exige rebuild del web | ● — documentado en el YAML y el runbook | D-065 |
 | `JWT_SECRET` con `generateValue: true` | ● — declarado | D-042 |
 | `TRUST_PROXY_HOPS=1` (con 0 detrás del proxy la app queda inusable) | ● — declarado | D-045 |
-| Plataforma: **Render**, build por servicio, GHA no despliega | ◐ — **cuenta no creada** | D-039 · D-010 |
-| Base **Turso** (`DATABASE_URL` + `DATABASE_AUTH_TOKEN`, `sync: false`) | ◐ — **base no creada** | D-038 |
+| Plataforma: **Render**, build por servicio, GHA no despliega | ● — los dos servicios en Oregon, §8b | D-039 · D-010 |
+| Base **Turso** (`DATABASE_URL` + `DATABASE_AUTH_TOKEN`, `sync: false`) | ● — §8b | D-038 |
 | **Todo el deploy en free tier — $0/mes** | ● — restricción respetada por el YAML | D-040 |
 | Presupuesto: **750 instance-hours/mes** compartidas · **keep-warm prohibido** | ● — documentado en el YAML y el runbook §5 | D-040 |
 | Cold start ~1 min tras 15 min de inactividad | ● — se calienta a mano antes de demo/grabación | D-040 |
 | Evidencia en **R2**; `UPLOAD_DIR` es solo staging de Multer | ● — la ruta borra el temporal apenas R2 confirma | D-011 |
 | Seed de las cuentas demo: desde tu máquina contra Turso (free no da shell) | ● — procedimiento en el runbook §1.3 | D-047 |
 | **Runbook** (deploy / rollback / incidente) | ● — `specs/RUNBOOK-deploy.md` | criterio 14 |
-| Worker de confirmaciones: **cron de GHA**, no background worker | ○ — nada que disparar todavía (`packages/cardano` vacío) | D-040 · D-003 |
-| Entorno de **pre-producción con URL pública** | ◐ — a un `render login` de distancia | criterio 12 |
-| Telemetría / métrica *reserva → escrow < 12 min* | ○ | criterio 9 · D-021 |
-| Monitoreo y capturas de monitoreo | ○ — hoy solo los logs de Render | criterio 14 |
+| Confirmaciones: **reconciliación al leer**, sin cron ni worker (el cron se revirtió) | ● | D-077 · D-003 |
+| Entorno de **pre-producción con URL pública** | ● — §8b | criterio 12 |
+| Telemetría / métrica *reserva → escrow < 12 min* | ● — `specs/README.md`, criterio 9 | criterio 9 · D-021 |
+| Monitoreo: Sentry (API y web) y OpenTelemetry hacia Grafana Cloud | ● — `specs/evidencia-m3/5-ops/` | criterio 14 |
 | Versionado de servicios: CalVer `vYYYY.MM.N` en tags | ○ — sin releases | D-015 |
-| Backups de la base | ○ — Turso free trae 1 día de point-in-time restore (runbook §3) | D-038 · D-040 |
+| Backups de la base | ◐ — Turso trae 1 día de point-in-time restore (runbook §3); a mano, `turso db export` + `.dump` fuera del repo (§8b) | D-038 · D-040 |
+
+## 8b · Lo desplegado
+
+Coordenadas de producción. Los valores secretos viven en el dashboard de Render y en
+`apps/api/.env` (gitignoreado), nunca acá (regla 12).
+
+| Qué | Dónde |
+|---|---|
+| API | `propnexus-api` · `srv-da87oaon74is739pr050` · https://propnexus-api.onrender.com · Render Oregon |
+| Web | `propnexus-web` · `srv-da87oaon74is739pr04g` · https://propnexus-web.onrender.com |
+| Base | Turso, org `javote`: `propnexus` en el grupo `default` (`aws-us-east-1`). `propnexus-west` en el grupo `propnexus` (`aws-us-west-2`) es la copia de `SPEC-603`. Bases y grupos, con delete protection |
+| Evidencia | Cloudflare R2, bucket `propnexus-evidencia`, token de tipo **Account** (uno de usuario muere si esa persona pierde acceso) y endpoint *jurisdiction-specific* |
+| Wallet de servicio | `addr_test1vp3vy56p6lrghhntg8ytydnuugnqh7ctkyxn3rm35g4q2ggtqvncw` · admin `62c25341d7c68bde6b41c8b2367ce2260bfb0bb10d388f71a22a0521`. La clave, en `~/propnexus-wallet-preprod.key` (600) y en `apps/api/.env`. No se rota (D-093) |
+| Reference script | txid `3c75280a9205b3d870ce18ed291dcf16593da4382c659bea0735396f0ba2c7f1` (Preprod) |
+| Backup manual | `~/Backups/propnexus/<fecha>/`, fuera del repo, permisos 700/600: `.db` + `.db-wal` de `turso db export` (van juntos) y `.sql` de `.dump` |
+
+**Las credenciales, que no son lo mismo:**
+
+| Qué | Para qué | Dónde |
+|---|---|---|
+| `SEED_ADMIN_PASSWORD` | login de `admin@example.com` | `apps/api/.env`; el seed no la imprime (D-047) |
+| `SEED_DEMO_PASSWORD` | login de las otras cuatro cuentas demo (`developer@`, `buyer@`, `verifier@`, `notary@`) | ídem |
+| `JWT_SECRET` | **no es un login**: la clave con la que la API firma los tokens | local en `apps/api/.env`; en producción, `generateValue: true`, distinta a propósito (D-042) |
+| El token JWT | la sesión: sale de cada login, dura 7 días, vive en `sessionStorage` | nada que guardar |
+| `SERVICE_WALLET_PRIVATE_KEY` | firma las transacciones (🔴) | arriba |
+
+**Operar sin shell:**
+
+- La base se mira desde la máquina de uno: `turso db shell propnexus "<sql>"`. Las tablas van en
+  PascalCase singular (`User`, `OnChainEvent`).
+- La CLI de Render se come el stdin: dentro de un `for`, `< /dev/null`.
+- En `apps/api/.env`, `BLOCKFROST_API_KEY` va entre comillas: un `cut -d= -f2-` las deja puestas y
+  Blockfrost contesta 403 (`Cannot convert undefined to a BigInt` en Lucid). Pelarlas con
+  `sed 's/^"//;s/"$//'`.
+- La wallet se consulta sin key: `POST https://preprod.koios.rest/api/v1/address_info`.
 
 ## 9 · Verificación
 
@@ -211,8 +243,8 @@ la ruta en vez de depender de un escáner. Ninguna ruta llama ya a `canAccessPro
 |---|---|
 | **Nitro sigue en beta** | Sigue sin haber Nitro 3 estable. Pero **el `502` en `POST`+`401` ya no es deuda**: se cerró con `credentials: "omit"` al descubrir que era el spec de fetch y no h3 (D-050) |
 | ~~**Evidencia efímera en la instancia desplegada**~~ | **Cerrada** el 2026-08-27 (D-011): la evidencia vive en Cloudflare R2. No hubo código nuevo —el driver `s3` ya estaba probado contra MinIO—, solo el bucket y las variables. Con esto deja de pesar sobre el primer anclaje |
-| ~~**`bcrypt` trae el warning de `url.parse()`**~~ | **Cerrada el 2026-09-10**: bump a `bcrypt@6.0.0`, que reemplazó `@mapbox/node-pre-gyp` por `node-gyp-build` (mismo mecanismo de binario precompilado, sin `url.parse()`). Queda el riesgo genérico de módulo nativo, que no cambia con la versión: sigue siendo más barato desde D-041 (sin imagen propia, el toolchain lo absorbe el entorno de build de Render). **La alternativa `bcryptjs` (JS puro, ~30% más lento) sigue conviniendo menos**: Render free da 0.1 CPU, donde los ~81 ms medidos en una máquina rápida se van a varios cientos. Detalle en `apps/api/CLAUDE.md` §Superficie 🔴. El bump en sí fue mecánico (mismo API de JS); el uso que rodea a `bcrypt` sigue siendo código 🔴 y lo decide el humano |
-| ~~**`contracts/` con 0 tests**~~ | **Cerrada** (D-057, D-058): 73 tests, con la tabla punto de rechazo → test en `contracts/CLAUDE.md`. Era la deuda más grande que quedaba |
+| ~~**`bcrypt` trae el warning de `url.parse()`**~~ | **Cerrada el 2026-09-10**: bump a `bcrypt@6.0.0`, que reemplazó `@mapbox/node-pre-gyp` por `node-gyp-build` (mismo mecanismo de binario precompilado, sin `url.parse()`). Queda el riesgo genérico de módulo nativo, que no cambia con la versión: sigue siendo más barato desde D-041 (sin imagen propia, el toolchain lo absorbe el entorno de build de Render). **La alternativa `bcryptjs` (JS puro, ~30% más lento) sigue conviniendo menos**: Render free da 0.1 CPU, donde los ~81 ms medidos en una máquina rápida se van a varios cientos. Detalle en `specs/archive/CLAUDE-subarboles-hasta-2026-10-01.md` §Superficie 🔴. El bump en sí fue mecánico (mismo API de JS); el uso que rodea a `bcrypt` sigue siendo código 🔴 y lo decide el humano |
+| ~~**`contracts/` con 0 tests**~~ | **Cerrada** (D-057, D-058): 73 tests, con la tabla punto de rechazo → test en `specs/evidencia-m3/1-repo-ci-tests/aiken-coverage-report.md`. Era la deuda más grande que quedaba |
 | ~~**`pnpm audit`: 1 crítica + 13 altas, casi todas vía `bcrypt` → `node-pre-gyp` → `tar`**~~ | **Cerrada junto con el bump de arriba** (2026-09-10): sin `@mapbox/node-pre-gyp` en el árbol, esa cadena entera desaparece de `pnpm audit`. De paso se bumpeó `multer` a `2.3.0` (parcha GHSA-qvfw-j98x-7q72, un bypass del límite de tamaño de archivo — fila de Multer en el inventario, arriba). Quedan **12 vulnerabilidades** (8 moderadas, 4 altas), ninguna crítica — casi todas de dependencias de build del front (`@babel/*`/`browserslist`, cadena de instalación, no de request). No revisadas una por una en esta sesión |
 | **`milestone` en el dominio** | D-023 pendiente; encarece con cada pantalla nueva |
 
@@ -409,7 +441,7 @@ Sin peers faltantes, sin warnings nuevos, y las 108 pruebas y los dos builds ver
 `@libsql/kysely-libsql@0.4.1` declara `^0.8.0`, y en versiones `0.x` el caret solo admite parches,
 así que no dedupea. Consecuencia ya conocida y resuelta: `LibsqlDialect` recibe `{ url, authToken }`
 en vez de un `Client` ya construido, porque los dos tipos `Client` no son asignables entre sí
-(`apps/api/CLAUDE.md` §Trampas). Arrastra dos copias del binario nativo `libsql`.
+(`specs/archive/CLAUDE-subarboles-hasta-2026-10-01.md`). Arrastra dos copias del binario nativo `libsql`.
 
 **3 · Duplicados menores, todos benignos:** `rolldown` en dos versiones (con sus 15 binarios por
 plataforma), `@oxc-project/types` en tres, `chokidar` 4/5, `debug` 2/4, `semver` 6/7. Ruido normal

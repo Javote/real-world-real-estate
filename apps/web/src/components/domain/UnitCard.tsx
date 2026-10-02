@@ -3,23 +3,10 @@ import { cn } from '#/lib/cn'
 import { ProgressBar } from './ProgressBar'
 import { StatusPill, type StatusTone } from './StatusPill'
 
-// M2-D3 §Cards · UnitCard — **dos variantes que el entregable separa
-// explícitamente**, y la diferencia no es cosmética:
-//
-//   · **investor** — card con imagen, nombre de proyecto, unidad y barra de avance.
-//   · **developer** — fila con ícono, piso + superficie + investor, pill y precio.
-//     *"developer rows do not [include progress] — progress is at project level"*.
-//
-// Esa asimetría es D-029: el avance es del PROYECTO y es el mismo para todas
-// las unidades hermanas. La variante del investor lo muestra porque es *su*
-// unidad y le importa; la del developer no, porque repetiría el mismo número en
-// cada fila de una lista de cuarenta.
-
 interface UnitCardInvestorProps {
   variant: 'investor'
   unitReference: string
   projectName: string
-  /** 0-100, del proyecto (D-029). */
   progress: number
   imageUrl?: string
   status: { tone: StatusTone; label: string }
@@ -30,11 +17,8 @@ interface UnitCardInvestorProps {
 interface UnitCardDeveloperProps {
   variant: 'developer'
   unitReference: string
-  /** Ya formateado: "Piso 7 · 85 m²". El componente no arma copy (D-025). */
   detailLine: string
-  /** Nombre del investor, o la etiqueta de "sin asignar" ya traducida. */
   investorLabel: string
-  /** Ya formateado con `Intl` (regla 1 y 14): nunca un número crudo. */
   priceLabel?: string
   status: { tone: StatusTone; label: string }
   onOpen?: () => void

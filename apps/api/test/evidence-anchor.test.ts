@@ -6,9 +6,6 @@ import { anchorPort } from "../src/lib/anchor";
 import { db } from "../src/lib/db";
 import { FIXTURES } from "./global-setup";
 
-// D-061 · el anclaje de evidencia lo dispara el admin, y el cierre de un stage
-// congela su evidencia en un bundle cuyo Merkle root es lo que viaja al datum.
-
 let proyecto: string;
 let tokenAdmin: string;
 let tokenDev: string;
@@ -51,8 +48,6 @@ async function subirEvidencia(stageId: string, contenido: string) {
       evidenceType: "certificate",
       category: "permits",
       authoritative: true,
-      // Autoritativa y atribuida: D-028 (a) no deja completar el stage con una
-      // evidencia que se declara oficial y no dice de dónde viene.
       issuingAuthority: "Municipalidad de Córdoba",
       originalFilename: `${contenido}.pdf`,
       storedFilename: `${id}.pdf`,
@@ -105,7 +100,6 @@ describe("POST /evidence/:id/anchor", () => {
     expect(res.body.eventType).toBe("EVIDENCE_ANCHOR");
     expect(res.body.txid).toMatch(/^[0-9a-f]{64}$/);
     expect(res.body.evidenceId).toBe(evidencia);
-    // Lo que se ancla es el hash del archivo, no el archivo ni su nombre.
     expect(res.body.commitment).toHaveLength(64);
   });
 
@@ -148,13 +142,6 @@ describe("POST /evidence/:id/anchor", () => {
       .set("Authorization", `Bearer ${tokenAdmin}`);
     expect([403, 404]).toContain(res.status);
   });
-
-  // SPEC-206 (B-08): estos cuatro casos se escribieron ANTES de reemplazar la
-  // reimplementación inline por `anchorCommitmentEvent` (domain/anchoring.ts)
-  // y no se tocaron después — es la prueba de que borrar las ~60 líneas
-  // gemelas no cambió el comportamiento. El de `referenceId` es la excepción
-  // a propósito: es la divergencia que la spec cierra, así que fallaba antes
-  // del refactor y pasa después.
 
   it("el evento anclado queda con referenceId — lo que permite reconciliarlo por su ref, no solo por evidenceId", async () => {
     const stage = await crearStage(998_040);
@@ -261,15 +248,11 @@ describe("EvidenceBundle · el acta del cierre", () => {
       .where("bundleId", "=", bundle.id)
       .execute();
 
-    // El acta guarda el hash de cada archivo: el root tiene que poder
-    // reconstruirse aunque la evidencia se borre.
     expect(items).toHaveLength(2);
     expect(items.every((i) => i.sha256Hash.length === 64)).toBe(true);
   });
 
   it("y con el root, el stage crítico SÍ se ancla", async () => {
-    // Este es el hueco que cierra la pieza 3: antes el datum iba con
-    // evidenceRoot vacío y el anclaje quedaba en Failed.
     const stage = await crearStage(998_011);
     await subirEvidencia(stage, "acta-final");
 
@@ -279,8 +262,6 @@ describe("EvidenceBundle · el acta del cierre", () => {
       .send({ state: "Completed" });
 
     expect(res.status).toBe(200);
-    // El stage se creó a mano (sin hilo abierto), así que el anclaje no puede
-    // gastar nada: lo que importa acá es que el root ya viaja en el datum.
     const bundle = await db
       .selectFrom("EvidenceBundle")
       .selectAll()
@@ -321,7 +302,6 @@ describe("GET /evidence/:bundleId/files y /:bundleId/proof/:fileHash — segunda
       .set("Authorization", `Bearer ${tokenAjeno}`);
     expect(prueba.status).toBe(403);
 
-    // Y un miembro real del proyecto sí puede: la capa no rompió el camino feliz.
     const okArchivos = await request(app)
       .get(`/api/v1/evidence/${bundle.id}/files`)
       .set("Authorization", `Bearer ${tokenDev}`);
@@ -490,11 +470,6 @@ describe("GET /evidence/:bundleId/proof/:fileHash — ramas del hash y del bundl
   });
 
   it("un bundle sin ningún item (fila plantada a mano) da 404 antes de calcular nada", async () => {
-    // El único camino real (`crearBundle`) siempre inserta el bundle CON sus
-    // items en la misma operación — no hay forma de llegar a esto por HTTP.
-    // Se planta la fila directo para ejercitar la guarda igual: `authorize`
-    // ya confirmó que el `EvidenceBundle` existe (mira esa tabla), y el 404
-    // de acá depende de una tabla distinta (`EvidenceBundleItem`, vacía).
     const stage = await crearStage(998_051);
     const ahora = new Date();
     const bundleId = createId();

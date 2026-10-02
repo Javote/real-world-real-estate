@@ -5,14 +5,6 @@ import { afterEach, describe, expect, it } from "vitest";
 import { applyPendingMigrations } from "../src/db/migrate";
 import { createClient } from "../src/lib/libsql-client";
 
-// SPEC-203 (B-03) — antes, `applyPendingMigrations` corría los statements de
-// un archivo uno por uno con un `for`: si el statement N fallaba, los N-1
-// anteriores ya habían corrido y el archivo no quedaba marcado en
-// `_migrations` — el próximo arranque lo reintentaba desde el principio y
-// moría con "table already exists", para siempre, sin intervención manual
-// (Render free tier no da shell). Ahora es un solo `client.batch(...,
-// "write")`, transaccional: o entra el archivo entero, o no entra nada.
-
 let dir: string | undefined;
 let client: ReturnType<typeof createClient> | undefined;
 
@@ -50,7 +42,6 @@ describe("applyPendingMigrations es atómica por archivo", () => {
     );
     expect(tablas.rows).toHaveLength(0);
 
-    // Invariante 2: `_migrations` no miente. Si falló, el archivo no figura.
     const registro = await client.execute({
       sql: "SELECT name FROM _migrations WHERE name = ?",
       args: ["0001_rompe.sql"]

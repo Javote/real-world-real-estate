@@ -2,11 +2,6 @@ import type { NextFunction, Request, Response } from "express";
 import { describe, expect, it, vi } from "vitest";
 import { conUsuario, delegarAOrpc, type OpenAPIHandler } from "../src/lib/orpc";
 
-// SPEC-018 §Paso 0 — el puente Express → oRPC que reemplazó las 89 copias de
-// `if (!matched) next()`. Por HTTP `matched` es siempre `true` (Express ya
-// matcheó el path antes de delegar), así que la rama que devuelve el control a
-// Express solo se puede probar acá, con un handler falso.
-
 type Contexto = { user: { id: string; email: string; role: "admin" } };
 
 function handlerFalso<T extends Record<string, unknown>>(matched: boolean) {

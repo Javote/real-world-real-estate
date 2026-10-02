@@ -78,7 +78,7 @@ mismo path es el rollback. Va en `specs/RUNBOOK-deploy.md`, en el mismo commit q
 
 - `specs/stack.md`: la fila PWA pasa de ○ a ●.
 - `CLAUDE.md` §Estructura y §Stack: se saca la aclaración "sin hacer".
-- `specs/GUION-2026-09-21-video-walkthrough.md` Anexo B: el ítem "No hay PWA instalable" se
+- `specs/archive/GUION-2026-09-21-video-walkthrough.md` Anexo B: el ítem "No hay PWA instalable" se
   actualiza. Si el video ya se grabó, queda como nota histórica.
 - `specs/RUNBOOK-deploy.md`: el rollback de arriba.
 

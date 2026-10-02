@@ -6,14 +6,6 @@ import { SecondaryButton } from '#/components/domain/PrimaryButton'
 import { ProgressBar } from '#/components/domain/ProgressBar'
 import { useTranslation } from '#/i18n/useTranslation'
 
-// La cola de dossiers pendientes de revisión (M2-D5 fila 51).
-//
-// Igual que `AssignedStagesQueue`: aparece en el panel y en la solapa
-// "Dossiers", así que vive una sola vez.
-//
-// **`completeness` es cuánta prueba está sustanciada**, no cuán listo está el
-// dossier (regla 17): la barra mide qué fracción de sus artefactos tiene TXID.
-
 export function PendingDossiersQueue() {
   const { t } = useTranslation()
   const navigate = useNavigate()
@@ -29,9 +21,6 @@ export function PendingDossiersQueue() {
   }
 
   return (
-    // SPEC-106 (F-11): todas las demás listas de la app usan `bg-card`
-    // (#ffffff); esta quedaba `bg-surface-alt`, gris contra el
-    // `--color-app-bg` off-white mientras las otras se ven blancas.
     <ul className="mt-s4 flex flex-col gap-s3">
       {pendientes.map((d) => (
         <li key={d.dossierId} className="flex flex-col gap-s2 rounded-lg bg-card p-s3">
@@ -41,9 +30,6 @@ export function PendingDossiersQueue() {
               <span className="truncate text-body-sm text-text-muted">{d.investorName}</span>
             </div>
 
-            {/* SPEC-105 (F-08): un solo elemento interactivo, no un botón
-                anidado dentro de un <a> — HTML inválido y nested-interactive
-                de axe. El botón navega, no lo envuelve un Link. */}
             <SecondaryButton
               className="shrink-0 px-s3 py-s1 text-body-sm"
               onClick={() =>

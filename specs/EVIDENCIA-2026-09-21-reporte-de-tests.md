@@ -6,7 +6,7 @@
 >
 > Todos los resultados de coverage salen de la corrida de CI del commit
 > [`831d9d8`](https://github.com/Javote/real-world-real-estate/commit/831d9d85042ad83d4fe277d477c619b3b47f5359),
-> que cerró [`SPEC-019`](SPEC-019-cobertura-de-apps-web.md): **desde este commit CI mide coverage
+> que cerró [`SPEC-019`](archive/SPEC-019-cobertura-de-apps-web.md): **desde este commit CI mide coverage
 > con umbral en las cuatro partes TypeScript** (api, web, shared, cardano), no solo en la API como
 > hasta el 2026-09-21.
 
@@ -47,8 +47,8 @@ corren a mano con `pnpm --filter @plataforma/api test:s3` y
 
 **El 1 `it.fails` es a propósito, no una regresión:** fija un bug conocido y sin arreglar de
 `LocationMapModal` (`modals-mapa.test.tsx`), documentado en
-[`SPEC-019`](SPEC-019-cobertura-de-apps-web.md) §Resultado final y en
-[`apps/web/CLAUDE.md`](../apps/web/CLAUDE.md) §Trampas verificadas — falta reproducirlo en el
+[`SPEC-019`](archive/SPEC-019-cobertura-de-apps-web.md) §Resultado final y en
+[`archive/CLAUDE-subarboles-hasta-2026-10-01.md`](archive/CLAUDE-subarboles-hasta-2026-10-01.md) §`apps/web/CLAUDE.md` — falta reproducirlo en el
 navegador real antes de decidir si se arregla el componente o el test.
 **Actualización 2026-09-28:** reproducido en producción (el mapa del detalle de obra abría vacío) y
 corregido en el componente (D-097); el `it.fails` pasó a `it`. Los números de esta tabla son los del
@@ -56,7 +56,7 @@ corregido en el componente (D-097); el `it.fails` pasó a `it`. Los números de 
 
 **Desde este reporte, CI mide coverage con umbral en las cuatro partes TypeScript.** Hasta el
 2026-09-21 solo cubría la API; web, shared y cardano corrían `test` pelado, sin coverage ni gate —
-se cerró en [`SPEC-019`](SPEC-019-cobertura-de-apps-web.md) §Consolidación, en el mismo commit que
+se cerró en [`SPEC-019`](archive/SPEC-019-cobertura-de-apps-web.md) §Consolidación, en el mismo commit que
 esta corrida verifica (`831d9d8`).
 
 ## Coverage
@@ -71,13 +71,13 @@ esta corrida verifica (`831d9d8`).
 **Las cuatro partes TypeScript miden 100% en las cuatro métricas, todo medido en CI** (antes tres de
 cuatro se medían local, sin umbral que fallara el build). El criterio 2 del SOM —*"unit tests ≥95%
 coverage"*, releído por el dueño el 2026-09-21 como de toda la app— cierra ✅. El detalle de cómo se
-llegó ahí, archivo por archivo, está en [`SPEC-017`](SPEC-017-cobertura-95-en-toda-la-app.md)
-(shared, cardano), [`SPEC-018`](SPEC-018-cobertura-de-apps-api.md) (api) y
-[`SPEC-019`](SPEC-019-cobertura-de-apps-web.md) (web + esta consolidación).
+llegó ahí, archivo por archivo, está en [`SPEC-017`](archive/SPEC-017-cobertura-95-en-toda-la-app.md)
+(shared, cardano), [`SPEC-018`](archive/SPEC-018-cobertura-de-apps-api.md) (api) y
+[`SPEC-019`](archive/SPEC-019-cobertura-de-apps-web.md) (web + esta consolidación).
 
 **Los contratos (`contracts/`) no tienen porcentaje de líneas**: Aiken no mide coverage de líneas.
 La evidencia de cobertura del validador es la tabla *punto de rechazo → test que lo ejercita* de
-[`contracts/CLAUDE.md`](../contracts/CLAUDE.md): cada condición por la que el validador rechaza una
+[`aiken-coverage-report.md`](evidencia-m3/1-repo-ci-tests/aiken-coverage-report.md): cada condición por la que el validador rechaza una
 transacción tiene al menos un test que la dispara.
 
 ## Seguridad en la misma corrida

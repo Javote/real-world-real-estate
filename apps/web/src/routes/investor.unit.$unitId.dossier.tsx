@@ -3,8 +3,6 @@ import { createFileRoute, useNavigate } from '@tanstack/react-router'
 import { Download, Share2 } from 'lucide-react'
 import { useState } from 'react'
 import { ApiError, api } from '#/api/port'
-import { INVESTOR_ROLES } from '#/auth/roles'
-import { useRoleGuard } from '#/auth/useRoleGuard'
 import { HashChip } from '#/components/domain/HashChip'
 import { Loading } from '#/components/domain/Loading'
 import { PrimaryButton, SecondaryButton } from '#/components/domain/PrimaryButton'
@@ -20,24 +18,12 @@ import { cn } from '#/lib/cn'
 import { reintentarSiNoEsAusencia, unicosPorStageId } from '#/lib/investor'
 import { bajarBlob, timelineDeStages } from '#/lib/stageProgress'
 
-// **M2-D5 filas 26-29 y 28s · `/investor/unit/:unitId/dossier`**
-// Test IDs: INV-DOSSIER-VIEW-001, INV-DOSSIER-EXPORT-002, INV-DOSSIER-SHARE-001.
-// Patrón P8. El dossier incompleto no se bloquea: la barra lo refleja.
-//
-// **Dos dimensiones, dos componentes** (M2-D4 §6.1 — "patterns compose, never
-// overlap"): `ProgressBar` de acá abajo es la de PRUEBA — qué fracción de los
-// artefactos tiene TXID (regla 17). El `ProgressTimeline` que se agregó es la
-// de OBRA — en qué etapa va la construcción, mismos datos que ya usa
-// `/investor/unit/:unitId` vía `getInvestorUnit`. Son preguntas distintas y
-// las capturas 26-29 muestran las dos.
-
 export const Route = createFileRoute('/investor/unit/$unitId/dossier')({
   component: InvestorDossier
 })
 
 function InvestorDossier() {
   const { unitId } = Route.useParams()
-  const { ready } = useRoleGuard(INVESTOR_ROLES)
   const { t, locale } = useTranslation()
   const navigate = useNavigate()
   const [shareUrl, setShareUrl] = useState<string | null>(null)
@@ -49,21 +35,19 @@ function InvestorDossier() {
   } = useQuery({
     queryKey: ['investor', 'unit', unitId, 'dossier'],
     queryFn: () => api.getUnitDossier(unitId),
-    enabled: ready,
     retry: reintentarSiNoEsAusencia
   })
 
   const { data: unidad } = useQuery({
     queryKey: ['investor', 'unit', unitId],
     queryFn: () => api.getInvestorUnit(unitId),
-    enabled: ready,
     retry: reintentarSiNoEsAusencia
   })
 
   const { data: proyecto } = useQuery({
     queryKey: ['project', unidad?.projectId],
     queryFn: () => api.getProject(unidad!.projectId),
-    enabled: ready && Boolean(unidad?.projectId),
+    enabled: Boolean(unidad?.projectId),
     retry: reintentarSiNoEsAusencia
   })
 
@@ -82,11 +66,9 @@ function InvestorDossier() {
     }
   })
 
-  if (!ready) return null
-
   if (error instanceof ApiError && (error.status === 403 || error.status === 404)) {
     return (
-      <PanelLayout rol="investor" title={t('investor.dossier.title')}>
+      <PanelLayout title={t('investor.dossier.title')}>
         <p data-testid="INV-DOSSIER-VIEW-001">
           {error.status === 403 ? t('error.forbidden') : t('error.notFound')}
         </p>
@@ -96,7 +78,6 @@ function InvestorDossier() {
 
   return (
     <PanelLayout
-      rol="investor"
       title={t('investor.dossier.title')}
       {...(dossier ? { context: `${dossier.projectName} · ${dossier.unitReference}` } : {})}
       back={{

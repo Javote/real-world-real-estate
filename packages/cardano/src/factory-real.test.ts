@@ -1,15 +1,8 @@
 import { describe, expect, it, vi } from "vitest";
 
-// Este archivo mockea Lucid y `./real.js` a propósito: el camino feliz de
-// `crearAdaptadorReal` sale a la red (Blockfrost) y ya está cubierto contra
-// un nodo de verdad en `yaci.test.ts` (manual, no en CI). Lo que este test
-// cubre es el CABLEADO — que factory.ts arme Lucid con la URL/red correctas,
-// seleccione la wallet con la clave dada, y pase la instancia al adaptador —
-// sin pagar el costo ni la flakiness de una llamada real.
 const fromPrivateKey = vi.fn();
 const lucidMock = { selectWallet: { fromPrivateKey } };
 const Lucid = vi.fn().mockResolvedValue(lucidMock);
-// Tiene que ser construible con `new` — factory.ts hace `new Blockfrost(url, apiKey)`.
 function Blockfrost(this: { url: string; apiKey: string }, url: string, apiKey: string) {
   this.url = url;
   this.apiKey = apiKey;

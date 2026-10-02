@@ -3,15 +3,6 @@ import { createId } from "../src/db/id";
 import { db } from "../src/lib/db";
 import { FIXTURES } from "./global-setup";
 
-// SPEC-219 (anexo de SPEC-218) — `Evidence_stageId_sha256Hash_key` (migración
-// 0009) es la red de seguridad de la base contra la carrera que el chequeo de
-// aplicación de SPEC-218 no cierra: dos requests simultáneos con el mismo
-// archivo pueden pasar los dos el "leer y después escribir" antes de que
-// cualquiera inserte. Este archivo prueba el ÍNDICE solo, insertando directo
-// contra `Evidence` — no pasa por la ruta HTTP de la subida (WIP de SPEC-218
-// al escribir esto), que es donde vive la traducción a la respuesta 409 con
-// limpieza que la spec describe en su paso 3.
-
 let proyecto: string;
 let developer: string;
 

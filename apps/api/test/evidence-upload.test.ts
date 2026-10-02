@@ -14,20 +14,8 @@ import { storage } from "../src/lib/storage";
 import { FIXTURES } from "./global-setup";
 import { crearStageMinteado } from "./helpers/stages";
 
-// 2026-09-08: `POST /projects/:id/evidence` y `GET /projects/:id/evidence`
-// (CRUD genérico, sin caller real en el front — ver CLAUDE.md raíz) se
-// borraron. Esta suite pasó a probar la ruta real que usa la pantalla,
-// `POST /developer/projects/:id/stages/:stageId/evidence` (M2-D5 fila 38),
-// que exige `stageId` en el path — a diferencia de la vieja, no admite un
-// "documento suelto" sin etapa, y esa es la diferencia real entre las dos:
-// la vieja lo permitía porque nadie lo pedía, no porque alguien lo usara.
-
 const UPLOAD_DIR = resolve(process.cwd(), process.env.UPLOAD_DIR ?? "./test-uploads");
 
-// SPEC-218: un stage no tiene dos evidencias con el mismo SHA-256, así que un
-// test que sube "un PDF cualquiera" dos veces al mismo stage ya no puede usar
-// los mismos bytes: cada llamada produce un contenido ÚNICO. Los tests que
-// necesitan el MISMO contenido dos veces lo dicen (reusan la variable).
 const pdf = () => Buffer.from(`%PDF-1.4\nevidencia ${createId()}\n%%EOF\n`);
 const png = () =>
   Buffer.concat([
@@ -35,7 +23,7 @@ const png = () =>
     Buffer.from(createId())
   ]);
 const jpeg = () => Buffer.concat([Buffer.from([0xff, 0xd8, 0xff, 0xe0]), Buffer.from(createId())]);
-const PDF = pdf(); // solo para el test de 401, que no llega a guardar nada
+const PDF = pdf();
 
 const token = async (email: string, password: string) => {
   const res = await request(app).post("/api/v1/auth/login").send({ email, password });
@@ -66,8 +54,6 @@ beforeAll(async () => {
       .executeTakeFirstOrThrow()
   ).id;
 
-  // Una sola etapa para los tests que no le importa el estado del stage —
-  // los que sí (Pending→InProgress) crean la suya propia, más abajo.
   const stage = await crearStageMinteado({
     projectId,
     name: "Stage para subida de evidencia",
@@ -98,7 +84,6 @@ const subir = (
 
 type Archivo = { buf: Buffer; nombre: string; tipo: string };
 
-/** Como `subir`, pero con N archivos en el mismo pedido (SPEC-218). */
 const subirLote = (
   tk: string,
   sId: string,
@@ -131,8 +116,6 @@ describe("POST /developer/projects/:id/stages/:stageId/evidence — subida de ev
     expect(res.status).toBe(201);
     expect(res.body.evidences).toHaveLength(1);
     expect(res.body.rejected).toEqual([]);
-    // El hash lo calcula el SERVIDOR (regla 3): no llega del cliente, y tiene
-    // que ser el del contenido real, no el de otra cosa.
     expect(res.body.evidences[0].sha256Hash).toBe(
       createHash("sha256").update(contenido).digest("hex")
     );
@@ -152,20 +135,13 @@ describe("POST /developer/projects/:id/stages/:stageId/evidence — subida de ev
       }
     );
 
-    // SPEC-218: un tipo no permitido es un rechazo POR ARCHIVO; con un solo
-    // archivo y ninguno aceptado, el pedido es 400 NO_FILES_ACCEPTED.
     expect(res.status).toBe(400);
     expect(res.body.code).toBe("NO_FILES_ACCEPTED");
     expect(res.body.rejected).toEqual([{ index: 0, code: "UNSUPPORTED_FILE_TYPE" }]);
-    // Regla 10: si la validación falla después de que Multer escribió, se borra
-    // el huérfano. Un directorio que crece con basura rechazada es una fuga.
     expect(archivosEnDisco()).toBe(antes);
   });
 
   it("rechaza un archivo más grande que el límite (EVIDENCE_MAX_FILE_MB, de packages/shared) sin dejar huérfanos", async () => {
-    // El tope ya no es una variable de entorno que el test baja a 1 MB: es la
-    // constante de `packages/shared`, la MISMA que usa el front — así que el test
-    // sube 50 MB + 1 de verdad (SPEC-218; un test, ~1 s).
     const antes = archivosEnDisco();
     const gigante = Buffer.concat([
       Buffer.from("%PDF-1.4\n"),
@@ -185,7 +161,6 @@ describe("POST /developer/projects/:id/stages/:stageId/evidence — subida de ev
 
   it("un body inválido borra el archivo que Multer ya había escrito", async () => {
     const antes = archivosEnDisco();
-    // Falta `category`, que el schema exige.
     const res = await subir(
       miembro,
       stageId,
@@ -202,10 +177,6 @@ describe("POST /developer/projects/:id/stages/:stageId/evidence — subida de ev
   });
 
   it("SPEC-212: el 400 tiene el shape unificado de oRPC, no error.flatten()", async () => {
-    // La ruta migró su validación de texto a `call()` (SPEC-212, investigación
-    // "Multer + call()") justo para que este shape deje de ser el único
-    // distinto de las otras 45 rutas de §A-D — ver el comentario grande de
-    // `developer-evidencia.routes.ts`.
     const res = await subir(
       miembro,
       stageId,
@@ -239,8 +210,6 @@ describe("POST /developer/projects/:id/stages/:stageId/evidence — subida de ev
       }
     );
 
-    // Rol global correcto (developer) pero sin membresía: la segunda capa de
-    // autorización es la que rechaza (regla 5). Y tampoco deja huérfano.
     expect(res.status).toBe(403);
     expect(archivosEnDisco()).toBe(antes);
   });
@@ -257,9 +226,6 @@ describe("POST /developer/projects/:id/stages/:stageId/evidence — subida de ev
 });
 
 describe("evidencia — storagePath jamás sale al cliente (D-011)", () => {
-  // D-011: la clave de almacenamiento (acá, la ruta absoluta en disco del
-  // servidor) es un detalle interno. Filtrarla expone la topología del
-  // filesystem del servidor a cualquiera con acceso de lectura.
   let evidenceId: string;
 
   beforeAll(async () => {
@@ -330,10 +296,6 @@ describe("evidencia — storagePath jamás sale al cliente (D-011)", () => {
   });
 });
 
-// M1-D2c: "Pending → InProgress : work initiated". La primera evidencia que
-// un developer sube a un stage Pending es la señal de que el trabajo
-// arrancó — sin botón aparte. Ver CLAUDE.md raíz y la restricción de
-// PATCH /stages/:id/state en stage-transitions.test.ts.
 describe("POST .../evidence · dispara Pending → InProgress", () => {
   async function crearStage(estado: "Pending" | "InProgress" | "Observed") {
     const ahora = new Date();
@@ -412,9 +374,6 @@ describe("POST .../evidence · dispara Pending → InProgress", () => {
   });
 });
 
-// SPEC-403 — `authoritative` solo entendía el literal "true"; un checkbox
-// real manda "on", y con la transformación vieja esa evidencia se guardaba
-// como no-autoritativa en silencio: el guard de D-028 nunca se disparaba.
 describe("POST .../evidence · authoritative='on' (checkbox real) se guarda atribuida", () => {
   it("sin issuingAuthority, completar el stage se rechaza con STAGE_EVIDENCE_UNATTRIBUTED", async () => {
     const ahora = new Date();
@@ -454,10 +413,6 @@ describe("POST .../evidence · authoritative='on' (checkbox real) se guarda atri
 });
 
 describe("EvidenceBundle · el acta es idempotente por contenido (regla 8)", () => {
-  // El bug que cierra: completar un stage llamaba a `crearBundle` dos veces
-  // —una en el POST de evidencia, otra desde `transitionStage`— y la segunda
-  // escribía una fila gemela con el MISMO root. En producción, "Terminaciones"
-  // de `torre-a` quedó con 3 evidencias, 4 bundles y 3 roots distintos.
   let admin: string;
   let actorId: string;
 
@@ -483,8 +438,6 @@ describe("EvidenceBundle · el acta es idempotente por contenido (regla 8)", () 
       actorUserId: actorId
     });
 
-    // Tres subidas: cada una agrega una hoja, así que cada una es un conjunto
-    // distinto y merece su propia acta.
     for (const n of [1, 2, 3]) {
       const res = await subir(
         miembro,
@@ -500,9 +453,6 @@ describe("EvidenceBundle · el acta es idempotente por contenido (regla 8)", () 
     }
     expect(await actas(stage.id)).toHaveLength(3);
 
-    // El stage ya está en `InProgress`: la PRIMERA subida lo movió sola
-    // (D-020, "work initiated"). Pedirlo de nuevo sería 409 — la FSM no tiene
-    // `InProgress → InProgress`.
     const enCurso = await db
       .selectFrom("Stage")
       .select("state")
@@ -510,8 +460,6 @@ describe("EvidenceBundle · el acta es idempotente por contenido (regla 8)", () 
       .executeTakeFirstOrThrow();
     expect(enCurso.state).toBe("InProgress");
 
-    // Completar NO agrega evidencia, así que el conjunto no cambió: el acta
-    // vigente ya dice ese root y no tiene que escribirse otra igual.
     const completado = await request(app)
       .patch(`/api/v1/stages/${stage.id}/state`)
       .set("Authorization", `Bearer ${admin}`)
@@ -520,8 +468,6 @@ describe("EvidenceBundle · el acta es idempotente por contenido (regla 8)", () 
 
     const finales = await actas(stage.id);
     expect(finales).toHaveLength(3);
-    // Y la invariante que importa, la que producción viola hoy: ninguna acta
-    // repite el root de la anterior.
     expect(new Set(finales.map((b) => b.commitmentHash)).size).toBe(3);
   });
 
@@ -550,8 +496,6 @@ describe("EvidenceBundle · el acta es idempotente por contenido (regla 8)", () 
     const antes = await actas(stage.id);
     expect(antes).toHaveLength(1);
 
-    // Dos llamadas más, sin evidencia nueva en el medio: las dos devuelven el
-    // mismo root y ninguna escribe.
     const root1 = await crearBundle(fila, actorId);
     const root2 = await crearBundle(fila, actorId);
     expect(root1).toBe(en(antes, 0).commitmentHash);
@@ -578,12 +522,6 @@ describe("EvidenceBundle · el acta es idempotente por contenido (regla 8)", () 
 });
 
 describe("POST .../evidence · un stage Completed no acepta más evidencia", () => {
-  // `Completed` es terminal en la FSM (D-020) y hasta hoy el pipeline de
-  // evidencia no se enteraba: la subida armaba un bundle nuevo con un root
-  // nuevo y lo anclaba, mientras el datum del hilo conserva el root congelado
-  // al certificar. La pantalla del stage muestra el bundle MÁS RECIENTE, así
-  // que ese root aparecía al lado del TXID de certificación que no lo
-  // atestigua — regla 17.
   let admin: string;
   let actorId: string;
 
@@ -606,8 +544,6 @@ describe("POST .../evidence · un stage Completed no acepta más evidencia", () 
       actorUserId: actorId
     });
 
-    // Una evidencia mueve el stage a InProgress solo (D-020) y le da al
-    // stage crítico lo que necesita para poder cerrarse.
     const subida = await subir(
       miembro,
       stage.id,
@@ -708,14 +644,6 @@ describe("POST .../evidence · un stage Completed no acepta más evidencia", () 
   });
 });
 
-// ─────────────────────────────────────────────────────────────────────────
-// SPEC-218 — la subida por LOTE, validada en los dos lados.
-//
-// Un pedido trae hasta 10 archivos y produce UN bundle, UN anclaje y UNA
-// notificación. Un archivo que no se acepta (tipo real no permitido, repetido,
-// ya enviado al stage) se rechaza SOLO él: el resto entra, y el rechazado vuelve
-// en `rejected` con su código.
-// ─────────────────────────────────────────────────────────────────────────
 describe("SPEC-218 · subida por lote", () => {
   let actorId: string;
   let investorId: string;
@@ -738,7 +666,6 @@ describe("SPEC-218 · subida por lote", () => {
     ).id;
   });
 
-  /** Un stage propio por test: los conteos (bundles, eventos, filas) no se pisan. */
   const nuevoStage = async () =>
     (
       await crearStageMinteado({
@@ -792,7 +719,6 @@ describe("SPEC-218 · subida por lote", () => {
     expect(res.body.rejected).toEqual([]);
     expect(await evidenciasDe(sId)).toHaveLength(3);
 
-    // Un lote es UN acta y UN anclaje, no uno por archivo (M2-D4 §P5).
     const bundles = await bundlesDe(sId);
     expect(bundles).toHaveLength(1);
     expect(res.body.bundleId).toBe(bundles[0]?.id);
@@ -804,10 +730,8 @@ describe("SPEC-218 · subida por lote", () => {
     expect(items).toHaveLength(3);
     expect(await anclajesDe(sId)).toHaveLength(1);
 
-    // Una notificación por lote al investor, no tres.
     expect((await notificacionesDeSubida()) - notifAntes).toBe(1);
 
-    // El audit log conserva la granularidad: una entrada por evidencia.
     const auditorias = await db
       .selectFrom("AuditLog")
       .select("entityId")
@@ -828,8 +752,6 @@ describe("SPEC-218 · subida por lote", () => {
 
     const res = await subirLote(miembro, sId, campos, [
       archivo(pdf(), "ok1.pdf"),
-      // Un ejecutable con el `Content-Type` de un PDF: lo que un `fileFilter`
-      // por MIME declarado deja pasar.
       archivo(Buffer.from("MZ\x90\x00 ejecutable disfrazado"), "falso.pdf"),
       archivo(pdf(), "ok2.pdf")
     ]);
@@ -839,8 +761,6 @@ describe("SPEC-218 · subida por lote", () => {
     expect(res.body.rejected).toEqual([{ index: 1, code: "UNSUPPORTED_FILE_TYPE" }]);
     expect(await evidenciasDe(sId)).toHaveLength(2);
     expect((await notificacionesDeSubida()) - notifAntes).toBe(1);
-    // Solo quedan en disco los dos aceptados (con `disk` el temporal ES el
-    // almacenamiento): el rechazado no dejó ni el temporal.
     expect(archivosEnDisco() - antes).toBe(2);
   });
 
@@ -917,7 +837,6 @@ describe("SPEC-218 · subida por lote", () => {
 
       const res = await subirLote(miembro, sId, campos, [
         archivo(igual, "original.pdf"),
-        // Mismo contenido con OTRO nombre: cuenta el contenido, no el nombre.
         archivo(Buffer.from(igual), "copia.pdf")
       ]);
 
@@ -943,10 +862,8 @@ describe("SPEC-218 · subida por lote", () => {
       expect(res.body.rejected).toEqual([{ index: 0, code: "EVIDENCE_ALREADY_IN_STAGE" }]);
       expect(res.body.evidences).toHaveLength(1);
       expect(await evidenciasDe(sId)).toHaveLength(2);
-      // Solo el nuevo dejó un archivo.
       expect(archivosEnDisco() - antes).toBe(1);
 
-      // El root del segundo lote incluye UNA hoja nueva, no dos: 2 hojas en total.
       const items = await db
         .selectFrom("EvidenceBundleItem")
         .select("evidenceId")
@@ -993,17 +910,6 @@ describe("SPEC-218 · subida por lote", () => {
       const sId = await nuevoStage();
       const contenido = pdf();
 
-      // El chequeo de aplicación (`existentes`) es "leer y después escribir":
-      // los dos pedidos pueden pasarlo antes de que cualquiera inserte, y ahí
-      // choca el índice único de la migración 0009. **Que pase o no depende
-      // del timing**: si el primero ya insertó cuando el segundo lee, el
-      // segundo ve el archivo en `existentes` y sale por el 400
-      // NO_FILES_ACCEPTED de siempre — correcto también, pero no es lo que
-      // este test prueba. Sin fijarlo, el test fallaba de vez en cuando en CI
-      // (`[201, 400]`). La barrera fija la intercalación: `storage.put` corre
-      // DESPUÉS del chequeo y ANTES del insert, y ninguno de los dos pedidos
-      // sigue hasta que los dos pasaron por ahí. El insert y el índice siguen
-      // siendo los de verdad.
       const putReal = storage.put.bind(storage);
       let llegaron = 0;
       let soltar!: () => void;
@@ -1029,9 +935,6 @@ describe("SPEC-218 · subida por lote", () => {
       expect(perdedor.body.code).toBe("EVIDENCE_ALREADY_IN_STAGE");
 
       expect(await evidenciasDe(sId)).toHaveLength(1);
-      // Solo el ganador deja un archivo — el que perdió la carrera se limpia
-      // en el `finally` del handler (`confirmado` queda `false` para ese
-      // pedido), sin objetos huérfanos.
       expect(archivosEnDisco() - antes).toBe(1);
     });
   });
@@ -1046,8 +949,6 @@ describe("SPEC-218 · subida por lote", () => {
         .execute();
       const antes = archivosEnDisco();
 
-      // 5 MB: si el servidor respondiera sin descartar el body, el cliente
-      // vería un corte de conexión y no el 409.
       const grande = Buffer.concat([
         Buffer.from("%PDF-1.4\n"),
         Buffer.alloc(5 * 1024 * 1024, 0x42)
@@ -1138,10 +1039,9 @@ describe("SPEC-218 · subida por lote", () => {
 
     expect(res.status).toBe(201);
     const [fila] = await evidenciasDe(sId);
-    expect(fila?.originalFilename).toBe("plano-financiero-secreto.pdf"); // solo en la base
+    expect(fila?.originalFilename).toBe("plano-financiero-secreto.pdf");
     expect(fila?.storedFilename).not.toContain("secreto");
     expect(fila?.storagePath).not.toContain("secreto");
-    // Y lo que guardamos como tipo es el REAL, detectado, no el declarado.
     expect(fila?.mimeType).toBe("application/pdf");
   });
 

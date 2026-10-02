@@ -26,13 +26,22 @@ const boton = () => screen.getByRole('button', { name: t('developer.newProject.s
 const nombre = () => screen.findByLabelText(t('developer.newProject.name'))
 const direccion = () => screen.getByLabelText(t('developer.newProject.location'))
 
-/** Marca el lote con un clic en el mapa (D-097): sin punto no se crea. */
 async function marcarLote(lat = -34.5470001234, lng = -58.4600009876) {
   await waitFor(() => expect(L.map).toHaveBeenCalled())
   act(() => L.dispararClick(lat, lng))
 }
 
-/** La búsqueda espera 0,9 s después de la última tecla: los `waitFor` le dan margen. */
+const render = () =>
+  new File(
+    [Uint8Array.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]), 'fachada'],
+    'render.png',
+    { type: 'image/png' }
+  )
+const inputDePortada = () =>
+  document.querySelector<HTMLInputElement>('input[type="file"]') as HTMLInputElement
+const elegirPortada = (...archivos: File[]) =>
+  fireEvent.change(inputDePortada(), { target: { files: archivos } })
+
 const conMargen = { timeout: 3000 }
 
 beforeEach(() => {
@@ -91,7 +100,6 @@ describe('/developer/project/new', () => {
     montar()
 
     await userEvent.type(await nombre(), 'Torres del Palermo')
-    // Una dirección de puros espacios cuenta como vacía, y no se busca.
     await userEvent.type(direccion(), '   ')
     await marcarLote()
     expect(await screen.findByText('Lote marcado: -34,54700, -58,46000')).toBeTruthy()
@@ -101,7 +109,6 @@ describe('/developer/project/new', () => {
       expect(crear).toHaveBeenCalledWith({
         name: 'Torres del Palermo',
         slug: 'torres-del-palermo',
-        // Seis decimales: -34.5470001234 → -34.547 y -58.4600009876 → -58.460001.
         latitude: -34.547,
         longitude: -58.460001
       })
@@ -208,7 +215,6 @@ describe('/developer/project/new', () => {
     await userEvent.type(direccion(), '0')
     await waitFor(() => expect(pendientes).toHaveLength(3), conMargen)
 
-    // Las dos primeras ya no valen: ni su acierto ni su error cambian nada.
     await act(async () => {
       pendientes[0]?.ok({ match: LIBERTADOR })
       pendientes[1]?.mal(new Error('tarde'))
@@ -260,6 +266,89 @@ describe('/developer/project/new', () => {
 
     await screen.findByText(t('developer.newProject.error'))
     expect((boton() as HTMLButtonElement).disabled).toBe(false)
+  })
+
+  it('la portada (D-099) es opcional, una sola imagen, JPG o PNG: el selector no ofrece PDF ni varios', async () => {
+    autenticarComo(DEVELOPER_USER)
+    const subir = vi.spyOn(api, 'uploadProjectCover')
+    vi.spyOn(api, 'createProject').mockResolvedValue(creado)
+    const router = montar()
+
+    await screen.findByText(t('developer.newProject.cover'))
+    expect(inputDePortada().accept).toBe('image/jpeg,image/png')
+    expect(inputDePortada().multiple).toBe(false)
+
+    await userEvent.type(await nombre(), 'Torre X')
+    await marcarLote()
+    await userEvent.click(boton())
+    await vi.waitFor(() =>
+      expect(router.state.location.pathname).toBe('/developer/project/p-nuevo')
+    )
+    expect(subir).not.toHaveBeenCalled()
+  })
+
+  it('un PDF no entra como portada: se avisa y no queda elegido', async () => {
+    autenticarComo(DEVELOPER_USER)
+    montar()
+
+    await screen.findByText(t('developer.newProject.cover'))
+    elegirPortada(
+      new File([Uint8Array.from([0x25, 0x50, 0x44, 0x46, 0x2d]), 'x'], 'plano.pdf', {
+        type: 'application/pdf'
+      })
+    )
+
+    await screen.findByText('plano.pdf no es un JPG o PNG válido.')
+  })
+
+  it('con portada crea el proyecto, le sube la imagen a su id y recién ahí navega', async () => {
+    autenticarComo(DEVELOPER_USER)
+    const crear = vi.spyOn(api, 'createProject').mockResolvedValue(creado)
+    const subir = vi
+      .spyOn(api, 'uploadProjectCover')
+      .mockResolvedValue({ coverUpdatedAt: '2026-09-30T12:00:00.000Z' })
+    const router = montar()
+
+    await userEvent.type(await nombre(), 'Torre X')
+    await marcarLote()
+    const imagen = render()
+    elegirPortada(imagen)
+    await screen.findByText('render.png')
+    await userEvent.click(boton())
+
+    await vi.waitFor(() =>
+      expect(router.state.location.pathname).toBe('/developer/project/p-nuevo')
+    )
+    expect(crear).toHaveBeenCalledTimes(1)
+    expect(subir).toHaveBeenCalledWith('p-nuevo', imagen)
+  })
+
+  it('si la portada falla, el proyecto ya existe: lo dice, y reintentar sube solo la portada', async () => {
+    autenticarComo(DEVELOPER_USER)
+    const crear = vi.spyOn(api, 'createProject').mockResolvedValue(creado)
+    const subir = vi
+      .spyOn(api, 'uploadProjectCover')
+      .mockRejectedValueOnce(new ApiError(500, 'R2'))
+      .mockResolvedValueOnce({ coverUpdatedAt: '2026-09-30T12:00:00.000Z' })
+    const router = montar()
+
+    await userEvent.type(await nombre(), 'Torre X')
+    await marcarLote()
+    elegirPortada(render())
+    await screen.findByText('render.png')
+    await userEvent.click(boton())
+
+    await screen.findByText(t('developer.newProject.coverError'))
+    expect(screen.queryByText(t('developer.newProject.error'))).toBeNull()
+    expect(router.state.location.pathname).toBe('/developer/project/new')
+
+    await userEvent.click(boton())
+
+    await vi.waitFor(() =>
+      expect(router.state.location.pathname).toBe('/developer/project/p-nuevo')
+    )
+    expect(crear).toHaveBeenCalledTimes(1)
+    expect(subir).toHaveBeenCalledTimes(2)
   })
 
   it('lista las diez etapas de la plantilla', async () => {

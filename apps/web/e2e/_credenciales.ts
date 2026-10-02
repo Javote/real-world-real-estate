@@ -2,20 +2,6 @@ import { existsSync, readFileSync } from 'node:fs'
 import { fileURLToPath } from 'node:url'
 import { parseEnv } from 'node:util'
 
-// Las passwords con las que entra la suite: **las mismas que usó el seed**, no
-// un literal.
-//
-// El seed (`apps/api/src/db/credentials.ts` → `passwordDeDemo`) toma
-// `SEED_DEMO_PASSWORD` / `SEED_ADMIN_PASSWORD` del entorno —que carga de
-// `apps/api/.env`— y solo si no están cae en `buyer123` y compañía. Con los
-// literales escritos acá, una base local sembrada con el `.env` de siempre (el
-// mismo que se usa para entrar a pre-prod) rechazaba todos los logins de la
-// suite, mientras en CI —sin `.env`— pasaba. Se leen de los mismos dos
-// lugares, en el mismo orden: el entorno del proceso y después `apps/api/.env`.
-//
-// Del `.env` se leen SOLO estas dos variables: no se vuelca el archivo entero
-// en `process.env` del runner.
-
 const ENV_API = fileURLToPath(new URL('../../api/.env', import.meta.url))
 
 function delEntorno(variable: 'SEED_DEMO_PASSWORD' | 'SEED_ADMIN_PASSWORD'): string | undefined {
@@ -25,7 +11,6 @@ function delEntorno(variable: 'SEED_DEMO_PASSWORD' | 'SEED_ADMIN_PASSWORD'): str
   return parseEnv(readFileSync(ENV_API, 'utf8'))[variable]?.trim() || undefined
 }
 
-// Los defaults son los `defaultLocal` de `apps/api/src/db/seed.ts`.
 const DEFAULTS = {
   admin: 'admin123',
   buyer: 'buyer123',
@@ -41,10 +26,6 @@ export function passwordDe(rol: RolSembrado): string {
   return delEntorno(variable) ?? DEFAULTS[rol]
 }
 
-/**
- * Los specs nombran la solapa por su etiqueta en inglés (estable); la pantalla
- * arranca en es-AR y la muestra en castellano. Esto traduce una a la otra.
- */
 export const SOLAPA_ES: Record<string, string> = {
   Investor: 'Inversor',
   Developer: 'Desarrollador',
@@ -52,7 +33,6 @@ export const SOLAPA_ES: Record<string, string> = {
   Certifier: 'Certificador'
 }
 
-/** La solapa del login → el rol del seed que prefilla. */
 export const ROL_DE_SOLAPA: Record<string, RolSembrado> = {
   Investor: 'buyer',
   Developer: 'developer',

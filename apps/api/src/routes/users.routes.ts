@@ -17,34 +17,8 @@ import { paramValidator } from "../middlewares/validate-params";
 import { writeAuditLog } from "../utils/audit";
 import { relanzarRestriccionComoOrpc } from "./_shared";
 
-// **SPEC-216 §E4 — migrado a oRPC (D-066). Aislado a propósito, en su propio
-// commit, sin mezclarse con las otras sub-partes: toca superficie 🔴
-// declarada (`bcrypt`, `apps/api/CLAUDE.md` §Superficie 🔴).**
-//
-// **Lo único que cambia es el transporte — la auditoría de la spec ya lo
-// preveía ("ninguna — toca bcrypt, pero solo el transporte cambia").**
-// `bcrypt.hash(password, 10)` (regla 4, cost 10) es EXACTAMENTE el mismo
-// código, en el mismo lugar del handler, sin tocar ni una línea de la lógica
-// 🔴 — lo único que cambia es que el body llega vía `.input()` de oRPC en vez
-// de `safeParse` a mano, y la respuesta se valida contra el mismo
-// `.output()` que ya declaraba `userMutationResultSchema`/`userSummarySchema`.
-// `passwordHash` nunca sale (regla 4): la lista de columnas del `select` es
-// la única fuente, y los dos `.output()` (`userSummarySchema`,
-// `userMutationResultSchema`) son `z.strictObject` — un campo de más no pasa.
-//
-// **`POST /` inserta contra `User.email` único, y se envuelve en
-// `relanzarRestriccionComoOrpc`**, mismo criterio que el resto del lote:
-// `test/constraint-errors.test.ts` → "un email de usuario repetido" fija 409
-// sin nombre de tabla/columna. `PATCH /:id` no toca `email` (no es un campo
-// de `updateUserSchema`), pero se envuelve igual: `.errors()` y el
-// `.catch()` cuestan lo mismo declararlos que no, y una columna única nueva
-// en `User` el día de mañana no depende de que alguien se acuerde de
-// agregarlos acá.
-
 const PREFIJO_ABSOLUTO = "/api/v1/users";
 
-/** El contexto que cada procedimiento recibe — siempre el usuario ya
- * autenticado por `authenticate`, corrido antes de que oRPC vea la request. */
 export type UsersContext = { user: { id: string; email: string; role: UserRole } };
 const orpc = os.$context<UsersContext>();
 
@@ -155,10 +129,6 @@ const updateUserProcedure = orpc
   .handler(async ({ input, context, errors }) => {
     const { id, ...body } = input;
 
-    // Un id inexistente daba 500: `executeTakeFirstOrThrow()` tira un error que
-    // `relanzarRestriccionComoOrpc` no clasifica (no es una restricción violada),
-    // así que quedaba como el 500 genérico de oRPC. `GET /users/:id` ya da 404
-    // para lo mismo — esto lo alinea (SPEC-018 §A4).
     const existe = await db.selectFrom("User").select("id").where("id", "=", id).executeTakeFirst();
     if (!existe) throw new ORPCError("NOT_FOUND", { message: "User not found" });
 
@@ -183,7 +153,7 @@ const updateUserProcedure = orpc
       .where("id", "=", id)
       .returning(["id", "email", "role", "fullName", "isActive"])
       .executeTakeFirstOrThrow()
-      /* v8 ignore start -- @preserve: inalcanzable salvo por una carrera con el chequeo de arriba (la fila ya se confirmó que existe) — ninguno de estos campos toca una columna única de User hoy, pero el `.catch()` queda por si mañana una sí (SPEC-018) */
+      /* v8 ignore start -- @preserve: inalcanzable salvo por una carrera con el chequeo de arriba (la fila ya se confirmó que existe) — ninguno de estos campos toca una columna única de User hoy, pero el `.catch()` queda por si mañana una sí */
       .catch((err) => relanzarRestriccionComoOrpc(err, errors));
     /* v8 ignore stop -- @preserve */
 
@@ -226,9 +196,6 @@ router.delete(
   delegarAOrpc(deleteUserHandler, PREFIJO_ABSOLUTO, conUsuario)
 );
 
-/** El router oRPC combinado de esta vertical — lo consume
- * `scripts/generate-openapi.ts` para generar el fragmento de OpenAPI de las 5
- * rutas migradas. */
 export const usersOrpcRouter = {
   userListProcedure,
   createUserProcedure,

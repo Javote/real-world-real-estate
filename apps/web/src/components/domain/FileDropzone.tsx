@@ -8,47 +8,19 @@ import { useId, useState } from 'react'
 import { cn } from '#/lib/cn'
 import { clasificarEntrantes, type MotivoLocal, type RechazoLocal } from '#/lib/evidenceFiles'
 
-// M2-D3 §Forms & Controls · FileDropzone — el área de subida con la que se arma
-// un bundle de evidencia (captura 38).
-//
-// **Los archivos se validan acá Y en el servidor, con las MISMAS reglas.** La
-// regla 10 fija `application/pdf`, `image/jpeg`, `image/png` y un máximo; el tope
-// de tamaño, el de archivos por subida y la detección del tipo real por los
-// primeros bytes viven en `packages/shared/evidence-rules` y los importan los dos
-// lados (SPEC-218) — antes eran un `50` a mano acá y una variable de entorno allá.
-// Además se rechaza un archivo repetido (mismo SHA-256) dentro de la lista.
-// Esta validación es de conveniencia —le ahorra al usuario subir un archivo pesado
-// para que lo rechacen—, no es la que protege. La que protege es la del backend,
-// que además no deja archivos huérfanos ante un rechazo. Todo lo que el navegador
-// no pueda comprobar **falla abierto** y lo decide el backend (`lib/evidenceFiles`).
-//
-// **No sube nada.** Junta archivos y avisa; quien lo usa decide cuándo y cómo
-// mandarlos. Un dropzone que dispara la request sola haría un anclaje sin que
-// el usuario lo pida, y toda superficie de prueba la inicia el usuario
-// (M2-D4 §6.3).
-
 interface FileDropzoneProps {
   files: readonly File[]
   onChange: (files: File[]) => void
   labels: {
-    /** "Arrastrá archivos o tocá para elegir" */
     primary: string
-    /** Línea secundaria de ayuda. */
     secondary?: string
     remove: string
-    /** Se muestra cuando un archivo no pasa el filtro, con el motivo. */
     rejected: (nombre: string, motivo: MotivoLocal) => string
   }
-  /**
-   * Un aviso por archivo ya elegido (p. ej. el motivo por el que el BACKEND lo
-   * rechazó y quedó en la lista para que el usuario lo vea). Sin él, un archivo
-   * rechazado desaparecería sin decir por qué.
-   */
   notes?: ReadonlyMap<File, string>
-  /** Por defecto, el tope de `packages/shared` (`EVIDENCE_MAX_FILE_MB`). Solo los tests lo bajan. */
   maxSizeMb?: number
-  /** Por defecto, el tope de `packages/shared` (`EVIDENCE_MAX_FILES`). */
   maxFiles?: number
+  allowedMime?: readonly string[]
   disabled?: boolean
   className?: string
 }
@@ -60,6 +32,7 @@ export function FileDropzone({
   notes,
   maxSizeMb = EVIDENCE_MAX_FILE_MB,
   maxFiles = EVIDENCE_MAX_FILES,
+  allowedMime = EVIDENCE_ALLOWED_MIME,
   disabled,
   className
 }: FileDropzoneProps) {
@@ -69,12 +42,11 @@ export function FileDropzone({
 
   const aceptar = async (entrantes: FileList | null) => {
     if (!entrantes) return
-    // Se copia ANTES del primer `await`: el <input> se vacía apenas vuelve el
-    // handler, y un `FileList` vaciado ya no tiene los archivos.
     const lista = Array.from(entrantes)
     const { aceptados, rechazados: malos } = await clasificarEntrantes(lista, files, {
       maxBytes: maxSizeMb * 1024 * 1024,
-      maxFiles
+      maxFiles,
+      allowedMime
     })
 
     setRechazados(malos)
@@ -123,15 +95,13 @@ export function FileDropzone({
         <input
           id={inputId}
           type="file"
-          multiple
-          accept={EVIDENCE_ALLOWED_MIME.join(',')}
+          multiple={maxFiles > 1}
+          accept={allowedMime.join(',')}
           disabled={disabled}
           className="sr-only"
           onChange={(e) => {
             void aceptar(e.target.files)
-            // Se limpia para que elegir el MISMO archivo dos veces vuelva a
-            // disparar `change`. Sin esto, quitar un archivo y volver a
-            // elegirlo no hace nada y parece que la app se colgó.
+            // Sin esto, volver a elegir el mismo archivo no dispara `change`.
             e.currentTarget.value = ''
           }}
         />

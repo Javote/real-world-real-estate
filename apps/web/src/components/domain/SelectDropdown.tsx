@@ -1,23 +1,8 @@
 import { ChevronDown } from 'lucide-react'
 import { cn } from '#/lib/cn'
 
-// M2-D3 §Forms & Controls · SelectDropdown — *"Same body as TextInput with
-// chevron-down adornment."* Lo usan la asignación de unidad, la plantilla de
-// stages y el orden del listado.
-//
-// **Es un `<select>` nativo, no un popover propio.** M2-D3 describe un popover,
-// pero el nativo da gratis lo que un popover propio hay que construir y
-// mantener: navegación por teclado, tipeo para saltar a una opción, y el
-// selector de rueda del sistema en mobile — que es la superficie primaria
-// (M2-D3 §Principio 4). El chevron se dibuja encima para que la anatomía sea
-// la que el entregable pide.
-//
-// Si algún día hace falta una opción con ícono o dos líneas, ahí sí es un
-// popover y es una decisión, no un archivo nuevo.
-
 export interface SelectOption {
   value: string
-  /** Ya traducida por quien lo usa. */
   label: string
   disabled?: boolean
 }
@@ -28,7 +13,6 @@ interface SelectDropdownProps {
   value: string
   onChange: (value: string) => void
   options: readonly SelectOption[]
-  /** Opción vacía inicial: "Elegí una unidad…". Sin esto no hay estado vacío. */
   placeholder?: string
   error?: string
   disabled?: boolean

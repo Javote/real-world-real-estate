@@ -1,9 +1,13 @@
 #!/usr/bin/env bash
 # Paso 5 del runbook del video, con ffmpeg: une el video y la voz de cada toma
-# y pega las 31 en orden. Deja walkthrough-final.mp4 y walkthrough-final.srt
+# y pega las 9 en el orden del mapa del runbook (T01, T07, T09, T12, T18, T23, T27, T22, T28). Deja walkthrough-final.mp4 y walkthrough-final.srt
 # (subtítulos en inglés, sacados del runbook) en la carpeta de grabaciones.
 #
 #   bash scripts/video-walkthrough/unir.sh
+#
+# El video de cada toma es el ya subtitulado (subtituladas/Txx.mp4, de
+# subtitular.sh): el dueño quiere dos versiones, solo subtítulos y voz con
+# subtítulos (2026-10-01). Si falta, se arma acá mismo.
 #
 # La voz puede venir del estudio (Txx.webm, grabada en sincronía con el video:
 # entra tal cual) o de QuickTime (Txx.m4a: se le recorta el silencio del
@@ -26,8 +30,12 @@ else
 fi
 
 : > unidas/duraciones.txt
-for video in T[0-9][0-9].mov; do
-  toma="${video%.mov}"
+# El orden es el del mapa del runbook, no el del nombre: T22 va después de T27.
+orden=$(node --input-type=module -e "import { leerTomas } from '$aqui/lib/tomas.mjs'; console.log(leerTomas().map((t) => t.toma).join(' '))")
+for toma in $orden; do
+  [ -e "$toma.mov" ] || { echo "  (aviso) falta $toma.mov: no entra"; continue; }
+  video="subtituladas/$toma.mp4"
+  [ -e "$video" ] || bash "$aqui/subtitular.sh" "$toma" >/dev/null
   dv=$(ffprobe -v error -show_entries format=duration -of csv=p=0 "$video")
   voz=$(ls -t "$toma.webm" "$toma.m4a" 2>/dev/null | head -1 || true)
   if [ -n "$voz" ]; then
@@ -52,7 +60,7 @@ for video in T[0-9][0-9].mov; do
     || { echo "FALLÓ $toma — mandale este mensaje a quien te pasó el runbook"; exit 1; }
   echo "$toma $dur" >> unidas/duraciones.txt
 done
-printf "file '%s'\n" "$PWD"/unidas/T[0-9][0-9].mp4 > unidas/lista.txt
+awk -v d="$PWD" '{ printf "file '"'"'%s/unidas/%s.mp4'"'"'\n", d, $1 }' unidas/duraciones.txt > unidas/lista.txt
 ffmpeg -y -loglevel error -f concat -safe 0 -i unidas/lista.txt -c copy walkthrough-final.mp4
 
 node --input-type=module -e "

@@ -1,8 +1,6 @@
 import { useQuery } from '@tanstack/react-query'
 import { createFileRoute } from '@tanstack/react-router'
 import { api } from '#/api/port'
-import { CERTIFIER_ROLES } from '#/auth/roles'
-import { useRoleGuard } from '#/auth/useRoleGuard'
 import { HashChip } from '#/components/domain/HashChip'
 import { Loading } from '#/components/domain/Loading'
 import { StatusPill } from '#/components/domain/StatusPill'
@@ -12,36 +10,18 @@ import { useTranslation } from '#/i18n/useTranslation'
 import { CARD_SHELL, CARD_SHELL_EMPTY } from '#/lib/cardShell'
 import { cn } from '#/lib/cn'
 
-// **M2-D5 fila 58 · `/certifier/issued`** — captura 58-CERTIFIER-ISSUED.
-// Componentes: HashChip (certificate hash + TXID), StatusPill (Certified).
-// Endpoint: GET /certifier/certificates?cursor=. Test ID: CER-ISSUED-LIST-001.
-// Patrón: P2.
-//
-// **El estado sale del TXID, no de `certifiedAt`.** Un stage puede estar
-// certificado en el registro y su anclaje todavía sin confirmar: ahí el pill
-// dice "Pendiente" (regla 17). La captura muestra "Certified" porque su dato
-// mock ya tiene TXID.
-
 export const Route = createFileRoute('/certifier/issued')({ component: IssuedCertificates })
 
 function IssuedCertificates() {
-  const { ready } = useRoleGuard(CERTIFIER_ROLES)
   const { t, locale } = useTranslation()
 
   const { data, isPending } = useQuery({
     queryKey: ['certifier', 'certificates'],
-    queryFn: () => api.listCertificates(),
-    enabled: ready
+    queryFn: () => api.listCertificates()
   })
 
-  if (!ready) return null
-
   return (
-    <PanelLayout
-      rol="certifier"
-      title={t('certifier.issued.title')}
-      context={t('certifier.issued.context')}
-    >
+    <PanelLayout title={t('certifier.issued.title')} context={t('certifier.issued.context')}>
       <section data-testid="CER-ISSUED-LIST-001">
         {isPending ? (
           <Loading />
@@ -67,8 +47,6 @@ function IssuedCertificates() {
                       </span>
                     ) : null}
 
-                    {/* El hash del bundle certificado y su TXID, los dos
-                        completos (regla 16): HashChip trunca al mostrar. */}
                     {c.commitmentHash ? (
                       <HashChip
                         hash={c.commitmentHash}

@@ -28,8 +28,6 @@ describe('unicosPorStageId', () => {
 })
 
 describe('anclajeVigenteDelStage', () => {
-  // `events` llega ordenado por eventIndex asc, así que un `.find()` devuelve
-  // la transición más vieja. Es el shape real de "Terminaciones" de torre-a.
   const hilo = [
     { eventType: 'STAGE_CREATED', txid: 'mint' },
     { eventType: 'STAGE_TRANSITION', txid: 'b28eb6cf' },

@@ -24,7 +24,6 @@ const evento = (sobre: Partial<AuditEvent>): AuditEvent => ({
   ...sobre
 })
 
-/** Una acción de cada familia de `categoriaDe` y un actor de cada rol de `rolDe`. */
 const EVENTOS: AuditEvent[] = [
   evento({
     id: 'e-etapa',
@@ -160,12 +159,10 @@ describe('/developer/audit-log', () => {
     expect(contar()).toBe(1)
     expect(boton(t('audit.category.certificador')).getAttribute('aria-pressed')).toBe('true')
 
-    // SIGN_DOSSIER y EXPORT_DOSSIER.
     await userEvent.click(boton(t('audit.category.firma')))
     expect(contar()).toBe(2)
     await userEvent.click(boton(t('audit.category.liberacion')))
     expect(contar()).toBe(1)
-    // UPLOAD_STAGE_EVIDENCE y ANCHOR_DOCUMENT.
     await userEvent.click(boton(t('audit.category.documento')))
     expect(contar()).toBe(2)
     await userEvent.click(boton(t('audit.category.etapa')))
@@ -209,7 +206,6 @@ describe('/developer/audit-log', () => {
     const lista = await screen.findByTestId('DEV-AUDIT-LIST-001')
     const chip = await within(lista).findByRole('button', { name: truncateHash(TXID) })
     expect(within(lista).getAllByRole('button', { name: truncateHash(TXID) })).toHaveLength(1)
-    // La pantalla nunca abre el modal sola (M2-D4 §6.3).
     expect(screen.queryByTestId('DEV-AUDIT-VERIFY-001')).toBeNull()
 
     await userEvent.click(chip)

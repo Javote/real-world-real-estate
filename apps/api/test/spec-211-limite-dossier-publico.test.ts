@@ -4,14 +4,6 @@ import { describe, expect, it, vi } from "vitest";
 import app from "../src/app";
 import { dossierRateLimiter, dossierRateLimitMax } from "../src/middlewares/rateLimit";
 
-// SPEC-211 (B-11) — `GET /public/dossier/:shareToken` es la otra ruta sin
-// sesión del backlog (junto a `/auth/login`) y no tenía ningún límite: cada
-// hit corre `compileDossier` (varias queries, una escritura si el hash
-// cambió, y una consulta a Blockfrost si el dossier está firmado) desde
-// tráfico sin sesión. Mismo patrón de test que `rate-limit.test.ts` para el
-// login: el limiter se prueba montado en una app mínima con un max propio,
-// para no chocar con los demás archivos que comparten proceso e IP.
-
 const appDePrueba = (
   max: number,
   handler: (req: express.Request, res: express.Response) => void
@@ -32,13 +24,10 @@ describe("dossierRateLimiter", () => {
 
     const cortado = await request(a).get("/dossier/x");
     expect(cortado.status).toBe(429);
-    // El handler (y por lo tanto compileDossier) no corre para el pedido que
-    // excede el límite: el 429 se contesta ANTES de tocar la base.
     expect(handler).toHaveBeenCalledTimes(3);
   });
 
   it("un token inexistente repetido cuenta igual para el límite — si no, sería un oráculo por costo", async () => {
-    // El handler simula "token no existe" (404), y aun así el 3er pedido corta.
     const handler = vi.fn((_req, res) => res.status(404).json({ message: "Dossier not found" }));
     const a = appDePrueba(2, handler);
 
@@ -71,9 +60,6 @@ describe("dossierRateLimitMax", () => {
 
 describe("cableado sobre la app real", () => {
   it("GET /public/dossier/:shareToken responde con las cabeceras del limiter", async () => {
-    // Un escribano abriendo el link una vez (o cinco, muy por debajo del
-    // default de 60) pasa sin problema — lo que se prueba acá es que el
-    // limiter está EN la cadena, no que corte.
     const res = await request(app).get(`/api/v1/public/dossier/${"a".repeat(64)}`);
 
     expect(res.status).toBe(404);

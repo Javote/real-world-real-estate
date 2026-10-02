@@ -24,21 +24,13 @@ const mediana = (xs: number[]) =>
     Math.floor(xs.length / 2)
   );
 
-// specs/SPEC-010 §Casos borde · routes/auth.routes.ts.
 describe("POST /api/v1/auth/login · el tiempo no filtra si el email existe", () => {
   it("un email inexistente cuesta lo mismo que una password incorrecta", async () => {
-    // El caso viejo era categórico, no marginal: el camino "no existe" cortaba
-    // antes de bcrypt y volvía en ~0 ms contra ~81 ms del otro. Por eso la
-    // aserción es por orden de magnitud y no por milisegundos: fija la propiedad
-    // que importa (se paga el hash igual) sin volverse flaky en CI compartido.
     const inexistentes: number[] = [];
     const passwordsMalas: number[] = [];
 
-    // Warm-up: la primera request paga conexión a la base y JIT.
     await login(FIXTURES.activo.email, "calentando");
 
-    // Intercaladas a propósito: si la máquina se frena a mitad de la corrida,
-    // frena las dos series por igual en vez de castigar a la que iba después.
     for (let i = 0; i < 5; i++) {
       inexistentes.push(await medir(() => login("no-existe@test.local", "loquesea")));
       passwordsMalas.push(await medir(() => login(FIXTURES.activo.email, "password-equivocada")));
@@ -52,16 +44,8 @@ describe("POST /api/v1/auth/login · el tiempo no filtra si el email existe", ()
   });
 
   it("un usuario inactivo tampoco se distingue por tiempo", async () => {
-    // isActive=false es el tercer rechazo: antes también cortaba antes de bcrypt,
-    // así que revelaba "esta cuenta existe pero está dada de baja".
     await login(FIXTURES.activo.email, "calentando");
 
-    // **Secuencial e intercalado, como el test de arriba.** Estaba con
-    // `Promise.all`: tres logins a la vez contra bcrypt, que es CPU-bound, así
-    // que lo que medía era el encolamiento y no el camino de código. Con la
-    // suite en paralelo (SPEC-015 §1) eso se volvió flaky — falló 1 de cada 3
-    // corridas. Intercalar hace que cualquier frenada de la máquina castigue a
-    // las dos series por igual.
     const inactivos: number[] = [];
     const passwordsMalas: number[] = [];
 
@@ -70,16 +54,10 @@ describe("POST /api/v1/auth/login · el tiempo no filtra si el email existe", ()
       passwordsMalas.push(await medir(() => login(FIXTURES.activo.email, "password-equivocada")));
     }
 
-    // Por orden de magnitud, no por milisegundos: la propiedad que importa es
-    // que el camino "inactivo" TAMBIÉN paga el hash, no que tarde exactamente
-    // lo mismo.
     expect(mediana(inactivos)).toBeGreaterThan(mediana(passwordsMalas) * 0.5);
   });
 
   it("el hash dummy no valida contra ninguna password", async () => {
-    // Si el hash de relleno fuera adivinable —un literal en el repo, o derivado
-    // de algo fijo— una password elegida a mano abriría sesión de un usuario que
-    // no existe. Se deriva de un UUID aleatorio por proceso justamente por esto.
     for (const password of ["", "password", "dev123", "$2b$10$loqueseaquesuenaahash"]) {
       const res = await login("no-existe@test.local", password);
 

@@ -4,19 +4,6 @@ import app from "../src/app";
 import { db } from "../src/lib/db";
 import { FIXTURES } from "./global-setup";
 
-// Violaciones de restricción de la base — `middlewares/errorHandler.ts`.
-//
-// **Antes esto era 500 en todos los casos.** Crear un proyecto con un slug que
-// ya existe, o un stage con un orden repetido, hacía que el servicio se
-// reportara roto a sí mismo: el monitoreo veía un 5xx donde el servidor estaba
-// perfectamente sano y el cliente había mandado un duplicado. Y la ventana de
-// carrera hace que un `select` previo por ruta no alcance: dos requests
-// simultáneos lo pasan los dos.
-//
-// Lo segundo que se fija acá: que el mensaje del cliente **no traiga el nombre
-// de la tabla ni de la columna**. El error crudo de libSQL dice
-// `UNIQUE constraint failed: Project.slug` y eso no puede salir (regla 2).
-
 const login = (f: { email: string; password: string }) =>
   request(app).post("/api/v1/auth/login").send({ email: f.email, password: f.password });
 
@@ -24,7 +11,6 @@ let tokenDev: string;
 let tokenAdmin: string;
 let projectId: string;
 
-// Base propia por archivo (SPEC-015 §1): este número no se coordina con nadie.
 const ETAPA = 1;
 
 beforeAll(async () => {
@@ -58,17 +44,10 @@ describe("un duplicado es 409, no 500", () => {
 
     expect(res.status).toBe(409);
     expect(res.body.code).toBe("RESOURCE_ALREADY_EXISTS");
-    // Ni la tabla ni la columna salen al cliente.
     expect(JSON.stringify(res.body)).not.toContain("Project");
     expect(JSON.stringify(res.body)).not.toContain("slug");
   });
 
-  // El caso "dos stages con el mismo orden" vivía acá contra `POST
-  // /projects/:id/stages`, borrada el 2026-09-08 (CRUD genérico sin caller
-  // real). El mapeo de restricciones es genérico y centralizado
-  // (`errorHandler.ts`) — este archivo lo prueba tres veces más (slug, unidad,
-  // email), así que la cobertura del comportamiento no se perdió, solo el
-  // caso particular de `Stage`.
   it("dos unidades con la misma referencia en el mismo proyecto", async () => {
     const referencia = `9${ETAPA}Z`;
 

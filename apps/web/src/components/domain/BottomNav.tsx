@@ -2,25 +2,10 @@ import { Link } from '@tanstack/react-router'
 import type { LucideIcon } from 'lucide-react'
 import { cn } from '#/lib/cn'
 
-// M2-D3 §Foundation · BottomNav — navegación primaria mobile, **scopeada por
-// rol**: la cantidad de tabs y sus etiquetas cambian según quién entró.
-//
-// Las cuatro composiciones salen textuales de M2-D3 §Usage rules y coinciden
-// con los árboles de pantallas de M2-D1:
-//
-//   INV: Menu · Favorites · Buy (FAB) · Units · User
-//   DEV: Panel · Projects · Capital · Units · Progress
-//   NOT: Panel · Dossiers · Signed · Profile
-//   CER: Panel · Assigned · Issued · Profile
-//
-// La variante del investor tiene un tab central tipo FAB para "Buy". En
-// desktop la barra se reemplaza por un sidebar izquierdo.
-
 export interface NavTab {
   to: string
   label: string
   icon: LucideIcon
-  /** El tab central elevado del investor. Solo uno por barra. */
   fab?: boolean
 }
 
@@ -29,8 +14,6 @@ interface BottomNavProps {
   ariaLabel: string
 }
 
-// TanStack Link pinta activo por prefijo. Un tab a `/developer` quedaría
-// activo en `/developer/capital` si no pedimos exact en el índice.
 export function tabNeedsExactMatch(tabTo: string, tabs: readonly { to: string }[]): boolean {
   return tabs.some((other) => other.to !== tabTo && other.to.startsWith(`${tabTo}/`))
 }
@@ -39,8 +22,6 @@ export function BottomNav({ tabs, ariaLabel }: BottomNavProps) {
   return (
     <nav
       aria-label={ariaLabel}
-      // `max-md:` en vez de `hidden md:` a propósito: ver la trampa de clases
-      // utilitarias en apps/web/CLAUDE.md.
       className="fixed inset-x-0 bottom-0 flex items-end justify-around border-t border-border bg-card px-s2 pb-s2 pt-s2 md:hidden"
     >
       {tabs.map((tab) => (

@@ -2,8 +2,6 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { createFileRoute } from '@tanstack/react-router'
 import { Activity, AlertCircle, Clock, ShieldCheck } from 'lucide-react'
 import { api } from '#/api/port'
-import { CERTIFIER_ROLES } from '#/auth/roles'
-import { useRoleGuard } from '#/auth/useRoleGuard'
 import { AssignedStagesQueue } from '#/components/AssignedStagesQueue'
 import { PrimaryButton, SecondaryButton } from '#/components/domain/PrimaryButton'
 import { StatCard } from '#/components/domain/StatCard'
@@ -12,42 +10,22 @@ import { useTranslation } from '#/i18n/useTranslation'
 import { CARD_SHELL } from '#/lib/cardShell'
 import { useKpiValue } from '#/lib/useKpiValue'
 
-// **M2-D5 fila 55 · `/certifier` (Panel)** — captura 55-CERTIFIER-PANEL.
-// Componentes: StatCard, PrimaryButton (Certify). Endpoints:
-// GET /certifier/kpis, GET /certifier/assignments.
-// Test IDs: CER-PANEL-001, CER-ASSIGNMENTS-002.
-//
-// **Las invitaciones a certificar (SPEC-221, D-095)** van arriba de todo y solo
-// si hay alguna pendiente: es donde el certifier ya mira, y no hace falta
-// inventar un inbox (el suyo no existe en M2-D5). Test ID propio:
-// CER-INVITATIONS-003.
-
-// **`*.index.tsx` y no `notary.tsx`/`certifier.tsx` a secas.** En el ruteo por
-// archivos de TanStack, `notary.tsx` es el LAYOUT de todo lo que cuelga de
-// `/notary` y tiene que renderizar un `<Outlet/>`; como esto es una pantalla y
-// no un layout, `/notary/profile` matcheaba el layout y mostraba el panel con
-// la URL del perfil. Con `.index` el panel es una hoja y sus hermanas son
-// hermanas de verdad.
 export const Route = createFileRoute('/certifier/')({ component: CertifierPanel })
 
 function CertifierPanel() {
-  const { session, ready } = useRoleGuard(CERTIFIER_ROLES)
+  const { session } = Route.useRouteContext()
   const { t } = useTranslation()
   const kpi = useKpiValue()
 
   const { data: kpis } = useQuery({
     queryKey: ['certifier', 'kpis'],
-    queryFn: api.getCertifierKpis,
-    enabled: ready
+    queryFn: api.getCertifierKpis
   })
-  if (!ready) return null
 
   return (
     <PanelLayout
-      rol="certifier"
       title={t('panel.certifier.title')}
-      /* v8 ignore next -- @preserve: `useRoleGuard` hace `setSession` y `setReady(true)` juntos y la pantalla ya salió en `if (!ready) return null`, así que `session` nunca es `null` acá (SPEC-019) */
-      context={session ? t('panel.welcome', { name: session.user.fullName }) : undefined}
+      context={t('panel.welcome', { name: session.user.fullName })}
     >
       <InvitacionesACertificar />
 
@@ -99,7 +77,6 @@ function InvitacionesACertificar() {
   const responder = useMutation({
     mutationFn: ({ id, acepta }: { id: string; acepta: boolean }) =>
       acepta ? api.acceptCertifierInvitation(id) : api.declineCertifierInvitation(id),
-    // Aceptar suma el proyecto: la cola y los KPIs cambian, no solo la lista.
     onSuccess: () => void queryClient.invalidateQueries({ queryKey: ['certifier'] })
   })
 

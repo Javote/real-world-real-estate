@@ -7,14 +7,6 @@ import { db } from "../src/lib/db";
 import { storage } from "../src/lib/storage";
 import { FIXTURES } from "./global-setup";
 
-// SPEC-210 (B-15) — reproduce y cierra: `DELETE /evidence/:id` no puede
-// borrar el archivo ni la fila si hay algo que depende de ella. Antes de
-// esto, un anclaje sobrevivía en la cadena y en la base mientras el archivo
-// que probaba desaparecía (OnChainEvent.evidenceId → ON DELETE set null), y
-// una evidencia dentro de un bundle cortaba con un 400 que describe el
-// problema al revés (SQLITE_CONSTRAINT_FOREIGNKEY → "A referenced resource
-// does not exist", cuando el recurso sí existe y está referenciado).
-
 let proyecto: string;
 let tokenAdmin: string;
 let usuario: string;
@@ -186,7 +178,6 @@ describe("DELETE /evidence/:id", () => {
 
       expect(res.status).toBe(409);
       expect(res.body.code).toBe("EVIDENCE_ANCHORED");
-      // El archivo ni se toca: la validación corre antes de llamar a storage.
       expect(removeSpy).not.toHaveBeenCalled();
 
       const fila = await db

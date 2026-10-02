@@ -9,9 +9,6 @@ import { db } from "../src/lib/db";
 import { FIXTURES } from "./global-setup";
 import { crearStageMinteado } from "./helpers/stages";
 
-// M2-D5 filas 03-05 (browse), 06-07 (documentos), 09-12 (stage), 38/44c
-// (subida anclada) y 46-47 (anclaje de documento suelto).
-
 const login = (f: { email: string; password: string }) =>
   request(app).post("/api/v1/auth/login").send({ email: f.email, password: f.password });
 
@@ -79,8 +76,6 @@ describe("GET /projects — filtros del backlog", () => {
       .set("Authorization", `Bearer ${tokenAdmin}`);
 
     expect(res.status).toBe(200);
-    // Ningún proyecto tiene un `%` en el nombre: si el escape no funcionara,
-    // el comodín devolvería todos.
     expect(res.body).toEqual([]);
   });
 
@@ -107,7 +102,6 @@ describe("GET /projects — filtros del backlog", () => {
       .set("Authorization", `Bearer ${tokenAdmin}`);
 
     expect(res.status).toBe(200);
-    // Los proyectos del fixture no tienen lat/lon: no se les inventa un punto.
     expect(res.body).toEqual([]);
   });
 });
@@ -125,7 +119,6 @@ describe("POST /developer/projects/:id/stages/:stageId/evidence", () => {
     expect(res.body.merkleRoot).toMatch(/^[0-9a-f]{64}$/);
     expect(res.body.anchor.eventType).toBe("EVIDENCE_ANCHOR");
     expect(res.body.anchor.commitment).toBe(res.body.merkleRoot);
-    // `storagePath` NUNCA sale al cliente (D-011).
     expect(res.body.evidences[0].storagePath).toBeUndefined();
     expect(res.body.evidences[0].sha256Hash).toMatch(/^[0-9a-f]{64}$/);
   });
@@ -147,10 +140,6 @@ describe("POST /developer/projects/:id/stages/:stageId/evidence", () => {
     expect(res.status).toBe(404);
   });
 
-  // 2026-09-08: esta es la ruta que la pantalla real usa (confirmado con
-  // Claude en Chrome contra dev). La gemela sin scope de stage en el path
-  // (`POST /projects/:id/evidence`) era CRUD genérico sin caller real y se
-  // borró el mismo día — ver CLAUDE.md raíz.
   it("la primera evidencia mueve el stage de Pending a InProgress", async () => {
     const nuevo = await crearStageMinteado({
       projectId,
@@ -187,10 +176,8 @@ describe("GET /projects/:id/documents y /projects/:id/stages/:stageId", () => {
     expect(res.body.length).toBeGreaterThanOrEqual(1);
 
     for (const doc of res.body) {
-      // El hash viaja COMPLETO: la truncación 6+4 la hace `HashChip` (regla 16).
       expect(doc.sha256Hash).toMatch(/^[0-9a-f]{64}$/);
       expect(doc.storagePath).toBeUndefined();
-      // Sin TXID el estado es "Pendiente", nunca "Verificado" (regla 17).
       if (!doc.txid) expect(doc.anchorStatus).toBe("Pending");
     }
   });
@@ -223,12 +210,6 @@ describe("GET /projects/:id/documents y /projects/:id/stages/:stageId", () => {
 });
 
 describe("POST /developer/documents", () => {
-  // `POST /developer/documents` ancla un `Evidence` **existente** por id — no
-  // sube archivos. M2-D5 (filas 46-47) declara ese endpoint pero no cómo nace
-  // la evidencia sin stage: la única forma que había (`POST /projects/:id/
-  // evidence`, con `stageId` opcional) se borró el 2026-09-08 por ser CRUD
-  // genérico sin caller real. La fila se siembra acá directo, como cualquier
-  // otro fixture de esta suite — lo que se prueba es el anclaje, no la subida.
   async function sembrarDocumentoSuelto(pid: string, contenido: Buffer) {
     const usuario = await db
       .selectFrom("User")
@@ -290,10 +271,6 @@ describe("POST /developer/documents", () => {
   });
 
   it("sin `evidenceId` en el body da 400, no 500", async () => {
-    // Desde el 2026-09-04 la regla la declara el guard, y el id le llega por el
-    // body. Un campo de body ausente es input del cliente (400), no una ruta mal
-    // declarada (500) — que es lo que devuelve el mismo guard cuando falta un
-    // param de PATH. Distinguirlos es el punto de `en: "body"`.
     const res = await request(app)
       .post("/api/v1/developer/documents")
       .set("Authorization", `Bearer ${tokenDev}`)

@@ -20,9 +20,6 @@ import { ObserveStageModal } from './ObserveStageModal'
 import { ShareDossierModal } from './ShareDossierModal'
 import { TxidModal } from './TxidModal'
 
-// SPEC-019 W7. Completa modals.test.tsx: las ramas de props, el Escape de cada
-// modal (R7) y el primitivo `ui/dialog`.
-
 function render(ui: ReactElement) {
   return renderRTL(ui, { wrapper: LocaleProvider })
 }

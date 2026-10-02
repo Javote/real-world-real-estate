@@ -6,10 +6,6 @@ import { agregadosDeProyectos } from "../src/domain/project-aggregates";
 import { db } from "../src/lib/db";
 import { FIXTURES } from "./global-setup";
 
-// SPEC-018 §A5 — `domain/notify.ts`, `domain/dossier.ts` (la unidad
-// inexistente) y `domain/project-aggregates.ts` (la lista vacía), llamados
-// directo. `dossier.test.ts` cubre el resto de `compileDossier` por HTTP.
-
 let proyecto: string;
 
 beforeAll(async () => {

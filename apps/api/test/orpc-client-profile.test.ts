@@ -12,10 +12,6 @@ function crearCliente(link: InstanceType<typeof OpenAPILink>) {
   return createORPCClient<RouterClient<typeof profileOrpcRouter>>(link);
 }
 
-// SPEC-216 §E1 — mismo patrón de prueba que las cuatro sub-partes de
-// SPEC-212 (`test/orpc-client-notary.test.ts` y hermanos): "Cubre: generar el
-// cliente oRPC tipado para cada archivo migrado, como prueba de que el
-// contrato es real". Sin caller real todavía (SPEC-111 sigue pendiente).
 let servidor: http.Server;
 let baseUrl: string;
 let token: string;
@@ -46,8 +42,6 @@ describe("cliente oRPC tipado de profile, contra el servidor real (SPEC-216 §E1
 
     const perfil = await client.profileProcedure();
 
-    // El tipo de `perfil` ya es `Profile` (inferido del mismo `profileSchema`
-    // que valida en el servidor) — sin cast.
     expect(perfil.email).toBe(FIXTURES.activo.email);
     expect(perfil).not.toHaveProperty("passwordHash");
   });
@@ -62,8 +56,6 @@ describe("cliente oRPC tipado de profile, contra el servidor real (SPEC-216 §E1
     const actualizado = await client.updateProfileProcedure({ fullName: "Dev Renombrado" });
     expect(actualizado.fullName).toBe("Dev Renombrado");
 
-    // Vuelve a "Dev Test" para no ensuciar el resto de la suite, que comparte
-    // la misma base entre archivos.
     await client.updateProfileProcedure({ fullName: FIXTURES.activo.fullName });
   });
 

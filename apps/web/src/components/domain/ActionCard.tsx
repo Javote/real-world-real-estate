@@ -1,21 +1,11 @@
 import type { LucideIcon } from 'lucide-react'
 import { cn } from '#/lib/cn'
 
-// M2-D3 §Cards · ActionCard — tile de una grilla de acciones.
-//
-// La variante `featured` es fondo morado lleno con texto blanco: es el tile
-// "New project" del panel del developer (captura 33).
-//
-// `compact` es la grilla de 4 del detalle de proyecto (captura 37): ícono +
-// label en una línea, sin descripción. M2-D3 ya marca la descripción como
-// opcional; esto solo achica el tile para que no ocupe el doble.
-
 interface ActionCardProps {
   title: string
   description?: string
   icon?: LucideIcon
   featured?: boolean
-  /** Ícono y label en una fila. La captura 37 no lleva descripción. */
   compact?: boolean
   onClick: () => void
   testId?: string

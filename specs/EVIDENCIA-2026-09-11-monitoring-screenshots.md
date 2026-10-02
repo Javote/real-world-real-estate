@@ -46,7 +46,7 @@ unhandled errors are visible:
   form twice against the same reference. Left in the screenshot on purpose, as further proof the
   pipeline captures real errors as they happen, not synthetic ones.
 - `Error — Cannot find module '@opentelemetry/api'`, 3 days old — a historical, already-fixed
-  incident (see `apps/api/CLAUDE.md` §Trampas, 2026-09-08) whose issue entry is still open in
+  incident (see `specs/archive/CLAUDE-subarboles-hasta-2026-10-01.md`, `apps/api` traps, 2026-09-08) whose issue entry is still open in
   Sentry because nobody has manually resolved it there; the underlying bug has been fixed in code
   since.
 

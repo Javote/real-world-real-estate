@@ -2,11 +2,6 @@ import { describe, expect, it } from "vitest";
 import { sembrarMembresias, sembrarProyecto } from "../src/db/fixtures";
 import { db } from "../src/lib/db";
 
-// SPEC-018 §A6 — `sembrarMembresias(db, projectId, [])`: el early-return
-// cuando no hay membresías que insertar. `test/global-setup.ts` siempre la
-// llama con una lista no vacía; un proyecto sin miembros (como
-// `FIXTURES.otroProyecto`, ya sembrado) hoy simplemente no la invoca.
-
 describe("sembrarMembresias con lista vacía", () => {
   it("no inserta nada y no revienta", async () => {
     const projectId = await sembrarProyecto(db, {

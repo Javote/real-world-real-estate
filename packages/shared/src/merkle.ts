@@ -1,19 +1,3 @@
-// El Merkle root de un bundle de evidencia: `bundle_commitment_hash` de
-// `M1-D2/2-core-domain-model.puml`.
-//
-// **Vive en `shared` y no en la API** porque su razón de ser es que alguien de
-// afuera pueda reproducirlo. M1-D1 §Verification Blueprint promete que un
-// tercero recalcula el hash de los archivos y lo compara con lo anclado; si la
-// regla de armado del árbol vive escondida en una ruta del backend, esa promesa
-// no se puede cumplir sin confiar en nosotros — que es justo lo que el producto
-// dice no pedir.
-//
-// La función de hash se INYECTA: este package lo compilan la API y el browser
-// con `lib: ["ES2022"]` pelado, así que no puede importar `node:crypto`. El
-// servidor le pasa SHA-256 de Node; una futura pantalla de verificación le
-// pasaría el de WebCrypto.
-
-/** Toma dos hashes en hex y devuelve el hash de su concatenación, en hex. */
 export type PairHasher = (leftHex: string, rightHex: string) => string;
 
 export const MERKLE_LEAF_HEX_LENGTH = 64;
@@ -24,17 +8,7 @@ function assertLeaf(leaf: string): void {
   }
 }
 
-/**
- * Raíz del árbol.
- *
- * Dos reglas que no son estéticas y hay que respetar para reproducirlo:
- *
- * 1. **Las hojas se ordenan** ascendente por su hex. Así el root no depende del
- *    orden en que se subieron los archivos, que es un dato accidental: dos
- *    personas con el mismo conjunto de evidencia obtienen el mismo root.
- * 2. **El nodo impar sube solo**, no se duplica. Duplicarlo —el estilo Bitcoin—
- *    hace que dos conjuntos distintos de hojas puedan dar el mismo root.
- */
+// Las hojas se ordenan y el nodo impar sube solo, sin duplicarse: si no, la raíz no es reproducible.
 export function merkleRoot(leaves: readonly string[], hashPair: PairHasher): string {
   if (leaves.length === 0) {
     throw new Error("Un bundle sin evidencia no tiene commitment: no hay nada que anclar");
@@ -49,7 +23,6 @@ export function merkleRoot(leaves: readonly string[], hashPair: PairHasher): str
     for (let i = 0; i < nivel.length; i += 2) {
       const izq = nivel[i] as string;
       const der = nivel[i + 1];
-      // Impar: sube solo, sin duplicarse.
       siguiente.push(der === undefined ? izq : hashPair(izq, der));
     }
     nivel = siguiente;
@@ -58,23 +31,6 @@ export function merkleRoot(leaves: readonly string[], hashPair: PairHasher): str
   return nivel[0] as string;
 }
 
-/**
- * El camino de prueba de una hoja hasta la raíz.
- *
- * **Es lo que vuelve real la promesa de M2-D4 Pattern 5**: *"To verify any
- * single file, a reviewer can re-compute the file hash, walk the Merkle path,
- * and check that the root matches the anchored value."* Sin el camino, el root
- * prueba el conjunto pero nadie puede verificar **su** archivo sin bajarse todos
- * los demás.
- *
- * Cada paso dice con qué hermano combinar y de qué lado va, porque el orden
- * importa: `hash(A+B)` no es `hash(B+A)`.
- */
-// `MerkleStep` se declara acá y no en `documents.ts`: `merkleStepSchema`
-// (SPEC-404, P-06) deriva su tipo de este, así que las dos no pueden divergir.
-// El import allá es `import type`, así que no le mete Zod a este archivo, que
-// se queda sin dependencias — sigue siendo lo que la firma de una función pura
-// pide.
 export interface MerkleStep {
   sibling: string;
   position: "left" | "right";
@@ -103,7 +59,6 @@ export function merkleProof(
       const der = nivel[i + 1];
 
       if (der === undefined) {
-        // Nodo impar: sube solo, así que no agrega paso al camino.
         siguiente.push(izq);
         if (i === indice) indice = siguiente.length - 1;
         continue;
@@ -121,12 +76,6 @@ export function merkleProof(
   return camino;
 }
 
-/**
- * Rehace la raíz desde una hoja y su camino. Es lo que corre el verificador
- * (SPEC-404, P-05) — la única de las cuatro que no validaba nada, y la que
- * más lejos de nuestro control llega: valida la hoja y cada hermano igual que
- * `merkleRoot`/`merkleProof`, en vez de devolver un hash sobre basura.
- */
 export function merkleRootFromProof(
   leaf: string,
   proof: readonly MerkleStep[],

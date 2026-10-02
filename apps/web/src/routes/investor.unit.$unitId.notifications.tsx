@@ -4,8 +4,6 @@ import type { LucideIcon } from 'lucide-react'
 import { FileCheck2, FileText, ShieldCheck, Signature } from 'lucide-react'
 import { useState } from 'react'
 import { api } from '#/api/port'
-import { INVESTOR_ROLES } from '#/auth/roles'
-import { useRoleGuard } from '#/auth/useRoleGuard'
 import type { AuditCategory } from '#/components/domain/AuditEventCard'
 import { CategoryChip } from '#/components/domain/Chips'
 import { Loading } from '#/components/domain/Loading'
@@ -15,9 +13,6 @@ import { formatRelative } from '#/i18n/format'
 import { useTranslation } from '#/i18n/useTranslation'
 import { CARD_SHELL_EMPTY } from '#/lib/cardShell'
 import { reintentarSiNoEsAusencia } from '#/lib/investor'
-
-// **M2-D5 fila 22 · `/investor/unit/:unitId/notifications`** — captura 22.
-// Test IDs: INV-NOTIF-UNIT-001, INV-NOTIF-READ-002.
 
 const CATEGORIAS = ['stage', 'document', 'release', 'signature', 'certificate'] as const
 type NotifCategory = (typeof CATEGORIAS)[number]
@@ -44,7 +39,6 @@ export const Route = createFileRoute('/investor/unit/$unitId/notifications')({
 
 function InvestorUnitNotifications() {
   const { unitId } = Route.useParams()
-  const { ready } = useRoleGuard(INVESTOR_ROLES)
   const { t, tDinamico, locale } = useTranslation()
   const navigate = useNavigate()
   const queryClient = useQueryClient()
@@ -53,7 +47,6 @@ function InvestorUnitNotifications() {
   const { data: unidad } = useQuery({
     queryKey: ['investor', 'unit', unitId],
     queryFn: () => api.getInvestorUnit(unitId),
-    enabled: ready,
     retry: reintentarSiNoEsAusencia
   })
 
@@ -63,8 +56,7 @@ function InvestorUnitNotifications() {
       api.listNotifications({
         unitId,
         ...(filtro ? { category: filtro } : {})
-      }),
-    enabled: ready
+      })
   })
 
   const marcarLeida = useMutation({
@@ -72,13 +64,10 @@ function InvestorUnitNotifications() {
     onSuccess: () => void queryClient.invalidateQueries({ queryKey: ['notifications'] })
   })
 
-  if (!ready) return null
-
   const primeraSinLeer = notificaciones?.find((n) => n.readAt === null)?.id
 
   return (
     <PanelLayout
-      rol="investor"
       title={t('investor.unit.notifications')}
       context={t('investor.unit.notificationsContext', {
         unit: unidad?.unitReference ?? ''
@@ -113,8 +102,6 @@ function InvestorUnitNotifications() {
                 timestampLabel={formatRelative(String(n.createdAt), locale)}
                 read={n.readAt !== null}
                 readLabel={t('investor.notifications.read')}
-                // Solo la PRIMERA sin leer: el ID marca la acción de marcar
-                // leída, no cada fila. Repetido, deja de ser un selector.
                 {...(n.id === primeraSinLeer ? { testId: 'INV-NOTIF-READ-002' } : {})}
                 {...(filtro ? { category: BORDE[categoria] } : {})}
                 onOpen={n.readAt === null ? () => marcarLeida.mutate(n.id) : undefined}

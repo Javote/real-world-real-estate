@@ -1,7 +1,7 @@
 # scripts/video-walkthrough
 
 Las herramientas del runbook del video walkthrough —
-[`specs/GUION-2026-09-21-video-walkthrough.md`](../../specs/GUION-2026-09-21-video-walkthrough.md),
+[`specs/archive/GUION-2026-09-21-video-walkthrough.md`](../../specs/archive/GUION-2026-09-21-video-walkthrough.md),
 ítem 3.12 / criterio 13—. **El runbook dice cuándo se usa cada una**; esto es solo el índice.
 Todas se corren desde la raíz del repo y funcionan con lo que trae esta Mac (bash 3.2 de macOS,
 Node, Chrome). ffmpeg es opcional.
@@ -12,9 +12,10 @@ Node, Chrome). ffmpeg es opcional.
 | 0, 1, 6 | `verificar-produccion.mjs` | **Solo lectura.** Entra con los cinco roles y compara lo que ve cada uno con lo que el runbook espera; saldo de tADA de la wallet de servicio. `--despues` para después de la sesión B |
 | 1 | `sesion.sh` | En una Terminal aparte durante cada sesión: esconde el escritorio, manda las grabaciones a la carpeta, ofrece cerrar apps ruidosas, despierta Render y lo mantiene despierto. `Ctrl-C` deshace todo |
 | 1 | `chrome.sh` | Abre un Chrome aparte (perfil `PropNexus Demo`: sin guardar contraseñas, sin traductor) con las cinco pestañas en `/login` |
-| 2 | `renombrar.sh A\|B\|C` | Al final de cada sesión, pone `Txx.mov` a sus grabaciones en orden; si sobran (tomas repetidas), pregunta cuáles descartar |
+| 2 | `renombrar.sh A\|B` | Al final de cada sesión, pone `Txx.mov` a sus grabaciones en orden; si sobran (tomas repetidas), pregunta cuáles descartar |
 | 4, 5 | `estudio/servidor.mjs` | El estudio en `http://127.0.0.1:8765`: graba la voz de cada toma mirando el video, con la frase en pantalla en su segundo, y guarda `Txx.webm`. Sin ffmpeg, también arma el video final |
-| 5 | `unir.sh` | Con ffmpeg: une video y voz de cada toma, pega las 31 y escribe `walkthrough-final.mp4` y `.srt` |
+| 5 | `unir.sh` | Con ffmpeg: une video y voz de cada toma, pega las 9 y escribe `walkthrough-final.mp4` (voz **y** subtítulos dibujados, sobre `subtituladas/`) y `.srt` |
+| 5 | `subtitular.sh` | La versión sin voz: superpone las frases del runbook a cada toma (cada una hasta la siguiente) y las pega en `walkthrough-subtitulado.mp4` (+ `.srt`). Con un argumento (`T15`), una sola toma. Usa Pillow para dibujar el texto: el ffmpeg de Homebrew no trae libass ni drawtext |
 | — | `evidencia/` | Los tres archivos que se suben en T15 (ficticios, marcados como tales) y `generar.sh` para regenerarlos desde `fuentes/` |
 | — | `lib/` | `tomas.mjs` lee las tomas y la narración **del runbook** (única fuente: el estudio y los subtítulos salen de ahí); `api.mjs`, el acceso a la API |
 

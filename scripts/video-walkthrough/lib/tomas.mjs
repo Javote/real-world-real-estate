@@ -1,4 +1,5 @@
-// Lee las 31 tomas del runbook del video: la fila del mapa (Paso 2) y las
+// Lee las 9 tomas del runbook del video (T01, la sesión A entera; T07, T09, T12, T18
+// y T23, bloques grabados de corrido; y T22, T27, T28): la fila del mapa (Paso 2) y las
 // frases de la narración con sus tiempos (Paso 4.3). El runbook es la única
 // fuente: el estudio de voz y los subtítulos salen de acá, así que editar una
 // frase en el .md alcanza.
@@ -6,7 +7,15 @@ import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import { RAIZ } from "./api.mjs";
 
-export const RUNBOOK = join(RAIZ, "specs", "GUION-2026-09-21-video-walkthrough.md");
+export const RUNBOOK = join(RAIZ, "specs", "archive", "GUION-2026-09-21-video-walkthrough.md");
+
+// La sesión A es una sola toma (T01) desde el 2026-10-01: T02–T06 no existen.
+// Y T07 funde el panel y el alta (T08 no existe), y T09 la unidad, la invitación y
+// la evidencia (T10, T11, T15 y T16 no existen), y T12 aceptar, la unidad y el
+// contrato (T13 y T14 no existen; T17 salió por un bug), y T18 observar, reanudar y
+// certificar (T19–T21 no existen), y T23 el dossier, compartirlo y la firma (T24–T26
+// no existen), grabadas el mismo día.
+export const TOMAS = 9;
 
 const segundos = (mmss) => {
   const [m, s] = mmss.split(":").map(Number);
@@ -46,9 +55,9 @@ export function leerTomas(texto = readFileSync(RUNBOOK, "utf8")) {
     }
   }
   const lista = [...tomas.values()];
-  if (lista.length !== 31 || lista.some((t) => !t.frases.length || !t.video))
+  if (lista.length !== TOMAS || lista.some((t) => !t.frases.length || !t.video))
     throw new Error(
-      `El runbook no tiene las 31 tomas completas (${lista.length}). ¿Cambió el formato de las tablas?`
+      `El runbook no tiene las ${TOMAS} tomas completas (${lista.length}). ¿Cambió el formato de las tablas?`
     );
   return lista;
 }

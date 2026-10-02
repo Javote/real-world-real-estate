@@ -1,28 +1,5 @@
 import { z } from "zod";
 
-// SPEC-207 (B-09): antes, `writeAuditLog` tomaba `action`/`entityType` como
-// `string` a secas. Del otro lado, `auditScope` (apps/api/src/middlewares/auth.ts)
-// es fail-closed: un `entityType` que no esté en su mapeo **no se muestra
-// nunca**, en silencio. Y las 29 `action` tienen que estar espejadas a mano en
-// el diccionario del front o la UI muestra el literal. Coincidían porque
-// alguien se acordó, no porque algo lo obligara — mismo argumento que
-// `ALL_MEMBERSHIPS`/`TODOS_LOS_ROLES` en `middlewares/auth.ts`: "ampliar un
-// permiso tiene que ser un acto deliberado; el trabajo de escribir un renglón
-// es exactamente el punto".
-//
-// **Esto gobierna la ESCRITURA, no la lectura histórica.** Una fila vieja con
-// un valor que ya no está acá se sigue leyendo igual — por eso
-// `auditLogEntrySchema`/`auditLogRowSchema` (`pagination.ts`) siguen con
-// `action`/`entityType` como `z.string()` pelado. Achicar cualquiera de las
-// dos uniones no puede romper una lectura, solo impedir que se vuelva a
-// escribir.
-
-/**
- * Toda `action` que `writeAuditLog` puede escribir hoy — contadas sobre los 29
- * call sites reales de `src` (27 literales + `CERTIFY_STAGE`/`OBSERVE_STAGE`,
- * que llegan vía el parámetro `auditAction` de `transitionStage`, y
- * `CHANGE_STAGE_STATE`, su default cuando no se pasa ninguno).
- */
 export const AUDIT_ACTIONS = [
   "ACCEPT_CERTIFIER_INVITATION",
   "ACCEPT_INVITATION",
@@ -53,6 +30,7 @@ export const AUDIT_ACTIONS = [
   "UPDATE_EVIDENCE",
   "UPDATE_PROFILE",
   "UPDATE_PROJECT",
+  "UPDATE_PROJECT_COVER",
   "UPDATE_STAGE",
   "UPDATE_UNIT",
   "UPDATE_USER",
@@ -61,13 +39,6 @@ export const AUDIT_ACTIONS = [
 export const auditActionSchema = z.enum(AUDIT_ACTIONS);
 export type AuditAction = z.infer<typeof auditActionSchema>;
 
-/**
- * Todo `entityType` que `writeAuditLog` puede escribir hoy. `User` está
- * incluida acá —es una `action` real, `CREATE_USER`/`UPDATE_USER`/`DELETE_USER`
- * la escriben— pero queda **fuera del scope del developer a propósito**:
- * crear usuarios o cambiar roles no pertenece a ningún proyecto. `auditScope`
- * la excluye explícitamente, no por omisión (ver ese archivo).
- */
 export const AUDIT_ENTITY_TYPES = [
   "CertifierInvitation",
   "Dossier",

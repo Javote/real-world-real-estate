@@ -14,7 +14,7 @@ import { afterEach, describe, expect, it, vi } from 'vitest'
 import { api } from '#/api/port'
 import { clearSession, setSession } from '#/auth/session'
 import { LocaleProvider } from '#/i18n/useTranslation'
-import { PanelLayout } from './PanelLayout'
+import { PanelLayout, PanelShell } from './PanelLayout'
 
 vi.mock('#/api/port', () => ({
   api: { getUnreadCount: vi.fn(async () => ({ unread: 0 })) }
@@ -22,8 +22,6 @@ vi.mock('#/api/port', () => ({
 
 type Rol = 'investor' | 'developer' | 'notary' | 'certifier' | 'admin'
 
-// Las pantallas a las que la campana y el perfil pueden llevar: el test lee
-// dónde terminó el router, no un mock de `navigate`.
 const DESTINOS = [
   '/admin',
   '/investor/profile',
@@ -53,18 +51,33 @@ function renderLayout(
     )
   })
 
-  const page = createRoute({
+  const shell = createRoute({
     getParentRoute: () => rootRoute,
+    id: 'panel',
+    component: () => <PanelShell rol={rol} />
+  })
+
+  const page = createRoute({
+    getParentRoute: () => shell,
     path: '/developer/',
     component: () => (
       <PanelLayout
-        rol={rol}
         title="Inversores"
         {...(back ? { back } : {})}
         {...(headerAction ? { headerAction } : {})}
         {...(context ? { context } : {})}
       >
         <p>contenido</p>
+      </PanelLayout>
+    )
+  })
+
+  const otra = createRoute({
+    getParentRoute: () => shell,
+    path: '/developer/otra',
+    component: () => (
+      <PanelLayout title="Otra pantalla">
+        <p>otro contenido</p>
       </PanelLayout>
     )
   })
@@ -84,7 +97,7 @@ function renderLayout(
   )
 
   const router = createRouter({
-    routeTree: rootRoute.addChildren([page, ...stubs]),
+    routeTree: rootRoute.addChildren([shell.addChildren([page, otra]), ...stubs]),
     history: createMemoryHistory({ initialEntries: ['/developer/'] })
   })
 
@@ -115,8 +128,20 @@ describe('PanelLayout (D-074)', () => {
     expect(texto.indexOf('Inversores')).toBeGreaterThan(texto.indexOf('Volver al panel'))
   })
 
-  // SPEC-103 (F-07): el aria-label de la campana decía solo "Notificaciones",
-  // sin el dato que el prop `unread` ya tenía.
+  it('el armazón no se desmonta al navegar: el mismo header cambia de título (SPEC-601)', async () => {
+    const router = renderLayout()
+
+    const header = await screen.findByRole('banner')
+    expect(header.textContent).toContain('Inversores')
+
+    router.history.push('/developer/otra')
+
+    await screen.findByText('otro contenido')
+    expect(screen.getByRole('banner')).toBe(header)
+    expect(header.textContent).toContain('Otra pantalla')
+    expect(header.textContent).not.toContain('Inversores')
+  })
+
   describe('campana: el aria-label interpola el conteo real (SPEC-103)', () => {
     it('unread === 0 usa la clave sin contador', async () => {
       vi.mocked(api.getUnreadCount).mockResolvedValueOnce({ unread: 0 })

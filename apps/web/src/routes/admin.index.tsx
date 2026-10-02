@@ -4,8 +4,6 @@ import { createFileRoute } from '@tanstack/react-router'
 import { useState } from 'react'
 import { ApiError, api } from '#/api/port'
 import type { CertifierInvitation } from '#/api/types'
-import { ADMIN_ROLES } from '#/auth/roles'
-import { useRoleGuard } from '#/auth/useRoleGuard'
 import { PrimaryButton } from '#/components/domain/PrimaryButton'
 import { SelectDropdown } from '#/components/domain/SelectDropdown'
 import { StatusPill, type StatusTone } from '#/components/domain/StatusPill'
@@ -13,15 +11,6 @@ import { PanelLayout } from '#/components/PanelLayout'
 import type { TranslationKey } from '#/i18n/dictionary'
 import { useTranslation } from '#/i18n/useTranslation'
 import { CARD_SHELL } from '#/lib/cardShell'
-
-// **`/admin` · la pantalla del admin** — D-095, SPEC-221. No es de M2-D5: los
-// entregables definen cuatro roles y ninguna superficie de admin. El admin es
-// la salvaguarda: puede entrar a los cuatro paneles (la barra de navegación lo
-// lleva) y, desde acá, hace lo único que no tiene pantalla en ningún rol —
-// invitar a un certifier a un proyecto.
-//
-// Componentes: todos de M2-D3 (SelectDropdown, PrimaryButton, StatusPill) sobre
-// el mismo armazón que los paneles (PanelLayout). Test IDs propios, `ADMIN-*`.
 
 export const Route = createFileRoute('/admin/')({ component: AdminPanel })
 
@@ -44,7 +33,6 @@ const ROL: Record<MembershipRole, TranslationKey> = {
 }
 
 function AdminPanel() {
-  const { ready } = useRoleGuard(ADMIN_ROLES)
   const { t } = useTranslation()
   const queryClient = useQueryClient()
   const [elegido, setElegido] = useState('')
@@ -52,30 +40,27 @@ function AdminPanel() {
 
   const { data: proyectos } = useQuery({
     queryKey: ['admin', 'projects'],
-    queryFn: () => api.listProjects(),
-    enabled: ready
+    queryFn: () => api.listProjects()
   })
 
-  // El más nuevo primero: el caso de uso real es el proyecto recién creado.
   const ordenados = [...(proyectos ?? [])].sort((a, b) => b.createdAt.localeCompare(a.createdAt))
   const projectId = elegido || ordenados[0]?.id || ''
 
   const { data: detalle } = useQuery({
     queryKey: ['admin', 'project', projectId],
     queryFn: () => api.getProject(projectId),
-    enabled: ready && projectId !== ''
+    enabled: projectId !== ''
   })
 
   const { data: invitaciones } = useQuery({
     queryKey: ['admin', 'certifier-invitations', projectId],
     queryFn: () => api.listProjectCertifierInvitations(projectId),
-    enabled: ready && projectId !== ''
+    enabled: projectId !== ''
   })
 
   const { data: usuarios } = useQuery({
     queryKey: ['admin', 'users'],
-    queryFn: api.listUsers,
-    enabled: ready
+    queryFn: api.listUsers
   })
 
   const miembros = detalle?.members ?? []
@@ -105,10 +90,8 @@ function AdminPanel() {
     (codigoDeError && ERRORES_CON_NOMBRE[codigoDeError]) || 'admin.error.generic'
   )
 
-  if (!ready) return null
-
   return (
-    <PanelLayout rol="admin" title={t('admin.title')} context={t('admin.context')}>
+    <PanelLayout title={t('admin.title')} context={t('admin.context')}>
       <section className={CARD_SHELL} data-testid="ADMIN-PROJECT-001">
         <h2 className="text-h2 font-bold text-text-primary">{t('admin.projects')}</h2>
         <SelectDropdown

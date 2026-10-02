@@ -11,13 +11,6 @@ function crearCliente(link: InstanceType<typeof OpenAPILink>) {
   return createORPCClient<RouterClient<typeof authOrpcRouter>>(link);
 }
 
-// SPEC-216 §E2 — mismo patrón que `orpc-client-profile.test.ts`, pero es el
-// primer router con procedimientos de DISTINTO contexto inicial en el mismo
-// combinado (`loginProcedure` sin `user`, `meProcedure` con `user`
-// obligatorio en tiempo de ejecución) — lo que `notary.routes.ts` solo
-// anticipaba en un comentario. Este test es la prueba de que
-// `os.$context<AuthContext>().prefix(...).router(authOrpcRouter)` tipa y
-// funciona con los dos, no solo que compile.
 let servidor: http.Server;
 let baseUrl: string;
 
@@ -42,8 +35,6 @@ describe("cliente oRPC tipado de auth, contra el servidor real (SPEC-216 §E2)",
       password: FIXTURES.activo.password
     });
 
-    // El tipo de `sesion` ya es `LoginResponse` (inferido del mismo
-    // `loginResponseSchema` que valida en el servidor) — sin cast.
     expect(sesion.token).toBeTruthy();
     expect(sesion.user.email).toBe(FIXTURES.activo.email);
     expect(sesion.user).not.toHaveProperty("passwordHash");

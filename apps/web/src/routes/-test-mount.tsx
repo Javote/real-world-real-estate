@@ -1,13 +1,9 @@
-// Helper compartido para montar una pantalla de ruta protegida por
-// `useRoleGuard`, con QueryClient + i18n + router de memoria — el mismo
-// armado que `-login.test.tsx` y `queues.test.tsx` repetían archivo por
-// archivo. Nace en la tanda notary de SPEC-017 §paso 5.
-
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import {
+  type AnyRoute,
   type AnyValidator,
   createMemoryHistory,
-  createRootRoute,
+  createRootRouteWithContext,
   createRoute,
   createRouter,
   Outlet,
@@ -17,8 +13,23 @@ import {
 import { render } from '@testing-library/react'
 import { vi } from 'vitest'
 import { api } from '#/api/port'
+import type { UserRole } from '#/api/types'
+import { requireRole } from '#/auth/requireRole'
+import { ADMIN_ROLES, CERTIFIER_ROLES, DEV_ROLES, INVESTOR_ROLES, NOTARY_ROLES } from '#/auth/roles'
 import { type Session, setSession } from '#/auth/session'
+import type { NAV_TABS } from '#/components/domain/navTabs'
+import { PanelShell } from '#/components/PanelLayout'
 import { LocaleProvider } from '#/i18n/useTranslation'
+
+// Los mismos seis layouts de `src/routes/<prefijo>.tsx`: la pantalla se monta debajo del suyo.
+const PANELES: Record<string, { rol: keyof typeof NAV_TABS; roles: readonly UserRole[] }> = {
+  investor: { rol: 'investor', roles: INVESTOR_ROLES },
+  project: { rol: 'investor', roles: INVESTOR_ROLES },
+  developer: { rol: 'developer', roles: DEV_ROLES },
+  notary: { rol: 'notary', roles: NOTARY_ROLES },
+  certifier: { rol: 'certifier', roles: CERTIFIER_ROLES },
+  admin: { rol: 'admin', roles: ADMIN_ROLES }
+}
 
 export const NOTARY_USER: Session['user'] = {
   id: 'u-not',
@@ -48,7 +59,6 @@ export const INVESTOR_USER: Session['user'] = {
   fullName: 'Investor Demo'
 }
 
-/** Entra a cualquier pantalla por el bypass de `useRoleGuard` (D-095). */
 export const ADMIN_USER: Session['user'] = {
   id: 'u-adm',
   email: 'admin@example.com',
@@ -56,11 +66,6 @@ export const ADMIN_USER: Session['user'] = {
   fullName: 'Admin Demo'
 }
 
-/**
- * Deja la sesión puesta y `api.me()`/`api.getUnreadCount()` resueltos: lo que
- * `useRoleGuard` y `PanelLayout`/`NotificationBell` piden en cada pantalla
- * protegida, sin repetirlo en cada test.
- */
 export function autenticarComo(user: Session['user']) {
   setSession({ token: 't', user })
   vi.spyOn(api, 'me').mockResolvedValue({
@@ -71,7 +76,6 @@ export function autenticarComo(user: Session['user']) {
   vi.spyOn(api, 'getUnreadCount').mockResolvedValue({ unread: 0 })
 }
 
-/** Lo mínimo que `montarRuta` necesita de una `Route` real de TanStack Router. */
 interface RutaMontable {
   options: {
     component?: RouteComponent
@@ -79,15 +83,6 @@ interface RutaMontable {
   }
 }
 
-/**
- * Monta una pantalla en `path`, con las rutas extra que necesite para navegar.
- *
- * Acepta el componente pelado (forma vieja, la que usan los tests de notary y
- * certifier) o la `Route` real (`Route.options.component` **y**
- * `validateSearch`, para pantallas como `investor.buy`/`investor.notifications`
- * cuyo parseo de query solo corre si `validateSearch` está declarado — sin
- * esto esas ~30 ramas no se ejecutan nunca).
- */
 export function montarRuta(
   componente: RouteComponent | RutaMontable,
   path: string,
@@ -100,7 +95,7 @@ export function montarRuta(
   if (!Componente) throw new Error(`montarRuta: la ruta de "${path}" no declara un component`)
 
   const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } })
-  const rootRoute = createRootRoute({
+  const rootRoute = createRootRouteWithContext<{ queryClient: QueryClient }>()({
     component: () => (
       <QueryClientProvider client={queryClient}>
         <LocaleProvider>
@@ -114,21 +109,45 @@ export function montarRuta(
     path: '/login',
     component: () => <div>LOGIN-STUB</div>
   })
-  const pantalla = createRoute({
-    getParentRoute: () => rootRoute,
-    path,
-    component: Componente,
-    validateSearch
-  })
-  const stubs = rutasExtra.map((ruta) =>
-    createRoute({
-      getParentRoute: () => rootRoute,
-      path: ruta,
-      component: () => <div>{ruta}</div>
-    })
-  )
+
+  const prefijo = path.split('/')[1] ?? ''
+  const panel = PANELES[prefijo]
+  const layout = panel
+    ? createRoute({
+        getParentRoute: () => rootRoute,
+        path: `/${prefijo}`,
+        beforeLoad: requireRole(panel.roles),
+        component: () => <PanelShell rol={panel.rol} />
+      })
+    : undefined
+  const debajoDelLayout = (ruta: string) =>
+    ruta === `/${prefijo}` || ruta.startsWith(`/${prefijo}/`)
+  const relativa = (ruta: string) => ruta.slice(prefijo.length + 1) || '/'
+
+  const hijosDelLayout: AnyRoute[] = []
+  const sueltas: AnyRoute[] = []
+  const crear = (ruta: string, component: RouteComponent, extra = {}) => {
+    if (layout && debajoDelLayout(ruta)) {
+      hijosDelLayout.push(
+        createRoute({ getParentRoute: () => layout, path: relativa(ruta), component, ...extra })
+      )
+    } else {
+      sueltas.push(
+        createRoute({ getParentRoute: () => rootRoute, path: ruta, component, ...extra })
+      )
+    }
+  }
+
+  crear(path, Componente, { validateSearch })
+  for (const ruta of rutasExtra) crear(ruta, () => <div>{ruta}</div>)
+
   const router = createRouter({
-    routeTree: rootRoute.addChildren([loginRoute, pantalla, ...stubs]),
+    routeTree: rootRoute.addChildren([
+      loginRoute,
+      ...(layout ? [layout.addChildren(hijosDelLayout)] : []),
+      ...sueltas
+    ]),
+    context: { queryClient },
     history: createMemoryHistory({ initialEntries: [entrada ?? path] })
   })
   render(<RouterProvider router={router} />)

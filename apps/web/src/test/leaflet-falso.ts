@@ -1,12 +1,3 @@
-// Leaflet real no corre en jsdom (no hay layout, no hay tiles). `LocationMapModal`
-// lo carga con `import()` dinámico — SPEC-019 §Paso 0, punto 9: un `L` falso,
-// compartido por los cuatro lotes que montan el mapa (investor.buy,
-// investor.unit.$unitId.index, project.$projectId.index, LocationMapModal).
-//
-// Uso: `vi.mock('leaflet', () => import('#/test/leaflet-falso'))` al principio
-// del archivo de test. Para disparar `moveend` a mano: `dispararMoveend()`;
-// un clic en el mapa (variante `picker`): `dispararClick(lat, lng)`. `estado`
-// fija lo que el mapa responde a `getZoom()` y a `getBounds().contains()`.
 import { vi } from 'vitest'
 
 interface BoundsFalsos {
@@ -16,7 +7,6 @@ interface BoundsFalsos {
   getNorth(): number
 }
 
-/** Lo que el mapa falso contesta; cada test lo puede fijar. */
 export const estado = { zoom: 15, contiene: true }
 
 const boundsPorDefecto: BoundsFalsos & { contains: () => boolean } = {
@@ -33,12 +23,10 @@ type CallbackClick = (e: { latlng: { lat: number; lng: number } }) => void
 let callbackMoveend: Callback | undefined
 let callbackClick: CallbackClick | undefined
 
-/** Dispara el `moveend` que `LocationMapModal` registró, como si el usuario hubiera movido el mapa. */
 export function dispararMoveend() {
   callbackMoveend?.()
 }
 
-/** Dispara el clic en el mapa que registró la variante `picker`. */
 export function dispararClick(lat: number, lng: number) {
   callbackClick?.({ latlng: { lat, lng } })
 }
@@ -99,7 +87,6 @@ export const marker = vi.fn((posicion: [number, number], _opciones?: unknown) =>
 )
 export const divIcon = vi.fn((opciones: unknown) => opciones)
 
-/** El ícono por defecto: `LocationMapModal` le pasa las imágenes publicadas por Vite. */
 export const Icon = { Default: { prototype: { _getIconUrl: vi.fn() }, mergeOptions: vi.fn() } }
 
 export default { map, tileLayer, featureGroup, marker, divIcon, Icon }

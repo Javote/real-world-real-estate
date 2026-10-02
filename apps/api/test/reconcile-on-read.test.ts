@@ -6,29 +6,6 @@ import { anchorPort } from "../src/lib/anchor";
 import { db } from "../src/lib/db";
 import { FIXTURES } from "./global-setup";
 
-// **La invariante: toda lectura que devuelva el estado de un anclaje
-// reconcilia su propio alcance antes de consultar.**
-//
-// Por qué existe. `reconciliarParaLectura` no tiene cron ni timer (D-077, y la
-// decisión de no agregar infra para lo que todavía no duele): el disparo ES la
-// lectura. Eso funciona solo si el disparador está donde se muestra el
-// anclaje, y hasta el 2026-09-09 no lo estaba: tres rutas devolvían
-// `anchorStatus` sin reconciliar nunca, así que un evento que ya estaba en un
-// bloque se servía `Pending` **para siempre** — no hasta la próxima carga,
-// para siempre, porque nada más lo iba a mirar.
-//
-// **Cómo se observa, y por qué así.** No hay espías ni inspección del fuente
-// (D-053: un escáner que grepea y adivina se borró por eso). Se planta un
-// evento `Pending` con un txid que el simulador reconoce como suyo, se pide la
-// ruta por HTTP, y se mira la BASE: si la fila quedó `Confirmed`, la ruta
-// reconcilió. Es el comportamiento real, no una declaración sobre él.
-//
-// **La lista se mantiene a mano, igual que el literal de `route-guards`.** El
-// test no descubre solo una ruta nueva que devuelva `anchorStatus`; lo que
-// hace es que las que ya sabemos que deben reconciliar no puedan dejar de
-// hacerlo en silencio. Si agregás una lectura con `anchorStatus`, sumala acá —
-// y sumarla es donde mirás si el alcance que elegiste es el correcto.
-
 let proyecto: string;
 let contratoId: string;
 let tokenDev: string;
@@ -40,13 +17,11 @@ let unidadInvestor: string;
 const login = (f: { email: string; password: string }) =>
   request(app).post("/api/v1/auth/login").send({ email: f.email, password: f.password });
 
-/** Un txid que el simulador reconoce como suyo — uno inventado da `null`. */
 async function txidReal(reference: string): Promise<string> {
   const recibo = await anchorPort().anchorCommitment({ sha256: "a".repeat(64), reference });
   return recibo.txid;
 }
 
-/** Un anclaje `Pending` de verdad confirmable, en el alcance del proyecto. */
 async function anclajePendiente(): Promise<string> {
   const id = createId();
   const ahora = new Date();
@@ -65,7 +40,6 @@ async function anclajePendiente(): Promise<string> {
       commitment: "a".repeat(64),
       status: "Pending",
       txid: await txidReal(id),
-      // El CHECK de la tabla no deja un TXID sin red (D-080).
       network: "Simulated",
       outputRef: null,
       blockTimestamp: null,
@@ -125,12 +99,6 @@ beforeAll(async () => {
   ).id;
 });
 
-/**
- * Un bundle de un solo archivo, con su `EvidenceBundleItem`, listo para pedirle
- * `GET /evidence/:bundleId/proof/:fileHash`. No pasa por el flujo real de
- * completar un stage (ese ya lo cubre `evidence-anchor.test.ts`): acá solo
- * hace falta la forma mínima que esa ruta necesita para reconciliar.
- */
 async function bundleConArchivo(): Promise<{ bundleId: string; fileHash: string }> {
   const ahora = new Date();
   const stageId = createId();
@@ -253,10 +221,6 @@ describe("toda lectura con anchorStatus reconcilia su alcance", () => {
     expect(await estado(id)).toBe("Confirmed");
   });
 
-  // Ya reconciliaban en el código (`evidence.routes.ts`/`investor.routes.ts`
-  // lo llaman antes de consultar) pero no estaban en esta lista — la misma
-  // clase de agujero que el 2026-09-09, solo que en el test y no en la ruta:
-  // nada impedía que alguien las rompiera sin que ningún rojo lo avisara.
   it("GET /evidence/:bundleId/proof/:fileHash", async () => {
     const { bundleId, fileHash } = await bundleConArchivo();
 
@@ -264,9 +228,6 @@ describe("toda lectura con anchorStatus reconcilia su alcance", () => {
       .get(`/api/v1/evidence/${bundleId}/proof/${fileHash}`)
       .set("Authorization", `Bearer ${tokenDev}`);
     expect(res.status).toBe(200);
-    // Regla 17: el proof object solo sostiene el TXID si `anchorStatus` ya
-    // reconcilió a `Confirmed` — si esta ruta dejara de reconciliar, el body
-    // seguiría en 200 pero con `txid: null`, así que el chequeo real está acá.
     expect(res.body.txid).not.toBeNull();
   });
 

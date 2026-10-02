@@ -56,9 +56,6 @@ describe('LocaleProvider / useTranslation', () => {
     expect(window.localStorage.getItem('propnexus.lang')).toBe('en-US')
   })
 
-  // SPEC-103 (F-04): `index.html` fija `lang="es"` una vez y el toggle nunca
-  // lo tocaba — `document.documentElement.lang` seguía en "es" con la app
-  // entera ya en inglés.
   it('invariante SPEC-103: document.documentElement.lang sigue al locale vigente, no solo al montar', async () => {
     function Toggle() {
       const { locale, setLocale } = useTranslation()
@@ -96,9 +93,6 @@ describe('LocaleProvider / useTranslation', () => {
     await screen.findByText('Sign in')
   })
 
-  // SPEC-107 (F-14) — el escape explícito para claves que no salen de una
-  // unión cerrada (p.ej. `titleKey` de una notificación, arbitrario del
-  // backend). Fallback obligatorio, a diferencia de `as never`.
   it('tDinamico: devuelve la traducción si la clave existe en el diccionario', async () => {
     function ProbeDinamico() {
       const { tDinamico } = useTranslation()

@@ -5,11 +5,6 @@ import { createId } from "../src/db/id";
 import { db } from "../src/lib/db";
 import { FIXTURES } from "./global-setup";
 
-// M2-D5 filas 02, 22, 62 — **M3-BE-07**.
-//
-// Lo que fijan estos tests: que una notificación viaje con su CLAVE y no con
-// una frase (regla 15), y que nadie lea las de otro.
-
 const login = (f: { email: string; password: string }) =>
   request(app).post("/api/v1/auth/login").send({ email: f.email, password: f.password });
 

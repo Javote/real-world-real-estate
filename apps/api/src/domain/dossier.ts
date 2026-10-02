@@ -5,21 +5,7 @@ import { db } from "../lib/db";
 import { reconciliarParaLectura } from "./reconcile";
 import { ultimoBundlePorStage } from "./stage-transition";
 
-// Compilación del dossier (M2-D4 P8, M2-D5 filas 26-29) — **M3-BE-12**.
-//
-// M2-D5 §3: *"Dossier compilation is on-demand from authoritative back-end
-// state. The dossier hash is computed at the moment of fetch and is stable as
-// long as the underlying anchored artifacts have not changed"*. Así que acá NO
-// hay un hash guardado que se sirva: se recompone la lista de artefactos y se
-// rehashea en cada lectura. Si el hash cambió, cambió lo que compromete — que
-// es exactamente lo que el patrón P8 promete y lo único que puede sostener.
-//
-// **Una vez firmado, el dossier se congela.** Recomputar el hash de algo que un
-// notario ya firmó dejaría la firma apuntando a un hash que ya no existe: la
-// prueba se rompería en silencio, que es el peor modo de falla posible acá
-// (regla 17). Firmado, `masterHash` es el que se firmó y no se toca.
-
-/** SHA-256 de la lista canónica. El orden es parte del compromiso. */
+// El orden de los artefactos es parte del compromiso.
 export function masterHashOf(artifacts: DossierArtifact[]): string {
   const canonico = JSON.stringify(
     artifacts.map((a) => [a.kind, a.referenceId, a.sha256 ?? "", a.txid ?? ""])
@@ -28,15 +14,9 @@ export function masterHashOf(artifacts: DossierArtifact[]): string {
 }
 
 export interface CompiledDossier extends Dossier {
-  /** Sirve para el aislamiento cross-rol: el investor solo ve SU unidad. */
   investorId: string | null;
 }
 
-/**
- * Reúne los artefactos de una unidad y devuelve el dossier compilado,
- * persistiendo la fila que le da identidad (id y `shareToken` estables entre
- * lecturas). Devuelve `null` si la unidad no existe.
- */
 export async function compileDossier(unitId: string): Promise<CompiledDossier | null> {
   const unidad = await db
     .selectFrom("Unit")
@@ -53,16 +33,6 @@ export async function compileDossier(unitId: string): Promise<CompiledDossier | 
 
   if (!unidad) return null;
 
-  // ── Stages: su prueba es la transición a `Completed`, y su huella el Merkle
-  // root del bundle que se ancló al completarlos.
-  //
-  // `ultimoBundlePorStage` (SPEC-213, domain/stage-transition.ts) elige el
-  // bundle vigente, no cualquiera: un stage acumula un bundle por cada subida
-  // de evidencia antes de completarse, así que un `leftJoin` directo a
-  // `EvidenceBundle` duplicaría el artefacto `stage` en `artifacts` — y
-  // `masterHash`, que se calcula sobre esa lista, saldría distinto del que
-  // corresponde. Reproducido contra producción: `specs/evidence/
-  // evidence-bundle-torre-a-terminaciones-2026-09-18.json`.
   const stages = await db
     .selectFrom("Stage")
     .leftJoin(ultimoBundlePorStage, "EvidenceBundle.stageId", "Stage.id")
@@ -83,12 +53,6 @@ export async function compileDossier(unitId: string): Promise<CompiledDossier | 
     .orderBy("Stage.sequenceOrder", "asc")
     .execute();
 
-  // ── Evidencia: su huella es el SHA-256 de los bytes guardados, y su prueba
-  // el TXID del anclaje de ese archivo.
-  //
-  // **Nunca `storagePath`** (D-011) y **nunca el nombre del archivo en la
-  // cadena** (regla 2). El `label` es de presentación y viaja off-chain: acá
-  // sí es el nombre original, porque el dossier es un artefacto para leer.
   const evidencia = await db
     .selectFrom("Evidence")
     .leftJoin("OnChainEvent", (join) =>
@@ -106,8 +70,6 @@ export async function compileDossier(unitId: string): Promise<CompiledDossier | 
     .orderBy("Evidence.uploadedAt", "asc")
     .execute();
 
-  // ── Liberaciones: la prueba financiera por release del patrón P10. Se
-  // encuentran por `referenceId`, que es el id del propio release.
   const releases = await db
     .selectFrom("PaymentAttestation")
     .innerJoin("Contract", "Contract.id", "PaymentAttestation.contractId")
@@ -150,8 +112,6 @@ export async function compileDossier(unitId: string): Promise<CompiledDossier | 
     }))
   ];
 
-  // **Completitud = cuántas piezas pueden mostrar un TXID.** No es "cuán listo
-  // está el dossier": es cuánta de su prueba está sustanciada (regla 17).
   const conPrueba = artifacts.filter((a) => a.txid !== null).length;
   const completeness =
     artifacts.length === 0 ? 0 : Math.round((conPrueba / artifacts.length) * 100);
@@ -168,12 +128,6 @@ export async function compileDossier(unitId: string): Promise<CompiledDossier | 
   let fila = existente;
 
   if (!fila) {
-    // SPEC-202 (B-02): `Dossier_unitId_key` es único, así que dos
-    // compilaciones concurrentes de la misma unidad ya no pueden insertar dos
-    // filas — la segunda choca y `onConflict().doNothing()` la absorbe. Pero
-    // eso deja a esa segunda llamada sin la fila que acaba de "insertar": hay
-    // que releerla, y la que gana la carrera es la que vale para las dos
-    // (invariante 2).
     await db
       .insertInto("Dossier")
       .values({
@@ -196,12 +150,17 @@ export async function compileDossier(unitId: string): Promise<CompiledDossier | 
       .where("unitId", "=", unidad.id)
       .executeTakeFirstOrThrow();
   } else if (fila.status !== "signed" && fila.masterHash !== hashCalculado) {
-    // Recompilar solo lo no firmado. Ver el comentario de arriba.
-    fila = await db
+    await db
       .updateTable("Dossier")
-      .set({ masterHash: hashCalculado, compiledAt: ahora })
+      .set({ masterHash: hashCalculado, compiledAt: ahora, status: "compiled" })
       .where("id", "=", fila.id)
-      .returningAll()
+      // Nunca pisar una firma: el hash firmado queda congelado.
+      .where("status", "!=", "signed")
+      .execute();
+    fila = await db
+      .selectFrom("Dossier")
+      .selectAll()
+      .where("id", "=", fila.id)
       .executeTakeFirstOrThrow();
   }
 
@@ -229,7 +188,6 @@ export async function compileDossier(unitId: string): Promise<CompiledDossier | 
     status: fila.status as DossierStatus,
     artifacts,
     completeness,
-    // Sin TXID el estado es "Pendiente", nunca "Verificado" (regla 17).
     signatureTxid: firma?.txid ?? null,
     signedAt: fila.signedAt ? new Date(fila.signedAt) : null,
     rejectionNote: fila.rejectionNote

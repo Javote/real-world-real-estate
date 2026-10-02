@@ -3,6 +3,7 @@ import { cleanup, fireEvent, screen, waitFor, within } from '@testing-library/re
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { ApiError, api } from '#/api/port'
 import { dictionary } from '#/i18n/dictionary'
+import * as L from '#/test/leaflet-falso'
 import { autenticarComo, INVESTOR_USER, montarRuta } from './-test-mount'
 import { Route } from './investor.unit.$unitId.index'
 
@@ -37,7 +38,6 @@ const etapas = [
     bundleId: 'b1',
     txid: TX1
   },
-  // El join de la API duplica el stage: la pantalla lo muestra una vez.
   {
     stageId: 's1',
     name: 'Cimientos',
@@ -139,11 +139,9 @@ const esquema = (): Esquema =>
         { id: 'u1', unitReference: '4B', floor: 4, status: 'reserved' },
         { id: 'u2', unitReference: '4A', floor: 4, status: 'available' },
         { id: 'u3', unitReference: '4C', floor: 4, status: 'sold' },
-        // Sin piso propio dentro de un piso: no se dibuja.
         { id: 'u4', unitReference: '4X', floor: null, status: 'sold' }
       ]
     },
-    // El grupo "sin piso" no entra al esquema.
     { floor: null, units: [{ id: 'u5', unitReference: 'SP1', floor: null, status: 'available' }] }
   ] as unknown as Esquema
 
@@ -160,7 +158,6 @@ const montar = (entrada = '/investor/unit/u1') =>
     entrada
   )
 
-/** Los chips llegan con la unidad: la lista existe desde el primer render, vacía. */
 const esperarChips = async () =>
   within(await screen.findByRole('list', { name: t['investor.unit.stagesAria'] })).findByRole(
     'button',
@@ -306,7 +303,6 @@ describe('/investor/unit/$unitId', () => {
       )
       const linea = screen.getByRole('list', { name: t['investor.project.timelineAria'] })
       expect(linea.querySelectorAll('li')).toHaveLength(3)
-      // Fecha de entrega: en el bloque de datos y como cierre de la línea de tiempo.
       await waitFor(() => expect(screen.getAllByText(/2027/)).toHaveLength(2))
     })
 
@@ -391,7 +387,6 @@ describe('/investor/unit/$unitId', () => {
       expect(getNews).toHaveBeenCalledTimes(1)
       expect(anunciar).not.toHaveBeenCalled()
 
-      // Vuelve el foco a la pestaña: el poll relee y las dos confirman.
       getNews.mockResolvedValue([
         novedad({ id: 'a', status: 'Confirmed' }),
         novedad({ id: 'b', status: 'Confirmed' }),
@@ -468,7 +463,6 @@ describe('/investor/unit/$unitId', () => {
   describe('galería de fotos (INV-UNIT-GALLERY-001)', () => {
     const fotos = [
       documento({ id: 'f1' }),
-      // Foto por el tipo de evidencia, y foto por el MIME: las dos cuentan.
       documento({ id: 'f2', evidenceType: 'document', mimeType: 'image/png' }),
       documento({ id: 'pdf', evidenceType: 'document', mimeType: 'application/pdf' })
     ]
@@ -486,32 +480,50 @@ describe('/investor/unit/$unitId', () => {
       expect(screen.queryByText(/fotos$/)).toBeNull()
     })
 
-    it('con fotos cuenta solo las fotos, y la portada es la primera (solo se descarga esa hasta abrir)', async () => {
-      const { descargar } = preparar({ documentos: fotos })
+    it('con portada (D-099): la del proyecto encabeza y se cuenta; las fotos no se bajan hasta abrir', async () => {
+      const { descargar } = preparar({
+        proyecto: proyecto({ coverUpdatedAt: '2026-09-30T12:00:00.000Z' }),
+        documentos: fotos
+      })
+      montar()
+
+      await screen.findByText(t['investor.unit.photosCount'].replace('{count}', '3'))
+      const boton = screen.getByRole('button', { name: t['investor.unit.openGallery'] })
+      expect((boton as HTMLButtonElement).disabled).toBe(false)
+      expect(boton.querySelector('img')?.getAttribute('src')).toBe(
+        '/api/v1/public/projects/p1/cover?v=2026-09-30T12%3A00%3A00.000Z'
+      )
+      expect(descargar).not.toHaveBeenCalled()
+    })
+
+    it('sin portada pero con fotos: superficie neutra, y la galería se puede abrir igual', async () => {
+      preparar({ documentos: fotos })
       montar()
 
       await screen.findByText(t['investor.unit.photosCount'].replace('{count}', '2'))
-      await waitFor(() => expect(descargar).toHaveBeenCalledTimes(1))
-      expect(descargar).toHaveBeenCalledWith('f1')
       const boton = screen.getByRole('button', { name: t['investor.unit.openGallery'] })
       expect((boton as HTMLButtonElement).disabled).toBe(false)
-      await waitFor(() => expect(boton.querySelector('img')).toBeTruthy())
+      expect(boton.querySelector('img')).toBeNull()
     })
 
-    it('abrir la galería descarga el resto y se cierra con el botón de cerrar', async () => {
-      const { descargar } = preparar({ documentos: fotos })
+    it('abrir la galería descarga las fotos, van detrás de la portada, y se cierra con el botón de cerrar', async () => {
+      const { descargar } = preparar({
+        proyecto: proyecto({ coverUpdatedAt: '2026-09-30T12:00:00.000Z' }),
+        documentos: fotos
+      })
       montar()
       const boton = await screen.findByRole('button', { name: t['investor.unit.openGallery'] })
-      await waitFor(() => expect(boton.querySelector('img')).toBeTruthy())
+      await waitFor(() => expect((boton as HTMLButtonElement).disabled).toBe(false))
 
       fireEvent.click(boton)
 
       const modal = await screen.findByTestId('INV-UNIT-GALLERY-001')
+      await waitFor(() => expect(descargar).toHaveBeenCalledWith('f1'))
       await waitFor(() => expect(descargar).toHaveBeenCalledWith('f2'))
       await waitFor(() =>
         expect(
           within(modal).getByText(
-            t['investor.unit.galleryCounter'].replace('{actual}', '1').replace('{total}', '2')
+            t['investor.unit.galleryCounter'].replace('{actual}', '1').replace('{total}', '3')
           )
         ).toBeTruthy()
       )
@@ -525,7 +537,10 @@ describe('/investor/unit/$unitId', () => {
       preparar({ documentos: fotos })
       montar()
       const boton = await screen.findByRole('button', { name: t['investor.unit.openGallery'] })
-      await waitFor(() => expect(boton.querySelector('img')).toBeTruthy())
+      await waitFor(() => expect((boton as HTMLButtonElement).disabled).toBe(false))
+      fireEvent.click(boton)
+      const modal = await screen.findByTestId('INV-UNIT-GALLERY-001')
+      await waitFor(() => expect(modal.querySelector('img')).toBeTruthy())
 
       expect(URL.revokeObjectURL).not.toHaveBeenCalled()
       cleanup()
@@ -565,6 +580,21 @@ describe('/investor/unit/$unitId', () => {
       fireEvent.keyDown(document.activeElement as Element, { key: 'Escape' })
 
       await waitFor(() => expect(screen.queryByTestId('INV-UNIT-LOC-001')).toBeNull())
+    })
+
+    it('con coordenadas, el cuadro muestra el mapa en miniatura, quieto (captura 15)', async () => {
+      preparar()
+      montar()
+      const boton = await screen.findByRole('button', { name: t['investor.unit.openMap'] })
+      await waitFor(() => expect((boton as HTMLButtonElement).disabled).toBe(false))
+
+      await waitFor(() =>
+        expect(L.map).toHaveBeenCalledWith(
+          expect.anything(),
+          expect.objectContaining({ dragging: false })
+        )
+      )
+      expect(boton.querySelector('.pointer-events-none')).toBeTruthy()
     })
 
     it('sin ciudad ni país el mapa no lleva dirección', async () => {
@@ -757,7 +787,6 @@ describe('/investor/unit/$unitId', () => {
       montar()
       await esperarChips()
 
-      // Sin TXID el chip no es clicable: el anclaje no está sustanciado.
       expect((chip(1) as HTMLButtonElement).disabled).toBe(true)
     })
 

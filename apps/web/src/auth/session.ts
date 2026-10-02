@@ -1,6 +1,3 @@
-// Sesión en sessionStorage. Invariante: nada de tokens
-// hardcodeados en el bundle; el token siempre sale del login real).
-
 import type { SessionUser } from '../api/types'
 
 export interface Session {

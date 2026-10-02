@@ -1,18 +1,6 @@
 import { Minus, Plus } from 'lucide-react'
 import { cn } from '#/lib/cn'
 
-// M2-D3 §Forms & Controls · NumberInput — *"Same body as TextInput. Up/down
-// stepper buttons on the right."*
-//
-// **El valor es `number | null`, no `number`.** Un input numérico vacío no es
-// cero: cero es una afirmación ("el precio es 0") y vacío es "todavía no se
-// cargó". Colapsar los dos hace que un formulario a medio llenar mande ceros
-// como si fueran datos.
-//
-// **Dinero jamás pasa por acá en unidades mayores** (regla 1): quien lo use
-// para un precio recibe y emite unidades mínimas enteras. El componente no
-// sabe de moneda — formatear es de `Intl`, no suyo.
-
 interface NumberInputProps {
   id: string
   label: string
@@ -22,9 +10,7 @@ interface NumberInputProps {
   max?: number
   step?: number
   placeholder?: string
-  /** Texto de error. Su presencia es lo que activa el estado de error. */
   error?: string
-  /** Accesibles: los steppers son botones y necesitan nombre. */
   stepUpLabel: string
   stepDownLabel: string
   disabled?: boolean
@@ -52,9 +38,6 @@ export function NumberInput({
     return n
   }
 
-  // Desde vacío, el primer paso arranca en `min` si está definido y no en 0:
-  // un stepper que empieza fuera del rango válido produce un valor inválido en
-  // el primer click.
   const paso = (delta: number) => onChange(acotar((value ?? min ?? 0) + delta * step))
 
   return (

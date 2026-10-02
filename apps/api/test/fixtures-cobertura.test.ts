@@ -3,19 +3,6 @@ import { USER_ROLES } from "../src/db/types";
 import { db } from "../src/lib/db";
 import { ELENCO_TEST } from "./global-setup";
 
-// La regla que faltaba (SPEC-015 §2).
-//
-// **Este es el test que habría atrapado el bug de hoy.** El elenco de la suite
-// no tenía ningún usuario activo que no fuera developer o admin, así que un
-// `router.use(requireRole("admin","developer"))` montado sobre `/api/v1` pelado
-// —que contestaba 403 a TODA la superficie del investor, del notario y del
-// certificador— pasó desapercibido: no había con qué pedir esas superficies.
-//
-// No prueba una ruta. Prueba que el mundo de prueba **pueda** ejercitar todos
-// los roles. Un rol sin representante activo es una superficie entera que nadie
-// puede pedir, y eso no se ve como un test rojo: se ve como un test que no
-// existe.
-
 describe("el elenco de fixtures cubre todos los roles", () => {
   it("cada rol de USER_ROLES tiene un representante ACTIVO", () => {
     const activosPorRol = new Set(

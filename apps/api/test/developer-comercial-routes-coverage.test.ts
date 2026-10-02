@@ -6,14 +6,6 @@ import { db } from "../src/lib/db";
 import { FIXTURES } from "./global-setup";
 import { crearStageMinteado } from "./helpers/stages";
 
-// SPEC-017 §paso 4 — ramas de `developer-comercial.routes.ts` sin ningún
-// test: el listado de unidades de un proyecto (nunca se llamó por HTTP), la
-// edición de unidad, el inventario cross-proyecto vacío (un developer sin
-// ningún proyecto), el rechazo de invitar sobre una unidad de OTRO proyecto,
-// y tres ramas de la liberación que `spec-205-tope-de-liberacion.test.ts` no
-// toca: etapa inexistente, etapa sin certificar, y la idempotencia (repetir
-// la misma liberación da 200, no un segundo anclaje).
-
 const login = (f: { email: string; password: string }) =>
   request(app).post("/api/v1/auth/login").send({ email: f.email, password: f.password });
 
@@ -92,6 +84,26 @@ describe("PATCH /developer/units/:id", () => {
       .where("action", "=", "UPDATE_UNIT")
       .executeTakeFirst();
     expect(auditoria).toBeDefined();
+  });
+
+  it("no acepta el estado comercial: sold sin contrato no se declara a mano", async () => {
+    const creada = await request(app)
+      .post(`/api/v1/developer/projects/${proyecto}/units`)
+      .set("Authorization", `Bearer ${tokenDev}`)
+      .send({ unitReference: "9S", priceMinorUnits: 1_000_000, currency: "USD" });
+
+    const res = await request(app)
+      .patch(`/api/v1/developer/units/${creada.body.id}`)
+      .set("Authorization", `Bearer ${tokenDev}`)
+      .send({ status: "sold" });
+
+    expect(res.status).toBe(400);
+    const fila = await db
+      .selectFrom("Unit")
+      .select("status")
+      .where("id", "=", creada.body.id)
+      .executeTakeFirstOrThrow();
+    expect(fila.status).toBe("available");
   });
 });
 
@@ -226,14 +238,9 @@ describe("POST /developer/contracts/:id/releases/:stageNum — ramas sin cubrir"
       .where("referenceId", "=", primera.body.id)
       .where("eventType", "=", "PAYMENT_RELEASE")
       .execute();
-    // Un solo anclaje, no dos: el segundo `POST` no volvió a llamar a
-    // `anchorCommitmentEvent`.
     expect(eventos).toHaveLength(1);
   });
 
-  // SPEC-018 A1 — el `catch` de la transacción relanza lo que no es
-  // `ReleaseExceedsContractError`. Sin este test, un `catch` que se tragara
-  // cualquier error y devolviera un 409 seguiría pasando toda la suite.
   it("un error ajeno al tope dentro de la transacción no se disfraza de 409: es 500", async () => {
     const sequenceOrder = 900_801;
     const { contractId, stageId } = await crearContratoConEtapa(sequenceOrder);
@@ -298,15 +305,6 @@ describe("GET /developer/projects/:id/contracts", () => {
     expect(res.body).toEqual([]);
   });
 
-  // El desempate de anclajes (`contractsOfProjectProcedure`, el `reduce` sobre
-  // `candidatos`). Por la API hoy una unidad tiene como mucho UNA invitación
-  // aceptada: `Contract_unitId_key` admite un contrato por unidad y el accept
-  // es atómico (SPEC-201), así que una segunda aceptación se rechaza entera.
-  // Pero el esquema no lo impide —ni la unicidad de invitaciones aceptadas ni
-  // `respondedAt`/`signedAt` no nulos—, y antes de SPEC-201 un accept que
-  // chocaba en el `INSERT Contract` dejaba la invitación `accepted` igual.
-  // Esas filas heredadas se arman a mano: son las que el desempate existe
-  // para no confundir con la venta real.
   const COMMITMENT_HEREDADO = "b".repeat(64);
 
   async function venderUnidad(unitReference: string) {
@@ -345,7 +343,6 @@ describe("GET /developer/projects/:id/contracts", () => {
     return unidad.body.id as string;
   }
 
-  /** Una invitación `accepted` con su evento, como las dejaba el accept pre-SPEC-201. */
   async function aceptacionHeredada(unitId: string, respondedAt: Date | null) {
     const invitacionId = createId();
     const ahora = new Date();
@@ -431,10 +428,6 @@ describe("GET /developer/projects/:id/contracts", () => {
 });
 
 describe("POST /investor/invitations/:id/accept — una unidad que ya tiene contrato", () => {
-  // Vender, devolver la unidad a `available` con el PATCH del developer y
-  // re-invitar: la unidad parece libre, pero `Contract_unitId_key` admite un
-  // solo contrato. Antes de SPEC-018 este accept chocaba en el INSERT y
-  // salía como un 500 no clasificado.
   it("aceptar la re-invitación da 409 UNIT_NOT_AVAILABLE y no toca nada", async () => {
     const tokenInvestor = (await login(FIXTURES.investor)).body.token;
     const unidad = await request(app)
@@ -459,11 +452,11 @@ describe("POST /investor/invitations/:id/accept — una unidad que ya tiene cont
       .set("Authorization", `Bearer ${tokenInvestor}`);
     expect(vendida.status).toBe(201);
 
-    const reabierta = await request(app)
-      .patch(`/api/v1/developer/units/${unidad.body.id}`)
-      .set("Authorization", `Bearer ${tokenDev}`)
-      .send({ status: "available" });
-    expect(reabierta.status).toBe(200);
+    await db
+      .updateTable("Unit")
+      .set({ status: "available" })
+      .where("id", "=", unidad.body.id)
+      .execute();
 
     const segunda = await invitar();
     expect(segunda.status).toBe(201);
@@ -474,8 +467,6 @@ describe("POST /investor/invitations/:id/accept — una unidad que ya tiene cont
     expect(res.status).toBe(409);
     expect(res.body.code).toBe("UNIT_NOT_AVAILABLE");
 
-    // Rechazada entera (SPEC-201): la invitación sigue `pending` y la unidad
-    // no volvió a `sold`.
     const invitacion = await db
       .selectFrom("Invitation")
       .select("status")

@@ -28,38 +28,6 @@ import { paramValidator } from "../middlewares/validate-params";
 import { writeAuditLog } from "../utils/audit";
 import { relanzarRestriccionComoOrpc } from "./_shared";
 
-// **El ciclo comercial del developer**, bajo `/api/v1/developer` (M2-D5 filas
-// 39, 40-41, 44, 44b).
-//
-// Unidad → invitación → contrato → liberación es UNA secuencia, y por eso vive
-// junta: cada paso produce el estado que el siguiente consume. Separarla por
-// entidad —una ruta de unidades, otra de invitaciones, otra de contratos—
-// esconde que el orden importa.
-//
-// Segundo router sobre el mismo prefijo que `developer.routes.ts`, igual que
-// `capital.routes.ts`: los paths son disjuntos y ninguno tiene catch-all, así
-// que no se pisan (SPEC-015 §4 y §6).
-//
-// **Nada de esto mueve valor** (D-021): "liberar" significa anclar el evento de
-// liberación, no ejecutar un pago.
-//
-// **SPEC-212 §D — migrado a oRPC (D-066).** Mismo patrón que el resto del
-// prefijo: `authorize` sigue siendo middleware Express y hay un
-// `OpenAPIHandler` por procedimiento, montado en el path exacto de esa ruta.
-//
-// **`UNIT_NOT_AVAILABLE` es un error CON NOMBRE** (`.errors({...})`), mismo
-// criterio que `investor.routes.ts` §accept: `res.body.code` tiene que seguir
-// siendo `"UNIT_NOT_AVAILABLE"` al nivel que ya fija
-// `test/accept-invitation-atomic.test.ts` — un `ORPCError("CONFLICT", ...)`
-// liso lo anidaría en `data.code`.
-//
-// **`RESOURCE_ALREADY_EXISTS` en `POST /projects/:id/units` es la misma
-// trampa que ya se encontró en `developer.routes.ts`:** `OpenAPIHandler`
-// nunca llama a `next(err)`, así que un `SQLITE_CONSTRAINT_UNIQUE` sin
-// capturar (`Unit_projectId_unitReference_key`) se volvía el 500 genérico de
-// oRPC en vez del 409 que `test/constraint-errors.test.ts` fija — ver
-// `relanzarRestriccionComoOrpc` en `_shared.ts`.
-
 const PREFIJO_ABSOLUTO = "/api/v1/developer";
 
 type DeveloperContext = { user: { id: string; role: UserRole } };
@@ -82,7 +50,6 @@ router.param("stageNum", paramValidator(positiveIntParamSchema));
 
 router.use(authenticate);
 
-/** Fila 44b — las unidades de un proyecto, del lado del developer. */
 const unitsOfProjectProcedure = os
   .route({ method: "GET", path: "/projects/{id}/units" })
   .input(z.strictObject({ id: cuidParamSchema }))
@@ -165,7 +132,7 @@ const updateUnitProcedure = orpc
     const { id, ...cambios } = input;
 
     const unidad = await db.selectFrom("Unit").selectAll().where("id", "=", id).executeTakeFirst();
-    /* v8 ignore if -- @preserve: authorize({ proyecto: { via: "Unit" } }) ya cargó la unidad (SPEC-018) */
+    /* v8 ignore if -- @preserve: authorize({ proyecto: { via: "Unit" } }) ya cargó la unidad */
     if (!unidad) throw new ORPCError("NOT_FOUND", { message: "Unit not found" });
 
     const actualizada = await db
@@ -175,9 +142,6 @@ const updateUnitProcedure = orpc
       .returningAll()
       .executeTakeFirstOrThrow();
 
-    // Regla 7: editar una unidad es una mutación relevante — cambia el precio,
-    // la superficie o el estado comercial de algo que después se invita y se
-    // contrata. El alta ya lo escribía; la edición se había quedado sin él.
     await writeAuditLog({
       actorUserId: context.user.id,
       action: "UPDATE_UNIT",
@@ -198,7 +162,6 @@ router.patch(
   delegarAOrpc(updateUnitHandler, PREFIJO_ABSOLUTO, conUsuario)
 );
 
-/** Fila 44 — el inventario cross-proyecto del developer. */
 const unitsProcedure = orpc
   .route({ method: "GET", path: "/units" })
   .output(z.array(developerUnitDirectoryEntrySchema))
@@ -238,15 +201,6 @@ router.get(
   delegarAOrpc(unitsHandler, PREFIJO_ABSOLUTO, conUsuario)
 );
 
-/**
- * Fila 39 — el developer emite la invitación.
- *
- * SPEC-201, invariante 1: una unidad `sold` no admite invitaciones nuevas.
- * Antes de este chequeo se podía emitir una segunda invitación `pending`
- * sobre una unidad que otra invitación ya había vendido, y esa segunda
- * invitación quedaba viva esperando un `accept` que terminaba sacándole la
- * unidad a quien ya la había comprado.
- */
 const createInvitationProcedure = orpc
   .errors({ UNIT_NOT_AVAILABLE: { status: 409 } })
   .route({ method: "POST", path: "/projects/{id}/invitations", successStatus: 201 })
@@ -284,7 +238,6 @@ const createInvitationProcedure = orpc
       .returningAll()
       .executeTakeFirstOrThrow();
 
-    // La unidad queda reservada mientras la invitación esté pendiente.
     await db
       .updateTable("Unit")
       .set({ status: "reserved", updatedAt: ahora })
@@ -298,13 +251,6 @@ const createInvitationProcedure = orpc
       entityId: invitacion.id
     });
 
-    // Si el invitado ya tiene cuenta, se entera por su lista de novedades
-    // (fila 62: la InvitationCard vive ahí). Sin esto, la única forma de ver la
-    // invitación era llegar con `?invitation=<id>` en la URL. Si todavía no tiene
-    // cuenta no hay a quién avisar: la invitación lo espera por email igual
-    // (la comparación es la misma que la del guard `dueño: Invitation`).
-    // `unitId` va en null a propósito: la unidad todavía no es suya, y su feed
-    // por unidad es de lo que pasa después de comprarla.
     const invitado = await db
       .selectFrom("User")
       .select("id")
@@ -332,30 +278,11 @@ router.post(
   delegarAOrpc(createInvitationHandler, PREFIJO_ABSOLUTO, conUsuario)
 );
 
-/**
- * Fila 40-41 — los contratos de un proyecto, del lado del developer.
- *
- * **El contrato como REGISTRO, no como flujo de pagos** (D-070): lo que sale de
- * acá es quién acordó qué sobre qué unidad, en qué estado quedó la unidad y con
- * qué anclaje se registró el acuerdo. No hay etapas liberadas ni montos por
- * etapa, porque la plataforma no administra fondos.
- *
- * `unitStatus` está porque D-070 lo nombra explícitamente como lo que esta
- * superficie SÍ puede mostrar; el anclaje, porque es la única de las cuatro
- * afirmaciones de D-026 que aplica a un contrato: *se registró en este momento*.
- *
- * El anclaje se alcanza por la invitación y no por el contrato: quien ancla es
- * `POST /investor/invitations/:id/accept`, y el `referenceId` del evento es la
- * invitación. Por eso el join pasa por ahí — el contrato no guarda la ref.
- */
 const contractsOfProjectProcedure = os
   .route({ method: "GET", path: "/projects/{id}/contracts" })
   .input(z.strictObject({ id: cuidParamSchema }))
   .output(z.array(developerContractSchema))
   .handler(async ({ input }) => {
-    // Los dos `innerJoin` son contra la clave primaria, así que esta consulta
-    // devuelve exactamente un registro por contrato. El anclaje se busca aparte
-    // —ver abajo— justamente para que no pueda multiplicar filas.
     const contratos = await db
       .selectFrom("Contract")
       .innerJoin("Unit", "Unit.id", "Contract.unitId")
@@ -376,15 +303,6 @@ const contractsOfProjectProcedure = os
 
     const unitIds = [...new Set(contratos.map((c) => c.unitId))];
 
-    // **Segunda consulta y no un `leftJoin`, y no es estilo: un join acá
-    // MULTIPLICA.** Una unidad puede tener más de una invitación aceptada en
-    // la base —el esquema no lo impide, y antes de SPEC-201 un accept que
-    // chocaba en `Contract_unitId_key` la dejaba `accepted` igual—, y
-    // `OnChainEvent` no tiene índice único por `referenceId`: el único que hay
-    // es `(stageId, eventIndex)`, y en un evento de invitación `stageId` es
-    // NULL, que en SQLite no restringe nada. Cada par de más devolvía el mismo
-    // contrato repetido, con el anclaje de OTRO investor pegado al lado, y la
-    // lista mentía sin fallar.
     const anclajes = unitIds.length
       ? await db
           .selectFrom("Invitation")
@@ -406,23 +324,10 @@ const contractsOfProjectProcedure = os
       : [];
 
     return contratos.map(({ investorEmail, ...contrato }) => {
-      // La invitación se ata al contrato por unidad **y por investor**: es el
-      // email de la invitación contra el del `User` del contrato. Sin eso,
-      // dos ventas de la misma unidad se cruzan los anclajes.
       const candidatos = anclajes.filter(
         (a) => a.unitId === contrato.unitId && a.investorEmail === investorEmail
       );
 
-      // Si quedan varios (filas heredadas, ver arriba: por la API de hoy un
-      // re-accept sobre una unidad con contrato da 409, SPEC-018) gana el
-      // `respondedAt` más cercano al `signedAt`. Hoy son el MISMO
-      // instante —el accept usa un único `ahora` para los dos— así que el
-      // match es exacto; el criterio es lo que lo mantiene determinístico si
-      // alguna vez dejan de serlo.
-      //
-      // SPEC-208 (B-10): las dos columnas ya son epoch ms de verdad — el
-      // tipo dejó de mentir, así que el `new Date(x).getTime()` que las
-      // envolvía "por las dudas" ya no hace falta.
       const firmado = contrato.signedAt;
       const anclaje = candidatos.reduce<(typeof candidatos)[number] | null>((mejor, a) => {
         if (mejor === null) return a;
@@ -453,14 +358,6 @@ router.get(
   delegarAOrpc(contractsOfProjectHandler, PREFIJO_ABSOLUTO)
 );
 
-/**
- * Fila 40-41 — liberar una etapa. **Ancla** (M3-SC-03).
- *
- * **Idempotente** (regla 8): el índice único (contrato, etapa) impide
- * liberar dos veces la misma — por eso el status de éxito no es fijo:
- * `outputStructure: "detailed"` deja que el handler elija 200 (ya existía) o
- * 201 (recién se liberó), cada uno con su propio schema de cuerpo.
- */
 const releasePaymentProcedure = orpc
   .errors({
     STAGE_NOT_CERTIFIED: { status: 409 },
@@ -494,13 +391,9 @@ const releasePaymentProcedure = orpc
       .where("Contract.id", "=", input.id)
       .executeTakeFirst();
 
-    /* v8 ignore if -- @preserve: authorize({ proyecto: { via: "Contract" } }) ya cargó el contrato, con el mismo join a Unit (SPEC-018) */
+    /* v8 ignore if -- @preserve: authorize({ proyecto: { via: "Contract" } }) ya cargó el contrato, con el mismo join a Unit */
     if (!contrato) throw new ORPCError("NOT_FOUND", { message: "Contract not found" });
 
-    // **La liberación exige que la etapa esté certificada.** El entregable lo
-    // dice: "the developer initiates [the release] after the certifier has
-    // issued the stage's certificate". Liberar antes sería afirmar un avance
-    // que nadie verificó.
     const stage = await db
       .selectFrom("Stage")
       .select(["id", "state"])
@@ -515,25 +408,9 @@ const releasePaymentProcedure = orpc
 
     const ahora = new Date();
 
-    // SPEC-205 (B-07) — nada comparaba la suma de `PaymentAttestation` contra
-    // `Contract.totalMinorUnits`: un release de cualquier monto entraba, se
-    // registraba y **se ancla su commitment en Cardano**. La plataforma no
-    // custodia plata (D-021), pero sí vende el registro, y un registro que
-    // admite una afirmación falsa —"se liberó más de lo contratado"— es
-    // exactamente lo que este proyecto existe para evitar.
-    //
-    // El chequeo y el INSERT van en la misma transacción (mismo patrón que
-    // SPEC-201 en `investor.routes.ts` §accept): sin esto, dos releases
-    // concurrentes sobre el mismo contrato leen las dos la suma vieja y
-    // entran las dos, aunque juntas superen el total — la idempotencia por
-    // `(contractId, stageNumber)` no alcanza porque acá el conflicto es
-    // entre DOS etapas distintas del mismo contrato, no la misma etapa dos
-    // veces.
     const resultado = await db
       .transaction()
       .execute(async (trx) => {
-        // Idempotencia (regla 8): el índice único (contrato, etapa) impide
-        // liberar dos veces la misma.
         const previa = await trx
           .selectFrom("PaymentAttestation")
           .selectAll()
@@ -580,9 +457,6 @@ const releasePaymentProcedure = orpc
 
     const { fila: release, yaExistia } = resultado;
 
-    // Ya existía (idempotencia, regla 8): se devuelve tal cual, sin volver a
-    // anclar — un segundo anclaje sobre el mismo release sería un evento
-    // fantasma.
     if (yaExistia) return { status: 200 as const, body: release };
 
     const anchor = await anchorCommitmentEvent({
@@ -619,8 +493,6 @@ router.post(
   delegarAOrpc(releasePaymentHandler, PREFIJO_ABSOLUTO, conUsuario)
 );
 
-/** El router oRPC combinado de esta vertical — ver el comentario homólogo en
- * `developer.routes.ts`. */
 export const developerComercialOrpcRouter = {
   unitsOfProjectProcedure,
   createUnitProcedure,

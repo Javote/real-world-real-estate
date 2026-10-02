@@ -4,8 +4,6 @@ import { FileText, Images } from 'lucide-react'
 import { useState } from 'react'
 import { ApiError, api } from '#/api/port'
 import type { MerkleProof } from '#/api/types'
-import { INVESTOR_ROLES } from '#/auth/roles'
-import { useRoleGuard } from '#/auth/useRoleGuard'
 import { DocumentCard } from '#/components/domain/DocumentCard'
 import { DocumentViewerModal } from '#/components/domain/DocumentViewerModal'
 import { HashChip } from '#/components/domain/HashChip'
@@ -28,17 +26,12 @@ import {
 } from '#/lib/investor'
 import { bajarBlob } from '#/lib/stageProgress'
 
-// **M2-D5 filas 09-12 y 25m · `/project/:projectId/stage/:stageId`**
-// Test IDs: INV-STAGE-DETAIL-001, INV-STAGE-DOCVIEW-002, INV-STAGE-MILESTONE-001,
-// INV-MERKLE-PROOF-002. Patrones: P1, P2, P5, P7.
-
 export const Route = createFileRoute('/project/$projectId/stage/$stageId')({
   component: InvestorStageDetail
 })
 
 function InvestorStageDetail() {
   const { projectId, stageId } = Route.useParams()
-  const { ready } = useRoleGuard(INVESTOR_ROLES)
   const { t, locale } = useTranslation()
   const navigate = useNavigate()
 
@@ -55,7 +48,6 @@ function InvestorStageDetail() {
   const { data: stages } = useQuery({
     queryKey: ['project', projectId, 'stages'],
     queryFn: () => api.listProjectStages(projectId),
-    enabled: ready,
     retry: reintentarSiNoEsAusencia
   })
 
@@ -66,25 +58,18 @@ function InvestorStageDetail() {
   } = useQuery({
     queryKey: ['project', projectId, 'stage', stageId],
     queryFn: () => api.getProjectStage(projectId, stageId),
-    enabled: ready,
     retry: reintentarSiNoEsAusencia
   })
 
   const { data: bundleFiles } = useQuery({
     queryKey: ['bundle', stage?.bundle?.id, 'files'],
     queryFn: () => api.getBundleFiles(stage!.bundle!.id),
-    enabled: ready && hito && Boolean(stage?.bundle?.id)
+    enabled: hito && Boolean(stage?.bundle?.id)
   })
 
-  // **El anclaje de un documento es el suyo, no el de la etapa.** `GET
-  // /projects/:id/stages/:stageId` devuelve la evidencia sin TXID; el join por
-  // evidencia lo hace `GET /projects/:id/documents` (`projects.routes.ts`), que
-  // deja escrito por qué la derivación vive allá: para que no haya dos
-  // versiones de la regla 17. Acá solo se indexa por id.
   const { data: documentosDelProyecto } = useQuery({
     queryKey: ['project', projectId, 'documents'],
     queryFn: () => api.listProjectDocuments(projectId),
-    enabled: ready,
     retry: reintentarSiNoEsAusencia
   })
 
@@ -103,18 +88,14 @@ function InvestorStageDetail() {
       return Object.fromEntries(pares.map((p) => [p.id, p.url])) as Record<string, string>
     },
     gcTime: 0,
-    enabled: ready && fotos.length > 0
+    enabled: fotos.length > 0
   })
 
-  // Solo los documentos abren el visor (las fotos abren la galería), y un
-  // documento no es una imagen: el visor no tiene página que renderizar.
   const docAbierto = docs.find((d) => d.id === docId)
-
-  if (!ready) return null
 
   if (error instanceof ApiError && (error.status === 403 || error.status === 404)) {
     return (
-      <PanelLayout rol="investor" title={t('investor.project.stages')}>
+      <PanelLayout title={t('investor.project.stages')}>
         <p data-testid="INV-STAGE-DETAIL-001">
           {error.status === 403 ? t('error.forbidden') : t('error.notFound')}
         </p>
@@ -122,16 +103,6 @@ function InvestorStageDetail() {
     )
   }
 
-  // **Tres anclajes distintos, tres preguntas distintas** (M2-D4 §6.1). Un solo
-  // TXID para todo dice "Verificado" sobre cosas que ese TXID no compromete.
-  //
-  //  1. La etapa (P1, arriba): su transición anclada **vigente** — la última,
-  //     no la primera. `events` viene ordenado por `eventIndex asc`, así que
-  //     un `.find()` devolvía el arranque del stage en vez de su estado
-  //     actual; el porqué completo está en `anclajeVigenteDelStage`.
-  //  2. El bundle (P5, el modal del hito): el evento cuyo `commitment` ES la
-  //     raíz del bundle. Sin esa igualdad, el TXID no sustancia estos archivos.
-  //  3. Cada documento: el suyo, que viene del endpoint de documentos.
   const txidDelStage = anclajeVigenteDelStage(stage?.events ?? [])?.txid ?? null
 
   const raizDelBundle = stage?.bundle?.commitmentHash ?? null
@@ -145,7 +116,6 @@ function InvestorStageDetail() {
   )
   const txidDe = (evidenceId: string) => txidPorEvidencia.get(evidenceId) ?? null
 
-  // El hito solo existe si la etapa tiene bundle: este objeto lo garantiza por tipo.
   const hitoDelStage = stage?.bundle
     ? { name: stage.name, bundleId: stage.bundle.id, raiz: stage.bundle.commitmentHash }
     : null
@@ -170,7 +140,6 @@ function InvestorStageDetail() {
 
   return (
     <PanelLayout
-      rol="investor"
       title={stage?.name ?? t('investor.project.stages')}
       context={
         stage
@@ -215,9 +184,6 @@ function InvestorStageDetail() {
                       key={f.id}
                       type="button"
                       className="overflow-hidden rounded-lg bg-surface-alt"
-                      // SPEC-114 §2: nombre propio, no heredado del <img>. Mientras
-                      // la URL firmada no llegó, adentro solo hay un ícono
-                      // aria-hidden y el botón quedaba sin nombre.
                       aria-label={t('investor.stage.photos')}
                       onClick={() => {
                         setFotoInicial(i)
@@ -360,8 +326,6 @@ function InvestorStageDetail() {
                 <span className="truncate text-body font-medium text-text-primary">
                   {f.filename ?? f.sha256Hash}
                 </span>
-                {/* El archivo está dentro del bundle que se ancló: lo que el
-                  TXID sustancia es la raíz, y la raíz compromete este hash. */}
                 <VerificationBadge
                   txid={txidDelBundle}
                   verifiedLabel={t('status.verified')}
@@ -425,8 +389,6 @@ function InvestorStageDetail() {
         </Dialog>
       ) : null}
 
-      {/* Sin `testId`: INV-TXID-MODAL-001 es de la fila 25v, que vive dentro
-          del contrato (23-24). Repetirlo acá duplica el ID en la suite. */}
       {txidModal ? (
         <TxidModal
           open

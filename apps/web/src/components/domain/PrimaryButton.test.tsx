@@ -2,11 +2,6 @@ import { render, screen } from '@testing-library/react'
 import { describe, expect, it } from 'vitest'
 import { DangerButton, PrimaryButton, SecondaryButton } from './PrimaryButton'
 
-// SPEC-108 (F-17) — `loading` está en `ButtonProps` desde siempre, pero solo
-// `PrimaryButton` lo implementaba: `<SecondaryButton loading>` y
-// `<DangerButton loading>` type-checkeaban y no hacían nada. Los tres
-// muestran el spinner y se deshabilitan.
-
 describe('loading en las tres variantes de botón', () => {
   it('PrimaryButton: muestra el spinner y se deshabilita', () => {
     render(<PrimaryButton loading>Guardar</PrimaryButton>)

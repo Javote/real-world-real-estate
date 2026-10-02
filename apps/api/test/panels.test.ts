@@ -4,9 +4,6 @@ import app from "../src/app";
 import { db } from "../src/lib/db";
 import { FIXTURES } from "./global-setup";
 
-// M2-D5 filas 33-34, 51 y 55. Lo que estos tests fijan no son los números:
-// es **que ningún panel invente uno**.
-
 let tokenDev: string;
 let tokenAdmin: string;
 
@@ -33,9 +30,6 @@ describe("GET /developer/kpis", () => {
     expect(typeof res.body.averageProgress).toBe("number");
     expect(typeof res.body.verifiedDocuments).toBe("number");
 
-    // `Unit` y `Contract` ya existen, así que estos dos se cuentan de verdad.
-    // El fixture planta UNA unidad con UN contrato, y con una base por archivo
-    // (SPEC-015 §1) nadie más la toca: la assert puede ser exacta.
     expect(res.body.totalUnits).toBe(1);
     expect(res.body.capitalRaisedMinorUnits).toBe(12_000_000);
   });
@@ -66,7 +60,6 @@ describe("GET /certifier/kpis y /certifier/assignments", () => {
       .set("Authorization", `Bearer ${tokenAdmin}`);
 
     expect(res.status).toBe(200);
-    // La suma de los tres estados no puede pasar el total.
     expect(res.body.assigned + res.body.certified + res.body.observed).toBeLessThanOrEqual(
       res.body.totalStages
     );
@@ -94,12 +87,6 @@ describe("GET /notary/*", () => {
       .set("Authorization", `Bearer ${tokenAdmin}`);
 
     expect(res.status).toBe(200);
-    // Antes los cuatro eran `null` porque `Dossier` no existía. Ahora existe y
-    // se cuentan de verdad; la distinción null/cero sigue viva en el schema,
-    // que es donde importa.
-    //
-    // Cero significa lo que dice: este archivo no compila ningún dossier, y
-    // ya no hereda los que compila `dossier.test.ts`.
     expect(res.body).toEqual({
       pendingDossiers: 0,
       verified: 0,

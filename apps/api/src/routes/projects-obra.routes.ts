@@ -18,7 +18,6 @@ import { ANY_MEMBERSHIP, authenticate, authorize, CUALQUIER_ROL } from "../middl
 import { paramValidator } from "../middlewares/validate-params";
 import { writeAuditLog } from "../utils/audit";
 
-/** `GET /:id/stages/:stageId` compone el stage con evidencia, bundle y eventos. */
 const stageDetailNestedSchema = stageSchema.extend({
   evidences: z.array(stageEvidenceSummarySchema),
   bundle: evidenceBundleSummarySchema.nullable(),
@@ -26,37 +25,8 @@ const stageDetailNestedSchema = stageSchema.extend({
   events: z.array(stageEventSummarySchema)
 });
 
-// **El registro de obra de un proyecto**: sus stages (M2-D5 filas 08, 09-12).
-//
-// Segundo router sobre `/api/v1/projects`. Se separa de `projects.routes.ts`
-// —que es el CRUD del proyecto y sus miembros— porque son dos cosas distintas
-// con dos lectores distintos: el CRUD lo toca quien administra, esto lo lee
-// quien quiere ver el avance y la prueba.
-//
-// **La FSM del stage no vive acá** (D-020): está en `packages/shared` y espejada
-// en Aiken. Estas rutas la consumen vía `domain/stage-transition`.
-//
-// **Tres rutas se borraron de acá el 2026-09-08: `GET/POST /:id/evidence` y
-// `POST /:id/stages`.** Las dos primeras eran CRUD genérico sin ningún
-// caller real en el front (confirmado con `grep -rn "api.uploadEvidence"
-// apps/web/src`, cero resultados) y sombra exacta de la ruta real
-// (`POST /developer/projects/:id/stages/:stageId/evidence`, M2-D5 fila 38,
-// que además devuelve Merkle root y TXID en la misma respuesta). La tercera
-// —crear una etapa suelta— no tenía ninguna gemela, pero tampoco tenía
-// caller real ni una sola línea en M1/M2/M3 que la pidiera: es más vieja que
-// el Stage template de 10 (`git log` la ubica antes del catálogo, D-021),
-// nadie repreguntó si seguía haciendo falta después de que el template
-// existiera. Los tests que la usaban para tener un stage con hilo real
-// migraron a `test/helpers/stages.ts` (`crearStageMinteado`), que hace lo
-// mismo sin pasar por HTTP. Detalle completo en `CLAUDE.md` raíz.
-//
-// **SPEC-216 §E6 — migrado a oRPC (D-066)**, junto con `projects.routes.ts`
-// (mismo prefijo, ver el comentario de ese archivo).
-
 const PREFIJO_ABSOLUTO = "/api/v1/projects";
 
-/** El contexto que cada procedimiento recibe — siempre el usuario ya
- * autenticado por `authenticate`, corrido antes de que oRPC vea la request. */
 export type ProjectsObraContext = { user: { id: string; email: string; role: UserRole } };
 const orpc = os.$context<ProjectsObraContext>();
 
@@ -79,8 +49,6 @@ const stagesOfProjectProcedure = os
       .orderBy("sequenceOrder", "asc")
       .execute();
 
-    // Una sola query para todo el listado, no una por stage: qué stages de
-    // este proyecto tienen un UTxO vivo (`cabezaDelHilo`, pero en lote).
     const conHilo = new Set(
       (
         await db
@@ -112,20 +80,6 @@ router.get(
   delegarAOrpc(stagesOfProjectHandler, PREFIJO_ABSOLUTO)
 );
 
-/**
- * Reintenta el mint de un stage cuyo `openThread` original falló y quedó sin
- * hilo on-chain — red caída, wallet sin fondos en el instante del mint.
- *
- * No es una superficie de M2-D5: es mantenimiento operativo, como
- * `POST /evidence/reconcile`. Admin-only y **solo mientras el stage siga en
- * `Pending`** (`domain/stage-transition.ts` explica por qué no hay reintento
- * para uno que ya avanzó sin hilo).
- *
- * Los cuatro códigos de `retryStageMint` que un caso legítimo puede producir
- * son errores con nombre — el quinto (`STAGE_NOT_FOUND`) es defensivo: la
- * ruta ya confirmó que el stage pertenece al proyecto antes de llamar a
- * `retryStageMint`, así que en la práctica no se alcanza por esta puerta.
- */
 const retryStageAnchorProcedure = orpc
   .errors({
     STAGE_ALREADY_ADVANCED: {
@@ -157,7 +111,7 @@ const retryStageAnchorProcedure = orpc
 
     const result = await retryStageMint(input.stageId);
     if (!result.ok) {
-      /* v8 ignore if -- @preserve: el handler confirmó el stage tres líneas antes (SPEC-018) */
+      /* v8 ignore if -- @preserve: el handler confirmó el stage tres líneas antes */
       if (result.code === "STAGE_NOT_FOUND") {
         throw new ORPCError("NOT_FOUND", { message: "Stage not found" });
       }
@@ -187,14 +141,6 @@ router.post(
   delegarAOrpc(retryStageAnchorHandler, PREFIJO_ABSOLUTO, conUsuario)
 );
 
-/**
- * Fila 09-12 — el mismo detalle de stage bajo el path anidado que el backlog
- * pide (INV-STAGE-DETAIL-001), con el bundle que lo compromete.
- *
- * **404 y no 403 si el stage es de otro proyecto**: el id existe, pero bajo
- * este proyecto no, y confirmar su existencia le diría a alguien con acceso a
- * un proyecto que hay un stage con ese id en otro.
- */
 const nestedStageDetailProcedure = os
   .route({ method: "GET", path: "/{id}/stages/{stageId}" })
   .input(z.strictObject({ id: cuidParamSchema, stageId: cuidParamSchema }))
@@ -209,13 +155,9 @@ const nestedStageDetailProcedure = os
 
     if (!stage) throw new ORPCError("NOT_FOUND", { message: "Stage not found" });
 
-    // Antes de leer los eventos, no después: un anclaje `Pending` que ya está en
-    // un bloque se confirma acá y la consulta de abajo lo ve `Confirmed`
-    // (D-077). Es la pantalla donde se mira la prueba de un stage.
     await reconciliarParaLectura({ stageId: stage.id });
 
     const [evidences, bundle, eventos] = await Promise.all([
-      // Sin `storagePath` (D-011): esta lista sale al cliente.
       db
         .selectFrom("Evidence")
         .select([
@@ -251,9 +193,6 @@ const nestedStageDetailProcedure = os
       ...stage,
       evidences,
       bundle: bundle ?? null,
-      // Calculado, no guardado (evita una segunda fuente de verdad): el mismo
-      // criterio que `cabezaDelHilo`, sin una query aparte porque `eventos` ya
-      // trae `outputRef`.
       hasOnChainThread: eventos.some((e) => e.outputRef !== null),
       events: eventos
     });
@@ -269,9 +208,6 @@ router.get(
   delegarAOrpc(nestedStageDetailHandler, PREFIJO_ABSOLUTO)
 );
 
-/** El router oRPC combinado de esta vertical — lo consume
- * `scripts/generate-openapi.ts` para generar el fragmento de OpenAPI de las 3
- * rutas migradas. */
 export const projectsObraOrpcRouter = {
   stagesOfProjectProcedure,
   retryStageAnchorProcedure,

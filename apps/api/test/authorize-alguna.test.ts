@@ -5,12 +5,6 @@ import { createId } from "../src/db/id";
 import { db } from "../src/lib/db";
 import { FIXTURES } from "./global-setup";
 
-// `GET /contracts/:contractId/releases` es la única regla disyuntiva de la API:
-// la ve el dueño del contrato **o** cualquiera con membresía en el proyecto. Una
-// cadena de middlewares es un AND, así que hasta el 2026-09-04 esto vivía adentro
-// del handler. Cada rama tiene su caso acá, y el punto de los dos primeros es que
-// pasan por caminos DISTINTOS: uno sin membresía, el otro sin ser dueño.
-
 let contratoDeAjeno: string;
 
 const tokenDe = async (f: { email: string; password: string }) =>
@@ -77,20 +71,14 @@ afterAll(async () => {
 
 describe("authorize · acceso disyuntivo (alguna)", () => {
   it("pasa el DUEÑO aunque no tenga membresía en el proyecto", async () => {
-    // `ajeno` no es miembro de ningún proyecto: si pasa, pasó por la rama del
-    // dueño y por ninguna otra.
     expect((await releases(contratoDeAjeno, FIXTURES.ajeno)).status).toBe(200);
   });
 
   it("pasa el MIEMBRO aunque no sea el dueño", async () => {
-    // `activo` es miembro del proyecto y el contrato es de otro: la rama
-    // complementaria.
     expect((await releases(contratoDeAjeno, FIXTURES.activo)).status).toBe(200);
   });
 
   it("rechaza a quien no es ninguna de las dos cosas", async () => {
-    // El notary no tiene membresía por proyecto (M2-D1 §4) y no es dueño: es el
-    // control de que las dos ramas de arriba prueban algo.
     expect((await releases(contratoDeAjeno, FIXTURES.notario)).status).toBe(403);
   });
 
