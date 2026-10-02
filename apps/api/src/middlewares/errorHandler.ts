@@ -44,6 +44,20 @@ export function codigoDeRestriccion(err: unknown): ConstraintCode | undefined {
   return undefined;
 }
 
+// El parser del body (JSON mal formado, body demasiado grande) tira errores de `http-errors`: traen su
+// status 4xx y `expose: true`, que es la marca de que el mensaje se le puede mostrar al cliente.
+export function errorDelCliente(err: unknown): { status: number; message: string } | undefined {
+  if (typeof err !== "object" || err === null) return undefined;
+  const { status, expose, message } = err as {
+    status?: unknown;
+    expose?: unknown;
+    message?: unknown;
+  };
+  if (expose !== true || typeof status !== "number" || status < 400 || status > 499)
+    return undefined;
+  return { status, message: typeof message === "string" ? message : "Bad request" };
+}
+
 export function errorHandler(err: unknown, _req: Request, res: Response, next: NextFunction) {
   if (res.headersSent) {
     return next(err);
@@ -55,6 +69,11 @@ export function errorHandler(err: unknown, _req: Request, res: Response, next: N
 
   if (err instanceof MulterError) {
     return res.status(400).json({ message: err.message, code: err.code });
+  }
+
+  const delCliente = errorDelCliente(err);
+  if (delCliente) {
+    return res.status(delCliente.status).json({ message: delCliente.message });
   }
 
   const restriccion = codigoDeRestriccion(err);

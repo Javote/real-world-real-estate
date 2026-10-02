@@ -172,11 +172,16 @@ autodeploy arrancó con el `startCommand` viejo del dashboard (`--require`) y fa
 `ERR_REQUIRE_ASYNC_MODULE` sin pasar a live; el sync del Blueprint trajo `--import` y ese quedó live,
 con OTel y Sentry activos y los logs limpios. La trampa quedó en `apps/api/CLAUDE.md`.
 
-**Hallazgos que A0 no toca** (estaban en `main`, iguales en las dos builds):
+**Dos bugs que ya estaban en CommonJS**, iguales en las dos builds, arreglados después en un commit
+aparte (2026-10-02):
 
-- `POST /auth/login` con un JSON mal formado responde **500** y llega a Sentry como error; debería
-  ser 400.
-- Todo evento de Sentry dice venir de `GET /health`, sea cual sea la request que falló.
+- **Un JSON mal formado respondía 500** y llegaba a Sentry: `errorHandler` no reconocía los errores
+  de `http-errors` del parser. Ahora es 400 (y un body demasiado grande, 413).
+- **Todo evento de Sentry decía venir de `GET /health`**: con `skipOpenTelemetrySetup` nadie instalaba
+  el `SentryContextManager`, y todas las requests compartían un isolation scope. Ahora cada evento
+  trae su request y su `transaction`. Medido contra producción con el mismo arnés: de las 683
+  requests solo cambia la del JSON mal formado, y OpenTelemetry da idéntico (spans por scope, tipo,
+  padre y nombre, y las 17 métricas).
 
 ## Rollback
 

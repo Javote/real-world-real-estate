@@ -66,6 +66,8 @@ backlog quedan el CRUD de `/projects` y `/users` (admin, `SPEC-221`).
 - **El parser multipart de oRPC bufferea todo sin límite**: las rutas de archivos siguen con Multer.
 - **Sentry ve el error antes que `errorHandler`**: filtra con `statusDeError(err) >= 500`, la misma
   clasificación compartida.
+- **Un error del parser del body es del cliente**: `errorDelCliente` lo reconoce por el `expose` de
+  `http-errors` (400 JSON mal formado, 413 body grande). Un `status` sin `expose` sigue siendo 500.
 - **CORS lista los métodos a mano en `app.ts`**: un método nuevo en la web se suma ahí, y se prueba
   desde un navegador (`curl` no hace preflight).
 - **`req.params[x]` es `string | string[]`** con Express 5.
@@ -115,7 +117,8 @@ backlog quedan el CRUD de `/projects` y `/users` (admin, `SPEC-221`).
 - **`envVars` de Render es un solo balde para build y start**: `NODE_ENV` va inline en el comando
   (`test/render-config.test.ts`).
 - **Sentry v10 registra sus propios globals de OTel**: `skipOpenTelemetrySetup: true`, o los traces
-  se pierden sin error.
+  se pierden sin error. Con eso nadie instala su `SentryContextManager`: lo pone `initSentry`, o
+  todos los eventos salen con la request de la primera.
 - **Sin `diag.setLogger` un exporter OTLP que falla no dice nada**.
 - **El wizard OTLP de Grafana da el header sin `Authorization=Basic%20`**: hay que anteponérselo.
 - **Detrás de Render, `TRUST_PROXY_HOPS=1`**: con 0 todos comparten balde, con `true` se falsifica

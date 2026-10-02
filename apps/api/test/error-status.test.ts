@@ -37,6 +37,19 @@ describe("statusDeError — la misma clasificación que errorHandler, un paso an
     expect(statusDeError(err)).toBe(409);
   });
 
+  it("un error del parser del body (http-errors con `expose`) conserva su 4xx", () => {
+    const parser = (status: number) =>
+      Object.assign(new Error("del parser"), { status, expose: true });
+    expect(statusDeError(parser(400))).toBe(400);
+    expect(statusDeError(parser(413))).toBe(413);
+  });
+
+  it("sin `expose`, o con un 5xx, el status del error no se cree", () => {
+    expect(statusDeError(Object.assign(new Error("x"), { status: 400 }))).toBe(500);
+    expect(statusDeError(Object.assign(new Error("x"), { status: 503, expose: true }))).toBe(500);
+    expect(statusDeError(Object.assign(new Error("x"), { status: "400", expose: true }))).toBe(500);
+  });
+
   it("un error sin clasificar es 500 — el único caso que Sentry SÍ tiene que ver", () => {
     expect(statusDeError(new Error("lo que sea, un null, la base caída"))).toBe(500);
   });

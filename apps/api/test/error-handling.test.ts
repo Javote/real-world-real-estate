@@ -94,3 +94,43 @@ describe("el errorHandler no le echa la culpa al cliente ni filtra el motivo", (
     expect(res.body.message).toBe("Mensaje escrito para el cliente");
   });
 });
+
+describe("un body que el parser rechaza es culpa del cliente, no un 500", () => {
+  it("JSON mal formado en el login es 400 y no pasa por el log de errores", async () => {
+    const { default: app } = await import("../src/app.js");
+    const espia = vi.spyOn(console, "error").mockImplementation(() => {});
+    const res = await request(app)
+      .post("/api/v1/auth/login")
+      .set("content-type", "application/json")
+      .send("{no es json");
+    const loggeado = espia.mock.calls.flat().map(String).join(" ");
+    espia.mockRestore();
+
+    expect(res.status).toBe(400);
+    expect(typeof res.body.message).toBe("string");
+    expect(loggeado).not.toContain("error no manejado");
+  });
+
+  it("un body más grande que el límite del parser es 413", async () => {
+    const res = await request(appDePrueba())
+      .post("/cualquiera")
+      .set("content-type", "application/json")
+      .send(JSON.stringify({ relleno: "x".repeat(200 * 1024) }));
+
+    expect(res.status).toBe(413);
+  });
+
+  it("un error con status 4xx pero sin `expose` sigue siendo 500: el status solo no alcanza", async () => {
+    const app = express();
+    app.get("/x", () => {
+      throw Object.assign(new Error("detalle interno"), { status: 400 });
+    });
+    app.use(errorHandler);
+    const silencio = vi.spyOn(console, "error").mockImplementation(() => {});
+    const res = await request(app).get("/x");
+    silencio.mockRestore();
+
+    expect(res.status).toBe(500);
+    expect(res.body).toEqual({ message: "Internal server error" });
+  });
+});

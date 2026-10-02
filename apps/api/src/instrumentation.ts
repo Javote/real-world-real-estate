@@ -1,6 +1,7 @@
 import "dotenv/config";
 
 import { register } from "node:module";
+import { context } from "@opentelemetry/api";
 import { createAddHookMessageChannel } from "import-in-the-middle";
 
 export function initSentry(): void {
@@ -13,6 +14,10 @@ export function initSentry(): void {
       skipOpenTelemetrySetup: true,
       registerEsmLoaderHooks: false
     });
+    // Con `skipOpenTelemetrySetup` nadie instala el context manager de Sentry, y sin él todas las
+    // requests comparten un isolation scope: cada error salía con la request de la primera.
+    context.disable();
+    context.setGlobalContextManager(new Sentry.SentryContextManager().enable());
     console.log("[instrumentation] Sentry activo");
   } else {
     console.log("[instrumentation] SENTRY_DSN ausente — Sentry apagado");

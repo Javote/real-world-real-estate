@@ -1,17 +1,26 @@
+import { context } from "@opentelemetry/api";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 const sentryInit = vi.fn();
-vi.mock("@sentry/node", () => ({ init: sentryInit }));
+class SentryContextManager {
+  enable() {
+    return this;
+  }
+}
+vi.mock("@sentry/node", () => ({ init: sentryInit, SentryContextManager }));
 
 let previoSentryDsn: string | undefined;
 
 beforeEach(() => {
+  vi.spyOn(context, "disable").mockImplementation(() => {});
+  vi.spyOn(context, "setGlobalContextManager").mockReturnValue(true);
   previoSentryDsn = process.env.SENTRY_DSN;
   delete process.env.SENTRY_DSN;
   vi.clearAllMocks();
 });
 
 afterEach(() => {
+  vi.restoreAllMocks();
   if (previoSentryDsn === undefined) delete process.env.SENTRY_DSN;
   else process.env.SENTRY_DSN = previoSentryDsn;
 });
@@ -34,6 +43,19 @@ describe("initSentry", () => {
     );
   });
 
+  it("con SENTRY_DSN, instala el context manager de Sentry: sin él, todo error sale con la primera request", async () => {
+    process.env.SENTRY_DSN = "https://example.invalid/1";
+    vi.resetModules();
+    const { initSentry } = await import("../src/instrumentation.js");
+    vi.mocked(context.disable).mockClear();
+    vi.mocked(context.setGlobalContextManager).mockClear();
+
+    initSentry();
+
+    expect(context.disable).toHaveBeenCalled();
+    expect(context.setGlobalContextManager).toHaveBeenCalledWith(expect.any(SentryContextManager));
+  });
+
   it("sin SENTRY_DSN, no inicializa nada", async () => {
     vi.resetModules();
     const { initSentry } = await import("../src/instrumentation.js");
@@ -41,6 +63,7 @@ describe("initSentry", () => {
     initSentry();
 
     expect(sentryInit).not.toHaveBeenCalled();
+    expect(context.setGlobalContextManager).not.toHaveBeenCalled();
   });
 });
 

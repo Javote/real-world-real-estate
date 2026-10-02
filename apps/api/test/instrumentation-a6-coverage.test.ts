@@ -1,12 +1,20 @@
+import { context } from "@opentelemetry/api";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 const sentryInit = vi.fn();
-vi.mock("@sentry/node", () => ({ init: sentryInit }));
+class SentryContextManager {
+  enable() {
+    return this;
+  }
+}
+vi.mock("@sentry/node", () => ({ init: sentryInit, SentryContextManager }));
 
 let previoSentryDsn: string | undefined;
 let previoNodeEnv: string | undefined;
 
 beforeEach(() => {
+  vi.spyOn(context, "disable").mockImplementation(() => {});
+  vi.spyOn(context, "setGlobalContextManager").mockReturnValue(true);
   previoSentryDsn = process.env.SENTRY_DSN;
   previoNodeEnv = process.env.NODE_ENV;
   process.env.SENTRY_DSN = "https://example.invalid/coverage";
@@ -15,6 +23,7 @@ beforeEach(() => {
 });
 
 afterEach(() => {
+  vi.restoreAllMocks();
   if (previoSentryDsn === undefined) delete process.env.SENTRY_DSN;
   else process.env.SENTRY_DSN = previoSentryDsn;
   if (previoNodeEnv === undefined) delete process.env.NODE_ENV;
