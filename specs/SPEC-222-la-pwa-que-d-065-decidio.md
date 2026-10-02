@@ -141,7 +141,16 @@ sigue: el `requireRole` de `SPEC-601` deja pasar con la sesión local ante un er
 `/investor/buy` dice "Todavía no hay desarrollos publicados." en vez de un error de red. No lo
 causa la PWA: con red y la API caída pasa lo mismo. Pero antes, sin red, se veía el error del
 navegador, y ahora se ve una afirmación falsa. §Invariantes da por hecho que cada pantalla "muestra
-el error de red que ya tiene", y no es así: **de los 33 archivos de `src/routes/` con `useQuery`, solo 7 mencionan `isError`**.
-Resolverlo es un estado de error por pantalla (o uno en el armazón) que M2-D3 no define, así que
-pide una decisión del dueño antes de construirlo (regla 2 y 3 del loop).
+el error de red que ya tiene", y no es así: de los 33 archivos de `src/routes/` con `useQuery`,
+**27 no miran el error** (medido el 2026-10-02; la lista, en `AUDITORIA-2026-10-01` §9 Fase 2).
 
+El dueño lo partió en dos (2026-10-02):
+
+- **Por el momento, D-101:** `OfflineBanner` en el armazón, mientras `navigator.onLine` es `false`,
+  avisa que lo de abajo puede estar incompleto o desactualizado. Visto con el build de producción en
+  1280 px y en 380 px, entre el header y el contenido. En el Chromium de Playwright, `setOffline`
+  corta la red pero deja `navigator.onLine` en `true`, así que la captura se hizo forzándolo: que el
+  evento real lo dispare lo fija `OfflineBanner.test.tsx`, y queda para la pasada manual de
+  §Verificación (DevTools → Network → *Offline*).
+- **De fondo, en la Fase 2 (W3/W4):** ninguna pantalla termina su migración sin su `error`. Eso
+  cubre también la API caída, que el aviso no ve.

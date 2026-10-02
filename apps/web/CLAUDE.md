@@ -25,6 +25,7 @@ modal que se abre solo es `AnchoringSuccessModal`.
 
 **El header es uno** (D-074): `PanelShell` pinta siempre logo + campana + perfil + idioma; con
 padre, la pantalla pasa `back`. No reintroducir un `hideBrand`. Login solo lleva el toggle de idioma.
+Sin red, `PanelShell` monta `OfflineBanner` debajo del header (D-101).
 
 **El armazón vive en el layout, no en la pantalla** (SPEC-601): `PanelShell` (sidebar, header,
 `<main>` con el `<Outlet />`, bottom nav) lo monta la ruta de layout y no se desmonta al navegar. La

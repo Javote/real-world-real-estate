@@ -125,6 +125,8 @@ const esAR = {
   'notifications.bellWithCount': 'Notificaciones, {count} sin leer',
   'common.cancel': 'Cancelar',
   'common.loading': 'Cargando…',
+  'common.offline':
+    'Sin conexión. Lo que ves puede estar incompleto o desactualizado hasta que vuelva la red.',
   'status.verified': 'Verificado',
   'status.pending': 'Pendiente',
   'status.certified': 'Certificado',
@@ -762,6 +764,8 @@ const enUS = {
   'notifications.bellWithCount': 'Notifications, {count} unread',
   'common.cancel': 'Cancel',
   'common.loading': 'Loading…',
+  'common.offline':
+    "You're offline. What you see may be incomplete or out of date until the connection is back.",
   'status.verified': 'Verified',
   'status.pending': 'Pending',
   'status.certified': 'Certified',

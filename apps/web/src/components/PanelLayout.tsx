@@ -9,6 +9,7 @@ import { GradientHeader } from '#/components/domain/GradientHeader'
 import { LanguageToggle } from '#/components/domain/LanguageToggle'
 import { NotificationBell } from '#/components/domain/NotificationBell'
 import { NAV_TABS } from '#/components/domain/navTabs'
+import { OfflineBanner } from '#/components/domain/OfflineBanner'
 import { Sidebar } from '#/components/domain/Sidebar'
 import { useTranslation } from '#/i18n/useTranslation'
 
@@ -53,6 +54,7 @@ export function PanelShell({ rol }: { rol: Rol }) {
       <Sidebar tabs={tabs} ariaLabel={t('nav.ariaLabel')} />
       <div className="min-h-dvh bg-app-bg pb-24 md:pl-64">
         <EncabezadoDelPanel rol={rol} cabecera={cabecera} />
+        <OfflineBanner />
 
         <main className="mx-auto flex max-w-2xl flex-col gap-s4 p-s4">
           <Outlet />

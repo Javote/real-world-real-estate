@@ -1399,3 +1399,25 @@ usa el investor en "Evidence by stage" (fila 15-18 de M2-D5, `StageChip (10x)`).
 de la etapa elegida ya estaba en la tarjeta "Selected stage", así que no se pierde ningún dato. El
 nombre accesible de cada chip sigue diciendo número y nombre (`developer.upload.stageAria`).
 
+
+## D-101 — Sin red, el armazón avisa que lo de abajo puede no estar al día
+
+**Decisión del dueño, 2026-10-02**, con la prueba offline de `SPEC-222`. Con la PWA el armazón carga
+sin red, y una pantalla que no mira el error de su consulta dibuja su estado vacío: `/investor/buy`
+dice "Todavía no hay desarrollos publicados.", que es falso. Antes de la PWA, sin red, se veía el
+error del navegador y nadie leía nada.
+
+**Por qué es un desvío legítimo, caso (c).** M2-D3 no define ningún aviso de conexión: su único
+estado "Error" es el de un input que falla la validación. Seguirlo al pie dejaría la app afirmando
+algo que no puede sustanciar, contra la regla dura 17 y D-026.
+
+**Cómo quedó.** `OfflineBanner` (`components/domain/`), montado por `PanelShell` entre el header y el
+contenido, solo mientras `navigator.onLine` es `false`; aparece y se va con los eventos
+`offline`/`online`, sin recargar. `role="status"`, el ícono `WifiOff` de Lucide, los tokens `pending`
+sobre `pending-light` (los de D-098, ya en 4.5:1) y el texto `common.offline` en los dos idiomas.
+Test ID `PWA-OFFLINE-BANNER-001`, fuera del patrón de M2-D5 a propósito: no es una superficie del
+backlog. Login y las páginas públicas no lo llevan.
+
+**Lo que no cubre.** Con red y la API caída `navigator.onLine` sigue en `true`, y la pantalla sigue
+mostrando su estado vacío. Eso se cierra en la Fase 2 (W3/W4): ninguna pantalla termina su migración
+sin su `error` (`AUDITORIA-2026-10-01` §9). Es una medida "por el momento", en palabras del dueño.
