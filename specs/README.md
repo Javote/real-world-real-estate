@@ -81,7 +81,7 @@ El diseño de cada ítem está en
 | 4 | La pasada de prosa | ✅ — §4 comentarios en `packages/` y `apps/`; `contracts/` queda como está (dueño, 2026-10-01: es mucho más simple). §6 documentación ✅ 2026-10-01: el estado en esta tabla, lo cerrado en `archive/` y cada `CLAUDE.md` recortado a trampas vigentes (2.457 → 743 líneas; la narración, en `archive/CLAUDE-subarboles-hasta-2026-10-01.md`) |
 | 5 | W0: observabilidad diferida, un diccionario por idioma, decidir PostHog | sin empezar |
 | 6 | `SPEC-603` misma región | en curso — opción B: la base copiada a Oregon (`propnexus-west`), idéntica byte a byte a producción el 2026-10-01. Falta el corte en Render; el detalle, en la spec |
-| 7 | W1 = `SPEC-601` con armazón en el layout | en revisión — rama `worktree-w1-spec-601` en `origin`, sin mergear (🟡: revisión línea por línea). `pnpm verify:all` en verde y `pnpm e2e` 100/100 (2026-10-02); falta la pasada manual con las DevTools de red (§Verificación de la spec) |
+| 7 | W1 = `SPEC-601` con armazón en el layout | en revisión — rama `worktree-w1-spec-601` en `origin`, sin mergear (🟡: revisión línea por línea). `pnpm verify:all` en verde, `pnpm e2e` 100/100 y la pasada manual de §Verificación hecha en Chrome (2026-10-02): login de buyer → buy → units → favorites con un solo `/auth/me`, y en 3.599 frames el mismo header y ningún `<main>` vacío |
 | 8 | `SPEC-402`, `SPEC-407`, `SPEC-408` | sin empezar — adelantadas desde "antes de mainnet" |
 | 9 | `SPEC-222` PWA (rama `spec-222-pwa`) y la pasada manual de `SPEC-112` | sin empezar — después de 5 y 7, y la rama se mergea recién después de entregar M3 (dueño, 2026-09-30: revertir el commit no desinstala un service worker) |
 
