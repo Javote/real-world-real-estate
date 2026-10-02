@@ -1,9 +1,10 @@
 # SPEC-222 — La PWA que D-065 decidió y nunca se hizo
 
-> **Estado: hecha el 2026-09-30 en la rama `spec-222-pwa`, sin mergear.** Se mergea a `main`
-> después de entregar M3 (decisión del dueño). Lo que queda después del merge es la pasada manual
-> de §Verificación contra producción. Abajo, §Cómo quedó registra lo que la implementación cambió
-> respecto del plan.
+> **Estado: hecha el 2026-09-30 en la rama `spec-222-pwa`, sin mergear; al día con `main` y
+> probada offline de punta a punta el 2026-10-02.** Se mergea a `main` después de entregar M3
+> (decisión del dueño). Lo que queda después del merge es la pasada manual de §Verificación contra
+> producción. Abajo, §Cómo quedó registra lo que la implementación cambió respecto del plan, y
+> §Lo que queda abierto, lo que la prueba encontró fuera del worker.
 
 > Nace revisando el guion del video (2026-09-30). Su Anexo B reportaba que no hay PWA instalable,
 > mientras que `CLAUDE.md` describía el front como "SPA + PWA". **Postergada a después de grabar
@@ -99,11 +100,12 @@ manual contra producción, no el código.
 | Manifest | `apps/web/public/manifest.json` — `background_color` es `--color-app-bg` (`#f4f1ed`) |
 | Íconos | `apps/web/public/icons/`: `icon.svg` (también es el favicon), `icon-192.png`, `icon-512.png`, `icon-maskable-512.png`, `apple-touch-icon.png`. Se generan con `node apps/web/scripts/iconos.mjs`, que rasteriza el SVG con el Chromium de Playwright (sin dependencias nuevas). El `favicon.ico` y los `logo*.png` del boilerplate se borraron |
 | Worker | `apps/web/public/sw.js` |
+| Precache | `src/lib/swPrecache.ts`, aplicado por el plugin `precache-del-service-worker` de `vite.config.ts` sobre `dist/sw.js`: escribe la lista de `/assets/` del build y una versión derivada de ella. En el fuente las dos líneas son `const VERSION = 'dev'` y `const PRECACHE = []`; si falta una, el build falla |
 | Rollback | `apps/web/sw-baja.js`, **fuera de `public/`** para que no se publique. `RUNBOOK-deploy.md` §3 (y su versión en inglés en `specs/evidencia-m3/5-ops/runbook.md`) |
 | Registro | `apps/web/src/lib/pwa.ts`, llamado desde `main.tsx` con `import.meta.env.PROD` y `navigator.serviceWorker` como argumentos, así el módulo se testea sin tocar el entorno. Un registro que falla va a Sentry |
-| Tests | `src/lib/pwa.test.ts` (el registro, y que manifest, íconos e `index.html` se correspondan, con los tamaños leídos de la cabecera de cada PNG) y `src/lib/sw.test.ts` (los dos workers corridos tal cual sobre un scope falso: cada regla de arriba tiene su caso) |
+| Tests | `src/lib/pwa.test.ts` (el registro, y que manifest, íconos e `index.html` se correspondan, con los tamaños leídos de la cabecera de cada PNG), `src/lib/sw.test.ts` (los dos workers corridos tal cual sobre un scope falso: cada regla de arriba tiene su caso) y `src/lib/swPrecache.test.ts` |
 
-**Dos correcciones al plan:**
+**Cuatro correcciones al plan:**
 
 - **Sin `skipWaiting`, la versión nueva no toma el control "en la próxima navegación"** como decía
   §Invariantes: espera a que se cierren **todas** las pestañas de la app. Es más conservador todavía,
@@ -111,7 +113,35 @@ manual contra producción, no el código.
 - **El worker de baja no recarga las pestañas.** El primer borrador lo hacía, y con la app todavía
   registrando `/sw.js` en cada carga eso era un bucle: instalar, desregistrarse, recargar, instalar.
   Como no tiene handler de `fetch`, no hace falta recargar nada.
+- **El precache del build sí hacía falta** (2026-10-02), contra lo que decía §Alcance. Medido con el
+  build de producción en Chromium: después de la primera visita, sin red y recargando, `#root`
+  quedaba vacío. El worker se registra en el `load`, cuando el JS de entrada ya se bajó sin pasar
+  por él, y cada ruta es un chunk aparte (`autoCodeSplitting`) que el worker no vio. Ahora `install`
+  guarda el shell y los 107 archivos de `/assets/` (1,4 MB). Como la versión sale de la lista, cada
+  deploy instala un worker nuevo y `activate` borra la caché del build anterior: los assets viejos ya
+  no se acumulan. Sigue sin `vite-plugin-pwa`: la lista entra con un reemplazo de dos líneas.
+- **Los assets se buscan con `ignoreVary`.** Un script `type=module` pide con `Origin`, y lo que
+  guardó `install` no lo tiene: con un `Vary: Origin` del servidor (`vite preview` lo manda; Render
+  hoy manda solo `Vary: Accept-Encoding`) el asset no aparecía en la caché. Como el nombre lleva el
+  hash del contenido, no hay otra variante posible.
 
 Se probó que los tests muerden: sacar la regla de `/api/` de `sw.js` pone rojo el caso "una
-navegación a la API pasa de largo".
+navegación a la API pasa de largo"; sacar el precache o el `ignoreVary`, los dos casos nuevos.
+
+**La prueba de punta a punta (2026-10-02)**, con el build de producción en `vite preview`, la API
+local y un login real del seed (buyer), en Chromium vía Playwright: Chrome no reporta errores de
+instalabilidad ni de manifest (`Page.getInstallabilityErrors` vacío). Online, `/investor/buy`
+carga con un solo `/auth/me`. Sin red, recargar `/investor/buy` muestra el armazón completo
+(header, sidebar, título) y `/auth/me` se pide dos veces (el intento y el reintento) y la pantalla
+sigue: el `requireRole` de `SPEC-601` deja pasar con la sesión local ante un error de red.
+
+## Lo que queda abierto
+
+**Sin red, una pantalla que no maneja el error de su consulta muestra su estado vacío.**
+`/investor/buy` dice "Todavía no hay desarrollos publicados." en vez de un error de red. No lo
+causa la PWA: con red y la API caída pasa lo mismo. Pero antes, sin red, se veía el error del
+navegador, y ahora se ve una afirmación falsa. §Invariantes da por hecho que cada pantalla "muestra
+el error de red que ya tiene", y no es así: **de los 33 archivos de `src/routes/` con `useQuery`, solo 7 mencionan `isError`**.
+Resolverlo es un estado de error por pantalla (o uno en el armazón) que M2-D3 no define, así que
+pide una decisión del dueño antes de construirlo (regla 2 y 3 del loop).
 

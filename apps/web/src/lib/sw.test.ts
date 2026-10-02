@@ -7,6 +7,7 @@
 import { readFileSync } from 'node:fs'
 import { join } from 'node:path'
 import { describe, expect, it, vi } from 'vitest'
+import { completarServiceWorker } from './swPrecache'
 
 const WEB = join(import.meta.dirname, '..', '..')
 const ORIGEN = 'https://propnexus-web.onrender.com'
@@ -21,8 +22,10 @@ function cacheStorageFalso() {
     if (!cajas.has(nombre)) cajas.set(nombre, new Map())
     const caja = cajas.get(nombre) as Map<string, Response>
     return {
-      add: async (url: string) => {
-        caja.set(clave(url), new Response('<html>shell</html>'))
+      addAll: async (urls: string[]) => {
+        for (const url of urls) {
+          caja.set(clave(url), new Response(url === '/index.html' ? '<html>shell</html>' : url))
+        }
       },
       put: async (pedido: string | { url: string }, respuesta: Response) => {
         caja.set(clave(pedido), respuesta)
@@ -44,7 +47,7 @@ function cacheStorageFalso() {
   }
 }
 
-function correr(archivo: string) {
+function correr(archivo: string, bundle?: string[]) {
   const manejadores = new Map<string, Manejador>()
   const self = {
     location: { origin: ORIGEN },
@@ -55,7 +58,8 @@ function correr(archivo: string) {
   }
   const caches = cacheStorageFalso()
   const fetch = vi.fn<(pedido: unknown) => Promise<Response>>()
-  const codigo = readFileSync(join(WEB, archivo), 'utf8')
+  const fuente = readFileSync(join(WEB, archivo), 'utf8')
+  const codigo = bundle ? completarServiceWorker(fuente, bundle) : fuente
   new Function('self', 'caches', 'fetch', codigo)(self, caches, fetch)
 
   async function ciclo(tipo: 'install' | 'activate') {
@@ -91,13 +95,29 @@ describe('public/sw.js', () => {
     expect(sw.self.skipWaiting).not.toHaveBeenCalled()
   })
 
+  it('al instalarse guarda también cada archivo de /assets/ del build', async () => {
+    const sw = correr('public/sw.js', ['index.html', 'assets/index-a1.js', 'assets/ruta-b2.js'])
+    await sw.ciclo('install')
+    expect(await (await sw.caches.match('/assets/ruta-b2.js'))?.text()).toBe('/assets/ruta-b2.js')
+    expect([...sw.caches.cajas.keys()]).toEqual([expect.stringMatching(/^propnexus-[0-9a-f]{8}$/)])
+  })
+
+  it('sin red, un asset guardado al instalar sale de la caché aunque el pedido traiga Origin', async () => {
+    const sw = correr('public/sw.js', ['index.html', 'assets/index-a1.js'])
+    await sw.ciclo('install')
+    sw.fetch.mockRejectedValue(new TypeError('Failed to fetch'))
+    expect(await (await sw.pedir('/assets/index-a1.js'))?.text()).toBe('/assets/index-a1.js')
+    expect(sw.caches.match).toHaveBeenCalledWith(expect.anything(), { ignoreVary: true })
+    expect(sw.fetch).not.toHaveBeenCalled()
+  })
+
   it('al activarse borra las cachés de versiones viejas y ninguna ajena', async () => {
     const sw = correr('public/sw.js')
     await sw.caches.open('propnexus-v0')
     await sw.caches.open('otra-app')
     await sw.ciclo('install')
     await sw.ciclo('activate')
-    expect([...sw.caches.cajas.keys()].sort()).toEqual(['otra-app', 'propnexus-v1'])
+    expect([...sw.caches.cajas.keys()].sort()).toEqual(['otra-app', 'propnexus-dev'])
     expect(sw.self.clients.claim).toHaveBeenCalled()
   })
 

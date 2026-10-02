@@ -6,7 +6,9 @@
 //      guardó. Ese es el shell offline: la app carga y cada pantalla muestra el
 //      error de red que ya tiene. No hay datos "de la última vez".
 //   2. `/assets/*`: primero la caché. Vite les pone el hash del contenido en el
-//      nombre, así que un archivo guardado nunca queda viejo.
+//      nombre, así que un archivo guardado nunca queda viejo. Se guardan todos
+//      al instalar, no a medida que se piden: la primera visita ya se bajó su
+//      JS antes de que el worker existiera, y cada ruta es un chunk aparte.
 //   3. Todo lo demás pasa de largo, sin `respondWith`: la API (que en producción
 //      vive en otro origen, y en dev va por `/api`), `/health`, cualquier otro
 //      origen y cualquier método que no sea GET.
@@ -24,12 +26,17 @@
 // instalado en los navegadores. El rollback es publicar `sw-baja.js` en este
 // mismo path. Ver `specs/RUNBOOK-deploy.md` §El service worker.
 
-const VERSION = 'v1'
+// El build reemplaza estas dos líneas (`src/lib/swPrecache.ts`): la lista de
+// `/assets/` y una versión que cambia con ella. Así cada deploy cambia los
+// bytes de este archivo, el navegador instala el worker nuevo y `activate`
+// borra la caché del build anterior.
+const VERSION = 'dev'
+const PRECACHE = []
 const CACHE = `propnexus-${VERSION}`
 const SHELL = '/index.html'
 
 self.addEventListener('install', (event) => {
-  event.waitUntil(caches.open(CACHE).then((cache) => cache.add(SHELL)))
+  event.waitUntil(caches.open(CACHE).then((cache) => cache.addAll([SHELL, ...PRECACHE])))
 })
 
 self.addEventListener('activate', (event) => {
@@ -82,8 +89,12 @@ async function navegacion(pedido) {
   }
 }
 
+// `ignoreVary`: un script `type=module` pide con `Origin` y lo que guardó
+// `install` no lo tiene, así que un `Vary: Origin` del servidor (el de
+// `vite preview` lo manda) lo dejaría sin encontrar. El nombre ya lleva el hash
+// del contenido: no hay otra variante que pueda tocar.
 async function asset(pedido) {
-  const guardado = await caches.match(pedido)
+  const guardado = await caches.match(pedido, { ignoreVary: true })
   if (guardado) return guardado
   const respuesta = await fetch(pedido)
   if (respuesta.ok) {

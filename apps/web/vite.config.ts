@@ -1,9 +1,22 @@
+import { readFileSync, writeFileSync } from 'node:fs'
+import { join } from 'node:path'
 import tailwindcss from '@tailwindcss/vite'
 import { tanstackRouter } from '@tanstack/router-plugin/vite'
 import viteReact from '@vitejs/plugin-react'
-import { defineConfig } from 'vite'
+import { defineConfig, type Plugin } from 'vite'
 
 import { API_ORIGIN, WEB_PORT } from './ports.ts'
+import { completarServiceWorker } from './src/lib/swPrecache.ts'
+
+// `public/sw.js` se copia tal cual a `dist/`; recién acá se sabe qué hay en `assets/` (SPEC-222).
+const precacheDelServiceWorker: Plugin = {
+  name: 'precache-del-service-worker',
+  apply: 'build',
+  writeBundle(opciones, bundle) {
+    const sw = join(opciones.dir ?? 'dist', 'sw.js')
+    writeFileSync(sw, completarServiceWorker(readFileSync(sw, 'utf8'), Object.keys(bundle)))
+  }
+}
 
 export default defineConfig({
   server: {
@@ -17,7 +30,8 @@ export default defineConfig({
   plugins: [
     tanstackRouter({ target: 'react', autoCodeSplitting: true }),
     tailwindcss(),
-    viteReact()
+    viteReact(),
+    precacheDelServiceWorker
   ],
   build: {
     rolldownOptions: {

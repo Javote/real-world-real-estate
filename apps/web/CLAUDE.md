@@ -87,6 +87,8 @@ unidad.
   Levantá la API sin `watch` y la web aparte; Playwright reusa los dos.
 - **`montarRuta` cuelga la pantalla del layout de su prefijo**, con el `requireRole` real: un test
   que la monta en un path inventado (`/perfil`) se queda sin header.
+- **`public/sw.js` tiene dos líneas que reescribe el build** (`const VERSION = 'dev'` y
+  `const PRECACHE = []`, `src/lib/swPrecache.ts`): no se les cambia la forma, o el build falla.
 - **`parentRoute` de TanStack no está resuelto antes de `addChildren`**: para armar un árbol a mano,
   separá los hijos vos.
 
