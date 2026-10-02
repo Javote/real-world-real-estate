@@ -120,6 +120,18 @@ describe("un body que el parser rechaza es culpa del cliente, no un 500", () => 
     expect(res.status).toBe(413);
   });
 
+  it("un error del parser sin mensaje cae a uno genérico, no a un body vacío", async () => {
+    const app = express();
+    app.get("/x", () => {
+      throw Object.assign(Object.create(null), { status: 400, expose: true });
+    });
+    app.use(errorHandler);
+    const res = await request(app).get("/x");
+
+    expect(res.status).toBe(400);
+    expect(res.body).toEqual({ message: "Bad request" });
+  });
+
   it("un error con status 4xx pero sin `expose` sigue siendo 500: el status solo no alcanza", async () => {
     const app = express();
     app.get("/x", () => {
