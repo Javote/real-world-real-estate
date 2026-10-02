@@ -167,6 +167,11 @@ MinIO, migrate + seed sobre una base vacía con el build nuevo (mismo esquema y 
 Quedan dos registros (Node avisa *"The 'import-in-the-middle' hook has already been initialized"*) y,
 con Sentry cargado antes del hook, falta `http.client.request.duration`.
 
+**En producción** (`cb7197a`, live el 2026-10-02 22:11 UTC): el push disparó dos deploys. El
+autodeploy arrancó con el `startCommand` viejo del dashboard (`--require`) y falló con
+`ERR_REQUIRE_ASYNC_MODULE` sin pasar a live; el sync del Blueprint trajo `--import` y ese quedó live,
+con OTel y Sentry activos y los logs limpios. La trampa quedó en `apps/api/CLAUDE.md`.
+
 **Hallazgos que A0 no toca** (estaban en `main`, iguales en las dos builds):
 
 - `POST /auth/login` con un JSON mal formado responde **500** y llega a Sentry como error; debería

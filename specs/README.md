@@ -94,7 +94,7 @@ la Fase 1 (ítems 6 y 9) en paralelo: ninguno de los dos la frena.
 
 | Paso | Qué | Spec | Estado |
 |---|---|---|---|
-| A0 | La API en ESM y el entorno en un solo lugar | [`612`](SPEC-612-la-api-en-esm-y-el-entorno-en-un-lugar.md) | en curso — **A0.1 (ESM) ✅ 2026-10-02**: 683 requests idénticas a `main` en los cuatro escenarios de observabilidad, `verify:all`, e2e 100/100, `test:s3`. Falta medir en producción (§Verificación 6) y A0.2 |
+| A0 | La API en ESM y el entorno en un solo lugar | [`612`](SPEC-612-la-api-en-esm-y-el-entorno-en-un-lugar.md) | en curso — **A0.1 (ESM) ✅ 2026-10-02**: 683 requests idénticas a `main` en los cuatro escenarios de observabilidad, `verify:all`, e2e 100/100, `test:s3`. En producción desde el 2026-10-02 22:11 UTC: `/health`, 401 y 404 como antes y logs limpios; falta ver un trace nuevo en Tempo (dueño) y A0.2 |
 | A1 | Los cimientos de los módulos | [`613`](SPEC-613-los-cimientos-de-los-modulos.md) | sin empezar · pide decidir `notify` |
 | A2 | El contrato en `shared`, el router raíz y los guards como `meta` | [`607`](SPEC-607-una-sola-capa-de-api.md) | sin empezar |
 | W2 | La fábrica de queries y `claveDeError` · el cliente desde el contrato | [`614`](SPEC-614-la-fabrica-de-queries.md) · [`609`](SPEC-609-el-cliente-sale-del-contrato.md) | sin empezar · `614` no espera a la API; `609`, a A2 |

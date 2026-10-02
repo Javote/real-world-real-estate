@@ -104,6 +104,11 @@ backlog quedan el CRUD de `/projects` y `/users` (admin, `SPEC-221`).
 - **`app.listen()` va antes que `initAnchorPort()`**: el puerto no espera a Blockfrost.
 - **Todo paso del `startCommand` anuncia que empieza y que termina**, y `migrate` tiene techo de 120 s.
 - **`--import` necesita `./`**: sin él se busca como paquete. Probá el comando literal del deploy.
+- **Un cambio del `startCommand` en `render.yaml` llega en un deploy aparte**: el push dispara el
+  autodeploy con el comando viejo del dashboard, y el sync del Blueprint otro con el nuevo. Si el
+  código nuevo no arranca con el comando viejo, el primero falla sin bajar el servicio y el segundo
+  queda live (pasó con `--require` → `--import`, `ERR_REQUIRE_ASYNC_MODULE`). Mirá
+  `render deploys list` antes de dar el deploy por bueno.
 - **Un solo hook de `import-in-the-middle`, registrado antes de cargar OTel y Sentry**: Sentry va con
   `registerEsmLoaderHooks: false` y se importa después de que el loader confirmó qué envolver. Si se
   carga antes, su `node:http` queda sin instrumentar (sin `http.client.request.duration`).
