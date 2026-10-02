@@ -79,7 +79,7 @@ const CASOS: Caso[] = [
   },
   {
     ruta: "GET /stages/:id",
-    enSerie: 7,
+    enSerie: 5,
     pedir: () =>
       request(app).get(`/api/v1/stages/${stage}`).set("Authorization", `Bearer ${developer}`)
   },
@@ -109,7 +109,7 @@ const CASOS: Caso[] = [
 ];
 
 describe("consultas lanzadas juntas", () => {
-  it("van en serie: el `SqliteAdapter` de Kysely pone un mutex de conexión", async () => {
+  it("van en paralelo: sin el mutex de conexión del `SqliteAdapter` de Kysely", async () => {
     const medida = await medirViajes(() =>
       Promise.all([
         db.selectFrom("User").select("id").execute(),
@@ -119,7 +119,19 @@ describe("consultas lanzadas juntas", () => {
     );
 
     expect(medida.consultas).toBe(3);
-    expect(medida.enSerie).toBe(3);
+    expect(medida.enSerie).toBe(1);
+  });
+
+  it("dos requests simultáneas no se turnan: cada una paga solo sus viajes", async () => {
+    const medida = await medirViajes(() =>
+      Promise.all([
+        request(app).get("/api/v1/auth/me").set("Authorization", `Bearer ${developer}`),
+        request(app).get("/api/v1/auth/me").set("Authorization", `Bearer ${developer}`)
+      ])
+    );
+
+    expect(medida.consultas).toBe(4);
+    expect(medida.enSerie).toBe(2);
   });
 });
 

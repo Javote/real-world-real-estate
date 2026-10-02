@@ -83,6 +83,9 @@ backlog quedan el CRUD de `/projects` y `/users` (admin, `SPEC-221`).
 - **TypeScript hoistea los `import`**: `import "dotenv/config"` va primero, sin código intercalado.
 - **`LibsqlDialect` recibe `{ url, authToken }`, no un `Client`**: trae su propia versión de
   `@libsql/client` y los tipos no casan.
+- **El `LibsqlDialect` es el de `lib/libsql-dialect.ts`, no el del paquete**: el original usa el
+  `SqliteAdapter` de Kysely, que pone un mutex global y vuelve serie todo `Promise.all` y toda request
+  concurrente (`SPEC-610`; lo fija `test/viajes-por-request.test.ts`).
 - **Una columna nueva de fecha o booleana se suma a `SqliteTypeCoercionPlugin`**; nada lo fuerza.
 - **Kysely no genera ids ni timestamps**: cada insert pasa `createId()` y fechas, y cada update suma
   `updatedAt`.

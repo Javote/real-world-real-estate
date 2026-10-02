@@ -5,6 +5,7 @@ const kyselyModule = require("kysely") as typeof import("kysely", { with: {
 
 export const Kysely = kyselyModule.Kysely;
 export const sql = kyselyModule.sql;
+export const SqliteAdapter = kyselyModule.SqliteAdapter;
 
 export type { Kysely as KyselyDb } from "kysely" with { "resolution-mode": "require" };
 

@@ -26,16 +26,17 @@ Encima, el middleware encadena sus propias lecturas. `GET /stages/:id`:
 
 Viajes en serie medidos con `test/viajes-por-request.test.ts` (paso 0):
 
-| Request | Antes | Después |
+| Request | Antes | Paso 1 |
 |---|---|---|
-| `GET /auth/me` | 2 | |
-| `GET /projects` | 3 | |
-| `GET /projects/:id` | 5 | |
-| `GET /projects/:id/stages` | 5 | |
-| `GET /stages/:id` | 7 | |
-| `PATCH /stages/:id` | 6 | |
-| `GET /investor/units` | 3 | |
-| `GET /notifications/unread-count` | 2 | |
+| `GET /auth/me` | 2 | 2 |
+| `GET /projects` | 3 | 3 |
+| `GET /projects/:id` | 5 | 5 |
+| `GET /projects/:id/stages` | 5 | 5 |
+| `GET /stages/:id` | 7 | 5 |
+| `PATCH /stages/:id` | 6 | 6 |
+| `GET /investor/units` | 3 | 3 |
+| `GET /notifications/unread-count` | 2 | 2 |
+| Dos `GET /auth/me` simultáneos | 4 | 2 |
 
 En las mutaciones, `writeAuditLog` es otro viaje después de la escritura. Las 6 rutas con
 `db.transaction()` usan transacciones interactivas: con una URL `libsql://` el cliente 0.17 de Node
@@ -72,7 +73,10 @@ dice.
 **1. Sin mutex.** `src/lib/db.ts` arma el dialecto con un adaptador que declara
 `supportsMultipleConnections = true`. Los `Promise.all` que ya existen pasan a ser paralelos, y las
 requests dejan de turnarse. El riesgo: en local, dos escrituras concurrentes contra el mismo archivo
-pueden dar `SQLITE_BUSY`; la suite completa y `pnpm e2e` lo dirían.
+pueden dar `SQLITE_BUSY`; la suite completa y `pnpm e2e` lo dirían. **Hecho el 2026-10-02:** la
+suite de la API (764) y `pnpm e2e` 100/100 con la API levantada sin `watch`. Con `tsx watch` fallaron
+11 logins sueltos, y las mismas 11 pasaron con el mutex puesto: la trampa de `tsx watch` de
+`apps/web/CLAUDE.md`, no este cambio.
 
 **2. La autorización por proyecto en una consulta.** `proyectoDeLaEntidad` + `canAccessProject` pasan
 a ser un solo `SELECT` desde la entidad con `LEFT JOIN Project` y el `EXISTS` de `projectScope` como
