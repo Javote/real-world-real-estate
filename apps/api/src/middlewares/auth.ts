@@ -304,10 +304,7 @@ async function evaluarRegla(user: Usuario, req: Request, regla: ReglaDeAcceso): 
     return evaluarSimple(user, req, regla);
   }
 
-  const veredictos: Veredicto[] = [];
-  for (const rama of regla.alguna) {
-    veredictos.push(await evaluarSimple(user, req, rama));
-  }
+  const veredictos = await Promise.all(regla.alguna.map((rama) => evaluarSimple(user, req, rama)));
 
   const roto = veredictos.find((v) => !v.ok && (v.status === 500 || v.status === 400));
   if (roto) return roto;

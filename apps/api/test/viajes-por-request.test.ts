@@ -1,6 +1,7 @@
 import request from "supertest";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import app from "../src/app";
+import { createId } from "../src/db/id";
 import { db } from "../src/lib/db";
 import { FIXTURES } from "./global-setup";
 import { crearStageMinteado } from "./helpers/stages";
@@ -15,6 +16,7 @@ let developer: string;
 let investor: string;
 let proyecto: string;
 let stage: string;
+let contrato: string;
 
 beforeAll(async () => {
   developer = await token(FIXTURES.activo.email, FIXTURES.activo.password);
@@ -40,6 +42,41 @@ beforeAll(async () => {
       actorUserId: dev.id
     })
   ).id;
+
+  const dueño = await db
+    .selectFrom("User")
+    .select("id")
+    .where("email", "=", FIXTURES.investor.email)
+    .executeTakeFirstOrThrow();
+  const ahora = new Date();
+  const unidad = createId();
+  await db
+    .insertInto("Unit")
+    .values({
+      id: unidad,
+      projectId: proyecto,
+      unitReference: "VIAJES-1",
+      status: "sold",
+      priceMinorUnits: 1_000_000,
+      currency: "USD",
+      investorId: dueño.id,
+      createdAt: ahora,
+      updatedAt: ahora
+    })
+    .execute();
+  contrato = createId();
+  await db
+    .insertInto("Contract")
+    .values({
+      id: contrato,
+      unitId: unidad,
+      investorId: dueño.id,
+      totalMinorUnits: 1_000_000,
+      currency: "USD",
+      signedAt: ahora,
+      createdAt: ahora
+    })
+    .execute();
 });
 
 afterAll(async () => {
@@ -97,6 +134,14 @@ const CASOS: Caso[] = [
     enSerie: 3,
     pedir: () =>
       request(app).get("/api/v1/investor/units").set("Authorization", `Bearer ${investor}`)
+  },
+  {
+    ruta: "GET /contracts/:id/releases (regla `alguna`)",
+    enSerie: 4,
+    pedir: () =>
+      request(app)
+        .get(`/api/v1/contracts/${contrato}/releases`)
+        .set("Authorization", `Bearer ${investor}`)
   },
   {
     ruta: "GET /notifications/unread-count",
