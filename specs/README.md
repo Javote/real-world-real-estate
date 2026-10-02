@@ -192,7 +192,9 @@ hechos el mismo día.
 §9** (dueño, 2026-10-01): una Fase 1 que emprolija la app como está (`601` con armazón en el layout,
 `603`, `402` adelantada, `407`/`408`, los bugs de su §1 y el ciclo del dossier rechazado) y una Fase 2
 que migra `apps/api` y `apps/web` módulo por módulo, con `dossier` de piloto. `602`, `604`, `607`,
-`608` y `609` salen de la Fase 1: lo que hacen lo hace la migración.
+`608` y `609` salen de la Fase 1: lo que hacen lo hace la migración. **Deuda anotada para W3/W4**
+(dueño, 2026-10-02): 27 de las 33 rutas con datos dibujan una consulta fallida como su estado vacío;
+ninguna pantalla termina su migración sin `error`. La lista, en la auditoría §9 Fase 2.
 
 Los planes fechados no llevan número: [`PLAN-2026-08-31-anclaje-real.md`](archive/PLAN-2026-08-31-anclaje-real.md)
 fue la secuencia operativa para pasar la instancia desplegada a `ANCHOR_MODE=real` (cerrada el

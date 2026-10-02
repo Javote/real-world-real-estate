@@ -576,6 +576,20 @@ deja pasar el resto a las rutas de Express.
 | W4 | El resto, por rol: `certifier` → `investor` → `developer` → `admin`; endpoints de pantalla donde haya cascada (detalle de unidad del investor primero) | |
 | W5 | Se borran `useRoleGuard`, las llaves escritas a mano y `unicosPorStageId` | |
 
+**Ninguna pantalla con datos termina W3/W4 sin su `error`** (dueño, 2026-10-02). Hoy una consulta que
+falla se dibuja como su estado vacío: sin red o con la API caída, `/investor/buy` dice "Todavía no
+hay desarrollos publicados.", que es falso. Lo encontró la prueba offline de `SPEC-222`, y la PWA lo
+vuelve visible: antes, sin red, se veía el error del navegador. Medido el 2026-10-02: de los 33
+archivos de `src/routes/` con `useQuery`, **27 no mencionan el error** —`certifier.issued`; de
+`developer`: `audit-log`, `capital`, `documentation`, `index`, `investors`, `progress`,
+`project.$projectId.contracts`, `project.$projectId.index`, `projects`, `units`; de `investor`:
+`buy`, `favorites`, `notifications`, `unit.$unitId.contract`, `unit.$unitId.dossier`,
+`unit.$unitId.index`, `unit.$unitId.notifications`, `units`; de `notary`: `dossier.$dossierId`,
+`index`, `signed`; de `project.$projectId`: `developer`, `index`, `progress`, `stage.$stageId`; y
+`public.dossier.$shareToken`. El `errorComponent` de cada ruta migrada lo cierra de a una; lo que
+sobreviva a W4 se cierra en W5. Mientras tanto, el aviso de "sin conexión" del armazón (llega con `SPEC-222`)
+cubre el caso sin red, no el de la API caída.
+
 **El acople entre los dos lados:** W0 y W1 no esperan a nadie. W2 espera a A2. A3 y W3 van juntos,
 porque el piloto es de punta a punta. A4 y W4 avanzan en paralelo, módulo con su rol. **Las features
 de M4 (`501`–`504`) entran después de A2**, en la forma nueva, en paralelo con A4/W4.
