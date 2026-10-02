@@ -1,6 +1,6 @@
 # SPEC-402 — Los 36 hashes y TXID del contrato tienen forma
 
-> **Origen:** [`AUDITORIA-2026-09-11-calidad-de-packages.md`](archive/AUDITORIA-2026-09-11-calidad-de-packages.md)
+> **Cerrada 2026-10-02.** **Origen:** [`AUDITORIA-2026-09-11-calidad-de-packages.md`](AUDITORIA-2026-09-11-calidad-de-packages.md)
 > §P-03. Nivel 🟢. **Independiente.** No toca ningún criterio del SOM, pero **vale antes de
 > mainnet**: es lo único que separa un "Verificado" real de uno que nadie validó.
 
@@ -78,3 +78,17 @@ de decir "todavía sin evidencia". El de las respuestas no lo acepta — ahí el
 por cerrada. El caso sospechoso es `certifierCertificateSchema.commitmentHash`, que es
 `.nullable()`: si algún bundle viejo tiene `""` en vez de `null`, esta spec lo destapa — y esa es
 una fila que hay que arreglar en la base, no un schema que haya que ensanchar.
+
+## Lo que encontró (2026-10-02)
+
+- **Eran 41 campos, no 36**: el contrato creció desde la auditoría, y `leaf` y `sibling` de
+  `evidenceProofSchema` también son prueba. Los tres schemas viven en `packages/shared/src/hashes.ts`,
+  y `commitmentSchema` del datum reusa `sha256HexSchema`.
+- **La respuesta real que se rompía era `OnChainEvent.commitment`, no `commitmentHash`**: completar
+  una etapa no crítica sin evidencia guardaba `""` (el `evidenceRoot` vacío del datum) en la fila del
+  evento. Ahora guarda `null` (`stage-transition.ts`, test en `stage-transitions.test.ts`). El datum
+  sigue llevando `""`, que ahí sí significa "sin evidencia".
+- **Dos fixtures de `shared` traían `outputRef: "abc#0"`**, el caso borde que la spec manda rechazar.
+- **Producción, medida el 2026-10-02** (`turso db shell`, solo lectura): cero `""` en
+  `OnChainEvent.commitment` y cero valores fuera de forma en `txid`, `outputRef`, `Evidence`,
+  `EvidenceBundle`, `EvidenceBundleItem` y `Dossier`. No hizo falta migración.

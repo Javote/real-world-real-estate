@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { sha256HexSchema } from "./hashes";
 import { type StageState, stageStateSchema } from "./stage";
 
 export const MAX_REF_BYTES = 32;
@@ -10,10 +11,7 @@ export const refSchema = z
   .regex(/^[\x21-\x7e]+$/, "una ref solo puede ser ASCII imprimible sin espacios")
   .max(MAX_REF_BYTES);
 
-export const commitmentSchema = z.union([
-  z.literal(""),
-  z.string().regex(/^[0-9a-f]{64}$/, "un commitment es SHA-256 en hex minúscula")
-]);
+export const commitmentSchema = z.union([z.literal(""), sha256HexSchema]);
 
 export const stageDatumSchema = z.strictObject({
   projectRef: z.string().regex(/^([0-9a-f]{2})+$/),

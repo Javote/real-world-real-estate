@@ -1,6 +1,7 @@
 import { z } from "zod";
 import { evidenceRejectionSchema } from "./evidence-files";
 import { EVIDENCE_MAX_FILES } from "./evidence-rules";
+import { sha256HexSchema, txidSchema } from "./hashes";
 import type { MerkleStep } from "./merkle";
 import { onChainEventSchema, onChainEventStatusSchema } from "./stage";
 
@@ -51,7 +52,7 @@ export const evidenceSchema = z.strictObject({
   storedFilename: z.string(),
   mimeType: z.string(),
   sizeBytes: z.number().int().nonnegative(),
-  sha256Hash: z.string(),
+  sha256Hash: sha256HexSchema,
   uploadedAt: z.coerce.date(),
   createdAt: z.coerce.date(),
   updatedAt: z.coerce.date()
@@ -66,7 +67,7 @@ export const stageEvidenceSummarySchema = z.strictObject({
   originalFilename: z.string(),
   mimeType: z.string(),
   sizeBytes: z.number().int().nonnegative(),
-  sha256Hash: z.string(),
+  sha256Hash: sha256HexSchema,
   uploadedAt: z.coerce.date()
 });
 export type StageEvidenceSummary = z.infer<typeof stageEvidenceSummarySchema>;
@@ -96,9 +97,9 @@ export const projectDocumentSchema = z.strictObject({
   originalFilename: z.string(),
   mimeType: z.string(),
   sizeBytes: z.number().int().nonnegative(),
-  sha256Hash: z.string(),
+  sha256Hash: sha256HexSchema,
   uploadedAt: z.coerce.date(),
-  txid: z.string().nullable(),
+  txid: txidSchema.nullable(),
   anchorStatus: onChainEventStatusSchema
 });
 export type ProjectDocument = z.infer<typeof projectDocumentSchema>;
@@ -108,38 +109,38 @@ export const developerDocumentSchema = z.strictObject({
   filename: z.string(),
   category: z.string(),
   authoritative: z.boolean(),
-  sha256Hash: z.string().nullable(),
+  sha256Hash: sha256HexSchema.nullable(),
   uploadedAt: z.coerce.date(),
-  txid: z.string().nullable(),
+  txid: txidSchema.nullable(),
   anchorStatus: onChainEventStatusSchema.nullable()
 });
 export type DeveloperDocument = z.infer<typeof developerDocumentSchema>;
 
 export const merkleStepSchema = z.strictObject({
-  sibling: z.string(),
+  sibling: sha256HexSchema,
   position: z.enum(["left", "right"])
 });
 const _merkleStepSchemaMatchesInterface: Equal<z.infer<typeof merkleStepSchema>, MerkleStep> = true;
 void _merkleStepSchemaMatchesInterface;
 
 export const evidenceProofSchema = z.strictObject({
-  merkleRoot: z.string(),
-  leaf: z.string(),
+  merkleRoot: sha256HexSchema,
+  leaf: sha256HexSchema,
   proof: z.array(merkleStepSchema),
   signerUserId: z.string(),
   anchorStatus: z.string().nullable(),
-  txid: z.string().nullable(),
+  txid: txidSchema.nullable(),
   timestamp: z.iso.datetime().nullable()
 });
 export type EvidenceProof = z.infer<typeof evidenceProofSchema>;
 
 export const bundleFilesSchema = z.strictObject({
   bundleId: z.string(),
-  merkleRoot: z.string(),
+  merkleRoot: sha256HexSchema,
   files: z.array(
     z.strictObject({
       evidenceId: z.string(),
-      sha256Hash: z.string(),
+      sha256Hash: sha256HexSchema,
       filename: z.string().nullable()
     })
   )
@@ -150,7 +151,7 @@ export const stageEvidenceUploadResultSchema = z.strictObject({
   evidences: z.array(evidenceSchema).min(1).max(EVIDENCE_MAX_FILES),
   rejected: z.array(evidenceRejectionSchema).max(EVIDENCE_MAX_FILES),
   bundleId: z.string(),
-  merkleRoot: z.string(),
+  merkleRoot: sha256HexSchema,
   anchor: onChainEventSchema
 });
 export type StageEvidenceUploadResult = z.infer<typeof stageEvidenceUploadResultSchema>;

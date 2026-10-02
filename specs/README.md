@@ -82,7 +82,7 @@ El diseño de cada ítem está en
 | 5 | W0: observabilidad diferida, un diccionario por idioma, decidir PostHog | sin empezar |
 | 6 | `SPEC-603` misma región | en curso — opción B: la base copiada a Oregon (`propnexus-west`), idéntica byte a byte a producción el 2026-10-01. Falta el corte en Render; el detalle, en la spec |
 | 7 | W1 = `SPEC-601` con armazón en el layout | sin empezar |
-| 8 | `SPEC-402`, `SPEC-407`, `SPEC-408` | sin empezar — adelantadas desde "antes de mainnet" |
+| 8 | `SPEC-402`, `SPEC-407`, `SPEC-408` | `402` ✅ 2026-10-02 — producción medida: cero filas fuera de forma, sin migración. `407` y `408` sin empezar |
 | 9 | `SPEC-222` PWA (rama `spec-222-pwa`) y la pasada manual de `SPEC-112` | sin empezar — después de 5 y 7, y la rama se mergea recién después de entregar M3 (dueño, 2026-09-30: revertir el commit no desinstala un service worker) |
 
 ### Fuera de alcance de M3
@@ -268,7 +268,7 @@ mismo— sigue siendo `SPEC-305`, decisión de mainnet.
 | [`SPEC-305`](SPEC-305-el-proximo-cambio-de-script-hash.md) | El próximo cambio de script hash: unicidad on-chain y el tope de `evidence_root` | C-01 (3)·C-04 | **postergada** 🔴 · **antes de mainnet** — revisada 2026-09-18 y diferida a propósito: cambia el script hash. Ver §Antes de mainnet, arriba |
 | [`SPEC-306`](archive/SPEC-306-property-tests-sobre-la-evolucion-del-datum.md) | Una propiedad sobre `valid_datum_evolution` | C-06 | **cerrada 2026-09-18** |
 | [`SPEC-401`](archive/SPEC-401-dos-campos-del-contrato-mas-flojos-que-la-realidad.md) | Dos campos del contrato declarados más flojos que la realidad | P-01·02 | **cerrada 2026-09-20** |
-| [`SPEC-402`](SPEC-402-los-hashes-y-txid-tienen-forma.md) | Los 36 hashes y TXID del contrato tienen forma | P-03 | **Fase 1, ítem 8** · sin empezar |
+| [`SPEC-402`](archive/SPEC-402-los-hashes-y-txid-tienen-forma.md) | Los 36 hashes y TXID del contrato tienen forma | P-03 | **cerrada 2026-10-02** — eran 41 campos; encontró un `commitment: ""` en la fila del evento al completar una etapa no crítica sin evidencia (ahora `null`). Producción, medida: cero filas fuera de forma |
 | [`SPEC-403`](archive/SPEC-403-el-authoritative-del-multipart.md) | El `authoritative` del multipart solo entiende el literal `"true"` | P-04 | **cerrada 2026-09-19** |
 | [`SPEC-404`](archive/SPEC-404-las-funciones-puras-validan-las-dos-direcciones.md) | Las funciones puras validan las dos direcciones, y `MerkleStep` se declara una vez | P-05·06 | **cerrada 2026-09-19** |
 | [`SPEC-405`](archive/SPEC-405-higiene-de-shared.md) | Higiene de `shared`: el idioma, dos tipos, y un comentario al revés | P-07 | **cerrada 2026-09-19** |

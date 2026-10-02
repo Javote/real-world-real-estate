@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { outputRefSchema, sha256HexSchema, txidSchema } from "./hashes";
 
 export const STAGE_STATES = ["Pending", "InProgress", "Observed", "Completed"] as const;
 
@@ -99,11 +100,11 @@ export const onChainEventSchema = z.strictObject({
   eventType: onChainEventTypeSchema,
   fromState: stageStateSchema.nullable(),
   toState: stageStateSchema.nullable(),
-  commitment: z.string().nullable(),
+  commitment: sha256HexSchema.nullable(),
   status: onChainEventStatusSchema,
-  txid: z.string().nullable(),
+  txid: txidSchema.nullable(),
   network: z.string().nullable(),
-  outputRef: z.string().nullable(),
+  outputRef: outputRefSchema.nullable(),
   blockTimestamp: z.coerce.date().nullable(),
   createdAt: z.coerce.date(),
   updatedAt: z.coerce.date()
@@ -124,8 +125,8 @@ export type HiloSospechosoResponse = z.infer<typeof hiloSospechosoSchema>;
 
 export const hiloReparadoSchema = z.strictObject({
   eventId: z.string(),
-  txid: z.string(),
-  outputRef: z.string()
+  txid: txidSchema,
+  outputRef: outputRefSchema
 });
 export type HiloReparadoResponse = z.infer<typeof hiloReparadoSchema>;
 
@@ -153,7 +154,7 @@ export const unitNewsEventSchema = z.strictObject({
   id: z.string(),
   eventType: onChainEventTypeSchema,
   toState: stageStateSchema.nullable(),
-  txid: z.string().nullable(),
+  txid: txidSchema.nullable(),
   status: onChainEventStatusSchema,
   createdAt: z.coerce.date(),
   stageName: z.string().nullable()
@@ -165,7 +166,7 @@ export type StageWithThread = z.infer<typeof stageWithThreadSchema>;
 
 export const evidenceBundleSummarySchema = z.strictObject({
   id: z.string(),
-  commitmentHash: z.string(),
+  commitmentHash: sha256HexSchema,
   createdAt: z.coerce.date()
 });
 export type EvidenceBundleSummary = z.infer<typeof evidenceBundleSummarySchema>;
@@ -173,10 +174,10 @@ export type EvidenceBundleSummary = z.infer<typeof evidenceBundleSummarySchema>;
 export const stageEventSummarySchema = z.strictObject({
   eventType: onChainEventTypeSchema,
   toState: stageStateSchema.nullable(),
-  commitment: z.string().nullable(),
-  txid: z.string().nullable(),
+  commitment: sha256HexSchema.nullable(),
+  txid: txidSchema.nullable(),
   status: onChainEventStatusSchema,
-  outputRef: z.string().nullable(),
+  outputRef: outputRefSchema.nullable(),
   createdAt: z.coerce.date()
 });
 export type StageEventSummary = z.infer<typeof stageEventSummarySchema>;

@@ -331,6 +331,17 @@ describe("OnChainEvent · el aterrizaje del anclaje", () => {
     expect(res.body.anchor.commitment).toMatch(/^[0-9a-f]{64}$/);
   });
 
+  it("un stage no crítico que se completa sin evidencia ancla con commitment null, nunca ''", async () => {
+    const creado = await crearStageConHilo({ validationCritical: false });
+
+    await patchState(creado.id, "InProgress");
+    const res = await patchStateAdmin(creado.id, "Completed");
+
+    expect(res.status).toBe(200);
+    expect(res.body.anchor.status).toBe("Confirmed");
+    expect(res.body.anchor.commitment).toBeNull();
+  });
+
   it("numera los eventos en orden dentro del hilo", async () => {
     const id = await crearStage({ state: "Pending" });
     await patchState(id, "InProgress");

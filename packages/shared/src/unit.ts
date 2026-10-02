@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { txidSchema } from "./hashes";
 import { stageStateSchema } from "./stage";
 
 export const UNIT_STATUSES = ["available", "reserved", "sold", "delivered"] as const;
@@ -83,7 +84,7 @@ export const investorUnitStageSchema = z.strictObject({
   sequenceOrder: z.number().int().positive(),
   state: stageStateSchema,
   bundleId: z.string().nullable(),
-  txid: z.string().nullable()
+  txid: txidSchema.nullable()
 });
 export type InvestorUnitStage = z.infer<typeof investorUnitStageSchema>;
 

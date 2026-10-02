@@ -175,7 +175,7 @@ async function anchorEvent(
   if (event.txid) return event;
 
   const root = await rootDelStage(stage.id);
-  const commitment = stage.state === "Completed" ? root : null;
+  const commitment = stage.state === "Completed" && root !== "" ? root : null;
 
   let receipt: AnchorReceipt;
   try {

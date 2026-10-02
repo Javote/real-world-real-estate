@@ -1150,7 +1150,8 @@
                             "maximum": 9007199254740991
                           },
                           "sha256Hash": {
-                            "type": "string"
+                            "type": "string",
+                            "pattern": "^[0-9a-f]{64}$"
                           },
                           "uploadedAt": {
                             "type": "string"
@@ -1213,7 +1214,8 @@
                       "type": "string"
                     },
                     "merkleRoot": {
-                      "type": "string"
+                      "type": "string",
+                      "pattern": "^[0-9a-f]{64}$"
                     },
                     "anchor": {
                       "type": "object",
@@ -1306,7 +1308,8 @@
                         "commitment": {
                           "anyOf": [
                             {
-                              "type": "string"
+                              "type": "string",
+                              "pattern": "^[0-9a-f]{64}$"
                             },
                             {
                               "type": "null"
@@ -1324,7 +1327,8 @@
                         "txid": {
                           "anyOf": [
                             {
-                              "type": "string"
+                              "type": "string",
+                              "pattern": "^[0-9a-fA-F]{64}$"
                             },
                             {
                               "type": "null"
@@ -1344,7 +1348,8 @@
                         "outputRef": {
                           "anyOf": [
                             {
-                              "type": "string"
+                              "type": "string",
+                              "pattern": "^[0-9a-fA-F]{64}#\\d+$"
                             },
                             {
                               "type": "null"
@@ -2023,7 +2028,8 @@
                       "type": "string"
                     },
                     "masterHash": {
-                      "type": "string"
+                      "type": "string",
+                      "pattern": "^[0-9a-f]{64}$"
                     },
                     "compiledAt": {
                       "type": "string",
@@ -2046,7 +2052,8 @@
                     "signatureTxid": {
                       "anyOf": [
                         {
-                          "type": "string"
+                          "type": "string",
+                          "pattern": "^[0-9a-fA-F]{64}$"
                         },
                         {
                           "type": "null"
@@ -2087,7 +2094,8 @@
                           "sha256": {
                             "anyOf": [
                               {
-                                "type": "string"
+                                "type": "string",
+                                "pattern": "^[0-9a-f]{64}$"
                               },
                               {
                                 "type": "null"
@@ -2097,7 +2105,8 @@
                           "txid": {
                             "anyOf": [
                               {
-                                "type": "string"
+                                "type": "string",
+                                "pattern": "^[0-9a-fA-F]{64}$"
                               },
                               {
                                 "type": "null"
@@ -2631,7 +2640,8 @@
                       "commitment": {
                         "anyOf": [
                           {
-                            "type": "string"
+                            "type": "string",
+                            "pattern": "^[0-9a-f]{64}$"
                           },
                           {
                             "type": "null"
@@ -2641,7 +2651,8 @@
                       "txid": {
                         "anyOf": [
                           {
-                            "type": "string"
+                            "type": "string",
+                            "pattern": "^[0-9a-fA-F]{64}$"
                           },
                           {
                             "type": "null"
@@ -2816,7 +2827,8 @@
                             "maximum": 9007199254740991
                           },
                           "sha256Hash": {
-                            "type": "string"
+                            "type": "string",
+                            "pattern": "^[0-9a-f]{64}$"
                           },
                           "uploadedAt": {
                             "type": "string",
@@ -3403,7 +3415,8 @@
                         "commitment": {
                           "anyOf": [
                             {
-                              "type": "string"
+                              "type": "string",
+                              "pattern": "^[0-9a-f]{64}$"
                             },
                             {
                               "type": "null"
@@ -3421,7 +3434,8 @@
                         "txid": {
                           "anyOf": [
                             {
-                              "type": "string"
+                              "type": "string",
+                              "pattern": "^[0-9a-fA-F]{64}$"
                             },
                             {
                               "type": "null"
@@ -3441,7 +3455,8 @@
                         "outputRef": {
                           "anyOf": [
                             {
-                              "type": "string"
+                              "type": "string",
+                              "pattern": "^[0-9a-fA-F]{64}#\\d+$"
                             },
                             {
                               "type": "null"
@@ -5377,7 +5392,8 @@
                         "maximum": 9007199254740991
                       },
                       "sha256Hash": {
-                        "type": "string"
+                        "type": "string",
+                        "pattern": "^[0-9a-f]{64}$"
                       },
                       "uploadedAt": {
                         "type": "string",
@@ -5387,7 +5403,8 @@
                       "txid": {
                         "anyOf": [
                           {
-                            "type": "string"
+                            "type": "string",
+                            "pattern": "^[0-9a-fA-F]{64}$"
                           },
                           {
                             "type": "null"
@@ -5808,7 +5825,8 @@
                         "commitment": {
                           "anyOf": [
                             {
-                              "type": "string"
+                              "type": "string",
+                              "pattern": "^[0-9a-f]{64}$"
                             },
                             {
                               "type": "null"
@@ -5826,7 +5844,8 @@
                         "txid": {
                           "anyOf": [
                             {
-                              "type": "string"
+                              "type": "string",
+                              "pattern": "^[0-9a-fA-F]{64}$"
                             },
                             {
                               "type": "null"
@@ -5846,7 +5865,8 @@
                         "outputRef": {
                           "anyOf": [
                             {
-                              "type": "string"
+                              "type": "string",
+                              "pattern": "^[0-9a-fA-F]{64}#\\d+$"
                             },
                             {
                               "type": "null"
@@ -6213,7 +6233,8 @@
                             "maximum": 9007199254740991
                           },
                           "sha256Hash": {
-                            "type": "string"
+                            "type": "string",
+                            "pattern": "^[0-9a-f]{64}$"
                           },
                           "uploadedAt": {
                             "type": "string",
@@ -6244,7 +6265,8 @@
                               "type": "string"
                             },
                             "commitmentHash": {
-                              "type": "string"
+                              "type": "string",
+                              "pattern": "^[0-9a-f]{64}$"
                             },
                             "createdAt": {
                               "type": "string",
@@ -6303,7 +6325,8 @@
                           "commitment": {
                             "anyOf": [
                               {
-                                "type": "string"
+                                "type": "string",
+                                "pattern": "^[0-9a-f]{64}$"
                               },
                               {
                                 "type": "null"
@@ -6313,7 +6336,8 @@
                           "txid": {
                             "anyOf": [
                               {
-                                "type": "string"
+                                "type": "string",
+                                "pattern": "^[0-9a-fA-F]{64}$"
                               },
                               {
                                 "type": "null"
@@ -6331,7 +6355,8 @@
                           "outputRef": {
                             "anyOf": [
                               {
-                                "type": "string"
+                                "type": "string",
+                                "pattern": "^[0-9a-fA-F]{64}#\\d+$"
                               },
                               {
                                 "type": "null"
@@ -6451,7 +6476,8 @@
                       "maximum": 9007199254740991
                     },
                     "sha256Hash": {
-                      "type": "string"
+                      "type": "string",
+                      "pattern": "^[0-9a-f]{64}$"
                     },
                     "uploadedAt": {
                       "type": "string",
@@ -6847,7 +6873,8 @@
                       "maximum": 9007199254740991
                     },
                     "sha256Hash": {
-                      "type": "string"
+                      "type": "string",
+                      "pattern": "^[0-9a-f]{64}$"
                     },
                     "uploadedAt": {
                       "type": "string",
@@ -7120,10 +7147,12 @@
                             "type": "string"
                           },
                           "txid": {
-                            "type": "string"
+                            "type": "string",
+                            "pattern": "^[0-9a-fA-F]{64}$"
                           },
                           "outputRef": {
-                            "type": "string"
+                            "type": "string",
+                            "pattern": "^[0-9a-fA-F]{64}#\\d+$"
                           }
                         },
                         "required": [
@@ -7259,7 +7288,8 @@
                     "commitment": {
                       "anyOf": [
                         {
-                          "type": "string"
+                          "type": "string",
+                          "pattern": "^[0-9a-f]{64}$"
                         },
                         {
                           "type": "null"
@@ -7277,7 +7307,8 @@
                     "txid": {
                       "anyOf": [
                         {
-                          "type": "string"
+                          "type": "string",
+                          "pattern": "^[0-9a-fA-F]{64}$"
                         },
                         {
                           "type": "null"
@@ -7297,7 +7328,8 @@
                     "outputRef": {
                       "anyOf": [
                         {
-                          "type": "string"
+                          "type": "string",
+                          "pattern": "^[0-9a-fA-F]{64}#\\d+$"
                         },
                         {
                           "type": "null"
@@ -7446,7 +7478,8 @@
                     "commitment": {
                       "anyOf": [
                         {
-                          "type": "string"
+                          "type": "string",
+                          "pattern": "^[0-9a-f]{64}$"
                         },
                         {
                           "type": "null"
@@ -7464,7 +7497,8 @@
                     "txid": {
                       "anyOf": [
                         {
-                          "type": "string"
+                          "type": "string",
+                          "pattern": "^[0-9a-fA-F]{64}$"
                         },
                         {
                           "type": "null"
@@ -7484,7 +7518,8 @@
                     "outputRef": {
                       "anyOf": [
                         {
-                          "type": "string"
+                          "type": "string",
+                          "pattern": "^[0-9a-fA-F]{64}#\\d+$"
                         },
                         {
                           "type": "null"
@@ -7573,10 +7608,12 @@
                   "type": "object",
                   "properties": {
                     "merkleRoot": {
-                      "type": "string"
+                      "type": "string",
+                      "pattern": "^[0-9a-f]{64}$"
                     },
                     "leaf": {
-                      "type": "string"
+                      "type": "string",
+                      "pattern": "^[0-9a-f]{64}$"
                     },
                     "proof": {
                       "type": "array",
@@ -7584,7 +7621,8 @@
                         "type": "object",
                         "properties": {
                           "sibling": {
-                            "type": "string"
+                            "type": "string",
+                            "pattern": "^[0-9a-f]{64}$"
                           },
                           "position": {
                             "enum": [
@@ -7617,7 +7655,8 @@
                     "txid": {
                       "anyOf": [
                         {
-                          "type": "string"
+                          "type": "string",
+                          "pattern": "^[0-9a-fA-F]{64}$"
                         },
                         {
                           "type": "null"
@@ -7679,7 +7718,8 @@
                       "type": "string"
                     },
                     "merkleRoot": {
-                      "type": "string"
+                      "type": "string",
+                      "pattern": "^[0-9a-f]{64}$"
                     },
                     "files": {
                       "type": "array",
@@ -7690,7 +7730,8 @@
                             "type": "string"
                           },
                           "sha256Hash": {
-                            "type": "string"
+                            "type": "string",
+                            "pattern": "^[0-9a-f]{64}$"
                           },
                           "filename": {
                             "anyOf": [
@@ -8457,7 +8498,8 @@
                       "type": "string"
                     },
                     "masterHash": {
-                      "type": "string"
+                      "type": "string",
+                      "pattern": "^[0-9a-f]{64}$"
                     },
                     "compiledAt": {
                       "type": "string",
@@ -8494,7 +8536,8 @@
                           "sha256": {
                             "anyOf": [
                               {
-                                "type": "string"
+                                "type": "string",
+                                "pattern": "^[0-9a-f]{64}$"
                               },
                               {
                                 "type": "null"
@@ -8504,7 +8547,8 @@
                           "txid": {
                             "anyOf": [
                               {
-                                "type": "string"
+                                "type": "string",
+                                "pattern": "^[0-9a-fA-F]{64}$"
                               },
                               {
                                 "type": "null"
@@ -8530,7 +8574,8 @@
                     "signatureTxid": {
                       "anyOf": [
                         {
-                          "type": "string"
+                          "type": "string",
+                          "pattern": "^[0-9a-fA-F]{64}$"
                         },
                         {
                           "type": "null"
@@ -8609,7 +8654,8 @@
                       "type": "string"
                     },
                     "masterHash": {
-                      "type": "string"
+                      "type": "string",
+                      "pattern": "^[0-9a-f]{64}$"
                     },
                     "signedAt": {
                       "type": "string",
@@ -8707,7 +8753,8 @@
                         "commitment": {
                           "anyOf": [
                             {
-                              "type": "string"
+                              "type": "string",
+                              "pattern": "^[0-9a-f]{64}$"
                             },
                             {
                               "type": "null"
@@ -8725,7 +8772,8 @@
                         "txid": {
                           "anyOf": [
                             {
-                              "type": "string"
+                              "type": "string",
+                              "pattern": "^[0-9a-fA-F]{64}$"
                             },
                             {
                               "type": "null"
@@ -8745,7 +8793,8 @@
                         "outputRef": {
                           "anyOf": [
                             {
-                              "type": "string"
+                              "type": "string",
+                              "pattern": "^[0-9a-fA-F]{64}#\\d+$"
                             },
                             {
                               "type": "null"
@@ -8817,7 +8866,8 @@
                       "type": "string"
                     },
                     "masterHash": {
-                      "type": "string"
+                      "type": "string",
+                      "pattern": "^[0-9a-f]{64}$"
                     },
                     "signedAt": {
                       "type": "string",
@@ -8915,7 +8965,8 @@
                         "commitment": {
                           "anyOf": [
                             {
-                              "type": "string"
+                              "type": "string",
+                              "pattern": "^[0-9a-f]{64}$"
                             },
                             {
                               "type": "null"
@@ -8933,7 +8984,8 @@
                         "txid": {
                           "anyOf": [
                             {
-                              "type": "string"
+                              "type": "string",
+                              "pattern": "^[0-9a-fA-F]{64}$"
                             },
                             {
                               "type": "null"
@@ -8953,7 +9005,8 @@
                         "outputRef": {
                           "anyOf": [
                             {
-                              "type": "string"
+                              "type": "string",
+                              "pattern": "^[0-9a-fA-F]{64}#\\d+$"
                             },
                             {
                               "type": "null"
@@ -9273,12 +9326,14 @@
                             "type": "string"
                           },
                           "masterHash": {
-                            "type": "string"
+                            "type": "string",
+                            "pattern": "^[0-9a-f]{64}$"
                           },
                           "signatureTxid": {
                             "anyOf": [
                               {
-                                "type": "string"
+                                "type": "string",
+                                "pattern": "^[0-9a-fA-F]{64}$"
                               },
                               {
                                 "type": "null"
@@ -9503,7 +9558,8 @@
                           "sha256Hash": {
                             "anyOf": [
                               {
-                                "type": "string"
+                                "type": "string",
+                                "pattern": "^[0-9a-f]{64}$"
                               },
                               {
                                 "type": "null"
@@ -9718,7 +9774,8 @@
                         "commitment": {
                           "anyOf": [
                             {
-                              "type": "string"
+                              "type": "string",
+                              "pattern": "^[0-9a-f]{64}$"
                             },
                             {
                               "type": "null"
@@ -9736,7 +9793,8 @@
                         "txid": {
                           "anyOf": [
                             {
-                              "type": "string"
+                              "type": "string",
+                              "pattern": "^[0-9a-fA-F]{64}$"
                             },
                             {
                               "type": "null"
@@ -9756,7 +9814,8 @@
                         "outputRef": {
                           "anyOf": [
                             {
-                              "type": "string"
+                              "type": "string",
+                              "pattern": "^[0-9a-fA-F]{64}#\\d+$"
                             },
                             {
                               "type": "null"
@@ -10022,7 +10081,8 @@
                         "commitment": {
                           "anyOf": [
                             {
-                              "type": "string"
+                              "type": "string",
+                              "pattern": "^[0-9a-f]{64}$"
                             },
                             {
                               "type": "null"
@@ -10040,7 +10100,8 @@
                         "txid": {
                           "anyOf": [
                             {
-                              "type": "string"
+                              "type": "string",
+                              "pattern": "^[0-9a-fA-F]{64}$"
                             },
                             {
                               "type": "null"
@@ -10060,7 +10121,8 @@
                         "outputRef": {
                           "anyOf": [
                             {
-                              "type": "string"
+                              "type": "string",
+                              "pattern": "^[0-9a-fA-F]{64}#\\d+$"
                             },
                             {
                               "type": "null"
@@ -10196,7 +10258,8 @@
                           "commitmentHash": {
                             "anyOf": [
                               {
-                                "type": "string"
+                                "type": "string",
+                                "pattern": "^[0-9a-f]{64}$"
                               },
                               {
                                 "type": "null"
@@ -10206,7 +10269,8 @@
                           "txid": {
                             "anyOf": [
                               {
-                                "type": "string"
+                                "type": "string",
+                                "pattern": "^[0-9a-fA-F]{64}$"
                               },
                               {
                                 "type": "null"
@@ -10848,7 +10912,8 @@
                           "txid": {
                             "anyOf": [
                               {
-                                "type": "string"
+                                "type": "string",
+                                "pattern": "^[0-9a-fA-F]{64}$"
                               },
                               {
                                 "type": "null"
@@ -10949,7 +11014,8 @@
                       "txid": {
                         "anyOf": [
                           {
-                            "type": "string"
+                            "type": "string",
+                            "pattern": "^[0-9a-fA-F]{64}$"
                           },
                           {
                             "type": "null"
@@ -11036,7 +11102,8 @@
                       "type": "string"
                     },
                     "masterHash": {
-                      "type": "string"
+                      "type": "string",
+                      "pattern": "^[0-9a-f]{64}$"
                     },
                     "compiledAt": {
                       "type": "string",
@@ -11073,7 +11140,8 @@
                           "sha256": {
                             "anyOf": [
                               {
-                                "type": "string"
+                                "type": "string",
+                                "pattern": "^[0-9a-f]{64}$"
                               },
                               {
                                 "type": "null"
@@ -11083,7 +11151,8 @@
                           "txid": {
                             "anyOf": [
                               {
-                                "type": "string"
+                                "type": "string",
+                                "pattern": "^[0-9a-fA-F]{64}$"
                               },
                               {
                                 "type": "null"
@@ -11109,7 +11178,8 @@
                     "signatureTxid": {
                       "anyOf": [
                         {
-                          "type": "string"
+                          "type": "string",
+                          "pattern": "^[0-9a-fA-F]{64}$"
                         },
                         {
                           "type": "null"
@@ -11213,7 +11283,8 @@
                       "type": "string"
                     },
                     "masterHash": {
-                      "type": "string"
+                      "type": "string",
+                      "pattern": "^[0-9a-f]{64}$"
                     }
                   },
                   "required": [
@@ -11585,7 +11656,8 @@
                         "commitment": {
                           "anyOf": [
                             {
-                              "type": "string"
+                              "type": "string",
+                              "pattern": "^[0-9a-f]{64}$"
                             },
                             {
                               "type": "null"
@@ -11603,7 +11675,8 @@
                         "txid": {
                           "anyOf": [
                             {
-                              "type": "string"
+                              "type": "string",
+                              "pattern": "^[0-9a-fA-F]{64}$"
                             },
                             {
                               "type": "null"
@@ -11623,7 +11696,8 @@
                         "outputRef": {
                           "anyOf": [
                             {
-                              "type": "string"
+                              "type": "string",
+                              "pattern": "^[0-9a-fA-F]{64}#\\d+$"
                             },
                             {
                               "type": "null"
@@ -12402,7 +12476,8 @@
                               "commitment": {
                                 "anyOf": [
                                   {
-                                    "type": "string"
+                                    "type": "string",
+                                    "pattern": "^[0-9a-f]{64}$"
                                   },
                                   {
                                     "type": "null"
@@ -12420,7 +12495,8 @@
                               "txid": {
                                 "anyOf": [
                                   {
-                                    "type": "string"
+                                    "type": "string",
+                                    "pattern": "^[0-9a-fA-F]{64}$"
                                   },
                                   {
                                     "type": "null"
@@ -12440,7 +12516,8 @@
                               "outputRef": {
                                 "anyOf": [
                                   {
-                                    "type": "string"
+                                    "type": "string",
+                                    "pattern": "^[0-9a-fA-F]{64}#\\d+$"
                                   },
                                   {
                                     "type": "null"
@@ -13034,7 +13111,8 @@
                       "sha256Hash": {
                         "anyOf": [
                           {
-                            "type": "string"
+                            "type": "string",
+                            "pattern": "^[0-9a-f]{64}$"
                           },
                           {
                             "type": "null"
@@ -13049,7 +13127,8 @@
                       "txid": {
                         "anyOf": [
                           {
-                            "type": "string"
+                            "type": "string",
+                            "pattern": "^[0-9a-fA-F]{64}$"
                           },
                           {
                             "type": "null"
@@ -13208,7 +13287,8 @@
                     "commitment": {
                       "anyOf": [
                         {
-                          "type": "string"
+                          "type": "string",
+                          "pattern": "^[0-9a-f]{64}$"
                         },
                         {
                           "type": "null"
@@ -13226,7 +13306,8 @@
                     "txid": {
                       "anyOf": [
                         {
-                          "type": "string"
+                          "type": "string",
+                          "pattern": "^[0-9a-fA-F]{64}$"
                         },
                         {
                           "type": "null"
@@ -13246,7 +13327,8 @@
                     "outputRef": {
                       "anyOf": [
                         {
-                          "type": "string"
+                          "type": "string",
+                          "pattern": "^[0-9a-fA-F]{64}#\\d+$"
                         },
                         {
                           "type": "null"
@@ -13395,7 +13477,8 @@
                     "commitment": {
                       "anyOf": [
                         {
-                          "type": "string"
+                          "type": "string",
+                          "pattern": "^[0-9a-f]{64}$"
                         },
                         {
                           "type": "null"
@@ -13413,7 +13496,8 @@
                     "txid": {
                       "anyOf": [
                         {
-                          "type": "string"
+                          "type": "string",
+                          "pattern": "^[0-9a-fA-F]{64}$"
                         },
                         {
                           "type": "null"
@@ -13433,7 +13517,8 @@
                     "outputRef": {
                       "anyOf": [
                         {
-                          "type": "string"
+                          "type": "string",
+                          "pattern": "^[0-9a-fA-F]{64}#\\d+$"
                         },
                         {
                           "type": "null"
@@ -14688,7 +14773,8 @@
                       "txid": {
                         "anyOf": [
                           {
-                            "type": "string"
+                            "type": "string",
+                            "pattern": "^[0-9a-fA-F]{64}$"
                           },
                           {
                             "type": "null"
@@ -14698,7 +14784,8 @@
                       "commitment": {
                         "anyOf": [
                           {
-                            "type": "string"
+                            "type": "string",
+                            "pattern": "^[0-9a-f]{64}$"
                           },
                           {
                             "type": "null"
@@ -14956,7 +15043,8 @@
                         "commitment": {
                           "anyOf": [
                             {
-                              "type": "string"
+                              "type": "string",
+                              "pattern": "^[0-9a-f]{64}$"
                             },
                             {
                               "type": "null"
@@ -14974,7 +15062,8 @@
                         "txid": {
                           "anyOf": [
                             {
-                              "type": "string"
+                              "type": "string",
+                              "pattern": "^[0-9a-fA-F]{64}$"
                             },
                             {
                               "type": "null"
@@ -14994,7 +15083,8 @@
                         "outputRef": {
                           "anyOf": [
                             {
-                              "type": "string"
+                              "type": "string",
+                              "pattern": "^[0-9a-fA-F]{64}#\\d+$"
                             },
                             {
                               "type": "null"

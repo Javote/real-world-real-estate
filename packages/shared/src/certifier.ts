@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { sha256HexSchema, txidSchema } from "./hashes";
 import { invitationStatusSchema } from "./invitation";
 import { onChainEventStatusSchema, stageStateSchema } from "./stage";
 
@@ -7,7 +8,7 @@ export const certifierEvidenceSchema = z.strictObject({
   originalFilename: z.string(),
   category: z.string(),
   authoritative: z.boolean(),
-  sha256Hash: z.string().nullable(),
+  sha256Hash: sha256HexSchema.nullable(),
   uploadedAt: z.coerce.date()
 });
 export type CertifierEvidence = z.infer<typeof certifierEvidenceSchema>;
@@ -29,8 +30,8 @@ export const certifierCertificateSchema = z.strictObject({
   stageName: z.string(),
   projectName: z.string(),
   certifiedAt: z.coerce.date().nullable(),
-  commitmentHash: z.string().nullable(),
-  txid: z.string().nullable(),
+  commitmentHash: sha256HexSchema.nullable(),
+  txid: txidSchema.nullable(),
   anchorStatus: onChainEventStatusSchema.nullable()
 });
 export type CertifierCertificate = z.infer<typeof certifierCertificateSchema>;

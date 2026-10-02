@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { sha256HexSchema, txidSchema } from "./hashes";
 import { onChainEventSchema, onChainEventStatusSchema } from "./stage";
 import { unitStatusSchema } from "./unit";
 
@@ -18,8 +19,8 @@ export const developerContractSchema = z.strictObject({
   unitReference: z.string(),
   unitStatus: unitStatusSchema,
   investorName: z.string(),
-  txid: z.string().nullable(),
-  commitment: z.string().nullable()
+  txid: txidSchema.nullable(),
+  commitment: sha256HexSchema.nullable()
 });
 export type DeveloperContract = z.infer<typeof developerContractSchema>;
 
@@ -70,8 +71,8 @@ export const contractReleaseSchema = z.strictObject({
   stageNumber: z.number().int().positive(),
   amountMinorUnits: z.number().int().positive(),
   releasedAt: z.number(),
-  commitment: z.string().nullable(),
-  txid: z.string().nullable(),
+  commitment: sha256HexSchema.nullable(),
+  txid: txidSchema.nullable(),
   anchorStatus: onChainEventStatusSchema.nullable()
 });
 export type ContractRelease = z.infer<typeof contractReleaseSchema>;

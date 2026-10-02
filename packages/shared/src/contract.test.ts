@@ -24,7 +24,7 @@ const anchor = {
   status: "Confirmed" as const,
   txid: "a".repeat(64),
   network: "Preprod",
-  outputRef: "abc#0",
+  outputRef: `${"a".repeat(64)}#0`,
   blockTimestamp: new Date().toISOString(),
   createdAt: new Date().toISOString(),
   updatedAt: new Date().toISOString()
