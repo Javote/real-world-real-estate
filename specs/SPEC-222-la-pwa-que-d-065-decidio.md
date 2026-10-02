@@ -150,7 +150,11 @@ El dueño lo partió en dos (2026-10-02):
   avisa que lo de abajo puede estar incompleto o desactualizado. Visto con el build de producción en
   1280 px y en 380 px, entre el header y el contenido. En el Chromium de Playwright, `setOffline`
   corta la red pero deja `navigator.onLine` en `true`, así que la captura se hizo forzándolo: que el
-  evento real lo dispare lo fija `OfflineBanner.test.tsx`, y queda para la pasada manual de
-  §Verificación (DevTools → Network → *Offline*).
+  evento real lo dispare lo fija `OfflineBanner.test.tsx`. **Probado en Chrome real el 2026-10-02**
+  (build de producción en `vite preview`, API local, login de buyer): con DevTools → Network →
+  *Offline* y recarga, el aviso aparece; al volver a *No throttling*, se va sin recargar. Falta
+  repetirlo contra producción después del merge (§Verificación). En la misma pasada, con el servidor
+  y la API apagados pero el navegador con red, el shell salió de la caché y la pantalla mostró su
+  estado vacío sin aviso: es el caso "API caída", que queda para la Fase 2.
 - **De fondo, en la Fase 2 (W3/W4):** ninguna pantalla termina su migración sin su `error`. Eso
   cubre también la API caída, que el aviso no ve.
