@@ -46,7 +46,7 @@ URL que cita la evidencia de M3).
    request siguiente.
 2. **Ningún token, `jti` ni hash de password en logs** (regla 2, regla 4).
 3. **`/login` sigue en tiempo constante** (`auth-timing.test.ts`).
-4. El guard del front ([`SPEC-601`](SPEC-601-el-guard-de-rol-vive-en-el-router.md), si ya está)
+4. El guard del front ([`SPEC-601`](archive/SPEC-601-el-guard-de-rol-vive-en-el-router.md), si ya está)
    lee la sesión de un solo lugar. El cambio de storage toca `session.ts` y nada más.
 
 ## Qué se toca en el mismo commit

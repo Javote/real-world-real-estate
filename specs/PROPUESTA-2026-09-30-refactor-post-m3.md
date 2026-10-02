@@ -66,7 +66,7 @@ llaman a `useRoleGuard`, que pide `/auth/me` sin caché y pinta en blanco hasta 
 
 | Spec | Qué | Nivel | Depende de | Cuándo |
 |---|---|---|---|---|
-| [`SPEC-601`](SPEC-601-el-guard-de-rol-vive-en-el-router.md) | El guard de rol pasa al router: `beforeLoad` por rol y `me` cacheado | 🟡 | — | post-M3 |
+| [`SPEC-601`](archive/SPEC-601-el-guard-de-rol-vive-en-el-router.md) | El guard de rol pasa al router: `beforeLoad` por rol y `me` cacheado | 🟡 | — | post-M3 |
 | [`SPEC-602`](SPEC-602-los-datos-arrancan-con-la-ruta.md) | Loaders que precargan: los datos arrancan con la ruta y el preload por intent sirve | 🟢 | 601 | post-M3 |
 | [`SPEC-603`](SPEC-603-la-api-y-la-base-en-la-misma-region.md) | La API y la base en la misma región | 🟡 | — | post-M3, la más barata |
 | [`SPEC-604`](SPEC-604-la-capa-de-datos-sale-de-los-routers.md) | Las lecturas repetidas salen de los routers (`queries/<entidad>.ts`), sin partir routers por largo (`SPEC-015` §6) | 🟢 | — | con la primera feature que las necesite |

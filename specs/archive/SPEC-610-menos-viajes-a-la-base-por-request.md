@@ -1,6 +1,6 @@
 # SPEC-610 — Menos viajes a la base por request
 
-> Fase 1, ítem 10 de [`specs/README.md`](README.md), que lleva su estado. Nivel 🟡: toca
+> Fase 1, ítem 10 de [`specs/README.md`](../README.md), que lleva su estado. Nivel 🟡: toca
 > `authenticate`/`authorize` y la capa de base. **No cambia la API:** paths, bodies, respuestas y
 > códigos de estado quedan idénticos.
 
@@ -62,7 +62,7 @@ valen por separado.
 3. **`req.user` solo existe después de verificar el usuario contra la base.** Un handler nunca lo ve
    antes.
 4. **Lo que toca el audit, lo deja atómico** con la mutación que audita (§1.3 de la
-   [auditoría](AUDITORIA-2026-10-01-arquitectura-api-y-web.md)).
+   [auditoría](../AUDITORIA-2026-10-01-arquitectura-api-y-web.md)).
 
 ## Pasos, en este orden
 

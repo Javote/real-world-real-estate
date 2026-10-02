@@ -1,6 +1,6 @@
 # SPEC-601 — El guard de rol vive en el router, no en cada pantalla
 
-> Serie `6xx`, refactor post-M3 ([`PROPUESTA-2026-09-30-refactor-post-m3.md`](PROPUESTA-2026-09-30-refactor-post-m3.md)).
+> Serie `6xx`, refactor post-M3 ([`PROPUESTA-2026-09-30-refactor-post-m3.md`](../PROPUESTA-2026-09-30-refactor-post-m3.md)).
 > **No es mandato hasta entregar M3.** Nivel 🟡: toca la capa de auth del front. La autorización
 > real sigue en la API (regla 5) y no cambia.
 
@@ -21,7 +21,7 @@ a `api.me()` **sin pasar por React Query**, así que:
    `GET /auth/me` nuevo y recién entonces habilita las queries de la pantalla. Es una cascada
    `chunk → /auth/me → datos` en cada cambio de ruta, no solo después del login.
 2. La API paga en cada una ~2 viajes a Turso (`authenticate` + el handler de `/me`), a ~100 ms cada
-   uno según lo medido ([`PROPUESTA`](PROPUESTA-2026-09-30-refactor-post-m3.md) §Del login).
+   uno según lo medido ([`PROPUESTA`](../PROPUESTA-2026-09-30-refactor-post-m3.md) §Del login).
 3. El mismo bloque (guard + `if (!ready)` + `enabled: ready`) está copiado 40 veces.
 
 ## Alcance

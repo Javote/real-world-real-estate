@@ -1,7 +1,7 @@
 # SPEC-602 — Los datos arrancan con la ruta, no después del primer render
 
 > Serie `6xx`, refactor post-M3 ([`PROPUESTA-2026-09-30-refactor-post-m3.md`](PROPUESTA-2026-09-30-refactor-post-m3.md)).
-> **No es mandato hasta entregar M3.** Nivel 🟢. **Depende de [`SPEC-601`](SPEC-601-el-guard-de-rol-vive-en-el-router.md)**:
+> **No es mandato hasta entregar M3.** Nivel 🟢. **Depende de [`SPEC-601`](archive/SPEC-601-el-guard-de-rol-vive-en-el-router.md)**:
 > sin el `QueryClient` en el contexto del router, un loader no tiene contra qué precargar.
 
 ## Lo que hay hoy, medido el 2026-09-30
