@@ -26,17 +26,17 @@ Encima, el middleware encadena sus propias lecturas. `GET /stages/:id`:
 
 Viajes en serie medidos con `test/viajes-por-request.test.ts` (paso 0):
 
-| Request | Antes | Paso 1 |
-|---|---|---|
-| `GET /auth/me` | 2 | 2 |
-| `GET /projects` | 3 | 3 |
-| `GET /projects/:id` | 5 | 5 |
-| `GET /projects/:id/stages` | 5 | 5 |
-| `GET /stages/:id` | 7 | 5 |
-| `PATCH /stages/:id` | 6 | 6 |
-| `GET /investor/units` | 3 | 3 |
-| `GET /notifications/unread-count` | 2 | 2 |
-| Dos `GET /auth/me` simultáneos | 4 | 2 |
+| Request | Antes | Paso 1 | Paso 2 |
+|---|---|---|---|
+| `GET /auth/me` | 2 | 2 | 2 |
+| `GET /projects` | 3 | 3 | 3 |
+| `GET /projects/:id` | 5 | 5 | 5 |
+| `GET /projects/:id/stages` | 5 | 5 | 5 |
+| `GET /stages/:id` | 7 | 5 | 4 |
+| `PATCH /stages/:id` | 6 | 6 | 5 |
+| `GET /investor/units` | 3 | 3 | 3 |
+| `GET /notifications/unread-count` | 2 | 2 | 2 |
+| Dos `GET /auth/me` simultáneos | 4 | 2 | 2 |
 
 En las mutaciones, `writeAuditLog` es otro viaje después de la escritura. Las 6 rutas con
 `db.transaction()` usan transacciones interactivas: con una URL `libsql://` el cliente 0.17 de Node

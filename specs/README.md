@@ -84,7 +84,7 @@ El diseño de cada ítem está en
 | 7 | W1 = `SPEC-601` con armazón en el layout | en revisión — mergeada a `main` el 2026-10-02; falta la revisión línea por línea (🟡). `pnpm verify:all` en verde, `pnpm e2e` 100/100 y la pasada manual de §Verificación hecha en Chrome (2026-10-02): login de buyer → buy → units → favorites con un solo `/auth/me`, y en 3.599 frames el mismo header y ningún `<main>` vacío |
 | 8 | `SPEC-402`, `SPEC-407`, `SPEC-408` | `402` ✅ 2026-10-02 — producción medida: cero filas fuera de forma, sin migración. `407` ✅ 2026-10-02 — el `outputRef` sale de la salida con el token. `408` ✅ 2026-10-02 — el datum pasa por `stageDatumSchema` y `verify` exige el thread token |
 | 9 | `SPEC-222` PWA (rama `spec-222-pwa`) y la pasada manual de `SPEC-112` | sin empezar — después de 5 y 7, y la rama se mergea recién después de entregar M3 (dueño, 2026-09-30: revertir el commit no desinstala un service worker) |
-| 10 | [`SPEC-610`](SPEC-610-menos-viajes-a-la-base-por-request.md) menos viajes a la base por request, sin cambiar la API: `GET /stages/:id` hace 7 en serie y un `PATCH` 6, porque Kysely serializa todas las consultas del proceso | en curso — paso 0 (medir) ✅ y paso 1 (sin el mutex de Kysely) ✅ 2026-10-02: `GET /stages/:id` 7 → 5, y dos requests simultáneas ya no se turnan consulta por consulta · 🟡 |
+| 10 | [`SPEC-610`](SPEC-610-menos-viajes-a-la-base-por-request.md) menos viajes a la base por request, sin cambiar la API: `GET /stages/:id` hace 7 en serie y un `PATCH` 6, porque Kysely serializa todas las consultas del proceso | en curso — pasos 0–2 ✅ 2026-10-02 (medir, sin el mutex de Kysely, la autorización por entidad en una consulta): `GET /stages/:id` 7 → 4, `PATCH /stages/:id` 6 → 5 · 🟡 |
 
 ### Fuera de alcance de M3
 

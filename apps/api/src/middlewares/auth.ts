@@ -108,32 +108,47 @@ export async function canAccessProject(
 export type ProjectSource =
   | { param: string }
   | {
-      via: "Stage" | "Evidence" | "EvidenceBundle" | "Unit" | "Contract";
+      via: EntidadConProyecto;
       param: string;
       en?: "path" | "body";
       nombre?: string;
     };
 
-async function proyectoDeLaEntidad(
-  via: "Stage" | "Evidence" | "EvidenceBundle" | "Unit" | "Contract",
-  key: string
-): Promise<string | null> {
-  if (via === "Contract") {
-    const fila = await db
-      .selectFrom("Contract")
-      .innerJoin("Unit", "Unit.id", "Contract.unitId")
-      .select("Unit.projectId as projectId")
-      .where("Contract.id", "=", key)
-      .executeTakeFirst();
-    return fila?.projectId ?? null;
-  }
+type EntidadConProyecto = "Stage" | "Evidence" | "EvidenceBundle" | "Unit" | "Contract";
 
-  const fila = await db
-    .selectFrom(via)
-    .select("projectId")
-    .where("id", "=", key)
-    .executeTakeFirst();
-  return fila?.projectId ?? null;
+// Una sola consulta: de qué proyecto es la entidad y si el usuario puede entrar. Sin fila, la
+// entidad no existe (404); con fila y `permitido` en falso, 403.
+async function accesoPorEntidad(
+  via: EntidadConProyecto,
+  key: string,
+  user: NonNullable<Request["user"]>,
+  allowedMemberships: MembershipRole[]
+): Promise<{ permitido: boolean } | undefined> {
+  const permitido = (eb: ExpressionBuilder<Database, "Project">) =>
+    eb
+      .and([
+        eb("Project.id", "is not", null),
+        projectScope(eb, user.role, user.id, allowedMemberships)
+      ])
+      .as("permitido");
+
+  const fila =
+    via === "Contract"
+      ? await db
+          .selectFrom("Contract")
+          .innerJoin("Unit", "Unit.id", "Contract.unitId")
+          .leftJoin("Project", "Project.id", "Unit.projectId")
+          .select((eb) => permitido(eb))
+          .where("Contract.id", "=", key)
+          .executeTakeFirst()
+      : await db
+          .selectFrom(via)
+          .leftJoin("Project", "Project.id", `${via}.projectId`)
+          .select((eb) => permitido(eb))
+          .where(`${via}.id`, "=", key)
+          .executeTakeFirst();
+
+  return fila && { permitido: Boolean(fila.permitido) };
 }
 
 type Veredicto = { ok: true } | { ok: false; status: 400 | 403 | 404 | 500; message: string };
@@ -174,21 +189,17 @@ async function evaluarProyecto(
   const key = leerParam(req, source.param, "via" in source ? source.en : "path");
   if (typeof key !== "string") return key;
 
-  let projectId: string;
-
   if ("via" in source) {
-    const encontrado = await proyectoDeLaEntidad(source.via, key);
+    const acceso = await accesoPorEntidad(source.via, key, user, allowedMemberships);
 
-    if (encontrado === null) {
+    if (!acceso) {
       return { ok: false, status: 404, message: `${source.nombre ?? source.via} not found` };
     }
 
-    projectId = encontrado;
-  } else {
-    projectId = key;
+    return acceso.permitido ? PASA : PROHIBIDO;
   }
 
-  const allowed = await canAccessProject(user.id, user.role, projectId, allowedMemberships);
+  const allowed = await canAccessProject(user.id, user.role, key, allowedMemberships);
   return allowed ? PASA : PROHIBIDO;
 }
 
