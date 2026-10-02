@@ -1,6 +1,9 @@
 import { AUDIT_ACTIONS } from '@plataforma/shared'
 import { describe, expect, it } from 'vitest'
-import { dictionary } from './dictionary'
+import { esAR } from './dictionary'
+import { enUS } from './en-US'
+
+const dictionary = { 'es-AR': esAR, 'en-US': enUS }
 
 const AUDIT_ACTION_KEYS = AUDIT_ACTIONS.map((action) => `audit.action.${action}` as const)
 

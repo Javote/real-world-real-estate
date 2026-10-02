@@ -1,11 +1,11 @@
 import { screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { afterEach, describe, expect, it, vi } from 'vitest'
-import { dictionary } from '#/i18n/dictionary'
+import { esAR, type TranslationKey } from '#/i18n/dictionary'
 import { autenticarComo, INVESTOR_USER, montarRuta } from './-test-mount'
 import { Route } from './investor.menu'
 
-const t = (clave: keyof (typeof dictionary)['es-AR']) => dictionary['es-AR'][clave]
+const t = (clave: TranslationKey) => esAR[clave]
 
 const DESTINOS = [
   '/investor/buy',

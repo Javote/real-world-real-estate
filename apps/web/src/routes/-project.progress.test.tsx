@@ -2,11 +2,11 @@ import { screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import { ApiError, api } from '#/api/port'
-import { dictionary } from '#/i18n/dictionary'
+import { esAR } from '#/i18n/dictionary'
 import { autenticarComo, INVESTOR_USER, montarRuta } from './-test-mount'
 import { Route } from './project.$projectId.progress'
 
-const t = dictionary['es-AR']
+const t = esAR
 
 type Proyecto = Awaited<ReturnType<typeof api.getProject>>
 type Stages = Awaited<ReturnType<typeof api.listProjectStages>>

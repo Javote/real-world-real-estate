@@ -283,7 +283,7 @@ el único con timeouts, reintentos y cola, y ya habla el idioma de Lucid.
 
   | Chunk | gz | |
   |---|---|---|
-  | `vendor-observability` (Sentry + PostHog) | **91,6 kB** | más que React. Precargado, y se carga **aunque no haya DSN** |
+  | `vendor-observability` (Sentry + PostHog) | **91,6 kB** | más que React. Precargado, y se carga **aunque no haya DSN**. Medido sin DSN: con DSN, como en producción, eran 118,2 kB (W0, 2026-10-02) |
   | `vendor-react` | 59,6 kB | |
   | `vendor-tanstack` | 37,7 kB | |
   | `LanguageToggle` (el diccionario) | 26,4 kB | **los dos idiomas siempre** |

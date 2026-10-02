@@ -2,11 +2,11 @@ import { screen, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import { ApiError, api } from '#/api/port'
-import { dictionary } from '#/i18n/dictionary'
+import { esAR } from '#/i18n/dictionary'
 import { autenticarComo, INVESTOR_USER, montarRuta } from './-test-mount'
 import { Route } from './project.$projectId.developer'
 
-const t = dictionary['es-AR']
+const t = esAR
 
 type Perfil = Awaited<ReturnType<typeof api.getProjectDeveloper>>
 

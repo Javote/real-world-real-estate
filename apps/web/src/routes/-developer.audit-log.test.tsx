@@ -4,11 +4,11 @@ import { afterEach, describe, expect, it, vi } from 'vitest'
 import { api } from '#/api/port'
 import type { AuditEvent } from '#/api/types'
 import { truncateHash } from '#/components/domain/HashChip'
-import { dictionary } from '#/i18n/dictionary'
+import { esAR, type TranslationKey } from '#/i18n/dictionary'
 import { autenticarComo, DEVELOPER_USER, montarRuta } from './-test-mount'
 import { Route } from './developer.audit-log'
 
-const t = (clave: keyof (typeof dictionary)['es-AR']) => dictionary['es-AR'][clave]
+const t = (clave: TranslationKey) => esAR[clave]
 
 const TXID = 'a'.repeat(64)
 

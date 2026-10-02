@@ -3,11 +3,11 @@ import userEvent from '@testing-library/user-event'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import { api } from '#/api/port'
 import type { InvestorUnit } from '#/api/types'
-import { dictionary } from '#/i18n/dictionary'
+import { esAR, type TranslationKey } from '#/i18n/dictionary'
 import { autenticarComo, INVESTOR_USER, montarRuta } from './-test-mount'
 import { Route } from './investor.units'
 
-const t = (clave: keyof (typeof dictionary)['es-AR']) => dictionary['es-AR'][clave]
+const t = (clave: TranslationKey) => esAR[clave]
 
 const unidad = (sobre: Partial<InvestorUnit>): InvestorUnit => ({
   id: 'un-1',

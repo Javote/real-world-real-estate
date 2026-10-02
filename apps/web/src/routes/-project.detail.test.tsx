@@ -2,13 +2,13 @@ import { fireEvent, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { ApiError, api } from '#/api/port'
-import { dictionary } from '#/i18n/dictionary'
+import { esAR } from '#/i18n/dictionary'
 import { autenticarComo, INVESTOR_USER, montarRuta } from './-test-mount'
 import { Route } from './project.$projectId.index'
 
 vi.mock('leaflet', () => import('#/test/leaflet-falso'))
 
-const t = dictionary['es-AR']
+const t = esAR
 
 type Proyecto = Awaited<ReturnType<typeof api.getProject>>
 type Documento = Awaited<ReturnType<typeof api.listProjectDocuments>>[number]

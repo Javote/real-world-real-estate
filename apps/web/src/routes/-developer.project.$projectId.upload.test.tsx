@@ -2,11 +2,11 @@ import { EVIDENCE_MAX_FILE_MB, EVIDENCE_MAX_FILES } from '@plataforma/shared/evi
 import { fireEvent, screen, waitFor } from '@testing-library/react'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import { ApiError, api } from '#/api/port'
-import { dictionary } from '#/i18n/dictionary'
+import { esAR } from '#/i18n/dictionary'
 import { autenticarComo, DEVELOPER_USER, montarRuta } from './-test-mount'
 import { Route } from './developer.project.$projectId.upload'
 
-const t = dictionary['es-AR']
+const t = esAR
 
 type Resultado = Awaited<ReturnType<typeof api.uploadStageEvidence>>
 

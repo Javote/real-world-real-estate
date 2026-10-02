@@ -10,7 +10,8 @@ Vitest+jsdom · Playwright. El estado vive en `specs/README.md`.
 |---|---|
 | `api/port.ts` | Único lugar que hace `fetch`. **Un método nuevo exige su caso en `api/port.contract.test.ts`**, que lo cruza contra el OpenAPI (`SPEC-111`) |
 | `auth/*` | `requireRole`: los AuthGuard role groups de M2-D1 §7.2, en el `beforeLoad` de los seis layouts por prefijo (`investor`, `project`, `developer`, `notary`, `certifier`, `admin`). La pantalla lee la sesión con `Route.useRouteContext()` (SPEC-601) |
-| `i18n/*` · `i18n/format.ts` | Diccionario propio; moneda y fecha con `Intl` (regla 14). La clave de idioma en `localStorage` es `propnexus.lang` |
+| `i18n/*` · `i18n/format.ts` | Diccionario propio; moneda y fecha con `Intl` (regla 14). La clave de idioma en `localStorage` es `propnexus.lang`. `dictionary.ts` es es-AR y va en el JS inicial; `en-US.ts` baja con `cargarDiccionario`, y `main.tsx` lo espera antes de montar |
+| `lib/observability.ts` | Sentry y PostHog con `import()`, solo si hay DSN o key: un `import` estático de cualquiera de los dos los vuelve a meter en el JS inicial |
 | `styles.css` | Los tokens de M2-D3 en `@theme`. `styles.test.ts` los compara contra el entregable: ningún componente escribe un color, tamaño, radio o sombra literal |
 | `components/domain/` | Los componentes de M2-D3 y los patrones de prueba de M2-D4 |
 | `components/ui/` | Primitivos de shadcn, de a uno y adaptados a M2-D3 |

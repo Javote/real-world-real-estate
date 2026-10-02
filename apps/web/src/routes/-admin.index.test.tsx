@@ -1,11 +1,11 @@
 import { fireEvent, screen, waitFor, within } from '@testing-library/react'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import { ApiError, api } from '#/api/port'
-import { dictionary } from '#/i18n/dictionary'
+import { esAR } from '#/i18n/dictionary'
 import { ADMIN_USER, autenticarComo, montarRuta } from './-test-mount'
 import { Route } from './admin.index'
 
-const t = dictionary['es-AR']
+const t = esAR
 
 type Proyectos = Awaited<ReturnType<typeof api.listProjects>>
 type Detalle = Awaited<ReturnType<typeof api.getProject>>

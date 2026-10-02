@@ -1,5 +1,5 @@
 import { Languages } from 'lucide-react'
-import type { TranslationKey } from '#/i18n/dictionary'
+import { cargarDiccionario, type TranslationKey } from '#/i18n/dictionary'
 import type { Locale } from '#/i18n/locale'
 import { useTranslation } from '#/i18n/useTranslation'
 
@@ -31,6 +31,8 @@ export function LanguageToggle() {
             lang={o.lang}
             aria-label={t(o.nameKey)}
             aria-pressed={activo}
+            onPointerEnter={() => cargarDiccionario(o.locale).catch(() => {})}
+            onFocus={() => cargarDiccionario(o.locale).catch(() => {})}
             onClick={() => {
               if (!activo) setLocale(o.locale)
             }}

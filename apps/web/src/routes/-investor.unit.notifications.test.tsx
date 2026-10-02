@@ -1,11 +1,11 @@
 import { fireEvent, screen, waitFor } from '@testing-library/react'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import { api } from '#/api/port'
-import { dictionary } from '#/i18n/dictionary'
+import { esAR } from '#/i18n/dictionary'
 import { autenticarComo, INVESTOR_USER, montarRuta } from './-test-mount'
 import { Route } from './investor.unit.$unitId.notifications'
 
-const t = dictionary['es-AR']
+const t = esAR
 
 type Notificacion = Awaited<ReturnType<typeof api.listNotifications>>[number]
 

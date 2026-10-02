@@ -3,7 +3,7 @@ import userEvent from '@testing-library/user-event'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { ApiError, api } from '#/api/port'
 import type { ProjectCreated } from '#/api/types'
-import { dictionary } from '#/i18n/dictionary'
+import { esAR, type TranslationKey } from '#/i18n/dictionary'
 import * as L from '#/test/leaflet-falso'
 import { autenticarComo, DEVELOPER_USER, montarRuta } from './-test-mount'
 import { Route } from './developer.project.new'
@@ -11,7 +11,7 @@ import { Route } from './developer.project.new'
 vi.mock('leaflet', () => import('#/test/leaflet-falso'))
 vi.mock('leaflet/dist/leaflet.css', () => ({}))
 
-const t = (clave: keyof (typeof dictionary)['es-AR']) => dictionary['es-AR'][clave]
+const t = (clave: TranslationKey) => esAR[clave]
 
 const creado = { id: 'p-nuevo' } as ProjectCreated
 const LIBERTADOR = { latitude: -34.547, longitude: -58.46, label: 'Av. del Libertador 7200, CABA' }

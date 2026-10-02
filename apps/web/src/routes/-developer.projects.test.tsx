@@ -3,12 +3,12 @@ import userEvent from '@testing-library/user-event'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import { api } from '#/api/port'
 import type { DeveloperProject } from '#/api/types'
-import { dictionary } from '#/i18n/dictionary'
+import { esAR, type TranslationKey } from '#/i18n/dictionary'
 import { formatCurrency, formatMonthYear } from '#/i18n/format'
 import { autenticarComo, DEVELOPER_USER, montarRuta } from './-test-mount'
 import { Route } from './developer.projects'
 
-const t = (clave: keyof (typeof dictionary)['es-AR']) => dictionary['es-AR'][clave]
+const t = (clave: TranslationKey) => esAR[clave]
 
 const completo = (sobre: Partial<DeveloperProject> = {}): DeveloperProject => ({
   id: 'p1',

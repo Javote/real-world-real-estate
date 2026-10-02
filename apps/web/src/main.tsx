@@ -1,25 +1,33 @@
 import { RouterProvider } from '@tanstack/react-router'
 import { StrictMode } from 'react'
 import { createRoot } from 'react-dom/client'
+import { cargarDiccionario } from './i18n/dictionary'
+import { getStoredLocale } from './i18n/locale'
 import { LocaleProvider } from './i18n/useTranslation'
 import { AnnounceProvider } from './lib/announce'
 import { initObservability } from './lib/observability'
 import { getRouter } from './router'
 import './styles.css'
 
-initObservability()
+void initObservability()
 
 const router = getRouter()
 
 const contenedor = document.getElementById('root')
 if (!contenedor) throw new Error('Falta #root en index.html')
 
-createRoot(contenedor).render(
-  <StrictMode>
-    <LocaleProvider>
-      <AnnounceProvider>
-        <RouterProvider router={router} />
-      </AnnounceProvider>
-    </LocaleProvider>
-  </StrictMode>
-)
+function montar(raiz: HTMLElement) {
+  createRoot(raiz).render(
+    <StrictMode>
+      <LocaleProvider>
+        <AnnounceProvider>
+          <RouterProvider router={router} />
+        </AnnounceProvider>
+      </LocaleProvider>
+    </StrictMode>
+  )
+}
+
+cargarDiccionario(getStoredLocale())
+  .catch(() => {})
+  .then(() => montar(contenedor))

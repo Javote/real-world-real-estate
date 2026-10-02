@@ -18,17 +18,17 @@ describe('initObservability', () => {
     vi.clearAllMocks()
   })
 
-  it('sin DSN ni key no inicializa ninguna de las dos herramientas', () => {
-    initObservability()
+  it('sin DSN ni key no inicializa ninguna de las dos herramientas', async () => {
+    await initObservability()
 
     expect(Sentry.init).not.toHaveBeenCalled()
     expect(posthog.init).not.toHaveBeenCalled()
   })
 
-  it('con DSN inicializa Sentry sin PII por defecto', () => {
+  it('con DSN inicializa Sentry sin PII por defecto', async () => {
     vi.stubEnv('VITE_SENTRY_DSN', 'https://k@sentry.example/1')
 
-    initObservability()
+    await initObservability()
 
     expect(Sentry.init).toHaveBeenCalledWith({
       dsn: 'https://k@sentry.example/1',
@@ -38,11 +38,11 @@ describe('initObservability', () => {
     expect(posthog.init).not.toHaveBeenCalled()
   })
 
-  it('con key y sin host inicializa PostHog en el host por defecto, sin autocapture ni grabación', () => {
+  it('con key y sin host inicializa PostHog en el host por defecto, sin autocapture ni grabación', async () => {
     vi.stubEnv('VITE_POSTHOG_KEY', 'phc_abc')
     vi.stubEnv('VITE_POSTHOG_HOST', undefined as unknown as string)
 
-    initObservability()
+    await initObservability()
 
     expect(posthog.init).toHaveBeenCalledWith('phc_abc', {
       api_host: 'https://us.i.posthog.com',
@@ -54,11 +54,11 @@ describe('initObservability', () => {
     expect(Sentry.init).not.toHaveBeenCalled()
   })
 
-  it('con key y host propio usa ese host', () => {
+  it('con key y host propio usa ese host', async () => {
     vi.stubEnv('VITE_POSTHOG_KEY', 'phc_abc')
     vi.stubEnv('VITE_POSTHOG_HOST', 'https://ph.example.com')
 
-    initObservability()
+    await initObservability()
 
     expect(posthog.init).toHaveBeenCalledWith(
       'phc_abc',

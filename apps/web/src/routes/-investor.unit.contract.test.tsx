@@ -1,11 +1,11 @@
 import { fireEvent, screen, waitFor } from '@testing-library/react'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import { ApiError, api } from '#/api/port'
-import { dictionary } from '#/i18n/dictionary'
+import { esAR } from '#/i18n/dictionary'
 import { autenticarComo, INVESTOR_USER, montarRuta } from './-test-mount'
 import { Route } from './investor.unit.$unitId.contract'
 
-const t = dictionary['es-AR']
+const t = esAR
 
 type Contrato = Awaited<ReturnType<typeof api.getInvestorContract>>
 type Liberacion = Awaited<ReturnType<typeof api.listContractReleases>>[number]

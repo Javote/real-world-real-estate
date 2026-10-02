@@ -1,5 +1,6 @@
 import { cleanup, fireEvent, render, screen } from '@testing-library/react'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
+import { cargarDiccionario } from './dictionary'
 import { LocaleProvider, useTranslation } from './useTranslation'
 
 function Probe() {
@@ -91,6 +92,20 @@ describe('LocaleProvider / useTranslation', () => {
     )
 
     await screen.findByText('Sign in')
+  })
+
+  it('con en-US guardado y su diccionario ya bajado, el primer render ya sale en inglés', async () => {
+    window.localStorage.setItem('propnexus.lang', 'en-US')
+    await cargarDiccionario('en-US')
+
+    render(
+      <LocaleProvider>
+        <Probe />
+      </LocaleProvider>
+    )
+
+    expect(screen.getByText('Sign in')).not.toBeNull()
+    expect(document.documentElement.lang).toBe('en-US')
   })
 
   it('tDinamico: devuelve la traducción si la clave existe en el diccionario', async () => {

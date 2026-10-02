@@ -26,7 +26,8 @@ export default defineConfig({
           groups: [
             { name: 'vendor-react', test: /node_modules\/(react|react-dom|scheduler)\// },
             { name: 'vendor-tanstack', test: /node_modules\/@tanstack\// },
-            { name: 'vendor-observability', test: /node_modules\/(@sentry|posthog-js)\// },
+            { name: 'vendor-sentry', test: /node_modules\/@sentry\// },
+            { name: 'vendor-posthog', test: /node_modules\/posthog-js\// },
             { name: 'vendor-radix', test: /node_modules\/radix-ui\// }
           ]
         }

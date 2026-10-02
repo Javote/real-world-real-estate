@@ -1,31 +1,56 @@
-import { createContext, useCallback, useContext, useEffect, useMemo, useState } from 'react'
-import { dictionary, type TranslationKey } from './dictionary'
+import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react'
+import {
+  cargarDiccionario,
+  type Diccionario,
+  diccionarioCargado,
+  esAR,
+  type TranslationKey
+} from './dictionary'
 import { DEFAULT_LOCALE, getStoredLocale, type Locale, setStoredLocale } from './locale'
 
 interface LocaleContextValue {
   locale: Locale
+  tabla: Diccionario
   setLocale: (locale: Locale) => void
 }
 
 const LocaleContext = createContext<LocaleContextValue | null>(null)
 
 export function LocaleProvider({ children }: { children: React.ReactNode }) {
-  const [locale, setLocaleState] = useState<Locale>(DEFAULT_LOCALE)
+  const [vigente, setVigente] = useState<{ locale: Locale; tabla: Diccionario }>(() => {
+    const guardada = getStoredLocale()
+    const tabla = diccionarioCargado(guardada)
+    return tabla ? { locale: guardada, tabla } : { locale: DEFAULT_LOCALE, tabla: esAR }
+  })
+  const pedida = useRef(vigente.locale)
 
-  useEffect(() => {
-    setLocaleState(getStoredLocale())
+  const aplicar = useCallback((next: Locale) => {
+    pedida.current = next
+    cargarDiccionario(next)
+      .then((tabla) => {
+        if (pedida.current === next) setVigente({ locale: next, tabla })
+      })
+      .catch(() => {})
   }, [])
 
   useEffect(() => {
-    document.documentElement.lang = locale
-  }, [locale])
+    const guardada = getStoredLocale()
+    if (guardada !== pedida.current) aplicar(guardada)
+  }, [aplicar])
 
-  const setLocale = useCallback((next: Locale) => {
-    setStoredLocale(next)
-    setLocaleState(next)
-  }, [])
+  useEffect(() => {
+    document.documentElement.lang = vigente.locale
+  }, [vigente.locale])
 
-  const value = useMemo(() => ({ locale, setLocale }), [locale, setLocale])
+  const setLocale = useCallback(
+    (next: Locale) => {
+      setStoredLocale(next)
+      aplicar(next)
+    },
+    [aplicar]
+  )
+
+  const value = useMemo(() => ({ ...vigente, setLocale }), [vigente, setLocale])
 
   return <LocaleContext.Provider value={value}>{children}</LocaleContext.Provider>
 }
@@ -33,25 +58,26 @@ export function LocaleProvider({ children }: { children: React.ReactNode }) {
 export function useTranslation() {
   const ctx = useContext(LocaleContext)
   if (!ctx) throw new Error('useTranslation debe usarse dentro de LocaleProvider')
+  const { tabla } = ctx
 
   const t = useCallback(
     (key: TranslationKey, params?: Record<string, string>) => {
-      const plantilla = dictionary[ctx.locale][key]
+      const plantilla = tabla[key]
       if (!params) return plantilla
       return plantilla.replace(
         /\{(\w+)\}/g,
         (original, nombre: string) => params[nombre] ?? original
       )
     },
-    [ctx.locale]
+    [tabla]
   )
 
   const tDinamico = useCallback(
     (clave: string, fallback: string) => {
-      const tabla: Record<string, string> = dictionary[ctx.locale]
-      return tabla[clave] ?? fallback
+      const porClave: Record<string, string> = tabla
+      return porClave[clave] ?? fallback
     },
-    [ctx.locale]
+    [tabla]
   )
 
   return { t, tDinamico, locale: ctx.locale, setLocale: ctx.setLocale }

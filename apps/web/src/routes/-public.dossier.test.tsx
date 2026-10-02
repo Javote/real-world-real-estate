@@ -1,11 +1,11 @@
 import { screen, waitFor } from '@testing-library/react'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import { ApiError, api } from '#/api/port'
-import { dictionary } from '#/i18n/dictionary'
+import { esAR } from '#/i18n/dictionary'
 import { montarRuta } from './-test-mount'
 import { Route } from './public.dossier.$shareToken'
 
-const t = dictionary['es-AR']
+const t = esAR
 
 type Dossier = Awaited<ReturnType<typeof api.getPublicDossier>>
 
