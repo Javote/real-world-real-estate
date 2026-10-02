@@ -26,18 +26,18 @@ Encima, el middleware encadena sus propias lecturas. `GET /stages/:id`:
 
 Viajes en serie medidos con `test/viajes-por-request.test.ts` (paso 0):
 
-| Request | Antes | Paso 1 | Paso 2 | Paso 3 | Paso 4 | Paso 5 |
-|---|---|---|---|---|---|---|
-| `GET /auth/me` | 2 | 2 | 2 | 2 | 2 | 2 |
-| `GET /projects` | 3 | 3 | 3 | 3 | 3 | 3 |
-| `GET /projects/:id` | 5 | 5 | 5 | 4 | 4 | 4 |
-| `GET /projects/:id/stages` | 5 | 5 | 5 | 3 | 3 | 3 |
-| `GET /stages/:id` | 7 | 5 | 4 | 3 | 3 | 3 |
-| `PATCH /stages/:id` | 6 | 6 | 5 | 4 | 4 | 3 |
-| `GET /investor/units` | 3 | 3 | 3 | 3 | 3 | 3 |
-| `GET /notifications/unread-count` | 2 | 2 | 2 | 2 | 2 | 2 |
-| `GET /contracts/:id/releases` (regla `alguna`) | — | — | — | 5 | 4 | 4 |
-| Dos `GET /auth/me` simultáneos | 4 | 2 | 2 | 2 | 2 | 2 |
+| Request | Antes | Paso 1 | Paso 2 | Paso 3 | Paso 4 | Paso 5 | Paso 6 |
+|---|---|---|---|---|---|---|---|
+| `GET /auth/me` | 2 | 2 | 2 | 2 | 2 | 2 | 2 |
+| `GET /projects` | 3 | 3 | 3 | 3 | 3 | 3 | 3 |
+| `GET /projects/:id` | 5 | 5 | 5 | 4 | 4 | 4 | 2 |
+| `GET /projects/:id/stages` | 5 | 5 | 5 | 3 | 3 | 3 | 3 |
+| `GET /stages/:id` | 7 | 5 | 4 | 3 | 3 | 3 | 2 |
+| `PATCH /stages/:id` | 6 | 6 | 5 | 4 | 4 | 3 | 3 |
+| `GET /investor/units` | 3 | 3 | 3 | 3 | 3 | 3 | 3 |
+| `GET /notifications/unread-count` | 2 | 2 | 2 | 2 | 2 | 2 | 2 |
+| `GET /contracts/:id/releases` (regla `alguna`) | — | — | — | 5 | 4 | 4 | 4 |
+| Dos `GET /auth/me` simultáneos | 4 | 2 | 2 | 2 | 2 | 2 | 2 |
 
 En las mutaciones, `writeAuditLog` es otro viaje después de la escritura. Las 6 rutas con
 `db.transaction()` usan transacciones interactivas. Las consultas de Kysely no van por el
@@ -113,10 +113,12 @@ driver no tiene camino para `batch`, y `db.transaction()` costaría un viaje por
 COMMIT. El helper de viajes espía `batch` en el prototipo del cliente para contarlo. Lo fija
 `test/en-lote.test.ts`: tipos coercionados, y un audit que falla deja la mutación sin aplicar.
 
-**6. Los handlers que releen lo que ya se sabe.** Solo en las rutas que el paso 0 mida por encima de
-su presupuesto: lanzar juntas las lecturas que no dependen entre sí (`GET /stages/:id`: `Stage`,
-`Evidence`, `Project` y `cabezaDelHilo` en un solo `Promise.all`). El resto lo hace la migración
-(`SPEC-604` se disuelve en A3/A4).
+**6. Los handlers que releen lo que ya se sabe.** Las lecturas que solo dependen del id del path
+van juntas en un `Promise.all`: `GET /stages/:id` (`Stage`, `Evidence`, `Project` por join y
+`cabezaDelHilo`) y `GET /projects/:id` (`Project`, sus `Stage` y sus miembros). `GET
+/contracts/:id/releases` queda como está: espera a `reconciliarParaLectura` antes de leer, y esa
+espera es la regla de D-077, no una relectura. El resto lo hace la migración (`SPEC-604` se disuelve
+en A3/A4).
 
 **Lo que no se hace:** confiar en el rol del JWT sin consultar la base, cachear usuarios en memoria
 (una sola instancia hoy, pero la invalidación es un problema nuevo) y tocar `transitionStage`, donde

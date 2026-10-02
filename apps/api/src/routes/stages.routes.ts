@@ -40,24 +40,24 @@ const stageDetailProcedure = os
   .input(z.strictObject({ id: cuidParamSchema }))
   .output(stageDetailSchema)
   .handler(async ({ input }) => {
-    const stage = await db
-      .selectFrom("Stage")
-      .selectAll()
-      .where("id", "=", input.id)
-      .executeTakeFirst();
-
-    /* v8 ignore if -- @preserve: authorize({ proyecto: { via: "Stage" } }) ya cargó el stage */
-    if (!stage) throw new ORPCError("NOT_FOUND", { message: "Stage not found" });
-
-    const [evidences, project, hilo] = await Promise.all([
+    const [stage, evidences, project, hilo] = await Promise.all([
+      db.selectFrom("Stage").selectAll().where("id", "=", input.id).executeTakeFirst(),
       db
         .selectFrom("Evidence")
         .select(EVIDENCE_SAFE_COLUMNS)
-        .where("stageId", "=", stage.id)
+        .where("stageId", "=", input.id)
         .execute(),
-      db.selectFrom("Project").selectAll().where("id", "=", stage.projectId).executeTakeFirst(),
-      cabezaDelHilo(stage.id)
+      db
+        .selectFrom("Project")
+        .innerJoin("Stage", "Stage.projectId", "Project.id")
+        .selectAll("Project")
+        .where("Stage.id", "=", input.id)
+        .executeTakeFirst(),
+      cabezaDelHilo(input.id)
     ]);
+
+    /* v8 ignore if -- @preserve: authorize({ proyecto: { via: "Stage" } }) ya cargó el stage */
+    if (!stage) throw new ORPCError("NOT_FOUND", { message: "Stage not found" });
 
     return stageDetailSchema.parse({
       ...stage,

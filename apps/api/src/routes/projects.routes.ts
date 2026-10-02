@@ -166,38 +166,34 @@ const projectByIdProcedure = os
   .input(z.strictObject({ id: cuidParamSchema }))
   .output(projectDetailSchema)
   .handler(async ({ input }) => {
-    const project = await db
-      .selectFrom("Project")
-      .selectAll()
-      .where("id", "=", input.id)
-      .executeTakeFirst();
+    const [project, stageRows, memberRows] = await Promise.all([
+      db.selectFrom("Project").selectAll().where("id", "=", input.id).executeTakeFirst(),
+      db
+        .selectFrom("Stage")
+        .selectAll()
+        .where("projectId", "=", input.id)
+        .orderBy("sequenceOrder", "asc")
+        .execute(),
+      db
+        .selectFrom("ProjectMember")
+        .innerJoin("User", "User.id", "ProjectMember.userId")
+        .select([
+          "ProjectMember.id",
+          "ProjectMember.userId",
+          "ProjectMember.projectId",
+          "ProjectMember.membershipRole",
+          "ProjectMember.createdAt",
+          "User.id as user_id",
+          "User.email as user_email",
+          "User.fullName as user_fullName",
+          "User.role as user_role"
+        ])
+        .where("ProjectMember.projectId", "=", input.id)
+        .execute()
+    ]);
 
     /* v8 ignore if -- @preserve: authorize({ proyecto }) ya confirmó que existe */
     if (!project) throw new ORPCError("NOT_FOUND", { message: "Project not found" });
-
-    const stageRows = await db
-      .selectFrom("Stage")
-      .selectAll()
-      .where("projectId", "=", project.id)
-      .orderBy("sequenceOrder", "asc")
-      .execute();
-
-    const memberRows = await db
-      .selectFrom("ProjectMember")
-      .innerJoin("User", "User.id", "ProjectMember.userId")
-      .select([
-        "ProjectMember.id",
-        "ProjectMember.userId",
-        "ProjectMember.projectId",
-        "ProjectMember.membershipRole",
-        "ProjectMember.createdAt",
-        "User.id as user_id",
-        "User.email as user_email",
-        "User.fullName as user_fullName",
-        "User.role as user_role"
-      ])
-      .where("ProjectMember.projectId", "=", project.id)
-      .execute();
 
     const members = memberRows.map((row) => ({
       id: row.id,

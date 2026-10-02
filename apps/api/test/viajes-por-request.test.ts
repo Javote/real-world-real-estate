@@ -102,7 +102,7 @@ const CASOS: Caso[] = [
   },
   {
     ruta: "GET /projects/:id",
-    enSerie: 4,
+    enSerie: 2,
     pedir: () =>
       request(app).get(`/api/v1/projects/${proyecto}`).set("Authorization", `Bearer ${developer}`)
   },
@@ -116,7 +116,7 @@ const CASOS: Caso[] = [
   },
   {
     ruta: "GET /stages/:id",
-    enSerie: 3,
+    enSerie: 2,
     pedir: () =>
       request(app).get(`/api/v1/stages/${stage}`).set("Authorization", `Bearer ${developer}`)
   },
