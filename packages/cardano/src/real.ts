@@ -142,18 +142,21 @@ export class LucidAnchorAdapter implements AnchorPort {
   async openThread({ datum }: OpenThreadInput): Promise<AnchorReceipt> {
     const unit = this.unitOf(datum);
 
-    return this.enCola(() =>
-      this.enviar(
-        this.conElValidador(
-          this.lucid
-            .newTx()
-            .mintAssets({ [unit]: 1n }, encodeInitRedeemer())
-            .pay.ToContract(
-              this.refs.address,
-              { kind: "inline", value: encodeStageDatum(datum) },
-              { lovelace: THREAD_MIN_LOVELACE, [unit]: 1n }
-            )
-            .addSignerKey(this.adminKeyHash())
+    return this.enCola(async () =>
+      this.reciboDelHilo(
+        unit,
+        await this.enviar(
+          this.conElValidador(
+            this.lucid
+              .newTx()
+              .mintAssets({ [unit]: 1n }, encodeInitRedeemer())
+              .pay.ToContract(
+                this.refs.address,
+                { kind: "inline", value: encodeStageDatum(datum) },
+                { lovelace: THREAD_MIN_LOVELACE, [unit]: 1n }
+              )
+              .addSignerKey(this.adminKeyHash())
+          )
         )
       )
     );
@@ -190,7 +193,7 @@ export class LucidAnchorAdapter implements AnchorPort {
     );
     const hasta = Math.max(now, completion?.now ?? now) + this.validityWindowMs;
 
-    const recibo = await this.enviar(
+    const enviado = await this.enviar(
       this.conElValidador(
         this.lucid
           .newTx()
@@ -207,7 +210,7 @@ export class LucidAnchorAdapter implements AnchorPort {
     );
 
     this.salidasPendientes.delete(outputRef);
-    return recibo;
+    return this.reciboDelHilo(this.unitOf(next), enviado);
   }
 
   async anchorCommitment({
@@ -361,7 +364,7 @@ export class LucidAnchorAdapter implements AnchorPort {
     return turno;
   }
 
-  private async enviar(tx: TxBuilder): Promise<AnchorReceipt & { salidas: UTxO[] }> {
+  private async enviar(tx: TxBuilder): Promise<{ txid: string; salidas: UTxO[] }> {
     // `chain()` y no `complete()`: devuelve el vuelto que encadena el próximo envío.
     const [utxosDeLaWallet, salidas, firmable] = await tx.chain({
       presetWalletInputs: await this.entradasDeLaWallet()
@@ -370,7 +373,21 @@ export class LucidAnchorAdapter implements AnchorPort {
     const txid = await firmada.submit();
 
     this.anotarLoEnviado(utxosDeLaWallet, salidas);
-    return { txid, outputRef: `${txid}#0`, status: "Pending", salidas };
+    return { txid, salidas };
+  }
+
+  // El token y no la dirección: cualquiera puede pagarle al script, solo el validador acuña el token.
+  private reciboDelHilo(
+    unit: string,
+    { txid, salidas }: { txid: string; salidas: UTxO[] }
+  ): AnchorReceipt {
+    const hilo = salidas.find(
+      (salida) => salida.address === this.refs.address && (salida.assets[unit] ?? 0n) > 0n
+    );
+    if (!hilo) {
+      throw new Error(`La transacción ${txid} se envió pero no dejó el hilo en el script.`);
+    }
+    return { txid, outputRef: `${hilo.txHash}#${hilo.outputIndex}`, status: "Pending" };
   }
 
   private conElValidador(tx: TxBuilder): TxBuilder {

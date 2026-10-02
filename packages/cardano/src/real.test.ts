@@ -207,6 +207,104 @@ describe("advanceThread contra el validador real", () => {
   });
 });
 
+describe("el outputRef del recibo se busca, no se supone (SPEC-407)", () => {
+  async function utxoDe(outputRef: string) {
+    const [txHash, indice] = outputRef.split("#") as [string, string];
+    const [utxo] = await lucid.utxosByOutRef([{ txHash, outputIndex: Number(indice) }]);
+    return utxo;
+  }
+
+  function unitDe(stageRef: string) {
+    return `${adapter.policyId}${stageRef}`;
+  }
+
+  it("openThread: el outputRef es el UTxO que lleva el thread token, leído de la cadena", async () => {
+    const datum = buildStageDatum(fuente);
+    const recibo = await abrirHilo(datum);
+
+    const utxo = await utxoDe(recibo.outputRef);
+
+    expect(utxo?.address).toBe(adapter.address);
+    expect(utxo?.assets[unitDe(datum.stageRef)]).toBe(1n);
+  });
+
+  it("advanceThread: el outputRef lleva el token y el UTxO viejo queda gastado", async () => {
+    const previous = buildStageDatum(fuente);
+    const abierto = await abrirHilo(previous);
+
+    const avance = await adapter.advanceThread({
+      outputRef: abierto.outputRef,
+      previous,
+      next: buildStageDatum({ ...fuente, state: "InProgress" })
+    });
+    emulator.awaitBlock(1);
+
+    expect((await utxoDe(avance.outputRef))?.assets[unitDe(previous.stageRef)]).toBe(1n);
+    expect(await utxoDe(abierto.outputRef)).toBeUndefined();
+  });
+
+  it("si el hilo no sale en el índice 0, devuelve el índice donde salió", async () => {
+    const newTx = lucid.newTx.bind(lucid);
+    const espia = vi
+      .spyOn(lucid, "newTx")
+      .mockImplementationOnce(() =>
+        newTx().pay.ToAddress(adapter.walletAddress, { lovelace: THREAD_MIN_LOVELACE })
+      );
+
+    try {
+      const datum = buildStageDatum(fuente);
+      const recibo = await abrirHilo(datum);
+
+      expect(recibo.outputRef).toBe(`${recibo.txid}#1`);
+      expect((await utxoDe(recibo.outputRef))?.assets[unitDe(datum.stageRef)]).toBe(1n);
+
+      const avance = await adapter.advanceThread({
+        outputRef: recibo.outputRef,
+        previous: datum,
+        next: buildStageDatum({ ...fuente, state: "InProgress" })
+      });
+      emulator.awaitBlock(1);
+      expect((await adapter.verify(avance.txid))?.datum.state).toBe("InProgress");
+    } finally {
+      espia.mockRestore();
+    }
+  });
+
+  it("anchorCommitment: el recibo no tiene outputRef, y el tipo no deja pedirlo", async () => {
+    const recibo = await adapter.anchorCommitment({ sha256: "e".repeat(64), reference: "ev_407" });
+
+    expect(recibo).not.toHaveProperty("outputRef");
+    // @ts-expect-error — MetadataAnchorReceipt no tiene outputRef
+    recibo.outputRef;
+  });
+
+  it.each([
+    ["ninguna salida al script", () => []],
+    [
+      "una salida al script sin el thread token",
+      (txid: string) => [
+        { txHash: txid, outputIndex: 0, address: adapter.address, assets: { lovelace: 2n } }
+      ]
+    ]
+  ])(
+    "una transacción de hilo enviada con %s lanza, con el txid en el mensaje",
+    async (_, salidas) => {
+      const txid = "f".repeat(64);
+      const espia = vi
+        .spyOn(adapter as unknown as { enviar: (tx: unknown) => Promise<unknown> }, "enviar")
+        .mockResolvedValueOnce({ txid, salidas: salidas(txid) });
+
+      try {
+        await expect(adapter.openThread({ datum: buildStageDatum(fuente) })).rejects.toThrow(
+          new RegExp(`${txid}.*no dejó el hilo`)
+        );
+      } finally {
+        espia.mockRestore();
+      }
+    }
+  );
+});
+
 describe("findLiveThread — Capa 1, contra el proveedor de verdad", () => {
   it("encuentra el UTxO vivo por stageRef, sin pasar por outputRef ni por verify()", async () => {
     const datum = buildStageDatum(fuente);
@@ -569,8 +667,6 @@ describe("el reference script", () => {
       .spyOn(adapter as unknown as { enviar: (tx: unknown) => Promise<unknown> }, "enviar")
       .mockResolvedValueOnce({
         txid: "f".repeat(64),
-        outputRef: `${"f".repeat(64)}#0`,
-        status: "Pending",
         salidas: []
       });
 

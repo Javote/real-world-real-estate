@@ -37,6 +37,9 @@ rojos a propósito. Los índices de constructor salen del orden de declaración 
   el faucet tiene que fondear la enterprise, que es la que mira el servicio (D-078).
 - **Se construye con `chain()`, no con `complete()`**: con `complete()` desaparece el encadenamiento
   de la cola (D-082) y nada se pone rojo hasta dos anclajes seguidos.
+- **El `outputRef` de un recibo sale de `reciboDelHilo()`**, que busca la salida con el thread token;
+  nunca `${txid}#0`, que hoy coincide por cómo Lucid ordena las salidas y no por nada que declaremos
+  (`SPEC-407`). El `#0` del simulador sí es verdad: ahí él decide los índices.
 - **La vista de UTxOs pendientes se vence en `enCola()`**, antes del trabajo; adentro de `enviar()`
   llega tarde. La cola guarda una promesa que nunca rechaza (un rechazo suelto mata el proceso), y
   vale para una sola instancia.

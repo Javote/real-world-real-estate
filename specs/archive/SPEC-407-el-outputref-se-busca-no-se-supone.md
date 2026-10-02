@@ -1,6 +1,6 @@
 # SPEC-407 — El `outputRef` del recibo se busca, no se supone
 
-> **Origen:** [`AUDITORIA-2026-09-11-calidad-de-packages.md`](archive/AUDITORIA-2026-09-11-calidad-de-packages.md)
+> **Cerrada 2026-10-02.** **Origen:** [`AUDITORIA-2026-09-11-calidad-de-packages.md`](AUDITORIA-2026-09-11-calidad-de-packages.md)
 > §C-02. Nivel 🟡 — toca la construcción de transacciones. **Independiente.**
 > No toca ningún criterio del SOM, pero **vale antes de mainnet**: es el campo cuyo error no se
 > deshace.
@@ -87,5 +87,16 @@ bug no se ve. El test nuevo tiene que leer el UTxO y comprobar que tiene el toke
 ¿Vale también fijar el orden de salidas con un test del `Emulator` que declare dos salidas al script?
 No hay ninguna operación que lo haga hoy, y agregarla solo para el test sería probar código que no
 existe. Se deja anotado: si alguna vez se fusiona el anclaje de evidencia con la transición
-([`PROPUESTA-2026-09-09`](PROPUESTA-2026-09-09-fusionar-anclaje-evidencia-transicion.md)), esa
+([`PROPUESTA-2026-09-09`](../PROPUESTA-2026-09-09-fusionar-anclaje-evidencia-transicion.md)), esa
 transacción tendría dos salidas y **esta spec es un prerrequisito**.
+
+## Cómo se cerró
+
+`enviar()` devuelve `{ txid, salidas }` y nada más; `reciboDelHilo(unit, …)` arma el recibo de
+`openThread` y `advanceThread` con la salida a la dirección del script que lleva el token, y lanza
+con el txid si no está. `anchorCommitment` ya devolvía `MetadataAnchorReceipt` sin `outputRef`; ahora
+`enviar()` tampoco se lo inventa.
+
+El test del índice ≠ 0 corre contra el validador real en el `Emulator`: le antepone a `openThread`
+un pago a la wallet, el script lo acepta y el hilo sale en `#1`. Con el código anterior daba `#0` —
+el vuelto de la wallet— **y no fallaba nada más**: el bug era exactamente el que la spec describía.
