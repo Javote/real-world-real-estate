@@ -1,6 +1,6 @@
 # SPEC-408 — Lo que vuelve de la cadena se valida, por las dos puertas
 
-> **Origen:** [`AUDITORIA-2026-09-11-calidad-de-packages.md`](archive/AUDITORIA-2026-09-11-calidad-de-packages.md)
+> **Cerrada 2026-10-02.** **Origen:** [`AUDITORIA-2026-09-11-calidad-de-packages.md`](AUDITORIA-2026-09-11-calidad-de-packages.md)
 > §C-03. Nivel 🟡 — toca el códec y el adaptador real. **Independiente.**
 > No toca ningún criterio del SOM, pero **vale antes de mainnet**.
 
@@ -98,3 +98,19 @@ cadena".
 `findLiveThread` en vez de "algún asset de nuestra policy". Cambia la firma del puerto, así que
 toca los cuatro adaptadores y a `apps/api`. Se decide al implementar: si el filtro por policy alcanza
 para el invariante 3, no vale el cambio de firma.
+
+## Cómo se cerró
+
+**Puerta 1.** `decodeStageDatum` chequea constructor 0 y 7 campos antes de indexar, convierte cada
+campo sin casts —lo que no tiene la forma esperada pasa tal cual y lo rechaza el schema— y devuelve
+el resultado de `stageDatumSchema.safeParse`. Todo rechazo es `AnchorRejectedError("BAD_DATUM")`; el
+mensaje del índice de estado desconocido se conserva. El valor dorado no se tocó. De paso quedó más
+estricto el Bool: antes todo lo que no fuera el constructor 1 era `false`; ahora solo el 0 lo es.
+
+**Puerta 2, y la pregunta abierta.** `verify(txid)` no cambió de firma: `threadProof` exige que la
+salida lleve algún token de nuestra policy, decodifica el datum y recién entonces exige el token
+exacto, `policyId + datum.stageRef`. El filtro termina siendo el mismo que el de `findLiveThread`,
+sin tocar el puerto ni `apps/api`.
+
+Medido antes del fix contra el `Emulator`: un pago al script con un datum válido y sin token, y otro
+con un token de una policy nativa propia y el mismo nombre de asset, **devolvían un `AnchorProof`**.
