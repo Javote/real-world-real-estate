@@ -137,6 +137,14 @@ del 2026-09-11 de nuevo.
 
 Los ítems 4–6 de esta lista (`SPEC-402`, `SPEC-407`, `SPEC-408`) se adelantaron a la Fase 1, ítem 8.
 
+**Hay dos secuencias escritas para cuando llegue el momento.** La completa de M4 está en
+[`RUNBOOK-mainnet-cutover.md`](RUNBOOK-mainnet-cutover.md). La corta, mainnet en tres semanas con dos
+desarrolladores y sin recompilar el validador, está en
+[`PLAN-2026-10-05-mainnet-en-tres-semanas.md`](PLAN-2026-10-05-mainnet-en-tres-semanas.md), con su
+presupuesto: **~$12/mes de infraestructura recomendada y ~180 ADA para la salida**, a precios del
+2026-10-05. Es una **propuesta**: no arranca hasta que el dueño tome las ocho decisiones de su §1,
+empezando por revertir D-013.
+
 **Por qué junta specs de auditorías distintas.** Los ítems 2 y 3 salen de
 `AUDITORIA-2026-09-11-calidad-de-contracts.md`; los ítems 4, 5 y 6, de
 `AUDITORIA-2026-09-11-calidad-de-packages.md`. No comparten numeración porque nacieron de auditorías

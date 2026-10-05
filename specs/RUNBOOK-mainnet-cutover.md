@@ -6,6 +6,10 @@
 > [`ESTADO-2026-09-22-catalyst-milestone-4.md`](archive/ESTADO-2026-09-22-catalyst-milestone-4.md) (qué pide
 > Catalyst y qué falta). **No ejecutar nada de acá mientras M3 no esté entregado** — D-013 sigue
 > vigente hasta que el dueño la revierta explícitamente.
+>
+> El camino corto —mainnet en tres semanas sin recompilar el validador, con presupuesto— es una
+> propuesta aparte: [`PLAN-2026-10-05-mainnet-en-tres-semanas.md`](PLAN-2026-10-05-mainnet-en-tres-semanas.md).
+> Se aparta de este runbook en tres puntos que decide el dueño (su §2).
 
 ## 0 · Precondición: qué tiene que estar cerrado antes de tocar esto
 
@@ -71,8 +75,8 @@ admin, y `SPEC-305` toca el mismo archivo:**
 que estar cerrada antes de escalar pilotos:**
 
 6. **Ítem 7 — las 2 ADA bloqueadas por etapa** (`D-057`). Confirmar que el dueño la revisó con el
-   número real de la prueba de volumen (`~99.8 ADA` por proyecto de 10 etapas,
-   `REPORTE-2026-09-10-prueba-de-volumen.md`) antes de medir 30+ proyectos reales de golpe en
+   número real de la prueba de volumen (`~33 ADA` por proyecto de 10 etapas: los ~99.8 ADA de
+   `REPORTE-2026-09-10-prueba-de-volumen.md` son de los 3 proyectos juntos) antes de medir 30+ proyectos reales de golpe en
    mainnet. No bloquea empezar a trabajar en 1-5; bloquea abrir pilotos a escala.
 
 **Al final, el switch real, después de todo lo anterior y del legal greenlight firmado:**
@@ -156,6 +160,6 @@ sin dependencias técnicas.
 
 | Riesgo | Por qué es distinto de Preprod | Mitigación |
 |---|---|---|
-| El primer anclaje real en mainnet falla por wallet sin fondos | Mainnet no tiene faucet — un error de cálculo de fees cuesta ADA real | Fondear con margen (mirar el costo real medido en la prueba de volumen de Preprod, ~99.8 ADA/proyecto, y multiplicar por los pilotos previstos) antes del primer mint |
+| El primer anclaje real en mainnet falla por wallet sin fondos | Mainnet no tiene faucet — un error de cálculo de fees cuesta ADA real | Fondear con margen (mirar el costo real medido en la prueba de volumen de Preprod, ~33 ADA por proyecto de 10 etapas —los ~99.8 del reporte son de los 3 proyectos juntos—, y multiplicar por los pilotos previstos) antes del primer mint |
 | Un piloto real dispara el drill de fallback antes de que `SPEC-502` esté testeado en producción | A diferencia de Preprod, hay una persona real esperando una resolución | No abrir pilotos hasta que `SPEC-502` tenga sus propios tests de rechazo en verde, igual que cualquier ruta 🟡 |
 | La clave del admin (paso 2.5) queda en un estado a medio decidir cuando el primer piloto ya está corriendo | Cambiar de custodia después de mintear hilos reales es un cambio de script hash con hilos ya vivos — mismo problema que describe `SPEC-305` para Preprod, pero con reputación real en juego | Cerrar la decisión de custodia **antes** de abrir el primer piloto, no en paralelo |
