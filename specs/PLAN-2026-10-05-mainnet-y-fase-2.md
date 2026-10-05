@@ -34,11 +34,15 @@ las revisiones y las suites e2e. **Además, la migración es una cadena:**
 A0 → A1 → A2 → W2 → piloto → A4/W4 → A5/W5 son ~17 días hábiles aunque haya dos personas. Con las
 features de M4 y el alta de los pilotos al final, son cinco semanas.
 
-**Mainnet sale en la semana 2, en el medio de la migración.** No hay contradicción: la Fase 2
-migra detrás de los mismos paths y cada commit deja `verify:all` en verde con el arnés intacto,
-igual que ya se hace con Preprod en vivo. Mientras dura la migración, en mainnet solo corre un
-proyecto nuestro. **Los pilotos entran en la semana 5, sobre la forma final**, y las features de
-M4 nacen como módulos y no hay que migrarlas (`SPEC-611` §El acople).
+**Mainnet se prepara en la semana 2 y, por defecto, sale en la semana 5**, el día 22, justo antes
+de los pilotos. **La fecha es flexible** (dueño, 2026-10-05): puede adelantarse a cualquier día
+desde el 10, porque no depende de la migración (§Qué tiene orden). El output 1 de M4 pide *"real data"*, no mainnet, pero el criterio 2
+pide los ≥350 eventos y los TXIDs **en mainnet**, y el único uso real que los produce son los
+pilotos. Salir antes no adelanta ningún criterio y cuesta ADA e infraestructura desde antes; salir
+después obligaría a re-anclar lo de Preprod, sin uso real y con otros timestamps. Así, **las
+semanas 1–4 no gastan nada en mainnet**, y el código que sale es el de la forma final. **Los
+pilotos entran en la semana 5, sobre esa forma**, y las features de M4 nacen como módulos y no hay
+que migrarlas (`SPEC-611` §El acople).
 
 ## Qué queda cerrado al final
 
@@ -46,9 +50,8 @@ M4 nacen como módulos y no hay que migrarlas (`SPEC-611` §El acople).
 |---|---|---|
 | Mainnet en vivo, con URL, direcciones del contrato y dashboards | `SPEC-304` y `SPEC-305` (§1, decisiones 2 y 3) | **`SPEC-222` (PWA):** el dueño decidió mergearla recién cuando Catalyst acepte M3 (2026-09-30), y esa fecha no la controlamos |
 | La Fase 2 entera: `612`–`617` | `SPEC-605` y `SPEC-606` (condicionales) | Los pisos de M4 (≥350 eventos, ≥10 contratos, ≥120 wallets…): son meses de pilotos |
-| `SPEC-603` | `SPEC-020` (MCP) | |
+| `SPEC-603` | `SPEC-020` (MCP) | **`SPEC-112`** (la pasada manual con VoiceOver): no entra; va a la semana 6, una persona durante un día |
 | `SPEC-501`–`SPEC-504` | | |
-| `SPEC-112`, si no se corrió nada (si no, en la semana 6) | | |
 | Los 3 pilotos dados de alta | | |
 
 **Preprod no se toca.** Sigue siendo pre-producción y la evidencia de M3 (criterios 12 y 15)
@@ -109,8 +112,74 @@ Si las del día 1–2 no salen en dos días, el calendario se corre lo mismo que
 | `SPEC-305` se recompila junto con la custodia | No se recompila | Decisión 3 |
 | Los pilotos esperan a `SPEC-501`–`SPEC-504` | Esperan a `502` y `503`; `501` puede llegar después | `501` solo agrega números para el reporte |
 
-**El primer mint en mainnet fija las decisiones 2 y 3 para siempre** (`SPEC-304`): hasta el día 10
+**El primer mint en mainnet fija las decisiones 2 y 3 para siempre** (`SPEC-304`): hasta el día 22
 se puede volver al runbook; después, no.
+
+## Qué tiene orden y qué no
+
+El calendario del §3 es una forma de repartir el trabajo. **Lo obligatorio es esto**; todo lo demás
+se puede mover.
+
+### Las cadenas: cada paso espera al anterior
+
+**La migración** (`SPEC-611` §El acople):
+
+```
+A0.2 (612) → A1 (613) → A2 (607) → 609 ─┐
+                                        ├─→ piloto: A3 + W3 (615) → regla de salida → A4 + W4 (616) → A5 + W5 (617)
+                  614 ──────────────────┘
+```
+
+- `614` no espera a la API: se hace en cualquier momento antes del piloto.
+- A3 y W3 van juntos; A4 y W4 avanzan en paralelo, módulo por módulo, y cada pantalla espera a su
+  módulo de la API.
+- Nada de A4 arranca antes de que el dueño apruebe el piloto.
+
+**Mainnet:**
+
+```
+decisiones 1–8 → código (factory + render.yaml) → clave 🔴 + infra → ensayo → go/no-go → salida → proyecto propio → pilotos
+```
+
+- **La salida no depende de la migración.** Puede ir cualquier día desde que el ensayo está hecho.
+  Si entre el ensayo y la salida entró código que toca la API, el go/no-go repite un ensayo corto
+  sobre ese código.
+- **El primer mint es irreversible:** fija las decisiones 2 y 3 (`SPEC-304`).
+
+**Las features de M4:**
+
+```
+A2 → 504 · 502 · 503 (en cualquier orden entre ellas) → 501
+```
+
+- Esperan a A2 para nacer como módulos y no tener que migrarlas después (`SPEC-611`). Si se
+  hicieran antes, funcionan igual, pero hay que migrarlas en A4.
+- `501` va última porque consume a las otras tres, y espera la decisión 18 (qué es una wallet).
+
+**Los pilotos** esperan cuatro cosas: mainnet en vivo con el proyecto propio recorrido, `502` en
+producción (el drill de fallback la usa), el legal greenlight y su propia disponibilidad. `503`
+tiene que estar antes de **la primera liberación**, no antes del alta.
+
+### Las decisiones, cada una antes de su paso
+
+| Decisión | Antes de |
+|---|---|
+| 1–8 (mainnet) | el código de mainnet |
+| 10 (`notify`) | A1 |
+| 9, 11 y 12 (evidencia de M3, scope del notary, compilación del dossier) | el piloto (A3) |
+| 13 y 14 (chip del investor, espera al crear proyecto) | W4 |
+| 18–21 (M4) | la spec de M4 que cada una afecta |
+| 15–17 (cerrar `605`, `606`, `020`) | nada: se cierran cuando sea |
+
+### Sin orden: en cualquier momento
+
+- El corte de `603`.
+- El runbook de mainnet, su parte de governance y el comando de detección del §4.
+- La pasada manual de `112`.
+- Cerrar por decisión `304`, `305`, `605`, `606` y `020`.
+- Pedir el legal greenlight y confirmar a los pilotos (cuanto antes, porque no los controlamos).
+
+**Fuera de nuestro control:** `SPEC-222` se mergea recién cuando Catalyst acepte M3.
 
 ## 3 · Las cinco semanas
 
@@ -131,20 +200,20 @@ En el mismo commit que habilita la red se reescriben D-013, la prohibición "No 
 `CLAUDE.md` (por ejemplo: *"Mainnet solo en los servicios `-mainnet`; en local y en CI, nunca"*), la
 fila de `README.md` §Fuera de alcance, y `specs/stack.md` §7 y §8.
 
-### Semana 2 — A2, y mainnet en vivo
+### Semana 2 — A2, y mainnet preparado
 
 | Días | Dev A | Dev B |
 |---|---|---|
 | 6 | A2 (`607`) | `614` |
-| 7 | A2 · 🔴 en pareja con B: **clave de pago de mainnet** (D-078: clave, no seed), generada fresca y fuera del repo. El dueño la guarda offline en dos lugares; no vive en ninguna máquina de desarrollo | 🔴 la clave, en pareja. Base Turso nueva en Oregon (`aws-us-west-2`), con delete protection; bucket R2 nuevo; proyecto Blockfrost mainnet; proyectos de mainnet en Sentry y PostHog, y `service.name` propio en Grafana. **Sin seed de demo:** solo el admin con `SEED_ADMIN_PASSWORD` (D-047) |
+| 7 | A2 · 🔴 en pareja con B: **clave de pago de mainnet** (D-078: clave, no seed), generada fresca y fuera del repo. El dueño la guarda offline en dos lugares; no vive en ninguna máquina de desarrollo | 🔴 la clave, en pareja. Base Turso nueva en Oregon (`aws-us-west-2`), con delete protection; bucket R2 nuevo; proyecto Blockfrost mainnet; proyectos de mainnet en Sentry y PostHog, y `service.name` propio en Grafana. **Todo en planes gratis hasta la salida.** **Sin seed de demo:** solo el admin con `SEED_ADMIN_PASSWORD` (D-047) |
 | 8–9 | A2 | **Ensayo general:** los servicios `-mainnet` apuntando a Preprod con una wallet de ensayo, y un proyecto entero recorrido por la UI. Runbook de mainnet como sección nueva de `RUNBOOK-deploy.md`: un rollback de código no deshace nada on-chain · clave comprometida · wallet sin saldo · quién aprueba volver a Preprod. Backup verificado (`stack.md` §8b) |
-| 10 | Cierra A2. Revisa el go/no-go | **Go/no-go** (§5). Fondear la wallet (§7), publicar el reference script (`RUNBOOK-deploy.md` paso 6) y reiniciar la API. **Mainnet en vivo** |
+| 10 | Cierra A2 | La parte de governance del runbook (quién aprueba volver a Preprod, quién accede a la clave y cómo se audita, `RUNBOOK-mainnet-cutover.md` §4) y el comando de detección del §4 |
 
 ### Semana 3 — el piloto y la regla de salida
 
 | Días | Dev A | Dev B |
 |---|---|---|
-| 11–13 | A3: el módulo `dossier` de la API (`615`) | `609` (W2: el cliente sale del contrato). En los ratos libres, el proyecto propio en mainnet de punta a punta, con cada TXID contra Koios y Cardanoscan |
+| 11–13 | A3: el módulo `dossier` de la API (`615`) | `609` (W2: el cliente sale del contrato) |
 | 13–14 | `504` como módulo nuevo | W3: las pantallas del dossier (`615`) |
 | 15 | **La regla de salida de `SPEC-611`:** el dueño revisa el piloto. Si el módulo no quedó claramente más chico y más legible, la migración se frena acá y las semanas 4–5 se usan para M4 y los pilotos (el plan termina en la semana 4) | ídem |
 
@@ -154,13 +223,18 @@ fila de `README.md` §Fuera de alcance, y `specs/stack.md` §7 y §8.
 |---|---|---|
 | 16–20 | A4 (`616`): los 7 módulos restantes de la API, en el orden de la spec | W4 (`616`): las pantallas del rol de cada módulo, siguiendo a A |
 
-### Semana 5 — una sola forma, M4 y los pilotos
+### Semana 5 — una sola forma, mainnet en vivo y los pilotos
 
 | Días | Dev A | Dev B |
 |---|---|---|
 | 21 | A5 (`617`) | W5 (`617`) |
-| 22–24 | `502` (disputas), con sus tests de rechazo | `503` (NPS) |
-| 24–25 | `501` (panel del piloto) | **Gate de los pilotos** (§5) y altas: proyectos, contratos y evidencia. El drill de fallback, con `502` ya en producción. `112` si sobra; si no, semana 6 |
+| 22 | `502` (disputas), con sus tests de rechazo | **Go/no-go de mainnet** (§5). Re-ensayo corto sobre el código de la semana 5, paso de Render y Turso a los planes pagos, fondear el tramo de la salida (§7), publicar el reference script (`RUNBOOK-deploy.md` paso 6) y reiniciar la API. **Mainnet en vivo** |
+| 23 | `502` | El proyecto propio en mainnet, de punta a punta, con cada TXID contra Koios y Cardanoscan |
+| 24 | Cierra `502` | `503` (NPS) |
+| 25 | `501` (panel del piloto) | Cierra `503`. **Gate de los pilotos** (§5): fondear su tramo y darlos de alta (proyectos, contratos y evidencia). El drill de fallback, con `502` ya en producción |
+
+**La semana 5 es la más cargada.** Si algo se corre, el alta de los pilotos pasa al día 26; el
+go/no-go y el proyecto propio no se comprimen. `112` va a la semana 6.
 
 ## 4 · El control que acompaña a "dejarlo así"
 
@@ -171,16 +245,17 @@ Una tx que la base no conoce es un incidente.
 
 ## 5 · Los dos gates
 
-**Mainnet en vivo, día 10:**
+**Mainnet en vivo, día 22:**
 
 - [ ] Decisiones 1–8 escritas en `DECISIONS.md`, y D-013 revisada.
 - [ ] `verify:all` verde; `render-config.test.ts` defiende las dos redes.
 - [ ] Ensayo del día 9 completo: 10 etapas `Completed`, cada TXID `Confirmed` y verificado.
+- [ ] Re-ensayo del día 22 sobre el código ya migrado: un mint y una transición, confirmados.
 - [ ] La clave de mainnet guardada offline en dos lugares, y su VKH anotado en `stack.md` §8b.
 - [ ] Base de mainnet sin cuentas demo; backup verificado.
 - [ ] Runbook de mainnet escrito.
 
-**Pilotos, día 24:**
+**Pilotos, día 25:**
 
 - [ ] La Fase 2 cerrada, o frenada por la regla de salida y escrito por qué.
 - [ ] `502` y `503` en producción, con sus tests en verde.
@@ -195,9 +270,9 @@ transcripción de [`ESTADO-2026-09-22-catalyst-milestone-4.md`](archive/ESTADO-2
 
 | M4 pide | Al final de las cinco semanas | Qué falta |
 |---|---|---|
-| Output 2 · URL de mainnet y direcciones del contrato publicadas | ✅ desde el día 10 | — |
+| Output 2 · URL de mainnet y direcciones del contrato publicadas | ✅ desde el día 22 | — |
 | Output 2 · dashboards operacionales | ✅ Sentry, Grafana y PostHog contra mainnet | — |
-| Output 2 · playbooks de governance y operación | ◐ el runbook de mainnet (semana 2) | La parte de governance: quién aprueba volver a Preprod, quién tiene acceso a la clave y cómo se audita (`RUNBOOK-mainnet-cutover.md` §4) |
+| Output 2 · playbooks de governance y operación | ✅ el runbook de mainnet y su parte de governance (semana 2) | — |
 | Criterio 2 · ≥350 eventos on-chain y ≥100 hashes de documentos | ~60 del proyecto propio, más el arranque de los pilotos | Uso real de los pilotos. **Con eventos de uso real, no con proyectos sintéticos para llegar al número** |
 | Criterio 2 · valor de escrow simulado, reportado | ✅ en `501`, como agregado sin custodia (D-021) | — |
 | Criterio 2 · legal greenlight de counsel/notario | lo que tarde la firma | Externo, pedido el día 1 |
@@ -256,7 +331,7 @@ se asume que las fees de mainnet son las mismas, porque Preprod sigue sus parám
 
 | Para qué | ADA | USD (ADA a $0,266) |
 |---|---|---|
-| **La salida, día 10:** reference script + proyecto propio | 11 + 33 = 44 → con 25% de margen, **~55** | **~$15** |
+| **La salida, día 22:** reference script + proyecto propio | 11 + 33 = 44 → con 25% de margen, **~55** | **~$15** |
 | **Los pilotos, semana 5:** 3 proyectos con el tour completo | 3 × 33 = 99 → con margen, **~125** | **~$33** |
 | **Hasta el piso de M4** (≥350 eventos, incluye lo anterior), si cada etapa hace el camino feliz (4 tx por etapa → 88 etapas) | 77 de fees + 176 bloqueados + 11 = 264 → con margen, **~330** | **~$88** |
 | Lo mismo, si cada etapa hace el tour completo (6 tx por etapa → 59 etapas) | 77 + 118 + 11 = 206 → con margen, **~260** | **~$69** |
@@ -269,9 +344,9 @@ lo de M4: lo que queda en una clave caliente es lo que se pierde si se compromet
 
 | | USD | ARS (USD a $1.520) |
 |---|---|---|
-| **Las cinco semanas**, recomendado (dos meses de infra + la salida + los pilotos) | **~$72** | ~$109.000 |
+| **Semanas 1–4** | **$0** | $0 |
+| **Las cinco semanas**, recomendado (un mes de infra desde la semana 5 + la salida + los pilotos) | **~$60** | ~$91.000 |
 | Las cinco semanas, mínimo absoluto (todo free + el mismo ADA) | ~$48 | ~$73.000 |
-| Hasta mainnet en vivo (día 10), recomendado | ~$27 | ~$41.000 |
 | **Por mes, después** | $11,99 + ~$9 por proyecto nuevo | ~$18.000 + ~$14.000 por proyecto |
 | ADA total hasta el piso de M4 | $69–$88 | $105.000–$134.000 |
 
@@ -284,8 +359,9 @@ No incluye horas de los dos desarrolladores, el legal greenlight ni un dominio p
 | Las decisiones del §1 tardan más de dos días | El calendario se corre lo mismo que tarden, sin comprimir el ensayo ni el piloto |
 | La migración se corre (el camino crítico no tiene margen) | Lo que no entra pasa a la semana 6. Los pilotos esperan a la forma final, no la apuran |
 | El piloto `dossier` no convence (regla de salida) | La migración se frena el día 15, A0–A2 y W2 no se pierden, y el plan termina en la semana 4 |
-| Un commit de la migración rompe algo en mainnet | Hasta la semana 5 en mainnet solo corre un proyecto nuestro, y cada commit pasa el mismo arnés que protege a Preprod |
-| El legal greenlight no llega en la semana 5 | Mainnet sigue solo con el proyecto propio; los pilotos esperan la firma |
+| El legal greenlight no llega en la semana 5 | Mainnet sale igual con el proyecto propio; los pilotos esperan la firma |
+| El ensayo de la semana 2 corrió sobre código que la migración cambió después | El re-ensayo del día 22, sobre el código final, es parte del go/no-go |
+| La semana 5 junta la salida, A5/W5, `502`, `503` y los pilotos | El ensayo ya está hecho en la semana 2; lo que se corre empuja el alta de los pilotos, nunca el go/no-go |
 | Blockfrost Starter no admite los dos proyectos | Hobby a €29/mes, o la idea de Koios (`README.md` §Antes de mainnet, ítem 8), que todavía no está medida para Plutus V3 |
 | El precio de ADA sube | El presupuesto en ADA no cambia; en dólares escala lineal. A $0,50, la salida y los pilotos salen ~$90 |
 | La disponibilidad de los pilotos en la semana 5 | No la controlamos: confirmarla el día 1 |

@@ -142,7 +142,7 @@ Los ítems 4–6 de esta lista (`SPEC-402`, `SPEC-407`, `SPEC-408`) se adelantar
 **Hay dos secuencias escritas para cuando llegue el momento.** La completa de M4 está en
 [`RUNBOOK-mainnet-cutover.md`](RUNBOOK-mainnet-cutover.md). La otra, en
 [`PLAN-2026-10-05-mainnet-y-fase-2.md`](PLAN-2026-10-05-mainnet-y-fase-2.md): cinco semanas con dos
-desarrolladores para mainnet sin recompilar el validador (en vivo el día 10), la Fase 2 entera,
+desarrolladores para mainnet sin recompilar el validador (en vivo el día 22), la Fase 2 entera,
 `SPEC-501`–`SPEC-504` y el alta de los pilotos. Su presupuesto, a precios del 2026-10-05: **~$12/mes
 de infraestructura recomendada y ~180 ADA entre la salida y los pilotos**. Las ≥120 wallets únicas
 de M4 no se alcanzan con un solo firmante (su §6). Es una **propuesta**: no arranca hasta que el
