@@ -76,6 +76,9 @@ unidad.
   parece un fallo de backend.
 - **`test.fail()` a nivel `describe` marca todos los tests que siguen**: va dentro del cuerpo.
 - **Selectores accesibles** (`getByLabel`, `getByRole`): fallan cuando la accesibilidad está mal.
+- **Lo que tiene que cambiar junto con el render no va en un `useEffect`**: el efecto corre después
+  de pintar, y un test que lee el DOM apenas aparece el texto falla de vez en cuando (pasó con
+  `document.documentElement.lang`). Se escribe donde cambia el estado (`vigenteCon`).
 - **Una regla CSS con nombre de utilidad de Tailwind pelea con el orden del archivo.**
 - **`Link` de TanStack pinta activo por prefijo**: el tab índice pide `activeOptions.exact`.
 - **Biome necesita `css.parser.tailwindDirectives`** para parsear `@theme`.

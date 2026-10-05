@@ -16,11 +16,17 @@ interface LocaleContextValue {
 
 const LocaleContext = createContext<LocaleContextValue | null>(null)
 
+/** `lang` cambia junto con el texto, nunca un render después: lo lee el lector de pantalla. */
+function vigenteCon(locale: Locale, tabla: Diccionario) {
+  document.documentElement.lang = locale
+  return { locale, tabla }
+}
+
 export function LocaleProvider({ children }: { children: React.ReactNode }) {
   const [vigente, setVigente] = useState<{ locale: Locale; tabla: Diccionario }>(() => {
     const guardada = getStoredLocale()
     const tabla = diccionarioCargado(guardada)
-    return tabla ? { locale: guardada, tabla } : { locale: DEFAULT_LOCALE, tabla: esAR }
+    return tabla ? vigenteCon(guardada, tabla) : vigenteCon(DEFAULT_LOCALE, esAR)
   })
   const pedida = useRef(vigente.locale)
 
@@ -28,7 +34,7 @@ export function LocaleProvider({ children }: { children: React.ReactNode }) {
     pedida.current = next
     cargarDiccionario(next)
       .then((tabla) => {
-        if (pedida.current === next) setVigente({ locale: next, tabla })
+        if (pedida.current === next) setVigente(vigenteCon(next, tabla))
       })
       .catch(() => {})
   }, [])
@@ -37,10 +43,6 @@ export function LocaleProvider({ children }: { children: React.ReactNode }) {
     const guardada = getStoredLocale()
     if (guardada !== pedida.current) aplicar(guardada)
   }, [aplicar])
-
-  useEffect(() => {
-    document.documentElement.lang = vigente.locale
-  }, [vigente.locale])
 
   const setLocale = useCallback(
     (next: Locale) => {

@@ -67,10 +67,18 @@ describe('LocaleProvider / useTranslation', () => {
       )
     }
 
+    const vistos: [locale: string, lang: string][] = []
+    function Espia() {
+      const { locale } = useTranslation()
+      vistos.push([locale, document.documentElement.lang])
+      return null
+    }
+
     render(
       <LocaleProvider>
         <Probe />
         <Toggle />
+        <Espia />
       </LocaleProvider>
     )
     await screen.findByText('locale: es-AR')
@@ -80,6 +88,7 @@ describe('LocaleProvider / useTranslation', () => {
 
     await screen.findByText('locale: en-US')
     expect(document.documentElement.lang).toBe('en-US')
+    expect(vistos.filter(([locale, lang]) => locale !== lang)).toEqual([])
   })
 
   it('persiste la locale elegida entre montajes (localStorage)', async () => {
