@@ -28,9 +28,9 @@ servidores MCP, **todos de solo lectura salvo el navegador**, y configurados en 
 - **Cubre:** un `.mcp.json` commiteado con los seis servidores de §Interfaz, las reglas de
   `permissions` en `.claude/settings.json` que les sacan las tools que mutan, y la documentación en
   `CLAUDE.md`, todo en el mismo commit.
-- **NO cubre:** MCPs de Turso, Cloudflare/R2 ni Cardano/Blockfrost (§Descartados); cambiar el código
-  de la app; ni mover a un MCP lo que hoy hacen los scripts (`pnpm e2e` sigue siendo Playwright como
-  test runner, no el MCP).
+- **NO cubre:** el MCP de Turso (§Preguntas abiertas); MCPs de Cloudflare/R2 ni Cardano/Blockfrost
+  (§Descartados); cambiar el código de la app; ni mover a un MCP lo que hoy hacen los scripts
+  (`pnpm e2e` sigue siendo Playwright como test runner, no el MCP).
 
 ## Interfaz
 
@@ -85,8 +85,6 @@ una tool que muta se intenta y se rechaza.
 
 ## Descartados
 
-- **Turso:** es la base de producción y `turso db shell` ya está documentado; una vía más de escritura
-  solo suma riesgo.
 - **Cloudflare/R2:** no hay hoy un problema que lo pida.
 - **Cardano/Blockfrost:** los que existen son de la comunidad; para un TXID en Preprod alcanza `curl`,
   y nada cerca de claves o firmas (🔴) pasa por un servidor de terceros.
@@ -94,3 +92,7 @@ una tool que muta se intenta y se rechaza.
 ## Preguntas abiertas
 
 - ¿Cuándo se toma? Sin disparador: cuando el dueño lo decida.
+- **¿Turso?** No se descarta, pero queda fuera de esta tanda (dueño, 2026-10-05). Si se suma, pasa
+  por las mismas invariantes: un token de solo lectura (`turso db tokens create --read-only`) y
+  nunca contra la base de producción sin el backup de `specs/stack.md` §8b. Hoy `turso db shell` ya
+  cubre las consultas a mano.
