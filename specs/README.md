@@ -82,7 +82,7 @@ e invalida las 180 TXIDs, el video y el reporte de Aiken.
 | 2 | Error budget: fijar el objetivo (propuesta: 99% de requests sin 5xx en 30 días) y reemplazar el *"What is not in place yet"* de `5-ops/monitoring-screenshots.md` | ✅ 2026-10-05 — 99% sin 5xx en 30 días (dueño), medido sobre `http.server.request.duration` en Grafana Cloud. Sin alerta: se revisa a mano hasta mainnet |
 | 3 | Sacar el ejemplo con `progressPercentage` de `apps/api/scripts/generate-api-docs.ts` (ruta borrada, no llega ni al Postman ni al OpenAPI) | ✅ 2026-10-05 |
 | 4 | La carta de los pilotos: la fila 1 de `evidencia-m3/README.md` citaba el ítem sin *"pilot participant letter of confirmation"* | ✅ 2026-10-05 — el README cita el ítem completo y dice que la carta existe y fue enviada aparte; no va al repo |
-| 5 | El cron `reconcile.yml` en rojo desde el 2026-10-03 (repo público: un reviewer lo ve en Actions). El login despertaba la API y el arranque en frío ya pasa los 2 min | ✅ 2026-10-05 — espera a `/health` antes de loguearse. Probado en frío: run 37384912417, 2 min despertando y verde |
+| 5 | El cron `reconcile.yml` en rojo desde el 2026-10-03 (repo público: un reviewer lo ve en Actions). El login despertaba la API y el arranque en frío ya pasa los 2 min | 🟡 2026-10-05 — espera a `/health` antes de loguearse. Con la API despierta pasa (runs 37385046005, 37385047032, 37385047305, ~2 s); **falta verlo en frío**: la primera corrida programada después del arreglo es la del 2026-10-06 a las 06:00 UTC |
 
 ### Fase 1 — emprolijar la app como está
 
