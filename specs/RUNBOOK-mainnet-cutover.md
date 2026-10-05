@@ -7,8 +7,8 @@
 > Catalyst y qué falta). **No ejecutar nada de acá mientras M3 no esté entregado** — D-013 sigue
 > vigente hasta que el dueño la revierta explícitamente.
 >
-> El camino corto —mainnet en tres semanas sin recompilar el validador, con presupuesto— es una
-> propuesta aparte: [`PLAN-2026-10-05-mainnet-en-tres-semanas.md`](PLAN-2026-10-05-mainnet-en-tres-semanas.md).
+> Mainnet sin recompilar el validador, junto con la Fase 2 y con presupuesto, es una propuesta
+> aparte: [`PLAN-2026-10-05-mainnet-y-fase-2.md`](PLAN-2026-10-05-mainnet-y-fase-2.md).
 > Se aparta de este runbook en tres puntos que decide el dueño (su §2).
 
 ## 0 · Precondición: qué tiene que estar cerrado antes de tocar esto
