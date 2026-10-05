@@ -21,7 +21,7 @@ the third:
 |---|---|---|
 | **Coverage** | Vitest coverage on every CI run; all four TypeScript parts have minimum thresholds that fail the build | The coverage table in the [test report](../1-repo-ci-tests/test-report.pdf) (100% of lines) |
 | **Latency** | OpenTelemetry traces of every API request, exported to Grafana Cloud (Tempo), with per-middleware timing | `grafana-tempo-trace-detail.jpg` below |
-| **Error budgets** | The target below, measured on the OpenTelemetry HTTP server metric the API exports to Grafana Cloud; Sentry captures each of those errors with its stack trace | The target and indicator below, `sentry-issues.jpg` |
+| **Error budgets** | The target below, measured on the OpenTelemetry traces of every API request in Grafana Cloud (Tempo); Sentry captures each of those errors with its stack trace | The target, indicator and measurement below, `sentry-issues.jpg` |
 
 The reservation → escrow latency that acceptance criterion 3 measures (median under 12 minutes)
 is a separate, product-level metric, served by the API at
@@ -32,7 +32,9 @@ is a separate, product-level metric, served by the API at
 | | |
 |---|---|
 | **Target (SLO)** | **99% of API requests answered without a 5xx, over a rolling 30-day window.** The budget is the remaining 1% |
-| **Indicator (SLI)** | Requests with `http.response.status_code` ≥ 500 over all requests, from the `http.server.request.duration` histogram that the OpenTelemetry HTTP instrumentation of `propnexus-api` exports to Grafana Cloud (`apps/api/src/instrumentation.ts`) |
+| **Indicator (SLI)** | Server requests answered with `http.response.status_code` ≥ 500 over all server requests, counted on the root server span of each trace in Tempo (`{ resource.service.name = "propnexus-api" && span:kind = server && nestedSetParent < 0 } \| count_over_time()`, and the same with `&& span.http.response.status_code >= 500`) |
+| **Why traces and not the metric** | The API also exports the `http.server.request.duration` histogram, but on the free tier the instance sleeps after 15 minutes and every wake-up restarts its counters under the same series. A rare error then shows up as a flat counter, and `increase()` reports **0** errors where Tempo shows them. The traces count each request once |
+| **Measured on 2026-10-05** (30 days, 2026-09-05 → 2026-10-05) | **138,796 requests, 22 with a 5xx: 99.98%**, inside the 99% target. The 22: 6 × 500 and 6 × 503 without a matched route, 4 × 503 on the geocoding proxy, 3 × 500 on `POST /evidence/reconcile`, 2 × 503 on `/health`, 1 × 500 on unit creation. The three reconcile errors were a start-up race, found through this measurement and fixed the same day: after a cold start, the anchoring service took about 25 seconds longer than the HTTP server to be ready |
 | **Where each error is investigated** | Sentry, which receives every 5xx with its stack trace (`sentry-issues.jpg`). 4xx responses are client errors and do not consume the budget |
 | **What it does not see** | A request that never reaches the API process, such as one that fails while the free-tier instance is waking up (about two minutes after 15 minutes without traffic), is not in the metric. It is measured at the API, not at the edge |
 

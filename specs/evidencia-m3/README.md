@@ -76,4 +76,4 @@ branches, *"rejects unsigned evidence"*, and error budgets. Each one, with its c
 - **Monitoring screenshots** (Sentry, Grafana Cloud, PostHog, Render):
   [`monitoring-screenshots.pdf`](5-ops/monitoring-screenshots.pdf), images in
   [`monitoring/`](5-ops/monitoring/). The same document sets the error-budget target (99% of API
-  requests without a 5xx over 30 days) that Output 4's telemetry asks for.
+  requests without a 5xx over 30 days) that Output 4's telemetry asks for, measured at 99.98%.
