@@ -277,7 +277,8 @@ left alone — there is nothing to query.
 **It has to be triggered from outside:** a `setInterval` inside the API stops counting when Render
 puts the service to sleep after 15 minutes, and the free tier has no workers. A
 GitHub Actions cron calls that same endpoint (`.github/workflows/reconcile.yml`, every day at 06:00
-UTC) and fails if it finds suspicious threads. It can also be run by hand, and every screen that
+UTC). It first waits for `/health` to answer, since waking the free-tier API takes about two
+minutes, and fails if it finds suspicious threads. It can also be run by hand, and every screen that
 shows an anchor reconciles its own scope on read.
 
 On Preprod a block takes ~20 s, so reconciling right after anchoring usually returns

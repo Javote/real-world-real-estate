@@ -21,15 +21,23 @@ the third:
 |---|---|---|
 | **Coverage** | Vitest coverage on every CI run; all four TypeScript parts have minimum thresholds that fail the build | The coverage table in the [test report](../1-repo-ci-tests/test-report.pdf) (100% of lines) |
 | **Latency** | OpenTelemetry traces of every API request, exported to Grafana Cloud (Tempo), with per-middleware timing | `grafana-tempo-trace-detail.jpg` below |
-| **Error budgets** | Sentry captures every unhandled error in the API and the web app | `sentry-issues.jpg` below |
+| **Error budgets** | The target below, measured on the OpenTelemetry HTTP server metric the API exports to Grafana Cloud; Sentry captures each of those errors with its stack trace | The target and indicator below, `sentry-issues.jpg` |
 
 The reservation → escrow latency that acceptance criterion 3 measures (median under 12 minutes)
 is a separate, product-level metric, served by the API at
 `GET /api/v1/audit-logs/telemetry/reservation-to-escrow` and reported under evidence item 3.
 
-**What is not in place yet:** no formal error-budget target (an SLO such as "99% of requests
-without a 5xx over 30 days") has been set. Sentry records the errors a budget would be computed
-from; setting the target itself is left for before mainnet.
+### The error budget
+
+| | |
+|---|---|
+| **Target (SLO)** | **99% of API requests answered without a 5xx, over a rolling 30-day window.** The budget is the remaining 1% |
+| **Indicator (SLI)** | Requests with `http.response.status_code` ≥ 500 over all requests, from the `http.server.request.duration` histogram that the OpenTelemetry HTTP instrumentation of `propnexus-api` exports to Grafana Cloud (`apps/api/src/instrumentation.ts`) |
+| **Where each error is investigated** | Sentry, which receives every 5xx with its stack trace (`sentry-issues.jpg`). 4xx responses are client errors and do not consume the budget |
+| **What it does not see** | A request that never reaches the API process, such as one that fails while the free-tier instance is waking up (about two minutes after 15 minutes without traffic), is not in the metric. It is measured at the API, not at the edge |
+
+The target was set on 2026-10-05. There is no alerting on it yet: on Preprod, with pilot traffic,
+it is reviewed by hand, and alerting is part of the work before mainnet.
 
 ## Files
 

@@ -15,6 +15,13 @@
 | 4 | *"Security review report (findings + applied fixes)"* | [`4-security/`](4-security/) |
 | 5 | *"Ops runbook (deploy/rollback/incident) in repo + monitoring screenshots"* | [`5-ops/`](5-ops/) |
 
+## How we read the SOM
+
+Six phrases of the SOM are implemented with a different shape than their words suggest: the
+Plutus version, roles and configurable signers, configurable percentages, timeouts and fallback
+branches, *"rejects unsigned evidence"*, and error budgets. Each one, with its code and tests, in
+[`reading-of-the-som.pdf`](reading-of-the-som.pdf).
+
 ## 1 · Repository, CI and tests
 
 - **Test and coverage report**: [`test-report.pdf`](1-repo-ci-tests/test-report.pdf) — tests and
@@ -68,4 +75,5 @@
 - **Runbook** for deploy, rollback and incident response: [`runbook.pdf`](5-ops/runbook.pdf).
 - **Monitoring screenshots** (Sentry, Grafana Cloud, PostHog, Render):
   [`monitoring-screenshots.pdf`](5-ops/monitoring-screenshots.pdf), images in
-  [`monitoring/`](5-ops/monitoring/).
+  [`monitoring/`](5-ops/monitoring/). The same document sets the error-budget target (99% of API
+  requests without a 5xx over 30 days) that Output 4's telemetry asks for.
