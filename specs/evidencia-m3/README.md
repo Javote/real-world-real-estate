@@ -9,7 +9,7 @@
 
 | # | Requirement | Where |
 |---|---|---|
-| 1 | *"Public GitHub repo(s) for contracts/services/frontend with CI logs, coverage report; README marks public vs private folders"* | [`1-repo-ci-tests/`](1-repo-ci-tests/) |
+| 1 | *"Public GitHub repo(s) for contracts/services/frontend with CI logs, coverage report, and pilot participant letter of confirmation; README marks public vs private folders"* | [`1-repo-ci-tests/`](1-repo-ci-tests/); the pilot letter was sent separately |
 | 2 | *"API docs + test reports with coverage/outcomes (e.g., Postman collection)"* | [`2-api/`](2-api/) + the test report in `1-repo-ci-tests/` |
 | 3 | *"Pre-prod URL, screenshots of audit logs/latency confirming <12m median; short performance note; walkthrough video of full flow + List of transaction identifiers associated milestone test anchors"* | [`3-preprod/`](3-preprod/) |
 | 4 | *"Security review report (findings + applied fixes)"* | [`4-security/`](4-security/) |
@@ -31,6 +31,8 @@
   [repository's README](https://github.com/Javote/real-world-real-estate#readme), section "This
   repository is public": no folder contains secrets, credentials, wallet keys or personal data;
   secrets travel only through environment variables.
+- **Pilot participant letter of confirmation**: it exists and has already been sent separately, so
+  it is not included in this repository.
 
 ## 2 · API
 
