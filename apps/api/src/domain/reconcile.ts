@@ -1,6 +1,6 @@
 import type { LiveThread } from "@plataforma/cardano";
 import { refToHex } from "@plataforma/shared";
-import { anchorPort } from "../lib/anchor.js";
+import { anchorPort, anchorPortListo } from "../lib/anchor.js";
 import { db } from "../lib/db.js";
 import { sql } from "../lib/kysely.js";
 
@@ -35,7 +35,7 @@ async function reconciliar(
   alcance: AlcanceReconciliacion,
   limite: number
 ): Promise<ResultadoReconciliacion> {
-  if (anchorPort().mode === "disabled") return { revisados: 0, confirmados: 0 };
+  if ((await anchorPortListo()).mode === "disabled") return { revisados: 0, confirmados: 0 };
 
   let query = db
     .selectFrom("OnChainEvent")
@@ -134,7 +134,7 @@ export interface HiloReparado {
 }
 
 export async function repararHilosSospechosos(limite = TOPE_SOSPECHOSOS): Promise<HiloReparado[]> {
-  if (anchorPort().mode === "disabled") return [];
+  if ((await anchorPortListo()).mode === "disabled") return [];
 
   const sospechosos = await hilosSospechosos(limite);
   const reparados: HiloReparado[] = [];

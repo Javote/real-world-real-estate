@@ -277,8 +277,7 @@ hay nada que consultar—.
 **Hay que dispararlo desde afuera, y no es pereza:** un `setInterval` dentro de la API deja de contar
 cuando Render duerme el servicio a los 15 minutos, y el free tier no tiene workers (D-003 · D-040).
 Lo dispara un cron de GitHub Actions contra ese mismo endpoint (`.github/workflows/reconcile.yml`,
-todos los días a las 06:00 UTC), que primero espera a que `/health` responda —despertar la API del
-plan free tarda unos 2 minutos— y falla si encuentra hilos sospechosos. También se puede
+todos los días a las 06:00 UTC), que además falla si encuentra hilos sospechosos. También se puede
 correr a mano, y cada pantalla que muestra un anclaje reconcilia lo suyo al leer (D-077).
 
 En Preprod un bloque tarda ~20 s, así que reconciliar inmediatamente después de anclar suele devolver

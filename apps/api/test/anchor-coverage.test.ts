@@ -49,6 +49,37 @@ describe("initAnchorPort", () => {
   });
 });
 
+describe("anchorPortListo", () => {
+  it("espera la inicialización en curso en vez de tirar: la API ya escucha mientras el puerto arranca", async () => {
+    process.env.ANCHOR_MODE = "real";
+    process.env.DATABASE_URL = "file:./.data/test.sqlite";
+    let terminar: (puerto: unknown) => void = () => {};
+    createAnchorPort.mockReturnValue(
+      new Promise((resolver) => {
+        terminar = resolver;
+      })
+    );
+    vi.resetModules();
+    const { anchorPort, anchorPortListo, initAnchorPort } = await import("../src/lib/anchor.js");
+    const real = { mode: "real" };
+
+    void initAnchorPort();
+    const listo = anchorPortListo();
+    expect(() => anchorPort()).toThrow(/no está inicializado/);
+
+    terminar(real);
+    await expect(listo).resolves.toBe(real);
+    await expect(anchorPortListo()).resolves.toBe(real);
+  });
+
+  it("sin initAnchorPort() tira igual que anchorPort()", async () => {
+    vi.resetModules();
+    const { anchorPortListo } = await import("../src/lib/anchor.js");
+
+    await expect(anchorPortListo()).rejects.toThrow(/no está inicializado/);
+  });
+});
+
 describe("anchorPort", () => {
   it("tira si se llama antes de que initAnchorPort() haya corrido", async () => {
     vi.resetModules();

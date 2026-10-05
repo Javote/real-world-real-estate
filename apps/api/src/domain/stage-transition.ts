@@ -19,7 +19,7 @@ import type {
   StageRow
 } from "../db/types.js";
 import { Sentry } from "../instrumentation.js";
-import { anchorPort } from "../lib/anchor.js";
+import { anchorPort, anchorPortListo } from "../lib/anchor.js";
 import { db } from "../lib/db.js";
 import type { ExpressionBuilder } from "../lib/kysely.js";
 import { writeAuditLog } from "../utils/audit.js";
@@ -180,10 +180,11 @@ async function anchorEvent(
 
   let receipt: AnchorReceipt;
   try {
+    const puerto = await anchorPortListo();
     receipt =
       previous === null
-        ? await anchorPort().openThread({ datum: buildStageDatum(toDatumSource(stage, "")) })
-        : await anchorPort().advanceThread({
+        ? await puerto.openThread({ datum: buildStageDatum(toDatumSource(stage, "")) })
+        : await puerto.advanceThread({
             outputRef: (await cabezaDelHilo(stage.id)) ?? "",
             previous: buildStageDatum(
               /* v8 ignore next -- @preserve: `Completed` es terminal: nunca hay una transición CON ESE stage de origen, así que `previous.state` nunca es "Completed" */
@@ -384,7 +385,7 @@ export async function retryStageMint(stageId: string): Promise<RetryMintResult> 
     return { ok: false, status: 409, code: "THREAD_ALREADY_OPEN" };
   }
 
-  if (anchorPort().mode !== "disabled") {
+  if ((await anchorPortListo()).mode !== "disabled") {
     const hiloEnCadena = await anchorPort().findLiveThread(refToHex(stage.id));
     if (hiloEnCadena !== null) {
       return { ok: false, status: 409, code: "THREAD_ALREADY_ON_CHAIN" };

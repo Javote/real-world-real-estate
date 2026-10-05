@@ -79,6 +79,7 @@ class KyselyLedgerStore implements LedgerStore {
 }
 
 let puerto: AnchorPort | null = null;
+let inicializando: Promise<AnchorPort> | null = null;
 
 export function motivoParaNoAnclar(): string | null {
   const modo = process.env.ANCHOR_MODE ?? "simulated";
@@ -104,7 +105,12 @@ function inhabilitar(motivo: string): AnchorPort {
   return new DisabledAnchorAdapter(motivo);
 }
 
-export async function initAnchorPort(): Promise<AnchorPort> {
+export function initAnchorPort(): Promise<AnchorPort> {
+  inicializando = crearPuerto();
+  return inicializando;
+}
+
+async function crearPuerto(): Promise<AnchorPort> {
   const motivo = motivoParaNoAnclar();
   if (motivo) {
     puerto = inhabilitar(motivo);
@@ -125,6 +131,12 @@ export async function initAnchorPort(): Promise<AnchorPort> {
   }
 
   return puerto;
+}
+
+/** La API escucha antes de que el puerto termine de inicializarse (`server.ts`): esto lo espera. */
+export async function anchorPortListo(): Promise<AnchorPort> {
+  if (!puerto && inicializando) return inicializando;
+  return anchorPort();
 }
 
 export function anchorPort(): AnchorPort {

@@ -103,7 +103,9 @@ backlog quedan el CRUD de `/projects` y `/users` (admin, `SPEC-221`).
 
 - **Render free duerme a los 15 min sin requests y mata también el deploy en curso** ("Timed Out"):
   no es el código (`specs/RUNBOOK-deploy.md` §2).
-- **`app.listen()` va antes que `initAnchorPort()`**: el puerto no espera a Blockfrost.
+- **`app.listen()` va antes que `initAnchorPort()`**: el puerto HTTP no espera a Blockfrost, y el
+  `AnchorPort` tarda ~25 s más en estar listo. El dominio lo pide con `await anchorPortListo()`;
+  `anchorPort()` tira hasta entonces y queda para los tests.
 - **Todo paso del `startCommand` anuncia que empieza y que termina**, y `migrate` tiene techo de 120 s.
 - **`--import` necesita `./`**: sin él se busca como paquete. Probá el comando literal del deploy.
 - **Un cambio del `startCommand` en `render.yaml` llega en un deploy aparte**: el push dispara el

@@ -3,7 +3,7 @@ import type { MetadataAnchorReceipt } from "@plataforma/cardano";
 import { createId } from "../db/id.js";
 import type { Database, OnChainEventRow, OnChainEventType } from "../db/types.js";
 import { Sentry } from "../instrumentation.js";
-import { anchorPort } from "../lib/anchor.js";
+import { anchorPort, anchorPortListo } from "../lib/anchor.js";
 import { db } from "../lib/db.js";
 import { type ExpressionBuilder, sql } from "../lib/kysely.js";
 
@@ -113,7 +113,7 @@ export async function anclarEvidenciaUnaVez(
 async function enviar(evento: OnChainEventRow, input: AnclajeInput): Promise<OnChainEventRow> {
   let recibo: MetadataAnchorReceipt;
   try {
-    recibo = await anchorPort().anchorCommitment({
+    recibo = await (await anchorPortListo()).anchorCommitment({
       sha256: input.commitment,
       reference: input.reference
     });
