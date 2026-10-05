@@ -3,8 +3,10 @@ import { Readable } from "node:stream";
 import {
   bundleFilesSchema,
   cuidParamSchema,
+  EVIDENCE_UNATTRIBUTED,
   evidenceProofSchema,
   evidenceSchema,
+  evidenciaSinAtribuir,
   hex64ParamSchema,
   merkleProof,
   onChainEventSchema,
@@ -147,6 +149,19 @@ const updateEvidenceProcedure = orpc
 
     /* v8 ignore if -- @preserve: authorize({ proyecto }) ya confirmó que existe (Evidence) */
     if (!existing) throw new ORPCError("NOT_FOUND", { message: "Evidence not found" });
+
+    if (
+      evidenciaSinAtribuir({
+        authoritative: body.authoritative ?? existing.authoritative,
+        issuingAuthority:
+          body.issuingAuthority === undefined ? existing.issuingAuthority : body.issuingAuthority
+      })
+    ) {
+      throw new ORPCError("BAD_REQUEST", {
+        message: EVIDENCE_UNATTRIBUTED,
+        data: { code: EVIDENCE_UNATTRIBUTED }
+      });
+    }
 
     if (body.stageId) {
       const stage = await db

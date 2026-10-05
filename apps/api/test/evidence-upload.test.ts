@@ -374,14 +374,14 @@ describe("POST .../evidence · dispara Pending → InProgress", () => {
   });
 });
 
-describe("POST .../evidence · authoritative='on' (checkbox real) se guarda atribuida", () => {
-  it("sin issuingAuthority, completar el stage se rechaza con STAGE_EVIDENCE_UNATTRIBUTED", async () => {
+describe("POST .../evidence · evidencia authoritative sin autoridad emisora (D-028)", () => {
+  const stageNuevo = async () => {
     const ahora = new Date();
-    const stageId = createId();
+    const id = createId();
     await db
       .insertInto("Stage")
       .values({
-        id: stageId,
+        id,
         projectId,
         name: "Stage para authoritative=on",
         sequenceOrder: Math.floor(Math.random() * 1_000_000) + 700_000,
@@ -391,24 +391,133 @@ describe("POST .../evidence · authoritative='on' (checkbox real) se guarda atri
         updatedAt: ahora
       })
       .execute();
+    return id;
+  };
 
-    const subida = await subir(
+  const evidenciasDelStage = (sId: string) =>
+    db
+      .selectFrom("Evidence")
+      .select(["authoritative", "issuingAuthority"])
+      .where("stageId", "=", sId)
+      .execute();
+
+  it("400 EVIDENCE_UNATTRIBUTED si se declara authoritative='on' sin issuingAuthority, sin fila ni huérfano", async () => {
+    const sId = await stageNuevo();
+    const antes = archivosEnDisco();
+
+    const res = await subir(
       miembro,
-      stageId,
+      sId,
       { evidenceType: "certificate", category: "permits", authoritative: "on" },
       { buf: pdf(), nombre: "acta.pdf", tipo: "application/pdf" }
     );
-    expect(subida.status).toBe(201);
-    expect(subida.body.evidences[0].authoritative).toBe(true);
 
-    const admin = await token(FIXTURES.admin.email, FIXTURES.admin.password);
-    const res = await request(app)
-      .patch(`/api/v1/stages/${stageId}/state`)
-      .set("Authorization", `Bearer ${admin}`)
-      .send({ state: "Completed" });
+    expect(res.status).toBe(400);
+    expect(res.body.code).toBe("EVIDENCE_UNATTRIBUTED");
+    expect(await evidenciasDelStage(sId)).toEqual([]);
+    expect(archivosEnDisco()).toBe(antes);
+  });
 
-    expect(res.status).toBe(409);
-    expect(res.body.code).toBe("STAGE_EVIDENCE_UNATTRIBUTED");
+  it("400 también si issuingAuthority es espacios en blanco", async () => {
+    const sId = await stageNuevo();
+    const res = await subir(
+      miembro,
+      sId,
+      {
+        evidenceType: "certificate",
+        category: "permits",
+        authoritative: "on",
+        issuingAuthority: "   "
+      },
+      { buf: pdf(), nombre: "acta.pdf", tipo: "application/pdf" }
+    );
+
+    expect(res.status).toBe(400);
+    expect(res.body.code).toBe("EVIDENCE_UNATTRIBUTED");
+  });
+
+  it("201 con authoritative='on' e issuingAuthority: se guarda atribuida", async () => {
+    const sId = await stageNuevo();
+    const res = await subir(
+      miembro,
+      sId,
+      {
+        evidenceType: "certificate",
+        category: "permits",
+        authoritative: "on",
+        issuingAuthority: "  Municipalidad de Córdoba  "
+      },
+      { buf: pdf(), nombre: "acta.pdf", tipo: "application/pdf" }
+    );
+
+    expect(res.status).toBe(201);
+    expect(res.body.evidences[0].authoritative).toBe(true);
+    expect(await evidenciasDelStage(sId)).toEqual([
+      { authoritative: true, issuingAuthority: "Municipalidad de Córdoba" }
+    ]);
+  });
+
+  describe("PATCH /evidence/:id · la misma regla sobre el resultado del cambio", () => {
+    const subirOperativa = async () => {
+      const sId = await stageNuevo();
+      const res = await subir(
+        miembro,
+        sId,
+        { evidenceType: "photo", category: "avance" },
+        { buf: pdf(), nombre: "foto.pdf", tipo: "application/pdf" }
+      );
+      expect(res.status).toBe(201);
+      return { sId, id: res.body.evidences[0].id as string };
+    };
+
+    const patch = (id: string, body: Record<string, unknown>) =>
+      request(app)
+        .patch(`/api/v1/evidence/${id}`)
+        .set("Authorization", `Bearer ${miembro}`)
+        .send(body);
+
+    it("400 EVIDENCE_UNATTRIBUTED al marcarla authoritative sin autoridad, y no cambia nada", async () => {
+      const { sId, id } = await subirOperativa();
+
+      const res = await patch(id, { authoritative: true });
+
+      expect(res.status).toBe(400);
+      expect(res.body.data.code).toBe("EVIDENCE_UNATTRIBUTED");
+      expect(await evidenciasDelStage(sId)).toEqual([
+        { authoritative: false, issuingAuthority: null }
+      ]);
+    });
+
+    it("200 al marcarla authoritative con su autoridad en el mismo pedido", async () => {
+      const { sId, id } = await subirOperativa();
+
+      const res = await patch(id, {
+        authoritative: true,
+        issuingAuthority: " Colegio de Escribanos "
+      });
+
+      expect(res.status).toBe(200);
+      expect(await evidenciasDelStage(sId)).toEqual([
+        { authoritative: true, issuingAuthority: "Colegio de Escribanos" }
+      ]);
+    });
+
+    it("400 al borrarle la autoridad a una evidencia authoritative, y 200 si deja de serlo", async () => {
+      const { sId, id } = await subirOperativa();
+      expect(
+        (await patch(id, { authoritative: true, issuingAuthority: "Municipalidad" })).status
+      ).toBe(200);
+
+      const sinAutoridad = await patch(id, { issuingAuthority: null });
+      expect(sinAutoridad.status).toBe(400);
+      expect(sinAutoridad.body.data.code).toBe("EVIDENCE_UNATTRIBUTED");
+
+      const operativa = await patch(id, { authoritative: false, issuingAuthority: "  " });
+      expect(operativa.status).toBe(200);
+      expect(await evidenciasDelStage(sId)).toEqual([
+        { authoritative: false, issuingAuthority: null }
+      ]);
+    });
   });
 });
 

@@ -40,6 +40,20 @@ export const stageEvidenceUploadSchema = z.object({
 });
 export type StageEvidenceUploadInput = z.infer<typeof stageEvidenceUploadSchema>;
 
+export const EVIDENCE_UNATTRIBUTED = "EVIDENCE_UNATTRIBUTED" as const;
+
+/**
+ * Evidencia sin firmar (D-028): declarada `authoritative` sin decir qué autoridad la emitió.
+ * La rechazan el upload y el `PATCH`; la transición a `Completed` la sigue frenando por las
+ * filas anteriores.
+ */
+export function evidenciaSinAtribuir(evidencia: {
+  authoritative: boolean;
+  issuingAuthority: string | null | undefined;
+}): boolean {
+  return evidencia.authoritative && !evidencia.issuingAuthority?.trim();
+}
+
 export const evidenceSchema = z.strictObject({
   id: z.string(),
   projectId: z.string(),
@@ -75,6 +89,12 @@ export type StageEvidenceSummary = z.infer<typeof stageEvidenceSummarySchema>;
 export const updateEvidenceSchema = z.object({
   category: z.string().min(1).optional(),
   authoritative: z.boolean().optional(),
+  issuingAuthority: z
+    .string()
+    .max(200)
+    .nullable()
+    .optional()
+    .transform((v) => (v === undefined ? undefined : v?.trim() || null)),
   evidenceType: evidenceTypeSchema.optional(),
   stageId: z.string().nullable().optional()
 });

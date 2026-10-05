@@ -6794,6 +6794,17 @@
                   "authoritative": {
                     "type": "boolean"
                   },
+                  "issuingAuthority": {
+                    "anyOf": [
+                      {
+                        "type": "string",
+                        "maxLength": 200
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ]
+                  },
                   "evidenceType": {
                     "enum": [
                       "document",

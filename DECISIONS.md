@@ -220,9 +220,14 @@ pruebas del proyecto.
 
 La plataforma no valida la firma: **registra la declaración de origen y la atestación de revisión**.
 Evidencia sin firmar es (a) la declarada `authoritative` sin atribución de autoridad
-(`issuingAuthority`), o (b) un bundle que ningún revisor atestiguó. **El rechazo ocurre en la
-transición, no en el upload**: subir siempre se puede; avanzar no.
-*Estado: implementado el piso (exige que haya evidencia). Faltan las columnas de (a) y (b).*
+(`issuingAuthority`), o (b) un bundle que ningún revisor atestiguó. Subir evidencia no
+autoritativa siempre se puede; **la declarada `authoritative` sin `issuingAuthority` se rechaza al
+subirla y al editarla** (400 `EVIDENCE_UNATTRIBUTED`), y la transición a `Completed` la sigue
+frenando (409 `STAGE_EVIDENCE_UNATTRIBUTED`) por las filas anteriores. Hasta el 2026-10-05 solo la
+frenaba la transición, y era un bug: el upload la aceptaba y el `PATCH` no dejaba cargar la autoridad
+después, así que el stage quedaba trabado hasta desmarcarla como autoritativa. La regla es una sola,
+`evidenciaSinAtribuir` en `packages/shared`.
+*Estado: (a) implementada.*
 **Acotada por D-084**, que sacó `authorityReference` de (a), y por **D-086**, que eliminó (b):
 la atestación se registra, pero ya no condiciona el avance.
 

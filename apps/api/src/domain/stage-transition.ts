@@ -4,6 +4,7 @@ import {
   type AuditAction,
   buildStageDatum,
   canTransition,
+  evidenciaSinAtribuir,
   merkleRoot,
   refToHex,
   STAGE_TRANSITION_ERRORS,
@@ -289,7 +290,7 @@ export async function transitionStage(input: {
       return { ok: false, status: 409, code: STAGE_TRANSITION_ERRORS.evidenceRequired };
     }
 
-    if (evidencias.some((e) => e.authoritative && !e.issuingAuthority?.trim())) {
+    if (evidencias.some(evidenciaSinAtribuir)) {
       return { ok: false, status: 409, code: STAGE_TRANSITION_ERRORS.evidenceUnattributed };
     }
   }

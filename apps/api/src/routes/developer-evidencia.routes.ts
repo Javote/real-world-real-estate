@@ -6,8 +6,10 @@ import {
   EVIDENCE_MAX_FILE_BYTES,
   EVIDENCE_MAX_FILES,
   EVIDENCE_SIGNATURE_BYTES,
+  EVIDENCE_UNATTRIBUTED,
   type EvidenceMime,
   type EvidenceRejection,
+  evidenciaSinAtribuir,
   stageEvidenceUploadResultSchema,
   stageEvidenceUploadSchema
 } from "@plataforma/shared";
@@ -118,6 +120,13 @@ router.post(
         if (err instanceof ORPCError) return res.status(err.status).json(err.toJSON());
         /* v8 ignore next -- @preserve: inalcanzable por lo mismo que el if de arriba, call() solo rechaza con ORPCError */
         throw err;
+      }
+
+      if (evidenciaSinAtribuir(parsed)) {
+        return res.status(400).json({
+          message: "Authoritative evidence must name its issuing authority",
+          code: EVIDENCE_UNATTRIBUTED
+        });
       }
 
       const { stage, rechazo } = await stageQueAceptaSubida(projectId, stageId);
