@@ -176,6 +176,7 @@ Las specs cerradas viven en [`archive/`](archive/); su fila queda acá como índ
 | [`SPEC-017`](archive/SPEC-017-cobertura-95-en-toda-la-app.md) | 95% de cobertura con unit tests, en toda la app (criterio 2) | **cerrada 2026-09-22, partida en SPEC-018 y SPEC-019** — shared, cardano y contratos cerrados; la API, sobre el 95% de líneas |
 | [`SPEC-018`](archive/SPEC-018-cobertura-de-apps-api.md) | Cobertura de `apps/api`: branches ≥95%, el resto ≥98% | **cerrada 2026-09-23** — vara más estricta que el criterio 2, pedida por el dueño. Los seis lotes (A1-A6) más tres `catch` de logging que ninguna tabla de lote traía: las cuatro métricas quedaron en **100%** (branches 839/839). Umbrales de `vitest.config.mts` subidos a 99/99/99/99 |
 | [`SPEC-019`](archive/SPEC-019-cobertura-de-apps-web.md) | Cobertura de `apps/web`: las cuatro métricas ≥95%, más CI y evidencia | **cerrada 2026-09-24** — las cuatro métricas en 100% (W1–W9), umbrales del `vitest.config.ts` en 100/100/100/100, `test:coverage` de la raíz corre las cuatro partes TypeScript y CI también. El criterio 2 del SOM cierra ✅ |
+| [`SPEC-020`](SPEC-020-servidores-mcp-del-repo.md) | Los servidores MCP del repo: Sentry, Grafana, Context7, Playwright, Render y GitHub en un `.mcp.json`, de solo lectura contra producción | **postergada** — decisión del dueño, 2026-10-05, sin fecha ni disparador · 🟡 |
 
 **Las specs de Milestone 4 se numeran aparte, en `5xx`, y no cuentan entre las abiertas de
 arriba porque todavía no son mandato — M3 no está entregado.** Nacen de leer el SOM de M4 contra el
