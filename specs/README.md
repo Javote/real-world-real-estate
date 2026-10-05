@@ -142,7 +142,9 @@ Los ítems 4–6 de esta lista (`SPEC-402`, `SPEC-407`, `SPEC-408`) se adelantar
 desarrolladores y sin recompilar el validador, está en
 [`PLAN-2026-10-05-mainnet-en-tres-semanas.md`](PLAN-2026-10-05-mainnet-en-tres-semanas.md), con su
 presupuesto: **~$12/mes de infraestructura recomendada y ~180 ADA para la salida**, a precios del
-2026-10-05. Es una **propuesta**: no arranca hasta que el dueño tome las ocho decisiones de su §1,
+2026-10-05. Cubre solo la infraestructura del output 2 de M4: las métricas del piloto siguen en
+`SPEC-501`–`SPEC-504`, y las ≥120 wallets únicas no se alcanzan con un solo firmante (su §6). Es una
+**propuesta**: no arranca hasta que el dueño tome las ocho decisiones de su §1,
 empezando por revertir D-013.
 
 **Por qué junta specs de auditorías distintas.** Los ítems 2 y 3 salen de

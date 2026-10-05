@@ -10,7 +10,7 @@
 > validador**. Los puntos donde se aparta están en §2; si el dueño elige el runbook, este plan se
 > archiva.
 >
-> Precios relevados el **2026-10-05** (fuentes en §7). Nivel: 🟡 en general, 🔴 en la wallet.
+> Precios relevados el **2026-10-05** (fuentes al final). Nivel: 🟡 en general, 🔴 en la wallet.
 
 ## Qué es "mainnet" al final de las tres semanas
 
@@ -35,7 +35,7 @@ Si alguna no sale en dos días, el plan no llega a tres semanas.
 | 1 | Revocar D-013 | ahora, en paralelo a la revisión de M3 · después de la aceptación (lo que dice el runbook) | Ahora, **solo si** Preprod queda intacto: los cambios de código son aditivos y `render-config.test.ts` defiende que los servicios de Preprod siguen en Preprod |
 | 2 | Custodia de la clave del admin (`SPEC-304`, D-093) | dejarlo así · multisig M-de-N · VKH de recuperación | **Dejarlo así**, con la custodia del §3 y el control de detección del §4. Las otras dos cambian `spend`, `mint` y `packages/cardano`: no entran en tres semanas con revisión 🔴 |
 | 3 | `SPEC-305` | A1 · A2 · ninguna · solo la Parte B | **Ninguna**, que la spec da como postura legítima: el camino alcanzable ya lo cerró `SPEC-301` y un duplicado es detectable on-chain. La Parte B es una línea, pero cambia el hash también en Preprod mientras M3 está en revisión |
-| 4 | Aceptar el costo de D-057 | 2 ADA bloqueadas por etapa, sin burn | Aceptarlo: son ~$0,53 por etapa al precio de hoy (§6) |
+| 4 | Aceptar el costo de D-057 | 2 ADA bloqueadas por etapa, sin burn | Aceptarlo: son ~$0,53 por etapa al precio de hoy (§7) |
 | 5 | API de mainnet en Render free o paga | Free ($0) · Starter ($7/mes) | **Starter.** En free, un reinicio por health check perdió 4 anclajes en la prueba de volumen, y los pilotos esperarían ~1 min de cold start |
 | 6 | Turso free o pago | Free (1 día de PITR) · Developer ($4,99/mes, 10 días) | **Developer.** La base es la fuente de verdad del registro (D-007): sin ella, los hashes on-chain no se pueden atribuir a nada |
 | 7 | Asientos para los dos desarrolladores | Render Hobby (1 asiento) · Pro ($25/mes) · Sentry Developer (1 usuario) · Team ($26/mes) | **Un solo titular** de Render y Sentry: el deploy sale de `git push` a `main` y los secretos los carga una persona, que es lo que la custodia 🔴 pide de todos modos |
@@ -82,9 +82,9 @@ fila de `README.md` §Fuera de alcance, y `specs/stack.md` §7 y §8.
 | Día | Qué |
 |---|---|
 | 11 | **Go/no-go** (§5). Después de esto, las decisiones 2 y 3 quedan fijas |
-| 12 | Fondear la wallet con lo de la semana (§6) y publicar el reference script (`RUNBOOK-deploy.md` paso 6), con restart de la API |
+| 12 | Fondear la wallet con lo de la semana (§7) y publicar el reference script (`RUNBOOK-deploy.md` paso 6), con restart de la API |
 | 12–13 | Proyecto propio en mainnet de punta a punta. Cada TXID, contra Koios y Cardanoscan |
-| 14–15 | Altas de los 3 pilotos. Se vigilan Sentry, el saldo de la wallet y la reconciliación de `Pending` |
+| 14–15 | Altas de los 3 pilotos: proyectos, contratos y evidencia. **Ninguna liberación antes de que exista `SPEC-503`, y ningún drill de fallback antes de `SPEC-502`** (§6). Se vigilan Sentry, el saldo de la wallet y la reconciliación de `Pending` |
 
 **Lo que se congela estas tres semanas:** la Fase 2 (`SPEC-611`, de A1 en adelante), la PWA
 (`SPEC-222`) y la pasada de `SPEC-112`. A0.2 (`SPEC-612`) se cierra solo si es corta; si no, se
@@ -108,7 +108,42 @@ Una tx que la base no conoce es un incidente.
 - [ ] Legal greenlight firmado, o el dueño decide por escrito salir sin él (en ese caso, sin pilotos).
 - [ ] Pilotos confirmados para los días 14–15.
 
-## 6 · Presupuesto
+## 6 · Contra el texto oficial de M4
+
+El texto de Catalyst (Milestone Module, releído el 2026-10-05) coincide palabra por palabra con la
+transcripción de [`ESTADO-2026-09-22-catalyst-milestone-4.md`](archive/ESTADO-2026-09-22-catalyst-milestone-4.md).
+**Estas tres semanas cubren la parte de infraestructura del output 2, y nada más.**
+
+| M4 pide | Al final de las tres semanas | Qué falta, y dónde |
+|---|---|---|
+| Output 2 · URL de mainnet y direcciones del contrato publicadas | ✅ | — |
+| Output 2 · dashboards operacionales | ✅ Sentry, Grafana y PostHog contra mainnet | — |
+| Output 2 · playbooks de governance y operación | ◐ el runbook de mainnet (§3, semana 2) | La parte de governance: quién aprueba volver a Preprod y quién tiene acceso a la clave, y cómo se audita (`RUNBOOK-mainnet-cutover.md` §4) |
+| Criterio 2 · ≥350 eventos on-chain y ≥100 hashes de documentos | ~60 del proyecto propio, más lo que avancen los pilotos | Uso real de los pilotos. El ADA está presupuestado en §7. **Con eventos de uso real, no con proyectos sintéticos para llegar al número** |
+| Criterio 2 · valor de escrow simulado, reportado | ✗ | Un agregado, sin custodia (D-021) → `SPEC-501` |
+| Criterio 2 · legal greenlight de counsel/notario | lo que tarde la firma | Externo, pedido el día 1 |
+| Evidencia 2 · TXIDs de mainnet en explorador público | ✅ los del proyecto propio | Crece con los pilotos |
+| Evidencia 2 · capturas de eventos, **wallets** y liberaciones | ✗ | Un panel de producto, no de Sentry → `SPEC-501` |
+| Output 1 y criterio 1 · métricas del piloto | ✗ | `SPEC-504` → `SPEC-502` → `SPEC-503` → `SPEC-501`, en ese orden ([`ESTADO-2026-09-22`](archive/ESTADO-2026-09-22-catalyst-milestone-4.md) §Orden de ataque), desde la semana 4 |
+| Output 1 · drill de fallback (inspección fallida → re-inspección/reembolso) | ✗ | `SPEC-502`. La re-inspección ya existe (`Observed`, D-020); el reembolso se registra como declaración, nunca como movimiento de valor |
+| Outputs 3 y 4 · documentación, dossier notarial, closeout | ✗ | Después de correr los pilotos: el output 3 pide incorporar su feedback |
+
+### Lo que el texto oficial pone en riesgo y estas semanas no resuelven
+
+- **≥120 wallets únicas.** `SPEC-501` define la wallet única como *"wallets CIP-30 distintas que
+  firmaron al menos una transacción anclada"*. Pero hoy **toda** transacción la firma el admin
+  (D-058) y no hay co-firma CIP-30 (D-009): on-chain hay una sola wallet. Ninguna versión del plan
+  llega a 120 sin una de dos cosas, y las dos son del dueño: redefinir qué cuenta como wallet (la
+  pregunta abierta de `SPEC-501`), o que los compradores conecten una wallet, que es un cambio de
+  producto. Hay que decidirlo antes de abrir pilotos a escala, no al armar el reporte.
+- **≥800.000 USDM en valor.** Sigue abierta la pregunta de `SPEC-501`: si es una conversión al
+  armar el reporte, o si los contratos se denominan en USDM (en ese caso, `Contract.currency`
+  cambia).
+- **≥10 contratos firmados, ≥15 liberaciones, ≥120 compradores y NPS ≥70.** Son metas comerciales
+  de los pilotos, no de ingeniería: dependen de cuántos compradores reales traigan los dos
+  developers.
+
+## 7 · Presupuesto
 
 ### Infraestructura, por mes
 
@@ -162,7 +197,7 @@ una clave caliente es lo que se pierde si se compromete.
 
 No incluye horas de los dos desarrolladores, el legal greenlight ni un dominio propio.
 
-## 7 · Riesgos
+## 8 · Riesgos
 
 | Riesgo | Mitigación |
 |---|---|
