@@ -1,6 +1,7 @@
 import express from "express";
 import request from "supertest";
 import { afterAll, describe, expect, it, vi } from "vitest";
+import apiReal from "../src/app.js";
 import { db } from "../src/lib/db.js";
 import { HttpError } from "../src/lib/http-error.js";
 import { errorHandler } from "../src/middlewares/errorHandler.js";
@@ -97,9 +98,8 @@ describe("el errorHandler no le echa la culpa al cliente ni filtra el motivo", (
 
 describe("un body que el parser rechaza es culpa del cliente, no un 500", () => {
   it("JSON mal formado en el login es 400 y no pasa por el log de errores", async () => {
-    const { default: app } = await import("../src/app.js");
     const espia = vi.spyOn(console, "error").mockImplementation(() => {});
-    const res = await request(app)
+    const res = await request(apiReal)
       .post("/api/v1/auth/login")
       .set("content-type", "application/json")
       .send("{no es json");
