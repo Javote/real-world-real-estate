@@ -27,10 +27,6 @@ const EJEMPLOS_CAMINO_FELIZ: Record<string, EjemploBody> = {
       status: "planning"
     }
   },
-  "POST /api/v1/projects/:id/stages": {
-    modo: "raw",
-    body: { name: "Cimentación", sequenceOrder: 1, progressPercentage: 15 }
-  },
   "POST /api/v1/projects/:id/evidence": {
     modo: "formdata",
     campos: [
