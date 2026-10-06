@@ -25,3 +25,13 @@ export async function initObservability(): Promise<void> {
       : undefined
   ])
 }
+
+// Después del primer pintado: bajarlas junto con el render compite por la CPU y empuja el LCP.
+export function programarObservabilidad(): void {
+  const iniciar = () => void initObservability()
+  if (typeof requestIdleCallback === 'function') {
+    requestIdleCallback(iniciar, { timeout: 2000 })
+  } else {
+    requestAnimationFrame(() => setTimeout(iniciar))
+  }
+}

@@ -5,11 +5,9 @@ import { cargarDiccionario } from './i18n/dictionary'
 import { getStoredLocale } from './i18n/locale'
 import { LocaleProvider } from './i18n/useTranslation'
 import { AnnounceProvider } from './lib/announce'
-import { initObservability } from './lib/observability'
+import { programarObservabilidad } from './lib/observability'
 import { getRouter } from './router'
 import './styles.css'
-
-void initObservability()
 
 const router = getRouter()
 
@@ -30,4 +28,7 @@ function montar(raiz: HTMLElement) {
 
 cargarDiccionario(getStoredLocale())
   .catch(() => {})
-  .then(() => montar(contenedor))
+  .then(() => {
+    montar(contenedor)
+    programarObservabilidad()
+  })
