@@ -1,3 +1,4 @@
+import type { Profile } from '@plataforma/shared'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { Bell, LogOut, ShieldCheck, User } from 'lucide-react'
 import { useState } from 'react'
@@ -12,8 +13,12 @@ import { PanelLayout } from '#/components/PanelLayout'
 import { useTranslation } from '#/i18n/useTranslation'
 import { CARD_SHELL } from '#/lib/cardShell'
 import { cn } from '#/lib/cn'
+import { optimista } from '#/lib/optimista'
 
 const CATEGORIAS = ['stage', 'document', 'release', 'signature', 'certificate'] as const
+
+const prefsDe = (perfil: Profile | undefined): Record<string, boolean> =>
+  perfil?.notificationPrefsJson ? JSON.parse(perfil.notificationPrefsJson) : {}
 
 interface ProfileScreenProps {
   rol: keyof typeof NAV_TABS
@@ -31,13 +36,16 @@ export function ProfileScreen({ rol, testId, back, editTestId, prefsTestId }: Pr
 
   const { data: perfil } = useQuery({ queryKey: ['profile'], queryFn: api.getProfile })
 
-  const prefs = perfil?.notificationPrefsJson
-    ? (JSON.parse(perfil.notificationPrefsJson) as Record<string, boolean>)
-    : {}
+  const prefs = prefsDe(perfil)
 
   const guardarPrefs = useMutation({
     mutationFn: (cambio: Record<string, boolean>) => api.updateNotificationPrefs(cambio),
-    onSuccess: () => void queryClient.invalidateQueries({ queryKey: ['profile'] })
+    ...optimista(queryClient, ['profile'], (cambio: Record<string, boolean>) => {
+      queryClient.setQueryData<Profile>(
+        ['profile'],
+        (p) => p && { ...p, notificationPrefsJson: JSON.stringify({ ...prefsDe(p), ...cambio }) }
+      )
+    })
   })
 
   const guardarNombre = useMutation({
@@ -119,7 +127,6 @@ export function ProfileScreen({ rol, testId, back, editTestId, prefsTestId }: Pr
               checked={prefs[c] ?? true}
               onChange={(valor) => guardarPrefs.mutate({ [c]: valor })}
               label={t(`profile.prefs.${c}`)}
-              disabled={guardarPrefs.isPending}
             />
           ))}
         </article>

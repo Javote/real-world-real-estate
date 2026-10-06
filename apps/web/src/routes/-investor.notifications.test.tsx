@@ -113,6 +113,24 @@ describe('/investor/notifications', () => {
     await waitFor(() => expect(listar).toHaveBeenLastCalledWith(undefined))
   })
 
+  it('al cambiar el filtro, la lista anterior queda a la vista mientras llega la nueva', async () => {
+    autenticarComo(INVESTOR_USER)
+    const listar = vi
+      .spyOn(api, 'listNotifications')
+      .mockResolvedValue([notificacion('n-1', { category: 'document', titleKey: 'clave.doc' })])
+    montarRuta(Route, '/investor/notifications')
+    await screen.findByText('clave.doc')
+    listar.mockReturnValue(new Promise(() => {}))
+
+    await userEvent.click(screen.getByRole('button', { name: t('audit.category.documento') }))
+
+    await waitFor(() =>
+      expect(screen.getByTestId('INV-NOTIF-LIST-001').getAttribute('aria-busy')).toBe('true')
+    )
+    expect(screen.getByText('clave.doc')).toBeDefined()
+    expect(screen.queryByText(t('common.loading'))).toBeNull()
+  })
+
   it('cada categoría del filtro se puede elegir', async () => {
     autenticarComo(INVESTOR_USER)
     const listar = vi

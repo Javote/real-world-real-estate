@@ -119,6 +119,21 @@ describe('/investor/unit/$unitId/notifications', () => {
     await waitFor(() => expect(listar).toHaveBeenLastCalledWith({ unitId: 'u1' }))
   })
 
+  it('al cambiar el filtro, la lista anterior queda a la vista mientras llega la nueva', async () => {
+    const listar = preparar([notif()])
+    montar()
+    await screen.findByTestId('INV-NOTIF-READ-002')
+    listar.mockReturnValue(new Promise(() => {}))
+
+    fireEvent.click(screen.getByRole('button', { name: t['audit.category.firma'] }))
+
+    await waitFor(() =>
+      expect(screen.getByTestId('INV-NOTIF-UNIT-001').getAttribute('aria-busy')).toBe('true')
+    )
+    expect(screen.getByTestId('INV-NOTIF-READ-002')).toBeDefined()
+    expect(screen.queryByText(t['common.loading'])).toBeNull()
+  })
+
   it('las cinco categorías de la lista se dibujan, y sus chips filtran', async () => {
     const listar = preparar([
       notif({ id: '1', category: 'stage' }),

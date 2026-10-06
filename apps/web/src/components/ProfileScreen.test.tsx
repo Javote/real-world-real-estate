@@ -112,20 +112,48 @@ describe('ProfileScreen', () => {
       await waitFor(() => expect(leer).toHaveBeenCalledTimes(2))
     })
 
-    it('mientras guarda, los switches quedan deshabilitados', async () => {
+    it('el switch cambia antes de que conteste la API, y los demás siguen habilitados', async () => {
       autenticarComo(DEVELOPER_USER)
       vi.spyOn(api, 'getProfile').mockResolvedValue(PERFIL)
       vi.spyOn(api, 'updateNotificationPrefs').mockReturnValue(new Promise(() => {}))
       montar()
 
-      await userEvent.click(await screen.findByRole('switch', { name: 'Firmas del escribano' }))
+      await screen.findByText('developer@example.com')
+      const firmas = screen.getByRole('switch', { name: 'Firmas del escribano' })
+      await userEvent.click(firmas)
 
-      await waitFor(() =>
-        expect(screen.getByRole('switch', { name: 'Certificaciones' })).toHaveProperty(
-          'disabled',
-          true
-        )
+      await waitFor(() => expect(firmas.getAttribute('aria-checked')).toBe('false'))
+      expect(screen.getByRole('switch', { name: 'Certificaciones' })).toHaveProperty(
+        'disabled',
+        false
       )
+    })
+
+    it('si la API falla, el switch vuelve a como estaba', async () => {
+      autenticarComo(DEVELOPER_USER)
+      vi.spyOn(api, 'getProfile')
+        .mockResolvedValueOnce(PERFIL)
+        .mockReturnValue(new Promise(() => {}))
+      const guardar = vi.spyOn(api, 'updateNotificationPrefs').mockRejectedValue(new Error('caída'))
+      montar()
+
+      await screen.findByText('developer@example.com')
+      const firmas = screen.getByRole('switch', { name: 'Firmas del escribano' })
+      await userEvent.click(firmas)
+
+      await waitFor(() => expect(guardar).toHaveBeenCalled())
+      await waitFor(() => expect(firmas.getAttribute('aria-checked')).toBe('true'))
+    })
+
+    it('tocar un switch antes de que llegue el perfil igual lo guarda', async () => {
+      autenticarComo(DEVELOPER_USER)
+      vi.spyOn(api, 'getProfile').mockReturnValue(new Promise(() => {}))
+      const guardar = vi.spyOn(api, 'updateNotificationPrefs').mockResolvedValue(undefined as never)
+      montar()
+
+      await userEvent.click(await screen.findByRole('switch', { name: 'Certificaciones' }))
+
+      await waitFor(() => expect(guardar).toHaveBeenCalledWith({ certificate: false }))
     })
   })
 

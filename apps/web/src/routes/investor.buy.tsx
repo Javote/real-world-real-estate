@@ -1,4 +1,4 @@
-import { useQuery } from '@tanstack/react-query'
+import { keepPreviousData, useQuery } from '@tanstack/react-query'
 import { createFileRoute, useNavigate } from '@tanstack/react-router'
 import { MapPin, Search, SlidersHorizontal, X } from 'lucide-react'
 import { useEffect, useState } from 'react'
@@ -82,9 +82,14 @@ function InvestorBuy() {
     ...(search.view === 'map' && bbox ? { bbox } : {})
   }
 
-  const { data: proyectos, isPending } = useQuery({
+  const {
+    data: proyectos,
+    isPending,
+    isPlaceholderData
+  } = useQuery({
     queryKey: ['projects', params],
-    queryFn: () => api.listProjects(params)
+    queryFn: () => api.listProjects(params),
+    placeholderData: keepPreviousData
   })
 
   const { esFavorito, alternar } = useFavoritos()
@@ -190,7 +195,11 @@ function InvestorBuy() {
     ) : null
 
   const listado = (
-    <section className="flex flex-col gap-s4" data-testid="INV-BUY-LIST-001">
+    <section
+      className="flex flex-col gap-s4"
+      data-testid="INV-BUY-LIST-001"
+      aria-busy={isPlaceholderData}
+    >
       {isPending ? (
         <Loading />
       ) : proyectos?.length ? (

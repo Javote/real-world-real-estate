@@ -195,6 +195,7 @@ function InvestorStageDetail() {
                           src={urls[f.id]}
                           alt={t('investor.stage.photos')}
                           className="aspect-square w-full object-cover"
+                          decoding="async"
                         />
                       ) : (
                         <span className="flex aspect-square items-center justify-center">

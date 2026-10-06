@@ -187,7 +187,12 @@ function InvestorUnitDetail() {
                 aria-label={t('investor.unit.openGallery')}
               >
                 {portada ? (
-                  <img src={portada} alt="" className="aspect-video w-full object-cover" />
+                  <img
+                    src={portada}
+                    alt=""
+                    className="aspect-video w-full object-cover"
+                    fetchPriority="high"
+                  />
                 ) : (
                   <span className="flex aspect-video items-center justify-center text-disabled">
                     <Building2 size={28} aria-hidden="true" />

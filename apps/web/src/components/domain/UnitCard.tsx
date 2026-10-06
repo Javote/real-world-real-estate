@@ -80,6 +80,7 @@ export function UnitCard(props: UnitCardProps) {
           alt=""
           className="aspect-video w-full object-cover"
           loading="lazy"
+          decoding="async"
         />
       ) : (
         <span aria-hidden="true" className="aspect-video w-full bg-surface-alt" />

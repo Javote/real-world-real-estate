@@ -1,4 +1,10 @@
-import { useMutation, useQueries, useQuery, useQueryClient } from '@tanstack/react-query'
+import {
+  keepPreviousData,
+  useMutation,
+  useQueries,
+  useQuery,
+  useQueryClient
+} from '@tanstack/react-query'
 import { createFileRoute, useNavigate } from '@tanstack/react-router'
 import type { LucideIcon } from 'lucide-react'
 import { FileCheck2, FileText, ShieldCheck, Signature } from 'lucide-react'
@@ -15,6 +21,7 @@ import { PanelLayout } from '#/components/PanelLayout'
 import { formatCurrency, formatRelative } from '#/i18n/format'
 import { useTranslation } from '#/i18n/useTranslation'
 import { CARD_SHELL_EMPTY } from '#/lib/cardShell'
+import { useMarcarLeida } from '#/lib/notificaciones'
 
 const INVITACION_RECIBIDA = 'notifications.invitation.received'
 
@@ -59,9 +66,14 @@ function InvestorNotifications() {
   const [filtro, setFiltro] = useState<NotifCategory | null>(null)
   const [abierta, setAbierta] = useState<string | null>(null)
 
-  const { data: notificaciones, isPending } = useQuery({
+  const {
+    data: notificaciones,
+    isPending,
+    isPlaceholderData
+  } = useQuery({
     queryKey: ['notifications', filtro],
-    queryFn: () => api.listNotifications(filtro ? { category: filtro } : undefined)
+    queryFn: () => api.listNotifications(filtro ? { category: filtro } : undefined),
+    placeholderData: keepPreviousData
   })
 
   const avisos = new Map<string, { id: string; leida: boolean }>()
@@ -84,10 +96,7 @@ function InvestorNotifications() {
     if (c.data) invitaciones.set(ids[i]!, c.data)
   })
 
-  const marcarLeida = useMutation({
-    mutationFn: (id: string) => api.markNotificationRead(id),
-    onSuccess: () => void queryClient.invalidateQueries({ queryKey: ['notifications'] })
-  })
+  const marcarLeida = useMarcarLeida()
 
   const aceptar = useMutation({
     mutationFn: (id: string) => api.acceptInvitation(id),
@@ -112,7 +121,7 @@ function InvestorNotifications() {
 
   function abrir(id: string) {
     const aviso = avisos.get(id)
-    if (aviso && !aviso.leida) marcarLeida.mutate(aviso.id)
+    if (aviso && !aviso.leida) marcarLeida(aviso.id)
     setAbierta(id)
   }
 
@@ -156,7 +165,11 @@ function InvestorNotifications() {
         ))}
       </div>
 
-      <section className="flex flex-col gap-s3" data-testid="INV-NOTIF-LIST-001">
+      <section
+        className="flex flex-col gap-s3"
+        data-testid="INV-NOTIF-LIST-001"
+        aria-busy={isPlaceholderData}
+      >
         {fijas.map(tarjeta)}
 
         {isPending ? (
@@ -177,7 +190,7 @@ function InvestorNotifications() {
                 read={n.readAt !== null}
                 readLabel={t('investor.notifications.read')}
                 {...(filtro ? { category: BORDE[categoria] } : {})}
-                onOpen={n.readAt === null ? () => marcarLeida.mutate(n.id) : undefined}
+                onOpen={n.readAt === null ? () => marcarLeida(n.id) : undefined}
               />
             )
           })

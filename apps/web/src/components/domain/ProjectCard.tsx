@@ -62,7 +62,13 @@ export function ProjectCard({
       <button type="button" onClick={onOpen} className="block w-full text-left">
         <div className="relative aspect-video w-full bg-surface-alt">
           {imageUrl ? (
-            <img src={imageUrl} alt="" className="h-full w-full object-cover" />
+            <img
+              src={imageUrl}
+              alt=""
+              className="h-full w-full object-cover"
+              loading="lazy"
+              decoding="async"
+            />
           ) : (
             <span className="flex h-full w-full items-center justify-center text-disabled">
               <Building2 size={32} aria-hidden="true" />

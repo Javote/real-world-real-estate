@@ -1,4 +1,4 @@
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
+import { keepPreviousData, useQuery } from '@tanstack/react-query'
 import { createFileRoute, useNavigate } from '@tanstack/react-router'
 import type { LucideIcon } from 'lucide-react'
 import { FileCheck2, FileText, ShieldCheck, Signature } from 'lucide-react'
@@ -13,6 +13,7 @@ import { formatRelative } from '#/i18n/format'
 import { useTranslation } from '#/i18n/useTranslation'
 import { CARD_SHELL_EMPTY } from '#/lib/cardShell'
 import { reintentarSiNoEsAusencia } from '#/lib/investor'
+import { useMarcarLeida } from '#/lib/notificaciones'
 
 const CATEGORIAS = ['stage', 'document', 'release', 'signature', 'certificate'] as const
 type NotifCategory = (typeof CATEGORIAS)[number]
@@ -41,7 +42,6 @@ function InvestorUnitNotifications() {
   const { unitId } = Route.useParams()
   const { t, tDinamico, locale } = useTranslation()
   const navigate = useNavigate()
-  const queryClient = useQueryClient()
   const [filtro, setFiltro] = useState<NotifCategory | null>(null)
 
   const { data: unidad } = useQuery({
@@ -50,19 +50,21 @@ function InvestorUnitNotifications() {
     retry: reintentarSiNoEsAusencia
   })
 
-  const { data: notificaciones, isPending } = useQuery({
+  const {
+    data: notificaciones,
+    isPending,
+    isPlaceholderData
+  } = useQuery({
     queryKey: ['notifications', unitId, filtro],
     queryFn: () =>
       api.listNotifications({
         unitId,
         ...(filtro ? { category: filtro } : {})
-      })
+      }),
+    placeholderData: keepPreviousData
   })
 
-  const marcarLeida = useMutation({
-    mutationFn: (id: string) => api.markNotificationRead(id),
-    onSuccess: () => void queryClient.invalidateQueries({ queryKey: ['notifications'] })
-  })
+  const marcarLeida = useMarcarLeida()
 
   const primeraSinLeer = notificaciones?.find((n) => n.readAt === null)?.id
 
@@ -88,7 +90,11 @@ function InvestorUnitNotifications() {
         ))}
       </div>
 
-      <section className="flex flex-col gap-s3" data-testid="INV-NOTIF-UNIT-001">
+      <section
+        className="flex flex-col gap-s3"
+        data-testid="INV-NOTIF-UNIT-001"
+        aria-busy={isPlaceholderData}
+      >
         {isPending ? (
           <Loading />
         ) : notificaciones?.length ? (
@@ -104,7 +110,7 @@ function InvestorUnitNotifications() {
                 readLabel={t('investor.notifications.read')}
                 {...(n.id === primeraSinLeer ? { testId: 'INV-NOTIF-READ-002' } : {})}
                 {...(filtro ? { category: BORDE[categoria] } : {})}
-                onOpen={n.readAt === null ? () => marcarLeida.mutate(n.id) : undefined}
+                onOpen={n.readAt === null ? () => marcarLeida(n.id) : undefined}
               />
             )
           })

@@ -108,6 +108,21 @@ describe('/investor/buy', () => {
     })
   })
 
+  it('al buscar, el listado anterior queda a la vista mientras llega el nuevo', async () => {
+    const listar = preparar()
+    montar('/investor/buy?view=search')
+    await screen.findByText('Torre A')
+    listar.mockReturnValue(new Promise(() => {}))
+
+    await userEvent.type(screen.getByLabelText(t('buy.searchLabel')), 'Torre')
+
+    await waitFor(() =>
+      expect(screen.getByTestId('INV-BUY-LIST-001').getAttribute('aria-busy')).toBe('true')
+    )
+    expect(within(screen.getByTestId('INV-BUY-LIST-001')).getByText('Torre A')).toBeDefined()
+    expect(screen.queryByText(t('common.loading'))).toBeNull()
+  })
+
   describe('favoritos', () => {
     it('un proyecto guardado ofrece sacarlo, y uno que no lo está, guardarlo', async () => {
       preparar([TORRE_A, TORRE_B], [TORRE_A])
@@ -179,7 +194,7 @@ describe('/investor/buy', () => {
       )
     })
 
-    it('con dos cambios en vuelo, solo el último refresca la lista', async () => {
+    it('dos cambios seguidos salen en orden, y solo el último refresca la lista', async () => {
       preparar([TORRE_A, TORRE_B], [TORRE_A])
       let terminarAgregar = () => {}
       let terminarQuitar = () => {}
@@ -207,10 +222,13 @@ describe('/investor/buy', () => {
       await userEvent.click(
         screen.getAllByRole('button', { name: t('investor.favorites.unsave') })[0] as HTMLElement
       )
-      await waitFor(() => expect(api.removeFavorite).toHaveBeenCalled())
+      expect(screen.getAllByRole('button', { name: t('investor.favorites.unsave') })).toHaveLength(
+        1
+      )
+      expect(api.removeFavorite).not.toHaveBeenCalled()
 
       terminarAgregar()
-      await new Promise((r) => setTimeout(r, 0))
+      await waitFor(() => expect(api.removeFavorite).toHaveBeenCalledWith('p1'))
       expect(api.listFavorites).toHaveBeenCalledTimes(1)
 
       terminarQuitar()
