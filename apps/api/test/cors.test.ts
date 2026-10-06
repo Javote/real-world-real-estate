@@ -19,6 +19,18 @@ describe("CORS", () => {
     expect(res.headers["access-control-allow-headers"]).toContain("Authorization");
   });
 
+  it("permite los headers de traza que manda la web, o el preflight de cada pedido falla", async () => {
+    const res = await request(app)
+      .options("/api/v1/auth/me")
+      .set("Origin", "http://localhost:3000")
+      .set("Access-Control-Request-Method", "GET")
+      .set("Access-Control-Request-Headers", "authorization,traceparent,sentry-trace,baggage");
+
+    expect(res.status).toBe(204);
+    const permitidos = (res.headers["access-control-allow-headers"] ?? "").toLowerCase().split(",");
+    expect(permitidos).toEqual(expect.arrayContaining(["traceparent", "sentry-trace", "baggage"]));
+  });
+
   it("permite PUT: la portada del proyecto se sube con PUT desde la web", async () => {
     const res = await request(app)
       .options("/api/v1/developer/projects/x/cover")

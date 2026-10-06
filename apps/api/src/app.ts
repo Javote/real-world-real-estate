@@ -50,7 +50,12 @@ app.use((req, res, next) => {
     res.setHeader("Vary", "Origin");
     // `curl` no hace preflight: un método que falte acá solo falla en el navegador.
     res.setHeader("Access-Control-Allow-Methods", "GET,POST,PUT,PATCH,DELETE,OPTIONS");
-    res.setHeader("Access-Control-Allow-Headers", "Authorization,Content-Type");
+    // Los tres de traza los manda Sentry desde la web para que OTel continúe la misma traza: si
+    // falta uno, el preflight falla y la web no puede llamar a la API.
+    res.setHeader(
+      "Access-Control-Allow-Headers",
+      "Authorization,Content-Type,traceparent,sentry-trace,baggage"
+    );
     res.setHeader("Access-Control-Max-Age", "86400");
   }
 
