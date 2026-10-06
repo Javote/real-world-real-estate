@@ -9,9 +9,8 @@ import { programarObservabilidad } from './lib/observability'
 import { getRouter } from './router'
 import './styles.css'
 
-programarObservabilidad()
-
 const router = getRouter()
+programarObservabilidad(router)
 
 const contenedor = document.getElementById('root')
 if (!contenedor) throw new Error('Falta #root en index.html')

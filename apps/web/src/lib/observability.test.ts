@@ -1,9 +1,15 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
+import type { SessionUser } from '#/api/types'
+import { clearSession, setSession } from '#/auth/session'
 
 const mocks = vi.hoisted(() => ({
   sentryInit: vi.fn(),
   browserTracing: { name: 'BrowserTracing' },
   posthogInit: vi.fn(),
+  capture: vi.fn(),
+  identify: vi.fn(),
+  reset: vi.fn(),
+  estado: { distinctId: 'anon-1', identificado: false },
   cargados: [] as string[]
 }))
 
@@ -13,18 +19,56 @@ vi.mock('@sentry/react', () => {
 })
 vi.mock('posthog-js/dist/module.slim', () => {
   mocks.cargados.push('posthog-js/dist/module.slim')
-  return { default: { init: mocks.posthogInit } }
+  return {
+    default: {
+      init: mocks.posthogInit,
+      capture: mocks.capture,
+      identify: (id: string, props: unknown) => {
+        mocks.identify(id, props)
+        mocks.estado.distinctId = id
+        mocks.estado.identificado = true
+      },
+      reset: () => {
+        mocks.reset()
+        mocks.estado.distinctId = 'anon-2'
+        mocks.estado.identificado = false
+      },
+      get_distinct_id: () => mocks.estado.distinctId,
+      get_property: (p: string) =>
+        p === '$user_state' ? (mocks.estado.identificado ? 'identified' : 'anonymous') : undefined
+    }
+  }
 })
 
-async function initObservability() {
+function routerFalso() {
+  let alResolver: (() => void) | undefined
+  return {
+    subscribe: vi.fn((_evento: 'onResolved', escucha: () => void) => {
+      alResolver = escucha
+      return () => {}
+    }),
+    navegar: () => alResolver?.()
+  }
+}
+
+async function initObservability(router = routerFalso()) {
   const modulo = await import('./observability')
-  await modulo.initObservability()
+  await modulo.initObservability(router)
+  return router
+}
+
+function entrarComo(id: string, role: SessionUser['role']) {
+  setSession({
+    token: 't',
+    user: { id, role, email: `${id}@example.com`, fullName: 'Nombre Real' }
+  })
 }
 
 describe('initObservability', () => {
   beforeEach(() => {
     vi.resetModules()
     mocks.cargados.length = 0
+    clearSession()
     vi.stubEnv('VITE_SENTRY_DSN', '')
     vi.stubEnv('VITE_POSTHOG_KEY', '')
     vi.stubEnv('VITE_POSTHOG_HOST', '')
@@ -33,6 +77,7 @@ describe('initObservability', () => {
   afterEach(() => {
     vi.unstubAllEnvs()
     vi.clearAllMocks()
+    clearSession()
   })
 
   it('sin DSN ni key no descarga ni inicializa ninguna de las dos herramientas', async () => {
@@ -59,7 +104,7 @@ describe('initObservability', () => {
     expect(mocks.posthogInit).not.toHaveBeenCalled()
   })
 
-  it('con key y sin host inicializa el núcleo slim de PostHog en el host por defecto, solo con páginas vistas, y Sentry no se descarga', async () => {
+  it('con key y sin host inicializa el núcleo slim de PostHog en el host por defecto, sin capturas automáticas salvo el $pageleave, y Sentry no se descarga', async () => {
     vi.stubEnv('VITE_POSTHOG_KEY', 'phc_abc')
     vi.stubEnv('VITE_POSTHOG_HOST', undefined as unknown as string)
 
@@ -69,10 +114,13 @@ describe('initObservability', () => {
       api_host: 'https://us.i.posthog.com',
       person_profiles: 'identified_only',
       autocapture: false,
+      capture_pageview: false,
+      capture_pageleave: true,
       disable_session_recording: true,
       capture_performance: false,
       disable_surveys: true,
-      advanced_disable_flags: true
+      advanced_disable_flags: true,
+      before_send: expect.any(Function)
     })
     expect(mocks.cargados).toEqual(['posthog-js/dist/module.slim'])
     expect(mocks.sentryInit).not.toHaveBeenCalled()
@@ -87,6 +135,151 @@ describe('initObservability', () => {
     expect(mocks.posthogInit).toHaveBeenCalledWith(
       'phc_abc',
       expect.objectContaining({ api_host: 'https://ph.example.com' })
+    )
+  })
+})
+
+describe('PostHog según el rol de la sesión', () => {
+  const evento = { event: '$pageleave', properties: {} } as never
+  const beforeSend = () => {
+    const config = mocks.posthogInit.mock.calls[0]?.[1] as
+      | { before_send: (e: unknown) => unknown }
+      | undefined
+    if (!config) throw new Error('PostHog no se inicializó')
+    return config.before_send
+  }
+  const guardadoEnElNavegador = (id: string) => {
+    mocks.estado.distinctId = id
+    mocks.estado.identificado = true
+  }
+
+  beforeEach(() => {
+    vi.resetModules()
+    clearSession()
+    mocks.estado.distinctId = 'anon-1'
+    mocks.estado.identificado = false
+    vi.stubEnv('VITE_POSTHOG_KEY', 'phc_abc')
+  })
+
+  afterEach(() => {
+    vi.unstubAllEnvs()
+    vi.clearAllMocks()
+    clearSession()
+  })
+
+  it('sin sesión (login): página vista anónima, sin identify', async () => {
+    const router = await initObservability()
+
+    expect(router.subscribe).toHaveBeenCalledWith('onResolved', expect.any(Function))
+    expect(mocks.capture).toHaveBeenCalledWith('$pageview')
+    expect(mocks.identify).not.toHaveBeenCalled()
+    expect(beforeSend()(evento)).toBe(evento)
+  })
+
+  it('inversor: se identifica una sola vez con el ID opaco y el rol, nunca con email ni nombre, y cada navegación es una página vista', async () => {
+    entrarComo('u-inv', 'buyer')
+    const router = await initObservability()
+    router.navegar()
+
+    expect(mocks.identify).toHaveBeenCalledOnce()
+    expect(mocks.identify).toHaveBeenCalledWith('u-inv', { role: 'buyer' })
+    expect(mocks.capture).toHaveBeenCalledTimes(2)
+    expect(mocks.capture).toHaveBeenCalledWith('$pageview')
+  })
+
+  it('desarrollador: también se mide', async () => {
+    entrarComo('u-dev', 'developer')
+    await initObservability()
+
+    expect(mocks.identify).toHaveBeenCalledWith('u-dev', { role: 'developer' })
+    expect(mocks.capture).toHaveBeenCalledWith('$pageview')
+  })
+
+  it.each(['notary', 'verifier', 'admin'] as const)(
+    '%s: no manda nada, ni lo que PostHog captura solo',
+    async (rol) => {
+      entrarComo('u-otro', rol)
+      await initObservability()
+
+      expect(mocks.capture).not.toHaveBeenCalled()
+      expect(mocks.identify).not.toHaveBeenCalled()
+      expect(mocks.reset).not.toHaveBeenCalled()
+      expect(beforeSend()(evento)).toBeNull()
+    }
+  )
+
+  it('al cerrar sesión se resetea y el login vuelve a ser anónimo', async () => {
+    entrarComo('u-inv', 'buyer')
+    const router = await initObservability()
+
+    clearSession()
+    router.navegar()
+
+    expect(mocks.reset).toHaveBeenCalledOnce()
+    expect(mocks.identify).toHaveBeenCalledOnce()
+    expect(mocks.capture).toHaveBeenCalledTimes(2)
+  })
+
+  it('si en la misma pestaña entra un escribano después de un inversor, se resetea y deja de mandar', async () => {
+    entrarComo('u-inv', 'buyer')
+    const router = await initObservability()
+
+    entrarComo('u-esc', 'notary')
+    router.navegar()
+
+    expect(mocks.reset).toHaveBeenCalledOnce()
+    expect(mocks.capture).toHaveBeenCalledOnce()
+    expect(beforeSend()(evento)).toBeNull()
+  })
+
+  it('después de recargar, el mismo usuario no se vuelve a identificar', async () => {
+    guardadoEnElNavegador('u-inv')
+    entrarComo('u-inv', 'buyer')
+    await initObservability()
+
+    expect(mocks.reset).not.toHaveBeenCalled()
+    expect(mocks.identify).not.toHaveBeenCalled()
+    expect(mocks.capture).toHaveBeenCalledWith('$pageview')
+  })
+
+  it('después de recargar sin sesión, la identidad que quedó guardada se resetea: el login es anónimo', async () => {
+    guardadoEnElNavegador('u-inv')
+    await initObservability()
+
+    expect(mocks.reset).toHaveBeenCalledOnce()
+    expect(mocks.identify).not.toHaveBeenCalled()
+    expect(mocks.capture).toHaveBeenCalledWith('$pageview')
+  })
+
+  it('después de recargar, si entra otro usuario medido, se resetea antes de identificarlo', async () => {
+    guardadoEnElNavegador('u-inv')
+    entrarComo('u-dev', 'developer')
+    await initObservability()
+
+    expect(mocks.reset).toHaveBeenCalledOnce()
+    expect(mocks.identify).toHaveBeenCalledWith('u-dev', { role: 'developer' })
+  })
+
+  it('después de recargar, si entra un escribano, se resetea la identidad guardada y no manda nada', async () => {
+    guardadoEnElNavegador('u-inv')
+    entrarComo('u-esc', 'notary')
+    await initObservability()
+
+    expect(mocks.reset).toHaveBeenCalledOnce()
+    expect(mocks.capture).not.toHaveBeenCalled()
+  })
+
+  it('si cambia el usuario medido, se resetea antes de identificar al nuevo', async () => {
+    entrarComo('u-inv', 'buyer')
+    const router = await initObservability()
+
+    entrarComo('u-dev', 'developer')
+    router.navegar()
+
+    expect(mocks.reset).toHaveBeenCalledOnce()
+    expect(mocks.identify).toHaveBeenLastCalledWith('u-dev', { role: 'developer' })
+    expect(mocks.reset.mock.invocationCallOrder[0]).toBeLessThan(
+      mocks.identify.mock.invocationCallOrder[1] ?? 0
     )
   })
 })
@@ -139,7 +332,7 @@ describe('programarObservabilidad', () => {
 
   async function programar() {
     const { programarObservabilidad } = await import('./observability')
-    programarObservabilidad()
+    programarObservabilidad(routerFalso())
     const [observador] = PerformanceObserverFalso.instancias
     if (!observador) throw new Error('no se creó el PerformanceObserver')
     return observador
@@ -187,7 +380,7 @@ describe('programarObservabilidad', () => {
     vi.stubGlobal('PerformanceObserver', undefined)
     const { programarObservabilidad } = await import('./observability')
 
-    programarObservabilidad()
+    programarObservabilidad(routerFalso())
     vi.advanceTimersByTime(4999)
     expect(requestIdleCallback).not.toHaveBeenCalled()
     vi.advanceTimersByTime(1)
