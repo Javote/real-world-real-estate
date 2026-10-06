@@ -105,7 +105,12 @@ El diseño de cada ítem está en
 ### Fase 2 — la migración, módulo por módulo
 
 El plan, el acople y la regla de salida están en [`SPEC-611`](SPEC-611-la-migracion-fase-2.md)
-(D-102); el estado, acá. Arranca el 2026-10-02 con A0, a pedido del dueño, con lo que queda abierto de
+(D-102); el estado, acá.
+
+**Lo próximo en la web (dueño, 2026-10-06): `614`, y de esa spec primero el Paso 1, después el Paso 2.**
+Se eligió entre todo lo abierto porque no espera a la API y es lo que más se nota: volver a una
+pantalla deja de pedir todo de nuevo (Paso 1) y los datos salen con el hover (Paso 2). Las cascadas
+de pedidos y la forma con Suspense siguen en W3/W4. Arranca el 2026-10-02 con A0, a pedido del dueño, con lo que queda abierto de
 la Fase 1 (ítems 6 y 9) en paralelo: ninguno de los dos la frena.
 La propuesta de calendario, junto con mainnet, está en
 [`PLAN-2026-10-05-mainnet-y-fase-2.md`](PLAN-2026-10-05-mainnet-y-fase-2.md) §3.
@@ -115,7 +120,7 @@ La propuesta de calendario, junto con mainnet, está en
 | A0 | La API en ESM y el entorno en un solo lugar | [`612`](SPEC-612-la-api-en-esm-y-el-entorno-en-un-lugar.md) | en curso — **A0.1 (ESM) ✅ 2026-10-02**: 683 requests idénticas a `main` en los cuatro escenarios de observabilidad, `verify:all`, e2e 100/100, `test:s3`. En producción desde el 2026-10-02 22:11 UTC: `/health`, 401 y 404 como antes y logs limpios; falta ver un trace nuevo en Tempo (dueño) y A0.2 |
 | A1 | Los cimientos de los módulos | [`613`](SPEC-613-los-cimientos-de-los-modulos.md) | sin empezar · pide decidir `notify` |
 | A2 | El contrato en `shared`, el router raíz y los guards como `meta` | [`607`](SPEC-607-una-sola-capa-de-api.md) | sin empezar |
-| W2 | La fábrica de queries y `claveDeError` · el cliente desde el contrato | [`614`](SPEC-614-la-fabrica-de-queries.md) · [`609`](SPEC-609-el-cliente-sale-del-contrato.md) | sin empezar · `614` no espera a la API; `609`, a A2 |
+| W2 | La fábrica de queries, `staleTime` y `claveDeError` (Paso 1) y los loaders con `prefetchQuery`, por rol (Paso 2) · el cliente desde el contrato | [`614`](SPEC-614-la-fabrica-de-queries.md) · [`609`](SPEC-609-el-cliente-sale-del-contrato.md) | **`614`: lo próximo**, sin empezar, no espera a la API · `609`: sin empezar, espera a A2 |
 | A3 + W3 | El piloto `dossier` | [`615`](SPEC-615-el-piloto-dossier.md) | sin empezar · antes, decidir el scope del notary, cuándo se persiste la compilación y si la evidencia de M3 se congela |
 | A4 + W4 | El resto, módulo con su rol | [`616`](SPEC-616-el-resto-modulo-por-modulo.md) | sin empezar · después del piloto |
 | A5 + W5 | Una sola forma | [`617`](SPEC-617-una-sola-forma.md) | sin empezar |
@@ -225,7 +230,7 @@ hechos el mismo día.
 | Spec | Título | Estado |
 |---|---|---|
 | [`SPEC-601`](archive/SPEC-601-el-guard-de-rol-vive-en-el-router.md) | El guard de rol vive en el router: `beforeLoad` por prefijo y `me` cacheado. Se van 40 `useRoleGuard` y 63 `enabled: ready` | **cerrada 2026-10-02** · 🟡 |
-| [`SPEC-602`](archive/SPEC-602-los-datos-arrancan-con-la-ruta.md) | Loaders que precargan (`prefetchQuery`, sin `await`) y `staleTime` por defecto, sin tocar los estados de carga de `SPEC-110` | **absorbida 2026-10-02** por `614`–`616` |
+| [`SPEC-602`](archive/SPEC-602-los-datos-arrancan-con-la-ruta.md) | Loaders que precargan (`prefetchQuery`, sin `await`) y `staleTime` por defecto, sin tocar los estados de carga de `SPEC-110` | **absorbida 2026-10-02** por `614` (Pasos 1 y 2, desde 2026-10-06); `615`/`616` convierten los loaders a Suspense |
 | [`SPEC-603`](archive/SPEC-603-la-api-y-la-base-en-la-misma-region.md) | La API (Oregon) y Turso (us-east-1) en la misma región: cada viaje a la base cuesta ~90–120 ms medidos | en curso · 🟡 · opción B, falta el corte |
 | [`SPEC-604`](archive/SPEC-604-la-capa-de-datos-sale-de-los-routers.md) | Las lecturas repetidas salen de los routers (`Stage`: 20 queries en 10 routers) | **absorbida 2026-10-02** por `615`/`616` |
 | [`SPEC-605`](SPEC-605-la-cadena-fuera-del-camino-de-la-request.md) | Anclar y reconciliar fuera de la request (outbox + worker) | **condicional**: contradice D-077; tiene disparadores escritos |
@@ -237,7 +242,7 @@ hechos el mismo día.
 | [`SPEC-611`](SPEC-611-la-migracion-fase-2.md) | **La migración (Fase 2)**: los pasos A0–A5 y W2–W5, su orden, su acople, la regla de salida y las decisiones que pide | el índice de la Fase 2 · D-102 |
 | [`SPEC-612`](SPEC-612-la-api-en-esm-y-el-entorno-en-un-lugar.md) | A0: la API en ESM y el entorno en `platform/config.ts`, sin cambio de comportamiento | **Fase 2, A0** · en curso · 🟡 |
 | [`SPEC-613`](SPEC-613-los-cimientos-de-los-modulos.md) | A1: `ErrorCode`, IDs con marca, `Result`, `audit(trx)`, `notify(trx)`, `anclarConReclamo`, el esquema contra los tipos | **Fase 2, A1** · sin empezar · 🟡 · pide decidir `notify` |
-| [`SPEC-614`](SPEC-614-la-fabrica-de-queries.md) | W2: la fábrica de queries por entidad, invalidar por entidad, `staleTime` y una sola `claveDeError` | **Fase 2, W2** · sin empezar · 🟢 · no espera a la API |
+| [`SPEC-614`](SPEC-614-la-fabrica-de-queries.md) | W2: la fábrica de queries por entidad, invalidar por entidad, `staleTime` y una sola `claveDeError` (Paso 1); un loader con `prefetchQuery` por ruta, por rol (Paso 2) | **Fase 2, W2** · **lo próximo** · sin empezar · 🟢 · no espera a la API |
 | [`SPEC-615`](SPEC-615-el-piloto-dossier.md) | A3 + W3: el piloto `dossier` de punta a punta, con su regla de salida | **Fase 2** · sin empezar · 🟡 · pide 3 decisiones |
 | [`SPEC-616`](SPEC-616-el-resto-modulo-por-modulo.md) | A4 + W4: los 7 módulos restantes con las pantallas de su rol, el `error` de 22 pantallas y dos bugs de UX | **Fase 2** · sin empezar · 🟡/🟢 · después del piloto |
 | [`SPEC-617`](SPEC-617-una-sola-forma.md) | A5 + W5: se borra la forma vieja y Biome impide que vuelva | **Fase 2** · sin empezar · 🟡 |

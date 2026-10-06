@@ -40,10 +40,33 @@ vacío (auditoría §9), las que no son del piloto: `certifier.issued`; de `deve
 `project.$projectId`: `developer`, `index`, `progress`, `stage.$stageId`. **Ninguna pantalla con
 datos termina W4 sin su `errorComponent`** (dueño, 2026-10-02).
 
-**Endpoints de pantalla, solo donde hay cascada dependiente.** El primero: el detalle de unidad del
-investor (`investor.unit.$unitId.index`), que hace 7 queries en dos olas porque la segunda espera el
-`projectId` de la primera. Si las queries son independientes, los loaders las disparan en paralelo y
-no hace falta endpoint. Un path nuevo sale de M2-D5 o de una decisión.
+**El loader ya existe; W4 lo convierte.** Desde [`SPEC-614`](SPEC-614-la-fabrica-de-queries.md)
+Paso 2, cada ruta precarga con `prefetchQuery`. Al migrar la pantalla, el loader pasa a
+`ensureQueryData` y el componente a `useSuspenseQuery`; si alguna ruta llegó sin loader, se escribe
+directo en la forma nueva.
+
+**Los filtros no vuelven a parpadear.** `investor.buy` y las dos de notificaciones usan
+`placeholderData: keepPreviousData` (2026-10-06): al filtrar queda el resultado anterior, con
+`aria-busy`, y no `<Loading />`. `useSuspenseQuery` no acepta `placeholderData`: al migrarlas, el
+filtro de notificaciones (hoy `useState`) pasa a la URL con `validateSearch` + `loaderDeps`, y el
+cambio de filtro va en una transición (`useTransition` o `useDeferredValue`) para que Suspense no
+reemplace la lista por el `pendingComponent`. Los tests *"la lista anterior queda a la vista"* de las
+tres pantallas lo fijan.
+
+### Las cascadas
+
+**Endpoints de pantalla, solo donde hay cascada dependiente.** Un path nuevo sale de M2-D5 o de una
+decisión. Si las queries son independientes, los loaders las disparan en paralelo y no hace falta
+endpoint. Medido el 2026-10-06 (`enabled:` que depende de otro dato):
+
+| Pantalla | Qué espera a qué | Cómo se resuelve |
+|---|---|---|
+| `investor.unit.$unitId.index` | 7 queries en dos olas: la segunda espera el `projectId` de la unidad | El primer candidato a endpoint de pantalla |
+| `investor.unit.$unitId.contract` | Las liberaciones esperan el `contrato.id` | Endpoint, o el loader encadena (`ensureQueryData` del contrato, después las liberaciones) |
+| `project.$projectId.stage.$stageId` | Stage → archivos del bundle → fotos | Ídem |
+| `investor.unit.$unitId.dossier` | Espera el `projectId` de la unidad | Es del piloto: [`SPEC-615`](SPEC-615-el-piloto-dossier.md) |
+| `project.$projectId.index` | Los documentos esperan al proyecto, sin necesitarlo | No es cascada: la resuelve `SPEC-614` Paso 2 |
+| `admin.index` | Espera que se elija un proyecto | No es cascada: es interacción |
 
 **El audit lee el TXID del `OnChainEvent`.** Con el audit escrito en la transacción, antes de que
 exista el TXID (auditoría §2.3), la pantalla de audit deja de leerlo de `AuditLog.metadata.txid` y lo

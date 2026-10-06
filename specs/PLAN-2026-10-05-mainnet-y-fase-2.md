@@ -22,12 +22,12 @@ pendientes no entra. Ninguna spec trae estimación: las de abajo son del 2026-10
 |---|---|---|
 | Mainnet: código, infraestructura, ensayo y runbook | este plan | ~6 |
 | A0.2, A1 y A2 | `612`, `613`, `607` | ~6–8 |
-| W2 | `609`, `614` | ~3 |
+| W2 | `609`, `614` (con los loaders de su Paso 2) | ~4 |
 | Piloto `dossier` (A3 + W3) | `615` | ~2–3 |
 | El resto, módulo por módulo, y borrar la forma vieja | `616`, `617` | ~8–10 |
 | Features de M4 | `504`, `502`, `503`, `501` | ~6–9 |
 | Lo suelto | `603` (el corte), `112` (VoiceOver manual) | ~2–3 |
-| **Total** | | **~33–42** |
+| **Total** | | **~34–43** |
 
 Dos personas dan ~10 días-dev por semana, y ~8 efectivos después del trabajo en pareja sobre lo 🔴,
 las revisiones y las suites e2e. **Además, la migración es una cadena:**
@@ -122,18 +122,10 @@ se puede mover.
 
 ### Las cadenas: cada paso espera al anterior
 
-**La migración** (`SPEC-611` §El acople):
-
-```
-A0.2 (612) → A1 (613) → A2 (607) → 609 ─┐
-                                        ├─→ piloto: A3 + W3 (615) → regla de salida → A4 + W4 (616) → A5 + W5 (617)
-                  614 ──────────────────┘
-```
-
-- `614` no espera a la API: se hace en cualquier momento antes del piloto.
-- A3 y W3 van juntos; A4 y W4 avanzan en paralelo, módulo por módulo, y cada pantalla espera a su
-  módulo de la API.
-- Nada de A4 arranca antes de que el dueño apruebe el piloto.
+**La migración:** la cadena, el acople y la regla de salida viven solo en
+[`SPEC-611`](SPEC-611-la-migracion-fase-2.md) §El acople; este plan no los repite. Lo que importa
+para el calendario: `614` no espera a la API, y nada de A4 arranca antes de que el dueño apruebe el
+piloto.
 
 **Mainnet:**
 

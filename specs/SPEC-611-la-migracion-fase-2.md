@@ -26,7 +26,7 @@ arnés de la auditoría §7 sin tocar:
 | **A1** | Los cimientos de los módulos: `ErrorCode`, IDs con marca, `Result`, `audit(trx)`, `notify(trx)`, anclaje con reclamo, `CHECK` en los enums | [`SPEC-613`](SPEC-613-los-cimientos-de-los-modulos.md) | A0 |
 | **A2** | El contrato en `shared`, un solo router oRPC y los guards como `meta` | [`SPEC-607`](SPEC-607-una-sola-capa-de-api.md) | A1 |
 | **W2** | El cliente de la web desde el contrato | [`SPEC-609`](SPEC-609-el-cliente-sale-del-contrato.md) | A2 |
-| **W2** | La fábrica de queries por entidad y una sola `claveDeError` | [`SPEC-614`](SPEC-614-la-fabrica-de-queries.md) | W1 (cerrado) |
+| **W2** | La fábrica de queries por entidad, `staleTime` y una sola `claveDeError` (Paso 1); los loaders con `prefetchQuery`, por rol (Paso 2) | [`SPEC-614`](SPEC-614-la-fabrica-de-queries.md) | W1 (cerrado) |
 | **A3 + W3** | El piloto `dossier`, de punta a punta | [`SPEC-615`](SPEC-615-el-piloto-dossier.md) | A2, W2 |
 | **A4 + W4** | El resto, módulo con su rol | [`SPEC-616`](SPEC-616-el-resto-modulo-por-modulo.md) | el piloto aprobado |
 | **A5 + W5** | Se borra la forma vieja y se activan las reglas que la impiden | [`SPEC-617`](SPEC-617-una-sola-forma.md) | A4 + W4 |
@@ -35,7 +35,8 @@ W0 y W1 son de la Fase 1 y están cerrados (W1 es
 [`SPEC-601`](archive/SPEC-601-el-guard-de-rol-vive-en-el-router.md)).
 
 **Lo que se disuelve en estos pasos:** [`SPEC-602`](archive/SPEC-602-los-datos-arrancan-con-la-ruta.md)
-(loaders y `staleTime`) en `614`/`615`/`616`; [`SPEC-604`](archive/SPEC-604-la-capa-de-datos-sale-de-los-routers.md)
+(loaders y `staleTime`) en `614`, y los loaders se convierten a la forma con Suspense en `615`/`616`
+(dueño, 2026-10-06: los loaders en dos tiempos, porque W4 reescribe el componente y no el loader); [`SPEC-604`](archive/SPEC-604-la-capa-de-datos-sale-de-los-routers.md)
 (las lecturas fuera de los routers) en los `queries.ts` de `615`/`616`; y
 [`SPEC-608`](archive/SPEC-608-los-archivos-por-concepto.md) (archivos por concepto) en los módulos de
 `615`/`616`. Las tres pasan a `archive/` con esta spec.
@@ -48,7 +49,8 @@ A0 → A1 → A2 ─┬─→ W2 (609) ─┐
      W2 (614) ┴─────────────┘
 ```
 
-- **`614` no espera a la API**: la fábrica de queries se puede hacer sobre el `port.ts` de hoy.
+- **`614` no espera a la API**: la fábrica y los loaders de su Paso 2 se hacen sobre el `port.ts` de
+  hoy. Por eso es el paso de la web que va primero.
 - **A3 y W3 van juntos**, porque el piloto es de punta a punta.
 - **A4 y W4 avanzan en paralelo**, un módulo de la API con las pantallas de su rol.
 - **Las features de M4 (`501`–`504`) entran después de A2**, ya con la forma nueva, en paralelo con
