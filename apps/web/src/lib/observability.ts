@@ -6,12 +6,17 @@ async function iniciarSentry(): Promise<void> {
   const sentryDsn = import.meta.env.VITE_SENTRY_DSN
   if (!sentryDsn) return
   const Sentry = await import('@sentry/react')
+  const apiOrigin = import.meta.env.VITE_API_ORIGIN
   Sentry.init({
     dsn: sentryDsn,
     environment: import.meta.env.MODE,
     sendDefaultPii: false,
     integrations: [Sentry.browserTracingIntegration()],
-    tracesSampleRate: 1
+    tracesSampleRate: 1,
+    // La API continúa la traza con OTel (traceparent), así un clic se sigue hasta la base en Tempo.
+    // Su CORS acepta los tres headers; sin `VITE_API_ORIGIN` la API es del mismo origen.
+    propagateTraceparent: true,
+    ...(apiOrigin ? { tracePropagationTargets: [apiOrigin] } : {})
   })
 }
 

@@ -161,7 +161,7 @@ Ningún validador custodia ni transfiere valor, en ninguna fase (D-021).
 | Confirmaciones: **reconciliación al leer**, sin cron ni worker (el cron se revirtió) | ● | D-077 · D-003 |
 | Entorno de **pre-producción con URL pública** | ● — §8b | criterio 12 |
 | Telemetría / métrica *reserva → escrow < 12 min* | ● — `specs/README.md`, criterio 9 | criterio 9 · D-021 |
-| Monitoreo: Sentry (API y web) y OpenTelemetry hacia Grafana Cloud | ● — `specs/evidencia-m3/5-ops/` | criterio 14 |
+| Monitoreo, una pregunta por herramienta: **Sentry** (¿algo falló o anduvo lento para alguien?) errores de web y API, y web vitals de la web; **OTel → Grafana Cloud** (¿cómo se porta el servidor?) trazas y métricas de la API, sobre las que se mide el error budget, continuando la traza de la web por `traceparent`; **PostHog** (¿qué hace la gente?) web analytics, anónimo en el login e identificado por ID opaco y rol para inversor y desarrollador | ● — `specs/evidencia-m3/5-ops/`; el reparto, en `apps/web/src/lib/observability.ts` | criterio 14 |
 | Versionado de servicios: CalVer `vYYYY.MM.N` en tags | ○ — sin releases | D-015 |
 | Backups de la base | ◐ — Turso trae 1 día de point-in-time restore (runbook §3); a mano, `turso db export` + `.dump` fuera del repo (§8b) | D-038 · D-040 |
 

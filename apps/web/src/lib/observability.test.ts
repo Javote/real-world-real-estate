@@ -71,6 +71,7 @@ describe('initObservability', () => {
     clearSession()
     vi.stubEnv('VITE_SENTRY_DSN', '')
     vi.stubEnv('VITE_POSTHOG_KEY', '')
+    vi.stubEnv('VITE_API_ORIGIN', '')
     vi.stubEnv('VITE_POSTHOG_HOST', '')
   })
 
@@ -98,10 +99,25 @@ describe('initObservability', () => {
       environment: 'test',
       sendDefaultPii: false,
       integrations: [mocks.browserTracing],
-      tracesSampleRate: 1
+      tracesSampleRate: 1,
+      propagateTraceparent: true
     })
     expect(mocks.cargados).toEqual(['@sentry/react'])
     expect(mocks.posthogInit).not.toHaveBeenCalled()
+  })
+
+  it('con la API en otro origen, los headers de traza van solo a ella', async () => {
+    vi.stubEnv('VITE_SENTRY_DSN', 'https://k@sentry.example/1')
+    vi.stubEnv('VITE_API_ORIGIN', 'https://api.example.com')
+
+    await initObservability()
+
+    expect(mocks.sentryInit).toHaveBeenCalledWith(
+      expect.objectContaining({
+        propagateTraceparent: true,
+        tracePropagationTargets: ['https://api.example.com']
+      })
+    )
   })
 
   it('con key y sin host inicializa el núcleo slim de PostHog en el host por defecto, sin capturas automáticas salvo el $pageleave, y Sentry no se descarga', async () => {
