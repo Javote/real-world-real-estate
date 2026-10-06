@@ -27,16 +27,6 @@ const EJEMPLOS_CAMINO_FELIZ: Record<string, EjemploBody> = {
       status: "planning"
     }
   },
-  "POST /api/v1/projects/:id/evidence": {
-    modo: "formdata",
-    campos: [
-      { key: "file", type: "file" },
-      { key: "stageId", type: "text", value: "" },
-      { key: "evidenceType", type: "text", value: "document" },
-      { key: "category", type: "text", value: "permits" },
-      { key: "authoritative", type: "text", value: "false" }
-    ]
-  },
   "POST /api/v1/investor/invitations/:id/accept": { modo: "raw", body: {} },
   "PATCH /api/v1/stages/:id/state": { modo: "raw", body: { state: "InProgress" } },
   "POST /api/v1/developer/contracts/:id/releases/:stageNum": {
@@ -111,7 +101,14 @@ function aItemPostman(clave: string, descripcionGuards: string): PostmanRequestI
 }
 
 export function buildPostmanCollection(): object {
-  const folders: PostmanFolder[] = [...agruparPorPrefijo()]
+  const porPrefijo = agruparPorPrefijo();
+  const montadas = new Set([...porPrefijo.values()].flatMap((rutas) => [...rutas.keys()]));
+  const huerfanos = Object.keys(EJEMPLOS_CAMINO_FELIZ).filter((clave) => !montadas.has(clave));
+  if (huerfanos.length > 0) {
+    throw new Error(`[docs:api] ejemplo de una ruta que no está montada: ${huerfanos.join(", ")}`);
+  }
+
+  const folders: PostmanFolder[] = [...porPrefijo]
     .sort(([a], [b]) => a.localeCompare(b))
     .map(([prefijo, rutas]) => ({
       name: prefijo,
