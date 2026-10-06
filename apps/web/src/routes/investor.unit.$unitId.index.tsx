@@ -7,6 +7,7 @@ import type { MerkleProof } from '#/api/types'
 import { BuildingSchematic } from '#/components/domain/BuildingSchematic'
 import { HashChip } from '#/components/domain/HashChip'
 import { ImageGalleryModal } from '#/components/domain/ImageGalleryModal'
+import { Loading } from '#/components/domain/Loading'
 import { LocationMapModal } from '#/components/domain/LocationMapModal'
 import { MerkleRootProof } from '#/components/domain/MerkleRootProof'
 import { PrimaryButton } from '#/components/domain/PrimaryButton'
@@ -166,246 +167,260 @@ function InvestorUnitDetail() {
   return (
     <PanelLayout
       title={unidad?.unitReference ?? t('investor.units.title')}
-      {...(unidad ? { context: unidad.projectName } : {})}
+      context={unidad ? unidad.projectName : null}
       back={{
         label: t('investor.unit.back'),
         onClick: () => void navigate({ to: '/investor/units' })
       }}
     >
       <section className="flex flex-col gap-s4" data-testid="INV-UNIT-DETAIL-001">
-        <div className="grid grid-cols-2 gap-s3">
-          <button
-            type="button"
-            onClick={() => setGaleria(true)}
-            disabled={cantidadDeImagenes === 0}
-            className="relative overflow-hidden rounded-xl bg-surface-alt disabled:cursor-not-allowed disabled:opacity-60"
-            aria-label={t('investor.unit.openGallery')}
-          >
-            {portada ? (
-              <img src={portada} alt="" className="aspect-video w-full object-cover" />
-            ) : (
-              <span className="flex aspect-video items-center justify-center text-disabled">
-                <Building2 size={28} aria-hidden="true" />
-              </span>
-            )}
-            {cantidadDeImagenes ? (
-              <span className="absolute bottom-s2 left-s2 rounded-full bg-black/50 px-s3 py-s1 text-caption text-white">
-                {t('investor.unit.photosCount', { count: String(cantidadDeImagenes) })}
-              </span>
-            ) : null}
-          </button>
-          <button
-            type="button"
-            onClick={() => setMapa(true)}
-            disabled={proyecto?.latitude == null || proyecto?.longitude == null}
-            className="overflow-hidden rounded-xl bg-card text-left shadow-e1 disabled:cursor-not-allowed disabled:opacity-60"
-            aria-label={t('investor.unit.openMap')}
-          >
-            {proyecto?.latitude != null && proyecto.longitude != null ? (
-              <span className="block aspect-video">
-                <LocationMapModal
-                  open
-                  variant="preview"
-                  latitude={proyecto.latitude}
-                  longitude={proyecto.longitude}
-                  labels={{
-                    title: t('investor.unit.location'),
-                    close: t('map.close'),
-                    marker: t('map.marker')
-                  }}
-                />
-              </span>
-            ) : (
-              <span className="flex aspect-video items-center justify-center bg-surface-alt text-primary">
-                <MapPin className="size-icon-stat" aria-hidden="true" />
-              </span>
-            )}
-            {ubicacion ? (
-              <span className="block truncate px-s3 py-s2 text-caption text-text-muted">
-                {ubicacion}
-              </span>
-            ) : null}
-          </button>
-        </div>
-
-        {tienePisos ? (
-          <PrimaryButton onClick={() => setEdificio(true)}>
-            <Building2 className="size-icon-inline" aria-hidden="true" />
-            {t('investor.unit.building')}
-          </PrimaryButton>
-        ) : null}
-
-        <article className={cn('flex flex-col gap-s3', CARD_SHELL)}>
-          <h2 className="text-body font-bold text-text-primary">{t('investor.unit.details')}</h2>
-          <dl className="flex flex-col gap-s2 text-body-sm">
-            <div className="flex justify-between gap-s2">
-              <dt className="text-text-muted">{t('investor.unit.project')}</dt>
-              <dd className="font-bold text-text-primary">{unidad?.projectName}</dd>
-            </div>
-            <div className="flex justify-between gap-s2">
-              <dt className="text-text-muted">{t('investor.unit.unit')}</dt>
-              <dd className="font-bold text-text-primary">{unidad?.unitReference}</dd>
-            </div>
-            {unidad?.floor != null ? (
-              <div className="flex justify-between gap-s2">
-                <dt className="text-text-muted">{t('investor.unit.floor')}</dt>
-                <dd className="font-bold text-text-primary">{unidad.floor}</dd>
-              </div>
-            ) : null}
-            {unidad?.sizeM2 != null ? (
-              <div className="flex justify-between gap-s2">
-                <dt className="text-text-muted">{t('investor.unit.surface')}</dt>
-                <dd className="font-bold text-text-primary">
-                  {t('investor.unit.m2', { size: String(unidad.sizeM2) })}
-                </dd>
-              </div>
-            ) : null}
-            {unidad?.priceMinorUnits != null && unidad.currency ? (
-              <div className="flex justify-between gap-s2">
-                <dt className="text-text-muted">{t('investor.unit.investment')}</dt>
-                <dd className="font-bold text-text-primary">
-                  {formatCurrency(unidad.priceMinorUnits, unidad.currency, locale)}
-                </dd>
-              </div>
-            ) : null}
-            {unidad?.status ? (
-              <div className="flex justify-between gap-s2">
-                <dt className="text-text-muted">{t('investor.unit.status')}</dt>
-                <dd className="font-bold text-text-primary">{t(`unitStatus.${unidad.status}`)}</dd>
-              </div>
-            ) : null}
-            {proyecto?.estimatedDelivery ? (
-              <div className="flex justify-between gap-s2">
-                <dt className="text-text-muted">{t('investor.unit.delivery')}</dt>
-                <dd className="font-bold text-text-primary">
-                  {formatMonthYear(String(proyecto.estimatedDelivery), locale)}
-                </dd>
-              </div>
-            ) : null}
-            {ubicacion ? (
-              <div className="flex justify-between gap-s2">
-                <dt className="text-text-muted">{t('investor.unit.location')}</dt>
-                <dd className="font-bold text-text-primary">{ubicacion}</dd>
-              </div>
-            ) : null}
-          </dl>
-        </article>
-
-        <article className={cn('flex flex-col gap-s3', CARD_SHELL)}>
-          <h2 className="text-body font-bold text-text-primary">{t('investor.unit.progress')}</h2>
-          {actual ? (
-            <p className="text-body-sm text-text-secondary">
-              {t('investor.unit.currentStage', {
-                name: actual.name,
-                percent: String(avance)
-              })}
-            </p>
-          ) : null}
-          <ProgressTimeline
-            stages={timeline}
-            ariaLabel={t('investor.project.timelineAria')}
-            finalizationLabel={
-              proyecto?.estimatedDelivery
-                ? t('investor.project.delivery', {
-                    date: formatMonthYear(String(proyecto.estimatedDelivery), locale)
-                  })
-                : undefined
-            }
-          />
-        </article>
-
-        <article className={cn('flex flex-col gap-s3', CARD_SHELL)}>
-          <h2 className="text-body font-bold text-text-primary">{t('investor.unit.news')}</h2>
-          <div className="flex flex-col gap-s2" data-testid="INV-UNIT-NEWS-002">
-            {news?.length ? (
-              news.slice(0, 3).map((n) => (
-                <div key={n.id} className="flex items-center gap-s3">
-                  <span className="flex size-9 shrink-0 items-center justify-center rounded-md bg-primary-light text-primary">
-                    <Images className="size-icon-inline" aria-hidden="true" />
+        {!unidad ? (
+          <Loading />
+        ) : (
+          <>
+            <div className="grid grid-cols-2 gap-s3">
+              <button
+                type="button"
+                onClick={() => setGaleria(true)}
+                disabled={cantidadDeImagenes === 0}
+                className="relative overflow-hidden rounded-xl bg-surface-alt disabled:cursor-not-allowed disabled:opacity-60"
+                aria-label={t('investor.unit.openGallery')}
+              >
+                {portada ? (
+                  <img src={portada} alt="" className="aspect-video w-full object-cover" />
+                ) : (
+                  <span className="flex aspect-video items-center justify-center text-disabled">
+                    <Building2 size={28} aria-hidden="true" />
                   </span>
-                  <span className="min-w-0 flex-1">
-                    <span className="block truncate text-body-sm text-text-primary">
-                      {t(claveNovedad(n.eventType), {
-                        stage: n.stageName ?? '',
-                        state: n.toState ? t(claveEstadoStage(n.toState)) : ''
-                      })}
-                    </span>
-                    <span className="text-caption text-text-muted">
-                      {formatRelative(String(n.createdAt), locale)}
-                    </span>
+                )}
+                {cantidadDeImagenes ? (
+                  <span className="absolute bottom-s2 left-s2 rounded-full bg-black/50 px-s3 py-s1 text-caption text-white">
+                    {t('investor.unit.photosCount', { count: String(cantidadDeImagenes) })}
                   </span>
+                ) : null}
+              </button>
+              <button
+                type="button"
+                onClick={() => setMapa(true)}
+                disabled={proyecto?.latitude == null || proyecto?.longitude == null}
+                className="overflow-hidden rounded-xl bg-card text-left shadow-e1 disabled:cursor-not-allowed disabled:opacity-60"
+                aria-label={t('investor.unit.openMap')}
+              >
+                {proyecto?.latitude != null && proyecto.longitude != null ? (
+                  <span className="block aspect-video">
+                    <LocationMapModal
+                      open
+                      variant="preview"
+                      latitude={proyecto.latitude}
+                      longitude={proyecto.longitude}
+                      labels={{
+                        title: t('investor.unit.location'),
+                        close: t('map.close'),
+                        marker: t('map.marker')
+                      }}
+                    />
+                  </span>
+                ) : (
+                  <span className="flex aspect-video items-center justify-center bg-surface-alt text-primary">
+                    <MapPin className="size-icon-stat" aria-hidden="true" />
+                  </span>
+                )}
+                {ubicacion ? (
+                  <span className="block truncate px-s3 py-s2 text-caption text-text-muted">
+                    {ubicacion}
+                  </span>
+                ) : null}
+              </button>
+            </div>
+
+            {tienePisos ? (
+              <PrimaryButton onClick={() => setEdificio(true)}>
+                <Building2 className="size-icon-inline" aria-hidden="true" />
+                {t('investor.unit.building')}
+              </PrimaryButton>
+            ) : null}
+
+            <article className={cn('flex flex-col gap-s3', CARD_SHELL)}>
+              <h2 className="text-body font-bold text-text-primary">
+                {t('investor.unit.details')}
+              </h2>
+              <dl className="flex flex-col gap-s2 text-body-sm">
+                <div className="flex justify-between gap-s2">
+                  <dt className="text-text-muted">{t('investor.unit.project')}</dt>
+                  <dd className="font-bold text-text-primary">{unidad?.projectName}</dd>
                 </div>
-              ))
-            ) : (
-              <p className="text-body-sm text-text-muted">{t('investor.unit.newsEmpty')}</p>
-            )}
-          </div>
-          <button
-            type="button"
-            className="self-start text-body-sm font-medium text-primary"
-            onClick={() =>
-              void navigate({
-                to: '/investor/unit/$unitId/notifications',
-                params: { unitId }
-              })
-            }
-          >
-            {t('investor.unit.viewAllNews')}
-          </button>
-        </article>
+                <div className="flex justify-between gap-s2">
+                  <dt className="text-text-muted">{t('investor.unit.unit')}</dt>
+                  <dd className="font-bold text-text-primary">{unidad?.unitReference}</dd>
+                </div>
+                {unidad?.floor != null ? (
+                  <div className="flex justify-between gap-s2">
+                    <dt className="text-text-muted">{t('investor.unit.floor')}</dt>
+                    <dd className="font-bold text-text-primary">{unidad.floor}</dd>
+                  </div>
+                ) : null}
+                {unidad?.sizeM2 != null ? (
+                  <div className="flex justify-between gap-s2">
+                    <dt className="text-text-muted">{t('investor.unit.surface')}</dt>
+                    <dd className="font-bold text-text-primary">
+                      {t('investor.unit.m2', { size: String(unidad.sizeM2) })}
+                    </dd>
+                  </div>
+                ) : null}
+                {unidad?.priceMinorUnits != null && unidad.currency ? (
+                  <div className="flex justify-between gap-s2">
+                    <dt className="text-text-muted">{t('investor.unit.investment')}</dt>
+                    <dd className="font-bold text-text-primary">
+                      {formatCurrency(unidad.priceMinorUnits, unidad.currency, locale)}
+                    </dd>
+                  </div>
+                ) : null}
+                <div className="flex justify-between gap-s2">
+                  <dt className="text-text-muted">{t('investor.unit.status')}</dt>
+                  <dd className="font-bold text-text-primary">
+                    {t(`unitStatus.${unidad.status}`)}
+                  </dd>
+                </div>
+                {proyecto?.estimatedDelivery ? (
+                  <div className="flex justify-between gap-s2">
+                    <dt className="text-text-muted">{t('investor.unit.delivery')}</dt>
+                    <dd className="font-bold text-text-primary">
+                      {formatMonthYear(String(proyecto.estimatedDelivery), locale)}
+                    </dd>
+                  </div>
+                ) : null}
+                {ubicacion ? (
+                  <div className="flex justify-between gap-s2">
+                    <dt className="text-text-muted">{t('investor.unit.location')}</dt>
+                    <dd className="font-bold text-text-primary">{ubicacion}</dd>
+                  </div>
+                ) : null}
+              </dl>
+            </article>
 
-        <article className={cn('flex flex-col gap-s3', CARD_SHELL)}>
-          <h2 className="text-body font-bold text-text-primary">{t('investor.unit.contract')}</h2>
-          {contrato ? (
-            <p className="text-body-sm text-text-secondary">
-              {t('investor.unit.contractAmount', {
-                amount: formatCurrency(contrato.totalMinorUnits, contrato.currency, locale)
-              })}
-            </p>
-          ) : null}
-          <PrimaryButton
-            onClick={() =>
-              void navigate({ to: '/investor/unit/$unitId/contract', params: { unitId } })
-            }
-          >
-            <FileText className="size-icon-inline" aria-hidden="true" />
-            {t('investor.unit.viewContract')}
-          </PrimaryButton>
-        </article>
+            <article className={cn('flex flex-col gap-s3', CARD_SHELL)}>
+              <h2 className="text-body font-bold text-text-primary">
+                {t('investor.unit.progress')}
+              </h2>
+              {actual ? (
+                <p className="text-body-sm text-text-secondary">
+                  {t('investor.unit.currentStage', {
+                    name: actual.name,
+                    percent: String(avance)
+                  })}
+                </p>
+              ) : null}
+              <ProgressTimeline
+                stages={timeline}
+                ariaLabel={t('investor.project.timelineAria')}
+                finalizationLabel={
+                  proyecto?.estimatedDelivery
+                    ? t('investor.project.delivery', {
+                        date: formatMonthYear(String(proyecto.estimatedDelivery), locale)
+                      })
+                    : undefined
+                }
+              />
+            </article>
 
-        <article className={cn('flex flex-col gap-s3', CARD_SHELL)}>
-          <h2 className="text-body font-bold text-text-primary">
-            {t('investor.unit.evidenceByStage')}
-          </h2>
-          <p className="text-caption text-text-muted">{t('investor.unit.tapMilestone')}</p>
-          <StageChips
-            ariaLabel={t('investor.unit.stagesAria')}
-            stages={stages.map((s) => ({
-              number: s.sequenceOrder,
-              anchored: Boolean(s.txid),
-              bundleId: s.bundleId ?? undefined
-            }))}
-            onOpenStage={(chip) => {
-              if (chip.bundleId) {
-                setPrueba(null)
-                setBundleId(chip.bundleId)
+            <article className={cn('flex flex-col gap-s3', CARD_SHELL)}>
+              <h2 className="text-body font-bold text-text-primary">{t('investor.unit.news')}</h2>
+              <div className="flex flex-col gap-s2" data-testid="INV-UNIT-NEWS-002">
+                {news?.length ? (
+                  news.slice(0, 3).map((n) => (
+                    <div key={n.id} className="flex items-center gap-s3">
+                      <span className="flex size-9 shrink-0 items-center justify-center rounded-md bg-primary-light text-primary">
+                        <Images className="size-icon-inline" aria-hidden="true" />
+                      </span>
+                      <span className="min-w-0 flex-1">
+                        <span className="block truncate text-body-sm text-text-primary">
+                          {t(claveNovedad(n.eventType), {
+                            stage: n.stageName ?? '',
+                            state: n.toState ? t(claveEstadoStage(n.toState)) : ''
+                          })}
+                        </span>
+                        <span className="text-caption text-text-muted">
+                          {formatRelative(String(n.createdAt), locale)}
+                        </span>
+                      </span>
+                    </div>
+                  ))
+                ) : (
+                  <p className="text-body-sm text-text-muted">
+                    {news ? t('investor.unit.newsEmpty') : t('common.loading')}
+                  </p>
+                )}
+              </div>
+              <button
+                type="button"
+                className="self-start text-body-sm font-medium text-primary"
+                onClick={() =>
+                  void navigate({
+                    to: '/investor/unit/$unitId/notifications',
+                    params: { unitId }
+                  })
+                }
+              >
+                {t('investor.unit.viewAllNews')}
+              </button>
+            </article>
+
+            <article className={cn('flex flex-col gap-s3', CARD_SHELL)}>
+              <h2 className="text-body font-bold text-text-primary">
+                {t('investor.unit.contract')}
+              </h2>
+              {contrato ? (
+                <p className="text-body-sm text-text-secondary">
+                  {t('investor.unit.contractAmount', {
+                    amount: formatCurrency(contrato.totalMinorUnits, contrato.currency, locale)
+                  })}
+                </p>
+              ) : null}
+              <PrimaryButton
+                onClick={() =>
+                  void navigate({ to: '/investor/unit/$unitId/contract', params: { unitId } })
+                }
+              >
+                <FileText className="size-icon-inline" aria-hidden="true" />
+                {t('investor.unit.viewContract')}
+              </PrimaryButton>
+            </article>
+
+            <article className={cn('flex flex-col gap-s3', CARD_SHELL)}>
+              <h2 className="text-body font-bold text-text-primary">
+                {t('investor.unit.evidenceByStage')}
+              </h2>
+              <p className="text-caption text-text-muted">{t('investor.unit.tapMilestone')}</p>
+              <StageChips
+                ariaLabel={t('investor.unit.stagesAria')}
+                stages={stages.map((s) => ({
+                  number: s.sequenceOrder,
+                  anchored: Boolean(s.txid),
+                  bundleId: s.bundleId ?? undefined
+                }))}
+                onOpenStage={(chip) => {
+                  if (chip.bundleId) {
+                    setPrueba(null)
+                    setBundleId(chip.bundleId)
+                  }
+                }}
+              />
+            </article>
+
+            <button
+              type="button"
+              className="flex items-center justify-between rounded-xl bg-card p-s4 text-left shadow-e1"
+              onClick={() =>
+                void navigate({ to: '/investor/unit/$unitId/dossier', params: { unitId } })
               }
-            }}
-          />
-        </article>
-
-        <button
-          type="button"
-          className="flex items-center justify-between rounded-xl bg-card p-s4 text-left shadow-e1"
-          onClick={() =>
-            void navigate({ to: '/investor/unit/$unitId/dossier', params: { unitId } })
-          }
-        >
-          <span className="text-body font-medium text-text-primary">
-            {t('investor.unit.dossier')}
-          </span>
-          <ChevronRight className="size-icon-inline text-text-muted" aria-hidden="true" />
-        </button>
+            >
+              <span className="text-body font-medium text-text-primary">
+                {t('investor.unit.dossier')}
+              </span>
+              <ChevronRight className="size-icon-inline text-text-muted" aria-hidden="true" />
+            </button>
+          </>
+        )}
       </section>
 
       <ImageGalleryModal

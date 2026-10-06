@@ -54,7 +54,7 @@ function DossierReview() {
   return (
     <PanelLayout
       title={t('notary.dossier.title')}
-      {...(dossier ? { context: `${dossier.projectName} · ${dossier.unitReference}` } : {})}
+      context={dossier ? `${dossier.projectName} · ${dossier.unitReference}` : null}
     >
       <section className="flex flex-col gap-s4" data-testid="NOT-DOSSIER-VIEW-001">
         {dossier ? (

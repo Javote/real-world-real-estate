@@ -79,7 +79,7 @@ function InvestorDossier() {
   return (
     <PanelLayout
       title={t('investor.dossier.title')}
-      {...(dossier ? { context: `${dossier.projectName} · ${dossier.unitReference}` } : {})}
+      context={dossier ? `${dossier.projectName} · ${dossier.unitReference}` : null}
       back={{
         label: t('investor.dossier.back'),
         onClick: () => void navigate({ to: '/investor/unit/$unitId', params: { unitId } })

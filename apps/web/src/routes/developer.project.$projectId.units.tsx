@@ -99,7 +99,7 @@ function ProjectUnits() {
   return (
     <PanelLayout
       title={t('developer.projectUnits.title')}
-      {...(proyecto ? { context: proyecto.name } : {})}
+      context={proyecto ? proyecto.name : null}
       back={{
         label: t('nav.back'),
         onClick: () =>

@@ -51,6 +51,18 @@ describe('/certifier/stage/$stageId', () => {
     expect(certificar.disabled).toBe(false)
   })
 
+  it('mientras carga la etapa: indicador de carga, ni "sin evidencia" ni acciones', async () => {
+    autenticarComo(CERTIFIER_USER)
+    vi.spyOn(api, 'getCertifierStage').mockReturnValue(new Promise(() => {}))
+
+    montarStage()
+
+    await screen.findByRole('status')
+    expect(screen.queryByText('Todavía no hay evidencia anclada para esta etapa.')).toBeNull()
+    expect(screen.queryByTestId('CER-CERTIFY-001')).toBeNull()
+    expect(screen.queryByRole('button', { name: /observar/i })).toBeNull()
+  })
+
   it('sin evidencia: Certify queda deshabilitado y se ve el empty-state, no el botón escondido', async () => {
     autenticarComo(CERTIFIER_USER)
     vi.spyOn(api, 'getCertifierStage').mockResolvedValue(unStage({ evidence: [] }))

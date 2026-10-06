@@ -37,7 +37,7 @@ function DeveloperProjectDetail() {
   return (
     <PanelLayout
       title={proyecto?.name ?? t('developer.project.title')}
-      {...(ubicacion ? { context: ubicacion } : {})}
+      context={proyecto ? ubicacion : null}
       back={{
         label: t('nav.back'),
         onClick: () => void navigate({ to: '/developer/projects' })

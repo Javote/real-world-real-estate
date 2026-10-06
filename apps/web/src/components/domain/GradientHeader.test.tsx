@@ -15,6 +15,31 @@ describe('GradientHeader', () => {
     expect(texto.indexOf('Inversores')).toBeGreaterThan(texto.indexOf('Volver al panel'))
   })
 
+  describe('context', () => {
+    const lineas = () => screen.getByRole('banner').querySelectorAll('p.mt-s4')
+
+    it('con texto dibuja la línea', () => {
+      render(<GradientHeader title="Unidad" context="Torre Norte" />)
+      expect(lineas()).toHaveLength(1)
+      expect(lineas()[0]?.textContent).toBe('Torre Norte')
+    })
+
+    it('null reserva la línea vacía y oculta del lector mientras el dato no llega (CLS)', () => {
+      render(<GradientHeader title="Unidad" context={null} />)
+      expect(lineas()).toHaveLength(1)
+      expect(lineas()[0]?.getAttribute('aria-hidden')).toBe('true')
+      expect(lineas()[0]?.textContent?.trim()).toBe('')
+    })
+
+    it('sin context o vacío no dibuja la línea', () => {
+      const { unmount } = render(<GradientHeader title="Unidad" />)
+      expect(lineas()).toHaveLength(0)
+      unmount()
+      render(<GradientHeader title="Unidad" context="" />)
+      expect(lineas()).toHaveLength(0)
+    })
+  })
+
   it('sin back no hay flecha y el logo queda', () => {
     render(<GradientHeader title="Panel" />)
 

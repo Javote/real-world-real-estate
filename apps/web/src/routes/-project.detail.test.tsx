@@ -120,7 +120,7 @@ describe('/project/:projectId (investor)', () => {
     expect(p.getAttribute('data-testid')).toBe('INV-PROJECT-DETAIL-001')
   })
 
-  it('mientras carga: título genérico, sin estado ni entrega, y el botón de favorito ya está', async () => {
+  it('mientras carga: título genérico e indicador de carga, sin estado, favorito ni link al desarrollador', async () => {
     autenticarComo(INVESTOR_USER)
     vi.spyOn(api, 'getProject').mockReturnValue(new Promise(() => {}))
     vi.spyOn(api, 'listFavorites').mockReturnValue(new Promise(() => {}))
@@ -128,8 +128,9 @@ describe('/project/:projectId (investor)', () => {
 
     await screen.findByRole('heading', { name: t['panel.investor.title'] })
     const detalle = screen.getByTestId('INV-PROJECT-DETAIL-001')
+    expect(within(detalle).getByRole('status')).toBeTruthy()
     expect(detalle.textContent).not.toContain(t['project.status.in_progress'])
-    expect(screen.getByRole('button', { name: t['investor.favorites.save'] })).toBeTruthy()
+    expect(screen.queryByRole('button', { name: t['investor.favorites.save'] })).toBeNull()
     expect(screen.queryByTestId('INV-DEVELOPER-LINK-004')).toBeNull()
   })
 

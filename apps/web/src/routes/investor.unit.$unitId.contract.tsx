@@ -78,7 +78,7 @@ function InvestorContract() {
   return (
     <PanelLayout
       title={t('investor.contract.title')}
-      {...(unidad ? { context: unidad.unitReference } : {})}
+      context={unidad ? unidad.unitReference : null}
       back={{
         label: t('nav.back'),
         onClick: () => void navigate({ to: '/investor/unit/$unitId', params: { unitId } })

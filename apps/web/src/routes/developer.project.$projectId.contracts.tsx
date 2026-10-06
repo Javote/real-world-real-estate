@@ -48,7 +48,7 @@ function ProjectContracts() {
   return (
     <PanelLayout
       title={t('developer.contracts.title')}
-      {...(proyecto ? { context: proyecto.name } : {})}
+      context={proyecto ? proyecto.name : null}
       back={{
         label: t('nav.back'),
         onClick: () =>

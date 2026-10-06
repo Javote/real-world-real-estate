@@ -6,7 +6,7 @@ import { PropNexusMark } from './PropNexusMark'
 interface GradientHeaderProps {
   title: string
   subtitle?: string
-  context?: string
+  context?: string | null
   back?: { label: string; onClick: () => void }
   right?: React.ReactNode
   titleAction?: React.ReactNode
@@ -70,7 +70,15 @@ export function GradientHeader({
           {titleAction ? <div className="shrink-0">{titleAction}</div> : null}
         </div>
 
-        {context ? <p className="mt-s4 text-body text-white/80">{context}</p> : null}
+        {/* `null`: la pantalla tiene contexto y todavía no llegó. Reservar la línea evita que todo
+            el contenido baje cuando llega el dato (CLS). */}
+        {context === null ? (
+          <p className="mt-s4 text-body text-white/80" aria-hidden="true">
+            {'\u00a0'}
+          </p>
+        ) : context ? (
+          <p className="mt-s4 text-body text-white/80">{context}</p>
+        ) : null}
       </div>
     </header>
   )

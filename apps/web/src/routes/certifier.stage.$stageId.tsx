@@ -4,6 +4,7 @@ import { AlertCircle, ShieldCheck } from 'lucide-react'
 import { useState } from 'react'
 import { api } from '#/api/port'
 import { DocumentCard } from '#/components/domain/DocumentCard'
+import { Loading } from '#/components/domain/Loading'
 import { ObserveStageModal } from '#/components/domain/ObserveStageModal'
 import { PrimaryButton, SecondaryButton } from '#/components/domain/PrimaryButton'
 import { StatusPill } from '#/components/domain/StatusPill'
@@ -54,10 +55,12 @@ function CertifyStage() {
   return (
     <PanelLayout
       title={t('certifier.stage.title')}
-      {...(stage ? { context: `${stage.projectName} · ${stage.name}` } : {})}
+      context={stage ? `${stage.projectName} · ${stage.name}` : null}
     >
       <section className="flex flex-col gap-s4" data-testid="CER-STAGE-VIEW-001">
-        {stage ? (
+        {!stage ? (
+          <Loading />
+        ) : (
           <article className={cn('flex flex-col gap-s1', CARD_SHELL)}>
             <div className="flex items-start justify-between gap-s3">
               <span className="text-body-sm text-text-muted">
@@ -69,46 +72,48 @@ function CertifyStage() {
             </div>
             <h2 className="text-h2 font-bold text-text-primary">{stage.name}</h2>
           </article>
+        )}
+
+        {stage ? (
+          <article className={cn('flex flex-col gap-s3', CARD_SHELL)}>
+            <h3 className="text-body font-bold text-text-primary">
+              {t('certifier.stage.evidenceTitle')}
+            </h3>
+
+            {sinEvidencia ? (
+              <p className="py-s4 text-center text-body-sm text-text-muted">
+                {t('certifier.stage.noEvidence')}
+              </p>
+            ) : (
+              <ul className="flex flex-col gap-s2">
+                {stage?.evidence.map((e) => (
+                  <li key={e.id}>
+                    <DocumentCard
+                      filename={e.originalFilename}
+                      uploadedAtLabel={formatDate(String(e.uploadedAt), locale)}
+                      format={e.category}
+                      sha256={e.sha256Hash}
+                      txid={null}
+                      showHash
+                      labels={{
+                        verified: t('status.verified'),
+                        pending: t('status.pending'),
+                        view: t('document.view'),
+                        download: t('document.download'),
+                        copy: t('hash.copy'),
+                        copied: t('hash.copied'),
+                        hashLabel: t('hash.label')
+                      }}
+                    />
+                  </li>
+                ))}
+              </ul>
+            )}
+          </article>
         ) : null}
-
-        <article className={cn('flex flex-col gap-s3', CARD_SHELL)}>
-          <h3 className="text-body font-bold text-text-primary">
-            {t('certifier.stage.evidenceTitle')}
-          </h3>
-
-          {sinEvidencia ? (
-            <p className="py-s4 text-center text-body-sm text-text-muted">
-              {t('certifier.stage.noEvidence')}
-            </p>
-          ) : (
-            <ul className="flex flex-col gap-s2">
-              {stage?.evidence.map((e) => (
-                <li key={e.id}>
-                  <DocumentCard
-                    filename={e.originalFilename}
-                    uploadedAtLabel={formatDate(String(e.uploadedAt), locale)}
-                    format={e.category}
-                    sha256={e.sha256Hash}
-                    txid={null}
-                    showHash
-                    labels={{
-                      verified: t('status.verified'),
-                      pending: t('status.pending'),
-                      view: t('document.view'),
-                      download: t('document.download'),
-                      copy: t('hash.copy'),
-                      copied: t('hash.copied'),
-                      hashLabel: t('hash.label')
-                    }}
-                  />
-                </li>
-              ))}
-            </ul>
-          )}
-        </article>
       </section>
 
-      {!yaCerrado ? (
+      {stage && !yaCerrado ? (
         <div className="flex gap-s3">
           <SecondaryButton
             className="flex-1"

@@ -559,12 +559,24 @@ describe('/investor/unit/$unitId', () => {
       expect(screen.queryByTestId('INV-UNIT-LOC-001')).toBeNull()
     })
 
-    it('mientras carga el proyecto el mapa tampoco se puede abrir', async () => {
+    it('con la unidad y las novedades en camino: "Cargando…", no "no hay novedades"', async () => {
+      const { getNews } = preparar()
+      getNews.mockReturnValue(new Promise(() => {}))
+      montar()
+
+      const noticias = await screen.findByTestId('INV-UNIT-NEWS-002')
+      expect(noticias.textContent).toContain(t['common.loading'])
+      expect(noticias.textContent).not.toContain(t['investor.unit.newsEmpty'])
+    })
+
+    it('mientras carga la unidad: indicador de carga y ni mapa ni tarjetas', async () => {
       preparar({ unidad: 'cargando' })
       montar()
 
-      const boton = await screen.findByRole('button', { name: t['investor.unit.openMap'] })
-      expect((boton as HTMLButtonElement).disabled).toBe(true)
+      const detalle = await screen.findByTestId('INV-UNIT-DETAIL-001')
+      expect(within(detalle).getByRole('status')).toBeTruthy()
+      expect(screen.queryByRole('button', { name: t['investor.unit.openMap'] })).toBeNull()
+      expect(detalle.textContent).not.toContain(t['investor.unit.newsEmpty'])
     })
 
     it('con coordenadas abre el modal del mapa y lo cierra con Escape', async () => {

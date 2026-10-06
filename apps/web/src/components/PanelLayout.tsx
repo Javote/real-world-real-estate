@@ -16,7 +16,7 @@ type Rol = keyof typeof NAV_TABS
 
 interface Cabecera {
   title: string
-  context?: string
+  context?: string | null
   back?: { label: string; onClick: () => void }
   headerAction?: ReactNode
 }
@@ -113,7 +113,7 @@ function EncabezadoDelPanel({ rol, cabecera }: { rol: Rol; cabecera: CabeceraSto
   return (
     <GradientHeader
       title={title}
-      {...(context ? { context } : {})}
+      {...(context !== undefined ? { context } : {})}
       {...(back ? { back } : {})}
       {...(headerAction ? { titleAction: headerAction } : {})}
       right={

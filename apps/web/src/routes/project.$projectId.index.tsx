@@ -143,181 +143,191 @@ function InvestorProjectDetail() {
   return (
     <PanelLayout
       title={proyecto?.name ?? t('panel.investor.title')}
-      {...(ubicacion ? { context: ubicacion } : {})}
+      context={proyecto ? ubicacion : null}
       back={{
         label: t('nav.back'),
         onClick: () => void navigate({ to: '/investor/buy' })
       }}
     >
       <section className="flex flex-col gap-s4" data-testid="INV-PROJECT-DETAIL-001">
-        <div className="relative overflow-hidden rounded-xl bg-surface-alt">
-          <button
-            type="button"
-            className="block w-full"
-            onClick={() => (portada || fotos.length) && setGaleria(true)}
-            aria-label={t('investor.unit.openGallery')}
-          >
-            {portada ? (
-              <img src={portada} alt="" className="aspect-video w-full object-cover" />
-            ) : (
-              <span className="flex aspect-video w-full items-center justify-center text-disabled">
-                <Building2 size={32} aria-hidden="true" />
-              </span>
-            )}
-          </button>
-          <button
-            type="button"
-            aria-pressed={esFavorito}
-            aria-label={esFavorito ? t('investor.favorites.unsave') : t('investor.favorites.save')}
-            onClick={() => toggleFavorito.mutate()}
-            className="absolute right-s3 bottom-s3 rounded-full bg-card/90 p-s2 text-primary shadow-e1"
-          >
-            <Heart size={20} aria-hidden="true" className={esFavorito ? 'fill-primary' : ''} />
-          </button>
-        </div>
-
-        <div className="grid grid-cols-2 gap-s3">
-          <article
-            className={cn(
-              'flex flex-col items-center justify-center gap-s2 text-center',
-              CARD_SHELL,
-              proyecto?.status ? TONOS[TONO_PROYECTO[proyecto.status]] : undefined,
-              proyecto?.status ? BORDE_DE_TONO[TONO_PROYECTO[proyecto.status]] : undefined
-            )}
-          >
-            {proyecto?.status ? (
-              <>
-                <EstadoIcono status={proyecto.status} />
-                <span className="text-h2 font-bold">{t(`project.status.${proyecto.status}`)}</span>
-              </>
-            ) : null}
-            {proyecto?.estimatedDelivery ? (
-              <p className="text-body-sm text-text-secondary">
-                {t('investor.project.delivery', {
-                  date: formatMonthYear(String(proyecto.estimatedDelivery), locale)
-                })}
-              </p>
-            ) : null}
-          </article>
-
-          {proyecto?.latitude != null && proyecto.longitude != null ? (
-            <button
-              type="button"
-              onClick={() => setMapa(true)}
-              className="overflow-hidden rounded-xl bg-card text-left shadow-e1"
-              aria-label={t('investor.project.location')}
-            >
-              <span className="block aspect-video">
-                <LocationMapModal
-                  open
-                  variant="preview"
-                  latitude={proyecto.latitude}
-                  longitude={proyecto.longitude}
-                  labels={{
-                    title: t('investor.project.location'),
-                    close: t('map.close'),
-                    marker: t('map.marker')
-                  }}
-                />
-              </span>
-              {ubicacion ? (
-                <span className="block truncate px-s3 py-s2 text-caption text-text-muted">
-                  {ubicacion}
-                </span>
-              ) : null}
-            </button>
-          ) : (
-            <article className={cn('flex flex-col justify-center', CARD_SHELL)}>
-              {ubicacion ? (
-                <p className="text-body-sm text-text-muted">{ubicacion}</p>
-              ) : (
-                <p className="text-body-sm text-text-muted">{t('investor.project.location')}</p>
-              )}
-            </article>
-          )}
-        </div>
-
-        <section className="flex flex-col gap-s3" data-testid="INV-PROJECT-DOCS-002">
-          <h2 className="text-h2 font-bold text-text-primary">{t('investor.project.docs')}</h2>
-          {documentosPending ? (
-            <Loading />
-          ) : docs.length ? (
-            <div className="grid grid-cols-2 gap-s3">
-              {docs.map((d) => (
-                <DocumentCard
-                  key={d.id}
-                  filename={d.originalFilename}
-                  uploadedAtLabel={formatDate(String(d.uploadedAt), locale)}
-                  format={formatoArchivo(d.mimeType, d.category)}
-                  sha256={d.sha256Hash}
-                  txid={d.txid}
-                  showHash
-                  labels={etiquetasDoc}
-                  onView={() => setDocId(d.id)}
-                  onDownload={
-                    d.txid
-                      ? () =>
-                          void api
-                            .downloadEvidence(d.id)
-                            .then((blob) => bajarBlob(blob, d.originalFilename))
-                      : undefined
-                  }
-                />
-              ))}
+        {!proyecto ? (
+          <Loading />
+        ) : (
+          <>
+            <div className="relative overflow-hidden rounded-xl bg-surface-alt">
+              <button
+                type="button"
+                className="block w-full"
+                onClick={() => (portada || fotos.length) && setGaleria(true)}
+                aria-label={t('investor.unit.openGallery')}
+              >
+                {portada ? (
+                  <img src={portada} alt="" className="aspect-video w-full object-cover" />
+                ) : (
+                  <span className="flex aspect-video w-full items-center justify-center text-disabled">
+                    <Building2 size={32} aria-hidden="true" />
+                  </span>
+                )}
+              </button>
+              <button
+                type="button"
+                aria-pressed={esFavorito}
+                aria-label={
+                  esFavorito ? t('investor.favorites.unsave') : t('investor.favorites.save')
+                }
+                onClick={() => toggleFavorito.mutate()}
+                className="absolute right-s3 bottom-s3 rounded-full bg-card/90 p-s2 text-primary shadow-e1"
+              >
+                <Heart size={20} aria-hidden="true" className={esFavorito ? 'fill-primary' : ''} />
+              </button>
             </div>
-          ) : (
-            <p className="text-body-sm text-text-muted">{t('investor.project.docsEmpty')}</p>
-          )}
-        </section>
 
-        {proyecto?.organizationId ? (
-          <SecondaryButton
-            testId="INV-DEVELOPER-LINK-004"
-            onClick={() =>
-              void navigate({ to: '/project/$projectId/developer', params: { projectId } })
-            }
-          >
-            {t('investor.developer.link')}
-          </SecondaryButton>
-        ) : null}
+            <div className="grid grid-cols-2 gap-s3">
+              <article
+                className={cn(
+                  'flex flex-col items-center justify-center gap-s2 text-center',
+                  CARD_SHELL,
+                  TONOS[TONO_PROYECTO[proyecto.status]],
+                  BORDE_DE_TONO[TONO_PROYECTO[proyecto.status]]
+                )}
+              >
+                <>
+                  <EstadoIcono status={proyecto.status} />
+                  <span className="text-h2 font-bold">
+                    {t(`project.status.${proyecto.status}`)}
+                  </span>
+                </>
+                {proyecto?.estimatedDelivery ? (
+                  <p className="text-body-sm text-text-secondary">
+                    {t('investor.project.delivery', {
+                      date: formatMonthYear(String(proyecto.estimatedDelivery), locale)
+                    })}
+                  </p>
+                ) : null}
+              </article>
 
-        <article className={cn('flex flex-col gap-s3', CARD_SHELL)}>
-          <h2 className="text-h2 font-bold text-text-primary">{t('investor.project.progress')}</h2>
-          <ProgressTimeline
-            stages={timeline}
-            ariaLabel={t('investor.project.timelineAria')}
-            currentLabel={
-              actual ? t('investor.project.currentStage', { name: actual.name }) : undefined
-            }
-            finalizationLabel={
-              proyecto?.estimatedDelivery
-                ? t('investor.project.delivery', {
-                    date: formatMonthYear(String(proyecto.estimatedDelivery), locale)
+              {proyecto?.latitude != null && proyecto.longitude != null ? (
+                <button
+                  type="button"
+                  onClick={() => setMapa(true)}
+                  className="overflow-hidden rounded-xl bg-card text-left shadow-e1"
+                  aria-label={t('investor.project.location')}
+                >
+                  <span className="block aspect-video">
+                    <LocationMapModal
+                      open
+                      variant="preview"
+                      latitude={proyecto.latitude}
+                      longitude={proyecto.longitude}
+                      labels={{
+                        title: t('investor.project.location'),
+                        close: t('map.close'),
+                        marker: t('map.marker')
+                      }}
+                    />
+                  </span>
+                  {ubicacion ? (
+                    <span className="block truncate px-s3 py-s2 text-caption text-text-muted">
+                      {ubicacion}
+                    </span>
+                  ) : null}
+                </button>
+              ) : (
+                <article className={cn('flex flex-col justify-center', CARD_SHELL)}>
+                  {ubicacion ? (
+                    <p className="text-body-sm text-text-muted">{ubicacion}</p>
+                  ) : (
+                    <p className="text-body-sm text-text-muted">{t('investor.project.location')}</p>
+                  )}
+                </article>
+              )}
+            </div>
+
+            <section className="flex flex-col gap-s3" data-testid="INV-PROJECT-DOCS-002">
+              <h2 className="text-h2 font-bold text-text-primary">{t('investor.project.docs')}</h2>
+              {documentosPending ? (
+                <Loading />
+              ) : docs.length ? (
+                <div className="grid grid-cols-2 gap-s3">
+                  {docs.map((d) => (
+                    <DocumentCard
+                      key={d.id}
+                      filename={d.originalFilename}
+                      uploadedAtLabel={formatDate(String(d.uploadedAt), locale)}
+                      format={formatoArchivo(d.mimeType, d.category)}
+                      sha256={d.sha256Hash}
+                      txid={d.txid}
+                      showHash
+                      labels={etiquetasDoc}
+                      onView={() => setDocId(d.id)}
+                      onDownload={
+                        d.txid
+                          ? () =>
+                              void api
+                                .downloadEvidence(d.id)
+                                .then((blob) => bajarBlob(blob, d.originalFilename))
+                          : undefined
+                      }
+                    />
+                  ))}
+                </div>
+              ) : (
+                <p className="text-body-sm text-text-muted">{t('investor.project.docsEmpty')}</p>
+              )}
+            </section>
+
+            {proyecto?.organizationId ? (
+              <SecondaryButton
+                testId="INV-DEVELOPER-LINK-004"
+                onClick={() =>
+                  void navigate({ to: '/project/$projectId/developer', params: { projectId } })
+                }
+              >
+                {t('investor.developer.link')}
+              </SecondaryButton>
+            ) : null}
+
+            <article className={cn('flex flex-col gap-s3', CARD_SHELL)}>
+              <h2 className="text-h2 font-bold text-text-primary">
+                {t('investor.project.progress')}
+              </h2>
+              <ProgressTimeline
+                stages={timeline}
+                ariaLabel={t('investor.project.timelineAria')}
+                currentLabel={
+                  actual ? t('investor.project.currentStage', { name: actual.name }) : undefined
+                }
+                finalizationLabel={
+                  proyecto?.estimatedDelivery
+                    ? t('investor.project.delivery', {
+                        date: formatMonthYear(String(proyecto.estimatedDelivery), locale)
+                      })
+                    : undefined
+                }
+                onSelectStage={(s) => {
+                  void navigate({
+                    to: '/project/$projectId/stage/$stageId',
+                    params: { projectId, stageId: idPorOrden[s.sequenceOrder] }
                   })
-                : undefined
-            }
-            onSelectStage={(s) => {
-              void navigate({
-                to: '/project/$projectId/stage/$stageId',
-                params: { projectId, stageId: idPorOrden[s.sequenceOrder] }
-              })
-            }}
-          />
-          {actual ? (
-            <p className="flex items-center justify-between gap-s2 text-body-sm">
-              <span className="text-text-primary">{actual.name}</span>
-              <span className="text-text-muted">{avanceDeStages(stages)}%</span>
-            </p>
-          ) : null}
-          <PrimaryButton
-            onClick={() =>
-              void navigate({ to: '/project/$projectId/progress', params: { projectId } })
-            }
-          >
-            <Images className="size-icon-inline" aria-hidden="true" />
-            {t('investor.project.viewProgress')}
-          </PrimaryButton>
-        </article>
+                }}
+              />
+              {actual ? (
+                <p className="flex items-center justify-between gap-s2 text-body-sm">
+                  <span className="text-text-primary">{actual.name}</span>
+                  <span className="text-text-muted">{avanceDeStages(stages)}%</span>
+                </p>
+              ) : null}
+              <PrimaryButton
+                onClick={() =>
+                  void navigate({ to: '/project/$projectId/progress', params: { projectId } })
+                }
+              >
+                <Images className="size-icon-inline" aria-hidden="true" />
+                {t('investor.project.viewProgress')}
+              </PrimaryButton>
+            </article>
+          </>
+        )}
       </section>
 
       <ImageGalleryModal

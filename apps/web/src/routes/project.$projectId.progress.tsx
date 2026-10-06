@@ -73,7 +73,7 @@ function InvestorProjectProgress() {
   return (
     <PanelLayout
       title={t('investor.project.progress')}
-      {...(proyecto ? { context: proyecto.name } : {})}
+      context={proyecto ? proyecto.name : null}
       back={{
         label: t('investor.project.back'),
         onClick: () => void navigate({ to: '/project/$projectId', params: { projectId } })

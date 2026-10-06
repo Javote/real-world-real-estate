@@ -33,6 +33,11 @@ pantalla envuelve su contenido en `PanelLayout`, que solo publica título, `cont
 `headerAction` al header. Una pantalla nueva no lleva guard ni `enabled: ready`: el `beforeLoad` del
 layout ya resolvió la sesión antes de montarla.
 
+**Una pantalla de detalle no dibuja nada antes de su dato** (`SPEC-110`): hasta que llega, `<Loading />`
+dentro de su sección con test ID, y el subtítulo del header va como `context={dato ? valor : null}`.
+`null` reserva la línea; dibujar las tarjetas vacías o agregar la línea después hacía saltar el
+contenido (CLS de 0,27 a 0,84 en cuatro detalles, 2026-10-06; ahora ≤ 0,05 en las 17 pantallas).
+
 **Mobile-first**: la captura es un teléfono de ~380px; los strings en español son 20-30% más largos,
 nada de anchos fijos salvo FAB e íconos.
 
@@ -91,6 +96,9 @@ unidad.
   Levantá la API sin `watch` y la web aparte; Playwright reusa los dos.
 - **`montarRuta` cuelga la pantalla del layout de su prefijo**, con el `requireRole` real: un test
   que la monta en un path inventado (`/perfil`) se queda sin header.
+- **El TBT de Lighthouse en modo simulado no es el de la CPU limitada de verdad**: en el login daba
+  90–140 ms y con `Emulation.setCPUThrottlingRate` 4× da 0. Para comparar pantallas con sesión, Playwright
+  con CDP (CPU 4×, 150 ms de latencia, 1,6 Mbps) y `PerformanceObserver` de `longtask` y `layout-shift`.
 - **PostHog descarta los eventos de un navegador automatizado sin avisar**: headless, o con
   `navigator.webdriver`. Para ver qué manda, Playwright con `headless: false`,
   `--disable-blink-features=AutomationControlled`, `localStorage.ph_debug = 'true'` y los `POST` a
