@@ -91,6 +91,10 @@ unidad.
   Levantá la API sin `watch` y la web aparte; Playwright reusa los dos.
 - **`montarRuta` cuelga la pantalla del layout de su prefijo**, con el `requireRole` real: un test
   que la monta en un path inventado (`/perfil`) se queda sin header.
+- **PostHog descarta los eventos de un navegador automatizado sin avisar**: headless, o con
+  `navigator.webdriver`. Para ver qué manda, Playwright con `headless: false`,
+  `--disable-blink-features=AutomationControlled`, `localStorage.ph_debug = 'true'` y los `POST` a
+  `posthog.com` abortados con `page.route`, para no ensuciar los datos reales.
 - **`parentRoute` de TanStack no está resuelto antes de `addChildren`**: para armar un árbol a mano,
   separá los hijos vos.
 
