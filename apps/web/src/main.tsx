@@ -9,6 +9,8 @@ import { programarObservabilidad } from './lib/observability'
 import { getRouter } from './router'
 import './styles.css'
 
+programarObservabilidad()
+
 const router = getRouter()
 
 const contenedor = document.getElementById('root')
@@ -28,7 +30,4 @@ function montar(raiz: HTMLElement) {
 
 cargarDiccionario(getStoredLocale())
   .catch(() => {})
-  .then(() => {
-    montar(contenedor)
-    programarObservabilidad()
-  })
+  .then(() => montar(contenedor))

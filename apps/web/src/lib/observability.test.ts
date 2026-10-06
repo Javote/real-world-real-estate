@@ -86,12 +86,43 @@ describe('initObservability', () => {
   })
 })
 
+class PerformanceObserverFalso {
+  static instancias: PerformanceObserverFalso[] = []
+  observado: unknown
+  desconectado = false
+  constructor(
+    readonly alObservar: (lista: { getEntriesByName: (n: string) => unknown[] }) => void
+  ) {
+    PerformanceObserverFalso.instancias.push(this)
+  }
+  observe(opciones: unknown) {
+    this.observado = opciones
+  }
+  disconnect() {
+    this.desconectado = true
+  }
+  pintar(nombre: string) {
+    this.alObservar({ getEntriesByName: (n) => (n === nombre ? [{ name: n }] : []) })
+  }
+}
+
 describe('programarObservabilidad', () => {
+  let alQuedarLibre: (() => void) | undefined
+  const requestIdleCallback = vi.fn((cb: () => void) => {
+    alQuedarLibre = cb
+    return 1
+  })
+
   beforeEach(() => {
     vi.resetModules()
+    vi.useFakeTimers()
     mocks.cargados.length = 0
+    alQuedarLibre = undefined
+    PerformanceObserverFalso.instancias.length = 0
     vi.stubEnv('VITE_SENTRY_DSN', 'https://k@sentry.example/1')
     vi.stubEnv('VITE_POSTHOG_KEY', 'phc_abc')
+    vi.stubGlobal('PerformanceObserver', PerformanceObserverFalso)
+    vi.stubGlobal('requestIdleCallback', requestIdleCallback)
   })
 
   afterEach(() => {
@@ -101,53 +132,72 @@ describe('programarObservabilidad', () => {
     vi.clearAllMocks()
   })
 
-  it('no descarga nada hasta que el navegador queda libre después del primer pintado', async () => {
-    let alQuedarLibre: (() => void) | undefined
-    const requestIdleCallback = vi.fn((cb: () => void) => {
-      alQuedarLibre = cb
-      return 1
-    })
-    vi.stubGlobal('requestIdleCallback', requestIdleCallback)
+  async function programar() {
     const { programarObservabilidad } = await import('./observability')
-
     programarObservabilidad()
-    await vi.dynamicImportSettled()
+    const [observador] = PerformanceObserverFalso.instancias
+    if (!observador) throw new Error('no se creó el PerformanceObserver')
+    return observador
+  }
 
+  async function esperarInicializadas() {
+    vi.useRealTimers()
+    await vi.waitFor(() => {
+      expect(mocks.sentryInit).toHaveBeenCalledOnce()
+      expect(mocks.posthogInit).toHaveBeenCalledOnce()
+    })
+  }
+
+  it('no descarga nada hasta el primer pintado con contenido, y después espera a que el navegador quede libre', async () => {
+    const observador = await programar()
+    expect(observador.observado).toEqual({ type: 'paint', buffered: true })
+
+    observador.pintar('first-paint')
+    expect(requestIdleCallback).not.toHaveBeenCalled()
+
+    observador.pintar('first-contentful-paint')
+    expect(observador.desconectado).toBe(true)
     expect(requestIdleCallback).toHaveBeenCalledWith(expect.any(Function), { timeout: 2000 })
+    await vi.dynamicImportSettled()
     expect(mocks.cargados).toEqual([])
 
     alQuedarLibre?.()
-    await vi.waitFor(() => {
-      expect(mocks.sentryInit).toHaveBeenCalled()
-      expect(mocks.posthogInit).toHaveBeenCalled()
-    })
+    await esperarInicializadas()
   })
 
-  it('sin requestIdleCallback espera al frame siguiente y a una tarea más', async () => {
-    vi.useFakeTimers()
-    vi.stubGlobal('requestIdleCallback', undefined)
-    let alPintar: (() => void) | undefined
-    vi.stubGlobal(
-      'requestAnimationFrame',
-      vi.fn((cb: () => void) => {
-        alPintar = cb
-        return 1
-      })
-    )
+  it('una pestaña que nunca pinta las inicia igual a los 5 s, una sola vez', async () => {
+    const observador = await programar()
+
+    vi.advanceTimersByTime(4999)
+    expect(requestIdleCallback).not.toHaveBeenCalled()
+    vi.advanceTimersByTime(1)
+    observador.pintar('first-contentful-paint')
+    expect(requestIdleCallback).toHaveBeenCalledOnce()
+
+    alQuedarLibre?.()
+    await esperarInicializadas()
+  })
+
+  it('sin PerformanceObserver las inicia a los 5 s', async () => {
+    vi.stubGlobal('PerformanceObserver', undefined)
     const { programarObservabilidad } = await import('./observability')
 
     programarObservabilidad()
-    vi.runAllTimers()
-    await vi.dynamicImportSettled()
-    expect(mocks.cargados).toEqual([])
+    vi.advanceTimersByTime(4999)
+    expect(requestIdleCallback).not.toHaveBeenCalled()
+    vi.advanceTimersByTime(1)
 
-    alPintar?.()
+    alQuedarLibre?.()
+    await esperarInicializadas()
+  })
+
+  it('sin requestIdleCallback (Safari) las inicia en la tarea siguiente al pintado', async () => {
+    vi.stubGlobal('requestIdleCallback', undefined)
+    const observador = await programar()
+
+    observador.pintar('first-contentful-paint')
     expect(mocks.cargados).toEqual([])
-    vi.runAllTimers()
-    vi.useRealTimers()
-    await vi.waitFor(() => {
-      expect(mocks.sentryInit).toHaveBeenCalled()
-      expect(mocks.posthogInit).toHaveBeenCalled()
-    })
+    vi.advanceTimersByTime(0)
+    await esperarInicializadas()
   })
 })
