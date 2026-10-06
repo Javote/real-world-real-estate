@@ -8,27 +8,23 @@ export async function initObservability(): Promise<void> {
           Sentry.init({
             dsn: sentryDsn,
             environment: import.meta.env.MODE,
-            sendDefaultPii: false
+            sendDefaultPii: false,
+            integrations: [Sentry.browserTracingIntegration()],
+            tracesSampleRate: 1
           })
         })
       : undefined,
-    // De PostHog solo se usan las páginas vistas y los web vitals: cada extensión encendida baja
-    // su propio script del CDN y se ejecuta justo después del primer pintado (TBT).
+    // De PostHog solo se usa web analytics (páginas vistas y sesiones): el núcleo slim, sin
+    // extensiones. Los web vitals los mide Sentry.
     posthogKey
-      ? import('posthog-js').then(({ default: posthog }) => {
+      ? import('posthog-js/dist/module.slim').then(({ default: posthog }) => {
           posthog.init(posthogKey, {
             api_host: import.meta.env.VITE_POSTHOG_HOST ?? 'https://us.i.posthog.com',
             person_profiles: 'identified_only',
             autocapture: false,
             disable_session_recording: true,
-            capture_performance: { web_vitals: true, network_timing: false },
-            capture_dead_clicks: false,
-            capture_heatmaps: false,
-            capture_exceptions: false,
+            capture_performance: false,
             disable_surveys: true,
-            disable_product_tours: true,
-            disable_conversations: true,
-            disable_web_experiments: true,
             advanced_disable_flags: true
           })
         })

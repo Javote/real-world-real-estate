@@ -2,16 +2,17 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
 const mocks = vi.hoisted(() => ({
   sentryInit: vi.fn(),
+  browserTracing: { name: 'BrowserTracing' },
   posthogInit: vi.fn(),
   cargados: [] as string[]
 }))
 
 vi.mock('@sentry/react', () => {
   mocks.cargados.push('@sentry/react')
-  return { init: mocks.sentryInit }
+  return { init: mocks.sentryInit, browserTracingIntegration: () => mocks.browserTracing }
 })
-vi.mock('posthog-js', () => {
-  mocks.cargados.push('posthog-js')
+vi.mock('posthog-js/dist/module.slim', () => {
+  mocks.cargados.push('posthog-js/dist/module.slim')
   return { default: { init: mocks.posthogInit } }
 })
 
@@ -42,7 +43,7 @@ describe('initObservability', () => {
     expect(mocks.posthogInit).not.toHaveBeenCalled()
   })
 
-  it('con DSN inicializa Sentry sin PII por defecto, y PostHog no se descarga', async () => {
+  it('con DSN inicializa Sentry sin PII, con las trazas de navegación que miden los web vitals, y PostHog no se descarga', async () => {
     vi.stubEnv('VITE_SENTRY_DSN', 'https://k@sentry.example/1')
 
     await initObservability()
@@ -50,13 +51,15 @@ describe('initObservability', () => {
     expect(mocks.sentryInit).toHaveBeenCalledWith({
       dsn: 'https://k@sentry.example/1',
       environment: 'test',
-      sendDefaultPii: false
+      sendDefaultPii: false,
+      integrations: [mocks.browserTracing],
+      tracesSampleRate: 1
     })
     expect(mocks.cargados).toEqual(['@sentry/react'])
     expect(mocks.posthogInit).not.toHaveBeenCalled()
   })
 
-  it('con key y sin host inicializa PostHog en el host por defecto, sin autocapture ni grabación, y Sentry no se descarga', async () => {
+  it('con key y sin host inicializa el núcleo slim de PostHog en el host por defecto, solo con páginas vistas, y Sentry no se descarga', async () => {
     vi.stubEnv('VITE_POSTHOG_KEY', 'phc_abc')
     vi.stubEnv('VITE_POSTHOG_HOST', undefined as unknown as string)
 
@@ -67,17 +70,11 @@ describe('initObservability', () => {
       person_profiles: 'identified_only',
       autocapture: false,
       disable_session_recording: true,
-      capture_performance: { web_vitals: true, network_timing: false },
-      capture_dead_clicks: false,
-      capture_heatmaps: false,
-      capture_exceptions: false,
+      capture_performance: false,
       disable_surveys: true,
-      disable_product_tours: true,
-      disable_conversations: true,
-      disable_web_experiments: true,
       advanced_disable_flags: true
     })
-    expect(mocks.cargados).toEqual(['posthog-js'])
+    expect(mocks.cargados).toEqual(['posthog-js/dist/module.slim'])
     expect(mocks.sentryInit).not.toHaveBeenCalled()
   })
 

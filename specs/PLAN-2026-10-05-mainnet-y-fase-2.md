@@ -310,9 +310,9 @@ Preprod sigue en free tier ($0). La tabla es lo que **agrega** mainnet.
 | Turso | base de mainnet | Free **$0** (5 GB, 500M lecturas, 10M escrituras, 1 día de PITR) | Developer **$4,99** (9 GB, 2.500M lecturas, 25M escrituras, 10 días de PITR) | Decisión 6. El plan es por organización y cubre también las bases de Preprod |
 | Cloudflare R2 | evidencia | **$0** (10 GB, 1M ops clase A, 10M clase B, egress gratis) | $0 | Después, $0,015/GB-mes |
 | Blockfrost | provider | Starter **$0** (50.000 requests/día) | $0 | **A confirmar en el dashboard:** si Starter no admite el proyecto de mainnet además del de Preprod, Hobby sale €29/mes (≈ $32,49) |
-| Sentry | errores | Developer **$0** (5.000 errores/mes, 1 usuario) | $0 | Team sale $26/mes, si los dos necesitan acceso |
+| Sentry | errores y web vitals | Developer **$0** (5.000 errores/mes, 5M spans/mes, 1 usuario) | $0 | Team sale $26/mes, si los dos necesitan acceso |
 | Grafana Cloud | traces y métricas | Free **$0** (10k series, 50 GB de traces, 3 usuarios, 14 días) | $0 | |
-| PostHog | web vitals | Free **$0** (1M eventos/mes) | $0 | |
+| PostHog | web analytics | Free **$0** (1M eventos/mes) | $0 | |
 | GitHub Actions | CI | **$0** (repo público) | $0 | |
 | Dominio | — | ninguno (`onrender.com`) | — | Opcional |
 | **Total por mes** | | **$0** | **$11,99** | **$44,48** si Blockfrost pide Hobby · **$62,99** con asientos para los dos (Render Pro + Sentry Team) |
