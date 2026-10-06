@@ -67,7 +67,15 @@ describe('initObservability', () => {
       person_profiles: 'identified_only',
       autocapture: false,
       disable_session_recording: true,
-      capture_performance: true
+      capture_performance: { web_vitals: true, network_timing: false },
+      capture_dead_clicks: false,
+      capture_heatmaps: false,
+      capture_exceptions: false,
+      disable_surveys: true,
+      disable_product_tours: true,
+      disable_conversations: true,
+      disable_web_experiments: true,
+      advanced_disable_flags: true
     })
     expect(mocks.cargados).toEqual(['posthog-js'])
     expect(mocks.sentryInit).not.toHaveBeenCalled()
