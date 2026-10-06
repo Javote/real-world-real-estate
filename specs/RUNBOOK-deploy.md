@@ -34,11 +34,16 @@ Se hace una sola vez. Requiere cuentas en Render y Turso (las dos gratis, sin ta
 ### 1.1 · Base en Turso
 
 ```bash
-turso auth login                                  # abre el browser
-turso db create propnexus                         # free: 5 GB · 500M lecturas · 10M escrituras/mes
-turso db show propnexus --url                     # → libsql://propnexus-<org>.<region>.turso.io
-turso db tokens create propnexus                  # → el DATABASE_AUTH_TOKEN
+turso auth login                                         # abre el browser
+turso group create propnexus --location aws-us-west-2    # la región de Render (Oregon)
+turso db create propnexus-west --group propnexus         # free: 5 GB · 500M lecturas · 10M escrituras/mes
+turso db show propnexus-west --url                       # → libsql://propnexus-west-<org>.aws-us-west-2.turso.io
+turso db tokens create propnexus-west                    # → el DATABASE_AUTH_TOKEN
 ```
+
+**La base va en la región de la API.** Con Render en Oregon y la base en Virginia, cada viaje a la
+base costaba ~70–120 ms; en la misma región, ~16 ms (`SPEC-603`). Una base no se muda de grupo:
+cambiar de región es una base nueva cargada con un `.dump`.
 
 Guardá los dos valores: van al dashboard de Render, **nunca al repo** (regla 12).
 
@@ -98,15 +103,15 @@ echo "los otros cuatro   → $DEMO_PW"
 Recién entonces, **en esa misma shell** (las variables solo existen ahí):
 
 ```bash
-DATABASE_URL='libsql://propnexus-<org>.<region>.turso.io' \
-DATABASE_AUTH_TOKEN="$(turso db tokens create propnexus)" \
+DATABASE_URL='libsql://propnexus-west-<org>.aws-us-west-2.turso.io' \
+DATABASE_AUTH_TOKEN="$(turso db tokens create propnexus-west)" \
 SEED_ADMIN_PASSWORD="$ADMIN_PW" \
 SEED_DEMO_PASSWORD="$DEMO_PW" \
 JWT_SECRET=cualquier-cosa-el-seed-no-firma-nada \
 pnpm --filter @plataforma/api db:seed
 ```
 
-`$(turso db tokens create propnexus)` evita copiar y pegar el token. Los tokens son **aditivos**:
+`$(turso db tokens create propnexus-west)` evita copiar y pegar el token. Los tokens son **aditivos**:
 crear uno nuevo no invalida el que ya está en Render. Lo que sí rompe la API desplegada es
 `turso db tokens invalidate`, que los mata **todos** de una — no lo corras.
 
@@ -425,12 +430,16 @@ una migración nueva que deshace — nunca editar la aplicada (bloqueado por hoo
 Turso free trae **1 día de point-in-time restore**:
 
 ```bash
-turso db shell propnexus                          # inspección
-turso db create propnexus-restore --from-db propnexus --timestamp <ISO-8601>
+turso db shell propnexus-west                                         # inspección
+turso db create propnexus-restore --group propnexus --from-db propnexus-west --timestamp <ISO-8601>
 ```
 
 Restaurar crea una base **nueva**: se apunta `DATABASE_URL` a ella y se redeploya. No se pisa la
-original hasta estar seguro.
+original hasta estar seguro. Va con `--group propnexus`: `--from-db` no copia entre grupos.
+
+**El rollback del cambio de región** (`SPEC-603`, 2026-10-06): `propnexus`, en Virginia, es la
+base de antes del corte y no recibe escrituras desde entonces. Volver es apuntarle `DATABASE_URL` y
+un token suyo, sabiendo que pierde lo escrito en Oregon después del corte.
 
 ## 4 · Incidentes
 
@@ -546,7 +555,7 @@ INSERT INTO Dossier (id, unitId, masterHash, compiledAt, shareToken, status, sig
    1788447381415, NULL, 'compiled', NULL, NULL, NULL);
 ```
 
-Se aplica con `turso db shell propnexus < archivo.sql`. **Esto no es una migración y no va en
+Se aplica con `turso db shell propnexus-west < archivo.sql`. **Esto no es una migración y no va en
 `apps/api/migrations/`**: ahí se aplicaría solo, en cada arranque, contra cualquier base.
 
 Los puntos 1 y 2 se revierten por API como admin — `DELETE` de las dos membresías nuevas no tiene

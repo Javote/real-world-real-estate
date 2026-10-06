@@ -1,8 +1,8 @@
 # SPEC-603 — La API y la base en la misma región
 
-> Serie `6xx`, refactor post-M3 ([`PROPUESTA-2026-09-30-refactor-post-m3.md`](PROPUESTA-2026-09-30-refactor-post-m3.md)).
-> Adelantada a la Fase 1 (ítem 6 de [`specs/README.md`](README.md), que lleva su estado). Nivel 🟡:
-> deploy e infra. No cambia código de la app.
+> Serie `6xx`, refactor post-M3 ([`PROPUESTA-2026-09-30-refactor-post-m3.md`](../PROPUESTA-2026-09-30-refactor-post-m3.md)).
+> Adelantada a la Fase 1 (ítem 6 de [`specs/README.md`](../README.md), que lleva su estado). Nivel 🟡:
+> deploy e infra. No cambia código de la app. **Cerrada 2026-10-06** (§El corte).
 
 ## Lo que hay hoy, medido el 2026-09-30
 
@@ -80,6 +80,33 @@ del repo: `~/Backups/propnexus/2026-10-01_1716/` (`.db` + `.db-wal` de `turso db
 Repetir la medición de arriba después del cambio, con el mismo comando (6 × `/health` contra 6 ×
 404, en caliente). **Éxito:** la diferencia de medianas baja de ~100 ms a un dígito o pocas decenas.
 El número medido va a esta spec y a `specs/RUNBOOK-deploy.md`.
+
+## El corte, 2026-10-06
+
+Producción pasó a `propnexus-west`. `propnexus` (Virginia) queda intacta, con delete protection,
+como rollback: no se borra en esta sesión.
+
+1. Backup en `~/Backups/propnexus/2026-10-06_1424/`: `integrity_check` ok, 22 tablas, 981 `INSERT`
+   (10 más que el 2026-10-01: la copia de Oregon ya estaba vieja).
+2. `propnexus-west` vaciada con un `DROP TABLE` por tabla (los 51 índices caen con ellas), cargada
+   con el dump, y `cmp` contra el backup: **idénticas**, 1.310 líneas.
+3. Token y variables, por el dueño. Deploy `manual`, live a las 17:52 UTC.
+4. Después del deploy, los `.dump` de las dos bases siguen idénticos al backup: ninguna escritura
+   quedó del lado de Virginia.
+
+| Mediana de 6, en caliente | `/health` | 404 | La base |
+|---|---|---|---|
+| Antes (Virginia) | 0,374 s | 0,304 s | **~70 ms** |
+| Después (Oregon) | 0,310 s | 0,294 s | **~16 ms** |
+
+**Lo que el corte enseñó:**
+
+- **El `.dump` de `turso db shell` y el de `sqlite3` sobre `turso db export` no son comparables con
+  `cmp`**: Turso escribe `CREATE TABLE IF NOT EXISTS` y los `REAL` con la precisión mínima
+  (`-34.5826` contra `-34.58259999999999935`). Se compara siempre `.dump` de Turso contra `.dump` de
+  Turso.
+- **El modo automático de Claude Code bloquea el `DROP TABLE` sobre Turso** como borrado masivo: ese
+  paso lo corre el dueño.
 
 ## Qué se toca en el mismo commit
 

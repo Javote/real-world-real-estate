@@ -103,7 +103,7 @@ Ningún validador custodia ni transfiere valor, en ninguna fase (D-021).
 
 | Pieza | Hoy | Destino | Estado | Decisión |
 |---|---|---|---|---|
-| Base de datos | **SQLite** (`.data/dev.db`, Kysely sobre `@libsql/client`) | **SQLite** vía **Turso** en prod (free: 5 GB · 500M lecturas · 10M escrituras) | ● — `propnexus` (org `javote`, `aws-us-east-1`), con delete protection; la copia en Oregon de `SPEC-603` y las coordenadas, en §8b | D-038 · D-040 — Turso **obligatorio**, no preferencia: en free no hay disco. ORM: D-048 → D-049 |
+| Base de datos | **SQLite** (`.data/dev.db`, Kysely sobre `@libsql/client`) | **SQLite** vía **Turso** en prod (free: 5 GB · 500M lecturas · 10M escrituras) | ● — `propnexus-west` (org `javote`, `aws-us-west-2`, la región de Render: `SPEC-603`), con delete protection; las coordenadas, en §8b | D-038 · D-040 — Turso **obligatorio**, no preferencia: en free no hay disco. ORM: D-048 → D-049 |
 | Migraciones | SQL plano en `apps/api/migrations/`, **una sola** (`0000_init.sql`, D-063), tracking propio (`_migrations`), **un solo runner** (D-052) | idempotentes en el `startCommand` | ● — verificado sobre el **compilado**, contra base nueva y re-aplicando | D-012 · D-049 |
 | Archivos de evidencia | `STORAGE_DRIVER=disk` por default; **`s3` implementado y probado contra MinIO** | **Cloudflare R2** en prod (free: 10 GB, egress $0) — mismo código, otras variables | ● — bucket `propnexus-evidencia` creado y en uso; los 6 tests de integración pasan contra R2 real y un archivo subido **sobrevivió a un restart** de la API (verificado 2026-08-27) | D-011 · D-040 |
 | URLs de archivos | descarga por endpoint autenticado | prefirmadas, TTL ≤15 min | ○ | D-011 |
@@ -174,7 +174,7 @@ Coordenadas de producción. Los valores secretos viven en el dashboard de Render
 |---|---|
 | API | `propnexus-api` · `srv-da87oaon74is739pr050` · https://propnexus-api.onrender.com · Render Oregon |
 | Web | `propnexus-web` · `srv-da87oaon74is739pr04g` · https://propnexus-web.onrender.com |
-| Base | Turso, org `javote`: `propnexus` en el grupo `default` (`aws-us-east-1`). `propnexus-west` en el grupo `propnexus` (`aws-us-west-2`) es la copia de `SPEC-603`. Bases y grupos, con delete protection |
+| Base | Turso, org `javote`: **`propnexus-west`** en el grupo `propnexus` (`aws-us-west-2`) es producción desde el 2026-10-06 (`SPEC-603`). `propnexus` en el grupo `default` (`aws-us-east-1`) es la de antes del corte, sin escrituras desde entonces: el rollback es volver a apuntarle `DATABASE_URL` y `DATABASE_AUTH_TOKEN`. Bases y grupos, con delete protection |
 | Evidencia | Cloudflare R2, bucket `propnexus-evidencia`, token de tipo **Account** (uno de usuario muere si esa persona pierde acceso) y endpoint *jurisdiction-specific* |
 | Wallet de servicio | `addr_test1vp3vy56p6lrghhntg8ytydnuugnqh7ctkyxn3rm35g4q2ggtqvncw` · admin `62c25341d7c68bde6b41c8b2367ce2260bfb0bb10d388f71a22a0521`. La clave, en `~/propnexus-wallet-preprod.key` (600) y en `apps/api/.env`. No se rota (D-093) |
 | Reference script | txid `3c75280a9205b3d870ce18ed291dcf16593da4382c659bea0735396f0ba2c7f1` (Preprod) |
@@ -192,7 +192,7 @@ Coordenadas de producción. Los valores secretos viven en el dashboard de Render
 
 **Operar sin shell:**
 
-- La base se mira desde la máquina de uno: `turso db shell propnexus "<sql>"`. Las tablas van en
+- La base se mira desde la máquina de uno: `turso db shell propnexus-west "<sql>"`. Las tablas van en
   PascalCase singular (`User`, `OnChainEvent`).
 - La CLI de Render se come el stdin: dentro de un `for`, `< /dev/null`.
 - En `apps/api/.env`, `BLOCKFROST_API_KEY` va entre comillas: un `cut -d= -f2-` las deja puestas y

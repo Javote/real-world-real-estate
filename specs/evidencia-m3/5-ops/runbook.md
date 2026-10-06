@@ -35,11 +35,16 @@ Done once. Requires Render and Turso accounts (both free, no card).
 ### 1.1 · Database on Turso
 
 ```bash
-turso auth login                                  # opens the browser
-turso db create propnexus                         # free: 5 GB · 500M reads · 10M writes/month
-turso db show propnexus --url                     # → libsql://propnexus-<org>.<region>.turso.io
-turso db tokens create propnexus                  # → the DATABASE_AUTH_TOKEN
+turso auth login                                         # opens the browser
+turso group create propnexus --location aws-us-west-2    # Render's region (Oregon)
+turso db create propnexus-west --group propnexus         # free: 5 GB · 500M reads · 10M writes/month
+turso db show propnexus-west --url                       # → libsql://propnexus-west-<org>.aws-us-west-2.turso.io
+turso db tokens create propnexus-west                    # → the DATABASE_AUTH_TOKEN
 ```
+
+**The database goes in the API's region.** With Render in Oregon and the database in Virginia, each
+round trip to the database cost ~70–120 ms; in the same region, ~16 ms. A database cannot move
+between groups: changing region means a new database loaded from a `.dump`.
 
 Keep both values: they go into the Render dashboard, **never into the repository**.
 
@@ -101,15 +106,15 @@ echo "the other four     → $DEMO_PW"
 Only then, **in that same shell** (the variables only exist there):
 
 ```bash
-DATABASE_URL='libsql://propnexus-<org>.<region>.turso.io' \
-DATABASE_AUTH_TOKEN="$(turso db tokens create propnexus)" \
+DATABASE_URL='libsql://propnexus-west-<org>.aws-us-west-2.turso.io' \
+DATABASE_AUTH_TOKEN="$(turso db tokens create propnexus-west)" \
 SEED_ADMIN_PASSWORD="$ADMIN_PW" \
 SEED_DEMO_PASSWORD="$DEMO_PW" \
 JWT_SECRET=anything-the-seed-signs-nothing \
 pnpm --filter @plataforma/api db:seed
 ```
 
-`$(turso db tokens create propnexus)` avoids copying and pasting the token. Tokens are
+`$(turso db tokens create propnexus-west)` avoids copying and pasting the token. Tokens are
 **additive**: creating a new one does not invalidate the one already in Render. What does break the
 deployed API is `turso db tokens invalidate`, which kills **all of them** at once — do not run it.
 
@@ -363,12 +368,16 @@ it is a new migration that undoes it — never editing the one already applied.
 Turso free includes **1 day of point-in-time restore**:
 
 ```bash
-turso db shell propnexus                          # inspection
-turso db create propnexus-restore --from-db propnexus --timestamp <ISO-8601>
+turso db shell propnexus-west                                         # inspection
+turso db create propnexus-restore --group propnexus --from-db propnexus-west --timestamp <ISO-8601>
 ```
 
 Restoring creates a **new** database: point `DATABASE_URL` at it and redeploy. The original is not
-overwritten until you are sure.
+overwritten until you are sure. It needs `--group propnexus`: `--from-db` does not copy across groups.
+
+**Rolling back the region change** (2026-10-06): `propnexus`, in Virginia, is the database from
+before the cutover and has received no writes since. Going back means pointing `DATABASE_URL` and one
+of its tokens at it, knowing it loses whatever was written in Oregon after the cutover.
 
 ## 4 · Incidents
 
@@ -478,7 +487,7 @@ INSERT INTO Dossier (id, unitId, masterHash, compiledAt, shareToken, status, sig
    1788447381415, NULL, 'compiled', NULL, NULL, NULL);
 ```
 
-Applied with `turso db shell propnexus < file.sql`. **This is not a migration and does not belong in
+Applied with `turso db shell propnexus-west < file.sql`. **This is not a migration and does not belong in
 `apps/api/migrations/`**: there it would apply itself, on every startup, against any database.
 
 Points 1 and 2 are reverted as admin: the two new memberships have no delete endpoint (done with
