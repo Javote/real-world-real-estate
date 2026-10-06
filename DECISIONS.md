@@ -207,6 +207,13 @@ todo proyecto, construida y testeada (`STAGE_TRANSITION_FORBIDDEN`, D-088). No e
 porque nada en `docs/` pide que lo sea; es **determinística y completa**, que es lo que un signer
 schema hace de verdad cuando no hay dos roles compitiendo por la misma transición.
 
+**Y que no estén en el validador es lo que pide M2-D6 §13.3**: lógica de validador por fases,
+*"introducing richer validator-based logic only where justified by product, trust, or governance
+requirements"*. Con el operador como único firmante (D-058), un rol on-chain sería su palabra sin
+nada que la contraste. Pasa a justificarse cuando un rol firme con su clave —la co-firma CIP-30 del
+certifier (D-009)—, y M4 le pone disparador: *"≥120 unique wallets"* no se alcanza con una sola
+clave (decisión 18 de `PLAN-2026-10-05-mainnet-y-fase-2.md`).
+
 **El criterio 3 del SOM queda sin código pendiente.** Documentación de cierre en `specs/README.md`
 y `M3-3.4`.
 
