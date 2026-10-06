@@ -56,6 +56,24 @@ A0 → A1 → A2 ─┬─→ W2 (609) ─┐
 - **Las features de M4 (`501`–`504`) entran después de A2**, ya con la forma nueva, en paralelo con
   A4/W4. Así nacen como módulos y no hay que migrarlas.
 
+## Quién hace qué (dueño, 2026-10-06)
+
+Dos personas: el dueño en la API y una segunda persona en la web, que entra en `609`.
+
+1. **El dueño, solo:** `614` (Paso 1, después Paso 2) → A0.2 → A1 → A2. `614` no espera a la API,
+   pero va primero para que la web quede con la fábrica y los loaders puestos antes de delegarla.
+2. **Desde A2, en relevo:**
+   - la segunda persona toma `609` mientras el dueño hace A3;
+   - W3 sigue a A3 (necesita el cliente del dossier de `609`);
+   - **el dueño revisa el piloto** (la regla de salida, abajo) antes de que arranque A4;
+   - A4 ∥ W4 módulo por módulo, en el orden de [`SPEC-616`](SPEC-616-el-resto-modulo-por-modulo.md):
+     el dueño cierra un módulo de la API y la segunda persona migra las pantallas que lo leen
+     mientras él sigue con el siguiente;
+   - A5 y W5, uno cada uno.
+
+**La entrada para la segunda persona es `609`**: acotada, no toca ninguna pantalla (la fachada de
+`port.ts` deja intactos los 324 `spyOn`) y la recibe con la fábrica de `614` ya hecha.
+
 ## La regla de salida
 
 **Si el piloto muestra que el arnés no alcanza para migrar sin miedo, o que la forma no simplifica**

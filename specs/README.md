@@ -105,13 +105,15 @@ El diseño de cada ítem está en
 ### Fase 2 — la migración, módulo por módulo
 
 El plan, el acople y la regla de salida están en [`SPEC-611`](SPEC-611-la-migracion-fase-2.md)
-(D-102); el estado, acá.
-
-**Lo próximo en la web (dueño, 2026-10-06): `614`, y de esa spec primero el Paso 1, después el Paso 2.**
-Se eligió entre todo lo abierto porque no espera a la API y es lo que más se nota: volver a una
-pantalla deja de pedir todo de nuevo (Paso 1) y los datos salen con el hover (Paso 2). Las cascadas
-de pedidos y la forma con Suspense siguen en W3/W4. Arranca el 2026-10-02 con A0, a pedido del dueño, con lo que queda abierto de
+(D-102); el estado, acá. Arranca el 2026-10-02 con A0, a pedido del dueño, con lo que queda abierto de
 la Fase 1 (ítems 6 y 9) en paralelo: ninguno de los dos la frena.
+
+**Lo próximo (dueño, 2026-10-06): `614`, primero el Paso 1 y después el Paso 2; después A0.2, A1 y
+A2.** Los hace el dueño, en ese orden; desde `609` se suma una segunda persona en la web y se
+alternan (el reparto, en `SPEC-611` §Quién hace qué). `614` va primero porque no espera a la API y
+es lo que más se nota: volver a una pantalla deja de pedir todo de nuevo (Paso 1) y los datos salen
+con el hover (Paso 2). Las cascadas de pedidos y la forma con Suspense siguen en W3/W4.
+
 La propuesta de calendario, junto con mainnet, está en
 [`PLAN-2026-10-05-mainnet-y-fase-2.md`](PLAN-2026-10-05-mainnet-y-fase-2.md) §3.
 

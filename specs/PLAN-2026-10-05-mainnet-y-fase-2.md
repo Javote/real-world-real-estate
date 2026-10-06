@@ -178,7 +178,9 @@ tiene que estar antes de **la primera liberación**, no antes del alta.
 **Dev A** se ocupa de la API: los pasos A de la migración y lo de `packages/cardano`. **Dev B**, de
 la web (los pasos W) y de la infraestructura de mainnet. Todo lo 🔴 se hace en pareja: uno escribe
 y el otro revisa, y el revisor tiene que poder explicar cada línea sin mirar el chat. Los dos sobre
-`main` (D-030), un commit por cambio y cada uno con `verify:all` en verde. **El calendario no tiene
+`main` (D-030), un commit por cambio y cada uno con `verify:all` en verde. **Donde este calendario
+difiere del reparto de [`SPEC-611`](SPEC-611-la-migracion-fase-2.md) §Quién hace qué (dueño,
+2026-10-06: `614` lo hace Dev A antes de A0.2, y Dev B entra en `609`), manda `SPEC-611`.** **El calendario no tiene
 margen:** lo que se corre empuja a la semana 6, no comprime el ensayo ni el piloto.
 
 ### Semana 1 — decidir y arrancar
