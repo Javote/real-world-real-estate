@@ -5,7 +5,7 @@ import { cargarDiccionario } from './i18n/dictionary'
 import { getStoredLocale } from './i18n/locale'
 import { LocaleProvider } from './i18n/useTranslation'
 import { AnnounceProvider } from './lib/announce'
-import { programarObservabilidad } from './lib/observability'
+import { erroresDeReact, programarObservabilidad } from './lib/observability'
 import { getRouter } from './router'
 import './styles.css'
 
@@ -16,7 +16,7 @@ const contenedor = document.getElementById('root')
 if (!contenedor) throw new Error('Falta #root en index.html')
 
 function montar(raiz: HTMLElement) {
-  createRoot(raiz).render(
+  createRoot(raiz, erroresDeReact).render(
     <StrictMode>
       <LocaleProvider>
         <AnnounceProvider>
