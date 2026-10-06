@@ -1,5 +1,5 @@
 import type { ProjectStatus } from '@plataforma/shared'
-import { useMutation, useQueries, useQuery, useQueryClient } from '@tanstack/react-query'
+import { useQueries, useQuery } from '@tanstack/react-query'
 import { createFileRoute, useNavigate } from '@tanstack/react-router'
 import {
   Building2,
@@ -26,6 +26,7 @@ import { useTranslation } from '#/i18n/useTranslation'
 import { useObjectUrls } from '#/lib/blobUrls'
 import { CARD_SHELL } from '#/lib/cardShell'
 import { cn } from '#/lib/cn'
+import { useFavoritos } from '#/lib/favoritos'
 import { esFoto, formatoArchivo, reintentarSiNoEsAusencia } from '#/lib/investor'
 import { avanceDeStages, bajarBlob, TONO_PROYECTO, timelineDeStages } from '#/lib/stageProgress'
 
@@ -52,7 +53,6 @@ function InvestorProjectDetail() {
   const { projectId } = Route.useParams()
   const { t, locale } = useTranslation()
   const navigate = useNavigate()
-  const queryClient = useQueryClient()
 
   const [galeria, setGaleria] = useState(false)
   const [mapa, setMapa] = useState(false)
@@ -76,10 +76,7 @@ function InvestorProjectDetail() {
     retry: reintentarSiNoEsAusencia
   })
 
-  const { data: favoritos } = useQuery({
-    queryKey: ['investor', 'favorites'],
-    queryFn: api.listFavorites
-  })
+  const favoritos = useFavoritos()
 
   const fotos = (documentos ?? []).filter((d) => esFoto(d.evidenceType, d.mimeType))
   const docs = (documentos ?? []).filter((d) => !esFoto(d.evidenceType, d.mimeType))
@@ -104,13 +101,7 @@ function InvestorProjectDetail() {
 
   const docAbierto = docs.find((d) => d.id === docId)
 
-  const idsFavoritos = new Set((favoritos ?? []).map((p) => p.id))
-  const esFavorito = idsFavoritos.has(projectId)
-
-  const toggleFavorito = useMutation({
-    mutationFn: () => (esFavorito ? api.removeFavorite(projectId) : api.addFavorite(projectId)),
-    onSuccess: () => void queryClient.invalidateQueries({ queryKey: ['investor', 'favorites'] })
-  })
+  const esFavorito = favoritos.esFavorito(projectId)
 
   if (error instanceof ApiError && error.status === 403) {
     return (
@@ -175,7 +166,7 @@ function InvestorProjectDetail() {
                 aria-label={
                   esFavorito ? t('investor.favorites.unsave') : t('investor.favorites.save')
                 }
-                onClick={() => toggleFavorito.mutate()}
+                onClick={() => favoritos.alternar(proyecto)}
                 className="absolute right-s3 bottom-s3 rounded-full bg-card/90 p-s2 text-primary shadow-e1"
               >
                 <Heart size={20} aria-hidden="true" className={esFavorito ? 'fill-primary' : ''} />

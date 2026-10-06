@@ -1,12 +1,12 @@
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { createFileRoute, useNavigate } from '@tanstack/react-router'
-import { api, projectCoverUrl } from '#/api/port'
+import { projectCoverUrl } from '#/api/port'
 import type { Project } from '#/api/types'
 import { Loading } from '#/components/domain/Loading'
 import { ProjectCard } from '#/components/domain/ProjectCard'
 import { PanelLayout } from '#/components/PanelLayout'
 import { useTranslation } from '#/i18n/useTranslation'
 import { CARD_SHELL_EMPTY } from '#/lib/cardShell'
+import { useFavoritos } from '#/lib/favoritos'
 import { avanceDeStages, TONO_PROYECTO } from '#/lib/stageProgress'
 
 export const Route = createFileRoute('/investor/favorites')({
@@ -16,17 +16,7 @@ export const Route = createFileRoute('/investor/favorites')({
 function InvestorFavorites() {
   const { t } = useTranslation()
   const navigate = useNavigate()
-  const queryClient = useQueryClient()
-
-  const { data: favoritos, isPending } = useQuery({
-    queryKey: ['investor', 'favorites'],
-    queryFn: api.listFavorites
-  })
-
-  const quitar = useMutation({
-    mutationFn: (id: string) => api.removeFavorite(id),
-    onSuccess: () => void queryClient.invalidateQueries({ queryKey: ['investor', 'favorites'] })
-  })
+  const { favoritos, isPending, alternar } = useFavoritos()
 
   const lista = favoritos ?? []
 
@@ -60,7 +50,7 @@ function InvestorFavorites() {
                 }
                 labels={{ from: t('project.from') }}
                 favorited
-                onToggleFavorite={() => quitar.mutate(proyecto.id)}
+                onToggleFavorite={() => alternar(proyecto)}
                 favoriteAriaLabel={t('investor.favorites.unsave')}
                 {...(i === 0 ? { favoriteTestId: 'INV-FAV-TOGGLE-002' } : {})}
               />

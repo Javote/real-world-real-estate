@@ -138,6 +138,85 @@ describe('/investor/buy', () => {
       expect(quitar).toHaveBeenCalledWith('p1')
     })
 
+    it('el corazón cambia antes de que conteste la API', async () => {
+      preparar([TORRE_A, TORRE_B], [TORRE_A])
+      vi.spyOn(api, 'addFavorite').mockReturnValue(new Promise(() => {}))
+      montar()
+
+      await screen.findByText('Torre B')
+      await userEvent.click(
+        await screen.findByRole('button', { name: t('investor.favorites.save') })
+      )
+
+      await waitFor(() =>
+        expect(
+          screen.getAllByRole('button', { name: t('investor.favorites.unsave') })
+        ).toHaveLength(2)
+      )
+    })
+
+    it('si la API falla, el corazón vuelve a como estaba', async () => {
+      preparar([TORRE_A, TORRE_B], [TORRE_A])
+      vi.mocked(api.listFavorites)
+        .mockResolvedValueOnce([TORRE_A])
+        .mockReturnValue(new Promise(() => {}))
+      const agregar = vi.spyOn(api, 'addFavorite').mockRejectedValue(new Error('caída'))
+      montar()
+
+      await screen.findByText('Torre B')
+      await userEvent.click(
+        await screen.findByRole('button', { name: t('investor.favorites.save') })
+      )
+
+      await waitFor(() => expect(agregar).toHaveBeenCalledWith('p2'))
+      await waitFor(() =>
+        expect(screen.getAllByRole('button', { name: t('investor.favorites.save') })).toHaveLength(
+          1
+        )
+      )
+      expect(screen.getAllByRole('button', { name: t('investor.favorites.unsave') })).toHaveLength(
+        1
+      )
+    })
+
+    it('con dos cambios en vuelo, solo el último refresca la lista', async () => {
+      preparar([TORRE_A, TORRE_B], [TORRE_A])
+      let terminarAgregar = () => {}
+      let terminarQuitar = () => {}
+      vi.spyOn(api, 'addFavorite').mockReturnValue(
+        new Promise<void>((r) => {
+          terminarAgregar = r
+        })
+      )
+      vi.spyOn(api, 'removeFavorite').mockReturnValue(
+        new Promise<void>((r) => {
+          terminarQuitar = r
+        })
+      )
+      montar()
+
+      await screen.findByText('Torre B')
+      await userEvent.click(
+        await screen.findByRole('button', { name: t('investor.favorites.save') })
+      )
+      await waitFor(() =>
+        expect(
+          screen.getAllByRole('button', { name: t('investor.favorites.unsave') })
+        ).toHaveLength(2)
+      )
+      await userEvent.click(
+        screen.getAllByRole('button', { name: t('investor.favorites.unsave') })[0] as HTMLElement
+      )
+      await waitFor(() => expect(api.removeFavorite).toHaveBeenCalled())
+
+      terminarAgregar()
+      await new Promise((r) => setTimeout(r, 0))
+      expect(api.listFavorites).toHaveBeenCalledTimes(1)
+
+      terminarQuitar()
+      await waitFor(() => expect(api.listFavorites).toHaveBeenCalledTimes(2))
+    })
+
     it('el corazón del listado no lleva el test ID de la pantalla de favoritos', async () => {
       preparar()
       montar()

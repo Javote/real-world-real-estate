@@ -1,4 +1,4 @@
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
+import { useQuery } from '@tanstack/react-query'
 import { createFileRoute, useNavigate } from '@tanstack/react-router'
 import { MapPin, Search, SlidersHorizontal, X } from 'lucide-react'
 import { useEffect, useState } from 'react'
@@ -13,6 +13,7 @@ import { TextInput } from '#/components/domain/TextInput'
 import { PanelLayout } from '#/components/PanelLayout'
 import { Dialog, DialogContent, DialogTitle } from '#/components/ui/dialog'
 import { useTranslation } from '#/i18n/useTranslation'
+import { useFavoritos } from '#/lib/favoritos'
 import { avanceDeStages, TONO_PROYECTO } from '#/lib/stageProgress'
 
 export type BuyView = 'map' | 'search' | 'filter'
@@ -53,7 +54,6 @@ function InvestorBuy() {
   const { t } = useTranslation()
   const navigate = useNavigate({ from: '/investor/buy' })
   const search = Route.useSearch()
-  const queryClient = useQueryClient()
   const [qLocal, setQLocal] = useState(search.q ?? '')
   const [bbox, setBbox] = useState<string | undefined>()
   const [pinSeleccionado, setPinSeleccionado] = useState<string | null>(null)
@@ -87,20 +87,7 @@ function InvestorBuy() {
     queryFn: () => api.listProjects(params)
   })
 
-  const { data: favoritos } = useQuery({
-    queryKey: ['investor', 'favorites'],
-    queryFn: api.listFavorites
-  })
-
-  const idsFavoritos = new Set((favoritos ?? []).map((p) => p.id))
-
-  const toggleFavorito = useMutation({
-    mutationFn: (proyecto: Project) =>
-      idsFavoritos.has(proyecto.id)
-        ? api.removeFavorite(proyecto.id)
-        : api.addFavorite(proyecto.id),
-    onSuccess: () => void queryClient.invalidateQueries({ queryKey: ['investor', 'favorites'] })
-  })
+  const { esFavorito, alternar } = useFavoritos()
 
   const setView = (view: BuyView | undefined) => {
     void navigate({
@@ -138,12 +125,10 @@ function InvestorBuy() {
           })
         }
         labels={etiquetasCard}
-        favorited={idsFavoritos.has(proyecto.id)}
-        onToggleFavorite={() => toggleFavorito.mutate(proyecto)}
+        favorited={esFavorito(proyecto.id)}
+        onToggleFavorite={() => alternar(proyecto)}
         favoriteAriaLabel={
-          idsFavoritos.has(proyecto.id)
-            ? t('investor.favorites.unsave')
-            : t('investor.favorites.save')
+          esFavorito(proyecto.id) ? t('investor.favorites.unsave') : t('investor.favorites.save')
         }
       />
     )
