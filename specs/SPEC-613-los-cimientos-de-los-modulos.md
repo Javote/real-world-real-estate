@@ -67,6 +67,44 @@ inglés y el PDF) en el mismo commit, y entonces el repo deja de tener el docume
 `specs/evidencia-m3/` y el test pasa a comparar contra un archivo vivo aparte) o se sigue
 regenerando.
 
+## A1, hecho el 2026-10-07
+
+En la rama `worktree-fase2-a0-a2`, sin mergear.
+
+| Pieza | Dónde | Cómo se verifica |
+|---|---|---|
+| `ErrorCode`: 33 códigos con status y clave | `packages/shared/src/errors.ts`, también como `@plataforma/shared/errors` para el front | `apps/api/test/error-codes.test.ts` lo cruza contra `src/` en los dos sentidos (ninguno inventado, ninguno falta, mismo status); `claveDeError.test.ts` exige que cada clave exista en el diccionario |
+| IDs con marca, 13 entidades | `packages/shared/src/ids.ts` | `ids.test.ts`: mismo JSON Schema que un `string`; `cimientos-tipos.test.ts`: lo que impide `tsc` |
+| `Result`, `ok()`, `err()` | `packages/shared/src/result.ts` | `result.test.ts` y `cimientos-tipos.test.ts` (un código fuera del inventario no compila) |
+| `audit(ejecutor, entrada)` | `apps/api/src/platform/audit.ts` | `platform-cimientos.test.ts`: con `db`, en una transacción que falla (no queda) y en un `enLote` |
+| `notify(ejecutor, entradas)` | `apps/api/src/platform/notify.ts` | el mismo: una, varias en un INSERT, ninguna, y la falla que se loguea sin tirar |
+| `anclarConReclamo` | `apps/api/src/platform/anclaje.ts` | el mismo: cinco reclamos simultáneos dan un ganador, un anclaje y un evento |
+| El esquema contra los tipos | `apps/api/test/esquema-contra-tipos.test.ts` | probado en rojo con una columna de más y una nulabilidad cambiada en `types.ts` |
+
+`writeAuditLog`/`insertAuditLog` y el `notify` de `domain/` quedan como están para sus llamadas, pero
+escritos sobre las piezas nuevas: no hay dos implementaciones. La API sigue en 100/100/100/100 (877
+tests), `reclamar-antes-de-anclar.test.ts` pasa sin cambios y el OpenAPI no se movió.
+
+**Dos cosas salieron distinto de lo escrito arriba, y las decide el dueño:**
+
+1. **Los IDs con marca existen, pero no se adoptaron en los schemas que ya hay.** Medido: marcar los
+   `*Id` de `shared` (sin los `id` primarios) da 3 errores en la API y 79 en la web, 73 de ellos en
+   fixtures de tests que arman respuestas con strings; y marcar los schemas de entrada obliga a la web
+   a convertir los params de ruta, que es lo que resuelve `609`. La propuesta: se adoptan **módulo por
+   módulo en A3/A4**, cuando el contrato de cada uno se muda a `shared/contract/` y sus pantallas se
+   migran igual. Lo que sí quedó: `Serialized` respeta un primitivo con marca (sin eso, la web veía un
+   `string & $brand` como objeto) y los schemas van anotados con `IdConMarca` (inferido, el `.d.ts`
+   desplegaba `string` en un objeto).
+2. **El reclamo no es una transacción interactiva.** Con cinco `db.transaction()` simultáneas sobre
+   libSQL local, las que pierden no esperan: tiran `SQLITE_BUSY: database is locked`. Las dos formas a
+   mano funcionan porque el reclamo es **una sola escritura condicional**, atómica sin transacción.
+   `anclarConReclamo` recibe eso: una sentencia condicional, o un `enLote` si lleva su audit. **De paso
+   aparece un riesgo que ya existe:** las seis rutas que hoy usan `db.transaction()` pueden dar 500 si
+   les llegan dos pedidos a la vez sobre la misma base. No se midió contra Turso.
+
+**Lo que no se hizo:** los `CHECK` en los enums (la spec pide primero el test y medir producción) y
+`notify` atómico (decisión pendiente, abajo).
+
 ## Verificación
 
 `pnpm verify:all`, `pnpm e2e` completo y el test nuevo del esquema contra los tipos, que se prueba en

@@ -28,6 +28,10 @@
     "./evidence-rules": {
       "types": "./src/evidence-rules.ts",
       "default": "./src/evidence-rules.ts"
+    },
+    "./errors": {
+      "types": "./src/errors.ts",
+      "default": "./src/errors.ts"
     }
   }
 }

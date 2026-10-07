@@ -1,6 +1,17 @@
+import { ERROR_CODES } from '@plataforma/shared/errors'
 import { describe, expect, it } from 'vitest'
+import { esAR } from '#/i18n/dictionary'
 import { claveDeError } from './claveDeError'
 import { ApiError } from './port'
+
+describe('ERROR_CODES de shared', () => {
+  it.each(Object.entries(ERROR_CODES))(
+    '%s nombra una clave que existe en el diccionario',
+    (_c, { clave }) => {
+      expect(Object.keys(esAR)).toContain(clave)
+    }
+  )
+})
 
 describe('claveDeError', () => {
   it('403 y 404 tienen su clave propia', () => {

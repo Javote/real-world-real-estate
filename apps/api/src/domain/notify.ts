@@ -1,34 +1,10 @@
 import type { NotificationCategory } from "@plataforma/shared";
-import { createId } from "../db/id.js";
 import { db } from "../lib/db.js";
+import { type EntradaDeNotificacion, notify as notificar } from "../platform/notify.js";
 
-export async function notify(input: {
-  userId: string;
-  category: NotificationCategory;
-  titleKey: string;
-  params?: Record<string, string | number>;
-  unitId?: string | null;
-}): Promise<void> {
-  try {
-    await db
-      .insertInto("Notification")
-      .values({
-        id: createId(),
-        userId: input.userId,
-        category: input.category,
-        titleKey: input.titleKey,
-        paramsJson: input.params ? JSON.stringify(input.params) : null,
-        unitId: input.unitId ?? null,
-        readAt: null,
-        createdAt: new Date()
-      })
-      .execute();
-  } catch (error) {
-    console.error("[notify] no se pudo registrar la notificación", {
-      titleKey: input.titleKey,
-      error
-    });
-  }
+// La forma vieja, sobre `notify()` de `platform/`: las llamadas se van con su módulo en A4 (SPEC-616).
+export async function notify(input: EntradaDeNotificacion): Promise<void> {
+  await notificar(db, input);
 }
 
 export async function notifyUnitInvestor(input: {
@@ -62,28 +38,14 @@ export async function notifyUnitInvestors(
     params?: Record<string, string | number>;
   }
 ): Promise<void> {
-  if (units.length === 0) return;
-
-  try {
-    await db
-      .insertInto("Notification")
-      .values(
-        units.map((u) => ({
-          id: createId(),
-          userId: u.investorId,
-          category: input.category,
-          titleKey: input.titleKey,
-          paramsJson: input.params ? JSON.stringify(input.params) : null,
-          unitId: u.unitId,
-          readAt: null,
-          createdAt: new Date()
-        }))
-      )
-      .execute();
-  } catch (error) {
-    console.error("[notify] no se pudieron registrar las notificaciones", {
+  await notificar(
+    db,
+    units.map((u) => ({
+      userId: u.investorId,
+      category: input.category,
       titleKey: input.titleKey,
-      error
-    });
-  }
+      ...(input.params ? { params: input.params } : {}),
+      unitId: u.unitId
+    }))
+  );
 }

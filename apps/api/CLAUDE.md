@@ -90,6 +90,16 @@ backlog quedan el CRUD de `/projects` y `/users` (admin, `SPEC-221`).
 - **El `LibsqlDialect` es el de `lib/libsql-dialect.ts`, no el del paquete**: el original usa el
   `SqliteAdapter` de Kysely, que pone un mutex global y vuelve serie todo `Promise.all` y toda request
   concurrente (`SPEC-610`; lo fija `test/viajes-por-request.test.ts`).
+- **Un reclamo ("lo gana uno solo") es una sola escritura condicional, nunca un `db.transaction()`**:
+  con dos a la vez sobre libSQL, la que pierde tira `SQLITE_BUSY` en vez de esperar. Para anclar,
+  `anclarConReclamo` (`platform/anclaje.ts`).
+- **El audit y las notificaciones nuevas salen de `platform/`**: `audit(ejecutor, entrada)` devuelve
+  la consulta sin ejecutar (sirve en una transacción y en un `enLote`); `notify(ejecutor, entradas)` no
+  tira. `writeAuditLog` y el `notify` de `domain/` son la forma vieja, escrita sobre las mismas piezas.
+- **Un código de error nuevo va primero a `ERROR_CODES`** (`packages/shared/src/errors.ts`), o
+  `test/error-codes.test.ts` se pone rojo; su clave tiene que existir en el diccionario de la web.
+- **Una columna nueva va a la migración y a `db/types.ts` en el mismo commit**:
+  `test/esquema-contra-tipos.test.ts` los compara.
 - **Escrituras que no dependen de una lectura intermedia van con `enLote`, no con `db.transaction()`**:
   sobre Turso, una transacción interactiva cuesta un viaje por sentencia más el COMMIT; `enLote` es un
   `batch`, un viaje y atómico. El audit va con `insertAuditLog` adentro del lote.
