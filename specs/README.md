@@ -115,6 +115,13 @@ pasó a **4 shards**: el más cargado baja de 92 a 76 s de tests. Con 14 runners
 libres para `reconcile.yml` y la corrida que queda cancelándose. L1 (`fullyParallel`) reparte test
 por test; ahí el e2e baja de `test-web` y `test-api` (~2:00).
 
+**Medido con 4 shards** (37569273172, `22c2975`): el más cargado, **2:35** (29 tests, 84 s de tests);
+los otros, 1:53 / 2:08 / 1:33; `a11y`, 2:26; la corrida, **2:40** (con 3 shards: 2:41 y 3:01). La
+variación entre runners es de ±20 s y pesa casi lo mismo que la ganancia: en esa corrida el shard 1
+pagó 32 s de install y 26 s de chromium, contra 18 y 23 s en otro. **El fijo de cada job de e2e
+(~45–60 s antes del primer test) es la próxima palanca**: cachear los navegadores de Playwright
+saca los ~25 s de chromium. Va a la Fase 2.
+
 #### Parte C: CI (primero)
 
 | Paso | Qué | Toca | Hecho cuando | Estado |
@@ -136,6 +143,8 @@ por test; ahí el e2e baja de `test-web` y `test-api` (~2:00).
 
 - **Acelerar vitest de web**, que manda en el camino crítico: el entorno jsdom suma 79 s y el setup
   43 s. Probar `happy-dom` u otro pool, solo si no cambia comportamiento.
+- **Cachear los navegadores de Playwright** en los jobs de e2e (`~/.cache/ms-playwright`, con la versión
+  de Playwright en la llave): ~25 s menos de chromium por job, que es el fijo que hoy decide al más lento.
 - **El e2e de CI sobre el build** (`vite preview` + la API compilada) en vez de `pnpm dev`: sin
   compilar cada página la primera vez, y más parecido a producción.
 
