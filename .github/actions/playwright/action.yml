@@ -1,5 +1,11 @@
 name: Navegador de Playwright
-description: Chromium (solo el headless shell) desde la caché, con la versión de Playwright en la llave; las dependencias de apt, siempre.
+description: Chromium (solo el headless shell) desde la caché, con la versión de Playwright en la llave, y sin apt.
+
+# Sin `--with-deps` ni `install-deps`: las librerías que pide el headless shell ya vienen en la
+# imagen de `ubuntu-latest` (en un runner sano, `install-deps` solo sumaba fuentes CJK y mesa). Y apt
+# depende del mirror del runner: el 2026-10-07 dos shards no llegaron a `azure.archive.ubuntu.com`,
+# cayeron a `archive.ubuntu.com` y la descarga de las listas se colgó sin timeout. Si a la imagen le
+# llega a faltar una librería, Playwright falla al lanzar el navegador con la lista de lo que falta.
 
 runs:
   using: composite
@@ -22,10 +28,4 @@ runs:
     - name: Chromium
       if: steps.cache.outputs.cache-hit != 'true'
       shell: bash
-      run: pnpm --filter @plataforma/web exec playwright install --with-deps --only-shell chromium
-
-    # Las librerías del sistema viven fuera de la caché: con hit, se instalan igual.
-    - name: Dependencias del sistema
-      if: steps.cache.outputs.cache-hit == 'true'
-      shell: bash
-      run: pnpm --filter @plataforma/web exec playwright install-deps chromium
+      run: pnpm --filter @plataforma/web exec playwright install --only-shell chromium

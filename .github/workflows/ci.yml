@@ -209,6 +209,8 @@ jobs:
   e2e:
     name: E2E Playwright (shard ${{ matrix.shard }}/4)
     runs-on: ubuntu-latest
+    # Un shard tarda ~2 min. Sin tope, un paso colgado espera las 6 h del default y frena el deploy.
+    timeout-minutes: 10
     strategy:
       fail-fast: false
       matrix:
@@ -266,6 +268,7 @@ jobs:
   e2e-a11y:
     name: E2E accesibilidad (no bloquea, SPEC-112)
     runs-on: ubuntu-latest
+    timeout-minutes: 10
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
       - uses: ./.github/actions/preparar
