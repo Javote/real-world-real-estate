@@ -109,7 +109,7 @@ const ARCHIVOS: Nombre[] = ['archivo.url', 'archivo.fotosDeEtapa']
 describe('las fábricas de queries', () => {
   afterEach(() => vi.restoreAllMocks())
 
-  it('invariante 3: lo que muestra un anclaje se reusa solo 10 s, lo que dura una navegación; el resto, 30 s', () => {
+  it('invariante 3: lo que muestra un anclaje se reusa solo 3 s, lo que dura una navegación; el resto, 30 s', () => {
     for (const nombre of NOMBRES) {
       const esperado = ARCHIVOS.includes(nombre)
         ? 0
