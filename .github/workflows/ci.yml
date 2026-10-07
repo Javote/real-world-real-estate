@@ -199,16 +199,20 @@ jobs:
   # los specs que escriben datos no se pisan entre shards, sin tocar ningún
   # test. Adentro, 1 worker y sin reintentos (`playwright.config.ts`):
   # Playwright recomienda 1 worker en CI, y con `checksPass` un test inestable
-  # frena un deploy. `fail-fast: false` para ver las fallas de los tres.
+  # frena un deploy. `fail-fast: false` para ver las fallas de todos.
+  #
+  # Cuatro y no tres: el e2e es el job más lento y el deploy lo espera.
+  # Playwright reparte archivo por archivo, así que un quinto no baja el más
+  # cargado (76 s de tests, un grupo que no se parte).
   #
   # `a11y.spec.ts` no va acá: tiene su job, que no bloquea (SPEC-112).
   e2e:
-    name: E2E Playwright (shard ${{ matrix.shard }}/3)
+    name: E2E Playwright (shard ${{ matrix.shard }}/4)
     runs-on: ubuntu-latest
     strategy:
       fail-fast: false
       matrix:
-        shard: [1, 2, 3]
+        shard: [1, 2, 3, 4]
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
       - uses: ./.github/actions/preparar
@@ -227,7 +231,7 @@ jobs:
           JWT_SECRET: ci-secret-jamas-en-produccion
 
       - name: E2E
-        run: pnpm --filter @plataforma/web e2e --grep-invert 'a11y\.spec' --shard=${{ matrix.shard }}/3
+        run: pnpm --filter @plataforma/web e2e --grep-invert 'a11y\.spec' --shard=${{ matrix.shard }}/4
         env:
           DATABASE_URL: file:./.data/dev.db
           JWT_SECRET: ci-secret-jamas-en-produccion

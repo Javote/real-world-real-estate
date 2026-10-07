@@ -96,7 +96,7 @@ unidad.
   CORS, falta `WEB_ORIGIN` en la API (`specs/RUNBOOK-deploy.md`).
 - **Los E2E entran con la password del seed** (`e2e/_credenciales.ts`), nunca con un literal.
 - **Si los E2E locales fallan en masa y en CI pasan, es la `dev.db`**: `pnpm db:seed`.
-- **En CI el E2E corre en 3 shards, cada uno con su propia base sembrada, y bloquea el deploy**: un
+- **En CI el E2E corre en 4 shards, cada uno con su propia base sembrada, y bloquea el deploy**: un
   spec que depende de lo que escribió otro pasa en local (todo en una base) y falla en CI. Cada spec
   arranca del seed. `a11y.spec.ts` va en su propio job y no bloquea (`SPEC-112`).
 - **Si fallan sueltos en el login con "No se pudo conectar con la API", es `tsx watch`**: reinicia
