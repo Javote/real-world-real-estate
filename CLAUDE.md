@@ -395,8 +395,8 @@ que la arregló (las anteriores al 2026-10-01, en
 - **Editar un `package.json` sin `pnpm install` da un verde falso.**
 - **`pnpm.overrides` solo se aplica porque `packageManager` pinea pnpm 9.15.0**: el día que suba a
   10+, los overrides van a `pnpm-workspace.yaml` en el mismo commit, o se ignoran en silencio.
-- **Una lectura nueva de `env.*` se declara en `render.yaml`**, o `apps/api/test/render-config.test.ts`
-  se pone rojo (D-076).
+- **Una variable nueva de la API va al schema de `apps/api/src/platform/config.ts` y a `render.yaml`**,
+  o `apps/api/test/render-config.test.ts` se pone rojo (D-076): también si se lee `process.env` suelto.
 - **CI corre lo que `verify:all` no** (e2e, audit, el smoke del `startCommand`, Semgrep, el diff de
   `plutus.json`): un verde local no es el verde de CI.
 - **Las capturas del developer no coinciden en el header**: gana D-074, no la captura.

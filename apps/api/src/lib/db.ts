@@ -1,15 +1,18 @@
 import { asegurarDirectorioLocal, urlDeLaBase } from "../db/local-db.js";
 import { coerceRow, SqliteTypeCoercionPlugin } from "../db/sqlite-type-plugin.js";
 import type { Database } from "../db/types.js";
+import { entorno } from "../platform/config.js";
 import { type Compilable, Kysely } from "./kysely.js";
 import { LibsqlDialect } from "./libsql-dialect.js";
 
 const databaseUrl = urlDeLaBase();
 asegurarDirectorioLocal(databaseUrl);
 
+const { DATABASE_AUTH_TOKEN } = entorno();
+
 const dialecto = new LibsqlDialect({
   url: databaseUrl,
-  ...(process.env.DATABASE_AUTH_TOKEN ? { authToken: process.env.DATABASE_AUTH_TOKEN } : {})
+  ...(DATABASE_AUTH_TOKEN ? { authToken: DATABASE_AUTH_TOKEN } : {})
 });
 
 export const db = new Kysely<Database>({

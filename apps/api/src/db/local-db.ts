@@ -1,11 +1,11 @@
 import { existsSync, mkdirSync } from "node:fs";
 import path from "node:path";
+import { entorno } from "../platform/config.js";
 
-export const LOCAL_DB_DIR = ".data";
-export const DEFAULT_DATABASE_URL = `file:./${LOCAL_DB_DIR}/dev.db`;
+export { DEFAULT_DATABASE_URL, LOCAL_DB_DIR } from "../platform/config.js";
 
 export const urlDeLaBase = (env: NodeJS.ProcessEnv = process.env): string =>
-  env.DATABASE_URL ?? DEFAULT_DATABASE_URL;
+  entorno(env).DATABASE_URL;
 
 export function asegurarDirectorioLocal(url: string): void {
   if (!url.startsWith("file:")) return;

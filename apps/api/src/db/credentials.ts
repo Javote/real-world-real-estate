@@ -1,4 +1,5 @@
 import { passwordSchema } from "@plataforma/shared";
+import { entorno } from "../platform/config.js";
 import { urlDeLaBase } from "./local-db.js";
 
 export const esBaseLocal = (url: string) => /^file:/i.test(url.trim());
@@ -15,10 +16,10 @@ export function exigirBaseLocal(env: NodeJS.ProcessEnv = process.env): void {
 }
 
 export function passwordDeProduccion(
-  variable: string,
+  variable: "SEED_ADMIN_PASSWORD" | "SEED_DEMO_PASSWORD",
   env: NodeJS.ProcessEnv = process.env
 ): string {
-  const delEntorno = env[variable]?.trim();
+  const delEntorno = entorno(env)[variable];
   if (!delEntorno) {
     throw new Error(
       `${variable} no está seteada: el seed de producción no tiene passwords por defecto.\n` +

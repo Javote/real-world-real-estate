@@ -7,9 +7,9 @@ import {
 } from "@plataforma/shared";
 import multer from "multer";
 import { createId } from "../db/id.js";
+import { entorno } from "../platform/config.js";
 
-const uploadDir =
-  process.env.UPLOAD_DIR || path.resolve(import.meta.dirname, "..", "..", "uploads");
+const uploadDir = entorno().UPLOAD_DIR ?? path.resolve(import.meta.dirname, "..", "..", "uploads");
 
 fs.mkdirSync(uploadDir, { recursive: true });
 

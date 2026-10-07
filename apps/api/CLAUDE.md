@@ -131,6 +131,11 @@ backlog quedan el CRUD de `/projects` y `/users` (admin, `SPEC-221`).
   `SEED_ADMIN_PASSWORD`/`SEED_DEMO_PASSWORD` y nunca las imprime (D-047). Los dos reescriben el
   `passwordHash`.
 - **El puerto sale de `PORT` en `apps/api/.env`.**
+- **El entorno se lee con `entorno()` (`platform/config.ts`), nunca con `process.env.X`**: una
+  variable nueva va al schema con su parseo y su default, y a `render.yaml`. `entorno()` lee el
+  `process.env` del momento: se llama donde se usa (al importar o por llamada), no se guarda en un
+  módulo aparte. Ninguna variable tira ahí: lo que frena el arranque lo decide quien la usa, y lo mal
+  formado sale en el log de arranque (`avisosDelEntorno`).
 
 ## Tests
 

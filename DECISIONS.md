@@ -733,8 +733,9 @@ cae en él.
 `apps/api/test/render-config.test.ts` carga el Blueprint y (a) ejecuta las reglas de arranque de la
 API contra el `ANCHOR_MODE` declarado y una `DATABASE_URL` con forma de Turso, exigiendo que el
 puerto no quede inhabilitado; (b) exige que los secretos del modo real estén como `sync: false`;
-(c) exige que **toda** variable que el backend lee esté declarada, con una lista corta de opcionales
-que a su vez se verifica que no envejezca.
+(c) exige que **toda** variable del schema del entorno (`apps/api/src/platform/config.ts`, `SPEC-612`)
+esté declarada, con una lista corta de opcionales que a su vez se verifica que no envejezca, y que
+ningún archivo de la API lea `process.env` por su cuenta.
 
 **Por qué existe.** El 2026-08-31 se pusheó un commit sabiendo que dejaría el anclaje inhabilitado
 en producción, y eso se verificó *después*, leyendo los logs del deploy. Saber el resultado no es un

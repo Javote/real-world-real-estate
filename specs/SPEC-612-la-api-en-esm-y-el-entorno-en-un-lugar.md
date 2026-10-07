@@ -183,6 +183,33 @@ aparte (2026-10-02):
   requests solo cambia la del JSON mal formado, y OpenTelemetry da idéntico (spans por scope, tipo,
   padre y nombre, y las 17 métricas).
 
+## A0.2, medido el 2026-10-07
+
+En la rama `worktree-fase2-a0-a2`, sin mergear. `platform/config.ts` tiene 27 variables, cada una con
+el parseo literal que tenía en su archivo (`parseInt` con fallback, `??` contra `||`, `=== "true"`);
+`platform-config.test.ts` fija 55 casos (ausente, vacía e inválida) y exige uno por campo. Las funciones
+que ya recibían el entorno por parámetro (`trustProxyHops(env)`, `urlDeLaBase(env)`…) lo siguen
+recibiendo, y los 15 tests que cambian `process.env` en caliente no se tocaron.
+
+**Lo que agrega:** `server.ts` loguea al arrancar lo mal formado, con el valor que usa en su lugar y sin
+el crudo (`[arranque] TRUST_PROXY_HOPS no tiene la forma esperada (^\d+$); se usa 3`), y no frena.
+`render-config.test.ts` lee las variables del schema y suma un test que se pone rojo si un archivo de
+`src/` lee `process.env.X` suelto (probado en rojo con una mutación). Los `SEED_*` entran al schema y a
+las opcionales de ese test: el seed de producción corre a mano.
+
+**Verificado:** la API en 100/100/100/100 (857 tests); `pnpm precommit`; el e2e 100/100 con la API sin
+`watch`. Con el mismo arnés de A0.1, la build de `main` (`0cda4d9`) y la nueva, cada una con el
+`buildCommand` y el `startCommand` literales en Node 22.23.3 y la misma base sembrada, con DSN y
+endpoint OTLP locales: **653 requests idénticas** (status y cuerpo, sin ids ni fechas: 246 × 200,
+58 × 400, 104 × 401, 239 × 403, un 404 y un 500 provocado), los mismos spans por scope
+(`http` 653, `express` 4.070, `router` 4.832, `@sentry/node` 4.723), el mismo evento de Sentry ante el
+500 y las mismas líneas de log de arranque. Sin DSN ni endpoint, arranca con los dos apagados y
+`/health` 200.
+
+**No corrido:** `test:s3`, porque Docker no estaba levantado; el driver S3 queda cubierto por
+`storage-mocked` y `storage-defaults-coverage`. Falta también lo de producción (§Verificación 6),
+después del merge.
+
 ## Rollback
 
 Revertir el commit y redeployar. No toca la base ni el estado de los navegadores.

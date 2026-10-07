@@ -2,8 +2,11 @@ import type { Server } from "node:http";
 import app from "./app.js";
 import { initAnchorPort } from "./lib/anchor.js";
 import { db } from "./lib/db.js";
+import { avisosDelEntorno, entorno } from "./platform/config.js";
 
-const port = Number(process.env.PORT || 8787);
+// Una variable mal formada se ve acá y no en la primera request que la usa; ninguna frena el arranque.
+const port = entorno().PORT;
+for (const aviso of avisosDelEntorno()) console.warn(`[arranque] ${aviso}`);
 
 console.log("[arranque] migraciones listas, levantando la API");
 

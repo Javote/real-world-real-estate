@@ -10,6 +10,7 @@ import {
   PutObjectCommand,
   S3Client
 } from "@aws-sdk/client-s3";
+import { type Entorno, entorno } from "../platform/config.js";
 
 export type StorageDriver = "disk" | "s3";
 
@@ -164,26 +165,30 @@ class S3Storage implements StoragePort {
   }
 }
 
-function required(name: string): string {
-  const valor = process.env[name];
+function required(
+  env: Entorno,
+  name: "S3_BUCKET" | "S3_ACCESS_KEY_ID" | "S3_SECRET_ACCESS_KEY"
+): string {
+  const valor = env[name];
   if (!valor) {
     throw new Error(`STORAGE_DRIVER=s3 exige ${name}, y no está definida`);
   }
   return valor;
 }
 
-export function createStorage(driver: string = process.env.STORAGE_DRIVER ?? "disk"): StoragePort {
+export function createStorage(driver: string = entorno().STORAGE_DRIVER): StoragePort {
   if (driver === "disk") return new DiskStorage();
 
   if (driver === "s3") {
+    const env = entorno();
     return new S3Storage({
-      endpoint: process.env.S3_ENDPOINT,
-      region: process.env.S3_REGION ?? "us-east-1",
-      bucket: required("S3_BUCKET"),
-      accessKeyId: required("S3_ACCESS_KEY_ID"),
-      secretAccessKey: required("S3_SECRET_ACCESS_KEY"),
-      forcePathStyle: (process.env.S3_FORCE_PATH_STYLE ?? "true") === "true",
-      createBucket: (process.env.S3_CREATE_BUCKET ?? "false") === "true"
+      endpoint: env.S3_ENDPOINT,
+      region: env.S3_REGION,
+      bucket: required(env, "S3_BUCKET"),
+      accessKeyId: required(env, "S3_ACCESS_KEY_ID"),
+      secretAccessKey: required(env, "S3_SECRET_ACCESS_KEY"),
+      forcePathStyle: env.S3_FORCE_PATH_STYLE,
+      createBucket: env.S3_CREATE_BUCKET
     });
   }
 

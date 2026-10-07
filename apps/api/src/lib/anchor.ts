@@ -1,6 +1,7 @@
 import type { AnchorPort, LedgerStore, LedgerUtxo, OutputRef } from "@plataforma/cardano";
 import { createAnchorPort, DisabledAnchorAdapter } from "@plataforma/cardano";
 import type { StageDatum } from "@plataforma/shared";
+import { entorno } from "../platform/config.js";
 import { db } from "./db.js";
 
 class KyselyLedgerStore implements LedgerStore {
@@ -82,8 +83,7 @@ let puerto: AnchorPort | null = null;
 let inicializando: Promise<AnchorPort> | null = null;
 
 export function motivoParaNoAnclar(): string | null {
-  const modo = process.env.ANCHOR_MODE ?? "simulated";
-  const url = process.env.DATABASE_URL ?? "";
+  const { ANCHOR_MODE: modo, DATABASE_URL: url } = entorno();
   const esRemota = url.startsWith("libsql://") || url.includes(".turso.io");
 
   if (modo === "simulated" && esRemota) {
@@ -117,14 +117,15 @@ async function crearPuerto(): Promise<AnchorPort> {
     return puerto;
   }
 
+  const env = entorno();
   try {
     puerto = await createAnchorPort({
-      mode: process.env.ANCHOR_MODE,
+      mode: env.ANCHOR_MODE,
       store: new KyselyLedgerStore(),
-      blockfrostApiKey: process.env.BLOCKFROST_API_KEY,
-      privateKey: process.env.SERVICE_WALLET_PRIVATE_KEY,
-      network: process.env.CARDANO_NETWORK,
-      blockfrostUrl: process.env.BLOCKFROST_URL
+      blockfrostApiKey: env.BLOCKFROST_API_KEY,
+      privateKey: env.SERVICE_WALLET_PRIVATE_KEY,
+      network: env.CARDANO_NETWORK,
+      blockfrostUrl: env.BLOCKFROST_URL
     });
   } catch (error) {
     puerto = inhabilitar(error instanceof Error ? error.message : String(error));

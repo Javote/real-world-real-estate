@@ -1,7 +1,8 @@
 import jwt from "jsonwebtoken";
+import { entorno } from "../platform/config.js";
 
 export function requireJwtSecret(env: NodeJS.ProcessEnv = process.env): string {
-  const secret = env.JWT_SECRET?.trim();
+  const secret = entorno(env).JWT_SECRET;
 
   if (!secret) {
     throw new Error(

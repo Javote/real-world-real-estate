@@ -1,10 +1,11 @@
-import { execFileSync } from "node:child_process";
+import { spawnSync } from "node:child_process";
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import { load } from "js-yaml";
 import { afterEach, describe, expect, it } from "vitest";
 import { motivoParaNoAnclar } from "../src/lib/anchor.js";
 import { en } from "../src/lib/arrays.js";
+import { VARIABLES_DEL_ENTORNO } from "../src/platform/config.js";
 
 const RAIZ = join(import.meta.dirname, "..", "..", "..");
 
@@ -79,46 +80,45 @@ describe("render.yaml — el anclaje que quedaría desplegado", () => {
 });
 
 describe("render.yaml — cobertura de variables", () => {
-  const OPCIONALES = new Set(["PORT", "BLOCKFROST_URL", "NODE_ENV"]);
+  // `PORT` lo pone Render, `NODE_ENV` va inline en el startCommand y `BLOCKFROST_URL` tiene default
+  // en el adaptador. Los `SEED_*` son del seed de producción, que se corre a mano (RUNBOOK §1.3).
+  const OPCIONALES = new Set([
+    "PORT",
+    "BLOCKFROST_URL",
+    "NODE_ENV",
+    "SEED_ADMIN_PASSWORD",
+    "SEED_DEMO_PASSWORD"
+  ]);
 
-  function variablesQueElCodigoLee(): string[] {
-    const salida = execFileSync(
+  it("declara toda variable del schema del entorno, salvo las opcionales conocidas", () => {
+    const declaradas = envDeclaradas();
+    const faltantes = VARIABLES_DEL_ENTORNO.filter((v) => !OPCIONALES.has(v) && !declaradas.has(v));
+
+    expect(faltantes, `sin declarar en render.yaml: ${faltantes.join(", ")}`).toEqual([]);
+  });
+
+  it("no exime variables que el schema ya no tiene", () => {
+    const leidas = new Set<string>(VARIABLES_DEL_ENTORNO);
+    const sobrantes = [...OPCIONALES].filter((v) => !leidas.has(v));
+
+    expect(sobrantes, `sobran en OPCIONALES: ${sobrantes.join(", ")}`).toEqual([]);
+  });
+
+  it("ningún archivo de la API lee `process.env` por su cuenta: todo pasa por `entorno()`", () => {
+    const { stdout } = spawnSync(
       "grep",
       [
-        "-rhoE",
+        "-rnE",
         "--include=*.ts",
         "--exclude=*.test.ts",
-        "\\benv\\.[A-Z][A-Z0-9_]{2,}",
+        "process\\.env(\\.|\\[)",
         join(RAIZ, "apps", "api", "src"),
         join(RAIZ, "packages", "cardano", "src")
       ],
       { encoding: "utf8" }
     );
 
-    return [
-      ...new Set(
-        salida
-          .split("\n")
-          .filter(Boolean)
-          .map((l) => l.replace("env.", ""))
-      )
-    ].sort();
-  }
-
-  it("declara toda variable que el código lee, salvo las opcionales conocidas", () => {
-    const declaradas = envDeclaradas();
-    const faltantes = variablesQueElCodigoLee().filter(
-      (v) => !OPCIONALES.has(v) && !declaradas.has(v)
-    );
-
-    expect(faltantes, `sin declarar en render.yaml: ${faltantes.join(", ")}`).toEqual([]);
-  });
-
-  it("no exime variables que el código ya no lee", () => {
-    const leidas = new Set(variablesQueElCodigoLee());
-    const sobrantes = [...OPCIONALES].filter((v) => !leidas.has(v));
-
-    expect(sobrantes, `sobran en OPCIONALES: ${sobrantes.join(", ")}`).toEqual([]);
+    expect(stdout).toBe("");
   });
 });
 

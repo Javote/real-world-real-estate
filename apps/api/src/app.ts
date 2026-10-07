@@ -8,6 +8,7 @@ import { statusDeError } from "./lib/error-status.js";
 import { sql } from "./lib/kysely.js";
 import { errorHandler } from "./middlewares/errorHandler.js";
 import { trustProxyHops } from "./middlewares/rateLimit.js";
+import { entorno } from "./platform/config.js";
 import auditRoutes from "./routes/audit.routes.js";
 import authRoutes from "./routes/auth.routes.js";
 import capitalRoutes from "./routes/capital.routes.js";
@@ -36,10 +37,7 @@ app.use(helmet());
 
 app.disable("x-powered-by");
 
-const origenesPermitidos = (process.env.WEB_ORIGIN ?? "http://localhost:3000")
-  .split(",")
-  .map((o) => o.trim())
-  .filter(Boolean);
+const origenesPermitidos = entorno().WEB_ORIGIN;
 
 app.use((req, res, next) => {
   const origen = req.headers.origin;

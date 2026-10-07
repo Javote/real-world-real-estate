@@ -3,6 +3,7 @@ import { existsSync, readdirSync, readFileSync } from "node:fs";
 import path from "node:path";
 import { type Client, createClient } from "../lib/libsql-client.js";
 import { esPuntoDeEntrada } from "../lib/punto-de-entrada.js";
+import { entorno } from "../platform/config.js";
 import { esBaseLocal } from "./credentials.js";
 import { asegurarDirectorioLocal, urlDeLaBase } from "./local-db.js";
 
@@ -94,9 +95,10 @@ export async function migrar(url: string = urlDeLaBase()): Promise<string[]> {
 
   console.log("[migrate] conectando a la base");
 
+  const { DATABASE_AUTH_TOKEN } = entorno();
   const client = createClient({
     url,
-    ...(process.env.DATABASE_AUTH_TOKEN ? { authToken: process.env.DATABASE_AUTH_TOKEN } : {})
+    ...(DATABASE_AUTH_TOKEN ? { authToken: DATABASE_AUTH_TOKEN } : {})
   });
 
   const aplicadas = await conTecho(applyPendingMigrations(client), "la base");

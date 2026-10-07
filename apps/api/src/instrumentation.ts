@@ -3,12 +3,14 @@ import "dotenv/config";
 import { register } from "node:module";
 import { context } from "@opentelemetry/api";
 import { createAddHookMessageChannel } from "import-in-the-middle";
+import { entorno } from "./platform/config.js";
 
 export function initSentry(): void {
-  if (process.env.SENTRY_DSN) {
+  const { SENTRY_DSN, NODE_ENV } = entorno();
+  if (SENTRY_DSN) {
     Sentry.init({
-      dsn: process.env.SENTRY_DSN,
-      environment: process.env.NODE_ENV ?? "development",
+      dsn: SENTRY_DSN,
+      environment: NODE_ENV,
       tracesSampleRate: 0,
       sendDefaultPii: false,
       skipOpenTelemetrySetup: true,
@@ -77,7 +79,7 @@ async function cargarDependenciasOtel(): Promise<DependenciasOtel> {
 }
 
 export function initOpenTelemetry(deps: DependenciasOtel | undefined): void {
-  if (process.env.OTEL_EXPORTER_OTLP_ENDPOINT && deps) {
+  if (entorno().OTEL_EXPORTER_OTLP_ENDPOINT && deps) {
     const {
       NodeSDK,
       getNodeAutoInstrumentations,
@@ -120,11 +122,10 @@ export function initOpenTelemetry(deps: DependenciasOtel | undefined): void {
   }
 }
 
+const alArrancar = entorno();
 const hookListo =
-  process.env.SENTRY_DSN || process.env.OTEL_EXPORTER_OTLP_ENDPOINT
-    ? registrarHookEsm()
-    : undefined;
-const dependenciasOtel = process.env.OTEL_EXPORTER_OTLP_ENDPOINT
+  alArrancar.SENTRY_DSN || alArrancar.OTEL_EXPORTER_OTLP_ENDPOINT ? registrarHookEsm() : undefined;
+const dependenciasOtel = alArrancar.OTEL_EXPORTER_OTLP_ENDPOINT
   ? await cargarDependenciasOtel()
   : undefined;
 
