@@ -19,12 +19,15 @@ describe('locale guardado', () => {
   })
 
   it('un storage que tira no rompe ni la lectura ni la escritura', () => {
-    vi.spyOn(Storage.prototype, 'getItem').mockImplementation(() => {
-      throw new Error('bloqueado')
-    })
-    vi.spyOn(Storage.prototype, 'setItem').mockImplementation(() => {
-      throw new Error('cuota')
-    })
+    // El storage entero, no `Storage.prototype`: en happy-dom los métodos no salen del prototipo.
+    vi.spyOn(window, 'localStorage', 'get').mockReturnValue({
+      getItem: () => {
+        throw new Error('bloqueado')
+      },
+      setItem: () => {
+        throw new Error('cuota')
+      }
+    } as unknown as Storage)
     expect(getStoredLocale()).toBe(DEFAULT_LOCALE)
     expect(() => setStoredLocale('en-US')).not.toThrow()
   })

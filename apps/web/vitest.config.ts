@@ -5,7 +5,8 @@ export default defineConfig({
   plugins: [react()],
   test: {
     globals: true,
-    environment: 'jsdom',
+    // happy-dom por defecto; jsdom en el archivo que lo pide con `@vitest-environment jsdom`.
+    environment: 'happy-dom',
     setupFiles: ['./src/test/a11y.ts', './src/test/testing-library-setup.ts'],
     testTimeout: 15000,
     exclude: ['**/node_modules/**', '**/dist/**', 'e2e/**'],

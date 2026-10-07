@@ -4,7 +4,7 @@
 > abrir la captura, abrir su fila de M2-D5, transcribir.
 
 TanStack **Router** sobre Vite — **SPA, sin SSR** (D-065) · React 19 · Tailwind v4 · Lucide ·
-Vitest+jsdom · Playwright. El estado vive en `specs/README.md`.
+Vitest+happy-dom (jsdom donde no alcanza) · Playwright. El estado vive en `specs/README.md`.
 
 | Dónde | Qué |
 |---|---|
@@ -91,6 +91,10 @@ unidad.
   `document.documentElement.lang`). Se escribe donde cambia el estado (`vigenteCon`).
 - **Una regla CSS con nombre de utilidad de Tailwind pelea con el orden del archivo.**
 - **`Link` de TanStack pinta activo por prefijo**: el tab índice pide `activeOptions.exact`.
+- **Vitest corre en happy-dom; un archivo que lo necesite pide jsdom** con `// @vitest-environment jsdom`
+  y el porqué. Hoy son dos: happy-dom valida formularios más estricto que un navegador (invite) y
+  arma una `FileList` en un `drop` sin archivos (`FileDropzone`). Un test que pasa en happy-dom
+  puede no ejercitar su rama: **la coverage es la que avisa**. `test:a11y` sigue en jsdom.
 - **Biome necesita `css.parser.tailwindDirectives`** para parsear `@theme`.
 - **En dev `/api` va por el proxy de Vite; en producción por `VITE_API_ORIGIN`**: si la consola dice
   CORS, falta `WEB_ORIGIN` en la API (`specs/RUNBOOK-deploy.md`).

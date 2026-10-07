@@ -103,7 +103,7 @@ describe('/project/:projectId/progress (investor)', () => {
     montar()
 
     const seccion = await screen.findByTestId('INV-PROJECT-STAGES-001')
-    await within(seccion).findByRole('button', { name: /^Etapa-3Etapa / })
+    await within(seccion).findByRole('button', { name: /^Etapa-3 ?Etapa / })
     expect(seccion.textContent).toContain('Etapa 1 de 3')
     expect(seccion.textContent).toContain('Etapa 3 de 3')
     expect(seccion.textContent).toContain(t['stage.state.Completed'])
@@ -118,7 +118,7 @@ describe('/project/:projectId/progress (investor)', () => {
     montar()
 
     const seccion = await screen.findByTestId('INV-PROJECT-STAGES-001')
-    await within(seccion).findByRole('button', { name: /^Etapa-3Etapa / })
+    await within(seccion).findByRole('button', { name: /^Etapa-3 ?Etapa / })
     expect(seccion.textContent).not.toContain('Finalización')
   })
 
@@ -127,7 +127,7 @@ describe('/project/:projectId/progress (investor)', () => {
     montar()
 
     const seccion = await screen.findByTestId('INV-PROJECT-STAGES-001')
-    await within(seccion).findByRole('button', { name: /^Etapa-2Etapa / })
+    await within(seccion).findByRole('button', { name: /^Etapa-2 ?Etapa / })
     expect(seccion.textContent).not.toContain('Etapa actual')
   })
 
@@ -142,9 +142,9 @@ describe('/project/:projectId/progress (investor)', () => {
     })
     montar()
 
-    const primera = await screen.findByRole('button', { name: /^Etapa-1Etapa / })
+    const primera = await screen.findByRole('button', { name: /^Etapa-1 ?Etapa / })
     await waitFor(() => expect(primera.textContent).toContain('+2'))
-    const segunda = screen.getByRole('button', { name: /^Etapa-2Etapa / })
+    const segunda = screen.getByRole('button', { name: /^Etapa-2 ?Etapa / })
     expect(segunda.textContent).not.toContain('+')
   })
 
@@ -152,7 +152,7 @@ describe('/project/:projectId/progress (investor)', () => {
     mockear()
     montar()
 
-    await userEvent.click(await screen.findByRole('button', { name: /^Etapa-3Etapa / }))
+    await userEvent.click(await screen.findByRole('button', { name: /^Etapa-3 ?Etapa / }))
 
     await screen.findByText('/project/$projectId/stage/$stageId')
   })

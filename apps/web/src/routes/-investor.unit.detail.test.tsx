@@ -205,6 +205,8 @@ describe('/investor/unit/$unitId', () => {
     URL.revokeObjectURL = vi.fn()
   })
   afterEach(() => {
+    // Desmontar antes de devolver el foco: si no, la pantalla refetchea contra la API sin mock.
+    cleanup()
     vi.restoreAllMocks()
     focusManager.setFocused(undefined)
     anunciar.mockClear()

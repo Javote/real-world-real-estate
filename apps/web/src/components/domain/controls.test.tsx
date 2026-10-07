@@ -1,3 +1,7 @@
+// @vitest-environment jsdom
+// En happy-dom, un `drop` con `dataTransfer: {}` trae igual una `FileList` vacía: el caso de
+// `FileDropzone` sin archivos pasa sin ejercitar su rama.
+
 import { fireEvent, render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { describe, expect, it, vi } from 'vitest'

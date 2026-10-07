@@ -1,3 +1,7 @@
+// @vitest-environment jsdom
+// happy-dom valida el formulario más estricto que un navegador: no recorta los espacios de un
+// `type="email"` y da `stepMismatch` en 285000.5 con `step="0.01"`, así que el submit no sale.
+
 import { fireEvent, screen, waitFor } from '@testing-library/react'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import { ApiError, api } from '#/api/port'

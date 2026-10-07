@@ -3,6 +3,10 @@ import userEvent from '@testing-library/user-event'
 import { describe, expect, it, vi } from 'vitest'
 import { HashChip, truncateHash } from './HashChip'
 
+// `navigator.clipboard` es solo getter en happy-dom: se pisa con una propiedad propia, no asignándolo.
+const portapapeles = (clipboard: unknown) =>
+  Object.defineProperty(navigator, 'clipboard', { value: clipboard, configurable: true })
+
 const HASH = '0xdcd5da16f89f6a2b3c4d5e6f708192a3b4c5d6e7f8091a2b3c4d5e6f43fa9aa7994'
 
 describe('truncateHash', () => {
@@ -22,7 +26,7 @@ describe('truncateHash', () => {
 describe('HashChip', () => {
   it('muestra truncado pero copia el hash COMPLETO', async () => {
     const escribir = vi.fn().mockResolvedValue(undefined)
-    Object.assign(navigator, { clipboard: { writeText: escribir } })
+    portapapeles({ writeText: escribir })
 
     render(<HashChip hash={HASH} copyLabel="Copiar" copiedLabel="Copiado" />)
 
@@ -40,7 +44,7 @@ describe('HashChip', () => {
   it('con onOpenDetail el chip abre el modal, y copiar NO lo abre', async () => {
     const abrir = vi.fn()
     const escribir = vi.fn().mockResolvedValue(undefined)
-    Object.assign(navigator, { clipboard: { writeText: escribir } })
+    portapapeles({ writeText: escribir })
 
     render(<HashChip hash={HASH} onOpenDetail={abrir} copyLabel="Copiar" copiedLabel="Copiado" />)
 

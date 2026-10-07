@@ -12,6 +12,10 @@ import { StageChips } from './StageChips'
 import { TxidModal } from './TxidModal'
 import { VerifiedWatermark } from './VerifiedWatermark'
 
+// `navigator.clipboard` es solo getter en happy-dom: se pisa con una propiedad propia, no asignándolo.
+const portapapeles = (clipboard: unknown) =>
+  Object.defineProperty(navigator, 'clipboard', { value: clipboard, configurable: true })
+
 function Providers({ children }: { children: React.ReactNode }) {
   return (
     <LocaleProvider>
@@ -71,7 +75,7 @@ describe('P3 · TxidModal', () => {
 
 describe('P4 · AnchoringSuccessModal', () => {
   it('muestra LOS DOS artefactos: Merkle root y TXID', async () => {
-    Object.assign(navigator, { clipboard: { writeText: vi.fn().mockResolvedValue(undefined) } })
+    portapapeles({ writeText: vi.fn().mockResolvedValue(undefined) })
 
     render(
       <AnchoringSuccessModal
@@ -98,7 +102,7 @@ describe('P4 · AnchoringSuccessModal', () => {
   })
 
   it('SPEC-104: al abrirse, anuncia el título + el TXID truncado (no el hash entero)', () => {
-    Object.assign(navigator, { clipboard: { writeText: vi.fn().mockResolvedValue(undefined) } })
+    portapapeles({ writeText: vi.fn().mockResolvedValue(undefined) })
 
     render(
       <AnchoringSuccessModal
@@ -378,7 +382,7 @@ describe('P2 · HashChip · variantes', () => {
     ['con detalle', vi.fn()]
   ])('copiar %s cambia el nombre a "Copiado" y vuelve solo', async (_caso, onOpenDetail) => {
     vi.useFakeTimers()
-    Object.assign(navigator, { clipboard: { writeText: vi.fn().mockResolvedValue(undefined) } })
+    portapapeles({ writeText: vi.fn().mockResolvedValue(undefined) })
     render(
       <HashChip
         hash={HASH}
@@ -400,7 +404,7 @@ describe('P2 · HashChip · variantes', () => {
   })
 
   it('sin API de portapapeles igual marca copiado y no rompe', async () => {
-    Object.assign(navigator, { clipboard: undefined })
+    portapapeles(undefined)
     render(<HashChip hash={HASH} copyLabel="Copiar" copiedLabel="Copiado" />)
 
     fireEvent.click(screen.getByLabelText('Copiar'))
