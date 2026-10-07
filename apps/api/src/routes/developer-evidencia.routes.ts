@@ -215,34 +215,33 @@ router.post(
 
       const now = new Date();
       try {
-        await db.transaction().execute(async (trx) => {
-          for (const g of guardados) {
-            await trx
-              .insertInto("Evidence")
-              .values({
-                id: g.id,
-                projectId,
-                stageId,
-                uploadedById: req.user!.id,
-                evidenceType: parsed.evidenceType,
-                category: parsed.category,
-                /* v8 ignore start -- @preserve: multipartBooleanSchema ya transforma undefined a false; el output es boolean, nunca nullish */
-                authoritative: parsed.authoritative ?? false,
-                /* v8 ignore stop -- @preserve */
-                issuingAuthority: parsed.issuingAuthority,
-                originalFilename: g.c.file.originalname,
-                storedFilename: g.c.file.filename,
-                mimeType: g.c.mime,
-                sizeBytes: g.c.file.size,
-                storagePath: g.storageRef,
-                sha256Hash: g.sha256,
-                uploadedAt: now,
-                createdAt: now,
-                updatedAt: now
-              })
-              .execute();
-          }
-        });
+        // Un solo INSERT: entran todos los archivos del lote o ninguno.
+        await db
+          .insertInto("Evidence")
+          .values(
+            guardados.map((g) => ({
+              id: g.id,
+              projectId,
+              stageId,
+              uploadedById: req.user!.id,
+              evidenceType: parsed.evidenceType,
+              category: parsed.category,
+              /* v8 ignore start -- @preserve: multipartBooleanSchema ya transforma undefined a false; el output es boolean, nunca nullish */
+              authoritative: parsed.authoritative ?? false,
+              /* v8 ignore stop -- @preserve */
+              issuingAuthority: parsed.issuingAuthority,
+              originalFilename: g.c.file.originalname,
+              storedFilename: g.c.file.filename,
+              mimeType: g.c.mime,
+              sizeBytes: g.c.file.size,
+              storagePath: g.storageRef,
+              sha256Hash: g.sha256,
+              uploadedAt: now,
+              createdAt: now,
+              updatedAt: now
+            }))
+          )
+          .execute();
       } catch (err) {
         if (
           codigoDeRestriccion(err) === "SQLITE_CONSTRAINT_UNIQUE" &&

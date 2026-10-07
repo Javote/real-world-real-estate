@@ -22,6 +22,7 @@ import type { UserRole } from "../db/types.js";
 import { anchorCommitmentEvent, commitmentOf } from "../domain/anchoring.js";
 import { notify } from "../domain/notify.js";
 import { db } from "../lib/db.js";
+import { sql } from "../lib/kysely.js";
 import { conUsuario, delegarAOrpc, OpenAPIHandler, ORPCError, os } from "../lib/orpc.js";
 import { authenticate, authorize, projectScope } from "../middlewares/auth.js";
 import { paramValidator } from "../middlewares/validate-params.js";
@@ -32,16 +33,6 @@ const PREFIJO_ABSOLUTO = "/api/v1/developer";
 
 type DeveloperContext = { user: { id: string; role: UserRole } };
 const orpc = os.$context<DeveloperContext>();
-
-class ReleaseExceedsContractError extends Error {
-  constructor(
-    readonly totalMinorUnits: number,
-    readonly releasedMinorUnits: number
-  ) {
-    super("Release would exceed the contract total");
-    this.name = "ReleaseExceedsContractError";
-  }
-}
 
 const router = Router();
 
@@ -408,56 +399,56 @@ const releasePaymentProcedure = orpc
 
     const ahora = new Date();
 
-    const resultado = await db
-      .transaction()
-      .execute(async (trx) => {
-        const previa = await trx
-          .selectFrom("PaymentAttestation")
-          .selectAll()
-          .where("contractId", "=", contrato.id)
-          .where("stageNumber", "=", stageNumber)
-          .executeTakeFirst();
+    const previaDe = () =>
+      db
+        .selectFrom("PaymentAttestation")
+        .selectAll()
+        .where("contractId", "=", contrato.id)
+        .where("stageNumber", "=", stageNumber)
+        .executeTakeFirst();
 
-        if (previa) return { fila: previa, yaExistia: true as const };
+    // Una sola sentencia (SPEC-618): la regla de no pasarse del total va en el WHERE, así no hay
+    // ventana entre sumar lo liberado y escribir. Si la etapa ya tenía su liberación, el UNIQUE
+    // (contractId, stageNumber) la deja sin fila y se devuelve esa (200), aunque haya ganado otra a la vez.
+    const liberar = () =>
+      db
+        .insertInto("PaymentAttestation")
+        .columns([
+          "id",
+          "contractId",
+          "stageNumber",
+          "amountMinorUnits",
+          "releasedById",
+          "releasedAt"
+        ])
+        .expression(
+          db
+            .selectNoFrom((eb) => [
+              eb.val(createId()).as("id"),
+              eb.val(contrato.id).as("contractId"),
+              eb.val(stageNumber).as("stageNumber"),
+              eb.val(input.amountMinorUnits).as("amountMinorUnits"),
+              eb.val(context.user.id).as("releasedById"),
+              eb.val(ahora).as("releasedAt")
+            ])
+            .where(
+              sql<number>`(select coalesce(sum(${sql.ref("amountMinorUnits")}), 0) from ${sql.table("PaymentAttestation")} where ${sql.ref("contractId")} = ${contrato.id}) + ${input.amountMinorUnits}`,
+              "<=",
+              contrato.totalMinorUnits
+            )
+        )
+        .onConflict((oc) => oc.columns(["contractId", "stageNumber"]).doNothing())
+        .returningAll()
+        .executeTakeFirst();
 
-        const liberado = await trx
-          .selectFrom("PaymentAttestation")
-          .select((eb) => eb.fn.sum<number>("amountMinorUnits").as("total"))
-          .where("contractId", "=", contrato.id)
-          .executeTakeFirst();
-
-        const liberadoHastaAhora = Number(liberado?.total ?? 0);
-        if (liberadoHastaAhora + input.amountMinorUnits > contrato.totalMinorUnits) {
-          throw new ReleaseExceedsContractError(contrato.totalMinorUnits, liberadoHastaAhora);
-        }
-
-        const fila = await trx
-          .insertInto("PaymentAttestation")
-          .values({
-            id: createId(),
-            contractId: contrato.id,
-            stageNumber,
-            amountMinorUnits: input.amountMinorUnits,
-            releasedById: context.user.id,
-            releasedAt: ahora
-          })
-          .returningAll()
-          .executeTakeFirstOrThrow();
-
-        return { fila, yaExistia: false as const };
-      })
-      .catch((err) => {
-        if (err instanceof ReleaseExceedsContractError) {
-          throw errors[RELEASE_EXCEEDS_CONTRACT]({
-            message: "Release would exceed the contract total"
-          });
-        }
-        throw err;
+    const release = await liberar();
+    if (!release) {
+      const previa = await previaDe();
+      if (previa) return { status: 200 as const, body: previa };
+      throw errors[RELEASE_EXCEEDS_CONTRACT]({
+        message: "Release would exceed the contract total"
       });
-
-    const { fila: release, yaExistia } = resultado;
-
-    if (yaExistia) return { status: 200 as const, body: release };
+    }
 
     const anchor = await anchorCommitmentEvent({
       projectId: contrato.projectId,

@@ -22,7 +22,8 @@ import { anchorCommitmentEvent, commitmentOf } from "../domain/anchoring.js";
 import { compileDossier } from "../domain/dossier.js";
 import { reconciliarParaLectura } from "../domain/reconcile.js";
 import { ultimoBundlePorStage } from "../domain/stage-transition.js";
-import { db } from "../lib/db.js";
+import { db, enLote } from "../lib/db.js";
+import { sql } from "../lib/kysely.js";
 import { conUsuario, delegarAOrpc, OpenAPIHandler, ORPCError, os } from "../lib/orpc.js";
 import { authenticate, authorize } from "../middlewares/auth.js";
 import { paramValidator } from "../middlewares/validate-params.js";
@@ -462,83 +463,112 @@ const acceptInvitationProcedure = orpc
   .handler(async ({ input, context, errors }) => {
     const ahora = new Date();
 
-    const { contrato, invitacion } = await db.transaction().execute(async (trx) => {
-      const invitacion = await trx
-        .selectFrom("Invitation")
-        .selectAll()
-        .where("id", "=", input.id)
-        .executeTakeFirst();
-
-      /* v8 ignore if -- @preserve: authorize({ dueño }) ya cargó la fila (Invitation) */
-      if (!invitacion) throw new ORPCError("NOT_FOUND", { message: "Invitation not found" });
-
-      const actualizada = await trx
+    // Un solo lote (SPEC-618): el UPDATE reclama la invitación solo si la unidad sigue disponible; el
+    // contrato entra solo si lo reclamó (`changes()` es el de la sentencia anterior), y la venta de la
+    // unidad y la membresía, solo si ese contrato existe. Dos aceptaciones a la vez dan un ganador.
+    const contratoId = createId();
+    const [[invitacion], contratos] = await enLote(
+      db
         .updateTable("Invitation")
         .set({ status: "accepted", respondedAt: ahora })
-        .where("id", "=", invitacion.id)
+        .where("id", "=", input.id)
         .where("status", "=", "pending")
-        .executeTakeFirst();
-
-      if (Number(actualizada.numUpdatedRows) === 0) {
-        throw errors.INVITATION_NOT_PENDING({
-          message: `Invitation already ${invitacion.status}`
-        });
-      }
-
-      const unidad = await trx
-        .selectFrom("Unit")
-        .select(["status"])
-        .where("id", "=", invitacion.unitId)
-        .executeTakeFirstOrThrow();
-
-      if (unidad.status === "sold") {
-        throw errors.UNIT_NOT_AVAILABLE({ message: "Unit is no longer available" });
-      }
-
-      const contratoPrevio = await trx
-        .selectFrom("Contract")
-        .select("id")
-        .where("unitId", "=", invitacion.unitId)
-        .executeTakeFirst();
-
-      if (contratoPrevio) {
-        throw errors.UNIT_NOT_AVAILABLE({ message: "Unit is no longer available" });
-      }
-
-      await trx
+        .where((eb) =>
+          eb.not(
+            eb.exists(
+              eb
+                .selectFrom("Unit")
+                .select("Unit.id")
+                .whereRef("Unit.id", "=", "Invitation.unitId")
+                .where("Unit.status", "=", "sold")
+            )
+          )
+        )
+        .where((eb) =>
+          eb.not(
+            eb.exists(
+              eb
+                .selectFrom("Contract")
+                .select("Contract.id")
+                .whereRef("Contract.unitId", "=", "Invitation.unitId")
+            )
+          )
+        )
+        .returningAll(),
+      db
+        .insertInto("Contract")
+        .columns([
+          "id",
+          "unitId",
+          "investorId",
+          "totalMinorUnits",
+          "currency",
+          "signedAt",
+          "createdAt"
+        ])
+        .expression(
+          db
+            .selectFrom("Invitation")
+            .select((eb) => [
+              eb.val(contratoId).as("id"),
+              "unitId",
+              eb.val(context.user.id).as("investorId"),
+              "amountMinorUnits",
+              "currency",
+              eb.val(ahora).as("signedAt"),
+              eb.val(ahora).as("createdAt")
+            ])
+            .where("id", "=", input.id)
+            .where(sql<number>`changes()`, "=", 1)
+        )
+        .returningAll(),
+      db
         .updateTable("Unit")
         .set({ status: "sold", investorId: context.user.id, updatedAt: ahora })
-        .where("id", "=", invitacion.unitId)
-        .execute();
-
-      await trx
+        .where("id", "=", (eb) =>
+          eb.selectFrom("Contract").select("Contract.unitId").where("Contract.id", "=", contratoId)
+        ),
+      db
         .insertInto("ProjectMember")
-        .values({
-          id: createId(),
-          userId: context.user.id,
-          projectId: invitacion.projectId,
-          membershipRole: "buyer",
-          createdAt: ahora
-        })
+        .columns(["id", "userId", "projectId", "membershipRole", "createdAt"])
+        .expression(
+          db
+            .selectFrom("Invitation")
+            .select((eb) => [
+              eb.val(createId()).as("id"),
+              eb.val(context.user.id).as("userId"),
+              "projectId",
+              eb.val("buyer").as("membershipRole"),
+              eb.val(ahora).as("createdAt")
+            ])
+            .where("id", "=", input.id)
+            .where((eb) =>
+              eb.exists(
+                eb
+                  .selectFrom("Contract")
+                  .select("Contract.id")
+                  .where("Contract.id", "=", contratoId)
+              )
+            )
+        )
         .onConflict((oc) => oc.doNothing())
-        .execute();
+    );
 
-      const contrato = await trx
-        .insertInto("Contract")
-        .values({
-          id: createId(),
-          unitId: invitacion.unitId,
-          investorId: context.user.id,
-          totalMinorUnits: invitacion.amountMinorUnits,
-          currency: invitacion.currency,
-          signedAt: ahora,
-          createdAt: ahora
-        })
-        .returningAll()
-        .executeTakeFirstOrThrow();
-
-      return { contrato, invitacion };
-    });
+    if (!invitacion) {
+      const fila = await db
+        .selectFrom("Invitation")
+        .select("status")
+        .where("id", "=", input.id)
+        .executeTakeFirst();
+      /* v8 ignore if -- @preserve: authorize({ dueño }) ya cargó la fila (Invitation) */
+      if (!fila) throw new ORPCError("NOT_FOUND", { message: "Invitation not found" });
+      if (fila.status !== "pending") {
+        throw errors.INVITATION_NOT_PENDING({ message: `Invitation already ${fila.status}` });
+      }
+      throw errors.UNIT_NOT_AVAILABLE({ message: "Unit is no longer available" });
+    }
+    // Con la invitación reclamada, el contrato entró en el mismo lote.
+    const contrato = contratos[0]!;
 
     const anchor = await anchorCommitmentEvent({
       projectId: invitacion.projectId,

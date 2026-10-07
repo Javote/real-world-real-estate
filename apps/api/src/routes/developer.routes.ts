@@ -26,7 +26,7 @@ import { anclarEvidenciaUnaVez } from "../domain/anchoring.js";
 import { agregadosDeProyectos } from "../domain/project-aggregates.js";
 import { reconciliarParaLectura } from "../domain/reconcile.js";
 import { anchorEvent, recordOnChainEvent } from "../domain/stage-transition.js";
-import { db } from "../lib/db.js";
+import { db, enLote } from "../lib/db.js";
 import { geocodificador } from "../lib/geocode.js";
 import { conUsuario, delegarAOrpc, OpenAPIHandler, ORPCError, os } from "../lib/orpc.js";
 import { auditScope, authenticate, authorize, projectScope } from "../middlewares/auth.js";
@@ -136,60 +136,51 @@ const createProjectProcedure = orpc
   .handler(async ({ input, context, errors }) => {
     const ahora = new Date();
 
-    const { proyecto, stages } = await db
-      .transaction()
-      .execute(async (trx) => {
-        const proyecto = await trx
-          .insertInto("Project")
-          .values({
+    const projectId = createId();
+    const [[creado], , stages] = await enLote(
+      db
+        .insertInto("Project")
+        .values({
+          id: projectId,
+          name: input.name,
+          slug: input.slug,
+          address: input.address ?? null,
+          city: input.city ?? null,
+          country: input.country ?? null,
+          latitude: input.latitude,
+          longitude: input.longitude,
+          totalUnits: input.totalUnits ?? 0,
+          estimatedDelivery: input.estimatedDelivery ? new Date(input.estimatedDelivery) : null,
+          status: "planning",
+          createdAt: ahora,
+          updatedAt: ahora
+        })
+        .returningAll(),
+      db.insertInto("ProjectMember").values({
+        id: createId(),
+        userId: context.user.id,
+        projectId,
+        membershipRole: "developer",
+        createdAt: ahora
+      }),
+      db
+        .insertInto("Stage")
+        .values(
+          DEFAULT_STAGE_CATALOG.map((etapa) => ({
             id: createId(),
-            name: input.name,
-            slug: input.slug,
-            address: input.address ?? null,
-            city: input.city ?? null,
-            country: input.country ?? null,
-            latitude: input.latitude,
-            longitude: input.longitude,
-            totalUnits: input.totalUnits ?? 0,
-            estimatedDelivery: input.estimatedDelivery ? new Date(input.estimatedDelivery) : null,
-            status: "planning",
+            projectId,
+            name: etapa.name,
+            sequenceOrder: etapa.sequenceOrder,
+            state: INITIAL_STAGE_STATE,
+            validationCritical: true,
             createdAt: ahora,
             updatedAt: ahora
-          })
-          .returningAll()
-          .executeTakeFirstOrThrow();
-
-        await trx
-          .insertInto("ProjectMember")
-          .values({
-            id: createId(),
-            userId: context.user.id,
-            projectId: proyecto.id,
-            membershipRole: "developer",
-            createdAt: ahora
-          })
-          .execute();
-
-        const stages = await trx
-          .insertInto("Stage")
-          .values(
-            DEFAULT_STAGE_CATALOG.map((etapa) => ({
-              id: createId(),
-              projectId: proyecto.id,
-              name: etapa.name,
-              sequenceOrder: etapa.sequenceOrder,
-              state: INITIAL_STAGE_STATE,
-              validationCritical: true,
-              createdAt: ahora,
-              updatedAt: ahora
-            }))
-          )
-          .returningAll()
-          .execute();
-
-        return { proyecto, stages };
-      })
-      .catch((err) => relanzarRestriccionComoOrpc(err, errors));
+          }))
+        )
+        .returningAll()
+    ).catch((err) => relanzarRestriccionComoOrpc(err, errors));
+    // Un INSERT con `returningAll` que no tiró devuelve su fila.
+    const proyecto = creado!;
 
     await writeAuditLog({
       actorUserId: context.user.id,

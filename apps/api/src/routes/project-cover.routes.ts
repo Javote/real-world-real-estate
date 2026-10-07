@@ -7,7 +7,7 @@ import {
   projectCoverResultSchema
 } from "@plataforma/shared";
 import { type Request, Router } from "express";
-import { db } from "../lib/db.js";
+import { db, enLote } from "../lib/db.js";
 import { leerCabecera, storage } from "../lib/storage.js";
 import { uploadProjectCoverFile } from "../lib/upload.js";
 import { authenticate, authorize } from "../middlewares/auth.js";
@@ -61,8 +61,8 @@ router.put(
       subido = storageRef;
 
       const ahora = new Date();
-      await db.transaction().execute(async (trx) => {
-        await trx
+      await enLote(
+        db
           .insertInto("ProjectCover")
           .values({
             projectId,
@@ -80,14 +80,12 @@ router.put(
               uploadedById: req.user!.id,
               updatedAt: ahora
             })
-          )
-          .execute();
-        await trx
+          ),
+        db
           .updateTable("Project")
           .set({ coverUpdatedAt: ahora, updatedAt: ahora })
           .where("id", "=", projectId)
-          .execute();
-      });
+      );
       confirmado = true;
 
       if (anterior) {

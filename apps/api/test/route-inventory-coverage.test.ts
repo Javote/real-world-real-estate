@@ -1,4 +1,4 @@
-import { describe, expect, it, vi } from "vitest";
+import { beforeAll, describe, expect, it, vi } from "vitest";
 
 interface CapaSintetica {
   route?: { path: string; methods: Record<string, boolean>; stack: { handle: unknown }[] };
@@ -24,28 +24,29 @@ const { routerSintetico } = vi.hoisted(() => {
 
 vi.mock("../src/app.js", () => ({ MONTAJE: [{ prefijo: "", router: routerSintetico }] }));
 
-describe("leerMontaje con un router sintético", () => {
-  it("un middleware de router sin GUARD no se agrega a guardsDeRouter", async () => {
-    const { leerMontaje } = await import("../src/lib/route-inventory.js");
+// El primer import arrastra todo el grafo de route-inventory: con la cobertura instrumentando y la
+// CPU compartida se pasaba de los 5 s de un test. Se carga una vez, con su propio tope.
+let inventario: typeof import("../src/lib/route-inventory.js");
+beforeAll(async () => {
+  inventario = await import("../src/lib/route-inventory.js");
+}, 30_000);
 
-    const montaje = leerMontaje().at(0);
+describe("leerMontaje con un router sintético", () => {
+  it("un middleware de router sin GUARD no se agrega a guardsDeRouter", () => {
+    const montaje = inventario.leerMontaje().at(0);
 
     expect(montaje?.guardsDeRouter).toEqual([]);
   });
 
-  it('un path que queda vacío tras sacarle la barra final se sirve como "/"', async () => {
-    const { leerMontaje } = await import("../src/lib/route-inventory.js");
-
-    const montaje = leerMontaje().at(0);
+  it('un path que queda vacío tras sacarle la barra final se sirve como "/"', () => {
+    const montaje = inventario.leerMontaje().at(0);
 
     expect(montaje?.rutas.has("GET /")).toBe(true);
   });
 });
 
 describe("matrizViva con el mismo router sintético", () => {
-  it('la ruta "/" aparece sin guards (—)', async () => {
-    const { matrizViva } = await import("../src/lib/route-inventory.js");
-
-    expect(matrizViva()["GET /"]).toBe("—");
+  it('la ruta "/" aparece sin guards (—)', () => {
+    expect(inventario.matrizViva()["GET /"]).toBe("—");
   });
 });

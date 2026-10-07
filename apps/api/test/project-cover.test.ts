@@ -89,6 +89,19 @@ afterAll(async () => {
   await db.destroy();
 });
 
+// El segundo paso del lote (el UPDATE de `Project`) apunta a una tabla que no existe: el lote entero
+// falla y el upsert de la portada, que iba primero, se deshace con él.
+function loteQueFalla() {
+  vi.spyOn(db, "updateTable").mockImplementationOnce(
+    () =>
+      ({
+        set: () => ({
+          where: () => ({ compile: () => ({ sql: "update NoExiste set x = 1", parameters: [] }) })
+        })
+      }) as unknown as ReturnType<typeof db.updateTable>
+  );
+}
+
 describe("PUT /developer/projects/:id/cover — quién puede", () => {
   it("sin sesión, 401", async () => {
     const id = await nuevoProyecto();
@@ -222,12 +235,7 @@ describe("PUT /developer/projects/:id/cover — cargar y reemplazar", () => {
     await subir(developer, id, { buf: png(), tipo: "image/png" });
     const anterior = await portadaDe(id);
     const antes = archivosEnDisco();
-    vi.spyOn(db, "transaction").mockImplementationOnce(
-      () =>
-        ({
-          execute: () => Promise.reject(new Error("disco lleno"))
-        }) as unknown as ReturnType<typeof db.transaction>
-    );
+    loteQueFalla();
 
     const res = await subir(developer, id, { buf: jpeg(), tipo: "image/jpeg" });
 
@@ -239,12 +247,7 @@ describe("PUT /developer/projects/:id/cover — cargar y reemplazar", () => {
 
   it("si además limpiar lo subido falla, se registra y el pedido falla con su error original", async () => {
     const id = await nuevoProyecto();
-    vi.spyOn(db, "transaction").mockImplementationOnce(
-      () =>
-        ({
-          execute: () => Promise.reject(new Error("disco lleno"))
-        }) as unknown as ReturnType<typeof db.transaction>
-    );
+    loteQueFalla();
     vi.spyOn(storage, "remove").mockRejectedValueOnce(new Error("R2 caído"));
     const log = vi.spyOn(console, "error").mockImplementation(() => {});
 

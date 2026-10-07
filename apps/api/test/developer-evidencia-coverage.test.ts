@@ -176,17 +176,23 @@ describe("POST .../evidence — el stage se cerró mientras subían los bytes", 
   });
 });
 
+// El INSERT de las evidencias rechaza al ejecutarse, con cualquier cadena del builder antes.
+function insertQueFalla(error: Error) {
+  const consulta: object = new Proxy(
+    {},
+    { get: (_, clave) => (clave === "execute" ? () => Promise.reject(error) : () => consulta) }
+  );
+  vi.spyOn(db, "insertInto").mockImplementationOnce(
+    () => consulta as ReturnType<typeof db.insertInto>
+  );
+}
+
 describe("POST .../evidence — fallas de infraestructura al confirmar", () => {
   it("un insert que falla por otra cosa que el UNIQUE (stageId, sha256Hash) se relanza (500) y limpia lo subido", async () => {
     const sId = await nuevoStage();
     const antes = archivosEnDisco();
     const remove = vi.spyOn(storage, "remove");
-    vi.spyOn(db, "transaction").mockImplementationOnce(
-      () =>
-        ({
-          execute: () => Promise.reject(new Error("disco lleno"))
-        }) as unknown as ReturnType<typeof db.transaction>
-    );
+    insertQueFalla(new Error("disco lleno"));
 
     const res = await subir(sId);
 
@@ -203,12 +209,7 @@ describe("POST .../evidence — fallas de infraestructura al confirmar", () => {
     const choque = Object.assign(new Error("UNIQUE constraint failed: Evidence.id"), {
       code: "SQLITE_CONSTRAINT_UNIQUE"
     });
-    vi.spyOn(db, "transaction").mockImplementationOnce(
-      () =>
-        ({
-          execute: () => Promise.reject(choque)
-        }) as unknown as ReturnType<typeof db.transaction>
-    );
+    insertQueFalla(choque);
 
     const res = await subir(sId);
 

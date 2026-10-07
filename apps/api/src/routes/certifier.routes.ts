@@ -18,11 +18,11 @@ import type { UserRole } from "../db/types.js";
 import { listarInvitacionesACertificar } from "../domain/certifier-invitation.js";
 import { reconciliarParaLectura } from "../domain/reconcile.js";
 import { transitionStage, ultimoBundlePorStage } from "../domain/stage-transition.js";
-import { db } from "../lib/db.js";
+import { db, enLote } from "../lib/db.js";
+import { sql } from "../lib/kysely.js";
 import { conUsuario, delegarAOrpc, OpenAPIHandler, ORPCError, os } from "../lib/orpc.js";
 import { authenticate, authorize } from "../middlewares/auth.js";
 import { paramValidator } from "../middlewares/validate-params.js";
-import { writeAuditLog } from "../utils/audit.js";
 import { proyectosVisibles } from "./_shared.js";
 
 const PREFIJO_ABSOLUTO = "/api/v1/certifier";
@@ -289,51 +289,87 @@ function responderInvitacion(respuesta: "accepted" | "declined") {
     .handler(async ({ input, context, errors }) => {
       const ahora = new Date();
 
-      const invitacion = await db.transaction().execute(async (trx) => {
-        const fila = await trx
+      // Un solo lote: el UPDATE reclama la invitación, el audit entra solo si la reclamó (`changes()` es
+      // el de la sentencia anterior) y el miembro, solo si ese audit existe. Sin transacción interactiva
+      // (SPEC-618): dos respuestas a la vez dan un ganador y un 409, nunca un `SQLITE_BUSY`.
+      const auditId = createId();
+      const [reclamada] = await enLote(
+        db
+          .updateTable("CertifierInvitation")
+          .set({ status: respuesta, respondedAt: ahora })
+          .where("id", "=", input.id)
+          .where("status", "=", "pending")
+          .returning("id"),
+        db
+          .insertInto("AuditLog")
+          .columns([
+            "id",
+            "actorUserId",
+            "action",
+            "entityType",
+            "entityId",
+            "metadataJson",
+            "createdAt"
+          ])
+          .expression(
+            db
+              .selectNoFrom((eb) => [
+                eb.val(auditId).as("id"),
+                eb.val(context.user.id).as("actorUserId"),
+                eb
+                  .val(
+                    respuesta === "accepted"
+                      ? "ACCEPT_CERTIFIER_INVITATION"
+                      : "DECLINE_CERTIFIER_INVITATION"
+                  )
+                  .as("action"),
+                eb.val("CertifierInvitation").as("entityType"),
+                eb.val(input.id).as("entityId"),
+                eb
+                  .val(
+                    JSON.stringify(respuesta === "accepted" ? { membershipRole: "verifier" } : {})
+                  )
+                  .as("metadataJson"),
+                eb.val(ahora).as("createdAt")
+              ])
+              .where(sql<number>`changes()`, "=", 1)
+          ),
+        ...(respuesta === "accepted"
+          ? [
+              db
+                .insertInto("ProjectMember")
+                .columns(["id", "userId", "projectId", "membershipRole", "createdAt"])
+                .expression(
+                  db
+                    .selectFrom("CertifierInvitation")
+                    .select((eb) => [
+                      eb.val(createId()).as("id"),
+                      "certifierId",
+                      "projectId",
+                      eb.val("verifier").as("membershipRole"),
+                      eb.val(ahora).as("createdAt")
+                    ])
+                    .where("id", "=", input.id)
+                    .where((eb) =>
+                      eb.exists(db.selectFrom("AuditLog").select("id").where("id", "=", auditId))
+                    )
+                )
+                .onConflict((oc) => oc.doNothing())
+            ]
+          : [])
+      );
+
+      if (reclamada.length === 0) {
+        const fila = await db
           .selectFrom("CertifierInvitation")
-          .select(["id", "projectId", "certifierId", "status"])
+          .select("status")
           .where("id", "=", input.id)
           .executeTakeFirst();
         /* v8 ignore if -- @preserve: authorize({ dueño }) ya cargó la fila (CertifierInvitation) */
         if (!fila) throw new ORPCError("NOT_FOUND", { message: "Invitation not found" });
-
-        const actualizada = await trx
-          .updateTable("CertifierInvitation")
-          .set({ status: respuesta, respondedAt: ahora })
-          .where("id", "=", fila.id)
-          .where("status", "=", "pending")
-          .executeTakeFirst();
-        if (Number(actualizada.numUpdatedRows) === 0) {
-          throw errors.INVITATION_NOT_PENDING({ message: `Invitation already ${fila.status}` });
-        }
-
-        if (respuesta === "accepted") {
-          await trx
-            .insertInto("ProjectMember")
-            .values({
-              id: createId(),
-              userId: fila.certifierId,
-              projectId: fila.projectId,
-              membershipRole: "verifier",
-              createdAt: ahora
-            })
-            .onConflict((oc) => oc.doNothing())
-            .execute();
-        }
-        return fila;
-      });
-
-      await writeAuditLog({
-        actorUserId: context.user.id,
-        action:
-          respuesta === "accepted" ? "ACCEPT_CERTIFIER_INVITATION" : "DECLINE_CERTIFIER_INVITATION",
-        entityType: "CertifierInvitation",
-        entityId: invitacion.id,
-        metadata: respuesta === "accepted" ? { membershipRole: "verifier" } : {}
-      });
-
-      const [resultado] = await listarInvitacionesACertificar({ id: invitacion.id });
+        throw errors.INVITATION_NOT_PENDING({ message: `Invitation already ${fila.status}` });
+      }
+      const [resultado] = await listarInvitacionesACertificar({ id: input.id });
       return resultado!;
     });
 }

@@ -100,9 +100,14 @@ Express, que sigue siendo la de las rutas existentes hasta A3/A4.
 - **El `LibsqlDialect` es el de `lib/libsql-dialect.ts`, no el del paquete**: el original usa el
   `SqliteAdapter` de Kysely, que pone un mutex global y vuelve serie todo `Promise.all` y toda request
   concurrente (`SPEC-610`; lo fija `test/viajes-por-request.test.ts`).
-- **Un reclamo ("lo gana uno solo") es una sola escritura condicional, nunca un `db.transaction()`**:
-  con dos a la vez sobre libSQL, la que pierde tira `SQLITE_BUSY` en vez de esperar. Para anclar,
-  `anclarConReclamo` (`platform/anclaje.ts`).
+- **Ninguna escritura usa `db.transaction()` sin `// transacción: <por qué>` en la línea de arriba**
+  (`test/sin-transacciones-interactivas.test.ts`, SPEC-618). Sobre libSQL local, la que pierde una
+  carrera tira `SQLITE_BUSY` y deja su cliente con una transacción abierta que se traga las escrituras
+  siguientes; sobre Turso encola, pero retiene la escritura durante todos sus viajes. Un reclamo ("lo
+  gana uno solo") es una sola escritura condicional, y lo que depende de que haya ganado va en el
+  mismo `enLote` como `INSERT … SELECT … WHERE changes() = 1` (`changes()` es el de la sentencia
+  anterior del lote) o `WHERE EXISTS` de una fila con id generado antes (el audit, el contrato). Para
+  anclar, `anclarConReclamo` (`platform/anclaje.ts`).
 - **El audit y las notificaciones nuevas salen de `platform/`**: `audit(ejecutor, entrada)` devuelve
   la consulta sin ejecutar (sirve en una transacción y en un `enLote`); `notify(ejecutor, entradas)` también,
   y va en el lote de la mutación que avisa: si falla, la deshace (SPEC-613 §La decisión). `writeAuditLog` y el `notify` de `domain/` son la forma vieja, escrita sobre las mismas piezas.

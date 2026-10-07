@@ -255,9 +255,18 @@ describe("POST /developer/contracts/:id/releases/:stageNum — ramas sin cubrir"
         .send({ state: estado });
     }
 
-    const espia = vi.spyOn(db, "transaction").mockReturnValueOnce({
-      execute: () => Promise.reject(new Error("la base se cayó a mitad de la transacción"))
-    } as unknown as ReturnType<typeof db.transaction>);
+    // El INSERT de la liberación rechaza al ejecutarse, con cualquier cadena del builder antes.
+    const caida = new Error("la base se cayó a mitad de la liberación");
+    const consulta: object = new Proxy(
+      {},
+      {
+        get: (_, clave) =>
+          clave === "executeTakeFirst" ? () => Promise.reject(caida) : () => consulta
+      }
+    );
+    const espia = vi
+      .spyOn(db, "insertInto")
+      .mockImplementationOnce(() => consulta as ReturnType<typeof db.insertInto>);
 
     try {
       const res = await request(app)
@@ -277,6 +286,70 @@ describe("POST /developer/contracts/:id/releases/:stageNum — ramas sin cubrir"
       .where("contractId", "=", contractId)
       .execute();
     expect(liberaciones).toHaveLength(0);
+  });
+
+  // SPEC-618: la liberación es una sola sentencia condicional, así que dos a la vez dan un ganador.
+  const completar = async (stageId: string) => {
+    for (const [estado, actor] of [
+      ["InProgress", tokenDev],
+      ["Completed", tokenAdmin]
+    ] as const) {
+      await request(app)
+        .patch(`/api/v1/stages/${stageId}/state`)
+        .set("Authorization", `Bearer ${actor}`)
+        .send({ state: estado });
+    }
+  };
+  const liberar = (contractId: string, etapa: number, monto: number) =>
+    request(app)
+      .post(`/api/v1/developer/contracts/${contractId}/releases/${etapa}`)
+      .set("Authorization", `Bearer ${tokenDev}`)
+      .send({ amountMinorUnits: monto });
+  const liberacionesDe = (contractId: string) =>
+    db
+      .selectFrom("PaymentAttestation")
+      .select(["id", "amountMinorUnits"])
+      .where("contractId", "=", contractId)
+      .execute();
+
+  it("dos liberaciones simultáneas de la misma etapa: una crea (201), la otra recibe esa (200)", async () => {
+    const etapa = 900_901;
+    const { contractId, stageId } = await crearContratoConEtapa(etapa);
+    await completar(stageId);
+
+    const respuestas = await Promise.all([
+      liberar(contractId, etapa, 1_000_000),
+      liberar(contractId, etapa, 1_000_000)
+    ]);
+
+    expect(respuestas.map((r) => r.status).sort()).toEqual([200, 201]);
+    expect(respuestas[0]!.body.id).toBe(respuestas[1]!.body.id);
+    expect(await liberacionesDe(contractId)).toHaveLength(1);
+  });
+
+  it("dos liberaciones simultáneas que juntas pasan el total: una entra, la otra 409, y el total no se pasa", async () => {
+    const etapa = 901_001;
+    const { contractId, stageId } = await crearContratoConEtapa(etapa);
+    const otra = await crearStageMinteado({
+      projectId: proyecto,
+      name: `Etapa release ${etapa + 1}`,
+      sequenceOrder: etapa + 1,
+      validationCritical: false,
+      actorUserId: actorId
+    });
+    await completar(stageId);
+    await completar(otra.id);
+
+    const respuestas = await Promise.all([
+      liberar(contractId, etapa, 3_000_000),
+      liberar(contractId, etapa + 1, 3_000_000)
+    ]);
+
+    expect(respuestas.map((r) => r.status).sort()).toEqual([201, 409]);
+    expect(respuestas.find((r) => r.status === 409)!.body.code).toBe("RELEASE_EXCEEDS_CONTRACT");
+    const filas = await liberacionesDe(contractId);
+    expect(filas).toHaveLength(1);
+    expect(filas[0]!.amountMinorUnits).toBe(3_000_000);
   });
 });
 
