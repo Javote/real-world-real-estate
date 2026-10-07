@@ -7,8 +7,11 @@ const BASE_URL = `http://localhost:${WEB_PORT}`
 export default defineConfig({
   testDir: './e2e',
   outputDir: './e2e/.artifacts/test-results',
-  fullyParallel: false,
-  workers: 1,
+  // Test por test, así los shards de CI se reparten parejo. En CI, un worker por runner (lo que
+  // recomienda Playwright: un test inestable frena el deploy); en local, 4: con 6 la CPU se satura
+  // y a11y vence por timeout (medido el 2026-10-07).
+  fullyParallel: true,
+  workers: process.env.CI ? 1 : 4,
   reporter: [['list'], ['html', { outputFolder: './e2e/.artifacts/report', open: 'never' }]],
   use: {
     baseURL: BASE_URL,

@@ -5,6 +5,10 @@ import { loginConSolapa } from './_helpers'
 
 const TAGS = ['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa', 'best-practice']
 
+// Cada test recorre varias pantallas con axe en cada una: ~7 s con un worker, y con 4 en local se
+// pasaba de los 30 s del default (6 de 10 corridas, medido el 2026-10-07).
+test.describe.configure({ timeout: 90_000 })
+
 async function sinViolacionesNuevas(page: Page, superficie: string) {
   await page.waitForLoadState('networkidle')
   const resultado = await new AxeBuilder({ page }).withTags(TAGS).analyze()
