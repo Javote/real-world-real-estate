@@ -72,4 +72,4 @@ de la clave (no solo la pérdida), pero es el cambio más grande y hoy **no hay 
 
 No hay test: es prosa. Lo que se comprueba es que las tres referencias del punto "Qué se cambia"
 digan lo mismo —el chequeo de contradicción entre documentos de la raíz— y que el commit sea
-solo-`.md`, con lo cual aplica la excepción de `verify:all`.
+solo-`.md`, con lo cual no corre CI ni hace falta `pnpm precommit`.

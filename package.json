@@ -20,6 +20,7 @@
     "contracts:build": "cd contracts && aiken build",
     "contracts:verify": "cd contracts && aiken fmt --check && aiken check && aiken build",
     "verify:all": "pnpm verify && pnpm contracts:verify",
+    "precommit": "bash scripts/precommit.sh",
     "db:migrate": "pnpm --filter @plataforma/api db:migrate",
     "db:seed": "pnpm --filter @plataforma/api db:seed",
     "e2e": "pnpm --filter web e2e"

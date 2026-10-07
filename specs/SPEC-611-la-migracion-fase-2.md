@@ -9,7 +9,7 @@
 
 Rearmar `apps/api` y `apps/web` **módulo por módulo, detrás de los mismos paths**, para llegar a la
 forma de la auditoría §2.2 (API) y §3.2 (web). No es un rewrite en paralelo: **en ningún momento hay
-dos apps a medias.** Cada commit deja la API y la web andando, con `pnpm verify:all` en verde y el
+dos apps a medias.** Cada commit deja la API y la web andando, con CI en verde y el
 arnés de la auditoría §7 sin tocar:
 
 - los tests de HTTP sin mocks de `apps/api/test/`;

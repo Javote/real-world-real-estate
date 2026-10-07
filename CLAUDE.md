@@ -236,9 +236,9 @@ aprende se escribe en el `.md` que corresponde, en el mismo commit que lo causa.
   y M3 mandan sobre el SOM** (dueño, 2026-09-09). Antes de construir algo "porque lo pide el SOM",
   buscá si una captura o una fila de M2-D5 lo muestra; si el diseño lo contradice, gana el diseño y
   lo que se ajusta es cómo se reporta el criterio.
-- **Un solo agente, sin subagentes ni skills que el dueño no haya pedido.** Durante una rebanada, el
-  e2e corre filtrado (`pnpm e2e -g "<TEST-ID>"`) con `LOGIN_RATE_LIMIT_MAX` alto; la suite completa,
-  antes de una demo o al cerrar un bloque.
+- **Un solo agente, sin subagentes ni skills que el dueño no haya pedido.** Antes del push, el
+  e2e corre filtrado (`pnpm e2e -g "<TEST-ID>"`); la suite completa, después del push, mientras CI
+  corre (§Commits y ramas).
 - **Comentarios mínimos**: ninguno que narre historia. La historia va al commit.
 - **Los entregables van en inglés**: el `README.md` raíz, `specs/evidencia-m3/` y lo que generan
   `docs:api`/`docs:openapi`. Los datos reales (etapas en es-AR, logs) no se traducen. El resto del
@@ -270,38 +270,37 @@ aprende se escribe en el `.md` que corresponde, en el mismo commit que lo causa.
 Un commit = un cambio lógico · el cuerpo explica el *por qué* · `BREAKING CHANGE:` si rompe contrato
 de API o esquema on-chain. **`main` es la rama de integración y no hay PRs** (D-030).
 
-**Testear, commitear y pushear son una sola unidad de trabajo.** `pnpm verify:all` en verde →
-`git commit` → `git push`, siempre juntos, en ese orden y en un solo comando con `&&` (con `;`, un
-rojo se commitea igual). No se junta trabajo local "para pushear al
-final", y no se commitea sin el verde.
-
-**La única excepción: un commit que no toca código, y la decide `git`, no vos.** "No toca código"
-quiere decir que todo archivo staged es documentación o un archivo que ningún paso del pipeline lee
-(`.md`, `.pdf`, `.png`, `.jpg`, `.jpeg`, `.gif`, `.webp`, `.ico`, `.csv`, `.log`, `.txt`, `.mp4`,
-`.mov`, `.webm`, `.srt`, `.vtt`), en
-cualquier carpeta, **y** que nada cae dentro de `docs/`.
+**El filtro es CI, y Render no despliega sin su verde** (`autoDeployTrigger: checksPass`,
+`specs/RUNBOOK-deploy.md` §2). Antes del commit corre solo lo rápido, y todo va en un solo comando
+con `&&` (con `;`, un rojo se commitea igual):
 
 ```bash
-[ -n "$(git diff --cached --name-only -- ':(exclude)*.md' ':(exclude,icase)*.pdf' ':(exclude,icase)*.png' ':(exclude,icase)*.jpg' ':(exclude,icase)*.jpeg' ':(exclude,icase)*.gif' ':(exclude,icase)*.webp' ':(exclude,icase)*.ico' ':(exclude,icase)*.csv' ':(exclude)*.log' ':(exclude)*.txt' ':(exclude,icase)*.mp4' ':(exclude,icase)*.mov' ':(exclude,icase)*.webm' ':(exclude,icase)*.srt' ':(exclude,icase)*.vtt')$(git diff --cached --name-only -- docs/)" ] && pnpm verify:all
+pnpm precommit && git add <archivos> && git commit … && git push
 ```
 
-Si aparece un solo archivo con otra extensión (`.ts`, `.tsx`, `.json`, `.yaml`, `.sql`, `.ak`,
-`.css`, `.sh`, …) o cualquier cosa bajo `docs/`, corre todo. Si no, no corre nada. **La lista es de
-lo que se saltea, no de lo que corre:** una extensión nueva que nadie pensó cae del lado seguro.
-**Por qué esas extensiones:** ni Biome, ni `typecheck`, ni los tests, ni `build`, ni Aiken leen un
-archivo del repo con esas extensiones (los tests que nombran `.pdf`/`.png` arman el archivo en
-memoria), y las imágenes de `apps/web/public/` el build solo las copia. Los videos y subtítulos
-solo los leen los scripts de `scripts/video-walkthrough/`, que se corren a mano. **Por qué `docs/` corre
-siempre:** `pnpm testids` lee un `.md` de ahí. El `.json` no se saltea nunca: hay tests que
-comparan el OpenAPI y la colección Postman de `specs/evidencia-m3/` con el código.
-**La regla es mecánica a propósito, y es `git` y no `grep` por una razón medida** — bajo el `grep`
-que shimea Claude Code, la versión con `grep` contestaba al revés justo en el caso peligroso. El
-argumento completo y las mediciones, en
-[`specs/archive/CLAUDE-argumentos-de-las-reglas-2026-09-20.md`](specs/archive/CLAUDE-argumentos-de-las-reglas-2026-09-20.md).
+`pnpm precommit` (`scripts/precommit.sh`, ~1 min): Biome arregla lo mecánico, `typecheck`, los
+tests de lo que cambió (`vitest --changed`, sin coverage) y Aiken solo si se tocó `contracts/`. Va
+antes del `git add` porque Biome reescribe archivos. Coverage, build, el smoke del arranque, audit,
+Semgrep y e2e los decide CI en ~2:40.
 
-**CI espeja esta misma regla** en `.github/workflows/ci.yml` (`paths` con negaciones en `push` y
-`pull_request`, y `docs/**` re-incluido al final), así que un commit sin código tampoco dispara la
-corrida en GitHub Actions.
+**Después de cada push, CI se sigue hasta el final**: `gh run watch` en background, y el trabajo
+no está terminado hasta el verde. Mientras corre, la suite e2e completa en local (`pnpm e2e`, 4
+workers, ~3 min); antes del push alcanzan los specs de lo que se tocó (`pnpm e2e -g "<TEST-ID>"`).
+**Si CI queda rojo, arreglarlo es lo siguiente**, antes que cualquier otra cosa: el deploy queda
+frenado, y lo que se commitee encima tampoco sale.
+
+**Al arrancar una sesión, lo primero es la última corrida de `main`**
+(`gh run list --workflow ci.yml --limit 1`): si está roja, se arregla antes de empezar otra cosa.
+GitHub además le manda un mail del workflow fallido a quien pusheó.
+
+No se junta trabajo local "para pushear al final". **`pnpm verify:all` sigue existiendo** —CI sin
+e2e, audit, smoke ni Semgrep— para antes de una demo o si CI no responde.
+
+**Un commit que no toca código no corre CI ni despliega, y no necesita `pnpm precommit`.** CI lo
+saltea por `paths` en `ci.yml`: todo archivo staged es `.md`, imagen, `.pdf`, `.csv`, `.log`,
+`.txt`, video o subtítulo, en cualquier carpeta, salvo lo que cae en `docs/` (re-incluido al final:
+`pnpm testids` lee un `.md` de ahí). Sin checks, Render no lo despliega; sale con el próximo commit
+de código. Un solo archivo con otra extensión, y corre todo.
 
 **La documentación viaja con el código que la causa, en el mismo commit.** Un cambio que altera cómo
 se opera, se configura o se despliega algo llega con su documentación adentro — no en un `docs(...)`
@@ -316,7 +315,8 @@ El porqué —el commit de R2 que dejó a `DECISIONS.md` mintiendo durante tres 
 ```bash
 pnpm install                      # bootstrap del workspace
 pnpm dev                          # web + api en paralelo
-pnpm verify                       # app TS: lint + typecheck + testids + tests con umbral de coverage + build (lo mismo que CI)
+pnpm precommit                    # antes de cada commit: Biome --write + typecheck + tests de lo que cambió (~1 min)
+pnpm verify                       # app TS: lint + typecheck + testids + tests con umbral de coverage + build
 pnpm contracts:verify             # Aiken: fmt + check + build
 pnpm verify:all                   # las dos, encadenadas
 pnpm lint:fix                     # Biome arregla lo mecánico
@@ -397,7 +397,8 @@ que la arregló (las anteriores al 2026-10-01, en
   10+, los overrides van a `pnpm-workspace.yaml` en el mismo commit, o se ignoran en silencio.
 - **Una lectura nueva de `env.*` se declara en `render.yaml`**, o `apps/api/test/render-config.test.ts`
   se pone rojo (D-076).
-- **Si CI agrega un paso, `pnpm verify` lo espeja**: un verde local que CI no confirma es falso.
+- **CI corre lo que `verify:all` no** (e2e, audit, el smoke del `startCommand`, Semgrep, el diff de
+  `plutus.json`): un verde local no es el verde de CI.
 - **Las capturas del developer no coinciden en el header**: gana D-074, no la captura.
 - **Un workflow manual o programado publica su check en el commit donde corre** (`evidencia-e2e.yml`,
   `reconcile.yml`): si ese commit todavía espera su deploy y el workflow falla, Render no lo despliega.

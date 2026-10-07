@@ -1441,4 +1441,4 @@ nombre accesible de cada chip sigue diciendo número y nombre (`developer.upload
 - **Los paths REST de M2-D5 no se mueven.** `RPCLink` queda descartado: manda a `/rpc/...`.
 
 **Mientras dura la migración** conviven las dos formas: lo nuevo atiende lo que conoce y lo viejo, lo
-demás. Cada commit deja la API y la web andando con `pnpm verify:all` en verde.
+demás. Cada commit deja la API y la web andando, con CI en verde.
