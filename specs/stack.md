@@ -46,8 +46,8 @@ entre web y los packages de Node.
 | **Cliente del contrato** (`@orpc/client`) | — | ○ | D-066. Reemplaza el espejo escrito a mano de `api/types.ts` |
 | **PWA** (manifest + service worker) | — | ○ | D-065. Desde el arranque, no al final |
 | **i18n es-AR/en-US** | `245 líneas` | ◐ | D-025. La maquinaria existe; conviven 36 strings hardcodeados |
-| Vitest + jsdom + Testing Library | `4.1.10` | ● | |
-| Playwright (E2E) | `1.62` | ● | solo Chromium · **no corre en CI**, a mano |
+| Vitest + happy-dom + Testing Library | `4.1.10` | ● | jsdom en los archivos que lo piden (`apps/web/CLAUDE.md`) y en `test:a11y` |
+| Playwright (E2E) | `1.62` | ● | solo Chromium · en CI bloquea: 4 shards y `a11y` aparte, sobre el build (`E2E_BUILD=1`) |
 | Leaflet + tiles de OpenStreetMap | — | ● | Los mapas (`LocationMapModal`). Los tiles son la única request del navegador que no va a nuestra API |
 
 El front se reconstruye desde los entregables: ver [`SPEC-014`](archive/SPEC-014-reconstruccion-del-front.md)
@@ -318,6 +318,7 @@ la ruta en vez de depender de un escáner. Ninguna ruta llama ya a `canAccessPro
 | `@types/react` | `^19.2.0` | **`19.2.17`** |
 | `@types/react-dom` | `^19.2.0` | **`19.2.3`** |
 | `@vitejs/plugin-react` | `^6.0.1` | **`6.0.3`** |
+| `happy-dom` | `^20.14.5` | `20.14.5` |
 | `jsdom` | `^28.1.0` | `28.1.0` |
 | `typescript` | `^6.0.2` | **`6.0.3`** |
 | `vite` | `^8.0.0` | **`8.1.4`** |
