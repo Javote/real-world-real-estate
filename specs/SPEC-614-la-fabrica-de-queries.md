@@ -33,8 +33,10 @@
    reescribe y se fija con un test que dice qué llaves invalida.
 3. **`staleTime` por defecto ~30 s**, recién cuando el punto 2 está hecho (antes, una invalidación
    por rol que no alcanza deja datos viejos). **Excepción, de `SPEC-602`:** toda query que muestra un
-   anclaje (`anchorStatus`, TXID, `Pending`) mantiene `staleTime: 0`, porque depende de la
-   reconciliación por lectura (D-077) y regla 17.
+   anclaje (`anchorStatus`, TXID, `Pending`) se reusa solo dentro de la misma navegación
+   (`staleTime` de 10 s, `ANCLAJE_MS`), porque depende de la reconciliación por lectura (D-077) y
+   regla 17. Era 0 hasta que el Paso 2 lo hizo pedir dos veces por navegación (dueño, 2026-10-06:
+   ver §Paso 2, Cómo quedó).
 4. **`claveDeError(err) → TranslationKey`**, una sola, en `apps/web/src/api/`. Traduce el `ApiError`
    (y desde `SPEC-609`, el error tipado del cliente) a una clave del diccionario. Las pantallas que
    hoy leen `status`/`body` a mano pasan a usarla cuando se migran en W3/W4; acá se escribe y se
@@ -48,7 +50,7 @@
 
 1. **Ninguna request cambia**: misma cantidad, mismo orden, mismos paths. Lo verifica `pnpm e2e`.
 2. **Ninguna pantalla cambia lo que muestra**: los tests de pantalla no cambian de expectativa.
-3. **Nada que muestre un anclaje se sirve de caché fresca.** Lo fija un test sobre las fábricas.
+3. **Lo que muestra un anclaje se reusa como mucho 10 s.** Lo fija un test sobre las fábricas.
 4. **Los 324 `spyOn(api.…)` siguen andando**: la fábrica llama a `port.ts`, no lo reemplaza.
 
 ### Verificación
@@ -67,8 +69,8 @@ developer y volver al detalle del proyecto muestra el estado nuevo sin recargar.
   deja viejas. `queries.test.ts` puebla una caché con una query por entrada de cada fábrica y fija,
   por mutación, cuáles quedan invalidadas. Crear un proyecto no invalidaba nada (con `staleTime` 0
   no hacía falta); ahora invalida las listas, unidades, KPIs y capital.
-- **Lo que queda en `staleTime: 0`**: toda respuesta con TXID, `anchorStatus` o `signatureTxid`, lo
-  que se reconcilia al leer (`GET /projects/:id`) y los KPIs que cuentan anclados
+- **Lo que queda con la ventana corta de `ANCLAJE_MS`**: toda respuesta con TXID, `anchorStatus` o
+  `signatureTxid`, lo que se reconcilia al leer (`GET /projects/:id`) y los KPIs que cuentan anclados
   (`verifiedDocuments` del developer; `verified` y `signed` del notary). La lista está en el test.
 - **El invariante 1 vale para la fábrica, no para `staleTime`**: volver a una pantalla o a un filtro
   dentro de los 30 s ya no pide de nuevo, que es el objetivo del paso. Los dos tests que fijaban ese
@@ -108,7 +110,7 @@ click— no depende de nada de la API.
 1. **Ninguna pantalla espera a su loader para montar**: el loader nunca hace `await` de datos.
 2. **Una pantalla con loader y la misma sin loader muestran exactamente lo mismo**: los tests de
    pantalla no cambian de expectativa.
-3. **Nada que muestre un anclaje se sirve de caché fresca**: la excepción del Paso 1 vale igual para
+3. **Lo que muestra un anclaje se reusa como mucho 10 s**: la excepción del Paso 1 vale igual para
    lo precargado.
 4. **Un test por ruta**: el loader llama a `prefetchQuery` con las mismas options que lee el
    componente.
@@ -144,10 +146,15 @@ sale **antes** del click; volver a `/investor/buy` dentro del `staleTime` no rep
   - Hover sobre "Capital" en la navegación del developer: salen los tres `GET /developer/capital/*`
     antes del click. Un segundo hover no pide nada, y el click tampoco.
   - Click en una card de `/investor/buy`: `GET /projects/:id` y `/documents` salen juntos (antes,
-    los documentos esperaban al proyecto). Como los dos muestran anclajes (`staleTime: 0`), se
-    vuelven a pedir al montar la pantalla: son **dos `GET /projects/:id` por navegación**, que
-    reconcilia al leer (hasta 5 consultas a Blockfrost, y solo si hay anclajes `Pending`). Con la
-    pantalla de KPIs del developer pasa lo mismo: un pedido en el hover y otro al montar.
+    los documentos esperaban al proyecto).
+  - **Lo anclado se pedía dos veces**: con `staleTime: 0`, lo que trajo el loader ya estaba viejo
+    cuando la pantalla montaba (el chunk de la ruta tarda ~270 ms), y se volvía a pedir. Eran dos
+    `GET /projects/:id` por navegación, que reconcilia al leer (hasta 5 consultas a Blockfrost si
+    hay anclajes `Pending`), y lo mismo con los KPIs del developer: uno en el hover y otro al
+    montar. Con la ventana de 10 s (dueño, 2026-10-06), medido otra vez: **uno** en cada caso. Lo
+    reusado viene del servidor y tiene como mucho 10 s: a lo sumo dice `Pending` un rato más, nunca
+    afirma una prueba que no tiene. Una pantalla montada tampoco se refrescaba sola con
+    `staleTime: 0`; lo que cambia es solo si una pantalla que se abre en esos 10 s vuelve a pedir.
   - Volver a `/investor/buy` dentro de los 30 s: ningún pedido.
 - **`AUTH-ME-001` rompía el token mientras la pantalla todavía pedía**: el loader adelanta los
   pedidos, un `unread-count` salía con el token roto, el 401 borraba la sesión y el `goto` iba a

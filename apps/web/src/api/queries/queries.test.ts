@@ -1,7 +1,7 @@
 import { hashKey, QueryClient, type QueryKey } from '@tanstack/react-query'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import { api } from '../port'
-import { FRESCO_MS } from './frescura'
+import { ANCLAJE_MS, FRESCO_MS } from './frescura'
 import {
   archivoQueries,
   auditoriaQueries,
@@ -109,9 +109,13 @@ const ARCHIVOS: Nombre[] = ['archivo.url', 'archivo.fotosDeEtapa']
 describe('las fábricas de queries', () => {
   afterEach(() => vi.restoreAllMocks())
 
-  it('invariante 3: lo que muestra un anclaje no se sirve de caché fresca; el resto, 30 s', () => {
+  it('invariante 3: lo que muestra un anclaje se reusa solo 10 s, lo que dura una navegación; el resto, 30 s', () => {
     for (const nombre of NOMBRES) {
-      const esperado = CON_ANCLAJE.includes(nombre) || ARCHIVOS.includes(nombre) ? 0 : FRESCO_MS
+      const esperado = ARCHIVOS.includes(nombre)
+        ? 0
+        : CON_ANCLAJE.includes(nombre)
+          ? ANCLAJE_MS
+          : FRESCO_MS
       expect({ nombre, staleTime: CATALOGO[nombre].staleTime }).toEqual({
         nombre,
         staleTime: esperado

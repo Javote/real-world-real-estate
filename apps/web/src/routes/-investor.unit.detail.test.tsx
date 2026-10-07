@@ -2,6 +2,7 @@ import { focusManager } from '@tanstack/react-query'
 import { cleanup, fireEvent, screen, waitFor, within } from '@testing-library/react'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { ApiError, api } from '#/api/port'
+import { ANCLAJE_MS } from '#/api/queries/frescura'
 import { esAR } from '#/i18n/dictionary'
 import * as L from '#/test/leaflet-falso'
 import { autenticarComo, INVESTOR_USER, montarRuta } from './-test-mount'
@@ -392,6 +393,9 @@ describe('/investor/unit/$unitId', () => {
         novedad({ id: 'b', status: 'Confirmed' }),
         novedad({ id: 'c', status: 'Confirmed' })
       ])
+      // El foco solo vuelve a pedir lo anclado pasada la ventana en que se reusa.
+      const ahora = Date.now.bind(Date)
+      vi.spyOn(Date, 'now').mockImplementation(() => ahora() + ANCLAJE_MS)
       focusManager.setFocused(false)
       focusManager.setFocused(true)
       await waitFor(() => expect(getNews).toHaveBeenCalledTimes(2))
