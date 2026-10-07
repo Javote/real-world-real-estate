@@ -36,6 +36,7 @@ import type {
   UpdateUnitInput
 } from '@plataforma/shared'
 import { clearSession, getSession } from '../auth/session'
+import { API_BASE, ApiError, fetchConSesion } from './transporte'
 import type {
   AuditEvent,
   BuildingSchematicFloor,
@@ -72,36 +73,10 @@ import type {
   UserSummary
 } from './types'
 
-export class ApiError extends Error {
-  constructor(
-    public status: number,
-    message: string,
-    public body?: unknown
-  ) {
-    super(message)
-  }
-}
-
-const API_BASE = import.meta.env.VITE_API_ORIGIN ?? ''
+export { ApiError }
 
 async function request<T>(path: string, init: RequestInit = {}): Promise<T> {
-  const session = getSession()
-  const headers = new Headers(init.headers)
-  if (session) headers.set('Authorization', `Bearer ${session.token}`)
-
-  const res = await fetch(`${API_BASE}${path}`, { ...init, headers })
-
-  if (res.status === 401) clearSession()
-  if (!res.ok) {
-    let message = res.statusText
-    let cuerpo: unknown
-    try {
-      const body = await res.json()
-      cuerpo = body
-      message = body?.message ?? JSON.stringify(body)
-    } catch {}
-    throw new ApiError(res.status, message, cuerpo)
-  }
+  const res = await fetchConSesion(`${API_BASE}${path}`, init)
   if (res.status === 204) return undefined as T
   return res.json() as Promise<T>
 }

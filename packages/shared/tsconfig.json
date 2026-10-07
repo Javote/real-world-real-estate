@@ -1,7 +1,9 @@
 {
   // CommonJS: apps/api es ESM y lo importa igual (D-102). El front no lo carga
   // en runtime — importa solo tipos, que `verbatimModuleSyntax` borra en la
-  // compilación.
+  // compilación. `nodenext` y no `node16` porque el contrato importa tipos de
+  // `@orpc/*`, que es solo ESM: con `node16` es TS1541. El JS emitido es el
+  // mismo (SPEC-609).
   //
   // El package.json apunta `types` al DIST (`dist/index.d.ts`) y `main` también
   // al dist: el typecheck de los consumidores SÍ depende de que este package
@@ -11,8 +13,8 @@
   // por consumidor, está en CLAUDE.md de este package.
   "compilerOptions": {
     "target": "ES2022",
-    "module": "node16",
-    "moduleResolution": "node16",
+    "module": "nodenext",
+    "moduleResolution": "nodenext",
     "lib": ["ES2022"],
     "outDir": "dist",
     "rootDir": "src",

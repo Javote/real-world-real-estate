@@ -118,9 +118,10 @@ Sentry ve lo mismo; OpenTelemetry suma **un span de middleware por request** (`r
 `express`, `router` y `@sentry/node`), el del router raíz que atiende antes que Express. `MATRIZ` sin un
 carácter de diferencia, la API en 100/100/100/100 (901 tests) y el e2e 100/100.
 
-**Lo que queda para A3:** el contrato en `packages/shared/src/contract/` (necesita `@orpc/contract` en
-un paquete CommonJS, el mismo problema que A0.1 resolvió en la API) y la entidad completa en el
-contexto, no solo su proyecto.
+**Lo que queda para A3:** llenar el contrato de `packages/shared/src/contract/` y la entidad completa
+en el contexto, no solo su proyecto. El contrato existe vacío desde `SPEC-609` (2026-10-07), con
+`@orpc/contract` en `shared`: el package sigue en CommonJS y compila con `module: nodenext`
+(SPEC-609 §La infraestructura).
 
 ## Tamaño
 

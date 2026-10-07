@@ -71,3 +71,39 @@ adelante todo viaja con marca. **Ningún componente hace un cast.**
 
 Mediano. Se puede hacer por vertical, en el mismo orden que `SPEC-607`, porque la fachada deja
 convivir métodos migrados y sin migrar.
+
+## La infraestructura, hecha el 2026-10-07
+
+**El contrato todavía está vacío** (lo llena A3), así que esto es todo lo que no depende de que
+tenga rutas. El dueño eligió adelantarlo antes que esperar a A3. **Ningún método de `port.ts` cambió**
+y el cliente no está en el bundle de la app: ninguna pantalla lo importa todavía.
+
+| Pieza | Dónde |
+|---|---|
+| El contrato, vacío, en una entrada propia (`@plataforma/shared/contract`), con `ClienteCable` y `ApiClient` (alcance 1) | `packages/shared/src/contract/index.ts` |
+| `contract.min.json`, generado con `minifyContractRouter` (`pnpm --filter @plataforma/shared contract:min`) y con su test de frescura (alcance 2) | `packages/shared/src/contract/` · `scripts/contrato-min.ts` |
+| `fetchConSesion`: el `fetch` de `request()` (Bearer, 401 que borra la sesión, `ApiError` con `status` y `body`), ahora compartido con el link (alcance 4) | `apps/web/src/api/transporte.ts` |
+| `crearCliente`: `OpenAPILink` sobre el contrato minificado, a `${VITE_API_ORIGIN o el mismo origen}/api/v1` | `apps/web/src/api/cliente.ts` |
+| Zod fuera del bundle, sobre el output de Vite (invariante 3) | `apps/web/src/api/cliente.bundle.test.ts` |
+
+**Lo que se probó:** `cliente.test.ts` arma un cliente sobre un contrato minificado de prueba. Con
+eso verifica el path REST bajo `/api/v1`, el origen con y sin `VITE_API_ORIGIN`, los params del
+input en el path, el Bearer, que un 401 borra la sesión y que un error llega como el mismo `ApiError`
+(sale de `fetchConSesion` antes de que oRPC lo decodifique, así que no hay que mapear el `ORPCError`).
+También fija con `@ts-expect-error` que una fecha del output es `string`. El test del bundle está
+probado en rojo: con un schema de `@plataforma/shared` importado en `cliente.ts`, entran 79 módulos
+de Zod.
+
+**`shared` compila con `module: nodenext` y sigue en CommonJS** (D-102 no cambia). `@orpc/contract`
+y `@orpc/client` son solo ESM, y `node16` rechaza hasta un `import type` de ellos (TS1541);
+`nodenext` lo acepta porque Node 22 hace `require()` de un ESM. El JS emitido de los módulos que ya
+existían es idéntico byte a byte (`diff -r` de los dos `dist`). `cardano` no cambia. Pasar
+`packages/` a ESM de verdad (`"type": "module"` y `.js` en los imports relativos) queda para después
+(dueño, 2026-10-07).
+
+**Lo que hace cada vertical en A3/A4, al mudar su contrato:** `pnpm --filter @plataforma/shared
+contract:min`; sus métodos de `port.ts` pasan a `cliente.<módulo>.<proc>(…)` (alcance 3); sus tipos
+salen de `types.ts` (alcance 6); sus casos de `port.contract.test.ts` se van (alcance 7, salvo
+`API_BASE` y las tres excepciones); y sus params de ruta se parsean con su schema con marca
+(§Los params de ruta). El primer método migrado mete el cliente en el bundle de la app: ese commit
+mide cuánto suma al JS inicial.

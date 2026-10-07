@@ -21,7 +21,8 @@ falla el typecheck de los dos lados.
 | typecheck de api y web | `dist/index.d.ts` (`types`) |
 | runtime de la API (CJS) | `dist/index.js` (`main`) |
 | tests de la API | el fuente, por alias en `vitest.config.mts` |
-| runtime del front | nada (solo tipos), salvo las entradas sin dependencias como `@plataforma/shared/evidence-rules` y `@plataforma/shared/errors`, que apuntan al `.ts` |
+| runtime del front | nada (solo tipos), salvo las entradas sin dependencias como `@plataforma/shared/evidence-rules` y `@plataforma/shared/errors`, que apuntan al `.ts`, y `@plataforma/shared/contract.min.json` |
+| el contrato de oRPC | `@plataforma/shared/contract` (`dist/contract/`), una entrada aparte del índice: `cardano` no lo carga nunca |
 
 `pnpm typecheck` reconstruye este package antes de verificar, y `prepare` lo compila en cada
 `pnpm install`.
@@ -38,3 +39,10 @@ falla el typecheck de los dos lados.
 - **El package es CommonJS** (D-102; la API es ESM y lo importa igual): el front no puede importar
   valores por el índice. Un valor que el front necesite va en un módulo sin dependencias con su propia entrada en
   `exports`.
+- **Compila con `module: nodenext`, sin dejar de ser CommonJS**: `@orpc/contract` y `@orpc/client`
+  son solo ESM, y `node16` rechaza hasta un `import type` de ellos (TS1541). `nodenext` lo acepta
+  porque Node 22 hace `require()` de un ESM; el JS que emite es el mismo. Pasar el package a ESM de
+  verdad (`"type": "module"` y `.js` en los imports relativos, también en `cardano`) queda para
+  después.
+- **`contract.min.json` se commitea**: después de tocar el contrato,
+  `pnpm --filter @plataforma/shared contract:min`. `contract.test.ts` lo compara con lo que generaría.
