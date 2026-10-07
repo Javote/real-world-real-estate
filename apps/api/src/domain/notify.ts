@@ -1,10 +1,28 @@
 import type { NotificationCategory } from "@plataforma/shared";
 import { db } from "../lib/db.js";
-import { type EntradaDeNotificacion, notify as notificar } from "../platform/notify.js";
+import {
+  type EntradaDeNotificacion,
+  type EntradasDeNotificacion,
+  notify as notificar
+} from "../platform/notify.js";
 
-// La forma vieja, sobre `notify()` de `platform/`: las llamadas se van con su módulo en A4 (SPEC-616).
+// La forma vieja, sobre `notify()` de `platform/`: después del commit y tragándose el error. Las
+// llamadas se van con su módulo en A4 (SPEC-616), a la nueva, que va en el lote de la mutación.
+async function notificarSinTirar(entradas: EntradasDeNotificacion): Promise<void> {
+  try {
+    await notificar(db, entradas).execute();
+  } catch (error) {
+    console.error(
+      Array.isArray(entradas)
+        ? "[notify] no se pudieron registrar las notificaciones"
+        : "[notify] no se pudo registrar la notificación",
+      { titleKey: (Array.isArray(entradas) ? entradas[0] : entradas).titleKey, error }
+    );
+  }
+}
+
 export async function notify(input: EntradaDeNotificacion): Promise<void> {
-  await notificar(db, input);
+  await notificarSinTirar(input);
 }
 
 export async function notifyUnitInvestor(input: {
@@ -38,14 +56,13 @@ export async function notifyUnitInvestors(
     params?: Record<string, string | number>;
   }
 ): Promise<void> {
-  await notificar(
-    db,
-    units.map((u) => ({
-      userId: u.investorId,
-      category: input.category,
-      titleKey: input.titleKey,
-      ...(input.params ? { params: input.params } : {}),
-      unitId: u.unitId
-    }))
-  );
+  const [primera, ...resto] = units.map((u) => ({
+    userId: u.investorId,
+    category: input.category,
+    titleKey: input.titleKey,
+    ...(input.params ? { params: input.params } : {}),
+    unitId: u.unitId
+  }));
+  if (!primera) return;
+  await notificarSinTirar([primera, ...resto]);
 }

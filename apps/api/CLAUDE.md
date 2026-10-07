@@ -104,8 +104,8 @@ Express, que sigue siendo la de las rutas existentes hasta A3/A4.
   con dos a la vez sobre libSQL, la que pierde tira `SQLITE_BUSY` en vez de esperar. Para anclar,
   `anclarConReclamo` (`platform/anclaje.ts`).
 - **El audit y las notificaciones nuevas salen de `platform/`**: `audit(ejecutor, entrada)` devuelve
-  la consulta sin ejecutar (sirve en una transacción y en un `enLote`); `notify(ejecutor, entradas)` no
-  tira. `writeAuditLog` y el `notify` de `domain/` son la forma vieja, escrita sobre las mismas piezas.
+  la consulta sin ejecutar (sirve en una transacción y en un `enLote`); `notify(ejecutor, entradas)` también,
+  y va en el lote de la mutación que avisa: si falla, la deshace (SPEC-613 §La decisión). `writeAuditLog` y el `notify` de `domain/` son la forma vieja, escrita sobre las mismas piezas.
 - **Un código de error nuevo va primero a `ERROR_CODES`** (`packages/shared/src/errors.ts`), o
   `test/error-codes.test.ts` se pone rojo; su clave tiene que existir en el diccionario de la web.
 - **Una columna nueva va a la migración y a `db/types.ts` en el mismo commit**:

@@ -102,41 +102,66 @@ describe("audit(ejecutor, entrada)", () => {
   });
 });
 
-describe("notify(ejecutor, entradas) — no tira (SPEC-613, hasta que el dueño decida)", () => {
+describe("notify(ejecutor, entradas) — atómico, en el lote de la mutación (SPEC-613 §La decisión)", () => {
   const notificacionesDe = (titleKey: string) =>
     db.selectFrom("Notification").selectAll().where("titleKey", "=", titleKey).execute();
 
   it("una entrada, una fila, con los params en JSON", async () => {
     const clave = `test.${createId()}`;
-    await notify(db, { userId: usuario, category: "stage", titleKey: clave, params: { n: 1 } });
+    await notify(db, {
+      userId: usuario,
+      category: "stage",
+      titleKey: clave,
+      params: { n: 1 }
+    }).execute();
     const [fila] = await notificacionesDe(clave);
     expect(fila).toMatchObject({ userId: usuario, unitId: null, readAt: null });
     expect(JSON.parse(fila!.paramsJson!)).toEqual({ n: 1 });
   });
 
-  it("varias entradas van en un solo INSERT; ninguna, en ninguno", async () => {
+  it("varias entradas van en un solo INSERT, y una lista vacía no compila", async () => {
     const clave = `test.${createId()}`;
     const entrada = { userId: usuario, category: "stage" as const, titleKey: clave };
-    await notify(db, [entrada, entrada]);
+    const consulta = notify(db, [entrada, entrada]);
+    expect(consulta.compile().sql.match(/insert into/gi)).toHaveLength(1);
+    await consulta.execute();
     expect(await notificacionesDe(clave)).toHaveLength(2);
 
-    const insertar = vi.spyOn(db, "insertInto");
-    await notify(db, []);
-    expect(insertar).not.toHaveBeenCalled();
-    insertar.mockRestore();
+    // @ts-expect-error — una lista vacía no es un INSERT
+    void (() => notify(db, []));
   });
 
-  it.each([
-    ["una", false, "[notify] no se pudo registrar la notificación"],
-    ["varias", true, "[notify] no se pudieron registrar las notificaciones"]
-  ])("si falla con %s, lo loguea y no tira", async (_n, enLista, mensaje) => {
-    const log = vi.spyOn(console, "error").mockImplementation(() => {});
-    const entrada = { userId: "no-existe", category: "stage" as const, titleKey: "test.falla" };
+  it("en un lote, viaja con la mutación que avisa", async () => {
+    const unidad = await crearUnidad();
+    const clave = `test.${createId()}`;
+    await enLote(
+      db.updateTable("Unit").set({ status: "reserved" }).where("id", "=", unidad),
+      notify(db, { userId: usuario, category: "stage", titleKey: clave, unitId: unidad })
+    );
+    expect(await notificacionesDe(clave)).toHaveLength(1);
+  });
 
-    await expect(notify(db, enLista ? [entrada] : entrada)).resolves.toBeUndefined();
+  it("si la notificación falla, tira y deshace la mutación del mismo lote", async () => {
+    const unidad = await crearUnidad();
+    const antes = await db
+      .selectFrom("Unit")
+      .select("status")
+      .where("id", "=", unidad)
+      .executeTakeFirstOrThrow();
 
-    expect(log).toHaveBeenCalledWith(mensaje, expect.objectContaining({ titleKey: "test.falla" }));
-    log.mockRestore();
+    await expect(
+      enLote(
+        db.updateTable("Unit").set({ status: "reserved" }).where("id", "=", unidad),
+        notify(db, { userId: "no-existe", category: "stage", titleKey: "test.falla" })
+      )
+    ).rejects.toThrow();
+
+    const despues = await db
+      .selectFrom("Unit")
+      .select("status")
+      .where("id", "=", unidad)
+      .executeTakeFirstOrThrow();
+    expect(despues.status).toBe(antes.status);
   });
 });
 

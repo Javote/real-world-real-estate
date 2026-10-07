@@ -1,4 +1,4 @@
-import { afterAll, beforeAll, describe, expect, it } from "vitest";
+import { afterAll, beforeAll, describe, expect, it, vi } from "vitest";
 import { createId } from "../src/db/id.js";
 import { compileDossier } from "../src/domain/dossier.js";
 import { notify, notifyUnitInvestor, notifyUnitInvestors } from "../src/domain/notify.js";
@@ -117,6 +117,31 @@ describe("notifyUnitInvestors — sin params", () => {
       .executeTakeFirstOrThrow();
 
     expect(fila.paramsJson).toBeNull();
+  });
+});
+
+describe("la forma vieja de domain/ se traga el error hasta A4 (SPEC-613 §La decisión)", () => {
+  const entrada = { userId: "no-existe", category: "stage" as const, titleKey: "test.falla" };
+
+  it.each([
+    ["notify", () => notify(entrada), "[notify] no se pudo registrar la notificación"],
+    [
+      "notifyUnitInvestors",
+      () => notifyUnitInvestors([{ unitId: "u-no-existe", investorId: "no-existe" }], entrada),
+      "[notify] no se pudieron registrar las notificaciones"
+    ]
+  ])("si %s falla, lo loguea y no tira", async (_nombre, llamar, mensaje) => {
+    const log = vi.spyOn(console, "error").mockImplementation(() => {});
+    await expect(llamar()).resolves.toBeUndefined();
+    expect(log).toHaveBeenCalledWith(mensaje, expect.objectContaining({ titleKey: "test.falla" }));
+    log.mockRestore();
+  });
+
+  it("notifyUnitInvestors sin unidades no consulta la base", async () => {
+    const insertar = vi.spyOn(db, "insertInto");
+    await notifyUnitInvestors([], { category: "stage", titleKey: "test.nada" });
+    expect(insertar).not.toHaveBeenCalled();
+    insertar.mockRestore();
   });
 });
 

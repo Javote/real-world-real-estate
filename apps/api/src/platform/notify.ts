@@ -10,40 +10,30 @@ export type EntradaDeNotificacion = {
   unitId?: string | null;
 };
 
-/**
- * Una notificación, o varias en un solo INSERT. **No tira**: si falla, queda en el log y la mutación que
- * avisa sigue en pie. Se llama después del commit, con `db`. Si tiene que ser atómica con la mutación
- * (entrar en su transacción y deshacerla si falla) es una decisión pendiente del dueño (SPEC-613).
- */
-export async function notify(
-  ejecutor: Ejecutor,
-  entradas: EntradaDeNotificacion | readonly EntradaDeNotificacion[]
-): Promise<void> {
-  const lista = Array.isArray(entradas) ? entradas : [entradas as EntradaDeNotificacion];
-  if (lista.length === 0) return;
+/** Al menos una: una lista vacía no es un INSERT. */
+export type EntradasDeNotificacion =
+  | EntradaDeNotificacion
+  | readonly [EntradaDeNotificacion, ...EntradaDeNotificacion[]];
 
-  try {
-    await ejecutor
-      .insertInto("Notification")
-      .values(
-        lista.map((e) => ({
-          id: createId(),
-          userId: e.userId,
-          category: e.category,
-          titleKey: e.titleKey,
-          paramsJson: e.params ? JSON.stringify(e.params) : null,
-          unitId: e.unitId ?? null,
-          readAt: null,
-          createdAt: new Date()
-        }))
-      )
-      .execute();
-  } catch (error) {
-    console.error(
-      Array.isArray(entradas)
-        ? "[notify] no se pudieron registrar las notificaciones"
-        : "[notify] no se pudo registrar la notificación",
-      { titleKey: (lista[0] as EntradaDeNotificacion).titleKey, error }
-    );
-  }
+/**
+ * Una notificación, o varias en un solo INSERT, sin ejecutar, como `audit`: viaja en el mismo
+ * `enLote` que la mutación que avisa y, si falla, la deshace (SPEC-613 §La decisión). En un flujo que
+ * ancla, va en el lote que guarda el resultado del anclaje, no antes.
+ */
+export function notify(ejecutor: Ejecutor, entradas: EntradasDeNotificacion) {
+  const lista: readonly EntradaDeNotificacion[] = Array.isArray(entradas)
+    ? entradas
+    : [entradas as EntradaDeNotificacion];
+  return ejecutor.insertInto("Notification").values(
+    lista.map((e) => ({
+      id: createId(),
+      userId: e.userId,
+      category: e.category,
+      titleKey: e.titleKey,
+      paramsJson: e.params ? JSON.stringify(e.params) : null,
+      unitId: e.unitId ?? null,
+      readAt: null,
+      createdAt: new Date()
+    }))
+  );
 }

@@ -59,8 +59,11 @@ traga el error. **Desde ahora, sí: va en el mismo lote que la mutación** y, si
   consulta sin ejecutar**, igual que `audit`. El `notify` de `domain/` (la forma vieja) conserva su
   `try/catch` hasta que su módulo se migra en A4.
 
-**Estado: abierta.** Se implementa antes de A3, en la misma rama que A1, para que el piloto nazca con
-la forma nueva.
+**Estado: hecha el 2026-10-07**, antes de A3. `notify(ejecutor, entradas)` de `platform/` devuelve el
+INSERT sin ejecutar y pide al menos una entrada (una lista vacía no compila).
+`platform-cimientos.test.ts` fija que viaja en el `enLote` de la mutación y que, si falla, la deshace:
+una unidad `available` sigue `available`. El `notify` de `domain/` se traga el error como antes, con
+los mismos mensajes, hasta que su módulo se migre (`notify-dossier-aggregates-coverage.test.ts`).
 
 ## Invariantes
 
@@ -117,8 +120,8 @@ tests), `reclamar-antes-de-anclar.test.ts` pasa sin cambios y el OpenAPI no se m
    les llegan dos pedidos a la vez sobre la misma base. No se midió contra Turso. **Decidido:** va a
    su propia spec, [`SPEC-618`](SPEC-618-las-transacciones-interactivas-y-sqlite-busy.md), antes que A3.
 
-**Lo que no se hizo:** los `CHECK` en los enums (la spec pide primero el test y medir producción) y
-`notify` atómico (decidido, abierto: §La decisión, arriba).
+**Lo que no se hizo:** los `CHECK` en los enums (la spec pide primero el test y medir producción).
+`notify` atómico quedó para después de A1 y se hizo el mismo día (§La decisión, arriba).
 
 ## Verificación
 
