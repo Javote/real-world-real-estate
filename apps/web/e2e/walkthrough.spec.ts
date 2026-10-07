@@ -127,11 +127,13 @@ test.describe('Walkthrough', () => {
     await login(page, 'Developer', 'developer@example.com', passwordDe('developer'), '/developer')
 
     await expect.poll(() => llamadas, { timeout: 15_000 }).toContain(200)
-    // Un pedido de la pantalla que salga con el token roto recibe 401 y borra la sesión: el `goto`
-    // iría a /login sin pasar por /auth/me.
-    await page.waitForLoadState('networkidle')
 
-    await page.evaluate(() => {
+    // El token se rompe al arrancar el documento nuevo, no en el viejo: la página vieja sigue viva
+    // mientras el `goto` espera el HTML, y un pedido suyo con el token roto recibe 401 y borra la
+    // sesión, así que el documento nuevo iría a /login sin pasar por /auth/me.
+    await page.addInitScript(() => {
+      if (sessionStorage.getItem('e2e.tokenRoto')) return
+      sessionStorage.setItem('e2e.tokenRoto', '1')
       const raw = JSON.parse(sessionStorage.getItem('proptrust.session') ?? '{}')
       sessionStorage.setItem(
         'proptrust.session',
