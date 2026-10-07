@@ -90,32 +90,36 @@ rojo** (era el audit, no el código, pero el freno no existía). El objetivo:
 | **Aiken sigue en CI** | Tarda 21 s en paralelo, no está en el camino crítico, y es el único lugar que verifica sobre un árbol limpio que `plutus.json` está al día. En local corre solo si el commit toca `contracts/` |
 | **`pnpm -r` hace esperar a la API** | Agrupa los paquetes por nivel de dependencia y no arranca un nivel hasta terminar el anterior: `api` (1:25) espera a `web` (2:13) sin depender de ella. En jobs separados desaparece solo; en local, `--parallel` |
 
-#### La tabla: CI ideal
+#### La tabla: CI medido (corrida 37566815612, `3d386d4`, 2026-10-07)
 
-| Job | Runners | Paralelismo adentro | Hoy | Estimado |
-|---|---|---|---|---|
-| `lint` (Biome + `testids`) | 1 | — | dentro de App TS | ~0:35 |
-| `typecheck` (build de `shared` + `tsc`) | 1 | — | ″ | ~0:55 |
-| `test-web` | 1 | Vitest, 4 núcleos | ″ (2:13) | **~2:45** ← crítico |
-| `test-api` | 1 | Vitest, 4 núcleos | ″ (1:25, esperando a web) | ~2:00 |
-| `test-packages` (shared + cardano) | 1 | Vitest, 4 núcleos | ″ (0:30) | ~1:00 |
-| `build` + smoke del `startCommand` | 1 | — | ″ | ~0:45 |
-| `audit` (reporte + gate en crítico, sin install) | 1 | — | ″ | ~0:20 |
-| `e2e` | **3 shards** | Playwright, **1 worker** | 4:17, 1 worker, video en todo, no bloqueante | ~2:00 |
-| `contracts` (fmt + check + build + diff de `plutus.json`) | 1 | — | 0:21 | 0:21 |
-| `semgrep` | 1 | — | 0:26 | 0:26 |
-| **Total** | **12 de 20 lugares** | | **5:16** | **~2:45** |
+| Job | Runners | Paralelismo adentro | Antes (un solo job) | Estimado | **Medido** |
+|---|---|---|---|---|---|
+| `lint` (Biome + `testids`) | 1 | — | dentro de App TS | ~0:35 | **0:21** |
+| `typecheck` (build de `shared` + `tsc`) | 1 | — | ″ | ~0:55 | **0:51** |
+| `test-web` | 1 | Vitest, 4 núcleos | ″ (2:13) | ~2:45 | **2:05** |
+| `test-api` | 1 | Vitest, 4 núcleos | ″ (1:25, esperando a web) | ~2:00 | **2:07** |
+| `test-packages` (shared + cardano) | 1 | Vitest, 4 núcleos | ″ (0:30) | ~1:00 | **0:57** |
+| `build` + smoke del `startCommand` | 1 | — | ″ | ~0:45 | **0:45** |
+| `audit` (reporte + gate en crítico, sin install) | 1 | — | ″ | ~0:20 | **0:26** |
+| `e2e` (bloquea) | **3 shards** | Playwright, **1 worker** | 4:17, 1 worker, video en todo, no bloqueante | ~2:00 | **2:37 / 2:10 / 2:15** ← crítico (37 / 25 / 28 tests) |
+| `e2e-a11y` (no bloquea, `SPEC-112`) | 1 | Playwright, 1 worker | dentro del e2e | — | **2:01** (10 tests) |
+| `contracts` (fmt + check + build + diff de `plutus.json`) | 1 | — | 0:21 | 0:21 | **0:17** |
+| `semgrep` | 1 | — | 0:26 | 0:26 | **0:40** |
+| **Total** | **13 de 20 lugares** | | **5:16** | ~2:45 | **2:41** |
 
-Los 8 lugares libres alcanzan para `reconcile.yml` y para la corrida que queda cancelándose cuando
-llegan dos pushes seguidos. Los estimados se reemplazan por medidos en C3.
+Los 7 lugares libres alcanzan para `reconcile.yml` y para la corrida que queda cancelándose cuando
+llegan dos pushes seguidos. **El crítico pasó a ser el shard 1 del e2e**: Playwright corta por
+cantidad de tests y archivo por archivo, y le tocaron 37 de 90. Cada shard paga ~55 s fijos
+(install, chromium, seed, arranque) antes del primer test. L1 (`fullyParallel`) lo reparte test por
+test. Después vienen `test-api` y `test-web`, a 30 s.
 
 #### Parte C: CI (primero)
 
 | Paso | Qué | Toca | Hecho cuando | Estado |
 |---|---|---|---|---|
 | C1 | `AUTH-ME-001` deja de ser una carrera: el token se rompe con `addInitScript` en el documento nuevo, no en el viejo | `walkthrough.spec.ts` | 50/50 en local y CI verde | ✅ 2026-10-06 — `1d2bdee` |
-| C2 | Render despliega solo con CI en verde: `autoDeployTrigger: checksPass` en los dos servicios | `render.yaml` + `RUNBOOK-deploy.md` §2 | el CLI de Render muestra `checksPass` en los dos, y el deploy del push siguiente arranca **después** de que termina CI, no junto con él | en verificación — `render.yaml` + test en `render-config.test.ts` + RUNBOOK §2 (y su versión en inglés); falta ver el CLI y el primer deploy |
-| C3 | `ci.yml` partido en los 12 jobs de la tabla, todos bloqueantes: el e2e pierde el `continue-on-error`, 3 shards (`--shard=i/3`) con 1 worker, reintentos 0. Se mantienen el filtro de `paths` y el `cancel-in-progress`. Los jobs de tests que lean `@plataforma/shared` compilado lo construyen antes | `ci.yml` + SPEC-015 §5 + `apps/web/CLAUDE.md` | una corrida verde con los 12 jobs y el camino crítico **medido** en esta tabla | en verificación — `ci.yml` en 11 jobs (13 runners: los 3 shards y un job de `a11y.spec.ts` que no bloquea, por `SPEC-112`) + `.github/actions/preparar`; falta la corrida verde y los tiempos medidos |
+| C2 | Render despliega solo con CI en verde: `autoDeployTrigger: checksPass` en los dos servicios | `render.yaml` + `RUNBOOK-deploy.md` §2 | el CLI de Render muestra `checksPass` en los dos, y el deploy del push siguiente arranca **después** de que termina CI, no junto con él | en verificación — `683bc25`: `render.yaml` + test en `render-config.test.ts` + RUNBOOK §2 (y su versión en inglés). El CLI muestra `checksPass` en los dos servicios (2026-10-07). Falta ver un deploy que arranque después de CI: ni `683bc25` (el trigger nuevo se aplicó con ese mismo deploy) ni `3d386d4` (solo CI y `.md`, fuera del `buildFilter`) sirven; el primero que toque código de `apps/` o `packages/` |
+| C3 | `ci.yml` partido en los 12 jobs de la tabla, todos bloqueantes: el e2e pierde el `continue-on-error`, 3 shards (`--shard=i/3`) con 1 worker, reintentos 0. Se mantienen el filtro de `paths` y el `cancel-in-progress`. Los jobs de tests que lean `@plataforma/shared` compilado lo construyen antes | `ci.yml` + SPEC-015 §5 + `apps/web/CLAUDE.md` | una corrida verde con los 12 jobs y el camino crítico **medido** en esta tabla | ✅ 2026-10-07 — `3d386d4`, corrida 37566815612: 13 runners verdes en **2:41** (antes 5:16), 90 tests en los shards (37/25/28) y 10 de `a11y.spec.ts` en su job, que no bloquea por `SPEC-112`. La preparación, en `.github/actions/preparar` |
 | C4 | El video sale de CI y la evidencia tiene su workflow: `video` y `trace` en `retain-on-failure`; `E2E_VIDEO=on` graba todo (`pnpm e2e:evidencia` en local); `evidencia-e2e.yml` con `workflow_dispatch` manual, suite completa con video, artefactos con retención larga y sin secrets; `include-hidden-files: true` en los dos `upload-artifact` | `playwright.config.ts` + `apps/web/package.json` + `.github/workflows/evidencia-e2e.yml` + `ci.yml` | una corrida manual del workflow sube los videos, y una falla provocada en CI sube su trace | pendiente |
 | C5 | La evidencia en inglés, si describe el pipeline | `specs/evidencia-m3/1-repo-ci-tests/` + su PDF | el paquete cuenta los jobs reales | pendiente |
 
