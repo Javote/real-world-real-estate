@@ -83,6 +83,11 @@ busca en el `OnChainEvent` de la misma referencia. El join ya existe (`conTxidDe
 **Una decisión de UX para el developer:** crear un proyecto tarda 18,5 s en Preprod (los 10 mints,
 ya sin `awaitTx`). Decidir si hace falta UI de espera antes de migrar `developer.project.new`.
 
+### IDs con marca
+
+Cada módulo marca sus respuestas y migra los fixtures de sus pantallas a la fábrica tipada, como el
+piloto (`SPEC-615` §IDs con marca). Un módulo no está terminado con sus schemas en `string`.
+
 ## Cuándo está terminado cada módulo
 
 La misma lista que el piloto (`SPEC-615` §Cuándo está terminado): el arnés sin cambios, el router sin

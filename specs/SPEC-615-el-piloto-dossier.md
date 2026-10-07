@@ -66,6 +66,19 @@ funciona en el resto. **Si no, acá se frena** (§La regla de salida).
 - **La vista del dossier, un componente compartido** entre investor y notary (hoy es el clon más
   grande del repo, 57 líneas).
 
+### IDs con marca (dueño, 2026-10-07)
+
+Los IDs con marca de [`SPEC-613`](SPEC-613-los-cimientos-de-los-modulos.md) se adoptan **con cada
+módulo**, y el piloto es el primero:
+
+- **Las respuestas primero.** Cuando el contrato de `dossier` se muda a `shared/contract/`, sus
+  schemas de salida se marcan, **incluidos los `id` primarios**: marcar los `*Id` sin los `id` hace que
+  un `Set<UserId>` no acepte un `u.id` (pasó en `admin.index.tsx` al medirlo).
+- **Los fixtures de la web, con una fábrica tipada por entidad** (`fabrica.dossier({ … })`): recibe
+  strings y devuelve el tipo con marca. Se toca cada fixture una vez, no cada campo, y en el mismo
+  cambio que migra las pantallas del módulo.
+- **Las entradas, con `609`** (`SPEC-609` §Los params de ruta).
+
 ## Cuándo está terminado
 
 1. **Los tests de HTTP del arnés pasan sin cambios.** La única excepción es la que cambie a propósito

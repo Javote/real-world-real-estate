@@ -80,7 +80,7 @@ Si las del día 1–2 no salen en dos días, el calendario se corre lo mismo que
 | # | Decisión | Antes de | Recomendación |
 |---|---|---|---|
 | 9 | La evidencia de M3: se congela o se regenera (`SPEC-613` §La evidencia de M3) | A3, día 11 | **Congelarla**: Catalyst está revisando ese documento. Una copia fechada en `specs/evidencia-m3/`, y `openapi-freshness` pasa a comparar contra un archivo vivo aparte |
-| 10 | Si una notificación que falla frena la mutación (`SPEC-613` §Decisión que pide) | A1, día 3 | La spec no recomienda; hasta que se decida, `notify(trx)` conserva el comportamiento de hoy (*best effort*) |
+| 10 | Si una notificación que falla frena la mutación (`SPEC-613` §La decisión) | A1, día 3 | **Decidido (dueño, 2026-10-07): sí**, `notify` va en el lote de la mutación; se implementa antes de A3 |
 | 11 | El scope de proyecto del notary (`SPEC-615`) | A3, día 11 | Con dos developers reales en los pilotos, conviene acotarlo. Si cambia, la `MATRIZ` cambia en un commit propio, nunca adentro del piloto |
 | 12 | Cuándo se persiste la compilación del dossier (`SPEC-615`) | A3, día 11 | La propuesta de la spec: los GET no escriben y el `masterHash` se fija al firmar |
 | 13 | Con qué se activa el chip *Evidence by stage* del investor (`SPEC-616`) | W4, día 16 | Ver la spec |

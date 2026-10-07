@@ -86,7 +86,7 @@ caminos: ninguno se pierde.
 | Qué | Antes de | Dónde está planteada |
 |---|---|---|
 | **La evidencia de M3 se congela o se regenera.** Desde A3 el OpenAPI cambia (errores declarados en el contrato). Regenerar mantiene verde `openapi-freshness`, pero el documento del repo deja de ser el que se entregó | A3 | [`SPEC-613`](SPEC-613-los-cimientos-de-los-modulos.md) §La evidencia de M3 |
-| **Una notificación que falla, ¿frena la mutación?** Hoy no: `notify` se traga el error | A1, al escribir `notify(trx)` | [`SPEC-613`](SPEC-613-los-cimientos-de-los-modulos.md) §Decisión que pide |
+| ~~**Una notificación que falla, ¿frena la mutación?**~~ **Decidido (dueño, 2026-10-07): sí, `notify` va en el lote de la mutación** | A1, al escribir `notify(trx)` | [`SPEC-613`](SPEC-613-los-cimientos-de-los-modulos.md) §La decisión |
 | **El scope de proyecto del notary**: hoy ve y firma cualquier dossier (auditoría §8 punto 6) | A3 | [`SPEC-615`](SPEC-615-el-piloto-dossier.md) |
 | **Cuándo se persiste la compilación del dossier**: la propuesta es que los GET no escriban y el `masterHash` se fije al firmar | A3 | [`SPEC-615`](SPEC-615-el-piloto-dossier.md) |
 | **Con qué se activa el chip *Evidence by stage*** del investor: hoy solo con el `txid` de `Completed` | W4 (investor) | [`SPEC-616`](SPEC-616-el-resto-modulo-por-modulo.md) |

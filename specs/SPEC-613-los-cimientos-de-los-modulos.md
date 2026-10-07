@@ -31,7 +31,7 @@
    - `audit(ejecutor, entrada)`: la entrada de audit contra un ejecutor (`db`, una transacción o un
      lote). Reemplaza a `writeAuditLog`/`insertAuditLog` **en los módulos nuevos**; las 34 llamadas
      viejas se van con su módulo en A4.
-   - `notify(ejecutor, entrada)`: lo mismo para `Notification`. **Decisión que pide** (abajo).
+   - `notify(ejecutor, entrada)`: lo mismo para `Notification`. **Atómico** (§La decisión, abajo).
    - `anclarConReclamo(...)`: la forma única de *"reclamo en la transacción, anclo después del
      commit, sin esperar el bloque"*, con el test de concurrencia de la Fase 1 (ítem 1) corriendo
      contra ella. `anclarEvidenciaUnaVez` y la firma del dossier pasan a usarla en A3/A4, no acá.
@@ -42,13 +42,25 @@
    alternativa aditiva es un trigger `BEFORE INSERT/UPDATE` por columna; antes se mide producción
    (cero filas fuera de dominio), como se hizo en `SPEC-402`.
 
-## Decisión que pide
+## La decisión: `notify` es atómico, en el lote de la mutación (dueño, 2026-10-07)
 
-**¿Una notificación que falla tiene que frenar la mutación?** Hoy no: `notify` se traga el error.
-Si `notify(trx)` entra en la misma transacción, una notificación que falla deshace la mutación. Las
-dos opciones son defendibles: atómico (no hay mutación sin su aviso) o *best effort* (la mutación es
-lo que importa, el aviso se pierde y queda en el log). **Hasta que el dueño decida, `notify(trx)`
-conserva el comportamiento de hoy**: corre después del commit y no tira.
+**La pregunta era si una notificación que falla tiene que frenar la mutación.** Hoy no: `notify` se
+traga el error. **Desde ahora, sí: va en el mismo lote que la mutación** y, si falla, la deshace.
+
+- **Por qué.** Que falle un INSERT en `Notification` mientras la mutación funciona solo puede pasar por
+  un bug (un `userId` que no existe, una categoría inválida) o porque se cayó la base, y en ese caso
+  la mutación también falla. Tragado, ese bug queda en un `console.error` que nadie lee y el investor
+  no se entera; atómico, es un 500 que llega a Sentry y se arregla.
+- **Cuesta poco**: casi toda mutación puede ir en un `enLote`, y la notificación viaja en el mismo
+  viaje, sin round-trip extra.
+- **La excepción son los flujos que anclan** (firmar el dossier y los que pasan por
+  `anclarConReclamo`): la notificación va en el lote que guarda el resultado del anclaje, no antes.
+- **La forma**: `notify(ejecutor, entradas)` de `platform/` deja de tragarse el error y **devuelve la
+  consulta sin ejecutar**, igual que `audit`. El `notify` de `domain/` (la forma vieja) conserva su
+  `try/catch` hasta que su módulo se migra en A4.
+
+**Estado: abierta.** Se implementa antes de A3, en la misma rama que A1, para que el piloto nazca con
+la forma nueva.
 
 ## Invariantes
 
@@ -85,7 +97,7 @@ En la rama `worktree-fase2-a0-a2`, sin mergear.
 escritos sobre las piezas nuevas: no hay dos implementaciones. La API sigue en 100/100/100/100 (877
 tests), `reclamar-antes-de-anclar.test.ts` pasa sin cambios y el OpenAPI no se movió.
 
-**Dos cosas salieron distinto de lo escrito arriba, y las decide el dueño:**
+**Dos cosas salieron distinto de lo escrito arriba; el dueño las decidió el 2026-10-07:**
 
 1. **Los IDs con marca existen, pero no se adoptaron en los schemas que ya hay.** Medido: marcar los
    `*Id` de `shared` (sin los `id` primarios) da 3 errores en la API y 79 en la web, 73 de ellos en
@@ -94,16 +106,19 @@ tests), `reclamar-antes-de-anclar.test.ts` pasa sin cambios y el OpenAPI no se m
    módulo en A3/A4**, cuando el contrato de cada uno se muda a `shared/contract/` y sus pantallas se
    migran igual. Lo que sí quedó: `Serialized` respeta un primitivo con marca (sin eso, la web veía un
    `string & $brand` como objeto) y los schemas van anotados con `IdConMarca` (inferido, el `.d.ts`
-   desplegaba `string` en un objeto).
+   desplegaba `string` en un objeto). **Decidido así:** las respuestas se marcan con cada módulo
+   (`SPEC-615` §IDs con marca, `SPEC-616`), con fábricas tipadas en los fixtures de la web, y las
+   entradas con `609` (`SPEC-609` §Los params de ruta).
 2. **El reclamo no es una transacción interactiva.** Con cinco `db.transaction()` simultáneas sobre
    libSQL local, las que pierden no esperan: tiran `SQLITE_BUSY: database is locked`. Las dos formas a
    mano funcionan porque el reclamo es **una sola escritura condicional**, atómica sin transacción.
    `anclarConReclamo` recibe eso: una sentencia condicional, o un `enLote` si lleva su audit. **De paso
    aparece un riesgo que ya existe:** las seis rutas que hoy usan `db.transaction()` pueden dar 500 si
-   les llegan dos pedidos a la vez sobre la misma base. No se midió contra Turso.
+   les llegan dos pedidos a la vez sobre la misma base. No se midió contra Turso. **Decidido:** va a
+   su propia spec, [`SPEC-618`](SPEC-618-las-transacciones-interactivas-y-sqlite-busy.md), antes que A3.
 
 **Lo que no se hizo:** los `CHECK` en los enums (la spec pide primero el test y medir producción) y
-`notify` atómico (decisión pendiente, abajo).
+`notify` atómico (decidido, abierto: §La decisión, arriba).
 
 ## Verificación
 

@@ -52,6 +52,13 @@ del front tiene que seguir siendo el REST que documenta la evidencia.**
 7. **`port.contract.test.ts`** conserva solo lo que el tipo no garantiza: el origen `API_BASE` y las
    tres excepciones. Lo demás (verbo, path, filtros y cuerpo) lo garantiza el contrato al compilar.
 
+### Los params de ruta (dueño, 2026-10-07)
+
+Con el cliente saliendo del contrato, las entradas pasan a pedir IDs con marca
+([`SPEC-613`](SPEC-613-los-cimientos-de-los-modulos.md)). Un param de ruta se parsea **una sola vez**,
+en el `params.parse` de la ruta de TanStack (`unitIdSchema.parse(params.unitId)`), y de ahí en
+adelante todo viaja con marca. **Ningún componente hace un cast.**
+
 ## Invariantes
 
 1. **Las requests del navegador son idénticas a las de hoy**: mismo método, path, query y body.
