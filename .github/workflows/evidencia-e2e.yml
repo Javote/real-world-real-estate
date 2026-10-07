@@ -20,8 +20,7 @@ jobs:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
       - uses: ./.github/actions/preparar
 
-      - name: Navegador de Playwright
-        run: pnpm --filter @plataforma/web exec playwright install --with-deps chromium
+      - uses: ./.github/actions/playwright
 
       - name: Base migrada y sembrada
         run: pnpm db:migrate && pnpm db:seed

@@ -141,14 +141,15 @@ saca los ~25 s de chromium. Va a la Fase 2.
 
 #### Fase 2, solo si se mide
 
-- **Acelerar vitest de web**, que manda en el camino crítico: el entorno jsdom suma 79 s y el setup
-  43 s. Probar `happy-dom` u otro pool, solo si no cambia comportamiento.
-- **Partir el job de a11y en 2 shards**: desde L1 es el más lento (2:26 en 37578577995, contra 2:04
-  del shard de e2e más cargado), y Render lo espera aunque no bloquee. Con 2 shards, ~1:45.
-- **Cachear los navegadores de Playwright** en los jobs de e2e (`~/.cache/ms-playwright`, con la versión
-  de Playwright en la llave): ~25 s menos de chromium por job, que es el fijo que hoy decide al más lento.
-- **El e2e de CI sobre el build** (`vite preview` + la API compilada) en vez de `pnpm dev`: sin
-  compilar cada página la primera vez, y más parecido a producción.
+En este orden (dueño, 2026-10-07): partir `a11y` va último, y solo si con los otros tres sigue
+siendo el job más lento.
+
+| Paso | Qué | Toca | Hecho cuando | Estado |
+|---|---|---|---|---|
+| F1 | **Cachear los navegadores de Playwright** (`~/.cache/ms-playwright`, con la versión de Playwright en la llave) e instalar solo el headless shell (`--only-shell`). Del paso de ~26 s, ~16 s son paquetes de apt (`--with-deps`), que no se cachean, y ~10 s la descarga: eso es lo que se gana, no los ~25 s estimados | `.github/actions/playwright` + `ci.yml` + `evidencia-e2e.yml` | una corrida con hit, medida | en curso |
+| F2 | **Vitest de web en `happy-dom`**, salvo los tests de drag and drop, que siguen en jsdom. El entorno jsdom suma 79 s y el setup 43 s | `apps/web/vitest.config.ts` | `test-web` medido, con el 100% de coverage | sin empezar |
+| F3 | **El e2e de CI sobre el build** (`vite preview` + la API compilada) en vez de `pnpm dev`: sin compilar cada página la primera vez, y más parecido a producción | `playwright.config.ts` + `ci.yml` | los shards medidos | sin empezar |
+| F4 | **Partir el job de `a11y` en 2 shards**, solo si después de F1–F3 sigue siendo el más lento (2:26 en 37578577995, contra 2:04 del shard de e2e más cargado): Render lo espera aunque no bloquee | `ci.yml` | se decide midiendo | sin empezar |
 
 #### Descartado, con motivo
 

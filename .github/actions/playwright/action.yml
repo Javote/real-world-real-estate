@@ -1,0 +1,31 @@
+name: Navegador de Playwright
+description: Chromium (solo el headless shell) desde la caché, con la versión de Playwright en la llave; las dependencias de apt, siempre.
+
+runs:
+  using: composite
+  steps:
+    - name: Versión de Playwright
+      id: version
+      shell: bash
+      run: echo "version=$(pnpm --filter @plataforma/web exec playwright --version | awk '{print $2}')" >> "$GITHUB_OUTPUT"
+
+    # La llave cambia con la versión de Playwright, que fija la de chromium: subir una baja otra.
+    - name: Caché de los navegadores
+      id: cache
+      uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6
+      with:
+        path: ~/.cache/ms-playwright
+        key: playwright-${{ runner.os }}-${{ steps.version.outputs.version }}-shell
+
+    # `--only-shell`: los tests corren headless, que usa el headless shell; el Chrome completo no
+    # lo abre nadie. ffmpeg (el video) viene igual.
+    - name: Chromium
+      if: steps.cache.outputs.cache-hit != 'true'
+      shell: bash
+      run: pnpm --filter @plataforma/web exec playwright install --with-deps --only-shell chromium
+
+    # Las librerías del sistema viven fuera de la caché: con hit, se instalan igual.
+    - name: Dependencias del sistema
+      if: steps.cache.outputs.cache-hit == 'true'
+      shell: bash
+      run: pnpm --filter @plataforma/web exec playwright install-deps chromium
