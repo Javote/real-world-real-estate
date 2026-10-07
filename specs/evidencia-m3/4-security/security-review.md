@@ -28,7 +28,7 @@ controls; social engineering; the Cardano client (Lucid Evolution) as a library 
 3. **Dependency scan** — `pnpm audit` run on 2026-09-07 against the 750 dependencies of the
    workspace, with every finding traced to its real chain (`paths`) to tell runtime dependencies
    apart from install-time or build/test ones. **Since 2026-09-11 it runs on every CI run**
-   (`.github/workflows/ci.yml` → job `app`): one step that never fails prints the full report (the
+   (`.github/workflows/ci.yml` → job `audit`; until 2026-10-07, inside `app`): one step that never fails prints the full report (the
    visibility of what is already triaged below, findings 9 and 10), and another one — the real gate
    — fails on **critical**, currently zero.
 4. **Timing side channels** — measured, not estimated, with `test/auth-timing.test.ts` (9

@@ -25,8 +25,8 @@ branches, *"rejects unsigned evidence"*, and error budgets. Each one, with its c
 ## 1 · Repository, CI and tests
 
 - **Test and coverage report**: [`test-report.pdf`](1-repo-ci-tests/test-report.pdf) — tests and
-  coverage for the four TypeScript parts (contracts excluded: see next bullet), plus a separate
-  non-blocking E2E job.
+  coverage for the four TypeScript parts (contracts excluded: see next bullet), plus the E2E suite,
+  which blocks the deploy since 2026-10-07.
 - **Validator coverage report**: [`aiken-coverage-report.pdf`](1-repo-ci-tests/aiken-coverage-report.pdf)
   — Aiken has no line-coverage percentage, so the validator's evidence is a rejection-point → test
   table plus mutation testing, kept as its own document.

@@ -1,4 +1,4 @@
-# Reporte de tests — 2026-09-21 (actualizado 2026-09-24)
+# Reporte de tests — 2026-09-21 (actualizado 2026-09-24 y 2026-10-07)
 
 > Evidencia del Milestone 3 de Catalyst: *"Public GitHub repo(s) … with **CI logs, coverage
 > report** …"* y *"API docs + **test reports with coverage/outcomes**"*
@@ -26,6 +26,32 @@ valores de prueba de CI (`JWT_SECRET: ci-secret-jamas-en-produccion`).
 | Contratos Aiken | `aiken fmt --check` · `aiken check` · `aiken build` y que `plutus.json` commiteado esté al día | ✅ |
 | Static analysis | Semgrep, rulesets `p/security-audit` + `p/owasp-top-ten` | ✅ 128 reglas, 536 archivos, **0 hallazgos** |
 | E2E Playwright | la app entera contra una base migrada y sembrada, en mobile (390 px) y desktop (1440 px) — job **no bloqueante** (`continue-on-error`) | ⚠️ intermitente, ver abajo |
+
+## El pipeline desde el 2026-10-07
+
+La corrida de arriba sigue siendo la fuente de los números de coverage de este reporte. Desde el
+2026-10-07 CI tiene otra forma: **un job por cosa, todos en paralelo, y todos bloquean salvo el de
+accesibilidad**. Render despliega solo si pasan todos los checks del commit (`autoDeployTrigger:
+checksPass`, `RUNBOOK-deploy.md` §2). La primera corrida completa con esa forma es
+**[Run 37569273172](https://github.com/Javote/real-world-real-estate/actions/runs/37569273172)**
+(`22c2975`, 2026-10-07 03:59 UTC), con copia en
+[`ci-run-37569273172.log`](evidencia-m3/1-repo-ci-tests/ci-run-37569273172.log):
+
+| Job | Qué corre | Tiempo | Resultado |
+|---|---|---|---|
+| Lint + test IDs | Biome · trazabilidad de test IDs | 0:24 | ✅ |
+| Typecheck | `tsc` en todo el workspace | 0:36 | ✅ |
+| Tests + coverage (web) | vitest con umbral | 1:31 | ✅ 1774/1774 · 100% statements |
+| Tests + coverage (api) | vitest con umbral | 1:16 | ✅ 792 passed · 3 skipped · 100% statements |
+| Tests + coverage (shared + cardano) | vitest con umbral | 0:57 | ✅ 241/241 y 148/148 · 100% statements |
+| Build + arranque compilado | `pnpm build` y el `startCommand` real de Render | 0:46 | ✅ |
+| Dependency scan | `pnpm audit`: reporte completo y gate en crítico | 0:15 | ✅ 0 críticos (el reporte lista 6 low, 21 moderate, 10 high) |
+| E2E Playwright, 4 shards | la app entera, mobile y desktop, cada shard con su base sembrada | 2:35 · 1:53 · 2:08 · 1:33 | ✅ 90/90 (29 · 18 · 27 · 16) |
+| E2E accesibilidad | axe en el navegador real; **no bloquea** (`SPEC-112`) | 2:26 | ✅ 10/10 |
+| Contratos Aiken | `fmt --check` · `check` · `build` · `plutus.json` al día | 0:18 | ✅ 102/102 |
+| Static analysis | Semgrep, `p/security-audit` + `p/owasp-top-ten` | 0:37 | ✅ 322 reglas, 629 archivos, **0 hallazgos** |
+
+La corrida entera tardó **2:40**; con el job único de antes, 5:16.
 
 ## Resultados por paquete
 
@@ -90,7 +116,7 @@ transacción tiene al menos un test que la dispara.
   `baseline-browser-mapping`). El triage está en
   [`SECURITY-REVIEW-2026-09.md`](SECURITY-REVIEW-2026-09.md).
 
-## El E2E, intermitente bajo carga de CI (no bloqueante)
+## El E2E del 2026-09-24, intermitente y no bloqueante (ya no es así)
 
 Job separado y explícitamente **no bloqueante** (`continue-on-error: true` en `ci.yml`) desde antes
 de este cierre — la pregunta de cuándo volverlo bloqueante es de `SPEC-015` §5, no de este ítem.
@@ -103,6 +129,12 @@ recursos del runner compartido de GitHub Actions (dos navegadores, mobile y desk
 app entera), no una regresión de este commit: ninguno de los cambios de `SPEC-019` toca `e2e/` ni el
 código que esos specs ejercitan. **Localmente, sobre el mismo código, la suite corre completa**
 (criterio de cierre de `SPEC-019` verificado con `pnpm verify:all` en verde antes de este push).
+
+**Desde el 2026-10-07 el E2E bloquea.** En las 60 corridas anteriores al cambio, todas las fallas
+del E2E fueron un solo test, `AUTH-ME-001`, por una carrera del propio test: rompía el token en la
+página cargada mientras el `goto` traía la nueva, y un pedido de la vieja borraba la sesión antes de
+tiempo. Se arregló en `1d2bdee` (50 de 50 en local). La suite corre en 4 shards, cada uno con su
+base, con 1 worker y sin reintentos.
 
 ## Un test intermitente, declarado
 

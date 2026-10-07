@@ -28,7 +28,7 @@ código controla; ingeniería social; el cliente Cardano (Lucid Evolution) como 
 3. **Escaneo de dependencias** — `pnpm audit` corrido el 2026-09-07 contra las 750 dependencias del
    workspace, con cada hallazgo trazado a su cadena real (`paths`) para distinguir dependencia de
    runtime de dependencia de instalación o de build/test. **Desde el 2026-09-11 corre en cada CI**
-   (`.github/workflows/ci.yml` → job `app`), no solo puntual: un paso que nunca falla imprime el
+   (`.github/workflows/ci.yml` → job `audit`; hasta el 2026-10-07, dentro de `app`), no solo puntual: un paso que nunca falla imprime el
    reporte completo (la visibilidad de lo ya triado abajo, hallazgos 9 y 10) y otro que sí falla —
    el gate real — corta en **crítico**, hoy en cero.
 4. **Timing de canales laterales** — medido, no estimado, con `test/auth-timing.test.ts` (9 corridas

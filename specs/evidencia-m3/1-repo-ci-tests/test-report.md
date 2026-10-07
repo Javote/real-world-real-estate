@@ -20,6 +20,31 @@ CI test values (`JWT_SECRET: ci-secret-jamas-en-produccion`, "never in productio
 | Static analysis | Semgrep, rulesets `p/security-audit` + `p/owasp-top-ten` | ✅ 128 rules, 536 files, **0 findings** |
 | E2E Playwright | the whole app against a migrated and seeded database, on mobile (390 px) and desktop (1440 px) — **non-blocking** job (`continue-on-error`) | ⚠️ flaky, see below |
 
+## The pipeline since 2026-10-07
+
+The run above is still the source of this report's coverage numbers. Since 2026-10-07 CI has a
+different shape: **one job per concern, all in parallel, and all blocking except accessibility**.
+Render deploys only if every check on the commit passes (`autoDeployTrigger: checksPass`,
+[runbook](../5-ops/runbook.pdf) §2). The first full run with that shape is
+**[Run 37569273172](https://github.com/Javote/real-world-real-estate/actions/runs/37569273172)**
+(`22c2975`, 2026-10-07 03:59 UTC), copied in [`ci-run-37569273172.log`](ci-run-37569273172.log):
+
+| Job | What it runs | Time | Result |
+|---|---|---|---|
+| Lint + test IDs | Biome · test ID traceability | 0:24 | ✅ |
+| Typecheck | `tsc` across the workspace | 0:36 | ✅ |
+| Tests + coverage (web) | vitest with threshold | 1:31 | ✅ 1774/1774 · 100% statements |
+| Tests + coverage (api) | vitest with threshold | 1:16 | ✅ 792 passed · 3 skipped · 100% statements |
+| Tests + coverage (shared + cardano) | vitest with threshold | 0:57 | ✅ 241/241 and 148/148 · 100% statements |
+| Build + compiled start | `pnpm build` and Render's real `startCommand` | 0:46 | ✅ |
+| Dependency scan | `pnpm audit`: full report and critical gate | 0:15 | ✅ 0 critical (the report lists 6 low, 21 moderate, 10 high) |
+| E2E Playwright, 4 shards | the whole app, mobile and desktop, each shard with its own seeded database | 2:35 · 1:53 · 2:08 · 1:33 | ✅ 90/90 (29 · 18 · 27 · 16) |
+| E2E accessibility | axe in a real browser; **non-blocking** by decision (SPEC-112) | 2:26 | ✅ 10/10 |
+| Aiken contracts | `fmt --check` · `check` · `build` · `plutus.json` up to date | 0:18 | ✅ 102/102 |
+| Static analysis | Semgrep, `p/security-audit` + `p/owasp-top-ten` | 0:37 | ✅ 322 rules, 629 files, **0 findings** |
+
+The whole run took **2:40**; with the single job it replaced, 5:16.
+
 ## Results per package
 
 | Package | What it covers | Tests | Result |
@@ -72,7 +97,7 @@ rejects a transaction has at least one test that triggers it.
   the `@tanstack/router-plugin` chain (`browserslist`, `baseline-browser-mapping`). The triage is in
   the [security review](../4-security/security-review.pdf).
 
-## The E2E job, flaky under CI load (non-blocking)
+## The E2E job on 2026-09-24, flaky and non-blocking (no longer the case)
 
 A separate job, explicitly **non-blocking** (`continue-on-error: true` in `ci.yml`). Running this
 same suite twice against the same commit: the first run failed 4 of 90 (86 passed), the second
@@ -82,6 +107,12 @@ failed 5 of 90 (85 passed), with **different tests** failing each time
 `expect(locator).toBeVisible() failed`), not a wrong business assertion. It is resource contention
 on GitHub Actions' shared runner (two browsers, mobile and desktop, driving the whole app), not a
 code defect: **locally, against the same code, the suite runs clean.**
+
+**Since 2026-10-07 the E2E suite blocks.** Over the 60 runs before the change, every E2E failure was
+a single test, `AUTH-ME-001`, from a race in the test itself: it broke the token on the loaded page
+while `goto` fetched the new one, and a request from the old page cleared the session too early.
+Fixed in `1d2bdee` (50 out of 50 locally). The suite runs in 4 shards, each with its own database,
+with 1 worker and no retries.
 
 ## A flaky test, disclosed
 

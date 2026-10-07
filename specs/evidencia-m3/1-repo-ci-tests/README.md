@@ -7,9 +7,10 @@
 
 | File | What it is |
 |---|---|
-| [`test-report.pdf`](test-report.pdf) | The test and coverage report: unit/integration tests across contracts, API, packages and web app (plus a separate, non-blocking E2E job), and coverage per package |
+| [`test-report.pdf`](test-report.pdf) | The test and coverage report: unit/integration tests across contracts, API, packages and web app, the E2E suite (blocking since 2026-10-07, in 4 shards), coverage per package, and the CI pipeline as it runs today |
 | [`aiken-coverage-report.pdf`](aiken-coverage-report.pdf) | The validator's own coverage evidence: every `expect` mapped to the test that aborts there, and mutation testing on every other rejection check. **Kept separate from `test-report.pdf` on purpose**: Aiken has no line-coverage percentage like `vitest`/`v8` does for the TypeScript parts, so its evidence takes a different shape — this document explains why in its first section |
 | [`ci-run-36004503722.log`](ci-run-36004503722.log) | Full copy of the CI run `test-report.pdf` is based on ([run 36004503722](https://github.com/Javote/real-world-real-estate/actions/runs/36004503722) on GitHub Actions), kept here because GitHub deletes Actions logs after 90 days. Test names in it are in Spanish; the log is kept verbatim |
+| [`ci-run-37569273172.log`](ci-run-37569273172.log) | Full copy of the first CI run with today's pipeline ([run 37569273172](https://github.com/Javote/real-world-real-estate/actions/runs/37569273172), 2026-10-07): one job per concern, E2E in 4 shards, every job green in 2:40. Same reason and same format as the one above |
 
 ## Covered elsewhere
 
