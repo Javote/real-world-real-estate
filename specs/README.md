@@ -63,6 +63,86 @@ aprobación explícita.
 
 ## Lo que sigue
 
+### Primero: CI como filtro y deploy cerrado (dueño, 2026-10-06)
+
+**Va antes que A0.2.** Hoy el filtro es el `verify:all` local antes de cada commit (4:12 medidos) y
+CI repite casi todo después (5:16). Pero Render no mira CI: los dos servicios estaban en
+`autoDeployTrigger: commit`, y **los 6 commits de SPEC-614 del 2026-10-06 se desplegaron con CI en
+rojo** (era el audit, no el código, pero el freno no existía). El objetivo:
+
+- **Ningún deploy con CI en rojo**, bajo ningún concepto.
+- **Camino crítico de CI de 5:16 a ~2:45.**
+- **Pre-commit local de 4:12 a ~1 min**, y el e2e local corriendo en paralelo con CI.
+- **La evidencia (video) fuera del camino de cada commit.**
+
+#### Los fundamentos
+
+| Qué | Por qué |
+|---|---|
+| **`autoDeployTrigger: checksPass`** en `propnexus-api` y `propnexus-web` | Leído en la doc de Render (2026-10-06): espera **todos** los checks del commit; despliega si cada uno termina en `success`, `neutral` o `skipped`, y **no despliega si alguno falla o si no encuentra ninguno**. Cierra por defecto. Un commit cancelado por `cancel-in-progress` no se despliega solo: sale con el siguiente, que lo incluye. Un commit que CI saltea (solo `.md`, imágenes…) y que el `buildFilter` incluye (una imagen de `apps/web/public/`) no se despliega hasta el próximo commit con código: el lado seguro |
+| **El e2e bloquea** (dueño) | El `continue-on-error` solo evita que falle el *workflow*: el check del job igual sale `failure` (visto en la corrida 37549629211), así que con `checksPass` frenaría el deploy de todas formas. Se vuelve bloqueante a propósito, como ya preveía SPEC-015 §5 |
+| **Reintentos: 0** | Las 7 fallas del e2e en las 60 corridas previas eran **un solo test**, `AUTH-ME-001`, y era una carrera del test, no del producto: ✅ arreglado en `1d2bdee` (50/50 en local). Con eso, cualquier falla del e2e quiere decir algo; un reintento escondería la próxima carrera |
+| **Paralelizar con jobs, no exprimir una máquina** | El repo es público: minutos ilimitados, runners de **4 vCPU / 16 GB** y **20 jobs simultáneos** (plan Free). Un job más no cuesta nada |
+| **E2E en CI: shards, con 1 worker** | Un shard es otra máquina con su propio SQLite sembrado y su propio `pnpm dev`: aísla los datos sin tocar ningún test. Playwright recomienda textual *"workers to '1' in CI environments to prioritize stability"* y shards para paralelizar en CI: en 4 vCPU compartidos con el servidor, más navegadores dan tests inestables, y con `checksPass` cada uno frena un deploy |
+| **3 shards, no 4** | Cada shard paga ~50 s fijos (install 23 s, chromium 21 s, seed y arranque ~6 s) más su parte de ~200 s de tests: 2 → ~2:30, 3 → ~2:00, 4 → ~1:40. Lo que importa es no ser el job más lento (`test-web`, ~2:45): con 2 quedaría demasiado cerca, y el shard al que le toque `a11y` (50 s en 10 tests) se pasaría |
+| **Workers de Playwright: para local** | Un worker es otro navegador en la misma máquina, contra el mismo servidor y la misma base. En la Mac (i7 de 6 núcleos y 12 hilos, 16 GB) arranca en 4, no en los 6 del default: conviven `pnpm dev`, el editor y el navegador |
+| **Video solo como evidencia** | El criterio 13 se cerró con el video narrado de `scripts/video-walkthrough/`; los `video.webm` de CI no los cita nada de `evidencia-m3/`. Además, **CI no sube ningún artefacto**: `upload-artifact` ≥ 4.4 ignora los directorios ocultos y la ruta es `e2e/.artifacts/` (el paso termina en verde sin subir nada) |
+| **Aiken sigue en CI** | Tarda 21 s en paralelo, no está en el camino crítico, y es el único lugar que verifica sobre un árbol limpio que `plutus.json` está al día. En local corre solo si el commit toca `contracts/` |
+| **`pnpm -r` hace esperar a la API** | Agrupa los paquetes por nivel de dependencia y no arranca un nivel hasta terminar el anterior: `api` (1:25) espera a `web` (2:13) sin depender de ella. En jobs separados desaparece solo; en local, `--parallel` |
+
+#### La tabla: CI ideal
+
+| Job | Runners | Paralelismo adentro | Hoy | Estimado |
+|---|---|---|---|---|
+| `lint` (Biome + `testids`) | 1 | — | dentro de App TS | ~0:35 |
+| `typecheck` (build de `shared` + `tsc`) | 1 | — | ″ | ~0:55 |
+| `test-web` | 1 | Vitest, 4 núcleos | ″ (2:13) | **~2:45** ← crítico |
+| `test-api` | 1 | Vitest, 4 núcleos | ″ (1:25, esperando a web) | ~2:00 |
+| `test-packages` (shared + cardano) | 1 | Vitest, 4 núcleos | ″ (0:30) | ~1:00 |
+| `build` + smoke del `startCommand` | 1 | — | ″ | ~0:45 |
+| `audit` (reporte + gate en crítico, sin install) | 1 | — | ″ | ~0:20 |
+| `e2e` | **3 shards** | Playwright, **1 worker** | 4:17, 1 worker, video en todo, no bloqueante | ~2:00 |
+| `contracts` (fmt + check + build + diff de `plutus.json`) | 1 | — | 0:21 | 0:21 |
+| `semgrep` | 1 | — | 0:26 | 0:26 |
+| **Total** | **12 de 20 lugares** | | **5:16** | **~2:45** |
+
+Los 8 lugares libres alcanzan para `reconcile.yml` y para la corrida que queda cancelándose cuando
+llegan dos pushes seguidos. Los estimados se reemplazan por medidos en C3.
+
+#### Parte C: CI (primero)
+
+| Paso | Qué | Toca | Hecho cuando | Estado |
+|---|---|---|---|---|
+| C1 | `AUTH-ME-001` deja de ser una carrera: el token se rompe con `addInitScript` en el documento nuevo, no en el viejo | `walkthrough.spec.ts` | 50/50 en local y CI verde | ✅ 2026-10-06 — `1d2bdee` |
+| C2 | Render despliega solo con CI en verde: `autoDeployTrigger: checksPass` en los dos servicios | `render.yaml` + `RUNBOOK-deploy.md` §2 | el CLI de Render muestra `checksPass` en los dos, y el deploy del push siguiente arranca **después** de que termina CI, no junto con él | pendiente |
+| C3 | `ci.yml` partido en los 12 jobs de la tabla, todos bloqueantes: el e2e pierde el `continue-on-error`, 3 shards (`--shard=i/3`) con 1 worker, reintentos 0. Se mantienen el filtro de `paths` y el `cancel-in-progress`. Los jobs de tests que lean `@plataforma/shared` compilado lo construyen antes | `ci.yml` + SPEC-015 §5 + `apps/web/CLAUDE.md` | una corrida verde con los 12 jobs y el camino crítico **medido** en esta tabla | pendiente |
+| C4 | El video sale de CI y la evidencia tiene su workflow: `video` y `trace` en `retain-on-failure`; `E2E_VIDEO=on` graba todo (`pnpm e2e:evidencia` en local); `evidencia-e2e.yml` con `workflow_dispatch` manual, suite completa con video, artefactos con retención larga y sin secrets; `include-hidden-files: true` en los dos `upload-artifact` | `playwright.config.ts` + `apps/web/package.json` + `.github/workflows/evidencia-e2e.yml` + `ci.yml` | una corrida manual del workflow sube los videos, y una falla provocada en CI sube su trace | pendiente |
+| C5 | La evidencia en inglés, si describe el pipeline | `specs/evidencia-m3/1-repo-ci-tests/` + su PDF | el paquete cuenta los jobs reales | pendiente |
+
+#### Parte L: local (después)
+
+| Paso | Qué | Toca | Hecho cuando | Estado |
+|---|---|---|---|---|
+| L1 | El seed precarga datos propios por spec y el e2e corre en paralelo. **Primero medir**: correr con 4 workers y ver qué choca. Después precargar exactamente eso: los specs que escriben (`developer-units`, `developer-invite`, `evidence-flow`, `admin-certifier-invite`, hoy todos sobre el primer proyecto de la lista) reciben su propio proyecto o etapa por proyecto de Playwright, encontrado por un identificador fijo. Se precarga la condición previa, nunca la acción que el test prueba. `fullyParallel: true`; `workers` en 1 para CI y 4 para local. De paso, los shards de CI reparten test por test y `a11y` deja de cargar uno solo | `apps/api/src/db/seed.ts` + esos 4 specs + `playwright.config.ts` | el e2e local con 4 workers pasa 10 veces seguidas (~1 min contra ~3:30) | pendiente |
+| L2 | El flujo local nuevo. `pnpm precommit` = `biome check --write` + `typecheck` + `vitest --changed` sin coverage, y Aiken solo si se tocó `contracts/` (~1 min). Orden de trabajo: `pnpm precommit && git commit && git push`; después, `gh run watch` en background y el e2e local en paralelo (antes del push, los specs relacionados; después, la suite entera). **Si CI queda rojo, arreglarlo es lo siguiente**, antes de otra feature: el deploy está frenado y lo que se acumula no llega. `verify:all` queda para demos o si CI no responde, con `test:coverage --parallel` (~85 s menos). Se reescribe la regla de `CLAUDE.md` que obliga `verify:all` antes de cada commit, y la excepción de los commits sin código desaparece | `package.json` raíz + `CLAUDE.md` §Commits y ramas y §Comandos | un ciclo completo con el flujo nuevo, medido | pendiente |
+
+#### Fase 2, solo si se mide
+
+- **Acelerar vitest de web**, que manda en el camino crítico: el entorno jsdom suma 79 s y el setup
+  43 s. Probar `happy-dom` u otro pool, solo si no cambia comportamiento.
+- **El e2e de CI sobre el build** (`vite preview` + la API compilada) en vez de `pnpm dev`: sin
+  compilar cada página la primera vez, y más parecido a producción.
+
+#### Descartado, con motivo
+
+| Qué | Por qué no |
+|---|---|
+| Shards de vitest web | El umbral del 100% se mide sobre el total: hace falta un job más, después, que junte los reportes (~0:40). ~2:20 contra ~2:45, a cambio de tres jobs y un merge de coverage |
+| E2E selectivo en CI (solo lo tocado) | No adelanta el deploy (el e2e no es el job más lento); `--only-changed` sigue los imports de los specs, que no importan la app; `shared`, la API, el router, la auth y el diccionario tocan todo (el cambio de loaders de SPEC-614 rompió `AUTH-ME-001`); y con `checksPass` un test que no corrió no frena nada. **En local sí** |
+| Un bot de Biome commiteando a `main` | Desincroniza el checkout en cada push, pide permiso de escritura y dispara otra corrida. Arreglar cuesta 2 s en el pre-commit; CI solo verifica |
+| Más workers de Playwright en CI | Playwright recomienda 1, y un test inestable frena un deploy. Si algún día se mide estable con 2, se sube |
+| Sacar Aiken de CI | No está en el camino crítico y es el único lugar que verifica `plutus.json` |
+
 **M3: el plan está cerrado entero; falta entregar y que Catalyst acepte.** Una sola cosa depende de
 esa aceptación: **el criterio 3 se cierra por documentación** (D-090, D-091 y D-092), sin construir
 signers ni percentages, por la regla de precedencia del dueño (entregables M2/M3 sobre el SOM,
@@ -108,7 +188,7 @@ El plan, el acople y la regla de salida están en [`SPEC-611`](SPEC-611-la-migra
 (D-102); el estado, acá. Arranca el 2026-10-02 con A0, a pedido del dueño, con lo que queda abierto de
 la Fase 1 (ítems 6 y 9) en paralelo: ninguno de los dos la frena.
 
-**Lo próximo (dueño, 2026-10-06): A0.2, A1 y A2** (`614` está hecha). Los hace el dueño, en ese orden; desde `609` se suma una segunda persona en la web y se
+**Lo próximo (dueño, 2026-10-06): el plan de CI de arriba, y después A0.2, A1 y A2** (`614` está hecha). Los hace el dueño, en ese orden; desde `609` se suma una segunda persona en la web y se
 alternan (el reparto, en `SPEC-611` §Quién hace qué). `614` va primero porque no espera a la API y
 es lo que más se nota: volver a una pantalla deja de pedir todo de nuevo (Paso 1) y los datos salen
 con el hover (Paso 2). Las cascadas de pedidos y la forma con Suspense siguen en W3/W4.
