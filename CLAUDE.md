@@ -399,3 +399,5 @@ que la arregló (las anteriores al 2026-10-01, en
   se pone rojo (D-076).
 - **Si CI agrega un paso, `pnpm verify` lo espeja**: un verde local que CI no confirma es falso.
 - **Las capturas del developer no coinciden en el header**: gana D-074, no la captura.
+- **Un workflow manual o programado publica su check en el commit donde corre** (`evidencia-e2e.yml`,
+  `reconcile.yml`): si ese commit todavía espera su deploy y el workflow falla, Render no lo despliega.

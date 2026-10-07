@@ -236,12 +236,17 @@ jobs:
           # de `playwright.config.ts`.
           LOGIN_RATE_LIMIT_MAX: "100000"
 
+      # Trace, video y captura de lo que falla, más el reporte. `.artifacts`
+      # empieza con punto, y `upload-artifact` ≥ 4.4 ignora los directorios
+      # ocultos si no se le pide: sin `include-hidden-files` el paso queda
+      # verde sin subir nada.
       - name: Subir artefactos
         if: always()
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         with:
           name: e2e-artifacts-${{ matrix.shard }}
           path: apps/web/e2e/.artifacts/
+          include-hidden-files: true
           retention-days: 14
 
   # axe en el navegador real (`a11y.spec.ts`). **No bloquea** (SPEC-112: ninguna
@@ -280,6 +285,7 @@ jobs:
         with:
           name: e2e-artifacts-a11y
           path: apps/web/e2e/.artifacts/
+          include-hidden-files: true
           retention-days: 14
 
   contracts:

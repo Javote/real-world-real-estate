@@ -12,7 +12,8 @@ export default defineConfig({
   reporter: [['list'], ['html', { outputFolder: './e2e/.artifacts/report', open: 'never' }]],
   use: {
     baseURL: BASE_URL,
-    video: 'on',
+    // El video de todo es evidencia, no diagnóstico: solo con `E2E_VIDEO=on` (`e2e:evidencia`).
+    video: process.env.E2E_VIDEO === 'on' ? 'on' : 'retain-on-failure',
     trace: 'retain-on-failure',
     screenshot: 'only-on-failure'
   },

@@ -1,0 +1,46 @@
+name: Evidencia E2E (video)
+
+# La suite e2e entera, a11y incluido, con video de cada test: lo que CI dejó
+# de grabar en cada push porque es evidencia y no diagnóstico. Se corre a mano
+# cuando hace falta evidencia fresca (Actions → este workflow → Run workflow).
+# Sin secrets: misma base sembrada que CI.
+#
+# Corre sobre la punta de la rama y publica su check en ese commit. Si ese
+# commit todavía espera su deploy y esto falla, Render no lo despliega
+# (`checksPass`): correrlo con el CI del commit ya terminado.
+
+on:
+  workflow_dispatch: {}
+
+jobs:
+  evidencia:
+    name: E2E completo con video
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+      - uses: ./.github/actions/preparar
+
+      - name: Navegador de Playwright
+        run: pnpm --filter @plataforma/web exec playwright install --with-deps chromium
+
+      - name: Base migrada y sembrada
+        run: pnpm db:migrate && pnpm db:seed
+        env:
+          DATABASE_URL: file:./.data/dev.db
+          JWT_SECRET: ci-secret-jamas-en-produccion
+
+      - name: E2E con video
+        run: pnpm --filter @plataforma/web e2e:evidencia
+        env:
+          DATABASE_URL: file:./.data/dev.db
+          JWT_SECRET: ci-secret-jamas-en-produccion
+          LOGIN_RATE_LIMIT_MAX: "100000"
+
+      - name: Subir capturas, videos y reporte
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: e2e-evidencia
+          path: apps/web/e2e/.artifacts/
+          include-hidden-files: true
+          retention-days: 90
