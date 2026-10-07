@@ -95,7 +95,7 @@ terminó (`SPEC-216`), y lo que quedó es una forma que nadie eligió como desti
 
 ## A2, hecho el 2026-10-07
 
-En la rama `worktree-fase2-a0-a2`, sin mergear. Ninguna ruta cambió de dueño y el OpenAPI no se movió.
+En `main` desde el 2026-10-07 (`a381d14`) y en producción con `fb81ba9`. Ninguna ruta cambió de dueño y el OpenAPI no se movió.
 
 | Pieza | Dónde |
 |---|---|

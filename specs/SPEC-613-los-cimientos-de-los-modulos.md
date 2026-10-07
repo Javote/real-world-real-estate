@@ -81,7 +81,7 @@ regenerando.
 
 ## A1, hecho el 2026-10-07
 
-En la rama `worktree-fase2-a0-a2`, sin mergear.
+En `main` desde el 2026-10-07 (`0953233`) y en producción con `fb81ba9`.
 
 | Pieza | Dónde | Cómo se verifica |
 |---|---|---|

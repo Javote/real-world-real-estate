@@ -81,6 +81,14 @@ developer y volver al detalle del proyecto muestra el estado nuevo sin recargar.
   de otro token.
 - **`claveDeError(err, { porCodigo, generica })`** en `api/claveDeError.ts`, probada contra los
   status y `code` de hoy; ninguna pantalla la usa todavía (W3/W4). Suma la clave `error.generic`.
+- **La verificación a mano, el 2026-10-07**, con Playwright contra la app local y la base recién
+  sembrada: el certifier observa una etapa por la API; el developer abre el detalle del proyecto
+  (`GET /developer/projects/:id` con la etapa `Observed`), va a Avance por la navegación y la
+  reanuda (`PATCH /stages/:id/state` y un `GET /developer/progress`), y vuelve atrás sin recargar
+  la página. Al volver sale un `GET /developer/projects/:id` con la etapa `InProgress`. Esa query
+  es de 30 s (`SIN_ANCLAJE`): el pedido sale porque `etapaCambiada` invalidó `['proyecto']`, no por
+  la ventana corta. El detalle del developer solo muestra el avance en %, que no cambia entre
+  `Observed` e `InProgress`: lo que se mide es el pedido y su respuesta.
 
 ## Paso 2 — los loaders que precargan, sin tocar los componentes
 

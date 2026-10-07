@@ -185,7 +185,7 @@ aparte (2026-10-02):
 
 ## A0.2, medido el 2026-10-07
 
-En la rama `worktree-fase2-a0-a2`, sin mergear. `platform/config.ts` tiene 27 variables, cada una con
+En `main` desde el 2026-10-07 (`5f07934`) y en producción con `fb81ba9`. `platform/config.ts` tiene 27 variables, cada una con
 el parseo literal que tenía en su archivo (`parseInt` con fallback, `??` contra `||`, `=== "true"`);
 `platform-config.test.ts` fija 55 casos (ausente, vacía e inválida) y exige uno por campo. Las funciones
 que ya recibían el entorno por parámetro (`trustProxyHops(env)`, `urlDeLaBase(env)`…) lo siguen
@@ -207,8 +207,8 @@ endpoint OTLP locales: **653 requests idénticas** (status y cuerpo, sin ids ni 
 `/health` 200.
 
 **No corrido:** `test:s3`, porque Docker no estaba levantado; el driver S3 queda cubierto por
-`storage-mocked` y `storage-defaults-coverage`. Falta también lo de producción (§Verificación 6),
-después del merge.
+`storage-mocked` y `storage-defaults-coverage`. De lo de producción (§Verificación 6), `/health` da 200
+con `fb81ba9`; faltan un login y un trace nuevo en Tempo.
 
 ## Rollback
 
