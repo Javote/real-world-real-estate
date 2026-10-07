@@ -1,7 +1,8 @@
 import { useQuery } from '@tanstack/react-query'
 import { createFileRoute, useNavigate } from '@tanstack/react-router'
 import { Plus } from 'lucide-react'
-import { api, projectCoverUrl } from '#/api/port'
+import { projectCoverUrl } from '#/api/port'
+import { proyectoQueries } from '#/api/queries'
 import { Loading } from '#/components/domain/Loading'
 import { SecondaryButton } from '#/components/domain/PrimaryButton'
 import { ProjectCard } from '#/components/domain/ProjectCard'
@@ -17,10 +18,7 @@ function DeveloperProjects() {
   const { t, locale } = useTranslation()
   const navigate = useNavigate()
 
-  const { data: proyectos, isPending } = useQuery({
-    queryKey: ['developer', 'projects'],
-    queryFn: api.listDeveloperProjects
-  })
+  const { data: proyectos, isPending } = useQuery(proyectoQueries.delDeveloper())
 
   return (
     <PanelLayout

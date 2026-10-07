@@ -1,6 +1,6 @@
 import { useQuery } from '@tanstack/react-query'
 import { createFileRoute } from '@tanstack/react-router'
-import { api } from '#/api/port'
+import { certificadoQueries } from '#/api/queries'
 import { HashChip } from '#/components/domain/HashChip'
 import { Loading } from '#/components/domain/Loading'
 import { StatusPill } from '#/components/domain/StatusPill'
@@ -15,10 +15,7 @@ export const Route = createFileRoute('/certifier/issued')({ component: IssuedCer
 function IssuedCertificates() {
   const { t, locale } = useTranslation()
 
-  const { data, isPending } = useQuery({
-    queryKey: ['certifier', 'certificates'],
-    queryFn: () => api.listCertificates()
-  })
+  const { data, isPending } = useQuery(certificadoQueries.lista())
 
   return (
     <PanelLayout title={t('certifier.issued.title')} context={t('certifier.issued.context')}>

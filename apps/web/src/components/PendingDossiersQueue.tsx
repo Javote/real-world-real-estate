@@ -1,6 +1,6 @@
 import { useQuery } from '@tanstack/react-query'
 import { useNavigate } from '@tanstack/react-router'
-import { api } from '#/api/port'
+import { dossierQueries } from '#/api/queries'
 import { Loading } from '#/components/domain/Loading'
 import { SecondaryButton } from '#/components/domain/PrimaryButton'
 import { ProgressBar } from '#/components/domain/ProgressBar'
@@ -10,8 +10,7 @@ export function PendingDossiersQueue() {
   const { t } = useTranslation()
   const navigate = useNavigate()
   const { data: pendientes, isPending } = useQuery({
-    queryKey: ['notary', 'pending'],
-    queryFn: api.getNotaryPendingDossiers
+    ...dossierQueries.pendientes()
   })
 
   if (isPending) return <Loading />

@@ -2,7 +2,8 @@ import { useQuery } from '@tanstack/react-query'
 import { createFileRoute, useNavigate } from '@tanstack/react-router'
 import { Building2, CalendarClock, KeyRound, Users } from 'lucide-react'
 import { useState } from 'react'
-import { api, projectCoverUrl } from '#/api/port'
+import { projectCoverUrl } from '#/api/port'
+import { proyectoQueries } from '#/api/queries'
 import type { DeveloperProfile } from '#/api/types'
 import { Loading } from '#/components/domain/Loading'
 import { SecondaryButton } from '#/components/domain/PrimaryButton'
@@ -26,8 +27,7 @@ function InvestorProjectDeveloper() {
   const [expandida, setExpandida] = useState(false)
 
   const { data, error, isPending } = useQuery({
-    queryKey: ['project', projectId, 'developer'],
-    queryFn: () => api.getProjectDeveloper(projectId),
+    ...proyectoQueries.desarrolladora(projectId),
     retry: reintentarSiNoEsAusencia
   })
 

@@ -10,6 +10,7 @@ import type { LucideIcon } from 'lucide-react'
 import { FileCheck2, FileText, ShieldCheck, Signature } from 'lucide-react'
 import { useState } from 'react'
 import { api } from '#/api/port'
+import { invalidaciones, invalidar, invitacionQueries, notificacionQueries } from '#/api/queries'
 import type { InvestorInvitation } from '#/api/types'
 import type { AuditCategory } from '#/components/domain/AuditEventCard'
 import { CategoryChip } from '#/components/domain/Chips'
@@ -71,8 +72,7 @@ function InvestorNotifications() {
     isPending,
     isPlaceholderData
   } = useQuery({
-    queryKey: ['notifications', filtro],
-    queryFn: () => api.listNotifications(filtro ? { category: filtro } : undefined),
+    ...notificacionQueries.lista(filtro),
     placeholderData: keepPreviousData
   })
 
@@ -86,10 +86,7 @@ function InvestorNotifications() {
   const ids = [...new Set([...(search.invitation ? [search.invitation] : []), ...avisos.keys()])]
 
   const consultas = useQueries({
-    queries: ids.map((id) => ({
-      queryKey: ['investor', 'invitation', id],
-      queryFn: () => api.getInvitation(id)
-    }))
+    queries: ids.map((id) => invitacionQueries.deInvestor(id))
   })
   const invitaciones = new Map<string, InvestorInvitation>()
   consultas.forEach((c, i) => {
@@ -101,7 +98,7 @@ function InvestorNotifications() {
   const aceptar = useMutation({
     mutationFn: (id: string) => api.acceptInvitation(id),
     onSuccess: (resultado) => {
-      void queryClient.invalidateQueries({ queryKey: ['investor'] })
+      invalidar(queryClient, invalidaciones.invitacionDeInvestorAceptada())
       setAbierta(null)
       void navigate({
         to: '/investor/unit/$unitId',
@@ -113,7 +110,7 @@ function InvestorNotifications() {
   const rechazar = useMutation({
     mutationFn: (id: string) => api.declineInvitation(id),
     onSuccess: () => {
-      void queryClient.invalidateQueries({ queryKey: ['investor', 'invitation'] })
+      invalidar(queryClient, invalidaciones.invitacionDeInvestorRechazada())
       setAbierta(null)
       void navigate({ search: {} })
     }

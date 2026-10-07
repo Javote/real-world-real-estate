@@ -1,7 +1,7 @@
 import { useQuery } from '@tanstack/react-query'
 import { createFileRoute, useNavigate } from '@tanstack/react-router'
 import { useState } from 'react'
-import { api } from '#/api/port'
+import { auditoriaQueries } from '#/api/queries'
 import {
   type ActorRole,
   type AuditCategory,
@@ -46,10 +46,7 @@ function AuditLog() {
   const [filtro, setFiltro] = useState<AuditCategory | null>(null)
   const [verTxid, setVerTxid] = useState<{ txid: string; label: string; at: string } | null>(null)
 
-  const { data, isPending } = useQuery({
-    queryKey: ['developer', 'audit-log'],
-    queryFn: () => api.listAuditLog()
-  })
+  const { data, isPending } = useQuery(auditoriaQueries.lista())
 
   const eventos = (data?.items ?? []).filter(
     (e) => filtro === null || categoriaDe(e.action) === filtro

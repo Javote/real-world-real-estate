@@ -2,7 +2,7 @@ import type { UnitStatus } from '@plataforma/shared'
 import { useQuery } from '@tanstack/react-query'
 import { createFileRoute, useNavigate } from '@tanstack/react-router'
 import { FileSignature, ShieldCheck, Wallet } from 'lucide-react'
-import { api } from '#/api/port'
+import { proyectoQueries } from '#/api/queries'
 import { HashChip } from '#/components/domain/HashChip'
 import { Loading } from '#/components/domain/Loading'
 import { StatCard } from '#/components/domain/StatCard'
@@ -30,15 +30,9 @@ function ProjectContracts() {
   const { t, locale } = useTranslation()
   const navigate = useNavigate()
 
-  const { data: proyecto } = useQuery({
-    queryKey: ['developer', 'project', projectId],
-    queryFn: () => api.getDeveloperProject(projectId)
-  })
+  const { data: proyecto } = useQuery(proyectoQueries.detalleDelDeveloper(projectId))
 
-  const { data: contratos, isPending } = useQuery({
-    queryKey: ['developer', 'project', projectId, 'contracts'],
-    queryFn: () => api.listProjectContracts(projectId)
-  })
+  const { data: contratos, isPending } = useQuery(proyectoQueries.contratos(projectId))
 
   const lista = contratos ?? []
   const total = lista.reduce((acc, c) => acc + c.totalMinorUnits, 0)

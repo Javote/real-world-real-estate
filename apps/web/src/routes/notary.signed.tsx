@@ -1,6 +1,6 @@
 import { useQuery } from '@tanstack/react-query'
 import { createFileRoute } from '@tanstack/react-router'
-import { api } from '#/api/port'
+import { dossierQueries } from '#/api/queries'
 import { HashChip } from '#/components/domain/HashChip'
 import { Loading } from '#/components/domain/Loading'
 import { StatusPill } from '#/components/domain/StatusPill'
@@ -15,10 +15,7 @@ export const Route = createFileRoute('/notary/signed')({ component: SignedDossie
 function SignedDossiers() {
   const { t, locale } = useTranslation()
 
-  const { data, isPending } = useQuery({
-    queryKey: ['notary', 'signatures'],
-    queryFn: () => api.listSignatures()
-  })
+  const { data, isPending } = useQuery(dossierQueries.firmas())
 
   return (
     <PanelLayout title={t('notary.signed.title')} context={t('notary.signed.context')}>

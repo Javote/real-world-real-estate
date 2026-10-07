@@ -2,6 +2,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { createFileRoute, useNavigate } from '@tanstack/react-router'
 import { FileCheck2, FileClock, ShieldCheck } from 'lucide-react'
 import { api } from '#/api/port'
+import { evidenciaQueries, invalidaciones, invalidar } from '#/api/queries'
 import { DocumentCard } from '#/components/domain/DocumentCard'
 import { Loading } from '#/components/domain/Loading'
 import { PrimaryButton } from '#/components/domain/PrimaryButton'
@@ -20,14 +21,11 @@ function DeveloperDocumentation() {
   const navigate = useNavigate()
   const queryClient = useQueryClient()
 
-  const { data: documentos, isPending } = useQuery({
-    queryKey: ['developer', 'documents'],
-    queryFn: () => api.listDeveloperDocuments()
-  })
+  const { data: documentos, isPending } = useQuery(evidenciaQueries.delDeveloper())
 
   const anclar = useMutation({
     mutationFn: (evidenceId: string) => api.anchorDocument(evidenceId),
-    onSuccess: () => void queryClient.invalidateQueries({ queryKey: ['developer', 'documents'] })
+    onSuccess: () => invalidar(queryClient, invalidaciones.documentoAnclado())
   })
 
   const verificados = documentos?.filter((d) => d.txid !== null) ?? []

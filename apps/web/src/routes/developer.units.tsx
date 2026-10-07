@@ -1,7 +1,7 @@
 import { useQuery } from '@tanstack/react-query'
 import { createFileRoute, useNavigate } from '@tanstack/react-router'
 import { Home } from 'lucide-react'
-import { api } from '#/api/port'
+import { proyectoQueries, unidadQueries } from '#/api/queries'
 import type { DeveloperUnit } from '#/api/types'
 import { Loading } from '#/components/domain/Loading'
 import { ProgressBar } from '#/components/domain/ProgressBar'
@@ -17,15 +17,9 @@ function DeveloperUnits() {
   const { t } = useTranslation()
   const navigate = useNavigate()
 
-  const { data: unidades, isPending } = useQuery({
-    queryKey: ['developer', 'units'],
-    queryFn: api.listDeveloperUnits
-  })
+  const { data: unidades, isPending } = useQuery(unidadQueries.delDeveloper())
 
-  const { data: proyectos } = useQuery({
-    queryKey: ['developer', 'projects'],
-    queryFn: api.listDeveloperProjects
-  })
+  const { data: proyectos } = useQuery(proyectoQueries.delDeveloper())
 
   const vendidas =
     unidades?.filter((u) => u.status === 'sold' || u.status === 'delivered').length ?? 0

@@ -179,6 +179,26 @@ describe('requireRole', () => {
     expect(meMock).toHaveBeenCalledTimes(1)
   })
 
+  it('la caché de otra sesión se descarta antes de entrar; la de la misma sesión se conserva', async () => {
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(async () => respuesta(CERTIFIER_USER))
+    )
+    const queryClient = new QueryClient()
+    queryClient.setQueryData(['auth', 'me', 'token-a'], CERTIFIER_USER)
+    queryClient.setQueryData(['proyecto', 'p1'], { id: 'p1' })
+
+    setSession({ token: 'token-a', user: CERTIFIER_USER })
+    await requireRole(CERTIFIER_ROLES)({ context: { queryClient } })
+    expect(queryClient.getQueryData(['proyecto', 'p1'])).toEqual({ id: 'p1' })
+
+    setSession({ token: 'token-b', user: CERTIFIER_USER })
+    await requireRole(CERTIFIER_ROLES)({ context: { queryClient } })
+    expect(queryClient.getQueryData(['proyecto', 'p1'])).toBeUndefined()
+    expect(queryClient.getQueryData(['auth', 'me', 'token-a'])).toBeUndefined()
+    expect(queryClient.getQueryData(['auth', 'me', 'token-b'])).toEqual(CERTIFIER_USER)
+  })
+
   it('invariante 6: la pantalla no se monta hasta que el guard resolvió, y nunca sin sesión', async () => {
     setSession({ token: 't', user: CERTIFIER_USER })
     let resolver: (r: Response) => void = () => {}

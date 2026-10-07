@@ -478,6 +478,7 @@ export const esAR = {
   'buy.close': 'Cerrar',
   'buy.noResults': 'Ningún desarrollo coincide con esa búsqueda.',
   'buy.mapMarker': 'Desarrollo',
+  'error.generic': 'Algo salió mal. Probá de nuevo.',
   'error.forbidden': 'No tenés acceso a este recurso.',
   'error.notFound': 'No se encontró lo que buscabas.',
   'investor.favorites.title': 'Mis favoritos',

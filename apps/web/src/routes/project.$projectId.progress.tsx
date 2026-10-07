@@ -1,7 +1,8 @@
 import { useQuery } from '@tanstack/react-query'
 import { createFileRoute, useNavigate } from '@tanstack/react-router'
 import { FileText, Images } from 'lucide-react'
-import { ApiError, api } from '#/api/port'
+import { ApiError } from '#/api/port'
+import { proyectoQueries } from '#/api/queries'
 import { Loading } from '#/components/domain/Loading'
 import { ProgressTimeline } from '#/components/domain/ProgressTimeline'
 import { StatusPill } from '#/components/domain/StatusPill'
@@ -23,8 +24,7 @@ function InvestorProjectProgress() {
   const navigate = useNavigate()
 
   const { data: proyecto, error: errorProyecto } = useQuery({
-    queryKey: ['project', projectId],
-    queryFn: () => api.getProject(projectId),
+    ...proyectoQueries.detalle(projectId),
     retry: reintentarSiNoEsAusencia
   })
 
@@ -33,14 +33,12 @@ function InvestorProjectProgress() {
     error,
     isPending
   } = useQuery({
-    queryKey: ['project', projectId, 'stages'],
-    queryFn: () => api.listProjectStages(projectId),
+    ...proyectoQueries.etapas(projectId),
     retry: reintentarSiNoEsAusencia
   })
 
   const { data: documentos } = useQuery({
-    queryKey: ['project', projectId, 'documents'],
-    queryFn: () => api.listProjectDocuments(projectId),
+    ...proyectoQueries.documentos(projectId),
     retry: reintentarSiNoEsAusencia
   })
 

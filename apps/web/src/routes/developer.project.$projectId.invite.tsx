@@ -2,6 +2,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { createFileRoute, useNavigate } from '@tanstack/react-router'
 import { useState } from 'react'
 import { api } from '#/api/port'
+import { invalidaciones, invalidar, proyectoQueries } from '#/api/queries'
 import { NumberInput } from '#/components/domain/NumberInput'
 import { PrimaryButton } from '#/components/domain/PrimaryButton'
 import { SelectDropdown } from '#/components/domain/SelectDropdown'
@@ -27,10 +28,7 @@ function InviteInvestor() {
   const [unitId, setUnitId] = useState('')
   const [monto, setMonto] = useState<number | null>(null)
 
-  const { data: unidades } = useQuery({
-    queryKey: ['developer', 'project', projectId, 'units'],
-    queryFn: () => api.listProjectUnits(projectId)
-  })
+  const { data: unidades } = useQuery(proyectoQueries.unidades(projectId))
 
   const unidad = unidades?.find((u) => u.id === unitId)
 
@@ -43,7 +41,7 @@ function InviteInvestor() {
         currency: unidad?.currency ?? MONEDA_POR_DEFECTO
       }),
     onSuccess: () => {
-      void queryClient.invalidateQueries({ queryKey: ['developer'] })
+      invalidar(queryClient, invalidaciones.inversorInvitado(projectId))
       void navigate({
         to: '/developer/project/$projectId/units',
         params: { projectId }

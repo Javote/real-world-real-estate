@@ -2,6 +2,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { createFileRoute } from '@tanstack/react-router'
 import { Activity, AlertCircle, Clock, ShieldCheck } from 'lucide-react'
 import { api } from '#/api/port'
+import { invalidaciones, invalidar, invitacionQueries, kpiQueries } from '#/api/queries'
 import { AssignedStagesQueue } from '#/components/AssignedStagesQueue'
 import { PrimaryButton, SecondaryButton } from '#/components/domain/PrimaryButton'
 import { StatCard } from '#/components/domain/StatCard'
@@ -17,10 +18,7 @@ function CertifierPanel() {
   const { t } = useTranslation()
   const kpi = useKpiValue()
 
-  const { data: kpis } = useQuery({
-    queryKey: ['certifier', 'kpis'],
-    queryFn: api.getCertifierKpis
-  })
+  const { data: kpis } = useQuery(kpiQueries.certificador())
 
   return (
     <PanelLayout
@@ -69,15 +67,12 @@ function InvitacionesACertificar() {
   const { t } = useTranslation()
   const queryClient = useQueryClient()
 
-  const { data: invitaciones } = useQuery({
-    queryKey: ['certifier', 'invitations'],
-    queryFn: api.getMyCertifierInvitations
-  })
+  const { data: invitaciones } = useQuery(invitacionQueries.delCertificador())
 
   const responder = useMutation({
     mutationFn: ({ id, acepta }: { id: string; acepta: boolean }) =>
       acepta ? api.acceptCertifierInvitation(id) : api.declineCertifierInvitation(id),
-    onSuccess: () => void queryClient.invalidateQueries({ queryKey: ['certifier'] })
+    onSuccess: () => invalidar(queryClient, invalidaciones.invitacionDeCertificadorRespondida())
   })
 
   if (!invitaciones || invitaciones.length === 0) return null

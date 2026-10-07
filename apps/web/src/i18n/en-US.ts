@@ -478,6 +478,7 @@ export const enUS = {
   'buy.close': 'Close',
   'buy.noResults': 'No developments match that search.',
   'buy.mapMarker': 'Development',
+  'error.generic': 'Something went wrong. Try again.',
   'error.forbidden': 'You do not have access to this resource.',
   'error.notFound': 'What you were looking for was not found.',
   'investor.favorites.title': 'My favorites',

@@ -4,6 +4,7 @@ import { createFileRoute, useNavigate } from '@tanstack/react-router'
 import { Plus } from 'lucide-react'
 import { useState } from 'react'
 import { api } from '#/api/port'
+import { invalidaciones, invalidar, proyectoQueries } from '#/api/queries'
 import type { DeveloperProjectUnit } from '#/api/types'
 import { Loading } from '#/components/domain/Loading'
 import { NumberInput } from '#/components/domain/NumberInput'
@@ -41,15 +42,11 @@ function ProjectUnits() {
   const [superficie, setSuperficie] = useState<number | null>(null)
   const [editando, setEditando] = useState<DeveloperProjectUnit | null>(null)
 
-  const { data: proyecto } = useQuery({
-    queryKey: ['developer', 'project', projectId],
-    queryFn: () => api.getDeveloperProject(projectId)
-  })
+  const { data: proyecto } = useQuery(proyectoQueries.detalleDelDeveloper(projectId))
 
-  const { data: unidades, isPending: unidadesPending } = useQuery({
-    queryKey: ['developer', 'project', projectId, 'units'],
-    queryFn: () => api.listProjectUnits(projectId)
-  })
+  const { data: unidades, isPending: unidadesPending } = useQuery(
+    proyectoQueries.unidades(projectId)
+  )
 
   const limpiar = () => {
     setEditando(null)
@@ -60,7 +57,7 @@ function ProjectUnits() {
 
   const refrescar = () => {
     limpiar()
-    void queryClient.invalidateQueries({ queryKey: ['developer'] })
+    invalidar(queryClient, invalidaciones.unidadGuardada(projectId))
   }
 
   const crear = useMutation({

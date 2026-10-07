@@ -1,25 +1,23 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { api } from '#/api/port'
+import { favoritoQueries } from '#/api/queries'
 import type { Project } from '#/api/types'
 import { optimista } from '#/lib/optimista'
 
-const CLAVE = ['investor', 'favorites'] as const
+const CLAVE = favoritoQueries.lista().queryKey
 
 type Cambio = { proyecto: Project; agregar: boolean }
 
 export function useFavoritos() {
   const queryClient = useQueryClient()
 
-  const { data: favoritos, isPending } = useQuery({
-    queryKey: CLAVE,
-    queryFn: api.listFavorites
-  })
+  const { data: favoritos, isPending } = useQuery(favoritoQueries.lista())
 
   const cambio = useMutation({
     mutationFn: ({ proyecto, agregar }: Cambio) =>
       agregar ? api.addFavorite(proyecto.id) : api.removeFavorite(proyecto.id),
     ...optimista(queryClient, CLAVE, ({ proyecto, agregar }: Cambio) => {
-      queryClient.setQueryData<Project[]>(CLAVE, (lista = []) => {
+      queryClient.setQueryData(CLAVE, (lista = []) => {
         const sin = lista.filter((p) => p.id !== proyecto.id)
         return agregar ? [proyecto, ...sin] : sin
       })

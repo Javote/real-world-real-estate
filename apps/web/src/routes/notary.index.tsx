@@ -1,7 +1,7 @@
 import { useQuery } from '@tanstack/react-query'
 import { createFileRoute } from '@tanstack/react-router'
 import { Building2, Clock, FileCheck2, ShieldCheck } from 'lucide-react'
-import { api } from '#/api/port'
+import { kpiQueries } from '#/api/queries'
 import { StatCard } from '#/components/domain/StatCard'
 import { PanelLayout } from '#/components/PanelLayout'
 import { PendingDossiersQueue } from '#/components/PendingDossiersQueue'
@@ -16,10 +16,7 @@ function NotaryPanel() {
   const { t } = useTranslation()
   const kpi = useKpiValue()
 
-  const { data: kpis } = useQuery({
-    queryKey: ['notary', 'kpis'],
-    queryFn: api.getNotaryKpis
-  })
+  const { data: kpis } = useQuery(kpiQueries.notary())
 
   return (
     <PanelLayout

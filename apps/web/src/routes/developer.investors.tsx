@@ -1,6 +1,6 @@
 import { useQuery } from '@tanstack/react-query'
 import { createFileRoute, useNavigate } from '@tanstack/react-router'
-import { api } from '#/api/port'
+import { usuarioQueries } from '#/api/queries'
 import { InvestorCard } from '#/components/domain/InvestorCard'
 import { Loading } from '#/components/domain/Loading'
 import { PanelLayout } from '#/components/PanelLayout'
@@ -14,10 +14,7 @@ function DeveloperInvestors() {
   const { t, locale } = useTranslation()
   const navigate = useNavigate()
 
-  const { data: investors, isPending } = useQuery({
-    queryKey: ['developer', 'investors'],
-    queryFn: api.listInvestors
-  })
+  const { data: investors, isPending } = useQuery(usuarioQueries.inversores())
 
   return (
     <PanelLayout

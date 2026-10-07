@@ -10,7 +10,7 @@ import {
   TrendingUp,
   Users
 } from 'lucide-react'
-import { api } from '#/api/port'
+import { kpiQueries } from '#/api/queries'
 import { ActionCard } from '#/components/domain/ActionCard'
 import { StatCard } from '#/components/domain/StatCard'
 import { PanelLayout } from '#/components/PanelLayout'
@@ -25,10 +25,7 @@ function DeveloperPanel() {
   const kpi = useKpiValue()
   const navigate = useNavigate()
 
-  const { data } = useQuery({
-    queryKey: ['developer', 'kpis'],
-    queryFn: api.getDeveloperKpis
-  })
+  const { data } = useQuery(kpiQueries.developer())
 
   return (
     <PanelLayout

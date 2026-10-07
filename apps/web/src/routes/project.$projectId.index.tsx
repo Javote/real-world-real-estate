@@ -12,6 +12,7 @@ import {
 } from 'lucide-react'
 import { useState } from 'react'
 import { ApiError, api, projectCoverUrl } from '#/api/port'
+import { archivoQueries, proyectoQueries } from '#/api/queries'
 import { DocumentCard } from '#/components/domain/DocumentCard'
 import { DocumentViewerModal } from '#/components/domain/DocumentViewerModal'
 import { ImageGalleryModal } from '#/components/domain/ImageGalleryModal'
@@ -64,14 +65,12 @@ function InvestorProjectDetail() {
     error,
     isSuccess
   } = useQuery({
-    queryKey: ['project', projectId],
-    queryFn: () => api.getProject(projectId),
+    ...proyectoQueries.detalle(projectId),
     retry: reintentarSiNoEsAusencia
   })
 
   const { data: documentos, isPending: documentosPending } = useQuery({
-    queryKey: ['project', projectId, 'documents'],
-    queryFn: () => api.listProjectDocuments(projectId),
+    ...proyectoQueries.documentos(projectId),
     enabled: isSuccess,
     retry: reintentarSiNoEsAusencia
   })
@@ -83,9 +82,7 @@ function InvestorProjectDetail() {
 
   const blobs = useQueries({
     queries: fotos.map((f) => ({
-      queryKey: ['evidence-blob', f.id],
-      queryFn: async () => objectUrl(await api.downloadEvidence(f.id)),
-      gcTime: 0,
+      ...archivoQueries.url(f.id, objectUrl),
       enabled: isSuccess && galeria
     }))
   })

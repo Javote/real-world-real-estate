@@ -101,7 +101,7 @@ describe('/investor/unit/$unitId/notifications', () => {
     await screen.findByText('clave.que.no.existe')
   })
 
-  it('el filtro por categoría pide esa categoría y pinta el borde; "Todos" la saca', async () => {
+  it('el filtro por categoría pide esa categoría y pinta el borde; "Todos" la saca sin volver a pedir', async () => {
     const listar = preparar([notif()])
     montar()
     await screen.findByTestId('INV-NOTIF-READ-002')
@@ -115,8 +115,11 @@ describe('/investor/unit/$unitId/notifications', () => {
       expect(screen.getByTestId('INV-NOTIF-READ-002').className).toContain('border-l-4')
     )
 
-    fireEvent.click(screen.getByRole('button', { name: t['developer.audit.all'] }))
-    await waitFor(() => expect(listar).toHaveBeenLastCalledWith({ unitId: 'u1' }))
+    const todos = screen.getByRole('button', { name: t['developer.audit.all'] })
+    fireEvent.click(todos)
+    await waitFor(() => expect(todos.getAttribute('aria-pressed')).toBe('true'))
+    screen.getByTestId('INV-NOTIF-READ-002')
+    expect(listar).toHaveBeenCalledTimes(2)
   })
 
   it('al cambiar el filtro, la lista anterior queda a la vista mientras llega la nueva', async () => {

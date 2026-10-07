@@ -3,7 +3,7 @@ import { useMutation, useQueryClient } from '@tanstack/react-query'
 import { api } from '#/api/port'
 import { optimista } from '#/lib/optimista'
 
-const CLAVE = ['notifications'] as const
+const CLAVE = ['notificacion'] as const
 
 // Marca leída en todas las listas cacheadas y baja el contador de la campana sin esperar a la API.
 export function useMarcarLeida() {

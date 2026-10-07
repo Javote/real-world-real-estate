@@ -1,7 +1,8 @@
 import type { UnitStatus } from '@plataforma/shared'
 import { useQuery } from '@tanstack/react-query'
 import { createFileRoute, useNavigate } from '@tanstack/react-router'
-import { api, projectCoverUrl } from '#/api/port'
+import { projectCoverUrl } from '#/api/port'
+import { unidadQueries } from '#/api/queries'
 import { Loading } from '#/components/domain/Loading'
 import type { StatusTone } from '#/components/domain/StatusPill'
 import { UnitCard } from '#/components/domain/UnitCard'
@@ -22,10 +23,7 @@ function InvestorUnits() {
   const { t } = useTranslation()
   const navigate = useNavigate()
 
-  const { data: unidades, isPending } = useQuery({
-    queryKey: ['investor', 'units'],
-    queryFn: api.listInvestorUnits
-  })
+  const { data: unidades, isPending } = useQuery(unidadQueries.delInvestor())
 
   return (
     <PanelLayout title={t('investor.units.title')} context={t('investor.units.context')}>

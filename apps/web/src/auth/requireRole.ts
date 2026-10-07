@@ -27,6 +27,13 @@ export function requireRole(allowed: readonly UserRole[]) {
     const session = getSession()
     if (!session) throw redirect({ to: '/login' })
 
+    // La caché es de una sesión: un `me` de otro token quiere decir que lo cacheado es de otro
+    // usuario (un 401 y un login nuevo, sin recargar la página).
+    const deOtraSesion = context.queryClient
+      .getQueriesData({ queryKey: ['auth', 'me'] })
+      .some(([queryKey]) => queryKey[2] !== session.token)
+    if (deOtraSesion) context.queryClient.clear()
+
     try {
       await context.queryClient.fetchQuery(meQuery(session.token))
     } catch (err) {

@@ -9,6 +9,7 @@ import { createFileRoute, useNavigate } from '@tanstack/react-router'
 import { ShieldCheck } from 'lucide-react'
 import { useState } from 'react'
 import { ApiError, api } from '#/api/port'
+import { invalidaciones, invalidar, proyectoQueries } from '#/api/queries'
 import type { StageEvidenceAnchor } from '#/api/types'
 import { AnchoringSuccessModal } from '#/components/domain/AnchoringSuccessModal'
 import { StageChip } from '#/components/domain/Chips'
@@ -59,10 +60,7 @@ function UploadEvidence() {
   const [avisos, setAvisos] = useState<ReadonlyMap<File, string>>(new Map())
   const [resumen, setResumen] = useState<'partial' | 'none' | null>(null)
 
-  const { data: proyecto } = useQuery({
-    queryKey: ['developer', 'project', projectId],
-    queryFn: () => api.getDeveloperProject(projectId)
-  })
+  const { data: proyecto } = useQuery(proyectoQueries.detalleDelDeveloper(projectId))
 
   const marcarRechazados = (enviados: readonly File[], rechazos: readonly RechazoDelServidor[]) => {
     setAvisos(
@@ -87,7 +85,7 @@ function UploadEvidence() {
       setAvisos(new Map())
       setResumen(null)
     },
-    onSuccess: (resultado, { enviados }) => {
+    onSuccess: (resultado, { enviados, stageId: etapaId }) => {
       const rechazados = new Set(resultado.rejected.map((r) => r.index))
       const quedan = enviados.filter((_, i) => rechazados.has(i))
       setAnclado(resultado)
@@ -95,7 +93,7 @@ function UploadEvidence() {
       marcarRechazados(enviados, resultado.rejected)
       setResumen(resultado.rejected.length > 0 ? 'partial' : null)
       if (quedan.length === 0) setNotas('')
-      void queryClient.invalidateQueries({ queryKey: ['developer'] })
+      invalidar(queryClient, invalidaciones.evidenciaSubida(projectId, etapaId))
     },
     onError: (error, { enviados }) => {
       const rechazos = rechazosDeUnError(error)

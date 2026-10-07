@@ -3,6 +3,7 @@ import { createFileRoute, useNavigate } from '@tanstack/react-router'
 import { FileText, Images } from 'lucide-react'
 import { useState } from 'react'
 import { ApiError, api } from '#/api/port'
+import { archivoQueries, etapaQueries, evidenciaQueries, proyectoQueries } from '#/api/queries'
 import type { MerkleProof } from '#/api/types'
 import { DocumentCard } from '#/components/domain/DocumentCard'
 import { DocumentViewerModal } from '#/components/domain/DocumentViewerModal'
@@ -46,8 +47,7 @@ function InvestorStageDetail() {
   const objectUrl = useObjectUrls()
 
   const { data: stages } = useQuery({
-    queryKey: ['project', projectId, 'stages'],
-    queryFn: () => api.listProjectStages(projectId),
+    ...proyectoQueries.etapas(projectId),
     retry: reintentarSiNoEsAusencia
   })
 
@@ -56,20 +56,17 @@ function InvestorStageDetail() {
     error,
     isPending
   } = useQuery({
-    queryKey: ['project', projectId, 'stage', stageId],
-    queryFn: () => api.getProjectStage(projectId, stageId),
+    ...etapaQueries.detalle(projectId, stageId),
     retry: reintentarSiNoEsAusencia
   })
 
   const { data: bundleFiles } = useQuery({
-    queryKey: ['bundle', stage?.bundle?.id, 'files'],
-    queryFn: () => api.getBundleFiles(stage!.bundle!.id),
+    ...evidenciaQueries.delBundle(stage?.bundle?.id ?? ''),
     enabled: hito && Boolean(stage?.bundle?.id)
   })
 
   const { data: documentosDelProyecto } = useQuery({
-    queryKey: ['project', projectId, 'documents'],
-    queryFn: () => api.listProjectDocuments(projectId),
+    ...proyectoQueries.documentos(projectId),
     retry: reintentarSiNoEsAusencia
   })
 
@@ -77,17 +74,11 @@ function InvestorStageDetail() {
   const docs = (stage?.evidences ?? []).filter((e) => !esFoto(e.evidenceType, e.mimeType))
 
   const { data: urls } = useQuery({
-    queryKey: ['stage-photos', stageId, fotos.map((f) => f.id).join(',')],
-    queryFn: async () => {
-      const pares = await Promise.all(
-        fotos.map(async (f) => ({
-          id: f.id,
-          url: objectUrl(await api.downloadEvidence(f.id))
-        }))
-      )
-      return Object.fromEntries(pares.map((p) => [p.id, p.url])) as Record<string, string>
-    },
-    gcTime: 0,
+    ...archivoQueries.fotosDeEtapa(
+      stageId,
+      fotos.map((f) => f.id),
+      objectUrl
+    ),
     enabled: fotos.length > 0
   })
 

@@ -1,7 +1,8 @@
 import { useQuery } from '@tanstack/react-query'
 import { createFileRoute, useNavigate } from '@tanstack/react-router'
 import { useState } from 'react'
-import { ApiError, api } from '#/api/port'
+import { ApiError } from '#/api/port'
+import { contratoQueries, unidadQueries } from '#/api/queries'
 import { Loading } from '#/components/domain/Loading'
 import type { ReleaseRecord } from '#/components/domain/ReleaseProofList'
 import { ReleaseProofList } from '#/components/domain/ReleaseProofList'
@@ -24,20 +25,17 @@ function InvestorContract() {
   const [txid, setTxid] = useState<ReleaseRecord | null>(null)
 
   const { data: unidad } = useQuery({
-    queryKey: ['investor', 'unit', unitId],
-    queryFn: () => api.getInvestorUnit(unitId),
+    ...unidadQueries.detalle(unitId),
     retry: reintentarSiNoEsAusencia
   })
 
   const { data: contrato, error } = useQuery({
-    queryKey: ['investor', 'contract', unitId],
-    queryFn: () => api.getInvestorContract(unitId),
+    ...contratoQueries.deUnidad(unitId),
     retry: reintentarSiNoEsAusencia
   })
 
   const { data: releases, isPending: releasesPending } = useQuery({
-    queryKey: ['contract', contrato?.id, 'releases'],
-    queryFn: () => api.listContractReleases(contrato!.id),
+    ...contratoQueries.liberaciones(contrato?.id ?? ''),
     enabled: Boolean(contrato?.id)
   })
 

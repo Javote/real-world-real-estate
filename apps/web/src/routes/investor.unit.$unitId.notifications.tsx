@@ -3,7 +3,7 @@ import { createFileRoute, useNavigate } from '@tanstack/react-router'
 import type { LucideIcon } from 'lucide-react'
 import { FileCheck2, FileText, ShieldCheck, Signature } from 'lucide-react'
 import { useState } from 'react'
-import { api } from '#/api/port'
+import { notificacionQueries, unidadQueries } from '#/api/queries'
 import type { AuditCategory } from '#/components/domain/AuditEventCard'
 import { CategoryChip } from '#/components/domain/Chips'
 import { Loading } from '#/components/domain/Loading'
@@ -45,8 +45,7 @@ function InvestorUnitNotifications() {
   const [filtro, setFiltro] = useState<NotifCategory | null>(null)
 
   const { data: unidad } = useQuery({
-    queryKey: ['investor', 'unit', unitId],
-    queryFn: () => api.getInvestorUnit(unitId),
+    ...unidadQueries.detalle(unitId),
     retry: reintentarSiNoEsAusencia
   })
 
@@ -55,12 +54,7 @@ function InvestorUnitNotifications() {
     isPending,
     isPlaceholderData
   } = useQuery({
-    queryKey: ['notifications', unitId, filtro],
-    queryFn: () =>
-      api.listNotifications({
-        unitId,
-        ...(filtro ? { category: filtro } : {})
-      }),
+    ...notificacionQueries.deUnidad(unitId, filtro),
     placeholderData: keepPreviousData
   })
 

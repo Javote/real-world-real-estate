@@ -3,6 +3,7 @@ import { createFileRoute, useNavigate } from '@tanstack/react-router'
 import { Download, Share2 } from 'lucide-react'
 import { useState } from 'react'
 import { ApiError, api } from '#/api/port'
+import { dossierQueries, proyectoQueries, unidadQueries } from '#/api/queries'
 import { HashChip } from '#/components/domain/HashChip'
 import { Loading } from '#/components/domain/Loading'
 import { PrimaryButton, SecondaryButton } from '#/components/domain/PrimaryButton'
@@ -33,20 +34,17 @@ function InvestorDossier() {
     error,
     isPending
   } = useQuery({
-    queryKey: ['investor', 'unit', unitId, 'dossier'],
-    queryFn: () => api.getUnitDossier(unitId),
+    ...dossierQueries.deUnidad(unitId),
     retry: reintentarSiNoEsAusencia
   })
 
   const { data: unidad } = useQuery({
-    queryKey: ['investor', 'unit', unitId],
-    queryFn: () => api.getInvestorUnit(unitId),
+    ...unidadQueries.detalle(unitId),
     retry: reintentarSiNoEsAusencia
   })
 
   const { data: proyecto } = useQuery({
-    queryKey: ['project', unidad?.projectId],
-    queryFn: () => api.getProject(unidad!.projectId),
+    ...proyectoQueries.detalle(unidad?.projectId ?? ''),
     enabled: Boolean(unidad?.projectId),
     retry: reintentarSiNoEsAusencia
   })

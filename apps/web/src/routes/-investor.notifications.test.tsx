@@ -97,7 +97,7 @@ describe('/investor/notifications', () => {
     await screen.findByText(t('investor.notifications.empty'))
   })
 
-  it('filtrar por categoría pide solo esa categoría; "Todas" vuelve a pedir sin filtro', async () => {
+  it('filtrar por categoría pide solo esa categoría; "Todas" vuelve a la lista sin filtro, de la caché', async () => {
     autenticarComo(INVESTOR_USER)
     const listar = vi
       .spyOn(api, 'listNotifications')
@@ -109,8 +109,11 @@ describe('/investor/notifications', () => {
     await userEvent.click(screen.getByRole('button', { name: t('audit.category.documento') }))
     await waitFor(() => expect(listar).toHaveBeenLastCalledWith({ category: 'document' }))
 
-    await userEvent.click(screen.getByRole('button', { name: t('developer.audit.all') }))
-    await waitFor(() => expect(listar).toHaveBeenLastCalledWith(undefined))
+    const todas = screen.getByRole('button', { name: t('developer.audit.all') })
+    await userEvent.click(todas)
+    await waitFor(() => expect(todas.getAttribute('aria-pressed')).toBe('true'))
+    screen.getByText('clave.doc')
+    expect(listar).toHaveBeenCalledTimes(2)
   })
 
   it('al cambiar el filtro, la lista anterior queda a la vista mientras llega la nueva', async () => {

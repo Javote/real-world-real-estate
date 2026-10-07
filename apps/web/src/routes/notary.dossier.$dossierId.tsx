@@ -3,6 +3,7 @@ import { createFileRoute, useNavigate } from '@tanstack/react-router'
 import { AlertCircle, ShieldCheck } from 'lucide-react'
 import { useState } from 'react'
 import { api } from '#/api/port'
+import { dossierQueries, invalidaciones, invalidar } from '#/api/queries'
 import { HashChip } from '#/components/domain/HashChip'
 import { ObserveStageModal } from '#/components/domain/ObserveStageModal'
 import { PrimaryButton, SecondaryButton } from '#/components/domain/PrimaryButton'
@@ -26,13 +27,10 @@ function DossierReview() {
 
   const [rechazando, setRechazando] = useState(false)
 
-  const { data: dossier } = useQuery({
-    queryKey: ['notary', 'dossier', dossierId],
-    queryFn: () => api.getDossier(dossierId)
-  })
+  const { data: dossier } = useQuery(dossierQueries.detalle(dossierId))
 
   const alTerminar = () => {
-    void queryClient.invalidateQueries({ queryKey: ['notary'] })
+    invalidar(queryClient, invalidaciones.dossierResuelto())
     void navigate({ to: '/notary' })
   }
 

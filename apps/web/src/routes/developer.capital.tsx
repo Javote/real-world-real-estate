@@ -2,7 +2,7 @@ import type { CapitalMonthlyPoint } from '@plataforma/shared'
 import { useQuery } from '@tanstack/react-query'
 import { createFileRoute, useNavigate } from '@tanstack/react-router'
 import { Building2, DollarSign } from 'lucide-react'
-import { api } from '#/api/port'
+import { capitalQueries } from '#/api/queries'
 import { Loading } from '#/components/domain/Loading'
 import { ProgressBar } from '#/components/domain/ProgressBar'
 import { PanelLayout } from '#/components/PanelLayout'
@@ -18,20 +18,13 @@ function DeveloperCapital() {
   const { t, locale } = useTranslation()
   const navigate = useNavigate()
 
-  const { data: resumen, isPending: resumenPending } = useQuery({
-    queryKey: ['developer', 'capital', 'summary'],
-    queryFn: api.getCapitalSummary
-  })
+  const { data: resumen, isPending: resumenPending } = useQuery(capitalQueries.resumen())
 
-  const { data: mensual, isPending: mensualPending } = useQuery({
-    queryKey: ['developer', 'capital', 'monthly'],
-    queryFn: api.getCapitalMonthly
-  })
+  const { data: mensual, isPending: mensualPending } = useQuery(capitalQueries.mensual())
 
-  const { data: porProyecto, isPending: porProyectoPending } = useQuery({
-    queryKey: ['developer', 'capital', 'by-project'],
-    queryFn: api.getCapitalByProject
-  })
+  const { data: porProyecto, isPending: porProyectoPending } = useQuery(
+    capitalQueries.porProyecto()
+  )
 
   const cargando = resumenPending || mensualPending || porProyectoPending
 

@@ -3,6 +3,13 @@ import { createFileRoute, useNavigate } from '@tanstack/react-router'
 import { Building2, ChevronRight, FileText, Images, MapPin } from 'lucide-react'
 import { useEffect, useRef, useState } from 'react'
 import { ApiError, api, projectCoverUrl } from '#/api/port'
+import {
+  archivoQueries,
+  contratoQueries,
+  evidenciaQueries,
+  proyectoQueries,
+  unidadQueries
+} from '#/api/queries'
 import type { MerkleProof } from '#/api/types'
 import { BuildingSchematic } from '#/components/domain/BuildingSchematic'
 import { HashChip } from '#/components/domain/HashChip'
@@ -50,14 +57,12 @@ function InvestorUnitDetail() {
   const objectUrl = useObjectUrls()
 
   const { data: unidad, error } = useQuery({
-    queryKey: ['investor', 'unit', unitId],
-    queryFn: () => api.getInvestorUnit(unitId),
+    ...unidadQueries.detalle(unitId),
     retry: reintentarSiNoEsAusencia
   })
 
   const { data: news } = useQuery({
-    queryKey: ['investor', 'unit', unitId, 'news'],
-    queryFn: () => api.getInvestorUnitNews(unitId),
+    ...unidadQueries.novedades(unitId),
     enabled: Boolean(unidad),
     retry: reintentarSiNoEsAusencia,
     refetchInterval: (query) => intervaloDeNovedades(query.state.data),
@@ -73,44 +78,37 @@ function InvestorUnitDetail() {
   }, [news, announce, t])
 
   const { data: proyecto } = useQuery({
-    queryKey: ['project', unidad?.projectId],
-    queryFn: () => api.getProject(unidad!.projectId),
+    ...proyectoQueries.detalle(unidad?.projectId ?? ''),
     enabled: Boolean(unidad?.projectId),
     retry: reintentarSiNoEsAusencia
   })
 
   const { data: documentos } = useQuery({
-    queryKey: ['project', unidad?.projectId, 'documents'],
-    queryFn: () => api.listProjectDocuments(unidad!.projectId),
+    ...proyectoQueries.documentos(unidad?.projectId ?? ''),
     enabled: Boolean(unidad?.projectId),
     retry: reintentarSiNoEsAusencia
   })
 
   const { data: contrato } = useQuery({
-    queryKey: ['investor', 'contract', unitId],
-    queryFn: () => api.getInvestorContract(unitId),
+    ...contratoQueries.deUnidad(unitId),
     enabled: Boolean(unidad),
     retry: reintentarSiNoEsAusencia
   })
 
   const { data: schematic } = useQuery({
-    queryKey: ['project', unidad?.projectId, 'schematic'],
-    queryFn: () => api.getBuildingSchematic(unidad!.projectId),
+    ...proyectoQueries.esquema(unidad?.projectId ?? ''),
     enabled: edificio && Boolean(unidad?.projectId)
   })
 
   const { data: bundleFiles } = useQuery({
-    queryKey: ['bundle', bundleId, 'files'],
-    queryFn: () => api.getBundleFiles(bundleId!),
+    ...evidenciaQueries.delBundle(bundleId ?? ''),
     enabled: Boolean(bundleId)
   })
 
   const fotos = (documentos ?? []).filter((d) => esFoto(d.evidenceType, d.mimeType))
   const blobs = useQueries({
     queries: fotos.map((f) => ({
-      queryKey: ['evidence-blob', f.id],
-      queryFn: async () => objectUrl(await api.downloadEvidence(f.id)),
-      gcTime: 0,
+      ...archivoQueries.url(f.id, objectUrl),
       enabled: Boolean(unidad) && galeria
     }))
   })

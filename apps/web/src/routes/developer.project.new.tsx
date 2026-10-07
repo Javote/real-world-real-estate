@@ -2,10 +2,11 @@ import {
   PROJECT_COVER_ALLOWED_MIME,
   PROJECT_COVER_MAX_FILE_MB
 } from '@plataforma/shared/evidence-rules'
-import { useMutation } from '@tanstack/react-query'
+import { useMutation, useQueryClient } from '@tanstack/react-query'
 import { createFileRoute, useNavigate } from '@tanstack/react-router'
 import { useEffect, useState } from 'react'
 import { api } from '#/api/port'
+import { invalidaciones, invalidar } from '#/api/queries'
 import { FileDropzone } from '#/components/domain/FileDropzone'
 import { LocationMapModal } from '#/components/domain/LocationMapModal'
 import { NumberInput } from '#/components/domain/NumberInput'
@@ -54,6 +55,7 @@ export function slugify(nombre: string): string {
 function NuevoProyecto() {
   const { t, locale } = useTranslation()
   const navigate = useNavigate()
+  const queryClient = useQueryClient()
 
   const [nombre, setNombre] = useState('')
   const [direccion, setDireccion] = useState('')
@@ -113,11 +115,13 @@ function NuevoProyecto() {
       if (imagen) await api.uploadProjectCover(projectId, imagen)
       return projectId
     },
-    onSuccess: (projectId) =>
+    onSuccess: (projectId) => {
+      invalidar(queryClient, invalidaciones.proyectoCreado())
       void navigate({
         to: '/developer/project/$projectId',
         params: { projectId }
       })
+    }
   })
 
   const lote = slugify(nombre).length > 0 && !crear.isPending ? punto : null

@@ -3,6 +3,13 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { createFileRoute } from '@tanstack/react-router'
 import { useState } from 'react'
 import { ApiError, api } from '#/api/port'
+import {
+  invalidaciones,
+  invalidar,
+  invitacionQueries,
+  proyectoQueries,
+  usuarioQueries
+} from '#/api/queries'
 import type { CertifierInvitation } from '#/api/types'
 import { PrimaryButton } from '#/components/domain/PrimaryButton'
 import { SelectDropdown } from '#/components/domain/SelectDropdown'
@@ -38,30 +45,22 @@ function AdminPanel() {
   const [elegido, setElegido] = useState('')
   const [certifierId, setCertifierId] = useState('')
 
-  const { data: proyectos } = useQuery({
-    queryKey: ['admin', 'projects'],
-    queryFn: () => api.listProjects()
-  })
+  const { data: proyectos } = useQuery(proyectoQueries.lista())
 
   const ordenados = [...(proyectos ?? [])].sort((a, b) => b.createdAt.localeCompare(a.createdAt))
   const projectId = elegido || ordenados[0]?.id || ''
 
   const { data: detalle } = useQuery({
-    queryKey: ['admin', 'project', projectId],
-    queryFn: () => api.getProject(projectId),
+    ...proyectoQueries.detalle(projectId),
     enabled: projectId !== ''
   })
 
   const { data: invitaciones } = useQuery({
-    queryKey: ['admin', 'certifier-invitations', projectId],
-    queryFn: () => api.listProjectCertifierInvitations(projectId),
+    ...invitacionQueries.aCertificadoresDelProyecto(projectId),
     enabled: projectId !== ''
   })
 
-  const { data: usuarios } = useQuery({
-    queryKey: ['admin', 'users'],
-    queryFn: api.listUsers
-  })
+  const { data: usuarios } = useQuery(usuarioQueries.lista())
 
   const miembros = detalle?.members ?? []
   const yaCertifican = new Set(
@@ -78,7 +77,7 @@ function AdminPanel() {
     mutationFn: () => api.inviteCertifier(projectId, certifierId),
     onSuccess: () => {
       setCertifierId('')
-      void queryClient.invalidateQueries({ queryKey: ['admin', 'certifier-invitations'] })
+      invalidar(queryClient, invalidaciones.certificadorInvitado(projectId))
     }
   })
 

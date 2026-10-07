@@ -56,6 +56,30 @@
 `pnpm verify:all`, `pnpm e2e` completo y, a mano, las DevTools de red: cambiar una etapa como
 developer y volver al detalle del proyecto muestra el estado nuevo sin recargar.
 
+### Cómo quedó
+
+- **Las llaves**: `api/queries/<entidad>.ts`, una fábrica por entidad (`proyecto`, `etapa`,
+  `unidad`, `contrato`, `dossier`, `evidencia`, `notificacion`, `invitacion`, `kpi`, `capital`,
+  `usuario`, `favorito`, `certificado`, `auditoria`). Dos vistas del mismo recurso que pegan a
+  endpoints distintos tienen llaves distintas bajo la misma raíz (`['proyecto', id]` y
+  `['proyecto', id, 'developer']`), y los binarios viven en `archivo`, que ninguna invalidación toca.
+- **Las invalidaciones**: `invalidaciones.ts`, una función por mutación que devuelve las llaves que
+  deja viejas. `queries.test.ts` puebla una caché con una query por entrada de cada fábrica y fija,
+  por mutación, cuáles quedan invalidadas. Crear un proyecto no invalidaba nada (con `staleTime` 0
+  no hacía falta); ahora invalida las listas, unidades, KPIs y capital.
+- **Lo que queda en `staleTime: 0`**: toda respuesta con TXID, `anchorStatus` o `signatureTxid`, lo
+  que se reconcilia al leer (`GET /projects/:id`) y los KPIs que cuentan anclados
+  (`verifiedDocuments` del developer; `verified` y `signed` del notary). La lista está en el test.
+- **El invariante 1 vale para la fábrica, no para `staleTime`**: volver a una pantalla o a un filtro
+  dentro de los 30 s ya no pide de nuevo, que es el objetivo del paso. Los dos tests que fijaban ese
+  segundo pedido (los filtros "Todas" de las dos pantallas de notificaciones) ahora fijan lo
+  contrario.
+- **La caché es de una sesión**: con datos frescos 30 s, un 401 seguido de un login con otro usuario
+  sin recargar la página mostraba lo del anterior. `requireRole` vacía la caché si encuentra un `me`
+  de otro token.
+- **`claveDeError(err, { porCodigo, generica })`** en `api/claveDeError.ts`, probada contra los
+  status y `code` de hoy; ninguna pantalla la usa todavía (W3/W4). Suma la clave `error.generic`.
+
 ## Paso 2 — los loaders que precargan, sin tocar los componentes
 
 **Por qué ahora y no en W3/W4** (dueño, 2026-10-06): W4 está detrás de A1, A2 y el piloto, y lo que

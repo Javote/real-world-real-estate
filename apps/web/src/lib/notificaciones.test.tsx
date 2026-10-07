@@ -3,14 +3,15 @@ import { act, renderHook, waitFor } from '@testing-library/react'
 import type { ReactNode } from 'react'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import { api } from '#/api/port'
+import { notificacionQueries } from '#/api/queries'
 import { useMarcarLeida } from './notificaciones'
 
-const LISTA = ['notifications', null]
-const CONTADOR = ['notifications', 'unread-count']
+const LISTA = notificacionQueries.lista(null).queryKey
+const CONTADOR = notificacionQueries.noLeidas().queryKey
 
 const notif = (id: string, readAt: Date | null = null) => ({
   id,
-  category: 'stage',
+  category: 'stage' as const,
   titleKey: 'x',
   params: {},
   unitId: null,
@@ -24,7 +25,7 @@ function preparar() {
   queryClient.setQueryData(CONTADOR, { unread: 2 })
   // Una lista que todavía no llegó: no hay qué marcar.
   void queryClient.prefetchQuery({
-    queryKey: ['notifications', 'stage'],
+    queryKey: notificacionQueries.lista('stage').queryKey,
     queryFn: () => new Promise(() => {})
   })
   // Ningún refresco contesta: lo que se ve es lo que escribió el hook.
@@ -54,7 +55,7 @@ describe('useMarcarLeida', () => {
 
     await waitFor(() => expect(leidas(queryClient)).toEqual(['a']))
     expect(queryClient.getQueryData(CONTADOR)).toEqual({ unread: 1 })
-    expect(queryClient.getQueryData(['notifications', 'stage'])).toBeUndefined()
+    expect(queryClient.getQueryData(notificacionQueries.lista('stage').queryKey)).toBeUndefined()
   })
 
   it('la campana no baja de cero', async () => {

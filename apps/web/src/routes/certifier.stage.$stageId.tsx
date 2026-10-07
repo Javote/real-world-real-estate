@@ -3,6 +3,7 @@ import { createFileRoute, useNavigate } from '@tanstack/react-router'
 import { AlertCircle, ShieldCheck } from 'lucide-react'
 import { useState } from 'react'
 import { api } from '#/api/port'
+import { etapaQueries, invalidaciones, invalidar } from '#/api/queries'
 import { DocumentCard } from '#/components/domain/DocumentCard'
 import { Loading } from '#/components/domain/Loading'
 import { ObserveStageModal } from '#/components/domain/ObserveStageModal'
@@ -26,13 +27,10 @@ function CertifyStage() {
 
   const [observando, setObservando] = useState(false)
 
-  const { data: stage } = useQuery({
-    queryKey: ['certifier', 'stage', stageId],
-    queryFn: () => api.getCertifierStage(stageId)
-  })
+  const { data: stage } = useQuery(etapaQueries.delCertificador(stageId))
 
   const alTerminar = () => {
-    void queryClient.invalidateQueries({ queryKey: ['certifier'] })
+    invalidar(queryClient, invalidaciones.etapaCambiada())
     void navigate({ to: '/certifier' })
   }
 

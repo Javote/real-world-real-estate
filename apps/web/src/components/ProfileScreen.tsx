@@ -3,6 +3,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { Bell, LogOut, ShieldCheck, User } from 'lucide-react'
 import { useState } from 'react'
 import { api } from '#/api/port'
+import { invalidaciones, invalidar, usuarioQueries } from '#/api/queries'
 import { clearSession } from '#/auth/session'
 import type { NAV_TABS } from '#/components/domain/navTabs'
 import { DangerButton, SecondaryButton } from '#/components/domain/PrimaryButton'
@@ -34,25 +35,29 @@ export function ProfileScreen({ rol, testId, back, editTestId, prefsTestId }: Pr
   const [editando, setEditando] = useState(false)
   const [nombre, setNombre] = useState('')
 
-  const { data: perfil } = useQuery({ queryKey: ['profile'], queryFn: api.getProfile })
+  const { data: perfil } = useQuery(usuarioQueries.perfil())
 
   const prefs = prefsDe(perfil)
 
   const guardarPrefs = useMutation({
     mutationFn: (cambio: Record<string, boolean>) => api.updateNotificationPrefs(cambio),
-    ...optimista(queryClient, ['profile'], (cambio: Record<string, boolean>) => {
-      queryClient.setQueryData<Profile>(
-        ['profile'],
-        (p) => p && { ...p, notificationPrefsJson: JSON.stringify({ ...prefsDe(p), ...cambio }) }
-      )
-    })
+    ...optimista(
+      queryClient,
+      usuarioQueries.perfil().queryKey,
+      (cambio: Record<string, boolean>) => {
+        queryClient.setQueryData(
+          usuarioQueries.perfil().queryKey,
+          (p) => p && { ...p, notificationPrefsJson: JSON.stringify({ ...prefsDe(p), ...cambio }) }
+        )
+      }
+    )
   })
 
   const guardarNombre = useMutation({
     mutationFn: (fullName: string) => api.updateProfile(fullName),
     onSuccess: () => {
       setEditando(false)
-      void queryClient.invalidateQueries({ queryKey: ['profile'] })
+      invalidar(queryClient, invalidaciones.perfilGuardado())
     }
   })
 

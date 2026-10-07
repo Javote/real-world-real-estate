@@ -1,7 +1,7 @@
 import { useQuery } from '@tanstack/react-query'
 import { createFileRoute, useNavigate } from '@tanstack/react-router'
 import { DollarSign, FileText, Home, TrendingUp, Upload, Users } from 'lucide-react'
-import { api } from '#/api/port'
+import { capitalQueries, proyectoQueries } from '#/api/queries'
 import { ActionCard } from '#/components/domain/ActionCard'
 import { StatCard } from '#/components/domain/StatCard'
 import { StatusPill } from '#/components/domain/StatusPill'
@@ -21,15 +21,9 @@ function DeveloperProjectDetail() {
   const { t, locale } = useTranslation()
   const navigate = useNavigate()
 
-  const { data: proyecto } = useQuery({
-    queryKey: ['developer', 'project', projectId],
-    queryFn: () => api.getDeveloperProject(projectId)
-  })
+  const { data: proyecto } = useQuery(proyectoQueries.detalleDelDeveloper(projectId))
 
-  const { data: capitalPorProyecto } = useQuery({
-    queryKey: ['developer', 'capital', 'by-project'],
-    queryFn: api.getCapitalByProject
-  })
+  const { data: capitalPorProyecto } = useQuery(capitalQueries.porProyecto())
 
   const capital = capitalPorProyecto?.find((p) => p.projectId === projectId)
   const ubicacion = [proyecto?.city, proyecto?.country].filter(Boolean).join(', ')

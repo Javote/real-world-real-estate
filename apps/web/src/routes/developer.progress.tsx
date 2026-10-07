@@ -3,6 +3,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { createFileRoute, useNavigate } from '@tanstack/react-router'
 import { AlertCircle } from 'lucide-react'
 import { api } from '#/api/port'
+import { etapaQueries, invalidaciones, invalidar } from '#/api/queries'
 import { Loading } from '#/components/domain/Loading'
 import { PrimaryButton } from '#/components/domain/PrimaryButton'
 import { ProgressTimeline, type TimelineStage } from '#/components/domain/ProgressTimeline'
@@ -36,14 +37,11 @@ function DeveloperProgress() {
   const navigate = useNavigate()
   const queryClient = useQueryClient()
 
-  const { data: filas, isPending } = useQuery({
-    queryKey: ['developer', 'progress'],
-    queryFn: api.getDeveloperProgress
-  })
+  const { data: filas, isPending } = useQuery(etapaQueries.progreso())
 
   const reanudar = useMutation({
     mutationFn: (stageId: string) => api.setMilestoneState(stageId, 'InProgress'),
-    onSuccess: () => void queryClient.invalidateQueries({ queryKey: ['developer', 'progress'] })
+    onSuccess: () => invalidar(queryClient, invalidaciones.etapaCambiada())
   })
 
   const observadas = (filas ?? []).filter((f) => f.state === 'Observed')

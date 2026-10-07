@@ -2,7 +2,8 @@ import { keepPreviousData, useQuery } from '@tanstack/react-query'
 import { createFileRoute, useNavigate } from '@tanstack/react-router'
 import { MapPin, Search, SlidersHorizontal, X } from 'lucide-react'
 import { useEffect, useState } from 'react'
-import { api, projectCoverUrl } from '#/api/port'
+import { projectCoverUrl } from '#/api/port'
+import { proyectoQueries } from '#/api/queries'
 import type { Project } from '#/api/types'
 import { FilterPill } from '#/components/domain/Chips'
 import { Loading } from '#/components/domain/Loading'
@@ -87,8 +88,7 @@ function InvestorBuy() {
     isPending,
     isPlaceholderData
   } = useQuery({
-    queryKey: ['projects', params],
-    queryFn: () => api.listProjects(params),
+    ...proyectoQueries.lista(params),
     placeholderData: keepPreviousData
   })
 

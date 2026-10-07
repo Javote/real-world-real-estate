@@ -1,6 +1,7 @@
 import { useQuery } from '@tanstack/react-query'
 import { createFileRoute } from '@tanstack/react-router'
-import { ApiError, api } from '#/api/port'
+import { ApiError } from '#/api/port'
+import { dossierQueries } from '#/api/queries'
 import { GradientHeader } from '#/components/domain/GradientHeader'
 import { HashChip } from '#/components/domain/HashChip'
 import { LanguageToggle } from '#/components/domain/LanguageToggle'
@@ -21,8 +22,7 @@ function PublicDossierPage() {
   const { t, locale } = useTranslation()
 
   const { data: dossier, error } = useQuery({
-    queryKey: ['public', 'dossier', shareToken],
-    queryFn: () => api.getPublicDossier(shareToken),
+    ...dossierQueries.publico(shareToken),
     retry: reintentarSiNoEsAusencia
   })
 

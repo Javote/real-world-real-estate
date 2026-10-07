@@ -2,7 +2,7 @@ import { useQuery } from '@tanstack/react-query'
 import { Outlet, useNavigate } from '@tanstack/react-router'
 import { User } from 'lucide-react'
 import { createContext, type ReactNode, useContext, useLayoutEffect, useState } from 'react'
-import { api } from '#/api/port'
+import { notificacionQueries } from '#/api/queries'
 import { getSession } from '#/auth/session'
 import { BottomNav } from '#/components/domain/BottomNav'
 import { GradientHeader } from '#/components/domain/GradientHeader'
@@ -71,10 +71,7 @@ function EncabezadoDelPanel({ rol, cabecera }: { rol: Rol; cabecera: CabeceraSto
 
   useLayoutEffect(() => cabecera.suscribir(() => setActual(cabecera.leer())), [cabecera])
 
-  const { data: unread } = useQuery({
-    queryKey: ['notifications', 'unread-count'],
-    queryFn: api.getUnreadCount
-  })
+  const { data: unread } = useQuery(notificacionQueries.noLeidas())
 
   const esAdmin = getSession()?.user.role === 'admin'
 

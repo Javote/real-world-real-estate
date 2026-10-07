@@ -108,7 +108,7 @@ El plan, el acople y la regla de salida están en [`SPEC-611`](SPEC-611-la-migra
 (D-102); el estado, acá. Arranca el 2026-10-02 con A0, a pedido del dueño, con lo que queda abierto de
 la Fase 1 (ítems 6 y 9) en paralelo: ninguno de los dos la frena.
 
-**Lo próximo (dueño, 2026-10-06): `614`, primero el Paso 1 y después el Paso 2; después A0.2, A1 y
+**Lo próximo (dueño, 2026-10-06): el Paso 2 de `614` (el Paso 1 está hecho); después A0.2, A1 y
 A2.** Los hace el dueño, en ese orden; desde `609` se suma una segunda persona en la web y se
 alternan (el reparto, en `SPEC-611` §Quién hace qué). `614` va primero porque no espera a la API y
 es lo que más se nota: volver a una pantalla deja de pedir todo de nuevo (Paso 1) y los datos salen
@@ -122,7 +122,7 @@ La propuesta de calendario, junto con mainnet, está en
 | A0 | La API en ESM y el entorno en un solo lugar | [`612`](SPEC-612-la-api-en-esm-y-el-entorno-en-un-lugar.md) | en curso — **A0.1 (ESM) ✅ 2026-10-02**: 683 requests idénticas a `main` en los cuatro escenarios de observabilidad, `verify:all`, e2e 100/100, `test:s3`. En producción desde el 2026-10-02 22:11 UTC: `/health`, 401 y 404 como antes y logs limpios; falta ver un trace nuevo en Tempo (dueño) y A0.2 |
 | A1 | Los cimientos de los módulos | [`613`](SPEC-613-los-cimientos-de-los-modulos.md) | sin empezar · pide decidir `notify` |
 | A2 | El contrato en `shared`, el router raíz y los guards como `meta` | [`607`](SPEC-607-una-sola-capa-de-api.md) | sin empezar |
-| W2 | La fábrica de queries, `staleTime` y `claveDeError` (Paso 1) y los loaders con `prefetchQuery`, por rol (Paso 2) · el cliente desde el contrato | [`614`](SPEC-614-la-fabrica-de-queries.md) · [`609`](SPEC-609-el-cliente-sale-del-contrato.md) | **`614`: lo próximo**, sin empezar, no espera a la API · `609`: sin empezar, espera a A2 |
+| W2 | La fábrica de queries, `staleTime` y `claveDeError` (Paso 1) y los loaders con `prefetchQuery`, por rol (Paso 2) · el cliente desde el contrato | [`614`](SPEC-614-la-fabrica-de-queries.md) · [`609`](SPEC-609-el-cliente-sale-del-contrato.md) | **`614`: Paso 1 ✅ 2026-10-06** (`verify:all`, e2e 99/100 con un flaky de `AUTH-ME-001` que pasa solo y en su archivo; falta mirar a mano las DevTools), **Paso 2 lo próximo** · `609`: sin empezar, espera a A2 |
 | A3 + W3 | El piloto `dossier` | [`615`](SPEC-615-el-piloto-dossier.md) | sin empezar · antes, decidir el scope del notary, cuándo se persiste la compilación y si la evidencia de M3 se congela |
 | A4 + W4 | El resto, módulo con su rol | [`616`](SPEC-616-el-resto-modulo-por-modulo.md) | sin empezar · después del piloto |
 | A5 + W5 | Una sola forma | [`617`](SPEC-617-una-sola-forma.md) | sin empezar |
@@ -244,7 +244,7 @@ hechos el mismo día.
 | [`SPEC-611`](SPEC-611-la-migracion-fase-2.md) | **La migración (Fase 2)**: los pasos A0–A5 y W2–W5, su orden, su acople, la regla de salida y las decisiones que pide | el índice de la Fase 2 · D-102 |
 | [`SPEC-612`](SPEC-612-la-api-en-esm-y-el-entorno-en-un-lugar.md) | A0: la API en ESM y el entorno en `platform/config.ts`, sin cambio de comportamiento | **Fase 2, A0** · en curso · 🟡 |
 | [`SPEC-613`](SPEC-613-los-cimientos-de-los-modulos.md) | A1: `ErrorCode`, IDs con marca, `Result`, `audit(trx)`, `notify(trx)`, `anclarConReclamo`, el esquema contra los tipos | **Fase 2, A1** · sin empezar · 🟡 · pide decidir `notify` |
-| [`SPEC-614`](SPEC-614-la-fabrica-de-queries.md) | W2: la fábrica de queries por entidad, invalidar por entidad, `staleTime` y una sola `claveDeError` (Paso 1); un loader con `prefetchQuery` por ruta, por rol (Paso 2) | **Fase 2, W2** · **lo próximo** · sin empezar · 🟢 · no espera a la API |
+| [`SPEC-614`](SPEC-614-la-fabrica-de-queries.md) | W2: la fábrica de queries por entidad, invalidar por entidad, `staleTime` y una sola `claveDeError` (Paso 1); un loader con `prefetchQuery` por ruta, por rol (Paso 2) | **Fase 2, W2** · Paso 1 ✅ · Paso 2 lo próximo · 🟢 · no espera a la API |
 | [`SPEC-615`](SPEC-615-el-piloto-dossier.md) | A3 + W3: el piloto `dossier` de punta a punta, con su regla de salida | **Fase 2** · sin empezar · 🟡 · pide 3 decisiones |
 | [`SPEC-616`](SPEC-616-el-resto-modulo-por-modulo.md) | A4 + W4: los 7 módulos restantes con las pantallas de su rol, el `error` de 22 pantallas y dos bugs de UX | **Fase 2** · sin empezar · 🟡/🟢 · después del piloto |
 | [`SPEC-617`](SPEC-617-una-sola-forma.md) | A5 + W5: se borra la forma vieja y Biome impide que vuelva | **Fase 2** · sin empezar · 🟡 |
