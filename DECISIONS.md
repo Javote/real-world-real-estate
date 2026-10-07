@@ -288,7 +288,7 @@ demo es de una vez.
 **Lo que cuesta, medido antes de decidir.** Producción tenía 5 usuarios, 1 proyecto, 2 stages, 1
 evidencia, 1 bundle y 4 filas de `AuditLog`. `OnChainEvent` ya estaba en 0, así que **no se pierde
 ningún anclaje**. Las cuentas demo **no cambian de password** si se re-siembra con las mismas
-`SEED_ADMIN_PASSWORD` y `SEED_DEMO_PASSWORD`: el seed las lee de ahí (`db/credentials.ts`). Lo único
+`SEED_ADMIN_PASSWORD` y `SEED_DEMO_PASSWORD`: `db:seed:produccion` las lee de ahí (D-047). Lo único
 irrecuperable son las 4 filas de auditoría, que son de datos sembrados.
 
 **El borrado tiene que incluir `_migrations`, y esto es lo que puede salir mal en silencio.**
@@ -635,9 +635,13 @@ bytes rechazando en vez de truncar, sin reglas de composición) vive en `passwor
 `packages/shared` y se aplica donde la password se **escribe**, nunca en el login. Jamás loguear ni
 devolver `passwordHash`.
 
-## D-047 — El seed de demo se niega a sembrar credenciales publicadas fuera de local
+## D-047 — Las credenciales publicadas no salen de local
 
-Contra cualquier base que no sea un SQLite local exige `SEED_ADMIN_PASSWORD`/`SEED_DEMO_PASSWORD`.
+Son dos seeds sobre el mismo mundo demo (`apps/api/src/db/demo.ts`): `db:seed`, el local, usa las
+passwords del repo, ignora `SEED_*` y se niega a correr contra una base que no sea un SQLite en
+disco; `db:seed:produccion` exige `SEED_ADMIN_PASSWORD`/`SEED_DEMO_PASSWORD`, sin defaults, y nunca
+las imprime. Hasta el 2026-10-07 era un solo seed que elegía según la base, y el `.env` local con
+las passwords de producción terminaba sembrándolas en la base local y tipeándolas en el e2e.
 
 ## D-035 · D-036 — Zod 4 en el contrato · Multer 2.x
 

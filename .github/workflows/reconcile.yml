@@ -26,8 +26,8 @@ name: Reconciliación de anclajes
 # **Credenciales:** `RECONCILE_ADMIN_EMAIL` / `RECONCILE_ADMIN_PASSWORD` son
 # secrets del repo — hay que cargarlos a mano en GitHub (Settings → Secrets
 # and variables → Actions) antes de que este workflow funcione. Son las
-# mismas credenciales del admin de producción que ya se usan en toda esta
-# prueba (`apps/api/.env` → `SEED_ADMIN_PASSWORD`, `admin@example.com`).
+# credenciales del admin de la demo desplegada (`admin@example.com`, la
+# `SEED_ADMIN_PASSWORD` de `db:seed:produccion`, RUNBOOK §1.3).
 
 on:
   schedule:

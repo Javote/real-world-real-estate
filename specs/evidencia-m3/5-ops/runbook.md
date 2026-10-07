@@ -86,11 +86,13 @@ shows a CORS error. The API is not down — its allowlist does not include that 
 
 ### 1.3 · Seeding the demo accounts
 
-The free tier **has no remote shell**, so the seed runs from your machine against Turso.
+The free tier **has no remote shell**, so the seed runs from your machine against Turso. **It is
+`db:seed:produccion`, not `db:seed`**: the local one uses the passwords published
+in the repository and refuses to run against anything but a SQLite file on disk.
 
 **The seed does NOT print passwords that came from the environment** — it prints `(from
 SEED_ADMIN_PASSWORD)`. This is deliberate, pinned by a test
-(`apps/api/test/seed-credentials.test.ts`), and it is why this procedure has **two steps**: if you
+(`apps/api/test/seed-demo.test.ts`), and it is why this procedure has **two steps**: if you
 generate the passwords inline with `$(openssl …)`, nobody ever sees them and you end up with five
 accounts whose credentials nobody knows — with no remote shell to fix it.
 
@@ -111,16 +113,16 @@ DATABASE_AUTH_TOKEN="$(turso db tokens create propnexus-west)" \
 SEED_ADMIN_PASSWORD="$ADMIN_PW" \
 SEED_DEMO_PASSWORD="$DEMO_PW" \
 JWT_SECRET=anything-the-seed-signs-nothing \
-pnpm --filter @plataforma/api db:seed
+pnpm --filter @plataforma/api db:seed:produccion
 ```
 
 `$(turso db tokens create propnexus-west)` avoids copying and pasting the token. Tokens are
 **additive**: creating a new one does not invalidate the one already in Render. What does break the
 deployed API is `turso db tokens invalidate`, which kills **all of them** at once — do not run it.
 
-**The passwords are mandatory against Turso and the seed fails without them:** the local
-seed credentials are published in the repository, and seeding them into a deployed instance would
-leave an admin account with known credentials. The ones you stored in the first step are the ones
+**The passwords are mandatory and `db:seed:produccion` fails without them, before writing
+anything:** it has no defaults. The local seed's credentials are published in the repository, and
+seeding them into a deployed instance would leave an admin account with known credentials. The ones you stored in the first step are the ones
 you hand to a reviewer.
 
 Migrations do **not** need to be run by hand: they are part of the API's `startCommand` and are

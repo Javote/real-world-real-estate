@@ -116,9 +116,10 @@ seeded accounts are:
 | Certifier | `verifier@example.com` / `verifier123` |
 | *(no tab)* Admin | `admin@example.com` / `admin123` |
 
-These are **public, development-only** credentials. The seed uses them only against a local SQLite
-file, and against any other database it refuses to run unless `SEED_ADMIN_PASSWORD` and
-`SEED_DEMO_PASSWORD` are set. Pre-production uses different passwords.
+These are **public, development-only** credentials. `pnpm db:seed` always uses them and refuses to
+run against anything but a local SQLite file. The deployed demo is seeded with a separate script,
+`db:seed:produccion`, which has no defaults and requires `SEED_ADMIN_PASSWORD` and
+`SEED_DEMO_PASSWORD`. Pre-production uses different passwords.
 
 Environment variables are documented in [`apps/api/.env.example`](apps/api/.env.example) and
 [`apps/web/.env.example`](apps/web/.env.example).

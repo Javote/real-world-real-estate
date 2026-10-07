@@ -1,121 +1,25 @@
 import "dotenv/config";
-import { DEFAULT_STAGE_CATALOG } from "@plataforma/shared";
-import { compileDossier } from "../domain/dossier.js";
 import { db } from "../lib/db.js";
 import { esPuntoDeEntrada } from "../lib/punto-de-entrada.js";
-import { paraMostrar, passwordDeDemo } from "./credentials.js";
-import {
-  type Personaje,
-  sembrarMembresias,
-  sembrarOrganizacion,
-  sembrarProyecto,
-  sembrarStages,
-  sembrarUnidadVendida,
-  sembrarUsuarios
-} from "./fixtures.js";
+import { exigirBaseLocal } from "./credentials.js";
+import { ELENCO_DEMO, sembrarMundoDemo } from "./demo.js";
 
-const ELENCO_DEMO = [
-  {
-    email: "admin@example.com",
-    fullName: "Admin Demo",
-    role: "admin",
-    variable: "SEED_ADMIN_PASSWORD",
-    defaultLocal: "admin123"
-  },
-  {
-    email: "developer@example.com",
-    fullName: "Developer Demo",
-    role: "developer",
-    variable: "SEED_DEMO_PASSWORD",
-    defaultLocal: "developer123"
-  },
-  {
-    email: "buyer@example.com",
-    fullName: "Buyer Demo",
-    role: "buyer",
-    variable: "SEED_DEMO_PASSWORD",
-    defaultLocal: "buyer123"
-  },
-  {
-    email: "verifier@example.com",
-    fullName: "Verifier Demo",
-    role: "verifier",
-    variable: "SEED_DEMO_PASSWORD",
-    defaultLocal: "verifier123"
-  },
-  {
-    email: "notary@example.com",
-    fullName: "Notary Demo",
-    role: "notary",
-    variable: "SEED_DEMO_PASSWORD",
-    defaultLocal: "notary123"
-  }
-] as const satisfies readonly (Omit<Personaje, "password"> & {
-  variable: string;
-  defaultLocal: string;
-})[];
+// El seed local (desarrollo, e2e y CI). Usa siempre las passwords del repo e ignora `SEED_*`
+// aunque estén en el `.env`: las del entorno son de producción y van por `seed-produccion.ts`.
+export async function sembrarDemo(env: NodeJS.ProcessEnv = process.env) {
+  exigirBaseLocal(env);
 
-export async function sembrarDemo() {
-  const personajes: Personaje[] = ELENCO_DEMO.map((p) => ({
-    email: p.email,
-    fullName: p.fullName,
-    role: p.role,
-    password: passwordDeDemo(p.variable, p.defaultLocal)
-  }));
-
-  const ids = await sembrarUsuarios(db, personajes);
-  const id = (email: string) => ids.get(email) as string;
-
-  const organizationId = await sembrarOrganizacion(db, {
-    slug: "grupo-alpine",
-    name: "Grupo Alpine",
-    bio: "Grupo Alpine desarrolla vivienda en pozo en Buenos Aires, con obra propia y entrega documentada etapa por etapa.",
-    foundedYear: 2005
-  });
-
-  const projectId = await sembrarProyecto(db, {
-    organizationId,
-    slug: "torre-a",
-    name: "Torre A",
-    address: "Av. Santa Fe 3200",
-    city: "Buenos Aires",
-    country: "Argentina",
-    totalUnits: 48,
-    status: "in_progress"
-  });
-
-  await sembrarMembresias(db, projectId, [
-    { userId: id("developer@example.com"), membershipRole: "developer" },
-    { userId: id("buyer@example.com"), membershipRole: "buyer" },
-    { userId: id("verifier@example.com"), membershipRole: "verifier" }
-  ]);
-
-  await sembrarStages(
-    db,
-    projectId,
-    DEFAULT_STAGE_CATALOG.map((etapa, i) => ({
-      name: etapa.name,
-      sequenceOrder: etapa.sequenceOrder,
-      state: i === 0 ? "InProgress" : "Pending"
+  await sembrarMundoDemo(
+    ELENCO_DEMO.map((p) => ({
+      email: p.email,
+      fullName: p.fullName,
+      role: p.role,
+      password: p.passwordLocal
     }))
   );
 
-  const { unitId } = await sembrarUnidadVendida(db, {
-    projectId,
-    investorId: id("buyer@example.com"),
-    unitReference: "4B",
-    floor: 4,
-    sizeM2: 68,
-    priceMinorUnits: 9_500_000,
-    currency: "USD"
-  });
-
-  await compileDossier(unitId);
-
-  console.log("Seed completado");
-  for (const p of ELENCO_DEMO) {
-    console.log(`${p.role}: ${p.email} / ${paraMostrar(p.variable, p.defaultLocal)}`);
-  }
+  console.log("Seed local completado");
+  for (const p of ELENCO_DEMO) console.log(`${p.role}: ${p.email} / ${p.passwordLocal}`);
   console.log("Project slug: torre-a");
 }
 

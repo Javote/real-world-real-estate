@@ -184,7 +184,7 @@ Coordenadas de producción. Los valores secretos viven en el dashboard de Render
 
 | Qué | Para qué | Dónde |
 |---|---|---|
-| `SEED_ADMIN_PASSWORD` | login de `admin@example.com` | `apps/api/.env`; el seed no la imprime (D-047) |
+| `SEED_ADMIN_PASSWORD` | login de `admin@example.com` en la demo desplegada | el gestor de passwords; se le pasa en la shell a `db:seed:produccion`, que no la imprime (D-047). Los scripts del video también la leen de `apps/api/.env`. El seed local no la usa |
 | `SEED_DEMO_PASSWORD` | login de las otras cuatro cuentas demo (`developer@`, `buyer@`, `verifier@`, `notary@`) | ídem |
 | `JWT_SECRET` | **no es un login**: la clave con la que la API firma los tokens | local en `apps/api/.env`; en producción, `generateValue: true`, distinta a propósito (D-042) |
 | El token JWT | la sesión: sale de cada login, dura 7 días, vive en `sessionStorage` | nada que guardar |

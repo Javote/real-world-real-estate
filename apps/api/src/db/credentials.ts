@@ -3,23 +3,27 @@ import { urlDeLaBase } from "./local-db.js";
 
 export const esBaseLocal = (url: string) => /^file:/i.test(url.trim());
 
-export function passwordDeDemo(
+// Las passwords del seed local están publicadas en el repo: sembradas en una base desplegada,
+// dejan cuentas de credenciales conocidas (D-047).
+export function exigirBaseLocal(env: NodeJS.ProcessEnv = process.env): void {
+  if (esBaseLocal(urlDeLaBase(env))) return;
+  throw new Error(
+    "`db:seed` es el seed local y DATABASE_URL no apunta a un SQLite en disco.\n" +
+      "Sus passwords están publicadas en el repo. Para la demo desplegada, " +
+      "`db:seed:produccion` (RUNBOOK §1.3)."
+  );
+}
+
+export function passwordDeProduccion(
   variable: string,
-  defaultLocal: string,
   env: NodeJS.ProcessEnv = process.env
 ): string {
   const delEntorno = env[variable]?.trim();
-
   if (!delEntorno) {
-    if (!esBaseLocal(urlDeLaBase(env))) {
-      throw new Error(
-        `${variable} no está seteada y DATABASE_URL no apunta a una base local.\n` +
-          "Las credenciales de este seed están publicadas en el repo: sembrarlas en una " +
-          "instancia desplegada deja una cuenta de credenciales conocidas expuesta.\n" +
-          `Seteá ${variable} (openssl rand -base64 24) o no corras el seed contra esta base.`
-      );
-    }
-    return defaultLocal;
+    throw new Error(
+      `${variable} no está seteada: el seed de producción no tiene passwords por defecto.\n` +
+        "Generala con `openssl rand -base64 24` y guardala antes de sembrar (RUNBOOK §1.3)."
+    );
   }
 
   const parsed = passwordSchema.safeParse(delEntorno);
@@ -30,9 +34,3 @@ export function passwordDeDemo(
   }
   return parsed.data;
 }
-
-export const paraMostrar = (
-  variable: string,
-  defaultLocal: string,
-  env: NodeJS.ProcessEnv = process.env
-) => (env[variable]?.trim() ? `(desde ${variable})` : defaultLocal);

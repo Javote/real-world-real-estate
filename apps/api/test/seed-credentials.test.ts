@@ -1,8 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { esBaseLocal, paraMostrar, passwordDeDemo } from "../src/db/credentials.js";
-
-const LOCAL = { DATABASE_URL: "file:./dev.db" };
-const REMOTA = { DATABASE_URL: "libsql://propnexus.turso.io" };
+import { esBaseLocal, exigirBaseLocal, passwordDeProduccion } from "../src/db/credentials.js";
 
 describe("esBaseLocal", () => {
   it("reconoce un SQLite en disco", () => {
@@ -17,65 +14,50 @@ describe("esBaseLocal", () => {
   });
 });
 
-describe("passwordDeDemo", () => {
-  it("contra una base local usa el default documentado", () => {
-    expect(passwordDeDemo("SEED_ADMIN_PASSWORD", "admin123", LOCAL)).toBe("admin123");
+describe("exigirBaseLocal — el seed local no toca una base desplegada", () => {
+  it("deja pasar un SQLite en disco", () => {
+    expect(() => exigirBaseLocal({ DATABASE_URL: "file:./.data/dev.db" })).not.toThrow();
   });
 
-  it("contra una base remota SIN la variable, revienta", () => {
-    expect(() => passwordDeDemo("SEED_ADMIN_PASSWORD", "admin123", REMOTA)).toThrow(
-      /SEED_ADMIN_PASSWORD/
-    );
+  it("sin DATABASE_URL deja pasar: la conexión cae a la base local, y el chequeo también", () => {
+    expect(() => exigirBaseLocal({})).not.toThrow();
   });
 
-  it("sin DATABASE_URL usa el default: la conexión cae a la base local, y el chequeo también", () => {
-    expect(passwordDeDemo("SEED_ADMIN_PASSWORD", "admin123", {})).toBe("admin123");
+  it("revienta contra una base remota, aunque estén las passwords de producción", () => {
+    expect(() =>
+      exigirBaseLocal({
+        DATABASE_URL: "libsql://propnexus.turso.io",
+        SEED_ADMIN_PASSWORD: "una password larga y valida"
+      })
+    ).toThrow(/db:seed:produccion/);
   });
 
   it("una DATABASE_URL vacía NO cuenta como local: la conexión tampoco caería al default", () => {
-    expect(() => passwordDeDemo("SEED_ADMIN_PASSWORD", "admin123", { DATABASE_URL: "" })).toThrow(
-      /SEED_ADMIN_PASSWORD/
-    );
-  });
-
-  it("contra una base remota CON la variable, la usa", () => {
-    const pw = "una password larga y valida";
-    expect(
-      passwordDeDemo("SEED_ADMIN_PASSWORD", "admin123", { ...REMOTA, SEED_ADMIN_PASSWORD: pw })
-    ).toBe(pw);
-  });
-
-  it("una variable que no cumple la política revienta, también en local", () => {
-    expect(() =>
-      passwordDeDemo("SEED_ADMIN_PASSWORD", "admin123", {
-        ...LOCAL,
-        SEED_ADMIN_PASSWORD: "corta12"
-      })
-    ).toThrow(/política/);
-  });
-
-  it("una variable vacía o de espacios cuenta como ausente", () => {
-    expect(
-      passwordDeDemo("SEED_ADMIN_PASSWORD", "admin123", { ...LOCAL, SEED_ADMIN_PASSWORD: "  " })
-    ).toBe("admin123");
-    expect(() =>
-      passwordDeDemo("SEED_ADMIN_PASSWORD", "admin123", { ...REMOTA, SEED_ADMIN_PASSWORD: "" })
-    ).toThrow();
+    expect(() => exigirBaseLocal({ DATABASE_URL: "" })).toThrow();
   });
 });
 
-describe("paraMostrar", () => {
-  it("imprime el default local, que ya es público", () => {
-    expect(paraMostrar("SEED_ADMIN_PASSWORD", "admin123", LOCAL)).toBe("admin123");
+describe("passwordDeProduccion — sin defaults", () => {
+  it("usa la del entorno", () => {
+    const pw = "una password larga y valida";
+    expect(passwordDeProduccion("SEED_ADMIN_PASSWORD", { SEED_ADMIN_PASSWORD: pw })).toBe(pw);
   });
 
-  it("NUNCA imprime una password que vino del entorno", () => {
-    const salida = paraMostrar("SEED_ADMIN_PASSWORD", "admin123", {
-      ...REMOTA,
-      SEED_ADMIN_PASSWORD: "el-secreto-de-produccion"
-    });
+  it("sin la variable revienta, también contra una base local", () => {
+    expect(() =>
+      passwordDeProduccion("SEED_ADMIN_PASSWORD", { DATABASE_URL: "file:./.data/dev.db" })
+    ).toThrow(/SEED_ADMIN_PASSWORD/);
+  });
 
-    expect(salida).not.toContain("el-secreto-de-produccion");
-    expect(salida).toBe("(desde SEED_ADMIN_PASSWORD)");
+  it("una variable vacía o de espacios cuenta como ausente", () => {
+    expect(() => passwordDeProduccion("SEED_DEMO_PASSWORD", { SEED_DEMO_PASSWORD: "  " })).toThrow(
+      /SEED_DEMO_PASSWORD/
+    );
+  });
+
+  it("una que no cumple la política revienta", () => {
+    expect(() =>
+      passwordDeProduccion("SEED_ADMIN_PASSWORD", { SEED_ADMIN_PASSWORD: "corta12" })
+    ).toThrow(/política/);
   });
 });

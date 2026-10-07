@@ -10,6 +10,7 @@
     "start": "node --import ./dist/src/instrumentation.js dist/src/server.js",
     "db:migrate": "tsx src/db/migrate.ts",
     "db:seed": "tsx src/db/seed.ts",
+    "db:seed:produccion": "tsx src/db/seed-produccion.ts",
     "docs:api": "tsx scripts/generate-api-docs.ts",
     "docs:openapi": "tsx scripts/generate-openapi.ts",
     "test": "vitest run",

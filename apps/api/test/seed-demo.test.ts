@@ -1,25 +1,28 @@
-import { afterEach, describe, expect, it } from "vitest";
+import bcrypt from "bcrypt";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import { sembrarDemo } from "../src/db/seed.js";
+import { sembrarDemoProduccion } from "../src/db/seed-produccion.js";
 import { db } from "../src/lib/db.js";
 
-const ENV_VARS = ["SEED_ADMIN_PASSWORD", "SEED_DEMO_PASSWORD"] as const;
-let previo: Record<string, string | undefined> = {};
+const ADMIN_PROD = "una password valida y larga 1";
+const DEMO_PROD = "otra password valida y larga 2";
+const CON_PASSWORDS = { SEED_ADMIN_PASSWORD: ADMIN_PROD, SEED_DEMO_PASSWORD: DEMO_PROD };
+
+const hashDe = async (email: string) =>
+  (
+    await db
+      .selectFrom("User")
+      .select("passwordHash")
+      .where("email", "=", email)
+      .executeTakeFirstOrThrow()
+  ).passwordHash;
 
 afterEach(() => {
-  for (const v of ENV_VARS) {
-    if (previo[v] === undefined) delete process.env[v];
-    else process.env[v] = previo[v];
-  }
-  previo = {};
+  vi.restoreAllMocks();
 });
 
-describe("sembrarDemo", () => {
-  it("sin variables de entorno — usa los defaults locales y arma el mundo completo", async () => {
-    for (const v of ENV_VARS) {
-      previo[v] = process.env[v];
-      delete process.env[v];
-    }
-
+describe("sembrarDemo — el seed local", () => {
+  it("arma el mundo completo", async () => {
     await sembrarDemo();
 
     const admin = await db
@@ -69,12 +72,24 @@ describe("sembrarDemo", () => {
     expect(dossier).toBeDefined();
   });
 
-  it("con las variables presentes, es idempotente y actualiza el hash de la password", async () => {
-    process.env.SEED_ADMIN_PASSWORD = "una password valida y larga 1";
-    process.env.SEED_DEMO_PASSWORD = "otra password valida y larga 2";
-    previo.SEED_ADMIN_PASSWORD = undefined;
-    previo.SEED_DEMO_PASSWORD = undefined;
+  it("ignora SEED_* del entorno: siembra siempre las passwords del repo", async () => {
+    await sembrarDemo({ ...process.env, ...CON_PASSWORDS });
 
+    expect(await bcrypt.compare("admin123", await hashDe("admin@example.com"))).toBe(true);
+    expect(await bcrypt.compare("developer123", await hashDe("developer@example.com"))).toBe(true);
+    expect(await bcrypt.compare(ADMIN_PROD, await hashDe("admin@example.com"))).toBe(false);
+  });
+
+  it("se niega contra una base que no es un SQLite en disco, antes de escribir nada", async () => {
+    const antes = await hashDe("admin@example.com");
+
+    await expect(
+      sembrarDemo({ ...process.env, DATABASE_URL: "libsql://propnexus.turso.io" })
+    ).rejects.toThrow(/seed local/);
+    expect(await hashDe("admin@example.com")).toBe(antes);
+  });
+
+  it("es idempotente", async () => {
     await sembrarDemo();
     await sembrarDemo();
 
@@ -84,5 +99,36 @@ describe("sembrarDemo", () => {
       .where("email", "=", "admin@example.com")
       .execute();
     expect(admins).toHaveLength(1);
+  });
+});
+
+describe("sembrarDemoProduccion — la demo desplegada", () => {
+  it("siembra las passwords del entorno, y reescribe el hash si ya existía", async () => {
+    await sembrarDemo();
+    await sembrarDemoProduccion({ ...process.env, ...CON_PASSWORDS });
+
+    expect(await bcrypt.compare(ADMIN_PROD, await hashDe("admin@example.com"))).toBe(true);
+    expect(await bcrypt.compare(DEMO_PROD, await hashDe("notary@example.com"))).toBe(true);
+    expect(await bcrypt.compare("admin123", await hashDe("admin@example.com"))).toBe(false);
+  });
+
+  it("sin las variables revienta antes de escribir nada", async () => {
+    const antes = await hashDe("admin@example.com");
+
+    await expect(
+      sembrarDemoProduccion({ ...process.env, SEED_ADMIN_PASSWORD: "", SEED_DEMO_PASSWORD: "" })
+    ).rejects.toThrow(/SEED_ADMIN_PASSWORD/);
+    expect(await hashDe("admin@example.com")).toBe(antes);
+  });
+
+  it("NUNCA imprime una password", async () => {
+    const log = vi.spyOn(console, "log").mockImplementation(() => {});
+
+    await sembrarDemoProduccion({ ...process.env, ...CON_PASSWORDS });
+
+    const salida = log.mock.calls.flat().join("\n");
+    expect(salida).not.toContain(ADMIN_PROD);
+    expect(salida).not.toContain(DEMO_PROD);
+    expect(salida).toContain("(desde SEED_ADMIN_PASSWORD)");
   });
 });
