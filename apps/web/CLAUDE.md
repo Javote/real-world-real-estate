@@ -94,7 +94,10 @@ unidad.
 - **Vitest corre en happy-dom; un archivo que lo necesite pide jsdom** con `// @vitest-environment jsdom`
   y el porqué. Hoy son dos: happy-dom valida formularios más estricto que un navegador (invite) y
   arma una `FileList` en un `drop` sin archivos (`FileDropzone`). Un test que pasa en happy-dom
-  puede no ejercitar su rama: **la coverage es la que avisa**. `test:a11y` sigue en jsdom.
+  puede no ejercitar su rama: **la coverage es la que avisa**. Y una rama que se cubría porque
+  jsdom era lento (el `return` del debounce de `investor.buy`) deja de cubrirse: si CI baja del 100%
+  y en local no, `CI=true pnpm exec vitest run --coverage --maxWorkers=4` lo reproduce. `test:a11y`
+  sigue en jsdom.
 - **Biome necesita `css.parser.tailwindDirectives`** para parsear `@theme`.
 - **En dev `/api` va por el proxy de Vite; en producción por `VITE_API_ORIGIN`**: si la consola dice
   CORS, falta `WEB_ORIGIN` en la API (`specs/RUNBOOK-deploy.md`).

@@ -460,6 +460,18 @@ describe('/investor/buy', () => {
       await waitFor(() => expect(busqueda(router)).toEqual({ view: 'search' }))
     })
 
+    it('si el campo ya tiene la `q` de la URL, la espera no navega', async () => {
+      preparar()
+      const router = montar(`${RUTA}?view=search&q=Des`)
+      await screen.findByLabelText(t('buy.searchLabel'))
+      const navegar = vi.spyOn(router, 'navigate')
+
+      await new Promise((r) => setTimeout(r, 350))
+
+      expect(navegar).not.toHaveBeenCalled()
+      expect(busqueda(router)).toEqual({ view: 'search', q: 'Des' })
+    })
+
     it('el campo arranca con la `q` de la URL y muestra hasta cinco sugerencias', async () => {
       const muchos = Array.from({ length: 7 }, (_, i) =>
         proyecto({ id: `x${i}`, name: `Desarrollo ${i}` })
