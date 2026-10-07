@@ -290,7 +290,29 @@ En Preprod un bloque tarda ~20 s, así que reconciliar inmediatamente después d
 
 ## 2 · Deploy de todos los días
 
-Push a `main`. Hasta el 2026-09-22, Render reconstruía **los dos servicios en cada push**, tocara lo
+Push a `main`. **Render despliega solo si pasan todos los checks de GitHub del commit**
+(`autoDeployTrigger: checksPass` en los dos servicios, desde el 2026-10-07; lo fija
+`apps/api/test/render-config.test.ts`). Según la doc de Render, un check pasa si termina en
+`success`, `neutral` o `skipped`; **si alguno falla, o si el commit no tiene ninguno, no hay
+deploy**. Hasta ese día los dos servicios estaban en `commit` y desplegaban sin mirar CI: los seis
+commits de `SPEC-614` del 2026-10-06 llegaron a producción con CI en rojo.
+
+Lo que cambia en la práctica:
+
+- **El deploy arranca cuando termina CI**, no con el push: unos 5 minutos después, el job más lento.
+- **CI en rojo = nada se despliega.** Se arregla con un commit nuevo; el deploy sale con él, que
+  incluye a los anteriores.
+- **Un commit cancelado por `cancel-in-progress`** (dos pushes seguidos) no se despliega solo: sale
+  con el siguiente.
+- **Un commit que CI saltea** (solo `.md`, imágenes, `.pdf`…) no tiene checks y no despliega,
+  aunque el `buildFilter` lo incluya (una imagen de `apps/web/public/`): sale con el próximo commit
+  de código.
+- **El rollback de §3 y el Manual Deploy del dashboard no esperan a CI**: son a mano, a propósito.
+- **Cómo verificar que sigue activo:** `render services list -o json` muestra
+  `"autoDeployTrigger": "checksPass"` en los dos. El Blueprint no siempre retira o aplica un campo
+  solo (pasó con `NODE_ENV`, ver `render.yaml`).
+
+Hasta el 2026-09-22, Render reconstruía **los dos servicios en cada push**, tocara lo
 que tocara.
 
 **Los `buildFilter` estaban declarados y no filtraban.** Medido el 2026-08-27: el commit `ee357df`
@@ -336,7 +358,9 @@ ventana de los 13-15 minutos. De los cinco fallidos, uno era de código de la AP
 **Cómo evitarlo, en orden de costo:**
 
 1. **Antes de pushear, un request a la API** (`curl -s https://propnexus-api.onrender.com/health`):
-   reinicia el contador de 15 minutos, y el deploy (~2,5 min) termina con margen.
+   reinicia el contador de 15 minutos. Con `checksPass` el deploy (~2,5 min) arranca cuando termina
+   CI (~5 min): termina a los ~8 minutos, todavía con margen. Si CI tarda más de lo normal, el
+   request va cuando CI termina, no antes del push.
 2. **Deployar menos**: el `buildFilter` de arriba.
 3. **Un ping periódico** (cada <15 min) que no deje dormir el servicio. También sacaría el
    arranque en frío de la primera visita. **Decisión del dueño:** el plan free da 750 horas por mes

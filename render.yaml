@@ -35,6 +35,9 @@ services:
     plan: free
     region: oregon
     branch: main
+    # Despliega solo si pasan todos los checks de GitHub del commit: uno que
+    # falla, o ninguno (un commit que CI saltea), no despliega. RUNBOOK §2.
+    autoDeployTrigger: checksPass
     # **Sin `rootDir`, a propósito (2026-09-22).** Estaba en `.` y el
     # `buildFilter` no filtraba nada: de los últimos 100 deploys de este
     # servicio, 57 fueron de commits que el filtro excluye (38 de solo `.md`,
@@ -246,6 +249,8 @@ services:
     name: propnexus-web
     runtime: static
     branch: main
+    # Mismo motivo que en `propnexus-api`.
+    autoDeployTrigger: checksPass
     # Sin `rootDir`: mismo motivo que en `propnexus-api`.
     buildFilter:
       paths:

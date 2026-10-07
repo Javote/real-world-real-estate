@@ -290,7 +290,29 @@ On Preprod a block takes ~20 s, so reconciling right after anchoring usually ret
 
 ## 2 · Everyday deploy
 
-Push to `main`. Render rebuilds **both services on every push**, whatever it touches.
+Push to `main`. **Render deploys only if every GitHub check on the commit passes**
+(`autoDeployTrigger: checksPass` on both services, since 2026-10-07; pinned by
+`apps/api/test/render-config.test.ts`). Per Render's docs, a check passes if it concludes `success`,
+`neutral` or `skipped`; **if any check fails, or the commit has none, there is no deploy**. Until
+that day both services were on `commit` and deployed without looking at CI: the six `SPEC-614`
+commits of 2026-10-06 reached production with CI red.
+
+What this means in practice:
+
+- **The deploy starts when CI finishes**, not on push: about 5 minutes later, the slowest job.
+- **Red CI = nothing deploys.** The fix is a new commit; the deploy ships with it, and it includes
+  the earlier ones.
+- **A commit cancelled by `cancel-in-progress`** (two pushes in a row) does not deploy on its own:
+  it ships with the next one.
+- **A commit CI skips** (only `.md`, images, `.pdf`…) has no checks and does not deploy, even if the
+  `buildFilter` includes it (an image under `apps/web/public/`): it ships with the next code commit.
+- **The rollback in §3 and the dashboard's Manual Deploy do not wait for CI**: they are manual, on
+  purpose.
+- **How to check it is still on:** `render services list -o json` shows
+  `"autoDeployTrigger": "checksPass"` on both. The Blueprint does not always apply or remove a field
+  on its own (it happened with `NODE_ENV`, see `render.yaml`).
+
+Before 2026-10-07, Render rebuilt **both services on every push**, whatever it touched.
 
 **The `buildFilter`s are declared and do not filter.** Measured on 2026-08-27: commit `ee357df`
 touched only three documentation files — no `render.yaml` involved — and triggered new deploys of both

@@ -20,6 +20,7 @@ interface Servicio {
   envVars?: EnvVar[];
   startCommand?: string;
   buildCommand?: string;
+  autoDeployTrigger?: string;
 }
 
 function servicioPorNombre(nombre: string): Servicio {
@@ -155,5 +156,14 @@ describe("render.yaml — buildCommand instala devDependencies pase lo que pase"
   ])("%s fuerza NODE_ENV=development antes de pnpm install", (_nombre, servicio) => {
     const comando = servicio().buildCommand ?? "";
     expect(comando).toMatch(/NODE_ENV=development\s+pnpm install/);
+  });
+});
+
+describe("render.yaml — ningún deploy con CI en rojo", () => {
+  it.each([
+    ["propnexus-api", servicioApi],
+    ["propnexus-web", servicioWeb]
+  ])("%s despliega solo cuando pasan los checks", (_nombre, servicio) => {
+    expect(servicio().autoDeployTrigger).toBe("checksPass");
   });
 });
