@@ -12,7 +12,12 @@ import { useTranslation } from '#/i18n/useTranslation'
 import { CARD_SHELL_EMPTY } from '#/lib/cardShell'
 import { TONO_PROYECTO } from '#/lib/stageProgress'
 
-export const Route = createFileRoute('/developer/projects')({ component: DeveloperProjects })
+export const Route = createFileRoute('/developer/projects')({
+  loader: ({ context: { queryClient } }) => {
+    void queryClient.prefetchQuery(proyectoQueries.delDeveloper())
+  },
+  component: DeveloperProjects
+})
 
 function DeveloperProjects() {
   const { t, locale } = useTranslation()

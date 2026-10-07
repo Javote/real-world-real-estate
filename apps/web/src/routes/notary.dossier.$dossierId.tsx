@@ -16,6 +16,9 @@ import { CARD_SHELL } from '#/lib/cardShell'
 import { cn } from '#/lib/cn'
 
 export const Route = createFileRoute('/notary/dossier/$dossierId')({
+  loader: ({ context: { queryClient }, params: { dossierId } }) => {
+    void queryClient.prefetchQuery(dossierQueries.detalle(dossierId))
+  },
   component: DossierReview
 })
 

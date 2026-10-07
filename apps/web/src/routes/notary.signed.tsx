@@ -10,7 +10,12 @@ import { useTranslation } from '#/i18n/useTranslation'
 import { CARD_SHELL, CARD_SHELL_EMPTY } from '#/lib/cardShell'
 import { cn } from '#/lib/cn'
 
-export const Route = createFileRoute('/notary/signed')({ component: SignedDossiers })
+export const Route = createFileRoute('/notary/signed')({
+  loader: ({ context: { queryClient } }) => {
+    void queryClient.prefetchQuery(dossierQueries.firmas())
+  },
+  component: SignedDossiers
+})
 
 function SignedDossiers() {
   const { t, locale } = useTranslation()

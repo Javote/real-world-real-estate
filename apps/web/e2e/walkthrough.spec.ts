@@ -127,6 +127,9 @@ test.describe('Walkthrough', () => {
     await login(page, 'Developer', 'developer@example.com', passwordDe('developer'), '/developer')
 
     await expect.poll(() => llamadas, { timeout: 15_000 }).toContain(200)
+    // Un pedido de la pantalla que salga con el token roto recibe 401 y borra la sesión: el `goto`
+    // iría a /login sin pasar por /auth/me.
+    await page.waitForLoadState('networkidle')
 
     await page.evaluate(() => {
       const raw = JSON.parse(sessionStorage.getItem('proptrust.session') ?? '{}')

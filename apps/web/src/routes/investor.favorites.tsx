@@ -1,5 +1,6 @@
 import { createFileRoute, useNavigate } from '@tanstack/react-router'
 import { projectCoverUrl } from '#/api/port'
+import { favoritoQueries } from '#/api/queries'
 import type { Project } from '#/api/types'
 import { Loading } from '#/components/domain/Loading'
 import { ProjectCard } from '#/components/domain/ProjectCard'
@@ -10,6 +11,9 @@ import { useFavoritos } from '#/lib/favoritos'
 import { avanceDeStages, TONO_PROYECTO } from '#/lib/stageProgress'
 
 export const Route = createFileRoute('/investor/favorites')({
+  loader: ({ context: { queryClient } }) => {
+    void queryClient.prefetchQuery(favoritoQueries.lista())
+  },
   component: InvestorFavorites
 })
 

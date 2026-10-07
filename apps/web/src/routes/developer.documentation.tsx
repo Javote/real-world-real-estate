@@ -13,6 +13,9 @@ import { useTranslation } from '#/i18n/useTranslation'
 import { CARD_SHELL_EMPTY } from '#/lib/cardShell'
 
 export const Route = createFileRoute('/developer/documentation')({
+  loader: ({ context: { queryClient } }) => {
+    void queryClient.prefetchQuery(evidenciaQueries.delDeveloper())
+  },
   component: DeveloperDocumentation
 })
 

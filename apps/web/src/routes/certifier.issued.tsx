@@ -10,7 +10,12 @@ import { useTranslation } from '#/i18n/useTranslation'
 import { CARD_SHELL, CARD_SHELL_EMPTY } from '#/lib/cardShell'
 import { cn } from '#/lib/cn'
 
-export const Route = createFileRoute('/certifier/issued')({ component: IssuedCertificates })
+export const Route = createFileRoute('/certifier/issued')({
+  loader: ({ context: { queryClient } }) => {
+    void queryClient.prefetchQuery(certificadoQueries.lista())
+  },
+  component: IssuedCertificates
+})
 
 function IssuedCertificates() {
   const { t, locale } = useTranslation()

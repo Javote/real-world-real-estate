@@ -10,7 +10,12 @@ import { PanelLayout } from '#/components/PanelLayout'
 import { useTranslation } from '#/i18n/useTranslation'
 import { CARD_SHELL_EMPTY } from '#/lib/cardShell'
 
-export const Route = createFileRoute('/investor/units')({ component: InvestorUnits })
+export const Route = createFileRoute('/investor/units')({
+  loader: ({ context: { queryClient } }) => {
+    void queryClient.prefetchQuery(unidadQueries.delInvestor())
+  },
+  component: InvestorUnits
+})
 
 const TONO: Record<UnitStatus, StatusTone> = {
   sold: 'verified',

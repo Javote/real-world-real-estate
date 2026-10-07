@@ -1,5 +1,6 @@
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { createRouter as createTanStackRouter } from '@tanstack/react-router'
+import { FRESCO_MS } from './api/queries/frescura'
 import { routeTree } from './routeTree.gen'
 
 export function getRouter() {
@@ -12,7 +13,8 @@ export function getRouter() {
     context: { queryClient },
     scrollRestoration: true,
     defaultPreload: 'intent',
-    defaultPreloadStaleTime: 0,
+    // Un hover repetido no vuelve a correr el loader mientras lo precargado sigue fresco.
+    defaultPreloadStaleTime: FRESCO_MS,
     Wrap: ({ children }) => (
       <QueryClientProvider client={queryClient}>{children}</QueryClientProvider>
     )

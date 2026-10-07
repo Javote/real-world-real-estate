@@ -14,6 +14,9 @@ import { cn } from '#/lib/cn'
 import { reintentarSiNoEsAusencia } from '#/lib/investor'
 
 export const Route = createFileRoute('/public/dossier/$shareToken')({
+  loader: ({ context: { queryClient }, params: { shareToken } }) => {
+    void queryClient.prefetchQuery(dossierQueries.publico(shareToken))
+  },
   component: PublicDossierPage
 })
 

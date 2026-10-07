@@ -12,7 +12,7 @@ import {
 } from 'lucide-react'
 import { useState } from 'react'
 import { ApiError, api, projectCoverUrl } from '#/api/port'
-import { archivoQueries, proyectoQueries } from '#/api/queries'
+import { archivoQueries, favoritoQueries, proyectoQueries } from '#/api/queries'
 import { DocumentCard } from '#/components/domain/DocumentCard'
 import { DocumentViewerModal } from '#/components/domain/DocumentViewerModal'
 import { ImageGalleryModal } from '#/components/domain/ImageGalleryModal'
@@ -47,6 +47,11 @@ const BORDE_DE_TONO: Record<StatusTone, string> = {
 }
 
 export const Route = createFileRoute('/project/$projectId/')({
+  loader: ({ context: { queryClient }, params: { projectId } }) => {
+    void queryClient.prefetchQuery(proyectoQueries.detalle(projectId))
+    void queryClient.prefetchQuery(proyectoQueries.documentos(projectId))
+    void queryClient.prefetchQuery(favoritoQueries.lista())
+  },
   component: InvestorProjectDetail
 })
 

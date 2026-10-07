@@ -126,3 +126,35 @@ loader.
 
 `pnpm verify:all`, `pnpm e2e` completo y, a mano: hover sobre un `ProjectCard` → `GET /projects/:id`
 sale **antes** del click; volver a `/investor/buy` dentro del `staleTime` no repite `GET /projects`.
+
+### Cómo quedó
+
+- **Un solo commit para todos los roles**, a pedido del dueño (2026-10-06), en vez de uno por rol.
+  `routes/-loaders.test.ts` tiene un caso por ruta: el loader devuelve `undefined` (no hay nada que
+  esperar) y precarga exactamente las options de la fábrica que lee el componente, con su
+  `staleTime`.
+- **Qué precarga cada loader**: lo que la pantalla pide con datos de la URL (params y search). Lo que
+  depende de otra respuesta (el proyecto de una unidad, el bundle de una etapa, los blobs, el
+  detalle que elige un `<select>` del admin) queda para `SPEC-616`. Los componentes compartidos
+  cuentan: las rutas con `useFavoritos`, `ProfileScreen`, `AssignedStagesQueue` o
+  `PendingDossiersQueue` precargan su query. `investor.buy` no precarga en la vista de mapa, porque
+  la lista va acotada al recuadro visible, que el loader no conoce.
+- **`defaultPreloadStaleTime` = 30 s** (`FRESCO_MS`).
+- **Medido el 2026-10-06 con Playwright contra la app local:**
+  - Hover sobre "Capital" en la navegación del developer: salen los tres `GET /developer/capital/*`
+    antes del click. Un segundo hover no pide nada, y el click tampoco.
+  - Click en una card de `/investor/buy`: `GET /projects/:id` y `/documents` salen juntos (antes,
+    los documentos esperaban al proyecto). Como los dos muestran anclajes (`staleTime: 0`), se
+    vuelven a pedir al montar la pantalla: son **dos `GET /projects/:id` por navegación**, que
+    reconcilia al leer (hasta 5 consultas a Blockfrost, y solo si hay anclajes `Pending`). Con la
+    pantalla de KPIs del developer pasa lo mismo: un pedido en el hover y otro al montar.
+  - Volver a `/investor/buy` dentro de los 30 s: ningún pedido.
+- **`AUTH-ME-001` rompía el token mientras la pantalla todavía pedía**: el loader adelanta los
+  pedidos, un `unread-count` salía con el token roto, el 401 borraba la sesión y el `goto` iba a
+  `/login` sin pasar por `/auth/me`. El test ahora espera `networkidle` antes de romperlo.
+- **El hover sobre un `ProjectCard` no precarga nada**, ni puede hacerlo: `ProjectCard` y `UnitCard`
+  navegan con un `<button>` y `navigate()`, y el preload por *intent* del router solo actúa sobre un
+  `<Link>`. Hoy precargan con hover solo la sidebar y la barra inferior, que no apuntan a ninguna
+  ruta con parámetros. Que las cards precarguen pide cambiar cómo navegan (un `<Link>`, o
+  `router.preloadRoute` al entrar el puntero) en dos componentes de M2-D3: **queda para decidir**,
+  con la medición de arriba sobre el endpoint que reconcilia.

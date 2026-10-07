@@ -16,6 +16,9 @@ import { CARD_SHELL } from '#/lib/cardShell'
 import { cn } from '#/lib/cn'
 
 export const Route = createFileRoute('/certifier/stage/$stageId')({
+  loader: ({ context: { queryClient }, params: { stageId } }) => {
+    void queryClient.prefetchQuery(etapaQueries.delCertificador(stageId))
+  },
   component: CertifyStage
 })
 

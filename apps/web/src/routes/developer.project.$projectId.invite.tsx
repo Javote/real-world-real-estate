@@ -13,6 +13,9 @@ import { CARD_SHELL } from '#/lib/cardShell'
 import { majorToMinor, minorToMajor } from '#/lib/money'
 
 export const Route = createFileRoute('/developer/project/$projectId/invite')({
+  loader: ({ context: { queryClient }, params: { projectId } }) => {
+    void queryClient.prefetchQuery(proyectoQueries.unidades(projectId))
+  },
   component: InviteInvestor
 })
 

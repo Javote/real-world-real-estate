@@ -3,7 +3,7 @@ import { createFileRoute, useNavigate } from '@tanstack/react-router'
 import { MapPin, Search, SlidersHorizontal, X } from 'lucide-react'
 import { useEffect, useState } from 'react'
 import { projectCoverUrl } from '#/api/port'
-import { proyectoQueries } from '#/api/queries'
+import { favoritoQueries, proyectoQueries } from '#/api/queries'
 import type { Project } from '#/api/types'
 import { FilterPill } from '#/components/domain/Chips'
 import { Loading } from '#/components/domain/Loading'
@@ -46,8 +46,26 @@ function parseBuySearch(raw: Record<string, unknown>): BuySearch {
   }
 }
 
+// En el mapa la lista va acotada al recuadro visible, que el loader no conoce: ahí no precarga.
+function parametrosDeLaLista(search: BuySearch, bbox?: string) {
+  return {
+    ...(search.status ? { status: search.status } : {}),
+    ...(search.q ? { q: search.q } : {}),
+    ...(search.sort ? { sort: search.sort } : {}),
+    ...(search.city ? { city: search.city } : {}),
+    ...(search.view === 'map' && bbox ? { bbox } : {})
+  }
+}
+
 export const Route = createFileRoute('/investor/buy')({
   validateSearch: (raw: Record<string, unknown>) => parseBuySearch(raw),
+  loaderDeps: ({ search }) => search,
+  loader: ({ context: { queryClient }, deps }) => {
+    if (deps.view !== 'map') {
+      void queryClient.prefetchQuery(proyectoQueries.lista(parametrosDeLaLista(deps)))
+    }
+    void queryClient.prefetchQuery(favoritoQueries.lista())
+  },
   component: InvestorBuy
 })
 
@@ -75,13 +93,7 @@ function InvestorBuy() {
     return () => window.clearTimeout(id)
   }, [qLocal, navigate, search.q])
 
-  const params = {
-    ...(search.status ? { status: search.status } : {}),
-    ...(search.q ? { q: search.q } : {}),
-    ...(search.sort ? { sort: search.sort } : {}),
-    ...(search.city ? { city: search.city } : {}),
-    ...(search.view === 'map' && bbox ? { bbox } : {})
-  }
+  const params = parametrosDeLaLista(search, bbox)
 
   const {
     data: proyectos,

@@ -8,7 +8,12 @@ import { formatCurrency } from '#/i18n/format'
 import { useTranslation } from '#/i18n/useTranslation'
 import { CARD_SHELL_EMPTY } from '#/lib/cardShell'
 
-export const Route = createFileRoute('/developer/investors')({ component: DeveloperInvestors })
+export const Route = createFileRoute('/developer/investors')({
+  loader: ({ context: { queryClient } }) => {
+    void queryClient.prefetchQuery(usuarioQueries.inversores())
+  },
+  component: DeveloperInvestors
+})
 
 function DeveloperInvestors() {
   const { t, locale } = useTranslation()

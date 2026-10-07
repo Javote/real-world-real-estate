@@ -22,6 +22,9 @@ import { CARD_SHELL } from '#/lib/cardShell'
 import { cn } from '#/lib/cn'
 
 export const Route = createFileRoute('/developer/project/$projectId/upload')({
+  loader: ({ context: { queryClient }, params: { projectId } }) => {
+    void queryClient.prefetchQuery(proyectoQueries.detalleDelDeveloper(projectId))
+  },
   component: UploadEvidence
 })
 

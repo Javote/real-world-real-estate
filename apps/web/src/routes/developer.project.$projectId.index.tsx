@@ -13,6 +13,10 @@ import { cn } from '#/lib/cn'
 import { avanceDeStages, TONO_PROYECTO } from '#/lib/stageProgress'
 
 export const Route = createFileRoute('/developer/project/$projectId/')({
+  loader: ({ context: { queryClient }, params: { projectId } }) => {
+    void queryClient.prefetchQuery(proyectoQueries.detalleDelDeveloper(projectId))
+    void queryClient.prefetchQuery(capitalQueries.porProyecto())
+  },
   component: DeveloperProjectDetail
 })
 

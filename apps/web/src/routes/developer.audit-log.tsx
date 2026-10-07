@@ -38,7 +38,12 @@ function rolDe(role: string | null): ActorRole {
   return 'developer'
 }
 
-export const Route = createFileRoute('/developer/audit-log')({ component: AuditLog })
+export const Route = createFileRoute('/developer/audit-log')({
+  loader: ({ context: { queryClient } }) => {
+    void queryClient.prefetchQuery(auditoriaQueries.lista())
+  },
+  component: AuditLog
+})
 
 function AuditLog() {
   const { t, locale } = useTranslation()

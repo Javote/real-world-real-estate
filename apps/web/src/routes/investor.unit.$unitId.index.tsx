@@ -40,6 +40,9 @@ import {
 import { avanceDeStages, timelineDeStages } from '#/lib/stageProgress'
 
 export const Route = createFileRoute('/investor/unit/$unitId/')({
+  loader: ({ context: { queryClient }, params: { unitId } }) => {
+    void queryClient.prefetchQuery(unidadQueries.detalle(unitId))
+  },
   component: InvestorUnitDetail
 })
 

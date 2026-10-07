@@ -56,6 +56,13 @@ function parseSearch(raw: Record<string, unknown>): NotifSearch {
 
 export const Route = createFileRoute('/investor/notifications')({
   validateSearch: (raw: Record<string, unknown>) => parseSearch(raw),
+  loaderDeps: ({ search }) => search,
+  loader: ({ context: { queryClient }, deps }) => {
+    void queryClient.prefetchQuery(notificacionQueries.lista(null))
+    if (deps.invitation) {
+      void queryClient.prefetchQuery(invitacionQueries.deInvestor(deps.invitation))
+    }
+  },
   component: InvestorNotifications
 })
 

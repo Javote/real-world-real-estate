@@ -35,6 +35,10 @@ const BORDE: Record<NotifCategory, AuditCategory> = {
 }
 
 export const Route = createFileRoute('/investor/unit/$unitId/notifications')({
+  loader: ({ context: { queryClient }, params: { unitId } }) => {
+    void queryClient.prefetchQuery(unidadQueries.detalle(unitId))
+    void queryClient.prefetchQuery(notificacionQueries.deUnidad(unitId, null))
+  },
   component: InvestorUnitNotifications
 })
 

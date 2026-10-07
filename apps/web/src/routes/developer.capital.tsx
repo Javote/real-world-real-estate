@@ -12,7 +12,14 @@ import { useTranslation } from '#/i18n/useTranslation'
 import { CARD_SHELL, CARD_SHELL_EMPTY } from '#/lib/cardShell'
 import { cn } from '#/lib/cn'
 
-export const Route = createFileRoute('/developer/capital')({ component: DeveloperCapital })
+export const Route = createFileRoute('/developer/capital')({
+  loader: ({ context: { queryClient } }) => {
+    void queryClient.prefetchQuery(capitalQueries.resumen())
+    void queryClient.prefetchQuery(capitalQueries.mensual())
+    void queryClient.prefetchQuery(capitalQueries.porProyecto())
+  },
+  component: DeveloperCapital
+})
 
 function DeveloperCapital() {
   const { t, locale } = useTranslation()

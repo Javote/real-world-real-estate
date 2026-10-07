@@ -28,6 +28,11 @@ import {
 import { bajarBlob } from '#/lib/stageProgress'
 
 export const Route = createFileRoute('/project/$projectId/stage/$stageId')({
+  loader: ({ context: { queryClient }, params: { projectId, stageId } }) => {
+    void queryClient.prefetchQuery(proyectoQueries.etapas(projectId))
+    void queryClient.prefetchQuery(etapaQueries.detalle(projectId, stageId))
+    void queryClient.prefetchQuery(proyectoQueries.documentos(projectId))
+  },
   component: InvestorStageDetail
 })
 

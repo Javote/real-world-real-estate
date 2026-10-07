@@ -11,7 +11,13 @@ import { useTranslation } from '#/i18n/useTranslation'
 import { CARD_SHELL, CARD_SHELL_EMPTY } from '#/lib/cardShell'
 import { cn } from '#/lib/cn'
 
-export const Route = createFileRoute('/developer/units')({ component: DeveloperUnits })
+export const Route = createFileRoute('/developer/units')({
+  loader: ({ context: { queryClient } }) => {
+    void queryClient.prefetchQuery(unidadQueries.delDeveloper())
+    void queryClient.prefetchQuery(proyectoQueries.delDeveloper())
+  },
+  component: DeveloperUnits
+})
 
 function DeveloperUnits() {
   const { t } = useTranslation()

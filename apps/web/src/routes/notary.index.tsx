@@ -1,7 +1,7 @@
 import { useQuery } from '@tanstack/react-query'
 import { createFileRoute } from '@tanstack/react-router'
 import { Building2, Clock, FileCheck2, ShieldCheck } from 'lucide-react'
-import { kpiQueries } from '#/api/queries'
+import { dossierQueries, kpiQueries } from '#/api/queries'
 import { StatCard } from '#/components/domain/StatCard'
 import { PanelLayout } from '#/components/PanelLayout'
 import { PendingDossiersQueue } from '#/components/PendingDossiersQueue'
@@ -9,7 +9,13 @@ import { useTranslation } from '#/i18n/useTranslation'
 import { CARD_SHELL } from '#/lib/cardShell'
 import { useKpiValue } from '#/lib/useKpiValue'
 
-export const Route = createFileRoute('/notary/')({ component: NotaryPanel })
+export const Route = createFileRoute('/notary/')({
+  loader: ({ context: { queryClient } }) => {
+    void queryClient.prefetchQuery(kpiQueries.notary())
+    void queryClient.prefetchQuery(dossierQueries.pendientes())
+  },
+  component: NotaryPanel
+})
 
 function NotaryPanel() {
   const { session } = Route.useRouteContext()

@@ -19,7 +19,13 @@ import type { TranslationKey } from '#/i18n/dictionary'
 import { useTranslation } from '#/i18n/useTranslation'
 import { CARD_SHELL } from '#/lib/cardShell'
 
-export const Route = createFileRoute('/admin/')({ component: AdminPanel })
+export const Route = createFileRoute('/admin/')({
+  loader: ({ context: { queryClient } }) => {
+    void queryClient.prefetchQuery(proyectoQueries.lista())
+    void queryClient.prefetchQuery(usuarioQueries.lista())
+  },
+  component: AdminPanel
+})
 
 const ERRORES_CON_NOMBRE: Record<string, TranslationKey> = {
   CERTIFIER_NOT_ELIGIBLE: 'admin.error.CERTIFIER_NOT_ELIGIBLE',

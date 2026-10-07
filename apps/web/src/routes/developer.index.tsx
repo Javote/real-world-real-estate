@@ -17,7 +17,12 @@ import { PanelLayout } from '#/components/PanelLayout'
 import { useTranslation } from '#/i18n/useTranslation'
 import { useKpiValue } from '#/lib/useKpiValue'
 
-export const Route = createFileRoute('/developer/')({ component: DeveloperPanel })
+export const Route = createFileRoute('/developer/')({
+  loader: ({ context: { queryClient } }) => {
+    void queryClient.prefetchQuery(kpiQueries.developer())
+  },
+  component: DeveloperPanel
+})
 
 function DeveloperPanel() {
   const { session } = Route.useRouteContext()

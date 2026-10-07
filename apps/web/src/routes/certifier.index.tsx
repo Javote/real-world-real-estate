@@ -2,7 +2,13 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { createFileRoute } from '@tanstack/react-router'
 import { Activity, AlertCircle, Clock, ShieldCheck } from 'lucide-react'
 import { api } from '#/api/port'
-import { invalidaciones, invalidar, invitacionQueries, kpiQueries } from '#/api/queries'
+import {
+  etapaQueries,
+  invalidaciones,
+  invalidar,
+  invitacionQueries,
+  kpiQueries
+} from '#/api/queries'
 import { AssignedStagesQueue } from '#/components/AssignedStagesQueue'
 import { PrimaryButton, SecondaryButton } from '#/components/domain/PrimaryButton'
 import { StatCard } from '#/components/domain/StatCard'
@@ -11,7 +17,14 @@ import { useTranslation } from '#/i18n/useTranslation'
 import { CARD_SHELL } from '#/lib/cardShell'
 import { useKpiValue } from '#/lib/useKpiValue'
 
-export const Route = createFileRoute('/certifier/')({ component: CertifierPanel })
+export const Route = createFileRoute('/certifier/')({
+  loader: ({ context: { queryClient } }) => {
+    void queryClient.prefetchQuery(kpiQueries.certificador())
+    void queryClient.prefetchQuery(invitacionQueries.delCertificador())
+    void queryClient.prefetchQuery(etapaQueries.asignadas())
+  },
+  component: CertifierPanel
+})
 
 function CertifierPanel() {
   const { session } = Route.useRouteContext()

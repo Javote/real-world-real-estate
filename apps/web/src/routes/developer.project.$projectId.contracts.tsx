@@ -15,6 +15,10 @@ import { CARD_SHELL, CARD_SHELL_EMPTY } from '#/lib/cardShell'
 import { cn } from '#/lib/cn'
 
 export const Route = createFileRoute('/developer/project/$projectId/contracts')({
+  loader: ({ context: { queryClient }, params: { projectId } }) => {
+    void queryClient.prefetchQuery(proyectoQueries.detalleDelDeveloper(projectId))
+    void queryClient.prefetchQuery(proyectoQueries.contratos(projectId))
+  },
   component: ProjectContracts
 })
 

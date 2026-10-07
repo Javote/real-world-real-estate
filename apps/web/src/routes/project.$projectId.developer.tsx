@@ -17,6 +17,9 @@ import { reintentarSiNoEsAusencia } from '#/lib/investor'
 import { TONO_PROYECTO } from '#/lib/stageProgress'
 
 export const Route = createFileRoute('/project/$projectId/developer')({
+  loader: ({ context: { queryClient }, params: { projectId } }) => {
+    void queryClient.prefetchQuery(proyectoQueries.desarrolladora(projectId))
+  },
   component: InvestorProjectDeveloper
 })
 

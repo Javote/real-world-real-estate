@@ -17,7 +17,12 @@ import { cn } from '#/lib/cn'
 import { claveEstadoStage } from '#/lib/investor'
 import { avanceDeStages } from '#/lib/stageProgress'
 
-export const Route = createFileRoute('/developer/progress')({ component: DeveloperProgress })
+export const Route = createFileRoute('/developer/progress')({
+  loader: ({ context: { queryClient } }) => {
+    void queryClient.prefetchQuery(etapaQueries.progreso())
+  },
+  component: DeveloperProgress
+})
 
 function nodoDe(state: string): TimelineStage['state'] {
   if (state === 'Completed') return 'completed'

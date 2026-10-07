@@ -15,6 +15,10 @@ import { cn } from '#/lib/cn'
 import { reintentarSiNoEsAusencia } from '#/lib/investor'
 
 export const Route = createFileRoute('/investor/unit/$unitId/contract')({
+  loader: ({ context: { queryClient }, params: { unitId } }) => {
+    void queryClient.prefetchQuery(unidadQueries.detalle(unitId))
+    void queryClient.prefetchQuery(contratoQueries.deUnidad(unitId))
+  },
   component: InvestorContract
 })
 

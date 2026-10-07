@@ -20,6 +20,10 @@ import { reintentarSiNoEsAusencia, unicosPorStageId } from '#/lib/investor'
 import { bajarBlob, timelineDeStages } from '#/lib/stageProgress'
 
 export const Route = createFileRoute('/investor/unit/$unitId/dossier')({
+  loader: ({ context: { queryClient }, params: { unitId } }) => {
+    void queryClient.prefetchQuery(dossierQueries.deUnidad(unitId))
+    void queryClient.prefetchQuery(unidadQueries.detalle(unitId))
+  },
   component: InvestorDossier
 })
 

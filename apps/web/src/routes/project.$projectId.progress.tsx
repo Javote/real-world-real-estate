@@ -15,6 +15,11 @@ import { claveEstadoStage, reintentarSiNoEsAusencia } from '#/lib/investor'
 import { timelineDeStages } from '#/lib/stageProgress'
 
 export const Route = createFileRoute('/project/$projectId/progress')({
+  loader: ({ context: { queryClient }, params: { projectId } }) => {
+    void queryClient.prefetchQuery(proyectoQueries.detalle(projectId))
+    void queryClient.prefetchQuery(proyectoQueries.etapas(projectId))
+    void queryClient.prefetchQuery(proyectoQueries.documentos(projectId))
+  },
   component: InvestorProjectProgress
 })
 
