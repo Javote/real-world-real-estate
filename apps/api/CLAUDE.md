@@ -9,6 +9,11 @@ backlog quedan el CRUD de `/projects` y `/users` (admin, `SPEC-221`).
 
 ## Checklist de un endpoint nuevo
 
+Desde A2 (SPEC-607), un endpoint nuevo puede nacer como procedimiento oRPC en `routerRaiz`
+(`platform/router.ts`): sale de `procedimiento(guard)` (`platform/procedimiento.ts`), con el mismo
+guard que `authorize` en su `meta`, y `route-guards.test.ts` lo lee de ahí. Lo de abajo es la forma
+Express, que sigue siendo la de las rutas existentes hasta A3/A4.
+
 1. Schema Zod en `packages/shared` **antes** que el endpoint (regla 6).
 2. **`authorize({ roles, acceso })`**, los dos obligatorios (D-088): `"soloRol"`,
    `{ proyecto, membresias }`, `{ dueño }`, `{ alguna: [...] }` o `{ scopeEnQuery: "<el filtro>" }`.
@@ -57,6 +62,11 @@ backlog quedan el CRUD de `/projects` y `/users` (admin, `SPEC-221`).
 
 **Express, oRPC y errores**
 
+- **El router oRPC raíz atiende antes que Express**: lo que no conoce sigue de largo con `next()`, y
+  cada request suma un span `routerOrpc`. Una ruta en los dos lados es un error de `rutasConGuards`.
+- **El guard de un procedimiento corre antes de validar el input** (`guardOrpc`): sin sesión es 401
+  aunque el body sea inválido. Un middleware que se agregue antes de `.input()` corre con el input
+  crudo; `test/guard-orpc.test.ts` fija el orden.
 - **El orden de montaje en `app.ts` es semántico**: un `router.use(guard)` corre para todo lo que le
   entra. Cada router con guard va bajo su prefijo, y los que lo comparten declaran los mismos guards.
 - **Una restricción de la base es 409/400, no 500**: lo mapea `errorHandler` (`codigoDeRestriccion`).

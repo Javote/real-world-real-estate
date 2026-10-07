@@ -7,11 +7,14 @@
  * por status (`claveDeError`).
  */
 export const ERROR_CODES = {
-  // Los de `ORPCError` con nombre.
+  // Los de `ORPCError` con nombre. `FORBIDDEN` e `INTERNAL_SERVER_ERROR` los manda el guard de los
+  // procedimientos oRPC (`guard-orpc.ts`), con los mismos status y mensajes que `authorize`.
   BAD_REQUEST: { status: 400, clave: "error.generic" },
   UNAUTHORIZED: { status: 401, clave: "error.generic" },
+  FORBIDDEN: { status: 403, clave: "error.forbidden" },
   NOT_FOUND: { status: 404, clave: "error.notFound" },
   CONFLICT: { status: 409, clave: "error.generic" },
+  INTERNAL_SERVER_ERROR: { status: 500, clave: "error.generic" },
 
   // Declarados con `.errors()` en un procedimiento.
   ALREADY_MEMBER: { status: 409, clave: "admin.error.ALREADY_MEMBER" },

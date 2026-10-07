@@ -10,7 +10,7 @@ import {
   sql
 } from "../lib/kysely.js";
 
-type Usuario = { id: string; email: string; role: UserRole };
+export type Usuario = { id: string; email: string; role: UserRole };
 
 type UsuarioLeido = Usuario | { rechazo: "User not active" | "Invalid token" };
 
@@ -18,7 +18,7 @@ declare global {
   namespace Express {
     interface Request {
       user?: Usuario;
-      sesion?: { token: Usuario; usuario: Promise<UsuarioLeido> };
+      sesion?: Sesion;
     }
   }
 }
@@ -56,27 +56,32 @@ async function leerUsuario(id: string): Promise<UsuarioLeido> {
   }
 }
 
-// No espera a la base: `authorize` lee el usuario en paralelo con la regla y recién ahí escribe
-// `req.user`.
-export function authenticate(req: Request, res: Response, next: NextFunction) {
-  const authHeader = req.headers.authorization;
+export type Sesion = { token: Usuario; usuario: Promise<UsuarioLeido> };
 
-  if (!authHeader?.startsWith("Bearer ")) {
-    return res.status(401).json({ message: "Missing or invalid token" });
-  }
+// No espera a la base: la regla corre con lo que dice el token mientras se lee el usuario.
+export function sesionDesde(
+  authHeader: string | undefined
+): Sesion | { rechazo: "Missing or invalid token" | "Invalid token" } {
+  if (!authHeader?.startsWith("Bearer ")) return { rechazo: "Missing or invalid token" };
 
   let payload: ReturnType<typeof verifyToken>;
   try {
     payload = verifyToken(authHeader.slice("Bearer ".length));
   } catch {
-    return res.status(401).json({ message: "Invalid token" });
+    return { rechazo: "Invalid token" };
   }
 
-  req.sesion = {
+  return {
     token: { id: payload.userId, email: payload.email, role: payload.role as UserRole },
     usuario: leerUsuario(payload.userId)
   };
+}
 
+export function authenticate(req: Request, res: Response, next: NextFunction) {
+  const sesion = sesionDesde(req.headers.authorization);
+  if ("rechazo" in sesion) return res.status(401).json({ message: sesion.rechazo });
+
+  req.sesion = sesion;
   next();
 }
 
@@ -138,7 +143,7 @@ async function accesoPorEntidad(
   key: string,
   user: Usuario,
   allowedMemberships: MembershipRole[]
-): Promise<{ permitido: boolean } | undefined> {
+): Promise<{ permitido: boolean; proyectoId: string | null } | undefined> {
   const permitido = (eb: ExpressionBuilder<Database, "Project">) =>
     eb
       .and([
@@ -153,55 +158,63 @@ async function accesoPorEntidad(
           .selectFrom("Contract")
           .innerJoin("Unit", "Unit.id", "Contract.unitId")
           .leftJoin("Project", "Project.id", "Unit.projectId")
-          .select((eb) => permitido(eb))
+          .select((eb) => [permitido(eb), "Project.id as proyectoId"])
           .where("Contract.id", "=", key)
           .executeTakeFirst()
       : await db
           .selectFrom(via)
           .leftJoin("Project", "Project.id", `${via}.projectId`)
-          .select((eb) => permitido(eb))
+          .select((eb) => [permitido(eb), "Project.id as proyectoId"])
           .where(`${via}.id`, "=", key)
           .executeTakeFirst();
 
-  return fila && { permitido: Boolean(fila.permitido) };
+  return fila && { permitido: Boolean(fila.permitido), proyectoId: fila.proyectoId };
 }
 
-type Veredicto = { ok: true } | { ok: false; status: 400 | 403 | 404 | 500; message: string };
+// Si la regla pasó por un proyecto, cuál: el procedimiento oRPC lo recibe en el contexto.
+export type Veredicto =
+  | { ok: true; proyectoId?: string }
+  | { ok: false; status: 400 | 403 | 404 | 500; message: string };
+
+/** De dónde lee la regla sus params: de `req` en Express, del `input` crudo en oRPC. */
+export type LectorDeParam = (param: string, en: "path" | "body") => string | Veredicto;
 
 const PASA: Veredicto = { ok: true };
 const PROHIBIDO: Veredicto = { ok: false, status: 403, message: "Forbidden" };
 
-function leerParam(req: Request, param: string, en: "path" | "body" = "path"): string | Veredicto {
-  if (en === "body") {
-    const valor = (req.body as Record<string, unknown> | undefined)?.[param];
-    if (typeof valor !== "string" || !valor) {
+export const paramsDeRequest =
+  (req: Request): LectorDeParam =>
+  (param, en) => {
+    if (en === "body") {
+      const valor = (req.body as Record<string, unknown> | undefined)?.[param];
+      if (typeof valor !== "string" || !valor) {
+        return {
+          ok: false,
+          status: 400,
+          message: `Missing or invalid "${param}"`
+        };
+      }
+      return valor;
+    }
+
+    const key = req.params[param];
+    if (typeof key !== "string" || !key) {
       return {
         ok: false,
-        status: 400,
-        message: `Missing or invalid "${param}"`
+        status: 500,
+        message: `Route misconfiguration: param "${param}" must be a single path value`
       };
     }
-    return valor;
-  }
-
-  const key = req.params[param];
-  if (typeof key !== "string" || !key) {
-    return {
-      ok: false,
-      status: 500,
-      message: `Route misconfiguration: param "${param}" must be a single path value`
-    };
-  }
-  return key;
-}
+    return key;
+  };
 
 async function evaluarProyecto(
   user: Usuario,
-  req: Request,
+  leer: LectorDeParam,
   source: ProjectSource,
   allowedMemberships: MembershipRole[]
 ): Promise<Veredicto> {
-  const key = leerParam(req, source.param, "via" in source ? source.en : "path");
+  const key = leer(source.param, "via" in source ? (source.en ?? "path") : "path");
   if (typeof key !== "string") return key;
 
   if ("via" in source) {
@@ -211,11 +224,12 @@ async function evaluarProyecto(
       return { ok: false, status: 404, message: `${source.nombre ?? source.via} not found` };
     }
 
-    return acceso.permitido ? PASA : PROHIBIDO;
+    // Permitido implica proyecto: `permitido` exige `Project.id is not null`.
+    return acceso.permitido ? { ok: true, proyectoId: acceso.proyectoId as string } : PROHIBIDO;
   }
 
   const allowed = await canAccessProject(user.id, user.role, key, allowedMemberships);
-  return allowed ? PASA : PROHIBIDO;
+  return allowed ? { ok: true, proyectoId: key } : PROHIBIDO;
 }
 
 export type OwnerSource =
@@ -272,8 +286,12 @@ async function cargarDueño(
   return fila ? { dueño: fila.investorId, contra: "id" } : null;
 }
 
-async function evaluarDueño(user: Usuario, req: Request, source: OwnerSource): Promise<Veredicto> {
-  const key = leerParam(req, source.param);
+async function evaluarDueño(
+  user: Usuario,
+  leer: LectorDeParam,
+  source: OwnerSource
+): Promise<Veredicto> {
+  const key = leer(source.param, "path");
   if (typeof key !== "string") return key;
 
   const fila = await cargarDueño(source, key);
@@ -295,64 +313,93 @@ export type ReglaSimple =
 
 export type ReglaDeAcceso = ReglaSimple | { alguna: [ReglaSimple, ReglaSimple, ...ReglaSimple[]] };
 
-async function evaluarSimple(user: Usuario, req: Request, regla: ReglaSimple): Promise<Veredicto> {
+async function evaluarSimple(
+  user: Usuario,
+  leer: LectorDeParam,
+  regla: ReglaSimple
+): Promise<Veredicto> {
   if (regla === "soloRol") return PASA;
 
   if ("scopeEnQuery" in regla) return PASA;
 
-  if ("proyecto" in regla) return evaluarProyecto(user, req, regla.proyecto, regla.membresias);
-  return evaluarDueño(user, req, regla.dueño);
+  if ("proyecto" in regla) return evaluarProyecto(user, leer, regla.proyecto, regla.membresias);
+  return evaluarDueño(user, leer, regla.dueño);
 }
 
-async function evaluarRegla(user: Usuario, req: Request, regla: ReglaDeAcceso): Promise<Veredicto> {
+async function evaluarRegla(
+  user: Usuario,
+  leer: LectorDeParam,
+  regla: ReglaDeAcceso
+): Promise<Veredicto> {
   if (typeof regla === "string" || !("alguna" in regla)) {
-    return evaluarSimple(user, req, regla);
+    return evaluarSimple(user, leer, regla);
   }
 
-  const veredictos = await Promise.all(regla.alguna.map((rama) => evaluarSimple(user, req, rama)));
+  const veredictos = await Promise.all(regla.alguna.map((rama) => evaluarSimple(user, leer, rama)));
 
   const roto = veredictos.find((v) => !v.ok && (v.status === 500 || v.status === 400));
   if (roto) return roto;
 
-  if (veredictos.some((v) => v.ok)) return PASA;
+  const permitido = veredictos.find((v) => v.ok);
+  if (permitido) return permitido;
 
   /* v8 ignore next -- @preserve: `alguna` exige dos ramas como mínimo (el tipo lo obliga), así que `veredictos[0]` siempre existe y el `?? PROHIBIDO` nunca corre */
   return veredictos.find((v) => !v.ok && v.status === 403) ?? veredictos[0] ?? PROHIBIDO;
 }
 
+export type ReglaDeAutorizacion = { roles: UserRole[]; acceso: ReglaDeAcceso };
+
 function veredictoPara(
   user: Usuario,
-  req: Request,
-  regla: { roles: UserRole[]; acceso: ReglaDeAcceso }
+  leer: LectorDeParam,
+  regla: ReglaDeAutorizacion
 ): Promise<Veredicto> {
   if (!regla.roles.includes(user.role)) return Promise.resolve(PROHIBIDO);
-  return evaluarRegla(user, req, regla.acceso);
+  return evaluarRegla(user, leer, regla.acceso);
 }
 
-export function authorize(regla: { roles: UserRole[]; acceso: ReglaDeAcceso }) {
+/**
+ * La regla corre con lo que dice el token mientras la base confirma al usuario; si la base dice otra
+ * cosa (otro rol, otro email), corre de nuevo con lo leído. Lo usan `authorize` y `guardOrpc`.
+ */
+export async function autorizar(
+  sesion: Sesion,
+  leer: LectorDeParam,
+  regla: ReglaDeAutorizacion
+): Promise<
+  { rechazo: "User not active" | "Invalid token" } | { usuario: Usuario; veredicto: Veredicto }
+> {
+  const { token, usuario } = sesion;
+
+  const anticipado = veredictoPara(token, leer, regla);
+  anticipado.catch(() => {});
+
+  const leido = await usuario;
+  if ("rechazo" in leido) return { rechazo: leido.rechazo };
+
+  const veredicto =
+    leido.role === token.role && leido.email === token.email
+      ? await anticipado
+      : await veredictoPara(leido, leer, regla);
+  return { usuario: leido, veredicto };
+}
+
+export function authorize(regla: ReglaDeAutorizacion) {
   return marcar(
     async (req: Request, res: Response, next: NextFunction) => {
+      const leer = paramsDeRequest(req);
       let veredicto: Veredicto;
 
       if (req.user) {
-        veredicto = await veredictoPara(req.user, req, regla);
+        veredicto = await veredictoPara(req.user, leer, regla);
       } else if (req.sesion) {
-        const { token, usuario } = req.sesion;
-
-        // La regla corre con lo que dice el token mientras la base confirma al usuario.
-        const anticipado = veredictoPara(token, req, regla);
-        anticipado.catch(() => {});
-
-        const leido = await usuario;
-        if ("rechazo" in leido) {
-          return res.status(401).json({ message: leido.rechazo });
+        const resultado = await autorizar(req.sesion, leer, regla);
+        if ("rechazo" in resultado) {
+          return res.status(401).json({ message: resultado.rechazo });
         }
 
-        req.user = leido;
-        veredicto =
-          leido.role === token.role && leido.email === token.email
-            ? await anticipado
-            : await veredictoPara(leido, req, regla);
+        req.user = resultado.usuario;
+        veredicto = resultado.veredicto;
       } else {
         return res.status(401).json({ message: "Unauthorized" });
       }

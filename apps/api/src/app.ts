@@ -9,6 +9,7 @@ import { sql } from "./lib/kysely.js";
 import { errorHandler } from "./middlewares/errorHandler.js";
 import { trustProxyHops } from "./middlewares/rateLimit.js";
 import { entorno } from "./platform/config.js";
+import { montarRouter, routerRaiz } from "./platform/router.js";
 import auditRoutes from "./routes/audit.routes.js";
 import authRoutes from "./routes/auth.routes.js";
 import capitalRoutes from "./routes/capital.routes.js";
@@ -96,6 +97,9 @@ export const MONTAJE = [
   { prefijo: "/api/v1/notary", router: notaryRoutes },
   { prefijo: "/api/v1/certifier", router: certifierRoutes }
 ] as const;
+
+// Antes que las rutas de Express: lo que el router oRPC no conoce sigue de largo (SPEC-607).
+app.use(montarRouter(routerRaiz));
 
 for (const { prefijo, router } of MONTAJE) {
   app.use(prefijo, router);

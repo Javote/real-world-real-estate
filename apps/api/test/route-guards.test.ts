@@ -1,6 +1,12 @@
 import { afterAll, describe, expect, it } from "vitest";
 import { db } from "../src/lib/db.js";
-import { describir, leerMontaje, matrizViva, ramas } from "../src/lib/route-inventory.js";
+import {
+  describir,
+  leerMontaje,
+  matrizViva,
+  ramas,
+  rutasConGuards
+} from "../src/lib/route-inventory.js";
 import type { ReglaDeAcceso } from "../src/middlewares/auth.js";
 
 afterAll(async () => {
@@ -196,13 +202,11 @@ describe("la matriz de permisos de las rutas montadas", () => {
       );
 
     const vacias: string[] = [];
-    for (const { rutas } of leerMontaje()) {
-      for (const [clave, guards] of rutas) {
-        for (const guard of guards) {
-          if (guard.kind !== "authorize") continue;
-          if (guard.roles.length === 0) vacias.push(`${clave} · rol`);
-          if (membresiasVacias(guard.acceso)) vacias.push(`${clave} · proyecto`);
-        }
+    for (const [clave, guards] of rutasConGuards()) {
+      for (const guard of guards) {
+        if (guard.kind !== "authorize") continue;
+        if (guard.roles.length === 0) vacias.push(`${clave} · rol`);
+        if (membresiasVacias(guard.acceso)) vacias.push(`${clave} · proyecto`);
       }
     }
 
@@ -218,11 +222,9 @@ describe("la matriz de permisos de las rutas montadas", () => {
           regla !== "soloRol" && "scopeEnQuery" in regla && regla.scopeEnQuery.trim().length === 0
       );
 
-    for (const { rutas } of leerMontaje()) {
-      for (const [clave, guards] of rutas) {
-        for (const guard of guards) {
-          if (guard.kind === "authorize" && enBlanco(guard.acceso)) sinNombrar.push(clave);
-        }
+    for (const [clave, guards] of rutasConGuards()) {
+      for (const guard of guards) {
+        if (guard.kind === "authorize" && enBlanco(guard.acceso)) sinNombrar.push(clave);
       }
     }
 

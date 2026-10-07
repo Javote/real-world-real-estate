@@ -93,6 +93,35 @@ terminó (`SPEC-216`), y lo que quedó es una forma que nadie eligió como desti
   para esas 6 y de Express para el resto. Si el piloto obliga a cambiar la `MATRIZ`, se frena y se
   revisa el diseño.
 
+## A2, hecho el 2026-10-07
+
+En la rama `worktree-fase2-a0-a2`, sin mergear. Ninguna ruta cambió de dueño y el OpenAPI no se movió.
+
+| Pieza | Dónde |
+|---|---|
+| El router raíz, vacío, montado en `/api/v1` antes que Express con un solo `OpenAPIHandler` | `apps/api/src/platform/router.ts` (`routerRaiz`, `montarRouter`) |
+| `procedimiento(guard)`: el único punto de entrada para un procedimiento nuevo; sin guard no compila | `apps/api/src/platform/procedimiento.ts` |
+| `guardOrpc`: lee `meta.guard` y corre antes de validar el input; deja `usuario` y `proyectoId` en el contexto | `apps/api/src/middlewares/guard-orpc.ts` |
+| El contexto inyectable `{ db, anchor, storage, clock, config }` | `apps/api/src/platform/contexto.ts` |
+| La regla, escrita una vez: los evaluadores leen los params por `LectorDeParam` (de `req` en Express, del `input` en oRPC) y `autorizar()` resuelve token → usuario para los dos | `apps/api/src/middlewares/auth.ts` |
+| La matriz lee de las dos fuentes (`rutasConGuards`), y una ruta con dos dueños es un error | `apps/api/src/lib/route-inventory.ts` |
+
+**Paso 0** (`test/guard-orpc.test.ts`, un router de prueba que no se publica): sin sesión es 401 aunque el
+body sea inválido, un rol o una membresía sin permiso es 403 antes que el 400, y recién con permiso
+aparece el 400 del schema. Probado en rojo: con `initialInputValidationIndex` antes del guard, los 6
+casos de orden fallan. Los mensajes son los de Express (`Missing or invalid token`, `Forbidden`,
+`Stage not found`, `Missing or invalid "stageId"`); el cuerpo es el de oRPC, que suma `code` y `status`.
+Por eso `ERROR_CODES` suma `FORBIDDEN` e `INTERNAL_SERVER_ERROR` (35 códigos).
+
+**Lo que se movió, medido** con el arnés de SPEC-612 contra `main`: las 653 respuestas son idénticas y
+Sentry ve lo mismo; OpenTelemetry suma **un span de middleware por request** (`routerOrpc`, +651 en
+`express`, `router` y `@sentry/node`), el del router raíz que atiende antes que Express. `MATRIZ` sin un
+carácter de diferencia, la API en 100/100/100/100 (901 tests) y el e2e 100/100.
+
+**Lo que queda para A3:** el contrato en `packages/shared/src/contract/` (necesita `@orpc/contract` en
+un paquete CommonJS, el mismo problema que A0.1 resolvió en la API) y la entidad completa en el
+contexto, no solo su proyecto.
+
 ## Tamaño
 
 Grande, pero mecánico después del piloto. Va por vertical, igual que `SPEC-212`, y cada vertical

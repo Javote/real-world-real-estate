@@ -9,6 +9,7 @@ import {
   unitIdSchema
 } from "@plataforma/shared";
 import { describe, expectTypeOf, it } from "vitest";
+import { procedimiento } from "../src/platform/procedimiento.js";
 
 // Las garantías de tipos de A1 (SPEC-613). Viven acá porque `packages/shared` no typechequea sus
 // tests y `apps/api` sí (`tsconfig.typecheck.json`): si una deja de valer, `pnpm typecheck` falla.
@@ -25,6 +26,12 @@ describe("cimientos de A1 — lo que verifica tsc", () => {
 
   it("Serialized deja un id con marca como está", () => {
     expectTypeOf<Serialized<{ unitId: UnitId }>>().toEqualTypeOf<{ unitId: UnitId }>();
+  });
+
+  it("un procedimiento oRPC no nace sin guard (SPEC-607)", () => {
+    // @ts-expect-error — `procedimiento` exige el guard
+    const sinGuard = () => procedimiento();
+    expectTypeOf(sinGuard).toBeFunction();
   });
 
   it("err solo acepta un ErrorCode del inventario", () => {

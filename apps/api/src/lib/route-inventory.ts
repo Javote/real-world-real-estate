@@ -5,6 +5,8 @@ import {
   type ReglaDeAcceso,
   type ReglaSimple
 } from "../middlewares/auth.js";
+import type { Guard } from "../middlewares/guard-orpc.js";
+import { PREFIJO_API, routerRaiz } from "../platform/router.js";
 import { en } from "./arrays.js";
 
 type Capa = {
@@ -98,12 +100,66 @@ export function leerMontaje(): Montaje[] {
   });
 }
 
-export function matrizViva(): Record<string, string> {
-  const salida: Record<string, string> = {};
-  for (const { rutas } of leerMontaje()) {
-    for (const [clave, guards] of rutas) {
-      salida[clave] = guards.map(describir).join(" + ") || "—";
+type ProcedimientoOrpc = {
+  "~orpc": { route: { method?: string; path?: string }; meta: { guard?: Guard }; handler: unknown };
+};
+
+const esProcedimiento = (x: unknown): x is ProcedimientoOrpc =>
+  typeof x === "object" &&
+  x !== null &&
+  "~orpc" in x &&
+  "handler" in (x as ProcedimientoOrpc)["~orpc"];
+
+/** Los procedimientos del router oRPC, con el guard de su `meta` en la forma de Express. */
+export function leerRouterOrpc(
+  router: object,
+  prefijo: string = PREFIJO_API
+): Map<string, GuardDescriptor[]> {
+  const rutas = new Map<string, GuardDescriptor[]>();
+
+  const recorrer = (nodo: object) => {
+    for (const hijo of Object.values(nodo)) {
+      if (!esProcedimiento(hijo)) {
+        recorrer(hijo as object);
+        continue;
+      }
+      const { route, meta } = hijo["~orpc"];
+      const path = `${prefijo}${route.path ?? ""}`.replace(/\{(\w+)\}/g, ":$1");
+      const clave = `${route.method ?? "POST"} ${path}`;
+      const guard = meta.guard;
+      if (!guard) throw new Error(`${clave} no declara guard`);
+      rutas.set(
+        clave,
+        "sinSesion" in guard
+          ? []
+          : [
+              { kind: "authenticate" },
+              { kind: "authorize", roles: guard.roles, acceso: guard.acceso }
+            ]
+      );
     }
+  };
+  recorrer(router);
+  return rutas;
+}
+
+/** Las rutas de Express y las del router oRPC, juntas. Una ruta con dos dueños es un error. */
+export function rutasConGuards(router: object = routerRaiz): Map<string, GuardDescriptor[]> {
+  const todas = new Map<string, GuardDescriptor[]>();
+  for (const { rutas } of leerMontaje()) {
+    for (const [clave, guards] of rutas) todas.set(clave, guards);
+  }
+  for (const [clave, guards] of leerRouterOrpc(router)) {
+    if (todas.has(clave)) throw new Error(`${clave} está en Express y en el router oRPC`);
+    todas.set(clave, guards);
+  }
+  return todas;
+}
+
+export function matrizViva(router: object = routerRaiz): Record<string, string> {
+  const salida: Record<string, string> = {};
+  for (const [clave, guards] of rutasConGuards(router)) {
+    salida[clave] = guards.map(describir).join(" + ") || "—";
   }
   return salida;
 }
