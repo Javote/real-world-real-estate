@@ -1,4 +1,5 @@
 import { Building2, Calendar, Heart, MapPin } from 'lucide-react'
+import { useIntencion } from '#/lib/intencion'
 import { ProgressBar } from './ProgressBar'
 import { StatusPill, type StatusTone } from './StatusPill'
 
@@ -14,6 +15,8 @@ interface ProjectCardBaseProps {
   unitsLabel?: string | null
   dateLabel?: string | null
   onOpen: () => void
+  // Precarga lo que abre `onOpen` cuando el usuario muestra intención (hover, foco, toque).
+  onIntent?: () => void
   labels: { from: string; units?: string; progress?: string }
   testId?: string
   variant?: 'buy' | 'developer'
@@ -47,6 +50,7 @@ export function ProjectCard({
   unitsLabel,
   dateLabel,
   onOpen,
+  onIntent,
   labels,
   testId,
   variant = 'buy',
@@ -56,10 +60,11 @@ export function ProjectCard({
   favoriteTestId
 }: ProjectCardProps) {
   const esDeveloper = variant === 'developer'
+  const intencion = useIntencion(onIntent)
 
   return (
     <article className="relative overflow-hidden rounded-lg bg-card shadow-e1" data-testid={testId}>
-      <button type="button" onClick={onOpen} className="block w-full text-left">
+      <button type="button" onClick={onOpen} {...intencion} className="block w-full text-left">
         <div className="relative aspect-video w-full bg-surface-alt">
           {imageUrl ? (
             <img

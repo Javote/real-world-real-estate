@@ -159,9 +159,13 @@ sale **antes** del click; volver a `/investor/buy` dentro del `staleTime` no rep
 - **`AUTH-ME-001` rompía el token mientras la pantalla todavía pedía**: el loader adelanta los
   pedidos, un `unread-count` salía con el token roto, el 401 borraba la sesión y el `goto` iba a
   `/login` sin pasar por `/auth/me`. El test ahora espera `networkidle` antes de romperlo.
-- **El hover sobre un `ProjectCard` no precarga nada**, ni puede hacerlo: `ProjectCard` y `UnitCard`
-  navegan con un `<button>` y `navigate()`, y el preload por *intent* del router solo actúa sobre un
-  `<Link>`. Hoy precargan con hover solo la sidebar y la barra inferior, que no apuntan a ninguna
-  ruta con parámetros. Que las cards precarguen pide cambiar cómo navegan (un `<Link>`, o
-  `router.preloadRoute` al entrar el puntero) en dos componentes de M2-D3: **queda para decidir**,
-  con la medición de arriba sobre el endpoint que reconcilia.
+- **Las cards precargan con hover** (dueño, 2026-10-06). `ProjectCard` y `UnitCard` navegan con un
+  `<button>`, y el preload por *intent* del router solo actúa sobre un `<Link>`. Siguen siendo
+  botones (mismo rol, mismos tests) y suman `onIntent`: `useIntencion` (`lib/intencion.ts`) lo
+  dispara cuando el puntero se queda 50 ms encima (la demora que usa el router en un `<Link>`), al
+  enfocar o al tocar. Las pantallas pasan `{...abrir({ to, params })}`, de `useAbrirConPrecarga`,
+  que da `onOpen` y `onIntent` con el mismo destino tipado. Medido: con el puntero encima de una
+  card salen `GET /projects/:id` y `/documents` antes del click, y el click no pide nada más;
+  pasar de largo no precarga. El seed tiene una sola card de proyecto, así que el barrido de una
+  lista larga no está medido; cada card precarga a lo sumo una vez cada 30 s
+  (`defaultPreloadStaleTime`).

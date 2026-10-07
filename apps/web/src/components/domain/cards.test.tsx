@@ -115,6 +115,40 @@ describe('UnitCard', () => {
   })
 })
 
+describe('las cards que navegan avisan la intención de abrir', () => {
+  it('ProjectCard: el foco en la card llama a onIntent', () => {
+    const onIntent = vi.fn()
+    render(
+      <ProjectCard
+        name="Torre A"
+        status={{ label: 'En obra', tone: 'info' }}
+        onOpen={vi.fn()}
+        onIntent={onIntent}
+        labels={{ from: 'Desde' }}
+      />
+    )
+    screen.getByText('Torre A').closest('button')?.focus()
+    expect(onIntent).toHaveBeenCalledTimes(1)
+  })
+
+  it('UnitCard: el foco en la card llama a onIntent', () => {
+    const onIntent = vi.fn()
+    render(
+      <UnitCard
+        variant="investor"
+        unitReference="3B"
+        projectName="Torre A"
+        progress={40}
+        status={{ label: 'En obra', tone: 'info' }}
+        onOpen={vi.fn()}
+        onIntent={onIntent}
+      />
+    )
+    screen.getByText('3B').closest('button')?.focus()
+    expect(onIntent).toHaveBeenCalledTimes(1)
+  })
+})
+
 describe('ProgressTimeline', () => {
   it('dibuja un nodo por stage real, no diez fijos', () => {
     render(

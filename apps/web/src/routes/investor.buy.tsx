@@ -15,6 +15,7 @@ import { PanelLayout } from '#/components/PanelLayout'
 import { Dialog, DialogContent, DialogTitle } from '#/components/ui/dialog'
 import { useTranslation } from '#/i18n/useTranslation'
 import { useFavoritos } from '#/lib/favoritos'
+import { useAbrirConPrecarga } from '#/lib/intencion'
 import { avanceDeStages, TONO_PROYECTO } from '#/lib/stageProgress'
 
 export type BuyView = 'map' | 'search' | 'filter'
@@ -72,6 +73,7 @@ export const Route = createFileRoute('/investor/buy')({
 function InvestorBuy() {
   const { t } = useTranslation()
   const navigate = useNavigate({ from: '/investor/buy' })
+  const abrir = useAbrirConPrecarga()
   const search = Route.useSearch()
   const [qLocal, setQLocal] = useState(search.q ?? '')
   const [bbox, setBbox] = useState<string | undefined>()
@@ -135,12 +137,7 @@ function InvestorBuy() {
           tone: TONO_PROYECTO[proyecto.status]
         }}
         progress={avanceDeStages(proyecto.stages)}
-        onOpen={() =>
-          void navigate({
-            to: '/project/$projectId',
-            params: { projectId: proyecto.id }
-          })
-        }
+        {...abrir({ to: '/project/$projectId', params: { projectId: proyecto.id } })}
         labels={etiquetasCard}
         favorited={esFavorito(proyecto.id)}
         onToggleFavorite={() => alternar(proyecto)}

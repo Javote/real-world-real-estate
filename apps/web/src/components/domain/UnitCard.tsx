@@ -1,5 +1,6 @@
 import { Home } from 'lucide-react'
 import { cn } from '#/lib/cn'
+import { useIntencion } from '#/lib/intencion'
 import { ProgressBar } from './ProgressBar'
 import { StatusPill, type StatusTone } from './StatusPill'
 
@@ -11,6 +12,7 @@ interface UnitCardInvestorProps {
   imageUrl?: string
   status: { tone: StatusTone; label: string }
   onOpen?: () => void
+  onIntent?: () => void
   className?: string
 }
 
@@ -22,14 +24,18 @@ interface UnitCardDeveloperProps {
   priceLabel?: string
   status: { tone: StatusTone; label: string }
   onOpen?: () => void
+  onIntent?: () => void
   className?: string
 }
 
 type UnitCardProps = UnitCardInvestorProps | UnitCardDeveloperProps
 
 export function UnitCard(props: UnitCardProps) {
+  const intencion = useIntencion(props.onIntent)
   const Contenedor = props.onOpen ? 'button' : 'div'
-  const interactivo = props.onOpen ? { type: 'button' as const, onClick: props.onOpen } : {}
+  const interactivo = props.onOpen
+    ? { type: 'button' as const, onClick: props.onOpen, ...intencion }
+    : {}
 
   if (props.variant === 'developer') {
     return (

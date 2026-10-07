@@ -13,6 +13,7 @@ import { PanelLayout } from '#/components/PanelLayout'
 import { formatCurrency } from '#/i18n/format'
 import { useTranslation } from '#/i18n/useTranslation'
 import { CARD_SHELL } from '#/lib/cardShell'
+import { useAbrirConPrecarga } from '#/lib/intencion'
 import { reintentarSiNoEsAusencia } from '#/lib/investor'
 import { TONO_PROYECTO } from '#/lib/stageProgress'
 
@@ -27,6 +28,7 @@ function InvestorProjectDeveloper() {
   const { projectId } = Route.useParams()
   const { t, locale } = useTranslation()
   const navigate = useNavigate()
+  const abrir = useAbrirConPrecarga()
   const [expandida, setExpandida] = useState(false)
 
   const { data, error, isPending } = useQuery({
@@ -182,9 +184,7 @@ function InvestorProjectDeveloper() {
                   : null
               }
               developerName={developerName}
-              onOpen={() =>
-                void navigate({ to: '/project/$projectId', params: { projectId: obra.id } })
-              }
+              {...abrir({ to: '/project/$projectId', params: { projectId: obra.id } })}
               labels={{ from: t('project.from'), progress: t('investor.project.progress') }}
             />
           ))

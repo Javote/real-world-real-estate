@@ -1,6 +1,6 @@
 import type { UnitStatus } from '@plataforma/shared'
 import { useQuery } from '@tanstack/react-query'
-import { createFileRoute, useNavigate } from '@tanstack/react-router'
+import { createFileRoute } from '@tanstack/react-router'
 import { projectCoverUrl } from '#/api/port'
 import { unidadQueries } from '#/api/queries'
 import { Loading } from '#/components/domain/Loading'
@@ -9,6 +9,7 @@ import { UnitCard } from '#/components/domain/UnitCard'
 import { PanelLayout } from '#/components/PanelLayout'
 import { useTranslation } from '#/i18n/useTranslation'
 import { CARD_SHELL_EMPTY } from '#/lib/cardShell'
+import { useAbrirConPrecarga } from '#/lib/intencion'
 
 export const Route = createFileRoute('/investor/units')({
   loader: ({ context: { queryClient } }) => {
@@ -26,7 +27,7 @@ const TONO: Record<UnitStatus, StatusTone> = {
 
 function InvestorUnits() {
   const { t } = useTranslation()
-  const navigate = useNavigate()
+  const abrir = useAbrirConPrecarga()
 
   const { data: unidades, isPending } = useQuery(unidadQueries.delInvestor())
 
@@ -48,12 +49,7 @@ function InvestorUnits() {
                 tone: TONO[u.status],
                 label: t(`unitStatus.${u.status}`)
               }}
-              onOpen={() =>
-                void navigate({
-                  to: '/investor/unit/$unitId',
-                  params: { unitId: u.id }
-                })
-              }
+              {...abrir({ to: '/investor/unit/$unitId', params: { unitId: u.id } })}
             />
           ))
         ) : (

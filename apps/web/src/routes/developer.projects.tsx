@@ -10,6 +10,7 @@ import { PanelLayout } from '#/components/PanelLayout'
 import { formatCurrency, formatMonthYear } from '#/i18n/format'
 import { useTranslation } from '#/i18n/useTranslation'
 import { CARD_SHELL_EMPTY } from '#/lib/cardShell'
+import { useAbrirConPrecarga } from '#/lib/intencion'
 import { TONO_PROYECTO } from '#/lib/stageProgress'
 
 export const Route = createFileRoute('/developer/projects')({
@@ -22,6 +23,7 @@ export const Route = createFileRoute('/developer/projects')({
 function DeveloperProjects() {
   const { t, locale } = useTranslation()
   const navigate = useNavigate()
+  const abrir = useAbrirConPrecarga()
 
   const { data: proyectos, isPending } = useQuery(proyectoQueries.delDeveloper())
 
@@ -78,12 +80,7 @@ function DeveloperProjects() {
                   units: t('projectCard.units'),
                   progress: t('projectCard.constructionProgress')
                 }}
-                onOpen={() =>
-                  void navigate({
-                    to: '/developer/project/$projectId',
-                    params: { projectId: p.id }
-                  })
-                }
+                {...abrir({ to: '/developer/project/$projectId', params: { projectId: p.id } })}
               />
             )
           })

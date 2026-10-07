@@ -1,4 +1,4 @@
-import { createFileRoute, useNavigate } from '@tanstack/react-router'
+import { createFileRoute } from '@tanstack/react-router'
 import { projectCoverUrl } from '#/api/port'
 import { favoritoQueries } from '#/api/queries'
 import type { Project } from '#/api/types'
@@ -8,6 +8,7 @@ import { PanelLayout } from '#/components/PanelLayout'
 import { useTranslation } from '#/i18n/useTranslation'
 import { CARD_SHELL_EMPTY } from '#/lib/cardShell'
 import { useFavoritos } from '#/lib/favoritos'
+import { useAbrirConPrecarga } from '#/lib/intencion'
 import { avanceDeStages, TONO_PROYECTO } from '#/lib/stageProgress'
 
 export const Route = createFileRoute('/investor/favorites')({
@@ -19,7 +20,7 @@ export const Route = createFileRoute('/investor/favorites')({
 
 function InvestorFavorites() {
   const { t } = useTranslation()
-  const navigate = useNavigate()
+  const abrir = useAbrirConPrecarga()
   const { favoritos, isPending, alternar } = useFavoritos()
 
   const lista = favoritos ?? []
@@ -46,12 +47,7 @@ function InvestorFavorites() {
                   tone: TONO_PROYECTO[proyecto.status]
                 }}
                 progress={avanceDeStages(proyecto.stages)}
-                onOpen={() =>
-                  void navigate({
-                    to: '/project/$projectId',
-                    params: { projectId: proyecto.id }
-                  })
-                }
+                {...abrir({ to: '/project/$projectId', params: { projectId: proyecto.id } })}
                 labels={{ from: t('project.from') }}
                 favorited
                 onToggleFavorite={() => alternar(proyecto)}
