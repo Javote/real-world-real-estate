@@ -53,39 +53,28 @@ concurrency:
   group: ci-${{ github.ref }}
   cancel-in-progress: true
 
-# Dos jobs independientes y a propósito: **TypeScript y Aiken son dos cadenas de
-# herramientas distintas**, con sus propias versiones, sus propios artefactos y
-# sus propios modos de falla. Corren en paralelo y ninguno espera al otro; que
-# los contratos no compilen no dice nada sobre la app, y al revés tampoco.
-# El equivalente local son `pnpm verify` y `pnpm contracts:verify`, o
-# `pnpm verify:all` para encadenarlos.
+# **Un job por cosa, todos en paralelo y todos bloqueantes.** Render despliega
+# solo si pasan todos los checks del commit (`autoDeployTrigger: checksPass`,
+# RUNBOOK §2), así que el deploy espera al job más lento: cada uno corre en su
+# propio runner y arranca apenas puede. El repo es público —minutos sin límite,
+# 4 vCPU por runner, 20 jobs simultáneos—, así que un job más no cuesta nada.
+# Antes era un solo job en fila, y `pnpm -r test:coverage` hacía esperar a la
+# API (1:25) a que terminara web (2:13) sin depender de ella.
+#
+# TypeScript y Aiken siguen siendo dos cadenas de herramientas distintas, con
+# sus versiones, sus artefactos y sus modos de falla: ninguno espera al otro.
+# El equivalente local es `pnpm verify:all`. El plan y sus números están en
+# `specs/README.md` §Lo que sigue.
 jobs:
-  app:
-    name: App TS (lint + typecheck + tests + build)
+  lint:
+    name: Lint + formato (Biome) + test IDs
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
-
-      - uses: pnpm/action-setup@0977fd99725f1db4007ccb2928dbb4e90d06cc86 # v6
-        # toma la versión de "packageManager" del package.json raíz
-
-      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7
-        with:
-          node-version: 22
-          cache: pnpm
-
-      # `--frozen-lockfile` falla si el lockfile no refleja los package.json.
-      # Eso ya cubre el caso que importa: editar una versión sin correr
-      # `pnpm install` deja el typecheck corriendo contra el entorno equivocado,
-      # y un verde sobre el entorno equivocado es peor que un rojo (D-053).
-      - name: Instalar dependencias
-        run: pnpm install --frozen-lockfile
+      - uses: ./.github/actions/preparar
 
       - name: Lint + formato (Biome)
         run: pnpm lint
-
-      - name: Typecheck
-        run: pnpm typecheck
 
       # La vara de aceptación de M3 se mide en test IDs del backlog, no en
       # líneas (M2-D5 §8). Falla si alguien reclama un ID que el entregable no
@@ -94,36 +83,50 @@ jobs:
       - name: Trazabilidad de los test IDs del backlog
         run: pnpm testids
 
-      # `test:coverage` corre `pnpm -r test:coverage`: las cuatro partes
-      # TypeScript (api, web, shared, cardano), cada una contra su propio
-      # umbral (`vitest.config.ts`/`.mts`). Hasta el 2026-09-24 esto solo
-      # cubría la API con umbral, y web/shared/cardano corrían `test` pelado
-      # sin coverage ni gate — se cerró en SPEC-019 §Consolidación.
-      - name: Tests + coverage (api, web, shared, cardano)
-        run: pnpm test:coverage
+  typecheck:
+    name: Typecheck
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+      - uses: ./.github/actions/preparar
+      - run: pnpm typecheck
 
-      # M3 §4 pide "dependency scans" además de static analysis, y hasta acá
-      # `pnpm audit` era una corrida puntual (`specs/SECURITY-REVIEW-2026-09.md`,
-      # 2026-09-07), no un paso de CI — quedaba desactualizado apenas se
-      # sumaba una dependencia nueva.
-      #
-      # **Dos pasos, a propósito, no uno.** El primero nunca falla: es la
-      # visibilidad completa (todo lo que el security review ya trió como
-      # "alto/moderado, no explotable en runtime" — browserslist, nanoid,
-      # undici, vitest, postcss, todos en la cadena de vite/vitest/@babel de
-      # build y test) para que quede en el log sin bloquear en algo ya
-      # decidido. El segundo es el gate real: falla en **crítico**, hoy en
-      # cero — si una dependencia nueva trae uno, esto se entera antes que un
-      # humano leyendo el log a mano.
-      # **`--ignore-registry-errors`**: un registry caído no tiene que tumbar
-      # el build por algo que no es del código (mismo criterio que
-      # `SQLITE_CONSTRAINT` → 409 en vez de 500: separar "el código está mal"
-      # de "algo externo no respondió").
-      - name: Dependency scan — reporte completo (nunca bloquea)
-        run: pnpm audit --ignore-registry-errors || true
+  # Un job por paquete, cada uno contra su propio umbral de coverage
+  # (`vitest.config.ts`/`.mts`). `@plataforma/shared` exporta desde `dist/`:
+  # web y cardano lo importan compilado, así que se compila antes.
+  test-web:
+    name: Tests + coverage (web)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+      - uses: ./.github/actions/preparar
+      - run: pnpm --filter @plataforma/shared build
+      - run: pnpm --filter @plataforma/web test:coverage
 
-      - name: Dependency scan — gate en crítico
-        run: pnpm audit --audit-level critical --ignore-registry-errors
+  test-api:
+    name: Tests + coverage (api)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+      - uses: ./.github/actions/preparar
+      - run: pnpm --filter @plataforma/shared build
+      - run: pnpm --filter @plataforma/api test:coverage
+
+  test-packages:
+    name: Tests + coverage (shared + cardano)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+      - uses: ./.github/actions/preparar
+      - run: pnpm --filter @plataforma/shared build
+      - run: pnpm --filter @plataforma/shared --filter @plataforma/cardano test:coverage
+
+  build:
+    name: Build (web + api) + arranque compilado
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+      - uses: ./.github/actions/preparar
 
       - name: Build (web + api)
         run: pnpm build
@@ -163,34 +166,57 @@ jobs:
           SENTRY_DSN: https://smoke@o0.ingest.sentry.io/1
           OTEL_EXPORTER_OTLP_ENDPOINT: http://localhost:4318
 
-  # ── E2E ────────────────────────────────────────────────────────────────────
-  #
-  # Job propio y **no bloqueante por ahora** (`continue-on-error`), según la
-  # pregunta abierta de SPEC-015 §5: primero se demuestra estable, después se
-  # vuelve bloqueante. Eso es una decisión aparte, no un olvido.
-  #
-  # Es job propio y no un paso del de la app porque necesita otra cosa: levantar
-  # dos servidores y una base sembrada. Encadenarlo ahí haría que un e2e lento
-  # bloquee el feedback de lint y typecheck, que es el que más se usa.
-  e2e:
-    name: E2E Playwright (no bloqueante)
+  # M3 §4 pide "dependency scans" además de static analysis. **Dos pasos, a
+  # propósito, no uno.** El primero nunca falla: es la visibilidad completa
+  # (lo que el security review ya trió como "alto/moderado, no explotable en
+  # runtime", todo en la cadena de vite/vitest/@babel de build y test) para que
+  # quede en el log sin bloquear en algo ya decidido. El segundo es el gate
+  # real: falla en **crítico** — si una dependencia nueva trae uno, esto se
+  # entera antes que un humano leyendo el log a mano.
+  # **`--ignore-registry-errors`**: un registry caído no tiene que tumbar el
+  # build por algo que no es del código.
+  # Sin `pnpm install`: `pnpm audit` lee el lockfile.
+  audit:
+    name: Dependency scan (pnpm audit)
     runs-on: ubuntu-latest
-    continue-on-error: true
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
       - uses: pnpm/action-setup@0977fd99725f1db4007ccb2928dbb4e90d06cc86 # v6
       - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7
         with:
           node-version: 22
-          cache: pnpm
 
-      - name: Instalar dependencias
-        run: pnpm install --frozen-lockfile
+      - name: Dependency scan — reporte completo (nunca bloquea)
+        run: pnpm audit --ignore-registry-errors || true
 
+      - name: Dependency scan — gate en crítico
+        run: pnpm audit --audit-level critical --ignore-registry-errors
+
+  # ── E2E ────────────────────────────────────────────────────────────────────
+  #
+  # **Bloquea** (dueño, 2026-10-06; era la pregunta abierta de SPEC-015). Un
+  # shard es otro runner con su propio SQLite sembrado y su propio `pnpm dev`:
+  # los specs que escriben datos no se pisan entre shards, sin tocar ningún
+  # test. Adentro, 1 worker y sin reintentos (`playwright.config.ts`):
+  # Playwright recomienda 1 worker en CI, y con `checksPass` un test inestable
+  # frena un deploy. `fail-fast: false` para ver las fallas de los tres.
+  #
+  # `a11y.spec.ts` no va acá: tiene su job, que no bloquea (SPEC-112).
+  e2e:
+    name: E2E Playwright (shard ${{ matrix.shard }}/3)
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        shard: [1, 2, 3]
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+      - uses: ./.github/actions/preparar
+
+      # Solo chromium: los dos proyectos (mobile y desktop) lo usan — el
+      # perfil iPhone 13 da el viewport, no el motor.
       - name: Navegador de Playwright
-        # Solo chromium: los dos proyectos (mobile y desktop) lo usan — el
-        # perfil iPhone 13 da el viewport, no el motor.
-        run: pnpm --filter web exec playwright install --with-deps chromium
+        run: pnpm --filter @plataforma/web exec playwright install --with-deps chromium
 
       # Los specs entran con los usuarios del seed, así que la base tiene que
       # existir y estar sembrada antes de levantar nada.
@@ -201,7 +227,7 @@ jobs:
           JWT_SECRET: ci-secret-jamas-en-produccion
 
       - name: E2E
-        run: pnpm e2e
+        run: pnpm --filter @plataforma/web e2e --grep-invert 'a11y\.spec' --shard=${{ matrix.shard }}/3
         env:
           DATABASE_URL: file:./.data/dev.db
           JWT_SECRET: ci-secret-jamas-en-produccion
@@ -210,13 +236,49 @@ jobs:
           # de `playwright.config.ts`.
           LOGIN_RATE_LIMIT_MAX: "100000"
 
-      # Capturas, video y reporte: el SOM de M3 los pide como evidencia de
-      # entrega (criterios 8 y 13). Se suben aunque el job falle.
       - name: Subir artefactos
         if: always()
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         with:
-          name: e2e-artifacts
+          name: e2e-artifacts-${{ matrix.shard }}
+          path: apps/web/e2e/.artifacts/
+          retention-days: 14
+
+  # axe en el navegador real (`a11y.spec.ts`). **No bloquea** (SPEC-112: ninguna
+  # capa de accesibilidad bloquea todavía): el `continue-on-error` va en el
+  # paso y no en el job, porque Render mira el check del job, y un job con
+  # `continue-on-error` igual publica su check en `failure`. Una violación
+  # nueva queda marcada en el paso; la conocida se registra en
+  # `a11y/hallazgos.ts`, no se silencia.
+  e2e-a11y:
+    name: E2E accesibilidad (no bloquea, SPEC-112)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+      - uses: ./.github/actions/preparar
+
+      - name: Navegador de Playwright
+        run: pnpm --filter @plataforma/web exec playwright install --with-deps chromium
+
+      - name: Base migrada y sembrada
+        run: pnpm db:migrate && pnpm db:seed
+        env:
+          DATABASE_URL: file:./.data/dev.db
+          JWT_SECRET: ci-secret-jamas-en-produccion
+
+      - name: E2E a11y
+        continue-on-error: true
+        run: pnpm --filter @plataforma/web e2e --grep 'a11y\.spec'
+        env:
+          DATABASE_URL: file:./.data/dev.db
+          JWT_SECRET: ci-secret-jamas-en-produccion
+          LOGIN_RATE_LIMIT_MAX: "100000"
+
+      - name: Subir artefactos
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: e2e-artifacts-a11y
           path: apps/web/e2e/.artifacts/
           retention-days: 14
 

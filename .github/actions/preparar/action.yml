@@ -1,0 +1,20 @@
+name: Preparar el workspace
+description: pnpm (la versión de `packageManager`), Node 22 con caché de pnpm e install con el lockfile congelado.
+
+runs:
+  using: composite
+  steps:
+    - uses: pnpm/action-setup@0977fd99725f1db4007ccb2928dbb4e90d06cc86 # v6
+
+    - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7
+      with:
+        node-version: 22
+        cache: pnpm
+
+    # `--frozen-lockfile` falla si el lockfile no refleja los package.json.
+    # Eso ya cubre el caso que importa: editar una versión sin correr
+    # `pnpm install` deja el typecheck corriendo contra el entorno equivocado,
+    # y un verde sobre el entorno equivocado es peor que un rojo (D-053).
+    - name: Instalar dependencias
+      shell: bash
+      run: pnpm install --frozen-lockfile

@@ -330,7 +330,7 @@ docker compose -f compose.dev.yml up -d       # solo si querés la infra levanta
 ```
 
 **TypeScript y Aiken no se mezclan:** distinto toolchain, distintos artefactos, distintos modos de
-falla. El CI los corre como dos jobs en paralelo. `test:s3`, `test:yaci` y los dos scripts de
+falla. El CI los corre en jobs separados y en paralelo, uno por cosa. `test:s3`, `test:yaci` y los dos scripts de
 `contracts/scripts/` **no corren en CI**: los dos primeros levantan infraestructura, y los scripts
 corren `aiken check` una vez por mutante (varios minutos). Se corren a mano. `test:a11y` tampoco,
 pero por otra razón: `SPEC-112` decidió que ninguna capa de accesibilidad bloquee todavía.

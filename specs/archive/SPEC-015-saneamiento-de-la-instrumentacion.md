@@ -106,7 +106,8 @@ distinguen por su descripción: **un ID identifica una superficie del backlog, n
   tres cosas, las tres reales: el limiter de login cortaba el segundo proyecto con 429, la aserción
   del `BottomNav` corría también en desktop —donde M2-D1 lo reemplaza por un sidebar que todavía no
   existe—, y el `test.fail` del proxy de nitro avisó que su bug se había arreglado con D-065.
-  Quedan 22 de 22 en verde.
+  Quedan 22 de 22 en verde. **Cerrada el 2026-10-07: bloquea** (dueño, 2026-10-06), en 3 shards, con
+  `a11y.spec.ts` aparte y sin bloquear por `SPEC-112` — `specs/README.md` §Lo que sigue, paso C3.
 
 ## El ítem 6, cerrado por reformulación — 2026-09-11
 
