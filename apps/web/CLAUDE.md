@@ -127,6 +127,7 @@ pnpm --filter web test            # vitest
 pnpm --filter web build           # dist/ — lo que se publica como static site
 pnpm --filter web e2e:ui          # playwright interactivo
 pnpm --filter web e2e:evidencia   # la suite con video de cada test (sin esto, solo lo que falla)
+E2E_BUILD=1 pnpm --filter web e2e # sobre el build (`pnpm build` antes), como en CI; no reusa un `pnpm dev`
 pnpm --filter web test:a11y       # vitest con axe después de cada test (SPEC-112)
 pnpm --filter web e2e a11y        # axe en el navegador real
 ```

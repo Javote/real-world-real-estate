@@ -1,8 +1,13 @@
 import { defineConfig, devices } from '@playwright/test'
 
-import { WEB_PORT } from './ports.ts'
+import { API_ORIGIN, WEB_PORT } from './ports.ts'
 
 const BASE_URL = `http://localhost:${WEB_PORT}`
+
+// La suite no compila nada mientras corre: lo que se publica, ya compilado (`pnpm build` antes).
+// Las variables de la base y del JWT las pone quien corre la suite, igual que con `pnpm dev`.
+const SOBRE_EL_BUILD = process.env.E2E_BUILD === '1'
+const ENTORNO = { LOGIN_RATE_LIMIT_MAX: '100000' }
 
 export default defineConfig({
   testDir: './e2e',
@@ -30,16 +35,33 @@ export default defineConfig({
       use: { ...devices['Desktop Chrome'], viewport: { width: 1440, height: 900 } }
     }
   ],
-  webServer: {
-    command: 'pnpm dev',
-    cwd: '../..',
-    url: BASE_URL,
-    env: {
-      LOGIN_RATE_LIMIT_MAX: '100000'
-    },
-    reuseExistingServer: true,
-    timeout: 120_000,
-    stdout: 'ignore',
-    stderr: 'pipe'
-  }
+  webServer: SOBRE_EL_BUILD
+    ? [
+        {
+          // El `start` de la API, desde su carpeta: la base de `DATABASE_URL` es relativa a ella.
+          command: 'node --import ./dist/src/instrumentation.js dist/src/server.js',
+          cwd: '../api',
+          url: `${API_ORIGIN}/health`,
+          env: { ...ENTORNO, PORT: new URL(API_ORIGIN).port },
+          stdout: 'ignore',
+          stderr: 'pipe'
+        },
+        {
+          // `preview` usa el proxy de `server.proxy`: `/api` va a la API como en dev.
+          command: `pnpm exec vite preview --port ${WEB_PORT} --strictPort`,
+          url: BASE_URL,
+          stdout: 'ignore',
+          stderr: 'pipe'
+        }
+      ]
+    : {
+        command: 'pnpm dev',
+        cwd: '../..',
+        url: BASE_URL,
+        env: ENTORNO,
+        reuseExistingServer: true,
+        timeout: 120_000,
+        stdout: 'ignore',
+        stderr: 'pipe'
+      }
 })

@@ -22,6 +22,10 @@ jobs:
 
       - uses: ./.github/actions/playwright
 
+      # La suite corre sobre lo que se publica, no sobre `pnpm dev` (`E2E_BUILD`).
+      - name: Build (web + api)
+        run: pnpm build
+
       - name: Base migrada y sembrada
         run: pnpm db:migrate && pnpm db:seed
         env:
@@ -34,6 +38,7 @@ jobs:
           DATABASE_URL: file:./.data/dev.db
           JWT_SECRET: ci-secret-jamas-en-produccion
           LOGIN_RATE_LIMIT_MAX: "100000"
+          E2E_BUILD: "1"
 
       - name: Subir capturas, videos y reporte
         if: always()

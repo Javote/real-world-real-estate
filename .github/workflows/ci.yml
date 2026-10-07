@@ -195,7 +195,7 @@ jobs:
   # ── E2E ────────────────────────────────────────────────────────────────────
   #
   # **Bloquea** (dueño, 2026-10-06; era la pregunta abierta de SPEC-015). Un
-  # shard es otro runner con su propio SQLite sembrado y su propio `pnpm dev`:
+  # shard es otro runner con su propio SQLite sembrado y su propia API y web:
   # los specs que escriben datos no se pisan entre shards, sin tocar ningún
   # test. Adentro, 1 worker y sin reintentos (`playwright.config.ts`):
   # Playwright recomienda 1 worker en CI, y con `checksPass` un test inestable
@@ -221,6 +221,10 @@ jobs:
       # perfil iPhone 13 da el viewport, no el motor.
       - uses: ./.github/actions/playwright
 
+      # La suite corre sobre lo que se publica, no sobre `pnpm dev` (`E2E_BUILD`).
+      - name: Build (web + api)
+        run: pnpm build
+
       # Los specs entran con los usuarios del seed, así que la base tiene que
       # existir y estar sembrada antes de levantar nada.
       - name: Base migrada y sembrada
@@ -238,6 +242,7 @@ jobs:
           # son dos, así que el segundo recibía 429 en todo. Ver el comentario
           # de `playwright.config.ts`.
           LOGIN_RATE_LIMIT_MAX: "100000"
+          E2E_BUILD: "1"
 
       # Trace, video y captura de lo que falla, más el reporte. `.artifacts`
       # empieza con punto, y `upload-artifact` ≥ 4.4 ignora los directorios
@@ -267,6 +272,10 @@ jobs:
 
       - uses: ./.github/actions/playwright
 
+      # La suite corre sobre lo que se publica, no sobre `pnpm dev` (`E2E_BUILD`).
+      - name: Build (web + api)
+        run: pnpm build
+
       - name: Base migrada y sembrada
         run: pnpm db:migrate && pnpm db:seed
         env:
@@ -280,6 +289,7 @@ jobs:
           DATABASE_URL: file:./.data/dev.db
           JWT_SECRET: ci-secret-jamas-en-produccion
           LOGIN_RATE_LIMIT_MAX: "100000"
+          E2E_BUILD: "1"
 
       - name: Subir artefactos
         if: always()
