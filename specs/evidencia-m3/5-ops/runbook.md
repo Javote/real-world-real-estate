@@ -314,13 +314,78 @@ What this means in practice:
   `"autoDeployTrigger": "checksPass"` on both. The Blueprint does not always apply or remove a field
   on its own (it happened with `NODE_ENV`, see `render.yaml`).
 
-Before 2026-10-07, Render rebuilt **both services on every push**, whatever it touched.
+Until 2026-09-22, Render rebuilt **both services on every push**, whatever it touched.
 
-**The `buildFilter`s are declared and do not filter.** Measured on 2026-08-27: commit `ee357df`
-touched only three documentation files — no `render.yaml` involved — and triggered new deploys of both
-services, with `trigger = new_commit`, exactly the case where they should apply. The filters are
-correctly registered on Render's side, and none of the three exceptions Render documents applies.
-**Cause undetermined.**
+**The `buildFilter`s were declared and did not filter.** Measured on 2026-08-27: commit `ee357df`
+touched only three documentation files — no `render.yaml` involved — and triggered new deploys of
+both services, with `trigger = new_commit`, exactly the case where they should apply. Measured again
+on 2026-09-22, over the API's last 100 deploys: **57 came from commits the filter excludes** (38
+documentation-only, 17 `apps/web`-only).
+
+**The cause, fixed on 2026-09-22: the `rootDir: .`** both services had. Render's docs say that with a
+root directory *"Render only triggers an autodeploy if your changes affect files anywhere under that
+directory"*, and with `.` the whole repository falls inside it. The `rootDir` was removed and
+`ignoredPaths` were added (documentation, tests, test configs). **It worked:** on 2026-10-05, still
+on `autoDeployTrigger: commit`, `43055c0` (only `apps/web`) and `64abcc1` (only `.github/`) did not
+deploy the API. Watch out: a field removed from the Blueprint may not be removed from the service
+(it happened with `NODE_ENV`, see `render.yaml`).
+
+**The web app installed twice.** On a static site, Render runs its own `pnpm install` of the whole
+workspace before the `buildCommand` (12.8 s of the ~33 s deploy), so the `--filter` saved nothing
+and the cache filled up again with the API's dependencies. Since 2026-09-22 the web app declares
+`SKIP_INSTALL_DEPS=true` and the only install is the `buildCommand`'s. The API does not need it: on
+a web service Render does not install on its own.
+
+### The deploy that coincides with the inactivity shutdown — 2026-09-22
+
+**Every failed API deploy of the preceding weeks had the same cause, and it was not the code.** On
+the free plan, Render puts the service to sleep after **15 minutes without any HTTP request**, and
+doing so sends `SIGTERM` to **all** its instances, including the one being deployed. If a deploy
+starts 13-15 minutes after the last request, the shutdown lands in the middle of its startup: the
+new instance dies, Render keeps scanning for a port that no longer exists until its 15-minute
+timeout, the deploy ends `update_failed`, and **the API stays down for ~18 minutes**.
+
+Verified on three of the five `update_failed` among the last 100 deploys, reading the logs with
+instance and type (`render logs … --output json`): between the previous `Your service is live` and
+the `SIGTERM` there are **zero requests and exactly 15:00 minutes**, all three times (`b10afdf`:
+19:45:51 → 20:00:51; `d69d059`: 16:57:45 → 17:12:45; `9054681`: 17:34:50 → 17:49:50). The "slow"
+deploys (>400 s) are not a different problem: they are the ones queued behind one of these.
+
+**It does not depend on the kind of commit.** That documentation-only commits failed more often was
+a timing coincidence: the documentation commit tends to arrive a while after the code commit, right
+in the 13-15 minute window. Of the five failures, one was an API code commit.
+
+**How to avoid it, by cost:**
+
+1. **A request to the API** (`curl -s https://propnexus-api.onrender.com/health`) when CI finishes:
+   it resets the 15-minute counter, and the deploy (~2.5 min) finishes with room to spare.
+2. **Deploy less**: the `buildFilter` above.
+3. **A periodic ping** (every <15 min) that keeps the service awake. It would also remove the cold
+   start of the first visit. **Owner's decision:** the free plan gives 750 hours per month **per
+   workspace**, shared with other free services. One service awake all month is ~720 h: if another
+   one also consumes hours, the workspace runs out and Render suspends them until the end of the
+   month.
+
+**A request during the hang unstuck it, once.** On 2026-10-07, the deploy of `fb81ba9` started 13
+minutes after the last request — a production check —: `SIGTERM` to the old instance (16:58:44) and
+to the new one (16:58:46), and nothing else in the logs. At 17:07 a `curl` to `/health` started a
+fresh instance, and at 17:08:24 Render declared the deploy `live`, with no redeploy. Seen only once:
+if it does not happen, there is the `update_failed` and the redeploy.
+
+**This corrects two earlier diagnoses**, which blamed the same symptom on something else: the
+2026-09-04 incident (*"it started fine fourteen minutes earlier"*) and the 2026-09-22 one (blamed on
+*"a slow Blockfrost"*). Both are this pattern.
+
+### "No open HTTP ports detected on 0.0.0.0, continuing to scan…"
+
+It shows up in deploys while Render looks for the port, and it is not an error: on 2026-09-22, ~10 s
+after `API listening`; on 2026-10-07, 13 s before. The API opens the port before initializing the
+`AnchorPort` (on purpose, since 2026-09-22). But initializing it in `real` mode imports Lucid, which
+**blocks the event loop**: measured locally, a single 2.1 s block on a 12-core machine, and on the
+free plan's 0.1 CPU that is ~38 s. While it lasts, the process does not respond. In the three
+startups of 2026-10-07, `AnchorPort listo` arrived 48-60 s after `API listening`, and Render declared
+`live` before that (in the only deploy, 33 s after `API listening` and 15 s before `AnchorPort
+listo`).
 
 What it costs: build minutes and a cold restart per commit. It no longer costs evidence — since R2,
 a redeploy takes nothing with it (§1.4). Before assuming a documentation commit is free, check: it
@@ -334,6 +399,9 @@ and with no errors in the logs. The status did not show it: you had to look at t
 **The asymmetry is the danger, not the lag.** Production ended up with the new front end talking to
 the old API, and since the schemas in `packages/shared` are `z.strictObject`, a missing field breaks
 the whole parse: a screen that used to work stopped working without Render saying anything.
+
+It is the flip side of the `buildFilter`: we already knew Render sometimes deploys **too much**, and
+now we know it sometimes deploys **too little**. Both lead to the same rule.
 
 > **After resuming a service, check each one's commit — not that they say `live`.**
 >
@@ -417,8 +485,8 @@ of its tokens at it, knowing it loses whatever was written in Oregon after the c
 | The API does not start, the log says `STORAGE_DRIVER=s3 exige …` | An `S3_*` variable is missing | On purpose. Load the variable in the dashboard and restart (§1.4) |
 | Service suspended mid-month | The 750 hours ran out | Someone set up a keep-warm. Remove it (§Accepted limitations) |
 | A service stuck on an old commit, both `live` and no errors | The push arrived while the service was suspended | Resuming does not recover it. `render deploys create <srv-id>` (§2) |
-| A push with green CI that touches the `buildFilter` and **no deploy** in `render deploys list` | Render did not create it. No pattern in the files: `dab082d` (2026-10-02) and `fb81ba9` (2026-10-07); in the same period, `9cce336` (three commits, the last one outside the filter) was created | `render deploys create <srv-id> --commit <sha> --wait`, the API before the web app (§2). The post-push check in `CLAUDE.md` §Commits is what catches it |
-| Deploy in `update_in_progress` and `SIGTERM` to the old instance **and** the new one, ~15 min after the last request | The free tier puts the service to sleep after 15 min without requests, and that kills the instance being deployed | A request to `/health`. On 2026-10-07 it started a fresh instance and the deploy went `live` a minute later, with no redeploy (seen once). If it does not, wait for `update_failed` and redeploy |
+| A push with green CI that touches the `buildFilter` and **no deploy** in `render deploys list` | Render did not create it. No pattern in the files: `dab082d` (2026-10-02) and `fb81ba9` (2026-10-07); in the same period, `9cce336` (three commits, the last one outside the filter) was created | `render deploys create <srv-id> --commit <sha> --wait`, the API before the web app (§2). Caught by checking each service's commit after every push, not only after resuming (§2) |
+| Deploy in `update_in_progress` and `SIGTERM` to the old instance **and** the new one, ~15 min after the last request | The free tier puts the service to sleep after 15 min without requests, and that kills the instance being deployed | A request to `/health` (§2, "The deploy that coincides with the inactivity shutdown"). If it does not unstick it, wait for `update_failed` and redeploy |
 | Screens that used to work start failing to parse | Front end and API on different commits | Same case as above. The `z.strictObject` schemas in `packages/shared` make it strict: a missing field breaks the whole parse |
 | `ERR_PNPM_OUTDATED_LOCKFILE` in the build | A `package.json` was edited without `pnpm install` | CI catches it first; if it got here, run `pnpm install` and commit the lockfile |
 | `Port scan timeout reached, no open ports detected` and then `Timed Out` | The build succeeded and the process **never listened**. The `startCommand` is `migrate && server` | Read the startup lines in order (below). Render takes ~15 min to declare it dead and on the free tier **the old instance is already gone**: it is an outage, not a degradation |
@@ -434,17 +502,21 @@ where the log stops tells you where the process hung:
 [migrate] conectando a la base                       ← migrate started ("connecting to the database")
 [migrate] sin migraciones pendientes                 ← migrate finished ("no pending migrations", or "N applied")
 [arranque] migraciones listas, levantando la API     ← server.js started ("migrations ready, starting the API")
+API listening on http://localhost:10000              ← listening: from here Render can declare it live
 AnchorPort listo en modo "real"                      ← the anchoring port resolved
-API listening on http://localhost:10000              ← listening: here the deploy goes live
 ```
 
-A healthy startup prints all five in about 5 seconds. If the second is missing, the database is not
-responding and a 120 s ceiling cuts it off with `la base no respondió en 120s`. If the first three
-are there and the last one is not, the problem is the server, not the migration.
+Cold, on the free plan, a healthy startup reaches `API listening` in under a minute and
+`AnchorPort listo` one minute later (measured on 2026-10-07). If the second is missing, the database
+is not responding and a 120 s ceiling cuts it off with `la base no respondió en 120s`. If the first
+three are there and `API listening` is not, the problem is the server, not the migration.
 
 **This exists because of the 2026-09-04 incident**, when none of these lines were printed: a startup
 hung in the migration and one hung in the server looked exactly the same — an empty log — and the
-API was down for ~18 minutes over a documentation-only commit.
+API was down for ~18 minutes over a documentation-only commit. **Corrected on 2026-09-22:** that
+startup did not hang; Render shut it down for inactivity (§2, "The deploy that coincides with the
+inactivity shutdown"). The startup logs are still worth what they say: without them it could not
+have been seen.
 
 Logs: **Dashboard → the service → Logs** (or `render logs -r <service>`). There is no shell: what is
 not logged cannot be inspected. That is why the API **fails at startup** instead of failing on a

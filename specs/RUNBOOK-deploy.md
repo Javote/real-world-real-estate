@@ -327,10 +327,10 @@ con `trigger = new_commit`, que es justo el caso donde deberían aplicar. Medido
 Render dice que con un root directory *"Render only triggers an autodeploy if your changes affect
 files anywhere under that directory"*, y con `.` todo el repo cae adentro. No dice explícitamente
 si eso se combina con el `buildFilter` por "y" o por "o". Se sacó el `rootDir` y se sumaron
-`ignoredPaths` (`.md`, tests, configs de test). **Cómo se sabe si funcionó:** el próximo commit de
-solo `.md` no tiene que aparecer en `render deploys list`. Si aparece, la hipótesis cae. Ojo: un
-campo que se borra del Blueprint puede no borrarse del servicio (ya pasó con `NODE_ENV`, ver
-`render.yaml`); verificar con la API de Render que `rootDir` haya quedado vacío.
+`ignoredPaths` (`.md`, tests, configs de test). **Funcionó:** el 2026-10-05, todavía con
+`autoDeployTrigger: commit`, `43055c0` (solo `apps/web`) y `64abcc1` (solo `.github/`) no generaron
+deploy de la API. Ojo: un campo que se borra del Blueprint puede no borrarse del servicio (ya pasó
+con `NODE_ENV`, ver `render.yaml`).
 
 **La web instalaba dos veces.** En un static site, Render corre su propio `pnpm install` de todo el
 workspace antes del `buildCommand` (12,8 s de los ~33 s del deploy), así que el `--filter` no
@@ -359,10 +359,9 @@ ventana de los 13-15 minutos. De los cinco fallidos, uno era de código de la AP
 
 **Cómo evitarlo, en orden de costo:**
 
-1. **Antes de pushear, un request a la API** (`curl -s https://propnexus-api.onrender.com/health`):
-   reinicia el contador de 15 minutos. Con `checksPass` el deploy (~2,5 min) arranca cuando termina
-   CI (~5 min): termina a los ~8 minutos, todavía con margen. Si CI tarda más de lo normal, el
-   request va cuando CI termina, no antes del push.
+1. **Cuando termina CI, un request a la API** (`curl -s https://propnexus-api.onrender.com/health`):
+   reinicia el contador de 15 minutos. Con `checksPass` el deploy (~2,5 min) arranca ahí y termina
+   con margen. Antes del push no alcanza: si CI tarda más de lo normal, el deploy cae en la ventana.
 2. **Deployar menos**: el `buildFilter` de arriba.
 3. **Un ping periódico** (cada <15 min) que no deje dormir el servicio. También sacaría el
    arranque en frío de la primera visita. **Decisión del dueño:** el plan free da 750 horas por mes
@@ -383,11 +382,13 @@ cosa: el incidente del 2026-09-04 (`ef8e55e`, "arrancó bien catorce minutos ant
 
 ### "No open HTTP ports detected on 0.0.0.0, continuing to scan…"
 
-Aparece en **todos** los deploys, ~10 s después de `API listening`, y no es un error. La API abre el
-puerto antes de inicializar el `AnchorPort` (a propósito, desde el 2026-09-22). Pero inicializarlo
-en modo `real` importa Lucid, que **bloquea el event loop**: medido en local, 2,1 s de un solo bloque
-en una máquina de 12 núcleos, y en el 0,1 CPU del plan free son ~38 s. Mientras dura, el proceso no
-contesta. Render declara `live` en el mismo segundo en que aparece `AnchorPort listo`.
+Aparece en los deploys mientras Render busca el puerto, y no es un error: el 2026-09-22, ~10 s
+después de `API listening`; el 2026-10-07, 13 s antes. La API abre el puerto antes de inicializar el
+`AnchorPort` (a propósito, desde el 2026-09-22). Pero inicializarlo en modo `real` importa Lucid, que
+**bloquea el event loop**: medido en local, 2,1 s de un solo bloque en una máquina de 12 núcleos, y
+en el 0,1 CPU del plan free son ~38 s. Mientras dura, el proceso no contesta. En los tres arranques
+del 2026-10-07, `AnchorPort listo` llegó 48-60 s después de `API listening`, y Render declaró `live`
+antes (en el único deploy, 33 s después de `API listening` y 15 s antes de `AnchorPort listo`).
 
 Lo que cuesta: minutos de build y un reinicio en frío por commit. Ya **no** cuesta evidencia — desde
 R2, un redeploy no se lleva nada (§1.4). Antes de asumir que un commit de documentación es gratis,
@@ -504,13 +505,14 @@ corta el log dice dónde se colgó el proceso:
 [migrate] conectando a la base                       ← migrate arrancó
 [migrate] sin migraciones pendientes                 ← migrate terminó (o "N migración(es) aplicada(s)")
 [arranque] migraciones listas, levantando la API     ← server.js arrancó
+API listening on http://localhost:10000              ← escuchando: desde acá Render puede darlo por live
 AnchorPort listo en modo "real"                      ← el puerto de anclaje resolvió
-API listening on http://localhost:10000              ← escuchando: acá el deploy pasa a live
 ```
 
-Un arranque sano imprime las cinco en unos 5 segundos. Si falta la segunda, la base no responde y
+En frío, en el plan free, un arranque sano llega a `API listening` en menos de un minuto y a
+`AnchorPort listo` uno después (medido el 2026-10-07). Si falta la segunda, la base no responde y
 `conTecho` va a cortar a los 120s con `la base no respondió en 120s`. Si están las tres primeras y no
-la última, el problema es del servidor, no de la migración.
+`API listening`, el problema es del servidor, no de la migración.
 
 **Esto existe por el incidente del 2026-09-04**, cuando ninguna de las líneas se imprimía: un arranque
 colgado en la migración y uno colgado en el servidor se veían exactamente igual —un log vacío— y la
