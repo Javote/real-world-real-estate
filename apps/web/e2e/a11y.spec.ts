@@ -41,6 +41,7 @@ async function primerId(page: Page, ruta: string, campo: string) {
 }
 
 test('login', async ({ page }) => {
+  expect(false, 'prueba de CI: a11y en rojo no frena el deploy').toBe(true)
   await page.goto('/login')
   await expect(page.getByLabel('Usuario')).toBeVisible()
   await sinViolacionesNuevas(page, '/login')
