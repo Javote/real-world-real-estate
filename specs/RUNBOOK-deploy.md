@@ -370,6 +370,12 @@ ventana de los 13-15 minutos. De los cinco fallidos, uno era de código de la AP
    Uno solo despierto todo el mes son ~720 h: si el otro también consume, se pasan y Render
    suspende los dos hasta fin de mes.
 
+**Un request durante el cuelgue lo destrabó, una vez.** El 2026-10-07, el deploy de `fb81ba9`
+arrancó 13 minutos después del último request —un chequeo de producción—: `SIGTERM` a la instancia
+vieja (16:58:44) y a la nueva (16:58:46), y nada más en los logs. A las 17:07 un `curl` a `/health`
+levantó una instancia nueva y a las 17:08:24 Render dio el deploy por `live`, sin redeploy. Visto
+una sola vez: si no pasa, queda el `update_failed` y el redeploy.
+
 **Esto corrige dos diagnósticos anteriores de este repo**, que atribuían el mismo síntoma a otra
 cosa: el incidente del 2026-09-04 (`ef8e55e`, "arrancó bien catorce minutos antes") y el del
 2026-09-22 (`f3296ed`, atribuido a "un Blockfrost lento"). Los dos son este patrón. Detalle en
@@ -481,6 +487,8 @@ un token suyo, sabiendo que pierde lo escrito en Oregon después del corte.
 | La API no arranca, log dice `STORAGE_DRIVER=s3 exige …` | Falta una `S3_*` | D-042, y es a propósito. Cargar la variable en el dashboard y restart (§1.4) |
 | Servicio suspendido a mitad de mes | Se agotaron las 750 h | Alguien puso un keep-warm. Sacarlo (§Limitaciones) |
 | Un servicio quedó en un commit viejo, los dos `live` y sin errores | El push llegó con el servicio suspendido | Reanudar no lo recupera. `render deploys create <srv-id>` (§2) |
+| Push con CI verde que toca el `buildFilter` y **ningún deploy** en `render deploys list` | Render no lo creó. Sin patrón en los archivos: `dab082d` (2026-10-02) y `fb81ba9` (2026-10-07); en el mismo período, `9cce336` (tres commits, el último fuera del filtro) sí se creó | `render deploys create <srv-id> --commit <sha> --wait`, la API antes que la web (§2). Lo que lo detecta es el chequeo post-push de `CLAUDE.md` §Commits |
+| Deploy `update_in_progress` y `SIGTERM` a la instancia vieja **y** a la nueva, ~15 min después del último request | El apagado por inactividad (§2) | Un request a `/health` (§2, abajo del patrón). Si no lo destraba, esperar el `update_failed` y redeploy |
 | Pantallas que andaban empiezan a fallar al parsear | Front y API en commits distintos | Mismo caso de arriba. Los `z.strictObject` de `packages/shared` lo vuelven duro: un campo que falta rompe el parse entero |
 | `ERR_PNPM_OUTDATED_LOCKFILE` en el build | Se tocó un `package.json` sin `pnpm install` | La puerta lo atrapa antes; si llegó acá, `pnpm install` y commitear el lockfile |
 | `Port scan timeout reached, no open ports detected` y después `Timed Out` | El build salió bien y el proceso **nunca escuchó**. El `startCommand` es `migrate && server` | Leé las tres líneas de arranque en orden (abajo). Render tarda ~15 min en darlo por muerto y en free tier **la instancia vieja ya se cerró**: es caída, no degradación |

@@ -289,6 +289,22 @@ workers, ~3 min); antes del push alcanzan los specs de lo que se tocó (`pnpm e2
 **Si CI queda rojo, arreglarlo es lo siguiente**, antes que cualquier otra cosa: el deploy queda
 frenado, y lo que se commitee encima tampoco sale.
 
+**Y después del verde, el deploy: el trabajo termina cuando producción corre el commit, no cuando
+CI pasa.** Que Render no despliegue sin el verde no implica que con el verde despliegue: a veces el
+deploy ni se crea y a veces se cuelga (`specs/RUNBOOK-deploy.md` §4). Si el push tocó el
+`buildFilter` de un servicio (`render.yaml`):
+
+1. **Apenas termina CI, `curl -s https://propnexus-api.onrender.com/health`.** El deploy arranca
+   ahí, y si la API lleva 13-15 min sin requests, el free tier la duerme en medio y lo cuelga
+   (RUNBOOK §2). Mirar sin este paso puede causar lo que se busca: el 2026-10-07 lo causó el
+   chequeo mismo.
+2. **Seguir cada servicio tocado hasta `live` con el commit del push**: `live` solo no alcanza
+   (el comando, en RUNBOOK §2).
+3. **Si a los ~5 min no hay deploy de ese commit, no se creó**: `render deploys create <srv-id>
+   --commit <sha> --wait`, la API antes que la web. **Si está `update_in_progress` sin un `API
+   listening` nuevo en los logs**, otro `curl` a `/health`. Disparar un deploy lo hace el dueño:
+   el modo automático del agente no lo deja.
+
 **Al arrancar una sesión, lo primero es la última corrida de `main`**
 (`gh run list --workflow ci.yml --limit 1`): si está roja, se arregla antes de empezar otra cosa.
 GitHub además le manda un mail del workflow fallido a quien pusheó.
