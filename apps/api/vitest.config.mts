@@ -4,6 +4,11 @@ import { defineConfig } from "vitest/config";
 export default defineConfig({
   resolve: {
     alias: {
+      // Antes que el índice: un alias de string también toma `@plataforma/shared/<subruta>`.
+      "@plataforma/shared/contract": path.resolve(
+        import.meta.dirname,
+        "../../packages/shared/src/contract/index.ts"
+      ),
       "@plataforma/shared": path.resolve(import.meta.dirname, "../../packages/shared/src/index.ts"),
       "@plataforma/cardano": path.resolve(
         import.meta.dirname,

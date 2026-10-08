@@ -1,5 +1,4 @@
 import { DEFAULT_STAGE_CATALOG } from "@plataforma/shared";
-import { compileDossier } from "../domain/dossier.js";
 import { db } from "../lib/db.js";
 import {
   type Personaje,
@@ -94,7 +93,7 @@ export async function sembrarMundoDemo(personajes: Personaje[]): Promise<void> {
     }))
   );
 
-  const { unitId } = await sembrarUnidadVendida(db, {
+  await sembrarUnidadVendida(db, {
     projectId,
     investorId: id("buyer@example.com"),
     unitReference: "4B",
@@ -103,6 +102,4 @@ export async function sembrarMundoDemo(personajes: Personaje[]): Promise<void> {
     priceMinorUnits: 9_500_000,
     currency: "USD"
   });
-
-  await compileDossier(unitId);
 }

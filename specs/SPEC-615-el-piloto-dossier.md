@@ -106,6 +106,36 @@ módulo**, y el piloto es el primero:
 6. Cero comentarios con fecha en lo migrado.
 7. `pnpm verify:all` y `pnpm e2e` completo en verde.
 
+## A3, hecho el 2026-10-07
+
+Tres commits: `6e0f559` (el dossier nace con la venta, en producción), `24c7f98` (la migración
+0013, que le da su dossier a cada venta que no lo tenía) y el del módulo. Los dos últimos salen
+juntos, con backup de Turso antes: la migración corre en el deploy.
+
+| Pieza | Dónde |
+|---|---|
+| El contrato de los 10 procedimientos, con `meta.guard` y errores; el tipo del guard | `packages/shared/src/contract/dossier.ts`, `guard.ts` |
+| `DOSSIER_TRANSITIONS` | `packages/shared/src/dossier.ts` |
+| El módulo: reglas puras, consultas con ejecutor (la cola en tres consultas, sin N+1), casos de uso con `Result`, router de una línea por procedimiento | `apps/api/src/modules/dossier/` |
+| `auditSiGano` y `notifySiGano` | `apps/api/src/platform/` |
+
+**Verificado:** la `MATRIZ` sin un carácter de diferencia; la API en 100/100/100/100 (921 tests);
+los e2e del notary, el investor y el walkthrough (52); la colección Postman idéntica, y en el OpenAPI
+vivo solo cambian las 10 rutas del dossier (su `operationId` y los errores que declaran). La carrera
+de la firma y la garantía de que las lecturas no escriben, probadas en rojo con una mutación cada una.
+
+**Tests del arnés que cambiaron**, cada uno por una razón: `dossier.test.ts` (dos ventas plantadas a
+mano pasan a `sembrarUnidadVendida`: decisión 2), `reclamar-antes-de-anclar.test.ts` (la demora va en
+`insumosDe`, no en `compileDossier`, que ya no existe), `orpc-client-notary` y `orpc-client-public`
+(reemplazados por `orpc-client-dossier`, contra el contrato), `dossier-unico-por-unidad`,
+`dossier-recompile-coverage` y `notary-coverage` (sin `compileDossier`), y `error-codes` (lee también
+los errores que declara el contrato).
+
+**Tamaño, el lado API:** 733 líneas en `modules/dossier/` más 131 del contrato, contra 767 de lo que
+reemplaza (`notary.routes.ts`, `domain/dossier.ts` y las rutas de investor y public). No es más chico:
+suma la cola en lote, el estado derivado y los reclamos con su audit en el mismo lote. La regla de
+salida se mide con W3.
+
 ## La regla de salida
 
 Al terminar, se mide: líneas del módulo nuevo contra las que reemplaza (rutas + `domain/dossier.ts`

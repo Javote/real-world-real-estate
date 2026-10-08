@@ -1,9 +1,9 @@
 import { afterAll, beforeAll, describe, expect, it, vi } from "vitest";
 import { createId } from "../src/db/id.js";
-import { compileDossier } from "../src/domain/dossier.js";
-import { notify, notifyUnitInvestor, notifyUnitInvestors } from "../src/domain/notify.js";
+import { notify, notifyUnitInvestors } from "../src/domain/notify.js";
 import { agregadosDeProyectos } from "../src/domain/project-aggregates.js";
 import { db } from "../src/lib/db.js";
+import { leerDeLaUnidad } from "../src/modules/dossier/casos.js";
 import { FIXTURES } from "./global-setup.js";
 
 let proyecto: string;
@@ -70,30 +70,6 @@ describe("notify — la notificación sin unitId", () => {
   });
 });
 
-describe("notifyUnitInvestor — la unidad sin dueño", () => {
-  it("no inserta nada: una unidad available no tiene a quién avisarle", async () => {
-    const disponible = await crearUnidad(`SPEC018-A5-SIN-DUENO-${createId()}`, null);
-
-    const antes = await db
-      .selectFrom("Notification")
-      .select((eb) => eb.fn.countAll().as("n"))
-      .executeTakeFirstOrThrow();
-
-    await notifyUnitInvestor({
-      unitId: disponible,
-      category: "document",
-      titleKey: "notifications.evidence.uploaded"
-    });
-
-    const despues = await db
-      .selectFrom("Notification")
-      .select((eb) => eb.fn.countAll().as("n"))
-      .executeTakeFirstOrThrow();
-
-    expect(despues.n).toBe(antes.n);
-  });
-});
-
 describe("notifyUnitInvestors — sin params", () => {
   it('paramsJson queda null, no undefined ni "undefined"', async () => {
     const investorId = (
@@ -145,9 +121,19 @@ describe("la forma vieja de domain/ se traga el error hasta A4 (SPEC-613 §La de
   });
 });
 
-describe("compileDossier de una unidad inexistente", () => {
-  it("devuelve null", async () => {
-    expect(await compileDossier(createId())).toBeNull();
+describe("el dossier de una unidad que no lo tiene", () => {
+  it("es NOT_FOUND, y leerlo no lo crea", async () => {
+    const unitId = createId();
+    expect(await leerDeLaUnidad({ db, clock: () => new Date() }, unitId)).toMatchObject({
+      ok: false,
+      code: "NOT_FOUND"
+    });
+    const filas = await db
+      .selectFrom("Dossier")
+      .select("id")
+      .where("unitId", "=", unitId)
+      .execute();
+    expect(filas).toEqual([]);
   });
 });
 

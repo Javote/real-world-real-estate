@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
   DOSSIER_STATUSES,
+  DOSSIER_TRANSITIONS,
   dossierArtifactSchema,
   dossierRejectResultSchema,
   dossierSchema,
@@ -8,6 +9,7 @@ import {
   dossierSignResultSchema,
   notarySignatureSchema,
   publicDossierSchema,
+  puedeTransicionarDossier,
   rejectDossierSchema
 } from "./dossier";
 
@@ -130,5 +132,23 @@ describe("publicDossierSchema", () => {
     };
     expect(publicDossierSchema.safeParse(fila).success).toBe(true);
     expect(publicDossierSchema.safeParse({ ...fila, id: "d1" }).success).toBe(false);
+  });
+});
+
+describe("DOSSIER_TRANSITIONS", () => {
+  it("firmar y rechazar solo parten de compiled", () => {
+    expect(puedeTransicionarDossier("compiled", "signed")).toBe(true);
+    expect(puedeTransicionarDossier("compiled", "rejected")).toBe(true);
+    expect(puedeTransicionarDossier("rejected", "signed")).toBe(false);
+    expect(puedeTransicionarDossier("rejected", "rejected")).toBe(false);
+  });
+
+  it("un rechazado puede volver a compiled; uno firmado no sale de signed", () => {
+    expect(puedeTransicionarDossier("rejected", "compiled")).toBe(true);
+    expect(DOSSIER_TRANSITIONS.signed).toEqual([]);
+  });
+
+  it("tiene una entrada por estado", () => {
+    expect(Object.keys(DOSSIER_TRANSITIONS).sort()).toEqual([...DOSSIER_STATUSES].sort());
   });
 });

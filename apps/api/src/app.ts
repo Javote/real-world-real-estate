@@ -7,7 +7,7 @@ import { db } from "./lib/db.js";
 import { statusDeError } from "./lib/error-status.js";
 import { sql } from "./lib/kysely.js";
 import { errorHandler } from "./middlewares/errorHandler.js";
-import { trustProxyHops } from "./middlewares/rateLimit.js";
+import { dossierRateLimiter, trustProxyHops } from "./middlewares/rateLimit.js";
 import { entorno } from "./platform/config.js";
 import { montarRouter, routerRaiz } from "./platform/router.js";
 import auditRoutes from "./routes/audit.routes.js";
@@ -20,7 +20,6 @@ import developerComercialRoutes from "./routes/developer-comercial.routes.js";
 import developerEvidenciaRoutes from "./routes/developer-evidencia.routes.js";
 import evidenceRoutes from "./routes/evidence.routes.js";
 import investorRoutes from "./routes/investor.routes.js";
-import notaryRoutes from "./routes/notary.routes.js";
 import notificationsRoutes from "./routes/notifications.routes.js";
 import profileRoutes from "./routes/profile.routes.js";
 import projectCoverRoutes from "./routes/project-cover.routes.js";
@@ -97,9 +96,13 @@ export const MONTAJE = [
   { prefijo: "/api/v1/developer", router: developerEvidenciaRoutes },
   { prefijo: "/api/v1/developer", router: capitalRoutes },
   { prefijo: "/api/v1/developer", router: projectCoverRoutes },
-  { prefijo: "/api/v1/notary", router: notaryRoutes },
   { prefijo: "/api/v1/certifier", router: certifierRoutes }
 ] as const;
+
+// El link público se lee sin sesión: el límite va en su path, delante del router (SPEC-211).
+const limitador = dossierRateLimiter();
+const limiteDelLinkPublico: RequestHandler = (req, res, next) => limitador(req, res, next);
+app.use("/api/v1/public/dossier", limiteDelLinkPublico);
 
 // Antes que las rutas de Express: lo que el router oRPC no conoce sigue de largo (SPEC-607).
 app.use(montarRouter(routerRaiz));

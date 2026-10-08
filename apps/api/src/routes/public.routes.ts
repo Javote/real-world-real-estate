@@ -1,57 +1,17 @@
 import { Readable } from "node:stream";
-import { cuidParamSchema, hex64ParamSchema, publicDossierSchema } from "@plataforma/shared";
+import { cuidParamSchema } from "@plataforma/shared";
 import { Router } from "express";
 import { z } from "zod";
-import { compileDossier } from "../domain/dossier.js";
 import { db } from "../lib/db.js";
 import { delegarAOrpc, OpenAPIHandler, ORPCError, os } from "../lib/orpc.js";
 import { storage } from "../lib/storage.js";
-import { dossierRateLimiter } from "../middlewares/rateLimit.js";
 import { paramValidator } from "../middlewares/validate-params.js";
 
 const PREFIJO_ABSOLUTO = "/api/v1/public";
 
 const router = Router();
 
-router.param("shareToken", paramValidator(hex64ParamSchema));
 router.param("id", paramValidator(cuidParamSchema));
-
-const publicDossierProcedure = os
-  .route({ method: "GET", path: "/dossier/{shareToken}" })
-  .input(z.strictObject({ shareToken: hex64ParamSchema }))
-  .output(publicDossierSchema)
-  .handler(async ({ input }) => {
-    const fila = await db
-      .selectFrom("Dossier")
-      .select(["unitId"])
-      .where("shareToken", "=", input.shareToken)
-      .executeTakeFirst();
-
-    if (!fila) throw new ORPCError("NOT_FOUND", { message: "Dossier not found" });
-
-    const dossier = await compileDossier(fila.unitId);
-    /* v8 ignore if -- @preserve: FK Dossier.unitId → Unit.id es ON DELETE CASCADE */
-    if (!dossier) throw new ORPCError("NOT_FOUND", { message: "Dossier not found" });
-
-    return publicDossierSchema.parse({
-      unitReference: dossier.unitReference,
-      projectName: dossier.projectName,
-      masterHash: dossier.masterHash,
-      compiledAt: dossier.compiledAt,
-      status: dossier.status,
-      completeness: dossier.completeness,
-      signatureTxid: dossier.signatureTxid,
-      signedAt: dossier.signedAt,
-      artifacts: dossier.artifacts
-    });
-  });
-const publicDossierHandler = new OpenAPIHandler({ publicDossierProcedure });
-
-router.get(
-  "/dossier/:shareToken",
-  dossierRateLimiter(),
-  delegarAOrpc(publicDossierHandler, PREFIJO_ABSOLUTO)
-);
 
 const projectCoverProcedure = os
   .route({ method: "GET", path: "/projects/{id}/cover", outputStructure: "detailed" })
@@ -88,7 +48,6 @@ const projectCoverHandler = new OpenAPIHandler({ projectCoverProcedure });
 router.get("/projects/:id/cover", delegarAOrpc(projectCoverHandler, PREFIJO_ABSOLUTO));
 
 export const publicOrpcRouter = {
-  publicDossierProcedure,
   projectCoverProcedure
 };
 

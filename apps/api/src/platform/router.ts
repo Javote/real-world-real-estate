@@ -1,14 +1,15 @@
 import type { RequestHandler } from "express";
 import { OpenAPIHandler } from "../lib/orpc.js";
+import { dossierRouter } from "../modules/dossier/router.js";
 import { type Contexto, contextoDeRequest } from "./contexto.js";
 
 export const PREFIJO_API = "/api/v1";
 
 /**
- * El router oRPC raíz. Vacío en A2 (SPEC-607): cada vertical se muda acá en A3/A4 y borra sus rutas de
- * Express. Lo que no conoce lo siguen atendiendo las de Express.
+ * El router oRPC raíz, que implementa el contrato de `shared` módulo por módulo (SPEC-607). Lo que no
+ * conoce lo siguen atendiendo las rutas de Express hasta que su módulo se mude (A4).
  */
-export const routerRaiz: Record<string, never> = {};
+export const routerRaiz = { dossier: dossierRouter };
 
 /** Un solo `OpenAPIHandler` para todo `/api/v1`, montado en Express antes que las rutas viejas. */
 export function montarRouter(router: object): RequestHandler {

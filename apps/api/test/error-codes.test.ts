@@ -9,6 +9,17 @@ import {
 import { describe, expect, it } from "vitest";
 
 const SRC = join(import.meta.dirname, "..", "src");
+// Los errores de un módulo mudado los declara su contrato (SPEC-607).
+const CONTRATO = join(
+  import.meta.dirname,
+  "..",
+  "..",
+  "..",
+  "packages",
+  "shared",
+  "src",
+  "contract"
+);
 
 const fuentes = (dir: string): string[] =>
   readdirSync(dir, { withFileTypes: true }).flatMap((e) =>
@@ -19,7 +30,7 @@ const fuentes = (dir: string): string[] =>
         : []
   );
 
-const codigo = fuentes(SRC).join("\n");
+const codigo = [...fuentes(SRC), ...fuentes(CONTRATO)].join("\n");
 const todos = (re: RegExp) => [...codigo.matchAll(re)];
 
 // `X: { status: N` en `.errors()`, y `status: N, code: "X"` en el dominio y en `errorHandler`. Las

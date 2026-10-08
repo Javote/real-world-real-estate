@@ -10,12 +10,14 @@ import {
   stageEvidenceUploadResultSchema,
   stageEvidenceUploadSchema
 } from "@plataforma/shared";
+import { contrato } from "@plataforma/shared/contract";
 import { type ZodType, z } from "zod";
 import { createDocument } from "zod-openapi";
 import { en } from "../src/lib/arrays.js";
 import { OpenAPIGenerator, os, ZodToJsonSchemaConverter } from "../src/lib/orpc.js";
 import { esPuntoDeEntrada } from "../src/lib/punto-de-entrada.js";
 import { describeGuardEn, leerMontaje } from "../src/lib/route-inventory.js";
+import { PREFIJO_API } from "../src/platform/router.js";
 import { auditOrpcRouter } from "../src/routes/audit.routes.js";
 import { type AuthContext, authOrpcRouter } from "../src/routes/auth.routes.js";
 import { capitalOrpcRouter } from "../src/routes/capital.routes.js";
@@ -25,7 +27,6 @@ import { type DeveloperContext, developerOrpcRouter } from "../src/routes/develo
 import { developerComercialOrpcRouter } from "../src/routes/developer-comercial.routes.js";
 import { type EvidenceContext, evidenceOrpcRouter } from "../src/routes/evidence.routes.js";
 import { type InvestorContext, investorOrpcRouter } from "../src/routes/investor.routes.js";
-import { type NotaryContext, notaryOrpcRouter } from "../src/routes/notary.routes.js";
 import {
   type NotificationsContext,
   notificationsOrpcRouter
@@ -98,7 +99,6 @@ function aPathOpenApi(ruta: string): string {
 const ORPC_MIGRADAS = new Set([
   "GET /api/v1/auth/me",
   "POST /api/v1/auth/login",
-  "GET /api/v1/public/dossier/:shareToken",
   "GET /api/v1/public/projects/:id/cover",
   "GET /api/v1/profile",
   "PATCH /api/v1/profile",
@@ -136,12 +136,6 @@ const ORPC_MIGRADAS = new Set([
   "GET /api/v1/users/:id",
   "PATCH /api/v1/users/:id",
   "DELETE /api/v1/users/:id",
-  "GET /api/v1/notary/kpis",
-  "GET /api/v1/notary/dossiers/pending",
-  "GET /api/v1/notary/dossiers/:id",
-  "POST /api/v1/notary/dossiers/:id/sign",
-  "POST /api/v1/notary/dossiers/:id/reject",
-  "GET /api/v1/notary/signatures",
   "GET /api/v1/certifier/kpis",
   "GET /api/v1/certifier/assignments",
   "GET /api/v1/certifier/stages/:id",
@@ -154,14 +148,11 @@ const ORPC_MIGRADAS = new Set([
   "GET /api/v1/investor/units",
   "GET /api/v1/investor/units/:id",
   "GET /api/v1/investor/units/:id/news",
-  "GET /api/v1/investor/units/:id/dossier",
-  "POST /api/v1/investor/units/:id/dossier/share",
   "GET /api/v1/investor/notifications",
   "GET /api/v1/investor/invitations/:id",
   "POST /api/v1/investor/invitations/:id/accept",
   "POST /api/v1/investor/invitations/:id/decline",
   "GET /api/v1/investor/contracts/:unitId",
-  "GET /api/v1/investor/units/:id/dossier/export.pdf",
   "GET /api/v1/developer/projects",
   "GET /api/v1/developer/projects/:id",
   "POST /api/v1/developer/projects",
@@ -340,13 +331,13 @@ export async function buildOpenApiDocument() {
   );
   Object.assign(paths, documentoUsers.paths);
 
-  const documentoNotary = await generadorOrpc.generate(
-    os.$context<NotaryContext>().prefix("/api/v1/notary").router(notaryOrpcRouter),
-    {
-      info: { title: "PropNexus API — notary (oRPC)", version: "1.0.0" }
-    }
-  );
-  Object.assign(paths, documentoNotary.paths);
+  // Los módulos que ya implementan el contrato de `shared` (SPEC-607): el documento sale del contrato.
+  const documentoContrato = await generadorOrpc.generate(contrato, {
+    info: { title: "PropNexus API — contrato", version: "1.0.0" }
+  });
+  for (const [ruta, operaciones] of Object.entries(documentoContrato.paths ?? {})) {
+    paths[`${PREFIJO_API}${ruta}`] = operaciones as Record<string, unknown>;
+  }
 
   const documentoCertifier = await generadorOrpc.generate(
     os.$context<CertifierContext>().prefix("/api/v1/certifier").router(certifierOrpcRouter),

@@ -9,10 +9,12 @@ backlog quedan el CRUD de `/projects` y `/users` (admin, `SPEC-221`).
 
 ## Checklist de un endpoint nuevo
 
-Desde A2 (SPEC-607), un endpoint nuevo puede nacer como procedimiento oRPC en `routerRaiz`
-(`platform/router.ts`): sale de `procedimiento(guard)` (`platform/procedimiento.ts`), con el mismo
-guard que `authorize` en su `meta`, y `route-guards.test.ts` lo lee de ahí. Lo de abajo es la forma
-Express, que sigue siendo la de las rutas existentes hasta A3/A4.
+Desde A3 (SPEC-615), un módulo vive en `modules/<módulo>/` e implementa su contrato de
+`packages/shared/src/contract/` (path, input, output, errores y `meta.guard`): `rules.ts` puro,
+`queries.ts` con el ejecutor, `casos.ts` que devuelve `Result`, y `router.ts`, una línea por
+procedimiento y sin importar `db`. Se monta en `routerRaiz` (`platform/router.ts`) y
+`route-guards.test.ts` lo lee de la `meta`. El primero es `dossier`. Lo de abajo es la forma Express,
+la de los módulos que todavía no se mudaron (A4).
 
 1. Schema Zod en `packages/shared` **antes** que el endpoint (regla 6).
 2. **`authorize({ roles, acceso })`**, los dos obligatorios (D-088): `"soloRol"`,
@@ -42,6 +44,11 @@ Express, que sigue siendo la de las rutas existentes hasta A3/A4.
   lado, y un dueño `null` es 403.
 - **La cola del notary es compartida**: `/dossiers/:id`, `/sign` y `/reject` no tienen regla de
   pertenencia, y los listados filtran por `signedById` como scope, no como autorización.
+- **El dossier nace con la venta y ninguna lectura lo escribe** (SPEC-615): la fila entra en el lote
+  de la aceptación con `masterHash` vacío, que es el hash de la última decisión del notary. El hash y
+  el estado vigentes (un `rejected` cuyo hash cambió se lee `compiled`) se calculan al leer;
+  `dossier-lecturas-sin-escrituras.test.ts` lo fija. Un seed o un test que planta una venta usa
+  `sembrarUnidadVendida`, que crea el dossier igual.
 - **Un seed que planta a mano una fila que el producto crea esconde el bug del endpoint** (pasó con
   la membresía `buyer` al aceptar una invitación). Antes de sembrarla, preguntá qué endpoint la crea.
 - **Un schema local que coincide con el compartido se queda atrás en silencio**: importá el de
@@ -109,7 +116,8 @@ Express, que sigue siendo la de las rutas existentes hasta A3/A4.
   anterior del lote) o `WHERE EXISTS` de una fila con id generado antes (el audit, el contrato). Para
   anclar, `anclarConReclamo` (`platform/anclaje.ts`).
 - **El audit y las notificaciones nuevas salen de `platform/`**: `audit(ejecutor, entrada)` devuelve
-  la consulta sin ejecutar (sirve en una transacción y en un `enLote`); `notify(ejecutor, entradas)` también,
+  la consulta sin ejecutar (sirve en una transacción y en un `enLote`); `auditSiGano` y `notifySiGano`
+  van después del `UPDATE` que reclama y entran solo si ganó; `notify(ejecutor, entradas)` también,
   y va en el lote de la mutación que avisa: si falla, la deshace (SPEC-613 §La decisión). `writeAuditLog` y el `notify` de `domain/` son la forma vieja, escrita sobre las mismas piezas.
 - **Un código de error nuevo va primero a `ERROR_CODES`** (`packages/shared/src/errors.ts`), o
   `test/error-codes.test.ts` se pone rojo; su clave tiene que existir en el diccionario de la web.

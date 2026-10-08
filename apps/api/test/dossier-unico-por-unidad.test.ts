@@ -1,7 +1,8 @@
 import { afterAll, describe, expect, it } from "vitest";
+import { sembrarUnidadVendida } from "../src/db/fixtures.js";
 import { createId } from "../src/db/id.js";
-import { compileDossier } from "../src/domain/dossier.js";
 import { db } from "../src/lib/db.js";
+import { leerDeLaUnidad } from "../src/modules/dossier/casos.js";
 import { FIXTURES } from "./global-setup.js";
 
 let proyecto: string;
@@ -77,8 +78,8 @@ describe("el índice único de Dossier.unitId", () => {
   });
 });
 
-describe("compileDossier bajo concurrencia (invariante 2)", () => {
-  it("Promise.all([compileDossier(u), compileDossier(u)]) devuelve el MISMO id, una sola fila", async () => {
+describe("un dossier firmado (invariante 2)", () => {
+  it("leerlo devuelve el masterHash firmado aunque cambie lo que compromete", async () => {
     proyecto ??= (
       await db
         .selectFrom("Project")
@@ -87,35 +88,26 @@ describe("compileDossier bajo concurrencia (invariante 2)", () => {
         .executeTakeFirstOrThrow()
     ).id;
 
-    const unidad = await crearUnidad(`SPEC202-CONC-${createId()}`);
-
-    const [a, b] = await Promise.all([compileDossier(unidad), compileDossier(unidad)]);
-
-    expect(a?.id).toBeDefined();
-    expect(a?.id).toBe(b?.id);
-
-    const filas = await db.selectFrom("Dossier").selectAll().where("unitId", "=", unidad).execute();
-    expect(filas).toHaveLength(1);
-  });
-
-  it("compilar una unidad con dossier ya firmado devuelve la firmada y no recompila el masterHash", async () => {
-    proyecto ??= (
-      await db
-        .selectFrom("Project")
-        .select("id")
-        .where("slug", "=", FIXTURES.proyecto.slug)
-        .executeTakeFirstOrThrow()
-    ).id;
-
-    const unidad = await crearUnidad(`SPEC202-SIGNED-${createId()}`);
-    const primera = await compileDossier(unidad);
-    expect(primera).not.toBeNull();
+    const investor = await db
+      .selectFrom("User")
+      .select("id")
+      .where("email", "=", FIXTURES.investor.email)
+      .executeTakeFirstOrThrow();
+    const { unitId: unidad } = await sembrarUnidadVendida(db, {
+      projectId: proyecto,
+      investorId: investor.id,
+      unitReference: `SPEC202-SIGNED-${createId()}`,
+      floor: 1,
+      sizeM2: 40,
+      priceMinorUnits: 5_000_000,
+      currency: "USD"
+    });
 
     const hashFirmado = "c".repeat(64);
     await db
       .updateTable("Dossier")
       .set({ status: "signed", masterHash: hashFirmado, signedAt: new Date() })
-      .where("id", "=", primera!.id)
+      .where("unitId", "=", unidad)
       .execute();
 
     const ahora = new Date();
@@ -147,10 +139,11 @@ describe("compileDossier bajo concurrencia (invariante 2)", () => {
       })
       .execute();
 
-    const releida = await compileDossier(unidad);
-    expect(releida?.id).toBe(primera!.id);
-    expect(releida?.masterHash).toBe(hashFirmado);
-    expect(releida?.status).toBe("signed");
+    const releida = await leerDeLaUnidad({ db, clock: () => new Date() }, unidad);
+    expect(releida).toMatchObject({
+      ok: true,
+      value: { masterHash: hashFirmado, status: "signed" }
+    });
 
     const filas = await db.selectFrom("Dossier").selectAll().where("unitId", "=", unidad).execute();
     expect(filas).toHaveLength(1);

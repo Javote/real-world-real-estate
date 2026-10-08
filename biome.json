@@ -16,7 +16,8 @@
       "!**/e2e/.artifacts",
       "!specs/evidencia-m3/2-api/postman",
       "!specs/evidencia-m3/2-api/openapi",
-      "!apps/api/api-docs"
+      "!apps/api/api-docs",
+      "!packages/shared/src/contract/contract.min.json"
     ]
   },
   "css": {

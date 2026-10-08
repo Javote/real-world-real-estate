@@ -1,6 +1,7 @@
 import request from "supertest";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import app from "../src/app.js";
+import { sembrarUnidadVendida } from "../src/db/fixtures.js";
 import { createId } from "../src/db/id.js";
 import { db } from "../src/lib/db.js";
 import { FIXTURES } from "./global-setup.js";
@@ -224,26 +225,18 @@ describe("el flujo del notario", () => {
   });
 
   it("rechazar un dossier sin firmar contesta 200 y deja la nota", async () => {
-    const unidad = await db
-      .insertInto("Unit")
-      .values({
-        id: createId(),
-        projectId,
-        unitReference: "RECHAZO",
-        status: "sold",
-        floor: 1,
-        sizeM2: 40,
-        priceMinorUnits: 5_000_000,
-        currency: "USD",
-        investorId: investorId,
-        createdAt: new Date(),
-        updatedAt: new Date()
-      })
-      .returningAll()
-      .executeTakeFirstOrThrow();
+    const unidad = await sembrarUnidadVendida(db, {
+      projectId,
+      investorId,
+      unitReference: "RECHAZO",
+      floor: 1,
+      sizeM2: 40,
+      priceMinorUnits: 5_000_000,
+      currency: "USD"
+    });
 
     const compilado = await request(app)
-      .get(`/api/v1/investor/units/${unidad.id}/dossier`)
+      .get(`/api/v1/investor/units/${unidad.unitId}/dossier`)
       .set("Authorization", `Bearer ${tokenInvestor}`);
     expect(compilado.status).toBe(200);
 
@@ -303,26 +296,18 @@ describe("el flujo del notario", () => {
 
   let dossierAjenoId: string;
   it("un segundo dossier, firmado por el admin", async () => {
-    const unidad = await db
-      .insertInto("Unit")
-      .values({
-        id: createId(),
-        projectId,
-        unitReference: "AJENO",
-        status: "sold",
-        floor: 2,
-        sizeM2: 45,
-        priceMinorUnits: 6_000_000,
-        currency: "USD",
-        investorId,
-        createdAt: new Date(),
-        updatedAt: new Date()
-      })
-      .returningAll()
-      .executeTakeFirstOrThrow();
+    const unidad = await sembrarUnidadVendida(db, {
+      projectId,
+      investorId,
+      unitReference: "AJENO",
+      floor: 2,
+      sizeM2: 45,
+      priceMinorUnits: 6_000_000,
+      currency: "USD"
+    });
 
     const compilado = await request(app)
-      .get(`/api/v1/investor/units/${unidad.id}/dossier`)
+      .get(`/api/v1/investor/units/${unidad.unitId}/dossier`)
       .set("Authorization", `Bearer ${tokenInvestor}`);
     expect(compilado.status).toBe(200);
     dossierAjenoId = compilado.body.id;

@@ -3,7 +3,8 @@ import { mkdirSync, writeFileSync } from "node:fs";
 import path from "node:path";
 import { en } from "../src/lib/arrays.js";
 import { esPuntoDeEntrada } from "../src/lib/punto-de-entrada.js";
-import { describeGuardEn, leerMontaje } from "../src/lib/route-inventory.js";
+import { describeGuardEn, leerMontaje, leerRouterOrpc } from "../src/lib/route-inventory.js";
+import { PREFIJO_API, routerRaiz } from "../src/platform/router.js";
 
 type EjemploBody =
   | { modo: "raw"; body: Record<string, unknown> }
@@ -61,6 +62,15 @@ function agruparPorPrefijo(): Map<string, Map<string, string>> {
     for (const [clave, guards] of rutas) {
       existente.set(clave, guards.map(describeGuardEn).join(" + ") || "—");
     }
+    porPrefijo.set(prefijo, existente);
+  }
+
+  // Las del router oRPC, en la carpeta de su primer segmento: `/api/v1/notary/kpis` va en `/api/v1/notary`.
+  for (const [clave, guards] of leerRouterOrpc(routerRaiz)) {
+    const segmento = en(en(clave.split(" "), 1).slice(PREFIJO_API.length).split("/"), 1);
+    const prefijo = `${PREFIJO_API}/${segmento}`;
+    const existente = porPrefijo.get(prefijo) ?? new Map<string, string>();
+    existente.set(clave, guards.map(describeGuardEn).join(" + ") || "—");
     porPrefijo.set(prefijo, existente);
   }
 

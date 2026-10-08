@@ -1,5 +1,6 @@
 import type { NotificationCategory } from "@plataforma/shared";
 import { createId } from "../db/id.js";
+import { sql } from "../lib/kysely.js";
 import type { Ejecutor } from "./audit.js";
 
 export type EntradaDeNotificacion = {
@@ -24,16 +25,32 @@ export function notify(ejecutor: Ejecutor, entradas: EntradasDeNotificacion) {
   const lista: readonly EntradaDeNotificacion[] = Array.isArray(entradas)
     ? entradas
     : [entradas as EntradaDeNotificacion];
-  return ejecutor.insertInto("Notification").values(
-    lista.map((e) => ({
-      id: createId(),
-      userId: e.userId,
-      category: e.category,
-      titleKey: e.titleKey,
-      paramsJson: e.params ? JSON.stringify(e.params) : null,
-      unitId: e.unitId ?? null,
-      readAt: null,
-      createdAt: new Date()
-    }))
-  );
+  return ejecutor.insertInto("Notification").values(lista.map(filaDeNotificacion));
+}
+
+/** Una, solo si la sentencia anterior del `enLote` cambió una fila, como `auditSiGano`. */
+export function notifySiGano(ejecutor: Ejecutor, entrada: EntradaDeNotificacion) {
+  const fila = filaDeNotificacion(entrada);
+  const columnas = Object.keys(fila) as (keyof typeof fila)[];
+  return ejecutor
+    .insertInto("Notification")
+    .columns(columnas)
+    .expression(
+      ejecutor
+        .selectNoFrom((eb) => columnas.map((c) => eb.val(fila[c]).as(c)))
+        .where(sql<number>`changes()`, "=", 1)
+    );
+}
+
+function filaDeNotificacion(e: EntradaDeNotificacion) {
+  return {
+    id: createId(),
+    userId: e.userId,
+    category: e.category,
+    titleKey: e.titleKey,
+    paramsJson: e.params ? JSON.stringify(e.params) : null,
+    unitId: e.unitId ?? null,
+    readAt: null,
+    createdAt: new Date()
+  };
 }

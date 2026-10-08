@@ -1,10 +1,7 @@
-import { randomBytes } from "node:crypto";
 import type { InvitationStatus, NotificationCategory, UnitStatus } from "@plataforma/shared";
 import {
   acceptInvitationResultSchema,
   cuidParamSchema,
-  dossierSchema,
-  dossierShareSchema,
   investorContractSchema,
   investorInvitationDetailSchema,
   investorUnitDetailSchema,
@@ -19,7 +16,6 @@ import { z } from "zod";
 import { createId } from "../db/id.js";
 import type { UserRole } from "../db/types.js";
 import { anchorCommitmentEvent, commitmentOf } from "../domain/anchoring.js";
-import { compileDossier } from "../domain/dossier.js";
 import { reconciliarParaLectura } from "../domain/reconcile.js";
 import { ultimoBundlePorStage } from "../domain/stage-transition.js";
 import { db, enLote } from "../lib/db.js";
@@ -28,7 +24,6 @@ import { conUsuario, delegarAOrpc, OpenAPIHandler, ORPCError, os } from "../lib/
 import { authenticate, authorize } from "../middlewares/auth.js";
 import { paramValidator } from "../middlewares/validate-params.js";
 import { writeAuditLog } from "../utils/audit.js";
-import { renderTextPdf } from "../utils/pdf.js";
 import { avancePorProyecto, conStages } from "./_shared.js";
 
 const PREFIJO_ABSOLUTO = "/api/v1/investor";
@@ -37,13 +32,6 @@ export type InvestorContext = { user: { id: string; email: string; role: UserRol
 const orpc = os.$context<InvestorContext>();
 
 const router = Router();
-
-async function dossierDeLaUnidad(unitId: string) {
-  const dossier = await compileDossier(unitId);
-  /* v8 ignore start -- @preserve: authorize({ dueño }) ya cargó la fila (Unit) en las tres rutas que la llaman */
-  return dossier ? { dossier } : { error: 404 as const };
-  /* v8 ignore stop -- @preserve */
-}
 
 router.param("id", paramValidator(cuidParamSchema));
 router.param("projectId", paramValidator(cuidParamSchema));
@@ -257,128 +245,6 @@ router.get(
   "/units/:id/news",
   authorize({ roles: ["admin", "buyer"], acceso: { dueño: { via: "Unit", param: "id" } } }),
   delegarAOrpc(unitNewsHandler, PREFIJO_ABSOLUTO)
-);
-
-const dossierProcedure = os
-  .route({ method: "GET", path: "/units/{id}/dossier" })
-  .input(z.strictObject({ id: cuidParamSchema }))
-  .output(dossierSchema)
-  .handler(async ({ input }) => {
-    const resultado = await dossierDeLaUnidad(input.id);
-    /* v8 ignore if -- @preserve: authorize({ dueño }) ya cargó la fila (Unit) */
-    if (resultado.error === 404) throw new ORPCError("NOT_FOUND", { message: "Unit not found" });
-
-    const { investorId: _investorId, ...dossier } = resultado.dossier;
-    return dossier;
-  });
-const dossierHandler = new OpenAPIHandler({ dossierProcedure });
-
-router.get(
-  "/units/:id/dossier",
-  authorize({ roles: ["admin", "buyer"], acceso: { dueño: { via: "Unit", param: "id" } } }),
-  delegarAOrpc(dossierHandler, PREFIJO_ABSOLUTO)
-);
-
-const dossierExportProcedure = orpc
-  .route({ method: "GET", path: "/units/{id}/dossier/export.pdf", outputStructure: "detailed" })
-  .input(z.strictObject({ id: cuidParamSchema }))
-  .output(
-    z.object({ headers: z.record(z.string(), z.string()).optional(), body: z.instanceof(File) })
-  )
-  .handler(async ({ input, context }) => {
-    const resultado = await dossierDeLaUnidad(input.id);
-    /* v8 ignore if -- @preserve: authorize({ dueño }) ya cargó la fila (Unit) */
-    if (resultado.error === 404) throw new ORPCError("NOT_FOUND", { message: "Unit not found" });
-
-    const d = resultado.dossier;
-    const pdf = renderTextPdf([
-      "PropNexus - Proof dossier",
-      "",
-      `Project:      ${d.projectName}`,
-      `Unit:         ${d.unitReference}`,
-      `Compiled at:  ${d.compiledAt.toISOString()}`,
-      `Status:       ${d.status}`,
-      `Master hash:  ${d.masterHash}`,
-      `Notary TXID:  ${d.signatureTxid ?? "(pending)"}`,
-      `Completeness: ${d.completeness}% of artifacts have an on-chain reference`,
-      "",
-      "This document asserts only that these hashes were registered at these times,",
-      "and, where a signature TXID is present, that a notary attested to reviewing them.",
-      "It certifies nothing about the construction itself.",
-      "",
-      "Artifacts",
-      "---------",
-      ...d.artifacts.flatMap((a) => [
-        `[${a.kind}] ${a.label}`,
-        `  sha256: ${a.sha256 ?? "(none)"}`,
-        `  txid:   ${a.txid ?? "(pending)"}`
-      ])
-    ]);
-
-    await writeAuditLog({
-      actorUserId: context.user.id,
-      action: "EXPORT_DOSSIER",
-      entityType: "Dossier",
-      entityId: d.id,
-      metadata: { masterHash: d.masterHash }
-    });
-
-    const nombreArchivo = `dossier-${d.unitReference.replace(/[^\w.-]/g, "_")}.pdf`;
-    return {
-      headers: { "content-disposition": `attachment; filename="${nombreArchivo}"` },
-      body: new File([Uint8Array.from(pdf)], nombreArchivo, { type: "application/pdf" })
-    };
-  });
-const dossierExportHandler = new OpenAPIHandler({ dossierExportProcedure });
-
-router.get(
-  "/units/:id/dossier/export.pdf",
-  authorize({ roles: ["admin", "buyer"], acceso: { dueño: { via: "Unit", param: "id" } } }),
-  delegarAOrpc(dossierExportHandler, PREFIJO_ABSOLUTO, conUsuario)
-);
-
-const shareDossierProcedure = orpc
-  .route({ method: "POST", path: "/units/{id}/dossier/share", successStatus: 201 })
-  .input(z.strictObject({ id: cuidParamSchema }))
-  .output(dossierShareSchema)
-  .handler(async ({ input, context }) => {
-    const resultado = await dossierDeLaUnidad(input.id);
-    /* v8 ignore if -- @preserve: authorize({ dueño }) ya cargó la fila (Unit) */
-    if (resultado.error === 404) throw new ORPCError("NOT_FOUND", { message: "Unit not found" });
-
-    const d = resultado.dossier;
-
-    const fila = await db
-      .selectFrom("Dossier")
-      .select("shareToken")
-      .where("id", "=", d.id)
-      .executeTakeFirstOrThrow();
-
-    let token = fila.shareToken;
-    if (!token) {
-      token = randomBytes(32).toString("hex");
-      await db.updateTable("Dossier").set({ shareToken: token }).where("id", "=", d.id).execute();
-
-      await writeAuditLog({
-        actorUserId: context.user.id,
-        action: "SHARE_DOSSIER",
-        entityType: "Dossier",
-        entityId: d.id
-      });
-    }
-
-    return {
-      shareToken: token,
-      path: `/api/v1/public/dossier/${token}`,
-      masterHash: d.masterHash
-    };
-  });
-const shareDossierHandler = new OpenAPIHandler({ shareDossierProcedure });
-
-router.post(
-  "/units/:id/dossier/share",
-  authorize({ roles: ["admin", "buyer"], acceso: { dueño: { via: "Unit", param: "id" } } }),
-  delegarAOrpc(shareDossierHandler, PREFIJO_ABSOLUTO, conUsuario)
 );
 
 const notificationsProcedure = orpc
@@ -705,9 +571,6 @@ export const investorOrpcRouter = {
   unitsProcedure,
   unitDetailProcedure,
   unitNewsProcedure,
-  dossierProcedure,
-  dossierExportProcedure,
-  shareDossierProcedure,
   notificationsProcedure,
   invitationDetailProcedure,
   acceptInvitationProcedure,

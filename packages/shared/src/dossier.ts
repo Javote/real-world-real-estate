@@ -15,6 +15,21 @@ export const DOSSIER_STATUSES = ["compiled", "signed", "rejected"] as const;
 export const dossierStatusSchema = z.enum(DOSSIER_STATUSES);
 export type DossierStatus = z.infer<typeof dossierStatusSchema>;
 
+/**
+ * Firmar y rechazar solo parten de `compiled`, y `signed` es terminal (dueño, 2026-10-01).
+ * `rejected → compiled` no lo dispara nadie: pasa cuando cambia lo que el dossier compromete y su
+ * `masterHash` deja de ser el que se rechazó.
+ */
+export const DOSSIER_TRANSITIONS: Readonly<Record<DossierStatus, readonly DossierStatus[]>> = {
+  compiled: ["signed", "rejected"],
+  rejected: ["compiled"],
+  signed: []
+};
+
+export function puedeTransicionarDossier(desde: DossierStatus, hacia: DossierStatus): boolean {
+  return DOSSIER_TRANSITIONS[desde].includes(hacia);
+}
+
 export const dossierSchema = z.strictObject({
   id: z.string(),
   unitId: z.string(),

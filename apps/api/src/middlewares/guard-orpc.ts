@@ -1,21 +1,16 @@
+import type { Guard, MetaDeProcedimiento } from "@plataforma/shared/contract";
 import { ORPCError, os } from "../lib/orpc.js";
 import type { Contexto } from "../platform/contexto.js";
 import {
   autorizar,
   type LectorDeParam,
-  type ReglaDeAutorizacion,
   sesionDesde,
   type Usuario,
   type Veredicto
 } from "./auth.js";
 
-/**
- * El guard de un procedimiento, la misma forma que `authorize({ roles, acceso })` (D-088). Las rutas
- * públicas lo dicen explícito con `sinSesion`: ninguna queda abierta por omisión.
- */
-export type Guard = ReglaDeAutorizacion | { sinSesion: true };
-
-export type MetaDeProcedimiento = { guard?: Guard };
+// El guard tiene la misma forma que `authorize({ roles, acceso })` (D-088) y vive en el contrato.
+export type { Guard, MetaDeProcedimiento };
 
 /** Lo que el guard agrega al contexto para el handler. */
 export type ContextoAutorizado = { usuario: Usuario | null; proyectoId: string | null };

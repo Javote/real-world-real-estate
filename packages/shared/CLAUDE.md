@@ -45,4 +45,8 @@ falla el typecheck de los dos lados.
   verdad (`"type": "module"` y `.js` en los imports relativos, también en `cardano`) queda para
   después.
 - **`contract.min.json` se commitea**: después de tocar el contrato,
-  `pnpm --filter @plataforma/shared contract:min`. `contract.test.ts` lo compara con lo que generaría.
+  `pnpm --filter @plataforma/shared contract:min`. `contract.test.ts` lo compara con lo que generaría,
+  y Biome no lo formatea.
+- **El tipo del guard vive en `contract/guard.ts`** (`ReglaDeAutorizacion`, `Guard`): la `meta` de
+  cada procedimiento lo declara y `apps/api/src/middlewares/auth.ts` lo evalúa. En los tests de la
+  API, `@plataforma/shared/contract` tiene su propio alias, antes que el del índice.

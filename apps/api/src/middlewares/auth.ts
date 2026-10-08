@@ -1,4 +1,12 @@
 import type { AuditEntityType } from "@plataforma/shared";
+import type {
+  EntidadConProyecto,
+  OwnerSource,
+  ProjectSource,
+  ReglaDeAcceso,
+  ReglaDeAutorizacion,
+  ReglaSimple
+} from "@plataforma/shared/contract";
 import type { NextFunction, Request, Response } from "express";
 import type { Database, MembershipRole, UserRole } from "../db/types.js";
 import { db } from "../lib/db.js";
@@ -125,17 +133,6 @@ export async function canAccessProject(
   return project !== undefined;
 }
 
-export type ProjectSource =
-  | { param: string }
-  | {
-      via: EntidadConProyecto;
-      param: string;
-      en?: "path" | "body";
-      nombre?: string;
-    };
-
-type EntidadConProyecto = "Stage" | "Evidence" | "EvidenceBundle" | "Unit" | "Contract";
-
 // Una sola consulta: de qué proyecto es la entidad y si el usuario puede entrar. Sin fila, la
 // entidad no existe (404); con fila y `permitido` en falso, 403.
 async function accesoPorEntidad(
@@ -232,13 +229,6 @@ async function evaluarProyecto(
   return allowed ? { ok: true, proyectoId: key } : PROHIBIDO;
 }
 
-export type OwnerSource =
-  | { via: "Unit"; param: string }
-  | { via: "Invitation"; param: string }
-  | { via: "CertifierInvitation"; param: string }
-  | { via: "ContractOfUnit"; param: string }
-  | { via: "Contract"; param: string };
-
 const NOMBRE_DE_ENTIDAD: Record<OwnerSource["via"], string> = {
   Unit: "Unit",
   Invitation: "Invitation",
@@ -305,14 +295,6 @@ async function evaluarDueño(
   return fila.dueño !== null && fila.dueño === user[fila.contra] ? PASA : PROHIBIDO;
 }
 
-export type ReglaSimple =
-  | { proyecto: ProjectSource; membresias: MembershipRole[] }
-  | { dueño: OwnerSource }
-  | { scopeEnQuery: string }
-  | "soloRol";
-
-export type ReglaDeAcceso = ReglaSimple | { alguna: [ReglaSimple, ReglaSimple, ...ReglaSimple[]] };
-
 async function evaluarSimple(
   user: Usuario,
   leer: LectorDeParam,
@@ -346,8 +328,6 @@ async function evaluarRegla(
   /* v8 ignore next -- @preserve: `alguna` exige dos ramas como mínimo (el tipo lo obliga), así que `veredictos[0]` siempre existe y el `?? PROHIBIDO` nunca corre */
   return veredictos.find((v) => !v.ok && v.status === 403) ?? veredictos[0] ?? PROHIBIDO;
 }
-
-export type ReglaDeAutorizacion = { roles: UserRole[]; acceso: ReglaDeAcceso };
 
 function veredictoPara(
   user: Usuario,
@@ -509,3 +489,11 @@ export function auditScope(
 
   return eb.or(Object.values(AUDIT_ENTITY_SCOPES).map((scope) => scope(eb, misProyectos)));
 }
+
+export type {
+  OwnerSource,
+  ProjectSource,
+  ReglaDeAcceso,
+  ReglaDeAutorizacion,
+  ReglaSimple
+} from "@plataforma/shared/contract";

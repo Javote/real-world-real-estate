@@ -1999,151 +1999,6 @@
         }
       }
     },
-    "/api/v1/public/dossier/{shareToken}": {
-      "get": {
-        "operationId": "publicDossierProcedure",
-        "parameters": [
-          {
-            "name": "shareToken",
-            "in": "path",
-            "required": true,
-            "schema": {
-              "type": "string",
-              "pattern": "^[a-f0-9]{64}$"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "OK",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "type": "object",
-                  "properties": {
-                    "unitReference": {
-                      "type": "string"
-                    },
-                    "projectName": {
-                      "type": "string"
-                    },
-                    "masterHash": {
-                      "type": "string",
-                      "pattern": "^[0-9a-f]{64}$"
-                    },
-                    "compiledAt": {
-                      "type": "string",
-                      "format": "date-time",
-                      "x-native-type": "date"
-                    },
-                    "status": {
-                      "enum": [
-                        "compiled",
-                        "signed",
-                        "rejected"
-                      ],
-                      "type": "string"
-                    },
-                    "completeness": {
-                      "type": "integer",
-                      "minimum": 0,
-                      "maximum": 100
-                    },
-                    "signatureTxid": {
-                      "anyOf": [
-                        {
-                          "type": "string",
-                          "pattern": "^[0-9a-fA-F]{64}$"
-                        },
-                        {
-                          "type": "null"
-                        }
-                      ]
-                    },
-                    "signedAt": {
-                      "anyOf": [
-                        {
-                          "type": "string",
-                          "format": "date-time",
-                          "x-native-type": "date"
-                        },
-                        {
-                          "type": "null"
-                        }
-                      ]
-                    },
-                    "artifacts": {
-                      "type": "array",
-                      "items": {
-                        "type": "object",
-                        "properties": {
-                          "kind": {
-                            "enum": [
-                              "stage",
-                              "evidence",
-                              "release"
-                            ],
-                            "type": "string"
-                          },
-                          "referenceId": {
-                            "type": "string"
-                          },
-                          "label": {
-                            "type": "string"
-                          },
-                          "sha256": {
-                            "anyOf": [
-                              {
-                                "type": "string",
-                                "pattern": "^[0-9a-f]{64}$"
-                              },
-                              {
-                                "type": "null"
-                              }
-                            ]
-                          },
-                          "txid": {
-                            "anyOf": [
-                              {
-                                "type": "string",
-                                "pattern": "^[0-9a-fA-F]{64}$"
-                              },
-                              {
-                                "type": "null"
-                              }
-                            ]
-                          }
-                        },
-                        "required": [
-                          "kind",
-                          "referenceId",
-                          "label",
-                          "sha256",
-                          "txid"
-                        ],
-                        "additionalProperties": false
-                      }
-                    }
-                  },
-                  "required": [
-                    "unitReference",
-                    "projectName",
-                    "masterHash",
-                    "compiledAt",
-                    "status",
-                    "completeness",
-                    "signatureTxid",
-                    "signedAt",
-                    "artifacts"
-                  ],
-                  "additionalProperties": false
-                }
-              }
-            }
-          }
-        }
-      }
-    },
     "/api/v1/public/projects/{id}/cover": {
       "get": {
         "operationId": "projectCoverProcedure",
@@ -8356,7 +8211,7 @@
     },
     "/api/v1/notary/kpis": {
       "get": {
-        "operationId": "kpisProcedure",
+        "operationId": "dossier.notary.kpis",
         "responses": {
           "200": {
             "description": "OK",
@@ -8430,7 +8285,7 @@
     },
     "/api/v1/notary/dossiers/pending": {
       "get": {
-        "operationId": "pendingDossiersProcedure",
+        "operationId": "dossier.notary.pendientes",
         "responses": {
           "200": {
             "description": "OK",
@@ -8473,7 +8328,7 @@
     },
     "/api/v1/notary/dossiers/{id}": {
       "get": {
-        "operationId": "dossierByIdProcedure",
+        "operationId": "dossier.notary.porId",
         "parameters": [
           {
             "name": "id",
@@ -8635,13 +8490,73 @@
                 }
               }
             }
+          },
+          "404": {
+            "description": "404",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "oneOf": [
+                    {
+                      "type": "object",
+                      "properties": {
+                        "defined": {
+                          "const": true
+                        },
+                        "code": {
+                          "const": "NOT_FOUND"
+                        },
+                        "status": {
+                          "const": 404
+                        },
+                        "message": {
+                          "type": "string",
+                          "default": "Dossier not found"
+                        },
+                        "data": {}
+                      },
+                      "required": [
+                        "defined",
+                        "code",
+                        "status",
+                        "message"
+                      ]
+                    },
+                    {
+                      "type": "object",
+                      "properties": {
+                        "defined": {
+                          "const": false
+                        },
+                        "code": {
+                          "type": "string"
+                        },
+                        "status": {
+                          "type": "number"
+                        },
+                        "message": {
+                          "type": "string"
+                        },
+                        "data": {}
+                      },
+                      "required": [
+                        "defined",
+                        "code",
+                        "status",
+                        "message"
+                      ]
+                    }
+                  ]
+                }
+              }
+            }
           }
         }
       }
     },
     "/api/v1/notary/dossiers/{id}/sign": {
       "post": {
-        "operationId": "signDossierProcedure",
+        "operationId": "dossier.notary.firmar",
         "parameters": [
           {
             "name": "id",
@@ -9078,6 +8993,66 @@
               }
             }
           },
+          "404": {
+            "description": "404",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "oneOf": [
+                    {
+                      "type": "object",
+                      "properties": {
+                        "defined": {
+                          "const": true
+                        },
+                        "code": {
+                          "const": "NOT_FOUND"
+                        },
+                        "status": {
+                          "const": 404
+                        },
+                        "message": {
+                          "type": "string",
+                          "default": "Dossier not found"
+                        },
+                        "data": {}
+                      },
+                      "required": [
+                        "defined",
+                        "code",
+                        "status",
+                        "message"
+                      ]
+                    },
+                    {
+                      "type": "object",
+                      "properties": {
+                        "defined": {
+                          "const": false
+                        },
+                        "code": {
+                          "type": "string"
+                        },
+                        "status": {
+                          "type": "number"
+                        },
+                        "message": {
+                          "type": "string"
+                        },
+                        "data": {}
+                      },
+                      "required": [
+                        "defined",
+                        "code",
+                        "status",
+                        "message"
+                      ]
+                    }
+                  ]
+                }
+              }
+            }
+          },
           "409": {
             "description": "409",
             "content": {
@@ -9143,7 +9118,7 @@
     },
     "/api/v1/notary/dossiers/{id}/reject": {
       "post": {
-        "operationId": "rejectDossierProcedure",
+        "operationId": "dossier.notary.rechazar",
         "parameters": [
           {
             "name": "id",
@@ -9196,6 +9171,66 @@
                     "status"
                   ],
                   "additionalProperties": false
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "404",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "oneOf": [
+                    {
+                      "type": "object",
+                      "properties": {
+                        "defined": {
+                          "const": true
+                        },
+                        "code": {
+                          "const": "NOT_FOUND"
+                        },
+                        "status": {
+                          "const": 404
+                        },
+                        "message": {
+                          "type": "string",
+                          "default": "Dossier not found"
+                        },
+                        "data": {}
+                      },
+                      "required": [
+                        "defined",
+                        "code",
+                        "status",
+                        "message"
+                      ]
+                    },
+                    {
+                      "type": "object",
+                      "properties": {
+                        "defined": {
+                          "const": false
+                        },
+                        "code": {
+                          "type": "string"
+                        },
+                        "status": {
+                          "type": "number"
+                        },
+                        "message": {
+                          "type": "string"
+                        },
+                        "data": {}
+                      },
+                      "required": [
+                        "defined",
+                        "code",
+                        "status",
+                        "message"
+                      ]
+                    }
+                  ]
                 }
               }
             }
@@ -9290,7 +9325,7 @@
     },
     "/api/v1/notary/signatures": {
       "get": {
-        "operationId": "signaturesProcedure",
+        "operationId": "dossier.notary.firmas",
         "parameters": [
           {
             "name": "cursor",
@@ -9400,6 +9435,627 @@
                     "nextCursor"
                   ],
                   "additionalProperties": false
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/investor/units/{id}/dossier": {
+      "get": {
+        "operationId": "dossier.investor.dossier",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "pattern": "^[a-z][a-z0-9]{23}$"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "id": {
+                      "type": "string"
+                    },
+                    "unitId": {
+                      "type": "string"
+                    },
+                    "unitReference": {
+                      "type": "string"
+                    },
+                    "projectId": {
+                      "type": "string"
+                    },
+                    "projectName": {
+                      "type": "string"
+                    },
+                    "masterHash": {
+                      "type": "string",
+                      "pattern": "^[0-9a-f]{64}$"
+                    },
+                    "compiledAt": {
+                      "type": "string",
+                      "format": "date-time",
+                      "x-native-type": "date"
+                    },
+                    "status": {
+                      "enum": [
+                        "compiled",
+                        "signed",
+                        "rejected"
+                      ],
+                      "type": "string"
+                    },
+                    "artifacts": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "kind": {
+                            "enum": [
+                              "stage",
+                              "evidence",
+                              "release"
+                            ],
+                            "type": "string"
+                          },
+                          "referenceId": {
+                            "type": "string"
+                          },
+                          "label": {
+                            "type": "string"
+                          },
+                          "sha256": {
+                            "anyOf": [
+                              {
+                                "type": "string",
+                                "pattern": "^[0-9a-f]{64}$"
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ]
+                          },
+                          "txid": {
+                            "anyOf": [
+                              {
+                                "type": "string",
+                                "pattern": "^[0-9a-fA-F]{64}$"
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ]
+                          }
+                        },
+                        "required": [
+                          "kind",
+                          "referenceId",
+                          "label",
+                          "sha256",
+                          "txid"
+                        ],
+                        "additionalProperties": false
+                      }
+                    },
+                    "completeness": {
+                      "type": "integer",
+                      "minimum": 0,
+                      "maximum": 100
+                    },
+                    "signatureTxid": {
+                      "anyOf": [
+                        {
+                          "type": "string",
+                          "pattern": "^[0-9a-fA-F]{64}$"
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ]
+                    },
+                    "signedAt": {
+                      "anyOf": [
+                        {
+                          "type": "string",
+                          "format": "date-time",
+                          "x-native-type": "date"
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ]
+                    },
+                    "rejectionNote": {
+                      "anyOf": [
+                        {
+                          "type": "string"
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ]
+                    }
+                  },
+                  "required": [
+                    "id",
+                    "unitId",
+                    "unitReference",
+                    "projectId",
+                    "projectName",
+                    "masterHash",
+                    "compiledAt",
+                    "status",
+                    "artifacts",
+                    "completeness",
+                    "signatureTxid",
+                    "signedAt",
+                    "rejectionNote"
+                  ],
+                  "additionalProperties": false
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "404",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "oneOf": [
+                    {
+                      "type": "object",
+                      "properties": {
+                        "defined": {
+                          "const": true
+                        },
+                        "code": {
+                          "const": "NOT_FOUND"
+                        },
+                        "status": {
+                          "const": 404
+                        },
+                        "message": {
+                          "type": "string",
+                          "default": "Dossier not found"
+                        },
+                        "data": {}
+                      },
+                      "required": [
+                        "defined",
+                        "code",
+                        "status",
+                        "message"
+                      ]
+                    },
+                    {
+                      "type": "object",
+                      "properties": {
+                        "defined": {
+                          "const": false
+                        },
+                        "code": {
+                          "type": "string"
+                        },
+                        "status": {
+                          "type": "number"
+                        },
+                        "message": {
+                          "type": "string"
+                        },
+                        "data": {}
+                      },
+                      "required": [
+                        "defined",
+                        "code",
+                        "status",
+                        "message"
+                      ]
+                    }
+                  ]
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/investor/units/{id}/dossier/export.pdf": {
+      "get": {
+        "operationId": "dossier.investor.exportar",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "pattern": "^[a-z][a-z0-9]{23}$"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {}
+          },
+          "404": {
+            "description": "404",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "oneOf": [
+                    {
+                      "type": "object",
+                      "properties": {
+                        "defined": {
+                          "const": true
+                        },
+                        "code": {
+                          "const": "NOT_FOUND"
+                        },
+                        "status": {
+                          "const": 404
+                        },
+                        "message": {
+                          "type": "string",
+                          "default": "Dossier not found"
+                        },
+                        "data": {}
+                      },
+                      "required": [
+                        "defined",
+                        "code",
+                        "status",
+                        "message"
+                      ]
+                    },
+                    {
+                      "type": "object",
+                      "properties": {
+                        "defined": {
+                          "const": false
+                        },
+                        "code": {
+                          "type": "string"
+                        },
+                        "status": {
+                          "type": "number"
+                        },
+                        "message": {
+                          "type": "string"
+                        },
+                        "data": {}
+                      },
+                      "required": [
+                        "defined",
+                        "code",
+                        "status",
+                        "message"
+                      ]
+                    }
+                  ]
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/investor/units/{id}/dossier/share": {
+      "post": {
+        "operationId": "dossier.investor.compartir",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "pattern": "^[a-z][a-z0-9]{23}$"
+            }
+          }
+        ],
+        "responses": {
+          "201": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "shareToken": {
+                      "type": "string"
+                    },
+                    "path": {
+                      "type": "string"
+                    },
+                    "masterHash": {
+                      "type": "string",
+                      "pattern": "^[0-9a-f]{64}$"
+                    }
+                  },
+                  "required": [
+                    "shareToken",
+                    "path",
+                    "masterHash"
+                  ],
+                  "additionalProperties": false
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "404",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "oneOf": [
+                    {
+                      "type": "object",
+                      "properties": {
+                        "defined": {
+                          "const": true
+                        },
+                        "code": {
+                          "const": "NOT_FOUND"
+                        },
+                        "status": {
+                          "const": 404
+                        },
+                        "message": {
+                          "type": "string",
+                          "default": "Dossier not found"
+                        },
+                        "data": {}
+                      },
+                      "required": [
+                        "defined",
+                        "code",
+                        "status",
+                        "message"
+                      ]
+                    },
+                    {
+                      "type": "object",
+                      "properties": {
+                        "defined": {
+                          "const": false
+                        },
+                        "code": {
+                          "type": "string"
+                        },
+                        "status": {
+                          "type": "number"
+                        },
+                        "message": {
+                          "type": "string"
+                        },
+                        "data": {}
+                      },
+                      "required": [
+                        "defined",
+                        "code",
+                        "status",
+                        "message"
+                      ]
+                    }
+                  ]
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/public/dossier/{shareToken}": {
+      "get": {
+        "operationId": "dossier.publico.dossier",
+        "parameters": [
+          {
+            "name": "shareToken",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "pattern": "^[a-f0-9]{64}$"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "unitReference": {
+                      "type": "string"
+                    },
+                    "projectName": {
+                      "type": "string"
+                    },
+                    "masterHash": {
+                      "type": "string",
+                      "pattern": "^[0-9a-f]{64}$"
+                    },
+                    "compiledAt": {
+                      "type": "string",
+                      "format": "date-time",
+                      "x-native-type": "date"
+                    },
+                    "status": {
+                      "enum": [
+                        "compiled",
+                        "signed",
+                        "rejected"
+                      ],
+                      "type": "string"
+                    },
+                    "completeness": {
+                      "type": "integer",
+                      "minimum": 0,
+                      "maximum": 100
+                    },
+                    "signatureTxid": {
+                      "anyOf": [
+                        {
+                          "type": "string",
+                          "pattern": "^[0-9a-fA-F]{64}$"
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ]
+                    },
+                    "signedAt": {
+                      "anyOf": [
+                        {
+                          "type": "string",
+                          "format": "date-time",
+                          "x-native-type": "date"
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ]
+                    },
+                    "artifacts": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "kind": {
+                            "enum": [
+                              "stage",
+                              "evidence",
+                              "release"
+                            ],
+                            "type": "string"
+                          },
+                          "referenceId": {
+                            "type": "string"
+                          },
+                          "label": {
+                            "type": "string"
+                          },
+                          "sha256": {
+                            "anyOf": [
+                              {
+                                "type": "string",
+                                "pattern": "^[0-9a-f]{64}$"
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ]
+                          },
+                          "txid": {
+                            "anyOf": [
+                              {
+                                "type": "string",
+                                "pattern": "^[0-9a-fA-F]{64}$"
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ]
+                          }
+                        },
+                        "required": [
+                          "kind",
+                          "referenceId",
+                          "label",
+                          "sha256",
+                          "txid"
+                        ],
+                        "additionalProperties": false
+                      }
+                    }
+                  },
+                  "required": [
+                    "unitReference",
+                    "projectName",
+                    "masterHash",
+                    "compiledAt",
+                    "status",
+                    "completeness",
+                    "signatureTxid",
+                    "signedAt",
+                    "artifacts"
+                  ],
+                  "additionalProperties": false
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "404",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "oneOf": [
+                    {
+                      "type": "object",
+                      "properties": {
+                        "defined": {
+                          "const": true
+                        },
+                        "code": {
+                          "const": "NOT_FOUND"
+                        },
+                        "status": {
+                          "const": 404
+                        },
+                        "message": {
+                          "type": "string",
+                          "default": "Dossier not found"
+                        },
+                        "data": {}
+                      },
+                      "required": [
+                        "defined",
+                        "code",
+                        "status",
+                        "message"
+                      ]
+                    },
+                    {
+                      "type": "object",
+                      "properties": {
+                        "defined": {
+                          "const": false
+                        },
+                        "code": {
+                          "type": "string"
+                        },
+                        "status": {
+                          "type": "number"
+                        },
+                        "message": {
+                          "type": "string"
+                        },
+                        "data": {}
+                      },
+                      "required": [
+                        "defined",
+                        "code",
+                        "status",
+                        "message"
+                      ]
+                    }
+                  ]
                 }
               }
             }
@@ -11068,242 +11724,6 @@
                     ],
                     "additionalProperties": false
                   }
-                }
-              }
-            }
-          }
-        }
-      }
-    },
-    "/api/v1/investor/units/{id}/dossier": {
-      "get": {
-        "operationId": "dossierProcedure",
-        "parameters": [
-          {
-            "name": "id",
-            "in": "path",
-            "required": true,
-            "schema": {
-              "type": "string",
-              "pattern": "^[a-z][a-z0-9]{23}$"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "OK",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "type": "object",
-                  "properties": {
-                    "id": {
-                      "type": "string"
-                    },
-                    "unitId": {
-                      "type": "string"
-                    },
-                    "unitReference": {
-                      "type": "string"
-                    },
-                    "projectId": {
-                      "type": "string"
-                    },
-                    "projectName": {
-                      "type": "string"
-                    },
-                    "masterHash": {
-                      "type": "string",
-                      "pattern": "^[0-9a-f]{64}$"
-                    },
-                    "compiledAt": {
-                      "type": "string",
-                      "format": "date-time",
-                      "x-native-type": "date"
-                    },
-                    "status": {
-                      "enum": [
-                        "compiled",
-                        "signed",
-                        "rejected"
-                      ],
-                      "type": "string"
-                    },
-                    "artifacts": {
-                      "type": "array",
-                      "items": {
-                        "type": "object",
-                        "properties": {
-                          "kind": {
-                            "enum": [
-                              "stage",
-                              "evidence",
-                              "release"
-                            ],
-                            "type": "string"
-                          },
-                          "referenceId": {
-                            "type": "string"
-                          },
-                          "label": {
-                            "type": "string"
-                          },
-                          "sha256": {
-                            "anyOf": [
-                              {
-                                "type": "string",
-                                "pattern": "^[0-9a-f]{64}$"
-                              },
-                              {
-                                "type": "null"
-                              }
-                            ]
-                          },
-                          "txid": {
-                            "anyOf": [
-                              {
-                                "type": "string",
-                                "pattern": "^[0-9a-fA-F]{64}$"
-                              },
-                              {
-                                "type": "null"
-                              }
-                            ]
-                          }
-                        },
-                        "required": [
-                          "kind",
-                          "referenceId",
-                          "label",
-                          "sha256",
-                          "txid"
-                        ],
-                        "additionalProperties": false
-                      }
-                    },
-                    "completeness": {
-                      "type": "integer",
-                      "minimum": 0,
-                      "maximum": 100
-                    },
-                    "signatureTxid": {
-                      "anyOf": [
-                        {
-                          "type": "string",
-                          "pattern": "^[0-9a-fA-F]{64}$"
-                        },
-                        {
-                          "type": "null"
-                        }
-                      ]
-                    },
-                    "signedAt": {
-                      "anyOf": [
-                        {
-                          "type": "string",
-                          "format": "date-time",
-                          "x-native-type": "date"
-                        },
-                        {
-                          "type": "null"
-                        }
-                      ]
-                    },
-                    "rejectionNote": {
-                      "anyOf": [
-                        {
-                          "type": "string"
-                        },
-                        {
-                          "type": "null"
-                        }
-                      ]
-                    }
-                  },
-                  "required": [
-                    "id",
-                    "unitId",
-                    "unitReference",
-                    "projectId",
-                    "projectName",
-                    "masterHash",
-                    "compiledAt",
-                    "status",
-                    "artifacts",
-                    "completeness",
-                    "signatureTxid",
-                    "signedAt",
-                    "rejectionNote"
-                  ],
-                  "additionalProperties": false
-                }
-              }
-            }
-          }
-        }
-      }
-    },
-    "/api/v1/investor/units/{id}/dossier/export.pdf": {
-      "get": {
-        "operationId": "dossierExportProcedure",
-        "parameters": [
-          {
-            "name": "id",
-            "in": "path",
-            "required": true,
-            "schema": {
-              "type": "string",
-              "pattern": "^[a-z][a-z0-9]{23}$"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "OK",
-            "content": {}
-          }
-        }
-      }
-    },
-    "/api/v1/investor/units/{id}/dossier/share": {
-      "post": {
-        "operationId": "shareDossierProcedure",
-        "parameters": [
-          {
-            "name": "id",
-            "in": "path",
-            "required": true,
-            "schema": {
-              "type": "string",
-              "pattern": "^[a-z][a-z0-9]{23}$"
-            }
-          }
-        ],
-        "responses": {
-          "201": {
-            "description": "OK",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "type": "object",
-                  "properties": {
-                    "shareToken": {
-                      "type": "string"
-                    },
-                    "path": {
-                      "type": "string"
-                    },
-                    "masterHash": {
-                      "type": "string",
-                      "pattern": "^[0-9a-f]{64}$"
-                    }
-                  },
-                  "required": [
-                    "shareToken",
-                    "path",
-                    "masterHash"
-                  ],
-                  "additionalProperties": false
                 }
               }
             }

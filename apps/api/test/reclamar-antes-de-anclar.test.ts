@@ -3,22 +3,23 @@ import bcrypt from "bcrypt";
 import request from "supertest";
 import { afterAll, beforeAll, describe, expect, it, vi } from "vitest";
 import app from "../src/app.js";
+import { sembrarUnidadVendida } from "../src/db/fixtures.js";
 import { createId } from "../src/db/id.js";
-import { compileDossier } from "../src/domain/dossier.js";
 import { anchorPort } from "../src/lib/anchor.js";
 import { db } from "../src/lib/db.js";
 import { FIXTURES } from "./global-setup.js";
 
 const ganchos = vi.hoisted(() => ({ demoraCompilacionMs: 0 }));
 
-vi.mock("../src/domain/dossier.js", async (importOriginal) => {
-  const real = await importOriginal<typeof import("../src/domain/dossier.js")>();
+// La ventana de la carrera: entre leer lo que el dossier compromete y reclamar la firma.
+vi.mock("../src/modules/dossier/queries.js", async (importOriginal) => {
+  const real = await importOriginal<typeof import("../src/modules/dossier/queries.js")>();
   return {
     ...real,
-    compileDossier: async (unitId: string) => {
-      const dossier = await real.compileDossier(unitId);
+    insumosDe: async (...args: Parameters<typeof real.insumosDe>) => {
+      const insumos = await real.insumosDe(...args);
       await new Promise((r) => setTimeout(r, ganchos.demoraCompilacionMs));
-      return dossier;
+      return insumos;
     }
   };
 });
@@ -49,24 +50,22 @@ async function crearDossier() {
     })
     .execute();
 
-  const unitId = createId();
-  await db
-    .insertInto("Unit")
-    .values({
-      id: unitId,
-      projectId: proyecto,
-      unitReference: `RECLAMO-${unitId}`,
-      status: "sold",
-      priceMinorUnits: 5_000_000,
-      currency: "USD",
-      investorId,
-      createdAt: ahora,
-      updatedAt: ahora
-    })
-    .execute();
+  const { unitId } = await sembrarUnidadVendida(db, {
+    projectId: proyecto,
+    investorId,
+    unitReference: `RECLAMO-${investorId}`,
+    floor: 1,
+    sizeM2: 40,
+    priceMinorUnits: 5_000_000,
+    currency: "USD"
+  });
 
-  const dossier = await compileDossier(unitId);
-  return dossier!.id;
+  const dossier = await db
+    .selectFrom("Dossier")
+    .select("id")
+    .where("unitId", "=", unitId)
+    .executeTakeFirstOrThrow();
+  return dossier.id;
 }
 
 async function crearEvidencia() {

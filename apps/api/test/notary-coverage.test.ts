@@ -2,8 +2,8 @@ import bcrypt from "bcrypt";
 import request from "supertest";
 import { afterAll, beforeAll, describe, expect, it, vi } from "vitest";
 import app from "../src/app.js";
+import { sembrarUnidadVendida } from "../src/db/fixtures.js";
 import { createId } from "../src/db/id.js";
-import { compileDossier } from "../src/domain/dossier.js";
 import { db } from "../src/lib/db.js";
 import { FIXTURES } from "./global-setup.js";
 
@@ -47,23 +47,16 @@ async function crearInvestor(email: string) {
 }
 
 async function crearUnidadVendida(reference: string, investorId: string) {
-  const ahora = new Date();
-  const id = createId();
-  await db
-    .insertInto("Unit")
-    .values({
-      id,
-      projectId: proyecto,
-      unitReference: reference,
-      status: "sold",
-      priceMinorUnits: 5_000_000,
-      currency: "USD",
-      investorId,
-      createdAt: ahora,
-      updatedAt: ahora
-    })
-    .execute();
-  return id;
+  const { unitId } = await sembrarUnidadVendida(db, {
+    projectId: proyecto,
+    investorId,
+    unitReference: reference,
+    floor: 1,
+    sizeM2: 40,
+    priceMinorUnits: 5_000_000,
+    currency: "USD"
+  });
+  return unitId;
 }
 
 beforeAll(async () => {
@@ -85,9 +78,7 @@ afterAll(async () => {
 describe("GET /notary/kpis con un dossier compiled (sin firmar)", () => {
   it("cuenta en pendingDossiers y en unitsUnderReview", async () => {
     const investorId = await crearInvestor(`notary-coverage-pend-${createId()}@test.local`);
-    const unitId = await crearUnidadVendida(`SPEC018-A5-KPI-${createId()}`, investorId);
-
-    await compileDossier(unitId);
+    await crearUnidadVendida(`SPEC018-A5-KPI-${createId()}`, investorId);
 
     const res = await request(app)
       .get("/api/v1/notary/kpis")
@@ -103,7 +94,6 @@ describe("POST /notary/dossiers/:id/sign — re-firmar sin evento de firma", () 
   it("devuelve 200 con anchor undefined, no revienta ni duplica la firma", async () => {
     const investorId = await crearInvestor(`notary-coverage-race-${createId()}@test.local`);
     const unitId = await crearUnidadVendida(`SPEC018-A5-RACE-${createId()}`, investorId);
-    await compileDossier(unitId);
 
     const dossier = await db
       .selectFrom("Dossier")
