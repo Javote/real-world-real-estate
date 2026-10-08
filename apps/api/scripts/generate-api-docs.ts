@@ -136,19 +136,17 @@ export function buildPostmanCollection(): object {
   };
 }
 
+// El vivo. El de `specs/evidencia-m3/2-api/` es la foto de M3 y no se regenera (D-103).
+export const ARCHIVO_POSTMAN = path.join(
+  import.meta.dirname,
+  "..",
+  "api-docs",
+  "propnexus.postman_collection.json"
+);
+
 function main() {
-  const salida = path.join(
-    import.meta.dirname,
-    "..",
-    "..",
-    "..",
-    "specs",
-    "evidencia-m3",
-    "2-api",
-    "postman"
-  );
-  mkdirSync(salida, { recursive: true });
-  const archivo = path.join(salida, "propnexus.postman_collection.json");
+  const archivo = ARCHIVO_POSTMAN;
+  mkdirSync(path.dirname(archivo), { recursive: true });
   writeFileSync(archivo, `${JSON.stringify(buildPostmanCollection(), null, 2)}\n`);
   console.log(`[docs:api] escrito ${archivo}`);
 }

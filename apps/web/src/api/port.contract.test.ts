@@ -19,10 +19,7 @@ interface EsquemaJson {
 }
 
 const DOC = JSON.parse(
-  readFileSync(
-    resolve(process.cwd(), '../../specs/evidencia-m3/2-api/openapi/propnexus.openapi.json'),
-    'utf8'
-  )
+  readFileSync(resolve(process.cwd(), '../api/api-docs/propnexus.openapi.json'), 'utf8')
 ) as { paths: Record<string, Record<string, Operacion>> }
 
 const PLANTILLAS = Object.keys(DOC.paths)

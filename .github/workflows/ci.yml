@@ -371,4 +371,5 @@ jobs:
             --exclude-rule package_managers.npm.npm-missing-minimum-release-age.npm-missing-minimum-release-age \
             --exclude contracts/build \
             --exclude specs/evidencia-m3/2-api/postman \
+            --exclude apps/api/api-docs/propnexus.postman_collection.json \
             --error

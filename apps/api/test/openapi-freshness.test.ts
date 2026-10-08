@@ -1,22 +1,10 @@
 import { readFileSync } from "node:fs";
-import path from "node:path";
 import { describe, expect, it } from "vitest";
-import { buildOpenApiDocument } from "../scripts/generate-openapi.js";
+import { ARCHIVO_OPENAPI, buildOpenApiDocument } from "../scripts/generate-openapi.js";
 
-describe("specs/evidencia-m3/2-api/openapi/propnexus.openapi.json", () => {
+describe("api-docs/propnexus.openapi.json", () => {
   it("coincide con lo que generaría el router montado ahora mismo", async () => {
-    const archivo = path.join(
-      import.meta.dirname,
-      "..",
-      "..",
-      "..",
-      "specs",
-      "evidencia-m3",
-      "2-api",
-      "openapi",
-      "propnexus.openapi.json"
-    );
-    const commiteado = readFileSync(archivo, "utf-8");
+    const commiteado = readFileSync(ARCHIVO_OPENAPI, "utf-8");
     const fresco = `${JSON.stringify(await buildOpenApiDocument(), null, 2)}\n`;
 
     expect(commiteado).toBe(fresco);

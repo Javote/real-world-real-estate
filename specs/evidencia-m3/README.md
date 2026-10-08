@@ -46,8 +46,9 @@ branches, *"rejects unsigned evidence"*, and error budgets. Each one, with its c
 - **OpenAPI 3.1**: [`propnexus.openapi.json`](2-api/openapi/propnexus.openapi.json) — every
   operation with its method, path, authorization and, where it validates with Zod, its schema.
 - **Postman collection**: [`propnexus.postman_collection.json`](2-api/postman/propnexus.postman_collection.json).
-- Both are generated from the mounted router, and a test fails if the committed file does not match
-  the code.
+- Both were generated from the mounted router and **frozen on 2026-10-07** (commit `bba2237`) as the
+  Milestone 3 snapshot. The repository keeps a live copy in `apps/api/api-docs/`, and a test fails
+  if that copy does not match the code.
 - **Test reports**: the same report as item 1.
 
 ## 3 · Pre-production

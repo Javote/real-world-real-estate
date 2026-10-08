@@ -1443,3 +1443,16 @@ nombre accesible de cada chip sigue diciendo número y nombre (`developer.upload
 
 **Mientras dura la migración** conviven las dos formas: lo nuevo atiende lo que conoce y lo viejo, lo
 demás. Cada commit deja la API y la web andando, con CI en verde.
+
+## D-103 — La evidencia de M3 se congela; la documentación viva de la API va en `apps/api/api-docs/`
+
+**Decisión del dueño, 2026-10-07** (`SPEC-615` §Decisiones, la tercera): A3 es el primer paso que
+cambia el OpenAPI, y M3 todavía no fue aceptado.
+
+**Qué obliga:**
+
+- **`specs/evidencia-m3/2-api/` no se regenera**: es la foto de M3 al commit `bba2237`. Los
+  `README` de la evidencia lo dicen en inglés.
+- **`docs:openapi` y `docs:api` escriben en `apps/api/api-docs/`**, y `openapi-freshness`,
+  `api-docs-freshness` y `port.contract.test.ts` comparan contra esa copia.
+- **Un cambio de contrato regenera solo la copia viva**, no la evidencia ni sus PDF.

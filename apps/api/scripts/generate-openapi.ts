@@ -414,19 +414,17 @@ export async function buildOpenApiDocument() {
   });
 }
 
+// El vivo. El de `specs/evidencia-m3/2-api/` es la foto de M3 y no se regenera (D-103).
+export const ARCHIVO_OPENAPI = path.join(
+  import.meta.dirname,
+  "..",
+  "api-docs",
+  "propnexus.openapi.json"
+);
+
 async function main() {
-  const salida = path.join(
-    import.meta.dirname,
-    "..",
-    "..",
-    "..",
-    "specs",
-    "evidencia-m3",
-    "2-api",
-    "openapi"
-  );
-  mkdirSync(salida, { recursive: true });
-  const archivo = path.join(salida, "propnexus.openapi.json");
+  const archivo = ARCHIVO_OPENAPI;
+  mkdirSync(path.dirname(archivo), { recursive: true });
   writeFileSync(archivo, `${JSON.stringify(await buildOpenApiDocument(), null, 2)}\n`);
   console.log(`[docs:openapi] escrito ${archivo}`);
 }

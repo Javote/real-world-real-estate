@@ -15,8 +15,8 @@ arnés de la auditoría §7 sin tocar:
 - los tests de HTTP sin mocks de `apps/api/test/`;
 - las specs de Playwright con los test IDs de M2-D5;
 - la `MATRIZ` de `apps/api/test/route-guards.test.ts`, que no cambia ni un carácter;
-- `openapi-freshness.test.ts` y `api-docs-freshness.test.ts`, que comparan byte a byte la evidencia
-  de `specs/evidencia-m3/2-api/` con lo que genera el código.
+- `openapi-freshness.test.ts` y `api-docs-freshness.test.ts`, que comparan byte a byte la copia viva
+  de `apps/api/api-docs/` con lo que genera el código (la evidencia de M3 quedó congelada, D-103).
 
 ## Los pasos y su spec
 

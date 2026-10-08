@@ -181,8 +181,8 @@ pnpm --filter @plataforma/api db:migrate     # aplica las migraciones pendientes
 pnpm --filter @plataforma/api db:seed        # datos demo en la base local (passwords del repo)
 pnpm --filter @plataforma/api db:seed:produccion  # la demo desplegada: RUNBOOK §1.3
 pnpm --filter @plataforma/api test:s3        # storage contra MinIO — NO corre en CI
-pnpm --filter @plataforma/api docs:api       # regenera la colección Postman de specs/evidencia-m3/2-api/
-pnpm --filter @plataforma/api docs:openapi   # regenera el OpenAPI de specs/evidencia-m3/2-api/
+pnpm --filter @plataforma/api docs:api       # regenera la colección Postman de api-docs/
+pnpm --filter @plataforma/api docs:openapi   # regenera el OpenAPI de api-docs/ (el de evidencia-m3 no se toca: D-103)
 ```
 
 Una migración nueva se escribe a mano en `migrations/*.sql`, con `--> statement-breakpoint` entre

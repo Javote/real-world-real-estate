@@ -1,0 +1,2547 @@
+{
+  "info": {
+    "name": "PropNexus API",
+    "description": "Generated from the mounted router (`pnpm --filter @plataforma/api docs:api`), not maintained by hand — see apps/api/scripts/generate-api-docs.ts. Each request's description is the guard chain `authorize()` declares: allowed role(s) and the per-project access rule. \"—\" means a public endpoint.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    {
+      "key": "baseUrl",
+      "value": "http://localhost:3001"
+    },
+    {
+      "key": "token",
+      "value": ""
+    },
+    {
+      "key": "password",
+      "value": ""
+    }
+  ],
+  "item": [
+    {
+      "name": "/api/v1/audit-logs",
+      "item": [
+        {
+          "name": "GET /api/v1/audit-logs",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/audit-logs",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "audit-logs"
+              ]
+            },
+            "description": "authenticated + authorize(role(admin) · role only)"
+          }
+        },
+        {
+          "name": "GET /api/v1/audit-logs/telemetry/reservation-to-escrow",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/audit-logs/telemetry/reservation-to-escrow",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "audit-logs",
+                "telemetry",
+                "reservation-to-escrow"
+              ]
+            },
+            "description": "authenticated + authorize(role(admin) · role only)"
+          }
+        }
+      ]
+    },
+    {
+      "name": "/api/v1/auth",
+      "item": [
+        {
+          "name": "GET /api/v1/auth/me",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/auth/me",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "auth",
+                "me"
+              ]
+            },
+            "description": "authenticated + authorize(role(admin|developer|buyer|verifier|notary) · scope(User.id = current user))"
+          }
+        },
+        {
+          "name": "POST /api/v1/auth/login",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/auth/login",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "auth",
+                "login"
+              ]
+            },
+            "description": "—",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"developer@example.com\",\n  \"password\": \"{{password}}\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "/api/v1/certifier",
+      "item": [
+        {
+          "name": "GET /api/v1/certifier/assignments",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/certifier/assignments",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "certifier",
+                "assignments"
+              ]
+            },
+            "description": "authenticated + authorize(role(admin|verifier) · scope(projectScope(any membership)))"
+          }
+        },
+        {
+          "name": "GET /api/v1/certifier/certificates",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/certifier/certificates",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "certifier",
+                "certificates"
+              ]
+            },
+            "description": "authenticated + authorize(role(admin|verifier) · scope(Stage.certifiedById = current user))"
+          }
+        },
+        {
+          "name": "GET /api/v1/certifier/invitations",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/certifier/invitations",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "certifier",
+                "invitations"
+              ]
+            },
+            "description": "authenticated + authorize(role(admin|verifier) · scope(CertifierInvitation.certifierId = current user))"
+          }
+        },
+        {
+          "name": "GET /api/v1/certifier/kpis",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/certifier/kpis",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "certifier",
+                "kpis"
+              ]
+            },
+            "description": "authenticated + authorize(role(admin|verifier) · scope(projectScope(any membership)))"
+          }
+        },
+        {
+          "name": "GET /api/v1/certifier/stages/:id",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/certifier/stages/:id",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "certifier",
+                "stages",
+                ":id"
+              ]
+            },
+            "description": "authenticated + authorize(role(admin|verifier) · project(Stage:id → verifier))"
+          }
+        },
+        {
+          "name": "POST /api/v1/certifier/invitations/:id/accept",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/certifier/invitations/:id/accept",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "certifier",
+                "invitations",
+                ":id",
+                "accept"
+              ]
+            },
+            "description": "authenticated + authorize(role(admin|verifier) · owner(CertifierInvitation:id))"
+          }
+        },
+        {
+          "name": "POST /api/v1/certifier/invitations/:id/decline",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/certifier/invitations/:id/decline",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "certifier",
+                "invitations",
+                ":id",
+                "decline"
+              ]
+            },
+            "description": "authenticated + authorize(role(admin|verifier) · owner(CertifierInvitation:id))"
+          }
+        },
+        {
+          "name": "POST /api/v1/certifier/stages/:id/certify",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/certifier/stages/:id/certify",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "certifier",
+                "stages",
+                ":id",
+                "certify"
+              ]
+            },
+            "description": "authenticated + authorize(role(admin|verifier) · project(Stage:id → verifier))"
+          }
+        },
+        {
+          "name": "POST /api/v1/certifier/stages/:id/observe",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/certifier/stages/:id/observe",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "certifier",
+                "stages",
+                ":id",
+                "observe"
+              ]
+            },
+            "description": "authenticated + authorize(role(admin|verifier) · project(Stage:id → verifier))"
+          }
+        }
+      ]
+    },
+    {
+      "name": "/api/v1/contracts",
+      "item": [
+        {
+          "name": "GET /api/v1/contracts/:contractId/releases",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/contracts/:contractId/releases",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "contracts",
+                ":contractId",
+                "releases"
+              ]
+            },
+            "description": "authenticated + authorize(role(admin|developer|buyer|verifier|notary) · any of[owner(Contract:contractId) | project(Contract:contractId → developer|buyer|verifier)])"
+          }
+        }
+      ]
+    },
+    {
+      "name": "/api/v1/developer",
+      "item": [
+        {
+          "name": "GET /api/v1/developer/audit-log",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/developer/audit-log",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "developer",
+                "audit-log"
+              ]
+            },
+            "description": "authenticated + authorize(role(admin|developer) · scope(auditScope(developer)))"
+          }
+        },
+        {
+          "name": "GET /api/v1/developer/capital/by-project",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/developer/capital/by-project",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "developer",
+                "capital",
+                "by-project"
+              ]
+            },
+            "description": "authenticated + authorize(role(admin|developer) · scope(projectScope(developer)))"
+          }
+        },
+        {
+          "name": "GET /api/v1/developer/capital/monthly",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/developer/capital/monthly",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "developer",
+                "capital",
+                "monthly"
+              ]
+            },
+            "description": "authenticated + authorize(role(admin|developer) · scope(projectScope(developer)))"
+          }
+        },
+        {
+          "name": "GET /api/v1/developer/capital/summary",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/developer/capital/summary",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "developer",
+                "capital",
+                "summary"
+              ]
+            },
+            "description": "authenticated + authorize(role(admin|developer) · scope(projectScope(developer)))"
+          }
+        },
+        {
+          "name": "GET /api/v1/developer/documents",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/developer/documents",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "developer",
+                "documents"
+              ]
+            },
+            "description": "authenticated + authorize(role(admin|developer) · scope(projectScope(developer)))"
+          }
+        },
+        {
+          "name": "GET /api/v1/developer/geocode",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/developer/geocode",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "developer",
+                "geocode"
+              ]
+            },
+            "description": "authenticated + authorize(role(admin|developer) · role only)"
+          }
+        },
+        {
+          "name": "GET /api/v1/developer/investors",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/developer/investors",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "developer",
+                "investors"
+              ]
+            },
+            "description": "authenticated + authorize(role(admin|developer) · scope(projectScope(developer)))"
+          }
+        },
+        {
+          "name": "GET /api/v1/developer/kpis",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/developer/kpis",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "developer",
+                "kpis"
+              ]
+            },
+            "description": "authenticated + authorize(role(admin|developer) · scope(projectScope(any membership)))"
+          }
+        },
+        {
+          "name": "GET /api/v1/developer/progress",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/developer/progress",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "developer",
+                "progress"
+              ]
+            },
+            "description": "authenticated + authorize(role(admin|developer) · scope(projectScope(developer)))"
+          }
+        },
+        {
+          "name": "GET /api/v1/developer/projects",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/developer/projects",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "developer",
+                "projects"
+              ]
+            },
+            "description": "authenticated + authorize(role(admin|developer) · scope(projectScope(developer)))"
+          }
+        },
+        {
+          "name": "GET /api/v1/developer/projects/:id",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/developer/projects/:id",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "developer",
+                "projects",
+                ":id"
+              ]
+            },
+            "description": "authenticated + authorize(role(admin|developer) · project(id → developer))"
+          }
+        },
+        {
+          "name": "GET /api/v1/developer/projects/:id/contracts",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/developer/projects/:id/contracts",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "developer",
+                "projects",
+                ":id",
+                "contracts"
+              ]
+            },
+            "description": "authenticated + authorize(role(admin|developer) · project(id → developer))"
+          }
+        },
+        {
+          "name": "GET /api/v1/developer/projects/:id/units",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/developer/projects/:id/units",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "developer",
+                "projects",
+                ":id",
+                "units"
+              ]
+            },
+            "description": "authenticated + authorize(role(admin|developer) · project(id → developer))"
+          }
+        },
+        {
+          "name": "GET /api/v1/developer/units",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/developer/units",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "developer",
+                "units"
+              ]
+            },
+            "description": "authenticated + authorize(role(admin|developer) · scope(projectScope(developer)))"
+          }
+        },
+        {
+          "name": "PATCH /api/v1/developer/units/:id",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/developer/units/:id",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "developer",
+                "units",
+                ":id"
+              ]
+            },
+            "description": "authenticated + authorize(role(admin|developer) · project(Unit:id → developer))"
+          }
+        },
+        {
+          "name": "POST /api/v1/developer/contracts/:id/releases/:stageNum",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/developer/contracts/:id/releases/:stageNum",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "developer",
+                "contracts",
+                ":id",
+                "releases",
+                ":stageNum"
+              ]
+            },
+            "description": "authenticated + authorize(role(admin|developer) · project(Contract:id → developer))",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"amountMinorUnits\": 1000000\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        },
+        {
+          "name": "POST /api/v1/developer/documents",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/developer/documents",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "developer",
+                "documents"
+              ]
+            },
+            "description": "authenticated + authorize(role(admin|developer) · project(Evidence:evidenceId@body → developer))"
+          }
+        },
+        {
+          "name": "POST /api/v1/developer/projects",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/developer/projects",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "developer",
+                "projects"
+              ]
+            },
+            "description": "authenticated + authorize(role(admin|developer) · role only)"
+          }
+        },
+        {
+          "name": "POST /api/v1/developer/projects/:id/invitations",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/developer/projects/:id/invitations",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "developer",
+                "projects",
+                ":id",
+                "invitations"
+              ]
+            },
+            "description": "authenticated + authorize(role(admin|developer) · project(id → developer))"
+          }
+        },
+        {
+          "name": "POST /api/v1/developer/projects/:id/stages/:stageId/evidence",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/developer/projects/:id/stages/:stageId/evidence",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "developer",
+                "projects",
+                ":id",
+                "stages",
+                ":stageId",
+                "evidence"
+              ]
+            },
+            "description": "authenticated + authorize(role(admin|developer) · project(id → developer))"
+          }
+        },
+        {
+          "name": "POST /api/v1/developer/projects/:id/units",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/developer/projects/:id/units",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "developer",
+                "projects",
+                ":id",
+                "units"
+              ]
+            },
+            "description": "authenticated + authorize(role(admin|developer) · project(id → developer))"
+          }
+        },
+        {
+          "name": "PUT /api/v1/developer/projects/:id/cover",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/developer/projects/:id/cover",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "developer",
+                "projects",
+                ":id",
+                "cover"
+              ]
+            },
+            "description": "authenticated + authorize(role(admin|developer) · project(id → developer))"
+          }
+        }
+      ]
+    },
+    {
+      "name": "/api/v1/evidence",
+      "item": [
+        {
+          "name": "DELETE /api/v1/evidence/:id",
+          "request": {
+            "method": "DELETE",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/evidence/:id",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "evidence",
+                ":id"
+              ]
+            },
+            "description": "authenticated + authorize(role(admin) · role only)"
+          }
+        },
+        {
+          "name": "GET /api/v1/evidence/:bundleId/files",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/evidence/:bundleId/files",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "evidence",
+                ":bundleId",
+                "files"
+              ]
+            },
+            "description": "authenticated + authorize(role(admin|developer|buyer|verifier|notary) · project(EvidenceBundle:bundleId → developer|buyer|verifier))"
+          }
+        },
+        {
+          "name": "GET /api/v1/evidence/:bundleId/proof/:fileHash",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/evidence/:bundleId/proof/:fileHash",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "evidence",
+                ":bundleId",
+                "proof",
+                ":fileHash"
+              ]
+            },
+            "description": "authenticated + authorize(role(admin|developer|buyer|verifier|notary) · project(EvidenceBundle:bundleId → developer|buyer|verifier))"
+          }
+        },
+        {
+          "name": "GET /api/v1/evidence/:id",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/evidence/:id",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "evidence",
+                ":id"
+              ]
+            },
+            "description": "authenticated + authorize(role(admin|developer|buyer|verifier|notary) · project(Evidence:id → developer|buyer|verifier))"
+          }
+        },
+        {
+          "name": "GET /api/v1/evidence/:id/download",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/evidence/:id/download",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "evidence",
+                ":id",
+                "download"
+              ]
+            },
+            "description": "authenticated + authorize(role(admin|developer|buyer|verifier|notary) · project(Evidence:id → developer|buyer|verifier))"
+          }
+        },
+        {
+          "name": "PATCH /api/v1/evidence/:id",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/evidence/:id",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "evidence",
+                ":id"
+              ]
+            },
+            "description": "authenticated + authorize(role(admin|developer) · project(Evidence:id → developer))"
+          }
+        },
+        {
+          "name": "POST /api/v1/evidence/:id/anchor",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/evidence/:id/anchor",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "evidence",
+                ":id",
+                "anchor"
+              ]
+            },
+            "description": "authenticated + authorize(role(admin) · project(Evidence:id → developer|buyer|verifier))"
+          }
+        },
+        {
+          "name": "POST /api/v1/evidence/reconcile",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/evidence/reconcile",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "evidence",
+                "reconcile"
+              ]
+            },
+            "description": "authenticated + authorize(role(admin) · role only)"
+          }
+        }
+      ]
+    },
+    {
+      "name": "/api/v1/investor",
+      "item": [
+        {
+          "name": "DELETE /api/v1/investor/favorites/:projectId",
+          "request": {
+            "method": "DELETE",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/investor/favorites/:projectId",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "investor",
+                "favorites",
+                ":projectId"
+              ]
+            },
+            "description": "authenticated + authorize(role(admin|buyer) · scope(Favorite.userId = current user))"
+          }
+        },
+        {
+          "name": "GET /api/v1/investor/contracts/:unitId",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/investor/contracts/:unitId",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "investor",
+                "contracts",
+                ":unitId"
+              ]
+            },
+            "description": "authenticated + authorize(role(admin|buyer) · owner(ContractOfUnit:unitId))"
+          }
+        },
+        {
+          "name": "GET /api/v1/investor/favorites",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/investor/favorites",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "investor",
+                "favorites"
+              ]
+            },
+            "description": "authenticated + authorize(role(admin|buyer) · scope(Favorite.userId = current user))"
+          }
+        },
+        {
+          "name": "GET /api/v1/investor/invitations/:id",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/investor/invitations/:id",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "investor",
+                "invitations",
+                ":id"
+              ]
+            },
+            "description": "authenticated + authorize(role(admin|buyer) · owner(Invitation:id))"
+          }
+        },
+        {
+          "name": "GET /api/v1/investor/notifications",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/investor/notifications",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "investor",
+                "notifications"
+              ]
+            },
+            "description": "authenticated + authorize(role(admin|buyer) · scope(Notification.userId = current user))"
+          }
+        },
+        {
+          "name": "GET /api/v1/investor/units",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/investor/units",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "investor",
+                "units"
+              ]
+            },
+            "description": "authenticated + authorize(role(admin|buyer) · scope(Unit.investorId = current user))"
+          }
+        },
+        {
+          "name": "GET /api/v1/investor/units/:id",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/investor/units/:id",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "investor",
+                "units",
+                ":id"
+              ]
+            },
+            "description": "authenticated + authorize(role(admin|buyer) · owner(Unit:id))"
+          }
+        },
+        {
+          "name": "GET /api/v1/investor/units/:id/dossier",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/investor/units/:id/dossier",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "investor",
+                "units",
+                ":id",
+                "dossier"
+              ]
+            },
+            "description": "authenticated + authorize(role(admin|buyer) · owner(Unit:id))"
+          }
+        },
+        {
+          "name": "GET /api/v1/investor/units/:id/dossier/export.pdf",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/investor/units/:id/dossier/export.pdf",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "investor",
+                "units",
+                ":id",
+                "dossier",
+                "export.pdf"
+              ]
+            },
+            "description": "authenticated + authorize(role(admin|buyer) · owner(Unit:id))"
+          }
+        },
+        {
+          "name": "GET /api/v1/investor/units/:id/news",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/investor/units/:id/news",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "investor",
+                "units",
+                ":id",
+                "news"
+              ]
+            },
+            "description": "authenticated + authorize(role(admin|buyer) · owner(Unit:id))"
+          }
+        },
+        {
+          "name": "POST /api/v1/investor/favorites/:projectId",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/investor/favorites/:projectId",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "investor",
+                "favorites",
+                ":projectId"
+              ]
+            },
+            "description": "authenticated + authorize(role(admin|buyer) · role only)"
+          }
+        },
+        {
+          "name": "POST /api/v1/investor/invitations/:id/accept",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/investor/invitations/:id/accept",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "investor",
+                "invitations",
+                ":id",
+                "accept"
+              ]
+            },
+            "description": "authenticated + authorize(role(admin|buyer) · owner(Invitation:id))",
+            "body": {
+              "mode": "raw",
+              "raw": "{}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        },
+        {
+          "name": "POST /api/v1/investor/invitations/:id/decline",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/investor/invitations/:id/decline",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "investor",
+                "invitations",
+                ":id",
+                "decline"
+              ]
+            },
+            "description": "authenticated + authorize(role(admin|buyer) · owner(Invitation:id))"
+          }
+        },
+        {
+          "name": "POST /api/v1/investor/units/:id/dossier/share",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/investor/units/:id/dossier/share",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "investor",
+                "units",
+                ":id",
+                "dossier",
+                "share"
+              ]
+            },
+            "description": "authenticated + authorize(role(admin|buyer) · owner(Unit:id))"
+          }
+        }
+      ]
+    },
+    {
+      "name": "/api/v1/notary",
+      "item": [
+        {
+          "name": "GET /api/v1/notary/dossiers/:id",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/notary/dossiers/:id",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "notary",
+                "dossiers",
+                ":id"
+              ]
+            },
+            "description": "authenticated + authorize(role(admin|notary) · role only)"
+          }
+        },
+        {
+          "name": "GET /api/v1/notary/dossiers/pending",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/notary/dossiers/pending",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "notary",
+                "dossiers",
+                "pending"
+              ]
+            },
+            "description": "authenticated + authorize(role(admin|notary) · role only)"
+          }
+        },
+        {
+          "name": "GET /api/v1/notary/kpis",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/notary/kpis",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "notary",
+                "kpis"
+              ]
+            },
+            "description": "authenticated + authorize(role(admin|notary) · scope(Dossier.signedById = current user))"
+          }
+        },
+        {
+          "name": "GET /api/v1/notary/signatures",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/notary/signatures",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "notary",
+                "signatures"
+              ]
+            },
+            "description": "authenticated + authorize(role(admin|notary) · scope(Dossier.signedById = current user))"
+          }
+        },
+        {
+          "name": "POST /api/v1/notary/dossiers/:id/reject",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/notary/dossiers/:id/reject",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "notary",
+                "dossiers",
+                ":id",
+                "reject"
+              ]
+            },
+            "description": "authenticated + authorize(role(admin|notary) · role only)"
+          }
+        },
+        {
+          "name": "POST /api/v1/notary/dossiers/:id/sign",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/notary/dossiers/:id/sign",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "notary",
+                "dossiers",
+                ":id",
+                "sign"
+              ]
+            },
+            "description": "authenticated + authorize(role(admin|notary) · role only)"
+          }
+        }
+      ]
+    },
+    {
+      "name": "/api/v1/notifications",
+      "item": [
+        {
+          "name": "GET /api/v1/notifications/unread-count",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/notifications/unread-count",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "notifications",
+                "unread-count"
+              ]
+            },
+            "description": "authenticated + authorize(role(admin|developer|buyer|verifier|notary) · scope(Notification.userId = current user))"
+          }
+        },
+        {
+          "name": "PATCH /api/v1/notifications/:id/read",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/notifications/:id/read",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "notifications",
+                ":id",
+                "read"
+              ]
+            },
+            "description": "authenticated + authorize(role(admin|developer|buyer|verifier|notary) · scope(Notification.userId = current user))"
+          }
+        }
+      ]
+    },
+    {
+      "name": "/api/v1/profile",
+      "item": [
+        {
+          "name": "GET /api/v1/profile",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/profile",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "profile"
+              ]
+            },
+            "description": "authenticated + authorize(role(admin|developer|buyer|verifier|notary) · scope(User.id = current user))"
+          }
+        },
+        {
+          "name": "PATCH /api/v1/profile",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/profile",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "profile"
+              ]
+            },
+            "description": "authenticated + authorize(role(admin|developer|buyer|verifier|notary) · scope(User.id = current user))"
+          }
+        },
+        {
+          "name": "PATCH /api/v1/profile/notifications",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/profile/notifications",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "profile",
+                "notifications"
+              ]
+            },
+            "description": "authenticated + authorize(role(admin|developer|buyer|verifier|notary) · scope(User.id = current user))"
+          }
+        }
+      ]
+    },
+    {
+      "name": "/api/v1/projects",
+      "item": [
+        {
+          "name": "DELETE /api/v1/projects/:id",
+          "request": {
+            "method": "DELETE",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/projects/:id",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "projects",
+                ":id"
+              ]
+            },
+            "description": "authenticated + authorize(role(admin) · role only)"
+          }
+        },
+        {
+          "name": "GET /api/v1/projects",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/projects",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "projects"
+              ]
+            },
+            "description": "authenticated + authorize(role(admin|developer|buyer|verifier|notary) · scope(projectScope(any membership)))"
+          }
+        },
+        {
+          "name": "GET /api/v1/projects/:id",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/projects/:id",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "projects",
+                ":id"
+              ]
+            },
+            "description": "authenticated + authorize(role(admin|developer|buyer|verifier|notary) · project(id → developer|buyer|verifier))"
+          }
+        },
+        {
+          "name": "GET /api/v1/projects/:id/building-schematic",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/projects/:id/building-schematic",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "projects",
+                ":id",
+                "building-schematic"
+              ]
+            },
+            "description": "authenticated + authorize(role(admin|developer|buyer|verifier|notary) · project(id → developer|buyer|verifier))"
+          }
+        },
+        {
+          "name": "GET /api/v1/projects/:id/certifier-invitations",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/projects/:id/certifier-invitations",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "projects",
+                ":id",
+                "certifier-invitations"
+              ]
+            },
+            "description": "authenticated + authorize(role(admin) · role only)"
+          }
+        },
+        {
+          "name": "GET /api/v1/projects/:id/developer",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/projects/:id/developer",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "projects",
+                ":id",
+                "developer"
+              ]
+            },
+            "description": "authenticated + authorize(role(admin|developer|buyer|verifier|notary) · project(id → developer|buyer|verifier))"
+          }
+        },
+        {
+          "name": "GET /api/v1/projects/:id/documents",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/projects/:id/documents",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "projects",
+                ":id",
+                "documents"
+              ]
+            },
+            "description": "authenticated + authorize(role(admin|developer|buyer|verifier|notary) · project(id → developer|buyer|verifier))"
+          }
+        },
+        {
+          "name": "GET /api/v1/projects/:id/members",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/projects/:id/members",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "projects",
+                ":id",
+                "members"
+              ]
+            },
+            "description": "authenticated + authorize(role(admin|developer|buyer|verifier|notary) · project(id → developer|buyer|verifier))"
+          }
+        },
+        {
+          "name": "GET /api/v1/projects/:id/stages",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/projects/:id/stages",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "projects",
+                ":id",
+                "stages"
+              ]
+            },
+            "description": "authenticated + authorize(role(admin|developer|buyer|verifier|notary) · project(id → developer|buyer|verifier))"
+          }
+        },
+        {
+          "name": "GET /api/v1/projects/:id/stages/:stageId",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/projects/:id/stages/:stageId",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "projects",
+                ":id",
+                "stages",
+                ":stageId"
+              ]
+            },
+            "description": "authenticated + authorize(role(admin|developer|buyer|verifier|notary) · project(id → developer|buyer|verifier))"
+          }
+        },
+        {
+          "name": "PATCH /api/v1/projects/:id",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/projects/:id",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "projects",
+                ":id"
+              ]
+            },
+            "description": "authenticated + authorize(role(admin) · role only)"
+          }
+        },
+        {
+          "name": "POST /api/v1/projects",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/projects",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "projects"
+              ]
+            },
+            "description": "authenticated + authorize(role(admin) · role only)",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Torre Ejemplo\",\n  \"slug\": \"torre-ejemplo\",\n  \"city\": \"Buenos Aires\",\n  \"country\": \"Argentina\",\n  \"latitude\": -34.5781,\n  \"longitude\": -58.4265,\n  \"totalUnits\": 24,\n  \"status\": \"planning\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        },
+        {
+          "name": "POST /api/v1/projects/:id/certifier-invitations",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/projects/:id/certifier-invitations",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "projects",
+                ":id",
+                "certifier-invitations"
+              ]
+            },
+            "description": "authenticated + authorize(role(admin) · role only)"
+          }
+        },
+        {
+          "name": "POST /api/v1/projects/:id/members",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/projects/:id/members",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "projects",
+                ":id",
+                "members"
+              ]
+            },
+            "description": "authenticated + authorize(role(admin) · role only)"
+          }
+        },
+        {
+          "name": "POST /api/v1/projects/:id/stages/:stageId/retry-anchor",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/projects/:id/stages/:stageId/retry-anchor",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "projects",
+                ":id",
+                "stages",
+                ":stageId",
+                "retry-anchor"
+              ]
+            },
+            "description": "authenticated + authorize(role(admin) · project(id → developer|buyer|verifier))"
+          }
+        }
+      ]
+    },
+    {
+      "name": "/api/v1/public",
+      "item": [
+        {
+          "name": "GET /api/v1/public/dossier/:shareToken",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/public/dossier/:shareToken",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "public",
+                "dossier",
+                ":shareToken"
+              ]
+            },
+            "description": "—"
+          }
+        },
+        {
+          "name": "GET /api/v1/public/projects/:id/cover",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/public/projects/:id/cover",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "public",
+                "projects",
+                ":id",
+                "cover"
+              ]
+            },
+            "description": "—"
+          }
+        }
+      ]
+    },
+    {
+      "name": "/api/v1/stages",
+      "item": [
+        {
+          "name": "GET /api/v1/stages/:id",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/stages/:id",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "stages",
+                ":id"
+              ]
+            },
+            "description": "authenticated + authorize(role(admin|developer|buyer|verifier|notary) · project(Stage:id → developer|buyer|verifier))"
+          }
+        },
+        {
+          "name": "PATCH /api/v1/stages/:id",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/stages/:id",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "stages",
+                ":id"
+              ]
+            },
+            "description": "authenticated + authorize(role(admin|developer) · project(Stage:id → developer))"
+          }
+        },
+        {
+          "name": "PATCH /api/v1/stages/:id/state",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/stages/:id/state",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "stages",
+                ":id",
+                "state"
+              ]
+            },
+            "description": "authenticated + authorize(role(admin|developer) · project(Stage:id → developer))",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"state\": \"InProgress\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "/api/v1/users",
+      "item": [
+        {
+          "name": "DELETE /api/v1/users/:id",
+          "request": {
+            "method": "DELETE",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/users/:id",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "users",
+                ":id"
+              ]
+            },
+            "description": "authenticated + authorize(role(admin) · role only)"
+          }
+        },
+        {
+          "name": "GET /api/v1/users",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/users",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "users"
+              ]
+            },
+            "description": "authenticated + authorize(role(admin) · role only)"
+          }
+        },
+        {
+          "name": "GET /api/v1/users/:id",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/users/:id",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "users",
+                ":id"
+              ]
+            },
+            "description": "authenticated + authorize(role(admin) · role only)"
+          }
+        },
+        {
+          "name": "PATCH /api/v1/users/:id",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/users/:id",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "users",
+                ":id"
+              ]
+            },
+            "description": "authenticated + authorize(role(admin) · role only)"
+          }
+        },
+        {
+          "name": "POST /api/v1/users",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/users",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "users"
+              ]
+            },
+            "description": "authenticated + authorize(role(admin) · role only)"
+          }
+        }
+      ]
+    }
+  ]
+}

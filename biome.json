@@ -15,7 +15,8 @@
       "!**/build",
       "!**/e2e/.artifacts",
       "!specs/evidencia-m3/2-api/postman",
-      "!specs/evidencia-m3/2-api/openapi"
+      "!specs/evidencia-m3/2-api/openapi",
+      "!apps/api/api-docs"
     ]
   },
   "css": {
