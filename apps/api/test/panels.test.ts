@@ -81,27 +81,29 @@ describe("GET /certifier/kpis y /certifier/assignments", () => {
 });
 
 describe("GET /notary/*", () => {
-  it("cuenta los dossiers reales, y cero es cero de verdad", async () => {
+  it("cuenta los dossiers reales: la única venta del seed espera revisión, y nada más", async () => {
     const res = await request(app)
       .get("/api/v1/notary/kpis")
       .set("Authorization", `Bearer ${tokenAdmin}`);
 
     expect(res.status).toBe(200);
     expect(res.body).toEqual({
-      pendingDossiers: 0,
+      pendingDossiers: 1,
       verified: 0,
       signed: 0,
-      unitsUnderReview: 0
+      unitsUnderReview: 1
     });
   });
 
-  it("la cola de revisión está vacía si nadie compiló un dossier, no inventada", async () => {
+  it("la cola tiene el dossier de la venta desde que nació, sin que nadie lo abra", async () => {
     const res = await request(app)
       .get("/api/v1/notary/dossiers/pending")
       .set("Authorization", `Bearer ${tokenAdmin}`);
 
     expect(res.status).toBe(200);
-    expect(res.body).toEqual([]);
+    expect(res.body).toHaveLength(1);
+    expect(res.body[0].unitLabel).toBe(FIXTURES.unidad.unitReference);
+    expect(res.body[0].investorName).toBe(FIXTURES.investor.fullName);
   });
 
   it("sin firmas, el historial da nextCursor null y no un ISO inventado", async () => {

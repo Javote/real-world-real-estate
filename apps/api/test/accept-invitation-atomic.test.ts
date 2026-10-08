@@ -218,6 +218,13 @@ describe("aceptar una invitación (transacción atómica)", () => {
       )
       .execute();
     expect(membresias).toHaveLength(1);
+
+    const dossiers = await db
+      .selectFrom("Dossier")
+      .select("id")
+      .where("unitId", "=", unidad)
+      .execute();
+    expect(dossiers).toHaveLength(1);
   });
 
   it("una invitación `pending` sobre una unidad ya `sold` a otro investor — 409 UNIT_NOT_AVAILABLE, sin tocar nada", async () => {

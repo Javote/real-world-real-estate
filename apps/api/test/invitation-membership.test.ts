@@ -102,6 +102,22 @@ describe("aceptar una invitación deja al investor con acceso al proyecto", () =
     expect(membresia?.membershipRole).toBe("buyer");
   });
 
+  it("y el dossier de la unidad nace con la venta, esperando al notary", async () => {
+    const { unitId } = await db
+      .selectFrom("Invitation")
+      .select("unitId")
+      .where("id", "=", invitacion)
+      .executeTakeFirstOrThrow();
+
+    const dossier = await db
+      .selectFrom("Dossier")
+      .select(["status", "masterHash", "signedById"])
+      .where("unitId", "=", unitId)
+      .executeTakeFirst();
+
+    expect(dossier).toEqual({ status: "compiled", masterHash: "", signedById: null });
+  });
+
   it("y con eso ya puede leer los stages de su proyecto", async () => {
     const res = await request(app)
       .get(`/api/v1/projects/${proyecto}/stages`)

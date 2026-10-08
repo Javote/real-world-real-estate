@@ -234,5 +234,18 @@ export async function sembrarUnidadVendida(
     .where("unitId", "=", unidad.id)
     .executeTakeFirstOrThrow();
 
+  // Como al aceptar la invitación: el dossier nace con la venta.
+  await db
+    .insertInto("Dossier")
+    .values({
+      id: createId(),
+      unitId: unidad.id,
+      masterHash: "",
+      compiledAt: ahora,
+      status: "compiled"
+    })
+    .onConflict((oc) => oc.column("unitId").doNothing())
+    .execute();
+
   return { unitId: unidad.id, contractId: contrato.id };
 }

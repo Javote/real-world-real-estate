@@ -465,7 +465,8 @@ const acceptInvitationProcedure = orpc
 
     // Un solo lote (SPEC-618): el UPDATE reclama la invitación solo si la unidad sigue disponible; el
     // contrato entra solo si lo reclamó (`changes()` es el de la sentencia anterior), y la venta de la
-    // unidad y la membresía, solo si ese contrato existe. Dos aceptaciones a la vez dan un ganador.
+    // unidad, la membresía y el dossier, solo si ese contrato existe. Dos aceptaciones a la vez dan un
+    // ganador.
     const contratoId = createId();
     const [[invitacion], contratos] = await enLote(
       db
@@ -551,7 +552,25 @@ const acceptInvitationProcedure = orpc
               )
             )
         )
-        .onConflict((oc) => oc.doNothing())
+        .onConflict((oc) => oc.doNothing()),
+      // El dossier nace con la venta (SPEC-615 decisión 2): las lecturas lo calculan y no escriben.
+      // `masterHash` vacío hasta que el notary decida: es el hash que firmó o que rechazó.
+      db
+        .insertInto("Dossier")
+        .columns(["id", "unitId", "masterHash", "compiledAt", "status"])
+        .expression(
+          db
+            .selectFrom("Contract")
+            .select((eb) => [
+              eb.val(createId()).as("id"),
+              "unitId",
+              eb.val("").as("masterHash"),
+              eb.val(ahora).as("compiledAt"),
+              eb.val("compiled").as("status")
+            ])
+            .where("Contract.id", "=", contratoId)
+        )
+        .onConflict((oc) => oc.column("unitId").doNothing())
     );
 
     if (!invitacion) {
