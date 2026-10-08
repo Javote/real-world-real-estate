@@ -206,8 +206,10 @@ endpoint OTLP locales: **653 requests idénticas** (status y cuerpo, sin ids ni 
 500 y las mismas líneas de log de arranque. Sin DSN ni endpoint, arranca con los dos apagados y
 `/health` 200.
 
-**No corrido:** `test:s3`, porque Docker no estaba levantado; el driver S3 queda cubierto por
-`storage-mocked` y `storage-defaults-coverage`. De lo de producción (§Verificación 6), `/health` da 200
+**`test:s3`, corrido el 2026-10-07:** 6/6 contra MinIO, con `80a3bed`, y con
+`COMPOSE_PROJECT_NAME=propnexus-s3` porque el Docker local tenía un contenedor de MinIO que
+`docker ps -a` lista pero `inspect` y `rm` no encuentran, y `compose up` falla al recrearlo. Es un
+problema de la máquina, no del código. De lo de producción (§Verificación 6), `/health` da 200
 con `fb81ba9`; faltan un login y un trace nuevo en Tempo.
 
 ## Rollback
