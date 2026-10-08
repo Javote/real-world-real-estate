@@ -1,6 +1,6 @@
 import "dotenv/config";
 
-import express from "express";
+import express, { type RequestHandler } from "express";
 import helmet from "helmet";
 import { Sentry } from "./instrumentation.js";
 import { db } from "./lib/db.js";
@@ -40,7 +40,8 @@ app.disable("x-powered-by");
 
 const origenesPermitidos = entorno().WEB_ORIGIN;
 
-app.use((req, res, next) => {
+// Con nombre: es el que lleva el span del middleware en Tempo.
+const cors: RequestHandler = (req, res, next) => {
   const origen = req.headers.origin;
 
   if (origen && origenesPermitidos.includes(origen)) {
@@ -61,7 +62,9 @@ app.use((req, res, next) => {
   if (req.method === "OPTIONS") return res.sendStatus(204);
 
   return next();
-});
+};
+
+app.use(cors);
 
 app.use(express.json());
 
@@ -110,9 +113,11 @@ Sentry.setupExpressErrorHandler(app, {
   shouldHandleError: (err) => statusDeError(err) >= 500
 });
 
-app.use((_req, res) => {
+const rutaInexistente: RequestHandler = (_req, res) => {
   res.status(404).json({ message: "Not found" });
-});
+};
+
+app.use(rutaInexistente);
 
 app.use(errorHandler);
 

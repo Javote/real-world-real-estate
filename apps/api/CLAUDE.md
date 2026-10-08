@@ -146,6 +146,12 @@ Express, que sigue siendo la de las rutas existentes hasta A3/A4.
 - **Sentry v10 registra sus propios globals de OTel**: `skipOpenTelemetrySetup: true`, o los traces
   se pierden sin error. Con eso nadie instala su `SentryContextManager`: lo pone `initSentry`, o
   todos los eventos salen con la request de la primera.
+- **Express se instrumenta con `instrumentation-express` y el parche de Sentry, nunca además con
+  `instrumentation-router`**: Express 5 corre sobre `router`, así que cada middleware salía dos
+  veces, nombrado `layerHandlePatched` (el wrapper de Sentry), y el request pasaba los 10 listeners
+  de `close` (`MaxListenersExceededWarning`, 11 por request autenticado; sin `router`, 8). `express`
+  es la que pone `http.route` en el span raíz. Un middleware sin nombre sale `<anonymous>` en Tempo:
+  `test/nombres-de-middleware.test.ts`.
 - **Sin `diag.setLogger` un exporter OTLP que falla no dice nada**.
 - **El wizard OTLP de Grafana da el header sin `Authorization=Basic%20`**: hay que anteponérselo.
 - **Detrás de Render, `TRUST_PROXY_HOPS=1`**: con 0 todos comparten balde, con `true` se falsifica

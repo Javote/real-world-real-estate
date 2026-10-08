@@ -106,7 +106,10 @@ export function initOpenTelemetry(deps: DependenciasOtel | undefined): void {
         getNodeAutoInstrumentations({
           "@opentelemetry/instrumentation-fs": { enabled: false },
           "@opentelemetry/instrumentation-dns": { enabled: false },
-          "@opentelemetry/instrumentation-net": { enabled: false }
+          "@opentelemetry/instrumentation-net": { enabled: false },
+          // Express 5 corre sobre `router`: con las dos, cada middleware sale dos veces y el
+          // request pasa los 10 listeners de `close` (MaxListenersExceededWarning).
+          "@opentelemetry/instrumentation-router": { enabled: false }
         })
       ]
     });

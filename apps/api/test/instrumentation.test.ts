@@ -131,6 +131,23 @@ describe("initOpenTelemetry", () => {
     }
   });
 
+  it("instrumenta Express una sola vez: `router` apagado, `express` no", async () => {
+    process.env[ENV] = "https://example.invalid/otlp";
+    vi.resetModules();
+    const { initOpenTelemetry } = await import("../src/instrumentation.js");
+
+    const { deps } = depsFalsas();
+    try {
+      initOpenTelemetry(deps);
+    } finally {
+      process.removeAllListeners("SIGTERM");
+    }
+
+    const config = deps.getNodeAutoInstrumentations.mock.calls[0]?.[0];
+    expect(config["@opentelemetry/instrumentation-router"]).toEqual({ enabled: false });
+    expect(config["@opentelemetry/instrumentation-express"]).toBeUndefined();
+  });
+
   it("sin OTEL_EXPORTER_OTLP_ENDPOINT, no arranca ningún SDK", async () => {
     vi.resetModules();
     const { initOpenTelemetry } = await import("../src/instrumentation.js");
