@@ -210,7 +210,13 @@ endpoint OTLP locales: **653 requests idénticas** (status y cuerpo, sin ids ni 
 `COMPOSE_PROJECT_NAME=propnexus-s3` porque el Docker local tenía un contenedor de MinIO que
 `docker ps -a` lista pero `inspect` y `rm` no encuentran, y `compose up` falla al recrearlo. Es un
 problema de la máquina, no del código. De lo de producción (§Verificación 6), `/health` da 200
-con `fb81ba9`; faltan un login y un trace nuevo en Tempo.
+con `fb81ba9`.
+
+**Producción, 2026-10-07, con `80a3bed`** (§Verificación 6, que cierra A0.1 y A0.2): login del dueño
+en la web y su `POST /api/v1/auth/login` en Tempo, 200, con los spans de `http`, `express`,
+`routerOrpc` y `undici` hacia Turso (trace `d12605624e194bf3a83a42738aed5c8b`). El login tardó
+porque la API venía dormida desde el deploy de las 21:11 UTC: el proceso arrancó a las 00:20:08 UTC,
+escuchó a las 00:20:48 y el pedido corrió en frío en 3,49 s (dos viajes a Turso, 0,9 y 0,8 s).
 
 ## Rollback
 
