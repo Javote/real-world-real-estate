@@ -21,6 +21,19 @@ funciona en el resto. **Si no, acá se frena** (§La regla de salida).
 
 ## Decisiones que pide, antes de empezar
 
+**Decididas por el dueño el 2026-10-07:**
+
+1. **El notary sigue viendo y firmando cualquier dossier** (`soloRol`): el piloto no toca la
+   `MATRIZ`. El scope se decide antes de los pilotos de M4, en un commit propio.
+2. **La propuesta**: la fila `Dossier` nace al aceptar la invitación, los GET calculan en memoria y
+   el `masterHash` se fija al firmar. Las unidades que ya tienen investor y no tienen fila se
+   completan con una migración de datos nueva (Turso está vivo, D-063).
+3. **La evidencia de M3 se congela** antes del primer commit que mueva el OpenAPI: una copia fechada
+   en `specs/evidencia-m3/` queda como lo entregado, y `openapi-freshness` pasa a comparar contra un
+   archivo vivo aparte. Ese commit suma la decisión a `DECISIONS.md`.
+
+Lo que se planteó:
+
 1. **El scope de proyecto del notary.** Hoy ve y firma cualquier dossier (`acceso: "soloRol"`). Con
    un escribano da igual; con los pilotos de M4 (dos developers, datos reales) hay que decidirlo. Si
    cambia, cambia la `MATRIZ`, y eso se hace en un commit propio, antes o después del piloto, nunca

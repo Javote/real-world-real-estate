@@ -80,7 +80,7 @@ documento. `openapi-freshness` obliga a regenerar `specs/evidencia-m3/2-api/` (y
 inglés y el PDF) en el mismo commit, y entonces el repo deja de tener el documento que se entregó.
 **Antes de A3 el dueño decide** si la evidencia se congela (una copia fechada en
 `specs/evidencia-m3/` y el test pasa a comparar contra un archivo vivo aparte) o se sigue
-regenerando.
+regenerando. **Decidido el 2026-10-07: se congela** (`SPEC-615` §Decisiones).
 
 ## A1, hecho el 2026-10-07
 
