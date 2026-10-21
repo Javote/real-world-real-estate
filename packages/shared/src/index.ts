@@ -16,6 +16,7 @@ export * from "./notifications";
 export * from "./pagination";
 export * from "./panels";
 export * from "./params";
+export * from "./pilot-metrics";
 export * from "./profile";
 export * from "./project";
 export * from "./result";

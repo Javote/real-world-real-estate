@@ -1,6 +1,10 @@
 # SPEC-504 — Completitud de documentación por unidad
 
-> Milestone 4, criterio 1 (`document completeness ≥95%`). Ver [`ESTADO-2026-09-22-catalyst-milestone-4.md`](archive/ESTADO-2026-09-22-catalyst-milestone-4.md).
+> Milestone 4, criterio 1 (`document completeness ≥95%`). Ver [`ESTADO-2026-09-22-catalyst-milestone-4.md`](ESTADO-2026-09-22-catalyst-milestone-4.md).
+>
+> **Cerrada 2026-10-21.** `GET /admin/document-completeness` en `apps/api/src/modules/metricas/`,
+> contrato en `packages/shared/src/contract/metricas.ts`; los casos borde de abajo son
+> `apps/api/test/spec-504-completitud-documental.test.ts`.
 
 ## Propósito
 
@@ -60,10 +64,13 @@ not null`) — una unidad sin comprador no tiene documentación que completar to
 - Dos unidades, una al 100% y otra al 50% — `overallRate = 0.75` (promedio simple, no ponderado por
   cantidad de stages, para que un proyecto con más etapas no pese más que uno con menos).
 
-## Preguntas abiertas
+## Lo que quedó decidido al implementar
 
-- **¿Promedio simple entre unidades o ponderado por total de stages críticos?** Se propone simple
-  arriba porque es lo que un lector de Catalyst esperaría de "95% completo" sin aclaración — pero si
-  un proyecto tiene unidades con catálogos de tamaño muy distinto (hoy no pasa, `DEFAULT_STAGE_CATALOG`
-  es uniforme; podría pasar si el catálogo se vuelve configurable por proyecto, que hoy no lo es,
-  D-092), esto habría que revisarlo.
+- **Promedio simple**, la propuesta de la spec: el catálogo sigue siendo uniforme (D-092), así que
+  ponderar no cambiaría ningún número de hoy. Si el catálogo se vuelve configurable por proyecto,
+  esto se revisa.
+- **Una unidad con `rate: null` no entra en `overallRate`**: sale en `perUnit`, pero un promedio
+  que la contara como 0 o como 1 inventaría un dato. Si ninguna tiene datos, `overallRate` es
+  `null`.
+- **`rate` es una proporción de 0 a 1**, no un porcentaje (el schema lo acota): el porcentaje es de
+  presentación.

@@ -312,10 +312,16 @@ Las specs cerradas viven en [`archive/`](archive/); su fila queda acá como índ
 
 **Las specs de Milestone 4 se numeran aparte, en `5xx`, y no cuentan entre las abiertas de
 arriba porque todavía no son mandato — M3 no está entregado.** Nacen de leer el SOM de M4 contra el
-código (`ESTADO-2026-09-22-catalyst-milestone-4.md`), no de una auditoría del código existente:
-`SPEC-501` (panel de métricas del piloto), `SPEC-502` (registro de disputas), `SPEC-503` (encuesta
-NPS) y `SPEC-504` (completitud de documentación) — las cuatro **sin empezar**, escritas para tener
-el terreno mapeado antes de que M4 se vuelva el mandato activo.
+código (`ESTADO-2026-09-22-catalyst-milestone-4.md`), no de una auditoría del código existente,
+para tener el terreno mapeado antes de que M4 se vuelva el mandato activo. **El dueño pidió
+construirlas el 2026-10-21**, en el orden de su §Orden de ataque: `504`, `502`, `503`, `501`.
+
+| Spec | Título | Estado |
+|---|---|---|
+| [`SPEC-501`](SPEC-501-panel-de-metricas-del-piloto.md) | Panel de métricas del piloto: los ocho números del criterio 1 | sin empezar |
+| [`SPEC-502`](SPEC-502-registro-de-disputas.md) | Registro de disputas | sin empezar |
+| [`SPEC-503`](SPEC-503-encuesta-nps-del-buyer.md) | Encuesta NPS del buyer | sin empezar |
+| [`SPEC-504`](archive/SPEC-504-completitud-de-documentacion.md) | Completitud de documentación por unidad | **cerrada 2026-10-21** · 🟢 · `GET /admin/document-completeness`, el primer procedimiento del módulo `metricas` |
 
 **La serie `6xx` es el refactor estructural post-M3**, y por la misma razón tampoco cuenta entre las
 abiertas. Nace de una revisión de arquitectura de `apps/web` y `apps/api` hecha el 2026-09-30,

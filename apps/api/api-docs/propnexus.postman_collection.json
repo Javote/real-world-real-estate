@@ -20,6 +20,36 @@
   ],
   "item": [
     {
+      "name": "/api/v1/admin",
+      "item": [
+        {
+          "name": "GET /api/v1/admin/document-completeness",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/admin/document-completeness",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "admin",
+                "document-completeness"
+              ]
+            },
+            "description": "authenticated + authorize(role(admin) · role only)"
+          }
+        }
+      ]
+    },
+    {
       "name": "/api/v1/audit-logs",
       "item": [
         {
