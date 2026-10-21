@@ -104,7 +104,12 @@ unidad.
 - **En dev `/api` va por el proxy de Vite; en producción por `VITE_API_ORIGIN`**: si la consola dice
   CORS, falta `WEB_ORIGIN` en la API (`specs/RUNBOOK-deploy.md`).
 - **Los E2E entran con la password del seed** (`e2e/_credenciales.ts`), nunca con un literal.
-- **Si los E2E locales fallan en masa y en CI pasan, es la `dev.db`**: `pnpm db:seed`.
+- **Si los E2E locales fallan en masa y en CI pasan, es la `dev.db`**: `pnpm db:seed` suma sobre lo
+  que hay, no limpia. Una base vieja se aparta del seed de CI (2026-10-21: la etapa 1 de Torre A
+  estaba `Completed` en local y es `InProgress` en CI). La base de CI: apartar la `dev.db` y
+  `pnpm db:migrate && pnpm db:seed`.
+- **Playwright reusa lo que ya escucha en 8787 y 3000**: un `pnpm dev` levantado a mano no trae
+  `LOGIN_RATE_LIMIT_MAX` y la suite cae en masa en el login. Antes de `pnpm e2e`, los puertos libres.
 - **El E2E corre test por test en paralelo** (`fullyParallel`): 4 workers en local, y en CI 4 shards
   de un worker, cada uno con su propia base. Un test que depende del orden o de lo que escribió otro
   falla tarde o temprano: cada test arranca del seed. En CI bloquea el deploy; `a11y.spec.ts` va en
