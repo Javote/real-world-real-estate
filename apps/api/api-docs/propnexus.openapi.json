@@ -10971,6 +10971,343 @@
         }
       }
     },
+    "/api/v1/admin/pilot-metrics": {
+      "get": {
+        "operationId": "metricas.piloto",
+        "parameters": [
+          {
+            "name": "projectIds",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "pattern": "^[a-z][a-z0-9]{23}(,[a-z][a-z0-9]{23})*$"
+            },
+            "allowEmptyValue": true,
+            "allowReserved": true
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "total": {
+                      "type": "object",
+                      "properties": {
+                        "signedContractsCount": {
+                          "type": "integer",
+                          "minimum": 0,
+                          "maximum": 9007199254740991
+                        },
+                        "evidenceBundlesCount": {
+                          "type": "integer",
+                          "minimum": 0,
+                          "maximum": 9007199254740991
+                        },
+                        "releasesCount": {
+                          "type": "integer",
+                          "minimum": 0,
+                          "maximum": 9007199254740991
+                        },
+                        "uniqueWalletsCount": {
+                          "type": "null"
+                        },
+                        "declaredValueByCurrency": {
+                          "type": "array",
+                          "items": {
+                            "type": "object",
+                            "properties": {
+                              "currency": {
+                                "type": "string"
+                              },
+                              "totalMinorUnits": {
+                                "type": "integer",
+                                "minimum": 0,
+                                "maximum": 9007199254740991
+                              }
+                            },
+                            "required": [
+                              "currency",
+                              "totalMinorUnits"
+                            ],
+                            "additionalProperties": false
+                          }
+                        },
+                        "documentCompletenessRate": {
+                          "anyOf": [
+                            {
+                              "type": "number",
+                              "minimum": 0,
+                              "maximum": 1
+                            },
+                            {
+                              "type": "null"
+                            }
+                          ]
+                        },
+                        "disputesCount": {
+                          "type": "integer",
+                          "minimum": 0,
+                          "maximum": 9007199254740991
+                        },
+                        "disputeRate": {
+                          "anyOf": [
+                            {
+                              "type": "number",
+                              "minimum": 0
+                            },
+                            {
+                              "type": "null"
+                            }
+                          ]
+                        },
+                        "nps": {
+                          "type": "object",
+                          "properties": {
+                            "promoters": {
+                              "type": "integer",
+                              "minimum": 0,
+                              "maximum": 9007199254740991
+                            },
+                            "passives": {
+                              "type": "integer",
+                              "minimum": 0,
+                              "maximum": 9007199254740991
+                            },
+                            "detractors": {
+                              "type": "integer",
+                              "minimum": 0,
+                              "maximum": 9007199254740991
+                            },
+                            "responseCount": {
+                              "type": "integer",
+                              "minimum": 0,
+                              "maximum": 9007199254740991
+                            },
+                            "sentCount": {
+                              "type": "integer",
+                              "minimum": 0,
+                              "maximum": 9007199254740991
+                            },
+                            "score": {
+                              "anyOf": [
+                                {
+                                  "type": "number",
+                                  "minimum": -100,
+                                  "maximum": 100
+                                },
+                                {
+                                  "type": "null"
+                                }
+                              ]
+                            },
+                            "minimumResponses": {
+                              "type": "integer",
+                              "minimum": 0,
+                              "maximum": 9007199254740991
+                            },
+                            "belowMinimum": {
+                              "type": "boolean"
+                            }
+                          },
+                          "required": [
+                            "promoters",
+                            "passives",
+                            "detractors",
+                            "responseCount",
+                            "sentCount",
+                            "score",
+                            "minimumResponses",
+                            "belowMinimum"
+                          ],
+                          "additionalProperties": false
+                        }
+                      },
+                      "required": [
+                        "signedContractsCount",
+                        "evidenceBundlesCount",
+                        "releasesCount",
+                        "uniqueWalletsCount",
+                        "declaredValueByCurrency",
+                        "documentCompletenessRate",
+                        "disputesCount",
+                        "disputeRate",
+                        "nps"
+                      ],
+                      "additionalProperties": false
+                    },
+                    "perProject": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "signedContractsCount": {
+                            "type": "integer",
+                            "minimum": 0,
+                            "maximum": 9007199254740991
+                          },
+                          "evidenceBundlesCount": {
+                            "type": "integer",
+                            "minimum": 0,
+                            "maximum": 9007199254740991
+                          },
+                          "releasesCount": {
+                            "type": "integer",
+                            "minimum": 0,
+                            "maximum": 9007199254740991
+                          },
+                          "uniqueWalletsCount": {
+                            "type": "null"
+                          },
+                          "declaredValueByCurrency": {
+                            "type": "array",
+                            "items": {
+                              "type": "object",
+                              "properties": {
+                                "currency": {
+                                  "type": "string"
+                                },
+                                "totalMinorUnits": {
+                                  "type": "integer",
+                                  "minimum": 0,
+                                  "maximum": 9007199254740991
+                                }
+                              },
+                              "required": [
+                                "currency",
+                                "totalMinorUnits"
+                              ],
+                              "additionalProperties": false
+                            }
+                          },
+                          "documentCompletenessRate": {
+                            "anyOf": [
+                              {
+                                "type": "number",
+                                "minimum": 0,
+                                "maximum": 1
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ]
+                          },
+                          "disputesCount": {
+                            "type": "integer",
+                            "minimum": 0,
+                            "maximum": 9007199254740991
+                          },
+                          "disputeRate": {
+                            "anyOf": [
+                              {
+                                "type": "number",
+                                "minimum": 0
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ]
+                          },
+                          "nps": {
+                            "type": "object",
+                            "properties": {
+                              "promoters": {
+                                "type": "integer",
+                                "minimum": 0,
+                                "maximum": 9007199254740991
+                              },
+                              "passives": {
+                                "type": "integer",
+                                "minimum": 0,
+                                "maximum": 9007199254740991
+                              },
+                              "detractors": {
+                                "type": "integer",
+                                "minimum": 0,
+                                "maximum": 9007199254740991
+                              },
+                              "responseCount": {
+                                "type": "integer",
+                                "minimum": 0,
+                                "maximum": 9007199254740991
+                              },
+                              "sentCount": {
+                                "type": "integer",
+                                "minimum": 0,
+                                "maximum": 9007199254740991
+                              },
+                              "score": {
+                                "anyOf": [
+                                  {
+                                    "type": "number",
+                                    "minimum": -100,
+                                    "maximum": 100
+                                  },
+                                  {
+                                    "type": "null"
+                                  }
+                                ]
+                              },
+                              "minimumResponses": {
+                                "type": "integer",
+                                "minimum": 0,
+                                "maximum": 9007199254740991
+                              },
+                              "belowMinimum": {
+                                "type": "boolean"
+                              }
+                            },
+                            "required": [
+                              "promoters",
+                              "passives",
+                              "detractors",
+                              "responseCount",
+                              "sentCount",
+                              "score",
+                              "minimumResponses",
+                              "belowMinimum"
+                            ],
+                            "additionalProperties": false
+                          },
+                          "projectId": {
+                            "type": "string"
+                          },
+                          "projectName": {
+                            "type": "string"
+                          }
+                        },
+                        "required": [
+                          "signedContractsCount",
+                          "evidenceBundlesCount",
+                          "releasesCount",
+                          "uniqueWalletsCount",
+                          "declaredValueByCurrency",
+                          "documentCompletenessRate",
+                          "disputesCount",
+                          "disputeRate",
+                          "nps",
+                          "projectId",
+                          "projectName"
+                        ],
+                        "additionalProperties": false
+                      }
+                    }
+                  },
+                  "required": [
+                    "total",
+                    "perProject"
+                  ],
+                  "additionalProperties": false
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/v1/certifier/kpis": {
       "get": {
         "operationId": "kpisProcedure",

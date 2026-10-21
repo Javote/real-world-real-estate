@@ -26,6 +26,7 @@ import type {
   NotificationQuery,
   ObserveStageInput,
   PendingDossier,
+  PilotMetricsReport,
   Profile,
   ProjectListQuery,
   RejectDossierInput,
@@ -134,6 +135,7 @@ export const api = {
   getCertifierKpis: () => request<CertifierKpis>('/api/v1/certifier/kpis'),
   getCertifierAssignments: () => request<CertifierAssignment[]>('/api/v1/certifier/assignments'),
   getNotaryKpis: () => request<NotaryKpis>('/api/v1/notary/kpis'),
+  getPilotMetrics: () => request<PilotMetricsReport>('/api/v1/admin/pilot-metrics'),
   getNotaryPendingDossiers: () => request<PendingDossier[]>('/api/v1/notary/dossiers/pending'),
 
   getProject: (id: string) => request<ProjectDetail>(`/api/v1/projects/${id}`),

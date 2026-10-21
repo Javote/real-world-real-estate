@@ -4,6 +4,7 @@ import {
   formatCurrency,
   formatCurrencyCompact,
   formatDate,
+  formatPercent,
   formatRelative
 } from './format'
 
@@ -16,6 +17,13 @@ describe('formatCurrency', () => {
     const es = formatCurrency(400000, 'USD', 'es-AR')
     const en = formatCurrency(400000, 'USD', 'en-US')
     expect(es).not.toBe(en)
+  })
+})
+
+describe('formatPercent', () => {
+  it('recibe una proporción de 0 a 1, con un decimal como mucho', () => {
+    expect(formatPercent(0.955, 'es-AR')).toMatch(/^95,5\s?%$/)
+    expect(formatPercent(1, 'en-US')).toBe('100%')
   })
 })
 

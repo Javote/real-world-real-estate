@@ -1,6 +1,10 @@
 # SPEC-501 — Panel de métricas del piloto
 
-> Milestone 4, criterio 1 del SOM (ver [`ESTADO-2026-09-22-catalyst-milestone-4.md`](archive/ESTADO-2026-09-22-catalyst-milestone-4.md)).
+> Milestone 4, criterio 1 del SOM (ver [`ESTADO-2026-09-22-catalyst-milestone-4.md`](ESTADO-2026-09-22-catalyst-milestone-4.md)).
+>
+> **Cerrada 2026-10-21.** `GET /admin/pilot-metrics` en `apps/api/src/modules/metricas/`, la sección
+> `ADMIN-PILOT-METRICS-005` en `apps/web/src/routes/admin.index.tsx`; los casos borde son
+> `apps/api/test/spec-501-metricas-del-piloto.test.ts` y `apps/web/src/routes/-admin.index.test.tsx`.
 
 ## Propósito
 
@@ -57,15 +61,25 @@ GET /admin/pilot-metrics?projectIds=<csv opcional>
 - Un usuario no-admin pide el endpoint: 403, antes de tocar cualquier query (mismo patrón que el
   resto de `/admin`).
 
-## Preguntas abiertas
+## Lo que quedó decidido al implementar
 
-- **¿Qué es una "wallet única"?** Hoy `OnChainEvent` no guarda qué dirección firmó — sabe el
-  `txid` y el `stageId`, no el signer. Antes de construir `uniqueWalletsCount` hay que decidir si se
-  suma esa columna (cambia el shape del evento, no el validador) o si "wallet" se aproxima con
-  `User.id` de quien disparó la acción (más simple, pero no es lo que el criterio pide — un
-  developer puede operar con la misma cuenta y distintas wallets CIP-30 entre sesiones).
-- **¿"≥800.000 USDM" es una conversión de reporte o un pedido de denominar los contratos reales en
-  USDM?** Ver `ESTADO-2026-09-22-catalyst-milestone-4.md` §Nota sobre "simulated escrow value" y
-  "USDM". Si es lo segundo, `Contract.currency` necesita aceptar `"USDM"` como valor válido — hoy es
-  un `string` libre (deuda ya señalada por `SPEC-402`), así que no hace falta migración, solo que los
-  pilotos reales lo declaren así al firmar.
+- **La respuesta es `{ total, perProject }`**: `perProject` trae los ocho números de cada proyecto
+  del filtro (o de todos), ordenados por nombre, y `total` se calcula **aparte** con el mismo
+  filtro, no sumando los proyectos: una tasa no se suma.
+- **`uniqueWalletsCount` es siempre `null`, y el schema lo fija así** (`z.null()`). Hoy toda
+  transacción la firma la wallet de servicio (D-078) y `OnChainEvent` no guarda quién firmó; contar
+  `User.id` contaría cuentas, no wallets, y la regla 17 no deja reportar un número que no se puede
+  sustanciar. El día que haya firmantes propios (co-firma CIP-30, D-009), se suma la columna del
+  firmante al evento y el schema pasa a `number`. La sección de `/admin` lo dice: *"No se mide"*.
+- **Sin conversión de moneda**: `declaredValueByCurrency` desglosa la suma de `Contract.totalMinorUnits`
+  por `currency`, sin total convertido. Convertir pide una tasa y su fecha, y eso es armado del
+  reporte, no dominio. Si los pilotos firman en USDM, entra como una moneda más (`Contract.currency`
+  es un string, `SPEC-402`).
+- **Las tres métricas delegadas se reusan, no se reescriben**: `completitud` (`SPEC-504`),
+  `tasaDeDisputas` (`SPEC-502`) y el `resumen` del NPS (`SPEC-503`), con el mismo filtro de
+  proyectos. El NPS viaja entero (`nps`), con su `belowMinimum`, en vez de un `npsScore` suelto: un
+  score sin su tamaño de muestra es lo que la regla 17 prohíbe.
+- **Sin caché ni tabla**: son seis consultas por proyecto más las del total, en paralelo. Con los
+  pilotos de M4 (dos o tres proyectos) no hay nada que medir todavía.
+- **La superficie es una sección de `/admin`** (dueño, 2026-10-21, D-104), `ADMIN-PILOT-METRICS-005`,
+  con ocho `StatCard` del total. Sin dato, la raya de `panel.emptyValue`, nunca un 0.

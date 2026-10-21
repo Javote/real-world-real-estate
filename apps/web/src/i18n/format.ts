@@ -21,6 +21,13 @@ export function formatCurrencyCompact(
   }).format(minorUnits / 100)
 }
 
+/** Una proporción de 0 a 1 como porcentaje, con un decimal como mucho. */
+export function formatPercent(proporcion: number, locale: Locale): string {
+  return new Intl.NumberFormat(locale, { style: 'percent', maximumFractionDigits: 1 }).format(
+    proporcion
+  )
+}
+
 function fechaDe(iso: string | number): Date {
   if (typeof iso === 'number') return new Date(iso)
   if (/^\d{13}$/.test(iso)) return new Date(Number(iso))

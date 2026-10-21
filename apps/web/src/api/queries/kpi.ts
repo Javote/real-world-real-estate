@@ -22,5 +22,12 @@ export const kpiQueries = {
       queryKey: ['kpi', 'notary'],
       queryFn: () => api.getNotaryKpis(),
       ...CON_ANCLAJE
+    }),
+  // Las métricas del piloto de M4 (SPEC-501): cuentas y tasas, ningún TXID.
+  piloto: () =>
+    queryOptions({
+      queryKey: ['kpi', 'piloto'],
+      queryFn: () => api.getPilotMetrics(),
+      ...SIN_ANCLAJE
     })
 }

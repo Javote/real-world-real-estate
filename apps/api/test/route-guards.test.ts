@@ -34,6 +34,7 @@ const MATRIZ: Record<string, string> = {
   "POST /api/v1/projects/:id/members": "auth + autoriza(rol(admin) · soloRol)",
   "POST /api/v1/projects/:id/certifier-invitations": "auth + autoriza(rol(admin) · soloRol)",
   "GET /api/v1/admin/document-completeness": "auth + autoriza(rol(admin) · soloRol)",
+  "GET /api/v1/admin/pilot-metrics": "auth + autoriza(rol(admin) · soloRol)",
   "POST /api/v1/disputes":
     "auth + autoriza(rol(developer|buyer) · proyecto(Stage:stageId@body → developer|buyer))",
   "GET /api/v1/disputes":

@@ -4,7 +4,7 @@
 > Serie `6xx`, refactor post-M3 ([`PROPUESTA-2026-09-30-refactor-post-m3.md`](../PROPUESTA-2026-09-30-refactor-post-m3.md)).
 > **No es mandato hasta entregar M3.** Nivel 🟢: refactor sin cambio de comportamiento, con las
 > respuestas de la API fijadas por los tests existentes. **Cuándo:** no como tanda propia, sino
-> la primera vez que una feature nueva (por ejemplo [`SPEC-501`](../SPEC-501-panel-de-metricas-del-piloto.md),
+> la primera vez que una feature nueva (por ejemplo [`SPEC-501`](SPEC-501-panel-de-metricas-del-piloto.md),
 > que agrega agregados) necesite una de estas lecturas.
 
 ## Qué NO es esta spec

@@ -67,6 +67,7 @@ const CATALOGO = {
   'kpi.developer': kpiQueries.developer(),
   'kpi.certificador': kpiQueries.certificador(),
   'kpi.notary': kpiQueries.notary(),
+  'kpi.piloto': kpiQueries.piloto(),
   'capital.resumen': capitalQueries.resumen(),
   'capital.mensual': capitalQueries.mensual(),
   'capital.porProyecto': capitalQueries.porProyecto(),
@@ -158,7 +159,7 @@ const PROYECTO_P1: Nombre[] = [
 ]
 const OTRO_PROYECTO: Nombre[] = ['otroProyecto.detalle', 'otroProyecto.documentos']
 const LISTAS_DE_PROYECTOS: Nombre[] = ['proyecto.lista', 'proyecto.delDeveloper']
-const KPIS: Nombre[] = ['kpi.developer', 'kpi.certificador', 'kpi.notary']
+const KPIS: Nombre[] = ['kpi.developer', 'kpi.certificador', 'kpi.notary', 'kpi.piloto']
 const UNIDADES: Nombre[] = [
   'unidad.delInvestor',
   'unidad.delDeveloper',

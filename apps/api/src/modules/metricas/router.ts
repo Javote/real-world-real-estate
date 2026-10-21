@@ -8,6 +8,9 @@ const impl = implement(contrato.metricas).$context<Contexto>().use(guardOrpc);
 
 export const metricasRouter = impl.router({
   completitud: impl.completitud.handler(({ context, input }) =>
-    casos.completitud(context, input.projectId)
+    casos.completitud(context, input.projectId ? [input.projectId] : undefined)
+  ),
+  piloto: impl.piloto.handler(({ context, input }) =>
+    casos.piloto(context, input.projectIds?.split(","))
   )
 });

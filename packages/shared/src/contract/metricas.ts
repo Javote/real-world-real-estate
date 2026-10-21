@@ -1,5 +1,10 @@
 import { oc } from "@orpc/contract";
-import { documentCompletenessQuerySchema, documentCompletenessSchema } from "../pilot-metrics";
+import {
+  documentCompletenessQuerySchema,
+  documentCompletenessSchema,
+  pilotMetricsQuerySchema,
+  pilotMetricsReportSchema
+} from "../pilot-metrics";
 import type { MetaDeProcedimiento } from "./guard";
 
 const base = oc.$meta<MetaDeProcedimiento>({});
@@ -12,5 +17,11 @@ export const metricasContrato = {
     .route({ method: "GET", path: "/admin/document-completeness" })
     .meta(SOLO_ADMIN)
     .input(documentCompletenessQuerySchema)
-    .output(documentCompletenessSchema)
+    .output(documentCompletenessSchema),
+
+  piloto: base
+    .route({ method: "GET", path: "/admin/pilot-metrics" })
+    .meta(SOLO_ADMIN)
+    .input(pilotMetricsQuerySchema)
+    .output(pilotMetricsReportSchema)
 };

@@ -37,6 +37,41 @@ const usuario = (id: string, fullName: string, role: string, isActive = true) =>
 const invitacion = (id: string, certifierId: string, certifierName: string, status: string) =>
   ({ id, certifierId, certifierName, status }) as unknown as Invitaciones[number]
 
+type Metricas = Awaited<ReturnType<typeof api.getPilotMetrics>>['total']
+
+const NPS_VACIO: Metricas['nps'] = {
+  promoters: 0,
+  passives: 0,
+  detractors: 0,
+  responseCount: 0,
+  sentCount: 0,
+  score: null,
+  minimumResponses: 30,
+  belowMinimum: true
+}
+
+const METRICAS: Metricas = {
+  signedContractsCount: 3,
+  evidenceBundlesCount: 12,
+  releasesCount: 4,
+  uniqueWalletsCount: null,
+  declaredValueByCurrency: [
+    { currency: 'ARS', totalMinorUnits: 900_000_000 },
+    { currency: 'USD', totalMinorUnits: 15_000_000 }
+  ],
+  documentCompletenessRate: 0.955,
+  disputesCount: 1,
+  disputeRate: 0.25,
+  nps: {
+    ...NPS_VACIO,
+    promoters: 2,
+    detractors: 1,
+    responseCount: 3,
+    sentCount: 5,
+    score: 33.333
+  }
+}
+
 function preparar(opts: {
   proyectos?: Proyectos
   detalle?: Detalle
@@ -50,6 +85,7 @@ function preparar(opts: {
     .spyOn(api, 'listProjectCertifierInvitations')
     .mockResolvedValue(opts.invitaciones ?? [])
   vi.spyOn(api, 'listUsers').mockResolvedValue((opts.usuarios ?? []) as unknown as Usuarios)
+  vi.spyOn(api, 'getPilotMetrics').mockResolvedValue({ total: METRICAS, perProject: [] })
   return { getProject, listInv }
 }
 
@@ -260,5 +296,63 @@ describe('/admin (invitar certificadores)', () => {
 
     fireEvent.change(screen.getByLabelText(t['admin.project']), { target: { value: 'p-viejo' } })
     await waitFor(() => expect(screen.queryByRole('alert')).toBeNull())
+  })
+})
+
+describe('/admin (métricas del piloto, SPEC-501)', () => {
+  afterEach(() => vi.restoreAllMocks())
+
+  it('muestra los ocho números del total, con el valor declarado desglosado por moneda', async () => {
+    preparar({})
+    montar()
+
+    const seccion = await screen.findByTestId('ADMIN-PILOT-METRICS-005')
+    await within(seccion).findByText(t['admin.metrics.signedContracts'])
+    expect(within(seccion).getByText('3')).toBeTruthy()
+    expect(within(seccion).getByText('12')).toBeTruthy()
+    expect(within(seccion).getByText(/95,5\s?%/)).toBeTruthy()
+    expect(within(seccion).getByText(/25\s?%/)).toBeTruthy()
+    expect(within(seccion).getByText('33')).toBeTruthy()
+    expect(within(seccion).getByText(/ARS.*·.*US\$|US\$.*·.*ARS|\$.*·.*US\$/)).toBeTruthy()
+    expect(
+      within(seccion).getByText(
+        `${t['admin.metrics.npsResponses'].replace('{responses}', '3').replace('{sent}', '5')} · ${t['admin.metrics.npsLowSample'].replace('{min}', '30')}`
+      )
+    ).toBeTruthy()
+    expect(within(seccion).getByText(t['admin.metrics.walletsNotMeasured'])).toBeTruthy()
+  })
+
+  it('sin datos dibuja la raya, nunca un 0: sin liberaciones no hay tasa de disputas', async () => {
+    preparar({})
+    vi.spyOn(api, 'getPilotMetrics').mockResolvedValue({
+      total: {
+        ...METRICAS,
+        declaredValueByCurrency: [],
+        documentCompletenessRate: null,
+        disputeRate: null,
+        nps: { ...NPS_VACIO, responseCount: 40, sentCount: 40, belowMinimum: false }
+      },
+      perProject: []
+    })
+    montar()
+
+    const seccion = await screen.findByTestId('ADMIN-PILOT-METRICS-005')
+    await within(seccion).findByText(t['admin.metrics.signedContracts'])
+    expect(within(seccion).getAllByText(t['panel.emptyValue'])).toHaveLength(5)
+    expect(
+      within(seccion).getByText(
+        t['admin.metrics.npsResponses'].replace('{responses}', '40').replace('{sent}', '40')
+      )
+    ).toBeTruthy()
+  })
+
+  it('mientras llegan, la sección muestra la carga y no tarjetas vacías', async () => {
+    preparar({})
+    vi.spyOn(api, 'getPilotMetrics').mockReturnValue(new Promise(() => {}))
+    montar()
+
+    const seccion = await screen.findByTestId('ADMIN-PILOT-METRICS-005')
+    expect(within(seccion).getByRole('status')).toBeTruthy()
+    expect(within(seccion).queryByText(t['admin.metrics.signedContracts'])).toBeNull()
   })
 })

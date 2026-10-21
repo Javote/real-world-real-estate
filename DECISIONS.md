@@ -1469,3 +1469,7 @@ le dejaba).
 - **La encuesta NPS sale con la primera liberación** (`SPEC-503`): la primera `PaymentAttestation`
   de un contrato del investor le manda la encuesta, una sola vez por investor y proyecto. Mide el
   servicio, no la venta.
+- **Las métricas se ven en una sección de `/admin`** (`SPEC-501`, `ADMIN-PILOT-METRICS-005`): ningún
+  entregable dibuja un panel de métricas, y el dueño eligió la pantalla del admin que ya existía
+  (`SPEC-221`) antes que solo la API. Solo `StatCard` de M2-D3, y los totales de todos los
+  proyectos; el desglose por proyecto queda en la respuesta de `GET /admin/pilot-metrics`.

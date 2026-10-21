@@ -71,6 +71,31 @@
             },
             "description": "authenticated + authorize(role(admin) · role only)"
           }
+        },
+        {
+          "name": "GET /api/v1/admin/pilot-metrics",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/admin/pilot-metrics",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "admin",
+                "pilot-metrics"
+              ]
+            },
+            "description": "authenticated + authorize(role(admin) · role only)"
+          }
         }
       ]
     },

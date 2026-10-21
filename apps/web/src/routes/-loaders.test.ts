@@ -244,7 +244,13 @@ const CASOS: Caso[] = [
   ],
   ['/notary/signed', NotarySigned, {}, undefined, [dossierQueries.firmas()]],
   ['/notary/profile', NotaryProfile, {}, undefined, PERFIL],
-  ['/admin', AdminIndex, {}, undefined, [proyectoQueries.lista(), usuarioQueries.lista()]]
+  [
+    '/admin',
+    AdminIndex,
+    {},
+    undefined,
+    [proyectoQueries.lista(), usuarioQueries.lista(), kpiQueries.piloto()]
+  ]
 ]
 
 const forma = (o: Opciones) => ({ queryKey: o.queryKey, staleTime: o.staleTime })

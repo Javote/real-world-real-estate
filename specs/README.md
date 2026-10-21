@@ -318,7 +318,7 @@ construirlas el 2026-10-21**, en el orden de su §Orden de ataque: `504`, `502`,
 
 | Spec | Título | Estado |
 |---|---|---|
-| [`SPEC-501`](SPEC-501-panel-de-metricas-del-piloto.md) | Panel de métricas del piloto: los ocho números del criterio 1 | sin empezar |
+| [`SPEC-501`](archive/SPEC-501-panel-de-metricas-del-piloto.md) | Panel de métricas del piloto: los ocho números del criterio 1 | **cerrada 2026-10-21** · 🟢 · `GET /admin/pilot-metrics` + la sección `ADMIN-PILOT-METRICS-005` de `/admin` (D-104). **`uniqueWalletsCount` no se mide**: todo lo firma la wallet de servicio, y es la pregunta 18 del plan de mainnet |
 | [`SPEC-502`](archive/SPEC-502-registro-de-disputas.md) | Registro de disputas | **cerrada 2026-10-21** · 🟡 (migración `0014` y guarda nueva por `Dispute`) · `disputeRate` por release (D-104) |
 | [`SPEC-503`](archive/SPEC-503-encuesta-nps-del-buyer.md) | Encuesta NPS del buyer | **cerrada 2026-10-21 en la API** · 🟡 (migración `0015`, ruta sin sesión) · la dispara la primera liberación (D-104). **Falta la pantalla para responder**: ningún entregable la tiene, y es decisión del dueño antes del primer piloto real |
 | [`SPEC-504`](archive/SPEC-504-completitud-de-documentacion.md) | Completitud de documentación por unidad | **cerrada 2026-10-21** · 🟢 · `GET /admin/document-completeness`, el primer procedimiento del módulo `metricas` |

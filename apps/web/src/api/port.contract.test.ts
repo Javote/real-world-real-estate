@@ -81,6 +81,7 @@ const CASOS: Record<keyof Api, Caso> = {
   getCertifierKpis: [() => api.getCertifierKpis()],
   getCertifierAssignments: [() => api.getCertifierAssignments()],
   getNotaryKpis: [() => api.getNotaryKpis()],
+  getPilotMetrics: [() => api.getPilotMetrics()],
   getNotaryPendingDossiers: [() => api.getNotaryPendingDossiers()],
   getProject: [() => api.getProject('p1')],
   getProjectDeveloper: [() => api.getProjectDeveloper('p1')],
