@@ -83,6 +83,25 @@ test.describe('SPEC-016 — investor', () => {
     await expect(page.getByTestId('INV-DOSSIER-EXPORT-002')).toBeVisible()
   })
 
+  // Sin una encuesta sembrada: crearla pide certificar y liberar una etapa del seed, que leen los
+  // demás specs. El camino con token válido lo cubre `apps/api/test/spec-503-encuesta-nps.test.ts`.
+  test('INV-SURVEY-NPS-001 · sin sesión, la respuesta llega a la API y un token desconocido cierra la encuesta', async ({
+    page
+  }) => {
+    await page.goto(`/survey/${'f'.repeat(64)}`)
+    const encuesta = page.getByTestId('INV-SURVEY-NPS-001')
+    const enviar = encuesta.getByRole('button', { name: /enviar respuesta|send answer/i })
+    await expect(enviar).toBeDisabled()
+
+    await encuesta.getByRole('button', { name: '9', exact: true }).click()
+    await encuesta.getByLabel(/comentario|comment/i).fill('Respuesta del e2e')
+    await enviar.click()
+
+    await expect(encuesta.getByText(/no está disponible|not available/i)).toBeVisible()
+    await expect(enviar).toHaveCount(0)
+    await expect(page).toHaveURL(/\/survey\//)
+  })
+
   test('INV-INVITE-VIEW-001 · INV-INVITE-ACCEPT-002 · INV-INVITE-DECLINE-003', async ({ page }) => {
     await loginConSolapa(page, 'Developer')
 

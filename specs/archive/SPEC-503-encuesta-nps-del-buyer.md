@@ -100,3 +100,7 @@ del investor (`useAbrirNotificacion`, `lib/notificaciones.ts`).
   reintentar. Cualquier otro error deja el formulario con el aviso genérico.
 - No hay un `GET` de la encuesta: la pantalla no sabe si ya se respondió hasta que el investor envía.
   Con una sola respuesta por token, no hizo falta.
+- El e2e (`INV-SURVEY-NPS-001`, `apps/web/e2e/investor-surface.spec.ts`) entra sin sesión, responde
+  contra la API real con un token que no existe y ve el 404: la ruta es pública y el cuerpo pasa el
+  Zod de la API. No siembra una encuesta: crearla pide certificar y liberar una etapa del seed, que
+  leen los demás specs. El camino con token válido es `apps/api/test/spec-503-encuesta-nps.test.ts`.
