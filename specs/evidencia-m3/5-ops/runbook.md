@@ -303,7 +303,12 @@ What this means in practice:
 
 - **The deploy starts when CI finishes**, not on push: about 5 minutes later, the slowest job.
 - **Red CI = nothing deploys.** The fix is a new commit; the deploy ships with it, and it includes
-  the earlier ones.
+  the earlier ones, **but only if that commit touches something the `buildFilter` includes and does
+  not ignore**. Render decides from the files in that push, not from what is still undeployed: on
+  2026-10-21, `51a26d6` (four specs) went red, the fix `95e4ea4` touched only a test and a
+  `vitest.config.mts` —both in `ignoredPaths` of both services—, CI passed and neither service
+  deployed. If the fix falls entirely in `ignoredPaths`, another commit touching an included path
+  unblocks the deploy (it shipped with `render.yaml`).
 - **A commit cancelled by `cancel-in-progress`** (two pushes in a row) does not deploy on its own:
   it ships with the next one.
 - **A commit CI skips** (only `.md`, images, `.pdf`…) has no checks and does not deploy, even if the

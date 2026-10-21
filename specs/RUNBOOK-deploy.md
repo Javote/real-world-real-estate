@@ -303,7 +303,12 @@ Lo que cambia en la práctica:
 
 - **El deploy arranca cuando termina CI**, no con el push: unos 5 minutos después, el job más lento.
 - **CI en rojo = nada se despliega.** Se arregla con un commit nuevo; el deploy sale con él, que
-  incluye a los anteriores.
+  incluye a los anteriores, **pero solo si ese commit toca algo que el `buildFilter` incluye y no
+  ignora**. Render decide por los archivos de ese push, no por lo que quedó sin desplegar: el
+  2026-10-21, `51a26d6` (cuatro specs) quedó rojo, el arreglo `95e4ea4` tocó solo un test y una
+  `vitest.config.mts` —los dos en `ignoredPaths` de los dos servicios—, CI pasó y no hubo deploy de
+  ninguno. Si el arreglo cae entero en `ignoredPaths`, el deploy lo destraba otro commit que toque
+  un path incluido (salió con `render.yaml`).
 - **Un commit cancelado por `cancel-in-progress`** (dos pushes seguidos) no se despliega solo: sale
   con el siguiente.
 - **Un commit que CI saltea** (solo `.md`, imágenes, `.pdf`…) no tiene checks y no despliega,

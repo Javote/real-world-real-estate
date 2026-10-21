@@ -301,7 +301,9 @@ deploy ni se crea y a veces se cuelga (`specs/RUNBOOK-deploy.md` §4). Si el pus
 2. **Seguir cada servicio tocado hasta `live` con el commit del push**: `live` solo no alcanza
    (el comando, en RUNBOOK §2).
 3. **Si a los ~5 min no hay deploy de ese commit, no se creó**: `render deploys create <srv-id>
-   --commit <sha> --wait`, la API antes que la web. **Si está `update_in_progress` sin un `API
+   --commit <sha> --wait`, la API antes que la web. **Si el push que arregla un rojo toca solo
+   `ignoredPaths`** (tests, `vitest.config.mts`), Render no despliega lo que quedó atrás: hace falta
+   un commit que toque un path incluido (RUNBOOK §2). **Si está `update_in_progress` sin un `API
    listening` nuevo en los logs**, otro `curl` a `/health`. Disparar un deploy lo hace el dueño:
    el modo automático del agente no lo deja.
 

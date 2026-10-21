@@ -62,7 +62,9 @@ services:
         - package.json
         - render.yaml
       # Ganan sobre `paths` ("Ignored paths will not trigger an autodeploy,
-      # even if those files also match an included path"). Nada de esto se
+      # even if those files also match an included path"). Render mira los
+      # archivos del push, no lo que quedó sin desplegar: el arreglo de un CI
+      # rojo que toca solo esto no despliega lo anterior. RUNBOOK §2. Nada de esto se
       # compila ni se lee en runtime: los `.md` solo aparecen en comentarios,
       # y los tests y su config no entran al `tsc` de la API.
       ignoredPaths:
