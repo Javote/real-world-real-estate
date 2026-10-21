@@ -2,6 +2,7 @@ import type { RequestHandler } from "express";
 import { OpenAPIHandler } from "../lib/orpc.js";
 import { disputasRouter } from "../modules/disputas/router.js";
 import { dossierRouter } from "../modules/dossier/router.js";
+import { encuestasRouter } from "../modules/encuestas/router.js";
 import { metricasRouter } from "../modules/metricas/router.js";
 import { type Contexto, contextoDeRequest } from "./contexto.js";
 
@@ -14,6 +15,7 @@ export const PREFIJO_API = "/api/v1";
 export const routerRaiz = {
   dossier: dossierRouter,
   disputas: disputasRouter,
+  encuestas: encuestasRouter,
   metricas: metricasRouter
 };
 

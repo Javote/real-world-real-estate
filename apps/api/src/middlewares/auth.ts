@@ -428,6 +428,7 @@ function viaProyecto(
     | "Unit"
     | "ProjectMember"
     | "Dispute"
+    | "NpsSurvey"
 ): AuditEntityScope {
   return (eb, misProyectos) =>
     eb.and([
@@ -455,6 +456,7 @@ const AUDIT_ENTITY_SCOPES = {
   Unit: viaProyecto("Unit"),
   ProjectMember: viaProyecto("ProjectMember"),
   Dispute: viaProyecto("Dispute"),
+  NpsSurvey: viaProyecto("NpsSurvey"),
   Dossier: (eb, misProyectos) =>
     eb.and([
       eb("AuditLog.entityType", "=", "Dossier"),

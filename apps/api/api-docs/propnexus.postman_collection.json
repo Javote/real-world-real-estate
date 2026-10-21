@@ -46,6 +46,31 @@
             },
             "description": "authenticated + authorize(role(admin) · role only)"
           }
+        },
+        {
+          "name": "GET /api/v1/admin/nps",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/admin/nps",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "admin",
+                "nps"
+              ]
+            },
+            "description": "authenticated + authorize(role(admin) · role only)"
+          }
         }
       ]
     },
@@ -1659,6 +1684,28 @@
               ]
             },
             "description": "authenticated + authorize(role(admin|buyer) · owner(Invitation:id))"
+          }
+        },
+        {
+          "name": "POST /api/v1/investor/surveys/:token/respond",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/investor/surveys/:token/respond",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "investor",
+                "surveys",
+                ":token",
+                "respond"
+              ]
+            },
+            "description": "—"
           }
         },
         {

@@ -14,6 +14,7 @@ export * from "./ids";
 export * from "./invitation";
 export * from "./merkle";
 export * from "./notifications";
+export * from "./nps";
 export * from "./pagination";
 export * from "./panels";
 export * from "./params";

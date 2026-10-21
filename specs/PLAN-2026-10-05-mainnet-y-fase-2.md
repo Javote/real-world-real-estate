@@ -100,7 +100,7 @@ Si las del día 1–2 no salen en dos días, el calendario se corre lo mismo que
 |---|---|---|
 | 18 | **Qué cuenta como wallet única** (`SPEC-501`) | Ver §6. Es la única que cambia el producto |
 | 19 | Si los ≥800.000 USDM son una conversión al armar el reporte o los contratos se denominan en USDM (`SPEC-501`) | La conversión no toca el dominio; la otra cambia `Contract.currency` |
-| 20 | Qué evento dispara la encuesta NPS (`SPEC-503`) | La propuesta de la spec: la primera liberación |
+| 20 | Qué evento dispara la encuesta NPS (`SPEC-503`) | **Decidida 2026-10-21** (D-104): la primera liberación |
 | 21 | Completitud: promedio simple o ponderado (`SPEC-504`) | Implementada con la propuesta (simple) el 2026-10-21, revisable si el catálogo deja de ser uniforme |
 
 ## 2 · Dónde se aparta de `RUNBOOK-mainnet-cutover.md`

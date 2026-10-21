@@ -103,6 +103,10 @@ export const MONTAJE = [
 const limitador = dossierRateLimiter();
 const limiteDelLinkPublico: RequestHandler = (req, res, next) => limitador(req, res, next);
 app.use("/api/v1/public/dossier", limiteDelLinkPublico);
+// La encuesta NPS también se responde sin sesión, con un token en el path (SPEC-503).
+const limitadorDeEncuestas = dossierRateLimiter();
+const limiteDeEncuestas: RequestHandler = (req, res, next) => limitadorDeEncuestas(req, res, next);
+app.use("/api/v1/investor/surveys", limiteDeEncuestas);
 
 // Antes que las rutas de Express: lo que el router oRPC no conoce sigue de largo (SPEC-607).
 app.use(montarRouter(routerRaiz));

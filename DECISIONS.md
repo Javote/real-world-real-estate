@@ -1466,3 +1466,6 @@ le dejaba).
 
 - **`disputeRate` es por liberación** (`SPEC-502`): toda disputa abierta, sea cual sea su desenlace,
   sobre la cantidad de `PaymentAttestation`. Sin liberaciones es `null`, no 0.
+- **La encuesta NPS sale con la primera liberación** (`SPEC-503`): la primera `PaymentAttestation`
+  de un contrato del investor le manda la encuesta, una sola vez por investor y proyecto. Mide el
+  servicio, no la venta.

@@ -1,6 +1,10 @@
 # SPEC-503 — Encuesta NPS del buyer
 
-> Milestone 4, criterio 1 (`buyer NPS ≥70`). Ver [`ESTADO-2026-09-22-catalyst-milestone-4.md`](archive/ESTADO-2026-09-22-catalyst-milestone-4.md).
+> Milestone 4, criterio 1 (`buyer NPS ≥70`). Ver [`ESTADO-2026-09-22-catalyst-milestone-4.md`](ESTADO-2026-09-22-catalyst-milestone-4.md).
+>
+> **Cerrada 2026-10-21, sin la pantalla para responder** (ver abajo). Módulo
+> `apps/api/src/modules/encuestas/`, contrato en `packages/shared/src/contract/encuestas.ts`, tabla en
+> la migración `0015_nps_survey.sql`; los casos borde son `apps/api/test/spec-503-encuesta-nps.test.ts`.
 
 ## Propósito
 
@@ -59,13 +63,33 @@ investor esté logueado para responder, porque el objetivo es maximizar la tasa 
   distinto de "no hay datos").
 - `comment` vacío o ausente — válido, es opcional.
 
-## Preguntas abiertas
+## Lo que quedó decidido al implementar
 
-- **¿Qué evento dispara el envío?** Se propone "primera liberación (`PaymentAttestation`) de un
-  contrato del investor" como default razonable, pero es una decisión de producto que el dueño
-  tiene que confirmar antes de construir — dispararla muy temprano (ej. al firmar el contrato) mide
-  la venta, no el servicio.
-- **¿Hay un piso de respuestas para que el NPS cuente como evidencia?** Con dos pilotos y ≥120
-  wallets el universo de encuestables es chico; un NPS con 3 respuestas no sostiene "≥70" frente a
-  un revisor de Catalyst sin una nota que diga el tamaño de muestra (mismo patrón que el criterio 9
-  de M3, que declaró `sampleSize: 1` explícito en vez de esconderlo).
+- **El disparo es la primera liberación** (dueño, 2026-10-21, D-104): `POST
+  /developer/contracts/:id/releases/:stageNum`, cuando crea la `PaymentAttestation` (201), le manda
+  la encuesta al investor del contrato. **Una sola por investor, proyecto y evento** (índice único
+  de `NpsSurvey`): la segunda liberación no vuelve a preguntar. La notificación va en el mismo lote
+  que la encuesta y entra solo si la encuesta es nueva (`notifySiGano`), con categoría `release` —
+  la encuesta nace de una liberación, y una categoría nueva sería un estado que M2-D3 no lista.
+- **El piso de respuestas es 30** (`NPS_MINIMUM_RESPONSES`, `packages/shared/src/nps.ts`): por
+  debajo, `belowMinimum: true`. Es el umbral de muestra chica habitual, no una decisión del dueño:
+  se revisa cuando se sepa cuántos investors tiene el piloto. La respuesta también trae
+  `sentCount`, para que la tasa de respuesta sea visible.
+- **El score no se redondea**: `% promotores − % detractores` exacto, de -100 a 100. El redondeo es
+  de presentación.
+- **"Vencido" no existe todavía**: el token no caduca. Un token inexistente es 404; uno ya
+  respondido, 409 `SURVEY_ALREADY_ANSWERED`, sin sobrescribir.
+- **La respuesta escribe `AuditLog`** (`RESPOND_NPS_SURVEY`, actor el investor) sin el puntaje ni el
+  comentario: el audit dice que respondió, no qué.
+- **`/investor/surveys` lleva límite de tasa**, como el link público del dossier (`SPEC-211`): es la
+  otra ruta sin sesión.
+- **`GET /admin/nps` no lleva filtro**: agrega todos los proyectos. `SPEC-501` filtra llamando al
+  caso de uso con sus `projectIds`.
+
+## Lo que falta: la pantalla para responder
+
+**Ni M2-D2 ni M2-D5 tienen una superficie donde el investor responda**, y CLAUDE.md prohíbe
+inventarla. Hoy el investor recibe la notificación (`notifications.survey.nps`, con el token en
+`paramsJson.surveyToken`) pero la web no tiene a dónde llevarlo: **la encuesta se puede responder
+solo por la API**. Antes del primer piloto real hace falta decidir esa superficie (una ruta pública
+`/survey/:token` con la pregunta y diez botones, o la respuesta dentro de la notificación misma).

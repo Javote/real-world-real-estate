@@ -31,6 +31,7 @@ export const ERROR_CODES = {
   REFUND_WITHOUT_RELEASE: { status: 409, clave: "error.generic" },
   RELATED_RESOURCE_NOT_FOUND: { status: 400, clave: "error.generic" },
   RESOURCE_ALREADY_EXISTS: { status: 409, clave: "error.generic" },
+  SURVEY_ALREADY_ANSWERED: { status: 409, clave: "error.generic" },
   STAGE_ALREADY_ADVANCED: { status: 409, clave: "error.generic" },
   STAGE_CREATED_EVENT_NOT_FOUND: { status: 404, clave: "error.notFound" },
   STAGE_EVIDENCE_REQUIRED: { status: 409, clave: "error.generic" },

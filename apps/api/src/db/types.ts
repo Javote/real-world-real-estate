@@ -3,6 +3,7 @@ import type {
   DisputeStatus,
   EvidenceType,
   MembershipRole,
+  NpsTriggerEvent,
   OnChainEventStatus,
   OnChainEventType,
   ProjectStatus,
@@ -282,6 +283,18 @@ export interface DisputeTable {
   resolvedAt: SqliteTimestampSinCoercion | null;
 }
 
+export interface NpsSurveyTable {
+  id: GeneratedId;
+  investorId: string;
+  projectId: string;
+  triggerEventType: NpsTriggerEvent;
+  token: string;
+  score: number | null;
+  comment: string | null;
+  sentAt: SqliteTimestampSinCoercion;
+  respondedAt: SqliteTimestampSinCoercion | null;
+}
+
 export interface Database {
   User: UserTable;
   Organization: OrganizationTable;
@@ -303,6 +316,7 @@ export interface Database {
   Dossier: DossierTable;
   Notification: NotificationTable;
   Dispute: DisputeTable;
+  NpsSurvey: NpsSurveyTable;
   EvidenceBundle: EvidenceBundleTable;
   EvidenceBundleItem: EvidenceBundleItemTable;
 }

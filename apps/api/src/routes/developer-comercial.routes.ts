@@ -26,6 +26,7 @@ import { sql } from "../lib/kysely.js";
 import { conUsuario, delegarAOrpc, OpenAPIHandler, ORPCError, os } from "../lib/orpc.js";
 import { authenticate, authorize, projectScope } from "../middlewares/auth.js";
 import { paramValidator } from "../middlewares/validate-params.js";
+import * as encuestas from "../modules/encuestas/casos.js";
 import { writeAuditLog } from "../utils/audit.js";
 import { relanzarRestriccionComoOrpc } from "./_shared.js";
 
@@ -375,6 +376,7 @@ const releasePaymentProcedure = orpc
       .select([
         "Contract.id as id",
         "Contract.unitId as unitId",
+        "Contract.investorId as investorId",
         "Contract.currency as currency",
         "Contract.totalMinorUnits as totalMinorUnits",
         "Unit.projectId as projectId"
@@ -470,6 +472,11 @@ const releasePaymentProcedure = orpc
       entityId: release.id,
       metadata: { stageNumber, txid: anchor.txid }
     });
+
+    await encuestas.enviarPorPrimeraLiberacion(
+      { db, clock: () => ahora },
+      { investorId: contrato.investorId, projectId: contrato.projectId, unitId: contrato.unitId }
+    );
 
     return { status: 201 as const, body: { ...release, anchor } };
   });

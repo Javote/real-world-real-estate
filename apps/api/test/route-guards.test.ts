@@ -38,6 +38,8 @@ const MATRIZ: Record<string, string> = {
     "auth + autoriza(rol(developer|buyer) · proyecto(Stage:stageId@body → developer|buyer))",
   "GET /api/v1/disputes":
     "auth + autoriza(rol(admin|developer|verifier) · proyecto(projectId → developer|verifier))",
+  "POST /api/v1/investor/surveys/:token/respond": "—",
+  "GET /api/v1/admin/nps": "auth + autoriza(rol(admin) · soloRol)",
   "POST /api/v1/disputes/:id/resolve":
     "auth + autoriza(rol(admin|verifier) · proyecto(Dispute:id → verifier))",
   "GET /api/v1/projects/:id/certifier-invitations": "auth + autoriza(rol(admin) · soloRol)",
@@ -186,6 +188,7 @@ const MATRIZ: Record<string, string> = {
 const SIN_SESION = new Set([
   "POST /api/v1/auth/login",
   "GET /api/v1/public/dossier/:shareToken",
+  "POST /api/v1/investor/surveys/:token/respond",
   "GET /api/v1/public/projects/:id/cover"
 ]);
 
@@ -194,7 +197,7 @@ describe("la matriz de permisos de las rutas montadas", () => {
     expect(matrizViva()).toEqual(MATRIZ);
   });
 
-  it("toda ruta exige sesión, salvo las dos declaradas sin ella", () => {
+  it("toda ruta exige sesión, salvo las declaradas sin ella", () => {
     const sinAuth = Object.entries(matrizViva())
       .filter(([, guards]) => !guards.includes("auth"))
       .map(([clave]) => clave);
