@@ -1,6 +1,7 @@
 import type { Client } from "@orpc/client";
 import type { AnyContractRouter, ContractRouterClient } from "@orpc/contract";
 import type { Serialized } from "../serialize";
+import { disputasContrato } from "./disputas";
 import { dossierContrato } from "./dossier";
 import { metricasContrato } from "./metricas";
 
@@ -12,6 +13,7 @@ export type * from "./guard";
  */
 export const contrato = {
   dossier: dossierContrato,
+  disputas: disputasContrato,
   metricas: metricasContrato
 } satisfies AnyContractRouter;
 

@@ -1020,6 +1020,85 @@
       ]
     },
     {
+      "name": "/api/v1/disputes",
+      "item": [
+        {
+          "name": "GET /api/v1/disputes",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/disputes",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "disputes"
+              ]
+            },
+            "description": "authenticated + authorize(role(admin|developer|verifier) · project(projectId → developer|verifier))"
+          }
+        },
+        {
+          "name": "POST /api/v1/disputes",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/disputes",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "disputes"
+              ]
+            },
+            "description": "authenticated + authorize(role(developer|buyer) · project(Stage:stageId@body → developer|buyer))"
+          }
+        },
+        {
+          "name": "POST /api/v1/disputes/:id/resolve",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/disputes/:id/resolve",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "disputes",
+                ":id",
+                "resolve"
+              ]
+            },
+            "description": "authenticated + authorize(role(admin|verifier) · project(Dispute:id → verifier))"
+          }
+        }
+      ]
+    },
+    {
       "name": "/api/v1/evidence",
       "item": [
         {

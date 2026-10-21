@@ -420,7 +420,14 @@ type AuditEntityScope = (
 ) => ExpressionWrapper<Database, "AuditLog", SqlBool>;
 
 function viaProyecto(
-  tabla: "Stage" | "Evidence" | "Invitation" | "CertifierInvitation" | "Unit" | "ProjectMember"
+  tabla:
+    | "Stage"
+    | "Evidence"
+    | "Invitation"
+    | "CertifierInvitation"
+    | "Unit"
+    | "ProjectMember"
+    | "Dispute"
 ): AuditEntityScope {
   return (eb, misProyectos) =>
     eb.and([
@@ -447,6 +454,7 @@ const AUDIT_ENTITY_SCOPES = {
   CertifierInvitation: viaProyecto("CertifierInvitation"),
   Unit: viaProyecto("Unit"),
   ProjectMember: viaProyecto("ProjectMember"),
+  Dispute: viaProyecto("Dispute"),
   Dossier: (eb, misProyectos) =>
     eb.and([
       eb("AuditLog.entityType", "=", "Dossier"),

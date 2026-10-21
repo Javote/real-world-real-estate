@@ -1456,3 +1456,13 @@ cambia el OpenAPI, y M3 todavía no fue aceptado.
 - **`docs:openapi` y `docs:api` escriben en `apps/api/api-docs/`**, y `openapi-freshness`,
   `api-docs-freshness` y `port.contract.test.ts` comparan contra esa copia.
 - **Un cambio de contrato regenera solo la copia viva**, no la evidencia ni sus PDF.
+
+## D-104 — Las métricas del piloto de M4: qué se cuenta y sobre qué universo
+
+**Decisiones del dueño, 2026-10-21**, al pedir la serie `5xx` (las preguntas abiertas que cada spec
+le dejaba).
+
+**Qué obliga:**
+
+- **`disputeRate` es por liberación** (`SPEC-502`): toda disputa abierta, sea cual sea su desenlace,
+  sobre la cantidad de `PaymentAttestation`. Sin liberaciones es `null`, no 0.

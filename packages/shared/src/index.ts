@@ -3,6 +3,7 @@ export * from "./auth";
 export * from "./capital";
 export * from "./certifier";
 export * from "./contract";
+export * from "./disputes";
 export * from "./documents";
 export * from "./dossier";
 export * from "./errors";

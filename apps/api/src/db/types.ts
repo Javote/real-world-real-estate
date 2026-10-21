@@ -1,4 +1,6 @@
 import type {
+  DisputeOutcome,
+  DisputeStatus,
   EvidenceType,
   MembershipRole,
   OnChainEventStatus,
@@ -266,6 +268,20 @@ export interface NotificationTable {
   createdAt: SqliteTimestamp;
 }
 
+export interface DisputeTable {
+  id: GeneratedId;
+  stageId: string;
+  projectId: string;
+  openedById: string;
+  reason: string;
+  status: DisputeStatus;
+  outcome: DisputeOutcome | null;
+  resolution: string | null;
+  resolvedById: string | null;
+  createdAt: SqliteTimestamp;
+  resolvedAt: SqliteTimestampSinCoercion | null;
+}
+
 export interface Database {
   User: UserTable;
   Organization: OrganizationTable;
@@ -286,6 +302,7 @@ export interface Database {
   PaymentAttestation: PaymentAttestationTable;
   Dossier: DossierTable;
   Notification: NotificationTable;
+  Dispute: DisputeTable;
   EvidenceBundle: EvidenceBundleTable;
   EvidenceBundleItem: EvidenceBundleItemTable;
 }

@@ -19,6 +19,7 @@ export const ERROR_CODES = {
   // Declarados con `.errors()` en un procedimiento.
   ALREADY_MEMBER: { status: 409, clave: "admin.error.ALREADY_MEMBER" },
   CERTIFIER_NOT_ELIGIBLE: { status: 400, clave: "admin.error.CERTIFIER_NOT_ELIGIBLE" },
+  DISPUTE_ALREADY_RESOLVED: { status: 409, clave: "error.generic" },
   DOSSIER_NOT_REJECTABLE: { status: 409, clave: "error.generic" },
   DOSSIER_NOT_SIGNABLE: { status: 409, clave: "error.generic" },
   DOSSIER_SIGNED: { status: 409, clave: "error.generic" },
@@ -27,6 +28,7 @@ export const ERROR_CODES = {
   INVITATION_ALREADY_PENDING: { status: 409, clave: "admin.error.INVITATION_ALREADY_PENDING" },
   INVITATION_NOT_PENDING: { status: 409, clave: "error.generic" },
   NO_HASH: { status: 400, clave: "error.generic" },
+  REFUND_WITHOUT_RELEASE: { status: 409, clave: "error.generic" },
   RELATED_RESOURCE_NOT_FOUND: { status: 400, clave: "error.generic" },
   RESOURCE_ALREADY_EXISTS: { status: 409, clave: "error.generic" },
   STAGE_ALREADY_ADVANCED: { status: 409, clave: "error.generic" },

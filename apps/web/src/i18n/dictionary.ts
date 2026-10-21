@@ -212,6 +212,8 @@ export const esAR = {
   'audit.action.CHANGE_STAGE_STATE': 'Cambió el estado de la etapa',
   'audit.action.CERTIFY_STAGE': 'Certificó la etapa',
   'audit.action.OBSERVE_STAGE': 'Observó la etapa',
+  'audit.action.OPEN_DISPUTE': 'Abrió una disputa sobre la etapa',
+  'audit.action.RESOLVE_DISPUTE': 'Resolvió una disputa',
   'audit.action.SIGN_DOSSIER': 'Firmó el dossier',
   'audit.action.REJECT_DOSSIER': 'Rechazó el dossier',
   'audit.action.CREATE_PROJECT': 'Creó el proyecto',

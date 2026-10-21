@@ -21,8 +21,10 @@ export const AUDIT_ACTIONS = [
   "INVITE_CERTIFIER",
   "LOGIN",
   "OBSERVE_STAGE",
+  "OPEN_DISPUTE",
   "REJECT_DOSSIER",
   "RELEASE_PAYMENT",
+  "RESOLVE_DISPUTE",
   "RETRY_STAGE_ANCHOR",
   "SHARE_DOSSIER",
   "SIGN_DOSSIER",
@@ -41,6 +43,7 @@ export type AuditAction = z.infer<typeof auditActionSchema>;
 
 export const AUDIT_ENTITY_TYPES = [
   "CertifierInvitation",
+  "Dispute",
   "Dossier",
   "Evidence",
   "Invitation",

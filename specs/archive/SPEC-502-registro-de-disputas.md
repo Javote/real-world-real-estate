@@ -1,7 +1,11 @@
 # SPEC-502 — Registro de disputas
 
 > Milestone 4, criterio 1 (`disputes ≤3%`) y output 1 (fallback: *"failed inspection →
-> re-inspection/refund"`). Ver [`ESTADO-2026-09-22-catalyst-milestone-4.md`](archive/ESTADO-2026-09-22-catalyst-milestone-4.md).
+> re-inspection/refund"`). Ver [`ESTADO-2026-09-22-catalyst-milestone-4.md`](ESTADO-2026-09-22-catalyst-milestone-4.md).
+>
+> **Cerrada 2026-10-21.** Módulo `apps/api/src/modules/disputas/`, contrato en
+> `packages/shared/src/contract/disputas.ts`, tabla en la migración `0014_dispute.sql`; los casos
+> borde de abajo son `apps/api/test/spec-502-disputas.test.ts`.
 
 ## Propósito
 
@@ -69,9 +73,23 @@ proyecto es exactamente la consulta que ese ítem señala como cara sin la colum
 - `disputeRate` con cero stages completados en el denominador — el endpoint de `SPEC-501` devuelve
   `null`/`"sin datos"`, no `0` ni división por cero.
 
-## Preguntas abiertas
+## Lo que quedó decidido al implementar
 
-- **¿El denominador de `disputeRate` es por stage, por contrato o por release?** El SOM dice
-  "disputes ≤3%" sin definir sobre qué universo. Elegir uno antes de instrumentar — se propone
-  **por release** (`PaymentAttestation`), porque el output 1 habla de "failed inspection" en el
-  contexto de una liberación, y es la unidad que ya cuenta `SPEC-501`.
+- **El denominador de `disputeRate` es por release** (dueño, 2026-10-21, D-104): disputas /
+  `PaymentAttestation`. El numerador cuenta **toda** disputa abierta, también la `Dismissed`: el
+  criterio mide cuánto se reclama, no cuánto se le da la razón al que reclama. Sin liberaciones,
+  `null`; con más disputas que liberaciones, la tasa pasa de 1 y se muestra así. El cálculo es
+  `tasaDeDisputas` (`modules/disputas/casos.ts`), que consume `SPEC-501`.
+- **Abrir es del developer y del buyer del proyecto, sin admin**: los stages son del proyecto
+  (D-029), así que "el investor de la unidad del stage" es el que tiene membresía `buyer`, que nace
+  al aceptar la invitación. El admin y el certifier no son partes.
+- **El comprador no lista** (`GET /disputes` es de admin, developer y certifier): el `reason` de
+  otro comprador del mismo proyecto no es suyo para leer, y la guarda no sabe filtrar "solo las
+  mías" sin un `if` en el handler. Su disputa le vuelve en el 201 de `POST /disputes`.
+- **`projectId` es obligatorio en `GET /disputes`**: es lo que la guarda de dos capas lee.
+- **Resolver es un reclamo condicional** (`status = 'Open'` en el `UPDATE`) con su audit en el mismo
+  lote: dos resoluciones a la vez, gana una y la otra es `409 DISPUTE_ALREADY_RESOLVED`.
+- **El audit no lleva `reason` ni `resolution`**: son texto libre. Lleva el `stageId` al abrir y el
+  `outcome` al resolver.
+- **Sin superficie en la web**: ni M2-D2 ni M2-D5 tienen una pantalla de disputas. Las cifras se ven
+  en la sección de `/admin` de `SPEC-501`; abrir y resolver, por ahora, solo por la API.

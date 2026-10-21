@@ -12,7 +12,8 @@ backlog quedan el CRUD de `/projects` y `/users` (admin, `SPEC-221`).
 Desde A3 (SPEC-615), un módulo vive en `modules/<módulo>/` e implementa su contrato de
 `packages/shared/src/contract/` (path, input, output, errores y `meta.guard`): `rules.ts` puro,
 `queries.ts` con el ejecutor, `casos.ts` que devuelve `Result`, y `router.ts`, una línea por
-procedimiento y sin importar `db`. Se monta en `routerRaiz` (`platform/router.ts`) y
+procedimiento y sin importar `db`; un `Result` sale como el error del contrato con `valor`
+(`platform/resultado.ts`). Se monta en `routerRaiz` (`platform/router.ts`) y
 `route-guards.test.ts` lo lee de la `meta`. El primero es `dossier`. Lo de abajo es la forma Express,
 la de los módulos que todavía no se mudaron (A4).
 

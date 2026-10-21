@@ -4,7 +4,13 @@ import type { MembershipRole } from "../project";
 // La regla de autorización como dato (D-088): la declara la `meta` de cada procedimiento del contrato y
 // la evalúa la API (`apps/api/src/middlewares/auth.ts`). Vive acá para escribirse una sola vez.
 
-export type EntidadConProyecto = "Stage" | "Evidence" | "EvidenceBundle" | "Unit" | "Contract";
+export type EntidadConProyecto =
+  | "Stage"
+  | "Evidence"
+  | "EvidenceBundle"
+  | "Unit"
+  | "Contract"
+  | "Dispute";
 
 export type ProjectSource =
   | { param: string }

@@ -212,6 +212,8 @@ export const enUS = {
   'audit.action.CHANGE_STAGE_STATE': 'Changed the stage state',
   'audit.action.CERTIFY_STAGE': 'Certified the stage',
   'audit.action.OBSERVE_STAGE': 'Observed the stage',
+  'audit.action.OPEN_DISPUTE': 'Opened a dispute on the stage',
+  'audit.action.RESOLVE_DISPUTE': 'Resolved a dispute',
   'audit.action.SIGN_DOSSIER': 'Signed the dossier',
   'audit.action.REJECT_DOSSIER': 'Rejected the dossier',
   'audit.action.CREATE_PROJECT': 'Created the project',

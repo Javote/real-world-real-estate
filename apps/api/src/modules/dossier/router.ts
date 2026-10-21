@@ -1,23 +1,11 @@
 import { implement } from "@orpc/server";
-import type { ErrorCode, Result } from "@plataforma/shared";
 import { contrato } from "@plataforma/shared/contract";
 import { guardOrpc } from "../../middlewares/guard-orpc.js";
 import type { Contexto } from "../../platform/contexto.js";
+import { valor } from "../../platform/resultado.js";
 import * as casos from "./casos.js";
 
 const impl = implement(contrato.dossier).$context<Contexto>().use(guardOrpc);
-
-/**
- * El valor, o el error que el contrato declara para el código del caso de uso. Un código que el
- * procedimiento no declara no compila.
- */
-function valor<T, C extends ErrorCode>(
-  resultado: Result<T, C>,
-  errores: Record<C, () => Error>
-): T {
-  if (resultado.ok) return resultado.value;
-  throw errores[resultado.code]();
-}
 
 // Con guard, `usuario` siempre está: sin sesión, `guardOrpc` ya contestó 401.
 export const dossierRouter = impl.router({

@@ -319,7 +319,7 @@ construirlas el 2026-10-21**, en el orden de su §Orden de ataque: `504`, `502`,
 | Spec | Título | Estado |
 |---|---|---|
 | [`SPEC-501`](SPEC-501-panel-de-metricas-del-piloto.md) | Panel de métricas del piloto: los ocho números del criterio 1 | sin empezar |
-| [`SPEC-502`](SPEC-502-registro-de-disputas.md) | Registro de disputas | sin empezar |
+| [`SPEC-502`](archive/SPEC-502-registro-de-disputas.md) | Registro de disputas | **cerrada 2026-10-21** · 🟡 (migración `0014` y guarda nueva por `Dispute`) · `disputeRate` por release (D-104) |
 | [`SPEC-503`](SPEC-503-encuesta-nps-del-buyer.md) | Encuesta NPS del buyer | sin empezar |
 | [`SPEC-504`](archive/SPEC-504-completitud-de-documentacion.md) | Completitud de documentación por unidad | **cerrada 2026-10-21** · 🟢 · `GET /admin/document-completeness`, el primer procedimiento del módulo `metricas` |
 
