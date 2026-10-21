@@ -22,7 +22,7 @@ import { PanelLayout } from '#/components/PanelLayout'
 import { formatCurrency, formatRelative } from '#/i18n/format'
 import { useTranslation } from '#/i18n/useTranslation'
 import { CARD_SHELL_EMPTY } from '#/lib/cardShell'
-import { useMarcarLeida } from '#/lib/notificaciones'
+import { useAbrirNotificacion, useMarcarLeida } from '#/lib/notificaciones'
 
 const INVITACION_RECIBIDA = 'notifications.invitation.received'
 
@@ -101,6 +101,7 @@ function InvestorNotifications() {
   })
 
   const marcarLeida = useMarcarLeida()
+  const abrirNotificacion = useAbrirNotificacion()
 
   const aceptar = useMutation({
     mutationFn: (id: string) => api.acceptInvitation(id),
@@ -194,7 +195,7 @@ function InvestorNotifications() {
                 read={n.readAt !== null}
                 readLabel={t('investor.notifications.read')}
                 {...(filtro ? { category: BORDE[categoria] } : {})}
-                onOpen={n.readAt === null ? () => marcarLeida(n.id) : undefined}
+                onOpen={abrirNotificacion(n)}
               />
             )
           })

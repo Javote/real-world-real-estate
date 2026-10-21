@@ -2,7 +2,7 @@
 
 > Milestone 4, criterio 1 (`buyer NPS ≥70`). Ver [`ESTADO-2026-09-22-catalyst-milestone-4.md`](ESTADO-2026-09-22-catalyst-milestone-4.md).
 >
-> **Cerrada 2026-10-21, sin la pantalla para responder** (ver abajo). Módulo
+> **Cerrada 2026-10-21; la pantalla para responder, el mismo día** (ver abajo). Módulo
 > `apps/api/src/modules/encuestas/`, contrato en `packages/shared/src/contract/encuestas.ts`, tabla en
 > la migración `0015_nps_survey.sql`; los casos borde son `apps/api/test/spec-503-encuesta-nps.test.ts`.
 
@@ -86,10 +86,17 @@ investor esté logueado para responder, porque el objetivo es maximizar la tasa 
 - **`GET /admin/nps` no lleva filtro**: agrega todos los proyectos. `SPEC-501` filtra llamando al
   caso de uso con sus `projectIds`.
 
-## Lo que falta: la pantalla para responder
+## La pantalla para responder
 
-**Ni M2-D2 ni M2-D5 tienen una superficie donde el investor responda**, y CLAUDE.md prohíbe
-inventarla. Hoy el investor recibe la notificación (`notifications.survey.nps`, con el token en
-`paramsJson.surveyToken`) pero la web no tiene a dónde llevarlo: **la encuesta se puede responder
-solo por la API**. Antes del primer piloto real hace falta decidir esa superficie (una ruta pública
-`/survey/:token` con la pregunta y diez botones, o la respuesta dentro de la notificación misma).
+**Ni M2-D2 ni M2-D5 tienen una superficie donde el investor responda.** El dueño la pidió el mismo
+día (D-104): `/survey/$token`, pública como el dossier compartido, con test ID
+`INV-SURVEY-NPS-001` (fuera del backlog, declarado en `scripts/check-testids.mjs`). La notificación
+`notifications.survey.nps` lleva ahí con el `surveyToken` de sus `params`, desde las dos listas
+del investor (`useAbrirNotificacion`, `lib/notificaciones.ts`).
+
+- La pregunta es la misma clave de la notificación; el puntaje, once `CategoryChip` del 0 al 10; el
+  comentario, un `TextArea` opcional que no viaja si queda en blanco.
+- Ya respondida (409) o inexistente (404) cierran el formulario con su mensaje: no hay nada que
+  reintentar. Cualquier otro error deja el formulario con el aviso genérico.
+- No hay un `GET` de la encuesta: la pantalla no sabe si ya se respondió hasta que el investor envía.
+  Con una sola respuesta por token, no hizo falta.

@@ -131,7 +131,9 @@ const FUERA_DEL_BACKLOG = new Map([
   // invita a un certifier y el certifier responde desde su panel. Mismo trato
   // que los de arriba — declarado, fuera del denominador. Los `ADMIN-*` de la
   // pantalla del admin no hace falta listarlos: el patrón no los reclama.
-  ["CER-INVITATIONS-003", "D-095 · SPEC-221 · invitaciones a certificar en el panel"]
+  ["CER-INVITATIONS-003", "D-095 · SPEC-221 · invitaciones a certificar en el panel"],
+  // Tampoco sale de una captura: la encuesta NPS de M4 no tiene superficie en `docs/` (D-104).
+  ["INV-SURVEY-NPS-001", "D-104 · SPEC-503 · la pantalla para responder la encuesta"]
 ]);
 
 const reclamados = new Map();

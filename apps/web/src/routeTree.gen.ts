@@ -21,6 +21,7 @@ import { Route as NotaryIndexRouteImport } from './routes/notary.index'
 import { Route as DeveloperIndexRouteImport } from './routes/developer.index'
 import { Route as CertifierIndexRouteImport } from './routes/certifier.index'
 import { Route as AdminIndexRouteImport } from './routes/admin.index'
+import { Route as SurveyTokenRouteImport } from './routes/survey.$token'
 import { Route as NotarySignedRouteImport } from './routes/notary.signed'
 import { Route as NotaryProfileRouteImport } from './routes/notary.profile'
 import { Route as NotaryDossiersRouteImport } from './routes/notary.dossiers'
@@ -118,6 +119,11 @@ const AdminIndexRoute = AdminIndexRouteImport.update({
   id: '/',
   path: '/',
   getParentRoute: () => AdminRoute,
+} as any)
+const SurveyTokenRoute = SurveyTokenRouteImport.update({
+  id: '/survey/$token',
+  path: '/survey/$token',
+  getParentRoute: () => rootRouteImport,
 } as any)
 const NotarySignedRoute = NotarySignedRouteImport.update({
   id: '/signed',
@@ -345,6 +351,7 @@ export interface FileRoutesByFullPath {
   '/notary/dossiers': typeof NotaryDossiersRoute
   '/notary/profile': typeof NotaryProfileRoute
   '/notary/signed': typeof NotarySignedRoute
+  '/survey/$token': typeof SurveyTokenRoute
   '/admin/': typeof AdminIndexRoute
   '/certifier/': typeof CertifierIndexRoute
   '/developer/': typeof DeveloperIndexRoute
@@ -392,6 +399,7 @@ export interface FileRoutesByTo {
   '/notary/dossiers': typeof NotaryDossiersRoute
   '/notary/profile': typeof NotaryProfileRoute
   '/notary/signed': typeof NotarySignedRoute
+  '/survey/$token': typeof SurveyTokenRoute
   '/admin': typeof AdminIndexRoute
   '/certifier': typeof CertifierIndexRoute
   '/developer': typeof DeveloperIndexRoute
@@ -444,6 +452,7 @@ export interface FileRoutesById {
   '/notary/dossiers': typeof NotaryDossiersRoute
   '/notary/profile': typeof NotaryProfileRoute
   '/notary/signed': typeof NotarySignedRoute
+  '/survey/$token': typeof SurveyTokenRoute
   '/admin/': typeof AdminIndexRoute
   '/certifier/': typeof CertifierIndexRoute
   '/developer/': typeof DeveloperIndexRoute
@@ -497,6 +506,7 @@ export interface FileRouteTypes {
     | '/notary/dossiers'
     | '/notary/profile'
     | '/notary/signed'
+    | '/survey/$token'
     | '/admin/'
     | '/certifier/'
     | '/developer/'
@@ -544,6 +554,7 @@ export interface FileRouteTypes {
     | '/notary/dossiers'
     | '/notary/profile'
     | '/notary/signed'
+    | '/survey/$token'
     | '/admin'
     | '/certifier'
     | '/developer'
@@ -595,6 +606,7 @@ export interface FileRouteTypes {
     | '/notary/dossiers'
     | '/notary/profile'
     | '/notary/signed'
+    | '/survey/$token'
     | '/admin/'
     | '/certifier/'
     | '/developer/'
@@ -627,6 +639,7 @@ export interface RootRouteChildren {
   LoginRoute: typeof LoginRoute
   NotaryRoute: typeof NotaryRouteWithChildren
   ProjectRoute: typeof ProjectRouteWithChildren
+  SurveyTokenRoute: typeof SurveyTokenRoute
   PublicDossierShareTokenRoute: typeof PublicDossierShareTokenRoute
 }
 
@@ -715,6 +728,13 @@ declare module '@tanstack/react-router' {
       fullPath: '/admin/'
       preLoaderRoute: typeof AdminIndexRouteImport
       parentRoute: typeof AdminRoute
+    }
+    '/survey/$token': {
+      id: '/survey/$token'
+      path: '/survey/$token'
+      fullPath: '/survey/$token'
+      preLoaderRoute: typeof SurveyTokenRouteImport
+      parentRoute: typeof rootRouteImport
     }
     '/notary/signed': {
       id: '/notary/signed'
@@ -1124,6 +1144,7 @@ const rootRouteChildren: RootRouteChildren = {
   LoginRoute: LoginRoute,
   NotaryRoute: NotaryRouteWithChildren,
   ProjectRoute: ProjectRouteWithChildren,
+  SurveyTokenRoute: SurveyTokenRoute,
   PublicDossierShareTokenRoute: PublicDossierShareTokenRoute,
 }
 export const routeTree = rootRouteImport

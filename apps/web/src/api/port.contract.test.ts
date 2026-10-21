@@ -137,6 +137,10 @@ const CASOS: Record<keyof Api, Caso> = {
   exportUnitDossier: [() => api.exportUnitDossier('u1')],
   shareUnitDossier: [() => api.shareUnitDossier('u1')],
   getPublicDossier: [() => api.getPublicDossier('tok')],
+  respondNpsSurvey: [
+    () => api.respondNpsSurvey('tok', { score: 9 }),
+    () => api.respondNpsSurvey('tok', { score: 3, comment: 'nota' })
+  ],
   getBundleFiles: [() => api.getBundleFiles('b1')],
   getMerkleProof: [() => api.getMerkleProof('b1', 'ab'.repeat(32))],
   getInvitation: [() => api.getInvitation('i1')],

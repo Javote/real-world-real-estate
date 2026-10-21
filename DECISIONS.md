@@ -1473,3 +1473,8 @@ le dejaba).
   entregable dibuja un panel de métricas, y el dueño eligió la pantalla del admin que ya existía
   (`SPEC-221`) antes que solo la API. Solo `StatCard` de M2-D3, y los totales de todos los
   proyectos; el desglose por proyecto queda en la respuesta de `GET /admin/pilot-metrics`.
+- **La encuesta se responde en `/survey/$token`** (`SPEC-503`, `INV-SURVEY-NPS-001`; dueño, el mismo
+  día): una ruta pública como `/public/dossier/$shareToken`, porque el token es la llave y la ruta de
+  la API no pide sesión. La notificación lleva ahí. Ninguna captura la dibuja, así que se arma solo
+  con componentes de M2-D3: `GradientHeader` con `LanguageToggle`, once `CategoryChip` del 0 al 10,
+  `TextArea` y `PrimaryButton`.

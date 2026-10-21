@@ -87,6 +87,34 @@ describe('/investor/notifications', () => {
     expect(marcar).toHaveBeenCalledTimes(1)
   })
 
+  it('la encuesta NPS lleva a su pantalla con el token, y la marca leída solo si no lo estaba', async () => {
+    autenticarComo(INVESTOR_USER)
+    vi.spyOn(api, 'listNotifications').mockResolvedValue([
+      notificacion('n-1', {
+        category: 'release',
+        titleKey: 'notifications.survey.nps',
+        params: { surveyToken: 'tok-1' }
+      }),
+      notificacion('n-2', {
+        category: 'release',
+        titleKey: 'clave.leida',
+        params: { surveyToken: 'tok-2' },
+        readAt: ahora
+      })
+    ])
+    const marcar = vi.spyOn(api, 'markNotificationRead').mockResolvedValue(undefined as never)
+    const router = montarRuta(Route, '/investor/notifications', ['/survey/$token'])
+
+    await userEvent.click(await screen.findByText(t('notifications.survey.nps')))
+    await waitFor(() => expect(router.state.location.pathname).toBe('/survey/tok-1'))
+    expect(marcar).toHaveBeenCalledWith('n-1')
+
+    await router.navigate({ to: '/investor/notifications' })
+    await userEvent.click(await screen.findByText('clave.leida'))
+    await waitFor(() => expect(router.state.location.pathname).toBe('/survey/tok-2'))
+    expect(marcar).toHaveBeenCalledTimes(1)
+  })
+
   it('una clave de título que el diccionario conoce se muestra traducida', async () => {
     autenticarComo(INVESTOR_USER)
     vi.spyOn(api, 'listNotifications').mockResolvedValue([

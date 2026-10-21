@@ -1,5 +1,6 @@
 import type { Notification, UnreadCount } from '@plataforma/shared'
 import { useMutation, useQueryClient } from '@tanstack/react-query'
+import { useNavigate } from '@tanstack/react-router'
 import { api } from '#/api/port'
 import { optimista } from '#/lib/optimista'
 
@@ -23,4 +24,21 @@ export function useMarcarLeida() {
   })
 
   return (id: string) => marcar.mutate(id)
+}
+
+// La encuesta NPS (SPEC-503) lleva a su pantalla; el resto solo se marca leída, y una leída no abre nada.
+export function useAbrirNotificacion() {
+  const marcarLeida = useMarcarLeida()
+  const navigate = useNavigate()
+
+  return (n: Pick<Notification, 'id' | 'readAt' | 'params'>) => {
+    const token = n.params.surveyToken
+    if (typeof token === 'string') {
+      return () => {
+        if (n.readAt === null) marcarLeida(n.id)
+        void navigate({ to: '/survey/$token', params: { token } })
+      }
+    }
+    return n.readAt === null ? () => marcarLeida(n.id) : undefined
+  }
 }

@@ -30,6 +30,7 @@ import type {
   Profile,
   ProjectListQuery,
   RejectDossierInput,
+  RespondNpsSurveyInput,
   StageTransitionInput,
   UnreadCount,
   UpdateNotificationPrefsInput,
@@ -275,6 +276,12 @@ export const api = {
 
   getPublicDossier: (shareToken: string) =>
     request<PublicDossier>(`/api/v1/public/dossier/${shareToken}`),
+
+  respondNpsSurvey: (token: string, respuesta: RespondNpsSurveyInput) =>
+    request<void>(
+      `/api/v1/investor/surveys/${token}/respond`,
+      jsonInit<RespondNpsSurveyInput>('POST', respuesta)
+    ),
 
   getBundleFiles: (bundleId: string) => request<BundleFiles>(`/api/v1/evidence/${bundleId}/files`),
 

@@ -13,7 +13,7 @@ import { formatRelative } from '#/i18n/format'
 import { useTranslation } from '#/i18n/useTranslation'
 import { CARD_SHELL_EMPTY } from '#/lib/cardShell'
 import { reintentarSiNoEsAusencia } from '#/lib/investor'
-import { useMarcarLeida } from '#/lib/notificaciones'
+import { useAbrirNotificacion } from '#/lib/notificaciones'
 
 const CATEGORIAS = ['stage', 'document', 'release', 'signature', 'certificate'] as const
 type NotifCategory = (typeof CATEGORIAS)[number]
@@ -62,7 +62,7 @@ function InvestorUnitNotifications() {
     placeholderData: keepPreviousData
   })
 
-  const marcarLeida = useMarcarLeida()
+  const abrirNotificacion = useAbrirNotificacion()
 
   const primeraSinLeer = notificaciones?.find((n) => n.readAt === null)?.id
 
@@ -108,7 +108,7 @@ function InvestorUnitNotifications() {
                 readLabel={t('investor.notifications.read')}
                 {...(n.id === primeraSinLeer ? { testId: 'INV-NOTIF-READ-002' } : {})}
                 {...(filtro ? { category: BORDE[categoria] } : {})}
-                onOpen={n.readAt === null ? () => marcarLeida(n.id) : undefined}
+                onOpen={abrirNotificacion(n)}
               />
             )
           })
