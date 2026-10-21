@@ -5,7 +5,8 @@ export default defineConfig({
     coverage: {
       provider: "v8",
       reporter: ["text-summary", "html"],
-      include: ["src/**"],
+      // El JSON del contrato minificado es un dato generado, no código: lo compara `contract.test.ts`.
+      include: ["src/**/*.ts"],
       thresholds: {
         statements: 100,
         branches: 100,
