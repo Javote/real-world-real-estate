@@ -1,6 +1,11 @@
 import {
+  type Dossier,
+  type DossierId,
   type Err,
   err,
+  type NotarySignature,
+  type PendingDossier,
+  type ProjectId,
   type Result,
   type Serialized,
   type StageId,
@@ -40,5 +45,13 @@ describe("cimientos de A1 — lo que verifica tsc", () => {
     const r: Result<number, "STAGE_NOT_FOUND"> = err("STAGE_NOT_FOUND");
     expectTypeOf(r).toMatchTypeOf<Result<number, "STAGE_NOT_FOUND">>();
     expectTypeOf(err("STAGE_NOT_FOUND")).toEqualTypeOf<Err<"STAGE_NOT_FOUND">>();
+  });
+
+  it("las salidas del dossier llevan sus ids con marca (SPEC-615)", () => {
+    expectTypeOf<Dossier["id"]>().toEqualTypeOf<DossierId>();
+    expectTypeOf<Dossier["unitId"]>().toEqualTypeOf<UnitId>();
+    expectTypeOf<Dossier["projectId"]>().toEqualTypeOf<ProjectId>();
+    expectTypeOf<PendingDossier["dossierId"]>().toEqualTypeOf<DossierId>();
+    expectTypeOf<NotarySignature["dossierId"]>().toEqualTypeOf<DossierId>();
   });
 });

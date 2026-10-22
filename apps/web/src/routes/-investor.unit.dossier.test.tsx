@@ -17,7 +17,7 @@ const SHA = 'b'.repeat(64)
 const TXID_FIRMA = 'f'.repeat(64)
 const TXID_ARTEFACTO = 'e'.repeat(64)
 
-const dossier = (over: Partial<Dossier> = {}): Dossier =>
+const dossier = (over: Parameters<typeof fabrica.dossier>[0] = {}): Dossier =>
   fabrica.dossier({
     masterHash: MASTER,
     status: 'signed',

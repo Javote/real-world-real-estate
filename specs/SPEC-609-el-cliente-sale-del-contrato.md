@@ -118,4 +118,5 @@ e2e lo prueba contra la API real). **El cliente no entra al JS inicial**: `port.
 `import()` la primera vez que un método lo usa (dueño, 2026-10-22). Importado de arriba, el primer
 método migrado lo metía: 130,6 → 142,9 kB gz (`vite build`, scripts y `modulepreload` del
 `index.html`); diferido, son 9,3 kB gz en su propio chunk. Los params de ruta con marca (§Los params de
-ruta) esperan a que las salidas estén marcadas (`SPEC-615` §W3, Lo que W3 no hizo).
+ruta) no se hicieron: las salidas ya están marcadas, pero el front no carga Zod (`SPEC-615` §W3, Lo
+que W3 no hizo).

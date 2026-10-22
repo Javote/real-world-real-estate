@@ -11,6 +11,7 @@ import userEvent from '@testing-library/user-event'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import { api } from '#/api/port'
 import { LocaleProvider } from '#/i18n/useTranslation'
+import { fabrica } from '#/test/fabrica'
 import { AssignedStagesQueue } from './AssignedStagesQueue'
 import { PendingDossiersQueue } from './PendingDossiersQueue'
 
@@ -50,9 +51,7 @@ describe('PendingDossiersQueue', () => {
   afterEach(() => vi.restoreAllMocks())
 
   it('el botón "Revisar" no está anidado dentro de un <a>, y navega al click', async () => {
-    vi.spyOn(api, 'getNotaryPendingDossiers').mockResolvedValue([
-      { dossierId: 'd1', unitLabel: 'Torre A · 4B', investorName: 'Ana Torres', completeness: 60 }
-    ])
+    vi.spyOn(api, 'getNotaryPendingDossiers').mockResolvedValue([fabrica.pendiente()])
 
     montar(() => <PendingDossiersQueue />, '/notary')
 
@@ -64,9 +63,7 @@ describe('PendingDossiersQueue', () => {
   })
 
   it('SPEC-106 (F-11): la fila usa bg-card, no bg-surface-alt', async () => {
-    vi.spyOn(api, 'getNotaryPendingDossiers').mockResolvedValue([
-      { dossierId: 'd1', unitLabel: 'Torre A · 4B', investorName: 'Ana Torres', completeness: 60 }
-    ])
+    vi.spyOn(api, 'getNotaryPendingDossiers').mockResolvedValue([fabrica.pendiente()])
 
     montar(() => <PendingDossiersQueue />, '/notary')
 

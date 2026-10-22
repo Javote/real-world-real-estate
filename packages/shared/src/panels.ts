@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { dossierIdSchema } from "./ids";
 
 const kpiPendiente = z.number().int().nonnegative().nullable();
 
@@ -36,7 +37,7 @@ export const notaryKpisSchema = z.strictObject({
 export type NotaryKpis = z.infer<typeof notaryKpisSchema>;
 
 export const pendingDossierSchema = z.strictObject({
-  dossierId: z.string(),
+  dossierId: dossierIdSchema,
   unitLabel: z.string(),
   investorName: z.string(),
   completeness: z.number().int().min(0).max(100)

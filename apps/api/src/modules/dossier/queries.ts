@@ -1,4 +1,4 @@
-import type { DossierStatus } from "@plataforma/shared";
+import type { DossierId, DossierStatus, ProjectId, UnitId } from "@plataforma/shared";
 import type { Database } from "../../db/types.js";
 import { ultimoBundlePorStage } from "../../domain/stage-transition.js";
 import type { ExpressionBuilder } from "../../lib/kysely.js";
@@ -27,7 +27,7 @@ function filasDeDossier(e: Ejecutor) {
       "Project.id as projectId",
       "Project.name as projectName"
     ])
-    .$narrowType<{ status: DossierStatus }>();
+    .$narrowType<{ id: DossierId; unitId: UnitId; projectId: ProjectId; status: DossierStatus }>();
 }
 
 export type FilaDeDossier = NonNullable<Awaited<ReturnType<typeof dossierPorId>>>;
@@ -215,7 +215,8 @@ export function firmas(
     ])
     .where("Dossier.status", "=", "signed")
     .orderBy("Dossier.signedAt", "desc")
-    .limit(filtro.limit);
+    .limit(filtro.limit)
+    .$narrowType<{ dossierId: DossierId }>();
 
   if (filtro.signedById) query = query.where("Dossier.signedById", "=", filtro.signedById);
   if (filtro.cursor) {

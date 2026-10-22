@@ -1,5 +1,6 @@
 import { z } from "zod";
 import { sha256HexSchema, txidSchema } from "./hashes";
+import { dossierIdSchema, projectIdSchema, unitIdSchema } from "./ids";
 import { onChainEventSchema } from "./stage";
 
 export const dossierArtifactSchema = z.strictObject({
@@ -31,10 +32,10 @@ export function puedeTransicionarDossier(desde: DossierStatus, hacia: DossierSta
 }
 
 export const dossierSchema = z.strictObject({
-  id: z.string(),
-  unitId: z.string(),
+  id: dossierIdSchema,
+  unitId: unitIdSchema,
   unitReference: z.string(),
-  projectId: z.string(),
+  projectId: projectIdSchema,
   projectName: z.string(),
   masterHash: sha256HexSchema,
   compiledAt: z.coerce.date(),
@@ -55,7 +56,7 @@ export const dossierShareSchema = z.strictObject({
 export type DossierShare = z.infer<typeof dossierShareSchema>;
 
 export const notarySignatureSchema = z.strictObject({
-  dossierId: z.string(),
+  dossierId: dossierIdSchema,
   unitReference: z.string(),
   projectName: z.string(),
   masterHash: sha256HexSchema,
@@ -69,7 +70,7 @@ export const rejectDossierSchema = z.strictObject({ note: z.string().min(1).max(
 export type RejectDossierInput = z.infer<typeof rejectDossierSchema>;
 
 export const dossierSignResultSchema = z.strictObject({
-  dossierId: z.string(),
+  dossierId: dossierIdSchema,
   masterHash: sha256HexSchema,
   signedAt: z.coerce.date().optional(),
   anchor: onChainEventSchema.optional()
@@ -77,7 +78,7 @@ export const dossierSignResultSchema = z.strictObject({
 export type DossierSignResult = z.infer<typeof dossierSignResultSchema>;
 
 export const dossierRejectResultSchema = z.strictObject({
-  dossierId: z.string(),
+  dossierId: dossierIdSchema,
   status: z.literal("rejected")
 });
 export type DossierRejectResult = z.infer<typeof dossierRejectResultSchema>;

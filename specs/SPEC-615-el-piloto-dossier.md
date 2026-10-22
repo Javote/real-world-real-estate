@@ -183,13 +183,19 @@ y `modulepreload` del `index.html`. Hubo que cuidar dos cosas (dueño, 2026-10-2
   comparten se queda en el archivo de la ruta) y lo que usa el loader vive en `lib/cargaDeRuta.ts`,
   que no importa componentes.
 
+**Los IDs con marca en las salidas, después de W3 (2026-10-22, commit propio):** `dossierSchema`
+(`id`, `unitId`, `projectId`), `pendingDossierSchema`, `notarySignatureSchema` y los resultados de
+firmar y rechazar llevan `DossierId`/`UnitId`/`ProjectId`. En la API, la marca entra en el borde con
+la base: el `$narrowType` de las consultas de `modules/dossier/queries.ts`, el mismo que ya fijaba
+el `status`; `db/types.ts` no cambia, así que la forma vieja no se entera. En la web, solo
+`test/fabrica.ts` convierte: los fixtures escriben sus ids como `string`. El JSON Schema y el
+OpenAPI no cambian. `apps/api/test/cimientos-tipos.test.ts` fija la marca de cada salida.
+
 **Lo que W3 no hizo:**
 
-- **Los IDs con marca en las salidas** (§IDs con marca): marcar `dossierSchema` en `shared` rompe
-  `modules/dossier/casos.ts`, que arma las respuestas con los `string` de la base. Es lado A3 (🟡):
-  marcar los IDs en `db/types.ts` o en las consultas del módulo. La fábrica de fixtures ya existe, así
-  que marcar después toca solo `fabrica.ts`. Sin marca en las salidas, el `params.parse` de las rutas
-  tampoco se hizo: el front no carga Zod, y la marca tendría que venir de un helper sin schema.
+- **Los params de ruta con marca** (SPEC-609 §Los params de ruta): el front no carga Zod, así que el
+  `params.parse` tendría que marcar con un helper sin schema, y el input del contrato sigue siendo
+  `string` (la marca de Zod es de salida). Ninguna llamada del dossier lo necesita hoy.
 - **El endpoint de pantalla del investor**: M2-D5 (fila 26-29) solo nombra los del dossier, así que
   un path nuevo o ampliar la respuesta es una decisión, y cambia el OpenAPI.
 

@@ -1,6 +1,7 @@
 import { randomBytes } from "node:crypto";
 import {
   type Dossier,
+  type DossierId,
   type DossierShare,
   type DossierSignResult,
   err,
@@ -158,7 +159,11 @@ export async function firmasDe(
 
 type Firma = { status: 200 | 201; body: DossierSignResult };
 
-async function firmaExistente(deps: Deps, dossierId: string, masterHash: string): Promise<Firma> {
+async function firmaExistente(
+  deps: Deps,
+  dossierId: DossierId,
+  masterHash: string
+): Promise<Firma> {
   await reconciliarParaLectura({ referenceId: dossierId });
   const anchor = await q.eventoDeFirma(deps.db, dossierId);
   return { status: 200, body: { dossierId, masterHash, ...(anchor && { anchor }) } };
