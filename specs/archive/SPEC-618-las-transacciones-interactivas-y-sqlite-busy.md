@@ -1,8 +1,8 @@
 # SPEC-618 — Las transacciones interactivas y `SQLITE_BUSY`
 
 > Fuera de la Fase 2 y antes que A3 (dueño, 2026-10-07): es lo único de lo que encontró A1 que puede
-> romper algo en producción hoy. El estado, en [`specs/README.md`](README.md). Nivel 🟡: toca
-> escrituras de seis rutas. Nace en [`SPEC-613`](SPEC-613-los-cimientos-de-los-modulos.md) §A1.
+> romper algo en producción hoy. El estado, en [`specs/README.md`](../README.md). Nivel 🟡: toca
+> escrituras de seis rutas. Nace en [`SPEC-613`](../SPEC-613-los-cimientos-de-los-modulos.md) §A1.
 
 ## Lo que hay hoy, medido el 2026-10-07
 

@@ -22,11 +22,11 @@ arnés de la auditoría §7 sin tocar:
 
 | Paso | Qué | Spec | Depende de |
 |---|---|---|---|
-| **A0** | La API en ESM y el entorno parseado en un solo lugar | [`SPEC-612`](SPEC-612-la-api-en-esm-y-el-entorno-en-un-lugar.md) | nada |
+| **A0** | La API en ESM y el entorno parseado en un solo lugar | [`SPEC-612`](archive/SPEC-612-la-api-en-esm-y-el-entorno-en-un-lugar.md) | nada |
 | **A1** | Los cimientos de los módulos: `ErrorCode`, IDs con marca, `Result`, `audit(trx)`, `notify(trx)`, anclaje con reclamo, `CHECK` en los enums | [`SPEC-613`](SPEC-613-los-cimientos-de-los-modulos.md) | A0 |
 | **A2** | El contrato en `shared`, un solo router oRPC y los guards como `meta` | [`SPEC-607`](SPEC-607-una-sola-capa-de-api.md) | A1 |
 | **W2** | El cliente de la web desde el contrato | [`SPEC-609`](SPEC-609-el-cliente-sale-del-contrato.md) | A2 |
-| **W2** | La fábrica de queries por entidad, `staleTime` y una sola `claveDeError` (Paso 1); los loaders con `prefetchQuery`, por rol (Paso 2) | [`SPEC-614`](SPEC-614-la-fabrica-de-queries.md) | W1 (cerrado) |
+| **W2** | La fábrica de queries por entidad, `staleTime` y una sola `claveDeError` (Paso 1); los loaders con `prefetchQuery`, por rol (Paso 2) | [`SPEC-614`](archive/SPEC-614-la-fabrica-de-queries.md) | W1 (cerrado) |
 | **A3 + W3** | El piloto `dossier`, de punta a punta | [`SPEC-615`](SPEC-615-el-piloto-dossier.md) | A2, W2 |
 | **A4 + W4** | El resto, módulo con su rol | [`SPEC-616`](SPEC-616-el-resto-modulo-por-modulo.md) | el piloto aprobado |
 | **A5 + W5** | Se borra la forma vieja y se activan las reglas que la impiden | [`SPEC-617`](SPEC-617-una-sola-forma.md) | A4 + W4 |

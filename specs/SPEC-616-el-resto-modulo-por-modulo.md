@@ -40,7 +40,7 @@ vacío (auditoría §9), las que no son del piloto: `certifier.issued`; de `deve
 `project.$projectId`: `developer`, `index`, `progress`, `stage.$stageId`. **Ninguna pantalla con
 datos termina W4 sin su `errorComponent`** (dueño, 2026-10-02).
 
-**El loader ya existe; W4 lo convierte.** Desde [`SPEC-614`](SPEC-614-la-fabrica-de-queries.md)
+**El loader ya existe; W4 lo convierte.** Desde [`SPEC-614`](archive/SPEC-614-la-fabrica-de-queries.md)
 Paso 2, cada ruta precarga con `prefetchQuery`. Al migrar la pantalla, el loader pasa a
 `ensureQueryData` y el componente a `useSuspenseQuery`; si alguna ruta llegó sin loader, se escribe
 directo en la forma nueva.

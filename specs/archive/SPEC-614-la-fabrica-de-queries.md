@@ -1,9 +1,9 @@
 # SPEC-614 — W2: la fábrica de queries por entidad, una sola `claveDeError` y los loaders que precargan
 
-> Fase 2, paso W2 ([`SPEC-611`](SPEC-611-la-migracion-fase-2.md)), junto con
-> [`SPEC-609`](SPEC-609-el-cliente-sale-del-contrato.md); el estado, en [`specs/README.md`](README.md).
+> Fase 2, paso W2 ([`SPEC-611`](../SPEC-611-la-migracion-fase-2.md)), junto con
+> [`SPEC-609`](../SPEC-609-el-cliente-sale-del-contrato.md); el estado, en [`specs/README.md`](../README.md).
 > Nivel 🟢. **No espera a la API**: se hace sobre el `port.ts` de hoy. Absorbe los cuatro puntos de
-> [`SPEC-602`](archive/SPEC-602-los-datos-arrancan-con-la-ruta.md): los puntos 2 a 4 en el Paso 1 y,
+> [`SPEC-602`](SPEC-602-los-datos-arrancan-con-la-ruta.md): los puntos 2 a 4 en el Paso 1 y,
 > desde el 2026-10-06 (dueño), el punto 1 —los loaders— en el Paso 2. W3/W4 ya no escriben loaders:
 > los convierten.
 >
@@ -102,7 +102,7 @@ click— no depende de nada de la API.
 
 1. **Un `loader` por ruta que dispara sus queries con `prefetchQuery`, sin `await`**, con las
    `queryOptions` de la fábrica del Paso 1. El componente sigue con `useQuery` y con los estados de
-   carga de [`SPEC-110`](archive/SPEC-110-estado-de-carga.md).
+   carga de [`SPEC-110`](SPEC-110-estado-de-carga.md).
 2. **`defaultPreloadStaleTime` se alinea con el `staleTime` del Paso 1** (hoy es 0 en
    `src/router.tsx`: el router volvería a correr el loader en cada hover).
 3. **Por rol, un commit por rol**, empezando por el investor en el orden de su flujo:
@@ -111,7 +111,7 @@ click— no depende de nada de la API.
 4. **La única cascada que sale gratis**: `project.$projectId.index` pide los documentos recién cuando
    llegó el proyecto (`enabled: isSuccess`), aunque el `projectId` ya está en la URL. El loader pide
    los dos en paralelo. Las otras cascadas son dependencias reales y quedan en
-   [`SPEC-616`](SPEC-616-el-resto-modulo-por-modulo.md) §Las cascadas.
+   [`SPEC-616`](../SPEC-616-el-resto-modulo-por-modulo.md) §Las cascadas.
 
 ### Invariantes
 

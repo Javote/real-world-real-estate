@@ -1,7 +1,7 @@
 # SPEC-609 — El cliente de la web sale del contrato (reabre la opción B de `SPEC-111`)
 
 > **Fase 2, paso W2** ([`SPEC-611`](SPEC-611-la-migracion-fase-2.md)), junto con
-> [`SPEC-614`](SPEC-614-la-fabrica-de-queries.md); el estado, en [`specs/README.md`](README.md).
+> [`SPEC-614`](archive/SPEC-614-la-fabrica-de-queries.md); el estado, en [`specs/README.md`](README.md).
 > Nivel 🟢: la API no cambia; cambia cómo el front tipa sus llamadas. **Depende de A2
 > ([`SPEC-607`](SPEC-607-una-sola-capa-de-api.md))**, y avanza **por vertical**: cada módulo que
 > A3/A4 mueve al contrato pasa su cliente al mismo tiempo, y la fachada de `port.ts` deja convivir

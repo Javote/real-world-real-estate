@@ -72,7 +72,7 @@ Lo que se planteó:
 
 - El layout `notary` ya tiene armazón (W1).
 - `dossierQueries` en la fábrica (`SPEC-614`); cliente desde el contrato (`SPEC-609`).
-- Las 6 pantallas con `loader` (`ensureQueryData`; si [`SPEC-614`](SPEC-614-la-fabrica-de-queries.md)
+- Las 6 pantallas con `loader` (`ensureQueryData`; si [`SPEC-614`](archive/SPEC-614-la-fabrica-de-queries.md)
   Paso 2 ya les puso uno con `prefetchQuery`, se cambia el verbo) y `useSuspenseQuery`: sin `enabled`, sin `data?.`,
   sin `return null`. `pendingComponent` adentro del armazón, `errorComponent` y `notFoundComponent`
   (el loader hace `throw notFound()`). `validateSearch` con Zod donde hay estado en la URL.

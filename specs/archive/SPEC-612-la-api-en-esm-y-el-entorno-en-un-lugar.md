@@ -1,7 +1,7 @@
 # SPEC-612 — A0: la API en ESM y el entorno en un solo lugar
 
-> Fase 2, paso A0 ([`SPEC-611`](SPEC-611-la-migracion-fase-2.md)); el estado, en
-> [`specs/README.md`](README.md). Nivel 🟡: cambia el `startCommand` de Render y cómo arranca la
+> Fase 2, paso A0 ([`SPEC-611`](../SPEC-611-la-migracion-fase-2.md)); el estado, en
+> [`specs/README.md`](../README.md). Nivel 🟡: cambia el `startCommand` de Render y cómo arranca la
 > observabilidad. **Sin cambio de comportamiento**: ni una respuesta, ni un path, ni el OpenAPI.
 
 ## Lo que hay hoy, medido el 2026-10-02

@@ -118,7 +118,7 @@ tests), `reclamar-antes-de-anclar.test.ts` pasa sin cambios y el OpenAPI no se m
    `anclarConReclamo` recibe eso: una sentencia condicional, o un `enLote` si lleva su audit. **De paso
    aparece un riesgo que ya existe:** las seis rutas que hoy usan `db.transaction()` pueden dar 500 si
    les llegan dos pedidos a la vez sobre la misma base. No se midió contra Turso. **Decidido:** va a
-   su propia spec, [`SPEC-618`](SPEC-618-las-transacciones-interactivas-y-sqlite-busy.md), antes que A3.
+   su propia spec, [`SPEC-618`](archive/SPEC-618-las-transacciones-interactivas-y-sqlite-busy.md), antes que A3.
 
 **Lo que no se hizo:** los `CHECK` en los enums (la spec pide primero el test y medir producción).
 `notify` atómico quedó para después de A1 y se hizo el mismo día (§La decisión, arriba).
