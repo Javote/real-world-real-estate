@@ -234,6 +234,20 @@ describe("POST /disputes/:id/resolve", () => {
     expect((await resolver("admin", id, { outcome: "Ganó", resolution: "x" })).status).toBe(400);
   });
 
+  it("resolver una disputa que no existe es NOT_FOUND, sin escribir nada", async () => {
+    const resultado = await casos.resolver(
+      { db, clock: () => new Date() },
+      {
+        id: "no-existe",
+        outcome: "Dismissed",
+        resolution: "Nada",
+        actorId: await idDe(FIXTURES.admin.email)
+      }
+    );
+
+    expect(resultado).toEqual({ ok: false, code: "NOT_FOUND" });
+  });
+
   it("si otra resolución gana entre la lectura y el reclamo, la segunda es DISPUTE_ALREADY_RESOLVED", async () => {
     const id = await nueva();
     const leer = q.disputaPorId;

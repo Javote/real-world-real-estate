@@ -189,12 +189,8 @@ function InvestorProjectDetail() {
                   BORDE_DE_TONO[TONO_PROYECTO[proyecto.status]]
                 )}
               >
-                <>
-                  <EstadoIcono status={proyecto.status} />
-                  <span className="text-h2 font-bold">
-                    {t(`project.status.${proyecto.status}`)}
-                  </span>
-                </>
+                <EstadoIcono status={proyecto.status} />
+                <span className="text-h2 font-bold">{t(`project.status.${proyecto.status}`)}</span>
                 {proyecto?.estimatedDelivery ? (
                   <p className="text-body-sm text-text-secondary">
                     {t('investor.project.delivery', {
