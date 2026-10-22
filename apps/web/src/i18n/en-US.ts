@@ -443,6 +443,8 @@ export const enUS = {
   'developer.newProject.stageTemplate.stage9': 'Finishes',
   'developer.newProject.stageTemplate.stage10': 'Final works and subdivision',
   'developer.newProject.submit': 'Create project',
+  'developer.newProject.creating':
+    'Creating the project and registering each stage on Cardano. This can take about 20 seconds.',
   'developer.newProject.error': 'The project could not be created. Check the data and try again.',
   'developer.newProject.cover': 'Cover image',
   'developer.newProject.coverDropzone': 'Drag an image or tap to select',

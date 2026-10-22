@@ -443,6 +443,8 @@ export const esAR = {
   'developer.newProject.stageTemplate.stage9': 'Terminaciones',
   'developer.newProject.stageTemplate.stage10': 'Final de obra y subdivisión',
   'developer.newProject.submit': 'Crear proyecto',
+  'developer.newProject.creating':
+    'Creando el proyecto y registrando cada etapa en Cardano. Puede tardar unos 20 segundos.',
   'developer.newProject.error': 'No se pudo crear el proyecto. Revisá los datos y probá de nuevo.',
   'developer.newProject.cover': 'Portada',
   'developer.newProject.coverDropzone': 'Arrastrá una imagen o tocá para elegir',

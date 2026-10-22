@@ -254,6 +254,20 @@ describe('/developer/project/new', () => {
     expect(crear).toHaveBeenCalledTimes(1)
   })
 
+  it('mientras se crea dice por qué tarda: cada etapa se registra en Cardano', async () => {
+    autenticarComo(DEVELOPER_USER)
+    vi.spyOn(api, 'createProject').mockReturnValue(new Promise(() => {}))
+    montar()
+
+    expect(screen.queryByText(t('developer.newProject.creating'))).toBeNull()
+    await userEvent.type(await nombre(), 'Torre X')
+    await marcarLote()
+    await userEvent.click(boton())
+
+    const aviso = await screen.findByText(t('developer.newProject.creating'))
+    expect(aviso.getAttribute('role')).toBe('status')
+  })
+
   it('si la API rechaza la creación muestra el error y deja reintentar', async () => {
     autenticarComo(DEVELOPER_USER)
     vi.spyOn(api, 'createProject').mockRejectedValue(new ApiError(400, 'invalid'))

@@ -268,6 +268,12 @@ function NuevoProyecto() {
         <PrimaryButton type="submit" disabled={!lote} loading={crear.isPending}>
           {t('developer.newProject.submit')}
         </PrimaryButton>
+
+        {crear.isPending ? (
+          <p role="status" className="text-center text-body-sm text-text-muted">
+            {t('developer.newProject.creating')}
+          </p>
+        ) : null}
       </form>
     </PanelLayout>
   )
