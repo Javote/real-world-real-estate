@@ -26,3 +26,6 @@ export const ROL_DE_SOLAPA: Record<string, RolSembrado> = {
   Notary: 'notary',
   Certifier: 'verifier'
 }
+
+// La encuesta NPS sin responder que planta el seed local (`TOKEN_ENCUESTA_DEL_SEED`, `apps/api/src/db/seed.ts`).
+export const TOKEN_ENCUESTA_DEL_SEED = '5eed'.repeat(16)

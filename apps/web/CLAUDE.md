@@ -105,6 +105,8 @@ unidad.
 - **En dev `/api` va por el proxy de Vite; en producción por `VITE_API_ORIGIN`**: si la consola dice
   CORS, falta `WEB_ORIGIN` en la API (`specs/RUNBOOK-deploy.md`).
 - **Los E2E entran con la password del seed** (`e2e/_credenciales.ts`), nunca con un literal.
+- **`INV-SURVEY-NPS-001` responde la encuesta del seed, y se responde una sola vez**: corre solo en
+  el proyecto `mobile`, y para correrlo de nuevo en local, `pnpm db:seed` la reabre.
 - **Si los E2E locales fallan en masa y en CI pasan, es la `dev.db`**: `pnpm db:seed` suma sobre lo
   que hay, no limpia. Una base vieja se aparta del seed de CI (2026-10-21: la etapa 1 de Torre A
   estaba `Completed` en local y es `InProgress` en CI). La base de CI: apartar la `dev.db` y

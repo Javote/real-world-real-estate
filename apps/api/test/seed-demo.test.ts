@@ -1,6 +1,6 @@
 import bcrypt from "bcrypt";
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { sembrarDemo } from "../src/db/seed.js";
+import { sembrarDemo, TOKEN_ENCUESTA_DEL_SEED } from "../src/db/seed.js";
 import { sembrarDemoProduccion } from "../src/db/seed-produccion.js";
 import { db } from "../src/lib/db.js";
 
@@ -100,9 +100,48 @@ describe("sembrarDemo — el seed local", () => {
       .execute();
     expect(admins).toHaveLength(1);
   });
+
+  it("deja la encuesta NPS del buyer sin responder, y sembrar otra vez la reabre", async () => {
+    const encuesta = () =>
+      db
+        .selectFrom("NpsSurvey")
+        .innerJoin("User", "User.id", "NpsSurvey.investorId")
+        .select(["User.email", "NpsSurvey.score", "NpsSurvey.respondedAt"])
+        .where("NpsSurvey.token", "=", TOKEN_ENCUESTA_DEL_SEED)
+        .execute();
+
+    await sembrarDemo();
+    expect(await encuesta()).toEqual([
+      { email: "buyer@example.com", score: null, respondedAt: null }
+    ]);
+
+    await db
+      .updateTable("NpsSurvey")
+      .set({ score: 9, respondedAt: new Date() })
+      .where("token", "=", TOKEN_ENCUESTA_DEL_SEED)
+      .execute();
+    await sembrarDemo();
+
+    expect(await encuesta()).toEqual([
+      { email: "buyer@example.com", score: null, respondedAt: null }
+    ]);
+  });
 });
 
 describe("sembrarDemoProduccion — la demo desplegada", () => {
+  it("no planta la encuesta del e2e: sumaría una respuesta inventada al NPS del piloto", async () => {
+    await db.deleteFrom("NpsSurvey").where("token", "=", TOKEN_ENCUESTA_DEL_SEED).execute();
+
+    await sembrarDemoProduccion({ ...process.env, ...CON_PASSWORDS });
+
+    const plantadas = await db
+      .selectFrom("NpsSurvey")
+      .select("id")
+      .where("token", "=", TOKEN_ENCUESTA_DEL_SEED)
+      .execute();
+    expect(plantadas).toEqual([]);
+  });
+
   it("siembra las passwords del entorno, y reescribe el hash si ya existía", async () => {
     await sembrarDemo();
     await sembrarDemoProduccion({ ...process.env, ...CON_PASSWORDS });

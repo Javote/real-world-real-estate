@@ -102,5 +102,9 @@ del investor (`useAbrirNotificacion`, `lib/notificaciones.ts`).
   Con una sola respuesta por token, no hizo falta.
 - El e2e (`INV-SURVEY-NPS-001`, `apps/web/e2e/investor-surface.spec.ts`) entra sin sesión, responde
   contra la API real con un token que no existe y ve el 404: la ruta es pública y el cuerpo pasa el
-  Zod de la API. No siembra una encuesta: crearla pide certificar y liberar una etapa del seed, que
-  leen los demás specs. El camino con token válido es `apps/api/test/spec-503-encuesta-nps.test.ts`.
+  Zod de la API. **Desde el 2026-10-22 también el camino feliz** (dueño): el seed local planta una
+  encuesta sin responder con un token fijo (`TOKEN_ENCUESTA_DEL_SEED`, `apps/api/src/db/seed.ts`),
+  porque crearla como el producto pide certificar y liberar una etapa que leen los demás specs. El
+  e2e la responde y ve que una segunda respuesta se rechaza; corre solo en el proyecto `mobile`
+  (una respuesta por token y una base por corrida). `pnpm db:seed` la reabre. El seed de producción
+  no la planta: sumaría una respuesta inventada al NPS del piloto.

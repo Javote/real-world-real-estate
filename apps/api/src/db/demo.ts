@@ -55,7 +55,9 @@ export const ELENCO_DEMO = [
 
 export type MiembroDelElenco = (typeof ELENCO_DEMO)[number];
 
-export async function sembrarMundoDemo(personajes: Personaje[]): Promise<void> {
+export async function sembrarMundoDemo(
+  personajes: Personaje[]
+): Promise<{ buyerId: string; projectId: string }> {
   const ids = await sembrarUsuarios(db, personajes);
   const id = (email: string) => ids.get(email) as string;
 
@@ -102,4 +104,6 @@ export async function sembrarMundoDemo(personajes: Personaje[]): Promise<void> {
     priceMinorUnits: 9_500_000,
     currency: "USD"
   });
+
+  return { buyerId: id("buyer@example.com"), projectId };
 }

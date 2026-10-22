@@ -249,3 +249,28 @@ export async function sembrarUnidadVendida(
 
   return { unitId: unidad.id, contractId: contrato.id };
 }
+
+/**
+ * Una encuesta NPS sin responder, con un token conocido: la que el e2e responde de punta a punta.
+ * Sembrar de nuevo la vuelve a dejar sin responder.
+ */
+export async function sembrarEncuestaPendiente(
+  db: KyselyDb<Database>,
+  input: { investorId: string; projectId: string; token: string }
+): Promise<void> {
+  const sinResponder = { token: input.token, score: null, comment: null, respondedAt: null };
+  await db
+    .insertInto("NpsSurvey")
+    .values({
+      id: createId(),
+      investorId: input.investorId,
+      projectId: input.projectId,
+      triggerEventType: "FIRST_RELEASE",
+      sentAt: new Date(),
+      ...sinResponder
+    })
+    .onConflict((oc) =>
+      oc.columns(["investorId", "projectId", "triggerEventType"]).doUpdateSet(sinResponder)
+    )
+    .execute();
+}

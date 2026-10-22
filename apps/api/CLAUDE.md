@@ -166,7 +166,8 @@ la de los módulos que todavía no se mudaron (A4).
 - **Detrás de Render, `TRUST_PROXY_HOPS=1`**: con 0 todos comparten balde, con `true` se falsifica
   (D-045).
 - **Contra R2, `S3_REGION=auto` y `S3_FORCE_PATH_STYLE=false`**: los defaults son de MinIO.
-- **Dos seeds, el mismo mundo** (`db/demo.ts`): `db:seed` es el local, con las passwords del repo,
+- **Dos seeds, el mismo mundo** (`db/demo.ts`), **salvo la encuesta NPS del e2e**, que planta solo el
+  local (`sembrarEncuestaPendiente`): en producción sumaría una respuesta al NPS del piloto. `db:seed` es el local, con las passwords del repo,
   ignora `SEED_*` y no corre fuera de un SQLite en disco; `db:seed:produccion` exige
   `SEED_ADMIN_PASSWORD`/`SEED_DEMO_PASSWORD` y nunca las imprime (D-047). Los dos reescriben el
   `passwordHash`.

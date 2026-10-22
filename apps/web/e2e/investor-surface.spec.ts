@@ -1,4 +1,5 @@
 import { expect, test } from '@playwright/test'
+import { TOKEN_ENCUESTA_DEL_SEED } from './_credenciales'
 import { loginConSolapa } from './_helpers'
 
 async function cambiarDeRol(page: import('@playwright/test').Page, rol: string) {
@@ -83,8 +84,33 @@ test.describe('SPEC-016 — investor', () => {
     await expect(page.getByTestId('INV-DOSSIER-EXPORT-002')).toBeVisible()
   })
 
-  // Sin una encuesta sembrada: crearla pide certificar y liberar una etapa del seed, que leen los
-  // demás specs. El camino con token válido lo cubre `apps/api/test/spec-503-encuesta-nps.test.ts`.
+  // La encuesta del seed: el producto la manda con la primera liberación, y liberar en el e2e
+  // cambiaría la etapa que leen los demás specs. Una sola respuesta por token: correrlo de nuevo en
+  // local pide `pnpm db:seed`, que la reabre.
+  test('INV-SURVEY-NPS-001 · sin sesión, la encuesta del seed se responde una vez', async ({
+    page
+  }, testInfo) => {
+    test.skip(
+      testInfo.project.name !== 'mobile',
+      'una sola respuesta por token y una base por corrida'
+    )
+    await page.goto(`/survey/${TOKEN_ENCUESTA_DEL_SEED}`)
+    const encuesta = page.getByTestId('INV-SURVEY-NPS-001')
+    const enviar = encuesta.getByRole('button', { name: /enviar respuesta|send answer/i })
+
+    await encuesta.getByRole('button', { name: '9', exact: true }).click()
+    await encuesta.getByLabel(/comentario|comment/i).fill('Respuesta del e2e')
+    await enviar.click()
+
+    await expect(encuesta.getByText(/gracias por responder|thanks for answering/i)).toBeVisible()
+    await expect(enviar).toHaveCount(0)
+
+    await page.reload()
+    await encuesta.getByRole('button', { name: '7', exact: true }).click()
+    await encuesta.getByRole('button', { name: /enviar respuesta|send answer/i }).click()
+    await expect(encuesta.getByText(/ya fue respondida|already answered/i)).toBeVisible()
+  })
+
   test('INV-SURVEY-NPS-001 · sin sesión, la respuesta llega a la API y un token desconocido cierra la encuesta', async ({
     page
   }) => {
