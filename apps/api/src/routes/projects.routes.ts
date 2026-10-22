@@ -167,7 +167,7 @@ const projectByIdProcedure = os
   .output(projectDetailSchema)
   .handler(async ({ input }) => {
     const [project, stageRows, memberRows] = await Promise.all([
-      db.selectFrom("Project").selectAll().where("id", "=", input.id).executeTakeFirst(),
+      db.selectFrom("Project").selectAll().where("id", "=", input.id).executeTakeFirstOrThrow(),
       db
         .selectFrom("Stage")
         .selectAll()
@@ -191,9 +191,6 @@ const projectByIdProcedure = os
         .where("ProjectMember.projectId", "=", input.id)
         .execute()
     ]);
-
-    /* v8 ignore if -- @preserve: authorize({ proyecto }) ya confirmó que existe */
-    if (!project) throw new ORPCError("NOT_FOUND", { message: "Project not found" });
 
     const members = memberRows.map((row) => ({
       id: row.id,
@@ -434,10 +431,8 @@ const inviteCertifierProcedure = orpc
             errors.INVITATION_ALREADY_PENDING({
               message: "Certifier already has a pending invitation for this project"
             }),
-          /* v8 ignore start -- @preserve: el handler ya confirmó que el proyecto y el certifier existen antes del insert */
           RELATED_RESOURCE_NOT_FOUND: () =>
             new ORPCError("NOT_FOUND", { message: "Project or user not found" })
-          /* v8 ignore stop -- @preserve */
         })
       );
 
@@ -510,9 +505,8 @@ const projectDocumentsProcedure = os
     return z.array(projectDocumentSchema).parse(
       filas.map((f) => ({
         ...f,
-        /* v8 ignore start -- @preserve: OnChainEvent.status es NOT NULL: si el LEFT JOIN trajo txid, trajo status */
-        anchorStatus: f.txid ? (f.anchorStatus ?? "Confirmed") : "Pending"
-        /* v8 ignore stop -- @preserve */
+        // OnChainEvent.status es NOT NULL: si el LEFT JOIN trajo txid, trajo status.
+        anchorStatus: f.txid ? f.anchorStatus! : "Pending"
       }))
     );
   });
@@ -571,10 +565,8 @@ const projectDeveloperProcedure = os
       .selectFrom("Project")
       .select("organizationId")
       .where("id", "=", input.id)
-      .executeTakeFirst();
+      .executeTakeFirstOrThrow();
 
-    /* v8 ignore if -- @preserve: authorize({ proyecto }) ya confirmó que existe */
-    if (!proyecto) throw new ORPCError("NOT_FOUND", { message: "Project not found" });
     if (!proyecto.organizationId) {
       throw new ORPCError("NOT_FOUND", { message: "Project has no developer organization" });
     }
@@ -583,10 +575,7 @@ const projectDeveloperProcedure = os
       .selectFrom("Organization")
       .select(["id", "name", "slug", "bio", "foundedYear"])
       .where("id", "=", proyecto.organizationId)
-      .executeTakeFirst();
-
-    /* v8 ignore if -- @preserve: FK Project.organizationId → Organization */
-    if (!organizacion) throw new ORPCError("NOT_FOUND", { message: "Organization not found" });
+      .executeTakeFirstOrThrow();
 
     const proyectos = await db
       .selectFrom("Project")
@@ -598,15 +587,12 @@ const projectDeveloperProcedure = os
     const ids = proyectos.map((p) => p.id);
     const agregados = await agregadosDeProyectos(ids);
 
-    const unidades = ids.length
-      ? /* v8 ignore start -- @preserve: ids siempre incluye al proyecto que se está mirando */
-        await db
-          .selectFrom("Unit")
-          .select(["status", "investorId"])
-          .where("projectId", "in", ids)
-          .execute()
-      : [];
-    /* v8 ignore stop -- @preserve */
+    // `ids` nunca está vacío: incluye al proyecto que se está mirando.
+    const unidades = await db
+      .selectFrom("Unit")
+      .select(["status", "investorId"])
+      .where("projectId", "in", ids)
+      .execute();
 
     const vendidas = unidades.filter((u) => u.status === "sold");
     const inversores = new Set(

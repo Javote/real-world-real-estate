@@ -199,3 +199,49 @@ describe("una unidad sin venta no tiene dossier", () => {
     leer.mockRestore();
   });
 });
+
+describe("una unidad que quedó sin investor", () => {
+  async function sinInvestor() {
+    const { unitId, dossierId } = await venta();
+    await db.updateTable("Unit").set({ investorId: null }).where("id", "=", unitId).execute();
+    // Primero en la cola, que se ordena por compilación y tiene tope.
+    await db
+      .updateTable("Dossier")
+      .set({ compiledAt: new Date(0) })
+      .where("id", "=", dossierId)
+      .execute();
+    return { unitId, dossierId };
+  }
+  const avisosDe = (unitId: string) =>
+    db.selectFrom("Notification").select("id").where("unitId", "=", unitId).execute();
+
+  it("la cola la nombra por su unidad", async () => {
+    const { dossierId } = await sinInvestor();
+    const { unitReference } = await db
+      .selectFrom("Dossier")
+      .innerJoin("Unit", "Unit.id", "Dossier.unitId")
+      .select("Unit.unitReference")
+      .where("Dossier.id", "=", dossierId)
+      .executeTakeFirstOrThrow();
+
+    const { body } = await request(app)
+      .get("/api/v1/notary/dossiers/pending")
+      .set("Authorization", `Bearer ${tokenNotario}`);
+
+    expect(body.find((d: { dossierId: string }) => d.dossierId === dossierId)).toMatchObject({
+      investorName: unitReference
+    });
+  });
+
+  it.each(["sign", "reject"])("%s no le avisa a nadie", async (accion) => {
+    const { unitId, dossierId } = await sinInvestor();
+
+    const res = await request(app)
+      .post(`/api/v1/notary/dossiers/${dossierId}/${accion}`)
+      .set("Authorization", `Bearer ${tokenNotario}`)
+      .send(accion === "reject" ? { note: "Falta el plano" } : {});
+
+    expect(res.status).toBeLessThan(300);
+    expect(await avisosDe(unitId)).toEqual([]);
+  });
+});

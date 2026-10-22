@@ -28,7 +28,7 @@ import { reconciliarParaLectura } from "../domain/reconcile.js";
 import { anchorEvent, recordOnChainEvent } from "../domain/stage-transition.js";
 import { db, enLote } from "../lib/db.js";
 import { geocodificador } from "../lib/geocode.js";
-import { conUsuario, delegarAOrpc, OpenAPIHandler, ORPCError, os } from "../lib/orpc.js";
+import { conUsuario, delegarAOrpc, OpenAPIHandler, os } from "../lib/orpc.js";
 import { auditScope, authenticate, authorize, projectScope } from "../middlewares/auth.js";
 import { paramValidator } from "../middlewares/validate-params.js";
 import { writeAuditLog } from "../utils/audit.js";
@@ -88,10 +88,7 @@ const projectByIdProcedure = os
       .selectFrom("Project")
       .selectAll()
       .where("id", "=", input.id)
-      .executeTakeFirst();
-
-    /* v8 ignore if -- @preserve: authorize({ proyecto }) ya confirmó que existe */
-    if (!proyecto) throw new ORPCError("NOT_FOUND", { message: "Project not found" });
+      .executeTakeFirstOrThrow();
 
     const stages = await db
       .selectFrom("Stage")
@@ -104,14 +101,12 @@ const projectByIdProcedure = os
       .selectFrom("Evidence")
       .select((eb) => eb.fn.countAll<number>().as("total"))
       .where("projectId", "=", proyecto.id)
-      .executeTakeFirst();
+      .executeTakeFirstOrThrow();
 
     return {
       ...proyecto,
       stages,
-      /* v8 ignore start -- @preserve: COUNT(*) siempre devuelve una fila */
-      evidenceCount: Number(evidencia?.total ?? 0)
-      /* v8 ignore stop -- @preserve */
+      evidenceCount: Number(evidencia.total)
     };
   });
 const projectByIdHandler = new OpenAPIHandler({ projectByIdProcedure });
@@ -376,7 +371,6 @@ router.get(
 );
 
 const anchorDocumentProcedure = orpc
-  .errors({ NO_HASH: { status: 400 } })
   .route({
     method: "POST",
     path: "/documents",
@@ -390,20 +384,12 @@ const anchorDocumentProcedure = orpc
       z.strictObject({ status: z.literal(201), body: onChainEventSchema })
     ])
   )
-  .handler(async ({ input, context, errors }) => {
+  .handler(async ({ input, context }) => {
     const documento = await db
       .selectFrom("Evidence")
       .select(["id", "projectId", "stageId", "sha256Hash"])
       .where("id", "=", input.evidenceId)
-      .executeTakeFirst();
-
-    /* v8 ignore if -- @preserve: authorize({ proyecto }) ya confirmó que existe (Evidence, en el body) */
-    if (!documento) throw new ORPCError("NOT_FOUND", { message: "Document not found" });
-
-    /* v8 ignore if -- @preserve: Evidence.sha256Hash es NOT NULL */
-    if (!documento.sha256Hash) {
-      throw errors.NO_HASH({ message: "Document has no hash" });
-    }
+      .executeTakeFirstOrThrow();
 
     await reconciliarParaLectura({ evidenceId: documento.id });
 
@@ -474,13 +460,13 @@ const kpisProcedure = orpc
       .where("projectId", "in", ids)
       .where("eventType", "=", "EVIDENCE_ANCHOR")
       .where("status", "=", "Confirmed")
-      .executeTakeFirst();
+      .executeTakeFirstOrThrow();
 
     const unidades = await db
       .selectFrom("Unit")
       .select((eb) => eb.fn.countAll<number>().as("total"))
       .where("projectId", "in", ids)
-      .executeTakeFirst();
+      .executeTakeFirstOrThrow();
 
     const contratos = await db
       .selectFrom("Contract")
@@ -493,14 +479,10 @@ const kpisProcedure = orpc
 
     return {
       activeProjects: ids.length,
-      /* v8 ignore start -- @preserve: COUNT(*) siempre devuelve una fila */
-      totalUnits: Number(unidades?.total ?? 0),
-      /* v8 ignore stop -- @preserve */
+      totalUnits: Number(unidades.total),
       capitalRaisedMinorUnits: Number(contratos?.total ?? 0),
       averageProgress: stages.length ? Math.round((completados / stages.length) * 100) : 0,
-      /* v8 ignore start -- @preserve: COUNT(*) siempre devuelve una fila */
-      verifiedDocuments: Number(anclados?.total ?? 0)
-      /* v8 ignore stop -- @preserve */
+      verifiedDocuments: Number(anclados.total)
     };
   });
 const kpisHandler = new OpenAPIHandler({ kpisProcedure });

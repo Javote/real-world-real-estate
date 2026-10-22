@@ -240,6 +240,8 @@ aprende se escribe en el `.md` que corresponde, en el mismo commit que lo causa.
   e2e corre filtrado (`pnpm e2e -g "<TEST-ID>"`); la suite completa, después del push, mientras CI
   corre (§Commits y ramas).
 - **Comentarios mínimos**: ninguno que narre historia. La historia va al commit.
+- **Coverage 100 en las cuatro partes TypeScript, sin `v8 ignore`** (dueño, 2026-10-22): una rama
+  que no se alcanza se prueba o se saca. Saltear es el último recurso, y lo decide el dueño.
 - **Los entregables van en inglés**: el `README.md` raíz, `specs/evidencia-m3/` y lo que generan
   `docs:api`/`docs:openapi`. Los datos reales (etapas en es-AR, logs) no se traducen. El resto del
   repo, en castellano.

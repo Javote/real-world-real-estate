@@ -61,10 +61,7 @@ const evidenceDetailProcedure = os
       .selectFrom("Evidence")
       .select(EVIDENCE_SAFE_COLUMNS)
       .where("id", "=", input.id)
-      .executeTakeFirst();
-
-    /* v8 ignore if -- @preserve: authorize({ proyecto }) ya confirmó que existe (Evidence) */
-    if (!evidence) throw new ORPCError("NOT_FOUND", { message: "Evidence not found" });
+      .executeTakeFirstOrThrow();
 
     const [project, stage, uploadedBy] = await Promise.all([
       db.selectFrom("Project").selectAll().where("id", "=", evidence.projectId).executeTakeFirst(),
@@ -105,10 +102,7 @@ const downloadEvidenceProcedure = os
       .selectFrom("Evidence")
       .selectAll()
       .where("id", "=", input.id)
-      .executeTakeFirst();
-
-    /* v8 ignore if -- @preserve: authorize({ proyecto }) ya confirmó que existe (Evidence) */
-    if (!evidence) throw new ORPCError("NOT_FOUND", { message: "Evidence not found" });
+      .executeTakeFirstOrThrow();
 
     if (!(await storage.exists(evidence.storagePath))) {
       throw new ORPCError("NOT_FOUND", { message: "Stored file not found" });
@@ -145,10 +139,7 @@ const updateEvidenceProcedure = orpc
       .selectFrom("Evidence")
       .selectAll()
       .where("id", "=", id)
-      .executeTakeFirst();
-
-    /* v8 ignore if -- @preserve: authorize({ proyecto }) ya confirmó que existe (Evidence) */
-    if (!existing) throw new ORPCError("NOT_FOUND", { message: "Evidence not found" });
+      .executeTakeFirstOrThrow();
 
     if (
       evidenciaSinAtribuir({
@@ -244,10 +235,7 @@ const anchorEvidenceProcedure = orpc
       .selectFrom("Evidence")
       .select(["id", "projectId", "stageId", "sha256Hash"])
       .where("id", "=", input.id)
-      .executeTakeFirst();
-
-    /* v8 ignore if -- @preserve: authorize({ proyecto }) ya confirmó que existe (Evidence) */
-    if (!evidencia) throw new ORPCError("NOT_FOUND", { message: "Evidence not found" });
+      .executeTakeFirstOrThrow();
 
     await reconciliarParaLectura({ evidenceId: evidencia.id });
 
@@ -424,10 +412,7 @@ const bundleFilesProcedure = os
       .selectFrom("EvidenceBundle")
       .selectAll()
       .where("id", "=", input.bundleId)
-      .executeTakeFirst();
-
-    /* v8 ignore if -- @preserve: authorize({ proyecto }) ya confirmó que existe (EvidenceBundle) */
-    if (!bundle) throw new ORPCError("NOT_FOUND", { message: "Bundle not found" });
+      .executeTakeFirstOrThrow();
 
     const items = await db
       .selectFrom("EvidenceBundleItem")

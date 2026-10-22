@@ -325,8 +325,8 @@ async function evaluarRegla(
   const permitido = veredictos.find((v) => v.ok);
   if (permitido) return permitido;
 
-  /* v8 ignore next -- @preserve: `alguna` exige dos ramas como mínimo (el tipo lo obliga), así que `veredictos[0]` siempre existe y el `?? PROHIBIDO` nunca corre */
-  return veredictos.find((v) => !v.ok && v.status === 403) ?? veredictos[0] ?? PROHIBIDO;
+  // `alguna` exige dos ramas como mínimo (el tipo lo obliga): `veredictos[0]` siempre existe.
+  return veredictos.find((v) => !v.ok && v.status === 403) ?? veredictos[0]!;
 }
 
 function veredictoPara(

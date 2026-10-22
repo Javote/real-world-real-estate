@@ -1,3 +1,4 @@
+import { toORPCError } from "@orpc/client";
 import { OpenAPIGenerator } from "@orpc/openapi";
 import { OpenAPIHandler as OpenAPIHandlerBase } from "@orpc/openapi/node";
 import { type Context as ContextType, call, ORPCError, os } from "@orpc/server";
@@ -66,5 +67,6 @@ export {
   OpenAPIHandler,
   ORPCError,
   os,
+  toORPCError,
   ZodToJsonSchemaConverter
 };

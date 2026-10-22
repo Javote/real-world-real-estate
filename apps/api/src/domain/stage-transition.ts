@@ -172,7 +172,7 @@ async function anchorEvent(
   stage: StageRow,
   previous: StageRow | null
 ): Promise<OnChainEventRow> {
-  /* v8 ignore if -- @preserve: los tres llamadores le pasan un evento recién insertado, sin txid */
+  // Idempotente: un evento que ya tiene TXID no se vuelve a anclar (regla 8).
   if (event.txid) return event;
 
   const root = await rootDelStage(stage.id);
@@ -187,7 +187,6 @@ async function anchorEvent(
         : await puerto.advanceThread({
             outputRef: (await cabezaDelHilo(stage.id)) ?? "",
             previous: buildStageDatum(
-              /* v8 ignore next -- @preserve: `Completed` es terminal: nunca hay una transición CON ESE stage de origen, así que `previous.state` nunca es "Completed" */
               toDatumSource(previous, previous.state === "Completed" ? root : "")
             ),
             next: buildStageDatum(toDatumSource(stage, stage.state === "Completed" ? root : ""))

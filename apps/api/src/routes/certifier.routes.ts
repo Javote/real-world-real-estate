@@ -119,10 +119,7 @@ const stageViewProcedure = os
         "Project.name as projectName"
       ])
       .where("Stage.id", "=", input.id)
-      .executeTakeFirst();
-
-    /* v8 ignore if -- @preserve: authorize({ proyecto }) ya confirmó que existe (Stage) */
-    if (!stage) throw new ORPCError("NOT_FOUND", { message: "Stage not found" });
+      .executeTakeFirstOrThrow();
 
     const evidencia = await db
       .selectFrom("Evidence")
@@ -147,7 +144,6 @@ router.get(
 function lanzarFalloDeTransicion(
   resultado: Extract<Awaited<ReturnType<typeof transitionStage>>, { ok: false }>
 ): never {
-  /* v8 ignore if -- @preserve: el único 404 de transitionStage es un stage que authorize ya cargó */
   if (resultado.status === 404) throw new ORPCError("NOT_FOUND", { message: "Stage not found" });
   throw new ORPCError("CONFLICT", { message: resultado.code, data: resultado });
 }
@@ -364,9 +360,7 @@ function responderInvitacion(respuesta: "accepted" | "declined") {
           .selectFrom("CertifierInvitation")
           .select("status")
           .where("id", "=", input.id)
-          .executeTakeFirst();
-        /* v8 ignore if -- @preserve: authorize({ dueño }) ya cargó la fila (CertifierInvitation) */
-        if (!fila) throw new ORPCError("NOT_FOUND", { message: "Invitation not found" });
+          .executeTakeFirstOrThrow();
         throw errors.INVITATION_NOT_PENDING({ message: `Invitation already ${fila.status}` });
       }
       const [resultado] = await listarInvitacionesACertificar({ id: input.id });

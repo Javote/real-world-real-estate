@@ -60,11 +60,8 @@ adivines**: devolvé el reporte con `needs input:` y la pregunta exacta.
      el test ya tiene `t()` o el diccionario a mano.
    - Un `it` por comportamiento que cambia algo visible, con nombre en castellano que diga qué
      verifica.
-   - Ramas que la spec dice "**marcar**" (no alcanzables): se marcan con la forma que ya usa el
-     repo (`apps/api/src/routes/certifier.routes.ts` tiene ejemplos), p. ej.
-     `/* v8 ignore if -- @preserve: <por qué no se alcanza> (SPEC-019) */`. Es el único cambio
-     permitido en un archivo de producción, y solo en las ramas que la spec nombra. Si encontrás
-     otra rama que creés inalcanzable, **no la marques**: reportala.
+   - **Ningún `v8 ignore`** (dueño, 2026-10-22): una rama que creés inalcanzable no se marca ni se
+     toca. Reportala con su motivo, y quien te lanzó decide si se prueba o se saca.
 
 4. **Verificá solo lo tuyo.** Desde la raíz del worktree. Ojo: con `--filter … exec` las rutas son
    **relativas a `apps/web`** (`src/routes/…`, no `apps/web/src/routes/…`):
@@ -100,7 +97,7 @@ Si para avanzar necesitás cambiar alguno de estos, **no lo cambies**: terminá 
 pedilo en el reporte.
 
 - **Cualquier archivo de producción** bajo `apps/web/src/` (todo lo que no sea `*.test.ts(x)` que
-  te pertenece), salvo el comentario `v8 ignore` del paso 3. Si un test destapa un bug real: dejá el test que lo muestra con
+  te pertenece). Si un test destapa un bug real: dejá el test que lo muestra con
   `it.fails(…)` y un comentario que lo explique, y reportalo con la reproducción. No lo arregles.
 - La infraestructura compartida de test: `src/routes/-test-mount.tsx`, `src/test/*`,
   `apps/web/vitest.config.ts` (umbrales incluidos), `playwright.config.ts`.

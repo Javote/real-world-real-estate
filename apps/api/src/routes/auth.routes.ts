@@ -72,12 +72,7 @@ const meProcedure = orpc
       .selectFrom("User")
       .select(["id", "email", "role", "fullName", "isActive", "createdAt"])
       .where("id", "=", context.user!.id)
-      .executeTakeFirst();
-
-    /* v8 ignore if -- @preserve: solo alcanzable por una carrera entre `authenticate` y este handler — `authenticate` acaba de consultar la misma fila */
-    if (!user) {
-      throw new ORPCError("UNAUTHORIZED", { message: "User not active" });
-    }
+      .executeTakeFirstOrThrow();
 
     return meResponseSchema.parse({
       ...user,

@@ -2,7 +2,7 @@ import { existsSync, mkdtempSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import path from "node:path";
 import { afterEach, describe, expect, it } from "vitest";
-import { migrar, migrarSoloLocal } from "../src/db/migrate.js";
+import { migrar, migrarDesdeCli, migrarSoloLocal } from "../src/db/migrate.js";
 
 let dir: string | undefined;
 
@@ -44,5 +44,16 @@ describe("migrarSoloLocal — la migración de pnpm dev", () => {
 
   it("no toca una base remota", async () => {
     expect(await migrarSoloLocal("libsql://no-existe.turso.io")).toBeNull();
+  });
+});
+
+describe("migrarDesdeCli — lo que corre `node migrate.js`", () => {
+  it.each([
+    ["sin flag, la del deploy", ["node", "migrate.js"]],
+    ["con --solo-local, la de pnpm dev", ["node", "migrate.js", "--solo-local"]]
+  ])("%s", async (_caso, argv) => {
+    dir = mkdtempSync(path.join(tmpdir(), "migrar-desde-cli-"));
+    const aplicadas = await migrarDesdeCli(argv, `file:${path.join(dir, "cli.db")}`);
+    expect(aplicadas?.length).toBeGreaterThan(0);
   });
 });

@@ -1,6 +1,11 @@
-import { afterAll, beforeAll, describe, expect, it } from "vitest";
+import { afterAll, beforeAll, describe, expect, it, vi } from "vitest";
 import { createId } from "../src/db/id.js";
-import { retryStageMint, transitionStage } from "../src/domain/stage-transition.js";
+import {
+  anchorEvent,
+  recordOnChainEvent,
+  retryStageMint,
+  transitionStage
+} from "../src/domain/stage-transition.js";
 import { anchorPort } from "../src/lib/anchor.js";
 import { db } from "../src/lib/db.js";
 import { FIXTURES } from "./global-setup.js";
@@ -118,5 +123,64 @@ describe("retryStageMint", () => {
       Object.defineProperty(puerto, "mode", { value: modoOriginal, configurable: true });
       puerto.findLiveThread = original;
     }
+  });
+});
+
+describe("anchorEvent", () => {
+  it("un evento que ya tiene TXID no se vuelve a anclar (idempotencia, regla 8)", async () => {
+    const { anchor, ...stage } = await crearStageMinteado({
+      projectId: proyecto,
+      name: "Ya anclado",
+      sequenceOrder: 9_401,
+      actorUserId: actorId
+    });
+    expect(anchor.txid).not.toBeNull();
+    const abrir = vi.spyOn(anchorPort(), "openThread");
+
+    const resultado = await anchorEvent(anchor, stage, null);
+
+    expect(resultado).toBe(anchor);
+    expect(abrir).not.toHaveBeenCalled();
+    abrir.mockRestore();
+  });
+
+  it("si la etapa previa estuviera Completed, su datum lleva la raíz de la evidencia", async () => {
+    const { anchor: _creado, ...stage } = await crearStageMinteado({
+      projectId: proyecto,
+      name: "Datum previo",
+      sequenceOrder: 9_402,
+      actorUserId: actorId
+    });
+    const raiz = "ab".repeat(32);
+    await db
+      .insertInto("EvidenceBundle")
+      .values({
+        id: createId(),
+        projectId: proyecto,
+        stageId: stage.id,
+        commitmentHash: raiz,
+        createdById: null,
+        createdAt: new Date()
+      })
+      .execute();
+    const evento = await recordOnChainEvent({
+      projectId: proyecto,
+      stageId: stage.id,
+      eventType: "STAGE_TRANSITION",
+      fromState: "Completed",
+      toState: "Completed"
+    });
+    let previo: unknown;
+    const avanzar = vi
+      .spyOn(anchorPort(), "advanceThread")
+      .mockImplementationOnce(async (input) => {
+        previo = input.previous;
+        throw new Error("corte del test: alcanza con ver el datum");
+      });
+
+    await anchorEvent(evento, stage, { ...stage, state: "Completed" });
+
+    expect(previo).toMatchObject({ state: "Completed", evidenceRoot: raiz });
+    avanzar.mockRestore();
   });
 });

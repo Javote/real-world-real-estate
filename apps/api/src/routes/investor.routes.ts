@@ -134,9 +134,8 @@ const unitsProcedure = orpc
     return unidades.map((u) => ({
       ...u,
       status: u.status as UnitStatus,
-      /* v8 ignore start -- @preserve: avancePorProyecto setea un valor para cada id que recibe */
-      progress: avance.get(u.projectId) ?? 0
-      /* v8 ignore stop -- @preserve */
+      // avancePorProyecto devuelve un valor por cada id que recibe.
+      progress: avance.get(u.projectId)!
     }));
   });
 const unitsHandler = new OpenAPIHandler({ unitsProcedure });
@@ -170,10 +169,7 @@ const unitDetailProcedure = os
         "Project.country as country"
       ])
       .where("Unit.id", "=", input.id)
-      .executeTakeFirst();
-
-    /* v8 ignore if -- @preserve: authorize({ dueño }) ya cargó la fila (Unit) */
-    if (!unidad) throw new ORPCError("NOT_FOUND", { message: "Unit not found" });
+      .executeTakeFirstOrThrow();
 
     const stages = await db
       .selectFrom("Stage")
@@ -216,10 +212,7 @@ const unitNewsProcedure = os
       .selectFrom("Unit")
       .select(["id", "projectId", "investorId"])
       .where("id", "=", input.id)
-      .executeTakeFirst();
-
-    /* v8 ignore if -- @preserve: authorize({ dueño }) ya cargó la fila (Unit) */
-    if (!unidad) throw new ORPCError("NOT_FOUND", { message: "Unit not found" });
+      .executeTakeFirstOrThrow();
 
     await reconciliarParaLectura({ projectId: unidad.projectId });
 
@@ -304,10 +297,7 @@ const invitationDetailProcedure = os
         "Project.name as projectName"
       ])
       .where("Invitation.id", "=", input.id)
-      .executeTakeFirst();
-
-    /* v8 ignore if -- @preserve: authorize({ dueño }) ya cargó la fila (Invitation) */
-    if (!invitacion) throw new ORPCError("NOT_FOUND", { message: "Invitation not found" });
+      .executeTakeFirstOrThrow();
 
     return { ...invitacion, status: invitacion.status as InvitationStatus };
   });
@@ -445,9 +435,7 @@ const acceptInvitationProcedure = orpc
         .selectFrom("Invitation")
         .select("status")
         .where("id", "=", input.id)
-        .executeTakeFirst();
-      /* v8 ignore if -- @preserve: authorize({ dueño }) ya cargó la fila (Invitation) */
-      if (!fila) throw new ORPCError("NOT_FOUND", { message: "Invitation not found" });
+        .executeTakeFirstOrThrow();
       if (fila.status !== "pending") {
         throw errors.INVITATION_NOT_PENDING({ message: `Invitation already ${fila.status}` });
       }
@@ -494,10 +482,8 @@ const declineInvitationProcedure = orpc
       .selectFrom("Invitation")
       .selectAll()
       .where("id", "=", input.id)
-      .executeTakeFirst();
+      .executeTakeFirstOrThrow();
 
-    /* v8 ignore if -- @preserve: authorize({ dueño }) ya cargó la fila (Invitation) */
-    if (!invitacion) throw new ORPCError("NOT_FOUND", { message: "Invitation not found" });
     if (invitacion.status !== "pending") {
       throw new ORPCError("CONFLICT", { message: `Invitation already ${invitacion.status}` });
     }
@@ -547,10 +533,7 @@ const contractProcedure = os
         "Unit.unitReference as unitReference"
       ])
       .where("Contract.unitId", "=", input.unitId)
-      .executeTakeFirst();
-
-    /* v8 ignore if -- @preserve: authorize({ dueño }) ya cargó la fila (ContractOfUnit) */
-    if (!contrato) throw new ORPCError("NOT_FOUND", { message: "Contract not found" });
+      .executeTakeFirstOrThrow();
 
     return contrato;
   });

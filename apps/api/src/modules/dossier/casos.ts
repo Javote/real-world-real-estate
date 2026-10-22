@@ -116,7 +116,6 @@ export async function cola(deps: Deps): Promise<PendingDossier[]> {
   return pendientes.slice(0, COLA_MAXIMA).map(({ fila, completeness }) => ({
     dossierId: fila.id,
     unitLabel: fila.unitReference,
-    /* v8 ignore next -- @preserve: el dossier nace con la venta, así que su unidad tiene investor */
     investorName: fila.investorName ?? fila.unitReference,
     completeness
   }));
@@ -208,7 +207,6 @@ export async function firmar(
       entityId: fila.id,
       metadata: { masterHash, txid: firmado.evento.txid }
     }),
-    /* v8 ignore next -- @preserve: el dossier nace con la venta, así que su unidad tiene investor */
     ...(fila.investorId
       ? [
           notify(deps.db, {
@@ -254,7 +252,6 @@ export async function rechazar(
       entityId: fila.id,
       metadata: { note: input.nota }
     }),
-    /* v8 ignore next -- @preserve: el dossier nace con la venta, así que su unidad tiene investor */
     ...(fila.investorId
       ? [
           notifySiGano(deps.db, {

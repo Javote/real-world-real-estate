@@ -41,7 +41,7 @@ const stageDetailProcedure = os
   .output(stageDetailSchema)
   .handler(async ({ input }) => {
     const [stage, evidences, project, hilo] = await Promise.all([
-      db.selectFrom("Stage").selectAll().where("id", "=", input.id).executeTakeFirst(),
+      db.selectFrom("Stage").selectAll().where("id", "=", input.id).executeTakeFirstOrThrow(),
       db
         .selectFrom("Evidence")
         .select(EVIDENCE_SAFE_COLUMNS)
@@ -55,9 +55,6 @@ const stageDetailProcedure = os
         .executeTakeFirst(),
       cabezaDelHilo(input.id)
     ]);
-
-    /* v8 ignore if -- @preserve: authorize({ proyecto: { via: "Stage" } }) ya cargó el stage */
-    if (!stage) throw new ORPCError("NOT_FOUND", { message: "Stage not found" });
 
     return stageDetailSchema.parse({
       ...stage,
@@ -155,7 +152,6 @@ const transitionStageProcedure = orpc
     });
 
     if (!resultado.ok) {
-      /* v8 ignore if -- @preserve: authorize({ proyecto: { via: "Stage" } }) ya cargó el stage */
       if (resultado.status === 404)
         throw new ORPCError("NOT_FOUND", { message: "Stage not found" });
       if (resultado.code === "STAGE_TRANSITION_INVALID") {

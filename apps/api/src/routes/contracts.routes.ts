@@ -3,7 +3,7 @@ import { Router } from "express";
 import { z } from "zod";
 import { reconciliarParaLectura } from "../domain/reconcile.js";
 import { db } from "../lib/db.js";
-import { delegarAOrpc, OpenAPIHandler, ORPCError, os } from "../lib/orpc.js";
+import { delegarAOrpc, OpenAPIHandler, os } from "../lib/orpc.js";
 import { authenticate, authorize, CUALQUIER_ROL } from "../middlewares/auth.js";
 import { paramValidator } from "../middlewares/validate-params.js";
 
@@ -25,10 +25,7 @@ const releasesProcedure = os
       .innerJoin("Unit", "Unit.id", "Contract.unitId")
       .select(["Contract.id as id", "Unit.projectId as projectId"])
       .where("Contract.id", "=", input.contractId)
-      .executeTakeFirst();
-
-    /* v8 ignore if -- @preserve: las dos ramas de authorize({ alguna }) ya cargaron el contrato */
-    if (!contrato) throw new ORPCError("NOT_FOUND", { message: "Contract not found" });
+      .executeTakeFirstOrThrow();
 
     await reconciliarParaLectura({ projectId: contrato.projectId });
 

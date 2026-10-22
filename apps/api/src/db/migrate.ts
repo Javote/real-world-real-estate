@@ -2,7 +2,7 @@ import "dotenv/config";
 import { existsSync, readdirSync, readFileSync } from "node:fs";
 import path from "node:path";
 import { type Client, createClient } from "../lib/libsql-client.js";
-import { esPuntoDeEntrada } from "../lib/punto-de-entrada.js";
+import { correrSiEsPuntoDeEntrada } from "../lib/punto-de-entrada.js";
 import { entorno } from "../platform/config.js";
 import { esBaseLocal } from "./credentials.js";
 import { asegurarDirectorioLocal, urlDeLaBase } from "./local-db.js";
@@ -85,8 +85,7 @@ export async function conTecho<T>(
       })
     ]);
   } finally {
-    /* v8 ignore if -- @preserve: el executor de `new Promise(...)` corre sincrónico, así que `reloj` ya está asignado en cualquier camino que llegue a este `finally` */
-    if (reloj) clearTimeout(reloj);
+    clearTimeout(reloj);
   }
 }
 
@@ -126,10 +125,9 @@ export async function migrarSoloLocal(url: string = urlDeLaBase()): Promise<stri
   return migrar(url);
 }
 
-/* v8 ignore if -- @preserve: guardia para que importar el módulo no migre; solo corre como CLI */
-if (esPuntoDeEntrada(import.meta.url)) {
-  (process.argv.includes("--solo-local") ? migrarSoloLocal() : migrar()).catch((e) => {
-    console.error(e);
-    process.exit(1);
-  });
+/** Lo que corre `node migrate.js`: con `--solo-local`, la de `pnpm dev`; sin él, la del deploy. */
+export function migrarDesdeCli(argv: readonly string[] = process.argv, url?: string) {
+  return argv.includes("--solo-local") ? migrarSoloLocal(url) : migrar(url);
 }
+
+correrSiEsPuntoDeEntrada(import.meta.url, migrarDesdeCli);

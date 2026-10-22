@@ -108,7 +108,6 @@ const retryStageAnchorProcedure = orpc
 
     const result = await retryStageMint(input.stageId);
     if (!result.ok) {
-      /* v8 ignore if -- @preserve: el handler confirmó el stage tres líneas antes */
       if (result.code === "STAGE_NOT_FOUND") {
         throw new ORPCError("NOT_FOUND", { message: "Stage not found" });
       }

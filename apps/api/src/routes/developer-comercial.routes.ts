@@ -123,9 +123,11 @@ const updateUnitProcedure = orpc
   .handler(async ({ input, context }) => {
     const { id, ...cambios } = input;
 
-    const unidad = await db.selectFrom("Unit").selectAll().where("id", "=", id).executeTakeFirst();
-    /* v8 ignore if -- @preserve: authorize({ proyecto: { via: "Unit" } }) ya cargó la unidad */
-    if (!unidad) throw new ORPCError("NOT_FOUND", { message: "Unit not found" });
+    const unidad = await db
+      .selectFrom("Unit")
+      .selectAll()
+      .where("id", "=", id)
+      .executeTakeFirstOrThrow();
 
     const actualizada = await db
       .updateTable("Unit")
@@ -382,10 +384,7 @@ const releasePaymentProcedure = orpc
         "Unit.projectId as projectId"
       ])
       .where("Contract.id", "=", input.id)
-      .executeTakeFirst();
-
-    /* v8 ignore if -- @preserve: authorize({ proyecto: { via: "Contract" } }) ya cargó el contrato, con el mismo join a Unit */
-    if (!contrato) throw new ORPCError("NOT_FOUND", { message: "Contract not found" });
+      .executeTakeFirstOrThrow();
 
     const stage = await db
       .selectFrom("Stage")

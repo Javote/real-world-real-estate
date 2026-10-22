@@ -1,5 +1,5 @@
 import type { LiveThread } from "@plataforma/cardano";
-import { refToHex } from "@plataforma/shared";
+import { refToHex, type StageState } from "@plataforma/shared";
 import { anchorPort, anchorPortListo } from "../lib/anchor.js";
 import { db } from "../lib/db.js";
 import { sql } from "../lib/kysely.js";
@@ -41,7 +41,8 @@ async function reconciliar(
     .selectFrom("OnChainEvent")
     .select(["id", "txid"])
     .where("status", "=", "Pending")
-    .where("txid", "is not", null);
+    .where("txid", "is not", null)
+    .$narrowType<{ txid: string }>();
 
   if (alcance.projectId) query = query.where("projectId", "=", alcance.projectId);
   if (alcance.projectIds) query = query.where("projectId", "in", alcance.projectIds);
@@ -55,9 +56,6 @@ async function reconciliar(
 
   // En serie y no con Promise.all: el proveedor tiene rate limit y un TXID que falla no corta la tanda.
   for (const evento of pendientes) {
-    /* v8 ignore if -- @preserve: la query de arriba ya filtra `txid is not null` */
-    if (!evento.txid) continue;
-
     let blockTimestamp: number | null = null;
     try {
       blockTimestamp = await anchorPort().confirmedAt(evento.txid);
@@ -87,10 +85,10 @@ async function reconciliar(
 export interface HiloSospechoso {
   eventId: string;
   projectId: string;
-  stageId: string | null;
+  stageId: string;
   eventIndex: number;
   fromState: string | null;
-  toState: string | null;
+  toState: string;
   status: string;
   createdAt: Date;
 }
@@ -98,33 +96,37 @@ export interface HiloSospechoso {
 const TOPE_SOSPECHOSOS = 20;
 
 export async function hilosSospechosos(limite = TOPE_SOSPECHOSOS): Promise<HiloSospechoso[]> {
-  return db
-    .selectFrom("OnChainEvent")
-    .select([
-      "id as eventId",
-      "projectId",
-      "stageId",
-      "eventIndex",
-      "fromState",
-      "toState",
-      "status",
-      "createdAt"
-    ])
-    .where("eventType", "=", "STAGE_TRANSITION")
-    .where("txid", "is", null)
-    .where("stageId", "is not", null)
-    .where((eb) =>
-      eb.exists(
-        eb
-          .selectFrom("OnChainEvent as siguiente")
-          .select(sql.lit(1).as("one"))
-          .whereRef("siguiente.stageId", "=", "OnChainEvent.stageId")
-          .whereRef("siguiente.eventIndex", ">", "OnChainEvent.eventIndex")
+  return (
+    db
+      .selectFrom("OnChainEvent")
+      .select([
+        "id as eventId",
+        "projectId",
+        "stageId",
+        "eventIndex",
+        "fromState",
+        "toState",
+        "status",
+        "createdAt"
+      ])
+      .where("eventType", "=", "STAGE_TRANSITION")
+      .where("txid", "is", null)
+      .where("stageId", "is not", null)
+      .where((eb) =>
+        eb.exists(
+          eb
+            .selectFrom("OnChainEvent as siguiente")
+            .select(sql.lit(1).as("one"))
+            .whereRef("siguiente.stageId", "=", "OnChainEvent.stageId")
+            .whereRef("siguiente.eventIndex", ">", "OnChainEvent.eventIndex")
+        )
       )
-    )
-    .orderBy("createdAt", "asc")
-    .limit(limite)
-    .execute();
+      .orderBy("createdAt", "asc")
+      .limit(limite)
+      // Filtra `stageId is not null`, y una STAGE_TRANSITION siempre trae `toState`.
+      .$narrowType<{ stageId: string; toState: StageState }>()
+      .execute()
+  );
 }
 
 export interface HiloReparado {
@@ -140,9 +142,6 @@ export async function repararHilosSospechosos(limite = TOPE_SOSPECHOSOS): Promis
   const reparados: HiloReparado[] = [];
 
   for (const sospechoso of sospechosos) {
-    /* v8 ignore if -- @preserve: `hilosSospechosos()` ya filtra `eventType = "STAGE_TRANSITION"` (siempre trae `toState`) y `stageId is not null` */
-    if (!sospechoso.stageId || !sospechoso.toState) continue;
-
     let vivo: LiveThread | null;
     try {
       vivo = await anchorPort().findLiveThread(refToHex(sospechoso.stageId));
@@ -156,17 +155,15 @@ export async function repararHilosSospechosos(limite = TOPE_SOSPECHOSOS): Promis
 
     if (!vivo || vivo.datum.state !== sospechoso.toState) continue;
 
-    const [txid] = vivo.outputRef.split("#");
-    /* v8 ignore if -- @preserve: el adaptador arma `outputRef` como `${txHash}#${índice}`: la parte antes de `#` nunca es vacía */
-    if (!txid) continue;
+    const txid = vivo.outputRef.replace(/#.*$/, "");
 
     const escrito = await db
       .updateTable("OnChainEvent")
       .set({
         txid,
         outputRef: vivo.outputRef,
-        /* v8 ignore next -- @preserve: `disabled` ya salió en el `if` de arriba, y los adaptadores `simulated`/`real` siempre traen `network` */
-        network: anchorPort().network ?? "Preprod",
+        // `disabled` ya salió arriba, y `simulated` y `real` siempre traen `network`.
+        network: anchorPort().network!,
         status: "Pending",
         updatedAt: new Date()
       })

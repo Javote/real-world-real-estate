@@ -119,14 +119,10 @@ router.get(
 );
 
 const updateUserProcedure = orpc
-  .errors({
-    RESOURCE_ALREADY_EXISTS: { status: 409, message: "Resource already exists" },
-    RELATED_RESOURCE_NOT_FOUND: { status: 400, message: "A referenced resource does not exist" }
-  })
   .route({ method: "PATCH", path: "/{id}" })
   .input(updateUserSchema.extend({ id: cuidParamSchema }))
   .output(userMutationResultSchema)
-  .handler(async ({ input, context, errors }) => {
+  .handler(async ({ input, context }) => {
     const { id, ...body } = input;
 
     const existe = await db.selectFrom("User").select("id").where("id", "=", id).executeTakeFirst();
@@ -152,10 +148,7 @@ const updateUserProcedure = orpc
       .set(data)
       .where("id", "=", id)
       .returning(["id", "email", "role", "fullName", "isActive"])
-      .executeTakeFirstOrThrow()
-      /* v8 ignore start -- @preserve: inalcanzable salvo por una carrera con el chequeo de arriba (la fila ya se confirmó que existe) — ninguno de estos campos toca una columna única de User hoy, pero el `.catch()` queda por si mañana una sí */
-      .catch((err) => relanzarRestriccionComoOrpc(err, errors));
-    /* v8 ignore stop -- @preserve */
+      .executeTakeFirstOrThrow();
 
     await writeAuditLog({
       actorUserId: context.user.id,

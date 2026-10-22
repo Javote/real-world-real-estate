@@ -1,6 +1,6 @@
 import "dotenv/config";
 import { db } from "../lib/db.js";
-import { esPuntoDeEntrada } from "../lib/punto-de-entrada.js";
+import { correrSiEsPuntoDeEntrada } from "../lib/punto-de-entrada.js";
 import { passwordDeProduccion } from "./credentials.js";
 import { ELENCO_DEMO, sembrarMundoDemo } from "./demo.js";
 
@@ -21,14 +21,4 @@ export async function sembrarDemoProduccion(env: NodeJS.ProcessEnv = process.env
   console.log("Project slug: torre-a");
 }
 
-/* v8 ignore if -- @preserve: guardia para que importar el módulo no siembre; solo corre como CLI */
-if (esPuntoDeEntrada(import.meta.url)) {
-  sembrarDemoProduccion()
-    .catch((e) => {
-      console.error(e);
-      process.exit(1);
-    })
-    .finally(() => {
-      db.destroy();
-    });
-}
+correrSiEsPuntoDeEntrada(import.meta.url, sembrarDemoProduccion, db.destroy.bind(db));

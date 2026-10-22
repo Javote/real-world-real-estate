@@ -27,7 +27,6 @@ export const ERROR_CODES = {
   GEOCODER_UNAVAILABLE: { status: 503, clave: "error.generic" },
   INVITATION_ALREADY_PENDING: { status: 409, clave: "admin.error.INVITATION_ALREADY_PENDING" },
   INVITATION_NOT_PENDING: { status: 409, clave: "error.generic" },
-  NO_HASH: { status: 400, clave: "error.generic" },
   REFUND_WITHOUT_RELEASE: { status: 409, clave: "error.generic" },
   RELATED_RESOURCE_NOT_FOUND: { status: 400, clave: "error.generic" },
   RESOURCE_ALREADY_EXISTS: { status: 409, clave: "error.generic" },

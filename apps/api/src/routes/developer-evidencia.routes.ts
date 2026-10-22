@@ -14,13 +14,12 @@ import {
   stageEvidenceUploadSchema
 } from "@plataforma/shared";
 import { type Request, type RequestHandler, Router } from "express";
-import type { z } from "zod";
 import { createId } from "../db/id.js";
 import { anchorCommitmentEvent } from "../domain/anchoring.js";
 import { notifyUnitInvestors } from "../domain/notify.js";
 import { crearBundle, transitionStage } from "../domain/stage-transition.js";
 import { db } from "../lib/db.js";
-import { call, ORPCError, os } from "../lib/orpc.js";
+import { call, ORPCError, os, toORPCError } from "../lib/orpc.js";
 import { leerCabecera, sha256DeArchivo, storage } from "../lib/storage.js";
 import { uploadEvidenceFiles } from "../lib/upload.js";
 import { authenticate, authorize } from "../middlewares/auth.js";
@@ -112,15 +111,8 @@ router.post(
     try {
       if (archivos.length === 0) return res.status(400).json({ message: "File is required" });
 
-      let parsed: z.infer<typeof stageEvidenceUploadSchema>;
-      try {
-        parsed = await call(validarCamposDeTexto, req.body);
-      } catch (err) {
-        /* v8 ignore if -- @preserve: el procedure solo tiene .input(); su handler devuelve el input y no tira, así que call() solo rechaza con el ORPCError BAD_REQUEST de la validación */
-        if (err instanceof ORPCError) return res.status(err.status).json(err.toJSON());
-        /* v8 ignore next -- @preserve: inalcanzable por lo mismo que el if de arriba, call() solo rechaza con ORPCError */
-        throw err;
-      }
+      const parsed = await call(validarCamposDeTexto, req.body).catch(toORPCError);
+      if (parsed instanceof ORPCError) return res.status(parsed.status).json(parsed.toJSON());
 
       if (evidenciaSinAtribuir(parsed)) {
         return res.status(400).json({
@@ -226,9 +218,7 @@ router.post(
               uploadedById: req.user!.id,
               evidenceType: parsed.evidenceType,
               category: parsed.category,
-              /* v8 ignore start -- @preserve: multipartBooleanSchema ya transforma undefined a false; el output es boolean, nunca nullish */
-              authoritative: parsed.authoritative ?? false,
-              /* v8 ignore stop -- @preserve */
+              authoritative: parsed.authoritative,
               issuingAuthority: parsed.issuingAuthority,
               originalFilename: g.c.file.originalname,
               storedFilename: g.c.file.filename,
