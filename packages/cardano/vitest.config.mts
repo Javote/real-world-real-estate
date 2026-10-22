@@ -11,10 +11,10 @@ export default defineConfig({
       include: ["src/**"],
       exclude: ["src/yaci.test.ts", "src/vitest.devnet.mts"],
       thresholds: {
-        statements: 95,
-        branches: 95,
-        functions: 95,
-        lines: 95
+        statements: 100,
+        branches: 100,
+        functions: 100,
+        lines: 100
       }
     }
   },

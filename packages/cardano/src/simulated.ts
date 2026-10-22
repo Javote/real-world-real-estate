@@ -16,8 +16,8 @@ import {
 } from "./port";
 
 function ordenarPorClave([a]: [string, unknown], [b]: [string, unknown]): number {
-  /* v8 ignore next -- @preserve: el único llamador es `Object.entries(...).sort(...)`, y las claves de un objeto son siempre distintas — `a === b` no puede pasar */
-  return a < b ? -1 : a > b ? 1 : 0;
+  // Solo ordena las claves de un objeto, que nunca se repiten: no hay empate que devolver.
+  return a < b ? -1 : 1;
 }
 
 export function canonical(value: unknown): string {
