@@ -72,7 +72,10 @@ const meProcedure = orpc
       .selectFrom("User")
       .select(["id", "email", "role", "fullName", "isActive", "createdAt"])
       .where("id", "=", context.user!.id)
-      .executeTakeFirstOrThrow();
+      .executeTakeFirst();
+
+    // El guard ya lo leyó, pero pudo borrarse en el medio: es una sesión que no vale, no un 500.
+    if (!user) throw new ORPCError("UNAUTHORIZED", { message: "User not active" });
 
     return meResponseSchema.parse({
       ...user,

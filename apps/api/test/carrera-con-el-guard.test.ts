@@ -115,3 +115,22 @@ describe("un recurso que desaparece entre el chequeo y el insert es 404", () => 
     expect(res.body.message).toBe("Project or user not found");
   });
 });
+
+describe("un usuario que desaparece entre el guard y el handler", () => {
+  it("GET /auth/me es 401, no 500", async () => {
+    const leer = db.selectFrom.bind(db);
+    // La primera lectura es la del guard; la segunda, la del handler, ya no lo encuentra.
+    vi.spyOn(db, "selectFrom")
+      .mockImplementationOnce(((tabla: "User") => leer(tabla)) as never)
+      .mockImplementationOnce((() => ({
+        select: () => ({ where: () => ({ executeTakeFirst: async () => undefined }) })
+      })) as never);
+
+    const res = await request(app)
+      .get("/api/v1/auth/me")
+      .set("Authorization", `Bearer ${tokenAdmin}`);
+
+    expect(res.status).toBe(401);
+    expect(res.body.message).toBe("User not active");
+  });
+});
