@@ -1,35 +1,23 @@
-import { screen } from '@testing-library/react'
+import { screen, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { afterEach, describe, expect, it, vi } from 'vitest'
-import { api } from '#/api/port'
+import { ApiError, api } from '#/api/port'
+import { esAR } from '#/i18n/dictionary'
+import { fabrica } from '#/test/fabrica'
 import { autenticarComo, montarRuta, NOTARY_USER } from './-test-mount'
 import { Route } from './notary.dossier.$dossierId'
 
-function unDossier() {
-  return {
-    id: 'd1',
-    unitId: 'u1',
-    unitReference: 'Torre A · 4B',
-    projectId: 'p1',
-    projectName: 'Torre A',
-    masterHash: 'a'.repeat(64),
-    compiledAt: new Date('2026-09-01T00:00:00Z'),
-    status: 'compiled' as const,
-    artifacts: [
-      {
-        kind: 'stage' as const,
-        referenceId: 's1',
-        label: 'Cimentación',
-        sha256: 'd'.repeat(64),
-        txid: null
-      }
-    ],
-    completeness: 40,
-    signatureTxid: null,
-    signedAt: null,
-    rejectionNote: null
-  }
+const ARTEFACTO = {
+  kind: 'stage' as const,
+  referenceId: 's1',
+  label: 'Cimentación',
+  sha256: 'd'.repeat(64),
+  txid: null
 }
+const unDossier = () => fabrica.dossier({ artifacts: [ARTEFACTO] })
+
+const montar = () =>
+  montarRuta(Route, '/notary/dossier/$dossierId', ['/notary'], '/notary/dossier/d1')
 
 describe('/notary/dossier/$dossierId', () => {
   afterEach(() => vi.restoreAllMocks())
@@ -38,12 +26,7 @@ describe('/notary/dossier/$dossierId', () => {
     autenticarComo(NOTARY_USER)
     vi.spyOn(api, 'getDossier').mockResolvedValue(unDossier())
 
-    montarRuta(
-      Route.options.component as () => React.ReactElement,
-      '/notary/dossier/$dossierId',
-      ['/notary'],
-      '/notary/dossier/d1'
-    )
+    montar()
 
     await screen.findByText('Torre A · 4B')
     expect(screen.getByTestId('NOT-DOSSIER-SIGN-001')).toBeTruthy()
@@ -56,15 +39,10 @@ describe('/notary/dossier/$dossierId', () => {
       ...unDossier(),
       status: 'signed',
       signatureTxid: 'b'.repeat(64),
-      signedAt: new Date('2026-09-02T00:00:00Z')
+      signedAt: '2026-09-02T00:00:00.000Z'
     })
 
-    montarRuta(
-      Route.options.component as () => React.ReactElement,
-      '/notary/dossier/$dossierId',
-      ['/notary'],
-      '/notary/dossier/d1'
-    )
+    montar()
 
     await screen.findByText('Torre A · 4B')
     expect(screen.queryByTestId('NOT-DOSSIER-SIGN-001')).toBeNull()
@@ -79,12 +57,7 @@ describe('/notary/dossier/$dossierId', () => {
       rejectionNote: 'falta el permiso municipal'
     })
 
-    montarRuta(
-      Route.options.component as () => React.ReactElement,
-      '/notary/dossier/$dossierId',
-      ['/notary'],
-      '/notary/dossier/d1'
-    )
+    montar()
 
     await screen.findByText('Torre A · 4B')
     expect(screen.queryByTestId('NOT-DOSSIER-SIGN-001')).toBeNull()
@@ -96,12 +69,7 @@ describe('/notary/dossier/$dossierId', () => {
     vi.spyOn(api, 'getDossier').mockResolvedValue(unDossier())
     const firmar = vi.spyOn(api, 'signDossier').mockResolvedValue(undefined as never)
 
-    montarRuta(
-      Route.options.component as () => React.ReactElement,
-      '/notary/dossier/$dossierId',
-      ['/notary'],
-      '/notary/dossier/d1'
-    )
+    montar()
 
     await screen.findByText('Torre A · 4B')
     await userEvent.click(screen.getByTestId('NOT-DOSSIER-SIGN-001'))
@@ -115,12 +83,7 @@ describe('/notary/dossier/$dossierId', () => {
     vi.spyOn(api, 'getDossier').mockResolvedValue(unDossier())
     const rechazar = vi.spyOn(api, 'rejectDossier').mockResolvedValue(undefined as never)
 
-    montarRuta(
-      Route.options.component as () => React.ReactElement,
-      '/notary/dossier/$dossierId',
-      ['/notary'],
-      '/notary/dossier/d1'
-    )
+    montar()
 
     await screen.findByText('Torre A · 4B')
     await userEvent.click(screen.getByTestId('NOT-DOSSIER-REJECT-001'))
@@ -137,12 +100,7 @@ describe('/notary/dossier/$dossierId', () => {
     autenticarComo(NOTARY_USER)
     vi.spyOn(api, 'getDossier').mockResolvedValue({ ...unDossier(), artifacts: [] })
 
-    montarRuta(
-      Route.options.component as () => React.ReactElement,
-      '/notary/dossier/$dossierId',
-      ['/notary'],
-      '/notary/dossier/d1'
-    )
+    montar()
 
     await screen.findByText('Torre A · 4B')
     expect(screen.queryByText('Cimentación')).toBeNull()
@@ -152,12 +110,7 @@ describe('/notary/dossier/$dossierId', () => {
     vi.spyOn(api, 'getDossier').mockResolvedValue(unDossier())
     const rechazar = vi.spyOn(api, 'rejectDossier')
 
-    montarRuta(
-      Route.options.component as () => React.ReactElement,
-      '/notary/dossier/$dossierId',
-      ['/notary'],
-      '/notary/dossier/d1'
-    )
+    montar()
 
     await screen.findByText('Torre A · 4B')
     await userEvent.click(screen.getByTestId('NOT-DOSSIER-REJECT-001'))
@@ -173,12 +126,7 @@ describe('/notary/dossier/$dossierId', () => {
     vi.spyOn(api, 'getDossier').mockResolvedValue(unDossier())
     vi.spyOn(api, 'signDossier').mockReturnValue(new Promise(() => {}))
 
-    montarRuta(
-      Route.options.component as () => React.ReactElement,
-      '/notary/dossier/$dossierId',
-      ['/notary'],
-      '/notary/dossier/d1'
-    )
+    montar()
 
     await screen.findByText('Torre A · 4B')
     await userEvent.click(screen.getByTestId('NOT-DOSSIER-SIGN-001'))
@@ -188,20 +136,41 @@ describe('/notary/dossier/$dossierId', () => {
 
   it('un artifact sin sha256 se lista sin HashChip', async () => {
     autenticarComo(NOTARY_USER)
-    const base = unDossier()
     vi.spyOn(api, 'getDossier').mockResolvedValue({
-      ...base,
-      artifacts: [{ ...base.artifacts[0], sha256: null }]
+      ...unDossier(),
+      artifacts: [{ ...ARTEFACTO, sha256: null }]
     })
 
-    montarRuta(
-      Route.options.component as () => React.ReactElement,
-      '/notary/dossier/$dossierId',
-      ['/notary'],
-      '/notary/dossier/d1'
-    )
+    montar()
 
     await screen.findByText('Cimentación')
     expect(screen.queryByText(/dddd/)).toBeNull()
+  })
+  it('mientras carga, el título y la carga dentro de la sección; nada del dossier', async () => {
+    autenticarComo(NOTARY_USER)
+    vi.spyOn(api, 'getDossier').mockReturnValue(new Promise(() => {}))
+    montar()
+
+    const seccion = await screen.findByTestId('NOT-DOSSIER-VIEW-001')
+    expect(within(seccion).getByRole('status')).toBeTruthy()
+    expect(screen.getByRole('heading', { name: 'Revisión de dossier' })).toBeTruthy()
+    expect(screen.queryByTestId('NOT-DOSSIER-SIGN-001')).toBeNull()
+  })
+
+  it('un dossier que no existe (404) dice que no se encontró, sin acciones', async () => {
+    autenticarComo(NOTARY_USER)
+    vi.spyOn(api, 'getDossier').mockRejectedValue(new ApiError(404, 'no'))
+    montar()
+
+    expect((await screen.findByRole('alert')).textContent).toBe(esAR['error.notFound'])
+    expect(screen.queryByTestId('NOT-DOSSIER-SIGN-001')).toBeNull()
+  })
+
+  it('si la API falla, el error y no un dossier vacío', async () => {
+    autenticarComo(NOTARY_USER)
+    vi.spyOn(api, 'getDossier').mockRejectedValue(new ApiError(403, 'no'))
+    montar()
+
+    expect((await screen.findByRole('alert')).textContent).toBe(esAR['error.forbidden'])
   })
 })

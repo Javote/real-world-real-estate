@@ -187,7 +187,7 @@ export const esAR = {
   'notary.dossier.masterHash': 'Hash del dossier',
   'notary.dossier.signatureTxid': 'TXID de la firma',
   'notary.dossier.artifacts': 'Artefactos del dossier',
-  'notary.dossier.noArtifacts': 'Este dossier todavía no tiene artefactos.',
+  'dossier.noArtifacts': 'Este dossier todavía no tiene artefactos.',
   'notary.dossier.sign': 'Verificar y firmar',
   'notary.dossier.signing': 'Firmando…',
   'notary.dossier.reject': 'Rechazar',

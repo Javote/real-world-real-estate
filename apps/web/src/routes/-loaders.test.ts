@@ -1,6 +1,7 @@
 import { QueryClient, type QueryKey } from '@tanstack/react-query'
-import type { AnyRoute } from '@tanstack/react-router'
+import { type AnyRoute, isNotFound } from '@tanstack/react-router'
 import { describe, expect, it, vi } from 'vitest'
+import { ApiError } from '#/api/port'
 import {
   auditoriaQueries,
   capitalQueries,
@@ -102,13 +103,6 @@ const CASOS: Caso[] = [
     [unidadQueries.detalle('u1'), contratoQueries.deUnidad('u1')]
   ],
   [
-    '/investor/unit/$unitId/dossier',
-    UnitDossier,
-    { unitId: 'u1' },
-    undefined,
-    [dossierQueries.deUnidad('u1'), unidadQueries.detalle('u1')]
-  ],
-  [
     '/investor/unit/$unitId/notifications',
     UnitNotifications,
     { unitId: 'u1' },
@@ -146,13 +140,6 @@ const CASOS: Caso[] = [
     { projectId: 'p1' },
     undefined,
     [proyectoQueries.desarrolladora('p1')]
-  ],
-  [
-    '/public/dossier/$shareToken',
-    PublicDossier,
-    { shareToken: 't1' },
-    undefined,
-    [dossierQueries.publico('t1')]
   ],
   ['/developer', DeveloperIndex, {}, undefined, [kpiQueries.developer()]],
   ['/developer/projects', DeveloperProjects, {}, undefined, [proyectoQueries.delDeveloper()]],
@@ -233,16 +220,6 @@ const CASOS: Caso[] = [
   ],
   ['/certifier/issued', CertifierIssued, {}, undefined, [certificadoQueries.lista()]],
   ['/certifier/profile', CertifierProfile, {}, undefined, PERFIL],
-  ['/notary', NotaryIndex, {}, undefined, [kpiQueries.notary(), dossierQueries.pendientes()]],
-  ['/notary/dossiers', NotaryDossiers, {}, undefined, [dossierQueries.pendientes()]],
-  [
-    '/notary/dossier/$dossierId',
-    NotaryDossier,
-    { dossierId: 'd1' },
-    undefined,
-    [dossierQueries.detalle('d1')]
-  ],
-  ['/notary/signed', NotarySigned, {}, undefined, [dossierQueries.firmas()]],
   ['/notary/profile', NotaryProfile, {}, undefined, PERFIL],
   [
     '/admin',
@@ -265,5 +242,61 @@ describe('los loaders precargan lo que lee la pantalla, sin esperarlo', () => {
 
     expect(resultado).toBeUndefined()
     expect(prefetch.mock.calls.map(([o]) => forma(o as Opciones))).toEqual(esperadas.map(forma))
+  })
+})
+
+// [ruta, Route, params, lo que tiene que esperar, en orden]
+type CasoQueEspera = [string, AnyRoute, Record<string, string>, Opciones[]]
+
+const DOSSIER = { projectId: 'p9' }
+
+const ESPERAN: CasoQueEspera[] = [
+  ['/notary', NotaryIndex, {}, [kpiQueries.notary(), dossierQueries.pendientes()]],
+  ['/notary/dossiers', NotaryDossiers, {}, [dossierQueries.pendientes()]],
+  [
+    '/notary/dossier/$dossierId',
+    NotaryDossier,
+    { dossierId: 'd1' },
+    [dossierQueries.detalle('d1')]
+  ],
+  ['/notary/signed', NotarySigned, {}, [dossierQueries.firmas()]],
+  [
+    '/public/dossier/$shareToken',
+    PublicDossier,
+    { shareToken: 't1' },
+    [dossierQueries.publico('t1')]
+  ],
+  [
+    '/investor/unit/$unitId/dossier: el proyecto, con el del dossier',
+    UnitDossier,
+    { unitId: 'u1' },
+    [dossierQueries.deUnidad('u1'), unidadQueries.detalle('u1'), proyectoQueries.detalle('p9')]
+  ]
+]
+
+describe('los loaders que leen con Suspense esperan lo que lee la pantalla (SPEC-615)', () => {
+  it.each(ESPERAN)('%s', async (_ruta, ruta, params, esperadas) => {
+    const queryClient = new QueryClient()
+    const ensure = vi.spyOn(queryClient, 'ensureQueryData').mockResolvedValue(DOSSIER)
+    const prefetch = vi.spyOn(queryClient, 'prefetchQuery')
+
+    await ruta.options.loader({ context: { queryClient }, params })
+
+    expect(ensure.mock.calls.map(([o]) => forma(o as Opciones))).toEqual(esperadas.map(forma))
+    expect(prefetch).not.toHaveBeenCalled()
+  })
+
+  it('un 404 del dossier es la ruta que no existe; otro error sigue siendo error', async () => {
+    const queryClient = new QueryClient()
+    const ensure = vi.spyOn(queryClient, 'ensureQueryData')
+    const ruta: AnyRoute = NotaryDossier
+    const cargar = () =>
+      ruta.options.loader({ context: { queryClient }, params: { dossierId: 'd1' } })
+
+    ensure.mockRejectedValueOnce(new ApiError(404, 'no'))
+    await expect(cargar()).rejects.toSatisfy(isNotFound)
+
+    ensure.mockRejectedValueOnce(new ApiError(500, 'boom'))
+    await expect(cargar()).rejects.toBeInstanceOf(ApiError)
   })
 })

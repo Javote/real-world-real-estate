@@ -1,24 +1,31 @@
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
+import { useMutation, useQueryClient, useSuspenseQuery } from '@tanstack/react-query'
 import { createFileRoute, useNavigate } from '@tanstack/react-router'
 import { AlertCircle, ShieldCheck } from 'lucide-react'
-import { useState } from 'react'
+import { type ReactNode, useState } from 'react'
 import { api } from '#/api/port'
 import { dossierQueries, invalidaciones, invalidar } from '#/api/queries'
+import { DossierArtifacts } from '#/components/DossierArtifacts'
 import { HashChip } from '#/components/domain/HashChip'
 import { ObserveStageModal } from '#/components/domain/ObserveStageModal'
 import { PrimaryButton, SecondaryButton } from '#/components/domain/PrimaryButton'
 import { ProgressBar } from '#/components/domain/ProgressBar'
 import { StatusPill } from '#/components/domain/StatusPill'
-import { VerificationBadge } from '#/components/domain/VerificationBadge'
+import { estadosDeRuta, oNoEncontrado } from '#/components/EstadosDeRuta'
 import { PanelLayout } from '#/components/PanelLayout'
 import { useTranslation } from '#/i18n/useTranslation'
 import { CARD_SHELL } from '#/lib/cardShell'
 import { cn } from '#/lib/cn'
 
+function Marco({ children }: { children: ReactNode }) {
+  const { t } = useTranslation()
+  return <PanelLayout title={t('notary.dossier.title')}>{children}</PanelLayout>
+}
+
 export const Route = createFileRoute('/notary/dossier/$dossierId')({
-  loader: ({ context: { queryClient }, params: { dossierId } }) => {
-    void queryClient.prefetchQuery(dossierQueries.detalle(dossierId))
+  loader: async ({ context: { queryClient }, params: { dossierId } }) => {
+    await oNoEncontrado(queryClient.ensureQueryData(dossierQueries.detalle(dossierId)))
   },
+  ...estadosDeRuta(Marco, { testId: 'NOT-DOSSIER-VIEW-001' }),
   component: DossierReview
 })
 
@@ -30,7 +37,7 @@ function DossierReview() {
 
   const [rechazando, setRechazando] = useState(false)
 
-  const { data: dossier } = useQuery(dossierQueries.detalle(dossierId))
+  const { data: dossier } = useSuspenseQuery(dossierQueries.detalle(dossierId))
 
   const alTerminar = () => {
     invalidar(queryClient, invalidaciones.dossierResuelto())
@@ -49,95 +56,56 @@ function DossierReview() {
     }
   })
 
-  const firmado = dossier?.status === 'signed'
-  const enRevision = dossier?.status === 'compiled'
+  const firmado = dossier.status === 'signed'
+  const enRevision = dossier.status === 'compiled'
 
   return (
     <PanelLayout
       title={t('notary.dossier.title')}
-      context={dossier ? `${dossier.projectName} · ${dossier.unitReference}` : null}
+      context={`${dossier.projectName} · ${dossier.unitReference}`}
     >
       <section className="flex flex-col gap-s4" data-testid="NOT-DOSSIER-VIEW-001">
-        {dossier ? (
-          <>
-            <article className={cn('flex flex-col gap-s3', CARD_SHELL)}>
-              <div className="flex items-start justify-between gap-s3">
-                <h2 className="text-h2 font-bold text-text-primary">{dossier.unitReference}</h2>
-                <StatusPill tone={firmado ? 'verified' : 'pending'}>
-                  {firmado ? t('status.signed') : t('status.pending')}
-                </StatusPill>
-              </div>
+        <article className={cn('flex flex-col gap-s3', CARD_SHELL)}>
+          <div className="flex items-start justify-between gap-s3">
+            <h2 className="text-h2 font-bold text-text-primary">{dossier.unitReference}</h2>
+            <StatusPill tone={firmado ? 'verified' : 'pending'}>
+              {firmado ? t('status.signed') : t('status.pending')}
+            </StatusPill>
+          </div>
 
-              <ProgressBar
-                percent={dossier.completeness}
-                label={t('investor.dossier.completeness')}
-                showValue
+          <ProgressBar
+            percent={dossier.completeness}
+            label={t('investor.dossier.completeness')}
+            showValue
+          />
+
+          <div className="flex items-center justify-between gap-s3">
+            <span className="text-body-sm text-text-muted">{t('notary.dossier.masterHash')}</span>
+            <HashChip
+              hash={dossier.masterHash}
+              copyLabel={t('hash.copy')}
+              copiedLabel={t('hash.copied')}
+            />
+          </div>
+
+          {dossier.signatureTxid ? (
+            <div className="flex items-center justify-between gap-s3">
+              <span className="text-body-sm text-text-muted">
+                {t('notary.dossier.signatureTxid')}
+              </span>
+              <HashChip
+                hash={dossier.signatureTxid}
+                label={t('hash.txidLabel')}
+                copyLabel={t('hash.copy')}
+                copiedLabel={t('hash.copied')}
               />
+            </div>
+          ) : null}
+        </article>
 
-              <div className="flex items-center justify-between gap-s3">
-                <span className="text-body-sm text-text-muted">
-                  {t('notary.dossier.masterHash')}
-                </span>
-                <HashChip
-                  hash={dossier.masterHash}
-                  copyLabel={t('hash.copy')}
-                  copiedLabel={t('hash.copied')}
-                />
-              </div>
+        <DossierArtifacts artifacts={dossier.artifacts} title={t('notary.dossier.artifacts')} />
 
-              {dossier.signatureTxid ? (
-                <div className="flex items-center justify-between gap-s3">
-                  <span className="text-body-sm text-text-muted">
-                    {t('notary.dossier.signatureTxid')}
-                  </span>
-                  <HashChip
-                    hash={dossier.signatureTxid}
-                    label={t('hash.txidLabel')}
-                    copyLabel={t('hash.copy')}
-                    copiedLabel={t('hash.copied')}
-                  />
-                </div>
-              ) : null}
-            </article>
-
-            <article className={cn('flex flex-col gap-s3', CARD_SHELL)}>
-              <h3 className="text-body font-bold text-text-primary">
-                {t('notary.dossier.artifacts')}
-              </h3>
-
-              {dossier.artifacts.length === 0 ? (
-                <p className="text-body-sm text-text-muted">{t('notary.dossier.noArtifacts')}</p>
-              ) : (
-                <ul className="flex flex-col gap-s2">
-                  {dossier.artifacts.map((a) => (
-                    <li
-                      key={`${a.kind}-${a.referenceId}`}
-                      className="flex items-center gap-s2 rounded-lg bg-surface-alt p-s2"
-                    >
-                      <span className="min-w-0 flex-1 truncate text-body-sm text-text-secondary">
-                        {a.label}
-                      </span>
-                      {a.sha256 ? (
-                        <HashChip
-                          hash={a.sha256}
-                          copyLabel={t('hash.copy')}
-                          copiedLabel={t('hash.copied')}
-                        />
-                      ) : null}
-                      <VerificationBadge
-                        txid={a.txid}
-                        verifiedLabel={t('status.verified')}
-                        pendingLabel={t('status.pending')}
-                      />
-                    </li>
-                  ))}
-                </ul>
-              )}
-            </article>
-
-            <p className="text-caption text-text-muted">{t('notary.dossier.disclaimer')}</p>
-          </>
-        ) : null}
+        <p className="text-caption text-text-muted">{t('notary.dossier.disclaimer')}</p>
       </section>
 
       {enRevision ? (

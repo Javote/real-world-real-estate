@@ -187,7 +187,7 @@ export const enUS = {
   'notary.dossier.masterHash': 'Dossier hash',
   'notary.dossier.signatureTxid': 'Signature TXID',
   'notary.dossier.artifacts': 'Dossier artifacts',
-  'notary.dossier.noArtifacts': 'This dossier has no artifacts yet.',
+  'dossier.noArtifacts': 'This dossier has no artifacts yet.',
   'notary.dossier.sign': 'Verify and sign',
   'notary.dossier.signing': 'Signing…',
   'notary.dossier.reject': 'Reject',

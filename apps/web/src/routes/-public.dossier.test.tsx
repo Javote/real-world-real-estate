@@ -1,25 +1,17 @@
-import { screen, waitFor } from '@testing-library/react'
+import { screen, waitFor, within } from '@testing-library/react'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import { ApiError, api } from '#/api/port'
 import { esAR } from '#/i18n/dictionary'
+import { fabrica } from '#/test/fabrica'
 import { montarRuta } from './-test-mount'
 import { Route } from './public.dossier.$shareToken'
 
 const t = esAR
 
-type Dossier = Awaited<ReturnType<typeof api.getPublicDossier>>
-
-const HASH = 'a'.repeat(64)
 const HASH_ARTEFACTO = 'b'.repeat(64)
 
-const dossier = (over: Partial<Record<string, unknown>> = {}) =>
-  ({
-    unitReference: 'Unidad 4B',
-    projectName: 'Torre Norte',
-    masterHash: HASH,
-    compiledAt: '2026-05-10T12:00:00.000Z',
-    status: 'signed',
-    completeness: 80,
+const dossier = (over: Parameters<typeof fabrica.dossierPublico>[0] = {}) =>
+  fabrica.dossierPublico({
     signatureTxid: 'tx-firma-1',
     signedAt: '2026-05-11T12:00:00.000Z',
     artifacts: [
@@ -33,15 +25,9 @@ const dossier = (over: Partial<Record<string, unknown>> = {}) =>
       { kind: 'stage', referenceId: 's1', label: 'Etapa sin hash', sha256: null, txid: null }
     ],
     ...over
-  }) as unknown as Dossier
+  })
 
-const montar = () =>
-  montarRuta(
-    Route.options.component as () => React.ReactElement,
-    '/public/dossier/$shareToken',
-    [],
-    '/public/dossier/tok-123'
-  )
+const montar = () => montarRuta(Route, '/public/dossier/$shareToken', [], '/public/dossier/tok-123')
 
 describe('/public/dossier/:shareToken (sin sesión)', () => {
   afterEach(() => vi.restoreAllMocks())
@@ -74,23 +60,26 @@ describe('/public/dossier/:shareToken (sin sesión)', () => {
     vi.spyOn(api, 'getPublicDossier').mockRejectedValue(new ApiError(404, 'no existe'))
     montar()
 
-    await screen.findByText(t['investor.public.notFound'])
+    const aviso = await screen.findByRole('alert')
+    expect(aviso.textContent).toBe(t['investor.public.notFound'])
+    expect(aviso.closest('main')?.dataset.testid).toBe('INV-DOSSIER-PUBLIC-002')
   })
 
-  it('mientras carga no muestra ni el dossier ni el aviso de no disponible', async () => {
+  it('mientras carga, solo la carga: ni el dossier ni el aviso de no disponible', async () => {
     vi.spyOn(api, 'getPublicDossier').mockReturnValue(new Promise(() => {}))
     montar()
 
     const main = await screen.findByTestId('INV-DOSSIER-PUBLIC-002')
-    expect(main.textContent).toBe('')
+    expect(within(main).getByRole('status')).toBeTruthy()
+    expect(main.textContent).not.toContain(t['investor.public.notFound'])
   })
 
-  it('otro error (no 404) no muestra el aviso de no disponible', async () => {
+  it('otro error (no 404) dice que algo salió mal, no que el dossier no está disponible', async () => {
     vi.spyOn(api, 'getPublicDossier').mockRejectedValue(new ApiError(500, 'boom'))
     montar()
 
-    const main = await screen.findByTestId('INV-DOSSIER-PUBLIC-002')
-    await waitFor(() => expect(api.getPublicDossier).toHaveBeenCalled())
-    expect(main.textContent).not.toContain(t['investor.public.notFound'])
+    const aviso = await screen.findByRole('alert')
+    expect(aviso.textContent).toBe(t['error.generic'])
+    expect(aviso.closest('main')?.dataset.testid).toBe('INV-DOSSIER-PUBLIC-002')
   })
 })

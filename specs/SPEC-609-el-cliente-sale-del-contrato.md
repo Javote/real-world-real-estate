@@ -107,3 +107,14 @@ salen de `types.ts` (alcance 6); sus casos de `port.contract.test.ts` se van (al
 `API_BASE` y las tres excepciones); y sus params de ruta se parsean con su schema con marca
 (§Los params de ruta). El primer método migrado mete el cliente en el bundle de la app: ese commit
 mide cuánto suma al JS inicial.
+
+## El dossier, el primer vertical (2026-10-22, con W3)
+
+Los 9 métodos del dossier pasan a `cliente.dossier.*` (`SPEC-615` §W3); `exportUnitDossier` sigue
+con `requestBlob` (alcance 5). Sus casos salen de `port.contract.test.ts` a una lista
+`DEL_CONTRATO`, que el test de cobertura de métodos suma. `api/port.dossier.test.ts` fija la request
+de cada uno: idénticas, salvo que `share` y `sign` ya no mandan `{}` como cuerpo (invariante 1; el
+e2e lo prueba contra la API real). **Con el primer método migrado, el cliente entra al JS inicial:
+130,6 → 142,9 kB gz** (`vite build`, scripts y `modulepreload` del `index.html`). Bajarlo con
+`import()` en `port.ts` es una decisión, no se tomó. Los params de ruta con marca (§Los params de
+ruta) esperan a que las salidas estén marcadas (`SPEC-615` §W3, Lo que W3 no hizo).

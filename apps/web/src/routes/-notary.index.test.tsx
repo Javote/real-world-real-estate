@@ -1,6 +1,7 @@
 import { screen } from '@testing-library/react'
 import { afterEach, describe, expect, it, vi } from 'vitest'
-import { api } from '#/api/port'
+import { ApiError, api } from '#/api/port'
+import { esAR } from '#/i18n/dictionary'
 import { autenticarComo, montarRuta, NOTARY_USER } from './-test-mount'
 import { Route } from './notary.index'
 
@@ -17,7 +18,7 @@ describe('/notary (panel)', () => {
     })
     vi.spyOn(api, 'getNotaryPendingDossiers').mockResolvedValue([])
 
-    montarRuta(Route.options.component as () => React.ReactElement, '/notary/')
+    montarRuta(Route, '/notary/')
 
     const panel = await screen.findByTestId('NOT-PANEL-001')
     expect(panel.textContent).not.toContain('null')
@@ -34,12 +35,22 @@ describe('/notary (panel)', () => {
     })
     vi.spyOn(api, 'getNotaryPendingDossiers').mockResolvedValue([])
 
-    montarRuta(Route.options.component as () => React.ReactElement, '/notary/')
+    montarRuta(Route, '/notary/')
 
     const panel = await screen.findByTestId('NOT-PANEL-001')
     await vi.waitFor(() => expect(panel.textContent).toContain('3'))
     expect(panel.textContent).toContain('12')
     expect(panel.textContent).toContain('5')
     expect(panel.textContent).toContain('2')
+  })
+  it('si los KPI fallan, el error en lugar del panel, nunca guiones de "sin dato"', async () => {
+    autenticarComo(NOTARY_USER)
+    vi.spyOn(api, 'getNotaryKpis').mockRejectedValue(new ApiError(500, 'caído'))
+    vi.spyOn(api, 'getNotaryPendingDossiers').mockResolvedValue([])
+
+    montarRuta(Route, '/notary/')
+
+    expect((await screen.findByRole('alert')).textContent).toBe(esAR['error.generic'])
+    expect(screen.queryByText(esAR['panel.notary.emptyPending'])).toBeNull()
   })
 })

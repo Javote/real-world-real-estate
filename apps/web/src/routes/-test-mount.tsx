@@ -80,7 +80,22 @@ interface RutaMontable {
   options: {
     component?: RouteComponent
     validateSearch?: AnyValidator
+    loader?: unknown
+    pendingMs?: unknown
+    pendingComponent?: unknown
+    errorComponent?: unknown
+    notFoundComponent?: unknown
   }
+}
+
+// Una ruta que lee con `useSuspenseQuery` se monta entera: su loader espera el dato y sus estados
+// dibujan la carga, el error y el 404. Las demás, solo con su componente y su `validateSearch`.
+function opcionesDe(ruta: RutaMontable) {
+  const { validateSearch, loader, pendingMs, pendingComponent, errorComponent, notFoundComponent } =
+    ruta.options
+  return pendingComponent
+    ? { validateSearch, loader, pendingMs, pendingComponent, errorComponent, notFoundComponent }
+    : { validateSearch }
 }
 
 export function montarRuta(
@@ -91,7 +106,7 @@ export function montarRuta(
 ) {
   const esRuta = typeof componente !== 'function'
   const Componente = esRuta ? componente.options.component : componente
-  const validateSearch = esRuta ? componente.options.validateSearch : undefined
+  const opciones = esRuta ? opcionesDe(componente) : {}
   if (!Componente) throw new Error(`montarRuta: la ruta de "${path}" no declara un component`)
 
   const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } })
@@ -138,7 +153,7 @@ export function montarRuta(
     }
   }
 
-  crear(path, Componente, { validateSearch })
+  crear(path, Componente, opciones)
   for (const ruta of rutasExtra) crear(ruta, () => <div>{ruta}</div>)
 
   const router = createRouter({

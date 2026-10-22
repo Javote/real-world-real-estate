@@ -1,7 +1,8 @@
-import { fireEvent, screen, waitFor } from '@testing-library/react'
+import { fireEvent, screen, waitFor, within } from '@testing-library/react'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import { ApiError, api } from '#/api/port'
 import { esAR } from '#/i18n/dictionary'
+import { fabrica } from '#/test/fabrica'
 import { autenticarComo, INVESTOR_USER, montarRuta } from './-test-mount'
 import { Route } from './investor.unit.$unitId.dossier'
 
@@ -16,15 +17,9 @@ const SHA = 'b'.repeat(64)
 const TXID_FIRMA = 'f'.repeat(64)
 const TXID_ARTEFACTO = 'e'.repeat(64)
 
-const dossier = (over: Partial<Record<keyof Dossier, unknown>> = {}): Dossier =>
-  ({
-    id: 'd1',
-    unitId: 'u1',
-    unitReference: 'Torre A · 4B',
-    projectId: 'p1',
-    projectName: 'Torre A',
+const dossier = (over: Partial<Dossier> = {}): Dossier =>
+  fabrica.dossier({
     masterHash: MASTER,
-    compiledAt: '2026-09-01T00:00:00.000Z',
     status: 'signed',
     artifacts: [
       {
@@ -39,9 +34,8 @@ const dossier = (over: Partial<Record<keyof Dossier, unknown>> = {}): Dossier =>
     completeness: 50,
     signatureTxid: TXID_FIRMA,
     signedAt: '2026-09-02T00:00:00.000Z',
-    rejectionNote: null,
     ...over
-  }) as unknown as Dossier
+  })
 
 const unidad = (stages: unknown[] = []): Unidad =>
   ({ id: 'u1', unitReference: 'Torre A · 4B', projectId: 'p1', stages }) as unknown as Unidad
@@ -78,7 +72,7 @@ const proyecto = (estimatedDelivery: string | null): Proyecto =>
 
 const montar = () =>
   montarRuta(
-    Route.options.component as () => React.ReactElement,
+    Route,
     '/investor/unit/$unitId/dossier',
     ['/investor/unit/$unitId'],
     '/investor/unit/u1/dossier'
@@ -138,37 +132,47 @@ describe('/investor/unit/$unitId/dossier', () => {
     expect(vista.textContent).toContain(t['status.pending'])
   })
 
-  it('mientras carga no muestra el dossier pero sí las acciones', async () => {
+  it('mientras carga, la carga en la sección y el botón de volver; ni el dossier ni sus acciones', async () => {
     preparar({ dossier: 'cargando' })
     montar()
 
-    await screen.findByRole('button', { name: t['investor.dossier.share'] })
-    expect(screen.queryByText(t['investor.dossier.certification'])).toBeNull()
+    const vista = await screen.findByTestId('INV-DOSSIER-VIEW-001')
+    expect(within(vista).getByRole('status')).toBeTruthy()
+    expect(screen.getByRole('button', { name: t['investor.dossier.back'] })).toBeTruthy()
+    expect(screen.queryByRole('button', { name: t['investor.dossier.share'] })).toBeNull()
   })
 
   it('sin permiso (403) — error de acceso', async () => {
     preparar({ dossier: new ApiError(403, 'no') })
     montar()
 
-    await screen.findByText(t['error.forbidden'])
+    expect((await screen.findByRole('alert')).textContent).toBe(t['error.forbidden'])
     expect(screen.queryByText(t['investor.dossier.certification'])).toBeNull()
   })
 
-  it('sin dossier (404) — no se encontró', async () => {
-    preparar({ dossier: new ApiError(404, 'no') })
+  it('sin dossier (404) — no se encontró, sin pedir el proyecto', async () => {
+    const proyecto = preparar({ dossier: new ApiError(404, 'no') })
     montar()
 
-    await screen.findByText(t['error.notFound'])
+    expect((await screen.findByRole('alert')).textContent).toBe(t['error.notFound'])
+    expect(proyecto).not.toHaveBeenCalled()
   })
 
-  it('un error que no es de ausencia deja la pantalla con sus acciones y sin dossier', async () => {
+  it('un error que no es de ausencia dice que algo salió mal, sin acciones ni dossier', async () => {
     preparar({ dossier: new ApiError(500, 'boom') })
     montar()
 
-    await screen.findByRole('button', { name: t['investor.dossier.export'] })
-    await waitFor(() => expect(screen.queryByRole('status')).toBeNull(), { timeout: 6000 })
-    expect(screen.queryByText(t['error.forbidden'])).toBeNull()
+    expect((await screen.findByRole('alert')).textContent).toBe(t['error.generic'])
+    expect(screen.queryByRole('button', { name: t['investor.dossier.export'] })).toBeNull()
     expect(screen.queryByText(t['investor.dossier.certification'])).toBeNull()
+  })
+
+  it('el proyecto se pide con el del dossier', async () => {
+    const proyecto = preparar({ dossier: dossier({ projectId: 'p9' }) })
+    montar()
+
+    await screen.findByText(t['investor.dossier.certification'])
+    expect(proyecto).toHaveBeenCalledWith('p9')
   })
 
   it('con etapas de obra muestra el avance, sin duplicar la etapa del join', async () => {

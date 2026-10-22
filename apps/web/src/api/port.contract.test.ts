@@ -69,7 +69,20 @@ afterAll(() => {
   vi.unstubAllGlobals()
 })
 
-const CASOS: Record<keyof Api, Caso> = {
+// Salen del cliente del contrato (SPEC-609): verbo, path y cuerpo los fija el contrato al compilar.
+const DEL_CONTRATO = [
+  'getNotaryKpis',
+  'getNotaryPendingDossiers',
+  'getUnitDossier',
+  'shareUnitDossier',
+  'getPublicDossier',
+  'getDossier',
+  'signDossier',
+  'rejectDossier',
+  'listSignatures'
+] as const satisfies readonly (keyof Api)[]
+
+const CASOS: Record<Exclude<keyof Api, (typeof DEL_CONTRATO)[number]>, Caso> = {
   login: [() => api.login('a@b.co', 'x')],
   me: [() => api.me()],
   listProjects: [
@@ -80,9 +93,7 @@ const CASOS: Record<keyof Api, Caso> = {
   getDeveloperKpis: [() => api.getDeveloperKpis()],
   getCertifierKpis: [() => api.getCertifierKpis()],
   getCertifierAssignments: [() => api.getCertifierAssignments()],
-  getNotaryKpis: [() => api.getNotaryKpis()],
   getPilotMetrics: [() => api.getPilotMetrics()],
-  getNotaryPendingDossiers: [() => api.getNotaryPendingDossiers()],
   getProject: [() => api.getProject('p1')],
   getProjectDeveloper: [() => api.getProjectDeveloper('p1')],
   setMilestoneState: [() => api.setMilestoneState('s1', 'InProgress')],
@@ -133,10 +144,7 @@ const CASOS: Record<keyof Api, Caso> = {
   getInvestorUnitNews: [() => api.getInvestorUnitNews('u1')],
   getInvestorContract: [() => api.getInvestorContract('u1')],
   listContractReleases: [() => api.listContractReleases('c1')],
-  getUnitDossier: [() => api.getUnitDossier('u1')],
   exportUnitDossier: [() => api.exportUnitDossier('u1')],
-  shareUnitDossier: [() => api.shareUnitDossier('u1')],
-  getPublicDossier: [() => api.getPublicDossier('tok')],
   respondNpsSurvey: [
     () => api.respondNpsSurvey('tok', { score: 9 }),
     () => api.respondNpsSurvey('tok', { score: 3, comment: 'nota' })
@@ -162,10 +170,6 @@ const CASOS: Record<keyof Api, Caso> = {
   declineCertifierInvitation: [() => api.declineCertifierInvitation('i1')],
   observeStage: [() => api.observeStage('s1', 'nota')],
   listCertificates: [() => api.listCertificates(), () => api.listCertificates('k')],
-  getDossier: [() => api.getDossier('d1')],
-  signDossier: [() => api.signDossier('d1')],
-  rejectDossier: [() => api.rejectDossier('d1', 'nota')],
-  listSignatures: [() => api.listSignatures(), () => api.listSignatures('k')],
   getProfile: [() => api.getProfile()],
   updateProfile: [() => api.updateProfile('Nombre')],
   updateNotificationPrefs: [() => api.updateNotificationPrefs({})],
@@ -180,8 +184,8 @@ async function capturar(llamada: () => unknown): Promise<Captura> {
 }
 
 describe('ApiPort contra el OpenAPI de la API', () => {
-  it('CASOS cubre exactamente los métodos de `api` (nada sin contrastar, nada de más)', () => {
-    expect(Object.keys(CASOS).sort()).toEqual(Object.keys(api).sort())
+  it('CASOS cubre exactamente los métodos de `api` que no salen del contrato', () => {
+    expect([...Object.keys(CASOS), ...DEL_CONTRATO].sort()).toEqual(Object.keys(api).sort())
   })
 
   for (const [metodo, llamadas] of Object.entries(CASOS)) {

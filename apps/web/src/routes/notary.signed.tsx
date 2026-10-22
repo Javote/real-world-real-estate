@@ -1,33 +1,42 @@
-import { useQuery } from '@tanstack/react-query'
+import { useSuspenseQuery } from '@tanstack/react-query'
 import { createFileRoute } from '@tanstack/react-router'
+import type { ReactNode } from 'react'
 import { dossierQueries } from '#/api/queries'
 import { HashChip } from '#/components/domain/HashChip'
-import { Loading } from '#/components/domain/Loading'
 import { StatusPill } from '#/components/domain/StatusPill'
+import { estadosDeRuta } from '#/components/EstadosDeRuta'
 import { PanelLayout } from '#/components/PanelLayout'
 import { formatDate } from '#/i18n/format'
 import { useTranslation } from '#/i18n/useTranslation'
 import { CARD_SHELL, CARD_SHELL_EMPTY } from '#/lib/cardShell'
 import { cn } from '#/lib/cn'
 
+function Marco({ children }: { children: ReactNode }) {
+  const { t } = useTranslation()
+  return (
+    <PanelLayout title={t('notary.signed.title')} context={t('notary.signed.context')}>
+      {children}
+    </PanelLayout>
+  )
+}
+
 export const Route = createFileRoute('/notary/signed')({
-  loader: ({ context: { queryClient } }) => {
-    void queryClient.prefetchQuery(dossierQueries.firmas())
+  loader: async ({ context: { queryClient } }) => {
+    await queryClient.ensureQueryData(dossierQueries.firmas())
   },
+  ...estadosDeRuta(Marco, { testId: 'NOT-SIGNED-LIST-001' }),
   component: SignedDossiers
 })
 
 function SignedDossiers() {
   const { t, locale } = useTranslation()
 
-  const { data, isPending } = useQuery(dossierQueries.firmas())
+  const { data } = useSuspenseQuery(dossierQueries.firmas())
 
   return (
-    <PanelLayout title={t('notary.signed.title')} context={t('notary.signed.context')}>
+    <Marco>
       <section data-testid="NOT-SIGNED-LIST-001">
-        {isPending ? (
-          <Loading />
-        ) : data?.items.length ? (
+        {data.items.length ? (
           <ul className="flex flex-col gap-s3">
             {data.items.map((f) => (
               <li key={f.dossierId} className={cn('flex flex-col gap-s2', CARD_SHELL)}>
@@ -43,7 +52,7 @@ function SignedDossiers() {
                 <div className="flex flex-wrap items-center gap-s2">
                   {f.signedAt ? (
                     <span className="text-caption text-text-muted">
-                      {formatDate(String(f.signedAt), locale)}
+                      {formatDate(f.signedAt, locale)}
                     </span>
                   ) : null}
 
@@ -70,6 +79,6 @@ function SignedDossiers() {
           <p className={CARD_SHELL_EMPTY}>{t('notary.signed.empty')}</p>
         )}
       </section>
-    </PanelLayout>
+    </Marco>
   )
 }

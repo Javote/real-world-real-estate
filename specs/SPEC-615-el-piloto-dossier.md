@@ -136,9 +136,72 @@ reemplaza (`notary.routes.ts`, `domain/dossier.ts` y las rutas de investor y pub
 suma la cola en lote, el estado derivado y los reclamos con su audit en el mismo lote. La regla de
 salida se mide con W3.
 
+## W3, hecho el 2026-10-22
+
+Un commit. Las seis pantallas y la cola leen con `useSuspenseQuery`: el `loader` espera con
+`ensureQueryData` (ya no precarga con `prefetchQuery`) y la ruta declara sus tres estados.
+
+| Pieza | Dónde |
+|---|---|
+| Los tres estados de una ruta con Suspense, dentro de su marco (`pendingMs` 150, carga con el test ID de la sección, error por `claveDeError`, 404 con su clave), y `oNoEncontrado`, que en el loader convierte un 404 de la API en `notFound()` | `apps/web/src/components/EstadosDeRuta.tsx` |
+| La vista de artefactos, la misma para investor y notary (el clon de 57 líneas); el texto del vacío pasa a `dossier.noArtifacts` | `apps/web/src/components/DossierArtifacts.tsx` |
+| Los 9 métodos del dossier por `cliente.dossier.*` (SPEC-609); `exportUnitDossier` sigue manual, es binario | `apps/web/src/api/port.ts` |
+| Los fixtures del módulo con la forma del cable | `apps/web/src/test/fabrica.ts` |
+| `montarRuta` monta la ruta entera (loader y estados) cuando declara `pendingComponent` | `apps/web/src/routes/-test-mount.tsx` |
+
+**El investor espera en el loader, no en la pantalla:** el dossier y la unidad en paralelo, y el
+proyecto con el `projectId` del dossier. La cascada sigue (dos olas), pero arranca con el hover y la
+pantalla no dibuja nada a medias.
+
+**Lo que cambió para quien mira:** mientras carga, cada pantalla muestra su título y la carga dentro de
+su sección, sin acciones; antes, el investor veía compartir y exportar sobre un dossier que no había
+llegado. Un error dice *"Algo salió mal"* (o el 403/404) en lugar del estado vacío: antes, una caída
+de la API en `/notary/signed` decía *"Todavía no firmaste ningún dossier."*. Los tipos dejaron de
+mentir: con `request<Dossier>`, `compiledAt` era `Date` y llegaba `string`.
+
+**Las requests son las mismas** (invariante 1 de SPEC-609), fijado en `api/port.dossier.test.ts`,
+salvo un detalle: `share` y `sign` mandaban `{}` como cuerpo JSON y el link los manda sin cuerpo. El
+e2e lo prueba contra la API real.
+
+**Verificado:** la web en 100/100/100/100 (1843 tests); el e2e del notary, del investor y del login
+(26, en las dos resoluciones). Tests de pantalla reescritos para montar la ruta entera:
+`-notary.dossier.detail`, `-notary.index`, `-notary.dossiers`, `-notary.signed`,
+`-investor.unit.dossier` y `-public.dossier`, más `-loaders` (las seis salen de los que precargan y
+pasan a los que esperan). Los que fijaban un error dibujado como vacío ahora fijan el error.
+`port.contract.test.ts` deja afuera los métodos que salen del contrato (`DEL_CONTRATO`, SPEC-609 §7).
+
+**El JS inicial sube de 130,6 a 142,9 kB gz**: el cliente de oRPC entra con el primer método migrado
+(SPEC-609 §La infraestructura lo anticipaba). Si se quiere evitar, `port.ts` puede bajarlo con
+`import()` la primera vez que lo usa; no se hizo: es una decisión.
+
+**Lo que W3 no hizo:**
+
+- **Los IDs con marca en las salidas** (§IDs con marca): marcar `dossierSchema` en `shared` rompe
+  `modules/dossier/casos.ts`, que arma las respuestas con los `string` de la base. Es lado A3 (🟡):
+  marcar los IDs en `db/types.ts` o en las consultas del módulo. La fábrica de fixtures ya existe, así
+  que marcar después toca solo `fabrica.ts`. Sin marca en las salidas, el `params.parse` de las rutas
+  tampoco se hizo: el front no carga Zod, y la marca tendría que venir de un helper sin schema.
+- **El endpoint de pantalla del investor**: M2-D5 (fila 26-29) solo nombra los del dossier, así que
+  un path nuevo o ampliar la respuesta es una decisión, y cambia el OpenAPI.
+
 ## La regla de salida
 
 Al terminar, se mide: líneas del módulo nuevo contra las que reemplaza (rutas + `domain/dossier.ts`
 + las 6 pantallas), y el dueño lo lee. **Si el módulo no queda claramente más chico y más legible, o
 si migrar obligó a cambiar tests del arnés que no estaban previstos, se frena** y se vuelve a la vía
 incremental de la serie `6xx`. Lo hecho en A0–A2 y W2 se queda.
+
+**Medido el 2026-10-22, para que el dueño lo lea:**
+
+| | Antes | Después |
+|---|---|---|
+| API (A3) | 767 (`notary.routes.ts`, `domain/dossier.ts`, rutas de investor y public) | 864 (`modules/dossier/` 733 + contrato 131) |
+| Las 6 pantallas y la cola | 732 | 662 |
+| La vista de artefactos compartida | — | 52 |
+| **Total** | **1.499** | **1.578** |
+
+`EstadosDeRuta.tsx` (56) queda afuera: es de toda ruta con Suspense, no del dossier. **No queda
+más chico**: las pantallas bajan 70 líneas, y la API sube 97 por la cola en lote, el estado derivado y
+los reclamos con su audit en el mismo lote. Lo que suma en la web son estados que antes no existían
+(carga, error y 404 por pantalla). Los tests del arnés que cambiaron están nombrados en §A3; W3 no
+tocó ninguno de HTTP.

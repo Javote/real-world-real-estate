@@ -1,19 +1,29 @@
-import { useQuery } from '@tanstack/react-query'
+import { useSuspenseQuery } from '@tanstack/react-query'
 import { createFileRoute } from '@tanstack/react-router'
 import { Building2, Clock, FileCheck2, ShieldCheck } from 'lucide-react'
+import type { ReactNode } from 'react'
 import { dossierQueries, kpiQueries } from '#/api/queries'
 import { StatCard } from '#/components/domain/StatCard'
+import { estadosDeRuta } from '#/components/EstadosDeRuta'
 import { PanelLayout } from '#/components/PanelLayout'
 import { PendingDossiersQueue } from '#/components/PendingDossiersQueue'
 import { useTranslation } from '#/i18n/useTranslation'
 import { CARD_SHELL } from '#/lib/cardShell'
 import { useKpiValue } from '#/lib/useKpiValue'
 
+function Marco({ children }: { children: ReactNode }) {
+  const { t } = useTranslation()
+  return <PanelLayout title={t('panel.notary.title')}>{children}</PanelLayout>
+}
+
 export const Route = createFileRoute('/notary/')({
-  loader: ({ context: { queryClient } }) => {
-    void queryClient.prefetchQuery(kpiQueries.notary())
-    void queryClient.prefetchQuery(dossierQueries.pendientes())
+  loader: async ({ context: { queryClient } }) => {
+    await Promise.all([
+      queryClient.ensureQueryData(kpiQueries.notary()),
+      queryClient.ensureQueryData(dossierQueries.pendientes())
+    ])
   },
+  ...estadosDeRuta(Marco, { testId: 'NOT-PANEL-001' }),
   component: NotaryPanel
 })
 
@@ -22,7 +32,7 @@ function NotaryPanel() {
   const { t } = useTranslation()
   const kpi = useKpiValue()
 
-  const { data: kpis } = useQuery(kpiQueries.notary())
+  const { data: kpis } = useSuspenseQuery(kpiQueries.notary())
 
   return (
     <PanelLayout
@@ -31,25 +41,25 @@ function NotaryPanel() {
     >
       <section className="grid grid-cols-2 gap-s4" data-testid="NOT-PANEL-001">
         <StatCard
-          value={kpi(kpis?.pendingDossiers ?? null)}
+          value={kpi(kpis.pendingDossiers)}
           label={t('panel.notary.pendingDossiers')}
           icon={Clock}
           tone="entity"
         />
         <StatCard
-          value={kpi(kpis?.verified ?? null)}
+          value={kpi(kpis.verified)}
           label={t('panel.notary.verified')}
           icon={ShieldCheck}
           tone="verification"
         />
         <StatCard
-          value={kpi(kpis?.signed ?? null)}
+          value={kpi(kpis.signed)}
           label={t('panel.notary.signed')}
           icon={FileCheck2}
           tone="portfolio"
         />
         <StatCard
-          value={kpi(kpis?.unitsUnderReview ?? null)}
+          value={kpi(kpis.unitsUnderReview)}
           label={t('panel.notary.unitsUnderReview')}
           icon={Building2}
           tone="trend"

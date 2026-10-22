@@ -29,7 +29,6 @@ import type {
   ProjectListItem,
   ProjectMemberWithUser,
   ProjectStatus as ProjectStatusShared,
-  PublicDossier as PublicDossierShared,
   Serialized,
   StageEventSummary,
   StageEvidenceSummary,
@@ -125,7 +124,5 @@ export type MerkleProof = Serialized<EvidenceProof>
 export type InvestorInvitation = Serialized<InvestorInvitationDetail>
 
 export type InvitationAcceptResult = Serialized<AcceptInvitationResult>
-
-export type PublicDossier = Serialized<PublicDossierShared>
 
 export type ProgressRow = Serialized<DeveloperProgressItem>

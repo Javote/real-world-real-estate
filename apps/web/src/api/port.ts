@@ -15,21 +15,15 @@ import type {
   DeveloperDocument,
   DeveloperDocumentListQuery,
   DeveloperKpis,
-  Dossier,
-  DossierShare,
   GeocodeResult,
   InvestorDirectoryEntry,
   InviteCertifierInput,
   LoginRequest,
-  NotaryKpis,
-  NotarySignature,
   NotificationQuery,
   ObserveStageInput,
-  PendingDossier,
   PilotMetricsReport,
   Profile,
   ProjectListQuery,
-  RejectDossierInput,
   RespondNpsSurveyInput,
   StageTransitionInput,
   UnreadCount,
@@ -38,6 +32,7 @@ import type {
   UpdateUnitInput
 } from '@plataforma/shared'
 import { clearSession, getSession } from '../auth/session'
+import { cliente } from './cliente'
 import { API_BASE, ApiError, fetchConSesion } from './transporte'
 import type {
   AuditEvent,
@@ -68,7 +63,6 @@ import type {
   ProjectDetail,
   ProjectDocument,
   ProjectStageDetail,
-  PublicDossier,
   Stage,
   StageEvidenceAnchor,
   StageState,
@@ -135,9 +129,9 @@ export const api = {
   getDeveloperKpis: () => request<DeveloperKpis>('/api/v1/developer/kpis'),
   getCertifierKpis: () => request<CertifierKpis>('/api/v1/certifier/kpis'),
   getCertifierAssignments: () => request<CertifierAssignment[]>('/api/v1/certifier/assignments'),
-  getNotaryKpis: () => request<NotaryKpis>('/api/v1/notary/kpis'),
+  getNotaryKpis: () => cliente.dossier.notary.kpis(),
   getPilotMetrics: () => request<PilotMetricsReport>('/api/v1/admin/pilot-metrics'),
-  getNotaryPendingDossiers: () => request<PendingDossier[]>('/api/v1/notary/dossiers/pending'),
+  getNotaryPendingDossiers: () => cliente.dossier.notary.pendientes(),
 
   getProject: (id: string) => request<ProjectDetail>(`/api/v1/projects/${id}`),
 
@@ -266,16 +260,14 @@ export const api = {
   listContractReleases: (contractId: string) =>
     request<ContractRelease[]>(`/api/v1/contracts/${contractId}/releases`),
 
-  getUnitDossier: (id: string) => request<Dossier>(`/api/v1/investor/units/${id}/dossier`),
+  getUnitDossier: (id: string) => cliente.dossier.investor.dossier({ id }),
 
   exportUnitDossier: (id: string): Promise<Blob> =>
     requestBlob(`/api/v1/investor/units/${id}/dossier/export.pdf`),
 
-  shareUnitDossier: (id: string) =>
-    request<DossierShare>(`/api/v1/investor/units/${id}/dossier/share`, jsonInit('POST', {})),
+  shareUnitDossier: (id: string) => cliente.dossier.investor.compartir({ id }),
 
-  getPublicDossier: (shareToken: string) =>
-    request<PublicDossier>(`/api/v1/public/dossier/${shareToken}`),
+  getPublicDossier: (shareToken: string) => cliente.dossier.publico.dossier({ shareToken }),
 
   respondNpsSurvey: (token: string, respuesta: RespondNpsSurveyInput) =>
     request<void>(
@@ -357,24 +349,15 @@ export const api = {
       jsonInit('POST', {})
     ),
 
-  getDossier: (dossierId: string) => request<Dossier>(`/api/v1/notary/dossiers/${dossierId}`),
+  getDossier: (dossierId: string) => cliente.dossier.notary.porId({ id: dossierId }),
 
-  signDossier: (dossierId: string) =>
-    request<{ dossierId: string; masterHash: string; anchor: { txid: string | null } }>(
-      `/api/v1/notary/dossiers/${dossierId}/sign`,
-      jsonInit('POST', {})
-    ),
+  signDossier: async (dossierId: string) =>
+    (await cliente.dossier.notary.firmar({ id: dossierId })).body,
 
   rejectDossier: (dossierId: string, note: string) =>
-    request<{ dossierId: string; status: string }>(
-      `/api/v1/notary/dossiers/${dossierId}/reject`,
-      jsonInit<RejectDossierInput>('POST', { note })
-    ),
+    cliente.dossier.notary.rechazar({ id: dossierId, note }),
 
-  listSignatures: (cursor?: string) =>
-    request<Paginated<NotarySignature>>(
-      `/api/v1/notary/signatures${cursor ? `?cursor=${encodeURIComponent(cursor)}` : ''}`
-    ),
+  listSignatures: (cursor?: string) => cliente.dossier.notary.firmas({ cursor }),
 
   getProfile: () => request<Profile>('/api/v1/profile'),
 
