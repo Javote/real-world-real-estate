@@ -196,8 +196,11 @@ OpenAPI no cambian. `apps/api/test/cimientos-tipos.test.ts` fija la marca de cad
 - **Los params de ruta con marca** (SPEC-609 §Los params de ruta): el front no carga Zod, así que el
   `params.parse` tendría que marcar con un helper sin schema, y el input del contrato sigue siendo
   `string` (la marca de Zod es de salida). Ninguna llamada del dossier lo necesita hoy.
-- **El endpoint de pantalla del investor**: M2-D5 (fila 26-29) solo nombra los del dossier, así que
-  un path nuevo o ampliar la respuesta es una decisión, y cambia el OpenAPI.
+- **El endpoint de pantalla del investor: queda como está** (dueño, 2026-10-22). La segunda ola
+  existe solo por `estimatedDelivery`, que `GET /investor/units/:id` no trae; el loader la encadena y
+  arranca con el hover. M2-D5 (fila 26-29) solo nombra los del dossier, así que un path nuevo queda
+  descartado; sumar `estimatedDelivery` a la respuesta de la unidad se decide en `SPEC-616`, junto con
+  la cascada de `investor.unit.$unitId.index`, que pide la misma unidad.
 
 ## La regla de salida
 

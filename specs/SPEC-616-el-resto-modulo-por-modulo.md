@@ -61,7 +61,7 @@ endpoint. Medido el 2026-10-06 (`enabled:` que depende de otro dato):
 
 | Pantalla | Qué espera a qué | Cómo se resuelve |
 |---|---|---|
-| `investor.unit.$unitId.index` | 7 queries en dos olas: la segunda espera el `projectId` de la unidad | El primer candidato a endpoint de pantalla |
+| `investor.unit.$unitId.index` | 7 queries en dos olas: la segunda espera el `projectId` de la unidad | El primer candidato a endpoint de pantalla. Se decide junto con el dossier del investor, que espera al proyecto solo por `estimatedDelivery` (`SPEC-615` §W3): sumarlo a `GET /investor/units/:id` resolvería esa ola sin path nuevo |
 | `investor.unit.$unitId.contract` | Las liberaciones esperan el `contrato.id` | Endpoint, o el loader encadena (`ensureQueryData` del contrato, después las liberaciones) |
 | `project.$projectId.stage.$stageId` | Stage → archivos del bundle → fotos | Ídem |
 | `investor.unit.$unitId.dossier` | Espera el `projectId` de la unidad | Es del piloto: [`SPEC-615`](SPEC-615-el-piloto-dossier.md) |
