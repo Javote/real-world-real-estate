@@ -188,7 +188,7 @@ describe('P7 · VerifiedWatermark', () => {
 describe('P9 · StageChips', () => {
   const stages = Array.from({ length: 10 }, (_, i) => ({
     number: i + 1,
-    anchored: i < 3,
+    anchored: i < 4,
     ...(i < 3 ? { bundleId: `bundle-${i}` } : {})
   }))
 
@@ -202,10 +202,18 @@ describe('P9 · StageChips', () => {
     render(<StageChips stages={stages} onOpenStage={abrir} ariaLabel="Anclaje por etapa" />)
 
     await userEvent.click(screen.getByText('1'))
-    expect(abrir).toHaveBeenCalledOnce()
+    expect(abrir).toHaveBeenCalledExactlyOnceWith('bundle-0')
 
     await userEvent.click(screen.getByText('8'))
     expect(abrir).toHaveBeenCalledOnce()
+  })
+
+  it('una anclada sin paquete de evidencia no se puede tocar: no hay nada que abrir', () => {
+    render(<StageChips stages={stages} onOpenStage={vi.fn()} ariaLabel="Anclaje por etapa" />)
+
+    const cuarta = screen.getByText('4') as HTMLButtonElement
+    expect(cuarta.disabled).toBe(true)
+    expect(cuarta.getAttribute('aria-current')).toBe('true')
   })
 })
 

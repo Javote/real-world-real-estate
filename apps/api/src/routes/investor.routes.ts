@@ -178,11 +178,12 @@ const unitDetailProcedure = os
     const stages = await db
       .selectFrom("Stage")
       .leftJoin(ultimoBundlePorStage, "EvidenceBundle.stageId", "Stage.id")
+      // El anclaje del paquete de evidencia, no el de la etapa: M2-D4 P9 marca anclada la etapa cuya
+      // evidencia tiene TXID, y su chip abre ese paquete. Que esté terminada lo dice el timeline.
       .leftJoin("OnChainEvent", (join) =>
         join
-          .onRef("OnChainEvent.stageId", "=", "Stage.id")
-          .on("OnChainEvent.eventType", "=", "STAGE_TRANSITION")
-          .on("OnChainEvent.toState", "=", "Completed")
+          .onRef("OnChainEvent.referenceId", "=", "EvidenceBundle.id")
+          .on("OnChainEvent.eventType", "=", "EVIDENCE_ANCHOR")
       )
       .select([
         "Stage.id as stageId",

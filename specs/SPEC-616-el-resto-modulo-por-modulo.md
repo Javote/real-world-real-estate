@@ -77,11 +77,11 @@ busca en el `OnChainEvent` de la misma referencia. El join ya existe (`conTxidDe
 
 | Bug | Pantalla | Qué pide |
 |---|---|---|
-| El "Certify" de la cola del certifier navega a `/certifier/stage/:id` en vez de certificar (`AssignedStagesQueue.tsx`) | `certifier` | Que el botón diga lo que hace. Si cambia el texto, sale del diccionario y de M2-D3 |
-| El chip *Evidence by stage* del investor solo se activa con el `txid` de la transición a `Completed` (`StageChips.tsx`, `investor.routes.ts`): una etapa `InProgress` con evidencia ya anclada queda deshabilitada | `investor` | **Decisión del dueño:** si el chip se activa con el anclaje de la evidencia |
+| El "Certify" de la cola del certifier navega a `/certifier/stage/:id` en vez de certificar (`AssignedStagesQueue.tsx`) | `certifier` | **Pide un desvío:** la captura 55 y M2-D5 fila 55 dicen *Certify*, y la captura manda (regla 1). Decide el dueño (2026-10-22) |
+| El chip *Evidence by stage* del investor solo se activa con el `txid` de la transición a `Completed` (`StageChips.tsx`, `investor.routes.ts`): una etapa `InProgress` con evidencia ya anclada queda deshabilitada | `investor` | ✅ 2026-10-22: el chip mira el anclaje del paquete de evidencia, con los dos estados de M2-D4 P9 (dueño) |
 
-**Una decisión de UX para el developer:** crear un proyecto tarda 18,5 s en Preprod (los 10 mints,
-ya sin `awaitTx`). Decidir si hace falta UI de espera antes de migrar `developer.project.new`.
+**La espera al crear un proyecto** (18,5 s en Preprod, los 10 mints): ✅ 2026-10-22, un `role="status"`
+abajo del botón dice por qué tarda.
 
 ### IDs con marca
 

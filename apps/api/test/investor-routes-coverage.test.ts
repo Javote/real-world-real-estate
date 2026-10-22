@@ -86,6 +86,91 @@ describe("GET /investor/units/:id", () => {
     expect(res.body.id).toBe(unidadId);
     expect(Array.isArray(res.body.stages)).toBe(true);
   });
+
+  it("el anclaje de cada stage es el de su paquete de evidencia, terminado o no (M2-D4 P9)", async () => {
+    const ahora = new Date();
+    const etapa = async (sequenceOrder: number, state: "InProgress" | "Completed") => {
+      const id = createId();
+      await db
+        .insertInto("Stage")
+        .values({
+          id,
+          projectId: proyectoId,
+          name: `P9 ${sequenceOrder}`,
+          sequenceOrder,
+          state,
+          validationCritical: false,
+          createdAt: ahora,
+          updatedAt: ahora
+        })
+        .execute();
+      return id;
+    };
+    const evento = (fila: {
+      stageId: string;
+      eventType: "EVIDENCE_ANCHOR" | "STAGE_TRANSITION";
+      referenceId: string | null;
+      txid: string;
+      eventIndex: number;
+    }) =>
+      db
+        .insertInto("OnChainEvent")
+        .values({
+          id: createId(),
+          projectId: proyectoId,
+          evidenceId: null,
+          fromState: null,
+          toState: fila.eventType === "STAGE_TRANSITION" ? "Completed" : null,
+          commitment: null,
+          status: "Confirmed",
+          network: "Preprod",
+          outputRef: null,
+          blockTimestamp: null,
+          createdAt: ahora,
+          updatedAt: ahora,
+          ...fila
+        })
+        .execute();
+
+    const enCurso = await etapa(901, "InProgress");
+    const bundleId = createId();
+    await db
+      .insertInto("EvidenceBundle")
+      .values({
+        id: bundleId,
+        projectId: proyectoId,
+        stageId: enCurso,
+        commitmentHash: "c".repeat(64),
+        createdById: null,
+        createdAt: ahora
+      })
+      .execute();
+    await evento({
+      stageId: enCurso,
+      eventType: "EVIDENCE_ANCHOR",
+      referenceId: bundleId,
+      txid: "e".repeat(64),
+      eventIndex: 90_001
+    });
+
+    const terminadaSinEvidencia = await etapa(902, "Completed");
+    await evento({
+      stageId: terminadaSinEvidencia,
+      eventType: "STAGE_TRANSITION",
+      referenceId: null,
+      txid: "f".repeat(64),
+      eventIndex: 90_002
+    });
+
+    const res = await request(app)
+      .get(`/api/v1/investor/units/${unidadId}`)
+      .set("Authorization", `Bearer ${tokenInvestor}`);
+
+    const deLaEtapa = (stageId: string) =>
+      res.body.stages.find((s: { stageId: string }) => s.stageId === stageId);
+    expect(deLaEtapa(enCurso)).toMatchObject({ bundleId, txid: "e".repeat(64) });
+    expect(deLaEtapa(terminadaSinEvidencia)).toMatchObject({ bundleId: null, txid: null });
+  });
 });
 
 describe("GET /investor/units/:id/dossier/export.pdf", () => {

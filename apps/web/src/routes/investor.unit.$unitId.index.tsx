@@ -404,11 +404,9 @@ function InvestorUnitDetail() {
                   anchored: Boolean(s.txid),
                   bundleId: s.bundleId ?? undefined
                 }))}
-                onOpenStage={(chip) => {
-                  if (chip.bundleId) {
-                    setPrueba(null)
-                    setBundleId(chip.bundleId)
-                  }
+                onOpenStage={(bundle) => {
+                  setPrueba(null)
+                  setBundleId(bundle)
                 }}
               />
             </article>
