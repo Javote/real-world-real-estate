@@ -4,11 +4,12 @@ import { Building2, Clock, FileCheck2, ShieldCheck } from 'lucide-react'
 import type { ReactNode } from 'react'
 import { dossierQueries, kpiQueries } from '#/api/queries'
 import { StatCard } from '#/components/domain/StatCard'
-import { estadosDeRuta } from '#/components/EstadosDeRuta'
+import { RutaCargando, RutaConError } from '#/components/EstadosDeRuta'
 import { PanelLayout } from '#/components/PanelLayout'
 import { PendingDossiersQueue } from '#/components/PendingDossiersQueue'
 import { useTranslation } from '#/i18n/useTranslation'
 import { CARD_SHELL } from '#/lib/cardShell'
+import { PENDING_MS } from '#/lib/cargaDeRuta'
 import { useKpiValue } from '#/lib/useKpiValue'
 
 function Marco({ children }: { children: ReactNode }) {
@@ -23,7 +24,11 @@ export const Route = createFileRoute('/notary/')({
       queryClient.ensureQueryData(dossierQueries.pendientes())
     ])
   },
-  ...estadosDeRuta(Marco, { testId: 'NOT-PANEL-001' }),
+  pendingMs: PENDING_MS,
+  pendingComponent: () => <RutaCargando Marco={Marco} testId="NOT-PANEL-001" />,
+  errorComponent: ({ error }) => (
+    <RutaConError Marco={Marco} testId="NOT-PANEL-001" error={error} />
+  ),
   component: NotaryPanel
 })
 

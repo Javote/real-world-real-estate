@@ -7,10 +7,11 @@ import { HashChip } from '#/components/domain/HashChip'
 import { LanguageToggle } from '#/components/domain/LanguageToggle'
 import { ProgressBar } from '#/components/domain/ProgressBar'
 import { VerificationBadge } from '#/components/domain/VerificationBadge'
-import { estadosDeRuta, oNoEncontrado } from '#/components/EstadosDeRuta'
+import { RutaCargando, RutaConError, RutaNoEncontrada } from '#/components/EstadosDeRuta'
 import { formatDate } from '#/i18n/format'
 import { useTranslation } from '#/i18n/useTranslation'
 import { CARD_SHELL, CARD_SHELL_DENSE } from '#/lib/cardShell'
+import { oNoEncontrado, PENDING_MS } from '#/lib/cargaDeRuta'
 import { cn } from '#/lib/cn'
 
 function Marco({ children }: { children: ReactNode }) {
@@ -33,7 +34,10 @@ export const Route = createFileRoute('/public/dossier/$shareToken')({
   loader: async ({ context: { queryClient }, params: { shareToken } }) => {
     await oNoEncontrado(queryClient.ensureQueryData(dossierQueries.publico(shareToken)))
   },
-  ...estadosDeRuta(Marco, { noEncontrado: 'investor.public.notFound' }),
+  pendingMs: PENDING_MS,
+  pendingComponent: () => <RutaCargando Marco={Marco} />,
+  errorComponent: ({ error }) => <RutaConError Marco={Marco} error={error} />,
+  notFoundComponent: () => <RutaNoEncontrada Marco={Marco} clave="investor.public.notFound" />,
   component: PublicDossierPage
 })
 

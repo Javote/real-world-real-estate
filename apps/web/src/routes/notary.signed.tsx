@@ -4,11 +4,12 @@ import type { ReactNode } from 'react'
 import { dossierQueries } from '#/api/queries'
 import { HashChip } from '#/components/domain/HashChip'
 import { StatusPill } from '#/components/domain/StatusPill'
-import { estadosDeRuta } from '#/components/EstadosDeRuta'
+import { RutaCargando, RutaConError } from '#/components/EstadosDeRuta'
 import { PanelLayout } from '#/components/PanelLayout'
 import { formatDate } from '#/i18n/format'
 import { useTranslation } from '#/i18n/useTranslation'
 import { CARD_SHELL, CARD_SHELL_EMPTY } from '#/lib/cardShell'
+import { PENDING_MS } from '#/lib/cargaDeRuta'
 import { cn } from '#/lib/cn'
 
 function Marco({ children }: { children: ReactNode }) {
@@ -24,7 +25,11 @@ export const Route = createFileRoute('/notary/signed')({
   loader: async ({ context: { queryClient } }) => {
     await queryClient.ensureQueryData(dossierQueries.firmas())
   },
-  ...estadosDeRuta(Marco, { testId: 'NOT-SIGNED-LIST-001' }),
+  pendingMs: PENDING_MS,
+  pendingComponent: () => <RutaCargando Marco={Marco} testId="NOT-SIGNED-LIST-001" />,
+  errorComponent: ({ error }) => (
+    <RutaConError Marco={Marco} testId="NOT-SIGNED-LIST-001" error={error} />
+  ),
   component: SignedDossiers
 })
 

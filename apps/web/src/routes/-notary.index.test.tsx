@@ -1,4 +1,4 @@
-import { screen } from '@testing-library/react'
+import { screen, within } from '@testing-library/react'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import { ApiError, api } from '#/api/port'
 import { esAR } from '#/i18n/dictionary'
@@ -52,5 +52,17 @@ describe('/notary (panel)', () => {
 
     expect((await screen.findByRole('alert')).textContent).toBe(esAR['error.generic'])
     expect(screen.queryByText(esAR['panel.notary.emptyPending'])).toBeNull()
+  })
+
+  it('mientras carga, la carga en el panel y ningún KPI', async () => {
+    autenticarComo(NOTARY_USER)
+    vi.spyOn(api, 'getNotaryKpis').mockReturnValue(new Promise(() => {}))
+    vi.spyOn(api, 'getNotaryPendingDossiers').mockResolvedValue([])
+
+    montarRuta(Route, '/notary/')
+
+    const panel = await screen.findByTestId('NOT-PANEL-001')
+    expect(within(panel).getByRole('status')).toBeTruthy()
+    expect(screen.queryByTestId('NOT-PENDING-002')).toBeNull()
   })
 })

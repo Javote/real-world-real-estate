@@ -15,7 +15,15 @@ export default defineConfig({
   },
   resolve: { tsconfigPaths: true },
   plugins: [
-    tanstackRouter({ target: 'react', autoCodeSplitting: true }),
+    tanstackRouter({
+      target: 'react',
+      autoCodeSplitting: true,
+      // La pantalla y sus estados comparten el marco: en grupos distintos, el marco queda en el
+      // archivo de la ruta, que es JS inicial.
+      codeSplittingOptions: {
+        defaultBehavior: [['component', 'pendingComponent', 'errorComponent', 'notFoundComponent']]
+      }
+    }),
     tailwindcss(),
     viteReact()
   ],

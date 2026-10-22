@@ -31,8 +31,8 @@ import type {
   UpdateProfileInput,
   UpdateUnitInput
 } from '@plataforma/shared'
+import type { ApiClient } from '@plataforma/shared/contract'
 import { clearSession, getSession } from '../auth/session'
-import { cliente } from './cliente'
 import { API_BASE, ApiError, fetchConSesion } from './transporte'
 import type {
   AuditEvent,
@@ -70,6 +70,10 @@ import type {
 } from './types'
 
 export { ApiError }
+
+// El cliente del contrato baja la primera vez que una pantalla lo usa, no con el JS inicial.
+let clientePendiente: Promise<ApiClient> | undefined
+const elCliente = () => (clientePendiente ??= import('./cliente').then((m) => m.cliente))
 
 async function request<T>(path: string, init: RequestInit = {}): Promise<T> {
   const res = await fetchConSesion(`${API_BASE}${path}`, init)
@@ -129,9 +133,9 @@ export const api = {
   getDeveloperKpis: () => request<DeveloperKpis>('/api/v1/developer/kpis'),
   getCertifierKpis: () => request<CertifierKpis>('/api/v1/certifier/kpis'),
   getCertifierAssignments: () => request<CertifierAssignment[]>('/api/v1/certifier/assignments'),
-  getNotaryKpis: () => cliente.dossier.notary.kpis(),
+  getNotaryKpis: async () => (await elCliente()).dossier.notary.kpis(),
   getPilotMetrics: () => request<PilotMetricsReport>('/api/v1/admin/pilot-metrics'),
-  getNotaryPendingDossiers: () => cliente.dossier.notary.pendientes(),
+  getNotaryPendingDossiers: async () => (await elCliente()).dossier.notary.pendientes(),
 
   getProject: (id: string) => request<ProjectDetail>(`/api/v1/projects/${id}`),
 
@@ -260,14 +264,15 @@ export const api = {
   listContractReleases: (contractId: string) =>
     request<ContractRelease[]>(`/api/v1/contracts/${contractId}/releases`),
 
-  getUnitDossier: (id: string) => cliente.dossier.investor.dossier({ id }),
+  getUnitDossier: async (id: string) => (await elCliente()).dossier.investor.dossier({ id }),
 
   exportUnitDossier: (id: string): Promise<Blob> =>
     requestBlob(`/api/v1/investor/units/${id}/dossier/export.pdf`),
 
-  shareUnitDossier: (id: string) => cliente.dossier.investor.compartir({ id }),
+  shareUnitDossier: async (id: string) => (await elCliente()).dossier.investor.compartir({ id }),
 
-  getPublicDossier: (shareToken: string) => cliente.dossier.publico.dossier({ shareToken }),
+  getPublicDossier: async (shareToken: string) =>
+    (await elCliente()).dossier.publico.dossier({ shareToken }),
 
   respondNpsSurvey: (token: string, respuesta: RespondNpsSurveyInput) =>
     request<void>(
@@ -349,15 +354,16 @@ export const api = {
       jsonInit('POST', {})
     ),
 
-  getDossier: (dossierId: string) => cliente.dossier.notary.porId({ id: dossierId }),
+  getDossier: async (dossierId: string) =>
+    (await elCliente()).dossier.notary.porId({ id: dossierId }),
 
   signDossier: async (dossierId: string) =>
-    (await cliente.dossier.notary.firmar({ id: dossierId })).body,
+    (await (await elCliente()).dossier.notary.firmar({ id: dossierId })).body,
 
-  rejectDossier: (dossierId: string, note: string) =>
-    cliente.dossier.notary.rechazar({ id: dossierId, note }),
+  rejectDossier: async (dossierId: string, note: string) =>
+    (await elCliente()).dossier.notary.rechazar({ id: dossierId, note }),
 
-  listSignatures: (cursor?: string) => cliente.dossier.notary.firmas({ cursor }),
+  listSignatures: async (cursor?: string) => (await elCliente()).dossier.notary.firmas({ cursor }),
 
   getProfile: () => request<Profile>('/api/v1/profile'),
 

@@ -11,11 +11,12 @@ import { ProgressBar } from '#/components/domain/ProgressBar'
 import { ProgressTimeline } from '#/components/domain/ProgressTimeline'
 import { ShareDossierModal } from '#/components/domain/ShareDossierModal'
 import { VerificationBadge } from '#/components/domain/VerificationBadge'
-import { estadosDeRuta, oNoEncontrado } from '#/components/EstadosDeRuta'
+import { RutaCargando, RutaConError, RutaNoEncontrada } from '#/components/EstadosDeRuta'
 import { PanelLayout } from '#/components/PanelLayout'
 import { formatDate, formatMonthYear } from '#/i18n/format'
 import { useTranslation } from '#/i18n/useTranslation'
 import { CARD_SHELL } from '#/lib/cardShell'
+import { oNoEncontrado, PENDING_MS } from '#/lib/cargaDeRuta'
 import { cn } from '#/lib/cn'
 import { unicosPorStageId } from '#/lib/investor'
 import { bajarBlob, timelineDeStages } from '#/lib/stageProgress'
@@ -46,7 +47,12 @@ export const Route = createFileRoute('/investor/unit/$unitId/dossier')({
     ])
     await queryClient.ensureQueryData(proyectoQueries.detalle(dossier.projectId))
   },
-  ...estadosDeRuta(Marco, { testId: 'INV-DOSSIER-VIEW-001' }),
+  pendingMs: PENDING_MS,
+  pendingComponent: () => <RutaCargando Marco={Marco} testId="INV-DOSSIER-VIEW-001" />,
+  errorComponent: ({ error }) => (
+    <RutaConError Marco={Marco} testId="INV-DOSSIER-VIEW-001" error={error} />
+  ),
+  notFoundComponent: () => <RutaNoEncontrada Marco={Marco} testId="INV-DOSSIER-VIEW-001" />,
   component: InvestorDossier
 })
 

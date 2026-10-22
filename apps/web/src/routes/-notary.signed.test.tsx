@@ -63,4 +63,14 @@ describe('/notary/signed', () => {
     expect((await screen.findByRole('alert')).textContent).toBe(esAR['error.generic'])
     expect(screen.queryByText(esAR['notary.signed.empty'])).toBeNull()
   })
+
+  it('mientras carga, la carga dentro de la sección y ni la lista ni el vacío', async () => {
+    autenticarComo(NOTARY_USER)
+    vi.spyOn(api, 'listSignatures').mockReturnValue(new Promise(() => {}))
+    montar()
+
+    const seccion = await screen.findByTestId('NOT-SIGNED-LIST-001')
+    expect(within(seccion).getByRole('status')).toBeTruthy()
+    expect(screen.queryByText(esAR['notary.signed.empty'])).toBeNull()
+  })
 })

@@ -10,10 +10,11 @@ import { ObserveStageModal } from '#/components/domain/ObserveStageModal'
 import { PrimaryButton, SecondaryButton } from '#/components/domain/PrimaryButton'
 import { ProgressBar } from '#/components/domain/ProgressBar'
 import { StatusPill } from '#/components/domain/StatusPill'
-import { estadosDeRuta, oNoEncontrado } from '#/components/EstadosDeRuta'
+import { RutaCargando, RutaConError, RutaNoEncontrada } from '#/components/EstadosDeRuta'
 import { PanelLayout } from '#/components/PanelLayout'
 import { useTranslation } from '#/i18n/useTranslation'
 import { CARD_SHELL } from '#/lib/cardShell'
+import { oNoEncontrado, PENDING_MS } from '#/lib/cargaDeRuta'
 import { cn } from '#/lib/cn'
 
 function Marco({ children }: { children: ReactNode }) {
@@ -25,7 +26,12 @@ export const Route = createFileRoute('/notary/dossier/$dossierId')({
   loader: async ({ context: { queryClient }, params: { dossierId } }) => {
     await oNoEncontrado(queryClient.ensureQueryData(dossierQueries.detalle(dossierId)))
   },
-  ...estadosDeRuta(Marco, { testId: 'NOT-DOSSIER-VIEW-001' }),
+  pendingMs: PENDING_MS,
+  pendingComponent: () => <RutaCargando Marco={Marco} testId="NOT-DOSSIER-VIEW-001" />,
+  errorComponent: ({ error }) => (
+    <RutaConError Marco={Marco} testId="NOT-DOSSIER-VIEW-001" error={error} />
+  ),
+  notFoundComponent: () => <RutaNoEncontrada Marco={Marco} testId="NOT-DOSSIER-VIEW-001" />,
   component: DossierReview
 })
 

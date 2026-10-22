@@ -143,7 +143,8 @@ Un commit. Las seis pantallas y la cola leen con `useSuspenseQuery`: el `loader`
 
 | Pieza | Dónde |
 |---|---|
-| Los tres estados de una ruta con Suspense, dentro de su marco (`pendingMs` 150, carga con el test ID de la sección, error por `claveDeError`, 404 con su clave), y `oNoEncontrado`, que en el loader convierte un 404 de la API en `notFound()` | `apps/web/src/components/EstadosDeRuta.tsx` |
+| Los tres estados de una ruta con Suspense, dentro de su marco: `RutaCargando` (con el test ID de la sección), `RutaConError` (por `claveDeError`) y `RutaNoEncontrada` (con su clave) | `apps/web/src/components/EstadosDeRuta.tsx` |
+| `oNoEncontrado`, que en el loader convierte un 404 de la API en `notFound()`, y `PENDING_MS` (150): lo que el archivo de la ruta usa fuera de sus componentes | `apps/web/src/lib/cargaDeRuta.ts` |
 | La vista de artefactos, la misma para investor y notary (el clon de 57 líneas); el texto del vacío pasa a `dossier.noArtifacts` | `apps/web/src/components/DossierArtifacts.tsx` |
 | Los 9 métodos del dossier por `cliente.dossier.*` (SPEC-609); `exportUnitDossier` sigue manual, es binario | `apps/web/src/api/port.ts` |
 | Los fixtures del módulo con la forma del cable | `apps/web/src/test/fabrica.ts` |
@@ -170,9 +171,17 @@ e2e lo prueba contra la API real.
 pasan a los que esperan). Los que fijaban un error dibujado como vacío ahora fijan el error.
 `port.contract.test.ts` deja afuera los métodos que salen del contrato (`DEL_CONTRATO`, SPEC-609 §7).
 
-**El JS inicial sube de 130,6 a 142,9 kB gz**: el cliente de oRPC entra con el primer método migrado
-(SPEC-609 §La infraestructura lo anticipaba). Si se quiere evitar, `port.ts` puede bajarlo con
-`import()` la primera vez que lo usa; no se hizo: es una decisión.
+**El JS inicial queda en 130,1 kB gz (130,6 antes de W3)**, medido con `vite build` sobre los scripts
+y `modulepreload` del `index.html`. Hubo que cuidar dos cosas (dueño, 2026-10-22):
+
+- **El cliente de oRPC baja con `import()`** la primera vez que `port.ts` lo usa (9,3 kB gz en su
+  chunk). Importado de arriba entraba con el primer método migrado: 142,9 kB gz.
+- **El code-splitting del router no separa una llamada ni un spread en las opciones de la ruta**:
+  con `...estadosDeRuta(Marco)` el marco de cada pantalla (`PanelLayout` incluido) quedaba en el
+  archivo de la ruta, que es JS inicial. Por eso los estados se declaran en línea, la pantalla y sus
+  estados van en un mismo grupo (`codeSplittingOptions` en `vite.config.ts`: si no, el `Marco` que
+  comparten se queda en el archivo de la ruta) y lo que usa el loader vive en `lib/cargaDeRuta.ts`,
+  que no importa componentes.
 
 **Lo que W3 no hizo:**
 
