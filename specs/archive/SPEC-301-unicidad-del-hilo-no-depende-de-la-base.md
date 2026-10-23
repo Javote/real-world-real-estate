@@ -3,7 +3,7 @@
 > **Origen:** [`AUDITORIA-2026-09-11-calidad-de-contracts.md`](AUDITORIA-2026-09-11-calidad-de-contracts.md)
 > §C-01, pasos 1 y 2. Nivel 🟡 (camino de anclaje). **Independiente.** No toca ningún criterio del
 > SOM y **no cambia el script hash** — cerrar el agujero *on-chain* es otra cosa y vive en
-> [`SPEC-305`](../SPEC-305-el-proximo-cambio-de-script-hash.md).
+> [`SPEC-305`](SPEC-305-el-proximo-cambio-de-script-hash.md).
 
 ## El problema, reproducido
 
@@ -67,7 +67,7 @@ su propio doc-comment usa para no repetir la promoción a `Confirmed`: **la mism
 lugares diverge**. El retry detecta y nombra; reconcile repara.
 
 **No toca el validador.** El agujero on-chain sigue abierto después de esta spec, a propósito:
-cerrarlo cambia el script hash y es decisión de mainnet ([`SPEC-305`](../SPEC-305-el-proximo-cambio-de-script-hash.md)).
+cerrarlo cambia el script hash y es decisión de mainnet ([`SPEC-305`](SPEC-305-el-proximo-cambio-de-script-hash.md)).
 
 **No corre reconcile automáticamente.** Sigue siendo un endpoint que alguien dispara.
 

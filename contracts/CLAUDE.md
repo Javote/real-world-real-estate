@@ -25,8 +25,10 @@ sin mirar la transacción, va en `fsm.ak`.
   Quién pidió cada transición lo decide `authorize()` en la API.
 - **El hilo es un NFT por stage** con asset name = `stage_ref`, y **no hay burn**. La unicidad por
   stage no la garantiza el validador (solo una acuñación por tx): la sostiene `retryStageMint`
-  contra la cadena (`SPEC-301`); cerrarla on-chain cambia el script hash (`SPEC-305`).
-- **La clave del `admin` no es rotable** (D-093, `SPEC-304`): es parámetro del script.
+  contra la cadena (`SPEC-301`); cerrarla on-chain cambia el script hash (`SPEC-305`, que el dueño
+  decidió no hacer: D-105).
+- **La clave del `admin` no es rotable** (D-093, `SPEC-304`): es parámetro del script. Queda simple
+  también en mainnet (D-105).
 - **El `stage_ref` es el cuid2 en bytes**: el validador acepta cualquier id de 1 a 32 bytes, pero
   con hilos ya acuñados no se puede cambiar de criterio.
 

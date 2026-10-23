@@ -804,7 +804,40 @@ nombra la consecuencia que D-058 no nombraba — que ese firmante único, al ser
 es además irremplazable sin abandonar los hilos vivos.
 
 **Antes del primer mint en mainnet, elegir entre las tres opciones que `SPEC-304` deja registradas**
-(dejarlo así, multisig M-de-N, o un segundo VKH de recuperación) — no después.
+(dejarlo así, multisig M-de-N, o un segundo VKH de recuperación) — no después. **Elegida: dejarlo
+así** (D-105).
+
+## D-105 — Mainnet sale con el validador de hoy, la clave simple y las 2 ADA por etapa
+
+**Decisiones del dueño, 2026-10-23** (las 2, 3, 4, 5 y 6 de `specs/PLAN-2026-10-05-mainnet-y-fase-2.md`
+§1).
+
+**Qué obliga:**
+
+- **La clave del `admin` queda simple** (D-093, `SPEC-304`): sin multisig ni VKH de recuperación. El
+  control es la custodia —clave fresca, guardada offline en dos lugares, en ninguna máquina de
+  desarrollo— y la detección a mano del plan (§4). *"Por ahora"* vale para los hilos que nazcan
+  después de un cambio, que serían otro script hash; los que ya se acuñaron quedan atados a esta
+  clave para siempre.
+- **El validador no se recompila** (`SPEC-305`, ninguna de sus dos partes): mainnet corre el mismo
+  código Aiken que ancló los 180 eventos de Preprod, y solo cambia el parámetro `admin`. La unicidad
+  del hilo la sostiene el backend (`SPEC-301`), y un duplicado se ve on-chain: el supply del asset
+  name pasa a 2.
+- **Las 2 ADA bloqueadas por etapa se aceptan** (`THREAD_MIN_LOVELACE`, sin burn por D-058): 20 ADA
+  permanentes por proyecto de 10 etapas. Las alternativas, abajo.
+- **La API de mainnet va en Render Starter, la base en Turso Developer y la evidencia en R2 pago**
+  (los tres en contratación, 2026-10-23).
+
+**Las alternativas a las 2 ADA, para cuando el costo pese.** Ninguna se toma hoy; están ordenadas de
+la más barata a la más cara.
+
+| Alternativa | Qué ahorra | Qué cuesta |
+|---|---|---|
+| Calcular el mínimo real del output en vez del `THREAD_MIN_LOVELACE` fijo (`packages/cardano/src/real.ts`) | La diferencia entre 2 ADA y lo que pide el ledger por el tamaño del UTxO (`coinsPerUTxOByte`). **Sin medir** | No cambia el script hash. Un datum que crece al completar (el `evidence_root`) exige más ADA en el output de continuación: el cálculo va en cada `advanceThread`, no solo al acuñar |
+| Hilo solo para los stages `validationCritical`; el resto se ancla con metadata, sin UTxO | 2 ADA por stage no crítico | No cambia el script hash, pero esos stages pierden la secuencia validada on-chain (D-008), y la verificación pasa a depender del tipo de stage |
+| Burn al llegar a `Completed`, con el ADA de vuelta a la wallet | Casi las 2 ADA, menos la fee | Cambia el script hash y revierte "sin burn" (D-058, `SPEC-302`): el estado final deja de leerse en un UTxO vivo y hay que reconstruirlo desde el historial de transacciones |
+| Un hilo por proyecto en vez de uno por stage | Paga 2 ADA por proyecto en vez de por etapa | Rediseño del validador y del datum; todas las transiciones de un proyecto se serializan sobre un solo UTxO |
+| Datum por hash en vez de inline | Lo que pesa el datum en el output | **Descartada**: el datum deja de leerse on-chain y la verificación independiente depende de que se lo demos nosotros |
 
 ## D-077 — La reconciliación la dispara la lectura, no un cron
 

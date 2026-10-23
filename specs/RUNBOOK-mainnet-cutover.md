@@ -10,6 +10,11 @@
 > Mainnet sin recompilar el validador, junto con la Fase 2 y con presupuesto, es una propuesta
 > aparte: [`PLAN-2026-10-05-mainnet-y-fase-2.md`](PLAN-2026-10-05-mainnet-y-fase-2.md).
 > Se aparta de este runbook en tres puntos que decide el dueño (su §2).
+>
+> **Dos de esos tres puntos ya los decidió el dueño (D-105, 2026-10-23), y ganan sobre este runbook:**
+> la clave de mainnet es la simple, con custodia y detección, y el validador no se recompila
+> (`SPEC-305` no se hace). Donde abajo se lee multisig, VKH de recuperación o recompilar
+> `plutus.json` (§1.2 y los puntos 4 y 5 del §2), no aplica.
 
 ## 0 · Precondición: qué tiene que estar cerrado antes de tocar esto
 

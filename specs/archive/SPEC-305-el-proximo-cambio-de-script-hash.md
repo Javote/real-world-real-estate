@@ -1,8 +1,12 @@
 # SPEC-305 — El próximo cambio de script hash: unicidad del hilo on-chain y el tope de `evidence_root`
 
-> **Origen:** [`AUDITORIA-2026-09-11-calidad-de-contracts.md`](archive/AUDITORIA-2026-09-11-calidad-de-contracts.md)
+> **Origen:** [`AUDITORIA-2026-09-11-calidad-de-contracts.md`](AUDITORIA-2026-09-11-calidad-de-contracts.md)
 > §C-01 paso 3 y §C-04. Nivel 🟡/🔴. **Independiente de las otras cuatro**, y la única de la serie
 > que **cambia el script hash**. No toca ningún criterio del SOM.
+>
+> **Cerrada 2026-10-23, por decisión del dueño: no se hace ninguna de las dos partes** — la
+> tercera opción de la Parte A, que esta spec ya daba por legítima ([`D-105`](../../DECISIONS.md)).
+> Mainnet sale con el validador de hoy. Si se retoma, es para hilos nuevos bajo un script hash nuevo.
 >
 > **Es deliberadamente la spec más larga de la serie, y trae dos cambios en vez de uno.** No es
 > descuido: el script hash es la restricción dura de este subárbol, y **todo cambio al validador
@@ -12,12 +16,12 @@
 >
 > **Es decisión de mainnet y no debería tomarse dentro del Milestone 3.** Lo urgente de C-01 —que la
 > afirmación publicada sea verdadera y que el backend no mintee dos veces— ya está resuelto sin
-> tocar el script en [`SPEC-301`](archive/SPEC-301-unicidad-del-hilo-no-depende-de-la-base.md).
+> tocar el script en [`SPEC-301`](SPEC-301-unicidad-del-hilo-no-depende-de-la-base.md).
 
 ## Por qué el script hash es la restricción
 
 `plutus.json` tiene hoy el hash `0a2571c121481939…`, y **bajo ese hash hay 180 eventos anclados en
-Preprod** ([`EVIDENCIA-2026-09-11-lista-formal-de-txids.md`](EVIDENCIA-2026-09-11-lista-formal-de-txids.md)).
+Preprod** ([`EVIDENCIA-2026-09-11-lista-formal-de-txids.md`](../EVIDENCIA-2026-09-11-lista-formal-de-txids.md)).
 Cualquier cambio al código compilado —una línea en `fsm.ak` alcanza— produce otro hash, y con él:
 
 - **otra dirección de script** y **otro policy id** (los dos derivan del hash, ver
@@ -40,7 +44,7 @@ trabajo nuevo de esta spec, y es la parte que hay que presupuestar.
 `mint` garantiza *un token por transacción*, no *uno por stage*: no mira `tx.inputs`, así que una
 segunda tx re-acuña el mismo asset name. Reproducido en la auditoría (`tmp_mint_is_not_one_shot`, las
 dos llamadas dan `True`). El detalle completo y el camino alcanzable desde el backend están en
-[`SPEC-301`](archive/SPEC-301-unicidad-del-hilo-no-depende-de-la-base.md); acá interesa solo cerrarlo en el
+[`SPEC-301`](SPEC-301-unicidad-del-hilo-no-depende-de-la-base.md); acá interesa solo cerrarlo en el
 validador.
 
 ### Por qué el patrón habitual no sirve
