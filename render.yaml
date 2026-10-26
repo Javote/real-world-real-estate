@@ -117,7 +117,7 @@ services:
     healthCheckPath: /health
     envVars:
       - key: NODE_VERSION
-        value: "22"                    # la misma que verifica el CI
+        value: "22.23.4"               # exacta y la del `.nvmrc`, que leen el CI y la web
       - key: JWT_SECRET
         generateValue: true            # D-042: sin fallback; si falta, el proceso no arranca
       # Turso (D-038 · D-040). `sync: false` = se carga a mano en el dashboard,

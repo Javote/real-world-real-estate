@@ -91,7 +91,7 @@ anchored on Cardano mainnet. Their TXIDs are listed in
 
 ## Quick start
 
-Requires Node ≥ 22.12 and pnpm 9 (`corepack enable`). The contracts also need Aiken v1.1.21:
+Requires Node ≥ 22.23.4 (the version in `.nvmrc`) and pnpm 9 (`corepack enable`). The contracts also need Aiken v1.1.21:
 
 ```bash
 curl --proto '=https' --tlsv1.2 -LsSf https://install.aiken-lang.org | sh && aikup install v1.1.21

@@ -17,7 +17,7 @@
 | Pieza | Versión | Estado | Decisión |
 |---|---|---|---|
 | pnpm workspaces — `apps/*` (desplegable) + `packages/*` (librería); `contracts/` en el repo pero **fuera** del workspace | `pnpm@9.15.0` | ● | D-001, D-055 |
-| Node | `engines: >=22.12` · `.nvmrc` · CI y Render usan **22** | ● | D-001, D-054 — `>=20` era falso: Nitro pide `^20.19 \|\| >=22.12` y el `require(esm)` de la API necesita 22.12 |
+| Node | `.nvmrc` **`22.23.4`** —lo leen el CI y la web; la API lo repite en `NODE_VERSION`— · `engines: >=22.23.4` | ● | D-001, D-054 — el piso es 22.23.4 por el security release del 2026-10-21 (CVE-2026-111497, RCE en el decoder Brotli, y tres High más); antes era 22.12, por el `require(esm)` de la API |
 | TypeScript, estricto, unificado en los tres packages | `6.0.3` | ● | `archive/SPEC-008` |
 | Resolución de módulos | `node16` en api y shared · `bundler` en web | ● | `archive/SPEC-008` |
 
@@ -142,7 +142,7 @@ Ningún validador custodia ni transfiere valor, en ninguna fase (D-021).
 | Pieza | Estado | Decisión |
 |---|---|---|
 | **`render.yaml`** (Blueprint: 2 servicios, `plan: free`, `rootDir`, `buildFilter`) | ● — escrito y desplegado; **el `buildFilter` no filtra**, medido el 2026-08-27 (RUNBOOK §2) | D-041 |
-| Runtime: **nativo de Node**, sin imagen propia · `NODE_VERSION=22` (la del CI) | ● — declarado | D-041 |
+| Runtime: **nativo de Node**, sin imagen propia · `NODE_VERSION=22.23.4` (la del `.nvmrc`) | ● — declarado | D-041 |
 | `startCommand` de la API: migraciones **y después** el servidor | ● — verificado sobre el compilado | D-012 · D-040 |
 | Script `start` de `apps/api` (`node dist/src/server.js`) | ● | — |
 | `healthCheckPath`: `/health` en la API, `/` en el web | ● — declarado | D-010 |
@@ -266,9 +266,9 @@ la ruta en vez de depender de un escáner. Ninguna ruta llama ya a `canAccessPro
 | Pieza | Versión | Dónde se fija |
 |---|---|---|
 | **pnpm** | `9.15.0` | `packageManager` de `package.json` raíz — el CI lo toma de ahí |
-| **Node (declarado)** | `>=20` | `engines` de `package.json` raíz |
-| **Node (CI)** | `22` | `.github/workflows/ci.yml` |
-| **Node (deploy)** | `22` | `NODE_VERSION` en `render.yaml` |
+| **Node (declarado)** | `>=22.23.4` | `engines` de `package.json` raíz |
+| **Node (CI)** | `22.23.4` | `.nvmrc`, por `node-version-file` en `.github/` |
+| **Node (deploy)** | `22.23.4` | la API, `NODE_VERSION` en `render.yaml`; la web, el `.nvmrc` |
 | **Node (máquina de esta auditoría)** | `24.14.1` — `undici` embebido `7.24.4` | local |
 | **TypeScript** | `6.0.3` (declarado `^6.0.2`) — unificado en los tres packages | cada `tsconfig.json` |
 | **Aiken** | `v1.1.21+42babe5` — pineado igual en local y en CI | `aiken.toml` · `setup-aiken@v1` |
