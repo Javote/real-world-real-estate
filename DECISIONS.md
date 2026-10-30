@@ -873,8 +873,9 @@ en mainnet: **un proyecto, sus 10 etapas, hasta 4 archivos de evidencia por etap
   en 10. Rige para las dos redes: es un solo número que leen la API y el front.
 - **La API acepta 30 min por pedido** (`server.requestTimeout`): con los 5 min por defecto de Node,
   un lote de 4 × 200 MB se corta con un uplink de menos de ~2,7 MB/s. **El proxy de Render no pone
-  tope propio**: medido el 2026-10-30, un cuerpo de 420 MB llegó a la app de Preprod (404 de
-  Express, no 413 del proxy).
+  tope hasta 1000 MB**: medido el 2026-10-30 contra una ruta inexistente de la API de Preprod,
+  cuerpos de 60, 120, 420 y 1000 MB llegaron enteros a la app (404 de Express, no 413 del proxy;
+  los 1000 MB, en 206 s a ~5 MB/s). Más arriba no se midió.
 - **El reference script de mainnet se publica después del alta**, a mano y por el dueño
   (`RUNBOOK-mainnet-cutover.md` §1.9); hasta entonces, nada se ancla en mainnet.
 
