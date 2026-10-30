@@ -170,7 +170,8 @@ la de los módulos que todavía no se mudaron (A4).
   local (`sembrarEncuestaPendiente`): en producción sumaría una respuesta al NPS del piloto. `db:seed` es el local, con las passwords del repo,
   ignora `SEED_*` y no corre fuera de un SQLite en disco; `db:seed:produccion` exige
   `SEED_ADMIN_PASSWORD`/`SEED_DEMO_PASSWORD` y nunca las imprime (D-047). Los dos reescriben el
-  `passwordHash`.
+  `passwordHash`. Mainnet no lleva demo: `db:seed:admin` siembra solo el admin, con
+  `SEED_ADMIN_EMAIL` y `SEED_ADMIN_PASSWORD` (D-106).
 - **El puerto sale de `PORT` en `apps/api/.env`.**
 - **El entorno se lee con `entorno()` (`platform/config.ts`), nunca con `process.env.X`**: una
   variable nueva va al schema con su parseo y su default, y a `render.yaml`. `entorno()` lee el
@@ -190,6 +191,7 @@ pnpm --filter @plataforma/api dev            # solo la API; antes migra la base 
 pnpm --filter @plataforma/api db:migrate     # aplica las migraciones pendientes
 pnpm --filter @plataforma/api db:seed        # datos demo en la base local (passwords del repo)
 pnpm --filter @plataforma/api db:seed:produccion  # la demo desplegada: RUNBOOK §1.3
+pnpm --filter @plataforma/api db:seed:admin  # mainnet: solo el admin (RUNBOOK-mainnet-cutover §1.8)
 pnpm --filter @plataforma/api test:s3        # storage contra MinIO — NO corre en CI
 pnpm --filter @plataforma/api docs:api       # regenera la colección Postman de api-docs/
 pnpm --filter @plataforma/api docs:openapi   # regenera el OpenAPI de api-docs/ (el de evidencia-m3 no se toca: D-103)

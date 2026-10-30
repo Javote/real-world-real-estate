@@ -157,7 +157,7 @@ describe("POST /developer/projects/:id/stages/:stageId/evidence — subida de ev
     expect(res.status).toBe(400);
     expect(res.body.code).toBe("LIMIT_FILE_SIZE");
     expect(archivosEnDisco()).toBe(antes);
-  });
+  }, 60_000);
 
   it("un body inválido borra el archivo que Multer ya había escrito", async () => {
     const antes = archivosEnDisco();

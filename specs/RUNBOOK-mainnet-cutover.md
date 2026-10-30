@@ -4,17 +4,17 @@
 > la secuencia operativa para el día en que sí lo estén. Complementa a
 > [`RUNBOOK-deploy.md`](RUNBOOK-deploy.md) (deploy/rollback de Preprod, que no cambia) y a
 > [`ESTADO-2026-09-22-catalyst-milestone-4.md`](archive/ESTADO-2026-09-22-catalyst-milestone-4.md) (qué pide
-> Catalyst y qué falta). **No ejecutar nada de acá mientras M3 no esté entregado** — D-013 sigue
-> vigente hasta que el dueño la revierta explícitamente.
+> Catalyst y qué falta).
 >
 > Mainnet sin recompilar el validador, junto con la Fase 2 y con presupuesto, es una propuesta
 > aparte: [`PLAN-2026-10-05-mainnet-y-fase-2.md`](PLAN-2026-10-05-mainnet-y-fase-2.md).
 > Se aparta de este runbook en tres puntos que decide el dueño (su §2).
 >
-> **Dos de esos tres puntos ya los decidió el dueño (D-105, 2026-10-23), y ganan sobre este runbook:**
-> la clave de mainnet es la simple, con custodia y detección, y el validador no se recompila
-> (`SPEC-305` no se hace). Donde abajo se lee multisig, VKH de recuperación o recompilar
-> `plutus.json` (§1.2 y los puntos 4 y 5 del §2), no aplica.
+> **El dueño eligió el plan en los tres (D-013 revisada y D-105, 2026-10-23), y gana sobre este
+> runbook:** mainnet sale en paralelo a la revisión de M3, sin tocar Preprod; la clave de mainnet es
+> la simple, con custodia y detección; y el validador no se recompila (`SPEC-305` no se hace).
+> Donde abajo se lee esperar a M3, multisig, VKH de recuperación o recompilar `plutus.json` (§0 y
+> los puntos 4 y 5 del §2), no aplica.
 
 ## 0 · Precondición: qué tiene que estar cerrado antes de tocar esto
 
@@ -29,23 +29,60 @@ Si falta cualquiera de estos, **no seguir**: el ítem 3 (`SPEC-305`) y la decisi
 ítem 2 (`D-093`) cambian juntos el script hash — hacerlo en dos pasadas (compilar, publicar,
 descubrir que la custodia obliga a recompilar) es mucho más caro que decidir antes de compilar.
 
-## 1 · Infraestructura nueva (una sola vez, antes de tocar código)
+## 1 · El alta (una sola vez)
 
-Mainnet no reutiliza nada de Preprod — ni wallet, ni proyecto Blockfrost, ni base:
+Mainnet no reutiliza nada de Preprod: ni wallet, ni proyecto de Blockfrost, ni base, ni bucket, ni
+proyectos de observabilidad. El código ya lo admite (D-013); esto es lo que se hace a mano, **y lo
+hace el dueño**. El estado de cada paso vive en [`README.md`](README.md) §Antes de mainnet.
 
-1. **Cuenta Blockfrost en mainnet** — proyecto nuevo, `BLOCKFROST_API_KEY` distinta a la de Preprod.
-2. **Wallet de servicio nueva**, fondeada con ADA real. La clave (`SERVICE_WALLET_PRIVATE_KEY`,
-   superficie 🔴) sale del proceso resuelto en el ítem 2 de "antes de mainnet" (`D-093`,
-   `SPEC-304`) — multisig M-de-N o segundo VKH de recuperación, **no** la clave simple que usa
-   Preprod. Si esa decisión eligió multisig o recuperación, el script Aiken cambia y hay que
-   recompilar y commitear `plutus.json` antes de este paso (regla 11).
-3. **Base Turso nueva** para mainnet — no comparte filas con la de Preprod. Aplica la migración
-   completa desde cero con `db:migrate` (D-063 ya no aplica en el sentido de "editar": es una base
-   nueva, así que corre todo el historial de `migrations/*.sql` tal cual).
-4. **Servicios Render nuevos** (`propnexus-api-mainnet`, `propnexus-web-mainnet` o el naming que se
-   decida) — no se reconfigura el Blueprint de Preprod in-place: los dos entornos conviven mientras
-   haga falta demostrar Preprod a un revisor. `render.yaml` necesita una segunda definición o un
-   segundo Blueprint; decidir cuál antes de este paso (afecta si es un archivo nuevo o parámetros).
+1. **Blockfrost**: proyecto **Mainnet**, con su key (empieza con `mainnet`). Confirmar en el
+   dashboard que el plan admite un segundo proyecto además del de Preprod.
+2. **La clave de pago 🔴** (D-078, D-105), en pareja y con la key del paso 1:
+
+   ```bash
+   CARDANO_NETWORK=Mainnet BLOCKFROST_API_KEY='<key mainnet>'      pnpm --filter @plataforma/cardano wallet:new
+   ```
+
+   Escribe `~/propnexus-wallet-mainnet.key` (600) y no la imprime; imprime la dirección (`addr1…`)
+   y el admin. **La clave se guarda offline en dos lugares y no se queda en ninguna máquina de
+   desarrollo**: se borra después de cargarla en Render. La dirección y el admin van a
+   [`stack.md`](stack.md) §8b. No se rota: el admin del validador es su hash (D-093).
+3. **Turso**: ✅ **hecho el 2026-10-30** — `propnexus-mainnet`, en el grupo `propnexus`
+   (`aws-us-west-2`, el de Preprod), con delete protection y las migraciones aplicadas; las
+   coordenadas, en [`stack.md`](stack.md) §8b. El `startCommand` las vuelve a correr en el primer
+   arranque y no aplica ninguna: ya están registradas.
+4. **R2**: bucket `propnexus-evidencia-mainnet`, con un token de tipo **Account**, como el de
+   Preprod.
+5. **Sentry, PostHog y Grafana**: proyectos nuevos. Mezclar trazas de dos redes no se separa
+   después.
+6. **Render: New → Blueprint**, rama `main`, *Blueprint path* `render.mainnet.yaml`. El asistente
+   pide cada `sync: false`: `DATABASE_URL`, `DATABASE_AUTH_TOKEN`, las tres `S3_*`,
+   `BLOCKFROST_API_KEY`, `SERVICE_WALLET_PRIVATE_KEY`, `SENTRY_DSN` y las dos `OTEL_*` en la API;
+   `VITE_API_ORIGIN`, `VITE_SENTRY_DSN` y las dos `VITE_POSTHOG_*` en la web. `WEB_ORIGIN` y
+   `VITE_API_ORIGIN` son las URLs de los servicios nuevos, con esquema: si todavía no se conocen,
+   se cargan después, con un restart de la API y un redeploy de la web.
+7. **El arranque**: `AnchorPort listo en modo "real"` en el log y la dirección `addr1…` del paso 2.
+   Si dice `disabled`, la línea de arriba dice por qué (D-075).
+8. **El admin, y nadie más**: sin cuentas de demo ni credenciales de Preprod (D-106). La
+   password, nueva, del gestor de passwords; `read -s` para que no quede en el historial:
+
+   ```bash
+   read -s SEED_ADMIN_PASSWORD && export SEED_ADMIN_PASSWORD
+   DATABASE_URL=libsql://propnexus-mainnet-javote.aws-us-west-2.turso.io \
+   DATABASE_AUTH_TOKEN="$(cat ~/propnexus-turso-mainnet.token)" \
+   SEED_ADMIN_EMAIL='<email del admin>' \
+     pnpm --filter @plataforma/api db:seed:admin
+   ```
+
+   Developer, notary, certifier e investors los crea ese admin desde la app.
+9. **Fondear el tramo de la salida** (~55 ADA, plan §7) y **publicar el reference script**, una
+   vez por red (D-083):
+
+   ```bash
+   CARDANO_NETWORK=Mainnet BLOCKFROST_API_KEY='<key mainnet>'    SERVICE_WALLET_PRIVATE_KEY="$(cat ~/propnexus-wallet-mainnet.key)"      pnpm --filter @plataforma/cardano ref:publish
+   ```
+
+   Inmoviliza ~11 ADA. **Después, reiniciar la API**: el reference script se descubre al arrancar.
 
 ## 2 · Los 7 ítems de "antes de mainnet", en el orden que importa
 
@@ -86,9 +123,8 @@ que estar cerrada antes de escalar pilotos:**
 
 **Al final, el switch real, después de todo lo anterior y del legal greenlight firmado:**
 
-7. **Ítem 1 — habilitar la red.** Este mismo runbook, más `CARDANO_NETWORK=Mainnet` en el
-   `render.yaml` de los servicios nuevos del paso 1.4. D-013 se revierte con un commit explícito que
-   el dueño apruebe — no es un flag que se cambia de paso, es el último.
+7. **Ítem 1 — habilitar la red.** D-013 se revisó el 2026-10-23 y `render.mainnet.yaml` ya declara
+   `CARDANO_NETWORK=Mainnet`: lo que queda es el alta del §1.
 
 ## 3 · Encender el anclaje real en mainnet
 
@@ -115,7 +151,7 @@ explorador público (Cardanoscan/Koios) — mismo patrón que la lista de TXIDs 
 
 ## 4 · Publicar lo que el criterio 2 exige
 
-- **URL mainnet** — la de los servicios Render nuevos del paso 1.4, publicada donde Catalyst la
+- **URL mainnet** — la de los servicios Render nuevos del §1, publicada donde Catalyst la
   pueda leer (evidencia del milestone, no el README del repo únicamente).
 - **Direcciones de contrato** — derivadas del `plutus.json` recompilado (paso 2), nunca
   hardcodeadas (regla 11 — esto no cambia entre Preprod y mainnet, solo cambia el valor).

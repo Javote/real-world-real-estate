@@ -4,10 +4,11 @@ import { ANCHOR_MODES, type AnchorMode, type AnchorPort } from "./port";
 import type { LucidAnchorAdapter, ReferenceScriptPublication } from "./real";
 import { SimulatedAnchorAdapter } from "./simulated";
 
-export const REDES_PERMITIDAS = ["Preprod", "Preview", "Custom"] as const;
+export const REDES_PERMITIDAS = ["Mainnet", "Preprod", "Preview", "Custom"] as const;
 export type RedPermitida = (typeof REDES_PERMITIDAS)[number];
 
 const BLOCKFROST_URL: Record<string, string> = {
+  Mainnet: "https://cardano-mainnet.blockfrost.io/api/v0",
   Preprod: "https://cardano-preprod.blockfrost.io/api/v0",
   Preview: "https://cardano-preview.blockfrost.io/api/v0"
 };
@@ -34,7 +35,7 @@ function validarRed(valor: string | undefined): RedPermitida {
   if (!REDES_PERMITIDAS.includes(network)) {
     throw new Error(
       `CARDANO_NETWORK="${network}" no está permitida. Valores posibles: ` +
-        `${REDES_PERMITIDAS.join(" | ")}. Mainnet está fuera de alcance (D-013).`
+        `${REDES_PERMITIDAS.join(" | ")}.`
     );
   }
   return network;

@@ -11,7 +11,7 @@ simulated.ts   adaptador simulado: rechaza lo mismo que rechazaría el validador
 real.ts        LucidAnchorAdapter: construye las transacciones de verdad
 codec.ts       StageDatum ⇄ Data de Plutus — el contrato binario con contracts/
 blueprint.ts   carga plutus.json, aplica el admin, deriva dirección y policy
-factory.ts     createAnchorPort(): ANCHOR_MODE, sin defaults inseguros; Mainnet se rechaza (D-013)
+factory.ts     createAnchorPort(): ANCHOR_MODE, sin defaults inseguros; la red por defecto es Preprod
 ```
 
 **El valor dorado.** `codec.test.ts` compara el CBOR del datum contra un hex fijo, y el mismo hex

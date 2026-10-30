@@ -83,7 +83,7 @@ let puerto: AnchorPort | null = null;
 let inicializando: Promise<AnchorPort> | null = null;
 
 export function motivoParaNoAnclar(): string | null {
-  const { ANCHOR_MODE: modo, DATABASE_URL: url } = entorno();
+  const { ANCHOR_MODE: modo, DATABASE_URL: url, CARDANO_NETWORK: red } = entorno();
   const esRemota = url.startsWith("libsql://") || url.includes(".turso.io");
 
   if (modo === "simulated" && esRemota) {
@@ -91,6 +91,13 @@ export function motivoParaNoAnclar(): string | null {
       "ANCHOR_MODE=simulated contra una base remota. El simulador escribe TXIDs falsos " +
       "marcados Confirmed que no se distinguen de los reales (regla 17, D-026). " +
       "Poné ANCHOR_MODE=real, o apuntá DATABASE_URL a una base local."
+    );
+  }
+
+  if (red === "Mainnet" && (modo !== "real" || !esRemota)) {
+    return (
+      "CARDANO_NETWORK=Mainnet exige ANCHOR_MODE=real y una base remota: mainnet corre solo en " +
+      "los servicios -mainnet, nunca en local ni en CI (D-013)."
     );
   }
 

@@ -687,7 +687,23 @@ upload anclaría borradores.
 
 # Cadena
 
-## D-013 — Preprod siempre. Mainnet fuera del alcance de M3
+## D-013 — Mainnet solo en los servicios `-mainnet`; en local y en CI, nunca
+
+**Revisada por el dueño el 2026-10-23** (decisión 1 de `specs/PLAN-2026-10-05-mainnet-y-fase-2.md`
+§1). Decía *"Preprod siempre, mainnet fuera del alcance de M3"*.
+
+**Qué obliga:**
+
+- **Preprod no se toca**: es la red de `render.yaml`, de la evidencia de M3 y de lo que Catalyst
+  revisa. Preprod y no Preview, porque espeja los parámetros de protocolo de mainnet.
+- **Mainnet vive en un Blueprint aparte, `render.mainnet.yaml`**, con base, bucket, wallet, proyecto
+  de Blockfrost y observabilidad propios. Un push no lo crea: lo da de alta el dueño
+  (`specs/RUNBOOK-mainnet-cutover.md` §1).
+- **`motivoParaNoAnclar()` inhabilita el puerto si `CARDANO_NETWORK=Mainnet` llega sin
+  `ANCHOR_MODE=real` o contra una base local**: en una máquina de desarrollo o en CI, mainnet no
+  ancla. Sin `CARDANO_NETWORK`, la red es Preprod.
+- **`render-config.test.ts` defiende las dos redes**: cada Blueprint apunta solo a la suya, y el de
+  mainnet repite los comandos, filtros y variables del de Preprod.
 
 ## D-005 — Lucid Evolution + Blockfrost
 
@@ -838,6 +854,34 @@ la más barata a la más cara.
 | Burn al llegar a `Completed`, con el ADA de vuelta a la wallet | Casi las 2 ADA, menos la fee | Cambia el script hash y revierte "sin burn" (D-058, `SPEC-302`): el estado final deja de leerse en un UTxO vivo y hay que reconstruirlo desde el historial de transacciones |
 | Un hilo por proyecto en vez de uno por stage | Paga 2 ADA por proyecto en vez de por etapa | Rediseño del validador y del datum; todas las transiciones de un proyecto se serializan sobre un solo UTxO |
 | Datum por hash en vez de inline | Lo que pesa el datum en el output | **Descartada**: el datum deja de leerse on-chain y la verificación independiente depende de que se lo demos nosotros |
+
+## D-106 — El piloto de mainnet: un proyecto real, base nueva y PDFs de hasta 200 MB
+
+**Decisiones del dueño, 2026-10-30.** M3 está aprobado; lo que sigue es un piloto con datos reales
+en mainnet: **un proyecto, sus 10 etapas, hasta 4 archivos de evidencia por etapa**, en 10 lotes.
+
+**Qué obliga:**
+
+- **La base de mainnet nace vacía**, con el esquema de `0000_init.sql` y nada más: ni la demo, ni un
+  dato de Preprod. La siembra `db:seed:admin` (solo el admin, con `SEED_ADMIN_EMAIL` y
+  `SEED_ADMIN_PASSWORD`, sin defaults); **el resto de las cuentas las crea el admin desde la app,
+  ninguna con credenciales de Preprod**. La base de Preprod no se toca ni se borra.
+- **La base de mainnet va en el mismo grupo y región que la de Preprod** (`aws-us-west-2`, cerca de
+  la API en Oregon), con delete protection.
+- **El tope por archivo sube de 50 a 200 MB** (`EVIDENCE_MAX_FILE_MB`, `packages/shared`): los PDF
+  de planos de ~50 páginas con imágenes en alta pasan los 50. El tope de archivos por lote sigue
+  en 10. Rige para las dos redes: es un solo número que leen la API y el front.
+- **La API acepta 30 min por pedido** (`server.requestTimeout`): con los 5 min por defecto de Node,
+  un lote de 4 × 200 MB se corta con un uplink de menos de ~2,7 MB/s. **El proxy de Render no pone
+  tope propio**: medido el 2026-10-30, un cuerpo de 420 MB llegó a la app de Preprod (404 de
+  Express, no 413 del proxy).
+- **El reference script de mainnet se publica después del alta**, a mano y por el dueño
+  (`RUNBOOK-mainnet-cutover.md` §1.9); hasta entonces, nada se ancla en mainnet.
+
+**Lo que no cambia:** subir sigue siendo un pedido por lote, por streaming a disco y de ahí a R2, y
+el hash se calcula leyendo el archivo de disco: 200 MB no pasan por la memoria de la API. En el
+navegador, el SHA-256 del aviso de repetidos es de a un archivo (`SPEC-218`), así que el peor caso en
+memoria es 200 MB.
 
 ## D-077 — La reconciliación la dispara la lectura, no un cron
 

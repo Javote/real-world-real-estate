@@ -14,6 +14,9 @@ const server: Server = app.listen(port, () => {
   console.log(`API listening on http://localhost:${port}`);
 });
 
+// Los 5 min de Node cortan un lote de 4 PDF de 200 MB con un uplink de 2 MB/s.
+server.requestTimeout = 30 * 60_000;
+
 // Después de escuchar: Render mata el deploy si el puerto no abre, y el anclaje no frena el resto.
 initAnchorPort()
   .then((puerto) => {

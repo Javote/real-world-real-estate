@@ -48,6 +48,24 @@ describe("crearAdaptadorReal — el cableado, con Lucid mockeado", () => {
     expect(puerto).toBe(await create.mock.results[0]?.value);
   });
 
+  it("Mainnet arma Blockfrost con la URL default de mainnet (D-013)", async () => {
+    await createAnchorPort({
+      mode: "real",
+      network: "Mainnet",
+      blockfrostApiKey: "k",
+      privateKey: "s"
+    });
+
+    expect(BlockfrostMock).toHaveBeenCalledWith(
+      "https://cardano-mainnet.blockfrost.io/api/v0",
+      "k"
+    );
+    expect(Lucid).toHaveBeenLastCalledWith(
+      expect.objectContaining({ url: expect.any(String) }),
+      "Mainnet"
+    );
+  });
+
   it("una blockfrostUrl explícita pisa la default de la red", async () => {
     await createAnchorPort({
       mode: "real",

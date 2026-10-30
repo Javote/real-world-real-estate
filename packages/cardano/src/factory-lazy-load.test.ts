@@ -13,15 +13,15 @@ describe("createAnchorPort — Lucid se carga solo si hace falta", () => {
     expect(Object.keys(require.cache).some((k) => k.includes("lucid-evolution"))).toBe(false);
   });
 
-  it("mainnet rechaza (D-013) sin cargar Lucid — la validación va antes del import", async () => {
+  it("una red inventada rechaza sin cargar Lucid — la validación va antes del import", async () => {
     await expect(
       createAnchorPort({
         mode: "real",
-        network: "Mainnet",
+        network: "Testnet",
         blockfrostApiKey: "k",
         privateKey: "s"
       })
-    ).rejects.toThrow(/Mainnet está fuera de alcance/);
+    ).rejects.toThrow(/no está permitida/);
     expect(Object.keys(require.cache).some((k) => k.includes("lucid-evolution"))).toBe(false);
   });
 

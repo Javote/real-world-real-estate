@@ -62,6 +62,7 @@ export const esquemaDelEntorno = z.object({
   SENTRY_DSN: noVacio,
   OTEL_EXPORTER_OTLP_ENDPOINT: noVacio,
 
+  SEED_ADMIN_EMAIL: recortado,
   SEED_ADMIN_PASSWORD: recortado,
   SEED_DEMO_PASSWORD: recortado
 });

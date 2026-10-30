@@ -139,14 +139,17 @@ starts the container it needs and stops it afterwards, so Docker running is enou
 
 ## Deploy
 
-Free tier, **$0/month**, and that is an architectural constraint, not a budget one. The deploy is
-declared in [`render.yaml`](render.yaml): two Render services (API and static web app) backed by
+The Preprod deploy runs on the free tier, **$0/month**, and that is an architectural constraint,
+not a budget one. It is declared in [`render.yaml`](render.yaml): two Render services (API and static web app) backed by
 Turso and Cloudflare R2. A daily GitHub Actions job reconciles anchors that may have been lost.
 The full procedure (deploy, rollback, incidents) is in the
 [runbook](specs/evidencia-m3/5-ops/runbook.md).
 
-The network is **always Cardano Preprod**. Mainnet is out of scope for this milestone and is
-blocked by configuration, not just by procedure.
+Milestone 3 ran, and stays, on **Cardano Preprod**. With M3 approved, the pilot with real data runs
+on **mainnet**, in a separate deployment declared in [`render.mainnet.yaml`](render.mainnet.yaml):
+its own services, database, bucket, wallet and Blockfrost project, nothing shared with Preprod. The
+code only lets mainnet anchor with `ANCHOR_MODE=real` against a remote database, so a development
+machine or CI can never reach it.
 
 ## This repository is public
 

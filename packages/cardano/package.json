@@ -12,7 +12,7 @@
     "test": "vitest run --exclude 'src/yaci.test.ts'",
     "test:coverage": "vitest run --exclude 'src/yaci.test.ts' --coverage",
     "test:yaci": "YACI_TEST=1 vitest run src/yaci.test.ts",
-    "wallet:new": "node scripts/wallet-preprod.mjs",
+    "wallet:new": "node scripts/wallet-nueva.mjs",
     "ref:publish": "pnpm build && node scripts/publish-reference-script.mjs"
   },
   "dependencies": {

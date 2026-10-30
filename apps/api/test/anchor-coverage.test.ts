@@ -9,6 +9,7 @@ vi.mock("@plataforma/cardano", async (importOriginal) => ({
 
 const ANCHOR_MODE = process.env.ANCHOR_MODE;
 const DATABASE_URL = process.env.DATABASE_URL;
+const CARDANO_NETWORK = process.env.CARDANO_NETWORK;
 
 function restaurar(clave: string, valor: string | undefined) {
   if (valor === undefined) delete process.env[clave];
@@ -18,6 +19,7 @@ function restaurar(clave: string, valor: string | undefined) {
 afterEach(() => {
   restaurar("ANCHOR_MODE", ANCHOR_MODE);
   restaurar("DATABASE_URL", DATABASE_URL);
+  restaurar("CARDANO_NETWORK", CARDANO_NETWORK);
   createAnchorPort.mockReset();
 });
 
@@ -25,6 +27,29 @@ describe("motivoParaNoAnclar", () => {
   it("sin DATABASE_URL, no es remota — el default vacío no matchea libsql:// ni .turso.io", async () => {
     delete process.env.DATABASE_URL;
     process.env.ANCHOR_MODE = "simulated";
+    vi.resetModules();
+    const { motivoParaNoAnclar } = await import("../src/lib/anchor.js");
+
+    expect(motivoParaNoAnclar()).toBeNull();
+  });
+
+  it.each([
+    ["real", "file:./.data/test.sqlite"],
+    ["simulated", "file:./.data/test.sqlite"]
+  ])("Mainnet con ANCHOR_MODE=%s contra una base local inhabilita el puerto", async (modo, url) => {
+    process.env.CARDANO_NETWORK = "Mainnet";
+    process.env.ANCHOR_MODE = modo;
+    process.env.DATABASE_URL = url;
+    vi.resetModules();
+    const { motivoParaNoAnclar } = await import("../src/lib/anchor.js");
+
+    expect(motivoParaNoAnclar()).toMatch(/Mainnet exige ANCHOR_MODE=real y una base remota/);
+  });
+
+  it("Mainnet con ANCHOR_MODE=real contra Turso deja anclar", async () => {
+    process.env.CARDANO_NETWORK = "Mainnet";
+    process.env.ANCHOR_MODE = "real";
+    process.env.DATABASE_URL = "libsql://propnexus-mainnet-javote.aws-us-west-2.turso.io";
     vi.resetModules();
     const { motivoParaNoAnclar } = await import("../src/lib/anchor.js");
 

@@ -11,6 +11,7 @@
     "db:migrate": "tsx src/db/migrate.ts",
     "db:seed": "tsx src/db/seed.ts",
     "db:seed:produccion": "tsx src/db/seed-produccion.ts",
+    "db:seed:admin": "tsx src/db/seed-admin.ts",
     "docs:api": "tsx scripts/generate-api-docs.ts",
     "docs:openapi": "tsx scripts/generate-openapi.ts",
     "test": "vitest run",

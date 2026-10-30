@@ -231,15 +231,15 @@ describe("createAnchorPort", () => {
     await expect(createAnchorPort({ mode: "mainnet" })).rejects.toThrow(/ANCHOR_MODE inválido/);
   });
 
-  it("rechaza mainnet, que está fuera de alcance", async () => {
+  it("rechaza una red que no está en la lista", async () => {
     await expect(
       createAnchorPort({
         mode: "real",
-        network: "Mainnet",
+        network: "Testnet",
         blockfrostApiKey: "k",
         privateKey: "s"
       })
-    ).rejects.toThrow(/Mainnet está fuera de alcance/);
+    ).rejects.toThrow(/CARDANO_NETWORK="Testnet" no está permitida/);
   });
 
   it("exige BLOCKFROST_API_KEY", async () => {

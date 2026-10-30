@@ -157,7 +157,8 @@ pasó decidir contra una transcripción errónea (ver Trampas).
 - En el front, no hacer `fetch` fuera de `ApiPort`.
 - No importar Lucid/Blockfrost fuera de `packages/cardano` (D-014).
 - No migrar lógica de negocio on-chain: el backend es fuente de verdad del **registro** (D-007).
-- No tocar mainnet: `CARDANO_NETWORK=Preprod` siempre (D-013).
+- **Mainnet solo en los servicios `-mainnet`** (`render.mainnet.yaml`); en local y en CI, nunca
+  (D-013).
 - **No editar migraciones aplicadas** — con la condición de D-063: mientras la única base sea local,
   el esquema se corrige editando el archivo y borrando la base. Con Turso vivo, se termina.
 - No tocar `contracts/build/` ni editar `aiken.lock` a mano.
@@ -206,7 +207,7 @@ en `specs/entregables.md`.
 | **db** | Kysely · SQLite en dev · Turso en prod · una sola migración | D-038, D-063 |
 | **cardano** | `AnchorPort` con adaptadores `simulated` y real (Lucid Evolution) | D-014, D-060 |
 | **contracts** | Aiken v1.1.21 · Plutus V3 · stdlib v3.0.0 · blueprint commiteado | D-019, D-058 |
-| red | **Preprod siempre**; mainnet fuera de alcance | D-013 |
+| red | **Preprod** en `render.yaml`; **Mainnet** solo en `render.mainnet.yaml` | D-013 |
 
 El inventario completo —versiones reales, qué corre y qué está solo decidido— vive en
 `specs/stack.md` y solo ahí (D-034).
@@ -256,8 +257,9 @@ aprende se escribe en el `.md` que corresponde, en el mismo commit que lo causa.
 - **La librería no decide el diseño.** Si Lucid impone una forma, se toca código. Y antes de
   arreglar, preguntá si el problema debía existir.
 - **Material de wallet, siempre fresco y fuera del repo**, y se le avisa al dueño para que lo guarde.
-- **Antes de pushear un cambio de `render.yaml` sobre un servicio desplegado, reproducí su
-  `buildCommand` y su `startCommand` literales**: `pnpm verify` no los corre.
+- **Antes de pushear un cambio de `render.yaml` o `render.mainnet.yaml` sobre un servicio
+  desplegado, reproducí su `buildCommand` y su `startCommand` literales**: `pnpm verify` no los
+  corre.
 - **Producción se toca con backup verificado antes** (`specs/stack.md` §8b) y nada se borra en la
   misma sesión en que se reemplaza.
 
@@ -415,8 +417,9 @@ que la arregló (las anteriores al 2026-10-01, en
 - **Editar un `package.json` sin `pnpm install` da un verde falso.**
 - **`pnpm.overrides` solo se aplica porque `packageManager` pinea pnpm 9.15.0**: el día que suba a
   10+, los overrides van a `pnpm-workspace.yaml` en el mismo commit, o se ignoran en silencio.
-- **Una variable nueva de la API va al schema de `apps/api/src/platform/config.ts` y a `render.yaml`**,
-  o `apps/api/test/render-config.test.ts` se pone rojo (D-076): también si se lee `process.env` suelto.
+- **Una variable nueva de la API va al schema de `apps/api/src/platform/config.ts` y a los dos
+  Blueprints** (`render.yaml` y `render.mainnet.yaml`), o `apps/api/test/render-config.test.ts` se
+  pone rojo (D-076): también si se lee `process.env` suelto.
 - **CI corre lo que `verify:all` no** (e2e, audit, el smoke del `startCommand`, Semgrep, el diff de
   `plutus.json`): un verde local no es el verde de CI.
 - **Las capturas del developer no coinciden en el header**: gana D-074, no la captura.

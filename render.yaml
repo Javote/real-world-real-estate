@@ -144,7 +144,7 @@ services:
       # objeto en R2, no esto.
       - key: UPLOAD_DIR
         value: /tmp/uploads
-      # El tope de tamaño por archivo (50 MB) y de archivos por subida (10) ya NO
+      # El tope de tamaño por archivo y de archivos por subida ya NO
       # son variables: viven en `packages/shared` (`EVIDENCE_MAX_FILE_MB`,
       # `EVIDENCE_MAX_FILES`) y los importan la API y el front — un solo lugar
       # (SPEC-218).
@@ -180,10 +180,9 @@ services:
       # de administración del bucket.
       - key: S3_CREATE_BUCKET
         value: "false"
-      # D-013: Preprod SIEMPRE. Mainnet está fuera del alcance de M3.
-      # La lee `apps/api/src/lib/anchor.ts` y la valida el factory contra
-      # `REDES_PERMITIDAS`, que no incluye mainnet: pedirla no es un error de
-      # configuración, es imposible.
+      # D-013: este Blueprint es Preprod y nada más. Mainnet vive en
+      # `render.mainnet.yaml`, y `render-config.test.ts` exige que ninguno de
+      # los dos apunte a la red del otro.
       - key: CARDANO_NETWORK
         value: Preprod
       # **El modo vive acá y no solo en el dashboard, y ese es el punto.** Las

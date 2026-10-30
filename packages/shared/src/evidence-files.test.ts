@@ -53,11 +53,11 @@ describe("detectarTipoDeEvidencia (SPEC-218)", () => {
 });
 
 describe("las constantes de la subida (SPEC-218)", () => {
-  it("los tres tipos de la regla 10, el tope de 10 archivos y los 50 MB", () => {
+  it("los tres tipos de la regla 10, el tope de 10 archivos y los 200 MB", () => {
     expect([...EVIDENCE_ALLOWED_MIME]).toEqual(["application/pdf", "image/jpeg", "image/png"]);
     expect(EVIDENCE_MAX_FILES).toBe(10);
-    expect(EVIDENCE_MAX_FILE_MB).toBe(50);
-    expect(EVIDENCE_MAX_FILE_BYTES).toBe(50 * 1024 * 1024);
+    expect(EVIDENCE_MAX_FILE_MB).toBe(200);
+    expect(EVIDENCE_MAX_FILE_BYTES).toBe(200 * 1024 * 1024);
   });
 
   it("un rechazo lleva la posición y un código de la lista, y nada más", () => {

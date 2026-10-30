@@ -1,0 +1,165 @@
+# ─────────────────────────────────────────────────────────────────────────────
+# Blueprint de Render para MAINNET (D-013). El de Preprod es `render.yaml`.
+#
+# **Un segundo Blueprint y no dos servicios más en `render.yaml`, a propósito:**
+# un push a `main` no crea nada solo. Los servicios de acá nacen cuando el
+# dueño da de alta este archivo (New → Blueprint, "Blueprint path":
+# `render.mainnet.yaml`), y es ese asistente el que pide cada `sync: false`.
+# Preprod y mainnet no comparten nada: ni base, ni bucket, ni wallet, ni key de
+# Blockfrost, ni proyectos de observabilidad.
+#
+# Build, start, filtros y variables son los de `render.yaml`, y
+# `apps/api/test/render-config.test.ts` exige que sigan siéndolo: lo que acá
+# cambia es la red, el plan, el bucket y el explorador. Los porqués de cada
+# línea están comentados allá y no se repiten.
+#
+# Lo que hay que crear a mano antes del alta (specs/RUNBOOK-mainnet-cutover.md §1):
+#   · La base Turso de mainnet y su token, con delete protection.
+#   · El bucket R2 `propnexus-evidencia-mainnet` y su par de claves S3.
+#   · El proyecto de Blockfrost en mainnet.
+#   · La clave de pago de la wallet de servicio de mainnet (🔴, D-078, D-105).
+# Sin seed de demo: solo el admin, con `db:seed:admin` (D-106). La base ya existe:
+# `propnexus-mainnet` (specs/stack.md §8b).
+# ─────────────────────────────────────────────────────────────────────────────
+
+services:
+  - type: web
+    name: propnexus-api-mainnet
+    runtime: node
+    # D-105: siempre prendida. En free un reinicio por health check perdió 4
+    # anclajes en la prueba de volumen, y en mainnet cada uno cuesta ADA real.
+    plan: starter
+    region: oregon
+    branch: main
+    autoDeployTrigger: checksPass
+    buildFilter:
+      paths:
+        - apps/api/**
+        - packages/shared/**
+        - packages/cardano/**
+        - pnpm-lock.yaml
+        - pnpm-workspace.yaml
+        - package.json
+        - render.mainnet.yaml
+      ignoredPaths:
+        - "**/*.md"
+        - apps/api/test/**
+        - apps/api/vitest.config.mts
+        - packages/shared/src/**/*.test.ts
+        - packages/cardano/src/**/*.test.ts
+        - packages/*/vitest.config.mts
+    buildCommand: >-
+      corepack enable &&
+      NODE_ENV=development pnpm install --frozen-lockfile --filter "@plataforma/api..." &&
+      pnpm --filter @plataforma/api build
+    startCommand: >-
+      node apps/api/dist/src/db/migrate.js &&
+      NODE_ENV=production node --import ./apps/api/dist/src/instrumentation.js apps/api/dist/src/server.js
+    healthCheckPath: /health
+    envVars:
+      - key: NODE_VERSION
+        value: "22.23.4"
+      - key: JWT_SECRET
+        generateValue: true
+      # libsql://<base>-<org>.turso.io — la base de mainnet, no la de Preprod.
+      - key: DATABASE_URL
+        sync: false
+      - key: DATABASE_AUTH_TOKEN
+        sync: false
+      - key: TRUST_PROXY_HOPS
+        value: "1"
+      - key: LOGIN_RATE_LIMIT_MAX
+        value: "20"
+      - key: DOSSIER_RATE_LIMIT_MAX
+        value: "60"
+      - key: UPLOAD_DIR
+        value: /tmp/uploads
+      - key: STORAGE_DRIVER
+        value: s3
+      - key: S3_ENDPOINT
+        sync: false
+      - key: S3_BUCKET
+        value: propnexus-evidencia-mainnet
+      - key: S3_ACCESS_KEY_ID
+        sync: false
+      - key: S3_SECRET_ACCESS_KEY
+        sync: false
+      - key: S3_REGION
+        value: auto
+      - key: S3_FORCE_PATH_STYLE
+        value: "false"
+      - key: S3_CREATE_BUCKET
+        value: "false"
+      # D-013: mainnet solo acá. `motivoParaNoAnclar()` inhabilita el puerto si
+      # esta red llega sin `ANCHOR_MODE=real` o contra una base local.
+      - key: CARDANO_NETWORK
+        value: Mainnet
+      - key: ANCHOR_MODE
+        value: real
+      # El proyecto de Blockfrost de mainnet y la clave de pago de mainnet
+      # (D-078). ⚠ No se rota: el admin del validador es el hash de esta clave
+      # (D-093), y queda simple con su custodia (D-105).
+      - key: BLOCKFROST_API_KEY
+        sync: false
+      - key: SERVICE_WALLET_PRIVATE_KEY
+        sync: false
+      # https://propnexus-web-mainnet.onrender.com
+      - key: WEB_ORIGIN
+        sync: false
+      # Proyectos propios de mainnet: mezclar trazas de dos redes no se separa después.
+      - key: SENTRY_DSN
+        sync: false
+      - key: OTEL_EXPORTER_OTLP_ENDPOINT
+        sync: false
+      - key: OTEL_EXPORTER_OTLP_HEADERS
+        sync: false
+
+  - type: web
+    name: propnexus-web-mainnet
+    runtime: static
+    branch: main
+    autoDeployTrigger: checksPass
+    buildFilter:
+      paths:
+        - apps/web/**
+        - packages/shared/**
+        - pnpm-lock.yaml
+        - pnpm-workspace.yaml
+        - package.json
+        - render.mainnet.yaml
+      ignoredPaths:
+        - "**/*.md"
+        - apps/web/e2e/**
+        - apps/web/src/**/*.test.ts
+        - apps/web/src/**/*.test.tsx
+        - apps/web/src/routes/-test-mount.tsx
+        - apps/web/src/test/**
+        - apps/web/vitest.config.ts
+        - apps/web/playwright.config.ts
+        - packages/shared/src/**/*.test.ts
+        - packages/*/vitest.config.mts
+    buildCommand: >-
+      corepack enable &&
+      NODE_ENV=development pnpm install --frozen-lockfile --filter "@plataforma/web..." &&
+      pnpm --filter @plataforma/web build
+    staticPublishPath: apps/web/dist
+    routes:
+      - type: rewrite
+        source: /*
+        destination: /index.html
+    envVars:
+      - key: SKIP_INSTALL_DEPS
+        value: "true"
+      # https://propnexus-api-mainnet.onrender.com
+      - key: VITE_API_ORIGIN
+        sync: false
+      # De build time. Sin ella, `explorer.ts` cae en el de Preprod y cada TXID
+      # de mainnet llevaría a una transacción que ahí no existe.
+      - key: VITE_EXPLORER_BASE
+        value: https://cardanoscan.io
+      - key: VITE_SENTRY_DSN
+        sync: false
+      - key: VITE_POSTHOG_KEY
+        sync: false
+      - key: VITE_POSTHOG_HOST
+        sync: false

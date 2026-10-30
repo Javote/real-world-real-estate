@@ -116,7 +116,7 @@ Ningún validador custodia ni transfiere valor, en ninguna fase (D-021).
 
 | Pieza | Estado | Decisión |
 |---|---|---|
-| Red: **Preprod en todos los entornos**. Mainnet fuera del alcance de M3 | ● (por configuración) | D-013 |
+| Red: **Preprod** en `render.yaml`; **Mainnet** solo en `render.mainnet.yaml`, con `ANCHOR_MODE=real` y base remota | ● Preprod · ◐ Mainnet: el código y el Blueprint, sin alta | D-013 |
 | `packages/cardano` con `AnchorPort` (`openThread`/`advanceThread`/`anchorEvidence`/`verify`/`awaitConfirmation`) | ● | D-014 · D-060 |
 | Adaptador `simulated` (determinístico, con ledger propio; es producto, no stub) | ● | D-014 · D-060 |
 | Adaptador real: **Lucid Evolution `0.6.2`** | ● — probado contra el `Emulator` y contra un devnet local | D-005 |
@@ -125,9 +125,9 @@ Ningún validador custodia ni transfiere valor, en ninguna fase (D-021).
 | Anclaje de evidencia: metadata de tx, label `1904`, strings ≤64 bytes | ● — lo dispara el admin | D-006 · D-061 |
 | Merkle root del bundle en el datum, verificado por el validador | ● | D-061 |
 | Devnet local (yaci-devkit `0.10.6`, Conway + PlutusV3) | ● — `compose.dev.yml` | SPEC-013 |
-| Provider contra Preprod: **Blockfrost** | ● — en local, contra el devnet, se usa Kupmios (`packages/cardano/CLAUDE.md`) | D-005 |
+| Provider contra Preprod y Mainnet: **Blockfrost** | ● — en local, contra el devnet, se usa Kupmios (`packages/cardano/CLAUDE.md`) | D-005 |
 | Cuenta Blockfrost (proyecto Preprod) | ● — `BLOCKFROST_API_KEY` en `apps/api/.env` y en el dashboard de Render | — |
-| Wallet de servicio: **una clave de pago**, sin seed, dirección enterprise derivada | ● — fondeada por faucet; coordenadas en §8b | 🔴 · D-078 |
+| Wallet de servicio: **una clave de pago**, sin seed, dirección enterprise derivada; una por red (`wallet:new` con `CARDANO_NETWORK`) | ● Preprod, fondeada por faucet; coordenadas en §8b · ○ Mainnet | 🔴 · D-078 · D-105 |
 | Reconciliación y `verify()` público sin cuenta | ○ — rebanada C | SPEC-013 |
 | Co-firma CIP-30 para notario/certificador | — **sin alcance en el validador** | D-009 · D-058 |
 
@@ -142,6 +142,7 @@ Ningún validador custodia ni transfiere valor, en ninguna fase (D-021).
 | Pieza | Estado | Decisión |
 |---|---|---|
 | **`render.yaml`** (Blueprint: 2 servicios, `plan: free`, `rootDir`, `buildFilter`) | ● — escrito y desplegado; **el `buildFilter` no filtra**, medido el 2026-08-27 (RUNBOOK §2) | D-041 |
+| **`render.mainnet.yaml`** (segundo Blueprint: `propnexus-api-mainnet` en `plan: starter` y `propnexus-web-mainnet`; mismos comandos, filtros y variables, lo defiende `render-config.test.ts`) | ◐ — escrito, sin alta: lo da de alta el dueño (`RUNBOOK-mainnet-cutover.md` §1) | D-013 · D-105 |
 | Runtime: **nativo de Node**, sin imagen propia · `NODE_VERSION=22.23.4` (la del `.nvmrc`) | ● — declarado | D-041 |
 | `startCommand` de la API: migraciones **y después** el servidor | ● — verificado sobre el compilado | D-012 · D-040 |
 | Script `start` de `apps/api` (`node dist/src/server.js`) | ● | — |
@@ -152,7 +153,7 @@ Ningún validador custodia ni transfiere valor, en ninguna fase (D-021).
 | `TRUST_PROXY_HOPS=1` (con 0 detrás del proxy la app queda inusable) | ● — declarado | D-045 |
 | Plataforma: **Render**, build por servicio, GHA no despliega | ● — los dos servicios en Oregon, §8b | D-039 · D-010 |
 | Base **Turso** (`DATABASE_URL` + `DATABASE_AUTH_TOKEN`, `sync: false`) | ● — §8b | D-038 |
-| **Todo el deploy en free tier — $0/mes** | ● — restricción respetada por el YAML | D-040 |
+| **Preprod en free tier — $0/mes**; mainnet en planes pagos (Render Starter, Turso Developer, R2) | ● Preprod — respetada por `render.yaml` · ◐ mainnet, en contratación | D-040 · D-105 |
 | Presupuesto: **750 instance-hours/mes** compartidas · **keep-warm prohibido** | ● — documentado en el YAML y el runbook §5 | D-040 |
 | Cold start ~1 min tras 15 min de inactividad | ● — se calienta a mano antes de demo/grabación | D-040 |
 | Evidencia en **R2**; `UPLOAD_DIR` es solo staging de Multer | ● — la ruta borra el temporal apenas R2 confirma | D-011 |
@@ -175,6 +176,7 @@ Coordenadas de producción. Los valores secretos viven en el dashboard de Render
 | API | `propnexus-api` · `srv-da87oaon74is739pr050` · https://propnexus-api.onrender.com · Render Oregon |
 | Web | `propnexus-web` · `srv-da87oaon74is739pr04g` · https://propnexus-web.onrender.com |
 | Base | Turso, org `javote`: **`propnexus-west`** en el grupo `propnexus` (`aws-us-west-2`) es producción desde el 2026-10-06 (`SPEC-603`). `propnexus` en el grupo `default` (`aws-us-east-1`) es la de antes del corte, sin escrituras desde entonces: el rollback es volver a apuntarle `DATABASE_URL` y `DATABASE_AUTH_TOKEN`, y desde la `0013` (2026-10-07) eso pierde todo lo escrito después del corte. `propnexus-prueba-618` (grupo `propnexus`) quedó vacía de `SPEC-618` y sin borrar porque el grupo tiene delete protection. Borrar cualquiera de las dos lo decide el dueño. Bases y grupos, con delete protection |
+| Base de mainnet | Turso, org `javote`: **`propnexus-mainnet`** en el grupo `propnexus` (`aws-us-west-2`), creada el 2026-10-30 vacía, con las 16 migraciones y delete protection (D-106). `libsql://propnexus-mainnet-javote.aws-us-west-2.turso.io`; el token, en `~/propnexus-turso-mainnet.token` (600) hasta cargarlo en Render. Sin usuarios hasta `db:seed:admin` |
 | Evidencia | Cloudflare R2, bucket `propnexus-evidencia`, token de tipo **Account** (uno de usuario muere si esa persona pierde acceso) y endpoint *jurisdiction-specific* |
 | Wallet de servicio | `addr_test1vp3vy56p6lrghhntg8ytydnuugnqh7ctkyxn3rm35g4q2ggtqvncw` · admin `62c25341d7c68bde6b41c8b2367ce2260bfb0bb10d388f71a22a0521`. La clave, en `~/propnexus-wallet-preprod.key` (600) y en `apps/api/.env`. No se rota (D-093) |
 | Reference script | txid `3c75280a9205b3d870ce18ed291dcf16593da4382c659bea0735396f0ba2c7f1` (Preprod) |

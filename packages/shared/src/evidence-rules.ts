@@ -4,7 +4,7 @@ export type EvidenceMime = (typeof EVIDENCE_ALLOWED_MIME)[number];
 
 export const EVIDENCE_MAX_FILES = 10;
 
-export const EVIDENCE_MAX_FILE_MB = 50;
+export const EVIDENCE_MAX_FILE_MB = 200;
 export const EVIDENCE_MAX_FILE_BYTES = EVIDENCE_MAX_FILE_MB * 1024 * 1024;
 
 export const EVIDENCE_SIGNATURE_BYTES = 8;

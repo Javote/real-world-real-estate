@@ -18,14 +18,15 @@ Preprod y verificable por cualquier tercero vía TXID.
 
 | | |
 |---|---|
-| Red | **Preprod**, en todos los entornos (D-013) |
+| Red | **Preprod** (D-013) |
 | Entorno | Pre-producción pública |
 | Datos | Semilla + piloto con 3 participantes |
 | Contratos | Escritos, testeados, desplegados en testnet |
 | Custodia de valor | **Ninguna** (D-021) |
 
-Mainnet y producción quedan fuera y no se planifican acá: requieren entorno nuevo, wallet nueva y
-aprobación explícita.
+**M3 está aprobado** (dueño, 2026-10-30). Lo que sigue es el piloto en mainnet: un proyecto real,
+sus 10 etapas y su evidencia, en un entorno aparte que no toca este (`render.mainnet.yaml`, D-013,
+D-106). Lo que le falta está en §Antes de mainnet.
 
 ## Qué controlamos y qué no
 
@@ -229,7 +230,7 @@ La propuesta de calendario, junto con mainnet, está en
 
 | Qué | Por qué |
 |---|---|
-| **Mainnet** | Decisión del dueño, 2026-09-09. D-013 lo hace imposible por configuración y `specs/README.md` ya lo declara fuera |
+| **Mainnet** | No cuenta para M3 (dueño, 2026-09-09). Desde el 2026-10-23 sale en un entorno aparte, sin tocar Preprod (D-013 revisada): §Antes de mainnet |
 | **Fusionar anclaje + transición** | Ahorra ~5% del costo on-chain; es 🟡 sobre el core de anclaje. Después de la prueba de volumen, que da la distribución real. Detalle en `specs/PROPUESTA-2026-09-09-fusionar-anclaje-evidencia-transicion.md` |
 | **`TOPE_POR_LECTURA`** | Medir una carga real antes de tocar el número. El disparador por lectura ya se arregló (2026-09-09) |
 | **"Contenido en `Pending`"** | Mejora de UX, ningún criterio la pide. Necesita que el listado de stages devuelva el anclaje y reconcilie |
@@ -252,11 +253,26 @@ del 2026-09-11 de nuevo.
 
 | # | Qué | Por qué espera | Detalle |
 |---|---|---|---|
-| 1 | Habilitar la red: runbook + `CARDANO_NETWORK=Mainnet` | D-013 lo hace imposible **por configuración** hoy — no es solo procedimiento, es código | D-013 |
+| 1 | Habilitar la red: runbook + `CARDANO_NETWORK=Mainnet` | ◐ **2026-10-23: D-013 revisada y el código listo** — `Mainnet` en el factory, la guarda de `motivoParaNoAnclar()`, `render.mainnet.yaml` y `wallet:new` para las dos redes. Falta lo de la lista de abajo | D-013, `RUNBOOK-mainnet-cutover.md` §1 |
 | 2 | Custodia y rotabilidad de la clave del `admin` | ✅ **Decidida 2026-10-23: queda simple** (dueño). El control es la custodia y la detección a mano del plan (§4) | D-093, D-105, [`SPEC-304`](archive/SPEC-304-la-clave-del-admin-no-se-puede-rotar.md) |
 | 3 | Unicidad del hilo on-chain + tope de `evidence_root` | ✅ **Decidida 2026-10-23: no se hace** (dueño). Mainnet sale con el validador de hoy; la unicidad la sostiene `SPEC-301` en el backend | D-105, [`SPEC-305`](archive/SPEC-305-el-proximo-cambio-de-script-hash.md) |
 | 7 | Las 2 ADA bloqueadas por etapa (20 por proyecto de 10 etapas) | ✅ **Aceptadas 2026-10-23** (dueño). Las alternativas para cuando el costo pese, en D-105 | D-105, `specs/REPORTE-2026-09-10-prueba-de-volumen.md` |
 | 8 | **Idea:** Koios en vez de Blockfrost, o como segunda fuente | Hoy dependemos de una sola empresa (D-005). Koios es comunitario, no pide key, y cualquiera puede verificar un TXID contra la misma fuente que usamos (el 2026-10-01 confirmó dos tx de Preprod que Blockfrost ya había confirmado). Lucid ya trae el provider; Blockfrost está atado solo en `factory.ts` y en el `fetch` de `confirmedAt`. **Sin medir:** que el provider de Koios evalúe bien Plutus V3. Primer paso: `yaci.test.ts` con ese provider. Paso intermedio más barato: Koios solo como respaldo de `confirmedAt` | D-005 |
+
+**El legal greenlight** de counsel/notario (criterio 2 de M4) **está firmado** (dueño, 2026-10-23).
+
+**Lo que falta para la salida**, en orden (`RUNBOOK-mainnet-cutover.md` §1 y el gate del plan, §5):
+
+1. ✅ Un seed que cree solo el admin: `db:seed:admin` (2026-10-30, D-106).
+2. La infraestructura: ✅ base Turso (`propnexus-mainnet`, 2026-10-30, `stack.md` §8b); falta
+   proyecto de Blockfrost, clave 🔴, bucket R2, proyectos de observabilidad y el alta de
+   `render.mainnet.yaml`. **La hace el dueño.**
+   ✅ El tope por archivo es 200 MB, para los PDF de planos del piloto (D-106).
+3. El ensayo: los servicios `-mainnet` contra Preprod con una wallet de ensayo, un proyecto entero.
+4. El runbook de incidentes de mainnet (rollback que no deshace nada on-chain, clave comprometida,
+   wallet sin saldo, quién aprueba volver a Preprod) y el comando de detección semanal (plan §4).
+5. Fondear el tramo de la salida (~55 ADA), publicar el reference script y reiniciar la API.
+6. El proyecto propio de punta a punta, con cada TXID contra Koios y Cardanoscan.
 
 Los ítems 4–6 de esta lista (`SPEC-402`, `SPEC-407`, `SPEC-408`) se adelantaron a la Fase 1, ítem 8.
 

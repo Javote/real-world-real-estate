@@ -63,6 +63,7 @@ const CASOS: [keyof Entorno, string | undefined, unknown][] = [
   ["SERVICE_WALLET_PRIVATE_KEY", "", ""],
   ["SENTRY_DSN", "", undefined],
   ["OTEL_EXPORTER_OTLP_ENDPOINT", "", undefined],
+  ["SEED_ADMIN_EMAIL", " admin@propnexus.io ", "admin@propnexus.io"],
   ["SEED_ADMIN_PASSWORD", "  ", undefined],
   ["SEED_DEMO_PASSWORD", " pw ", "pw"]
 ];
