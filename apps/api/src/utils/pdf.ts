@@ -1,14 +1,39 @@
 const ANCHO_LINEA = 92;
 const LINEAS_POR_PAGINA = 56;
 
+// Los de WinAnsi que no están en Latin-1 (0x80–0x9F); el resto de 0xA0–0xFF coincide con Unicode.
+const WIN_ANSI_FUERA_DE_LATIN1: Readonly<Record<string, number>> = {
+  "€": 0x80,
+  "‚": 0x82,
+  "„": 0x84,
+  "…": 0x85,
+  "‘": 0x91,
+  "’": 0x92,
+  "“": 0x93,
+  "”": 0x94,
+  "•": 0x95,
+  "–": 0x96,
+  "—": 0x97
+};
+
+function codigoWinAnsi(caracter: string): number | undefined {
+  const cp = caracter.codePointAt(0)!;
+  if ((cp >= 0x20 && cp <= 0x7e) || (cp >= 0xa0 && cp <= 0xff)) return cp;
+  return WIN_ANSI_FUERA_DE_LATIN1[caracter];
+}
+
+/** Courier con WinAnsi: acentos, `°` y `·` salen como son; lo que no existe ahí, sin tilde o `?`. */
 function escaparTexto(linea: string): string {
-  return linea
-    .normalize("NFD")
-    .replace(/[̀-ͯ]/g, "")
-    .replace(/[^\x20-\x7e]/g, "?")
-    .replace(/\\/g, "\\\\")
-    .replace(/\(/g, "\\(")
-    .replace(/\)/g, "\\)");
+  return [...linea.normalize("NFC")]
+    .map((caracter) => {
+      const codigo =
+        codigoWinAnsi(caracter) ?? codigoWinAnsi(caracter.normalize("NFD").charAt(0)) ?? 0x3f;
+      if (codigo === 0x5c || codigo === 0x28 || codigo === 0x29) {
+        return `\\${String.fromCharCode(codigo)}`;
+      }
+      return codigo > 0x7e ? `\\${codigo.toString(8)}` : String.fromCharCode(codigo);
+    })
+    .join("");
 }
 
 function envolver(linea: string): string[] {
@@ -38,7 +63,7 @@ export function renderTextPdf(lineas: string[]): Buffer {
       .map((_, i) => `${idPagina(i)} 0 R`)
       .join(" ")}] >>`
   );
-  objetos.push("<< /Type /Font /Subtype /Type1 /BaseFont /Courier >>");
+  objetos.push("<< /Type /Font /Subtype /Type1 /BaseFont /Courier /Encoding /WinAnsiEncoding >>");
 
   for (const [i, pagina] of paginas.entries()) {
     objetos.push(
