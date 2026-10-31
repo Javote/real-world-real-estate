@@ -142,8 +142,8 @@ describe("las dos redes no se cruzan (D-013)", () => {
     });
   });
 
-  it("la API de mainnet no duerme (D-105)", () => {
-    expect(servicioApiMainnet().plan).toBe("starter");
+  it("la API de mainnet va en free mientras Preprod está suspendida (D-105)", () => {
+    expect(servicioApiMainnet().plan).toBe("free");
   });
 });
 

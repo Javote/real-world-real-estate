@@ -841,8 +841,14 @@ así** (D-105).
   name pasa a 2.
 - **Las 2 ADA bloqueadas por etapa se aceptan** (`THREAD_MIN_LOVELACE`, sin burn por D-058): 20 ADA
   permanentes por proyecto de 10 etapas. Las alternativas, abajo.
-- **La API de mainnet va en Render Starter, la base en Turso Developer y la evidencia en R2 pago**
-  (los tres en contratación, 2026-10-23).
+- **Mainnet sale en free tier: Render, Turso y R2** (dueño, 2026-10-31; el 2026-10-23 había
+  elegido Render Starter, Turso Developer y R2 pago). La API de Preprod se suspende, y la de
+  mainnet toma las 750 h/mes del workspace. **El riesgo aceptado:** se duerme a los 15 min (~1 min
+  de arranque en frío para el primero que entra), en free un reinicio por health check perdió 4
+  anclajes de la prueba de volumen, Turso free tiene 1 día de point-in-time restore en vez de 10, y
+  los 10 GB de R2 free son de la cuenta, compartidos con el bucket de Preprod: el piloto entero
+  (10 etapas × 4 × 200 MB) llega a 8 GB. Volver a Starter es cambiar `plan:` en
+  `render.mainnet.yaml` y el test que lo fija.
 
 **Las alternativas a las 2 ADA, para cuando el costo pese.** Ninguna se toma hoy; están ordenadas de
 la más barata a la más cara.

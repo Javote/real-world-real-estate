@@ -26,9 +26,11 @@ services:
   - type: web
     name: propnexus-api-mainnet
     runtime: node
-    # D-105: siempre prendida. En free un reinicio por health check perdió 4
-    # anclajes en la prueba de volumen, y en mainnet cada uno cuesta ADA real.
-    plan: starter
+    # D-105, revisada el 2026-10-31: free mientras la API de Preprod está
+    # suspendida, para que las 750 h/mes del workspace sean todas de esta. Se
+    # duerme a los 15 min y en free un reinicio por health check perdió 4
+    # anclajes en la prueba de volumen: subir a `starter` es cambiar esta línea.
+    plan: free
     region: oregon
     branch: main
     autoDeployTrigger: checksPass

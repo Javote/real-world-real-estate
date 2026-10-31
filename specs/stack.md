@@ -142,7 +142,7 @@ Ningún validador custodia ni transfiere valor, en ninguna fase (D-021).
 | Pieza | Estado | Decisión |
 |---|---|---|
 | **`render.yaml`** (Blueprint: 2 servicios, `plan: free`, `rootDir`, `buildFilter`) | ● — escrito y desplegado; **el `buildFilter` no filtra**, medido el 2026-08-27 (RUNBOOK §2) | D-041 |
-| **`render.mainnet.yaml`** (segundo Blueprint: `propnexus-api-mainnet` en `plan: starter` y `propnexus-web-mainnet`; mismos comandos, filtros y variables, lo defiende `render-config.test.ts`) | ◐ — escrito, sin alta: lo da de alta el dueño (`RUNBOOK-mainnet-cutover.md` §1) | D-013 · D-105 |
+| **`render.mainnet.yaml`** (segundo Blueprint: `propnexus-api-mainnet` en `plan: free` y `propnexus-web-mainnet`; mismos comandos, filtros y variables, lo defiende `render-config.test.ts`) | ◐ — escrito, sin alta: lo da de alta el dueño (`RUNBOOK-mainnet-cutover.md` §1) | D-013 · D-105 |
 | Runtime: **nativo de Node**, sin imagen propia · `NODE_VERSION=22.23.4` (la del `.nvmrc`) | ● — declarado | D-041 |
 | `startCommand` de la API: migraciones **y después** el servidor | ● — verificado sobre el compilado | D-012 · D-040 |
 | Script `start` de `apps/api` (`node dist/src/server.js`) | ● | — |
@@ -153,7 +153,7 @@ Ningún validador custodia ni transfiere valor, en ninguna fase (D-021).
 | `TRUST_PROXY_HOPS=1` (con 0 detrás del proxy la app queda inusable) | ● — declarado | D-045 |
 | Plataforma: **Render**, build por servicio, GHA no despliega | ● — los dos servicios en Oregon, §8b | D-039 · D-010 |
 | Base **Turso** (`DATABASE_URL` + `DATABASE_AUTH_TOKEN`, `sync: false`) | ● — §8b | D-038 |
-| **Preprod en free tier — $0/mes**; mainnet en planes pagos (Render Starter, Turso Developer, R2) | ● Preprod — respetada por `render.yaml` · ◐ mainnet, en contratación | D-040 · D-105 |
+| **Free tier — $0/mes**, también mainnet por ahora: su API toma las 750 h con la de Preprod suspendida | ● Preprod — respetada por `render.yaml` · ◐ mainnet, sin alta | D-040 · D-105 |
 | Presupuesto: **750 instance-hours/mes** compartidas · **keep-warm prohibido** | ● — documentado en el YAML y el runbook §5 | D-040 |
 | Cold start ~1 min tras 15 min de inactividad | ● — se calienta a mano antes de demo/grabación | D-040 |
 | Evidencia en **R2**; `UPLOAD_DIR` es solo staging de Multer | ● — la ruta borra el temporal apenas R2 confirma | D-011 |
