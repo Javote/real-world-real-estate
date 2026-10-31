@@ -871,7 +871,9 @@ en mainnet: **un proyecto, sus 10 etapas, hasta 4 archivos de evidencia por etap
 - **La base de mainnet nace vacía**, con el esquema de `0000_init.sql` y nada más: ni la demo, ni un
   dato de Preprod. La siembra `db:seed:admin` (solo el admin, con `SEED_ADMIN_EMAIL` y
   `SEED_ADMIN_PASSWORD`, sin defaults); **el resto de las cuentas las crea el admin desde la app,
-  ninguna con credenciales de Preprod**. La base de Preprod no se toca ni se borra.
+  ninguna con credenciales de Preprod**. *Revisado el 2026-10-31 (dueño):* se sembraron las cinco
+  cuentas con los emails de Preprod (`admin@`, `developer@`, `buyer@`, `verifier@`,
+  `notary@example.com`) y passwords nuevas, `SEED_MAINNET_*` en `apps/api/.env`. La base de Preprod no se toca ni se borra.
 - **La base de mainnet va en el mismo grupo y región que la de Preprod** (`aws-us-west-2`, cerca de
   la API en Oregon), con delete protection.
 - **El tope por archivo sube de 50 a 200 MB** (`EVIDENCE_MAX_FILE_MB`, `packages/shared`): los PDF

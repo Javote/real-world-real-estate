@@ -264,9 +264,11 @@ del 2026-09-11 de nuevo.
 **Lo que falta para la salida**, en orden (`RUNBOOK-mainnet-cutover.md` §1 y el gate del plan, §5):
 
 1. ✅ Un seed que cree solo el admin: `db:seed:admin` (2026-10-30, D-106).
-2. La infraestructura: ✅ base Turso (`propnexus-mainnet`, 2026-10-30, `stack.md` §8b); falta
-   proyecto de Blockfrost, clave 🔴, bucket R2, proyectos de observabilidad y el alta de
-   `render.mainnet.yaml`. **La hace el dueño.**
+2. La infraestructura, en free tier (D-105, 2026-10-31): ✅ base Turso (`propnexus-mainnet`,
+   2026-10-30) con sus cinco cuentas, ✅ bucket R2, ✅ proyecto de Blockfrost y ✅ el alta de
+   `render.mainnet.yaml` (2026-10-31, `stack.md` §8b), con la API de Preprod suspendida. Falta:
+   la clave 🔴, los secretos en Render (los carga el dueño) y la observabilidad (Sentry; PostHog y
+   Grafana free admiten un solo proyecto, el de Preprod).
    ✅ El tope por archivo es 200 MB, para los PDF de planos del piloto (D-106).
 3. El ensayo: los servicios `-mainnet` contra Preprod con una wallet de ensayo, un proyecto entero.
 4. El runbook de incidentes de mainnet (rollback que no deshace nada on-chain, clave comprometida,

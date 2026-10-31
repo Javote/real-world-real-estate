@@ -173,10 +173,13 @@ Coordenadas de producción. Los valores secretos viven en el dashboard de Render
 
 | Qué | Dónde |
 |---|---|
-| API | `propnexus-api` · `srv-da87oaon74is739pr050` · https://propnexus-api.onrender.com · Render Oregon |
+| API | `propnexus-api` · `srv-da87oaon74is739pr050` · https://propnexus-api.onrender.com · Render Oregon. **Suspendida desde el 2026-10-31** para que las 750 h de free sean de la de mainnet (D-105), y con ella `reconcile.yml` (`gh workflow disable`): sin API, su corrida diaria dejaba un check rojo en `main` y frenaba todo deploy. Volver: *Resume Web Service* y `gh workflow enable reconcile.yml` |
 | Web | `propnexus-web` · `srv-da87oaon74is739pr04g` · https://propnexus-web.onrender.com |
 | Base | Turso, org `javote`: **`propnexus-west`** en el grupo `propnexus` (`aws-us-west-2`) es producción desde el 2026-10-06 (`SPEC-603`). `propnexus` en el grupo `default` (`aws-us-east-1`) es la de antes del corte, sin escrituras desde entonces: el rollback es volver a apuntarle `DATABASE_URL` y `DATABASE_AUTH_TOKEN`, y desde la `0013` (2026-10-07) eso pierde todo lo escrito después del corte. `propnexus-prueba-618` (grupo `propnexus`) quedó vacía de `SPEC-618` y sin borrar porque el grupo tiene delete protection. Borrar cualquiera de las dos lo decide el dueño. Bases y grupos, con delete protection |
-| Base de mainnet | Turso, org `javote`: **`propnexus-mainnet`** en el grupo `propnexus` (`aws-us-west-2`), creada el 2026-10-30 vacía, con las 16 migraciones y delete protection (D-106). `libsql://propnexus-mainnet-javote.aws-us-west-2.turso.io`; el token, en `~/propnexus-turso-mainnet.token` (600) hasta cargarlo en Render. Sin usuarios hasta `db:seed:admin` |
+| Base de mainnet | Turso, org `javote`: **`propnexus-mainnet`** en el grupo `propnexus` (`aws-us-west-2`), creada el 2026-10-30 vacía, con las 16 migraciones y delete protection (D-106). `libsql://propnexus-mainnet-javote.aws-us-west-2.turso.io`; el token, en `~/propnexus-turso-mainnet.token` (600) hasta cargarlo en Render. Las cinco cuentas, con los emails de Preprod y passwords propias (D-106), sembradas el 2026-10-31 |
+| Mainnet en Render | Blueprint `propnexus-mainnet` (`render.mainnet.yaml`), creado el 2026-10-31: `propnexus-api-mainnet` · `srv-dbj0h6m7bikc73e2t0t0` · https://propnexus-api-mainnet.onrender.com (free) y `propnexus-web-mainnet` · `srv-dbj0h6m7bikc73e2t0sg` · https://propnexus-web-mainnet.onrender.com |
+| Evidencia de mainnet | Cloudflare R2, bucket `propnexus-evidencia-mainnet` (creado el 2026-10-31, ubicación automática). 33,82 MB en el de Preprod ese día, contra 10 GB free de la cuenta |
+| Blockfrost de mainnet | proyecto `real-estate-mainnet`; el plan Starter no admite otro |
 | Evidencia | Cloudflare R2, bucket `propnexus-evidencia`, token de tipo **Account** (uno de usuario muere si esa persona pierde acceso) y endpoint *jurisdiction-specific* |
 | Wallet de servicio | `addr_test1vp3vy56p6lrghhntg8ytydnuugnqh7ctkyxn3rm35g4q2ggtqvncw` · admin `62c25341d7c68bde6b41c8b2367ce2260bfb0bb10d388f71a22a0521`. La clave, en `~/propnexus-wallet-preprod.key` (600) y en `apps/api/.env`. No se rota (D-093) |
 | Reference script | txid `3c75280a9205b3d870ce18ed291dcf16593da4382c659bea0735396f0ba2c7f1` (Preprod) |
@@ -188,6 +191,7 @@ Coordenadas de producción. Los valores secretos viven en el dashboard de Render
 |---|---|---|
 | `SEED_ADMIN_PASSWORD` | login de `admin@example.com` en la demo desplegada | el gestor de passwords; se le pasa en la shell a `db:seed:produccion`, que no la imprime (D-047). Los scripts del video también la leen de `apps/api/.env`. El seed local no la usa |
 | `SEED_DEMO_PASSWORD` | login de las otras cuatro cuentas demo (`developer@`, `buyer@`, `verifier@`, `notary@`) | ídem |
+| `SEED_MAINNET_ADMIN_PASSWORD` · `SEED_MAINNET_DEMO_PASSWORD` | los mismos cinco emails, en la base de mainnet: el admin y las otras cuatro | `apps/api/.env`. Nuevas, nunca las de Preprod (D-106) |
 | `JWT_SECRET` | **no es un login**: la clave con la que la API firma los tokens | local en `apps/api/.env`; en producción, `generateValue: true`, distinta a propósito (D-042) |
 | El token JWT | la sesión: sale de cada login, dura 7 días, vive en `sessionStorage` | nada que guardar |
 | `SERVICE_WALLET_PRIVATE_KEY` | firma las transacciones (🔴) | arriba |

@@ -74,7 +74,8 @@ hace el dueño**. El estado de cada paso vive en [`README.md`](README.md) §Ante
      pnpm --filter @plataforma/api db:seed:admin
    ```
 
-   Developer, notary, certifier e investors los crea ese admin desde la app.
+   Developer, notary, certifier e investors los crea ese admin desde la app. **Hecho de otra forma
+   el 2026-10-31** (D-106): las cinco cuentas con los emails de Preprod y passwords nuevas.
 9. **Fondear el tramo de la salida** (~55 ADA, plan §7) y **publicar el reference script**, una
    vez por red (D-083):
 
