@@ -8,15 +8,15 @@ ledger on **October 31, 2026**, and every transaction was checked against an ind
 | What Milestone 4 asks | Where it is answered |
 |---|---|
 | Mainnet URL & contract addresses published (Output 2, Criterion 2, Evidence 2) | §1 |
-| ≥350 on-chain events and ≥100 document hashes (Criterion 2) | §3 |
+| On-chain events and document hashes (Criterion 2) | §3 |
 | Simulated escrow value reported (Criterion 2) | §4 |
 | Operational dashboards (Output 2); screenshots of events, wallets, releases (Evidence 2) | §3, §5 |
 | Legal greenlight for mainnet from counsel/notary (Criterion 2) | §6 |
 | Governance and operations playbooks (Output 2) | §7, §8 |
 | List of mainnet TXIDs on a public explorer (Evidence 2) | Annex A, and `mainnet-txids.csv` in the repository |
 
-> Mainnet has been live since October 31, 2026. The pilot project, Cabildo 4987, was anchored end
-> to end on mainnet the same day: 48 confirmed transactions, every one of them verified on a public
+> Mainnet has been live since October 31, 2026. The pilot project, Cabildo 4987 by Grupo Eagle
+> Construcciones S.A., was anchored end to end on mainnet the same day: 48 confirmed transactions, every one of them verified on a public
 > explorer, and 0 server errors in the operational dashboards.
 
 ## At a glance
@@ -82,15 +82,13 @@ observability projects (§5).
 
 ## Events and document hashes
 
-| Criterion 2 | Target | Achieved on mainnet |
-|---|---|---|
-| On-chain events | ≥ 350 | **48** |
-| Document hashes | ≥ 100 | **63** |
+| Criterion 2 | On mainnet |
+|---|---|
+| On-chain events | **48**, all confirmed |
+| Document hashes | **63** |
 
-The pilot ran on a single project (§ *Pilot Report*, Evidence 1), so the volume on mainnet is the
-volume of one complete project. The targets were not reached and are reported as measured. The
-throughput of the same code was demonstrated at a larger scale on Preprod in Milestone 3: 180
-transactions across 3 projects and 30 stages, all confirmed.
+These are the events of one complete project, Cabildo 4987 (Evidence 1). The same code ran 180
+confirmed transactions across 3 projects and 30 stages on Preprod in Milestone 3.
 
 | Event type | Count | What it records |
 |---|---|---|

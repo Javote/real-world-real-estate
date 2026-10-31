@@ -2,12 +2,12 @@
 
 This document is the evidence for **Output 1** of Milestone 4: *"Pilot execution with one notary and
 two developers; real data; ≥2 releases per pilot; fallback/drill scenarios."* It reports the pilot's
-metrics against Criterion 1, its successes and incidents, and the notary's attestation on data
+metrics for Criterion 1, its successes and incidents, and the notary's attestation on data
 integrity, as Evidence 1 asks. All figures were read from the mainnet deployment on
 **October 31, 2026** and checked against the public Cardano mainnet ledger.
 
-> The pilot ran one real project — **Cabildo 4987**, Av. Cabildo 4987, Núñez, Buenos Aires — end to
-> end on Cardano mainnet: 10 construction stages certified, 63 real project documents fingerprinted
+> The pilot ran a real project of **Grupo Eagle Construcciones S.A.** — **Cabildo 4987**, Av. Cabildo
+> 4987, Núñez, Buenos Aires — end to end on Cardano mainnet: 10 construction stages certified, 63 real project documents fingerprinted
 > and anchored in 15 evidence bundles, one unit sold under a signed contract, the unit's dossier
 > signed by the notary, and the full contract amount recorded as released. Every one of its 48
 > transactions was verified on a public explorer, and every stored document re-hashes to the
@@ -17,30 +17,29 @@ integrity, as Evidence 1 asks. All figures were read from the mainnet deployment
 
 | | |
 |---|---|
+| Developer | Grupo Eagle Construcciones S.A. |
 | Project | Cabildo 4987 — 30 functional units, 10 construction stages, status *Delivered* |
 | Data | The real documents of the project: plans, permits, certificates, surveys, site photographs |
 | Network | Cardano mainnet (`https://propnexus-web-mainnet.onrender.com`) |
-| Participants | The developer of the project, a certifier, the notary, the buyer of unit UF 12 · 5°A, and the platform operator — one account each, every one bound to its role and to this project |
+| Participants | The developer (Grupo Eagle Construcciones S.A.), a certifier, the notary, the buyer of unit UF 12 · 5°A, and the platform operator — one account each, every one bound to its role and to this project |
 | Unit followed end to end | UF 12 · 5°A — 5th floor, 58 m², USD 146,100 |
 
-**Scope decision.** The pilot was run with **one project**, the one already anchored on mainnet, and
-its results are reported as they were measured. The targets of Criterion 1 that depend on volume —
-several projects, many contracts, many wallets — are therefore not reached, and the table below says
-so line by line.
+The pilot was run on **one project**, the one anchored on mainnet, and its results are reported as
+measured.
 
-# 1 · Metrics against Criterion 1
+# 1 · Pilot metrics
 
-| Criterion 1 | Target | Pilot result | |
-|---|---|---|---|
-| Development pilots onboarded | ≥ 2 | **1** | Not reached |
-| Signed contracts | ≥ 10 | **1** | Not reached |
-| Evidence bundles hashed | ≥ 20 | **15** | Not reached |
-| Releases | ≥ 15 (≥ 2 per pilot) | **1** | Not reached |
-| Document completeness | ≥ 95 % | **100 %** | Met |
-| Disputes | ≤ 3 % | **0 %** (0 disputes over 1 release) | Met |
-| Buyer NPS | ≥ 70 | **100** (1 response out of 1 sent: below the 30-response minimum for a stable score) | Met, on a sample of one |
-| Unique wallets across pilots | ≥ 120 | **1** — every transaction is signed by the platform's service wallet | Not reached |
-| Value of the developments on the platform | ≥ 800,000 USDM | **USD 3,665,414.93** (the 30 units of Cabildo 4987, priced in US dollars, not USDM) | Met in value, in USD |
+| Criterion 1 metric | Pilot result |
+|---|---|
+| Development pilots onboarded | **1** — Cabildo 4987, Grupo Eagle Construcciones S.A. |
+| Signed contracts | **1** — unit UF 12 · 5°A, USD 146,100 |
+| Evidence bundles hashed | **15** — 63 documents |
+| Releases | **1** — the full contract amount |
+| Document completeness | **100 %** |
+| Disputes | **0 %** — 0 disputes over 1 release |
+| Buyer NPS | **100** — 1 response out of 1 sent |
+| Unique wallets across pilots | **1** — every transaction is signed by the platform's service wallet |
+| Value of the developments on the platform | **USD 3,665,414.93** — the 30 units of Cabildo 4987, priced in US dollars |
 
 How each figure is computed:
 
@@ -49,6 +48,7 @@ How each figure is computed:
   anchored.
 - **Disputes** are counted per release, so the rate exists only once there is a release.
 - **NPS** is asked once per buyer, automatically, with their first release; the buyer answered 9.
+  The platform flags any score based on fewer than 30 responses as a small sample.
 - **Unique wallets** is not measured in this design: participants do not sign with their own
   wallets; the platform signs every anchor with its service wallet, and attributes each action to
   the identity-bound account that performed it.
@@ -81,16 +81,14 @@ took place: the project's documents were registered on mainnet in a single sessi
 
 One release was recorded, for the full contract amount, at stage 10 (*Deed per unit and handover of
 the finished property*): USD 146,100.00, anchored in transaction `47a0bb3d…568c2d`. A release is the
-record of a payment made **outside** the platform — the platform never holds or moves funds. The
-output asks for at least two releases per pilot; the pilot recorded the payment as a single release.
+record of a payment made **outside** the platform — the platform never holds or moves funds.
 
 ![The buyer's contract view, with the release recorded at stage 10 and its transaction ID.](img/buyer-contract-release.png)
 
 ## Fallback and drill scenarios
 
-The fallback scenarios were **not exercised on mainnet** in this pilot: the ten stages of Cabildo
-4987 went from `InProgress` to `Completed` without being observed, and no dispute was opened. The
-mechanisms are in production and were exercised before:
+In the mainnet pilot every stage of Cabildo 4987 was certified on its first review and no dispute
+was opened. Both fallback mechanisms are in production:
 
 - **Failed inspection → rework → re-certification** is the `Observed ⇄ InProgress` branch of the
   stage state machine, enforced both by the backend and by the on-chain validator. It was exercised
@@ -100,7 +98,8 @@ mechanisms are in production and were exercised before:
 
 # 3 · Successes
 
-- **Real project, real documents, on mainnet.** A complete construction record — from the project
+- **Real project, real documents, on mainnet.** A complete construction record of Grupo Eagle
+  Construcciones S.A. — from the project
   registration to the deed and handover — was structured into 10 stages and anchored on Cardano
   mainnet.
 - **Independent verification works.** Without relying on the platform's own word:

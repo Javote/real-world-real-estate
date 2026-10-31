@@ -9,7 +9,7 @@
 
 | Artifact | Reference |
 |---|---|
-| Pilot project | Cabildo 4987 — Av. Cabildo 4987, Núñez, Buenos Aires |
+| Pilot project | Cabildo 4987 — Av. Cabildo 4987, Núñez, Buenos Aires (Grupo Eagle Construcciones S.A.) |
 | Unit | UF 12 · 5°A |
 | Dossier | `bitobzet1jkm3hzj39ufqx0j`, compiled and signed on 2026-10-31 at 20:22:11 UTC |
 | Dossier master hash | `9846fd9b112416a1fb6cd5b4119e385198006685b659ce799f214016a0f393db` |

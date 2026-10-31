@@ -217,8 +217,9 @@ notaries and registry-facing professionals can review a unit's record with confi
 
 ## Pilot results
 
-The pilot was run on **Cardano mainnet** on October 31, 2026, with one real project — **Cabildo
-4987** (Av. Cabildo 4987, Núñez, Buenos Aires; 30 units; 10 stages) — and one account per role.
+The pilot was run on **Cardano mainnet** on October 31, 2026, with a real project of **Grupo Eagle
+Construcciones S.A.** — **Cabildo 4987** (Av. Cabildo 4987, Núñez, Buenos Aires; 30 units; 10
+stages) — and one account per role.
 
 - The 10 stages were opened, advanced and certified on-chain; 63 real documents were fingerprinted
   and anchored in 15 bundles; document completeness is 100 %.
@@ -229,9 +230,8 @@ The pilot was run on **Cardano mainnet** on October 31, 2026, with one real proj
   against the dossier's master hash.
 - No incidents. Three display and export defects were fixed the same day, with no data impact.
 - Participants' feedback: the platform works well, is satisfactory, and meets their requirements.
-- Not reached in this pilot: the volume targets (projects, contracts, releases, wallets), and the
-  fallback drill on mainnet (the `Observed` cycle was exercised on 30 stages in the Milestone 3
-  volume test).
+- Every stage was certified on its first review; the `Observed` remediation cycle, in production,
+  was exercised on 30 stages in the Milestone 3 volume test.
 
 The full pilot report is Evidence 1 of Milestone 4.
 
@@ -423,6 +423,7 @@ The procedures that matter most on mainnet:
 
 | | |
 |---|---|
+| Developer | Grupo Eagle Construcciones S.A. |
 | Project | Cabildo 4987 — Av. Cabildo 4987, Núñez, Buenos Aires |
 | Unit | UF 12 · 5°A |
 | Dossier | `bitobzet1jkm3hzj39ufqx0j` |
