@@ -21,6 +21,7 @@ import { createId } from "../db/id.js";
 import type { UserRole } from "../db/types.js";
 import { anchorCommitmentEvent, commitmentOf } from "../domain/anchoring.js";
 import { notify } from "../domain/notify.js";
+import { porProyecto, porReferencia } from "../lib/arrays.js";
 import { db } from "../lib/db.js";
 import { sql } from "../lib/kysely.js";
 import { conUsuario, delegarAOrpc, OpenAPIHandler, ORPCError, os } from "../lib/orpc.js";
@@ -51,10 +52,9 @@ const unitsOfProjectProcedure = os
       .selectFrom("Unit")
       .selectAll()
       .where("projectId", "=", input.id)
-      .orderBy("unitReference", "asc")
       .execute();
 
-    return unidades.map((u) => ({ ...u, status: u.status as UnitStatus }));
+    return unidades.sort(porReferencia).map((u) => ({ ...u, status: u.status as UnitStatus }));
   });
 const unitsOfProjectHandler = new OpenAPIHandler({ unitsOfProjectProcedure });
 
@@ -185,7 +185,11 @@ const unitsProcedure = orpc
       .where("Unit.projectId", "in", ids)
       .execute();
 
-    return unidades.map((u) => ({ ...u, status: u.status as UnitStatus }));
+    // Dos pasadas estables: el orden por referencia sobrevive dentro de cada proyecto.
+    return unidades
+      .sort(porReferencia)
+      .sort(porProyecto)
+      .map((u) => ({ ...u, status: u.status as UnitStatus }));
   });
 const unitsHandler = new OpenAPIHandler({ unitsProcedure });
 

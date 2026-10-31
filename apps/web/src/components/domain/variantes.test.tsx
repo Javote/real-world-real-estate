@@ -156,6 +156,21 @@ describe('BuildingSchematic · variantes', () => {
     expect(screen.getByText('P2').className).toContain('text-text-muted')
   })
 
+  it('ordena las unidades de un piso por su número: UF 2 antes que UF 10', () => {
+    render(
+      <BuildingSchematic
+        projectName="Torre A"
+        units={[
+          { id: 'x', unitReference: 'UF 10', floor: 3, state: 'available' },
+          { id: 'y', unitReference: 'UF 2', floor: 3, state: 'available' }
+        ]}
+        labels={labels}
+      />
+    )
+
+    expect(screen.getAllByText(/^UF \d+$/).map((n) => n.textContent)).toEqual(['UF 2', 'UF 10'])
+  })
+
   it('sin callout ni aviso no dibuja esos párrafos; con ellos sí', () => {
     const { rerender } = render(
       <BuildingSchematic projectName="Torre A" units={units} labels={labels} />

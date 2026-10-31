@@ -76,7 +76,9 @@ export function BuildingSchematic({
             <div className="flex flex-1 gap-s1">
               {units
                 .filter((u) => u.floor === piso)
-                .sort((a, b) => a.unitReference.localeCompare(b.unitReference))
+                .sort((a, b) =>
+                  a.unitReference.localeCompare(b.unitReference, undefined, { numeric: true })
+                )
                 .map((u) => (
                   <span
                     key={u.id}

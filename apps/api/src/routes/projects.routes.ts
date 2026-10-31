@@ -23,7 +23,7 @@ import { anclajeDeLaEvidencia } from "../domain/anchoring.js";
 import { listarInvitacionesACertificar } from "../domain/certifier-invitation.js";
 import { agregadosDeProyectos } from "../domain/project-aggregates.js";
 import { reconciliarParaLectura } from "../domain/reconcile.js";
-import { en } from "../lib/arrays.js";
+import { en, porReferencia } from "../lib/arrays.js";
 import { db } from "../lib/db.js";
 import { sql } from "../lib/kysely.js";
 import { conUsuario, delegarAOrpc, OpenAPIHandler, ORPCError, os } from "../lib/orpc.js";
@@ -530,7 +530,6 @@ const buildingSchematicProcedure = os
       .select(["id", "unitReference", "floor", "status"])
       .where("projectId", "=", input.id)
       .orderBy("floor", "desc")
-      .orderBy("unitReference", "asc")
       .execute();
 
     const pisos = new Map<number | null, typeof unidades>();
@@ -542,7 +541,9 @@ const buildingSchematicProcedure = os
 
     return z
       .array(buildingSchematicFloorSchema)
-      .parse([...pisos.entries()].map(([floor, units]) => ({ floor, units })));
+      .parse(
+        [...pisos.entries()].map(([floor, units]) => ({ floor, units: units.sort(porReferencia) }))
+      );
   });
 const buildingSchematicHandler = new OpenAPIHandler({ buildingSchematicProcedure });
 

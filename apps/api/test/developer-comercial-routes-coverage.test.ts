@@ -62,6 +62,52 @@ describe("GET /developer/projects/:id/units", () => {
   });
 });
 
+describe("las referencias de unidad se ordenan por su número, no como texto", () => {
+  const crear = (unitReference: string, floor?: number) =>
+    request(app)
+      .post(`/api/v1/developer/projects/${proyecto}/units`)
+      .set("Authorization", `Bearer ${tokenDev}`)
+      .send({ unitReference, floor });
+
+  const orden = (body: { unitReference: string }[], refs: string[]) =>
+    body.map((u) => u.unitReference).filter((r) => refs.includes(r));
+
+  beforeAll(async () => {
+    await crear("ORD 10", 77);
+    await crear("ORD 2", 77);
+  });
+
+  it("GET /developer/projects/:id/units: ORD 2 antes que ORD 10", async () => {
+    const res = await request(app)
+      .get(`/api/v1/developer/projects/${proyecto}/units`)
+      .set("Authorization", `Bearer ${tokenDev}`);
+
+    expect(orden(res.body, ["ORD 2", "ORD 10"])).toEqual(["ORD 2", "ORD 10"]);
+  });
+
+  it("GET /developer/units: por proyecto y, adentro, por número", async () => {
+    const res = await request(app)
+      .get("/api/v1/developer/units")
+      .set("Authorization", `Bearer ${tokenAdmin}`);
+
+    const nombres = res.body.map((u: { projectName: string }) => u.projectName);
+    expect(nombres).toEqual([...nombres].sort(new Intl.Collator("es", { numeric: true }).compare));
+    expect(orden(res.body, ["ORD 2", "ORD 10"])).toEqual(["ORD 2", "ORD 10"]);
+  });
+
+  it("GET /projects/:id/building-schematic: dentro del piso, ORD 2 antes que ORD 10", async () => {
+    const res = await request(app)
+      .get(`/api/v1/projects/${proyecto}/building-schematic`)
+      .set("Authorization", `Bearer ${tokenDev}`);
+
+    const piso = res.body.find((p: { floor: number | null }) => p.floor === 77);
+    expect(piso.units.map((u: { unitReference: string }) => u.unitReference)).toEqual([
+      "ORD 2",
+      "ORD 10"
+    ]);
+  });
+});
+
 describe("PATCH /developer/units/:id", () => {
   it("edita la unidad y lo escribe en el audit log", async () => {
     const creada = await request(app)
