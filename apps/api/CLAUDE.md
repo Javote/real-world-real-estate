@@ -61,6 +61,9 @@ la de los módulos que todavía no se mudaron (A4).
 - **Un stage sembrado directo en la base no tiene hilo**: su transición queda `Failed` en silencio.
   Mirá `hasOnChainThread` antes de usarlo en una demo; `retry-anchor` solo sirve en `Pending`.
 - **Antes de anclar algo nuevo, definí cómo se vuelve del registro a su TXID**: `OnChainEvent.referenceId`.
+- **Un lote de evidencia se ancla una vez**: el evento lleva el bundle en `referenceId` y solo el
+  primer archivo en `evidenceId`. El anclaje de una evidencia sale de `anclajeDeLaEvidencia`; un
+  join por `OnChainEvent.evidenceId` deja "Pendiente" al resto del lote (`anclaje-por-lote.test.ts`).
 - **Toda lectura que devuelve `anchorStatus` reconcilia su alcance** (`reconciliarParaLectura`, D-077)
   y entra en `test/reconcile-on-read.test.ts`, que se mantiene a mano.
 - **`crearBundle` es idempotente por contenido**: el acta vigente con el mismo root se devuelve, no se

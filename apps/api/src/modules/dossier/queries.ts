@@ -1,7 +1,8 @@
 import type { DossierId, DossierStatus, ProjectId, UnitId } from "@plataforma/shared";
 import type { Database } from "../../db/types.js";
+import { anclajeDeLaEvidencia } from "../../domain/anchoring.js";
 import { ultimoBundlePorStage } from "../../domain/stage-transition.js";
-import type { ExpressionBuilder } from "../../lib/kysely.js";
+import { type ExpressionBuilder, sql } from "../../lib/kysely.js";
 import type { Ejecutor } from "../../platform/audit.js";
 import type { Insumos } from "./rules.js";
 
@@ -89,9 +90,7 @@ export async function insumosDe(
     e
       .selectFrom("Evidence")
       .leftJoin("OnChainEvent", (join) =>
-        join
-          .onRef("OnChainEvent.evidenceId", "=", "Evidence.id")
-          .on("OnChainEvent.eventType", "=", "EVIDENCE_ANCHOR")
+        join.on("OnChainEvent.id", "=", anclajeDeLaEvidencia(sql.ref("Evidence.id")))
       )
       .select([
         "Evidence.id as id",

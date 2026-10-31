@@ -19,6 +19,7 @@ import { Router } from "express";
 import { z } from "zod";
 import { createId } from "../db/id.js";
 import type { UserRole } from "../db/types.js";
+import { anclajeDeLaEvidencia } from "../domain/anchoring.js";
 import { listarInvitacionesACertificar } from "../domain/certifier-invitation.js";
 import { agregadosDeProyectos } from "../domain/project-aggregates.js";
 import { reconciliarParaLectura } from "../domain/reconcile.js";
@@ -480,9 +481,7 @@ const projectDocumentsProcedure = os
     const filas = await db
       .selectFrom("Evidence")
       .leftJoin("OnChainEvent", (join) =>
-        join
-          .onRef("OnChainEvent.evidenceId", "=", "Evidence.id")
-          .on("OnChainEvent.eventType", "=", "EVIDENCE_ANCHOR")
+        join.on("OnChainEvent.id", "=", anclajeDeLaEvidencia(sql.ref("Evidence.id")))
       )
       .select([
         "Evidence.id as id",

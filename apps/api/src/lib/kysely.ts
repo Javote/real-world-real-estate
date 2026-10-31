@@ -1,6 +1,7 @@
 export type {
   ColumnType,
   Compilable,
+  Expression,
   ExpressionBuilder,
   ExpressionWrapper,
   Generated,

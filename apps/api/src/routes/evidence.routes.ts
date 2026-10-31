@@ -18,7 +18,7 @@ import {
 import { Router } from "express";
 import { z } from "zod";
 import type { UserRole } from "../db/types.js";
-import { anclarEvidenciaUnaVez } from "../domain/anchoring.js";
+import { anclajeDeLaEvidencia, anclarEvidenciaUnaVez } from "../domain/anchoring.js";
 import {
   hilosSospechosos,
   reconciliarAnclajes,
@@ -26,6 +26,7 @@ import {
   repararHilosSospechosos
 } from "../domain/reconcile.js";
 import { db } from "../lib/db.js";
+import { sql } from "../lib/kysely.js";
 import { conUsuario, delegarAOrpc, OpenAPIHandler, ORPCError, os } from "../lib/orpc.js";
 import { storage } from "../lib/storage.js";
 import { ANY_MEMBERSHIP, authenticate, authorize, CUALQUIER_ROL } from "../middlewares/auth.js";
@@ -337,7 +338,7 @@ const bundleProofProcedure = os
 
     const bundle = await db
       .selectFrom("EvidenceBundle")
-      .select(["commitmentHash"])
+      .select(["commitmentHash", "projectId"])
       .where("id", "=", input.bundleId)
       .executeTakeFirstOrThrow();
 
@@ -346,14 +347,16 @@ const bundleProofProcedure = os
       throw new ORPCError("NOT_FOUND", { message: "That hash is not part of this bundle" });
     }
 
-    await reconciliarParaLectura({ evidenceId: item.evidenceId });
+    await reconciliarParaLectura({ projectId: bundle.projectId });
 
     const evidencia = await db
       .selectFrom("Evidence")
       .leftJoin("OnChainEvent", (join) =>
-        join
-          .onRef("OnChainEvent.evidenceId", "=", "Evidence.id")
-          .on("OnChainEvent.eventType", "=", "EVIDENCE_ANCHOR")
+        join.on(
+          "OnChainEvent.id",
+          "=",
+          anclajeDeLaEvidencia(sql.ref("Evidence.id"), input.bundleId)
+        )
       )
       .select([
         "Evidence.uploadedById as signerUserId",

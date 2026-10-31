@@ -5,11 +5,40 @@ import type { Database, OnChainEventRow, OnChainEventType } from "../db/types.js
 import { Sentry } from "../instrumentation.js";
 import { anchorPort, anchorPortListo } from "../lib/anchor.js";
 import { db } from "../lib/db.js";
-import { type ExpressionBuilder, sql } from "../lib/kysely.js";
+import { type Expression, type ExpressionBuilder, sql } from "../lib/kysely.js";
 
 export function commitmentOf(payload: Record<string, string | number>): string {
   const canonico = JSON.stringify(payload, Object.keys(payload).sort());
   return createHash("sha256").update(canonico).digest("hex");
+}
+
+/**
+ * El `EVIDENCE_ANCHOR` que cubre una evidencia. Un lote se ancla una vez, con el bundle en
+ * `referenceId` y solo su primer archivo en `evidenceId`, y los bundles de un stage son
+ * acumulativos: gana el de `loteId` si se pide, después uno con TXID y después el más viejo.
+ */
+export function anclajeDeLaEvidencia(evidenceId: Expression<string>, loteId?: string) {
+  let anclajes = db
+    .selectFrom("OnChainEvent as anclaje")
+    .select("anclaje.id")
+    .where("anclaje.eventType", "=", "EVIDENCE_ANCHOR")
+    .where((eb) =>
+      eb.or([
+        eb("anclaje.evidenceId", "=", evidenceId),
+        eb(
+          "anclaje.referenceId",
+          "in",
+          eb
+            .selectFrom("EvidenceBundleItem")
+            .select("EvidenceBundleItem.bundleId")
+            .where("EvidenceBundleItem.evidenceId", "=", evidenceId)
+        )
+      ])
+    );
+
+  if (loteId) anclajes = anclajes.orderBy(sql`anclaje.referenceId = ${loteId}`, "desc");
+
+  return anclajes.orderBy(sql`anclaje.txid is null`).orderBy("anclaje.createdAt", "asc").limit(1);
 }
 
 type AnclajeInput = {
@@ -74,7 +103,17 @@ export async function anclarEvidenciaUnaVez(
   const valores = await eventoPendiente(input);
   const vivo = (eb: ExpressionBuilder<Database, "OnChainEvent">) =>
     eb.and([
-      eb("OnChainEvent.evidenceId", "=", input.evidenceId),
+      eb.or([
+        eb("OnChainEvent.evidenceId", "=", input.evidenceId),
+        eb(
+          "OnChainEvent.referenceId",
+          "in",
+          eb
+            .selectFrom("EvidenceBundleItem")
+            .select("EvidenceBundleItem.bundleId")
+            .where("EvidenceBundleItem.evidenceId", "=", input.evidenceId)
+        )
+      ]),
       eb.or([
         eb("OnChainEvent.txid", "is not", null),
         eb.and([
