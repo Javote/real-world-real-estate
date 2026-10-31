@@ -108,7 +108,8 @@ services:
       # https://propnexus-web-mainnet.onrender.com
       - key: WEB_ORIGIN
         sync: false
-      # Proyectos propios de mainnet: mezclar trazas de dos redes no se separa después.
+      # Los mismos proyectos que Preprod: los planes free admiten uno, y con la API
+      # de Preprod suspendida no hay trazas de dos redes que mezclar (D-105).
       - key: SENTRY_DSN
         sync: false
       - key: OTEL_EXPORTER_OTLP_ENDPOINT

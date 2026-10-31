@@ -267,8 +267,8 @@ del 2026-09-11 de nuevo.
 2. La infraestructura, en free tier (D-105, 2026-10-31): ✅ base Turso (`propnexus-mainnet`,
    2026-10-30) con sus cinco cuentas, ✅ bucket R2, ✅ proyecto de Blockfrost y ✅ el alta de
    `render.mainnet.yaml` (2026-10-31, `stack.md` §8b), con la API de Preprod suspendida. Falta:
-   la clave 🔴, los secretos en Render (los carga el dueño) y la observabilidad (Sentry; PostHog y
-   Grafana free admiten un solo proyecto, el de Preprod).
+   la clave 🔴 y los secretos en Render (los carga el dueño). La observabilidad reusa los
+   proyectos de Sentry, PostHog y Grafana de Preprod: los planes free admiten uno (D-105).
    ✅ El tope por archivo es 200 MB, para los PDF de planos del piloto (D-106).
 3. El ensayo: los servicios `-mainnet` contra Preprod con una wallet de ensayo, un proyecto entero.
 4. El runbook de incidentes de mainnet (rollback que no deshace nada on-chain, clave comprometida,

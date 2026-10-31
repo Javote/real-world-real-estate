@@ -53,8 +53,9 @@ hace el dueño**. El estado de cada paso vive en [`README.md`](README.md) §Ante
    arranque y no aplica ninguna: ya están registradas.
 4. **R2**: bucket `propnexus-evidencia-mainnet`, con un token de tipo **Account**, como el de
    Preprod.
-5. **Sentry, PostHog y Grafana**: proyectos nuevos. Mezclar trazas de dos redes no se separa
-   después.
+5. **Sentry, PostHog y Grafana**: los mismos proyectos que Preprod (dueño, 2026-10-31). Los planes
+   free admiten uno, y con la API de Preprod suspendida no hay trazas de dos redes que mezclar. Si
+   Preprod vuelve a prenderse, sus datos caen en los mismos proyectos.
 6. **Render: New → Blueprint**, rama `main`, *Blueprint path* `render.mainnet.yaml`. El asistente
    pide cada `sync: false`: `DATABASE_URL`, `DATABASE_AUTH_TOKEN`, las tres `S3_*`,
    `BLOCKFROST_API_KEY`, `SERVICE_WALLET_PRIVATE_KEY`, `SENTRY_DSN` y las dos `OTEL_*` en la API;

@@ -848,7 +848,8 @@ así** (D-105).
   anclajes de la prueba de volumen, Turso free tiene 1 día de point-in-time restore en vez de 10, y
   los 10 GB de R2 free son de la cuenta, compartidos con el bucket de Preprod: el piloto entero
   (10 etapas × 4 × 200 MB) llega a 8 GB. Volver a Starter es cambiar `plan:` en
-  `render.mainnet.yaml` y el test que lo fija.
+  `render.mainnet.yaml` y el test que lo fija. **Sentry, PostHog y Grafana reusan los proyectos de
+  Preprod**: sus planes free admiten uno, y con Preprod suspendida no hay dos redes que mezclar.
 
 **Las alternativas a las 2 ADA, para cuando el costo pese.** Ninguna se toma hoy; están ordenadas de
 la más barata a la más cara.
