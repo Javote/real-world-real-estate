@@ -266,14 +266,16 @@ del 2026-09-11 de nuevo.
 1. ✅ Un seed que cree solo el admin: `db:seed:admin` (2026-10-30, D-106).
 2. La infraestructura, en free tier (D-105, 2026-10-31): ✅ base Turso (`propnexus-mainnet`,
    2026-10-30) con sus cinco cuentas, ✅ bucket R2, ✅ proyecto de Blockfrost y ✅ el alta de
-   `render.mainnet.yaml` (2026-10-31, `stack.md` §8b), con la API de Preprod suspendida. Falta:
-   la clave 🔴 y los secretos en Render (los carga el dueño). La observabilidad reusa los
-   proyectos de Sentry, PostHog y Grafana de Preprod: los planes free admiten uno (D-105).
+   `render.mainnet.yaml` (2026-10-31, `stack.md` §8b), con la API de Preprod suspendida, ✅ la
+   clave 🔴 y ✅ los secretos en Render: la API arranca con `AnchorPort` en modo `real`. La
+   observabilidad reusa los proyectos de Sentry, PostHog y Grafana de Preprod: los planes free
+   admiten uno (D-105).
    ✅ El tope por archivo es 200 MB, para los PDF de planos del piloto (D-106).
 3. El ensayo: los servicios `-mainnet` contra Preprod con una wallet de ensayo, un proyecto entero.
 4. El runbook de incidentes de mainnet (rollback que no deshace nada on-chain, clave comprometida,
    wallet sin saldo, quién aprueba volver a Preprod) y el comando de detección semanal (plan §4).
-5. Fondear el tramo de la salida (~55 ADA), publicar el reference script y reiniciar la API.
+5. ✅ Fondear el tramo de la salida, publicar el reference script y reiniciar la API (2026-10-31,
+   `stack.md` §8b).
 6. El proyecto propio de punta a punta, con cada TXID contra Koios y Cardanoscan.
 
 Los ítems 4–6 de esta lista (`SPEC-402`, `SPEC-407`, `SPEC-408`) se adelantaron a la Fase 1, ítem 8.
