@@ -1,0 +1,345 @@
+/* Milestone 4 evidence, in the visual language of the project Whitepaper v1.0. */
+
+@font-face {
+  font-family: "MS";
+  src: local("Montserrat Regular"), local("Montserrat-Regular");
+  font-weight: 400;
+}
+@font-face {
+  font-family: "MS";
+  src: local("Montserrat Medium"), local("Montserrat-Medium");
+  font-weight: 500;
+}
+@font-face {
+  font-family: "MS";
+  src: local("Montserrat SemiBold"), local("Montserrat-SemiBold");
+  font-weight: 600;
+}
+@font-face {
+  font-family: "MS";
+  src: local("Montserrat Bold"), local("Montserrat-Bold");
+  font-weight: 700;
+}
+@font-face {
+  font-family: "MS";
+  src: local("Montserrat ExtraBold"), local("Montserrat-ExtraBold");
+  font-weight: 800;
+}
+@font-face {
+  font-family: "MS";
+  src: local("Montserrat Italic"), local("Montserrat-Italic");
+  font-weight: 400;
+  font-style: italic;
+}
+
+:root {
+  --azul: #234f9c;
+  --azul-claro: #2b62ab;
+  --texto: #3b3b3b;
+  --gris: #6b6b6b;
+  --linea: #d9dde5;
+  --fondo: #f3f5f9;
+}
+
+@page {
+  size: 8.5in 14in;
+  margin: 0.45in 0 0.8in 0;
+  @bottom-left {
+    padding-left: 0.8in;
+    content: counter(page) "- Real-World Real Estate | Pre-Sale with Proof & Release";
+    font-family: "MS", sans-serif;
+    font-size: 7.5pt;
+    color: #444;
+    vertical-align: middle;
+  }
+}
+
+html {
+  -webkit-print-color-adjust: exact;
+  print-color-adjust: exact;
+}
+body {
+  font-family: "MS", "Helvetica Neue", Arial, sans-serif;
+  font-size: 9.6pt;
+  line-height: 1.6;
+  color: var(--texto);
+  margin: 0;
+}
+main {
+  padding: 0 0.8in;
+}
+
+/* Cover: the Whitepaper v1.0 cover, with the document's title on a band at the foot. */
+.portada {
+  width: 100%;
+  height: 14in;
+  position: relative;
+  background: url("cover.jpg") center / cover no-repeat;
+  break-after: page;
+}
+.portada .banda {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: var(--azul);
+  color: #fff;
+  padding: 0.55in 0.8in 0.6in;
+}
+.portada .etiqueta {
+  display: inline-block;
+  background: #fff;
+  color: var(--azul);
+  font-weight: 700;
+  font-size: 10pt;
+  letter-spacing: 0.04em;
+  padding: 0.05in 0.14in;
+  margin-bottom: 0.18in;
+}
+.portada .titulo {
+  font-size: 30pt;
+  line-height: 1.12;
+  font-weight: 800;
+  margin: 0 0 0.16in;
+  color: #fff;
+}
+.portada .bajada {
+  font-size: 11pt;
+  font-weight: 500;
+  margin: 0;
+  opacity: 0.95;
+}
+.portada .datos {
+  font-size: 8.5pt;
+  margin-top: 0.22in;
+  opacity: 0.85;
+}
+
+/* Section opener: the full-bleed blue band of the Whitepaper. */
+h1 {
+  break-before: auto;
+  break-after: avoid;
+  background: var(--azul);
+  color: #fff;
+  font-weight: 800;
+  font-size: 27pt;
+  line-height: 1.15;
+  margin: 0.4in -0.8in 0.28in;
+  padding: 0.34in 0.8in 0.3in;
+}
+main > h1:first-child {
+  margin-top: 0;
+}
+h1.pagina {
+  break-before: page;
+  margin-top: 0;
+}
+
+h2 {
+  color: var(--azul);
+  font-weight: 700;
+  font-size: 17pt;
+  line-height: 1.2;
+  margin: 0.32in 0 0.12in;
+  break-after: avoid;
+}
+h3 {
+  color: var(--azul);
+  font-weight: 700;
+  font-size: 11pt;
+  margin: 0.22in 0 0.06in;
+  break-after: avoid;
+}
+h4 {
+  font-weight: 700;
+  font-size: 9.6pt;
+  margin: 0.16in 0 0.04in;
+  color: #222;
+  break-after: avoid;
+}
+
+p {
+  margin: 0 0 0.1in;
+}
+strong {
+  color: #222;
+  font-weight: 700;
+}
+a {
+  color: var(--azul-claro);
+  text-decoration: none;
+  word-break: break-word;
+}
+
+/* Bullets: the solid blue dots of the Whitepaper. */
+ul {
+  list-style: none;
+  padding-left: 0.28in;
+  margin: 0.04in 0 0.12in;
+}
+ul > li {
+  position: relative;
+  margin-bottom: 0.05in;
+}
+ul > li::before {
+  content: "";
+  position: absolute;
+  left: -0.22in;
+  top: 0.07in;
+  width: 0.09in;
+  height: 0.09in;
+  border-radius: 50%;
+  background: var(--azul);
+}
+ol {
+  padding-left: 0.28in;
+  margin: 0.04in 0 0.12in;
+}
+ol > li {
+  margin-bottom: 0.05in;
+}
+ol > li::marker {
+  color: var(--azul);
+  font-weight: 700;
+}
+
+/* Callout: the blue acknowledgement boxes of the Whitepaper. */
+blockquote {
+  background: var(--azul);
+  color: #fff;
+  margin: 0.16in 0;
+  padding: 0.14in 0.2in;
+  font-weight: 600;
+  break-inside: avoid;
+}
+blockquote p:last-child {
+  margin-bottom: 0;
+}
+blockquote strong,
+blockquote a,
+blockquote code {
+  color: #fff;
+}
+blockquote code {
+  background: rgba(255, 255, 255, 0.15);
+}
+
+table {
+  width: 100%;
+  border-collapse: collapse;
+  margin: 0.1in 0 0.18in;
+  font-size: 8.4pt;
+  line-height: 1.4;
+  break-inside: auto;
+}
+thead {
+  display: table-header-group;
+}
+tr {
+  break-inside: avoid;
+}
+th {
+  background: linear-gradient(90deg, var(--azul-claro), var(--azul));
+  color: #fff;
+  font-weight: 700;
+  text-align: left;
+  padding: 0.06in 0.08in;
+  border: 1px solid #c6cfdd;
+}
+td {
+  padding: 0.05in 0.08in;
+  border: 1px solid var(--linea);
+  vertical-align: top;
+}
+tbody tr:nth-child(even) td {
+  background: var(--fondo);
+}
+
+code {
+  font-family: "SF Mono", Menlo, Consolas, monospace;
+  font-size: 0.86em;
+  background: var(--fondo);
+  padding: 0.01in 0.04in;
+  border-radius: 2px;
+  word-break: normal;
+  overflow-wrap: break-word;
+}
+td code {
+  overflow-wrap: anywhere;
+}
+td:first-child code {
+  overflow-wrap: normal;
+  white-space: nowrap;
+}
+pre {
+  background: var(--fondo);
+  border-left: 3px solid var(--azul);
+  padding: 0.1in 0.14in;
+  font-size: 7.8pt;
+  line-height: 1.45;
+  white-space: pre-wrap;
+  word-break: break-all;
+  break-inside: avoid;
+}
+pre code {
+  background: none;
+  padding: 0;
+  font-size: 1em;
+}
+
+img {
+  max-width: 92%;
+  border: 1px solid var(--linea);
+  display: block;
+  margin: 0.08in auto 0.04in;
+  break-inside: avoid;
+}
+figure {
+  margin: 0.12in 0;
+  break-inside: avoid;
+}
+figcaption,
+.pie {
+  font-size: 7.8pt;
+  color: var(--gris);
+  text-align: center;
+  margin-bottom: 0.12in;
+}
+
+hr {
+  border: 0;
+  border-top: 2px solid var(--azul);
+  margin: 0.22in 0;
+}
+
+/* Dense tables of hashes and TXIDs. */
+table.hashes,
+.hashes table {
+  font-size: 6.6pt;
+}
+.hashes td {
+  font-family: "SF Mono", Menlo, monospace;
+  white-space: nowrap;
+  word-break: normal;
+}
+.hashes td:last-child,
+.hashes td.h {
+  white-space: normal;
+  word-break: break-all;
+}
+.hashes td.t {
+  white-space: normal;
+  font-family: "MS", sans-serif;
+}
+
+.firma td {
+  height: 0.36in;
+}
+.firma td:first-child {
+  width: 32%;
+  font-weight: 600;
+}
+.sello {
+  font-size: 8pt;
+  color: var(--gris);
+}

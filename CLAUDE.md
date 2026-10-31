@@ -21,6 +21,11 @@ runbook, monitoreo, reporte de tests) siguen en `specs/` y son los que se mantie
 se actualiza su versión en inglés en el mismo commit**, y su PDF con `bash scripts/evidencia-pdf/generar.sh`
 (cada `.md` de la carpeta tiene un `.pdf` hermano generado desde él).
 
+**La evidencia de M4 vive en [`specs/evidencia-m4/`](specs/evidencia-m4/): solo los PDF que se
+envían** (los 3 entregables y los 2 sign-offs a firmar), con el estilo del Whitepaper v1.0. Sus
+fuentes, capturas y tablas están en `specs/evidencia-m4-fuentes/`, y se regeneran con
+`bash scripts/evidencia-m4/generar.sh` (`SOLO=<carpeta>` para uno).
+
 ---
 
 ## Contexto
