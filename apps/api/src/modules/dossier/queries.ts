@@ -97,6 +97,7 @@ export async function insumosDe(
         "Evidence.projectId as projectId",
         "Evidence.originalFilename as filename",
         "Evidence.sha256Hash as sha256Hash",
+        "Evidence.uploadedAt as uploadedAt",
         "OnChainEvent.txid as txid"
       ])
       .where("Evidence.projectId", "in", proyectos)
@@ -115,7 +116,8 @@ export async function insumosDe(
         "Contract.unitId as unitId",
         "PaymentAttestation.stageNumber as stageNumber",
         "OnChainEvent.commitment as commitment",
-        "OnChainEvent.txid as txid"
+        "OnChainEvent.txid as txid",
+        "PaymentAttestation.releasedAt as releasedAt"
       ])
       .where("Contract.unitId", "in", unitIds)
       .orderBy("PaymentAttestation.stageNumber", "asc")

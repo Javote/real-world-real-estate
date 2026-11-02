@@ -50,6 +50,10 @@ la de los módulos que todavía no se mudaron (A4).
   el estado vigentes (un `rejected` cuyo hash cambió se lee `compiled`) se calculan al leer;
   `dossier-lecturas-sin-escrituras.test.ts` lo fija. Un seed o un test que planta una venta usa
   `sembrarUnidadVendida`, que crea el dossier igual.
+- **Un dossier firmado muestra lo que existía al firmarse** (`insumosAlFirmar`): la evidencia y las
+  liberaciones posteriores a `signedAt` tienen su propio anclaje y no entran, o el hash recalculado
+  deja de coincidir con el firmado (pasó en mainnet con el release de UF 12 · 5°A). No cubre una
+  etapa que se complete después de la firma: eso pediría guardar los artefactos al firmar.
 - **Un seed que planta a mano una fila que el producto crea esconde el bug del endpoint** (pasó con
   la membresía `buyer` al aceptar una invitación). Antes de sembrarla, preguntá qué endpoint la crea.
 - **Un schema local que coincide con el compartido se queda atrás en silencio**: importá el de

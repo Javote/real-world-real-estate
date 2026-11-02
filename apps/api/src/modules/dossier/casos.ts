@@ -27,6 +27,7 @@ import {
   esperaAlNotary,
   estadoVigente,
   type Insumos,
+  insumosAlFirmar,
   masterHashDe
 } from "./rules.js";
 
@@ -37,9 +38,10 @@ const COLA_MAXIMA = 50;
 // Ninguna lectura escribe el dossier (SPEC-615, decisión 2): el hash y el estado vigentes se calculan
 // acá. La firma es lo único que fija el `masterHash`.
 async function compilado(deps: Deps, fila: q.FilaDeDossier, insumos: Insumos): Promise<Dossier> {
-  const artefactos = artefactosDe(insumos);
-  const hashActual = masterHashDe(artefactos);
   const firmado = fila.status === "signed";
+  // Firmar siempre escribe `signedAt`.
+  const artefactos = artefactosDe(firmado ? insumosAlFirmar(insumos, fila.signedAt!) : insumos);
+  const hashActual = masterHashDe(artefactos);
 
   if (firmado) await reconciliarParaLectura({ referenceId: fila.id });
   const firma = firmado ? await q.eventoDeFirma(deps.db, fila.id) : undefined;

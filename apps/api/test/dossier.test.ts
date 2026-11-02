@@ -1,9 +1,11 @@
+import type { DossierArtifact } from "@plataforma/shared";
 import request from "supertest";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import app from "../src/app.js";
 import { sembrarUnidadVendida } from "../src/db/fixtures.js";
 import { createId } from "../src/db/id.js";
 import { db } from "../src/lib/db.js";
+import { masterHashDe } from "../src/modules/dossier/rules.js";
 import { FIXTURES } from "./global-setup.js";
 
 const login = (f: { email: string; password: string }) =>
@@ -222,6 +224,63 @@ describe("el flujo del notario", () => {
       .execute();
 
     expect(eventos).toHaveLength(1);
+  });
+
+  it("una liberación registrada después de firmar no entra en el dossier firmado", async () => {
+    const firmado = await request(app)
+      .get(`/api/v1/notary/dossiers/${dossierId}`)
+      .set("Authorization", `Bearer ${tokenNotario}`);
+    const { signedAt } = await db
+      .selectFrom("Dossier")
+      .select("signedAt")
+      .where("id", "=", dossierId)
+      .executeTakeFirstOrThrow();
+
+    const previo = await db
+      .selectFrom("Contract")
+      .select("id")
+      .where("unitId", "=", unitId)
+      .executeTakeFirst();
+    const contratoId = previo?.id ?? createId();
+    if (!previo) {
+      await db
+        .insertInto("Contract")
+        .values({
+          id: contratoId,
+          unitId,
+          investorId,
+          totalMinorUnits: 100_000,
+          currency: "USD",
+          signedAt: signedAt!,
+          createdAt: signedAt!
+        })
+        .execute();
+    }
+    const releaseId = createId();
+    await db
+      .insertInto("PaymentAttestation")
+      .values({
+        id: releaseId,
+        contractId: contratoId,
+        stageNumber: 1,
+        amountMinorUnits: 1,
+        releasedById: null,
+        releasedAt: signedAt! + 60_000
+      })
+      .execute();
+
+    try {
+      const releido = await request(app)
+        .get(`/api/v1/notary/dossiers/${dossierId}`)
+        .set("Authorization", `Bearer ${tokenNotario}`);
+
+      expect(releido.body.artifacts.some((a: DossierArtifact) => a.kind === "release")).toBe(false);
+      expect(releido.body.artifacts).toEqual(firmado.body.artifacts);
+      expect(masterHashDe(releido.body.artifacts)).toBe(releido.body.masterHash);
+    } finally {
+      await db.deleteFrom("PaymentAttestation").where("id", "=", releaseId).execute();
+      if (!previo) await db.deleteFrom("Contract").where("id", "=", contratoId).execute();
+    }
   });
 
   it("rechazar un dossier sin firmar contesta 200 y deja la nota", async () => {

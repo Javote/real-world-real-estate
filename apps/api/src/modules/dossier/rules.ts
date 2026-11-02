@@ -5,9 +5,33 @@ import { commitmentOf } from "../../domain/anchoring.js";
 /** Lo que el dossier de una unidad compromete, en el orden en que lo compromete. */
 export type Insumos = {
   stages: { id: string; name: string; commitmentHash: string | null; txid: string | null }[];
-  evidencia: { id: string; filename: string; sha256Hash: string; txid: string | null }[];
-  releases: { id: string; stageNumber: number; commitment: string | null; txid: string | null }[];
+  evidencia: {
+    id: string;
+    filename: string;
+    sha256Hash: string;
+    txid: string | null;
+    uploadedAt: Date;
+  }[];
+  releases: {
+    id: string;
+    stageNumber: number;
+    commitment: string | null;
+    txid: string | null;
+    releasedAt: number;
+  }[];
 };
+
+/**
+ * Lo que un dossier firmado compromete es lo que existía al firmarse: la evidencia subida y las
+ * liberaciones registradas después tienen su propio anclaje y no entran en lo que el notary firmó.
+ */
+export function insumosAlFirmar(insumos: Insumos, firmadoEn: number): Insumos {
+  return {
+    stages: insumos.stages,
+    evidencia: insumos.evidencia.filter((e) => e.uploadedAt.getTime() <= firmadoEn),
+    releases: insumos.releases.filter((r) => r.releasedAt <= firmadoEn)
+  };
+}
 
 export function artefactosDe(insumos: Insumos): DossierArtifact[] {
   return [
